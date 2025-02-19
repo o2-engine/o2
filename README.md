@@ -5,12 +5,12 @@
 
 o2 - it's an open-source technology for easy making 2D games and applications for mobile and PC platforms using C++ and JavaScript with visual editor. The main features are performance, usability and effective development. [More about motiovation and architecture](/Docs/en/main.md) ([rus](/Docs/ru/main.md))
 
-
-Here is the test project: https://github.com/zenkovich/o2-Template
+Here is the test project: https://github.com/zenkovich/PetStory
 
 **Now work in progress.**
 
 [Discord channel](https://discord.gg/FqBBYpYGfS) 
+
 [Telegram channel](https://t.me/o2engine) 
 
 ![](https://github.com/zenkovich/o2/blob/master/editor.png)
