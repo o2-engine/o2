@@ -15,22 +15,22 @@ namespace o2
     {
     public:
         // Returns vector of processing assets types
-        Vector<const Type*> GetProcessingAssetsTypes() const;
+        Vector<const Type*> GetProcessingAssetsTypes() const override;
 
         // Converts atlas by path
-        void ConvertAsset(const AssetInfo& node);
+        void ConvertAsset(const AssetInfo& node) override;
 
         // Removes atlas by path
-        void RemoveAsset(const AssetInfo& node);
+        void RemoveAsset(const AssetInfo& node) override;
 
         // Moves atlas
-        void MoveAsset(const AssetInfo& nodeFrom, const AssetInfo& nodeTo);
+        void MoveAsset(const AssetInfo& nodeFrom, const AssetInfo& nodeTo) override;
 
         // Post processing atlases. Here checking atlases for rebuild
-        Vector<UID> AssetsPostProcess();
+        Vector<UID> AssetsPostProcess() override;
 
         // Resets converter
-        void Reset();
+        void Reset() override;
 
         IOBJECT(AtlasAssetConverter);
 

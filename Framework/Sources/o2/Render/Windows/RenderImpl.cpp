@@ -407,6 +407,15 @@ namespace o2
         GL_CHECK_ERROR();
     }
 
+    void Render::PlatformFlipVerticesUV()
+    {
+        for (UInt i = 0; i < mLastDrawVertex; i++)
+        {
+            Vertex& v = ((Vertex*)mVertexData)[i];
+            v.tv = 1.0f - v.tv;
+        }
+    }
+
     void Render::PlatformBeginStencilDrawing()
     {
         glEnable(GL_STENCIL_TEST);

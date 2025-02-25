@@ -20,7 +20,6 @@ namespace o2
         UInt   mWndStyle;        // Window styles data
         bool   mWindowed;        // True if app in windowed mode, false if in fullscreen mode
         bool   mWindowResizible; // True, if window can be sized by user
-        Vec2I  mWindowedSize;    // Size of window
         Vec2I  mWindowedPos;     // Position of window
         String mWndCaption;      // Window caption
         bool   mActive;          // True, if window is active

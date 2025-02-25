@@ -766,6 +766,41 @@ namespace o2
         return newComponent;
     }
 
+    template<typename _type>
+    Vector<Ref<_type>> Component::GetComponentsInChildren() const
+    {
+        if (mOwner)
+            return mOwner.Lock()->template GetComponentsInChildren<_type>();
+
+        return {};
+    }
+
+    template<typename _type>
+    Vector<Ref<_type>> Component::GetComponents() const
+    {
+        if (mOwner)
+            return mOwner.Lock()->GetComponents();
+
+        return {};
+    }
+
+    template<typename _type>
+    Ref<_type> Component::GetComponentInChildren() const
+    {
+        if (mOwner)
+            return mOwner.Lock()->template GetComponentInChildren<_type>();
+
+        return nullptr;
+    }
+
+    template<typename _type>
+    Ref<_type> Component::GetComponent() const
+    {
+        if (mOwner)
+            return mOwner.Lock()->template GetComponent<_type>();
+
+        return nullptr;
+    }
 }
 // --- META ---
 

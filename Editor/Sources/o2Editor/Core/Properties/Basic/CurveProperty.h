@@ -43,7 +43,7 @@ namespace Editor
         void InitializeControls();
 
         // Called when common curve changed in curve edit dialog, tells to drawing content
-        void OnValueChanged();
+        void OnValueChanged() override;
 
         // Called when box pressed and shows color picking dialog
         void OnClicked();

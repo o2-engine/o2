@@ -14,6 +14,8 @@ set(O2_COMPILE_DEFINITIONS SCRIPTING_BACKEND_JERRYSCRIPT _CRT_SECURE_NO_WARNINGS
 
 if (WIN32)
     list(APPEND O2_COMPILE_DEFINITIONS PLATFORM_WINDOWS)
+elseif (APPLE)
+    list(APPEND O2_COMPILE_DEFINITIONS PLATFORM_MAC)
 elseif (UNIX)
     list(APPEND O2_COMPILE_DEFINITIONS PLATFORM_LINUX)
 endif()
@@ -43,7 +45,9 @@ if (O2_MEMORY_ANALYZE)
     list(APPEND O2_COMPILE_DEFINITIONS MEMORY_ANALYZE_ENABLE)
 endif()
 
-if (UNIX)
+if (APPLE)
+    set(O2_PLATFORM "Mac" PARENT_SCOPE)
+elseif (UNIX)
     set(O2_PLATFORM "Linux" PARENT_SCOPE)
 elseif (WIN32)
     set(O2_PLATFORM "Windows" PARENT_SCOPE)
@@ -64,8 +68,8 @@ else()
 
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wno-error=format -Wno-error=format-extra-args -Wno-error=conversion \
                          -Wno-error=incompatible-pointer-types -Wno-error=sign-conversion -Wno-error=pointer-sign \
-                         -Wno-error=deprecated -Wno-reorder -Wno-unused-variable"
-    )
+                         -Wno-error=deprecated -Wno-reorder -Wno-unused-variable -Wno-unused-local-typedef \
+                         -Wno-undefined-var-template -Wno-overloaded-virtual")
 endif()
 
 # dependencies
@@ -84,7 +88,9 @@ add_custom_target(o2CopyBuiltinAssets
 # o2 Framework library
 add_library(o2Framework STATIC)
 
-file(GLOB_RECURSE o2Framework_SOURCES "Framework/Sources/*.cpp" "Framework/Sources/*.h")
+file(GLOB_RECURSE o2Framework_SOURCES "Framework/Sources/*.cpp" "Framework/Sources/*.h"
+                                      "Framework/Sources/*.m" "Framework/Sources/*.mm")
+
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${o2Framework_SOURCES})
 
 set(o2Framework_INCLUDES 
@@ -135,16 +141,21 @@ if (O2_MEMORY_ANALYZE)
 endif()
 
 if (UNIX)
-    find_package(X11 REQUIRED)
-    target_link_libraries(o2Framework PUBLIC ${X11_LIBRARIES})
+    if (NOT APPLE)
+        find_package(X11 REQUIRED)
+        target_link_libraries(o2Framework PUBLIC ${X11_LIBRARIES})
+    endif()
 
     if (O2_RENDER_API STREQUAL "gles2")
         list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}")
         find_package(OpenGLES2 REQUIRED)
         target_link_libraries(o2Framework PRIVATE OpenGLES2::OpenGLES2)
-    else()
+    elseif(NOT APPLE)
         find_package(OpenGL REQUIRED COMPONENTS GLX)
         target_link_libraries(o2Framework PUBLIC OpenGL::GL OpenGL::GLX)
+    else()
+        find_library(OpenGL_LIBRARY OpenGL)
+        target_link_libraries(o2Framework PRIVATE ${OpenGL_LIBRARY})
     endif()
 endif()
 
@@ -155,6 +166,8 @@ endif()
 
 if (UNIX)
     target_compile_options(o2Framework PRIVATE -Wno-pedantic)
+    target_compile_options(o2Framework PUBLIC "$<$<NOT:$<COMPILE_LANGUAGE:OBJC>>:-std=gnu++20>")
+    target_compile_options(o2Framework PUBLIC "-ObjC")
 elseif(MSVC)
     target_compile_options(o2Framework PUBLIC "/MP" "/Zc:__cplusplus" "/bigobj")
     target_sources(o2Framework PRIVATE "Framework/Platforms/Windows/Framework.natvis")
@@ -177,7 +190,9 @@ add_dependencies(o2Framework o2FrameworkCodegen)
 if (O2_EDITOR)
     add_library(o2Editor STATIC)
 
-    file(GLOB_RECURSE o2Framework_SOURCES "Editor/Sources/*.cpp" "Editor/Sources/*.h")
+    file(GLOB_RECURSE o2Framework_SOURCES "Editor/Sources/*.cpp" "Editor/Sources/*.h"
+                                          "Editor/Sources/*.m" "Editor/Sources/*.mm")
+
     source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${o2Framework_SOURCES})
 
     target_sources(o2Editor PRIVATE ${o2Framework_SOURCES})

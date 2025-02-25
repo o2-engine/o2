@@ -8,7 +8,7 @@ if (MSVC)
         add_compile_options(/fsanitize=address)
         add_compile_definitions(_DISABLE_STRING_ANNOTATION _DISABLE_VECTOR_ANNOTATION _DISABLE_ITERATOR_ANNOTATION)
     endif()
-else()
+elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     include(CheckGCCVersion.cmake)
 
     add_compile_options(-Wall -Wno-error=format -Wno-error=format-extra-args -Wno-error=conversion
@@ -18,6 +18,10 @@ else()
     if(GCC_MAJOR_INT GREATER_EQUAL 12 AND GCC_MINOR_INT GREATER_EQUAL 1)
         add_compile_options(-Wno-error=dangling-pointer)
     endif()
+else()
+    add_compile_options(-Wno-self-assign -Wno-parentheses-equality -Wno-shorten-64-to-32
+                        -Wno-unused-but-set-variable -Wno-deprecated-non-prototype -Wno-unused-local-typedef
+                        -Wno-deprecated-declarations)
 endif()
 
 # jerry script

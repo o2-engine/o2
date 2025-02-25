@@ -235,6 +235,8 @@ namespace o2
         
         float mGraphicsScale = 1.0f; // Application graphics scale. Used in mac for retina displays
 
+        Vec2I  mWindowedSize; // Size of window
+
     protected:
         // Basic initialization for all platforms
         virtual void BasicInitialize();
@@ -367,6 +369,7 @@ CLASS_FIELDS_META(o2::Application)
     FIELD().PROTECTED().DEFAULT_VALUE(0.0f).NAME(mAccumulatedDT);
     FIELD().PROTECTED().NAME(mMainListenersLayer);
     FIELD().PROTECTED().DEFAULT_VALUE(1.0f).NAME(mGraphicsScale);
+    FIELD().PROTECTED().NAME(mWindowedSize);
 }
 END_META;
 CLASS_METHODS_META(o2::Application)

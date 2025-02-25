@@ -537,6 +537,9 @@ namespace o2
 #elif PLATFORM_LINUX
         String assetsBuilderPath = "AssetsBuilder";
         String platform = "Linux";
+#elif PLATFORM_MAC
+        String assetsBuilderPath = "AssetsBuilder";
+        String platform = "Mac";
 #endif
 
         //-platform ${O2_PLATFORM} -source "${CMAKE_CURRENT_SOURCE_DIR}/Assets/" -target "${CMAKE_CURRENT_SOURCE_DIR}/BuiltAssets/${O2_PLATFORM}/Data/" -target-tree "${CMAKE_CURRENT_SOURCE_DIR}/BuiltAssets/${O2_PLATFORM}/Data.json" -compressor-config "${CMAKE_CURRENT_SOURCE_DIR}/o2/CompressToolsConfig.json"

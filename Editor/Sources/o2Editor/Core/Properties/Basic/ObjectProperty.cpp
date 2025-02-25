@@ -103,7 +103,7 @@ namespace Editor
                 }));
         }
 
-        SetEnabled(mObjectViewer && !mObjectViewer->IsEmpty() || !mNoHeader);
+        SetEnabled((mObjectViewer && !mObjectViewer->IsEmpty()) || !mNoHeader);
     }
 
     void ObjectProperty::CheckViewer()

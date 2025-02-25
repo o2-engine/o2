@@ -201,13 +201,7 @@ namespace o2
         static const Vector<TextureFormat> flipFormats = { TextureFormat::DXT5 };
 
         if (mCurrentDrawTexture && flipFormats.Contains(mCurrentDrawTexture->GetFormat()))
-        {
-            for (UInt i = 0; i < mLastDrawVertex; i++)
-            {
-                Vertex& v = ((Vertex*)mVertexData)[i];
-                v.tv = 1.0f - v.tv;
-            }
-        }
+            PlatformFlipVerticesUV();
     }
 
     void Render::SetupViewMatrix(const Vec2I& viewSize)

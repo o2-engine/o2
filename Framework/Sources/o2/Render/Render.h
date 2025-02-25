@@ -414,6 +414,9 @@ namespace o2
         // Checks vertex buffer for texture coordinate flip by texture format
         void CheckVertexBufferTexCoordFlipByTextureFormat();
 
+        // Platform specific flips current vertex buffer UX by Y
+        void PlatformFlipVerticesUV();
+
         // Platform specific reset renderer state
         void PlatformResetState();
 
