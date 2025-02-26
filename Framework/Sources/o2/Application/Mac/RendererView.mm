@@ -2,7 +2,7 @@
 
 #import "RendererView.h"
 
-#import "ShaderTypes.h"
+#import "o2/Render/Mac/ShaderTypes.h"
 #include "o2/Render/Render.h"
 #include "o2/Render/Mac/MetalWrappers.h"
 #include "o2/Application/Application.h"

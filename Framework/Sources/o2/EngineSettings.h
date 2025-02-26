@@ -1,7 +1,7 @@
 #pragma once
 #include "o2/Utils/Types/CommonTypes.h"
 
-#define DEBUG
+#define DEBUG true
 
 // Enables memory managing
 #if defined DEBUG

@@ -1,4 +1,4 @@
-project(o2)
+project(o2 LANGUAGES C CXX OBJC OBJCXX)
 
 set(CMAKE_CXX_STANDARD 20)
 
@@ -69,7 +69,8 @@ else()
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wno-error=format -Wno-error=format-extra-args -Wno-error=conversion \
                          -Wno-error=incompatible-pointer-types -Wno-error=sign-conversion -Wno-error=pointer-sign \
                          -Wno-error=deprecated -Wno-reorder -Wno-unused-variable -Wno-unused-local-typedef \
-                         -Wno-undefined-var-template -Wno-overloaded-virtual")
+                         -Wno-undefined-var-template -Wno-overloaded-virtual -Wno-deprecated-declarations \
+                         -Wno-delete-non-abstract-non-virtual-dtor -Wno-unused-but-set-variable")
 endif()
 
 # dependencies
@@ -154,8 +155,22 @@ if (UNIX)
         find_package(OpenGL REQUIRED COMPONENTS GLX)
         target_link_libraries(o2Framework PUBLIC OpenGL::GL OpenGL::GLX)
     else()
-        find_library(OpenGL_LIBRARY OpenGL)
-        target_link_libraries(o2Framework PRIVATE ${OpenGL_LIBRARY})
+        find_library(CORE_GRAPHICS CoreGraphics)
+        find_library(METAL Metal)
+        find_library(APP_KIT AppKit)
+        find_library(METALKIT MetalKit)
+        find_library(FOUNDATION Foundation)
+        find_library(OBJC objc)
+
+        target_link_libraries(o2Framework
+                PRIVATE
+                    ${CORE_GRAPHICS}
+                    ${METAL}
+                    ${APP_KIT}
+                    ${FOUNDATION}
+                    ${OBJC}
+                    ${METALKIT}
+        )
     endif()
 endif()
 
@@ -166,8 +181,6 @@ endif()
 
 if (UNIX)
     target_compile_options(o2Framework PRIVATE -Wno-pedantic)
-    target_compile_options(o2Framework PUBLIC "$<$<NOT:$<COMPILE_LANGUAGE:OBJC>>:-std=gnu++20>")
-    target_compile_options(o2Framework PUBLIC "-ObjC")
 elseif(MSVC)
     target_compile_options(o2Framework PUBLIC "/MP" "/Zc:__cplusplus" "/bigobj")
     target_sources(o2Framework PRIVATE "Framework/Platforms/Windows/Framework.natvis")
