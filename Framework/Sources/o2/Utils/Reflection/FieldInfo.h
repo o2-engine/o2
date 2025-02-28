@@ -15,6 +15,7 @@ namespace o2
     struct IDefaultValue
     {
         virtual bool Equals(void* value) const = 0;
+        virtual ~IDefaultValue() {}
     };
 
     template<typename T>

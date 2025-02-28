@@ -814,9 +814,6 @@ namespace o2
         if (mode == ActorCreateMode::Default)
             mode = ActorCreateMode::InScene;
 
-        if (mode != mDefaultCreationMode)
-            mode = mode;
-
         mDefaultCreationMode = mode;
     }
 

@@ -16,6 +16,7 @@ if (WIN32)
     list(APPEND O2_COMPILE_DEFINITIONS PLATFORM_WINDOWS)
 elseif (APPLE)
     list(APPEND O2_COMPILE_DEFINITIONS PLATFORM_MAC)
+    list(APPEND O2_COMPILE_DEFINITIONS BOOST_STACKTRACE_GNU_SOURCE_NOT_REQUIRED)
 elseif (UNIX)
     list(APPEND O2_COMPILE_DEFINITIONS PLATFORM_LINUX)
 endif()
@@ -70,7 +71,9 @@ else()
                          -Wno-error=incompatible-pointer-types -Wno-error=sign-conversion -Wno-error=pointer-sign \
                          -Wno-error=deprecated -Wno-reorder -Wno-unused-variable -Wno-unused-local-typedef \
                          -Wno-undefined-var-template -Wno-overloaded-virtual -Wno-deprecated-declarations \
-                         -Wno-delete-non-abstract-non-virtual-dtor -Wno-unused-but-set-variable")
+                         -Wno-delete-non-abstract-non-virtual-dtor -Wno-unused-but-set-variable \
+                         -Wno-inconsistent-missing-override -Wno-shorten-64-to-32 -Wno-switch -Wno-delete-incomplete \
+                         -Wno-potentially-evaluated-expression")
 endif()
 
 # dependencies

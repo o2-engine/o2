@@ -30,7 +30,7 @@ namespace o2
         
         TextureRef mWhiteTexture; // Default white texture
         
-        friend class RenderDevice;
+        friend struct RenderDevice;
     };
 };
 
