@@ -505,6 +505,9 @@ namespace Editor
 	{
         static Vector<String> searchNames = { "name", "id", "mName", "mId", "_name", "_id" };
 
+		if (!object)
+			return String::empty;
+
         if (type.GetUsage() == Type::Usage::Reference)
         {
             if (auto referenceType = dynamic_cast<const ReferenceType*>(&type))

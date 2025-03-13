@@ -3,7 +3,7 @@
         "Type": "Editor::ActorProperty",
         "Value": {
             "Prototype": {
-                "id": "4d641916518140a942f94d6e60670858",
+                "id": "27bc0c3747bb20704501041624e23a37",
                 "path": "Editor UI styles/Editor  Actor Property standard.proto"
             },
             "PrototypeLink": 4805589122804512876,
@@ -20,7 +20,7 @@
                     "Type": "o2::Label",
                     "Data": {
                         "Prototype": {
-                            "id": "047318127fa57cf72398035e105414ad",
+                            "id": "61f4253507aa1fb5662634953cdd346c",
                             "path": "Editor UI styles/O2  Label standard.proto"
                         },
                         "PrototypeLink": 9613259363390956959,
@@ -79,7 +79,7 @@
                                                         "Type": "o2::Button",
                                                         "Data": {
                                                             "Prototype": {
-                                                                "id": "41b20cc310ce653c5f8373f900d549b7",
+                                                                "id": "4df2151202081afd3d7002d0503c7a97",
                                                                 "path": "Editor UI styles/O2  Button asset link.proto"
                                                             },
                                                             "PrototypeLink": 6733663352943945518,

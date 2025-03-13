@@ -42,7 +42,7 @@
                                             "Type": "o2::Toggle",
                                             "Data": {
                                                 "Prototype": {
-                                                    "id": "726f4c9708504d5f36ba20ad0e9b6718",
+                                                    "id": "48b04b0432551ffd288a57034bbb3d30",
                                                     "path": "Editor UI styles/O2  Toggle actor head enable.proto"
                                                 },
                                                 "PrototypeLink": 2030780835377490888,

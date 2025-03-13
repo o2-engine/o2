@@ -83,8 +83,8 @@ namespace o2
                 mPlaying = false;
                 Evaluate();
 
-                onStopEvent();
-                onPlayedEvent();
+                onStop();
+                onPlayed();
                 OnStop();
             }
             else if (mTime < mBeginTime)
@@ -94,8 +94,8 @@ namespace o2
                 mPlaying = false;
                 Evaluate();
 
-                onStopEvent();
-                onPlayedEvent();
+                onStop();
+                onPlayed();
                 OnStop();
             }
             else
@@ -145,7 +145,7 @@ namespace o2
 
         mPlaying = true;
 
-        onPlayEvent();
+        onPlay();
         OnPlay();
     }
 
@@ -186,7 +186,7 @@ namespace o2
 
         mPlaying = false;
 
-        onStopEvent();
+        onStop();
         OnStop();
     }
 

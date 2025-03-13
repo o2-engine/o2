@@ -13,17 +13,63 @@ namespace o2
     // ---------------------------------------------------------------------------------------
     class AnimationStateGraphComponent: public Component
     {
+	public:
+		// ------------------------------------------------------------
+		// State player. Contains animation players and state reference
+		// ------------------------------------------------------------
+		struct StatePlayer: public RefCounterable
+		{
+		public:
+			// Setup state player. Initializes animation players
+			void Setup(const Ref<AnimationComponent>& animationComponent, const Ref<AnimationGraphState>& state,
+					   const Ref<AnimationStateGraphComponent>& owner);
+
+			// Play state
+			void Play();
+
+			// Stop state
+			void Stop();
+
+			// Set weight of state
+			void SetWeight(float weight);
+
+			// Returns time of state. Gets value from first animation player
+			float GetTime() const;
+
+			// Returns duration of state. Gets value from first animation player
+			float GetDuration() const;
+
+			// Returns players
+            const Vector<Pair<Ref<AnimationGraphState::Animation>, Ref<IAnimationState>>>& GetPlayers() const;
+
+			// Returns state
+			const Ref<AnimationGraphState>& GetState() const;
+
+			// Returns owner
+			Ref<AnimationStateGraphComponent> GetOwner() const;
+
+		private:
+			Vector<Pair<Ref<AnimationGraphState::Animation>, Ref<IAnimationState>>> mPlayers; // Animation players
+
+			Ref<AnimationGraphState> mState; // State reference
+
+			WeakRef<AnimationStateGraphComponent> mOwner; // Owner reference
+		};
+
     public:
         PROPERTIES(AnimationStateGraphComponent);
         PROPERTY(AssetRef<AnimationStateGraphAsset>, graph, SetGraph, GetGraph); // State graph asset property
         PROPERTY(String, State, GoToState, GetCurrentStateName);                 // Current state property
 
     public:
-		Function<void(const Ref<AnimationGraphState>& state)> onStateStarted;  // Event, called when state started
-		Function<void(const Ref<AnimationGraphState>& state)> onStateFinished; // Event, called when state finished
+		Function<void(const Ref<StatePlayer>& player)> onStateStarted;  // Event, called when state started
+		Function<void(const Ref<StatePlayer>& player)> onStateFinished; // Event, called when state finished
 
 		Function<void(const Ref<AnimationGraphTransition>& transition)> onTransitionStarted;  // Event, called when transition started
 		Function<void(const Ref<AnimationGraphTransition>& transition)> onTransitionFinished; // Event, called when transition finished
+    	Function<void(const Ref<AnimationGraphTransition>& transition)> onTransitionCancelled; // Event, called when transition cancelled
+
+		Function<void(const Vector<Ref<AnimationGraphTransition>>& path)> onTransitionsPlanned; // Event, called when transitions planned
 
     public:
         // Default constructor @SCRIPTABLE
@@ -33,7 +79,7 @@ namespace o2
         AnimationStateGraphComponent(const AnimationStateGraphComponent& other);
 
         // Destructor
-        ~AnimationStateGraphComponent();
+        ~AnimationStateGraphComponent() override;
 
         // Copy-operator
         AnimationStateGraphComponent& operator=(const AnimationStateGraphComponent& other);
@@ -68,14 +114,26 @@ namespace o2
         // Returns current state
         const Ref<AnimationGraphState>& GetCurrentState() const;
 
+		// Returns current state player
+		const Ref<StatePlayer>& GetCurrentStatePlayer() const;
+
         // Returns current state name
         String GetCurrentStateName() const;
 
         // Returns next state
         const Ref<AnimationGraphState>& GetNextState() const;
 
+		// Returns next state player
+		const Ref<StatePlayer>& GetNextStatePlayer() const;
+
+		// Returns next state name
+		String GetNextStateName() const;
+
         // Returns current transition
         const Ref<AnimationGraphTransition>& GetCurrentTransition() const;
+
+		// Returns current transition time
+		float GetCurrentTransitionTime() const;
 
         // Returns next transitions
         const Vector<Ref<AnimationGraphTransition>>& GetNextTransitions() const;
@@ -93,45 +151,15 @@ namespace o2
         REF_COUNTERABLE_IMPL(Component);
 
     protected:
-        struct StatePlayer
-        {
-            Vector<Pair<Ref<AnimationGraphState::Animation>, Ref<IAnimationState>>> players;
-
-            Ref<AnimationGraphState> state;
-
-			WeakRef<AnimationStateGraphComponent> owner;
-
-        public:
-            // Setup state player. Initializes animation players
-            void Setup(const Ref<AnimationComponent>& animationComponent, const Ref<AnimationGraphState>& state, 
-                       const Ref<AnimationStateGraphComponent>& owner);
-
-            // Play state
-            void Play();
-
-            // Stop state
-            void Stop();
-
-            // Set weight of state
-            void SetWeight(float weight);
-
-            // Returns time of state. Gets value from first animation player
-            float GetTime() const;
-
-            // Returns duration of state. Gets value from first animation player
-            float GetDuration() const;
-        };
-
-    protected:
         AssetRef<AnimationStateGraphAsset> mStateGraph; // State graph asset @SERIALIZABLE 
 
         WeakRef<AnimationComponent> mAnimationComponent; // Animation component reference
 
         Ref<AnimationGraphState> mCurrentState;       // Current state
-        StatePlayer              mCurrentStatePlayer; // Current state player
+        Ref<StatePlayer>         mCurrentStatePlayer; // Current state player
 
         Ref<AnimationGraphState> mNextState;       // Next state
-        StatePlayer              mNextStatePlayer; // Next state player
+        Ref<StatePlayer>         mNextStatePlayer; // Next state player
 
         Ref<AnimationGraphTransition> mCurrentTransition;            // Current transition
         float                         mCurrentTransitionTime = 0.0f; // Current transition time
@@ -167,6 +195,8 @@ CLASS_FIELDS_META(o2::AnimationStateGraphComponent)
     FIELD().PUBLIC().NAME(onStateFinished);
     FIELD().PUBLIC().NAME(onTransitionStarted);
     FIELD().PUBLIC().NAME(onTransitionFinished);
+    FIELD().PUBLIC().NAME(onTransitionCancelled);
+    FIELD().PUBLIC().NAME(onTransitionsPlanned);
     FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().NAME(mStateGraph);
     FIELD().PROTECTED().NAME(mAnimationComponent);
     FIELD().PROTECTED().NAME(mCurrentState);
@@ -193,9 +223,13 @@ CLASS_METHODS_META(o2::AnimationStateGraphComponent)
     FUNCTION().PUBLIC().SIGNATURE(void, ForcePlayState, const Ref<AnimationGraphState>&);
     FUNCTION().PUBLIC().SIGNATURE(void, StopTransition);
     FUNCTION().PUBLIC().SIGNATURE(const Ref<AnimationGraphState>&, GetCurrentState);
+    FUNCTION().PUBLIC().SIGNATURE(const Ref<StatePlayer>&, GetCurrentStatePlayer);
     FUNCTION().PUBLIC().SIGNATURE(String, GetCurrentStateName);
     FUNCTION().PUBLIC().SIGNATURE(const Ref<AnimationGraphState>&, GetNextState);
+    FUNCTION().PUBLIC().SIGNATURE(const Ref<StatePlayer>&, GetNextStatePlayer);
+    FUNCTION().PUBLIC().SIGNATURE(String, GetNextStateName);
     FUNCTION().PUBLIC().SIGNATURE(const Ref<AnimationGraphTransition>&, GetCurrentTransition);
+    FUNCTION().PUBLIC().SIGNATURE(float, GetCurrentTransitionTime);
     FUNCTION().PUBLIC().SIGNATURE(const Vector<Ref<AnimationGraphTransition>>&, GetNextTransitions);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetName);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetCategory);

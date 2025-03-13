@@ -3,7 +3,7 @@
         "Type": "Editor::AssetProperty",
         "Value": {
             "Prototype": {
-                "id": "07654df0022c60756a871ec008556e9b",
+                "id": "033178105954489227d504cc4c1e525a",
                 "path": "Editor UI styles/Editor  Asset Property standard.proto"
             },
             "PrototypeLink": 13905003956545137290,
@@ -14,7 +14,7 @@
                     "Type": "o2::Spoiler",
                     "Data": {
                         "Prototype": {
-                            "id": "014e34505071452216bf64900e7f4280",
+                            "id": "1052104270f8398467c163f07df80c14",
                             "path": "Editor UI styles/O2  Spoiler expand with caption.proto"
                         },
                         "PrototypeLink": 7302530387275184224,
@@ -24,7 +24,7 @@
                                 "Type": "o2::Button",
                                 "Data": {
                                     "Prototype": {
-                                        "id": "16bc090c409a6bf659c018272fa12223",
+                                        "id": "5b1f1a9e51f23d7d36992c55422c6972",
                                         "path": "Editor UI styles/O2  Button expand.proto"
                                     },
                                     "PrototypeLink": 12815916003396062931,
@@ -216,7 +216,7 @@
                                             "Type": "o2::Label",
                                             "Data": {
                                                 "Prototype": {
-                                                    "id": "047318127fa57cf72398035e105414ad",
+                                                    "id": "61f4253507aa1fb5662634953cdd346c",
                                                     "path": "Editor UI styles/O2  Label standard.proto"
                                                 },
                                                 "PrototypeLink": 9613259363390956959,
@@ -300,7 +300,7 @@
                                                                     "Type": "o2::Button",
                                                                     "Data": {
                                                                         "Prototype": {
-                                                                            "id": "60746c0e267f21900c81155b3fc965d1",
+                                                                            "id": "2c0d6b591f7e6c556b01787123f95d08",
                                                                             "path": "Editor UI styles/O2  Button create asset instance.proto"
                                                                         },
                                                                         "PrototypeLink": 12027224945567259969,
@@ -444,7 +444,7 @@
                                                                     "Type": "o2::Button",
                                                                     "Data": {
                                                                         "Prototype": {
-                                                                            "id": "2563481751882ba813813c4e70080147",
+                                                                            "id": "1f765d6455ce1981087d201057906b8c",
                                                                             "path": "Editor UI styles/O2  Button remove asset instance.proto"
                                                                         },
                                                                         "PrototypeLink": 934262872080852003,
@@ -596,7 +596,7 @@
                                                                     "Type": "o2::Button",
                                                                     "Data": {
                                                                         "Prototype": {
-                                                                            "id": "4d220f850fe21e503264424a314c3610",
+                                                                            "id": "20cf2c74238f2ddb62fc1a596a4d2402",
                                                                             "path": "Editor UI styles/O2  Button save asset instance.proto"
                                                                         },
                                                                         "PrototypeLink": 1993097511871404322,
@@ -958,7 +958,7 @@
                                                                                         "meta": {
                                                                                             "Type": "o2::DefaultAssetMeta<o2::AnimationAsset>",
                                                                                             "Value": {
-                                                                                                "mId": "3108437400b2588069651ebd619b2102"
+                                                                                                "mId": "1897224e14931f845316024e0dbb50c9"
                                                                                             }
                                                                                         }
                                                                                     }
@@ -1011,7 +1011,7 @@
                                                                                         "meta": {
                                                                                             "Type": "o2::DefaultAssetMeta<o2::AnimationAsset>",
                                                                                             "Value": {
-                                                                                                "mId": "6db723ae32324364250134b97d147e84"
+                                                                                                "mId": "56337a4220ac4f40224f0d1f60011d12"
                                                                                             }
                                                                                         }
                                                                                     }
@@ -1026,7 +1026,7 @@
                                                                     "Type": "o2::Label",
                                                                     "Value": {
                                                                         "Prototype": {
-                                                                            "id": "047318127fa57cf72398035e105414ad",
+                                                                            "id": "61f4253507aa1fb5662634953cdd346c",
                                                                             "path": "Editor UI styles/O2  Label standard.proto"
                                                                         },
                                                                         "PrototypeLink": 9613259363390956959,

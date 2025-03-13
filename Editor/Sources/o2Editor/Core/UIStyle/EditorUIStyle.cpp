@@ -3676,6 +3676,7 @@ namespace Editor
         sample->spacing = 5;
         sample->border = BorderF(10, 10, 10, 10);
 
+		auto shadow = sample->AddLayer("shadow", mmake<Sprite>("ui/UI4_animation_state_shadow.png"), Layout::BothStretch(1, -17, -13, -1));
 		auto back = sample->AddLayer("back", mmake<Sprite>("ui/UI4_animation_state_regular.png"), Layout::BothStretch(-6, -10, -6, -8));
 		auto hover = sample->AddLayer("hover", mmake<Sprite>("ui/UI4_animation_state_hover.png"), Layout::BothStretch(-6, -10, -6, -8));
 		auto pressed = sample->AddLayer("pressed", mmake<Sprite>("ui/UI4_animation_state_pressed.png"), Layout::BothStretch(-6, -10, -6, -8));

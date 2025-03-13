@@ -4,8 +4,7 @@
 
 namespace o2
 {
-    AnimationStateGraphComponent::AnimationStateGraphComponent()
-    {}
+    AnimationStateGraphComponent::AnimationStateGraphComponent() = default;
 
     AnimationStateGraphComponent::AnimationStateGraphComponent(const AnimationStateGraphComponent& other) :
         Component(other)
@@ -13,8 +12,7 @@ namespace o2
         Reset();
     }
 
-    AnimationStateGraphComponent::~AnimationStateGraphComponent()
-    {}
+    AnimationStateGraphComponent::~AnimationStateGraphComponent() = default;
 
     AnimationStateGraphComponent& AnimationStateGraphComponent::operator=(const AnimationStateGraphComponent& other)
     {
@@ -60,6 +58,8 @@ namespace o2
 
         auto sourceState = mCurrentState;
         mNextTransitions = mStateGraph->CalculatePath(sourceState, state);
+
+		onTransitionsPlanned(mNextTransitions);
     }
 
     void AnimationStateGraphComponent::ForcePlayState(const String& name)
@@ -77,23 +77,34 @@ namespace o2
 
         StopTransition();
 
-        if (mCurrentState)
-            mCurrentStatePlayer.Stop();
+        if (mCurrentStatePlayer)
+        {
+            mCurrentStatePlayer->Stop();
+            mCurrentStatePlayer = nullptr;
+        }
 
         mCurrentState = state;
 
-        mCurrentStatePlayer.Setup(GetAnimationComponent(), mCurrentState, Ref(this));
-        mCurrentStatePlayer.Play();
+		mCurrentStatePlayer = mmake<StatePlayer>();
+        mCurrentStatePlayer->Setup(GetAnimationComponent(), mCurrentState, Ref(this));
+        mCurrentStatePlayer->Play();
     }
 
     void AnimationStateGraphComponent::StopTransition()
     {
+        if (mCurrentTransition)
+            onTransitionCancelled(mCurrentTransition);
+
+        for (auto& transition : mNextTransitions)
+            onTransitionCancelled(transition);
+
         mCurrentTransition = nullptr;
         mNextTransitions.Clear();
 
         if (mNextState)
         {
-            mNextStatePlayer.Stop();
+            mNextStatePlayer->Stop();
+			mNextStatePlayer = nullptr;
             mNextState = nullptr;
         }
     }
@@ -103,7 +114,12 @@ namespace o2
         return mCurrentState;
     }
 
-    String AnimationStateGraphComponent::GetCurrentStateName() const
+	const Ref<AnimationStateGraphComponent::StatePlayer>& AnimationStateGraphComponent::GetCurrentStatePlayer() const
+	{
+		return mCurrentStatePlayer;
+	}
+
+	String AnimationStateGraphComponent::GetCurrentStateName() const
     {
         if (mCurrentState)
             return mCurrentState->name;
@@ -126,14 +142,11 @@ namespace o2
 
     void AnimationStateGraphComponent::CheckStartNextTransition()
     {
-        if (mCurrentTransition)
-            return;
-
-        if (mNextTransitions.IsEmpty())
+        if (mCurrentTransition || mNextTransitions.IsEmpty() || !mCurrentStatePlayer)
             return;
 
         auto nextTransition = mNextTransitions[0];
-        float currentRelativeTime = mCurrentStatePlayer.GetTime() / mCurrentStatePlayer.GetDuration();
+        float currentRelativeTime = mCurrentStatePlayer->GetTime() / mCurrentStatePlayer->GetDuration();
         bool canStartByTime = currentRelativeTime >= nextTransition->beginTimeRange && 
                               currentRelativeTime <= nextTransition->endTimeRange;
 
@@ -144,8 +157,10 @@ namespace o2
         mNextTransitions.RemoveAt(0);
 
         mNextState = mCurrentTransition->GetDestinationState();
-        mNextStatePlayer.Setup(GetAnimationComponent(), mNextState, Ref(this));
-        mNextStatePlayer.Play();
+
+		mNextStatePlayer = mmake<StatePlayer>();
+        mNextStatePlayer->Setup(GetAnimationComponent(), mNextState, Ref(this));
+        mNextStatePlayer->Play();
 
         mCurrentTransitionTime = 0.0f;
 
@@ -154,7 +169,7 @@ namespace o2
 
     void AnimationStateGraphComponent::UpdateCurrentTransition(float dt)
     {
-        if (!mCurrentTransition)
+        if (!mCurrentTransition || !mCurrentStatePlayer || !mNextStatePlayer)
             return;
 
         mCurrentTransitionTime += dt;
@@ -167,12 +182,12 @@ namespace o2
         if (mCurrentTransition->curve)
             coef = mCurrentTransition->curve->Evaluate(coef);
 
-        mCurrentStatePlayer.SetWeight(1.0f - coef);
-        mNextStatePlayer.SetWeight(coef);
+        mCurrentStatePlayer->SetWeight(1.0f - coef);
+        mNextStatePlayer->SetWeight(coef);
 
         if (isFinished)
         {
-            mCurrentStatePlayer.Stop();
+            mCurrentStatePlayer->Stop();
 
 			onTransitionFinished(mCurrentTransition);
 
@@ -180,6 +195,7 @@ namespace o2
             mCurrentStatePlayer = mNextStatePlayer;
 
             mCurrentTransition = nullptr;
+			mNextStatePlayer = nullptr;
             mNextState = nullptr;
         }
     }
@@ -197,9 +213,9 @@ namespace o2
                                                           const Ref<AnimationGraphState>& state,
 														  const Ref<AnimationStateGraphComponent>& owner)
     {
-        players.Clear();
-        this->state = state;
-        this->owner = owner;
+        mPlayers.Clear();
+        this->mState = state;
+        this->mOwner = owner;
         
         if (!state)
             return;
@@ -210,61 +226,94 @@ namespace o2
             if (!player)
                 continue;
 
-            players.Add({ animation, player });
+            mPlayers.Add({ animation, player });
         }
     }
 
     void AnimationStateGraphComponent::StatePlayer::Play()
     {
-        for (auto& player : players)
+        for (auto& player : mPlayers)
             player.second->GetPlayer().Play();
 
-		if (auto ownerRef = owner.Lock())
-			ownerRef->onStateStarted(state);
+		if (auto ownerRef = mOwner.Lock())
+			ownerRef->onStateStarted(Ref(this));
     }
 
     void AnimationStateGraphComponent::StatePlayer::Stop()
     {
-        for (auto& player : players)
+        for (auto& player : mPlayers)
             player.second->GetPlayer().Stop();
 
-		if (auto ownerRef = owner.Lock())
-			ownerRef->onStateFinished(state);
+		if (auto ownerRef = mOwner.Lock())
+			ownerRef->onStateFinished(Ref(this));
     }
 
     void AnimationStateGraphComponent::StatePlayer::SetWeight(float weight)
     {
-        for (auto& player : players)
+        for (auto& player : mPlayers)
             player.second->SetWeight(weight);
     }
 
     float AnimationStateGraphComponent::StatePlayer::GetTime() const
     {
-        if (players.IsEmpty())
+        if (mPlayers.IsEmpty())
             return 0.0f;
 
-        return players[0].second->GetPlayer().GetInDurationTime();
+        return mPlayers[0].second->GetPlayer().GetInDurationTime();
     }
 
     float AnimationStateGraphComponent::StatePlayer::GetDuration() const
     {
-        if (players.IsEmpty())
+        if (mPlayers.IsEmpty())
             return 0.0f;
 
-        return players[0].second->GetPlayer().GetDuration();
+        return mPlayers[0].second->GetPlayer().GetDuration();
     }
 
-    const Ref<AnimationGraphState>& AnimationStateGraphComponent::GetNextState() const
+	const Vector<Pair<Ref<AnimationGraphState::Animation>, Ref<IAnimationState>>>& AnimationStateGraphComponent::StatePlayer::GetPlayers() const
+	{
+        return mPlayers;
+	}
+
+	const Ref<AnimationGraphState>& AnimationStateGraphComponent::StatePlayer::GetState() const
+	{
+		return mState;
+	}
+
+	Ref<AnimationStateGraphComponent> AnimationStateGraphComponent::StatePlayer::GetOwner() const
+	{
+		return mOwner.Lock();
+	}
+
+	const Ref<AnimationGraphState>& AnimationStateGraphComponent::GetNextState() const
     {
         return mNextState;
     }
 
-    const Ref<AnimationGraphTransition>& AnimationStateGraphComponent::GetCurrentTransition() const
+	const Ref<AnimationStateGraphComponent::StatePlayer>& AnimationStateGraphComponent::GetNextStatePlayer() const
+	{
+		return mNextStatePlayer;
+	}
+
+	String AnimationStateGraphComponent::GetNextStateName() const
+	{
+		if (mNextState)
+			return mNextState->name;
+
+		return "";
+	}
+
+	const Ref<AnimationGraphTransition>& AnimationStateGraphComponent::GetCurrentTransition() const
     {
         return mCurrentTransition;
     }
 
-    const Vector<Ref<AnimationGraphTransition>>& AnimationStateGraphComponent::GetNextTransitions() const
+	float AnimationStateGraphComponent::GetCurrentTransitionTime() const
+	{
+		return mCurrentTransitionTime;
+	}
+
+	const Vector<Ref<AnimationGraphTransition>>& AnimationStateGraphComponent::GetNextTransitions() const
     {
         return mNextTransitions;
     }

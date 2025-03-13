@@ -347,7 +347,7 @@
                     "Type": "o2::HorizontalScrollBar",
                     "Value": {
                         "Prototype": {
-                            "id": "09817f9b558c58502268534b4acc21f5",
+                            "id": "45136f1e498d114a3934747d38e4186a",
                             "path": "Editor UI styles/O2  Horizontal Scroll Bar standard.proto"
                         },
                         "PrototypeLink": 2396346607982954160,
@@ -503,7 +503,7 @@
                     "Type": "o2::VerticalScrollBar",
                     "Value": {
                         "Prototype": {
-                            "id": "273e45743056153d6baf123b080d57d6",
+                            "id": "04325a0179c53893745f75a270254f20",
                             "path": "Editor UI styles/O2  Vertical Scroll Bar standard.proto"
                         },
                         "PrototypeLink": 8311025582170325613,
@@ -663,7 +663,7 @@
                     "Type": "o2::Button",
                     "Value": {
                         "Prototype": {
-                            "id": "5a416df6720b099b62961bb076023c52",
+                            "id": "4991362f117a6dbb280833f66dac6b36",
                             "path": "Editor UI styles/O2  Button close.proto"
                         },
                         "PrototypeLink": 5849452934504718062,
@@ -762,7 +762,7 @@
                     "Type": "o2::Button",
                     "Value": {
                         "Prototype": {
-                            "id": "682717571fc525ce03d10f8f24560617",
+                            "id": "189144b2721b7521445e31a128f97a28",
                             "path": "Editor UI styles/O2  Button arrow.proto"
                         },
                         "PrototypeLink": 13921512005207480944,
@@ -1011,7 +1011,7 @@
                             "meta": {
                                 "Type": "o2::DefaultAssetMeta<o2::AnimationAsset>",
                                 "Value": {
-                                    "mId": "72bf0dbc5f0754b47c7345e67bb3613f"
+                                    "mId": "59fd372524cf7e8c020004a353543551"
                                 }
                             }
                         }

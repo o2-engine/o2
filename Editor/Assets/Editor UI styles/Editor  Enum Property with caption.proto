@@ -3,7 +3,7 @@
         "Type": "Editor::EnumProperty",
         "Value": {
             "Prototype": {
-                "id": "3ca3120c3802358918eb238470981ee5",
+                "id": "741d41d74ca6448d46f17a8d2d3e256a",
                 "path": "Editor UI styles/Editor  Enum Property standard.proto"
             },
             "PrototypeLink": 2591757174609462046,
@@ -20,7 +20,7 @@
                     "Type": "o2::Label",
                     "Data": {
                         "Prototype": {
-                            "id": "047318127fa57cf72398035e105414ad",
+                            "id": "61f4253507aa1fb5662634953cdd346c",
                             "path": "Editor UI styles/O2  Label standard.proto"
                         },
                         "PrototypeLink": 9613259363390956959,
@@ -73,7 +73,7 @@
                                             "Type": "o2::DropDown",
                                             "Data": {
                                                 "Prototype": {
-                                                    "id": "12731625483117c95d55282c293e0480",
+                                                    "id": "5b205949421c1175395b5fa0165f1347",
                                                     "path": "Editor UI styles/O2  Drop Down standard.proto"
                                                 },
                                                 "PrototypeLink": 2578094123240746403,
@@ -109,7 +109,7 @@
                                                                 "Type": "o2::Label",
                                                                 "Value": {
                                                                     "Prototype": {
-                                                                        "id": "047318127fa57cf72398035e105414ad",
+                                                                        "id": "61f4253507aa1fb5662634953cdd346c",
                                                                         "path": "Editor UI styles/O2  Label standard.proto"
                                                                     },
                                                                     "PrototypeLink": 9613259363390956959,
@@ -273,7 +273,7 @@
                                                                     "Type": "o2::HorizontalScrollBar",
                                                                     "Value": {
                                                                         "Prototype": {
-                                                                            "id": "09817f9b558c58502268534b4acc21f5",
+                                                                            "id": "45136f1e498d114a3934747d38e4186a",
                                                                             "path": "Editor UI styles/O2  Horizontal Scroll Bar standard.proto"
                                                                         },
                                                                         "PrototypeLink": 2396346607982954160,
@@ -558,7 +558,7 @@
                                                                     "Type": "o2::VerticalScrollBar",
                                                                     "Value": {
                                                                         "Prototype": {
-                                                                            "id": "273e45743056153d6baf123b080d57d6",
+                                                                            "id": "04325a0179c53893745f75a270254f20",
                                                                             "path": "Editor UI styles/O2  Vertical Scroll Bar standard.proto"
                                                                         },
                                                                         "PrototypeLink": 8311025582170325613,
@@ -943,7 +943,7 @@
                                                                             "meta": {
                                                                                 "Type": "o2::DefaultAssetMeta<o2::AnimationAsset>",
                                                                                 "Value": {
-                                                                                    "mId": "3752691e39446ace424e099077b84521"
+                                                                                    "mId": "3c8c0f8906eb7bb158ab79b200aa77c2"
                                                                                 }
                                                                             }
                                                                         }
@@ -996,7 +996,7 @@
                                                                             "meta": {
                                                                                 "Type": "o2::DefaultAssetMeta<o2::AnimationAsset>",
                                                                                 "Value": {
-                                                                                    "mId": "5d3d353e06c5532c29d24e394d3b371a"
+                                                                                    "mId": "603b3c72028a0a653383509f5a611160"
                                                                                 }
                                                                             }
                                                                         }
@@ -1049,7 +1049,7 @@
                                                                             "meta": {
                                                                                 "Type": "o2::DefaultAssetMeta<o2::AnimationAsset>",
                                                                                 "Value": {
-                                                                                    "mId": "08c7699928742fc1359543e80c985666"
+                                                                                    "mId": "18ba6f302b1a27b9216c564b535353da"
                                                                                 }
                                                                             }
                                                                         }
@@ -1102,7 +1102,7 @@
                                                                             "meta": {
                                                                                 "Type": "o2::DefaultAssetMeta<o2::AnimationAsset>",
                                                                                 "Value": {
-                                                                                    "mId": "3bcc719077162ef40c84344d5c23223d"
+                                                                                    "mId": "32664fa577de22965bd378e8385506e9"
                                                                                 }
                                                                             }
                                                                         }

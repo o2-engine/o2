@@ -63,7 +63,7 @@
                                                         "Type": "o2::Label",
                                                         "Data": {
                                                             "Prototype": {
-                                                                "id": "047318127fa57cf72398035e105414ad",
+                                                                "id": "61f4253507aa1fb5662634953cdd346c",
                                                                 "path": "Editor UI styles/O2  Label standard.proto"
                                                             },
                                                             "PrototypeLink": 9613259363390956959,
@@ -110,7 +110,7 @@
                                                         "Type": "Editor::FloatProperty",
                                                         "Data": {
                                                             "Prototype": {
-                                                                "id": "56f242985ad07bc62c6d3b9060d73a6d",
+                                                                "id": "4f5878c922034ba55dc01b8a59715cac",
                                                                 "path": "Editor UI styles/Editor  Float Property standard.proto"
                                                             },
                                                             "PrototypeLink": 8335615307801933253,
@@ -151,7 +151,7 @@
                                                                                             "Type": "o2::HorizontalProgress",
                                                                                             "Data": {
                                                                                                 "Prototype": {
-                                                                                                    "id": "3ca7340851a005940cb74b75620f229f",
+                                                                                                    "id": "0ed666573f245db7071c7b1f5e854149",
                                                                                                     "path": "Editor UI styles/O2  Horizontal Progress standard.proto"
                                                                                                 },
                                                                                                 "PrototypeLink": 6794873802875439462,
@@ -293,7 +293,7 @@
                                                                                             "Type": "o2::EditBox",
                                                                                             "Data": {
                                                                                                 "Prototype": {
-                                                                                                    "id": "29ec36bf44e3370c529d002b0215765a",
+                                                                                                    "id": "6010654b326119412c31155531970867",
                                                                                                     "path": "Editor UI styles/O2  Edit Box singleline with arrows.proto"
                                                                                                 },
                                                                                                 "PrototypeLink": 16188381784564775579,
@@ -476,7 +476,7 @@
                                                         "Type": "o2::Label",
                                                         "Data": {
                                                             "Prototype": {
-                                                                "id": "047318127fa57cf72398035e105414ad",
+                                                                "id": "61f4253507aa1fb5662634953cdd346c",
                                                                 "path": "Editor UI styles/O2  Label standard.proto"
                                                             },
                                                             "PrototypeLink": 9613259363390956959,
@@ -531,7 +531,7 @@
                                                         "Type": "Editor::FloatProperty",
                                                         "Data": {
                                                             "Prototype": {
-                                                                "id": "56f242985ad07bc62c6d3b9060d73a6d",
+                                                                "id": "4f5878c922034ba55dc01b8a59715cac",
                                                                 "path": "Editor UI styles/Editor  Float Property standard.proto"
                                                             },
                                                             "PrototypeLink": 8335615307801933253,
@@ -576,7 +576,7 @@
                                                                                             "Type": "o2::HorizontalProgress",
                                                                                             "Data": {
                                                                                                 "Prototype": {
-                                                                                                    "id": "3ca7340851a005940cb74b75620f229f",
+                                                                                                    "id": "0ed666573f245db7071c7b1f5e854149",
                                                                                                     "path": "Editor UI styles/O2  Horizontal Progress standard.proto"
                                                                                                 },
                                                                                                 "PrototypeLink": 6794873802875439462,
@@ -718,7 +718,7 @@
                                                                                             "Type": "o2::EditBox",
                                                                                             "Data": {
                                                                                                 "Prototype": {
-                                                                                                    "id": "29ec36bf44e3370c529d002b0215765a",
+                                                                                                    "id": "6010654b326119412c31155531970867",
                                                                                                     "path": "Editor UI styles/O2  Edit Box singleline with arrows.proto"
                                                                                                 },
                                                                                                 "PrototypeLink": 16188381784564775579,
@@ -901,7 +901,7 @@
                                                         "Type": "o2::Label",
                                                         "Data": {
                                                             "Prototype": {
-                                                                "id": "047318127fa57cf72398035e105414ad",
+                                                                "id": "61f4253507aa1fb5662634953cdd346c",
                                                                 "path": "Editor UI styles/O2  Label standard.proto"
                                                             },
                                                             "PrototypeLink": 9613259363390956959,
@@ -956,7 +956,7 @@
                                                         "Type": "Editor::FloatProperty",
                                                         "Data": {
                                                             "Prototype": {
-                                                                "id": "56f242985ad07bc62c6d3b9060d73a6d",
+                                                                "id": "4f5878c922034ba55dc01b8a59715cac",
                                                                 "path": "Editor UI styles/Editor  Float Property standard.proto"
                                                             },
                                                             "PrototypeLink": 8335615307801933253,
@@ -1001,7 +1001,7 @@
                                                                                             "Type": "o2::HorizontalProgress",
                                                                                             "Data": {
                                                                                                 "Prototype": {
-                                                                                                    "id": "3ca7340851a005940cb74b75620f229f",
+                                                                                                    "id": "0ed666573f245db7071c7b1f5e854149",
                                                                                                     "path": "Editor UI styles/O2  Horizontal Progress standard.proto"
                                                                                                 },
                                                                                                 "PrototypeLink": 6794873802875439462,
@@ -1143,7 +1143,7 @@
                                                                                             "Type": "o2::EditBox",
                                                                                             "Data": {
                                                                                                 "Prototype": {
-                                                                                                    "id": "29ec36bf44e3370c529d002b0215765a",
+                                                                                                    "id": "6010654b326119412c31155531970867",
                                                                                                     "path": "Editor UI styles/O2  Edit Box singleline with arrows.proto"
                                                                                                 },
                                                                                                 "PrototypeLink": 16188381784564775579,
@@ -1326,7 +1326,7 @@
                                                         "Type": "o2::Label",
                                                         "Data": {
                                                             "Prototype": {
-                                                                "id": "047318127fa57cf72398035e105414ad",
+                                                                "id": "61f4253507aa1fb5662634953cdd346c",
                                                                 "path": "Editor UI styles/O2  Label standard.proto"
                                                             },
                                                             "PrototypeLink": 9613259363390956959,
@@ -1381,7 +1381,7 @@
                                                         "Type": "Editor::FloatProperty",
                                                         "Data": {
                                                             "Prototype": {
-                                                                "id": "56f242985ad07bc62c6d3b9060d73a6d",
+                                                                "id": "4f5878c922034ba55dc01b8a59715cac",
                                                                 "path": "Editor UI styles/Editor  Float Property standard.proto"
                                                             },
                                                             "PrototypeLink": 8335615307801933253,
@@ -1426,7 +1426,7 @@
                                                                                             "Type": "o2::HorizontalProgress",
                                                                                             "Data": {
                                                                                                 "Prototype": {
-                                                                                                    "id": "3ca7340851a005940cb74b75620f229f",
+                                                                                                    "id": "0ed666573f245db7071c7b1f5e854149",
                                                                                                     "path": "Editor UI styles/O2  Horizontal Progress standard.proto"
                                                                                                 },
                                                                                                 "PrototypeLink": 6794873802875439462,
@@ -1568,7 +1568,7 @@
                                                                                             "Type": "o2::EditBox",
                                                                                             "Data": {
                                                                                                 "Prototype": {
-                                                                                                    "id": "29ec36bf44e3370c529d002b0215765a",
+                                                                                                    "id": "6010654b326119412c31155531970867",
                                                                                                     "path": "Editor UI styles/O2  Edit Box singleline with arrows.proto"
                                                                                                 },
                                                                                                 "PrototypeLink": 16188381784564775579,

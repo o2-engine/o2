@@ -43,16 +43,16 @@ namespace o2
             {
                 if (mEndTime > Math::Min(mTime, lastTime) && mEndTime <= Math::Max(mTime, lastTime))
                 {
-                    onStopEvent();
-                    onPlayedEvent();
+                    onStop();
+                    onPlayed();
                 }
             }
             else
             {
                 if (mBeginTime > Math::Min(mTime, lastTime) && mBeginTime <= Math::Max(mTime, lastTime))
                 {
-                    onStopEvent();
-                    onPlayedEvent();
+                    onStop();
+                    onPlayed();
                 }
             }
         }

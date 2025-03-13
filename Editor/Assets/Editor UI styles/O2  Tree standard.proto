@@ -231,7 +231,7 @@
                                                 "meta": {
                                                     "Type": "o2::DefaultAssetMeta<o2::AnimationAsset>",
                                                     "Value": {
-                                                        "mId": "7f072cf07da0242f286905030cb87378"
+                                                        "mId": "3b5d476715c755fc0bcf0de26d81793d"
                                                     }
                                                 }
                                             }
@@ -284,7 +284,7 @@
                                                 "meta": {
                                                     "Type": "o2::DefaultAssetMeta<o2::AnimationAsset>",
                                                     "Value": {
-                                                        "mId": "6be96ac8440a634a1c64678f00aa0dad"
+                                                        "mId": "1e1718ac6304233131724895369a501a"
                                                     }
                                                 }
                                             }
@@ -338,7 +338,7 @@
                                                 "meta": {
                                                     "Type": "o2::DefaultAssetMeta<o2::AnimationAsset>",
                                                     "Value": {
-                                                        "mId": "4f5b633527250bc51130299a6f97077e"
+                                                        "mId": "579227217eb3013067b8558359101f1d"
                                                     }
                                                 }
                                             }
@@ -604,7 +604,7 @@
                                     "meta": {
                                         "Type": "o2::DefaultAssetMeta<o2::AnimationAsset>",
                                         "Value": {
-                                            "mId": "14ed2de925f7778746ce005952151e91"
+                                            "mId": "0a485fd975293ff67e6f334a34cb7056"
                                         }
                                     }
                                 }
@@ -656,7 +656,7 @@
                                     "meta": {
                                         "Type": "o2::DefaultAssetMeta<o2::AnimationAsset>",
                                         "Value": {
-                                            "mId": "44aa70007ec45f4a5e6e66b67686208e"
+                                            "mId": "547b4d29365f03f60e0669093f2b580e"
                                         }
                                     }
                                 }
@@ -733,7 +733,7 @@
                                     "meta": {
                                         "Type": "o2::DefaultAssetMeta<o2::AnimationAsset>",
                                         "Value": {
-                                            "mId": "391401f82f4b1c14663501763bf46a26"
+                                            "mId": "344e3cb377d172264a5661a65ba919ac"
                                         }
                                     }
                                 }
@@ -807,7 +807,7 @@
                     "Type": "o2::HorizontalScrollBar",
                     "Value": {
                         "Prototype": {
-                            "id": "09817f9b558c58502268534b4acc21f5",
+                            "id": "45136f1e498d114a3934747d38e4186a",
                             "path": "Editor UI styles/O2  Horizontal Scroll Bar standard.proto"
                         },
                         "PrototypeLink": 2396346607982954160,
@@ -959,7 +959,7 @@
                     "Type": "o2::VerticalScrollBar",
                     "Value": {
                         "Prototype": {
-                            "id": "273e45743056153d6baf123b080d57d6",
+                            "id": "04325a0179c53893745f75a270254f20",
                             "path": "Editor UI styles/O2  Vertical Scroll Bar standard.proto"
                         },
                         "PrototypeLink": 8311025582170325613,
@@ -1161,7 +1161,7 @@
                             "meta": {
                                 "Type": "o2::DefaultAssetMeta<o2::AnimationAsset>",
                                 "Value": {
-                                    "mId": "1c6917127bb0632e4b70582a42142774"
+                                    "mId": "4e7e0e394c245051632b3931007b19c9"
                                 }
                             }
                         }
@@ -1214,7 +1214,7 @@
                             "meta": {
                                 "Type": "o2::DefaultAssetMeta<o2::AnimationAsset>",
                                 "Value": {
-                                    "mId": "232609cf04594b2239ab5da358db49cf"
+                                    "mId": "720668bc423d6580669416fb7416223d"
                                 }
                             }
                         }
@@ -1267,7 +1267,7 @@
                             "meta": {
                                 "Type": "o2::DefaultAssetMeta<o2::AnimationAsset>",
                                 "Value": {
-                                    "mId": "5c076bef15ea5bb86ab47ff2507e17d1"
+                                    "mId": "68264a7d354009fb10dc3d951d2f7222"
                                 }
                             }
                         }
@@ -1321,7 +1321,7 @@
                             "meta": {
                                 "Type": "o2::DefaultAssetMeta<o2::AnimationAsset>",
                                 "Value": {
-                                    "mId": "0009167479491dfa7698386849723d52"
+                                    "mId": "445918fd1c92374c1c911ad052bb4dd1"
                                 }
                             }
                         }
