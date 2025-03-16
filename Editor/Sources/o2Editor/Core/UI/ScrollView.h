@@ -88,29 +88,32 @@ namespace Editor
         CLONEABLE_REF(ScrollView);
 
     protected:
-        bool mReady = false; // Is widget initialized and ready to use
-                                                              
-        Ref<Sprite>  mRenderTargetSprite; // Render target sprite, using for caching graphics
-        TextureRef mRenderTarget;       // Render target texture, using for caching graphics
-        bool         mNeedRedraw = false; // Is need to redraw render target
-                                                              
-        Color4 mBackColor; // Color of back @SERIALIZABLE
-        Color4 mGridColor; // Color of grid @SERIALIZABLE
+        bool mReady = false; // Whether the widget is initialized and ready to use
 
-        RectF  mViewArea;                              // View area range
+		Ref<CursorAreaEventListenersLayer> mListenersLayer = mmake<CursorAreaEventListenersLayer>(); // Listeners layer, used to handle cursor events
+                                                              
+        Ref<Sprite> mRenderTargetSprite; // Render target sprite used for caching graphics
+        TextureRef  mRenderTarget;       // Render target texture used for caching graphics
+        bool        mNeedRedraw = false; // Whether the render target needs to be redrawn
+                                                              
+        Color4 mBackColor; // Background color @SERIALIZABLE
+        Color4 mGridColor; // Grid line color @SERIALIZABLE
+
+        RectF  mViewArea;                              // View area bounds
         Camera mViewCamera;                            // Scene view camera
-        Vec2F  mViewCameraTargetScale = Vec2F(1, 1);   // Camera target scale
-        float  mViewCameraScaleSence = 0.1f / 120.0f;  // Camera scale sense
+        Vec2F  mViewCameraTargetScale = Vec2F(1, 1);   // Target scale for camera
+        float  mViewCameraScaleSence = 0.1f / 120.0f;  // Camera scale sensitivity
         float  mViewCameraScaleElasticyCoef = 30.0f;   // Scale smoothing coefficient
         Vec2F  mViewCameraTargetPos;                   // Target camera position
-        Vec2F  mViewCameraVelocity;                    // Camera velocity
-        float  mViewCameraPosElasticyCoef = 30.0f;     // Camera dragging smoothing coefficient
+        Vec2F  mViewCameraVelocity;                    // Camera movement velocity
+        float  mViewCameraPosElasticyCoef = 30.0f;     // Camera position smoothing coefficient
         float  mViewCameraVelocityDampingCoef = 10.0f; // Camera velocity damping coefficient
-        float  mViewCameraMinScale = 0.001f;           // Minimal camera scale
-        float  mViewCameraMaxScale = 10000.0f;         // Maximal camera scale
+        float  mViewCameraMinScale = 0.001f;           // Minimum camera scale
+        float  mViewCameraMaxScale = 10000.0f;         // Maximum camera scale
+		bool   mViewCameraMoved = false;               // Whether the camera was moved       
                    
-        Basis mLocalToScreenTransform; // Local to screen transformation
-        Basis mScreenToLocalTransform; // Screen to local transformation
+        Basis mLocalToScreenTransform; // Transform from local to screen coordinates
+        Basis mScreenToLocalTransform; // Transform from screen to local coordinates
 
     protected:
         // Called when transformation was changed and updated, updates render texture and sprite
@@ -174,6 +177,7 @@ CLASS_FIELDS_META(Editor::ScrollView)
     FIELD().PUBLIC().DEFAULT_VALUE(true).NAME(horGridEnabled);
     FIELD().PUBLIC().DEFAULT_VALUE(true).NAME(verGridEnabled);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mReady);
+    FIELD().PROTECTED().DEFAULT_VALUE(mmake<CursorAreaEventListenersLayer>()).NAME(mListenersLayer);
     FIELD().PROTECTED().NAME(mRenderTargetSprite);
     FIELD().PROTECTED().NAME(mRenderTarget);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mNeedRedraw);
@@ -190,6 +194,7 @@ CLASS_FIELDS_META(Editor::ScrollView)
     FIELD().PROTECTED().DEFAULT_VALUE(10.0f).NAME(mViewCameraVelocityDampingCoef);
     FIELD().PROTECTED().DEFAULT_VALUE(0.001f).NAME(mViewCameraMinScale);
     FIELD().PROTECTED().DEFAULT_VALUE(10000.0f).NAME(mViewCameraMaxScale);
+    FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mViewCameraMoved);
     FIELD().PROTECTED().NAME(mLocalToScreenTransform);
     FIELD().PROTECTED().NAME(mScreenToLocalTransform);
 }

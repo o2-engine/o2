@@ -151,26 +151,29 @@ namespace Editor
 			// Sets player, when state is started to play
             void SetPlayer(const Ref<AnimationStateGraphComponent::StatePlayer>& player);
 
+			// Opens context menu
+			void OpenContextMenu();
+
 			IOBJECT(StateWidget);
         };
 
     protected:
-        Ref<ContextMenu> mContextMenu; // Context menu for editing keys properties, copying, pasting and other
-        
-        Ref<ContextMenu> mStateContextMenu; // Common context menu for all states
+        Ref<ContextMenu> mContextMenu;           // Context menu for editing keys properties, copying, pasting and other        
+        Ref<ContextMenu> mStateContextMenu;      // Common context menu for all states
+		Ref<ContextMenu> mTransitionContextMenu; // Common context menu for all transitions
 
 		WeakRef<AnimationStateGraphAsset>     mGraph;     // Animation state graph asset
 		WeakRef<AnimationStateGraphComponent> mComponent; // Animation state graph component
 
 		Vector<Ref<StateWidget>>                            mStatesWidgets;    // States widgets
         Map<WeakRef<AnimationGraphState>, Ref<StateWidget>> mStatesWidgetsMap; // States widgets map by state
-        
-        WeakRef<StateWidget> mContextMenuStateTarget; // Target state for context menu operations
 
 		Ref<Sprite> mSelectionSprite;       // Selection sprite @SERIALIZABLE
 		Vec2F       mSelectingPressedPoint; // Point, where cursor was pressed, selection starts here, in local space
 
-		Ref<CursorAreaEventListenersLayer> mListenersLayer = mmake<CursorAreaEventListenersLayer>(); // Listeners layer
+		Vector<Ref<StateWidget>> mPreSelectedStates; // States under frame while selecting 
+
+		Vec2F mContextMenuPos; // Context menu position when right mouse button was pressed
 
 		bool mNeedAdjustView = false; // True when need to adjust view scale. This works in update
 
@@ -205,10 +208,7 @@ namespace Editor
 		void RedrawContent() override;
 
 		// Initializes context menu items
-		void InitializeContextMenu();
-		
-		// Initializes common state context menu
-		void InitializeStateContextMenu();
+		void InitializeContextMenus();
 
         // Recalculates view area by curves approximated points
 		void RecalculateViewArea();
@@ -242,6 +242,21 @@ namespace Editor
 
 		// Called when transition cancelled, updates states transition animation
 		void OnStateGraphTransitionCancelled(const Ref<AnimationGraphTransition>& transition);
+
+		// Creates state widget
+		void CreateState();
+
+		// Sets current state default
+        void SetCurrentStateDefault();
+
+		// Starts adding transition from current state
+		void StartAddingTransition();
+
+		// Removes current selected states
+		void RemoveCurrentStates();
+
+		// Removes current transition
+        void RemoveCurrentTransition();
         
         REF_COUNTERABLE_IMPL(FrameScrollView, SelectableDragHandlesGroup);
 
@@ -320,14 +335,15 @@ CLASS_FIELDS_META(Editor::AnimationStateGraphEditor)
     FIELD().PUBLIC().NAME(actionsListDelegate);
     FIELD().PROTECTED().NAME(mContextMenu);
     FIELD().PROTECTED().NAME(mStateContextMenu);
+    FIELD().PROTECTED().NAME(mTransitionContextMenu);
     FIELD().PROTECTED().NAME(mGraph);
     FIELD().PROTECTED().NAME(mComponent);
     FIELD().PROTECTED().NAME(mStatesWidgets);
     FIELD().PROTECTED().NAME(mStatesWidgetsMap);
-    FIELD().PROTECTED().NAME(mContextMenuStateTarget);
     FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().NAME(mSelectionSprite);
     FIELD().PROTECTED().NAME(mSelectingPressedPoint);
-    FIELD().PROTECTED().DEFAULT_VALUE(mmake<CursorAreaEventListenersLayer>()).NAME(mListenersLayer);
+    FIELD().PROTECTED().NAME(mSelectedStates);
+    FIELD().PROTECTED().NAME(mContextMenuPos);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mNeedAdjustView);
     FIELD().PROTECTED().NAME(mActionsList);
 }
@@ -352,8 +368,7 @@ CLASS_METHODS_META(Editor::AnimationStateGraphEditor)
     FUNCTION().PROTECTED().SIGNATURE(void, OnCursorRightMouseStayDown, const Input::Cursor&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnCursorRightMouseReleased, const Input::Cursor&);
     FUNCTION().PROTECTED().SIGNATURE(void, RedrawContent);
-    FUNCTION().PROTECTED().SIGNATURE(void, InitializeContextMenu);
-    FUNCTION().PROTECTED().SIGNATURE(void, InitializeStateContextMenu);
+    FUNCTION().PROTECTED().SIGNATURE(void, InitializeContextMenus);
     FUNCTION().PROTECTED().SIGNATURE(void, RecalculateViewArea);
     FUNCTION().PROTECTED().SIGNATURE(void, DrawHandles);
     FUNCTION().PROTECTED().SIGNATURE(void, DrawSelection);
@@ -365,6 +380,11 @@ CLASS_METHODS_META(Editor::AnimationStateGraphEditor)
     FUNCTION().PROTECTED().SIGNATURE(void, OnStateGraphTransitionFinished, const Ref<AnimationGraphTransition>&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnStateGraphTransitionsPlanned, const Vector<Ref<AnimationGraphTransition>>&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnStateGraphTransitionCancelled, const Ref<AnimationGraphTransition>&);
+    FUNCTION().PROTECTED().SIGNATURE(void, CreateState);
+    FUNCTION().PROTECTED().SIGNATURE(void, SetCurrentStateDefault);
+    FUNCTION().PROTECTED().SIGNATURE(void, StartAddingTransition);
+    FUNCTION().PROTECTED().SIGNATURE(void, RemoveCurrentStates);
+    FUNCTION().PROTECTED().SIGNATURE(void, RemoveCurrentTransition);
 }
 END_META;
 
@@ -452,6 +472,7 @@ CLASS_METHODS_META(Editor::AnimationStateGraphEditor::StateWidget)
     FUNCTION().PUBLIC().SIGNATURE(void, DrawTransitions);
     FUNCTION().PUBLIC().SIGNATURE(void, UpdateState, TransitionState);
     FUNCTION().PUBLIC().SIGNATURE(void, SetPlayer, const Ref<AnimationStateGraphComponent::StatePlayer>&);
+    FUNCTION().PUBLIC().SIGNATURE(void, OpenContextMenu);
 }
 END_META;
 // --- END META ---

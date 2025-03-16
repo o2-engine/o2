@@ -34,8 +34,7 @@ namespace Editor
         mReady = false;
 
         mSelectionSprite = mmake<Sprite>();
-        InitializeContextMenu();
-        InitializeStateContextMenu();
+        InitializeContextMenus();
 
         mBackColor = Color4(225, 232, 232, 255);
         mViewCameraMinScale = 1.0f;
@@ -72,6 +71,7 @@ namespace Editor
 			lastComponent->onTransitionStarted -= THIS_FUNC(OnStateGraphTransitionStarted);
 			lastComponent->onTransitionFinished -= THIS_FUNC(OnStateGraphTransitionFinished);
 			lastComponent->onTransitionsPlanned -= THIS_FUNC(OnStateGraphTransitionsPlanned);
+			lastComponent->onTransitionCancelled -= THIS_FUNC(OnStateGraphTransitionCancelled);
 		}
 
 		if (!mGraph)
@@ -95,55 +95,22 @@ namespace Editor
 			component->onTransitionStarted += THIS_FUNC(OnStateGraphTransitionStarted);
 			component->onTransitionFinished += THIS_FUNC(OnStateGraphTransitionFinished);
 			component->onTransitionsPlanned += THIS_FUNC(OnStateGraphTransitionsPlanned);
+			component->onTransitionCancelled += THIS_FUNC(OnStateGraphTransitionCancelled);
 		}
 	}
 
 	void AnimationStateGraphEditor::Draw()
 	{
-		if (!mResEnabledInHierarchy || mIsClipped)
-			return;
-
-		DrawLayers();
-
-		Widget::OnDrawn();
-
-		DrawInternalChildren();
-		DrawTopLayers();
-
-		if (!mReady)
-			return;
-
-		RedrawRenderTarget();
-		mRenderTargetSprite->Draw();
-
-		mListenersLayer->OnDrawn(mRenderTargetSprite->GetBasis());
-
-		CursorAreaEventsListener::OnDrawn();
-
-		mHorScrollbar->Draw();
-		mVerScrollbar->Draw();
-
-        o2Render.EnableScissorTest(layout->GetWorldRect());
-
-        DrawHandles();
-        DrawSelection();
-
-		o2Render.DisableScissorTest();
-
-		DrawDebugFrame();
+		ScrollView::Draw();
+		DrawSelection();
 	}
 
 	void AnimationStateGraphEditor::RedrawContent()
 	{
-		mListenersLayer->OnBeginDraw();
-		mListenersLayer->camera = o2Render.GetCamera();
-
 		DrawGrid();
 
 		DrawTransitions();
 		DrawInheritedDepthChildren();
-
-		mListenersLayer->OnEndDraw();
 	}
 
 	void AnimationStateGraphEditor::DrawHandles()
@@ -152,7 +119,7 @@ namespace Editor
 
 	void AnimationStateGraphEditor::DrawSelection()
 	{
-		if (mIsPressed && false)
+		if (mIsPressed)
 		{
 			mSelectionSprite->rect = RectF(LocalToScreenPoint(mSelectingPressedPoint), o2Input.cursorPos);
 			mSelectionSprite->Draw();
@@ -243,7 +210,7 @@ namespace Editor
 
 	void AnimationStateGraphEditor::OnCursorReleased(const Input::Cursor& cursor)
 	{
-
+		DeselectAll();
 	}
 
 	void AnimationStateGraphEditor::OnCursorStillDown(const Input::Cursor& cursor)
@@ -258,107 +225,34 @@ namespace Editor
 
 	void AnimationStateGraphEditor::OnCursorRightMouseReleased(const Input::Cursor& cursor)
 	{
+		if (!mViewCameraMoved)
+		{
+			mContextMenuPos = cursor.position;
+			mContextMenu->Show();
+		}
+
 		FrameScrollView::OnCursorRightMouseReleased(cursor);
 	}
 
-	void AnimationStateGraphEditor::InitializeContextMenu()
+	void AnimationStateGraphEditor::InitializeContextMenus()
     {
         mContextMenu = o2UI.CreateWidget<ContextMenu>();
+		mContextMenu->AddItem("Add state", THIS_FUNC(CreateState));
 
-        onShow = [&]() { mContextMenu->SetItemsMaxPriority(); };
-        onHide = [&]() { mContextMenu->SetItemsMinPriority(); };
+		mStateContextMenu = o2UI.CreateWidget<ContextMenu>();
+		mStateContextMenu->AddItem("Set as default", THIS_FUNC(SetCurrentStateDefault));
+		mStateContextMenu->AddItem("Add transition", THIS_FUNC(StartAddingTransition));
+		mStateContextMenu->AddItem("Remove state", THIS_FUNC(RemoveCurrentStates));
 
-        AddChild(mContextMenu);
-    }
+		mTransitionContextMenu = o2UI.CreateWidget<ContextMenu>();
+		mTransitionContextMenu->AddItem("Remove transition", THIS_FUNC(RemoveCurrentTransition));
 
-    void AnimationStateGraphEditor::InitializeStateContextMenu()
-    {
-        mStateContextMenu = o2UI.CreateWidget<ContextMenu>();
-        
-        // Add state-specific menu items
-        mStateContextMenu->AddItem(WString("Set as default"), [this]() {
-            if (auto stateWidget = mContextMenuStateTarget.Lock()) {
-                auto stateGraphAsset = mGraph.Lock();
-                if (stateGraphAsset && stateWidget->state) {
-                    // Use state's name to set as initial state
-                    stateGraphAsset->SetInitialState(stateWidget->state.Lock()->name);
-                }
-            }
-        });
+		AddChild(mContextMenu);
+		AddChild(mStateContextMenu);
+		AddChild(mTransitionContextMenu);
 
-        mStateContextMenu->AddItem(WString("Add animation"), [this]() {
-            if (auto stateWidget = mContextMenuStateTarget.Lock()) {
-                auto statePtr = stateWidget->state.Lock();
-                if (statePtr) {
-                    // Create a new animation with a default name
-                    String newAnimName = "New Animation";
-                    auto newAnimation = statePtr->AddAnimation(newAnimName);
-
-                    // Add to UI
-                    Ref<StateAnimation> stateAnimation = mmake<StateAnimation>();
-                    stateAnimation->name = newAnimation->name;
-                    stateAnimation->animation = newAnimation;
-                    stateAnimation->owner = stateWidget;
-                    stateWidget->animations.Add(stateAnimation);
-
-                    // Refresh the animations list property
-                    if (stateWidget->animationsListProperty)
-                        stateWidget->animationsListProperty->Refresh();
-                }
-            }
-        });
-
-        mStateContextMenu->AddItem(WString("Add transition"), [this]() {
-            if (auto stateWidget = mContextMenuStateTarget.Lock()) {
-                // Find another state to transition to
-                auto thisState = stateWidget->state.Lock();
-                if (!thisState || !mGraph)
-                    return;
-                
-                auto stateGraphAsset = mGraph.Lock();
-                if (!stateGraphAsset)
-                    return;
-                
-                auto states = stateGraphAsset->GetStates();
-                
-                // Find another state to transition to
-                Ref<AnimationGraphState> targetState;
-                for (auto& otherState : states) {
-                    if (otherState != thisState) {
-                        targetState = otherState;
-                        break;
-                    }
-                }
-
-                if (targetState) {
-                    // Create transition
-                    auto transition = thisState->AddTransition(targetState);
-
-                    // Add visual representation
-                    Ref<StateTransition> stateTransition = mmake<StateTransition>();
-                    stateTransition->owner = stateWidget;
-                    stateTransition->destination = mStatesWidgetsMap[targetState];
-                    stateWidget->transitions.Add(stateTransition);
-                    stateWidget->transitionsMap[WeakRef<AnimationGraphTransition>(transition)] = stateTransition;
-                }
-            }
-        });
-
-        mStateContextMenu->AddItem(WString("Delete state"), [this]() {
-            if (auto stateWidget = mContextMenuStateTarget.Lock()) {
-                auto stateGraphAsset = mGraph.Lock();
-                if (!stateGraphAsset)
-                    return;
-
-                auto thisState = stateWidget->state.Lock();
-                if (thisState) {
-                    stateGraphAsset->RemoveState(thisState);
-                    InitializeStates();
-                }
-            }
-        });
-
-        AddChild(mStateContextMenu);
+		onShow = [&]() { mContextMenu->SetItemsMaxPriority(); };
+		onHide = [&]() { mContextMenu->SetItemsMinPriority(); };
     }
 
     void AnimationStateGraphEditor::RecalculateViewArea()
@@ -470,6 +364,42 @@ namespace Editor
 			widget->UpdateState(StateWidget::TransitionState::None);
 	}
 
+	void AnimationStateGraphEditor::CreateState()
+	{
+		auto graph = mGraph.Lock();
+		if (!graph)
+			return;
+
+		auto state = graph->AddState("New state", {});
+		state->SetPosition(mContextMenuPos);
+		InitializeStates();
+	}
+
+
+	void AnimationStateGraphEditor::SetCurrentStateDefault()
+	{
+
+	}
+
+
+	void AnimationStateGraphEditor::StartAddingTransition()
+	{
+
+	}
+
+
+	void AnimationStateGraphEditor::RemoveCurrentStates()
+	{
+
+
+	}
+
+
+	void AnimationStateGraphEditor::RemoveCurrentTransition()
+	{
+
+	}
+
 	AnimationStateGraphEditor::StateWidget::StateWidget(RefCounter* refCounter, const Ref<AnimationStateGraphEditor>& owner,
 														const Ref<AnimationGraphState>& state):
 		RefCounterable(refCounter), editor(owner), state(state)
@@ -478,11 +408,15 @@ namespace Editor
 		borderLayer = widget->GetLayer("border");
 
 		dragHandle = mmake<DragHandle>();
-		dragHandle->isPointInside = [this](const Vec2F& p) { return widget->IsUnderPoint(p); };
+		dragHandle->SetSelectionGroup(owner);
+		dragHandle->isPointInside = [this](const Vec2F& p) { return widget ? widget->IsUnderPoint(p) : false; };
 		dragHandle->onHoverEnter = [this]() { widget->SetState("hover", true); };
 		dragHandle->onHoverExit = [this]() { widget->SetState("hover", false); };
 		dragHandle->onPressed = [this]() { widget->SetState("pressed", true); };
 		dragHandle->onReleased = [this]() { widget->SetState("pressed", false); };
+		dragHandle->onRightButtonReleased = [this](const Input::Cursor&) { OpenContextMenu(); };
+		dragHandle->onSelected = [this]() { widget->SetState("focused", true); };
+		dragHandle->onDeselected = [this]() { widget->SetState("focused", false); };
         dragHandle->messageFallDownListener = owner.Get();
         dragHandle->onChangedPos = [this](const Vec2F& pos)
 		{
@@ -569,6 +503,12 @@ namespace Editor
 		}
 
 		animationsListProperty->Refresh();
+	}
+
+
+	void AnimationStateGraphEditor::StateWidget::OpenContextMenu()
+	{
+		editor.Lock()->mStateContextMenu->Show();
 	}
 
 	void AnimationStateGraphEditor::StateTransition::Draw()

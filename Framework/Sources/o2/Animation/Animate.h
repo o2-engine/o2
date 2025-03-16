@@ -63,42 +63,42 @@ namespace o2
     };
 
     // --------------------------------------------
-    // Class for building simple animation sequence
+    // Class for building a simple animation sequence
     // --------------------------------------------
     class Animate
     {
     public:
-        // Constructor. Takes object as parameter
+        // Constructor. Takes an object as a parameter
         explicit Animate(IObject& object);
 
-        // Animation cast operator. Needs to store as animation
+        // Animation cast operator. Needed to store as an animation
         operator Ref<AnimationClip>() const;
 
-        // Inserts delay for seconds
+        // Inserts a delay for seconds
         Animate& Wait(float seconds);
 
         // Applies stored transformations after seconds
         Animate& For(float seconds);
 
-        // Splits sequence
+        // Splits the sequence
         Animate& Then();
 
-        // Moves object in (x,y)
+        // Moves the object to (x,y)
         Animate& Move(float x, float y);
 
-        // Moves object into position
+        // Moves the object into position
         Animate& Move(const Vec2F& point);
 
-        // Moves object by path from points
+        // Moves the object along a path from points
         Animate& Move(const Vector<Vec2F>& points);
 
         // Changes alpha
         Animate& Alpha(float alpha);
 
-        // Shows object
+        // Shows the object
         Animate& Show();
 
-        // Hides object
+        // Hides the object
         Animate& Hide();
 
         // Sets color
@@ -113,13 +113,13 @@ namespace o2
         // Sets scale
         Animate& Scale(const Vec2F& scale);
 
-        // Rotates object
+        // Rotates the object
         Animate& Rotate(float angle);
 
-        // Sets animation looped
+        // Sets the animation to loop
         Animate& Looped();
 
-        // Sets pin pong loop
+        // Sets ping-pong loop
         Animate& PingPong();
 
         // Changes specified parameter
@@ -127,22 +127,22 @@ namespace o2
         Animate& Change(T* target, const T& value);
 
     protected:
-        IObject* mTarget = nullptr; // Target animating object
+        IObject* mTarget = nullptr; // Target object being animated
 
-        Ref<AnimationClip> mAnimation = mmake<AnimationClip>(); // Building animation
+        Ref<AnimationClip> mAnimation = mmake<AnimationClip>(); // Animation being built
 
-        bool  mKeysApplied = false; // Is stored keys was applied
+        bool  mKeysApplied = false; // Whether stored keys were applied
         float mTime = 0.0f;         // Current sequence time
 
-        Vector<Ref<IKeyContainer>> mKeyContainers; // Stored keys that applies in For()
+        Vector<Ref<IKeyContainer>> mKeyContainers; // Stored keys that are applied in For()
 
-        Function<void()> mFunction; // Stored callback that applies in For()
+        Function<void()> mFunction; // Stored callback that is applied in For()
 
-        Ref<AnimationTrack<Color4>> mColorAnimatedValue;   // Color Animation track, stored when needs
-        Ref<AnimationTrack<Vec2F>> mPositionAnimatedValue; // Position Animation track, stored when needs
-        Ref<AnimationTrack<float>> mScaleXAnimatedValue;   // Scale X Animation track, stored when needs
-        Ref<AnimationTrack<float>> mScaleYAnimatedValue;   // Scale Y Animation track, stored when needs
-        Ref<AnimationTrack<float>> mRotationAnimatedValue; // Rotation Animation track, stored when needs
+        Ref<AnimationTrack<Color4>> mColorAnimatedValue;   // Color Animation track, stored when needed
+        Ref<AnimationTrack<Vec2F>> mPositionAnimatedValue; // Position Animation track, stored when needed
+        Ref<AnimationTrack<float>> mScaleXAnimatedValue;   // Scale X Animation track, stored when needed
+        Ref<AnimationTrack<float>> mScaleYAnimatedValue;   // Scale Y Animation track, stored when needed
+        Ref<AnimationTrack<float>> mRotationAnimatedValue; // Rotation Animation track, stored when needed
 
     protected:
         // Checks color Animation track: creates them if needed
@@ -154,13 +154,13 @@ namespace o2
         // Checks scale Animation track: creates them if needed
         void CheckScaleAnimatedValue();
 
-        // Checks rotate Animation track: creates them if needed
+        // Checks rotation Animation track: creates it if needed
         void CheckRotateAnimatedValue();
 
-        // Checks applied keys: if keys was applied, clears keys containers
+        // Checks applied keys: if keys were applied, clears key containers
         void CheckAppliedKeys();
 
-        // Applies keys and function to animation at current time
+        // Applies keys and function to the animation at the current time
         void ApplyKeys();
     };
 

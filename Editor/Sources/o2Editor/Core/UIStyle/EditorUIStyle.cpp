@@ -3680,7 +3680,7 @@ namespace Editor
 		auto back = sample->AddLayer("back", mmake<Sprite>("ui/UI4_animation_state_regular.png"), Layout::BothStretch(-6, -10, -6, -8));
 		auto hover = sample->AddLayer("hover", mmake<Sprite>("ui/UI4_animation_state_hover.png"), Layout::BothStretch(-6, -10, -6, -8));
 		auto pressed = sample->AddLayer("pressed", mmake<Sprite>("ui/UI4_animation_state_pressed.png"), Layout::BothStretch(-6, -10, -6, -8));
-		auto focus = sample->AddLayer("focus", mmake<Sprite>("ui/UI4_animation_state_frame.png"), Layout::BothStretch(-6, -10, -6, -8));
+		auto focus = sample->AddLayer("focus", mmake<Sprite>("ui/UI4_animation_state_frame.png"), Layout::BothStretch(-9, -13, -9, -11));
 		auto borderFinished = sample->AddLayer("borderFinished", mmake<Sprite>("ui/UI4_animation_state_frame.png"), Layout::BothStretch(-6, -10, -6, -8));
 		auto borderPlanned = sample->AddLayer("borderPlanned", mmake<Sprite>("ui/UI4_animation_state_frame.png"), Layout::BothStretch(-6, -10, -6, -8));
 

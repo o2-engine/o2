@@ -31,14 +31,20 @@ namespace o2
         KeyboardKey snappingKey = VK_CONTROL;       // Snapping key, when it pressed handle uses checkSnappingFunc to correct position
 
     public:
-        Function<void(const Vec2F&)> onChangedPos;      // On position changed event
-        Function<void()>             onPressed;         // Pressed cursor on handle event
-        Function<void()>             onDblClicked;      // Double clicked cursor on handle event
-        Function<void()>             onReleased;        // Released cursor event
-		Function<void()>             onHoverEnter;      // Hovered cursor enter event
-		Function<void()>             onHoverExit;       // Hovered cursor exit event
-        Function<void()>             onBeganDragging;   // Drag begin event
-        Function<void()>             onChangeCompleted; // Change completed event
+		Function<void(const Vec2F&)> onChangedPos;      // On position changed event
+		Function<void()>             onChangeCompleted; // Change completed event
+
+		Function<void()> onPressed;    // Pressed cursor on handle event
+		Function<void()> onDblClicked; // Double clicked cursor on handle event
+		Function<void()> onReleased;   // Released cursor event
+
+		Function<void(const Input::Cursor&)> onRightButtonPressed;  // Right mouse button pressed event
+		Function<void(const Input::Cursor&)> onRightButtonReleased; // Right mouse button released event
+
+		Function<void()> onHoverEnter; // Hovered cursor enter event
+		Function<void()> onHoverExit;  // Hovered cursor exit event
+
+        Function<void()> onBeganDragging; // Drag begin event
 
         Function<bool(const Vec2F&)> isPointInside; // Checking point inside function. When this is empty, using IRectDrawable inside checking function
 
@@ -47,8 +53,8 @@ namespace o2
         Function<Vec2F(const Vec2F&)> checkPositionFunc;          // Position constraints checking function
         Function<Vec2F(const Vec2F&)> checkSnappingFunc;          // Checking snapping position when dragging with pressed snapping key
 
-        Function<void(const Input::Cursor&)> onRightButtonPressed;  // Right mouse button pressed event
-        Function<void(const Input::Cursor&)> onRightButtonReleased; // Right mouse button released event
+		Function<void()> onSelected;   // Selected event
+		Function<void()> onDeselected; // Deselected event
 
     public:
         // Default constructor
@@ -504,20 +510,22 @@ CLASS_FIELDS_META(o2::DragHandle)
     FIELD().PUBLIC().DEFAULT_VALUE(true).NAME(pixelPerfect);
     FIELD().PUBLIC().DEFAULT_VALUE(VK_CONTROL).NAME(snappingKey);
     FIELD().PUBLIC().NAME(onChangedPos);
+    FIELD().PUBLIC().NAME(onChangeCompleted);
     FIELD().PUBLIC().NAME(onPressed);
     FIELD().PUBLIC().NAME(onDblClicked);
     FIELD().PUBLIC().NAME(onReleased);
+    FIELD().PUBLIC().NAME(onRightButtonPressed);
+    FIELD().PUBLIC().NAME(onRightButtonReleased);
     FIELD().PUBLIC().NAME(onHoverEnter);
     FIELD().PUBLIC().NAME(onHoverExit);
     FIELD().PUBLIC().NAME(onBeganDragging);
-    FIELD().PUBLIC().NAME(onChangeCompleted);
     FIELD().PUBLIC().NAME(isPointInside);
     FIELD().PUBLIC().NAME(screenToLocalTransformFunc);
     FIELD().PUBLIC().NAME(localToScreenTransformFunc);
     FIELD().PUBLIC().NAME(checkPositionFunc);
     FIELD().PUBLIC().NAME(checkSnappingFunc);
-    FIELD().PUBLIC().NAME(onRightButtonPressed);
-    FIELD().PUBLIC().NAME(onRightButtonReleased);
+    FIELD().PUBLIC().NAME(onSelected);
+    FIELD().PUBLIC().NAME(onDeselected);
     FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().NAME(mRegularDrawable);
     FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().NAME(mHoverDrawable);
     FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().NAME(mPressedDrawable);

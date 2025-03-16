@@ -618,10 +618,14 @@ namespace o2
     }
 
     void DragHandle::OnSelected()
-    {}
+    {
+        onSelected();
+    }
 
     void DragHandle::OnDeselected()
-    {}
+    {
+		onDeselected();
+    }
 
     void DragHandle::DrawInternal()
     {
@@ -945,11 +949,14 @@ namespace o2
 
     void SelectableDragHandlesGroup::OnHandleMoved(const Ref<DragHandle>& handle, const Vec2F& cursorPos)
     {
-        for (auto& handle : GetSelectedHandles())
+        for (auto& selectedHandle : GetSelectedHandles())
         {
-            handle->mDragPosition = handle->ScreenToLocal(cursorPos) + handle->mDragOffset;
-            handle->SetPosition(handle->mDragPosition);
-            handle->onChangedPos(handle->GetPosition());
+            if (selectedHandle == handle)
+                continue;
+
+            selectedHandle->mDragPosition = selectedHandle->ScreenToLocal(cursorPos) + selectedHandle->mDragOffset;
+            selectedHandle->SetPosition(selectedHandle->mDragPosition);
+            selectedHandle->onChangedPos(selectedHandle->GetPosition());
         }
     }
 }

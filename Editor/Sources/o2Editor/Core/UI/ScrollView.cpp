@@ -59,12 +59,10 @@ namespace Editor
         if (!mReady)
             return;
 
-        if (mNeedRedraw)
-            RedrawRenderTarget();
+        RedrawRenderTarget();
 
         mRenderTargetSprite->Draw();
-
-        CursorAreaEventsListener::OnDrawn();
+		mListenersLayer->OnDrawn(mRenderTargetSprite->GetBasis());
     }
 
     void ScrollView::Update(float dt)
@@ -94,7 +92,7 @@ namespace Editor
 
     bool ScrollView::IsUnderPoint(const Vec2F& point)
     {
-        return Widget::IsUnderPoint(point);
+        return true;
     }
 
     bool ScrollView::IsScrollable() const
@@ -258,8 +256,15 @@ namespace Editor
 
         o2Render.Clear(mBackColor);
         o2Render.SetCamera(mViewCamera);
+        
+		mListenersLayer->OnBeginDraw();
+		mListenersLayer->camera = o2Render.GetCamera();
+
+		CursorAreaEventsListener::OnDrawn();
 
         RedrawContent();
+        
+		mListenersLayer->OnEndDraw();
 
         o2Render.SetCamera(prevCamera);
         o2Render.UnbindRenderTexture();
@@ -349,16 +354,18 @@ namespace Editor
     void ScrollView::OnCursorRightMousePressed(const Input::Cursor& cursor)
     {
         o2Application.SetCursorInfiniteMode(true);
+        mViewCameraMoved = false;
     }
 
     void ScrollView::OnCursorRightMouseStayDown(const Input::Cursor& cursor)
     {
         if (cursor.delta.Length() > 0.5f)
         {
-            Vec2F delta = cursor.delta*mViewCamera.scale*-1.0f;
+            Vec2F delta = cursor.delta*-1.0f;
             mViewCameraVelocity = delta / o2Time.GetDeltaTime();
             mViewCameraTargetPos += delta;
             mNeedRedraw = true;
+			mViewCameraMoved = true;
         }
     }
 
