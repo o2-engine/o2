@@ -142,7 +142,7 @@ namespace o2
 
             for (auto& listener : allUnderCursor)
             {
-                String name = typeid(*listener).name();
+                String name = listener->GetDebugName();
 
                 if (auto widget = DynamicCast<Widget>(listener))
                 {

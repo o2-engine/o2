@@ -342,7 +342,7 @@ CLASS_FIELDS_META(Editor::AnimationStateGraphEditor)
     FIELD().PROTECTED().NAME(mStatesWidgetsMap);
     FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().NAME(mSelectionSprite);
     FIELD().PROTECTED().NAME(mSelectingPressedPoint);
-    FIELD().PROTECTED().NAME(mSelectedStates);
+    FIELD().PROTECTED().NAME(mPreSelectedStates);
     FIELD().PROTECTED().NAME(mContextMenuPos);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mNeedAdjustView);
     FIELD().PROTECTED().NAME(mActionsList);

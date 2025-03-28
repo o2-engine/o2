@@ -54,32 +54,22 @@ namespace Editor
     {}
 
     void SceneEditScreen::Draw()
-    {
-        if (!mReady)
-            return;
+	{
+        ScrollView::Draw();
 
-        if (mNeedRedraw || (mEnabledTool && mEnabledTool->mNeedRedraw) || true)
-            RedrawRenderTarget();
-
-        mRenderTargetSprite->Draw();
-
-        CursorAreaEventsListener::OnDrawn();
-
-        if (mEnabledTool)
-            mEnabledTool->DrawScreen();
-
-        for (auto& handle : mDragHandles)
-            handle->Draw();
-
-        mEditorLayers.SortBy<int>([](auto& l) { return l->GetOrder(); });
-
-        for (auto& layer : mEditorLayers)
-        {
-            if (layer->IsEnabled() && IsLayerEnabled(layer->GetName()))
-                layer->DrawOverScene();
-        }
-
-        Widget::Draw();
+ 		if (mEnabledTool)
+ 			mEnabledTool->DrawScreen();
+ 
+ 		for (auto& handle : mDragHandles)
+ 			handle->Draw();
+ 
+ 		mEditorLayers.SortBy<int>([](auto& l) { return l->GetOrder(); });
+ 
+ 		for (auto& layer : mEditorLayers)
+ 		{
+ 			if (layer->IsEnabled() && IsLayerEnabled(layer->GetName()))
+ 				layer->DrawOverScene();
+ 		}
     }
 
     void SceneEditScreen::NeedRedraw()
@@ -417,7 +407,7 @@ namespace Editor
 
     bool SceneEditScreen::IsUnderPoint(const Vec2F& point)
     {
-        return Widget::IsUnderPoint(point);
+        return true;
     }
 
     Ref<RefCounterable> SceneEditScreen::CastToRefCounterable(const Ref<SceneEditScreen>& ref)

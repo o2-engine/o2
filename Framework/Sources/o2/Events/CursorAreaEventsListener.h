@@ -105,6 +105,9 @@ namespace o2
 
         // Called when scrolling
         virtual void OnScrolled(float scroll);
+
+		// Returns debug name
+		virtual String GetDebugName() const;
         
     protected:
         RectF mScissorRect; // Scissor rect at drawing moment
