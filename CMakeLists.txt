@@ -2,6 +2,20 @@ project(o2 LANGUAGES C CXX OBJC OBJCXX)
 
 set(CMAKE_CXX_STANDARD 20)
 
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/CMake")
+
+if(APPLE)
+    include(CheckLanguage)
+    include(MetalShaderSupport)
+    check_language(Metal)
+    
+    if(CMAKE_Metal_COMPILER)
+       enable_language(Metal)
+    else ()
+       message(FATAL_ERROR "Could not find compiler for metal")
+    endif()
+endif()
+
 # Options
 option(O2_SELFPROFILE "Enable profiling o2 benchmark." OFF)
 option(O2_EDITOR "Enables o2 editor." ON)
@@ -173,6 +187,14 @@ if (UNIX)
                     ${FOUNDATION}
                     ${OBJC}
                     ${METALKIT}
+        )
+
+        set(METAL_SHADERS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Framework/Sources/o2/Render/Mac")
+        add_subdirectory(${METAL_SHADERS_DIR})
+
+        target_include_directories(o2Framework
+                PRIVATE
+                ${METAL_SHADERS_DIR}
         )
     endif()
 endif()

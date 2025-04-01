@@ -55,7 +55,12 @@ namespace o2
                                                     options:MTLResourceStorageModeShared];
         }
 
-        defaultLibrary = [device newDefaultLibrary];
+        NSError *error = nil;
+        defaultLibrary = [device newLibraryWithURL:[NSBundle.mainBundle URLForResource:@"PetStoryShaders" withExtension:@"metallib"] error:&error];
+        if (!defaultLibrary) {
+            NSLog(@"Can't create metal library: %@", error);
+            exit(EXIT_FAILURE);
+        }
 
         id<MTLFunction> vertexFunction = [defaultLibrary newFunctionWithName:@"vertexShader"];
         id<MTLFunction> fragmentFunction = [defaultLibrary newFunctionWithName:@"fragmentShader"];
@@ -74,7 +79,6 @@ namespace o2
         pipelineStateDescriptor.colorAttachments[0].destinationRGBBlendFactor   = MTLBlendFactorOneMinusSourceAlpha;
         pipelineStateDescriptor.colorAttachments[0].destinationAlphaBlendFactor = MTLBlendFactorOneMinusSourceAlpha;
 
-        NSError *error = NULL;
         pipelineState = [device newRenderPipelineStateWithDescriptor:pipelineStateDescriptor
                                                                error:&error];
 
