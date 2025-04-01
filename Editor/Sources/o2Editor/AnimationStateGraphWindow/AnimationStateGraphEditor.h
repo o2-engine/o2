@@ -122,8 +122,6 @@ namespace Editor
 			Ref<VectorProperty>    animationsListProperty; // Animations list property
 			Ref<PropertiesContext> propertiesContext;      // Properties context
 
-			Ref<WidgetLayer> borderLayer; // Border layer
-
 			Ref<DragHandle> dragHandle; // Drag handle
 
 			WeakRef<AnimationStateGraphEditor> editor; // Owner editor reference
@@ -203,6 +201,9 @@ namespace Editor
 
 		// Called when right mouse button was released (only when right mouse button pressed this at previous time), overriding from scroll view to call context menu
 		void OnCursorRightMouseReleased(const Input::Cursor& cursor) override;
+
+		// Overriding from ISceneDrawable to skip drawing children
+		void DrawInheritedDepthChildren() override;
 
         // Redraws content into render target
 		void RedrawContent() override;
@@ -367,6 +368,7 @@ CLASS_METHODS_META(Editor::AnimationStateGraphEditor)
     FUNCTION().PROTECTED().SIGNATURE(void, OnCursorStillDown, const Input::Cursor&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnCursorRightMouseStayDown, const Input::Cursor&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnCursorRightMouseReleased, const Input::Cursor&);
+    FUNCTION().PROTECTED().SIGNATURE(void, DrawInheritedDepthChildren);
     FUNCTION().PROTECTED().SIGNATURE(void, RedrawContent);
     FUNCTION().PROTECTED().SIGNATURE(void, InitializeContextMenus);
     FUNCTION().PROTECTED().SIGNATURE(void, RecalculateViewArea);
@@ -457,7 +459,6 @@ CLASS_FIELDS_META(Editor::AnimationStateGraphEditor::StateWidget)
     FIELD().PUBLIC().NAME(widget);
     FIELD().PUBLIC().NAME(animationsListProperty);
     FIELD().PUBLIC().NAME(propertiesContext);
-    FIELD().PUBLIC().NAME(borderLayer);
     FIELD().PUBLIC().NAME(dragHandle);
     FIELD().PUBLIC().NAME(editor);
 }

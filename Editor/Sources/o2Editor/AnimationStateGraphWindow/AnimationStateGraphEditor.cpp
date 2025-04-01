@@ -110,7 +110,7 @@ namespace Editor
 		DrawGrid();
 
 		DrawTransitions();
-		DrawInheritedDepthChildren();
+		ISceneDrawable::DrawInheritedDepthChildren();
 	}
 
 	void AnimationStateGraphEditor::DrawHandles()
@@ -228,11 +228,16 @@ namespace Editor
 		if (!mViewCameraMoved)
 		{
 			mContextMenuPos = cursor.position;
+			o2Debug.Log("Right mouse button released at: " + String(mContextMenuPos));
 			mContextMenu->Show();
 		}
 
 		FrameScrollView::OnCursorRightMouseReleased(cursor);
 	}
+
+
+	void AnimationStateGraphEditor::DrawInheritedDepthChildren()
+	{}
 
 	void AnimationStateGraphEditor::InitializeContextMenus()
     {
@@ -371,7 +376,8 @@ namespace Editor
 			return;
 
 		auto state = graph->AddState("New state", {});
-		state->SetPosition(mContextMenuPos);
+		state->SetPosition(mContextMenuPos + layout->GetSize()/2.0f);
+		o2Debug.Log("State created at: " + String(mContextMenuPos));
 		InitializeStates();
 	}
 
@@ -405,23 +411,27 @@ namespace Editor
 		RefCounterable(refCounter), editor(owner), state(state)
 	{
         widget = o2UI.CreateWidget<VerticalLayout>("ASG state");
-		borderLayer = widget->GetLayer("border");
+		auto weakWidget = WeakRef(widget);
 
 		dragHandle = mmake<DragHandle>();
 		dragHandle->SetSelectionGroup(owner);
-		dragHandle->isPointInside = [this](const Vec2F& p) { return widget ? widget->IsUnderPoint(p) : false; };
-		dragHandle->onHoverEnter = [this]() { widget->SetState("hover", true); };
-		dragHandle->onHoverExit = [this]() { widget->SetState("hover", false); };
-		dragHandle->onPressed = [this]() { widget->SetState("pressed", true); };
-		dragHandle->onReleased = [this]() { widget->SetState("pressed", false); };
+		dragHandle->isPointInside = [weakWidget](const Vec2F& p) { return weakWidget ? weakWidget.Lock()->IsUnderPoint(p) : false; };
+		dragHandle->onHoverEnter = [weakWidget]() { if (weakWidget) weakWidget.Lock()->SetState("hover", true); };
+		dragHandle->onHoverExit = [weakWidget]() { if (weakWidget) weakWidget.Lock()->SetState("hover", false); };
+		dragHandle->onPressed = [weakWidget]() { if (weakWidget) weakWidget.Lock()->SetState("pressed", true); };
+		dragHandle->onReleased = [weakWidget]() { if (weakWidget) weakWidget.Lock()->SetState("pressed", false); };
+		dragHandle->onSelected = [weakWidget]() { if (weakWidget) weakWidget.Lock()->SetState("focused", true); };
+		dragHandle->onDeselected = [weakWidget]() { if (weakWidget) weakWidget.Lock()->SetState("focused", false); };
 		dragHandle->onRightButtonReleased = [this](const Input::Cursor&) { OpenContextMenu(); };
-		dragHandle->onSelected = [this]() { widget->SetState("focused", true); };
-		dragHandle->onDeselected = [this]() { widget->SetState("focused", false); };
         dragHandle->messageFallDownListener = owner.Get();
-        dragHandle->onChangedPos = [this](const Vec2F& pos)
+        dragHandle->onChangedPos = [weakWidget, this](const Vec2F& pos)
 		{
-			widget->layout->position = pos;
-			this->state.Lock()->SetPosition(pos); 
+			if (auto widget = weakWidget.Lock())
+			{
+				*widget->layout = WidgetLayout::Based(BaseCorner::LeftBottom, Vec2F(250, 50), pos);
+				o2Debug.Log("State moved to: " + String(pos));
+				this->state.Lock()->SetPosition(pos);
+			}
 		};
 
 		widget->onDraw = [this]() { dragHandle->Draw(); };
@@ -444,7 +454,7 @@ namespace Editor
 		animationsListProperty->SetValuePointers<Vector<Ref<StateAnimation>>>({ &animations });
 		widget->AddChild(animationsListProperty);
 
-		widget->layout->position = state->GetPosition();
+		*widget->layout = WidgetLayout::Based(BaseCorner::LeftBottom, Vec2F(250, 50), state->GetPosition());
 		dragHandle->position = state->GetPosition();
 
 		editor.Lock()->AddChild(widget);

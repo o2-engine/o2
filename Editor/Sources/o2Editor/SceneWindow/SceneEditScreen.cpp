@@ -60,9 +60,6 @@ namespace Editor
  		if (mEnabledTool)
  			mEnabledTool->DrawScreen();
  
- 		for (auto& handle : mDragHandles)
- 			handle->Draw();
- 
  		mEditorLayers.SortBy<int>([](auto& l) { return l->GetOrder(); });
  
  		for (auto& layer : mEditorLayers)
@@ -170,8 +167,6 @@ namespace Editor
         o2Debug.Draw(false);
         DrawSelection();
 
-        mEditorLayers.SortBy<int>([](auto& l) { return l->GetOrder(); });
-
         for (auto& layer : mEditorLayers)
         {
             if (layer->IsEnabled() && IsLayerEnabled(layer->GetName()))
@@ -182,7 +177,10 @@ namespace Editor
         {
             mEnabledTool->DrawScene();
             mEnabledTool->mNeedRedraw = false;
-        }
+		}
+
+		for (auto& handle : mDragHandles)
+			handle->Draw();
     }
 
     void SceneEditScreen::DrawObjects()

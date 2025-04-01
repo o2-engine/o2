@@ -15,6 +15,9 @@ namespace o2
     public:
         // Default constructor
         LogStream();
+         
+		// Default constructor
+		LogStream(RefCounter* refCounter);
 
         // Constructor with id
         LogStream(const WString& id);
