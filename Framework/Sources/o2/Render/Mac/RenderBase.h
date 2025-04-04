@@ -22,8 +22,7 @@ namespace o2
         Color4 mClearColor; // Clear color for next pass
         bool mNeedClear = false;
         
-        float mProjMatrix[16];      // Render projection matrix
-        float mViewModelMatrix[16]; // Render view and model matrix
+        float mMVPMatrix[16]; // Render model view projection matrix
         
         bool  mScissorEnabled = false;
         RectI mScissorRect;

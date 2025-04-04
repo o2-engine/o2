@@ -87,7 +87,7 @@ else()
                          -Wno-undefined-var-template -Wno-overloaded-virtual -Wno-deprecated-declarations \
                          -Wno-delete-non-abstract-non-virtual-dtor -Wno-unused-but-set-variable \
                          -Wno-inconsistent-missing-override -Wno-shorten-64-to-32 -Wno-switch -Wno-delete-incomplete \
-                         -Wno-potentially-evaluated-expression")
+                         -Wno-potentially-evaluated-expression -Wno-deprecated-this-capture")
 endif()
 
 # dependencies

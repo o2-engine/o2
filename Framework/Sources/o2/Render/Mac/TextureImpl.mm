@@ -19,7 +19,7 @@ namespace o2
     bool Texture::PlatformCreate()
     {
         MTLTextureDescriptor *textureDescriptor = [[MTLTextureDescriptor alloc] init];
-        textureDescriptor.pixelFormat = MTLPixelFormatBGRA8Unorm;
+        textureDescriptor.pixelFormat = MTLPixelFormatRGBA8Unorm;
         textureDescriptor.width = mSize.x;
         textureDescriptor.height = mSize.y;
         

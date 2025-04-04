@@ -394,10 +394,11 @@ namespace o2
     {
         mAssetsTrees.Clear();
 
+        mMainAssetsTree = mmake<AssetsTree>();
         auto editorAssetsTree = mmake<AssetsTree>();
+
         editorAssetsTree->DeserializeFromString(o2FileSystem.ReadFile(::GetEditorBuiltAssetsTreePath()));
 
-        mMainAssetsTree = mmake<AssetsTree>();
         mMainAssetsTree->DeserializeFromString(o2FileSystem.ReadFile(::GetBuiltAssetsTreePath()));
         mMainAssetsTree->assetsPath = ::GetAssetsPath();
         mMainAssetsTree->builtAssetsPath = ::GetBuiltAssetsPath();

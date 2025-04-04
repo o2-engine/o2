@@ -16,10 +16,8 @@ vertex RasterizerData vertexShader(uint vertexID [[vertex_id]], constant MetalVe
 	RasterizerData out;
 	
 	MetalVertex2 v = vertices[vertexID];
-	matrix_float4x4 m = uniforms.projectionMatrix*uniforms.modelViewMatrix;
 	
-	out.position = m*float4(v.x, v.y, v.z, 1.0);
-	
+	out.position = uniforms.mvpMatrix*float4(v.x, v.y, 0.5, 1);
 	out.color = v.color;
 	out.textureCoordinate = vector_float2(v.tu, v.tv);
 	

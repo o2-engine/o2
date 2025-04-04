@@ -75,9 +75,10 @@ namespace o2
         pipelineStateDescriptor.colorAttachments[0].rgbBlendOperation           = MTLBlendOperationAdd;
         pipelineStateDescriptor.colorAttachments[0].alphaBlendOperation         = MTLBlendOperationAdd;
         pipelineStateDescriptor.colorAttachments[0].sourceRGBBlendFactor        = MTLBlendFactorSourceAlpha;
-        pipelineStateDescriptor.colorAttachments[0].sourceAlphaBlendFactor      = MTLBlendFactorSourceAlpha;
         pipelineStateDescriptor.colorAttachments[0].destinationRGBBlendFactor   = MTLBlendFactorOneMinusSourceAlpha;
+        pipelineStateDescriptor.colorAttachments[0].sourceAlphaBlendFactor      = MTLBlendFactorOne;
         pipelineStateDescriptor.colorAttachments[0].destinationAlphaBlendFactor = MTLBlendFactorOneMinusSourceAlpha;
+
 
         pipelineState = [device newRenderPipelineStateWithDescriptor:pipelineStateDescriptor
                                                                error:&error];
@@ -107,6 +108,10 @@ namespace o2
         
         RenderDevice::commandBuffer = [RenderDevice::commandQueue commandBuffer];
         RenderDevice::commandBuffer.label = @"Default";
+        
+        mVertexBufferOffset = 0;
+        mIndexBufferOffset = 0;
+        mUniformBufferOffset = 0;
     }
 
     void Render::PlatformUploadBuffers(Vertex* vertices, UInt verticesCount, VertexIndex* indexes, UInt indexesCount)
@@ -151,7 +156,7 @@ namespace o2
                 mNeedClear = false;
             }
             else
-                [renderPassDescriptor.colorAttachments[0] setLoadAction:MTLLoadActionDontCare];
+                [renderPassDescriptor.colorAttachments[0] setLoadAction:MTLLoadActionLoad];
             
             if (mCurrentRenderTarget)
                 renderPassDescriptor.colorAttachments[0].texture = mCurrentRenderTarget->mImpl->texture;
@@ -189,13 +194,11 @@ namespace o2
             }
             
             Uniforms uniforms;
-            MtxConvert(mProjMatrix, uniforms.projectionMatrix);
-            MtxConvert(mViewModelMatrix, uniforms.modelViewMatrix);
+            MtxConvert(mMVPMatrix, uniforms.mvpMatrix);
             
             Uniforms* dstUniformsBuffer = (Uniforms*)((Byte*)[RenderDevice::uniformBuffer contents] + mUniformBufferOffset);
             memcpy(dstUniformsBuffer, &uniforms, sizeof(Uniforms));
             [renderEncoder setVertexBuffer:RenderDevice::uniformBuffer offset:mUniformBufferOffset atIndex:1];
-            mUniformBufferOffset += (sizeof(Uniforms)/256 + 1)*256;
             
             static const MTLPrimitiveType primitiveType[3]{ MTLPrimitiveTypeTriangle, MTLPrimitiveTypeTriangle, MTLPrimitiveTypeLine };
             
@@ -207,6 +210,7 @@ namespace o2
 
         mVertexBufferOffset += (sizeof(MetalVertex2)*mLastDrawVertex/256 + 1)*256;
         mIndexBufferOffset += (sizeof(UInt)*mLastDrawIdx/256 + 1)*256;
+        mUniformBufferOffset += (sizeof(Uniforms)/256 + 1)*256;
     }
 
     void Render::PlatformEnd()
@@ -234,7 +238,12 @@ namespace o2
     }
 
     void Render::PlatformSetupCameraTransforms(float* matrix)
-    {}
+    {
+        memcpy(mMVPMatrix, matrix, sizeof(float)*16);
+        
+        if (mCurrentRenderTarget)
+            mMVPMatrix[5] = -mMVPMatrix[5]; // Flip by Y
+    }
 
     void Render::PlatformBeginStencilDrawing()
     {}
@@ -275,9 +284,10 @@ namespace o2
         NSSize displayPixelSize = [[description objectForKey:NSDeviceSize] sizeValue];
         CGSize displayPhysicalSize = CGDisplayScreenSize([[description objectForKey:@"NSScreenNumber"] unsignedIntValue]);
         
-        const float mmPerInch = 25.4f;
-        return Vec2I((displayPixelSize.width / displayPhysicalSize.width) * mmPerInch,
-                     (displayPixelSize.height / displayPhysicalSize.height) * mmPerInch);
+        float mmPerInch = 25.4f;
+        float scale = o2Application.GetGraphicsScale();
+        return Vec2I((displayPixelSize.width / displayPhysicalSize.width) * mmPerInch / scale,
+                     (displayPixelSize.height / displayPhysicalSize.height) * mmPerInch / scale);
     }
 }
 

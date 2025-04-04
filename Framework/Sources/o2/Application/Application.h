@@ -282,9 +282,6 @@ namespace o2
 
         // Calling on updating by fixed FPS
         virtual void OnFixedUpdate(float dt);
-        
-        // Setups default camera with scaled graphics
-        virtual void SetupGraphicsScaledCamera();
 
         // Calling on drawing
         virtual void OnDraw();
@@ -440,7 +437,6 @@ CLASS_METHODS_META(o2::Application)
     FUNCTION().PROTECTED().SIGNATURE(void, UpdateDebug, float);
     FUNCTION().PROTECTED().SIGNATURE(void, OnUpdate, float);
     FUNCTION().PROTECTED().SIGNATURE(void, OnFixedUpdate, float);
-    FUNCTION().PROTECTED().SIGNATURE(void, SetupGraphicsScaledCamera);
     FUNCTION().PROTECTED().SIGNATURE(void, OnDraw);
     FUNCTION().PROTECTED().SIGNATURE(void, OnActivated);
     FUNCTION().PROTECTED().SIGNATURE(void, OnDeactivated);

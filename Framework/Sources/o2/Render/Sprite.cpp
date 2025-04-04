@@ -584,6 +584,9 @@ namespace o2
 
         Vec2F tileSize = (Vec2F)(mTextureSrcRect.Size())*mTileScale;
         Vec2F sz = mSize*mScale;
+        
+        if (Math::Equals(tileSize.x, 0.0f) || Math::Equals(tileSize.y, 0.0f))
+            return;
 
         Vec2I tilesCount(Math::CeilToInt(sz.x/tileSize.x), Math::CeilToInt(sz.y/tileSize.y));
 

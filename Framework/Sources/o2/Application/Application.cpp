@@ -164,15 +164,6 @@ namespace o2
 
         Assets::DestroySingleton(mAssets);
     }
-    
-    void Application::SetupGraphicsScaledCamera()
-    {
-        PROFILE_SAMPLE_FUNC();
-
-        Camera camera = Camera::Default();
-        camera.scale = Vec2F(1.0f/mGraphicsScale, 1.0f/mGraphicsScale);
-        o2Render.camera = camera;
-    }
 
     void Application::ProcessFrame()
     {
@@ -235,7 +226,7 @@ namespace o2
         PostUpdateEventSystem();
         
         mMainListenersLayer->OnBeginDraw();
-        SetupGraphicsScaledCamera();
+        mRender->SetCamera(Camera());
         mMainListenersLayer->camera = o2Render.GetCamera();
 
         DrawScene();

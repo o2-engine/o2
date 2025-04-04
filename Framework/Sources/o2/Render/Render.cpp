@@ -486,10 +486,10 @@ namespace o2
 
         mStackScissors.Add(ScissorStackEntry(RectI(), RectI(), true));
 
+        mCurrentRenderTarget = renderTarget;
+        
         PlatformBindRenderTarget(renderTarget);
         SetupViewMatrix(renderTarget->GetSize());
-
-        mCurrentRenderTarget = renderTarget;
     }
 
     void Render::UnbindRenderTexture()
@@ -499,9 +499,10 @@ namespace o2
 
         DrawPrimitives();
         PlatformBindRenderTarget(nullptr);
-        SetupViewMatrix(mResolution);
 
         mCurrentRenderTarget = TextureRef();
+        
+        SetupViewMatrix(mResolution);
         SetCamera(Camera());
 
         DisableScissorTest(true);

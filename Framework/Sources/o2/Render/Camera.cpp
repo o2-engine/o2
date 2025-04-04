@@ -1,6 +1,7 @@
 #include "o2/stdafx.h"
 #include "Camera.h"
 
+#include "o2/Application/Application.h"
 #include "o2/Render/Render.h"
 
 namespace o2
@@ -11,13 +12,12 @@ namespace o2
     {
         if (size == Vec2F() && Render::IsSingletonInitialzed())
             SetSize(o2Render.GetCurrentResolution());
-    }
-
-    Camera::Camera():
-        Transform(Vec2F(), Vec2F(), 0.0f)
-    {
-        if (size == Vec2F() && Render::IsSingletonInitialzed())
-            SetSize(o2Render.GetCurrentResolution());
+        
+        if (Application::IsSingletonInitialzed())
+        {
+            mScale.x = 1.0f/o2Application.GetGraphicsScale();
+            mScale.y = 1.0f/o2Application.GetGraphicsScale();
+        }
     }
 
     bool Camera::operator==(const Camera& other) const
