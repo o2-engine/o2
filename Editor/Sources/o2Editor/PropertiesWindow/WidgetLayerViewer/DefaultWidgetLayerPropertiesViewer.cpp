@@ -37,8 +37,8 @@ namespace Editor
         if (!mViewer)
         {
             mViewer = o2EditorProperties.CreateObjectViewer(&TypeOf(WidgetLayer), "");
-            mViewer->SetHeaderEnabled(false);
-            mSpoiler->AddChild(mViewer->GetSpoiler());
+            mViewer->CreateSpoiler(mSpoiler);
+			mViewer->SetHeaderEnabled(false);
             mFitSizeButton->SetParent(mSpoiler);
         }
 

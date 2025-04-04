@@ -64,7 +64,7 @@
                                                         "Type": "o2::Button",
                                                         "Data": {
                                                             "Prototype": {
-                                                                "id": "3e003b14526401a52c854a5059e44eaa",
+                                                                "id": "4df2151202081afd3d7002d0503c7a97",
                                                                 "path": "Editor UI styles/O2  Button asset link.proto"
                                                             },
                                                             "PrototypeLink": 3391303721553335004,
@@ -345,7 +345,7 @@
                                                                 "meta": {
                                                                     "Type": "o2::DefaultAssetMeta<o2::AnimationAsset>",
                                                                     "Value": {
-                                                                        "mId": "7dc4021c01d859c20dc71a9724b86aa3"
+                                                                        "mId": "5f9a093c71ba198e59b15f900d7a6c56"
                                                                     }
                                                                 }
                                                             }
@@ -398,7 +398,7 @@
                                                                 "meta": {
                                                                     "Type": "o2::DefaultAssetMeta<o2::AnimationAsset>",
                                                                     "Value": {
-                                                                        "mId": "6408237b5feb54d953b507536f97116d"
+                                                                        "mId": "648a0ac22855473614921e017e37020f"
                                                                     }
                                                                 }
                                                             }

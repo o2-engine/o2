@@ -54,30 +54,27 @@ namespace Editor
 
     Vec2F SceneDragHandle::ScreenToLocal(const Vec2F& point)
     {
-        return o2EditorSceneScreen.ScreenToScenePoint(DragHandle::ScreenToLocal(point));
+        return point;
     }
 
     Vec2F SceneDragHandle::LocalToScreen(const Vec2F& point)
     {
-        return o2EditorSceneScreen.SceneToScreenPoint(DragHandle::LocalToScreen(point));
+        return point;
     }
 
     void SceneDragHandle::Draw()
     {
-        if (mode == Mode::SceneSpace)
-        {
-            Vec2F cameraScale = o2EditorSceneScreen.GetCameraScale();
-            Vec2F drawablesScale(1.0f/cameraScale.x, 1.0f/cameraScale.y);
+        Vec2F cameraScale = o2EditorSceneScreen.GetCameraScale();
+        Vec2F drawablesScale(cameraScale.x, cameraScale.y);
 
-            if (mRegularDrawable)
-                mRegularDrawable->scale = drawablesScale;
+        if (mRegularDrawable)
+            mRegularDrawable->scale = drawablesScale;
 
-            if (mHoverDrawable)
-                mHoverDrawable->scale = drawablesScale;
+        if (mHoverDrawable)
+            mHoverDrawable->scale = drawablesScale;
 
-            if (mPressedDrawable)
-                mPressedDrawable->scale = drawablesScale;
-        }
+        if (mPressedDrawable)
+            mPressedDrawable->scale = drawablesScale;  
 
         DragHandle::Draw();
     }
@@ -96,13 +93,6 @@ namespace Editor
     }
 }
 // --- META ---
-
-ENUM_META(Editor::SceneDragHandle::Mode)
-{
-    ENUM_ENTRY(SceneSpace);
-    ENUM_ENTRY(ScreenSpace);
-}
-END_ENUM_META;
 
 DECLARE_CLASS(Editor::SceneDragHandle, Editor__SceneDragHandle);
 // --- END META ---

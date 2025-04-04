@@ -32,14 +32,14 @@ namespace Editor
     void SelectionTool::DrawScene()
     {
         for (auto& object : mCurrentSelectingObjects)
-            o2EditorSceneScreen.DrawObjectSelection(object, o2EditorSceneScreen.GetManyObjectsSelectionColor());
+			o2EditorSceneScreen.DrawObjectSelection(object, o2EditorSceneScreen.GetManyObjectsSelectionColor());
+
+		if (mSelectingObjects)
+			mSelectionSprite->Draw();
     }
 
     void SelectionTool::DrawScreen()
-    {
-        if (mSelectingObjects)
-            mSelectionSprite->Draw();
-    }
+    {}
 
     void SelectionTool::Update(float dt)
     {}
@@ -131,8 +131,7 @@ namespace Editor
         if (mSelectingObjects && cursor.delta.Length() > 0.1f)
         {
             mSelectionSprite->SetRect(RectF(mPressPoint, cursor.position));
-            RectF selectionRect(o2EditorSceneScreen.ScreenToScenePoint(cursor.position),
-                                o2EditorSceneScreen.ScreenToScenePoint(mPressPoint));
+            RectF selectionRect(cursor.position, mPressPoint);
 
             auto currentSelectedObjects = mCurrentSelectingObjects;
             mCurrentSelectingObjects.Clear();

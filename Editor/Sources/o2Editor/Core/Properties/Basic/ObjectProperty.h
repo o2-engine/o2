@@ -34,7 +34,7 @@ namespace Editor
         void SetValueAndPrototypeProxy(const TargetsVec& targets) override;
 
         // Updates and checks value
-        void Refresh() override;
+        void Refresh(bool forcible = false) override;
 
         // Returns editing by this field type
         const Type* GetValueType() const override;
@@ -106,7 +106,7 @@ namespace Editor
         void InitializeControls();
 
         // Checks viewer type, creates new if needed
-        void CheckViewer();
+        void CheckViewer(bool forcible = false);
 
         // Returns object target data from proxy. Creates copy of object when it is property proxy, or gets pointer from pointer proxy
         TargetObjectData GetObjectFromProxy(const Ref<IAbstractValueProxy>& proxy);
@@ -138,7 +138,7 @@ CLASS_METHODS_META(Editor::ObjectProperty)
     FUNCTION().PUBLIC().CONSTRUCTOR(RefCounter*);
     FUNCTION().PUBLIC().CONSTRUCTOR(RefCounter*, const ObjectProperty&);
     FUNCTION().PUBLIC().SIGNATURE(void, SetValueAndPrototypeProxy, const TargetsVec&);
-    FUNCTION().PUBLIC().SIGNATURE(void, Refresh);
+    FUNCTION().PUBLIC().SIGNATURE(void, Refresh, bool);
     FUNCTION().PUBLIC().SIGNATURE(const Type*, GetValueType);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(const Type*, GetValueTypeStatic);
     FUNCTION().PUBLIC().SIGNATURE(void, SetFieldInfo, const FieldInfo*);
@@ -153,7 +153,7 @@ CLASS_METHODS_META(Editor::ObjectProperty)
     FUNCTION().PROTECTED().SIGNATURE(void, OnPropertyEnabled);
     FUNCTION().PROTECTED().SIGNATURE(void, OnPropertyDisabled);
     FUNCTION().PROTECTED().SIGNATURE(void, InitializeControls);
-    FUNCTION().PROTECTED().SIGNATURE(void, CheckViewer);
+    FUNCTION().PROTECTED().SIGNATURE(void, CheckViewer, bool);
     FUNCTION().PROTECTED().SIGNATURE(TargetObjectData, GetObjectFromProxy, const Ref<IAbstractValueProxy>&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnPropertyChanged, const String&, const Vector<DataDocument>&, const Vector<DataDocument>&);
 }

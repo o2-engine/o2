@@ -84,13 +84,13 @@ namespace Editor
             return TargetPair(mmake<YValueProxy>(x.first), x.second ? mmake<YValueProxy>(x.second) : nullptr); }));
     }
 
-    void Vec2IProperty::Refresh()
+    void Vec2IProperty::Refresh(bool forcible /*= false*/)
     {
         if (mValuesProxies.IsEmpty())
             return;
 
-        mXProperty->Refresh();
-        mXProperty->Refresh();
+        mXProperty->Refresh(forcible);
+        mXProperty->Refresh(forcible);
 
         CheckRevertableState();
     }

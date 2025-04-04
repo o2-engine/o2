@@ -79,9 +79,9 @@ namespace o2
         CLONEABLE_REF(AnimationStateGraphAsset);
 
     protected:
-        String mInitialState; // Initial state name @SERIALIZABLE
+		String mInitialState; // Initial state name @SERIALIZABLE @EDITOR_PROPERTY()
 
-        Vector<Ref<AnimationGraphState>> mStates; // Animation graph states @SERIALIZABLE
+        Vector<Ref<AnimationGraphState>> mStates; // Animation graph states @SERIALIZABLE @EDITOR_PROPERTY()
 
     protected:
         // Completion deserialization callback
@@ -97,8 +97,8 @@ CLASS_BASES_META(o2::AnimationStateGraphAsset)
 END_META;
 CLASS_FIELDS_META(o2::AnimationStateGraphAsset)
 {
-    FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().NAME(mInitialState);
-    FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().NAME(mStates);
+    FIELD().PROTECTED().EDITOR_PROPERTY_ATTRIBUTE().SERIALIZABLE_ATTRIBUTE().NAME(mInitialState);
+    FIELD().PROTECTED().EDITOR_PROPERTY_ATTRIBUTE().SERIALIZABLE_ATTRIBUTE().NAME(mStates);
 }
 END_META;
 CLASS_METHODS_META(o2::AnimationStateGraphAsset)

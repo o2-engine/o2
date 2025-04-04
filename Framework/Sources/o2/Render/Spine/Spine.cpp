@@ -194,7 +194,10 @@ namespace o2
     void Spine::Track::Evaluate()
     {
         if (mOwner && mTrackEntry)
-            mInDurationTime = mTrackEntry->getTrackTime();
+        {
+            float x;
+            mInDurationTime = modff(mTrackEntry->getTrackTime()/mDuration, &x)*mDuration;
+        }
     }
 
     void Spine::Track::OnPlay()

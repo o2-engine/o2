@@ -135,6 +135,7 @@ namespace o2
                         currentState = passedStateTransition->GetSourceState();
                     }
 
+					path.Reverse();
                     return path;
                 }
 

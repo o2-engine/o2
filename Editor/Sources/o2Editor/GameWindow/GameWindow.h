@@ -45,8 +45,8 @@ namespace Editor
             CLONEABLE_REF(GameView);
 
         protected:
-            Ref<Sprite>  mRenderTargetSprite; // Render target sprite, using for drawing scene render target
-            TextureRef mRenderTarget;       // Render target texture, using for rendering scene
+            Ref<Sprite> mRenderTargetSprite; // Render target sprite, using for drawing scene render target
+            TextureRef  mRenderTarget;       // Render target texture, using for rendering scene
 
         protected:
             // Called when transformation was changed and updated, updates render texture and sprite

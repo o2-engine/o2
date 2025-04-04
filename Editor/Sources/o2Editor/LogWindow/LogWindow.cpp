@@ -32,11 +32,10 @@ namespace Editor
     }
 
     LogWindow::LogWindow(RefCounter* refCounter) :
-        IEditorWindow(refCounter), mRegularMessagesEnabled(true), mWarningMessagesEnabled(true), mErrorMessagesEnabled(true), mRegularMessagesCount(0),
-        mWarningMessagesCount(0), mErrorMessagesCount(0)
+        IEditorWindow(refCounter), LogStream(refCounter)
     {
         InitializeWindow();
-        //BindStream(o2Debug.GetLog());
+        BindStream(o2Debug.GetLog());
     }
 
     LogWindow::~LogWindow()

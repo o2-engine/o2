@@ -60,8 +60,8 @@ namespace Editor
         // Sets parent context
         virtual void SetParentContext(const Ref<PropertiesContext>& context);
 
-        // Checks common value and fill fields
-        virtual void Refresh() {}
+		// Checks common value and fill fields. Forcible flags disables value caching
+        virtual void Refresh(bool forcible = false) {}
 
         // Reverts value to prototype value
         virtual void Revert() {}
@@ -233,7 +233,7 @@ namespace Editor
         TPropertyField& operator=(const TPropertyField& other);
 
         // Checks common value and fill fields
-        void Refresh() override;
+        void Refresh(bool forcible = false) override;
 
         // Reverts value to prototype value
         void Revert() override;
@@ -437,7 +437,7 @@ namespace Editor
     }
 
     template<typename _type>
-    void TPropertyField<_type>::Refresh()
+    void TPropertyField<_type>::Refresh(bool forcible /*= false*/)
     {
         if (mValuesProxies.IsEmpty())
             return;
@@ -464,7 +464,7 @@ namespace Editor
             if (!lastDifferent)
                 SetUnknownValue();
         }
-        else if (lastCommonValue != newCommonValue || lastDifferent || IsAlwaysRefresh())
+        else if (lastCommonValue != newCommonValue || lastDifferent || IsAlwaysRefresh() || forcible)
             SetCommonValue(newCommonValue);
 
         CheckRevertableState();
@@ -632,7 +632,7 @@ CLASS_METHODS_META(Editor::IPropertyField)
     FUNCTION().PUBLIC().SIGNATURE(const TargetsVec&, GetValueAndPrototypeProxy);
     FUNCTION().PUBLIC().SIGNATURE(void, SetValueProxy, const Vector<Ref<IAbstractValueProxy>>&);
     FUNCTION().PUBLIC().SIGNATURE(void, SetParentContext, const Ref<PropertiesContext>&);
-    FUNCTION().PUBLIC().SIGNATURE(void, Refresh);
+    FUNCTION().PUBLIC().SIGNATURE(void, Refresh, bool);
     FUNCTION().PUBLIC().SIGNATURE(void, Revert);
     FUNCTION().PUBLIC().SIGNATURE(void, SetCaption, const WString&);
     FUNCTION().PUBLIC().SIGNATURE(WString, GetCaption);
@@ -684,7 +684,7 @@ CLASS_METHODS_META(Editor::TPropertyField<_type>)
 
     FUNCTION().PUBLIC().CONSTRUCTOR(RefCounter*);
     FUNCTION().PUBLIC().CONSTRUCTOR(RefCounter*, const TPropertyField&);
-    FUNCTION().PUBLIC().SIGNATURE(void, Refresh);
+    FUNCTION().PUBLIC().SIGNATURE(void, Refresh, bool);
     FUNCTION().PUBLIC().SIGNATURE(void, Revert);
     FUNCTION().PUBLIC().SIGNATURE(const Type*, GetValueType);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(const Type*, GetValueTypeStatic);

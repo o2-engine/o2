@@ -386,6 +386,9 @@ namespace o2
         // Checks that copy visitor finished work, calls it finalization
         void CheckCopyVisitorFinalization() const;
 
+		// Draws components of actor
+        virtual void DrawComponents();
+
         // Updates result read enable flag
         virtual void UpdateResEnabled(bool withChildren = true);
 
@@ -939,6 +942,7 @@ CLASS_METHODS_META(o2::Actor)
     FUNCTION().PROTECTED().CONSTRUCTOR(RefCounter*, ActorTransform*, Vector<Ref<Component>>, ActorCreateMode);
     FUNCTION().PROTECTED().CONSTRUCTOR(RefCounter*, ActorTransform*, const Actor&, ActorCreateMode);
     FUNCTION().PROTECTED().SIGNATURE(void, CheckCopyVisitorFinalization);
+    FUNCTION().PROTECTED().SIGNATURE(void, DrawComponents);
     FUNCTION().PROTECTED().SIGNATURE(void, UpdateResEnabled, bool);
     FUNCTION().PROTECTED().SIGNATURE(void, UpdateResEnabledInHierarchy, bool);
     FUNCTION().PROTECTED().SIGNATURE(void, SerializeRaw, DataValue&);

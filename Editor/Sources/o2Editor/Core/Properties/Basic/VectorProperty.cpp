@@ -61,6 +61,7 @@ namespace Editor
 
         mHeaderContainer = mmake<HorizontalLayout>();
         *mHeaderContainer->layout = WidgetLayout::HorStretch(VerAlign::Top, 100, 0, 20, 0);
+        mHeaderContainer->layout->minHeight = 20;
         mHeaderContainer->baseCorner = BaseCorner::Right;
         mHeaderContainer->expandHeight = false;
         mHeaderContainer->SetInternalParent(mSpoiler, false);
@@ -119,7 +120,7 @@ namespace Editor
         Refresh();
     }
 
-    void VectorProperty::Refresh()
+    void VectorProperty::Refresh(bool forcible /*= false*/)
     {
         PushEditorScopeOnStack scope;
 
@@ -175,7 +176,7 @@ namespace Editor
                 }
             }
         }
-        else if (lastDifferent || mValueProperties.Count() != mCountOfElements)
+        else if (lastDifferent || mValueProperties.Count() != mCountOfElements || forcible)
         {
             mCountProperty->SetValue(mCountOfElements);
 
@@ -202,11 +203,10 @@ namespace Editor
                     }
 
                     mSpoiler->AddChild(propertyDef);
-                    propertyDef->SetCaption((String)"# " + (String)i);
+                    propertyDef->SetCaption(GetElementCaption(i, itemTargetValues));
                     propertyDef->SetValueAndPrototypeProxy(itemTargetValues);
                     propertyDef->SetValuePath((String)i);
                     propertyDef->GetRemoveButton()->onClick = [=]() { Remove(i); };
-                    UpdateElementCaption(propertyDef);
 
                     propertyDef->onChangeCompleted =
                         [&](const String& path, const Vector<DataDocument>& before, const Vector<DataDocument>& after)
@@ -247,9 +247,16 @@ namespace Editor
 
                     auto propertyDef = mValueProperties[i];
                     propertyDef->SetValueAndPrototypeProxy(itemTargetValues);
-                    UpdateElementCaption(propertyDef);
+                    propertyDef->SetCaption(GetElementCaption(i, itemTargetValues));
                 }
             }
+        }
+
+        if (!mHeaderEnabled)
+        {
+			mHeaderContainer->SetInternalParent(nullptr);
+			mHeaderContainer->SetDrawingDepthInheritFromParent(true);
+            mSpoiler->AddChild(mHeaderContainer);
         }
 
         mIsRefreshing = false;
@@ -300,6 +307,7 @@ namespace Editor
         {
             Vec2F captionSize = Text::GetTextSize(text, spoilerCaptionLayer->GetFont(), spoilerCaptionLayer->GetFontHeight());
             *mHeaderContainer->layout = WidgetLayout::HorStretch(VerAlign::Top, captionSize.x + 20.0f, 0, 17, 0);
+            mHeaderContainer->layout->minHeight = 17;
         }
     }
 
@@ -338,10 +346,59 @@ namespace Editor
 
     bool VectorProperty::IsExpanded() const
     {
-        return mSpoiler->IsExpanded();
+        return mSpoiler->IsExpanded() || !mHeaderEnabled;
     }
 
-    void* VectorProperty::GetProxyValuePointer(const Ref<IAbstractValueProxy>& proxy) const
+	void VectorProperty::SetHeaderEnabled(bool enabled)
+	{
+		mHeaderEnabled = enabled;
+
+		if (mHeaderEnabled)
+		{
+			mSpoiler->SetHeadHeight(20);
+            mSpoiler->GetLayerDrawable<Text>("caption")->enabled = true;
+            mSpoiler->GetInternalWidget("expand")->enabledForcibly = true;
+            mSpoiler->borderTop = 2;
+            mHeaderContainer->SetInternalParent(mSpoiler);
+		}
+		else
+		{
+            mSpoiler->SetHeadHeight(0);
+            mSpoiler->GetLayerDrawable<Text>("caption")->enabled = false;
+            mSpoiler->GetInternalWidget("expand")->enabledForcibly = false;
+            mSpoiler->borderTop = 0;
+            mSpoiler->Expand();
+            mHeaderContainer->SetInternalParent(nullptr);
+		}
+	}
+
+	bool VectorProperty::IsHeaderEnabled() const
+	{
+        return mHeaderEnabled;
+	}
+
+	void VectorProperty::SetCaptionIndexesEnabled(bool enabled)
+	{
+        mCaptionIndexesEnabled = enabled;
+	}
+
+	bool VectorProperty::IsCaptionIndexesEnabled() const
+	{
+        return mCaptionIndexesEnabled;
+	}
+
+	void VectorProperty::SetCountEditBoxEnabled(bool enabled)
+	{
+        mCountEditBoxEnabled = enabled;
+        mCountProperty->SetEnabled(enabled);
+	}
+
+	bool VectorProperty::IsCountEditBoxEnabled() const
+	{
+        return mCountEditBoxEnabled;
+	}
+
+	void* VectorProperty::GetProxyValuePointer(const Ref<IAbstractValueProxy>& proxy) const
     {
         auto variableProxy = DynamicCast<IPointerValueProxy>(proxy);
         if (variableProxy)
@@ -357,7 +414,9 @@ namespace Editor
 
         auto res = o2EditorProperties.CreateFieldProperty(mVectorType->GetElementType(), "Element", 
                                                           onChangeCompleted, onChanged);
-        res->SetParentContext(mParentContext.Lock());
+
+        if (mParentContext)
+            res->SetParentContext(mParentContext.Lock());
 
         res->AddLayer("drag", mmake<Sprite>("ui/UI4_drag_handle.png"), Layout::Based(BaseCorner::LeftTop, Vec2F(20, 20), Vec2F(-18, 0)));
 
@@ -417,7 +476,65 @@ namespace Editor
         return res;
     }
 
-    void VectorProperty::OnPropertyChanged(const String& path, const Vector<DataDocument>& before, 
+	String VectorProperty::GetElementCaption(int idx, const Vector<Pair<Ref<IAbstractValueProxy>, Ref<IAbstractValueProxy>>>& targets)
+	{
+		String caption = mCaptionIndexesEnabled ? (String)"# " + (String)idx : String::empty;
+
+		if (!targets.IsEmpty())
+		{
+			auto& targetValue = targets[0].first;
+			auto& type = targetValue->GetType();
+			void* object = type.CreateSample();
+			targetValue->GetValuePtr(object);
+			String name = TryGetObjectName(object, type);
+			type.DestroySample(object);
+
+            if (!name.IsEmpty())
+            {
+                if (mCaptionIndexesEnabled)
+                    caption += " ";
+
+                caption += name;
+            }
+		}
+
+        return caption;
+	}
+
+	String VectorProperty::TryGetObjectName(void* object, const Type& type) const
+	{
+        static Vector<String> searchNames = { "name", "id", "mName", "mId", "_name", "_id" };
+
+		if (!object)
+			return String::empty;
+
+        if (type.GetUsage() == Type::Usage::Reference)
+        {
+            if (auto referenceType = dynamic_cast<const ReferenceType*>(&type))
+                return TryGetObjectName(referenceType->GetObjectRawPtr(object), *referenceType->GetBaseType());
+        }
+
+        for (auto& fieldInfo : type.GetFields())
+        {
+            if (searchNames.Contains(fieldInfo.GetName()) && fieldInfo.GetType() == &TypeOf(String))
+            {
+                String value = fieldInfo.GetValue<String>(object);
+                return value;
+            }
+        }
+
+        for (auto& base : type.GetBaseTypes())
+        {
+            void* baseObject = base.dynamicCastUpFunc(object);
+            String value = TryGetObjectName(baseObject, *base.type);
+            if (!value.IsEmpty())
+                return value;
+        }
+
+        return String::empty;
+	}
+
+	void VectorProperty::OnPropertyChanged(const String& path, const Vector<DataDocument>& before,
                                            const Vector<DataDocument>& after)
     {
         for (auto& pair : mTargetObjects)
@@ -483,43 +600,6 @@ namespace Editor
 
         onChanged(Ref(this));
         o2EditorSceneScreen.OnSceneChanged();
-    }
-
-    void VectorProperty::UpdateElementCaption(const Ref<IPropertyField>& propertyDef) const
-    {
-        auto& proxies = propertyDef->GetValueAndPrototypeProxy();
-        if (!proxies.IsEmpty())
-        {
-            const Type* itemType = &proxies[0].first->GetType();
-            if (auto ptrType = dynamic_cast<const PointerType*>(itemType))
-                itemType = ptrType->GetBaseType();
-
-            if (auto objectType = dynamic_cast<const ObjectType*>(itemType))
-            {
-                static String nameVariants[] = { "name", "mName", "_name", "id", "mId" };
-                for (auto& name : nameVariants)
-                {
-                    if (auto nameField = objectType->GetField(name))
-                    {
-                        if (nameField->GetType() == &TypeOf(String))
-                        {
-                            void* objectPtr;
-                            proxies[0].first->GetValuePtr(&objectPtr);
-                            if (objectPtr)
-                            {
-                                String name = nameField->GetValue<String>(objectPtr);
-                                if (!name.IsEmpty())
-                                    propertyDef->SetCaption("#" + propertyDef->GetValuePath() + " - " + name);
-                            }
-
-                            return;
-                        }
-                    }
-                }
-            }
-        }
-
-        propertyDef->SetCaption("#" + propertyDef->GetValuePath());
     }
 
     void VectorProperty::TargetObjectData::Refresh()

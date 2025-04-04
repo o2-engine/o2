@@ -47,7 +47,7 @@
                                             "Type": "o2::DropDown",
                                             "Data": {
                                                 "Prototype": {
-                                                    "id": "37a349bd00c3556110947fff44f13ca5",
+                                                    "id": "5b205949421c1175395b5fa0165f1347",
                                                     "path": "Editor UI styles/O2  Drop Down standard.proto"
                                                 },
                                                 "PrototypeLink": 2817208883017020917,
@@ -71,6 +71,7 @@
                                                     {
                                                         "Type": "o2::CustomList",
                                                         "Data": {
+                                                            "mInheritDrawingDepthFromParent": false,
                                                             "mName": "unnamed",
                                                             "mTransparency": 0.0,
                                                             "mViewAreaLayout": {
@@ -97,7 +98,7 @@
                                                                 "Type": "o2::Label",
                                                                 "Value": {
                                                                     "Prototype": {
-                                                                        "id": "52422d7940b0288b7d092c7254f87e60",
+                                                                        "id": "61f4253507aa1fb5662634953cdd346c",
                                                                         "path": "Editor UI styles/O2  Label standard.proto"
                                                                     },
                                                                     "PrototypeLink": 9613259363390956959,
@@ -261,7 +262,7 @@
                                                                     "Type": "o2::HorizontalScrollBar",
                                                                     "Value": {
                                                                         "Prototype": {
-                                                                            "id": "0692262812827c0756ab79b2151f10d0",
+                                                                            "id": "45136f1e498d114a3934747d38e4186a",
                                                                             "path": "Editor UI styles/O2  Horizontal Scroll Bar standard.proto"
                                                                         },
                                                                         "PrototypeLink": 2396346607982954160,
@@ -280,6 +281,7 @@
                                                                                 "y": 15.0
                                                                             }
                                                                         },
+                                                                        "mInheritDrawingDepthFromParent": false,
                                                                         "mName": "horScrollBar",
                                                                         "mTransparency": 0.0,
                                                                         "mMaxValue": 0.0,
@@ -545,7 +547,7 @@
                                                                     "Type": "o2::VerticalScrollBar",
                                                                     "Value": {
                                                                         "Prototype": {
-                                                                            "id": "2d5360a62b9b390a672d11f65d144766",
+                                                                            "id": "04325a0179c53893745f75a270254f20",
                                                                             "path": "Editor UI styles/O2  Vertical Scroll Bar standard.proto"
                                                                         },
                                                                         "PrototypeLink": 8311025582170325613,
@@ -568,6 +570,7 @@
                                                                                 "y": -5.0
                                                                             }
                                                                         },
+                                                                        "mInheritDrawingDepthFromParent": false,
                                                                         "mName": "verScrollBar",
                                                                         "mTransparency": 0.0,
                                                                         "mMaxValue": 0.0,
@@ -929,7 +932,7 @@
                                                                             "meta": {
                                                                                 "Type": "o2::DefaultAssetMeta<o2::AnimationAsset>",
                                                                                 "Value": {
-                                                                                    "mId": "3dda4e195e8b72592f757e1832537604"
+                                                                                    "mId": "1d94586674fb0e364c0f6b1f04a65717"
                                                                                 }
                                                                             }
                                                                         }
@@ -982,7 +985,7 @@
                                                                             "meta": {
                                                                                 "Type": "o2::DefaultAssetMeta<o2::AnimationAsset>",
                                                                                 "Value": {
-                                                                                    "mId": "05b40af6140a6c7c3a5326df2cb822d1"
+                                                                                    "mId": "3baa6025628b2cfd6f2e25c1662a5da8"
                                                                                 }
                                                                             }
                                                                         }
@@ -1035,7 +1038,7 @@
                                                                             "meta": {
                                                                                 "Type": "o2::DefaultAssetMeta<o2::AnimationAsset>",
                                                                                 "Value": {
-                                                                                    "mId": "0f2e65773648121027037c3b1fa03378"
+                                                                                    "mId": "21db37f50eaa0a8427f0744802106f5f"
                                                                                 }
                                                                             }
                                                                         }
@@ -1088,7 +1091,7 @@
                                                                             "meta": {
                                                                                 "Type": "o2::DefaultAssetMeta<o2::AnimationAsset>",
                                                                                 "Value": {
-                                                                                    "mId": "26494af3594d431151d5261031e41706"
+                                                                                    "mId": "20a3065915bc69557de35584644d6992"
                                                                                 }
                                                                             }
                                                                         }

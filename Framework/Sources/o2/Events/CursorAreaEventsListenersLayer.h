@@ -11,15 +11,17 @@ namespace o2
     class CursorAreaEventListenersLayer: public RefCounterable, public CursorAreaEventsListener
     {
     public:
-        Basis  drawnTransform;
-        Basis  viewPortBasis;
-        Basis  renderBasis;
-        Camera camera;
+		Basis  drawnTransform; // Transform at drawing moment
+		Basis  viewPortBasis;  // Camera view port basis before layer content drawing moment
+		Basis  renderBasis;    // Camera render basis after layer content drawing moment
+		Camera camera;         // Camera used to draw this layer
 
-        Vector<WeakRef<CursorAreaEventsListener>> cursorEventAreaListeners;
+		Vector<WeakRef<CursorAreaEventsListener>> cursorEventAreaListeners; // List of contained cursor event listeners
 
         bool isEditor      = false; // Is this layer drawn in editor scope
         bool isTransparent = false; // Is this layer transparent to input other listeners
+
+		String name; // Layer name, used to debug
 
     public:
         // Destructor. Unregisters from events system
@@ -69,6 +71,9 @@ namespace o2
 
         // Returns true when input events can be handled by down listeners
         bool IsInputTransparent() const override;
+
+		// Returns debug name
+		String GetDebugName() const override;
 
     private:
         bool mEnabled = false;

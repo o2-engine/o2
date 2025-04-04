@@ -40,12 +40,8 @@ namespace o2
 
     void ISceneDrawable::Draw()
     {
-        //PROFILE_SAMPLE_FUNC();
-
         OnDrawn();
-
-        for (auto& child : mChildrenInheritedDepth)
-            child->Draw();
+        DrawInheritedDepthChildren();
     }
 
     void ISceneDrawable::SetDrawingDepth(float depth)
@@ -88,7 +84,13 @@ namespace o2
         mChildrenInheritedDepth.SortBy<int>([](const Ref<ISceneDrawable>& x) { return x->GetIndexInParentDrawable(); });
     }
 
-    void ISceneDrawable::OnEnabled()
+	void ISceneDrawable::DrawInheritedDepthChildren()
+	{
+		for (auto& child : mChildrenInheritedDepth)
+			child->Draw();
+	}
+
+	void ISceneDrawable::OnEnabled()
     {
         mDrawableEnabled = true;
 

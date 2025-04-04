@@ -183,7 +183,7 @@ namespace Editor
         }
     }
 
-    void FunctionProperty::Refresh()
+    void FunctionProperty::Refresh(bool forcible /*= false*/)
     {
         PushEditorScopeOnStack scope;
 

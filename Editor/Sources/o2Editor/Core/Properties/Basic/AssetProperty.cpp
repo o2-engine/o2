@@ -104,24 +104,17 @@ namespace Editor
                     allAreInstance = false;
                     for (auto& proxy : mValuesProxies)
                     {
-                        auto proxyType = dynamic_cast<const ObjectType*>(&proxy.first->GetType());
-                        if (auto ptrProxy = DynamicCast<IPointerValueProxy>(proxy.first))
-                        {
-                            void* rawAssetRefPtr = ptrProxy->GetValueVoidPointer();
-                            if (auto refPtr = dynamic_cast<BaseAssetRef*>(proxyType->DynamicCastToIObject(rawAssetRefPtr)))
-                            {
-                                if (refPtr->IsInstance())
-                                {
-                                    targets.Add(refPtr->GetAssetBase());
-                                    allAreInstance = true;
-                                }
-                                else
-                                {
-                                    allAreInstance = false;
-                                    break;
-                                }
-                            }
-                        }
+						auto assetRef = GetProxy(proxy.first);
+						if (assetRef.IsInstance())
+						{
+							targets.Add(assetRef.GetAssetBase());
+							allAreInstance = true;
+						}
+						else
+						{
+							allAreInstance = false;
+							break;
+						}
                     }
 
                     if (allAreInstance)
@@ -228,17 +221,20 @@ namespace Editor
         SetState("instance", true);
 
         for (auto& proxy : mValuesProxies)
-        {
-            auto proxyType = dynamic_cast<const ObjectType*>(&proxy.first->GetType());
-            if (auto ptrProxy = DynamicCast<IPointerValueProxy>(proxy.first))
-            {
-                void* rawAssetRefPtr = ptrProxy->GetValueVoidPointer();
-                if (AssetRef<Asset>* refPtr = dynamic_cast<AssetRef<Asset>*>(proxyType->DynamicCastToIObject(rawAssetRefPtr)))
-                    refPtr->CreateInstance();
-            }
+		{
+			auto proxyType = dynamic_cast<const ObjectType*>(&proxy.first->GetType());
+            auto assetRef = proxyType->CreateSample();
+			proxy.first->GetValuePtr(assetRef); 
+            
+            if (auto* refPtr = dynamic_cast<BaseAssetRef*>(proxyType->DynamicCastToIObject(assetRef)))
+				refPtr->CreateInstance();
+
+			proxy.first->SetValuePtr(assetRef);
+
+			proxyType->DestroySample(assetRef);
         }
 
-        Refresh();
+        Refresh(true);
         mSpoiler->Expand();
     }
 

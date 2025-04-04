@@ -63,12 +63,6 @@ namespace Editor
     void FrameScrollView::Draw()
     {
         ScrollView::Draw();
-
-        if (!mReady)
-            return;
-
-        mHorScrollbar->Draw();
-        mVerScrollbar->Draw();
     }
 
     void FrameScrollView::Update(float dt)
@@ -79,24 +73,18 @@ namespace Editor
             return;
 
         UpdateCameraLimits(dt);
-
-        mHorScrollbar->Update(dt);
-        mVerScrollbar->Update(dt);
     }
 
     void FrameScrollView::UpdateSelfTransform()
     {
         ScrollView::UpdateSelfTransform();
-
-        if (!mReady)
-            return;
-
-        mHorScrollbar->UpdateSelfTransform();
-        mVerScrollbar->UpdateSelfTransform();
     }
 
     void FrameScrollView::SetHorScrollbar(const Ref<HorizontalScrollBar>& scrollbar)
     {
+		if (mHorScrollbar)
+			RemoveInternalWidget(mHorScrollbar);
+
         mHorScrollbar = scrollbar;
         mHorScrollbar->SetInternalParent(Ref(this));
         mHorScrollbar->onChangeByUser = THIS_FUNC(OnHorScrollScrolled);
@@ -106,6 +94,9 @@ namespace Editor
 
     void FrameScrollView::SetVerScrollbar(const Ref<VerticalScrollBar>& scrollbar)
     {
+		if (mVerScrollbar)
+			RemoveInternalWidget(mVerScrollbar);
+
         mVerScrollbar = scrollbar;
         mVerScrollbar->SetInternalParent(Ref(this));
         mVerScrollbar->onChangeByUser = THIS_FUNC(OnVerScrollScrolled);

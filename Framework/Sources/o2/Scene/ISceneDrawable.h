@@ -85,7 +85,10 @@ namespace o2
         virtual int GetIndexInParentDrawable() const { return 0; }
 
         // Sorts depth-inheriting drawables
-        void SortInheritedDrawables();
+		void SortInheritedDrawables();
+
+		// Draws children with inherited depth
+		virtual void DrawInheritedDepthChildren();
 
         // Called when the parent changes
         virtual void OnDrawbleParentChanged();
@@ -185,6 +188,7 @@ CLASS_METHODS_META(o2::ISceneDrawable)
     FUNCTION().PROTECTED().SIGNATURE(Ref<ISceneDrawable>, GetParentDrawable);
     FUNCTION().PROTECTED().SIGNATURE(int, GetIndexInParentDrawable);
     FUNCTION().PROTECTED().SIGNATURE(void, SortInheritedDrawables);
+    FUNCTION().PROTECTED().SIGNATURE(void, DrawInheritedDepthChildren);
     FUNCTION().PROTECTED().SIGNATURE(void, OnDrawbleParentChanged);
     FUNCTION().PROTECTED().SIGNATURE(void, OnDrawableLayerChanged);
     FUNCTION().PROTECTED().SIGNATURE(void, OnEnabled);

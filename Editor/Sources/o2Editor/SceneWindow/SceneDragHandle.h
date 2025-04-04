@@ -12,15 +12,6 @@ namespace Editor
     class SceneDragHandle : public DragHandle
     {
     public:
-        // Handle drawing type. 
-        // ScreenSpace - draws without zooming, in screen space coordinates
-        // SceneSpace - draws with zooming and depends on camera, in local scene coordinates
-        enum class Mode { ScreenSpace, SceneSpace };
-
-    public:
-        Mode mode = Mode::ScreenSpace; // Handle drawing mode, screen or scene space
-
-    public:
         // Default constructor
         SceneDragHandle(RefCounter* refCounter);
 
@@ -57,8 +48,6 @@ namespace Editor
 }
 // --- META ---
 
-PRE_ENUM_META(Editor::SceneDragHandle::Mode);
-
 CLASS_BASES_META(Editor::SceneDragHandle)
 {
     BASE_CLASS(o2::DragHandle);
@@ -66,7 +55,6 @@ CLASS_BASES_META(Editor::SceneDragHandle)
 END_META;
 CLASS_FIELDS_META(Editor::SceneDragHandle)
 {
-    FIELD().PUBLIC().DEFAULT_VALUE(Mode::ScreenSpace).NAME(mode);
 }
 END_META;
 CLASS_METHODS_META(Editor::SceneDragHandle)

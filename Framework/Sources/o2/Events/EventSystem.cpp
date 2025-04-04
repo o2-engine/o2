@@ -142,7 +142,7 @@ namespace o2
 
             for (auto& listener : allUnderCursor)
             {
-                String name = typeid(*listener).name();
+                String name = listener->GetDebugName();
 
                 if (auto widget = DynamicCast<Widget>(listener))
                 {
@@ -158,7 +158,10 @@ namespace o2
                     o2Debug.DrawRect(widget->layout->GetWorldRect(), Color4::Red());
                 }
                 else if (auto handle = DynamicCast<DragHandle>(listener))
-                    o2Debug.DrawRect(handle->GetRegularDrawable()->GetAxisAlignedRect(), Color4::Red());
+                {
+                    if (auto drawable = handle->GetRegularDrawable())
+                        o2Debug.DrawRect(drawable->GetAxisAlignedRect(), Color4::Red());
+                }
 
                 o2Debug.DrawText(Vec2F(-o2Render.GetResolution().x*0.5f, o2Render.GetResolution().y*0.5f - (float)line), name);
 

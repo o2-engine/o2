@@ -231,6 +231,9 @@ namespace o2
         // Adds widget to internal children @SCRIPTABLE
         void AddInternalWidget(const Ref<Widget>& widget, bool worldPositionStays = false);
 
+		// Removes widget from internal children @SCRIPTABLE
+		void RemoveInternalWidget(const Ref<Widget>& widget);
+
         // Returns internal child widget by path (like "root/some node/other node/target node") @SCRIPTABLE
         Ref<Widget> GetInternalWidget(const String& path) const;
 
@@ -336,6 +339,15 @@ namespace o2
 
         // Called when actor excluding from scene, removes this from layer drawables
         void OnRemoveFromScene() override;
+
+		// Draws widget's layers (below children)
+        virtual void DrawLayers();
+
+		// Draws widget's top layers (above children)
+		virtual void DrawTopLayers();
+
+		// Draws internal children
+        virtual void DrawInternalChildren();
 
         // Updates child widgets list
         void UpdateChildWidgetsList();
@@ -833,6 +845,7 @@ CLASS_METHODS_META(o2::Widget)
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(bool, IsUnderPoint, const Vec2F&);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetInternalParent, const Ref<Widget>&, bool);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, AddInternalWidget, const Ref<Widget>&, bool);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, RemoveInternalWidget, const Ref<Widget>&);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(Ref<Widget>, GetInternalWidget, const String&);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(Ref<Widget>, FindInternalWidget, const String&);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(Ref<Actor>, FindActorById, SceneUID);
@@ -854,6 +867,9 @@ CLASS_METHODS_META(o2::Widget)
     FUNCTION().PROTECTED().SIGNATURE(void, OnChildRemoved, const Ref<Actor>&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnAddToScene);
     FUNCTION().PROTECTED().SIGNATURE(void, OnRemoveFromScene);
+    FUNCTION().PROTECTED().SIGNATURE(void, DrawLayers);
+    FUNCTION().PROTECTED().SIGNATURE(void, DrawTopLayers);
+    FUNCTION().PROTECTED().SIGNATURE(void, DrawInternalChildren);
     FUNCTION().PROTECTED().SIGNATURE(void, UpdateChildWidgetsList);
     FUNCTION().PROTECTED().SIGNATURE(WidgetLayoutData&, GetLayoutData);
     FUNCTION().PROTECTED().SIGNATURE(const WidgetLayoutData&, GetLayoutData);

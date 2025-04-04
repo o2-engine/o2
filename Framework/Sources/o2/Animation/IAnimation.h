@@ -25,10 +25,10 @@ namespace o2
         GETTER(float, duration, GetDuration);                      // Animation duration property
 
     public:
-        Function<void()>      onPlayEvent;   // Event calling when starting playing
-        Function<void()>      onStopEvent;   // Event calling when stopping playing
-        Function<void()>      onPlayedEvent; // Event calling when finishing playing
-        Function<void(float)> onUpdate;      // Event calling on animation update
+        Function<void()>      onPlay;   // Event calling when starting playing
+        Function<void()>      onStop;   // Event calling when stopping playing
+        Function<void()>      onPlayed; // Event calling when finishing playing
+        Function<void(float)> onUpdate; // Event calling on animation update
 
     public:
         // Default constructor
@@ -215,9 +215,9 @@ CLASS_FIELDS_META(o2::IAnimation)
     FIELD().PUBLIC().EDITOR_IGNORE_ATTRIBUTE().NAME(endBound);
     FIELD().PUBLIC().NAME(loop);
     FIELD().PUBLIC().NAME(duration);
-    FIELD().PUBLIC().NAME(onPlayEvent);
-    FIELD().PUBLIC().NAME(onStopEvent);
-    FIELD().PUBLIC().NAME(onPlayedEvent);
+    FIELD().PUBLIC().NAME(onPlay);
+    FIELD().PUBLIC().NAME(onStop);
+    FIELD().PUBLIC().NAME(onPlayed);
     FIELD().PUBLIC().NAME(onUpdate);
     FIELD().PROTECTED().DEFAULT_VALUE(0.0f).NAME(mTime);
     FIELD().PROTECTED().DEFAULT_VALUE(0.0f).NAME(mInDurationTime);

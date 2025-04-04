@@ -150,7 +150,7 @@ namespace Editor
         IPropertyField::SetValueAndPrototypeProxy(targets);
     }
 
-    void ScriptValueProperty::Refresh()
+    void ScriptValueProperty::Refresh(bool forcible /*= false*/)
     {
         mIsRefreshing = true;
 
@@ -217,7 +217,7 @@ namespace Editor
             }
 
             // Rebuild properties if needed
-            if (changedProperties)
+            if (changedProperties || forcible)
             {
                 mPreviousBuiltTypes.Clear();
                 for (auto& kv : mBuiltProperties)

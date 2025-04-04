@@ -38,7 +38,7 @@ namespace Editor
         void SetValueAndPrototypeProxy(const TargetsVec& targets) override;
 
         // Updates and checks value
-        void Refresh() override;
+        void Refresh(bool forcible = false) override;
 
         // Returns editing by this field type
         const Type* GetValueType() const override;
@@ -174,7 +174,7 @@ CLASS_METHODS_META(Editor::ObjectPtrProperty)
     FUNCTION().PUBLIC().CONSTRUCTOR(RefCounter*);
     FUNCTION().PUBLIC().CONSTRUCTOR(RefCounter*, const ObjectPtrProperty&);
     FUNCTION().PUBLIC().SIGNATURE(void, SetValueAndPrototypeProxy, const TargetsVec&);
-    FUNCTION().PUBLIC().SIGNATURE(void, Refresh);
+    FUNCTION().PUBLIC().SIGNATURE(void, Refresh, bool);
     FUNCTION().PUBLIC().SIGNATURE(const Type*, GetValueType);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(const Type*, GetValueTypeStatic);
     FUNCTION().PUBLIC().SIGNATURE(void, SetFieldInfo, const FieldInfo*);

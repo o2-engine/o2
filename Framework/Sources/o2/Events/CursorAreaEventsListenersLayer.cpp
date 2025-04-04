@@ -193,7 +193,12 @@ namespace o2
         return isTransparent;
     }
 
-    void CursorAreaEventListenersLayer::OnCursorEnter(const Input::Cursor& cursor)
+	String CursorAreaEventListenersLayer::GetDebugName() const
+	{
+		return CursorAreaEventsListener::GetDebugName() + "(" + name = ")";
+	}
+
+	void CursorAreaEventListenersLayer::OnCursorEnter(const Input::Cursor& cursor)
     {
         mEnabled = true;
     }
@@ -360,12 +365,12 @@ namespace o2
 
     void CursorAreaEventListenersLayer::ProcessRBPressed()
     {
-        auto localCursor = ConvertLocalCursor(*o2Input.GetCursor(0));
+		auto localCursor = ConvertLocalCursor(*o2Input.GetCursor(0));
+
+		mRightButtonPressedListeners.Clear();
 
         if (!mUnderCursorListeners.ContainsKey(localCursor.id))
             return;
-
-        mRightButtonPressedListeners.Clear();
 
         auto listeners = mUnderCursorListeners[localCursor.id];
         for (auto& listener : listeners)
@@ -419,12 +424,12 @@ namespace o2
 
     void CursorAreaEventListenersLayer::ProcessMBPressed()
     {
-        auto localCursor = ConvertLocalCursor(*o2Input.GetCursor(0));
+		auto localCursor = ConvertLocalCursor(*o2Input.GetCursor(0));
+
+		mMiddleButtonPressedListeners.Clear();
 
         if (!mUnderCursorListeners.ContainsKey(localCursor.id))
             return;
-
-        mMiddleButtonPressedListeners.Clear();
 
         auto listeners = mUnderCursorListeners[localCursor.id];
         for (auto& listener : listeners)

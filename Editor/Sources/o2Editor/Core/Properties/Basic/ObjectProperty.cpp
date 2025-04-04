@@ -82,7 +82,7 @@ namespace Editor
         Refresh();
     }
 
-    void ObjectProperty::Refresh()
+    void ObjectProperty::Refresh(bool forcible /*= false*/)
     {
         PushEditorScopeOnStack scope;
 
@@ -106,7 +106,7 @@ namespace Editor
         SetEnabled((mObjectViewer && !mObjectViewer->IsEmpty()) || !mNoHeader);
     }
 
-    void ObjectProperty::CheckViewer()
+    void ObjectProperty::CheckViewer(bool forcible /*= false*/)
     {
         PushEditorScopeOnStack scope;
 
@@ -119,7 +119,7 @@ namespace Editor
         }
 
         const Type* prevObjectType = mObjectViewer ? mObjectViewer->GetViewingObjectType() : nullptr;
-        if (objectType != prevObjectType)
+        if (objectType != prevObjectType || forcible)
         {
             if (mObjectViewer)
                 o2EditorProperties.FreeObjectViewer(mObjectViewer);

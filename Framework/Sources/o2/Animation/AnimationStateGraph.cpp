@@ -87,18 +87,31 @@ namespace o2
         return mTransitions;
     }
 
-    void AnimationGraphState::ReinitTransitions()
+	void AnimationGraphState::SetPosition(const Vec2F& position)
+	{
+		mPosition = position;
+	}
+
+	Vec2F AnimationGraphState::GetPosition() const
+	{
+		return mPosition;
+	}
+
+	void AnimationGraphState::ReinitTransitions()
     {
         for (auto& transition : mTransitions)
-            transition->SetState(Ref(this));
+        {
+            if (transition)
+                transition->SetState(Ref(this));
+        }
     }
 
     void AnimationGraphState::SetGraph(const Ref<AnimationStateGraphAsset>& graph)
     {
         mGraph = graph;
+
         ReinitTransitions();
     }
-
 }
 // --- META ---
 

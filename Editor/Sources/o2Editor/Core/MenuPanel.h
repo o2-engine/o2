@@ -96,6 +96,9 @@ namespace Editor
         // On View/Log pressed in menu
         void OnShowLogPressed();
 
+		// On View/Animation state graph pressed in menu
+		void OnShowAnimationStateGraphPressed();
+
         // On View/Game pressed in menu
         void OnShowGamePressed();
 

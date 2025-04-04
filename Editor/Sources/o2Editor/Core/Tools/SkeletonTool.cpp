@@ -164,8 +164,6 @@ namespace Editor
                                         mmake<FunctionalRectDrawable>(drawHandleHover),
                                         mmake<FunctionalRectDrawable>(drawHandlePressed));
 
-        handle->mode = SceneDragHandle::Mode::SceneSpace;
-
         handle->GetRegularDrawable()->pivot = Vec2F(0, 0.5f);
         handle->GetHoverDrawable()->pivot = Vec2F(0, 0.5f);
         handle->GetPressedDrawable()->pivot = Vec2F(0, 0.5f);

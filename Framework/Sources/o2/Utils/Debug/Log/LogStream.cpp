@@ -12,7 +12,11 @@ namespace o2
         mId(id)
     {}
 
-    LogStream::~LogStream()
+	LogStream::LogStream(RefCounter* refCounter):
+		RefCounterable(refCounter)
+	{}
+
+	LogStream::~LogStream()
     {
         if (mParentStream)
             mParentStream.Lock()->UnbindStream(Ref(this));

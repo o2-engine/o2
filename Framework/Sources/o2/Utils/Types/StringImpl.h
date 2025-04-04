@@ -815,7 +815,14 @@ namespace o2
         vsnprintf(buffer, maxSize, TString<char>(format).c_str(), vlist);
 
         return TString<T>(buffer);
-    }
+	}
+
+	template<typename T>
+	template<typename T2>
+	TString<T> TString<T>::ToString(const T2& value)
+	{
+		return TString<T>(value);
+	}
 
     template<typename T>
     TString<T> TString<T>::Appended(const TString& other) const

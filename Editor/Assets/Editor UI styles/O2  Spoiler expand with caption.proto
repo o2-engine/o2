@@ -21,7 +21,7 @@
                     "Type": "o2::Button",
                     "Value": {
                         "Prototype": {
-                            "id": "56c202cf3ade71042df7429b53340cdc",
+                            "id": "5b1f1a9e51f23d7d36992c55422c6972",
                             "path": "Editor UI styles/O2  Button expand.proto"
                         },
                         "PrototypeLink": 12815916003396062931,
@@ -48,6 +48,7 @@
                                 "y": 0.0
                             }
                         },
+                        "mInheritDrawingDepthFromParent": false,
                         "Layers": [
                             {
                                 "mDrawable": {
@@ -203,7 +204,7 @@
                             "meta": {
                                 "Type": "o2::DefaultAssetMeta<o2::AnimationAsset>",
                                 "Value": {
-                                    "mId": "3df914ac64d05674168f3382766e0aad"
+                                    "mId": "142f4bb068db18fe6ae832d405b478a5"
                                 }
                             }
                         }

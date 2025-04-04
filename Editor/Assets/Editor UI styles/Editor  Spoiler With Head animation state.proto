@@ -21,7 +21,7 @@
                     "Type": "o2::Button",
                     "Value": {
                         "Prototype": {
-                            "id": "56c202cf3ade71042df7429b53340cdc",
+                            "id": "5b1f1a9e51f23d7d36992c55422c6972",
                             "path": "Editor UI styles/O2  Button expand.proto"
                         },
                         "PrototypeLink": 12815916003396062931,
@@ -48,6 +48,7 @@
                                 "y": 0.0
                             }
                         },
+                        "mInheritDrawingDepthFromParent": false,
                         "Layers": [
                             {
                                 "mDrawable": {
@@ -121,7 +122,7 @@
                     "Type": "o2::Toggle",
                     "Value": {
                         "Prototype": {
-                            "id": "104a0a130494266e6887779c5eac206f",
+                            "id": "5a51343a12ff6bda4a9d14c0551c5598",
                             "path": "Editor UI styles/O2  Toggle standard.proto"
                         },
                         "PrototypeLink": 16024588942107279533,
@@ -148,6 +149,7 @@
                                 "y": 0.0
                             }
                         },
+                        "mInheritDrawingDepthFromParent": false,
                         "mName": "play-stop",
                         "Layers": [
                             {
@@ -307,7 +309,7 @@
                     "Type": "o2::Button",
                     "Value": {
                         "Prototype": {
-                            "id": "710a753f392920603a400d9f16bd6301",
+                            "id": "6755761327614419674a2f3b12486238",
                             "path": "Editor UI styles/O2  Button remove small.proto"
                         },
                         "PrototypeLink": 17745652814016868347,
@@ -334,6 +336,7 @@
                                 "y": 0.0
                             }
                         },
+                        "mInheritDrawingDepthFromParent": false,
                         "mName": "expand",
                         "Layers": [
                             {
@@ -405,7 +408,7 @@
                     "Type": "o2::Toggle",
                     "Value": {
                         "Prototype": {
-                            "id": "104a0a130494266e6887779c5eac206f",
+                            "id": "5a51343a12ff6bda4a9d14c0551c5598",
                             "path": "Editor UI styles/O2  Toggle standard.proto"
                         },
                         "PrototypeLink": 16024588942107279533,
@@ -432,6 +435,7 @@
                                 "y": 0.0
                             }
                         },
+                        "mInheritDrawingDepthFromParent": false,
                         "mName": "loop",
                         "Layers": [
                             {
@@ -591,7 +595,7 @@
                     "Type": "o2::HorizontalProgress",
                     "Value": {
                         "Prototype": {
-                            "id": "6cae28f616ec162037354c51591f7e02",
+                            "id": "0ed666573f245db7071c7b1f5e854149",
                             "path": "Editor UI styles/O2  Horizontal Progress standard.proto"
                         },
                         "PrototypeLink": 17695803339813000106,
@@ -618,6 +622,7 @@
                                 "y": 0.0
                             }
                         },
+                        "mInheritDrawingDepthFromParent": false,
                         "mName": "bar",
                         "Layers": [
                             {
@@ -824,7 +829,7 @@
                             "meta": {
                                 "Type": "o2::DefaultAssetMeta<o2::AnimationAsset>",
                                 "Value": {
-                                    "mId": "2b1a23b7781c5fcb206d072a72eb560b"
+                                    "mId": "363601916f94496a7db9443105eb44f7"
                                 }
                             }
                         }

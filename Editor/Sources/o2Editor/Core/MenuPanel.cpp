@@ -34,6 +34,7 @@
 #include "o2Editor/SceneWindow/SceneWindow.h"
 #include "o2Editor/TreeWindow/SceneHierarchyTree.h"
 #include "o2Editor/TreeWindow/TreeWindow.h"
+#include "../AnimationStateGraphWindow/AnimationStateGraphWindow.h"
 
 DECLARE_SINGLETON(Editor::MenuPanel);
 
@@ -77,8 +78,9 @@ namespace Editor
         mMenuPanel->AddItem("View/Show Tree", [&]() { OnShowTreePressed(); });
         mMenuPanel->AddItem("View/Show Scene", [&]() { OnShowScenePressed(); });
         mMenuPanel->AddItem("View/Show Assets", [&]() { OnShowAssetsPressed(); });
-        mMenuPanel->AddItem("View/Show Properties", [&]() { OnShowPropertiesPressed(); });
-        mMenuPanel->AddItem("View/Show Animation", [&]() { OnShowAnimationPressed(); });
+		mMenuPanel->AddItem("View/Show Properties", [&]() { OnShowPropertiesPressed(); });
+		mMenuPanel->AddItem("View/Show Animation", [&]() { OnShowAnimationPressed(); });
+		mMenuPanel->AddItem("View/Show Animation State graph", [&]() { OnShowAnimationStateGraphPressed(); });
         mMenuPanel->AddItem("View/Show Log", [&]() { OnShowLogPressed(); });
         mMenuPanel->AddItem("View/Show Game", [&]() { OnShowGamePressed(); });
 
@@ -325,7 +327,14 @@ namespace Editor
             window->Show();
     }
 
-    void MenuPanel::OnShowGamePressed()
+	void MenuPanel::OnShowAnimationStateGraphPressed()
+	{
+		auto window = o2EditorWindows.GetWindow<AnimationStateGraphWindow>();
+		if (window)
+			window->Show();
+	}
+
+	void MenuPanel::OnShowGamePressed()
     {
         auto window = o2EditorWindows.GetWindow<GameWindow>();
         if (window)

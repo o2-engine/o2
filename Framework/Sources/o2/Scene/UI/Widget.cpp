@@ -300,30 +300,39 @@ namespace o2
         if (!mResEnabledInHierarchy || mIsClipped)
         {
             if (mIsClipped)
-            {
-                for (auto& child : mChildrenInheritedDepth)
-                    child->Draw();
-            }
+                DrawInheritedDepthChildren();
 
             return;
         }
 
-        for (auto& layer : mDrawingLayers)
-            layer->Draw();
+        DrawLayers();
 
         OnDrawn();
 
-        for (auto& child : mChildrenInheritedDepth)
-            child->Draw();
-
-        for (auto& child : mInternalWidgets)
-            child->Draw();
-
-        for (auto& layer : mTopDrawingLayers)
-            layer->Draw();
+		DrawInheritedDepthChildren();
+        DrawInternalChildren();
+        DrawTopLayers();
 
         DrawDebugFrame();
-    }
+	}
+
+	void Widget::DrawLayers()
+	{
+		for (auto& layer : mDrawingLayers)
+			layer->Draw();
+	}
+
+	void Widget::DrawTopLayers()
+	{
+		for (auto& layer : mTopDrawingLayers)
+			layer->Draw();
+	}
+
+	void Widget::DrawInternalChildren()
+	{
+		for (auto& child : mInternalWidgets)
+			child->Draw();
+	}
 
     void Widget::DrawDebugFrame()
     {
@@ -536,18 +545,14 @@ namespace o2
     void Widget::OnEnabled()
     {
         Actor::OnEnabled();
-        ISceneDrawable::OnEnabled();
 
         layout->SetDirty(false);
         onShow();
     }
 
     void Widget::OnDisabled()
-    {
-        Actor::OnDisabled();
-        ISceneDrawable::OnDisabled();
-
-        //layout->SetDirty(false);
+	{
+		Actor::OnDisabled();
         onHide();
     }
 
@@ -1237,7 +1242,7 @@ namespace o2
 
     }
 
-    void Widget::OnAddToScene()
+	void Widget::OnAddToScene()
     {
         Actor::OnAddToScene();
 
@@ -1348,6 +1353,8 @@ namespace o2
             parent->mChildWidgets.Remove(thisPtr);
             parent->mInternalWidgets.Add(thisPtr);
         }
+
+        SetDrawingDepthInheritFromParent(false);
     }
 
     void Widget::AddInternalWidget(const Ref<Widget>& widget, bool worldPositionStays /*= false*/)
@@ -1355,7 +1362,26 @@ namespace o2
         widget->SetInternalParent(Ref(this), worldPositionStays);
     }
 
-    Ref<Widget> Widget::GetInternalWidget(const String& path) const
+	void Widget::RemoveInternalWidget(const Ref<Widget>& widget)
+	{
+		auto oldParent = widget->mParent.Lock();
+
+        widget->mParent = nullptr;
+		mInternalWidgets.RemoveFirst([&](auto& x) { return x == widget; });
+
+		widget->OnParentChanged(oldParent);
+
+		OnChildRemoved(widget);
+
+		if (widget->mState != State::Destroyed)
+		{
+            widget->transform->SetDirty();
+            widget->UpdateResEnabledInHierarchy();
+		}
+
+	}
+
+	Ref<Widget> Widget::GetInternalWidget(const String& path) const
     {
         int delPos = path.Find("/");
         String pathPart = path.SubStr(0, delPos);

@@ -21,7 +21,7 @@
                     "Type": "o2::Button",
                     "Value": {
                         "Prototype": {
-                            "id": "32063b1e3ebf27a337073cc700436fec",
+                            "id": "63bb66c4414c5d84658978fb07656eff",
                             "path": "Editor UI styles/O2  Button expand white.proto"
                         },
                         "PrototypeLink": 2007336637936081033,
@@ -48,6 +48,7 @@
                                 "y": 0.0
                             }
                         },
+                        "mInheritDrawingDepthFromParent": false,
                         "mName": "expand",
                         "Layers": [
                             {
@@ -121,6 +122,7 @@
                 {
                     "Type": "o2::Image",
                     "Value": {
+                        "mInheritDrawingDepthFromParent": false,
                         "mName": "icon",
                         "Id": 947346046459549220,
                         "Transform": {
@@ -287,7 +289,7 @@
                             "meta": {
                                 "Type": "o2::DefaultAssetMeta<o2::AnimationAsset>",
                                 "Value": {
-                                    "mId": "68150fda14d77db44e296e9e27144996"
+                                    "mId": "0f6439d518bb2cf44ece6a7478340b21"
                                 }
                             }
                         }

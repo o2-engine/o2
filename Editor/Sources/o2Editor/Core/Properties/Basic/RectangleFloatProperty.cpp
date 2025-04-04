@@ -130,15 +130,15 @@ namespace Editor
             return TargetPair(mmake<BottomValueProxy>(x.first), x.second ? mmake<BottomValueProxy>(x.second) : nullptr); }));
     }
 
-    void RectFProperty::Refresh()
+    void RectFProperty::Refresh(bool forcible /*= false*/)
     {
         if (mValuesProxies.IsEmpty())
             return;
 
-        mLeftProperty->Refresh();
-        mRightProperty->Refresh();
-        mTopProperty->Refresh();
-        mBottomProperty->Refresh();
+        mLeftProperty->Refresh(forcible);
+        mRightProperty->Refresh(forcible);
+        mTopProperty->Refresh(forcible);
+        mBottomProperty->Refresh(forcible);
 
         CheckRevertableState();
     }

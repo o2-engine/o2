@@ -27,7 +27,7 @@
                 "Type": "o2::Label",
                 "Value": {
                     "Prototype": {
-                        "id": "52422d7940b0288b7d092c7254f87e60",
+                        "id": "61f4253507aa1fb5662634953cdd346c",
                         "path": "Editor UI styles/O2  Label standard.proto"
                     },
                     "PrototypeLink": 9613259363390956959,
@@ -184,7 +184,7 @@
                     "Type": "o2::HorizontalScrollBar",
                     "Value": {
                         "Prototype": {
-                            "id": "0692262812827c0756ab79b2151f10d0",
+                            "id": "45136f1e498d114a3934747d38e4186a",
                             "path": "Editor UI styles/O2  Horizontal Scroll Bar standard.proto"
                         },
                         "PrototypeLink": 2396346607982954160,
@@ -203,6 +203,7 @@
                                 "y": 15.0
                             }
                         },
+                        "mInheritDrawingDepthFromParent": false,
                         "mName": "horScrollBar",
                         "mMaxValue": 0.0,
                         "Layers": [
@@ -335,7 +336,7 @@
                     "Type": "o2::VerticalScrollBar",
                     "Value": {
                         "Prototype": {
-                            "id": "2d5360a62b9b390a672d11f65d144766",
+                            "id": "04325a0179c53893745f75a270254f20",
                             "path": "Editor UI styles/O2  Vertical Scroll Bar standard.proto"
                         },
                         "PrototypeLink": 8311025582170325613,
@@ -358,6 +359,7 @@
                                 "y": -5.0
                             }
                         },
+                        "mInheritDrawingDepthFromParent": false,
                         "mName": "verScrollBar",
                         "mMaxValue": 0.0,
                         "Layers": [
@@ -570,7 +572,7 @@
                             "meta": {
                                 "Type": "o2::DefaultAssetMeta<o2::AnimationAsset>",
                                 "Value": {
-                                    "mId": "41df16ac35952d90529d436d3b0c3b94"
+                                    "mId": "731b02ab52402f206d2b25c807ce26fb"
                                 }
                             }
                         }
@@ -623,7 +625,7 @@
                             "meta": {
                                 "Type": "o2::DefaultAssetMeta<o2::AnimationAsset>",
                                 "Value": {
-                                    "mId": "629f775f3a7b6fc951e62708458b3c66"
+                                    "mId": "64301bad04d5609328083a433e0f167b"
                                 }
                             }
                         }
@@ -676,7 +678,7 @@
                             "meta": {
                                 "Type": "o2::DefaultAssetMeta<o2::AnimationAsset>",
                                 "Value": {
-                                    "mId": "3e2248ab72551c0b4eec5e9507ca1752"
+                                    "mId": "0538702310951b3c7c0924cd0236289e"
                                 }
                             }
                         }
@@ -729,7 +731,7 @@
                             "meta": {
                                 "Type": "o2::DefaultAssetMeta<o2::AnimationAsset>",
                                 "Value": {
-                                    "mId": "02882c86644e6bf33220389715c41706"
+                                    "mId": "105058ae488664c55c5b405728d977dd"
                                 }
                             }
                         }
@@ -783,7 +785,7 @@
                             "meta": {
                                 "Type": "o2::DefaultAssetMeta<o2::AnimationAsset>",
                                 "Value": {
-                                    "mId": "5d32452510cd1b5f273217d560b13c6e"
+                                    "mId": "61d54d3033ec5c17126b4b100ecd1bf1"
                                 }
                             }
                         }

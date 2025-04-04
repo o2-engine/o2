@@ -215,7 +215,13 @@ namespace o2
         }
     }
 
-    void Actor::Destroy()
+	void Actor::DrawComponents()
+	{
+		for (auto& component : mComponents)
+			component->OnDraw();
+	}
+
+	void Actor::Destroy()
     {
         if (Scene::IsSingletonInitialzed())
             o2Scene.DestroyActor(Ref(this));
@@ -228,10 +234,7 @@ namespace o2
         PROFILE_SAMPLE_FUNC();
 
         OnDraw();
-
-        for (auto& component : mComponents)
-            component->OnDraw();
-
+		DrawComponents();
         ISceneDrawable::Draw();
     }
 

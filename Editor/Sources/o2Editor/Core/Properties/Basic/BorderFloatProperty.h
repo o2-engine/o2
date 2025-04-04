@@ -27,7 +27,7 @@ namespace Editor
         void SetValueAndPrototypeProxy(const TargetsVec& targets) override;
 
         // Updates and checks value
-        void Refresh() override;
+        void Refresh(bool forcible = false) override;
 
         // Sets value
         void SetValue(const BorderF& value);
@@ -156,7 +156,7 @@ CLASS_METHODS_META(Editor::BorderFProperty)
     FUNCTION().PUBLIC().CONSTRUCTOR(RefCounter*);
     FUNCTION().PUBLIC().CONSTRUCTOR(RefCounter*, const BorderFProperty&);
     FUNCTION().PUBLIC().SIGNATURE(void, SetValueAndPrototypeProxy, const TargetsVec&);
-    FUNCTION().PUBLIC().SIGNATURE(void, Refresh);
+    FUNCTION().PUBLIC().SIGNATURE(void, Refresh, bool);
     FUNCTION().PUBLIC().SIGNATURE(void, SetValue, const BorderF&);
     FUNCTION().PUBLIC().SIGNATURE(void, SetValueLeft, float);
     FUNCTION().PUBLIC().SIGNATURE(void, SetValueRight, float);

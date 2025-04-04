@@ -32,7 +32,7 @@ namespace o2
     void Debug::InitializeFont()
     {
         mFont = mmake<VectorFont>(o2Assets.GetBuiltAssetsPath() + "debugFont.ttf");
-        mFont->AddEffect<FontStrokeEffect>(5.0f, Color4(0, 0, 0, 150), 100);
+        mFont->AddEffect<FontStrokeEffect>(1.5f, Color4(0, 0, 0, 150), 100);
         mText = mmake<Text>(mFont);
     }
 

@@ -29,7 +29,7 @@ namespace Editor
         void SetValueAndPrototypeProxy(const TargetsVec& targets) override;
 
         // Updates and checks value
-        void Refresh() override;
+        void Refresh(bool forcible = false) override;
 
         // Reverts value to prototype value
         void Revert() override;
@@ -120,7 +120,7 @@ CLASS_METHODS_META(Editor::Vec2FProperty)
     FUNCTION().PUBLIC().CONSTRUCTOR(RefCounter*);
     FUNCTION().PUBLIC().CONSTRUCTOR(RefCounter*, const Vec2FProperty&);
     FUNCTION().PUBLIC().SIGNATURE(void, SetValueAndPrototypeProxy, const TargetsVec&);
-    FUNCTION().PUBLIC().SIGNATURE(void, Refresh);
+    FUNCTION().PUBLIC().SIGNATURE(void, Refresh, bool);
     FUNCTION().PUBLIC().SIGNATURE(void, Revert);
     FUNCTION().PUBLIC().SIGNATURE(void, SetValue, const Vec2F&);
     FUNCTION().PUBLIC().SIGNATURE(void, SetValueX, float);

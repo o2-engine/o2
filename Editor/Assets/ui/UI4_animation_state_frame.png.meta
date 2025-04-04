@@ -1,6 +1,13 @@
 {
     "Type": "o2::ImageAsset::Meta",
     "Value": {
-        "mId": "053d07b13b9965125f8a17a539fb42ee"
+        "mId": "053d07b13b9965125f8a17a539fb42ee",
+        "sliceBorder": {
+            "left": 18,
+            "bottom": 19,
+            "right": 19,
+            "top": 18
+        },
+        "defaultMode": "Sliced"
     }
 }

@@ -339,7 +339,6 @@ namespace o2
 
     void Bitmap::Outline(float radius, const Color4& color, int threshold /*= 100*/)
     {
-        return;
         int mapSize = Math::CeilToInt(radius);
         int fullmapSize = mapSize * 2 + 1;
         int alphaThreshold = threshold;
@@ -351,7 +350,7 @@ namespace o2
         UInt8* srcData = mnew UInt8[mSize.x*mSize.y*curbpp];
         memcpy(srcData, mData, mSize.x*mSize.y*curbpp);
 
-        for (int x = 0; x < mSize.x && false; x++)
+        for (int x = 0; x < mSize.x; x++)
         {
             for (int y = 0; y < mSize.y; y++)
             {

@@ -333,6 +333,10 @@ namespace o2
         // Returns formatted string, like sprintf()
         static TString Format(TString format, va_list vlist);
 
+		// Converts value to string
+		template<typename T2>
+		static TString ToString(const T2& value);
+
         static TString empty;
     };
 

@@ -85,7 +85,7 @@ namespace Editor
             layer->Draw();
 
         mBackCursorArea->OnDrawn();
-        ScrollArea::OnDrawn();
+        //ScrollArea::OnDrawn();
 
         if (!mTabState || mTabActive)
         {

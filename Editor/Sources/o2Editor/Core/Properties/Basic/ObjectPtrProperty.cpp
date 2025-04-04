@@ -105,7 +105,7 @@ namespace Editor
         Refresh();
     }
 
-    void ObjectPtrProperty::Refresh()
+    void ObjectPtrProperty::Refresh(bool forcible /*= false*/)
     {
         PushEditorScopeOnStack scope;
 
@@ -128,7 +128,7 @@ namespace Editor
         }
 
         const Type* prevObjectType = mObjectViewer ? mObjectViewer->GetViewingObjectType() : nullptr;
-        if (mBuiltObjectType != prevObjectType || mCurrentObjectType != mBuiltObjectType)
+        if (mBuiltObjectType != prevObjectType || mCurrentObjectType != mBuiltObjectType || forcible)
         {
             if (mObjectViewer)
             {

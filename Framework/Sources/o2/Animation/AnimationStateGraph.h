@@ -23,6 +23,9 @@ namespace o2
 
         Ref<Curve> curve; // Curve of transition @SERIALIZABLE
 
+        PROPERTIES(AnimationGraphTransition);
+        PROPERTY(Ref<AnimationGraphState>, destinationState, SetDestinationState, GetDestinationState); // Destination state property
+
     public:
         // Sets destination state
         void SetDestinationState(const Ref<AnimationGraphState>& state);
@@ -63,10 +66,7 @@ namespace o2
             String name;          // Name of animation @SERIALIZABLE
             float  weight = 1.0f; // Weight of animation @SERIALIZABLE
 
-            SERIALIZABLE(Animation);
-
-        protected:
-            Ref<IAnimationState> mState; // Animation state
+            SERIALIZABLE(Animation);;
         };
 
     public:
@@ -100,6 +100,12 @@ namespace o2
         // Returns transitions
         const Vector<Ref<AnimationGraphTransition>>& GetTransitions() const;
 
+		// Sets position of state in graph
+        void SetPosition(const Vec2F& position);
+
+		// Returns position of state in graph
+        Vec2F GetPosition() const;
+
         SERIALIZABLE(AnimationGraphState);
         CLONEABLE_REF(AnimationGraphState);
 
@@ -111,6 +117,8 @@ namespace o2
 
         WeakRef<AnimationStateGraphAsset> mGraph; // Graph reference
 
+		Vec2F mPosition; // Position of state in graph @SERIALIZABLE @EDITOR_PROPERTY
+            
     protected:
         // Reinitializes transitions
         void ReinitTransitions();
@@ -138,6 +146,7 @@ CLASS_FIELDS_META(o2::AnimationGraphTransition)
     FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(1.0f).NAME(endTimeRange);
     FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(true).NAME(backwardAvailable);
     FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().NAME(curve);
+    FIELD().PUBLIC().NAME(destinationState);
     FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().NAME(mDestinationState);
     FIELD().PROTECTED().NAME(mSourceStateRef);
     FIELD().PROTECTED().NAME(mDestinationStateRef);
@@ -167,6 +176,7 @@ CLASS_FIELDS_META(o2::AnimationGraphState)
     FIELD().PROTECTED().EDITOR_PROPERTY_ATTRIBUTE().INVOKE_ON_CHANGE_ATTRIBUTE(ReinitAnimations).SERIALIZABLE_ATTRIBUTE().NAME(mAnimations);
     FIELD().PROTECTED().EDITOR_PROPERTY_ATTRIBUTE().INVOKE_ON_CHANGE_ATTRIBUTE(ReinitTransitions).SERIALIZABLE_ATTRIBUTE().NAME(mTransitions);
     FIELD().PROTECTED().NAME(mGraph);
+    FIELD().PROTECTED().EDITOR_PROPERTY_ATTRIBUTE().SERIALIZABLE_ATTRIBUTE().NAME(mPosition);
 }
 END_META;
 CLASS_METHODS_META(o2::AnimationGraphState)
@@ -181,6 +191,8 @@ CLASS_METHODS_META(o2::AnimationGraphState)
     FUNCTION().PUBLIC().SIGNATURE(Ref<AnimationGraphTransition>, AddTransition, const Ref<AnimationGraphState>&);
     FUNCTION().PUBLIC().SIGNATURE(void, RemoveTransition, const Ref<AnimationGraphTransition>&);
     FUNCTION().PUBLIC().SIGNATURE(const Vector<Ref<AnimationGraphTransition>>&, GetTransitions);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetPosition, const Vec2F&);
+    FUNCTION().PUBLIC().SIGNATURE(Vec2F, GetPosition);
     FUNCTION().PROTECTED().SIGNATURE(void, ReinitTransitions);
     FUNCTION().PROTECTED().SIGNATURE(void, SetGraph, const Ref<AnimationStateGraphAsset>&);
 }
@@ -196,7 +208,6 @@ CLASS_FIELDS_META(o2::AnimationGraphState::Animation)
 {
     FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().NAME(name);
     FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(1.0f).NAME(weight);
-    FIELD().PROTECTED().NAME(mState);
 }
 END_META;
 CLASS_METHODS_META(o2::AnimationGraphState::Animation)

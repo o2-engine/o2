@@ -16,7 +16,7 @@
                     "Type": "o2::Spoiler",
                     "Data": {
                         "Prototype": {
-                            "id": "202451c03916283d0dc9424f1848669d",
+                            "id": "1052104270f8398467c163f07df80c14",
                             "path": "Editor UI styles/O2  Spoiler expand with caption.proto"
                         },
                         "PrototypeLink": 16856642250299733553,
@@ -37,7 +37,7 @@
                                 "Type": "o2::Button",
                                 "Data": {
                                     "Prototype": {
-                                        "id": "56c202cf3ade71042df7429b53340cdc",
+                                        "id": "5b1f1a9e51f23d7d36992c55422c6972",
                                         "path": "Editor UI styles/O2  Button expand.proto"
                                     },
                                     "PrototypeLink": 12815916003396062931,
@@ -64,6 +64,7 @@
                                             "y": 0.0
                                         }
                                     },
+                                    "mInheritDrawingDepthFromParent": false,
                                     "Layers": [
                                         {
                                             "layout": {
@@ -195,6 +196,7 @@
                             {
                                 "Type": "o2::HorizontalLayout",
                                 "Data": {
+                                    "mInheritDrawingDepthFromParent": false,
                                     "mName": "mainLayout",
                                     "Id": 18010192878973228795,
                                     "Transform": {
@@ -220,7 +222,7 @@
                                             "Type": "o2::Label",
                                             "Data": {
                                                 "Prototype": {
-                                                    "id": "52422d7940b0288b7d092c7254f87e60",
+                                                    "id": "61f4253507aa1fb5662634953cdd346c",
                                                     "path": "Editor UI styles/O2  Label standard.proto"
                                                 },
                                                 "PrototypeLink": 9613259363390956959,
@@ -304,7 +306,7 @@
                                                                     "Type": "o2::Button",
                                                                     "Data": {
                                                                         "Prototype": {
-                                                                            "id": "10360e30717e38e6635b32f03795108b",
+                                                                            "id": "2c0d6b591f7e6c556b01787123f95d08",
                                                                             "path": "Editor UI styles/O2  Button create asset instance.proto"
                                                                         },
                                                                         "PrototypeLink": 12027224945567259969,
@@ -390,7 +392,7 @@
                                                                     "Type": "o2::Button",
                                                                     "Data": {
                                                                         "Prototype": {
-                                                                            "id": "6107043e0aa3617b25be02d37dff2739",
+                                                                            "id": "1f765d6455ce1981087d201057906b8c",
                                                                             "path": "Editor UI styles/O2  Button remove asset instance.proto"
                                                                         },
                                                                         "PrototypeLink": 934262872080852003,
@@ -477,7 +479,7 @@
                                                                     "Type": "o2::Button",
                                                                     "Data": {
                                                                         "Prototype": {
-                                                                            "id": "23be6cab46d7596155ab3688603d2a4c",
+                                                                            "id": "20cf2c74238f2ddb62fc1a596a4d2402",
                                                                             "path": "Editor UI styles/O2  Button save asset instance.proto"
                                                                         },
                                                                         "PrototypeLink": 1993097511871404322,
@@ -774,7 +776,7 @@
                                                                                         "meta": {
                                                                                             "Type": "o2::DefaultAssetMeta<o2::AnimationAsset>",
                                                                                             "Value": {
-                                                                                                "mId": "16bc23c551a9210033e8268201dd6695"
+                                                                                                "mId": "0e0b42f9496f574602bc61d45ffa7db1"
                                                                                             }
                                                                                         }
                                                                                     }
@@ -827,7 +829,7 @@
                                                                                         "meta": {
                                                                                             "Type": "o2::DefaultAssetMeta<o2::AnimationAsset>",
                                                                                             "Value": {
-                                                                                                "mId": "6904670d3b5d62cc1e02511a29bc079f"
+                                                                                                "mId": "7888463b137f14087a3523a86b8f0962"
                                                                                             }
                                                                                         }
                                                                                     }
@@ -842,7 +844,7 @@
                                                                     "Type": "o2::Label",
                                                                     "Value": {
                                                                         "Prototype": {
-                                                                            "id": "52422d7940b0288b7d092c7254f87e60",
+                                                                            "id": "61f4253507aa1fb5662634953cdd346c",
                                                                             "path": "Editor UI styles/O2  Label standard.proto"
                                                                         },
                                                                         "PrototypeLink": 9613259363390956959,
@@ -865,6 +867,7 @@
                                                                                 "y": 0.0
                                                                             }
                                                                         },
+                                                                        "mInheritDrawingDepthFromParent": false,
                                                                         "mName": "instanceCaption",
                                                                         "mTransparency": 0.0,
                                                                         "Layers": [
@@ -1198,7 +1201,7 @@
                             "meta": {
                                 "Type": "o2::DefaultAssetMeta<o2::AnimationAsset>",
                                 "Value": {
-                                    "mId": "01784f251d3972ba68c21e1b4ab47596"
+                                    "mId": "7af563542edf5d143065377a0f82275c"
                                 }
                             }
                         }

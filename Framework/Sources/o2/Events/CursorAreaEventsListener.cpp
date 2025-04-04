@@ -22,7 +22,7 @@ namespace o2
 
     bool CursorAreaEventsListener::IsUnderPoint(const Vec2F& point)
     {
-        return false;
+        return true;
     }
 
     bool CursorAreaEventsListener::IsScrollable() const
@@ -164,7 +164,12 @@ namespace o2
             messageFallDownListener->OnScrolled(scroll);
     }
 
-    bool CursorAreaEventsListener::IsPressed() const
+	String CursorAreaEventsListener::GetDebugName() const
+	{
+		return typeid(this).name();
+	}
+
+	bool CursorAreaEventsListener::IsPressed() const
     {
         return mIsPressed;
     }
