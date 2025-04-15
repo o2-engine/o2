@@ -2,12 +2,13 @@
 
 #include "o2/Assets/Types/AnimationStateGraphAsset.h"
 #include "o2/Scene/Components/AnimationStateGraphComponent.h"
+#include "o2/Scene/UI/Widgets/EditBoxDropDown.h"
 #include "o2/Utils/Editor/DragHandle.h"
 #include "o2/Utils/Editor/FrameHandles.h"
 #include "o2Editor/Core/Actions/ActionsList.h"
 #include "o2Editor/Core/Actions/IAction.h"
-#include "o2Editor/Core/Properties/Objects/DefaultObjectPropertiesViewer.h"
 #include "o2Editor/Core/Properties/Basic/VectorProperty.h"
+#include "o2Editor/Core/Properties/Objects/DefaultObjectPropertiesViewer.h"
 #include "o2Editor/Core/UI/FrameScrollView.h"
 
 using namespace o2;
@@ -70,13 +71,17 @@ namespace Editor
 		// -----------------------------------------------------------
         struct StateAnimation : public RefCounterable, public IObject
         {
-			String name; // Name of animation
+			String name; // Name of animation @ITEMS_SOURCE(GetAvailableStates)
 
 			Ref<IAnimationState>                state;     // Animation state
 			Ref<AnimationGraphState::Animation> animation; // Animation
 			WeakRef<StateWidget>                owner;     // Owner state widget
 
             IOBJECT(StateAnimation);
+
+        public:
+			// Returns available states names from AnimationComponent
+			Vector<String> GetAvailableStates() const;
         };
 
 		// --------------------------------------------------------------------
@@ -152,6 +157,9 @@ namespace Editor
 			// Opens context menu
 			void OpenContextMenu();
 
+			// Called when state was pressed
+            void OnPressed();
+
 			IOBJECT(StateWidget);
         };
 
@@ -163,15 +171,18 @@ namespace Editor
 		WeakRef<AnimationStateGraphAsset>     mGraph;     // Animation state graph asset
 		WeakRef<AnimationStateGraphComponent> mComponent; // Animation state graph component
 
-		Vector<Ref<StateWidget>>                            mStatesWidgets;    // States widgets
-        Map<WeakRef<AnimationGraphState>, Ref<StateWidget>> mStatesWidgetsMap; // States widgets map by state
+		Ref<Widget>                                         mStateWidgetsContainer; // Container for states widgets
+		Vector<Ref<StateWidget>>                            mStatesWidgets;         // States widgets
+		Map<WeakRef<AnimationGraphState>, Ref<StateWidget>> mStatesWidgetsMap;      // States widgets map by state
+		Map<WeakRef<DragHandle>, Ref<StateWidget>>          mStateHandlesMap;       // States widgets map by drag handle
 
 		Ref<Sprite> mSelectionSprite;       // Selection sprite @SERIALIZABLE
 		Vec2F       mSelectingPressedPoint; // Point, where cursor was pressed, selection starts here, in local space
 
-		Vector<Ref<StateWidget>> mPreSelectedStates; // States under frame while selecting 
+		Vec2F            mContextMenuPos;   // Context menu position when right mouse button was pressed
+		Ref<StateWidget> mContextMenuState; // State widget, where context menu was opened
 
-		Vec2F mContextMenuPos; // Context menu position when right mouse button was pressed
+		bool mCreatingTransition = false; // True when creating transition
 
 		bool mNeedAdjustView = false; // True when need to adjust view scale. This works in update
 
@@ -208,6 +219,9 @@ namespace Editor
         // Redraws content into render target
 		void RedrawContent() override;
 
+		// Called when selection is changed - some handle was added or removed from selection; updates selected states in property viewer
+		void OnSelectionChanged() override;
+
 		// Initializes context menu items
 		void InitializeContextMenus();
 
@@ -222,6 +236,9 @@ namespace Editor
 
         // Draws states transitions
         void DrawTransitions();
+
+		// Draws single transition
+        static void DrawTransition(Vec2F from, Vec2F to, StateTransition::Status status, float progress);
 
         // Initializes states list
         void InitializeStates();
@@ -258,6 +275,12 @@ namespace Editor
 
 		// Removes current transition
         void RemoveCurrentTransition();
+
+		// Opens context menu for state
+		void OpenStateContextMenu(const Ref<StateWidget>& state);
+
+		// Called when state was pressed
+		void OnStatePressed(const Ref<StateWidget>& state);
         
         REF_COUNTERABLE_IMPL(FrameScrollView, SelectableDragHandlesGroup);
 
@@ -318,6 +341,7 @@ namespace Editor
 		// Called when animation finished
 		void OnAnimationFinished();
 	};
+
 }
 // --- META ---
 
@@ -339,12 +363,15 @@ CLASS_FIELDS_META(Editor::AnimationStateGraphEditor)
     FIELD().PROTECTED().NAME(mTransitionContextMenu);
     FIELD().PROTECTED().NAME(mGraph);
     FIELD().PROTECTED().NAME(mComponent);
+    FIELD().PROTECTED().NAME(mStateWidgetsContainer);
     FIELD().PROTECTED().NAME(mStatesWidgets);
     FIELD().PROTECTED().NAME(mStatesWidgetsMap);
+    FIELD().PROTECTED().NAME(mStateHandlesMap);
     FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().NAME(mSelectionSprite);
     FIELD().PROTECTED().NAME(mSelectingPressedPoint);
-    FIELD().PROTECTED().NAME(mPreSelectedStates);
     FIELD().PROTECTED().NAME(mContextMenuPos);
+    FIELD().PROTECTED().NAME(mContextMenuState);
+    FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mCreatingTransition);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mNeedAdjustView);
     FIELD().PROTECTED().NAME(mActionsList);
 }
@@ -370,11 +397,13 @@ CLASS_METHODS_META(Editor::AnimationStateGraphEditor)
     FUNCTION().PROTECTED().SIGNATURE(void, OnCursorRightMouseReleased, const Input::Cursor&);
     FUNCTION().PROTECTED().SIGNATURE(void, DrawInheritedDepthChildren);
     FUNCTION().PROTECTED().SIGNATURE(void, RedrawContent);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnSelectionChanged);
     FUNCTION().PROTECTED().SIGNATURE(void, InitializeContextMenus);
     FUNCTION().PROTECTED().SIGNATURE(void, RecalculateViewArea);
     FUNCTION().PROTECTED().SIGNATURE(void, DrawHandles);
     FUNCTION().PROTECTED().SIGNATURE(void, DrawSelection);
     FUNCTION().PROTECTED().SIGNATURE(void, DrawTransitions);
+    FUNCTION().PROTECTED().SIGNATURE_STATIC(void, DrawTransition, Vec2F, Vec2F, StateTransition::Status, float);
     FUNCTION().PROTECTED().SIGNATURE(void, InitializeStates);
     FUNCTION().PROTECTED().SIGNATURE(void, OnStateGraphStateStarted, const Ref<AnimationStateGraphComponent::StatePlayer>&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnStateGraphStateFinished, const Ref<AnimationStateGraphComponent::StatePlayer>&);
@@ -387,6 +416,8 @@ CLASS_METHODS_META(Editor::AnimationStateGraphEditor)
     FUNCTION().PROTECTED().SIGNATURE(void, StartAddingTransition);
     FUNCTION().PROTECTED().SIGNATURE(void, RemoveCurrentStates);
     FUNCTION().PROTECTED().SIGNATURE(void, RemoveCurrentTransition);
+    FUNCTION().PROTECTED().SIGNATURE(void, OpenStateContextMenu, const Ref<StateWidget>&);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnStatePressed, const Ref<StateWidget>&);
 }
 END_META;
 
@@ -432,7 +463,7 @@ CLASS_BASES_META(Editor::AnimationStateGraphEditor::StateAnimation)
 END_META;
 CLASS_FIELDS_META(Editor::AnimationStateGraphEditor::StateAnimation)
 {
-    FIELD().PUBLIC().NAME(name);
+    FIELD().PUBLIC().ITEMS_SOURCE_ATTRIBUTE(GetAvailableStates).NAME(name);
     FIELD().PUBLIC().NAME(state);
     FIELD().PUBLIC().NAME(animation);
     FIELD().PUBLIC().NAME(owner);
@@ -440,6 +471,8 @@ CLASS_FIELDS_META(Editor::AnimationStateGraphEditor::StateAnimation)
 END_META;
 CLASS_METHODS_META(Editor::AnimationStateGraphEditor::StateAnimation)
 {
+
+    FUNCTION().PUBLIC().SIGNATURE(Vector<String>, GetAvailableStates);
 }
 END_META;
 
@@ -474,6 +507,7 @@ CLASS_METHODS_META(Editor::AnimationStateGraphEditor::StateWidget)
     FUNCTION().PUBLIC().SIGNATURE(void, UpdateState, TransitionState);
     FUNCTION().PUBLIC().SIGNATURE(void, SetPlayer, const Ref<AnimationStateGraphComponent::StatePlayer>&);
     FUNCTION().PUBLIC().SIGNATURE(void, OpenContextMenu);
+    FUNCTION().PUBLIC().SIGNATURE(void, OnPressed);
 }
 END_META;
 // --- END META ---

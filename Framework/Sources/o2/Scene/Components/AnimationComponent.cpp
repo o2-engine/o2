@@ -112,6 +112,16 @@ namespace o2
         return result;
     }
 
+    Vector<String> AnimationComponent::GetStatesNames() const
+    {
+        Vector<String> result;
+        
+        for (auto& state : mStates)
+            result.Add(state->name);
+            
+        return result;
+    }
+
     Ref<IAnimationState> AnimationComponent::Play(const Ref<AnimationClip>& animation, const String& name)
     {
         auto state = AddState(name, animation, AnimationMask(), 1.0f);

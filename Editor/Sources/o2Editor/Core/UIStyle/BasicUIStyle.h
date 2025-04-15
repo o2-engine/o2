@@ -28,6 +28,7 @@ namespace o2
         void RebuildListStyle();
         void RebuildCustomDropDownStyle();
         void RebuildDropDownStyle();
+        void RebuildEditBoxDropDownStyle();
         void RebuildWindowStyle();
         void RebuildTreeStyle();
         void RebuildMenuPanelStyle();
@@ -79,6 +80,7 @@ CLASS_METHODS_META(o2::BasicUIStyleBuilder)
     FUNCTION().PUBLIC().SIGNATURE(void, RebuildListStyle);
     FUNCTION().PUBLIC().SIGNATURE(void, RebuildCustomDropDownStyle);
     FUNCTION().PUBLIC().SIGNATURE(void, RebuildDropDownStyle);
+    FUNCTION().PUBLIC().SIGNATURE(void, RebuildEditBoxDropDownStyle);
     FUNCTION().PUBLIC().SIGNATURE(void, RebuildWindowStyle);
     FUNCTION().PUBLIC().SIGNATURE(void, RebuildTreeStyle);
     FUNCTION().PUBLIC().SIGNATURE(void, RebuildMenuPanelStyle);

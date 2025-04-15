@@ -61,7 +61,7 @@ namespace Editor
         bool IsHeaderEnabled() const;
 
         // Expands or collapses spoiler
-        virtual void SetExpanded(bool expanded);
+		virtual void SetExpanded(bool expanded, bool forcible = false);
 
         // Returns is spoiler expanded
         bool IsExpanded() const;
@@ -203,7 +203,7 @@ CLASS_METHODS_META(Editor::IObjectPropertiesViewer)
     FUNCTION().PUBLIC().SIGNATURE(Ref<Spoiler>, CreateSpoiler, const Ref<Widget>&);
     FUNCTION().PUBLIC().SIGNATURE(void, SetHeaderEnabled, bool);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsHeaderEnabled);
-    FUNCTION().PUBLIC().SIGNATURE(void, SetExpanded, bool);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetExpanded, bool, bool);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsExpanded);
     FUNCTION().PUBLIC().SIGNATURE(void, SetCaption, const WString&);
     FUNCTION().PUBLIC().SIGNATURE(const WString&, GetCaption);

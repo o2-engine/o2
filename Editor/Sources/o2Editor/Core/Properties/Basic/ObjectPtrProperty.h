@@ -62,13 +62,13 @@ namespace Editor
         void SetBasicType(const ObjectType* type);
 
         // Expands property fields
-        void Expand();
+		void Expand(bool forcible = false);
 
         // Collapses property field
-        void Collapse();
+        void Collapse(bool forcible = false);
 
         // Sets properties expanding
-        void SetExpanded(bool expanded);
+        void SetExpanded(bool expanded, bool forcible = false);
 
         // Returns is properties expanded
         bool IsExpanded() const;
@@ -182,9 +182,9 @@ CLASS_METHODS_META(Editor::ObjectPtrProperty)
     FUNCTION().PUBLIC().SIGNATURE(WString, GetCaption);
     FUNCTION().PUBLIC().SIGNATURE(Ref<Button>, GetRemoveButton);
     FUNCTION().PUBLIC().SIGNATURE(void, SetBasicType, const ObjectType*);
-    FUNCTION().PUBLIC().SIGNATURE(void, Expand);
-    FUNCTION().PUBLIC().SIGNATURE(void, Collapse);
-    FUNCTION().PUBLIC().SIGNATURE(void, SetExpanded, bool);
+    FUNCTION().PUBLIC().SIGNATURE(void, Expand, bool);
+    FUNCTION().PUBLIC().SIGNATURE(void, Collapse, bool);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetExpanded, bool, bool);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsExpanded);
     FUNCTION().PROTECTED().SIGNATURE(void, OnFreeProperty);
     FUNCTION().PROTECTED().SIGNATURE(void, OnPropertyEnabled);

@@ -683,7 +683,16 @@ namespace o2
         return nullptr;
     }
 
-    Ref<Component> Actor::AddComponent(const Ref<Component>& component)
+	void Actor::ForEachActor(const Function<bool(Actor&)>& func)
+	{
+        if (func(*this))
+        {
+            for (auto& child : mChildren)
+                child->ForEachActor(func);
+        }
+	}
+
+	Ref<Component> Actor::AddComponent(const Ref<Component>& component)
     {
         component->SetOwnerActor(Ref(this));
         mComponents.Add(component);
@@ -959,6 +968,8 @@ namespace o2
 
             for (auto& comp : mComponents)
                 comp->UpdateEnabledInHierarchy();
+
+            transform->SetDirty();
 
 #if IS_EDITOR
             if (mIsOnScene)

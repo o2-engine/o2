@@ -16,6 +16,7 @@
 #include "o2/Scene/UI/Widgets/CustomList.h"
 #include "o2/Scene/UI/Widgets/DropDown.h"
 #include "o2/Scene/UI/Widgets/EditBox.h"
+#include "o2/Scene/UI/Widgets/EditBoxDropDown.h"
 #include "o2/Scene/UI/Widgets/HorizontalProgress.h"
 #include "o2/Scene/UI/Widgets/HorizontalScrollBar.h"
 #include "o2/Scene/UI/Widgets/Label.h"
@@ -812,8 +813,71 @@ namespace o2
             ->offStateAnimationSpeed = 0.5f;
 
         o2UI.AddWidgetStyle(sample, "standard");
+    }
 
+    void BasicUIStyleBuilder::RebuildEditBoxDropDownStyle()
+    {
+        auto sample = mmake<EditBoxDropDown>();
+        sample->layout->minSize = Vec2F(20, 20);
         
+        // Background layers
+        auto backLayer = sample->AddLayer("back", mmake<Sprite>("ui/UI4_Editbox_regular.png"), 
+                                          Layout::BothStretch(-9, -9, -9, -9));
+
+        auto hoverLayer = sample->AddLayer("hover", mmake<Sprite>("ui/UI4_Editbox_select.png"), 
+                                           Layout::BothStretch(-9, -9, -9, -9));
+
+        auto focusLayer = sample->AddLayer("focused", mmake<Sprite>("ui/UI4_Editbox_focus.png"), 
+                                           Layout::BothStretch(-9, -9, -9, -9));
+
+        auto arrowLayer = sample->AddLayer("arrow", mmake<Sprite>("ui/UI4_Down_icn.png"),
+                                           Layout(Vec2F(1.0f, 0.5f), Vec2F(1.0f, 0.5f), Vec2F(-20, -10), Vec2F(0, 10)));
+
+        sample->SetClippingLayout(Layout::BothStretch(4, 2, 20, 2));
+
+        // Configure the EditBox
+        auto editBox = sample->GetEditBox();
+        *editBox = *o2UI.GetWidgetStyle<EditBox>("standard");
+        editBox->RemoveLayer("back");
+        editBox->RemoveLayer("hover");
+        editBox->RemoveLayer("focused");
+        editBox->layout->minSize = Vec2F(20, 20);
+        editBox->layout->offsetMin = Vec2F(5, 2);
+        editBox->layout->offsetMax = Vec2F(-25, -2);
+        editBox->SetMultiLine(false);
+        
+        // Configure the dropdown list
+        auto list = sample->GetListView();
+        *list = *o2UI.GetWidgetStyle<CustomList>("standard");
+        list->SetViewLayout(Layout::BothStretch(2, 2, 2, 2));
+        list->layer["back"]->SetDrawable(mmake<Sprite>("ui/UI4_Box_regular.png"));
+        list->layout->pivot = Vec2F(0.5f, 1.0f);
+        list->layout->anchorMin = Vec2F(0, 0);
+        list->layout->anchorMax = Vec2F(1, 0);
+        list->layout->offsetMin = Vec2F(2, -160);
+        list->layout->offsetMax = Vec2F(0, 3);
+
+        // Create item sample
+        Ref<Label> itemSample = o2UI.CreateLabel("empty");
+        itemSample->horAlign = HorAlign::Left;
+        sample->SetItemSample(itemSample);
+
+        // Add states and animations
+        sample->AddState("hover", AnimationClip::EaseInOut("layer/hover/transparency", 0.0f, 1.0f, 0.05f))
+            ->offStateAnimationSpeed = 0.5f;
+
+        sample->AddState("focused", AnimationClip::EaseInOut("layer/focused/transparency", 0.0f, 1.0f, 0.05f))
+            ->offStateAnimationSpeed = 0.5f;
+
+        sample->AddState("pressed", AnimationClip::EaseInOut("layer/pressed/transparency", 0.0f, 1.0f, 0.05f))
+            ->offStateAnimationSpeed = 0.5f;
+
+        sample->AddState("opened", AnimationClip::EaseInOut("layer/arrow/mDrawable/scale", Vec2F(1, 1), Vec2F(1, -1), 0.2f));
+
+        sample->AddState("visible", AnimationClip::EaseInOut("transparency", 0.0f, 1.0f, 0.2f))
+            ->offStateAnimationSpeed = 0.5f;
+
+        o2UI.AddWidgetStyle(sample, "standard");
     }
 
     void BasicUIStyleBuilder::RebuildWindowStyle()

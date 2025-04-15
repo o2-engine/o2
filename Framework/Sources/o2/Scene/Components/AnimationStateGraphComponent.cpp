@@ -303,6 +303,15 @@ namespace o2
 		return "";
 	}
 
+	Vector<String> AnimationStateGraphComponent::GetStatesNames() const
+	{
+		Vector<String> names;
+		if (mStateGraph)
+			names = mStateGraph->GetStatesNames();
+
+		return names;
+	}
+
 	const Ref<AnimationGraphTransition>& AnimationStateGraphComponent::GetCurrentTransition() const
     {
         return mCurrentTransition;

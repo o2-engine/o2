@@ -50,6 +50,9 @@ namespace o2
         // Fits size by items
         virtual void FitSizeAndPosition(const Vec2F& position);
 
+        // Returns the layer on which this popup was opened
+        const WeakRef<CursorAreaEventListenersLayer>& GetOpenedLayer() const;
+
         // Returns create menu group in editor
         static String GetCreateMenuGroup();
 
@@ -65,6 +68,9 @@ namespace o2
         WeakRef<PopupWidget> mChildPopup;  // Child visible popup widget
 
         bool mShownAtFrame = false; // Is popup was shown at current frame
+
+        WeakRef<CursorAreaEventListenersLayer> mOpenedLayer;         // Layer on which this popup was opened
+        WeakRef<CursorAreaEventListenersLayer> mCurrentDrawingLayer; // Current layer during drawing
 
     protected:
         // Checks widget clipping by area
@@ -94,8 +100,8 @@ namespace o2
         // Called when cursor pressing was broken (when scrolled scroll area or some other)
         void OnCursorPressBreak(const Input::Cursor& cursor) override;
 
-        // Called when cursor released outside this(only when cursor pressed this at previous time)
-        void OnCursorReleasedOutside(const Input::Cursor& cursor) override;
+        // Called when cursor pressed outside this(only when cursor pressed this at previous time)
+        void OnCursorPressedOutside(const Input::Cursor& cursor) override;
 
         // Called when key was released
         void OnKeyPressed(const Input::Key& key) override;
@@ -122,6 +128,8 @@ CLASS_FIELDS_META(o2::PopupWidget)
     FIELD().PROTECTED().NAME(mParentPopup);
     FIELD().PROTECTED().NAME(mChildPopup);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mShownAtFrame);
+    FIELD().PROTECTED().NAME(mOpenedLayer);
+    FIELD().PROTECTED().NAME(mCurrentDrawingLayer);
 }
 END_META;
 CLASS_METHODS_META(o2::PopupWidget)
@@ -137,6 +145,7 @@ CLASS_METHODS_META(o2::PopupWidget)
     FUNCTION().PUBLIC().SIGNATURE(bool, IsScrollable);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsInputTransparent);
     FUNCTION().PUBLIC().SIGNATURE(void, FitSizeAndPosition, const Vec2F&);
+    FUNCTION().PUBLIC().SIGNATURE(const WeakRef<CursorAreaEventListenersLayer>&, GetOpenedLayer);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetCreateMenuGroup);
     FUNCTION().PROTECTED().SIGNATURE(void, CheckClipping, const RectF&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnEnabled);
@@ -147,7 +156,7 @@ CLASS_METHODS_META(o2::PopupWidget)
     FUNCTION().PROTECTED().SIGNATURE(void, HideWithChild);
     FUNCTION().PROTECTED().SIGNATURE(void, SpecialDraw);
     FUNCTION().PROTECTED().SIGNATURE(void, OnCursorPressBreak, const Input::Cursor&);
-    FUNCTION().PROTECTED().SIGNATURE(void, OnCursorReleasedOutside, const Input::Cursor&);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnCursorPressedOutside, const Input::Cursor&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnKeyPressed, const Input::Key&);
 }
 END_META;

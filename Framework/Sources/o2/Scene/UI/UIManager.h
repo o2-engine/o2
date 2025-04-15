@@ -1,6 +1,7 @@
 #pragma once
 
 #include "o2/Assets/Types/ActorAsset.h"
+#include "o2/Events/CursorAreaEventsListenersLayer.h"
 #include "o2/Scene/UI/Widgets/ContextMenu.h"
 #include "o2/Utils/Debug/Log/LogStream.h"
 #include "o2/Utils/Property.h"
@@ -18,6 +19,7 @@ namespace o2
     FORWARD_CLASS_REF(CustomList);
     FORWARD_CLASS_REF(DropDown);
     FORWARD_CLASS_REF(EditBox);
+    FORWARD_CLASS_REF(EditBoxDropDown);
     FORWARD_CLASS_REF(HorizontalLayout);
     FORWARD_CLASS_REF(HorizontalProgress);
     FORWARD_CLASS_REF(HorizontalScrollBar);
@@ -121,6 +123,9 @@ namespace o2
         // Creates text dropdown
         Ref<DropDown> CreateDropdown(const String& style = "standard");
 
+        // Creates editbox dropdown
+        Ref<EditBoxDropDown> CreateEditBoxDropDown(const String& style = "standard");
+
         // Creates toggle
         Ref<Toggle> CreateToggle(const WString& caption, const String& style = "standard");
 
@@ -137,7 +142,7 @@ namespace o2
         void FocusNextWidget();
 
         // Draws context menus and top drawing widgets
-        void Draw();
+        void DrawCurrentLayerTopWidgets();
 
         // Checks last focused and unfocused widget
         void Update();
@@ -156,7 +161,7 @@ namespace o2
         Vector<Ref<Widget>> mLastFocusedWidgets;   // Widget that was focused on last frame
         Vector<Ref<Widget>> mFocusableWidgets;     // List of selectable widgets
 
-        Vector<Ref<Widget>> mTopWidgets; // Top widgets, drawing after mScreenWidget 
+        Map<WeakRef<CursorAreaEventListenersLayer>, Vector<Ref<Widget>>> mTopWidgets; // Top widgets, drawing after mScreenWidget 
 
         Vector<AssetRef<ActorAsset>> mStyleSamples; // Style widgets
 
@@ -196,17 +201,24 @@ namespace o2
     template<typename _type>
     void UIManager::RemoveWidgetStyle(const String& style)
     {
+        int removeIdx = -1;
+        int i = 0;
         for (auto& styleWidget : mStyleSamples)
         {
             if (TypeOf(_type) == styleWidget->GetActor()->GetType())
             {
                 if (style == styleWidget->GetActor()->GetName())
                 {
-                    mStyleSamples.Remove(styleWidget);
+                    removeIdx = i;
                     break;
                 }
             }
+
+            i++;
         }
+
+        if (removeIdx != -1)
+            mStyleSamples.RemoveAt(removeIdx);
     }
 
     template<typename _type>
@@ -223,10 +235,6 @@ namespace o2
         else
             res = mmake<_type>();
 
-        //         if (TypeOf(_type) != TypeOf(ContextMenu))
-        //             res->SetEnabledForcible(true);
-
         return res;
     }
-
 }

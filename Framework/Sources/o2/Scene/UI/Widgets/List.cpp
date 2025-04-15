@@ -115,8 +115,8 @@ namespace o2
     }
 
     void List::OnSelectionChanged()
-    {
-        onSelectedText(GetSelectedItemText());
+	{
+		onSelectedText(GetSelectedItemText());
     }
 
     String List::GetCreateMenuGroup()

@@ -74,6 +74,7 @@ namespace o2
         auto transition = mmake<AnimationGraphTransition>();
         transition->SetDestinationState(destinationState);
         transition->SetState(Ref(this));
+        mTransitions.Add(transition);
         return transition;
     }
 

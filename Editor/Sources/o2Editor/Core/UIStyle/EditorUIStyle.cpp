@@ -69,6 +69,7 @@
 #include "o2Editor/TreeWindow/DrawOrderTree.h"
 #include "o2Editor/TreeWindow/SceneHierarchyTree.h"
 #include "o2Editor/MemoryAnalyzerWindow/MemoryAnalyzerWindow.h"
+#include "o2/Scene/UI/Widgets/EditBoxDropDown.h"
 
 using namespace o2;
 
@@ -4746,8 +4747,14 @@ namespace Editor
         layoutContainer->AddChild(layout);
 
         Ref<EditBox> editBox = o2UI.CreateEditBox("singleline");
+		editBox->name = "editbox";
         *editBox->layout = WidgetLayout::BothStretch();
         layout->AddChild(editBox);
+
+		Ref<EditBoxDropDown> editBoxDropDown = o2UI.CreateEditBoxDropDown();
+		editBoxDropDown->name = "dropdown";
+		*editBoxDropDown->layout = WidgetLayout::BothStretch();
+		layout->AddChild(editBoxDropDown);
 
         o2UI.AddWidgetStyle(sample, "standard");
     }

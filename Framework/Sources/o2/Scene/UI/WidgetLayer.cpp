@@ -296,7 +296,7 @@ namespace o2
                     }
                 }
             }
-            else if (mOwnerWidget.Lock()->mPrototypeLink)
+            else if (mOwnerWidget && mOwnerWidget.Lock()->mPrototypeLink)
             {
                 for (auto& protoChild : dynamic_cast<Widget*>(mOwnerWidget.Lock()->mPrototypeLink.Lock().Get())->mLayers)
                 {

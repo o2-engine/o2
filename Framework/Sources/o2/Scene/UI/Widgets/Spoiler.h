@@ -31,13 +31,13 @@ namespace o2
         Spoiler& operator=(const Spoiler& other);
 
         // Expands spoiler
-        void Expand();
+        void Expand(bool forcible = false);
 
         // Collapses spoiler
-        void Collapse();
+        void Collapse(bool forcible = false);
 
         // Sets expanded state
-        void SetExpanded(bool expand);
+        void SetExpanded(bool expand, bool forcible = false);
 
         // Returns is expanded
         bool IsExpanded() const;
@@ -70,8 +70,8 @@ namespace o2
         float mHeadHeight = 0.0f; // Spoiler head height @SERIALIZABLE
 
         Ref<WidgetState> mExpandState;         // Expanding state
-        float             mExpandCoef = 0.0f;   // Expanding animation coefficient 0...1 
-        float             mTargetHeight = 0.0f; // target expanding height
+        float            mExpandCoef = 0.0f;   // Expanding animation coefficient 0...1 
+        float            mTargetHeight = 0.0f; // target expanding height
 
     protected:
         // Invokes required function for childs arranging
@@ -123,9 +123,9 @@ CLASS_METHODS_META(o2::Spoiler)
 
     FUNCTION().PUBLIC().CONSTRUCTOR(RefCounter*);
     FUNCTION().PUBLIC().CONSTRUCTOR(RefCounter*, const Spoiler&);
-    FUNCTION().PUBLIC().SIGNATURE(void, Expand);
-    FUNCTION().PUBLIC().SIGNATURE(void, Collapse);
-    FUNCTION().PUBLIC().SIGNATURE(void, SetExpanded, bool);
+    FUNCTION().PUBLIC().SIGNATURE(void, Expand, bool);
+    FUNCTION().PUBLIC().SIGNATURE(void, Collapse, bool);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetExpanded, bool, bool);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsExpanded);
     FUNCTION().PUBLIC().SIGNATURE(void, Draw);
     FUNCTION().PUBLIC().SIGNATURE(void, SetCaption, const WString&);

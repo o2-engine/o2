@@ -37,6 +37,9 @@ namespace o2
         // Returns all cursor listeners under cursor arranged by depth
         Vector<Ref<CursorAreaEventsListener>> GetAllCursorListenersUnderCursor(CursorId cursorId) const;
 
+		// Returns current cursor area events listeners layer at time
+		Ref<CursorAreaEventListenersLayer> GetCurrentCursorAreaEventsLayer() const;
+
         // Breaks cursor event. All pressed listeners will be unpressed with specific event OnPressBreak
         void BreakCursorEvent();
 

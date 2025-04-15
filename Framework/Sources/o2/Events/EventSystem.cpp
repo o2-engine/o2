@@ -231,7 +231,12 @@ namespace o2
         return mCursorAreaListenersBasicLayer->GetAllCursorListenersUnderCursor(o2Input.GetCursorPos(cursorId));
     }
 
-    void EventSystem::BreakCursorEvent()
+	Ref<CursorAreaEventListenersLayer> EventSystem::GetCurrentCursorAreaEventsLayer() const
+	{
+		return mCurrentCursorAreaEventsLayer;
+	}
+
+	void EventSystem::BreakCursorEvent()
     {
         for (auto& layer : mCursorAreaEventsListenersLayers)
             layer.Lock()->BreakCursorEvent();

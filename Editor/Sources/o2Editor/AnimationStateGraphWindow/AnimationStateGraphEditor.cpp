@@ -19,25 +19,26 @@
 #include "o2/Utils/Editor/EditorScope.h"
 #include "o2/Utils/Math/Interpolation.h"
 #include "o2/Utils/System/Clipboard.h"
+#include "o2Editor/AnimationWindow/AnimationWindow.h"
 #include "o2Editor/Core/Dialogs/KeyEditDlg.h"
 #include "o2Editor/Core/Properties/Properties.h"
 #include "o2Editor/Core/UI/CurveEditor/CurveActions.h"
 #include "o2Editor/Core/UIRoot.h"
+#include "o2Editor/PropertiesWindow/PropertiesWindow.h"
 #include "o2Editor/SceneWindow/SceneEditScreen.h"
-#include "o2Editor/AnimationWindow/AnimationWindow.h"
 
 namespace Editor
 {
     AnimationStateGraphEditor::AnimationStateGraphEditor(RefCounter* refCounter):
         FrameScrollView(refCounter), SelectableDragHandlesGroup(refCounter)
     {
-        mReady = false;
-
         mSelectionSprite = mmake<Sprite>();
-        InitializeContextMenus();
-
+		mStateWidgetsContainer = mmake<Widget>();
         mBackColor = Color4(225, 232, 232, 255);
         mViewCameraMinScale = 1.0f;
+
+		InitializeContextMenus();
+
         mReady = true;
     }
 
@@ -54,6 +55,8 @@ namespace Editor
 
 		if (mComponent)
 			mComponent.Lock()->Reset();
+
+		mNeedAdjustView = true;
 	}
 
 	void AnimationStateGraphEditor::InitializeStates()
@@ -63,6 +66,7 @@ namespace Editor
 
 		mStatesWidgets.Clear();
 		mStatesWidgetsMap.Clear();
+		mStateHandlesMap.Clear();
 
 		if (auto lastComponent = mComponent.Lock())
 		{
@@ -83,6 +87,7 @@ namespace Editor
 			auto stateWidget = mmake<StateWidget>(Ref(this), state);
 			mStatesWidgets.Add(stateWidget);
 			mStatesWidgetsMap[state] = stateWidget;
+			mStateHandlesMap[stateWidget->dragHandle] = stateWidget;
 		}
 
 		for (auto& state : mStatesWidgets)
@@ -97,6 +102,8 @@ namespace Editor
 			component->onTransitionsPlanned += THIS_FUNC(OnStateGraphTransitionsPlanned);
 			component->onTransitionCancelled += THIS_FUNC(OnStateGraphTransitionCancelled);
 		}
+
+		RecalculateViewArea();
 	}
 
 	void AnimationStateGraphEditor::Draw()
@@ -110,7 +117,19 @@ namespace Editor
 		DrawGrid();
 
 		DrawTransitions();
-		ISceneDrawable::DrawInheritedDepthChildren();
+		mStateWidgetsContainer->Draw();
+	}
+
+
+	void AnimationStateGraphEditor::OnSelectionChanged()
+	{
+		if (!mSelectedHandles.IsEmpty())
+		{
+			if (auto state = mStateHandlesMap[mSelectedHandles[0]])
+			{
+				o2EditorPropertiesWindow.SetTarget(state->state.Lock().Get());
+			}
+		}
 	}
 
 	void AnimationStateGraphEditor::DrawHandles()
@@ -130,16 +149,70 @@ namespace Editor
 	{
 		for (auto& state : mStatesWidgets)
 			state->DrawTransitions();
+
+		if (mCreatingTransition)
+		{
+			Vec2F from = mContextMenuState->state.Lock()->GetPosition();
+			Vec2F to = ScreenToLocalPoint(o2Input.cursorPos);
+
+			DrawTransition(from, to, StateTransition::Status::None, 0.0f);
+		}
 	}
 
-    void AnimationStateGraphEditor::Update(float dt)
+	void AnimationStateGraphEditor::DrawTransition(Vec2F from, Vec2F to, StateTransition::Status status, float progress)
+	{
+		Vec2F dir = (to - from).Normalized();
+		Vec2F norm = dir.Perpendicular();
+		Vec2F center = (from + to)/2.0f;
+
+		Color4 colorRegular(126, 149, 160);
+		Color4 colorPlanned(159, 190, 254);
+		Color4 colorFinished(249, 93, 72);
+		float width = 4.0f;
+		float arrowSize = 10.0f;
+		float offset = 7.0f;
+
+		from += norm*offset;
+		to += norm*offset;
+
+		static Vector<Vec2F> arrowLocal = { Vec2F(-0.5f, 0.5f), Vec2F(0.0f, 1.5f), Vec2F(0.5f, 0.5f), Vec2F(-0.5f, 0.5f), Vec2F(0.0f, 1.5f) };
+
+		Basis arrowBasis(center, norm*arrowSize, dir*arrowSize);
+		Vector<Vec2F> arrowWorld = arrowLocal.Convert<Vec2F>([&](const Vec2F& p) { return arrowBasis.Transform(p) + norm*offset; });
+
+		if (status == StateTransition::Status::None)
+		{
+			o2Render.DrawAALine(from, to, colorRegular, width);
+			o2Render.DrawAALine(arrowWorld, colorRegular, width);
+		}
+		else
+		{
+			Vec2F progressPoint = from;
+
+			if (status == StateTransition::Status::Started)
+				progressPoint = Math::Lerp(from, to, progress);
+			else
+				progress = 0.0f;
+
+			o2Render.DrawAALine(from, to, colorPlanned, width);
+			o2Render.DrawAALine(from, progressPoint, colorFinished, width);
+
+			auto arrowColor = progress < 0.5f ? colorPlanned : colorFinished;
+			o2Render.DrawAALine(arrowWorld, arrowColor, width);
+		}
+	}
+
+	void AnimationStateGraphEditor::Update(float dt)
     {
+		mStateWidgetsContainer->Update(dt);
+		mStateWidgetsContainer->UpdateChildren(dt);
+
         FrameScrollView::Update(dt);
 
         if (mReady && mResEnabledInHierarchy && !mIsClipped && mNeedAdjustView)
         {
             mNeedAdjustView = false;
-            mViewCameraTargetScale = mAvailableArea.Size()/mViewCamera.GetSize();
+			mViewCameraTargetScale = Vec2F(1, 1);
             mViewCamera.center = mAvailableArea.Center();
             mViewCameraTargetPos = mViewCamera.position;
         }
@@ -206,16 +279,33 @@ namespace Editor
 		Focus();
 
 		mSelectingPressedPoint = cursor.position;
+		BeginPreSelect();
 	}
 
 	void AnimationStateGraphEditor::OnCursorReleased(const Input::Cursor& cursor)
 	{
-		DeselectAll();
+		EndPreSelect();
 	}
 
 	void AnimationStateGraphEditor::OnCursorStillDown(const Input::Cursor& cursor)
 	{
+		Vector<Ref<DragHandle>> preSelectedHandles;
 
+		RectF selectionRect = RectF(mSelectingPressedPoint, ScreenToLocalPoint(o2Input.cursorPos));
+
+		for (auto& state : mStatesWidgets)
+		{
+			RectF stateRect = state->widget->layout->worldAABB;
+			if (selectionRect.IsIntersects(stateRect))
+			{
+				preSelectedHandles.Add(state->dragHandle);
+				state->widget->SetState("focused", true);
+			}
+			else
+				state->widget->SetState("focused", mSelectedHandles.Contains(state->dragHandle));
+		}
+
+		UpdatePreSelect(preSelectedHandles);
 	}
 
 	void AnimationStateGraphEditor::OnCursorRightMouseStayDown(const Input::Cursor& cursor)
@@ -234,7 +324,6 @@ namespace Editor
 
 		FrameScrollView::OnCursorRightMouseReleased(cursor);
 	}
-
 
 	void AnimationStateGraphEditor::DrawInheritedDepthChildren()
 	{}
@@ -264,21 +353,15 @@ namespace Editor
     {
         // Initialize with first state position if available
         if (!mStatesWidgets.IsEmpty())
-            mAvailableArea = RectF(mStatesWidgets[0]->widget->layout->position, 
-                                  mStatesWidgets[0]->widget->layout->position);
+            mAvailableArea = mStatesWidgets[0]->widget->layout->worldAABB;
         else
             mAvailableArea = RectF(Vec2F(), Vec2F());
 
         // Calculate bounds from all state positions
         for (auto& state : mStatesWidgets)
-        {
-            Vec2F pos = state->widget->layout->position;
-            mAvailableArea.left = Math::Min(mAvailableArea.left, pos.x);
-            mAvailableArea.right = Math::Max(mAvailableArea.right, pos.x);
-            mAvailableArea.top = Math::Max(mAvailableArea.top, pos.y);
-            mAvailableArea.bottom = Math::Min(mAvailableArea.bottom, pos.y);
-        }
+			mAvailableArea.Expand(state->widget->layout->worldAABB);
 
+		// Add borders
         float bordersCoef = 1.5f;
         Vec2F size = mAvailableArea.Size();
         mAvailableArea.left -= size.x*bordersCoef;
@@ -376,8 +459,7 @@ namespace Editor
 			return;
 
 		auto state = graph->AddState("New state", {});
-		state->SetPosition(mContextMenuPos + layout->GetSize()/2.0f);
-		o2Debug.Log("State created at: " + String(mContextMenuPos));
+		state->SetPosition(mContextMenuPos);
 		InitializeStates();
 	}
 
@@ -390,20 +472,51 @@ namespace Editor
 
 	void AnimationStateGraphEditor::StartAddingTransition()
 	{
-
+		mCreatingTransition = true;
 	}
 
 
 	void AnimationStateGraphEditor::RemoveCurrentStates()
 	{
+		auto graph = mGraph.Lock();
+		if (graph)
+		{
+			for (auto& handle : mSelectedHandles)
+			{
+				if (auto state = mStateHandlesMap[handle])
+					graph->RemoveState(state->state.Lock());
 
+			}
 
+			InitializeStates();
+		}
 	}
 
 
 	void AnimationStateGraphEditor::RemoveCurrentTransition()
 	{
 
+	}
+
+	void AnimationStateGraphEditor::OpenStateContextMenu(const Ref<StateWidget>& state)
+	{
+		mContextMenuState = state;
+		mStateContextMenu->Show();
+	}
+
+	void AnimationStateGraphEditor::OnStatePressed(const Ref<StateWidget>& state)
+	{
+		if (mCreatingTransition)
+		{
+			auto sourceState = mContextMenuState->state.Lock();
+			auto destinationState = state->state.Lock();
+			if (sourceState && destinationState)
+			{
+				auto transition = sourceState->AddTransition(state->state.Lock());
+				mCreatingTransition = false;
+				InitializeStates();
+			}
+		}
 	}
 
 	AnimationStateGraphEditor::StateWidget::StateWidget(RefCounter* refCounter, const Ref<AnimationStateGraphEditor>& owner,
@@ -415,22 +528,26 @@ namespace Editor
 
 		dragHandle = mmake<DragHandle>();
 		dragHandle->SetSelectionGroup(owner);
+		dragHandle->messageFallDownListener = owner.Get();
 		dragHandle->isPointInside = [weakWidget](const Vec2F& p) { return weakWidget ? weakWidget.Lock()->IsUnderPoint(p) : false; };
+
 		dragHandle->onHoverEnter = [weakWidget]() { if (weakWidget) weakWidget.Lock()->SetState("hover", true); };
 		dragHandle->onHoverExit = [weakWidget]() { if (weakWidget) weakWidget.Lock()->SetState("hover", false); };
 		dragHandle->onPressed = [weakWidget]() { if (weakWidget) weakWidget.Lock()->SetState("pressed", true); };
 		dragHandle->onReleased = [weakWidget]() { if (weakWidget) weakWidget.Lock()->SetState("pressed", false); };
 		dragHandle->onSelected = [weakWidget]() { if (weakWidget) weakWidget.Lock()->SetState("focused", true); };
 		dragHandle->onDeselected = [weakWidget]() { if (weakWidget) weakWidget.Lock()->SetState("focused", false); };
+
+		dragHandle->onPressed = [this]() { OnPressed(); };
 		dragHandle->onRightButtonReleased = [this](const Input::Cursor&) { OpenContextMenu(); };
-        dragHandle->messageFallDownListener = owner.Get();
+
         dragHandle->onChangedPos = [weakWidget, this](const Vec2F& pos)
 		{
 			if (auto widget = weakWidget.Lock())
 			{
-				*widget->layout = WidgetLayout::Based(BaseCorner::LeftBottom, Vec2F(250, 50), pos);
-				o2Debug.Log("State moved to: " + String(pos));
+				*widget->layout = WidgetLayout::Based(BaseCorner::Center, Vec2F(250, 50), pos);
 				this->state.Lock()->SetPosition(pos);
+				editor.Lock()->RecalculateViewArea();
 			}
 		};
 
@@ -454,10 +571,10 @@ namespace Editor
 		animationsListProperty->SetValuePointers<Vector<Ref<StateAnimation>>>({ &animations });
 		widget->AddChild(animationsListProperty);
 
-		*widget->layout = WidgetLayout::Based(BaseCorner::LeftBottom, Vec2F(250, 50), state->GetPosition());
+		*widget->layout = WidgetLayout::Based(BaseCorner::Center, Vec2F(250, 50), state->GetPosition());
 		dragHandle->position = state->GetPosition();
 
-		editor.Lock()->AddChild(widget);
+		editor.Lock()->mStateWidgetsContainer->AddChild(widget);
 	}
 
 	void AnimationStateGraphEditor::StateWidget::InitializeTransitions()
@@ -518,7 +635,13 @@ namespace Editor
 
 	void AnimationStateGraphEditor::StateWidget::OpenContextMenu()
 	{
-		editor.Lock()->mStateContextMenu->Show();
+		editor.Lock()->OpenStateContextMenu(Ref(this));
+	}
+
+
+	void AnimationStateGraphEditor::StateWidget::OnPressed()
+	{
+		editor.Lock()->OnStatePressed(Ref(this));
 	}
 
 	void AnimationStateGraphEditor::StateTransition::Draw()
@@ -530,56 +653,15 @@ namespace Editor
 
 		Vec2F fromPoint = from->widget->layout->GetWorldCenter();
 		Vec2F toPoint = to->widget->layout->GetWorldCenter();
-		Vec2F dir = (toPoint - fromPoint).Normalized();
-		Vec2F norm = dir.Perpendicular();
-		Vec2F center = (fromPoint + toPoint)/2.0f;
 
-		Color4 colorRegular(126, 149, 160);
-		Color4 colorPlanned(159, 190, 254);
-		Color4 colorFinished(249, 93, 72);
-		float width = 4.0f;
-		float arrowSize = 10.0f;
-		float offset = 7.0f;
-
-		fromPoint += norm*offset;
-		toPoint += norm*offset;
-
-		static Vector<Vec2F> arrowLocal = { Vec2F(-0.5f, 0.5f), Vec2F(0.0f, 1.5f), Vec2F(0.5f, 0.5f), Vec2F(-0.5f, 0.5f), Vec2F(0.0f, 1.5f) };
-
-		Basis arrowBasis(center, norm*arrowSize, dir*arrowSize);
-		Vector<Vec2F> arrowWorld = arrowLocal.Convert<Vec2F>([&](const Vec2F& p) { return arrowBasis.Transform(p) + norm*offset; });
-
-		if (status == Status::None)
+		float progress = 0.0f;
+		if (auto component = from->editor.Lock()->mComponent.Lock())
 		{
-			o2Render.DrawAALine(fromPoint, toPoint, colorRegular, width);
-			o2Render.DrawAALine(arrowWorld, colorRegular, width);
+			if (auto currentTransition = component->GetCurrentTransition())
+				progress = component->GetCurrentTransitionTime() / currentTransition->duration;
 		}
-		else
-		{
-			float currentProgress = 0.0f;
-			Vec2F progressPoint = fromPoint;
 
-			if (status == Status::Started)
-			{
-				if (auto editor = owner.Lock()->editor.Lock())
-				{
-					if (auto component = editor->mComponent.Lock())
-					{
-						if (auto currentTransition = component->GetCurrentTransition())
-						{
-							currentProgress = component->GetCurrentTransitionTime() / currentTransition->duration;
-							progressPoint = Math::Lerp(fromPoint, toPoint, currentProgress);
-						}
-					}
-				}
-			}
-
-			o2Render.DrawAALine(fromPoint, toPoint, colorPlanned, width);
-			o2Render.DrawAALine(fromPoint, progressPoint, colorFinished, width);
-
-			auto arrowColor = currentProgress < 0.5f ? colorPlanned : colorFinished;
-			o2Render.DrawAALine(arrowWorld, arrowColor, width);
-		}
+		AnimationStateGraphEditor::DrawTransition(fromPoint, toPoint, status, progress);
 	}
 
 	void AnimationStateGraphEditor::StateTransition::SetStatus(Status status)
@@ -766,6 +848,22 @@ namespace Editor
 		mTimeProgress->value = 0.0f;
 	}
 
+	Vector<String> AnimationStateGraphEditor::StateAnimation::GetAvailableStates() const
+	{
+		auto owner = this->owner.Lock();
+		if (!owner)
+			return {};
+
+		auto editor = owner->editor.Lock();
+		if (!editor)
+			return {};
+
+		auto component = editor->mComponent.Lock();
+		if (!component)
+			return {};
+
+		return component->GetStatesNames();
+	}
 }
 
 DECLARE_TEMPLATE_CLASS(o2::LinkRef<Editor::AnimationStateGraphEditor>);

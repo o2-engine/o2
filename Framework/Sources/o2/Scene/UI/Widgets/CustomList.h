@@ -1,15 +1,16 @@
 #pragma once
 
 #include "o2/Render/Sprite.h"
-#include "ScrollArea.h"
+#include "o2/Scene/UI/Widgets/ScrollArea.h"
 #include "o2/Scene/UI/Widgets/VerticalLayout.h"
+#include "o2/Events/KeyboardEventsListener.h"
 
 namespace o2
 {
     // -------------------------------
     // List view widget with selection
     // -------------------------------
-    class CustomList : public ScrollArea
+    class CustomList : public ScrollArea, public KeyboardEventsListener
     {
     public:
         PROPERTIES(CustomList);
@@ -220,6 +221,9 @@ namespace o2
         // Called when cursor exits this object
         void OnCursorExit(const Input::Cursor& cursor) override;
 
+        // Called when key was pressed when widget is focused
+        void OnKeyPressed(const Input::Key& key) override;
+
         // Returns item widget under point and stores index in idxPtr, if not null
         Ref<Widget> GetItemUnderPoint(const Vec2F& point, int* idxPtr);
 
@@ -227,7 +231,9 @@ namespace o2
         void UpdateHover(const Vec2F& point);
 
         // Returns selection sprite
-        Ref<Sprite> GetSelectionSprite();
+		Ref<Sprite> GetSelectionSprite();
+
+		REF_COUNTERABLE_IMPL(ScrollArea);
 
         friend class DropDown;
         friend class CustomDropDown;
@@ -238,6 +244,7 @@ namespace o2
 CLASS_BASES_META(o2::CustomList)
 {
     BASE_CLASS(o2::ScrollArea);
+    BASE_CLASS(o2::KeyboardEventsListener);
 }
 END_META;
 CLASS_FIELDS_META(o2::CustomList)
@@ -319,6 +326,7 @@ CLASS_METHODS_META(o2::CustomList)
     FUNCTION().PROTECTED().SIGNATURE(void, OnCursorReleased, const Input::Cursor&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnCursorPressBreak, const Input::Cursor&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnCursorExit, const Input::Cursor&);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnKeyPressed, const Input::Key&);
     FUNCTION().PROTECTED().SIGNATURE(Ref<Widget>, GetItemUnderPoint, const Vec2F&, int*);
     FUNCTION().PROTECTED().SIGNATURE(void, UpdateHover, const Vec2F&);
     FUNCTION().PROTECTED().SIGNATURE(Ref<Sprite>, GetSelectionSprite);

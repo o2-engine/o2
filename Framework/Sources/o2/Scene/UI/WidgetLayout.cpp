@@ -112,8 +112,8 @@ namespace o2
                         mData->offsetMax + mData->anchorMax*parentRect.Size());
 
         float szDelta = value - rectangle.Height();
-        mData->offsetMax.y += szDelta*(1.0f - mData->pivot.y);
-        mData->offsetMin.y -= szDelta*mData->pivot.y;
+        mData->offsetMax.y += szDelta*mData->pivot.y;
+        mData->offsetMin.y -= szDelta*(1.0f - mData->pivot.y);
 
         SetDirty();
     }

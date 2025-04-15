@@ -59,27 +59,36 @@ namespace o2
         return *this;
     }
 
-    void Spoiler::Expand()
+    void Spoiler::Expand(bool forcible /*= false*/)
     {
-        SetExpanded(true);
+        SetExpanded(true, forcible);
     }
 
-    void Spoiler::Collapse()
+    void Spoiler::Collapse(bool forcible /*= false*/)
     {
-        SetExpanded(false);
+        SetExpanded(false, forcible);
     }
 
-    void Spoiler::SetExpanded(bool expand)
+    void Spoiler::SetExpanded(bool expand, bool forcible /*= false*/)
     {
         if (mExpandState)
-            mExpandState->SetState(expand);
+        {
+            if (forcible)
+                mExpandState->SetStateForcible(expand);
+            else
+                mExpandState->SetState(expand);
+        }
 
         if (expand)
             onExpand();
 
-        auto expandBtn = GetExpandButton();
-        if (expandBtn)
-            expandBtn->SetState("expanded", expand);
+        if (auto expandBtn = GetExpandButton())
+        {
+			if (forcible)
+				expandBtn->SetStateForcible("expanded", expand);
+			else
+                expandBtn->SetState("expanded", expand);
+        }
 
         mTargetHeight = VerticalLayout::GetMinHeightWithChildren();
     }

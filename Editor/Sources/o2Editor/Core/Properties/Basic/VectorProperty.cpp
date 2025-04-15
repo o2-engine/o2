@@ -289,7 +289,7 @@ namespace Editor
         if (fieldInfo)
         {
             if (fieldInfo->HasAttribute<ExpandedByDefaultAttribute>())
-                mSpoiler->Expand();
+                mSpoiler->Expand(true);
         }
     }
 
@@ -329,19 +329,19 @@ namespace Editor
         return mRemoveBtn;
     }
 
-    void VectorProperty::Expand()
+	void VectorProperty::Expand(bool forcible /*= false*/)
     {
-        SetExpanded(true);
+        SetExpanded(true, forcible);
     }
 
-    void VectorProperty::Collapse()
+    void VectorProperty::Collapse(bool forcible /*= false*/)
     {
-        SetExpanded(false);
+        SetExpanded(false, forcible);
     }
 
-    void VectorProperty::SetExpanded(bool expanded)
+    void VectorProperty::SetExpanded(bool expanded, bool forcible /*= false*/)
     {
-        mSpoiler->SetExpanded(expanded);
+        mSpoiler->SetExpanded(expanded, forcible);
     }
 
     bool VectorProperty::IsExpanded() const
@@ -367,7 +367,7 @@ namespace Editor
             mSpoiler->GetLayerDrawable<Text>("caption")->enabled = false;
             mSpoiler->GetInternalWidget("expand")->enabledForcibly = false;
             mSpoiler->borderTop = 0;
-            mSpoiler->Expand();
+            mSpoiler->Expand(true);
             mHeaderContainer->SetInternalParent(nullptr);
 		}
 	}

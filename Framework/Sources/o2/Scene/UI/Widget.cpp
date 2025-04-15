@@ -288,7 +288,19 @@ namespace o2
         GetLayoutData().childrenWorldRect = childrenWorldRect;
     }
 
-    void Widget::SetLayoutDirty()
+	void Widget::ForEachActor(const Function<bool(Actor&)>& func)
+	{
+        if (func(*this))
+        {
+			for (auto& child : mChildren)
+				child->ForEachActor(func);
+
+            for (auto& child : mInternalWidgets)
+                child->ForEachActor(func);
+        }
+	}
+
+	void Widget::SetLayoutDirty()
     {
         layout->SetDirty(false);
     }
@@ -1039,8 +1051,6 @@ namespace o2
 
     void Widget::UpdateLayersDrawingSequence()
     {
-        const float topLayersDepth = 1000.0f;
-
         mDrawingLayers.Clear();
         mTopDrawingLayers.Clear();
 
