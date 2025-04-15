@@ -17,41 +17,30 @@ namespace o2
     {
         mEditBox = mmake<EditBox>();
         mEditBox->SetInternalParent(Ref(this), false);
-        mEditBox->onChanged += [&](auto text) { OnEditBoxTextChanged(text); };
-        mEditBox->onChangeCompleted += [&](auto text) { OnEditBoxTextCompleted(text); };
-        mEditBox->onFocused += [&]() { OnEditBoxFocused(); };
-        mEditBox->onUnfocused += [&]() { OnEditBoxUnfocused(); };
         mEditBox->SetMultiLine(false);
 
-        mItemsList = mmake<CustomList>();
+        mItemsList = mmake<List>();
         mItemsList->SetInternalParent(Ref(this), false);
-        mItemsList->onSelectedItem += [&](auto x) { OnItemSelected(); };
         mItemsList->SetMultiselectionAvailable(false);
         mItemsList->Hide(true);
 
-        auto itemSample = mmake<Label>();
-        itemSample->horOverflow = Label::HorOverflow::Dots;
-        SetItemSample(itemSample);
+        SetupCallbacks();
     }
 
     EditBoxDropDown::EditBoxDropDown(RefCounter* refCounter, const EditBoxDropDown& other):
-        Widget(refCounter, other), DrawableCursorEventsListener(this), mClipLayout(other.mClipLayout),
-        mMaxListItems(other.mMaxListItems), text(this), value(this), selectedItemPos(this), itemsCount(this)
+        Widget(refCounter, other), DrawableCursorEventsListener(this),
+        mMaxListItems(other.mMaxListItems), text(this), selectedItemPos(this), itemsCount(this)
     {
         mEditBox = FindInternalWidgetByType<EditBox>();
-        mEditBox->onChanged += [&](auto text) { OnEditBoxTextChanged(text); };
-        mEditBox->onChangeCompleted += [&](auto text) { OnEditBoxTextCompleted(text); };
-        mEditBox->onFocused += [&]() { OnEditBoxFocused(); };
-        mEditBox->onUnfocused += [&]() { OnEditBoxUnfocused(); };
         
-        mItemsList = FindInternalWidgetByType<CustomList>();
-        mItemsList->onSelectedItem += [&](auto x) { OnItemSelected(); };
+        mItemsList = FindInternalWidgetByType<List>();
         mItemsList->Hide(true);
         mItemsList->SetMultiselectionAvailable(false);
 
         // Copy original items
         mOriginalItems = other.mOriginalItems;
 
+        SetupCallbacks();
         RetargetStatesAnimations();
     }
 
@@ -63,46 +52,41 @@ namespace o2
         Widget::operator=(other);
 
         mEditBox = FindInternalWidgetByType<EditBox>();
-        mEditBox->onChanged += [&](auto text) { OnEditBoxTextChanged(text); };
-        mEditBox->onChangeCompleted += [&](auto text) { OnEditBoxTextCompleted(text); };
-        mEditBox->onFocused += [&]() { OnEditBoxFocused(); };
-        mEditBox->onUnfocused += [&]() { OnEditBoxUnfocused(); };
 
-        mItemsList = FindInternalWidgetByType<CustomList>();
-        mItemsList->onSelectedItem += [&](auto x) { OnItemSelected(); };
+        mItemsList = FindInternalWidgetByType<List>();
         mItemsList->Hide(true);
         mItemsList->SetMultiselectionAvailable(false);
 
-        mClipLayout = other.mClipLayout;
         mMaxListItems = other.mMaxListItems;
         mOriginalItems = other.mOriginalItems;
 
+        SetupCallbacks();
         RetargetStatesAnimations();
 
         return *this;
     }
 
+    void EditBoxDropDown::SetupCallbacks()
+    {
+        mEditBox->onChanged += [&](auto text) { OnEditBoxTextChanged(text); };
+        mEditBox->onChangeCompleted += [&](auto text) { OnEditBoxTextCompleted(text); };
+        mEditBox->onFocused += [&]() { OnEditBoxFocused(); };
+        mEditBox->onUnfocused += [&]() { OnEditBoxUnfocused(); };
+        
+        mItemsList->onSelectedText += [&](const WString& text) { OnSelectedText(text); };
+    }
+    
     void EditBoxDropDown::Draw()
-    {
-        PROFILE_SAMPLE_FUNC();
+	{
+		PROFILE_SAMPLE_FUNC();
 
-        if (!mResEnabledInHierarchy)
-            return;
+		if (!mResEnabledInHierarchy)
+			return;
 
-        Widget::Draw();
+		Widget::Draw();
 
-        o2UI.DrawWidgetAtTop(mItemsList);
-
-        DrawDebugFrame();
-    }
-
-    void EditBoxDropDown::Update(float dt)
-    {
-        Widget::Update(dt);
-
-        if (!mResEnabledInHierarchy || mIsClipped)
-            return;
-    }
+		o2UI.DrawWidgetAtTop(mItemsList);
+	}
 
     void EditBoxDropDown::SetText(const WString& text)
     {
@@ -120,28 +104,32 @@ namespace o2
 
     void EditBoxDropDown::Expand()
     {
-        onBeforeExpand();
+		onExpand();
 
-        float itemHeight = mItemsList->GetItemSample()->layout->minHeight;
-        int itemsVisible = Math::Min(mMaxListItems, mItemsList->GetItemsCount());
-
-        // Calculate approximate view size offset
-        float viewOffsetY = itemHeight * 0.2f; // Approximate offset for spacing
-
-        mItemsList->layout->minHeight = itemHeight * (float)itemsVisible + viewOffsetY;
+		mItemsList->RemoveAllItems();
+		mItemsList->AddItems(mOriginalItems);
 
         auto openedState = state["opened"];
         if (openedState)
             *openedState = true;
 
-        mItemsList->SetEnabled(true);
-        mItemsList->UpdateSelfTransform();
-        mItemsList->UpdateChildrenTransforms();
-
-        // Filter items based on current text
-        FilterItems();
-
+		mItemsList->SetEnabled(true);
+		
+		UpdateListSize();
         SetLayoutDirty();
+    }
+
+    void EditBoxDropDown::UpdateListSize()
+    {
+        float itemHeight = mItemsList->GetItemSample()->layout->minHeight;
+        int itemsVisible = Math::Min(mMaxListItems, mItemsList->GetItemsCount());
+        float itemsHeight = itemHeight * (float)itemsVisible; 
+
+        mItemsList->layout->minHeight = itemsHeight;
+        mItemsList->layout->height = itemsHeight;
+		
+		mItemsList->UpdateSelfTransform();
+		mItemsList->UpdateChildrenTransforms();
     }
 
     void EditBoxDropDown::Collapse()
@@ -160,26 +148,15 @@ namespace o2
 
     int EditBoxDropDown::AddItem(const WString& text)
     {
-        Ref<Widget> widget = mItemsList->AddItem();
-        auto item = DynamicCast<Label>(widget);
-        if (item)
-            item->SetText(text);
-        
+        mItemsList->AddItem(text);
         mOriginalItems.Add(text);
         return GetItemsCount() - 1;
     }
 
     int EditBoxDropDown::AddItem(const WString& text, int position)
     {
-        Ref<Widget> widget = mItemsList->AddItem(position);
-        auto item = DynamicCast<Label>(widget);
-        if (item)
-            item->SetText(text);
-        
-        if (position >= 0 && position <= mOriginalItems.Count())
-            mOriginalItems.Insert(position, text);
-        else
-            mOriginalItems.Add(text);
+        mItemsList->AddItem(text, position);        
+        mOriginalItems.Insert(text, position);
             
         return position;
     }
@@ -194,7 +171,8 @@ namespace o2
     {
         if (position >= 0 && position < GetItemsCount())
         {
-            mItemsList->RemoveItem(position);
+            WString text = GetItemText(position);
+            mItemsList->RemoveItem(text);
             
             if (position < mOriginalItems.Count())
                 mOriginalItems.RemoveAt(position);
@@ -241,23 +219,6 @@ namespace o2
                 res.Add(item->GetText());
         }
         return res;
-    }
-
-    void EditBoxDropDown::MoveItem(int position, int newPosition)
-    {
-        if (position >= 0 && position < GetItemsCount() && 
-            newPosition >= 0 && newPosition < GetItemsCount())
-        {
-            mItemsList->MoveItem(position, newPosition);
-            
-            // Update original items list
-            if (position < mOriginalItems.Count() && newPosition < mOriginalItems.Count())
-            {
-                WString item = mOriginalItems[position];
-                mOriginalItems.RemoveAt(position);
-                mOriginalItems.Insert(newPosition, item);
-            }
-        }
     }
 
     Ref<Widget> EditBoxDropDown::GetItem(int position) const
@@ -307,20 +268,14 @@ namespace o2
         return mEditBox;
     }
 
+    const Ref<List>& EditBoxDropDown::GetListView() const
+    {
+        return mItemsList;
+    }
+
     void EditBoxDropDown::SetMaxListSizeInItems(int itemsCount)
     {
         mMaxListItems = itemsCount;
-    }
-
-    void EditBoxDropDown::SetClippingLayout(const Layout& layout)
-    {
-        mClipLayout = layout;
-        SetLayoutDirty();
-    }
-
-    Layout EditBoxDropDown::GetClippingLayout()
-    {
-        return mClipLayout;
     }
 
     void EditBoxDropDown::MoveAndCheckClipping(const Vec2F& delta, const RectF& clipArea)
@@ -331,53 +286,14 @@ namespace o2
         if (!mIsClipped)
             UpdateSelfTransform();
 
-        // Update child widgets positions
-        for (auto& child : mChildWidgets)
-            child->MoveAndCheckClipping(delta, clipArea);
-
         if (IsExpanded())
             Collapse();
-    }
-
-    void EditBoxDropDown::OnCursorPressed(const Input::Cursor& cursor)
-    {
-        auto pressedState = state["pressed"];
-        if (pressedState)
-            *pressedState = true;
-    }
-
-    void EditBoxDropDown::OnCursorReleased(const Input::Cursor& cursor)
-    {
-        auto pressedState = state["pressed"];
-        if (pressedState)
-            *pressedState = false;
     }
 
     void EditBoxDropDown::OnCursorReleasedOutside(const Input::Cursor& cursor)
     {
         if (!mItemsList->layout->IsPointInside(o2Input.GetCursorPos()) && IsExpanded())
             Collapse();
-    }
-
-    void EditBoxDropDown::OnCursorPressBreak(const Input::Cursor& cursor)
-    {
-        auto pressedState = state["pressed"];
-        if (pressedState)
-            *pressedState = false;
-    }
-
-    void EditBoxDropDown::OnCursorEnter(const Input::Cursor& cursor)
-    {
-        auto selectState = state["hover"];
-        if (selectState)
-            *selectState = true;
-    }
-
-    void EditBoxDropDown::OnCursorExit(const Input::Cursor& cursor)
-    {
-        auto selectState = state["hover"];
-        if (selectState)
-            *selectState = false;
     }
 
     void EditBoxDropDown::OnEnabled()
@@ -397,7 +313,6 @@ namespace o2
     void EditBoxDropDown::UpdateSelfTransform()
     {
         layout->Update();
-        mAbsoluteClip = mClipLayout.Calculate(GetLayoutData().worldRectangle);
     }
 
     String EditBoxDropDown::GetCreateMenuGroup()
@@ -407,47 +322,28 @@ namespace o2
 
     void EditBoxDropDown::FilterItems()
     {
-        // Prevent recursive filtering during text updates
-        if (mIsFiltering)
+        if (mIsFiltering || mIsKeyboardNavigating)
             return;
 
         mIsFiltering = true;
 
-        WString filterText = mEditBox->GetText();
-        
-        // First remove all items from the visible list
+        WString filterTextLower = mEditBox->GetText().ToLowerCase();
         mItemsList->RemoveAllItems();
 
-        // Add filtered items from original list
-        for (auto& itemText : mOriginalItems)
+        if (filterTextLower.IsEmpty())
         {
-            bool matches = true;
-            
-            if (!filterText.IsEmpty())
+            mItemsList->AddItems(mOriginalItems);
+        }
+        else
+        {
+            for (const auto& itemText : mOriginalItems)
             {
-                // Case-insensitive comparison
-                WString itemTextLower = itemText;
-                WString filterTextLower = filterText;
-                
-                // Convert to lowercase manually
-                for (int i = 0; i < itemTextLower.Length(); i++)
-                    itemTextLower[i] = (wchar_t)tolower((int)itemTextLower[i]);
-                    
-                for (int i = 0; i < filterTextLower.Length(); i++)
-                    filterTextLower[i] = (wchar_t)tolower((int)filterTextLower[i]);
-                
-                matches = itemTextLower.Contains(filterTextLower);
-            }
-
-            // Add if filter matches or is empty
-            if (matches)
-            {
-                Ref<Widget> widget = mItemsList->AddItem();
-                auto item = DynamicCast<Label>(widget);
-                if (item)
-                    item->SetText(itemText);
+                if (itemText.ToLowerCase().Contains(filterTextLower))
+                    mItemsList->AddItem(itemText);
             }
         }
+        
+        UpdateListSize();
 
         mIsFiltering = false;
     }
@@ -458,34 +354,29 @@ namespace o2
         if (IsExpanded())
             FilterItems();
 
-        onTextChanged(text);
+        onChanged(text);
     }
 
     void EditBoxDropDown::OnEditBoxTextCompleted(const WString& text)
-    {
-        onTextChangeCompleted(text);
+	{
+		Collapse();
+        onChangeCompleted(text);
     }
 
-    void EditBoxDropDown::OnItemSelected()
-    {
-        auto selectedItem = DynamicCast<Label>(mItemsList->GetSelectedItem());
-        if (selectedItem)
-        {
-            mEditBox->SetText(selectedItem->GetText());
-        }
+    void EditBoxDropDown::OnSelectedText(const WString& text)
+	{
+        if (!mIsKeyboardNavigating)
+		    Collapse();
 
-        Collapse();
-        onSelectedPos(mItemsList->GetSelectedItemPos());
-        
-        if (selectedItem)
-            onSelectedText(selectedItem->GetText());
+        mEditBox->SetText(text);
+		onSelectedText(text);
 
-        OnSelectionChanged();
+		if (!mIsKeyboardNavigating)
+		    onChangeCompleted(text);
     }
 
     void EditBoxDropDown::OnSelectionChanged()
-    {
-    }
+    {}
 
     void EditBoxDropDown::OnEditBoxFocused()
     {
@@ -495,12 +386,50 @@ namespace o2
 
     void EditBoxDropDown::OnEditBoxUnfocused()
     {
-        // Give small delay before collapse to allow list item selection
-        o2Application.AddDelayedCall([this]() {
-            // Only collapse if not selecting an item
-            if (!mItemsList->IsUnderPoint(o2Input.GetCursorPos()))
-                Collapse();
-        }, 0.1f);
+        // Simply check if cursor is over the list and close if it's not
+        if (!mItemsList->IsUnderPoint(o2Input.GetCursorPos()))
+            Collapse();
+    }
+
+    void EditBoxDropDown::OnKeyPressed(const Input::Key& key)
+    {
+        if (!IsExpanded())
+            return;
+
+        if (key.keyCode == VK_DOWN)
+            NavigateNext();
+        else if (key.keyCode == VK_UP)
+            NavigatePrevious();
+    }
+
+    void EditBoxDropDown::NavigateNext()
+    {
+        int currentPos = GetSelectedItemPosition();
+        int itemsCount = GetItemsCount();
+        
+        if (itemsCount <= 0)
+            return;
+        
+        int nextPos = currentPos < 0 ? 0 : (currentPos + 1) % itemsCount;
+
+        mIsKeyboardNavigating = true;
+        SelectItemAt(nextPos);
+		mIsKeyboardNavigating = false;
+    }
+
+    void EditBoxDropDown::NavigatePrevious()
+    {
+        int currentPos = GetSelectedItemPosition();
+        int itemsCount = GetItemsCount();
+        
+        if (itemsCount <= 0)
+            return;
+        
+        int prevPos = currentPos < 0 ? itemsCount - 1 : (currentPos - 1 + itemsCount) % itemsCount;
+
+		mIsKeyboardNavigating = true;
+        SelectItemAt(prevPos);
+		mIsKeyboardNavigating = false;
     }
 
     void EditBoxDropDown::SetItemSample(const Ref<Widget>& sample)
@@ -513,4 +442,4 @@ DECLARE_TEMPLATE_CLASS(o2::LinkRef<o2::EditBoxDropDown>);
 // --- META ---
 
 DECLARE_CLASS(o2::EditBoxDropDown, o2__EditBoxDropDown);
-// --- END META --- 
+// --- END META ---

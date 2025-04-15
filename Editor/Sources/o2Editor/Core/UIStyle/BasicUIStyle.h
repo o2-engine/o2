@@ -28,7 +28,6 @@ namespace o2
         void RebuildListStyle();
         void RebuildCustomDropDownStyle();
         void RebuildDropDownStyle();
-        void RebuildEditBoxDropDownStyle();
         void RebuildWindowStyle();
         void RebuildTreeStyle();
         void RebuildMenuPanelStyle();
@@ -41,7 +40,8 @@ namespace o2
         void RebuildExpandButton();
         void RebuildExpandDownButton();
         void RebuildExpandWhiteButton();
-        void RebuildSpoiler();
+		void RebuildSpoiler();
+		void RebuildEditBoxDropDownStyle();
 
         IOBJECT(BasicUIStyleBuilder);
     };
@@ -80,7 +80,6 @@ CLASS_METHODS_META(o2::BasicUIStyleBuilder)
     FUNCTION().PUBLIC().SIGNATURE(void, RebuildListStyle);
     FUNCTION().PUBLIC().SIGNATURE(void, RebuildCustomDropDownStyle);
     FUNCTION().PUBLIC().SIGNATURE(void, RebuildDropDownStyle);
-    FUNCTION().PUBLIC().SIGNATURE(void, RebuildEditBoxDropDownStyle);
     FUNCTION().PUBLIC().SIGNATURE(void, RebuildWindowStyle);
     FUNCTION().PUBLIC().SIGNATURE(void, RebuildTreeStyle);
     FUNCTION().PUBLIC().SIGNATURE(void, RebuildMenuPanelStyle);
@@ -94,6 +93,7 @@ CLASS_METHODS_META(o2::BasicUIStyleBuilder)
     FUNCTION().PUBLIC().SIGNATURE(void, RebuildExpandDownButton);
     FUNCTION().PUBLIC().SIGNATURE(void, RebuildExpandWhiteButton);
     FUNCTION().PUBLIC().SIGNATURE(void, RebuildSpoiler);
+    FUNCTION().PUBLIC().SIGNATURE(void, RebuildEditBoxDropDownStyle);
 }
 END_META;
 // --- END META ---
