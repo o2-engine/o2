@@ -1,5 +1,6 @@
 #include "o2Editor/stdafx.h"
 #include "AnimationStateGraphEditor.h"
+#include "GraphAnimationStateViewer.h"
 
 #include "o2/Application/Application.h"
 #include "o2/Render/Render.h"
@@ -48,8 +49,28 @@ namespace Editor
 	void AnimationStateGraphEditor::SetGraph(const Ref<AnimationStateGraphAsset>& graph, 
                                              const Ref<AnimationStateGraphComponent>& component)
 	{
+		if (auto lastComponent = mComponent.Lock())
+		{
+			lastComponent->onStateStarted -= THIS_FUNC(OnStateGraphStateStarted);
+			lastComponent->onStateFinished -= THIS_FUNC(OnStateGraphStateFinished);
+			lastComponent->onTransitionStarted -= THIS_FUNC(OnStateGraphTransitionStarted);
+			lastComponent->onTransitionFinished -= THIS_FUNC(OnStateGraphTransitionFinished);
+			lastComponent->onTransitionsPlanned -= THIS_FUNC(OnStateGraphTransitionsPlanned);
+			lastComponent->onTransitionCancelled -= THIS_FUNC(OnStateGraphTransitionCancelled);
+		}
+
 		mGraph = graph;
 		mComponent = component;
+
+		if (auto component = mComponent.Lock())
+		{
+			component->onStateStarted += THIS_FUNC(OnStateGraphStateStarted);
+			component->onStateFinished += THIS_FUNC(OnStateGraphStateFinished);
+			component->onTransitionStarted += THIS_FUNC(OnStateGraphTransitionStarted);
+			component->onTransitionFinished += THIS_FUNC(OnStateGraphTransitionFinished);
+			component->onTransitionsPlanned += THIS_FUNC(OnStateGraphTransitionsPlanned);
+			component->onTransitionCancelled += THIS_FUNC(OnStateGraphTransitionCancelled);
+		}
 
 		InitializeStates();
 
@@ -61,47 +82,34 @@ namespace Editor
 
 	void AnimationStateGraphEditor::InitializeStates()
 	{
-		for (auto& state : mStatesWidgets)
-			state->RemoveWidget();
+		auto stateWidgetsCache = mStatesWidgetsMap;
 
 		mStatesWidgets.Clear();
 		mStatesWidgetsMap.Clear();
 		mStateHandlesMap.Clear();
 
-		if (auto lastComponent = mComponent.Lock())
+		if (mGraph)
 		{
-			lastComponent->onStateStarted -= THIS_FUNC(OnStateGraphStateStarted);
-			lastComponent->onStateFinished -= THIS_FUNC(OnStateGraphStateFinished);
-			lastComponent->onTransitionStarted -= THIS_FUNC(OnStateGraphTransitionStarted);
-			lastComponent->onTransitionFinished -= THIS_FUNC(OnStateGraphTransitionFinished);
-			lastComponent->onTransitionsPlanned -= THIS_FUNC(OnStateGraphTransitionsPlanned);
-			lastComponent->onTransitionCancelled -= THIS_FUNC(OnStateGraphTransitionCancelled);
+			auto graph = mGraph.Lock();
+			for (auto& state : graph->GetStates())
+			{
+				Ref<StateWidget> stateWidget;
+				if (stateWidgetsCache.TryGetValue(state, stateWidget))
+					stateWidgetsCache.Remove(state);
+				else
+					stateWidget = mmake<StateWidget>(Ref(this), state);
+
+				mStatesWidgets.Add(stateWidget);
+				mStatesWidgetsMap[state] = stateWidget;
+				mStateHandlesMap[stateWidget->dragHandle] = stateWidget;
+			}
+
+			for (auto& state : mStatesWidgets)
+				state->InitializeTransitions();
 		}
 
-		if (!mGraph)
-			return;
-
-		auto graph = mGraph.Lock();
-		for (auto& state : graph->GetStates())
-		{
-			auto stateWidget = mmake<StateWidget>(Ref(this), state);
-			mStatesWidgets.Add(stateWidget);
-			mStatesWidgetsMap[state] = stateWidget;
-			mStateHandlesMap[stateWidget->dragHandle] = stateWidget;
-		}
-
-		for (auto& state : mStatesWidgets)
-			state->InitializeTransitions();
-
-		if (auto component = mComponent.Lock())
-		{
-			component->onStateStarted += THIS_FUNC(OnStateGraphStateStarted);
-			component->onStateFinished += THIS_FUNC(OnStateGraphStateFinished);
-			component->onTransitionStarted += THIS_FUNC(OnStateGraphTransitionStarted);
-			component->onTransitionFinished += THIS_FUNC(OnStateGraphTransitionFinished);
-			component->onTransitionsPlanned += THIS_FUNC(OnStateGraphTransitionsPlanned);
-			component->onTransitionCancelled += THIS_FUNC(OnStateGraphTransitionCancelled);
-		}
+		for (auto kv : stateWidgetsCache)
+			kv.second->RemoveWidget();
 
 		RecalculateViewArea();
 	}
@@ -115,7 +123,6 @@ namespace Editor
 	void AnimationStateGraphEditor::RedrawContent()
 	{
 		DrawGrid();
-
 		DrawTransitions();
 		mStateWidgetsContainer->Draw();
 	}
@@ -133,8 +140,7 @@ namespace Editor
 	}
 
 	void AnimationStateGraphEditor::DrawHandles()
-	{
-	}
+	{}
 
 	void AnimationStateGraphEditor::DrawSelection()
 	{
@@ -159,7 +165,7 @@ namespace Editor
 		}
 	}
 
-	void AnimationStateGraphEditor::DrawTransition(Vec2F from, Vec2F to, StateTransition::Status status, float progress)
+	void AnimationStateGraphEditor::DrawTransition(Vec2F from, Vec2F to, StateTransition::Status status, float progress, bool selected)
 	{
 		Vec2F dir = (to - from).Normalized();
 		Vec2F norm = dir.Perpendicular();
@@ -168,7 +174,9 @@ namespace Editor
 		Color4 colorRegular(126, 149, 160);
 		Color4 colorPlanned(159, 190, 254);
 		Color4 colorFinished(249, 93, 72);
-		float width = 4.0f;
+		Color4 colorSelected(0, 150, 136);
+		
+		float width = selected ? 6.0f : 4.0f; 
 		float arrowSize = 10.0f;
 		float offset = 7.0f;
 
@@ -182,8 +190,9 @@ namespace Editor
 
 		if (status == StateTransition::Status::None)
 		{
-			o2Render.DrawAALine(from, to, colorRegular, width);
-			o2Render.DrawAALine(arrowWorld, colorRegular, width);
+			Color4 lineColor = selected ? colorSelected : colorRegular;
+			o2Render.DrawAALine(from, to, lineColor, width);
+			o2Render.DrawAALine(arrowWorld, lineColor, width);
 		}
 		else
 		{
@@ -194,10 +203,11 @@ namespace Editor
 			else
 				progress = 0.0f;
 
-			o2Render.DrawAALine(from, to, colorPlanned, width);
+			Color4 plannedColor = selected ? colorSelected : colorPlanned;
+			o2Render.DrawAALine(from, to, plannedColor, width);
 			o2Render.DrawAALine(from, progressPoint, colorFinished, width);
 
-			auto arrowColor = progress < 0.5f ? colorPlanned : colorFinished;
+			auto arrowColor = progress < 0.5f ? plannedColor : colorFinished;
 			o2Render.DrawAALine(arrowWorld, arrowColor, width);
 		}
 	}
@@ -219,6 +229,8 @@ namespace Editor
 
 		if (mComponent)
 			mComponent.Lock()->GetActor()->Update(dt);
+
+		CheckRefreshViewersTimer(dt);
     }
 
     void AnimationStateGraphEditor::UpdateSelfTransform()
@@ -278,6 +290,32 @@ namespace Editor
 	{
 		Focus();
 
+		// Deselect all transitions when clicking on empty space
+		bool clickedOnTransition = false;
+		for (auto& state : mStatesWidgets)
+		{
+			for (auto& transition : state->transitions)
+			{
+				if (transition->IsUnderPoint(cursor.position))
+				{
+					clickedOnTransition = true;
+					break;
+				}
+			}
+			if (clickedOnTransition)
+				break;
+		}
+
+		if (!clickedOnTransition)
+		{
+			// Deselect all transitions
+			for (auto& state : mStatesWidgets)
+			{
+				for (auto& transition : state->transitions)
+					transition->SetSelected(false);
+			}
+		}
+
 		mSelectingPressedPoint = cursor.position;
 		BeginPreSelect();
 	}
@@ -326,7 +364,11 @@ namespace Editor
 	}
 
 	void AnimationStateGraphEditor::DrawInheritedDepthChildren()
-	{}
+	{
+		mContextMenu->Draw();
+		mStateContextMenu->Draw();
+		mTransitionContextMenu->Draw();
+	}
 
 	void AnimationStateGraphEditor::InitializeContextMenus()
     {
@@ -334,7 +376,7 @@ namespace Editor
 		mContextMenu->AddItem("Add state", THIS_FUNC(CreateState));
 
 		mStateContextMenu = o2UI.CreateWidget<ContextMenu>();
-		mStateContextMenu->AddItem("Set as default", THIS_FUNC(SetCurrentStateDefault));
+		mStateContextMenu->AddItem("Set as initial", THIS_FUNC(SetCurrentStateInitial));
 		mStateContextMenu->AddItem("Add transition", THIS_FUNC(StartAddingTransition));
 		mStateContextMenu->AddItem("Remove state", THIS_FUNC(RemoveCurrentStates));
 
@@ -460,21 +502,30 @@ namespace Editor
 
 		auto state = graph->AddState("New state", {});
 		state->SetPosition(mContextMenuPos);
+		state->AddAnimation("");
 		InitializeStates();
 	}
 
-
-	void AnimationStateGraphEditor::SetCurrentStateDefault()
+	void AnimationStateGraphEditor::SetCurrentStateInitial()
 	{
+		auto graph = mGraph.Lock();
+		if (!graph)
+			return;
 
+		for (auto& handle : mSelectedHandles)
+		{
+			if (auto state = mStateHandlesMap[handle])
+			{
+				graph->SetInitialState(state->state.Lock()->name);
+				break;
+			}
+		}
 	}
-
 
 	void AnimationStateGraphEditor::StartAddingTransition()
 	{
 		mCreatingTransition = true;
 	}
-
 
 	void AnimationStateGraphEditor::RemoveCurrentStates()
 	{
@@ -492,10 +543,21 @@ namespace Editor
 		}
 	}
 
-
 	void AnimationStateGraphEditor::RemoveCurrentTransition()
 	{
+		auto graph = mGraph.Lock();
+		if (!graph || !mContextMenuTransition)
+			return;
 
+		auto sourceState = mContextMenuTransition->owner.Lock()->state.Lock();
+		auto transition = mContextMenuTransition->transition;
+
+		if (sourceState && transition)
+		{
+			sourceState->RemoveTransition(transition);
+			mContextMenuTransition = nullptr;
+			InitializeStates();
+		}
 	}
 
 	void AnimationStateGraphEditor::OpenStateContextMenu(const Ref<StateWidget>& state)
@@ -519,11 +581,40 @@ namespace Editor
 		}
 	}
 
+	void AnimationStateGraphEditor::CheckRefreshViewersTimer(float dt)
+	{
+		mRefreshViewersTimer += dt;
+
+		const float refreshInterval = 0.5f;
+		if (mRefreshViewersTimer > refreshInterval)
+		{
+			mRefreshViewersTimer = 0.0f;
+
+			for (auto& state : mStatesWidgets)
+				state->animationsListProperty->Refresh();
+		}
+	}
+
+	void AnimationStateGraphEditor::ClearSelection()
+	{
+		DeselectAll();
+
+		for (auto& state : mStatesWidgets)
+		{
+			for (auto& transition : state->transitions)
+				transition->SetSelected(false);
+		}
+
+		mContextMenuTransition = nullptr;
+	}
+
+	const Vec2F AnimationStateGraphEditor::StateWidget::defaultWidgetSize = Vec2F(300, 50);
+
 	AnimationStateGraphEditor::StateWidget::StateWidget(RefCounter* refCounter, const Ref<AnimationStateGraphEditor>& owner,
 														const Ref<AnimationGraphState>& state):
 		RefCounterable(refCounter), editor(owner), state(state)
 	{
-        widget = o2UI.CreateWidget<VerticalLayout>("ASG state");
+		widget = o2UI.CreateWidget<VerticalLayout>("ASG state");
 		auto weakWidget = WeakRef(widget);
 
 		dragHandle = mmake<DragHandle>();
@@ -545,20 +636,30 @@ namespace Editor
 		{
 			if (auto widget = weakWidget.Lock())
 			{
-				*widget->layout = WidgetLayout::Based(BaseCorner::Center, Vec2F(250, 50), pos);
+				*widget->layout = WidgetLayout::Based(BaseCorner::Center, defaultWidgetSize, pos);
 				this->state.Lock()->SetPosition(pos);
 				editor.Lock()->RecalculateViewArea();
 			}
 		};
 
 		widget->onDraw = [this]() { dragHandle->Draw(); };
+
+		dragHandle->position = state->GetPosition();
         
 		for (auto& animation : state->GetAnimations())
 		{
 			Ref<StateAnimation> stateAnimation = mmake<StateAnimation>();
+
+			stateAnimation->owner = Ref(this);
 			stateAnimation->name = animation->name;
 			stateAnimation->animation = animation;
-			stateAnimation->owner = Ref(this);
+
+			if (auto graphComponent = owner->mComponent.Lock())
+			{
+				if (auto animationComponent = graphComponent->GetAnimationComponent())
+					stateAnimation->state = animationComponent->GetState(animation->name);
+			}
+
 			animations.Add(stateAnimation);
 		}
 
@@ -571,19 +672,22 @@ namespace Editor
 		animationsListProperty->SetValuePointers<Vector<Ref<StateAnimation>>>({ &animations });
 		widget->AddChild(animationsListProperty);
 
-		*widget->layout = WidgetLayout::Based(BaseCorner::Center, Vec2F(250, 50), state->GetPosition());
-		dragHandle->position = state->GetPosition();
+		*widget->layout = WidgetLayout::Based(BaseCorner::Center, defaultWidgetSize, state->GetPosition());
 
 		editor.Lock()->mStateWidgetsContainer->AddChild(widget);
 	}
 
 	void AnimationStateGraphEditor::StateWidget::InitializeTransitions()
 	{
+		transitions.Clear();
+		transitionsMap.Clear();
+
 		for (auto& transition : state.Lock()->GetTransitions())
 		{
 			Ref<StateTransition> stateTransition = mmake<StateTransition>();
 			stateTransition->owner = Ref(this);
 			stateTransition->destination = editor.Lock()->mStatesWidgetsMap[transition->GetDestinationState()];
+			stateTransition->transition = transition;
 			transitions.Add(stateTransition);
 			transitionsMap[WeakRef(transition)] = stateTransition;
 		}
@@ -616,22 +720,8 @@ namespace Editor
 	void AnimationStateGraphEditor::StateWidget::SetPlayer(const Ref<AnimationStateGraphComponent::StatePlayer>& player)
 	{
 		this->player = player;
-
-		if (!player)
-			return;
-
-		auto& statePlayers = player->GetPlayers();
-		for (auto& animation : animations)
-		{
-			auto animationState = statePlayers.FindOrDefault([animation](const Pair<Ref<AnimationGraphState::Animation>, Ref<IAnimationState>>& p) 
-													         { return p.first == animation->animation; }).second;
-
-			animation->state = animationState; 
-		}
-
 		animationsListProperty->Refresh();
 	}
-
 
 	void AnimationStateGraphEditor::StateWidget::OpenContextMenu()
 	{
@@ -642,6 +732,34 @@ namespace Editor
 	void AnimationStateGraphEditor::StateWidget::OnPressed()
 	{
 		editor.Lock()->OnStatePressed(Ref(this));
+	}
+
+
+	void AnimationStateGraphEditor::StateWidget::OnAnimationsListChanged()
+	{
+		auto state = this->state.Lock();
+		if (!state)
+			return;
+
+		Vector<Ref<AnimationGraphState::Animation>> animations;
+		for (auto& stateAnimation : this->animations)
+		{
+			if (stateAnimation->animation)
+				animations.Add(stateAnimation->animation.Lock());
+			else
+			{
+				auto newAnimation = mmake<AnimationGraphState::Animation>();
+				newAnimation->name = stateAnimation->name;
+				newAnimation->weight = stateAnimation->weight;
+
+				stateAnimation->animation = newAnimation;
+				stateAnimation->owner = Ref(this);
+
+				animations.Add(newAnimation);
+			}
+		}
+
+		state->SetAnimations(animations);
 	}
 
 	void AnimationStateGraphEditor::StateTransition::Draw()
@@ -661,191 +779,14 @@ namespace Editor
 				progress = component->GetCurrentTransitionTime() / currentTransition->duration;
 		}
 
-		AnimationStateGraphEditor::DrawTransition(fromPoint, toPoint, status, progress);
+		AnimationStateGraphEditor::DrawTransition(fromPoint, toPoint, status, progress, mIsSelected);
+
+		OnDrawn();
 	}
 
 	void AnimationStateGraphEditor::StateTransition::SetStatus(Status status)
 	{
     	this->status = status;
-	}
-
-	const Type* GraphAnimationStateViewer::GetViewingObjectType() const
-	{
-		if (mRealObjectType)
-			return mRealObjectType;
-
-		return GetViewingObjectTypeStatic();
-	}
-
-	const Type* GraphAnimationStateViewer::GetViewingObjectTypeStatic()
-	{
-		return &TypeOf(AnimationStateGraphEditor::StateAnimation);
-	}
-
-	Ref<Spoiler> GraphAnimationStateViewer::CreateSpoiler(const Ref<Widget>& parent)
-	{
-		mSpoiler = IObjectPropertiesViewer::CreateSpoiler(parent);
-
-		mPlayPause = o2UI.CreateWidget<Toggle>("animation state play-stop");
-		mPlayPause->name = "play-stop";
-		*mPlayPause->layout = WidgetLayout::Based(BaseCorner::LeftTop, Vec2F(20, 20), Vec2F(7, 1));
-		mPlayPause->onToggleByUser = THIS_FUNC(OnPlayPauseToggled);
-		mSpoiler->AddInternalWidget(mPlayPause);
-
-		mEditBtn = o2UI.CreateWidget<Button>("edit animation state");
-		mEditBtn->name = "edit";
-		*mEditBtn->layout = WidgetLayout::Based(BaseCorner::RightTop, Vec2F(20, 20), Vec2F(-40, 1));
-		mEditBtn->onClick = THIS_FUNC(OnEditPressed);
-		mSpoiler->AddInternalWidget(mEditBtn);
-
-		mLooped = o2UI.CreateWidget<Toggle>("animation state loop");
-		mLooped->name = "loop";
-		*mLooped->layout = WidgetLayout::Based(BaseCorner::RightTop, Vec2F(20, 20), Vec2F(-20, 1));
-		mLooped->onToggleByUser = THIS_FUNC(OnLoopToggled);
-		mSpoiler->AddInternalWidget(mLooped);
-
-		mTimeProgress = o2UI.CreateWidget<HorizontalProgress>("animation state bar");
-		mTimeProgress->name = "bar";
-		*mTimeProgress->layout = WidgetLayout::HorStretch(VerAlign::Top, 0, 0, 2, 18);
-		mTimeProgress->onChangeByUser = THIS_FUNC(OnTimeProgressChanged);
-		mSpoiler->AddInternalWidget(mTimeProgress);
-
-		if (auto textLayer = GetSpoiler()->GetLayer("caption"))
-		{
-			textLayer->layout.offsetLeft = 27;
-			textLayer->layout.offsetBottom = -19;
-			textLayer->layout.offsetTop = 1;
-		}
-
-		if (auto header = parent->GetChildByType<Widget>("caption/header"))
-		{
-			auto spacer = mmake<Widget>();
-			spacer->layout->maxWidth = 40;
-			header->AddChild(spacer, 1);
-		}
-
-		return mSpoiler;
-	}
-
-	void GraphAnimationStateViewer::OnRefreshed(const Vector<Pair<IObject*, IObject*>>& targetObjets)
-	{
-		if (mSubscribedPlayer)
-			mSubscribedPlayer.Lock()->onUpdate -= THIS_FUNC(OnAnimationUpdated);
-
-		mSubscribedPlayer = nullptr;
-
-		if (!targetObjets.IsEmpty())
-		{
-			auto state = dynamic_cast<AnimationStateGraphEditor::StateAnimation*>(targetObjets.Last().first);
-			if (state && state->state)
-				mSubscribedPlayer = Ref(&state->state->GetPlayer());
-
-			if (auto player = mSubscribedPlayer.Lock())
-			{
-				player->onUpdate += THIS_FUNC(OnAnimationUpdated);
-				player->onPlay += THIS_FUNC(OnAnimationStarted);
-				player->onStop += THIS_FUNC(OnAnimationFinished);
-
-				mPlayPause->value = player->IsPlaying();
-			}
-		}
-	}
-
-	void GraphAnimationStateViewer::OnFree()
-	{
-		if (auto player = mSubscribedPlayer.Lock())
-		{
-			player->onUpdate -= THIS_FUNC(OnAnimationUpdated);
-			player->onPlay -= THIS_FUNC(OnAnimationStarted);
-			player->onStop -= THIS_FUNC(OnAnimationFinished);
-		}
-
-		mSubscribedPlayer = nullptr;
-	}
-
-	void GraphAnimationStateViewer::OnPlayPauseToggled(bool play)
-	{
-		if (auto stateWidget = mPropertiesContext->FindOnStack<AnimationStateGraphEditor::StateWidget>())
-		{
-			if (auto component = stateWidget->editor.Lock()->mComponent.Lock())
-			{
-				if (play)
-					component->GoToState(stateWidget->state.Lock());
-			}
-		}
-
-		o2Scene.OnObjectChanged(o2EditorSceneScreen.GetSelectedObjects().First());
-	}
-
-	void GraphAnimationStateViewer::OnLoopToggled(bool looped)
-	{
-		for (auto& targets : mTargetObjects)
-		{
-			if (!targets.first)
-				continue;
-
-			auto animationState = dynamic_cast<IAnimationState*>(targets.first);
-			if (!animationState)
-				continue;
-
-			animationState->SetLooped(looped);
-		}
-
-		o2Scene.OnObjectChanged(o2EditorSceneScreen.GetSelectedObjects().First());
-	}
-
-	void GraphAnimationStateViewer::OnEditPressed()
-	{
-		if (mTargetObjects.IsEmpty())
-			return;
-
-		auto state = dynamic_cast<AnimationStateGraphEditor::StateAnimation*>(mTargetObjects.Last().first);
-		auto animationState = DynamicCast<AnimationState>(state->state);
-		if (!animationState)
-			return;
-
-		auto animationRef = animationState->GetAnimation();
-		if (!animationRef)
-		{
-			animationRef.CreateInstance();
-			animationState->SetAnimation(animationRef);
-
-			GetSpoiler()->Expand();
-		}
-
-		if (animationRef)
-		{
-			o2EditorAnimationWindow.SetAnimation(animationRef->animation);
-
-			if (!o2EditorSceneScreen.GetSelectedObjects().IsEmpty())
-				o2EditorAnimationWindow.SetTarget(DynamicCast<Actor>(o2EditorSceneScreen.GetSelectedObjects().Last()));
-
-			o2EditorAnimationWindow.SetAnimationEditable(Ref(mPropertiesContext->FindOnStack<IEditableAnimation>()));
-			o2EditorAnimationWindow.GetWindow()->Focus();
-		}
-	}
-
-	void GraphAnimationStateViewer::OnTimeProgressChanged(float value)
-	{
-		if (mSubscribedPlayer)
-			mSubscribedPlayer.Lock()->SetRelTime(value);
-	}
-
-	void GraphAnimationStateViewer::OnAnimationUpdated(float time)
-	{
-		if (auto subscribedPlayer = mSubscribedPlayer.Lock())
-			mTimeProgress->value = subscribedPlayer->GetLoopTime()/ subscribedPlayer->GetDuration();
-	}
-
-	void GraphAnimationStateViewer::OnAnimationStarted()
-	{
-		mPlayPause->value = true;
-	}
-
-	void GraphAnimationStateViewer::OnAnimationFinished()
-	{
-		mPlayPause->value = false;
-		mTimeProgress->value = 0.0f;
 	}
 
 	Vector<String> AnimationStateGraphEditor::StateAnimation::GetAvailableStates() const
@@ -862,7 +803,137 @@ namespace Editor
 		if (!component)
 			return {};
 
-		return component->GetStatesNames();
+		auto animationComponent = component->GetAnimationComponent();
+		if (!animationComponent)
+			return {};
+
+		return animationComponent->GetStatesNames();
+	}
+
+	void AnimationStateGraphEditor::StateAnimation::SetName(const String& name)
+	{
+		auto stateAnimation = animation.Lock();
+		if (!stateAnimation)
+			return;
+
+		stateAnimation->name = name;
+
+		auto owner = this->owner.Lock();
+		if (!owner)
+			return;
+
+		auto state = owner->state.Lock();
+		if (!state)
+			return;
+
+		state->name = name;
+	}
+
+	const String& AnimationStateGraphEditor::StateAnimation::GetName() const
+	{
+		auto stateAnimation = animation.Lock();
+		if (!stateAnimation)
+			return String::empty;
+
+		return stateAnimation->name;
+	}
+
+	void AnimationStateGraphEditor::StateAnimation::SetWeight(float weight)
+	{
+		auto stateAnimation = animation.Lock();
+		if (!stateAnimation)
+			return;
+
+		stateAnimation->weight = weight;
+	}
+
+	float AnimationStateGraphEditor::StateAnimation::GetWeight() const
+	{
+		auto stateAnimation = animation.Lock();
+		if (!stateAnimation)
+			return 0.0f;
+
+		return stateAnimation->weight;
+	}
+
+	AnimationStateGraphEditor::StateTransition::StateTransition():
+		RefCounterable(nullptr)
+	{}
+
+	bool AnimationStateGraphEditor::StateTransition::IsUnderPoint(const Vec2F& point)
+	{
+		const float lineThickness = 10.0f;
+		const float offset = 10.0f;
+
+		auto from = owner.Lock();
+		auto to = destination.Lock();
+		if (!from || !to)
+			return false;
+
+		Vec2F fromPoint = from->widget->layout->GetWorldCenter();
+		Vec2F toPoint = to->widget->layout->GetWorldCenter();
+
+		Vec2F line = toPoint - fromPoint;
+		float lineLength = line.Length();
+		if (lineLength < Math::Epsilon)
+			return false;
+
+		Vec2F lineDir = line / lineLength;
+		Vec2F norm = lineDir.Perpendicular();
+
+		fromPoint += norm*offset;
+		toPoint += norm*offset;
+		
+		Vec2F pointVector = point - fromPoint;
+		float projection = pointVector.Dot(lineDir);
+		
+		if (projection < 0.0f || projection > lineLength)
+			return false;
+
+		Vec2F projectionPoint = fromPoint + lineDir * projection;
+		
+		float distance = Math::Abs(pointVector.Dot(norm));
+		return distance <= lineThickness;
+	}
+
+	void AnimationStateGraphEditor::StateTransition::OnCursorPressed(const Input::Cursor& cursor)
+	{
+		if (auto editorPtr = owner.Lock()->editor.Lock())
+			editorPtr->ClearSelection();
+
+		SetSelected(true);
+	}
+
+	void AnimationStateGraphEditor::StateTransition::OnCursorPressedOutside(const Input::Cursor& cursor)
+	{
+		SetSelected(false);
+	}
+
+	bool AnimationStateGraphEditor::StateTransition::IsSelected() const
+	{
+		return mIsSelected;
+	}
+
+	void AnimationStateGraphEditor::StateTransition::SetSelected(bool selected)
+	{
+		mIsSelected = selected;
+
+		if (mIsSelected && transition)
+			o2EditorPropertiesWindow.SetTarget(this);
+	}
+
+	void AnimationStateGraphEditor::StateTransition::OnCursorRightMouseReleased(const Input::Cursor& cursor)
+	{
+		SetSelected(true);
+		
+		if (auto ownerPtr = owner.Lock())
+		{
+			if (auto editorPtr = ownerPtr->editor.Lock())
+			{
+				editorPtr->mContextMenuTransition = Ref(this);
+				editorPtr->mTransitionContextMenu->Show();
+			}
+		}
 	}
 }
 
@@ -887,9 +958,9 @@ END_ENUM_META;
 
 DECLARE_CLASS(Editor::AnimationStateGraphEditor, Editor__AnimationStateGraphEditor);
 
-DECLARE_CLASS(Editor::GraphAnimationStateViewer, Editor__GraphAnimationStateViewer);
-
 DECLARE_CLASS(Editor::AnimationStateGraphEditor::StateAnimation, Editor__AnimationStateGraphEditor__StateAnimation);
+
+DECLARE_CLASS(Editor::AnimationStateGraphEditor::StateTransition, Editor__AnimationStateGraphEditor__StateTransition);
 
 DECLARE_CLASS(Editor::AnimationStateGraphEditor::StateWidget, Editor__AnimationStateGraphEditor__StateWidget);
 // --- END META ---

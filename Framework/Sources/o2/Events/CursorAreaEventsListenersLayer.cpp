@@ -57,7 +57,7 @@ namespace o2
 
     Vec2F CursorAreaEventListenersLayer::ScreenToLocal(const Vec2F& point) const
     {
-        if (mParentLayer)
+        if (mParentLayer && mParentLayer != this)
             return ToLocal(mParentLayer.Lock()->ScreenToLocal(point));
         
         return ToLocal(point);

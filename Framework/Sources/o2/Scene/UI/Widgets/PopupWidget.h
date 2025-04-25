@@ -100,8 +100,8 @@ namespace o2
         // Called when cursor pressing was broken (when scrolled scroll area or some other)
         void OnCursorPressBreak(const Input::Cursor& cursor) override;
 
-        // Called when cursor pressed outside this(only when cursor pressed this at previous time)
-        void OnCursorPressedOutside(const Input::Cursor& cursor) override;
+        // Called when cursor released outside this(only when cursor pressed this at previous time)
+        void OnCursorReleasedOutside(const Input::Cursor& cursor) override;
 
         // Called when key was released
         void OnKeyPressed(const Input::Key& key) override;
@@ -156,7 +156,7 @@ CLASS_METHODS_META(o2::PopupWidget)
     FUNCTION().PROTECTED().SIGNATURE(void, HideWithChild);
     FUNCTION().PROTECTED().SIGNATURE(void, SpecialDraw);
     FUNCTION().PROTECTED().SIGNATURE(void, OnCursorPressBreak, const Input::Cursor&);
-    FUNCTION().PROTECTED().SIGNATURE(void, OnCursorPressedOutside, const Input::Cursor&);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnCursorReleasedOutside, const Input::Cursor&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnKeyPressed, const Input::Key&);
 }
 END_META;

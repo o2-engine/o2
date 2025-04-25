@@ -51,6 +51,9 @@ namespace Editor
         // Returns view widget
         const Ref<Spoiler>& GetSpoiler();
 
+		// Creates spoiler if it is not created yet
+		Ref<Spoiler> CheckCreateSpoiler(const Ref<Widget>& parent);
+
         // Creates spoiler for properties
         virtual Ref<Spoiler> CreateSpoiler(const Ref<Widget>& parent);
 
@@ -200,6 +203,7 @@ CLASS_METHODS_META(Editor::IObjectPropertiesViewer)
     FUNCTION().PUBLIC().SIGNATURE_STATIC(const Type*, GetViewingObjectTypeStatic);
     FUNCTION().PUBLIC().SIGNATURE(void, SetParentContext, const Ref<PropertiesContext>&);
     FUNCTION().PUBLIC().SIGNATURE(const Ref<Spoiler>&, GetSpoiler);
+    FUNCTION().PUBLIC().SIGNATURE(Ref<Spoiler>, CheckCreateSpoiler, const Ref<Widget>&);
     FUNCTION().PUBLIC().SIGNATURE(Ref<Spoiler>, CreateSpoiler, const Ref<Widget>&);
     FUNCTION().PUBLIC().SIGNATURE(void, SetHeaderEnabled, bool);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsHeaderEnabled);

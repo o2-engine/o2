@@ -88,6 +88,9 @@ namespace o2
         // Removes animation from state
         void RemoveAnimation(const Ref<Animation>& animation);
 
+        // Sets animations
+		void SetAnimations(const Vector<Ref<Animation>>& animations); 
+
         // Returns animations
         const Vector<Ref<Animation>>& GetAnimations() const;
 
@@ -112,7 +115,7 @@ namespace o2
     protected:
         UID mUID; // UID of state @SERIALIZABLE
 
-        Vector<Ref<Animation>>  mAnimations;  // Animations @SERIALIZABLE @EDITOR_PROPERTY @INVOKE_ON_CHANGE(ReinitAnimations)
+        Vector<Ref<Animation>>                mAnimations;  // Animations @SERIALIZABLE @EDITOR_PROPERTY @INVOKE_ON_CHANGE(ReinitAnimations)
         Vector<Ref<AnimationGraphTransition>> mTransitions; // Transitions @SERIALIZABLE @EDITOR_PROPERTY @INVOKE_ON_CHANGE(ReinitTransitions)
 
         WeakRef<AnimationStateGraphAsset> mGraph; // Graph reference
@@ -187,6 +190,7 @@ CLASS_METHODS_META(o2::AnimationGraphState)
     FUNCTION().PUBLIC().SIGNATURE(Ref<Animation>, AddAnimation, const String&);
     FUNCTION().PUBLIC().SIGNATURE(void, RemoveAnimation, const String&);
     FUNCTION().PUBLIC().SIGNATURE(void, RemoveAnimation, const Ref<Animation>&);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetAnimations, const Vector<Ref<Animation>>&);
     FUNCTION().PUBLIC().SIGNATURE(const Vector<Ref<Animation>>&, GetAnimations);
     FUNCTION().PUBLIC().SIGNATURE(Ref<AnimationGraphTransition>, AddTransition, const Ref<AnimationGraphState>&);
     FUNCTION().PUBLIC().SIGNATURE(void, RemoveTransition, const Ref<AnimationGraphTransition>&);

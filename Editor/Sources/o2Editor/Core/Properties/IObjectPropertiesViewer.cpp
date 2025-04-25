@@ -89,6 +89,17 @@ namespace Editor
         return mSpoiler;
     }
 
+	Ref<Spoiler> IObjectPropertiesViewer::CheckCreateSpoiler(const Ref<Widget>& parent)
+	{
+        if (mSpoiler)
+        {
+			parent->AddChild(mSpoiler);
+            return mSpoiler;
+        }
+
+		return CreateSpoiler(parent);
+	}
+
 	void IObjectPropertiesViewer::SetExpanded(bool expanded, bool forcible /*= false*/)
     {
         GetSpoiler()->SetExpanded(expanded, forcible);

@@ -146,7 +146,7 @@ namespace Editor
                 mObjectViewer = o2EditorProperties.CreateObjectViewer(mBuiltObjectType, mValuesPath, onChangeCompleted,
                                                                       onChanged);
 
-                mObjectViewer->CreateSpoiler(Ref(this));
+                mObjectViewer->CheckCreateSpoiler(Ref(this));
                 mObjectViewer->SetParentContext(mParentContext.Lock());
                 mObjectViewer->SetHeaderEnabled(!mNoHeader);
                 mObjectViewer->SetExpanded(mExpanded, true);
@@ -200,9 +200,9 @@ namespace Editor
 
         if (fieldInfo)
         {
-            mExpanded = fieldInfo->HasAttribute<ExpandedByDefaultAttribute>();
-            mNoHeader = fieldInfo->HasAttribute<NoHeaderAttribute>();
-            mDontDeleteEnabled = fieldInfo->HasAttribute<DontDeleteAttribute>();
+			mNoHeader = fieldInfo->HasAttribute<NoHeaderAttribute>();
+			mExpanded = fieldInfo->HasAttribute<ExpandedByDefaultAttribute>() || mNoHeader;
+            mDontDeleteEnabled = fieldInfo->HasAttribute<DontDeleteAttribute>() && !mNoHeader;
         }
     }
 

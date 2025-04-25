@@ -130,7 +130,7 @@ namespace Editor
                                                                       THIS_FUNC(OnPropertyChanged),
                                                                       onChanged);
 
-                mObjectViewer->CreateSpoiler(Ref(this));
+                mObjectViewer->CheckCreateSpoiler(Ref(this));
                 mObjectViewer->SetParentContext(mParentContext.Lock());
                 mObjectViewer->SetHeaderEnabled(!mNoHeader);
                 mObjectViewer->SetExpanded(mExpanded, true);

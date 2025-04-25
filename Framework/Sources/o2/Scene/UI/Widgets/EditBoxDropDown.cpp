@@ -37,7 +37,6 @@ namespace o2
         mItemsList->Hide(true);
         mItemsList->SetMultiselectionAvailable(false);
 
-        // Copy original items
         mOriginalItems = other.mOriginalItems;
 
         SetupCallbacks();
@@ -92,7 +91,6 @@ namespace o2
     {
         mEditBox->SetText(text);
         
-        // Apply filter to items 
         if (IsExpanded())
             FilterItems();
     }
@@ -280,11 +278,7 @@ namespace o2
 
     void EditBoxDropDown::MoveAndCheckClipping(const Vec2F& delta, const RectF& clipArea)
     {
-        mBoundsWithChilds += delta;
-        mIsClipped = !mBoundsWithChilds.IsIntersects(clipArea);
-
-        if (!mIsClipped)
-            UpdateSelfTransform();
+		Widget::MoveAndCheckClipping(delta, clipArea);
 
         if (IsExpanded())
             Collapse();
@@ -350,7 +344,6 @@ namespace o2
 
     void EditBoxDropDown::OnEditBoxTextChanged(const WString& text)
     {
-        // Filter items when text changes
         if (IsExpanded())
             FilterItems();
 
@@ -386,7 +379,6 @@ namespace o2
 
     void EditBoxDropDown::OnEditBoxUnfocused()
     {
-        // Simply check if cursor is over the list and close if it's not
         if (!mItemsList->IsUnderPoint(o2Input.GetCursorPos()))
             Collapse();
     }

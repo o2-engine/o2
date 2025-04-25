@@ -200,7 +200,7 @@ namespace o2
         }
     }
 
-    Ref<AnimationComponent> AnimationStateGraphComponent::GetAnimationComponent()
+    Ref<AnimationComponent> AnimationStateGraphComponent::GetAnimationComponent() const 
     {
         if (mAnimationComponent)
             return mAnimationComponent.Lock();
@@ -209,7 +209,7 @@ namespace o2
         return mAnimationComponent.Lock();
     }
 
-	void AnimationStateGraphComponent::StatePlayer::Setup(const Ref<AnimationComponent>& animationComponent, 
+	void AnimationStateGraphComponent::StatePlayer::Setup(const Ref<AnimationComponent>& animationComponent,
                                                           const Ref<AnimationGraphState>& state,
 														  const Ref<AnimationStateGraphComponent>& owner)
     {

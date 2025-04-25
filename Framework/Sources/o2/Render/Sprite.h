@@ -104,6 +104,10 @@ namespace o2
         // Sets corner color
         void SetCornerColor(Corner corner, const Color4& color);
 
+		// Sets colors of all corners
+		void SetCornerColors(const Color4& leftTop, const Color4& rightTop,
+							 const Color4& rightBottom, const Color4& leftBottom);
+
         // Returns corner color
         Color4 GetCornerColor(Corner corner) const;
 
@@ -309,6 +313,7 @@ CLASS_METHODS_META(o2::Sprite)
     FUNCTION().PUBLIC().SIGNATURE(RectI, GetTextureSrcRect);
     FUNCTION().PUBLIC().SIGNATURE(Vec2I, GetOriginalSize);
     FUNCTION().PUBLIC().SIGNATURE(void, SetCornerColor, Corner, const Color4&);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetCornerColors, const Color4&, const Color4&, const Color4&, const Color4&);
     FUNCTION().PUBLIC().SIGNATURE(Color4, GetCornerColor, Corner);
     FUNCTION().PUBLIC().SIGNATURE(void, SetLeftTopColor, const Color4&);
     FUNCTION().PUBLIC().SIGNATURE(Color4, GetLeftTopCorner);

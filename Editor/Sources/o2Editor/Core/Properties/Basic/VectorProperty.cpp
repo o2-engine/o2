@@ -516,10 +516,24 @@ namespace Editor
 
         for (auto& fieldInfo : type.GetFields())
         {
-            if (searchNames.Contains(fieldInfo.GetName()) && fieldInfo.GetType() == &TypeOf(String))
+            if (searchNames.Contains(fieldInfo.GetName()))
             {
-                String value = fieldInfo.GetValue<String>(object);
-                return value;
+                if (fieldInfo.GetType() == &TypeOf(String))
+                {
+                    String value = fieldInfo.GetValue<String>(object);
+                    return value;
+                }
+                else if (fieldInfo.GetType()->GetUsage() == Type::Usage::Property)
+                {
+					auto propertyType = dynamic_cast<const PropertyType*>(fieldInfo.GetType());
+                    if (propertyType->GetValueType() == &TypeOf(String))
+					{
+						String value;
+                        auto valueProxy = propertyType->GetValueProxy(fieldInfo.GetValuePtr(object));
+						valueProxy->GetValuePtr(&value);
+						return value;
+                    }
+                }
             }
         }
 

@@ -110,7 +110,7 @@ namespace o2
         HideWithChild();
     }
 
-    void PopupWidget::OnCursorPressedOutside(const Input::Cursor& cursor)
+    void PopupWidget::OnCursorReleasedOutside(const Input::Cursor& cursor)
     {
         HideWithParent();
         HideWithChild();

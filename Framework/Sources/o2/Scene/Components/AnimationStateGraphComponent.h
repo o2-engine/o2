@@ -60,9 +60,7 @@ namespace o2
     public:
         PROPERTIES(AnimationStateGraphComponent);
         PROPERTY(AssetRef<AnimationStateGraphAsset>, graph, SetGraph, GetGraph); // State graph asset property
-        PROPERTY(String, state, GoToState, GetCurrentStateName);                 // Current state property
-
-		String test; // Test property @ITEMS_SOURCE(GetStatesNames)
+        PROPERTY(String, state, GoToState, GetCurrentStateName);                 // Current state property @ITEMS_SOURCE(GetStatesNames)
 
     public:
 		Function<void(const Ref<StatePlayer>& player)> onStateStarted;  // Event, called when state started
@@ -144,6 +142,9 @@ namespace o2
         // Returns next transitions
         const Vector<Ref<AnimationGraphTransition>>& GetNextTransitions() const;
 
+		// Returns animation component
+		Ref<AnimationComponent> GetAnimationComponent() const;
+
         // Returns name of component
         static String GetName();
 
@@ -159,7 +160,7 @@ namespace o2
     protected:
         AssetRef<AnimationStateGraphAsset> mStateGraph; // State graph asset @SERIALIZABLE 
 
-        WeakRef<AnimationComponent> mAnimationComponent; // Animation component reference
+        mutable WeakRef<AnimationComponent> mAnimationComponent; // Animation component reference
 
         Ref<AnimationGraphState> mCurrentState;       // Current state
         Ref<StatePlayer>         mCurrentStatePlayer; // Current state player
@@ -181,9 +182,6 @@ namespace o2
 
         // Updates current transition
         void UpdateCurrentTransition(float dt);
-
-        // Returns animation component. Stores reference to animation component
-        Ref<AnimationComponent> GetAnimationComponent();
     };
 }
 // --- META ---
@@ -196,8 +194,7 @@ END_META;
 CLASS_FIELDS_META(o2::AnimationStateGraphComponent)
 {
     FIELD().PUBLIC().NAME(graph);
-    FIELD().PUBLIC().NAME(state);
-    FIELD().PUBLIC().ITEMS_SOURCE_ATTRIBUTE(GetStatesNames).NAME(test);
+    FIELD().PUBLIC().ITEMS_SOURCE_ATTRIBUTE(GetStatesNames).NAME(state);
     FIELD().PUBLIC().NAME(onStateStarted);
     FIELD().PUBLIC().NAME(onStateFinished);
     FIELD().PUBLIC().NAME(onTransitionStarted);
@@ -239,13 +236,13 @@ CLASS_METHODS_META(o2::AnimationStateGraphComponent)
     FUNCTION().PUBLIC().SIGNATURE(const Ref<AnimationGraphTransition>&, GetCurrentTransition);
     FUNCTION().PUBLIC().SIGNATURE(float, GetCurrentTransitionTime);
     FUNCTION().PUBLIC().SIGNATURE(const Vector<Ref<AnimationGraphTransition>>&, GetNextTransitions);
+    FUNCTION().PUBLIC().SIGNATURE(Ref<AnimationComponent>, GetAnimationComponent);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetName);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetCategory);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetIcon);
     FUNCTION().PROTECTED().SIGNATURE(void, OnInitialized);
     FUNCTION().PROTECTED().SIGNATURE(void, CheckStartNextTransition);
     FUNCTION().PROTECTED().SIGNATURE(void, UpdateCurrentTransition, float);
-    FUNCTION().PROTECTED().SIGNATURE(Ref<AnimationComponent>, GetAnimationComponent);
 }
 END_META;
 // --- END META ---

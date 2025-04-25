@@ -39,7 +39,7 @@ namespace Editor
             mViewer = o2EditorProperties.CreateObjectViewer(mComponentType, (String)"component:" + mComponentType->GetName() + "/",
                                                             THIS_FUNC(OnPropertyChanged));
 
-            mViewer->CreateSpoiler(mSpoiler);
+            mViewer->CheckCreateSpoiler(mSpoiler);
             mViewer->SetHeaderEnabled(false);
         }
 
