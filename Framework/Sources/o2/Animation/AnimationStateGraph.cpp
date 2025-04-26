@@ -64,7 +64,12 @@ namespace o2
         mAnimations.Remove(animation);
     }
 
-    const Vector<Ref<AnimationGraphState::Animation>>& AnimationGraphState::GetAnimations() const
+	void AnimationGraphState::SetAnimations(const Vector<Ref<Animation>>& animations)
+	{
+		mAnimations = animations;
+	}
+
+	const Vector<Ref<AnimationGraphState::Animation>>& AnimationGraphState::GetAnimations() const
     {
         return mAnimations;
     }
@@ -74,6 +79,7 @@ namespace o2
         auto transition = mmake<AnimationGraphTransition>();
         transition->SetDestinationState(destinationState);
         transition->SetState(Ref(this));
+        mTransitions.Add(transition);
         return transition;
     }
 

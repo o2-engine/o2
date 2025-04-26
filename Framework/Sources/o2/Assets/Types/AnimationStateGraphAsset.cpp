@@ -108,6 +108,15 @@ namespace o2
         return mStates;
     }
 
+    Vector<String> AnimationStateGraphAsset::GetStatesNames() const
+    {
+        Vector<String> names;
+        for (auto& state : mStates)
+            names.Add(state->name);
+
+        return names;
+    }
+
     Vector<Ref<AnimationGraphTransition>> AnimationStateGraphAsset::CalculatePath(const Ref<AnimationGraphState>& from, 
                                                                                       const Ref<AnimationGraphState>& to)
     {

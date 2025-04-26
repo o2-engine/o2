@@ -282,13 +282,7 @@ namespace o2
     void ContextMenu::AddItem(const Ref<Item>& item)
     {
         mItems.Add(item);
-        mItemsBuilt = false;
-
-        if (mResEnabledInHierarchy) {
-            RebuildItems();
-            FitSizeAndPosition(layout->worldLeftTop);
-            SetLayoutDirty();
-        }
+        ForceRebuildItems();
     }
 
     Ref<ContextMenu::Item>  ContextMenu::AddItem(const WString& path,
@@ -305,6 +299,7 @@ namespace o2
                                 icon, shortcut);
 
         itemsList.Add(item);
+        ForceRebuildItems();
 
         return item;
     }
@@ -322,6 +317,7 @@ namespace o2
                                 groupDelPos < 0 ? "" : targetPath.SubStr(groupDelPos + 1),
                                 icon, shortcut);
         itemsList.Add(item);
+        ForceRebuildItems();
 
         return item;
     }
@@ -354,19 +350,13 @@ namespace o2
     void ContextMenu::InsertItem(const Ref<Item>& item, int position)
     {
         mItems.Insert(item, position);
-        mItemsBuilt = false;
-
-        if (mResEnabledInHierarchy) {
-            RebuildItems();
-            FitSizeAndPosition(layout->worldLeftTop);
-            SetLayoutDirty();
-        }
+        ForceRebuildItems();
     }
 
     void ContextMenu::AddItems(const Vector<Ref<Item>>& items)
     {
-        for (auto item : items)
-            AddItem(item);
+        mItems.Add(items);
+        ForceRebuildItems();
     }
 
     void ContextMenu::InsertItems(const Vector<Ref<Item>>& items, int position)
@@ -426,14 +416,7 @@ namespace o2
             return;
 
         mItems[position] = item;
-
-        mItemsBuilt = false;
-
-        if (mResEnabledInHierarchy) {
-            RebuildItems();
-            FitSizeAndPosition(layout->worldLeftTop);
-            SetLayoutDirty();
-        }
+        ForceRebuildItems();
     }
 
     Ref<ContextMenuItem> ContextMenu::GetItemUnderPoint(const Vec2F& point)
@@ -551,46 +534,26 @@ namespace o2
 
     void ContextMenu::RemoveItem(int position)
     {
-        if (position > 0 && position < mItemsLayout->GetChildren().Count())
-            mItemsLayout->RemoveChild(mItemsLayout->GetChildren()[position]);
+        if (position < 0 || position >= mItems.Count())
+            return;
+
+        mItems.RemoveAt(position);
+        ForceRebuildItems();
     }
 
     void ContextMenu::RemoveItem(const WString& path)
     {
-        Ref<Item> item;
-        auto itItems = &mItems;
-        WString targetPath = path;
+        auto idx = FindItem(path);
+        if (idx < 0)
+            return;
 
-        while (!targetPath.IsEmpty()) {
-            int slashPos = targetPath.Find("/");
-            WString subMenu = targetPath.SubStr(0, slashPos);
-
-            auto subItem = itItems->FindOrDefault([&](auto& x) { return x->text == subMenu; });
-            if (!subItem)
-                break;
-
-            if (slashPos < 0) {
-                item = subItem;
-                break;
-            }
-
-            itItems = &subItem->subItems;
-            targetPath = targetPath.SubStr(slashPos + 1);
-        }
-
-        if (item) {
-            itItems->Remove(item);
-        }
+        RemoveItem(idx);
     }
 
     void ContextMenu::RemoveAllItems()
     {
-        mItemsLayout->RemoveAllChildren();
-        mItemsLayout->AddChild(mSearchPanel);
-
-        mSelectedItem = nullptr;
-
         mItems.Clear();
+        ForceRebuildItems();
     }
 
     void ContextMenu::SetItemChecked(int position, bool checked)
@@ -670,7 +633,8 @@ namespace o2
         float maxCaption = 0.0f;
         float maxShortcut = 0.0f;
 
-        mSearchPanel->enabled = mSearchEnabled;
+        if (mSearchPanel)
+            mSearchPanel->enabled = mSearchEnabled;
 
         int i = 0;
         for (auto& child : mItemsLayout->GetChildWidgets()) 
@@ -835,7 +799,7 @@ namespace o2
     void ContextMenu::OnSearchChanged(const WString& text)
     {
         mSearchText = text.ToLowerCase();
-        RebuildItems();
+        ForceRebuildItems();
     }
 
     Ref<ContextMenu::Item> ContextMenu::GetItem(int idx) const
@@ -1003,6 +967,16 @@ namespace o2
     {
         if (child->GetType() == TypeOf(ContextMenu))
             mSubMenu = DynamicCast<ContextMenu>(child);
+    }
+
+    void ContextMenu::ForceRebuildItems()
+    {
+        if (mResEnabledInHierarchy)
+        {
+            RebuildItems();
+            FitSizeAndPosition(layout->worldLeftTop);
+            SetLayoutDirty();
+        }
     }
 }
 

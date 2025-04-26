@@ -44,6 +44,8 @@ namespace o2
         ACCESSOR(Ref<WidgetState>, state, String, GetStateObject, GetAllStates);                 // Widget state accessor by name
 
     public:
+        static const int topLayersDepth = 1000; // Threshold value for separating bottom and top layers
+        
         WidgetLayout* const layout; // Widget layout @EDITOR_IGNORE
 
     public:
@@ -83,6 +85,9 @@ namespace o2
 
         // Updates children and internal children transforms
         void UpdateChildrenTransforms() override;
+
+		// Recursively invokes function for each actor in this and children, including internal widgets
+		void ForEachActor(const Function<bool(Actor&)>& func) override;
 
         // Draws widget and child widgets with not overridden depth
         void Draw() override;
@@ -274,8 +279,8 @@ namespace o2
         float mTransparency = 1.0f;    // Widget transparency @SERIALIZABLE
         float mResTransparency = 1.0f; // Widget result transparency, depends on parent's result transparency
 
-        Vector<Ref<WidgetLayer>> mDrawingLayers;    // Layers ordered by depth, which drawing before children (depth < 1000) @DONT_DELETE @DEFAULT_TYPE(o2::WidgetLayer)
-        Vector<Ref<WidgetLayer>> mTopDrawingLayers; // Layers ordered by depth, which drawing after children (depth > 1000) @DONT_DELETE @DEFAULT_TYPE(o2::WidgetLayer)
+        Vector<Ref<WidgetLayer>> mDrawingLayers;    // Layers ordered by depth, which drawing before children (depth < layersDepthThreshold) @DONT_DELETE @DEFAULT_TYPE(o2::WidgetLayer)
+        Vector<Ref<WidgetLayer>> mTopDrawingLayers; // Layers ordered by depth, which drawing after children (depth > layersDepthThreshold) @DONT_DELETE @DEFAULT_TYPE(o2::WidgetLayer)
 
         Ref<WidgetState> mFocusedState;        // Focused widget state @DONT_DELETE @DEFAULT_TYPE(o2::WidgetState)
         bool             mIsFocused = false;   // Is widget focused
@@ -799,6 +804,7 @@ CLASS_METHODS_META(o2::Widget)
     FUNCTION().PUBLIC().SIGNATURE(void, UpdateChildren, float);
     FUNCTION().PUBLIC().SIGNATURE(void, UpdateTransform);
     FUNCTION().PUBLIC().SIGNATURE(void, UpdateChildrenTransforms);
+    FUNCTION().PUBLIC().SIGNATURE(void, ForEachActor, const Function<bool(Actor&)>&);
     FUNCTION().PUBLIC().SIGNATURE(void, Draw);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, ForceDraw, const RectF&, float);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetLayoutDirty);

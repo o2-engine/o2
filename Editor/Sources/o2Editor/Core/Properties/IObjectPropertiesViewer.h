@@ -51,6 +51,9 @@ namespace Editor
         // Returns view widget
         const Ref<Spoiler>& GetSpoiler();
 
+		// Creates spoiler if it is not created yet
+		Ref<Spoiler> CheckCreateSpoiler(const Ref<Widget>& parent);
+
         // Creates spoiler for properties
         virtual Ref<Spoiler> CreateSpoiler(const Ref<Widget>& parent);
 
@@ -61,7 +64,7 @@ namespace Editor
         bool IsHeaderEnabled() const;
 
         // Expands or collapses spoiler
-        virtual void SetExpanded(bool expanded);
+		virtual void SetExpanded(bool expanded, bool forcible = false);
 
         // Returns is spoiler expanded
         bool IsExpanded() const;
@@ -200,10 +203,11 @@ CLASS_METHODS_META(Editor::IObjectPropertiesViewer)
     FUNCTION().PUBLIC().SIGNATURE_STATIC(const Type*, GetViewingObjectTypeStatic);
     FUNCTION().PUBLIC().SIGNATURE(void, SetParentContext, const Ref<PropertiesContext>&);
     FUNCTION().PUBLIC().SIGNATURE(const Ref<Spoiler>&, GetSpoiler);
+    FUNCTION().PUBLIC().SIGNATURE(Ref<Spoiler>, CheckCreateSpoiler, const Ref<Widget>&);
     FUNCTION().PUBLIC().SIGNATURE(Ref<Spoiler>, CreateSpoiler, const Ref<Widget>&);
     FUNCTION().PUBLIC().SIGNATURE(void, SetHeaderEnabled, bool);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsHeaderEnabled);
-    FUNCTION().PUBLIC().SIGNATURE(void, SetExpanded, bool);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetExpanded, bool, bool);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsExpanded);
     FUNCTION().PUBLIC().SIGNATURE(void, SetCaption, const WString&);
     FUNCTION().PUBLIC().SIGNATURE(const WString&, GetCaption);

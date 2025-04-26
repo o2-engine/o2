@@ -72,20 +72,6 @@ namespace o2
 
     void Scene::UpdateAddedEntities()
     {
-        struct helper
-        {
-            static void RecursiveCall(const Ref<Actor>& actor, const Function<void(const Ref<Actor>&)>& func)
-            {
-                if (actor->mState == Actor::State::Initializing)
-                {
-                    func(actor);
-
-                    for (auto& child : actor->GetChildren())
-                        RecursiveCall(child, func);
-                }
-            }
-        };
-
         auto addedActors = mAddedActors;
         mAddedActors.Clear();
 
@@ -93,17 +79,31 @@ namespace o2
         mStartActors = addedActors;
         startedActorsCache.Clear();
 
+		auto forEachInitializingActor = [&](const Ref<Actor>& actor, const Function<void(const Ref<Actor>&)>& func)
+			{
+				actor->ForEachActor([&](Actor& actor)
+									{
+										if (actor.mState == Actor::State::Initializing)
+										{
+                                            func(Ref(&actor));
+											return true;
+										}
+
+										return false;
+									});
+			};
+
         for (auto& actor : addedActors)
         {
             if (actor->IsOnScene())
-                helper::RecursiveCall(actor, [&](const Ref<Actor>& actor) { AddActorToScene(actor); });
+				forEachInitializingActor(actor, [&](const Ref<Actor>& actor) { AddActorToScene(actor); });
         }
 
         for (auto& actor : addedActors)
-            helper::RecursiveCall(actor, [&](const Ref<Actor>& actor) { actor->UpdateResEnabledInHierarchy(); });
+			forEachInitializingActor(actor, [&](const Ref<Actor>& actor) { actor->UpdateResEnabledInHierarchy(); });
 
         for (auto& actor : addedActors)
-            helper::RecursiveCall(actor, [&](const Ref<Actor>& actor) { actor->OnInitialized(); });
+			forEachInitializingActor(actor, [&](const Ref<Actor>& actor) { actor->OnInitialized(); });
     }
 
     void Scene::UpdateTransforms()

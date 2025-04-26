@@ -192,7 +192,7 @@ namespace Editor
                 return;
 
             drawing = true;
-            EditorUIRoot.GetRootWidget()->Draw();
+            //EditorUIRoot.GetRootWidget()->Draw();
             drawing = false;
 
             mNeedRedraw = true;

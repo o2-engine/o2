@@ -68,6 +68,9 @@ namespace o2
         // Returns all states
         Map<String, Ref<IAnimationState>> GetAllStates() const;
 
+        // Returns vector of available states names @SCRIPTABLE
+        Vector<String> GetStatesNames() const;
+
         // Creates new state and plays him
         Ref<IAnimationState> Play(const Ref<AnimationClip>& animation, const String& name);
 
@@ -382,6 +385,7 @@ CLASS_METHODS_META(o2::AnimationComponent)
     FUNCTION().PUBLIC().SIGNATURE(Ref<IAnimationState>, GetState, const String&);
     FUNCTION().PUBLIC().SIGNATURE(const Vector<Ref<IAnimationState>>&, GetStates);
     FUNCTION().PUBLIC().SIGNATURE(_tmp1, GetAllStates);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(Vector<String>, GetStatesNames);
     FUNCTION().PUBLIC().SIGNATURE(Ref<IAnimationState>, Play, const Ref<AnimationClip>&, const String&);
     FUNCTION().PUBLIC().SIGNATURE(Ref<IAnimationState>, Play, const Ref<AnimationClip>&);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(Ref<IAnimationState>, Play, const String&);

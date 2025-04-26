@@ -16,6 +16,7 @@
 #include "o2/Scene/UI/Widgets/CustomList.h"
 #include "o2/Scene/UI/Widgets/DropDown.h"
 #include "o2/Scene/UI/Widgets/EditBox.h"
+#include "o2/Scene/UI/Widgets/EditBoxDropDown.h"
 #include "o2/Scene/UI/Widgets/HorizontalProgress.h"
 #include "o2/Scene/UI/Widgets/HorizontalScrollBar.h"
 #include "o2/Scene/UI/Widgets/Label.h"
@@ -812,8 +813,40 @@ namespace o2
             ->offStateAnimationSpeed = 0.5f;
 
         o2UI.AddWidgetStyle(sample, "standard");
+    }
 
+    void BasicUIStyleBuilder::RebuildEditBoxDropDownStyle()
+    {
+        auto sample = mmake<EditBoxDropDown>();
+        sample->layout->minSize = Vec2F(20, 20);
+
+        auto arrowLayer = sample->AddLayer("arrow", mmake<Sprite>("ui/UI4_Down_icn.png"),
+                                           Layout(Vec2F(1.0f, 0.5f), Vec2F(1.0f, 0.5f), Vec2F(-20, -10), Vec2F(0, 10)),
+                                           Widget::topLayersDepth);
+
+        // Configure the EditBox
+        auto editBox = sample->GetEditBox();
+        *editBox = *o2UI.GetWidgetStyle<EditBox>("singleline");
+		*editBox->layout = WidgetLayout::BothStretch(0, 0, 0, 0);
         
+        // Configure the dropdown list
+        auto list = sample->GetListView();
+        *list = *o2UI.GetWidgetStyle<List>("standard");
+        list->SetViewLayout(Layout::BothStretch(2, 2, 2, 2));
+        list->layer["back"]->SetDrawable(mmake<Sprite>("ui/UI4_Box_regular.png"));
+        list->layout->pivot = Vec2F(0.5f, 0.0f);
+        list->layout->anchorMin = Vec2F(0, 0);
+        list->layout->anchorMax = Vec2F(1, 0);
+        list->layout->offsetMin = Vec2F(2, -160);
+        list->layout->offsetMax = Vec2F(0, 3);
+
+        // Add states and animations
+        sample->AddState("opened", AnimationClip::EaseInOut("layer/arrow/mDrawable/scale", Vec2F(1, 1), Vec2F(1, -1), 0.2f));
+
+        sample->AddState("visible", AnimationClip::EaseInOut("transparency", 0.0f, 1.0f, 0.2f))
+            ->offStateAnimationSpeed = 0.5f;
+
+        o2UI.AddWidgetStyle(sample, "standard");
     }
 
     void BasicUIStyleBuilder::RebuildWindowStyle()

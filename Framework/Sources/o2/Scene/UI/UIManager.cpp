@@ -14,12 +14,14 @@
 #include "o2/Scene/UI/Widgets/CustomList.h"
 #include "o2/Scene/UI/Widgets/DropDown.h"
 #include "o2/Scene/UI/Widgets/EditBox.h"
+#include "o2/Scene/UI/Widgets/EditBoxDropDown.h"
 #include "o2/Scene/UI/Widgets/HorizontalLayout.h"
 #include "o2/Scene/UI/Widgets/HorizontalProgress.h"
 #include "o2/Scene/UI/Widgets/HorizontalScrollBar.h"
 #include "o2/Scene/UI/Widgets/Image.h"
 #include "o2/Scene/UI/Widgets/Label.h"
 #include "o2/Scene/UI/Widgets/List.h"
+#include "o2/Scene/UI/Widgets/PopupWidget.h"
 #include "o2/Scene/UI/Widgets/ScrollArea.h"
 #include "o2/Scene/UI/Widgets/Toggle.h"
 #include "o2/Scene/UI/Widgets/VerticalLayout.h"
@@ -30,6 +32,7 @@
 #include "o2/Utils/Debug/Log/LogStream.h"
 #include "o2/Utils/StringUtils.h"
 #include "o2/Utils/System/Time/Timer.h"
+#include "o2/Events/EventSystem.h"
 
 #undef CreateWindow
 
@@ -42,6 +45,7 @@ namespace o2
     FORWARD_REF_IMPL(CustomList);
     FORWARD_REF_IMPL(DropDown);
     FORWARD_REF_IMPL(EditBox);
+    FORWARD_REF_IMPL(EditBoxDropDown);
     FORWARD_REF_IMPL(HorizontalLayout);
     FORWARD_REF_IMPL(HorizontalProgress);
     FORWARD_REF_IMPL(HorizontalScrollBar);
@@ -338,6 +342,13 @@ namespace o2
         return res;
     }
 
+    Ref<EditBoxDropDown> UIManager::CreateEditBoxDropDown(const String& style /*= "standard"*/)
+    {
+        auto res = CreateWidget<EditBoxDropDown>(style);
+        res->name = "editbox dropdown";
+        return res;
+    }
+
     Ref<Toggle> UIManager::CreateToggle(const WString& caption, const String& style /*= "standard"*/)
     {
         auto res = CreateWidget<Toggle>(style);
@@ -354,14 +365,17 @@ namespace o2
         return res;
     }
 
-    void UIManager::Draw()
+    void UIManager::DrawCurrentLayerTopWidgets()
     {
-        for (auto& widget : mTopWidgets)
+		auto currentLayer = o2Events.GetCurrentCursorAreaEventsLayer();
+        
+		auto& topWidgetsAtLayer = mTopWidgets[currentLayer];
+        for (auto& widget : topWidgetsAtLayer)
             widget->Draw();
 
-        mTopWidgets.Clear();
+        topWidgetsAtLayer.Clear();
 
-        if (PopupWidget::mVisiblePopup)
+        if (PopupWidget::mVisiblePopup && PopupWidget::mVisiblePopup.Lock()->GetOpenedLayer() == currentLayer)
             PopupWidget::mVisiblePopup.Lock()->SpecialDraw();
 
         if (o2Input.IsKeyPressed(VK_TAB))
@@ -384,7 +398,7 @@ namespace o2
 
     void UIManager::DrawWidgetAtTop(const Ref<Widget>& widget)
     {
-        mTopWidgets.Add(widget);
+        mTopWidgets[o2Events.GetCurrentCursorAreaEventsLayer()].Add(widget);
     }
 
     const Vector<AssetRef<ActorAsset>>& UIManager::GetWidgetStyles() const

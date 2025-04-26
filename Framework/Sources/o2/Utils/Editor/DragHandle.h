@@ -466,9 +466,19 @@ namespace o2
         // Selects all in group
         void SelectAll() override;
 
-    protected:
-        Vector<Ref<DragHandle>> mSelectedHandles;
-        Vector<Ref<DragHandle>> mHandles;
+		// Begins prepared to select handles
+        void BeginPreSelect();
+
+		// Updates preselected handles by rectangle
+		void UpdatePreSelect(const Vector<Ref<DragHandle>>& handles);
+
+		// Finishes prepared to select handles, updates selected handles
+		void EndPreSelect();
+
+	protected:
+		Vector<Ref<DragHandle>> mPreSelectedHandles; // Prepared to select handles, used for selection rectangle
+		Vector<Ref<DragHandle>> mSelectedHandles;    // Current selected handles in group
+		Vector<Ref<DragHandle>> mHandles;            // All handles in group
 
     protected:
         // Called when selection is changed - some handle was added or removed from selection

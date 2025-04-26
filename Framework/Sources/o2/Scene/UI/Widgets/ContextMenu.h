@@ -266,6 +266,9 @@ namespace o2
         // Build items layout
         void RebuildItems();
 
+        // Force rebuild items - clears cache and rebuilds items if enabled
+        void ForceRebuildItems();
+
         // Called when search edit box has changed, updates items list
         void OnSearchChanged(const WString& text);
 
@@ -449,6 +452,7 @@ CLASS_METHODS_META(o2::ContextMenu)
     FUNCTION().PROTECTED().SIGNATURE(void, HideWithChild);
     FUNCTION().PROTECTED().SIGNATURE(void, SpecialDraw);
     FUNCTION().PROTECTED().SIGNATURE(void, RebuildItems);
+    FUNCTION().PROTECTED().SIGNATURE(void, ForceRebuildItems);
     FUNCTION().PROTECTED().SIGNATURE(void, OnSearchChanged, const WString&);
     FUNCTION().PROTECTED().SIGNATURE(Vector<Ref<Item>>&, CreateItemsByPath, WString&);
     FUNCTION().PROTECTED().SIGNATURE(Ref<Item>, GetItem, int);

@@ -38,7 +38,7 @@ namespace Editor
             spoiler->GetInternalWidget("expand")->enabledForcibly = false;
             spoiler->borderLeft = 0;
             spoiler->borderTop = 0;
-            spoiler->Expand();
+            spoiler->Expand(true);
         }
 
         OnHeaderEnableChanged(enabled);
@@ -89,9 +89,20 @@ namespace Editor
         return mSpoiler;
     }
 
-    void IObjectPropertiesViewer::SetExpanded(bool expanded)
+	Ref<Spoiler> IObjectPropertiesViewer::CheckCreateSpoiler(const Ref<Widget>& parent)
+	{
+        if (mSpoiler)
+        {
+			parent->AddChild(mSpoiler);
+            return mSpoiler;
+        }
+
+		return CreateSpoiler(parent);
+	}
+
+	void IObjectPropertiesViewer::SetExpanded(bool expanded, bool forcible /*= false*/)
     {
-        GetSpoiler()->SetExpanded(expanded);
+        GetSpoiler()->SetExpanded(expanded, forcible);
     }
 
     bool IObjectPropertiesViewer::IsExpanded() const

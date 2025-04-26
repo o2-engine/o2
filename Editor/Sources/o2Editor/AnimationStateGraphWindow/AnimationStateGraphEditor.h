@@ -2,13 +2,16 @@
 
 #include "o2/Assets/Types/AnimationStateGraphAsset.h"
 #include "o2/Scene/Components/AnimationStateGraphComponent.h"
+#include "o2/Scene/UI/Widgets/EditBoxDropDown.h"
 #include "o2/Utils/Editor/DragHandle.h"
 #include "o2/Utils/Editor/FrameHandles.h"
+#include "o2/Events/CursorAreaEventsListener.h"
 #include "o2Editor/Core/Actions/ActionsList.h"
 #include "o2Editor/Core/Actions/IAction.h"
-#include "o2Editor/Core/Properties/Objects/DefaultObjectPropertiesViewer.h"
 #include "o2Editor/Core/Properties/Basic/VectorProperty.h"
+#include "o2Editor/Core/Properties/Objects/DefaultObjectPropertiesViewer.h"
 #include "o2Editor/Core/UI/FrameScrollView.h"
+#include "GraphAnimationStateViewer.h"
 
 using namespace o2;
 
@@ -46,7 +49,7 @@ namespace Editor
         // Updates drawables, states and widget
         void Update(float dt) override;
 
-        // Sets selection rectangle sprite image
+        // Sets selection sprite image
         void SetSelectionSpriteImage(const AssetRef<ImageAsset>& image);
 
         // Updates layout
@@ -70,36 +73,83 @@ namespace Editor
 		// -----------------------------------------------------------
         struct StateAnimation : public RefCounterable, public IObject
         {
-			String name; // Name of animation
+			PROPERTIES(StateAnimation);
+			PROPERTY(String, name, SetName, GetName);      // Animation name property @ITEMS_SOURCE(GetAvailableStates)
+			PROPERTY(float, weight, SetWeight, GetWeight); // Animation weight property @RANGE(0, 1)
 
-			Ref<IAnimationState>                state;     // Animation state
-			Ref<AnimationGraphState::Animation> animation; // Animation
-			WeakRef<StateWidget>                owner;     // Owner state widget
+		public:
+			WeakRef<IAnimationState>                state;     // Animation state
+			WeakRef<AnimationGraphState::Animation> animation; // Animation
+			WeakRef<StateWidget>                    owner;     // Owner state widget
 
-            IOBJECT(StateAnimation);
+        public:
+			// Returns available states names from AnimationComponent
+			Vector<String> GetAvailableStates() const;
+
+			// Sets animation name
+			void SetName(const String& name);
+
+			// Returns name
+			const String& GetName() const;
+
+			// Sets animation weight
+			void SetWeight(float weight);
+
+			// Returns animation weight
+			float GetWeight() const;
+
+			IOBJECT(StateAnimation);
         };
 
 		// --------------------------------------------------------------------
 		// State transition struct. Contains owner, destination and drag handle
 		// Used to control state transition
 		// --------------------------------------------------------------------
-        struct StateTransition : public RefCounterable
+        struct StateTransition : public RefCounterable, public IObject, public CursorAreaEventsListener
         {
 	        enum class Status { None, Planned, Started };
 
 			WeakRef<StateWidget> owner;       // Owner state widget
 			WeakRef<StateWidget> destination; // Destination state widget
 
-			Ref<DragHandle> dragHandle; // Drag handle
+			Ref<AnimationGraphTransition> transition; // Animation transition reference @NO_HEADER
 
         	Status status = Status::None;
+			
+			bool mIsSelected = false; // True when transition is selected
 
         public:
+			// Default constructor
+			StateTransition();
+
 			// Draws transition
             void Draw();
 
         	// Sets transition animation status
         	void SetStatus(Status status);
+
+			// Sets selected state
+			void SetSelected(bool selected);
+
+			// Returns true if transition is selected
+			bool IsSelected() const;
+
+			// Returns true if point is in this object
+			bool IsUnderPoint(const Vec2F& point) override;
+
+			IOBJECT(StateTransition);
+			
+		protected:
+			// Called when cursor pressed on this
+			void OnCursorPressed(const Input::Cursor& cursor) override;
+
+			// Called when cursor released outside (when this was pressed)
+			void OnCursorPressedOutside(const Input::Cursor& cursor) override;
+
+			// Called when right mouse button was released
+			void OnCursorRightMouseReleased(const Input::Cursor& cursor) override;
+
+			REF_COUNTERABLE_IMPL(RefCounterable);
         };
 
 		// -----------------------------------------------------------------------------------
@@ -110,10 +160,12 @@ namespace Editor
         {
 			enum class TransitionState { None, Finished, Planned };
 
+			static const Vec2F defaultWidgetSize; // Default size for state widget
+			
 			WeakRef<AnimationGraphState>                       state;  // Animation state reference
 			WeakRef<AnimationStateGraphComponent::StatePlayer> player; // State player reference, when state is playing
 
-			Vector<Ref<StateAnimation>>  animations;  // Animations list @DONT_DELETE @DEFAULT_TYPE(StateAnimation)
+			Vector<Ref<StateAnimation>> animations;  // Animations list @DONT_DELETE @DEFAULT_TYPE(StateAnimation) @INVOKE_ON_CHANGE(OnAnimationsListChanged)
 
 			Vector<Ref<StateTransition>>                                 transitions;    // Transitions list
 			Map<WeakRef<AnimationGraphTransition>, Ref<StateTransition>> transitionsMap; // Transitions map by destination state
@@ -152,6 +204,13 @@ namespace Editor
 			// Opens context menu
 			void OpenContextMenu();
 
+			// Called when state was pressed
+            void OnPressed();
+
+		protected:
+			// Called when animations list was changed, creates or removes animations in original state
+            void OnAnimationsListChanged();
+
 			IOBJECT(StateWidget);
         };
 
@@ -163,17 +222,24 @@ namespace Editor
 		WeakRef<AnimationStateGraphAsset>     mGraph;     // Animation state graph asset
 		WeakRef<AnimationStateGraphComponent> mComponent; // Animation state graph component
 
-		Vector<Ref<StateWidget>>                            mStatesWidgets;    // States widgets
-        Map<WeakRef<AnimationGraphState>, Ref<StateWidget>> mStatesWidgetsMap; // States widgets map by state
+		Ref<Widget>                                         mStateWidgetsContainer; // Container for states widgets
+		Vector<Ref<StateWidget>>                            mStatesWidgets;         // States widgets
+		Map<WeakRef<AnimationGraphState>, Ref<StateWidget>> mStatesWidgetsMap;      // States widgets map by state
+		Map<WeakRef<DragHandle>, Ref<StateWidget>>          mStateHandlesMap;       // States widgets map by drag handle
 
 		Ref<Sprite> mSelectionSprite;       // Selection sprite @SERIALIZABLE
 		Vec2F       mSelectingPressedPoint; // Point, where cursor was pressed, selection starts here, in local space
 
-		Vector<Ref<StateWidget>> mPreSelectedStates; // States under frame while selecting 
+		Vec2F            mContextMenuPos;   // Context menu position when right mouse button was pressed
+		Ref<StateWidget> mContextMenuState; // State widget, where context menu was opened
 
-		Vec2F mContextMenuPos; // Context menu position when right mouse button was pressed
+		Ref<StateTransition> mContextMenuTransition; // Transition, where context menu was opened
+
+		bool mCreatingTransition = false; // True when creating transition
 
 		bool mNeedAdjustView = false; // True when need to adjust view scale. This works in update
+
+		float mRefreshViewersTimer = 0.0f; // Timer for refreshing viewers
 
         ActionsList mActionsList; // Local actions list. It uses when actionFallDown is null
 
@@ -208,6 +274,9 @@ namespace Editor
         // Redraws content into render target
 		void RedrawContent() override;
 
+		// Called when selection is changed - some handle was added or removed from selection; updates selected states in property viewer
+		void OnSelectionChanged() override;
+
 		// Initializes context menu items
 		void InitializeContextMenus();
 
@@ -222,6 +291,9 @@ namespace Editor
 
         // Draws states transitions
         void DrawTransitions();
+
+		// Draws single transition
+        static void DrawTransition(Vec2F from, Vec2F to, StateTransition::Status status, float progress, bool selected = false);
 
         // Initializes states list
         void InitializeStates();
@@ -248,7 +320,7 @@ namespace Editor
 		void CreateState();
 
 		// Sets current state default
-        void SetCurrentStateDefault();
+        void SetCurrentStateInitial();
 
 		// Starts adding transition from current state
 		void StartAddingTransition();
@@ -258,65 +330,22 @@ namespace Editor
 
 		// Removes current transition
         void RemoveCurrentTransition();
+
+		// Opens context menu for state
+		void OpenStateContextMenu(const Ref<StateWidget>& state);
+
+		// Called when state was pressed
+		void OnStatePressed(const Ref<StateWidget>& state);
+
+		// Checks if viewers need to be refreshed, uses timer to refresh them (mRefreshViewersTimer)
+		void CheckRefreshViewersTimer(float dt);
+        
+		// Clears all selected handles and transitions
+		void ClearSelection();
         
         REF_COUNTERABLE_IMPL(FrameScrollView, SelectableDragHandlesGroup);
 
-		friend class GraphAnimationStateViewer;
-	};
-
-	// ------------------------------------
-	// AnimationComponent properties viewer
-	// ------------------------------------
-	class GraphAnimationStateViewer : public DefaultObjectPropertiesViewer
-	{
-	public:
-		// Returns viewing objects type
-		const Type* GetViewingObjectType() const override;
-
-		// Creates spoiler for properties
-		Ref<Spoiler> CreateSpoiler(const Ref<Widget>& parent) override;
-
-		// Returns viewing objects base type by static function
-		static const Type* GetViewingObjectTypeStatic();
-
-		IOBJECT(GraphAnimationStateViewer);
-
-	private:
-		Ref<Toggle> mPlayPause;
-		Ref<Button> mEditBtn;
-		Ref<Toggle> mLooped;
-
-		Ref<HorizontalProgress> mTimeProgress;
-
-		WeakRef<IAnimation> mSubscribedPlayer;
-
-	private:
-		// Called when viewer is refreshed
-		void OnRefreshed(const Vector<Pair<IObject*, IObject*>>& targetObjets) override;
-
-		// ThCalled when the viewer is freed
-		void OnFree() override;
-
-		// Called when play pause toggled
-		void OnPlayPauseToggled(bool play);
-
-		// Called when loop toggled
-		void OnLoopToggled(bool looped);
-
-		// Called when edit button pressed, sets animation editing
-		void OnEditPressed();
-
-		// Called when time progress changed by user, sets subscribed player time 
-		void OnTimeProgressChanged(float value);
-
-		// Called when animation updates
-		void OnAnimationUpdated(float time);
-
-		// Called when animation started
-		void OnAnimationStarted();
-
-		// Called when animation finished
-		void OnAnimationFinished();
+        friend class GraphAnimationStateViewer;
 	};
 }
 // --- META ---
@@ -339,13 +368,18 @@ CLASS_FIELDS_META(Editor::AnimationStateGraphEditor)
     FIELD().PROTECTED().NAME(mTransitionContextMenu);
     FIELD().PROTECTED().NAME(mGraph);
     FIELD().PROTECTED().NAME(mComponent);
+    FIELD().PROTECTED().NAME(mStateWidgetsContainer);
     FIELD().PROTECTED().NAME(mStatesWidgets);
     FIELD().PROTECTED().NAME(mStatesWidgetsMap);
+    FIELD().PROTECTED().NAME(mStateHandlesMap);
     FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().NAME(mSelectionSprite);
     FIELD().PROTECTED().NAME(mSelectingPressedPoint);
-    FIELD().PROTECTED().NAME(mPreSelectedStates);
     FIELD().PROTECTED().NAME(mContextMenuPos);
+    FIELD().PROTECTED().NAME(mContextMenuState);
+    FIELD().PROTECTED().NAME(mContextMenuTransition);
+    FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mCreatingTransition);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mNeedAdjustView);
+    FIELD().PROTECTED().DEFAULT_VALUE(0.0f).NAME(mRefreshViewersTimer);
     FIELD().PROTECTED().NAME(mActionsList);
 }
 END_META;
@@ -370,11 +404,13 @@ CLASS_METHODS_META(Editor::AnimationStateGraphEditor)
     FUNCTION().PROTECTED().SIGNATURE(void, OnCursorRightMouseReleased, const Input::Cursor&);
     FUNCTION().PROTECTED().SIGNATURE(void, DrawInheritedDepthChildren);
     FUNCTION().PROTECTED().SIGNATURE(void, RedrawContent);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnSelectionChanged);
     FUNCTION().PROTECTED().SIGNATURE(void, InitializeContextMenus);
     FUNCTION().PROTECTED().SIGNATURE(void, RecalculateViewArea);
     FUNCTION().PROTECTED().SIGNATURE(void, DrawHandles);
     FUNCTION().PROTECTED().SIGNATURE(void, DrawSelection);
     FUNCTION().PROTECTED().SIGNATURE(void, DrawTransitions);
+    FUNCTION().PROTECTED().SIGNATURE_STATIC(void, DrawTransition, Vec2F, Vec2F, StateTransition::Status, float, bool);
     FUNCTION().PROTECTED().SIGNATURE(void, InitializeStates);
     FUNCTION().PROTECTED().SIGNATURE(void, OnStateGraphStateStarted, const Ref<AnimationStateGraphComponent::StatePlayer>&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnStateGraphStateFinished, const Ref<AnimationStateGraphComponent::StatePlayer>&);
@@ -383,44 +419,14 @@ CLASS_METHODS_META(Editor::AnimationStateGraphEditor)
     FUNCTION().PROTECTED().SIGNATURE(void, OnStateGraphTransitionsPlanned, const Vector<Ref<AnimationGraphTransition>>&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnStateGraphTransitionCancelled, const Ref<AnimationGraphTransition>&);
     FUNCTION().PROTECTED().SIGNATURE(void, CreateState);
-    FUNCTION().PROTECTED().SIGNATURE(void, SetCurrentStateDefault);
+    FUNCTION().PROTECTED().SIGNATURE(void, SetCurrentStateInitial);
     FUNCTION().PROTECTED().SIGNATURE(void, StartAddingTransition);
     FUNCTION().PROTECTED().SIGNATURE(void, RemoveCurrentStates);
     FUNCTION().PROTECTED().SIGNATURE(void, RemoveCurrentTransition);
-}
-END_META;
-
-CLASS_BASES_META(Editor::GraphAnimationStateViewer)
-{
-    BASE_CLASS(Editor::DefaultObjectPropertiesViewer);
-}
-END_META;
-CLASS_FIELDS_META(Editor::GraphAnimationStateViewer)
-{
-    FIELD().PRIVATE().NAME(mPlayPause);
-    FIELD().PRIVATE().NAME(mEditBtn);
-    FIELD().PRIVATE().NAME(mLooped);
-    FIELD().PRIVATE().NAME(mTimeProgress);
-    FIELD().PRIVATE().NAME(mSubscribedPlayer);
-}
-END_META;
-CLASS_METHODS_META(Editor::GraphAnimationStateViewer)
-{
-
-    typedef const Vector<Pair<IObject*, IObject*>>& _tmp1;
-
-    FUNCTION().PUBLIC().SIGNATURE(const Type*, GetViewingObjectType);
-    FUNCTION().PUBLIC().SIGNATURE(Ref<Spoiler>, CreateSpoiler, const Ref<Widget>&);
-    FUNCTION().PUBLIC().SIGNATURE_STATIC(const Type*, GetViewingObjectTypeStatic);
-    FUNCTION().PRIVATE().SIGNATURE(void, OnRefreshed, _tmp1);
-    FUNCTION().PRIVATE().SIGNATURE(void, OnFree);
-    FUNCTION().PRIVATE().SIGNATURE(void, OnPlayPauseToggled, bool);
-    FUNCTION().PRIVATE().SIGNATURE(void, OnLoopToggled, bool);
-    FUNCTION().PRIVATE().SIGNATURE(void, OnEditPressed);
-    FUNCTION().PRIVATE().SIGNATURE(void, OnTimeProgressChanged, float);
-    FUNCTION().PRIVATE().SIGNATURE(void, OnAnimationUpdated, float);
-    FUNCTION().PRIVATE().SIGNATURE(void, OnAnimationStarted);
-    FUNCTION().PRIVATE().SIGNATURE(void, OnAnimationFinished);
+    FUNCTION().PROTECTED().SIGNATURE(void, OpenStateContextMenu, const Ref<StateWidget>&);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnStatePressed, const Ref<StateWidget>&);
+    FUNCTION().PROTECTED().SIGNATURE(void, CheckRefreshViewersTimer, float);
+    FUNCTION().PROTECTED().SIGNATURE(void, ClearSelection);
 }
 END_META;
 
@@ -432,7 +438,8 @@ CLASS_BASES_META(Editor::AnimationStateGraphEditor::StateAnimation)
 END_META;
 CLASS_FIELDS_META(Editor::AnimationStateGraphEditor::StateAnimation)
 {
-    FIELD().PUBLIC().NAME(name);
+    FIELD().PUBLIC().ITEMS_SOURCE_ATTRIBUTE(GetAvailableStates).NAME(name);
+    FIELD().PUBLIC().RANGE_ATTRIBUTE(0, 1).NAME(weight);
     FIELD().PUBLIC().NAME(state);
     FIELD().PUBLIC().NAME(animation);
     FIELD().PUBLIC().NAME(owner);
@@ -440,6 +447,43 @@ CLASS_FIELDS_META(Editor::AnimationStateGraphEditor::StateAnimation)
 END_META;
 CLASS_METHODS_META(Editor::AnimationStateGraphEditor::StateAnimation)
 {
+
+    FUNCTION().PUBLIC().SIGNATURE(Vector<String>, GetAvailableStates);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetName, const String&);
+    FUNCTION().PUBLIC().SIGNATURE(const String&, GetName);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetWeight, float);
+    FUNCTION().PUBLIC().SIGNATURE(float, GetWeight);
+}
+END_META;
+
+CLASS_BASES_META(Editor::AnimationStateGraphEditor::StateTransition)
+{
+    BASE_CLASS(o2::RefCounterable);
+    BASE_CLASS(o2::IObject);
+    BASE_CLASS(o2::CursorAreaEventsListener);
+}
+END_META;
+CLASS_FIELDS_META(Editor::AnimationStateGraphEditor::StateTransition)
+{
+    FIELD().PUBLIC().NAME(owner);
+    FIELD().PUBLIC().NAME(destination);
+    FIELD().PUBLIC().NO_HEADER_ATTRIBUTE().NAME(transition);
+    FIELD().PUBLIC().DEFAULT_VALUE(Status::None).NAME(status);
+    FIELD().PUBLIC().DEFAULT_VALUE(false).NAME(mIsSelected);
+}
+END_META;
+CLASS_METHODS_META(Editor::AnimationStateGraphEditor::StateTransition)
+{
+
+    FUNCTION().PUBLIC().CONSTRUCTOR();
+    FUNCTION().PUBLIC().SIGNATURE(void, Draw);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetStatus, Status);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetSelected, bool);
+    FUNCTION().PUBLIC().SIGNATURE(bool, IsSelected);
+    FUNCTION().PUBLIC().SIGNATURE(bool, IsUnderPoint, const Vec2F&);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnCursorPressed, const Input::Cursor&);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnCursorPressedOutside, const Input::Cursor&);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnCursorRightMouseReleased, const Input::Cursor&);
 }
 END_META;
 
@@ -453,7 +497,7 @@ CLASS_FIELDS_META(Editor::AnimationStateGraphEditor::StateWidget)
 {
     FIELD().PUBLIC().NAME(state);
     FIELD().PUBLIC().NAME(player);
-    FIELD().PUBLIC().DEFAULT_TYPE_ATTRIBUTE(StateAnimation).DONT_DELETE_ATTRIBUTE().NAME(animations);
+    FIELD().PUBLIC().DEFAULT_TYPE_ATTRIBUTE(StateAnimation).DONT_DELETE_ATTRIBUTE().INVOKE_ON_CHANGE_ATTRIBUTE(OnAnimationsListChanged).NAME(animations);
     FIELD().PUBLIC().NAME(transitions);
     FIELD().PUBLIC().NAME(transitionsMap);
     FIELD().PUBLIC().NAME(widget);
@@ -474,6 +518,8 @@ CLASS_METHODS_META(Editor::AnimationStateGraphEditor::StateWidget)
     FUNCTION().PUBLIC().SIGNATURE(void, UpdateState, TransitionState);
     FUNCTION().PUBLIC().SIGNATURE(void, SetPlayer, const Ref<AnimationStateGraphComponent::StatePlayer>&);
     FUNCTION().PUBLIC().SIGNATURE(void, OpenContextMenu);
+    FUNCTION().PUBLIC().SIGNATURE(void, OnPressed);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnAnimationsListChanged);
 }
 END_META;
 // --- END META ---

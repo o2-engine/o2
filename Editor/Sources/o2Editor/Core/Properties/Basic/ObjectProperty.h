@@ -55,13 +55,13 @@ namespace Editor
         Ref<Button> GetRemoveButton() override;
 
         // Expands property fields
-        void Expand();
+		void Expand(bool forcible = false);
 
         // Collapses property field
-        void Collapse();
+		void Collapse(bool forcible = false);
 
         // Sets properties expanding
-        void SetExpanded(bool expanded);
+		void SetExpanded(bool expanded, bool forcible = false);
 
         // Returns is properties expanded
         bool IsExpanded() const;
@@ -145,9 +145,9 @@ CLASS_METHODS_META(Editor::ObjectProperty)
     FUNCTION().PUBLIC().SIGNATURE(void, SetCaption, const WString&);
     FUNCTION().PUBLIC().SIGNATURE(WString, GetCaption);
     FUNCTION().PUBLIC().SIGNATURE(Ref<Button>, GetRemoveButton);
-    FUNCTION().PUBLIC().SIGNATURE(void, Expand);
-    FUNCTION().PUBLIC().SIGNATURE(void, Collapse);
-    FUNCTION().PUBLIC().SIGNATURE(void, SetExpanded, bool);
+    FUNCTION().PUBLIC().SIGNATURE(void, Expand, bool);
+    FUNCTION().PUBLIC().SIGNATURE(void, Collapse, bool);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetExpanded, bool, bool);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsExpanded);
     FUNCTION().PROTECTED().SIGNATURE(void, OnFreeProperty);
     FUNCTION().PROTECTED().SIGNATURE(void, OnPropertyEnabled);

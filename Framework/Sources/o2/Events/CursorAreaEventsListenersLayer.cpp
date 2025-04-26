@@ -2,6 +2,7 @@
 #include "CursorAreaEventsListenersLayer.h"
 
 #include "o2/Events/EventSystem.h"
+#include "o2/Scene/UI/UIManager.h"
 #include "o2/Utils/Editor/DragAndDrop.h"
 #include "o2/Utils/Editor/EditorScope.h"
 #include "o2/Utils/System/Time/Time.h"
@@ -25,6 +26,8 @@ namespace o2
     void CursorAreaEventListenersLayer::OnEndDraw()
     {
         //PROFILE_SAMPLE_FUNC();
+
+        o2UI.DrawCurrentLayerTopWidgets();
 
         renderBasis = o2Render.GetCamera().GetBasis();
         o2Events.PopCursorAreaEventsListenersLayer();
@@ -54,7 +57,7 @@ namespace o2
 
     Vec2F CursorAreaEventListenersLayer::ScreenToLocal(const Vec2F& point) const
     {
-        if (mParentLayer)
+        if (mParentLayer && mParentLayer != this)
             return ToLocal(mParentLayer.Lock()->ScreenToLocal(point));
         
         return ToLocal(point);

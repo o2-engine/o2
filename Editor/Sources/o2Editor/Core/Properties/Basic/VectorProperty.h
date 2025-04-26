@@ -63,13 +63,13 @@ namespace Editor
         const Type* GetSpecializedType() const;
 
         // Expands property fields
-        void Expand();
+		void Expand(bool forcible = false);
 
         // Collapses property field
-        void Collapse();
+        void Collapse(bool forcible = false);
 
         // Sets properties expanding
-        void SetExpanded(bool expanded);
+        void SetExpanded(bool expanded, bool forcible = false);
 
         // Returns is properties expanded
         bool IsExpanded() const;
@@ -223,9 +223,9 @@ CLASS_METHODS_META(Editor::VectorProperty)
     FUNCTION().PUBLIC().SIGNATURE(void, SpecializeType, const Type*);
     FUNCTION().PUBLIC().SIGNATURE(void, SetFieldInfo, const FieldInfo*);
     FUNCTION().PUBLIC().SIGNATURE(const Type*, GetSpecializedType);
-    FUNCTION().PUBLIC().SIGNATURE(void, Expand);
-    FUNCTION().PUBLIC().SIGNATURE(void, Collapse);
-    FUNCTION().PUBLIC().SIGNATURE(void, SetExpanded, bool);
+    FUNCTION().PUBLIC().SIGNATURE(void, Expand, bool);
+    FUNCTION().PUBLIC().SIGNATURE(void, Collapse, bool);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetExpanded, bool, bool);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsExpanded);
     FUNCTION().PUBLIC().SIGNATURE(void, SetHeaderEnabled, bool);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsHeaderEnabled);

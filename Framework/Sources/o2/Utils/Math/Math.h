@@ -15,6 +15,8 @@ namespace o2
 
     namespace Math
     {
+		const float Epsilon = FLT_EPSILON;
+
         float Floor(float value);
         int FloorToInt(float value);
 

@@ -123,6 +123,7 @@ extern void __RegisterClass__o2__CustomDropDown();
 extern void __RegisterClass__o2__CustomList();
 extern void __RegisterClass__o2__DropDown();
 extern void __RegisterClass__o2__EditBox();
+extern void __RegisterClass__o2__EditBoxDropDown();
 extern void __RegisterClass__o2__GridLayout();
 extern void __RegisterClass__o2__GridLayoutScrollArea();
 extern void __RegisterClass__o2__HorizontalLayout();
@@ -287,6 +288,7 @@ extern void InitializeTypeso2Framework()
     __RegisterClass__o2__CustomList();
     __RegisterClass__o2__DropDown();
     __RegisterClass__o2__EditBox();
+    __RegisterClass__o2__EditBoxDropDown();
     __RegisterClass__o2__GridLayout();
     __RegisterClass__o2__GridLayoutScrollArea();
     __RegisterClass__o2__HorizontalLayout();

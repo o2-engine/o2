@@ -916,7 +916,29 @@ namespace o2
         OnSelectionChanged();
     }
 
-    void SelectableDragHandlesGroup::OnSelectionChanged()
+	void SelectableDragHandlesGroup::BeginPreSelect()
+	{
+		if (!o2Input.IsKeyDown(VK_CONTROL))
+			DeselectAll();
+
+		mPreSelectedHandles.Clear();
+	}
+
+	void SelectableDragHandlesGroup::UpdatePreSelect(const Vector<Ref<DragHandle>>& handles)
+	{
+        mPreSelectedHandles = handles;
+	}
+
+	void SelectableDragHandlesGroup::EndPreSelect()
+	{
+		for (auto& handle : mPreSelectedHandles)
+		{
+			if (!mSelectedHandles.Contains(handle))
+                SelectHandle(handle);
+		}
+	}
+
+	void SelectableDragHandlesGroup::OnSelectionChanged()
     {}
 
     void SelectableDragHandlesGroup::OnHandleCursorPressed(const Ref<DragHandle>& handle, const Input::Cursor& cursor)

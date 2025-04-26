@@ -289,7 +289,7 @@ namespace Editor
         if (fieldInfo)
         {
             if (fieldInfo->HasAttribute<ExpandedByDefaultAttribute>())
-                mSpoiler->Expand();
+                mSpoiler->Expand(true);
         }
     }
 
@@ -329,19 +329,19 @@ namespace Editor
         return mRemoveBtn;
     }
 
-    void VectorProperty::Expand()
+	void VectorProperty::Expand(bool forcible /*= false*/)
     {
-        SetExpanded(true);
+        SetExpanded(true, forcible);
     }
 
-    void VectorProperty::Collapse()
+    void VectorProperty::Collapse(bool forcible /*= false*/)
     {
-        SetExpanded(false);
+        SetExpanded(false, forcible);
     }
 
-    void VectorProperty::SetExpanded(bool expanded)
+    void VectorProperty::SetExpanded(bool expanded, bool forcible /*= false*/)
     {
-        mSpoiler->SetExpanded(expanded);
+        mSpoiler->SetExpanded(expanded, forcible);
     }
 
     bool VectorProperty::IsExpanded() const
@@ -367,7 +367,7 @@ namespace Editor
             mSpoiler->GetLayerDrawable<Text>("caption")->enabled = false;
             mSpoiler->GetInternalWidget("expand")->enabledForcibly = false;
             mSpoiler->borderTop = 0;
-            mSpoiler->Expand();
+            mSpoiler->Expand(true);
             mHeaderContainer->SetInternalParent(nullptr);
 		}
 	}
@@ -516,10 +516,24 @@ namespace Editor
 
         for (auto& fieldInfo : type.GetFields())
         {
-            if (searchNames.Contains(fieldInfo.GetName()) && fieldInfo.GetType() == &TypeOf(String))
+            if (searchNames.Contains(fieldInfo.GetName()))
             {
-                String value = fieldInfo.GetValue<String>(object);
-                return value;
+                if (fieldInfo.GetType() == &TypeOf(String))
+                {
+                    String value = fieldInfo.GetValue<String>(object);
+                    return value;
+                }
+                else if (fieldInfo.GetType()->GetUsage() == Type::Usage::Property)
+                {
+					auto propertyType = dynamic_cast<const PropertyType*>(fieldInfo.GetType());
+                    if (propertyType->GetValueType() == &TypeOf(String))
+					{
+						String value;
+                        auto valueProxy = propertyType->GetValueProxy(fieldInfo.GetValuePtr(object));
+						valueProxy->GetValuePtr(&value);
+						return value;
+                    }
+                }
             }
         }
 

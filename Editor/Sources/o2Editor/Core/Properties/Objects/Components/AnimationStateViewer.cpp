@@ -75,10 +75,14 @@ namespace Editor
 
         if (!targetObjets.IsEmpty())
         {
-            mSubscribedPlayer = Ref(&dynamic_cast<IAnimationState*>(targetObjets.Last().first)->GetPlayer());
+			auto animationState = Ref(dynamic_cast<IAnimationState*>(targetObjets.Last().first));
+            mSubscribedPlayer = Ref(&animationState->GetPlayer());
 
             if (mSubscribedPlayer)
                 mSubscribedPlayer.Lock()->onUpdate += THIS_FUNC(OnAnimationUpdated);
+
+            mLooped->value = animationState->IsLooped();
+			mEditBtn->enabled = DynamicCast<AnimationState>(animationState) != nullptr;
         }
     }
 

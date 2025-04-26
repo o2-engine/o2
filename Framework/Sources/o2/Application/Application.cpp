@@ -269,7 +269,7 @@ namespace o2
     void Application::DrawUIManager()
     {
         PROFILE_SAMPLE_FUNC();
-        mUIManager->Draw();
+        mUIManager->DrawCurrentLayerTopWidgets();
     }
 
     void Application::DrawDebug()

@@ -146,10 +146,10 @@ namespace Editor
                 mObjectViewer = o2EditorProperties.CreateObjectViewer(mBuiltObjectType, mValuesPath, onChangeCompleted,
                                                                       onChanged);
 
-                mObjectViewer->CreateSpoiler(Ref(this));
+                mObjectViewer->CheckCreateSpoiler(Ref(this));
                 mObjectViewer->SetParentContext(mParentContext.Lock());
                 mObjectViewer->SetHeaderEnabled(!mNoHeader);
-                mObjectViewer->SetExpanded(mExpanded);
+                mObjectViewer->SetExpanded(mExpanded, true);
 
                 mCaption->SetEnabledForcible(false);
                 mHeaderContainer->SetInternalParent(mObjectViewer->GetSpoiler());
@@ -200,9 +200,9 @@ namespace Editor
 
         if (fieldInfo)
         {
-            mExpanded = fieldInfo->HasAttribute<ExpandedByDefaultAttribute>();
-            mNoHeader = fieldInfo->HasAttribute<NoHeaderAttribute>();
-            mDontDeleteEnabled = fieldInfo->HasAttribute<DontDeleteAttribute>();
+			mNoHeader = fieldInfo->HasAttribute<NoHeaderAttribute>();
+			mExpanded = fieldInfo->HasAttribute<ExpandedByDefaultAttribute>() || mNoHeader;
+            mDontDeleteEnabled = fieldInfo->HasAttribute<DontDeleteAttribute>() && !mNoHeader;
         }
     }
 
@@ -237,22 +237,22 @@ namespace Editor
         mAvailableMultipleTypes = !mBasicObjectType->GetDerivedTypes().IsEmpty();
     }
 
-    void ObjectPtrProperty::Expand()
+	void ObjectPtrProperty::Expand(bool forcible /*= false*/)
     {
-        SetExpanded(true);
+        SetExpanded(true, forcible);
     }
 
-    void ObjectPtrProperty::Collapse()
+    void ObjectPtrProperty::Collapse(bool forcible /*= false*/)
     {
-        SetExpanded(false);
+        SetExpanded(false, forcible);
     }
 
-    void ObjectPtrProperty::SetExpanded(bool expanded)
+    void ObjectPtrProperty::SetExpanded(bool expanded, bool forcible /*= false*/)
     {
         mExpanded = expanded;
 
         if (mObjectViewer)
-            mObjectViewer->GetSpoiler()->SetExpanded(expanded);
+            mObjectViewer->GetSpoiler()->SetExpanded(expanded, forcible);
     }
 
     bool ObjectPtrProperty::IsExpanded() const

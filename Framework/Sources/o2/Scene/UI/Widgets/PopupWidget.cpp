@@ -4,6 +4,7 @@
 #include "o2/Scene/UI/UIManager.h"
 #include "o2/Scene/UI/WidgetLayout.h"
 #include "o2/Render/Render.h"
+#include "o2/Events/EventSystem.h"
 
 namespace o2
 {
@@ -57,7 +58,9 @@ namespace o2
     }
 
     void PopupWidget::Draw()
-    {}
+	{
+		mCurrentDrawingLayer = o2Events.GetCurrentCursorAreaEventsLayer();
+    }
 
     void PopupWidget::Show(const Ref<PopupWidget>& parent, const Vec2F& position /*= o2Input.GetCursorPos()*/)
     {
@@ -65,9 +68,13 @@ namespace o2
         {
             mParentPopup = parent;
             parent->mChildPopup = Ref(this);
+            mOpenedLayer = parent->mOpenedLayer;
         }
         else 
+        {
             mVisiblePopup = Ref(this);
+            mOpenedLayer = mCurrentDrawingLayer;
+        }
 
         Widget::Show();
 
@@ -102,7 +109,6 @@ namespace o2
         HideWithParent();
         HideWithChild();
     }
-
 
     void PopupWidget::OnCursorReleasedOutside(const Input::Cursor& cursor)
     {
@@ -155,6 +161,11 @@ namespace o2
     bool PopupWidget::IsInputTransparent() const
     {
         return false;
+    }
+
+    const WeakRef<CursorAreaEventListenersLayer>& PopupWidget::GetOpenedLayer() const
+    {
+        return mOpenedLayer;
     }
 
     void PopupWidget::CheckClipping(const RectF& clipArea)

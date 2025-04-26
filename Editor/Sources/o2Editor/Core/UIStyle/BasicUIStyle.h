@@ -40,7 +40,8 @@ namespace o2
         void RebuildExpandButton();
         void RebuildExpandDownButton();
         void RebuildExpandWhiteButton();
-        void RebuildSpoiler();
+		void RebuildSpoiler();
+		void RebuildEditBoxDropDownStyle();
 
         IOBJECT(BasicUIStyleBuilder);
     };
@@ -92,6 +93,7 @@ CLASS_METHODS_META(o2::BasicUIStyleBuilder)
     FUNCTION().PUBLIC().SIGNATURE(void, RebuildExpandDownButton);
     FUNCTION().PUBLIC().SIGNATURE(void, RebuildExpandWhiteButton);
     FUNCTION().PUBLIC().SIGNATURE(void, RebuildSpoiler);
+    FUNCTION().PUBLIC().SIGNATURE(void, RebuildEditBoxDropDownStyle);
 }
 END_META;
 // --- END META ---

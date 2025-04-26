@@ -57,6 +57,9 @@ namespace o2
         // Returns all states
         const Vector<Ref<AnimationGraphState>>& GetStates() const;
 
+        // Returns all states names
+        Vector<String> GetStatesNames() const;
+
         // Calculates path between two states
         Vector<Ref<AnimationGraphTransition>> CalculatePath(const Ref<AnimationGraphState>& from, const Ref<AnimationGraphState>& to);
 
@@ -116,6 +119,7 @@ CLASS_METHODS_META(o2::AnimationStateGraphAsset)
     FUNCTION().PUBLIC().SIGNATURE(Ref<AnimationGraphState>, GetState, const String&);
     FUNCTION().PUBLIC().SIGNATURE(Ref<AnimationGraphState>, GetState, const UID&);
     FUNCTION().PUBLIC().SIGNATURE(const Vector<Ref<AnimationGraphState>>&, GetStates);
+    FUNCTION().PUBLIC().SIGNATURE(Vector<String>, GetStatesNames);
     FUNCTION().PUBLIC().SIGNATURE(Vector<Ref<AnimationGraphTransition>>, CalculatePath, const Ref<AnimationGraphState>&, const Ref<AnimationGraphState>&);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(Vector<String>, GetFileExtensions);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(int, GetEditorSorting);

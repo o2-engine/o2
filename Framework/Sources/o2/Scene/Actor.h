@@ -238,6 +238,9 @@ namespace o2
         // Searches actor with id in this and this children @SCRIPTABLE
         virtual Ref<Actor> FindActorById(SceneUID id);
 
+		// Recursively invokes function for each actor in this and children
+		virtual void ForEachActor(const Function<bool(Actor&)>& func);
+
         // And new component
         template<typename _type>
         Ref<_type> AddComponent();
@@ -919,6 +922,7 @@ CLASS_METHODS_META(o2::Actor)
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, RemoveChild, const Ref<Actor>&, bool);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, RemoveAllChildren);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(Ref<Actor>, FindActorById, SceneUID);
+    FUNCTION().PUBLIC().SIGNATURE(void, ForEachActor, const Function<bool(Actor&)>&);
     FUNCTION().PUBLIC().SIGNATURE(Ref<Component>, AddComponent, const Ref<Component>&);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, RemoveComponent, const Ref<Component>&);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, RemoveAllComponents);

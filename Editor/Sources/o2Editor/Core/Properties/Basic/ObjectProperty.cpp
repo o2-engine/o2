@@ -130,10 +130,10 @@ namespace Editor
                                                                       THIS_FUNC(OnPropertyChanged),
                                                                       onChanged);
 
-                mObjectViewer->CreateSpoiler(Ref(this));
+                mObjectViewer->CheckCreateSpoiler(Ref(this));
                 mObjectViewer->SetParentContext(mParentContext.Lock());
                 mObjectViewer->SetHeaderEnabled(!mNoHeader);
-                mObjectViewer->SetExpanded(mExpanded);
+                mObjectViewer->SetExpanded(mExpanded, true);
                 mObjectViewer->GetSpoiler()->SetCaption(mCaption);
             }
         }
@@ -185,22 +185,22 @@ namespace Editor
         return mRemoveBtn;
     }
 
-    void ObjectProperty::Expand()
+	void ObjectProperty::Expand(bool forcible /*= false*/)
     {
-        SetExpanded(true);
+        SetExpanded(true, forcible);
     }
 
-    void ObjectProperty::Collapse()
+    void ObjectProperty::Collapse(bool forcible /*= false*/)
     {
-        SetExpanded(false);
+        SetExpanded(false, forcible);
     }
 
-    void ObjectProperty::SetExpanded(bool expanded)
+    void ObjectProperty::SetExpanded(bool expanded, bool forcible /*= false*/)
     {
         mExpanded = expanded;
 
         if (mObjectViewer)
-            mObjectViewer->GetSpoiler()->SetExpanded(expanded);
+            mObjectViewer->GetSpoiler()->SetExpanded(expanded, forcible);
     }
 
     bool ObjectProperty::IsExpanded() const

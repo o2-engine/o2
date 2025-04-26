@@ -175,7 +175,15 @@ namespace o2
         mCornersColors[(int)corner] = color;
     }
 
-    Color4 Sprite::GetCornerColor(Corner corner) const
+	void Sprite::SetCornerColors(const Color4& leftTop, const Color4& rightTop, const Color4& rightBottom, const Color4& leftBottom)
+	{
+		mCornersColors[(int)Corner::LeftTop] = leftTop;
+		mCornersColors[(int)Corner::RightTop] = rightTop;
+		mCornersColors[(int)Corner::RightBottom] = rightBottom;
+		mCornersColors[(int)Corner::LeftBottom] = leftBottom;
+	}
+
+	Color4 Sprite::GetCornerColor(Corner corner) const
     {
         return mCornersColors[(int)corner];
     }
