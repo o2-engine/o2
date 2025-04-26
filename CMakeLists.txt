@@ -1,4 +1,8 @@
-project(o2 LANGUAGES C CXX OBJC OBJCXX)
+if(APPLE)
+    project(o2 LANGUAGES C CXX OBJC OBJCXX)
+else()
+    project(o2 LANGUAGES C CXX)
+endif()
 
 set(CMAKE_CXX_STANDARD 20)
 
