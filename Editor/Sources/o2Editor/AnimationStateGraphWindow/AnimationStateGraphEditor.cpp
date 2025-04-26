@@ -161,11 +161,11 @@ namespace Editor
 			Vec2F from = mContextMenuState->state.Lock()->GetPosition();
 			Vec2F to = ScreenToLocalPoint(o2Input.cursorPos);
 
-			DrawTransition(from, to, StateTransition::Status::None, 0.0f);
+			DrawTransition(from, to, StateTransition::TransitionStatus::None, 0.0f);
 		}
 	}
 
-	void AnimationStateGraphEditor::DrawTransition(Vec2F from, Vec2F to, StateTransition::Status status, float progress, bool selected)
+	void AnimationStateGraphEditor::DrawTransition(Vec2F from, Vec2F to, StateTransition::TransitionStatus status, float progress, bool selected)
 	{
 		Vec2F dir = (to - from).Normalized();
 		Vec2F norm = dir.Perpendicular();
@@ -188,7 +188,7 @@ namespace Editor
 		Basis arrowBasis(center, norm*arrowSize, dir*arrowSize);
 		Vector<Vec2F> arrowWorld = arrowLocal.Convert<Vec2F>([&](const Vec2F& p) { return arrowBasis.Transform(p) + norm*offset; });
 
-		if (status == StateTransition::Status::None)
+		if (status == StateTransition::TransitionStatus::None)
 		{
 			Color4 lineColor = selected ? colorSelected : colorRegular;
 			o2Render.DrawAALine(from, to, lineColor, width);
@@ -198,7 +198,7 @@ namespace Editor
 		{
 			Vec2F progressPoint = from;
 
-			if (status == StateTransition::Status::Started)
+			if (status == StateTransition::TransitionStatus::Started)
 				progressPoint = Math::Lerp(from, to, progress);
 			else
 				progress = 0.0f;
@@ -443,7 +443,7 @@ namespace Editor
 
 			Ref<StateTransition> stateTransition;
 			if (widget->transitionsMap.TryGetValue(transition, stateTransition))
-				stateTransition->SetStatus(StateTransition::Status::Started);
+				stateTransition->SetStatus(StateTransition::TransitionStatus::Started);
 		}
 	}
 
@@ -456,7 +456,7 @@ namespace Editor
 
 			Ref<StateTransition> stateTransition;
 			if (widget->transitionsMap.TryGetValue(transition, stateTransition))
-				stateTransition->SetStatus(StateTransition::Status::None);
+				stateTransition->SetStatus(StateTransition::TransitionStatus::None);
 		}
 	}
 
@@ -472,7 +472,7 @@ namespace Editor
 			{
 				Ref<StateTransition> stateTransition;
 				if (widget->transitionsMap.TryGetValue(transition, stateTransition))
-					stateTransition->SetStatus(StateTransition::Status::Planned);
+					stateTransition->SetStatus(StateTransition::TransitionStatus::Planned);
 			}
 		}
 	}
@@ -486,7 +486,7 @@ namespace Editor
 
 			Ref<StateTransition> stateTransition;
 			if (widget->transitionsMap.TryGetValue(transition, stateTransition))
-				stateTransition->SetStatus(StateTransition::Status::None);
+				stateTransition->SetStatus(StateTransition::TransitionStatus::None);
 		}
 
 		// Also update destination state if needed
@@ -784,7 +784,7 @@ namespace Editor
 		OnDrawn();
 	}
 
-	void AnimationStateGraphEditor::StateTransition::SetStatus(Status status)
+	void AnimationStateGraphEditor::StateTransition::SetStatus(TransitionStatus status)
 	{
     	this->status = status;
 	}
@@ -940,7 +940,7 @@ namespace Editor
 DECLARE_TEMPLATE_CLASS(o2::LinkRef<Editor::AnimationStateGraphEditor>);
 // --- META ---
 
-ENUM_META(Editor::AnimationStateGraphEditor::StateTransition::Status)
+ENUM_META(Editor::AnimationStateGraphEditor::StateTransition::TransitionStatus)
 {
     ENUM_ENTRY(None);
     ENUM_ENTRY(Planned);
