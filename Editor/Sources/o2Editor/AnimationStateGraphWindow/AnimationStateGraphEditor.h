@@ -107,14 +107,14 @@ namespace Editor
 		// --------------------------------------------------------------------
         struct StateTransition : public RefCounterable, public IObject, public CursorAreaEventsListener
         {
-	        enum class Status { None, Planned, Started };
+	        enum class TransitionStatus { None, Planned, Started };
 
 			WeakRef<StateWidget> owner;       // Owner state widget
 			WeakRef<StateWidget> destination; // Destination state widget
 
 			Ref<AnimationGraphTransition> transition; // Animation transition reference @NO_HEADER
 
-        	Status status = Status::None;
+        	TransitionStatus status = TransitionStatus::None;
 			
 			bool mIsSelected = false; // True when transition is selected
 
@@ -126,7 +126,7 @@ namespace Editor
             void Draw();
 
         	// Sets transition animation status
-        	void SetStatus(Status status);
+        	void SetStatus(TransitionStatus status);
 
 			// Sets selected state
 			void SetSelected(bool selected);
@@ -293,7 +293,7 @@ namespace Editor
         void DrawTransitions();
 
 		// Draws single transition
-        static void DrawTransition(Vec2F from, Vec2F to, StateTransition::Status status, float progress, bool selected = false);
+        static void DrawTransition(Vec2F from, Vec2F to, StateTransition::TransitionStatus status, float progress, bool selected = false);
 
         // Initializes states list
         void InitializeStates();
@@ -350,7 +350,7 @@ namespace Editor
 }
 // --- META ---
 
-PRE_ENUM_META(Editor::AnimationStateGraphEditor::StateTransition::Status);
+PRE_ENUM_META(Editor::AnimationStateGraphEditor::StateTransition::TransitionStatus);
 
 PRE_ENUM_META(Editor::AnimationStateGraphEditor::StateWidget::TransitionState);
 
@@ -410,7 +410,7 @@ CLASS_METHODS_META(Editor::AnimationStateGraphEditor)
     FUNCTION().PROTECTED().SIGNATURE(void, DrawHandles);
     FUNCTION().PROTECTED().SIGNATURE(void, DrawSelection);
     FUNCTION().PROTECTED().SIGNATURE(void, DrawTransitions);
-    FUNCTION().PROTECTED().SIGNATURE_STATIC(void, DrawTransition, Vec2F, Vec2F, StateTransition::Status, float, bool);
+    FUNCTION().PROTECTED().SIGNATURE_STATIC(void, DrawTransition, Vec2F, Vec2F, StateTransition::TransitionStatus, float, bool);
     FUNCTION().PROTECTED().SIGNATURE(void, InitializeStates);
     FUNCTION().PROTECTED().SIGNATURE(void, OnStateGraphStateStarted, const Ref<AnimationStateGraphComponent::StatePlayer>&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnStateGraphStateFinished, const Ref<AnimationStateGraphComponent::StatePlayer>&);
@@ -468,7 +468,7 @@ CLASS_FIELDS_META(Editor::AnimationStateGraphEditor::StateTransition)
     FIELD().PUBLIC().NAME(owner);
     FIELD().PUBLIC().NAME(destination);
     FIELD().PUBLIC().NO_HEADER_ATTRIBUTE().NAME(transition);
-    FIELD().PUBLIC().DEFAULT_VALUE(Status::None).NAME(status);
+    FIELD().PUBLIC().DEFAULT_VALUE(TransitionStatus::None).NAME(status);
     FIELD().PUBLIC().DEFAULT_VALUE(false).NAME(mIsSelected);
 }
 END_META;
@@ -477,7 +477,7 @@ CLASS_METHODS_META(Editor::AnimationStateGraphEditor::StateTransition)
 
     FUNCTION().PUBLIC().CONSTRUCTOR();
     FUNCTION().PUBLIC().SIGNATURE(void, Draw);
-    FUNCTION().PUBLIC().SIGNATURE(void, SetStatus, Status);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetStatus, TransitionStatus);
     FUNCTION().PUBLIC().SIGNATURE(void, SetSelected, bool);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsSelected);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsUnderPoint, const Vec2F&);
