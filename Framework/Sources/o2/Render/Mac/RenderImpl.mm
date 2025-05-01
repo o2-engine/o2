@@ -263,13 +263,19 @@ namespace o2
     {}
 
     void Render::PlatformEnableScissorTest()
-    {}
+    {
+        mScissorEnabled = true;
+    }
 
     void Render::PlatformDisableScissorTest()
-    {}
+    {
+        mScissorEnabled = false;
+    }
 
     void Render::PlatformSetScissorRect(const RectI& rect)
-    {}
+    {
+        mScissorRect = rect;
+    }
 
     void Render::PlatformBindRenderTarget(const TextureRef& renderTarget)
     {}
