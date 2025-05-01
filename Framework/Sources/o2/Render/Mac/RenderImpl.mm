@@ -237,12 +237,14 @@ namespace o2
             dstVertexBuffer[i].tv = 1.0f - dstVertexBuffer[i].tv;
     }
 
-    void Render::PlatformSetupCameraTransforms(float* matrix)
+    void Render::PlatformSetupCameraTransforms(float* modelMatrix, float* viewMatrix, float* projMatrix)
     {
-        memcpy(mMVPMatrix, matrix, sizeof(float)*16);
-        
         if (mCurrentRenderTarget)
-            mMVPMatrix[5] = -mMVPMatrix[5]; // Flip by Y
+            modelMatrix[5] = -modelMatrix[5]; // Flip by Y for render targets
+        
+        float finalCamMtx[16];
+        Math::mtxMultiply(finalCamMtx, modelMatrix, viewMatrix);
+        Math::mtxMultiply(mMVPMatrix, projMatrix, finalCamMtx);
     }
 
     void Render::PlatformBeginStencilDrawing()

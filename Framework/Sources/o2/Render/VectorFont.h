@@ -124,6 +124,7 @@ namespace o2
 
     protected:
         static const int mInitialTextureSize = 1024;
+        static const int mResolution = 92;
 
         String  mFileName;     // Source file name
         FT_Face mFreeTypeFace; // Free Type font face

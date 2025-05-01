@@ -97,7 +97,10 @@ namespace o2
         void OrthoProjMatrix(float* mat, float left, float right, float bottom, float top, float nearz, float farz);
 
         // Calculates tangent vector on ellipse that located on axis begin-end at point middle
-        Vec2F CalculateEllipseTangent(const Vec2F& begin, const Vec2F& middle, const Vec2F& end); 
+        Vec2F CalculateEllipseTangent(const Vec2F& begin, const Vec2F& middle, const Vec2F& end);
+        
+        // Multiplicates matrixes 4x4
+        void mtxMultiply(float* ret, const float* lhs, const float* rhs);
         
         template<typename T>
         T Sign(const T& value)

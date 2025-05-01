@@ -133,7 +133,7 @@
 
 - (void)mouseDragged:(NSEvent *)event
 {
-    o2Input.OnCursorMoved([self getMousePos:event]);
+    o2Input.OnCursorMoved([self getMousePos:event], 0);
 }
 
 - (void)mouseMoved:(NSEvent *)event
@@ -154,6 +154,11 @@
 - (void)rightMouseUp:(NSEvent *)event
 {
     o2Input.OnAltCursorReleased();
+}
+
+- (void)rightMouseDragged:(NSEvent *)event
+{
+    o2Input.OnCursorMoved([self getMousePos:event], 0);
 }
 
 - (void)scrollWheel:(NSEvent *)event

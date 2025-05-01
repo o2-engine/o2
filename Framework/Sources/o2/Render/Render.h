@@ -427,7 +427,7 @@ namespace o2
         void UpdateCameraTransforms();
 
         // Platform specific setup camera transforms
-        void PlatformSetupCameraTransforms(float* matrix);
+        void PlatformSetupCameraTransforms(float* modelMatrix, float* viewMatrix, float* projMatrix);
 
         // Platform specific begin of stencil drawing
         void PlatformBeginStencilDrawing();

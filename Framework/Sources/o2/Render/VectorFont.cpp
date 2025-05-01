@@ -112,19 +112,18 @@ namespace o2
 
     float VectorFont::GetHeightPx(int height) const
     {
-        float res = 0;
-        if (mHeights.TryGetValue(height, res))
-            return res;
+        float result = 0;
+        if (mHeights.TryGetValue(height, result))
+            return result;
 
-        Vec2I dpi = o2Render.GetDPI();
-        FT_Set_Char_Size(mFreeTypeFace, 0, height*64, dpi.x, dpi.y);
+        FT_Set_Char_Size(mFreeTypeFace, 0, height*64, mResolution, mResolution);
 
         FT_Load_Char(mFreeTypeFace, 'A', FT_LOAD_RENDER);
 
-        res = mFreeTypeFace->glyph->metrics.horiBearingY/64.0f;
-        mHeights.Add(height, res);
+        result = mFreeTypeFace->glyph->metrics.horiBearingY/64.0f;
+        mHeights.Add(height, result);
 
-        return res;
+        return result;
     }
 
     float VectorFont::GetLineHeightPx(int height) const
@@ -206,9 +205,8 @@ namespace o2
     {
         if (!mFreeTypeFace)
             return;
-        
-        Vec2I dpi = o2Render.GetDPI();
-        FT_Set_Char_Size(mFreeTypeFace, 0, height * 64, dpi.x, dpi.y);
+
+        FT_Set_Char_Size(mFreeTypeFace, 0, height * 64, mResolution, mResolution);
 
         Vec2I border;
         for (auto& effect : mEffects)

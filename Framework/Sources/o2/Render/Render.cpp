@@ -249,33 +249,6 @@ namespace o2
         ResetState();
     }
 
-    void mtxMultiply(float* ret, const float* lhs, const float* rhs)
-    {
-        // [ 0 4  8 12 ]   [ 0 4  8 12 ]
-        // [ 1 5  9 13 ] x [ 1 5  9 13 ]
-        // [ 2 6 10 14 ]   [ 2 6 10 14 ]
-        // [ 3 7 11 15 ]   [ 3 7 11 15 ]
-        ret[0] = lhs[0] * rhs[0] + lhs[4] * rhs[1] + lhs[8] * rhs[2] + lhs[12] * rhs[3];
-        ret[1] = lhs[1] * rhs[0] + lhs[5] * rhs[1] + lhs[9] * rhs[2] + lhs[13] * rhs[3];
-        ret[2] = lhs[2] * rhs[0] + lhs[6] * rhs[1] + lhs[10] * rhs[2] + lhs[14] * rhs[3];
-        ret[3] = lhs[3] * rhs[0] + lhs[7] * rhs[1] + lhs[11] * rhs[2] + lhs[15] * rhs[3];
-
-        ret[4] = lhs[0] * rhs[4] + lhs[4] * rhs[5] + lhs[8] * rhs[6] + lhs[12] * rhs[7];
-        ret[5] = lhs[1] * rhs[4] + lhs[5] * rhs[5] + lhs[9] * rhs[6] + lhs[13] * rhs[7];
-        ret[6] = lhs[2] * rhs[4] + lhs[6] * rhs[5] + lhs[10] * rhs[6] + lhs[14] * rhs[7];
-        ret[7] = lhs[3] * rhs[4] + lhs[7] * rhs[5] + lhs[11] * rhs[6] + lhs[15] * rhs[7];
-
-        ret[8] = lhs[0] * rhs[8] + lhs[4] * rhs[9] + lhs[8] * rhs[10] + lhs[12] * rhs[11];
-        ret[9] = lhs[1] * rhs[8] + lhs[5] * rhs[9] + lhs[9] * rhs[10] + lhs[13] * rhs[11];
-        ret[10] = lhs[2] * rhs[8] + lhs[6] * rhs[9] + lhs[10] * rhs[10] + lhs[14] * rhs[11];
-        ret[11] = lhs[3] * rhs[8] + lhs[7] * rhs[9] + lhs[11] * rhs[10] + lhs[15] * rhs[11];
-
-        ret[12] = lhs[0] * rhs[12] + lhs[4] * rhs[13] + lhs[8] * rhs[14] + lhs[12] * rhs[15];
-        ret[13] = lhs[1] * rhs[12] + lhs[5] * rhs[13] + lhs[9] * rhs[14] + lhs[13] * rhs[15];
-        ret[14] = lhs[2] * rhs[12] + lhs[6] * rhs[13] + lhs[10] * rhs[14] + lhs[14] * rhs[15];
-        ret[15] = lhs[3] * rhs[12] + lhs[7] * rhs[13] + lhs[11] * rhs[14] + lhs[15] * rhs[15];
-    }
-
     void Render::UpdateCameraTransforms()
     {
         PROFILE_SAMPLE_FUNC();
@@ -288,9 +261,11 @@ namespace o2
         Vec2F resf = (Vec2F)mCurrentResolution;
         Vec2F halfRes(Math::Round(resf.x / 2.0f), Math::Round(resf.y / 2.0f));
 
-        float projMat[16];
-        Math::OrthoProjMatrix(projMat, 0.0f, (float)mCurrentResolution.x, (float)mCurrentResolution.y, 0.0f, 0.0f, 10.0f);
+        // Projection matrix
+        float projMatrix[16];
+        Math::OrthoProjMatrix(projMatrix, 0.0f, (float)mCurrentResolution.x, (float)mCurrentResolution.y, 0.0f, 0.0f, 10.0f);
 
+        // Model matrix
         float modelMatrix[16] =
         {
             1,         0,          0, 0,
@@ -299,12 +274,13 @@ namespace o2
             halfRes.x, halfRes.y, -1, 1
         };
 
+        // View matrix
         Basis defaultCameraBasis((Vec2F)mCurrentResolution * -0.5f, Vec2F::Right() * resf.x, Vec2F().Up() * resf.y);
         Basis camTransf = mCamera.GetBasis().Inverted() * defaultCameraBasis;
         mViewScale = Vec2F(camTransf.xv.Length(), camTransf.yv.Length());
         mInvViewScale = Vec2F(1.0f / mViewScale.x, 1.0f / mViewScale.y);
 
-        float camTransfMatr[16] =
+        float viewMatrix[16] =
         {
             camTransf.xv.x,     camTransf.xv.y,     0, 0,
             camTransf.yv.x,     camTransf.yv.y,     0, 0,
@@ -312,12 +288,7 @@ namespace o2
             camTransf.origin.x, camTransf.origin.y, 0, 1
         };
 
-        float mvp[16];
-        float finalCamMtx[16];
-        mtxMultiply(finalCamMtx, modelMatrix, camTransfMatr);
-        mtxMultiply(mvp, projMat, finalCamMtx);
-
-        PlatformSetupCameraTransforms(mvp);
+        PlatformSetupCameraTransforms(modelMatrix, viewMatrix, projMatrix);
 
         mPrevCamera = mCamera;
         mPrevResolution = mCurrentResolution;

@@ -47,6 +47,9 @@ namespace o2
 
         // Converts from local point from screen coordinates
         Vec2F ScreenFromLocal(const Vec2F& point) const;
+        
+        // Returns local to world transform
+        const Basis& GetLocalToWorldTransform() const;
 
         // Updates and processes events
         void Update();

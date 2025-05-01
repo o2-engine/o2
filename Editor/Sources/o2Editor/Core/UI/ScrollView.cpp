@@ -196,12 +196,12 @@ namespace Editor
     Basis ScrollView::GetCameraScreenToLocalTransform(const Camera& camera) const
     {
         RectF rectangle = layout->worldRect;
-        Basis identityCamTransform = Transform(rectangle.Size()).basis;
+        Basis identityCamTransform = Basis(rectangle);
         Basis cameraTransform = camera.basis;
 
         Basis sceneToCamTransform = identityCamTransform.Inverted()*cameraTransform;
 
-        return Basis::Translated(rectangle.Center()*-1.0f)*sceneToCamTransform;
+        return sceneToCamTransform;
     }
 
     void ScrollView::UpdateLocalScreenTransforms()
