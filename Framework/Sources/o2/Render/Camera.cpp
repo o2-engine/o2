@@ -12,12 +12,6 @@ namespace o2
     {
         if (size == Vec2F() && Render::IsSingletonInitialzed())
             SetSize(o2Render.GetCurrentResolution());
-        
-        if (Application::IsSingletonInitialzed())
-        {
-            mScale.x = 1.0f/o2Application.GetGraphicsScale();
-            mScale.y = 1.0f/o2Application.GetGraphicsScale();
-        }
     }
 
     bool Camera::operator==(const Camera& other) const

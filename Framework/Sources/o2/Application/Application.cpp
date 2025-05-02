@@ -237,6 +237,9 @@ namespace o2
 
         mMainListenersLayer->OnEndDraw();
         mMainListenersLayer->OnDrawn(Camera::Default().GetBasis());
+        
+        if (o2Input.IsKeyDown(VK_F1))
+            mRender->DrawCross(o2Input.cursorPos.Get(), 20, Color4::Red());
 
         mRender->End();
 

@@ -164,21 +164,25 @@ namespace o2
             auto renderEncoder = [RenderDevice::commandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
             renderEncoder.label = @"Default";
             
-            [renderEncoder setViewport:(MTLViewport){0.0, 0.0, (double)mCurrentResolution.x, (double)mCurrentResolution.y, -1.0, 1.0 }];
+            float scale = mCurrentRenderTarget ? 1.0f : o2Application.GetGraphicsScale();
+            [renderEncoder setViewport:(MTLViewport){0.0, 0.0, (double)(mCurrentResolution.x * scale), (double)(mCurrentResolution.y * scale), -1.0, 1.0 }];
             
             if (mScissorEnabled)
             {
-                Basis scissorRect(mScissorRect);
+                Vec2I resolution = mCurrentResolution*scale;
+                RectF scissorRectF = RectF(mScissorRect.left*scale, mScissorRect.top*scale, mScissorRect.right*scale, mScissorRect.bottom*scale)
+                    .Move(resolution/2);
                 
-                RectI clipRect = scissorRect.AABB().Move(Vec2I(mCurrentResolution.x/2, mCurrentResolution.y/2));
-                clipRect.left = Math::Clamp(clipRect.left, 0, mCurrentResolution.x);
-                clipRect.right = Math::Clamp(clipRect.right, 0, mCurrentResolution.x);
-                clipRect.bottom = Math::Clamp(clipRect.bottom, 0, mCurrentResolution.y);
-                clipRect.top = Math::Clamp(clipRect.top, 0, mCurrentResolution.y);
+                RectI scissorRect = scissorRectF;
+                
+                scissorRect.left = Math::Clamp(scissorRect.left, 0, resolution.x);
+                scissorRect.right = Math::Clamp(scissorRect.right, 0, resolution.x);
+                scissorRect.bottom = Math::Clamp(scissorRect.bottom, 0, resolution.y);
+                scissorRect.top = Math::Clamp(scissorRect.top, 0, resolution.y);
                 
                 [renderEncoder setScissorRect:(MTLScissorRect){
-                    (ULong)clipRect.left, (ULong)mCurrentResolution.y - clipRect.bottom - clipRect.Height(),
-                    (ULong)clipRect.Width(), (ULong)clipRect.Height()
+                    (ULong)scissorRect.left, (ULong)resolution.y - scissorRect.bottom - scissorRect.Height(),
+                    (ULong)scissorRect.Width(), (ULong)scissorRect.Height()
                 }];
             }
             
@@ -186,7 +190,8 @@ namespace o2
             
             [renderEncoder setVertexBuffer:RenderDevice::vertexBuffer offset:mVertexBufferOffset atIndex:0];
             
-            if (mCurrentDrawTexture) {
+            if (mCurrentDrawTexture)
+            {
                 [renderEncoder setFragmentTexture:mCurrentDrawTexture->mImpl->texture atIndex:0];
             }
             else {

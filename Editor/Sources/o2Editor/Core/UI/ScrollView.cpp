@@ -325,6 +325,9 @@ namespace Editor
                                   xTen ? mGridColor : cellColorSmoothed);
             }
         }
+        
+        if (o2Input.IsKeyDown(VK_F1))
+            o2Render.DrawCross(ScreenToLocalPoint(o2Input.GetCursorPos()), 200, Color4::Green());
     }
 
     void ScrollView::OnCameraTransformChanged()

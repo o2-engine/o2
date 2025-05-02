@@ -25,7 +25,8 @@
 
 - (void)mtkView:(nonnull MTKView *)view drawableSizeWillChange:(CGSize)size
 {
-    o2::ApplicationPlatformWrapper::OnWindowRsized(o2::Vec2I(size.width, size.height));
+    float scale = o2Application.GetGraphicsScale();
+    o2::ApplicationPlatformWrapper::OnWindowRsized(o2::Vec2I(size.width/scale, size.height/scale));
 }
 
 @end
@@ -120,8 +121,8 @@
     NSRect viewRectPixels = [self convertRectToBacking:viewRectPoints];
     
     float scale = o2Application.GetGraphicsScale();
-    auto screenPoint = o2::Vec2F(o2::Math::Floor(pt.x*scale - viewRectPixels.size.width/2),
-                                 o2::Math::Floor(pt.y*scale - viewRectPixels.size.height/2));
+    auto screenPoint = o2::Vec2F(o2::Math::Floor(pt.x - viewRectPixels.size.width/2/scale),
+                                 o2::Math::Floor(pt.y - viewRectPixels.size.height/2/scale));
     
     return screenPoint;
 }

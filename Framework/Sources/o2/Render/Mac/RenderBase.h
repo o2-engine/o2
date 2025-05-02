@@ -13,7 +13,7 @@ namespace o2
     protected:
         UInt mVertexBufferSize = 1000000; // Maximum size of vertex buffer
         UInt mIndexBufferSize = 3000000;  // Maximum size of index buffer
-        UInt mUniformBufferSize = 2000;    // Maximum size of uniforms buffer
+        UInt mUniformBufferSize = 20000;    // Maximum size of uniforms buffer
         
         UInt mVertexBufferOffset = 0;
         UInt mIndexBufferOffset = 0;
