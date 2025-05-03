@@ -53,6 +53,6 @@ namespace Editor
     void UIRoot::OnApplicationSized()
     {
         *mRootWidget->layout = WidgetLayout::Based(BaseCorner::Center, (Vec2F)o2Application.GetContentSize());
+        mRootWidget->UpdateTransform();
     }
-
 }
