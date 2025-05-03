@@ -46,7 +46,7 @@
                 "Value": {
                     "mSize": {
                         "x": 1.0,
-                        "y": 18.700000762939454
+                        "y": 17.0
                     },
                     "mScale": {
                         "x": 1.0,
@@ -72,7 +72,7 @@
             },
             "mCaretBlinkDelay": 1.149999976158142,
             "mMultiLine": false,
-            "Id": 18233092539257903640,
+            "Id": 14508266127541491258,
             "Transform": {
                 "minSize": {
                     "x": 30.0,
@@ -105,12 +105,12 @@
                                                             "Value": {
                                                                 "mKeys": [
                                                                     {
-                                                                        "uid": 18437366104550590994,
+                                                                        "uid": 3091832535586880392,
                                                                         "rightSupportPosition": 0.08000000566244126,
                                                                         "supportsType": "Broken"
                                                                     },
                                                                     {
-                                                                        "uid": 5309883195208995529,
+                                                                        "uid": 16179409453158506096,
                                                                         "value": 1.0,
                                                                         "position": 0.20000000298023225,
                                                                         "leftSupportPosition": -0.20000000298023225,
@@ -130,7 +130,7 @@
                             "meta": {
                                 "Type": "o2::DefaultAssetMeta<o2::AnimationAsset>",
                                 "Value": {
-                                    "mId": "19936f6f47b24bef05806c4e267178cb"
+                                    "mId": "b0b1a8f2bdcc6293f9dbb7c50b68b9f3"
                                 }
                             }
                         }

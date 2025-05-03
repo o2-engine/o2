@@ -196,13 +196,7 @@ namespace Editor
             sortingCache[assetInfo] = { assetInfo->path.ToLowerCase(), assetInfo->meta->GetAssetType()->InvokeStatic<int>("GetEditorSorting") };
         }
 
-        mAssetInfos.Sort([&](const Ref<AssetInfo>& a, const Ref<AssetInfo>& b)
-                         {
-                             if (a->meta->GetAssetType() == b->meta->GetAssetType())
-                                 return sortingCache[a].first < sortingCache[b].first;
-
-                             return sortingCache[a].second > sortingCache[b].second;
-                         });
+        mAssetInfos.Sort([&](const Ref<AssetInfo>& a, const Ref<AssetInfo>& b) { return sortingCache[a].second < sortingCache[b].second; });
     }
 
     bool AssetsIconsScrollArea::IsFocusable() const

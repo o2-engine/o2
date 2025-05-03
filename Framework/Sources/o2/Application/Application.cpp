@@ -75,7 +75,12 @@ namespace o2
     void Application::OnResized(const Vec2I& size)
     {
         mWindowedSize = size;
+        
+        if (!mReady)
+            return;
+        
         mRender->OnFrameResized();
+        
         onResizing.Invoke();
         OnResizing();
         o2Events.OnApplicationSized();

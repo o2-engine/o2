@@ -3,11 +3,11 @@
         "Type": "o2::EditBox",
         "Value": {
             "Prototype": {
-                "id": "5ef05d97267026d90e3930282b63044e",
+                "id": "2d1bc9de661588a251bc2ace26e231e6",
                 "path": "Editor UI styles/O2  Edit Box singleline.proto"
             },
-            "PrototypeLink": 18361699463735310704,
-            "Id": 18363384242936881972,
+            "PrototypeLink": 8926645254524101399,
+            "Id": 14091277112788532382,
             "mName": "singleline with arrows",
             "mViewAreaLayout": {
                 "offsetMax": {
@@ -51,7 +51,7 @@
                 "Value": {
                     "mSize": {
                         "x": 1.0,
-                        "y": 18.700000762939454
+                        "y": 17.0
                     },
                     "mScale": {
                         "x": 1.0,
@@ -93,8 +93,8 @@
                             }
                         }
                     },
-                    "mUID": 17780265500988598915,
-                    "PrototypeLink": 1144532298054957297
+                    "mUID": 18243179156437349906,
+                    "PrototypeLink": 9438727374839791160
                 },
                 {
                     "mDrawable": {
@@ -119,8 +119,8 @@
                             }
                         }
                     },
-                    "mUID": 2132920985005650082,
-                    "PrototypeLink": 5501630202941640501
+                    "mUID": 10869968157201491642,
+                    "PrototypeLink": 4679136951724565477
                 },
                 {
                     "mDrawable": {
@@ -145,8 +145,8 @@
                             }
                         }
                     },
-                    "mUID": 949053511853586531,
-                    "PrototypeLink": 855029936525502237
+                    "mUID": 8070869940243471212,
+                    "PrototypeLink": 1966911780778273301
                 },
                 {
                     "layout": {
@@ -177,7 +177,7 @@
                             }
                         }
                     },
-                    "mUID": 5614247147578210767,
+                    "mUID": 7437729054232647880,
                     "mDepth": 3.0
                 }
             ],

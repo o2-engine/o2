@@ -3,7 +3,7 @@
         "Type": "Editor::ComponentProperty",
         "Value": {
             "mName": "standard",
-            "Id": 15854609553621531130,
+            "Id": 2825910129889791349,
             "Transform": {
                 "minSize": {
                     "x": 0.0,
@@ -15,7 +15,7 @@
                     "Type": "o2::Widget",
                     "Data": {
                         "mName": "container",
-                        "Id": 9367237417040710301,
+                        "Id": 7726582733021293817,
                         "Transform": {
                             "anchorMax": {
                                 "x": 1.0,
@@ -31,7 +31,7 @@
                                 "Type": "o2::HorizontalLayout",
                                 "Data": {
                                     "mName": "layout",
-                                    "Id": 12833232446117114988,
+                                    "Id": 12351285375484132825,
                                     "Transform": {
                                         "anchorMax": {
                                             "x": 1.0,
@@ -48,7 +48,7 @@
                                             "Data": {
                                                 "mName": "box",
                                                 "mIsFocusable": true,
-                                                "Id": 8736709005334315666,
+                                                "Id": 14617071365094760025,
                                                 "Transform": {
                                                     "anchorMax": {
                                                         "x": 1.0,
@@ -91,7 +91,7 @@
                                                                     }
                                                                 }
                                                             },
-                                                            "mUID": 5161932398631444197
+                                                            "mUID": 7502246880861722008
                                                         }
                                                     },
                                                     {
@@ -130,7 +130,7 @@
                                                                     }
                                                                 }
                                                             },
-                                                            "mUID": 8245829412009998179,
+                                                            "mUID": 12151393434705130188,
                                                             "mTransparency": 0.0,
                                                             "mDepth": 1.0
                                                         }
@@ -171,7 +171,7 @@
                                                                     }
                                                                 }
                                                             },
-                                                            "mUID": 10838776767044328615,
+                                                            "mUID": 15334879539464380978,
                                                             "mTransparency": 0.0,
                                                             "mDepth": 2.0
                                                         }
@@ -208,7 +208,7 @@
                                                                     "mDotsEndings": true
                                                                 }
                                                             },
-                                                            "mUID": 8631424537122937923,
+                                                            "mUID": 10751088145981727125,
                                                             "mDepth": 3.0
                                                         }
                                                     }
@@ -236,12 +236,12 @@
                                                                                                 "Value": {
                                                                                                     "mKeys": [
                                                                                                         {
-                                                                                                            "uid": 16189492456486568257,
+                                                                                                            "uid": 1715691987689528399,
                                                                                                             "rightSupportPosition": 0.020000001415610315,
                                                                                                             "supportsType": "Broken"
                                                                                                         },
                                                                                                         {
-                                                                                                            "uid": 8653377237679906410,
+                                                                                                            "uid": 18064661161782126723,
                                                                                                             "value": 1.0,
                                                                                                             "position": 0.05000000074505806,
                                                                                                             "leftSupportPosition": -0.05000000074505806,
@@ -261,7 +261,7 @@
                                                                 "meta": {
                                                                     "Type": "o2::DefaultAssetMeta<o2::AnimationAsset>",
                                                                     "Value": {
-                                                                        "mId": "3bdb64bc42121408355866af295879cc"
+                                                                        "mId": "9e967e8223438f8725d90fa94badf36c"
                                                                     }
                                                                 }
                                                             }
@@ -289,12 +289,12 @@
                                                                                                 "Value": {
                                                                                                     "mKeys": [
                                                                                                         {
-                                                                                                            "uid": 8068946602178429935,
+                                                                                                            "uid": 17606806132836320028,
                                                                                                             "rightSupportPosition": 0.020000001415610315,
                                                                                                             "supportsType": "Broken"
                                                                                                         },
                                                                                                         {
-                                                                                                            "uid": 13764682698191629988,
+                                                                                                            "uid": 13004944886459204388,
                                                                                                             "value": 1.0,
                                                                                                             "position": 0.05000000074505806,
                                                                                                             "leftSupportPosition": -0.05000000074505806,
@@ -314,7 +314,7 @@
                                                                 "meta": {
                                                                     "Type": "o2::DefaultAssetMeta<o2::AnimationAsset>",
                                                                     "Value": {
-                                                                        "mId": "718417771d59428019ef21d76ea912db"
+                                                                        "mId": "b536a5fd703f19794821417477397b7d"
                                                                     }
                                                                 }
                                                             }

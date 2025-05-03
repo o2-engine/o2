@@ -21,8 +21,8 @@ namespace o2
     {
         ApplicationPlatformWrapper::resolution = resolution;
         
-        if (Render::IsSingletonInitialzed())
-            o2Render.OnFrameResized();
+        if (Application::IsSingletonInitialzed())
+            o2Application.OnResized(resolution);
     }
 
     void Application::Initialize()

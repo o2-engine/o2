@@ -110,8 +110,12 @@ add_custom_target(o2CopyBuiltinAssets
 # o2 Framework library
 add_library(o2Framework STATIC)
 
-file(GLOB_RECURSE o2Framework_SOURCES "Framework/Sources/*.cpp" "Framework/Sources/*.h"
-                                      "Framework/Sources/*.m" "Framework/Sources/*.mm")
+set(o2Framework_SOURCES_DIRS "Framework/Sources/*.h" "Framework/Sources/*.cpp")
+if (APPLE)
+    list(APPEND o2Framework_SOURCES_DIRS "Framework/Sources/*.mm" "Framework/Sources/*.m")
+endif()
+
+file(GLOB_RECURSE o2Framework_SOURCES ${o2Framework_SOURCES_DIRS})
 
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${o2Framework_SOURCES})
 
@@ -232,8 +236,7 @@ add_dependencies(o2Framework o2FrameworkCodegen)
 if (O2_EDITOR)
     add_library(o2Editor STATIC)
 
-    file(GLOB_RECURSE o2Framework_SOURCES "Editor/Sources/*.cpp" "Editor/Sources/*.h"
-                                          "Editor/Sources/*.m" "Editor/Sources/*.mm")
+    file(GLOB_RECURSE o2Framework_SOURCES "Editor/Sources/*.cpp" "Editor/Sources/*.h")
 
     source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${o2Framework_SOURCES})
 

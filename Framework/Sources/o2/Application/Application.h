@@ -317,6 +317,7 @@ namespace o2
         void CheckCursorInfiniteMode();
 
         friend class WndProcFunc;
+        friend struct ApplicationPlatformWrapper;
     };
 }
 // --- META ---

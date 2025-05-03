@@ -3,7 +3,7 @@
         "Type": "Editor::FloatProperty",
         "Value": {
             "mName": "green",
-            "Id": 12750229680774982100,
+            "Id": 9725429332388951807,
             "Transform": {
                 "minSize": {
                     "x": 0.0,
@@ -15,7 +15,7 @@
                     "Type": "o2::Widget",
                     "Data": {
                         "mName": "container",
-                        "Id": 9595817717874565736,
+                        "Id": 14784047056047167028,
                         "Transform": {
                             "anchorMax": {
                                 "x": 1.0,
@@ -31,7 +31,7 @@
                                 "Type": "o2::HorizontalLayout",
                                 "Data": {
                                     "mName": "layout",
-                                    "Id": 3819065268812624422,
+                                    "Id": 12598318551718909497,
                                     "Transform": {
                                         "anchorMax": {
                                             "x": 1.0,
@@ -47,11 +47,11 @@
                                             "Type": "o2::EditBox",
                                             "Data": {
                                                 "Prototype": {
-                                                    "id": "3917071144af7c2a7e861e5104cf4288",
+                                                    "id": "73217a41c93da5da158b04fbe05288b3",
                                                     "path": "Editor UI styles/O2  Edit Box green singleline.proto"
                                                 },
-                                                "PrototypeLink": 11682942543682065658,
-                                                "Id": 14435511521314925280,
+                                                "PrototypeLink": 7609116425992221578,
+                                                "Id": 16156568334675698695,
                                                 "Transform": {
                                                     "anchorMax": {
                                                         "x": 1.0,
@@ -109,7 +109,7 @@
                                                         },
                                                         "mSize": {
                                                             "x": 1.0,
-                                                            "y": 18.700000762939454
+                                                            "y": 17.0
                                                         },
                                                         "mScale": {
                                                             "x": 1.0,
@@ -151,8 +151,8 @@
                                                                 }
                                                             }
                                                         },
-                                                        "mUID": 15641188409314967600,
-                                                        "PrototypeLink": 14812095647073126993
+                                                        "mUID": 14863366427204099936,
+                                                        "PrototypeLink": 8312843236716312532
                                                     },
                                                     {
                                                         "mDrawable": {
@@ -177,8 +177,8 @@
                                                                 }
                                                             }
                                                         },
-                                                        "mUID": 14478011807750577634,
-                                                        "PrototypeLink": 18437112216010789004
+                                                        "mUID": 17290636176496784240,
+                                                        "PrototypeLink": 306104389817883793
                                                     },
                                                     {
                                                         "mDrawable": {
@@ -203,8 +203,8 @@
                                                                 }
                                                             }
                                                         },
-                                                        "mUID": 4995959383331131510,
-                                                        "PrototypeLink": 18095853075256946761
+                                                        "mUID": 2405382903258917363,
+                                                        "PrototypeLink": 4201942568180786684
                                                     },
                                                     {
                                                         "mDrawable": {
@@ -216,8 +216,8 @@
                                                                 }
                                                             }
                                                         },
-                                                        "mUID": 4202365852104358680,
-                                                        "PrototypeLink": 2343417941860733643
+                                                        "mUID": 11208304032460736882,
+                                                        "PrototypeLink": 14811867461339938095
                                                     }
                                                 ],
                                                 "States": [
