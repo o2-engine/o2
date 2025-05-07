@@ -235,6 +235,9 @@ namespace o2
         // Initializes font and text
         void InitializeFont();
 
+        // Deinitializes debug system
+        void DeinitializeFont();
+
         // Updates drawables list
         void UpdateDrawables(Vector<Ref<IDbgDrawable>>& drawables, float dt);
 

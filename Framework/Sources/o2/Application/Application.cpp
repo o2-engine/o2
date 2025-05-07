@@ -53,9 +53,7 @@ namespace o2
     {}
 
     Application::~Application()
-    {
-        DeinitializeSystems();
-    }
+    {}
 
     void Application::BasicInitialize()
     {
@@ -70,6 +68,11 @@ namespace o2
         o2UI.TryLoadStyle();
 
         mReady = true;
+    }
+     
+    void Application::Deinitialize()
+    {
+        DeinitializeSystems();
     }
 
     void Application::OnResized(const Vec2I& size)
@@ -155,19 +158,19 @@ namespace o2
 
     void Application::DeinitializeSystems()
     {
-        mScene = nullptr;
-        mInput = nullptr;
-        mProjectConfig = nullptr;
-        mPhysics = nullptr;
-        mTaskManager = nullptr;
-        mUIManager = nullptr;
-        mEventSystem = nullptr;
-        mRender = nullptr;
-        mFileSystem = nullptr;
-        mTime = nullptr;
-        mLog = nullptr;
-
+        Scene::DestroySingleton(mScene);
+        Input::DestroySingleton(mInput);
+        ProjectConfig::DestroySingleton(mProjectConfig);
+        PhysicsWorld::DestroySingleton(mPhysics);
+        TaskManager::DestroySingleton(mTaskManager);
+        UIManager::DestroySingleton(mUIManager);
+        EventSystem::DestroySingleton(mEventSystem);
+        o2Debug.DeinitializeFont();
+        Render::DestroySingleton(mRender);
+        Time::DestroySingleton(mTime);
         Assets::DestroySingleton(mAssets);
+        
+        mLog = nullptr;
     }
 
     void Application::ProcessFrame()

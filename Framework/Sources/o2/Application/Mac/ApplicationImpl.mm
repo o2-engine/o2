@@ -24,6 +24,12 @@ namespace o2
         if (Application::IsSingletonInitialzed())
             o2Application.OnResized(resolution);
     }
+    
+    void ApplicationPlatformWrapper::Deinitialize()
+    {
+        if (Application::IsSingletonInitialzed())
+            o2Application.Deinitialize();
+    }
 
     void Application::Initialize()
     {

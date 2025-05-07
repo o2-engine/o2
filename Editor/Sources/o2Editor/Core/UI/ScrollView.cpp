@@ -61,6 +61,7 @@ namespace Editor
 
         RedrawRenderTarget();
 
+        mRenderTargetSprite->transparency = mResTransparency;
         mRenderTargetSprite->Draw();
 		mListenersLayer->OnDrawn(mRenderTargetSprite->GetBasis());
     }

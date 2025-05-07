@@ -17,6 +17,8 @@ namespace o2
     Assets::Assets(RefCounter* refCounter):
         Singleton<Assets>(refCounter)
     {
+        mReady = true;
+        
         mLog = mmake<LogStream>("Assets");
         o2Debug.GetLog()->BindStream(mLog);
 
@@ -27,6 +29,8 @@ namespace o2
 
     Assets::~Assets()
     {
+        mReady = false;
+        
         mCachedAssets.Clear();
         mCachedAssetsByPath.Clear();
         mCachedAssetsByUID.Clear();
@@ -465,6 +469,9 @@ namespace o2
 
     AssetRef<Asset> Assets::AddAssetCache(Asset* asset)
     {
+        if (!mReady)
+            return nullptr;
+        
         AssetRef<Asset> assetRef(asset);
         mCachedAssets.Add(assetRef);
 
@@ -485,6 +492,9 @@ namespace o2
 
     void Assets::RemoveAssetCache(Asset* asset)
     {
+        if (!mReady)
+            return;
+        
         auto fnd = mCachedAssetsByUID.find(asset->GetUID());
         if (fnd != mCachedAssetsByUID.end())
             mCachedAssetsByUID.erase(fnd);
@@ -498,6 +508,9 @@ namespace o2
 
     AssetRef<Asset> Assets::UpdateAssetCache(Asset* asset, const String& oldPath, const UID& oldUID)
     {
+        if (!mReady)
+            return nullptr;
+        
         AssetRef<Asset> cached;
 
         auto fnd = mCachedAssetsByUID.find(oldUID);

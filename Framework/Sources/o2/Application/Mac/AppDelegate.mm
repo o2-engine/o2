@@ -11,10 +11,8 @@
 
 @implementation AppDelegate
 
-- (void)applicationWillFinishLaunching:(NSNotification *)aNotification {
-}
-
 - (void)applicationWillTerminate:(NSNotification *)aNotification {
+    o2::ApplicationPlatformWrapper::Deinitialize();
 }
 
 - (BOOL)applicationShouldTerminateAfterLastWindowClosed:(NSApplication *)sender {

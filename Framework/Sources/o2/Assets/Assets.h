@@ -149,6 +149,8 @@ namespace o2
 #endif
 
     protected:
+        bool mReady = true; // Is assets manager ready to work
+        
         Ref<AssetsTree>         mMainAssetsTree; // Main assets tree
         Vector<Ref<AssetsTree>> mAssetsTrees;    // Assets trees
 

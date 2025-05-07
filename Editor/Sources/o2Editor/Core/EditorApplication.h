@@ -99,6 +99,9 @@ namespace Editor
     protected:
         // Initializing all systems and log. Sets up editor settings for some systems
         void InitalizeSystems() override;
+        
+        // Deinitializes application
+        void Deinitialize() override;
 
         // Check style rebuilding and loads editor UI style
         void LoadUIStyle();
@@ -210,6 +213,7 @@ CLASS_METHODS_META(Editor::EditorApplication)
     FUNCTION().PUBLIC().SIGNATURE(bool, IsPlaying);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(Ref<RefCounterable>, CastToRefCounterable, const Ref<EditorApplication>&);
     FUNCTION().PROTECTED().SIGNATURE(void, InitalizeSystems);
+    FUNCTION().PROTECTED().SIGNATURE(void, Deinitialize);
     FUNCTION().PROTECTED().SIGNATURE(void, LoadUIStyle);
     FUNCTION().PROTECTED().SIGNATURE(void, PreUpdatePhysics);
     FUNCTION().PROTECTED().SIGNATURE(void, UpdatePhysics, float);

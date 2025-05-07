@@ -36,6 +36,12 @@ namespace o2
         mText = mmake<Text>(mFont);
     }
 
+    void Debug::DeinitializeFont()
+    {
+        mText = nullptr;
+        mFont = nullptr;
+    }
+
     void Debug::Update(bool isEditor, float dt)
     {
         //PROFILE_SAMPLE_FUNC();
