@@ -58,6 +58,9 @@ namespace o2
     class IPointerValueProxy : public IRefCounterable
     {
     public:
+        // Destructor
+        virtual ~IPointerValueProxy() {}
+        
         // Returns the pointer to value, stored in proxy
         virtual void* GetValueVoidPointer() const = 0;
     };

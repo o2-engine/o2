@@ -141,7 +141,7 @@ namespace Editor
         auto hParamWidget = mColorHProperty.Initialize("Hue", ParameterType::H, Ref(this),
                                                        [](float value, Color4& color) { float h, s, l; color.ToHSL(h, s, l); h = value; color.SetHSL(h, s, l); },
                                                        [](const Color4& color) { float h, s, l; color.ToHSL(h, s, l); return h; },
-                                                       [this](int x) { Color4 color; float h = x/255.0f, s = 1.0f, l = 0.5f; color.SetHSL(h, s, l); return color; });
+                                                       [](int x) { Color4 color; float h = x/255.0f, s = 1.0f, l = 0.5f; color.SetHSL(h, s, l); return color; });
 
         auto sParamWidget = mColorSProperty.Initialize("Saturation", ParameterType::S, Ref(this),
                                                        [](float value, Color4& color) { float h, s, l; color.ToHSL(h, s, l); s = value; color.SetHSL(h, s, l); },

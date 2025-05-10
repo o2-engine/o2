@@ -414,6 +414,9 @@ namespace o2
         // Checks vertex buffer for texture coordinate flip by texture format
         void CheckVertexBufferTexCoordFlipByTextureFormat();
 
+        // Platform specific flips current vertex buffer UX by Y
+        void PlatformFlipVerticesUV();
+
         // Platform specific reset renderer state
         void PlatformResetState();
 
@@ -424,7 +427,7 @@ namespace o2
         void UpdateCameraTransforms();
 
         // Platform specific setup camera transforms
-        void PlatformSetupCameraTransforms(float* matrix);
+        void PlatformSetupCameraTransforms(float* modelMatrix, float* viewMatrix, float* projMatrix);
 
         // Platform specific begin of stencil drawing
         void PlatformBeginStencilDrawing();

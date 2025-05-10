@@ -76,9 +76,6 @@ namespace o2
 
         // Destructor 
         virtual ~Application();
-        
-        // Platform-specific initializations
-        void InitializePlatform();
 
         // Returns pointer to log object
         virtual const Ref<LogStream>& GetLog() const;
@@ -235,9 +232,17 @@ namespace o2
         
         float mGraphicsScale = 1.0f; // Application graphics scale. Used in mac for retina displays
 
+        Vec2I  mWindowedSize; // Size of window
+
     protected:
         // Basic initialization for all platforms
         virtual void BasicInitialize();
+        
+        // Platform-specific initializations
+        void InitializePlatform();
+        
+        // Deinitializes application
+        virtual void Deinitialize();
 
         // It is called when application frame resized
         virtual void OnResized(const Vec2I& size);
@@ -280,9 +285,6 @@ namespace o2
 
         // Calling on updating by fixed FPS
         virtual void OnFixedUpdate(float dt);
-        
-        // Setups default camera with scaled graphics
-        virtual void SetupGraphicsScaledCamera();
 
         // Calling on drawing
         virtual void OnDraw();
@@ -318,6 +320,7 @@ namespace o2
         void CheckCursorInfiniteMode();
 
         friend class WndProcFunc;
+        friend struct ApplicationPlatformWrapper;
     };
 }
 // --- META ---
@@ -346,6 +349,7 @@ CLASS_FIELDS_META(o2::Application)
     FIELD().PUBLIC().DEFAULT_VALUE(600).NAME(maxFPS);
     FIELD().PUBLIC().DEFAULT_VALUE(60).NAME(fixedFPS);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mReady);
+    FIELD().PROTECTED().DEFAULT_VALUE(true).NAME(mRunning);
     FIELD().PROTECTED().NAME(mAssets);
     FIELD().PROTECTED().NAME(mEventSystem);
     FIELD().PROTECTED().NAME(mFileSystem);
@@ -367,13 +371,13 @@ CLASS_FIELDS_META(o2::Application)
     FIELD().PROTECTED().DEFAULT_VALUE(0.0f).NAME(mAccumulatedDT);
     FIELD().PROTECTED().NAME(mMainListenersLayer);
     FIELD().PROTECTED().DEFAULT_VALUE(1.0f).NAME(mGraphicsScale);
+    FIELD().PROTECTED().NAME(mWindowedSize);
 }
 END_META;
 CLASS_METHODS_META(o2::Application)
 {
 
     FUNCTION().PUBLIC().CONSTRUCTOR(RefCounter*);
-    FUNCTION().PUBLIC().SIGNATURE(void, InitializePlatform);
     FUNCTION().PUBLIC().SIGNATURE(const Ref<LogStream>&, GetLog);
     FUNCTION().PUBLIC().SIGNATURE(void, Shutdown);
     FUNCTION().PUBLIC().SIGNATURE(void, SetFullscreen, bool);
@@ -399,6 +403,8 @@ CLASS_METHODS_META(o2::Application)
     FUNCTION().PUBLIC().SIGNATURE(String, GetBinPath);
     FUNCTION().PUBLIC().SIGNATURE(float, GetGraphicsScale);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(bool, IsReady);
+    FUNCTION().PUBLIC().SIGNATURE(bool, IsRunning);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetRunning, bool);
 #if  defined PLATFORM_WINDOWS
     FUNCTION().PUBLIC().SIGNATURE(void, Initialize);
     FUNCTION().PUBLIC().SIGNATURE(void, Launch);
@@ -423,6 +429,8 @@ CLASS_METHODS_META(o2::Application)
     FUNCTION().PUBLIC().SIGNATURE(void, Launch);
 #endif
     FUNCTION().PROTECTED().SIGNATURE(void, BasicInitialize);
+    FUNCTION().PROTECTED().SIGNATURE(void, InitializePlatform);
+    FUNCTION().PROTECTED().SIGNATURE(void, Deinitialize);
     FUNCTION().PROTECTED().SIGNATURE(void, OnResized, const Vec2I&);
     FUNCTION().PROTECTED().SIGNATURE(void, UpdateScene, float);
     FUNCTION().PROTECTED().SIGNATURE(void, FixedUpdateScene, float);
@@ -437,7 +445,6 @@ CLASS_METHODS_META(o2::Application)
     FUNCTION().PROTECTED().SIGNATURE(void, UpdateDebug, float);
     FUNCTION().PROTECTED().SIGNATURE(void, OnUpdate, float);
     FUNCTION().PROTECTED().SIGNATURE(void, OnFixedUpdate, float);
-    FUNCTION().PROTECTED().SIGNATURE(void, SetupGraphicsScaledCamera);
     FUNCTION().PROTECTED().SIGNATURE(void, OnDraw);
     FUNCTION().PROTECTED().SIGNATURE(void, OnActivated);
     FUNCTION().PROTECTED().SIGNATURE(void, OnDeactivated);

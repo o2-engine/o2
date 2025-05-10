@@ -372,7 +372,7 @@ namespace o2
         String res;
         res.resize(jerry_get_string_length(jvalue));
         jerry_string_to_char_buffer(jvalue, (jerry_char_t*)res.Data(), res.Capacity());
-        return std::move(res);
+        return res;
     }
 
     ScriptValue ScriptValue::InvokeRaw(const Vector<ScriptValue>& args) const

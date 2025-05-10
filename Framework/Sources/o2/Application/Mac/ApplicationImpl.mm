@@ -21,8 +21,14 @@ namespace o2
     {
         ApplicationPlatformWrapper::resolution = resolution;
         
-        if (Render::IsSingletonInitialzed())
-            o2Render.OnFrameResized();
+        if (Application::IsSingletonInitialzed())
+            o2Application.OnResized(resolution);
+    }
+    
+    void ApplicationPlatformWrapper::Deinitialize()
+    {
+        if (Application::IsSingletonInitialzed())
+            o2Application.Deinitialize();
     }
 
     void Application::Initialize()
@@ -33,6 +39,8 @@ namespace o2
     void Application::InitializePlatform()
     {
         [NSApplication sharedApplication];
+        [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
+        [NSApp activateIgnoringOtherApps:YES];        
         [NSApp setDelegate:[[AppDelegate alloc] init]];
         
         ApplicationPlatformWrapper::window = [[NSWindow alloc] initWithContentRect:NSMakeRect(0, 0, 960, 640)
@@ -43,6 +51,7 @@ namespace o2
         [ApplicationPlatformWrapper::window makeKeyAndOrderFront:nil];
         
         ApplicationPlatformWrapper::view = [[ViewController alloc] init];
+        ApplicationPlatformWrapper::view.colorPixelFormat = MTLPixelFormatRGBA8Unorm;
         [ApplicationPlatformWrapper::window setContentView:ApplicationPlatformWrapper::view];
         [ApplicationPlatformWrapper::window setInitialFirstResponder:ApplicationPlatformWrapper::view];
         [ApplicationPlatformWrapper::window makeFirstResponder:ApplicationPlatformWrapper::view];

@@ -39,7 +39,7 @@ namespace o2
         void Draw();
 
         // Returns true if point is in this object
-        bool IsUnderPoint(const Vec2F& point);
+        bool IsUnderPoint(const Vec2F& point) override;
 
         // Sets pivot editing available
         void SetPivotEnabled(bool enabled);
@@ -90,16 +90,16 @@ namespace o2
 
     protected:
         // Called when cursor pressed on this
-        void OnCursorPressed(const Input::Cursor& cursor);
+        void OnCursorPressed(const Input::Cursor& cursor) override;
 
         // Called when cursor released (only when cursor pressed this at previous time)
-        void OnCursorReleased(const Input::Cursor& cursor);
+        void OnCursorReleased(const Input::Cursor& cursor) override;
 
         // Called when cursor pressing was broken (when scrolled scroll area or some other)
-        void OnCursorPressBreak(const Input::Cursor& cursor);
+        void OnCursorPressBreak(const Input::Cursor& cursor) override;
 
         // Called when cursor stay down during frame
-        void OnCursorStillDown(const Input::Cursor& cursor);
+        void OnCursorStillDown(const Input::Cursor& cursor) override;
 
         // Left top handle moved
         void OnLeftTopHandle(const Vec2F& position);

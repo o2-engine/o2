@@ -1,6 +1,5 @@
-#import "RendererView.h"
-
 #ifdef PLATFORM_IOS
+#import "RendererView.h"
 
 #import "ShaderTypes.h"
 #include "o2/Render/Render.h"

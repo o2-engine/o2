@@ -53,9 +53,7 @@ namespace o2
     {}
 
     Application::~Application()
-    {
-        DeinitializeSystems();
-    }
+    {}
 
     void Application::BasicInitialize()
     {
@@ -71,11 +69,21 @@ namespace o2
 
         mReady = true;
     }
+     
+    void Application::Deinitialize()
+    {
+        DeinitializeSystems();
+    }
 
     void Application::OnResized(const Vec2I& size)
     {
         mWindowedSize = size;
+        
+        if (!mReady)
+            return;
+        
         mRender->OnFrameResized();
+        
         onResizing.Invoke();
         OnResizing();
         o2Events.OnApplicationSized();
@@ -150,28 +158,19 @@ namespace o2
 
     void Application::DeinitializeSystems()
     {
-        mScene = nullptr;
-        mInput = nullptr;
-        mProjectConfig = nullptr;
-        mPhysics = nullptr;
-        mTaskManager = nullptr;
-        mUIManager = nullptr;
-        mEventSystem = nullptr;
-        mRender = nullptr;
-        mFileSystem = nullptr;
-        mTime = nullptr;
-        mLog = nullptr;
-
+        Scene::DestroySingleton(mScene);
+        Input::DestroySingleton(mInput);
+        ProjectConfig::DestroySingleton(mProjectConfig);
+        PhysicsWorld::DestroySingleton(mPhysics);
+        TaskManager::DestroySingleton(mTaskManager);
+        UIManager::DestroySingleton(mUIManager);
+        EventSystem::DestroySingleton(mEventSystem);
+        o2Debug.DeinitializeFont();
+        Render::DestroySingleton(mRender);
+        Time::DestroySingleton(mTime);
         Assets::DestroySingleton(mAssets);
-    }
-    
-    void Application::SetupGraphicsScaledCamera()
-    {
-        PROFILE_SAMPLE_FUNC();
-
-        Camera camera = Camera::Default();
-        camera.scale = Vec2F(1.0f/mGraphicsScale, 1.0f/mGraphicsScale);
-        o2Render.camera = camera;
+        
+        mLog = nullptr;
     }
 
     void Application::ProcessFrame()
@@ -235,7 +234,7 @@ namespace o2
         PostUpdateEventSystem();
         
         mMainListenersLayer->OnBeginDraw();
-        SetupGraphicsScaledCamera();
+        mRender->SetCamera(Camera());
         mMainListenersLayer->camera = o2Render.GetCamera();
 
         DrawScene();
@@ -246,6 +245,9 @@ namespace o2
 
         mMainListenersLayer->OnEndDraw();
         mMainListenersLayer->OnDrawn(Camera::Default().GetBasis());
+        
+        if (o2Input.IsKeyDown(VK_F1))
+            mRender->DrawCross(o2Input.cursorPos.Get(), 20, Color4::Red());
 
         mRender->End();
 

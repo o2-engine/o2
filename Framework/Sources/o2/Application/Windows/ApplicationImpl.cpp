@@ -154,6 +154,8 @@ namespace o2
         o2Events.OnApplicationClosing();
         OnClosing();
         onClosing.Invoke();
+        
+        Deinitialize();
     }
 
     bool Application::IsFullScreen() const

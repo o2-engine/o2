@@ -14,19 +14,19 @@ namespace o2
         Vector<const Type*> GetProcessingAssetsTypes() const override;
 
         // Converts folder by path
-        void ConvertAsset(const AssetInfo& node);
+        void ConvertAsset(const AssetInfo& node) override;
 
         // Removes folder by path
-        void RemoveAsset(const AssetInfo& node);
+        void RemoveAsset(const AssetInfo& node) override;
 
         // Moves folder to new path
-        void MoveAsset(const AssetInfo& nodeFrom, const AssetInfo& nodeTo);
+        void MoveAsset(const AssetInfo& nodeFrom, const AssetInfo& nodeTo) override;
 
         // Post processing folders
-        Vector<UID> AssetsPostProcess();
+        Vector<UID> AssetsPostProcess() override;
 
         // Resets converter
-        void Reset();
+        void Reset() override;
 
         IOBJECT(FolderAssetConverter);
 

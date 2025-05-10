@@ -45,10 +45,7 @@ namespace Editor
     {}
 
     EditorApplication::~EditorApplication()
-    {
-        o2EditorConfig.SaveProjectConfigs();
-        o2EditorConfig.SaveGlobalConfigs();
-    }
+    {}
 
     const String& EditorApplication::GetLoadedSceneName() const
     {
@@ -131,6 +128,22 @@ namespace Editor
     Ref<RefCounterable> EditorApplication::CastToRefCounterable(const Ref<EditorApplication>& ref)
     {
         return DynamicCast<Application>(ref);
+    }
+    
+    void EditorApplication::InitalizeSystems()
+    {
+        PROFILE_SAMPLE_FUNC();
+
+        Application::InitalizeSystems();
+        mMainListenersLayer->SetEditorMode(true);
+    }
+    
+    void EditorApplication::Deinitialize()
+    {
+        o2EditorConfig.SaveProjectConfigs();
+        o2EditorConfig.SaveGlobalConfigs();
+        
+        Application::Deinitialize();
     }
 
     void EditorApplication::OnStarted()
@@ -412,14 +425,6 @@ namespace Editor
         }
 
         mPlayingChanged = false;
-    }
-
-    void EditorApplication::InitalizeSystems()
-    {
-        PROFILE_SAMPLE_FUNC();
-
-        Application::InitalizeSystems();
-        mMainListenersLayer->SetEditorMode(true);
     }
 
     void EditorApplication::LoadUIStyle()

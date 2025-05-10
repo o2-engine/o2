@@ -326,10 +326,24 @@ namespace o2
         GL_CHECK_ERROR();
     }
 
-    void Render::PlatformSetupCameraTransforms(float* matrix)
+    void Render::PlatformFlipVerticesUV()
     {
+        for (UInt i = 0; i < mLastDrawVertex; i++)
+        {
+            Vertex& v = ((Vertex*)mVertexData)[i];
+            v.tv = 1.0f - v.tv;
+        }
+    }
+
+    void Render::PlatformSetupCameraTransforms(float* modelMatrix, float* viewMatrix, float* projMatrix)
+    {
+        float mvp[16];
+        float finalCamMtx[16];
+        Math::mtxMultiply(finalCamMtx, modelMatrix, viewMatrix);
+        Math::mtxMultiply(mvp, projMatrix, finalCamMtx);
+        
         glViewport(0, 0, mCurrentResolution.x, mCurrentResolution.y);
-        glUniformMatrix4fv(mStdShaderMvpUniform, 1, GL_FALSE, matrix);
+        glUniformMatrix4fv(mStdShaderMvpUniform, 1, GL_FALSE, mvp);
 
         GL_CHECK_ERROR();
     }

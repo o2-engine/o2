@@ -1,6 +1,24 @@
-project(o2)
+if(APPLE)
+    project(o2 LANGUAGES C CXX OBJC OBJCXX)
+else()
+    project(o2 LANGUAGES C CXX)
+endif()
 
 set(CMAKE_CXX_STANDARD 20)
+
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/CMake")
+
+if(APPLE)
+    include(CheckLanguage)
+    include(MetalShaderSupport)
+    check_language(Metal)
+    
+    if(CMAKE_Metal_COMPILER)
+       enable_language(Metal)
+    else ()
+       message(FATAL_ERROR "Could not find compiler for metal")
+    endif()
+endif()
 
 # Options
 option(O2_SELFPROFILE "Enable profiling o2 benchmark." OFF)
@@ -14,6 +32,9 @@ set(O2_COMPILE_DEFINITIONS SCRIPTING_BACKEND_JERRYSCRIPT _CRT_SECURE_NO_WARNINGS
 
 if (WIN32)
     list(APPEND O2_COMPILE_DEFINITIONS PLATFORM_WINDOWS)
+elseif (APPLE)
+    list(APPEND O2_COMPILE_DEFINITIONS PLATFORM_MAC)
+    list(APPEND O2_COMPILE_DEFINITIONS BOOST_STACKTRACE_GNU_SOURCE_NOT_REQUIRED)
 elseif (UNIX)
     list(APPEND O2_COMPILE_DEFINITIONS PLATFORM_LINUX)
 endif()
@@ -43,7 +64,9 @@ if (O2_MEMORY_ANALYZE)
     list(APPEND O2_COMPILE_DEFINITIONS MEMORY_ANALYZE_ENABLE)
 endif()
 
-if (UNIX)
+if (APPLE)
+    set(O2_PLATFORM "Mac" PARENT_SCOPE)
+elseif (UNIX)
     set(O2_PLATFORM "Linux" PARENT_SCOPE)
 elseif (WIN32)
     set(O2_PLATFORM "Windows" PARENT_SCOPE)
@@ -64,8 +87,11 @@ else()
 
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wno-error=format -Wno-error=format-extra-args -Wno-error=conversion \
                          -Wno-error=incompatible-pointer-types -Wno-error=sign-conversion -Wno-error=pointer-sign \
-                         -Wno-error=deprecated -Wno-reorder -Wno-unused-variable"
-    )
+                         -Wno-error=deprecated -Wno-reorder -Wno-unused-variable -Wno-unused-local-typedef \
+                         -Wno-undefined-var-template -Wno-overloaded-virtual -Wno-deprecated-declarations \
+                         -Wno-delete-non-abstract-non-virtual-dtor -Wno-unused-but-set-variable \
+                         -Wno-inconsistent-missing-override -Wno-shorten-64-to-32 -Wno-switch -Wno-delete-incomplete \
+                         -Wno-potentially-evaluated-expression -Wno-deprecated-this-capture")
 endif()
 
 # dependencies
@@ -84,7 +110,13 @@ add_custom_target(o2CopyBuiltinAssets
 # o2 Framework library
 add_library(o2Framework STATIC)
 
-file(GLOB_RECURSE o2Framework_SOURCES "Framework/Sources/*.cpp" "Framework/Sources/*.h")
+set(o2Framework_SOURCES_DIRS "Framework/Sources/*.h" "Framework/Sources/*.cpp")
+if (APPLE)
+    list(APPEND o2Framework_SOURCES_DIRS "Framework/Sources/*.mm" "Framework/Sources/*.m")
+endif()
+
+file(GLOB_RECURSE o2Framework_SOURCES ${o2Framework_SOURCES_DIRS})
+
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${o2Framework_SOURCES})
 
 set(o2Framework_INCLUDES 
@@ -135,16 +167,43 @@ if (O2_MEMORY_ANALYZE)
 endif()
 
 if (UNIX)
-    find_package(X11 REQUIRED)
-    target_link_libraries(o2Framework PUBLIC ${X11_LIBRARIES})
+    if (NOT APPLE)
+        find_package(X11 REQUIRED)
+        target_link_libraries(o2Framework PUBLIC ${X11_LIBRARIES})
+    endif()
 
     if (O2_RENDER_API STREQUAL "gles2")
         list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}")
         find_package(OpenGLES2 REQUIRED)
         target_link_libraries(o2Framework PRIVATE OpenGLES2::OpenGLES2)
-    else()
+    elseif(NOT APPLE)
         find_package(OpenGL REQUIRED COMPONENTS GLX)
         target_link_libraries(o2Framework PUBLIC OpenGL::GL OpenGL::GLX)
+    else()
+        find_library(CORE_GRAPHICS CoreGraphics)
+        find_library(METAL Metal)
+        find_library(APP_KIT AppKit)
+        find_library(METALKIT MetalKit)
+        find_library(FOUNDATION Foundation)
+        find_library(OBJC objc)
+
+        target_link_libraries(o2Framework
+                PRIVATE
+                    ${CORE_GRAPHICS}
+                    ${METAL}
+                    ${APP_KIT}
+                    ${FOUNDATION}
+                    ${OBJC}
+                    ${METALKIT}
+        )
+
+        set(METAL_SHADERS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Framework/Sources/o2/Render/Mac")
+        add_subdirectory(${METAL_SHADERS_DIR})
+
+        target_include_directories(o2Framework
+                PRIVATE
+                ${METAL_SHADERS_DIR}
+        )
     endif()
 endif()
 
@@ -178,6 +237,7 @@ if (O2_EDITOR)
     add_library(o2Editor STATIC)
 
     file(GLOB_RECURSE o2Framework_SOURCES "Editor/Sources/*.cpp" "Editor/Sources/*.h")
+
     source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${o2Framework_SOURCES})
 
     target_sources(o2Editor PRIVATE ${o2Framework_SOURCES})

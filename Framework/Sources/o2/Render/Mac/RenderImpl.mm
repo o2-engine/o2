@@ -22,44 +22,49 @@
 
 namespace o2
 {
-    MTKView* RenderDevice::view;
-    id<MTLDevice> RenderDevice::device;
-    id<MTLCommandQueue> RenderDevice::commandQueue;
-    id<MTLLibrary> RenderDevice::defaultLibrary;
-    id<MTLRenderPipelineState> RenderDevice::pipelineState;
+    MTKView*                    RenderDevice::view;
+    id<MTLDevice>               RenderDevice::device;
+    id<MTLCommandQueue>         RenderDevice::commandQueue;
+    id<MTLLibrary>              RenderDevice::defaultLibrary;
+    id<MTLRenderPipelineState>  RenderDevice::pipelineState;
     id<MTLRenderCommandEncoder> RenderDevice::renderEncoder;
-    id<MTLCommandBuffer> RenderDevice::commandBuffer;
-    
+    id<MTLCommandBuffer>        RenderDevice::commandBuffer;
+
     id<MTLBuffer> RenderDevice::vertexBuffers[2];
     id<MTLBuffer> RenderDevice::indexBuffers[2];
     id<MTLBuffer> RenderDevice::uniformBuffers[2];
-    
+
     id<MTLBuffer> RenderDevice::vertexBuffer;
     id<MTLBuffer> RenderDevice::indexBuffer;
     id<MTLBuffer> RenderDevice::uniformBuffer;
-    
+
     void RenderDevice::Initialize()
     {
         RenderDevice::view = ApplicationPlatformWrapper::view;
         device = ApplicationPlatformWrapper::view.device;
-        
+
         for (int i = 0; i < 2; i++)
         {
             vertexBuffers[i] = [device newBufferWithLength:o2Render.mVertexBufferSize*sizeof(MetalVertex2)
                                                    options:MTLResourceStorageModeShared];
-            
+
             indexBuffers[i] = [device newBufferWithLength:o2Render.mIndexBufferSize*sizeof(UInt)
                                                   options:MTLResourceStorageModeShared];
-            
+
             uniformBuffers[i] = [device newBufferWithLength:o2Render.mUniformBufferSize*sizeof(Uniforms)
                                                     options:MTLResourceStorageModeShared];
         }
-        
-        defaultLibrary = [device newDefaultLibrary];
-        
+
+        NSError *error = nil;
+        defaultLibrary = [device newLibraryWithURL:[NSBundle.mainBundle URLForResource:@"PetStoryShaders" withExtension:@"metallib"] error:&error];
+        if (!defaultLibrary) {
+            NSLog(@"Can't create metal library: %@", error);
+            exit(EXIT_FAILURE);
+        }
+
         id<MTLFunction> vertexFunction = [defaultLibrary newFunctionWithName:@"vertexShader"];
         id<MTLFunction> fragmentFunction = [defaultLibrary newFunctionWithName:@"fragmentShader"];
-        
+
         // Set up a descriptor for creating a pipeline state object
         MTLRenderPipelineDescriptor *pipelineStateDescriptor = [[MTLRenderPipelineDescriptor alloc] init];
         pipelineStateDescriptor.label = @"Default";
@@ -70,141 +75,47 @@ namespace o2
         pipelineStateDescriptor.colorAttachments[0].rgbBlendOperation           = MTLBlendOperationAdd;
         pipelineStateDescriptor.colorAttachments[0].alphaBlendOperation         = MTLBlendOperationAdd;
         pipelineStateDescriptor.colorAttachments[0].sourceRGBBlendFactor        = MTLBlendFactorSourceAlpha;
-        pipelineStateDescriptor.colorAttachments[0].sourceAlphaBlendFactor      = MTLBlendFactorSourceAlpha;
         pipelineStateDescriptor.colorAttachments[0].destinationRGBBlendFactor   = MTLBlendFactorOneMinusSourceAlpha;
+        pipelineStateDescriptor.colorAttachments[0].sourceAlphaBlendFactor      = MTLBlendFactorOne;
         pipelineStateDescriptor.colorAttachments[0].destinationAlphaBlendFactor = MTLBlendFactorOneMinusSourceAlpha;
-        
-        NSError *error = NULL;
+
+
         pipelineState = [device newRenderPipelineStateWithDescriptor:pipelineStateDescriptor
                                                                error:&error];
-        
+
         commandQueue = [device newCommandQueue];
     }
-    
-    Render::Render() :
-        mReady(false), mStencilDrawing(false), mStencilTest(false), mClippingEverything(false)
+
+    void Render::InitializePlatform()
     {
+        mLog->Out("Initializing Metal render..");
+
         RenderDevice::Initialize();
-        
-        mLog = mnew LogStream("Render");
-        o2Debug.GetLog()->BindStream(mLog);
-        
-        mResolution = o2Application.GetContentSize();
-        
-        Bitmap b(PixelFormat::R8G8B8A8, Vec2I(16, 16));
-        b.Fill(Color4::White());
-        mWhiteTexture = TextureRef(&b);
-        
-        InitializeFreeType();
-        InitializeLinesIndexBuffer();
-        InitializeLinesTextures();
-
-        mCurrentRenderTarget = TextureRef();
-        
-        NSScreen *screen = [NSScreen mainScreen];
-        NSDictionary *description = [screen deviceDescription];
-        NSSize displayPixelSize = [[description objectForKey:NSDeviceSize] sizeValue];
-        CGSize displayPhysicalSize = CGDisplayScreenSize([[description objectForKey:@"NSScreenNumber"] unsignedIntValue]);
-        
-        const float mmPerInch = 25.4f;
-        mDPI = Vec2I((displayPixelSize.width / displayPhysicalSize.width) * mmPerInch,
-                     (displayPixelSize.height / displayPhysicalSize.height) * mmPerInch);
-
-//        if (IsDevMode())
-//            o2Assets.onAssetsRebuilt += THIS_FUNC(&Render::OnAssetsRebuilded);
-
-        mReady = true;
     }
 
-    Render::~Render()
+    void Render::DeinitializePlatform()
+    {}
+
+    void Render::InitializeSandardShader()
+    {}
+
+    void Render::PlatformBegin()
     {
-        if (!mReady)
-            return;
-
-//        if (IsDevMode())
-//            o2Assets.onAssetsRebuilded -= Func(this, &Render::OnAssetsRebuilded);
-
-        mSolidLineTexture = TextureRef::Null();
-        mDashLineTexture = TextureRef::Null();
-
-        DeinitializeFreeType();
-
-        mReady = false;
-    }
-
-    void Render::CheckCompatibles()
-    {
-        //get max texture size
-//        glGetIntegerv(GL_MAX_TEXTURE_SIZE, &mMaxTextureSize.x);
-//        mMaxTextureSize.y = mMaxTextureSize.x;
-    }
-
-    void Render::Begin()
-    {
-        if (!mReady)
-            return;
-        
         int currentBuffers = RenderDevice::vertexBuffer == RenderDevice::vertexBuffers[0] ? 1 : 0;
         RenderDevice::vertexBuffer = RenderDevice::vertexBuffers[currentBuffers];
         RenderDevice::indexBuffer = RenderDevice::indexBuffers[currentBuffers];
         RenderDevice::uniformBuffer = RenderDevice::uniformBuffers[currentBuffers];
         
-        mLastDrawTexture = NULL;
-        mLastDrawVertex = 0;
-        mLastDrawIdx = 0;
+        RenderDevice::commandBuffer = [RenderDevice::commandQueue commandBuffer];
+        RenderDevice::commandBuffer.label = @"Default";
+        
         mVertexBufferOffset = 0;
         mIndexBufferOffset = 0;
         mUniformBufferOffset = 0;
-        mTrianglesCount = 0;
-        mFrameTrianglesCount = 0;
-        mDIPCount = 0;
-        mCurrentPrimitiveType = PrimitiveType::Polygon;
-
-        mDrawingDepth = 0.0f;
-
-        mScissorInfos.Clear();
-        mStackScissors.Clear();
-
-        mClippingEverything = false;
-        
-        RenderDevice::commandBuffer = [RenderDevice::commandQueue commandBuffer];
-        RenderDevice::commandBuffer.label = @"Default";
-
-        SetupViewMatrix(mResolution);
-        UpdateCameraTransforms();
-
-        preRender();
-        preRender.Clear();
     }
-    
-    void Render::DrawBuffer(PrimitiveType primitiveType, Vertex2* vertices, UInt verticesCount,
-                            UInt16* indexes, UInt elementsCount, const TextureRef& texture)
+
+    void Render::PlatformUploadBuffers(Vertex* vertices, UInt verticesCount, VertexIndex* indexes, UInt indexesCount)
     {
-        if (!mReady)
-            return;
-        
-        mDrawingDepth += 1.0f;
-        
-        if (mClippingEverything)
-            return;
-        
-        UInt indexesCount;
-        if (primitiveType == PrimitiveType::Line)
-            indexesCount = elementsCount*2;
-        else
-            indexesCount = elementsCount*3;
-        
-        if (mLastDrawTexture != texture.mTexture ||
-            mLastDrawVertex + verticesCount >= mVertexBufferSize ||
-            mLastDrawIdx + indexesCount >= mIndexBufferSize ||
-            mCurrentPrimitiveType != primitiveType)
-        {
-            DrawPrimitives();
-            
-            mLastDrawTexture = texture.mTexture;
-            mCurrentPrimitiveType = primitiveType;
-        }
-        
         MetalVertex2* dstVertexBuffer = (MetalVertex2*)((Byte*)[RenderDevice::vertexBuffer contents] + mVertexBufferOffset);
         for (UInt i = 0; i < verticesCount; i++)
         {
@@ -217,45 +128,11 @@ namespace o2
             
             Color4 c; c.SetABGR(vertices[i].color);
             dstVertexBuffer[vi].color = { c.RF(), c.GF(), c.BF(), c.AF() };
-        }            
+        }
         
         UInt* dstIndexBuffer =(UInt*)((Byte*)[RenderDevice::indexBuffer contents] + mIndexBufferOffset);
         for (UInt i = mLastDrawIdx, j = 0; j < indexesCount; i++, j++)
             dstIndexBuffer[i] = mLastDrawVertex + indexes[j];
-        
-        if (primitiveType != PrimitiveType::Line)
-            mTrianglesCount += elementsCount;
-        
-        mLastDrawVertex += verticesCount;
-        mLastDrawIdx += indexesCount;
-    }
-
-    
-    void MtxMultiply(float* ret, const float* lhs, const float* rhs)
-    {
-        // [ 0 4  8 12 ]   [ 0 4  8 12 ]
-        // [ 1 5  9 13 ] x [ 1 5  9 13 ]
-        // [ 2 6 10 14 ]   [ 2 6 10 14 ]
-        // [ 3 7 11 15 ]   [ 3 7 11 15 ]
-        ret[0] = lhs[0]*rhs[0] + lhs[4]*rhs[1] + lhs[8]*rhs[2] + lhs[12]*rhs[3];
-        ret[1] = lhs[1]*rhs[0] + lhs[5]*rhs[1] + lhs[9]*rhs[2] + lhs[13]*rhs[3];
-        ret[2] = lhs[2]*rhs[0] + lhs[6]*rhs[1] + lhs[10]*rhs[2] + lhs[14]*rhs[3];
-        ret[3] = lhs[3]*rhs[0] + lhs[7]*rhs[1] + lhs[11]*rhs[2] + lhs[15]*rhs[3];
-        
-        ret[4] = lhs[0]*rhs[4] + lhs[4]*rhs[5] + lhs[8]*rhs[6] + lhs[12]*rhs[7];
-        ret[5] = lhs[1]*rhs[4] + lhs[5]*rhs[5] + lhs[9]*rhs[6] + lhs[13]*rhs[7];
-        ret[6] = lhs[2]*rhs[4] + lhs[6]*rhs[5] + lhs[10]*rhs[6] + lhs[14]*rhs[7];
-        ret[7] = lhs[3]*rhs[4] + lhs[7]*rhs[5] + lhs[11]*rhs[6] + lhs[15]*rhs[7];
-        
-        ret[8] = lhs[0]*rhs[8] + lhs[4]*rhs[9] + lhs[8]*rhs[10] + lhs[12]*rhs[11];
-        ret[9] = lhs[1]*rhs[8] + lhs[5]*rhs[9] + lhs[9]*rhs[10] + lhs[13]*rhs[11];
-        ret[10] = lhs[2]*rhs[8] + lhs[6]*rhs[9] + lhs[10]*rhs[10] + lhs[14]*rhs[11];
-        ret[11] = lhs[3]*rhs[8] + lhs[7]*rhs[9] + lhs[11]*rhs[10] + lhs[15]*rhs[11];
-        
-        ret[12] = lhs[0]*rhs[12] + lhs[4]*rhs[13] + lhs[8]*rhs[14] + lhs[12]*rhs[15];
-        ret[13] = lhs[1]*rhs[12] + lhs[5]*rhs[13] + lhs[9]*rhs[14] + lhs[13]*rhs[15];
-        ret[14] = lhs[2]*rhs[12] + lhs[6]*rhs[13] + lhs[10]*rhs[14] + lhs[14]*rhs[15];
-        ret[15] = lhs[3]*rhs[12] + lhs[7]*rhs[13] + lhs[11]*rhs[14] + lhs[15]*rhs[15];
     }
     
     void MtxConvert(float* origin, matrix_float4x4& dst)
@@ -266,11 +143,8 @@ namespace o2
         dst.columns[3][0] = origin[12]; dst.columns[3][1] = origin[13]; dst.columns[3][2] = origin[14]; dst.columns[3][3] = origin[15];
     }
     
-    void Render::DrawPrimitives()
+    void Render::PlatformDrawPrimitives()
     {
-        if (mLastDrawVertex < 1)
-            return;
-        
         MTLRenderPassDescriptor *renderPassDescriptor = RenderDevice::view.currentRenderPassDescriptor;
         if(renderPassDescriptor != nil)
         {
@@ -282,7 +156,7 @@ namespace o2
                 mNeedClear = false;
             }
             else
-                [renderPassDescriptor.colorAttachments[0] setLoadAction:MTLLoadActionDontCare];
+                [renderPassDescriptor.colorAttachments[0] setLoadAction:MTLLoadActionLoad];
             
             if (mCurrentRenderTarget)
                 renderPassDescriptor.colorAttachments[0].texture = mCurrentRenderTarget->mImpl->texture;
@@ -290,21 +164,25 @@ namespace o2
             auto renderEncoder = [RenderDevice::commandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
             renderEncoder.label = @"Default";
             
-            [renderEncoder setViewport:(MTLViewport){0.0, 0.0, (double)mCurrentResolution.x, (double)mCurrentResolution.y, -1.0, 1.0 }];
+            float scale = mCurrentRenderTarget ? 1.0f : o2Application.GetGraphicsScale();
+            [renderEncoder setViewport:(MTLViewport){0.0, 0.0, (double)(mCurrentResolution.x * scale), (double)(mCurrentResolution.y * scale), -1.0, 1.0 }];
             
             if (mScissorEnabled)
             {
-                Basis scissorRect(mScissorRect);
+                Vec2I resolution = mCurrentResolution*scale;
+                RectF scissorRectF = RectF(mScissorRect.left*scale, mScissorRect.top*scale, mScissorRect.right*scale, mScissorRect.bottom*scale)
+                    .Move(resolution/2);
                 
-                RectI clipRect = scissorRect.AABB().Move(Vec2I(mCurrentResolution.x/2, mCurrentResolution.y/2));
-                clipRect.left = Math::Clamp(clipRect.left, 0, mCurrentResolution.x);
-                clipRect.right = Math::Clamp(clipRect.right, 0, mCurrentResolution.x);
-                clipRect.bottom = Math::Clamp(clipRect.bottom, 0, mCurrentResolution.y);
-                clipRect.top = Math::Clamp(clipRect.top, 0, mCurrentResolution.y);
+                RectI scissorRect = scissorRectF;
+                
+                scissorRect.left = Math::Clamp(scissorRect.left, 0, resolution.x);
+                scissorRect.right = Math::Clamp(scissorRect.right, 0, resolution.x);
+                scissorRect.bottom = Math::Clamp(scissorRect.bottom, 0, resolution.y);
+                scissorRect.top = Math::Clamp(scissorRect.top, 0, resolution.y);
                 
                 [renderEncoder setScissorRect:(MTLScissorRect){
-                    (ULong)clipRect.left, (ULong)mCurrentResolution.y - clipRect.bottom - clipRect.Height(),
-                    (ULong)clipRect.Width(), (ULong)clipRect.Height()
+                    (ULong)scissorRect.left, (ULong)resolution.y - scissorRect.bottom - scissorRect.Height(),
+                    (ULong)scissorRect.Width(), (ULong)scissorRect.Height()
                 }];
             }
             
@@ -312,21 +190,20 @@ namespace o2
             
             [renderEncoder setVertexBuffer:RenderDevice::vertexBuffer offset:mVertexBufferOffset atIndex:0];
             
-            if (mLastDrawTexture) {
-                [renderEncoder setFragmentTexture:mLastDrawTexture->mImpl->texture atIndex:0];
+            if (mCurrentDrawTexture)
+            {
+                [renderEncoder setFragmentTexture:mCurrentDrawTexture->mImpl->texture atIndex:0];
             }
             else {
                 [renderEncoder setFragmentTexture:mWhiteTexture->mImpl->texture atIndex:0];
             }
             
             Uniforms uniforms;
-            MtxConvert(mProjMatrix, uniforms.projectionMatrix);
-            MtxConvert(mViewModelMatrix, uniforms.modelViewMatrix);
+            MtxConvert(mMVPMatrix, uniforms.mvpMatrix);
             
             Uniforms* dstUniformsBuffer = (Uniforms*)((Byte*)[RenderDevice::uniformBuffer contents] + mUniformBufferOffset);
             memcpy(dstUniformsBuffer, &uniforms, sizeof(Uniforms));
             [renderEncoder setVertexBuffer:RenderDevice::uniformBuffer offset:mUniformBufferOffset atIndex:1];
-            mUniformBufferOffset += (sizeof(Uniforms)/256 + 1)*256;
             
             static const MTLPrimitiveType primitiveType[3]{ MTLPrimitiveTypeTriangle, MTLPrimitiveTypeTriangle, MTLPrimitiveTypeLine };
             
@@ -338,282 +215,92 @@ namespace o2
 
         mVertexBufferOffset += (sizeof(MetalVertex2)*mLastDrawVertex/256 + 1)*256;
         mIndexBufferOffset += (sizeof(UInt)*mLastDrawIdx/256 + 1)*256;
-        
-        mFrameTrianglesCount += mTrianglesCount;
-        mLastDrawVertex = mTrianglesCount = mLastDrawIdx = 0;
-
-        mDIPCount++;
+        mUniformBufferOffset += (sizeof(Uniforms)/256 + 1)*256;
     }
 
-    void Render::SetupViewMatrix(const Vec2I& viewSize)
+    void Render::PlatformEnd()
     {
-        mCurrentResolution = viewSize;
-        
-        Math::OrthoProjMatrix(mProjMatrix, 0.0f, (float)viewSize.x, (float)viewSize.y, 0.0f, -2.0f, 2.0f);
-        UpdateCameraTransforms();
-    }
-
-    void Render::End()
-    {
-        if (!mReady)
-            return;
-
-        postRender();
-        postRender.Clear();
-
-        DrawPrimitives();
-
         [RenderDevice::commandBuffer presentDrawable:RenderDevice::view.currentDrawable];
         [RenderDevice::commandBuffer commit];
+    }
+
+    void Render::PlatformResetState()
+    {
         
-        //CheckTexturesUnloading();
-        CheckFontsUnloading();
     }
 
     void Render::Clear(const Color4& color /*= Color4::Blur()*/)
     {
-        DrawPrimitives();
         mClearColor = color;
         mNeedClear = true;
     }
-    
-    void Render::UpdateCameraTransforms()
+
+    void Render::PlatformFlipVerticesUV()
     {
-        Vec2F resf = (Vec2F)mCurrentResolution;
-        
-        float sign = mCurrentRenderTarget ? 1 : -1;
-        
-        float modelMatrix[16] =
-        {
-            1,           0,            0, 0,
-            0,        sign,            0, 0,
-            0,           0,            1, 0,
-            Math::Round(resf.x*0.5f), Math::Round(resf.y*0.5f), -1, 1
-        };
-        
-        Basis defaultCameraBasis((Vec2F)mCurrentResolution*-0.5f, Vec2F::Right()*resf.x, Vec2F().Up()*resf.y);
-        Basis camTransf = mCamera.GetBasis().Inverted()*defaultCameraBasis;
-        mViewScale = Vec2F(camTransf.xv.Length(), camTransf.yv.Length());
-        mInvViewScale = Vec2F(1.0f / mViewScale.x, 1.0f / mViewScale.y);
-        
-        float camTransfMatr[16] =
-        {
-            camTransf.xv.x,   camTransf.xv.y,   0, 0,
-            camTransf.yv.x,   camTransf.yv.y,   0, 0,
-            0,                0,                0, 0,
-            camTransf.origin.x, camTransf.origin.y, 0, 1
-        };
-        
-        MtxMultiply(mViewModelMatrix, modelMatrix, camTransfMatr);
+        MetalVertex2* dstVertexBuffer = (MetalVertex2*)((Byte*)[RenderDevice::vertexBuffer contents] + mVertexBufferOffset);
+        for (UInt i = 0; i < mLastDrawVertex; i++)
+            dstVertexBuffer[i].tv = 1.0f - dstVertexBuffer[i].tv;
     }
 
-    void Render::BeginRenderToStencilBuffer()
+    void Render::PlatformSetupCameraTransforms(float* modelMatrix, float* viewMatrix, float* projMatrix)
     {
-//        if (mStencilDrawing || mStencilTest)
-//            return;
-//
-//        DrawPrimitives();
-//
-//        glEnable(GL_STENCIL_TEST);
-//        glStencilFunc(GL_ALWAYS, 0x1, 0xffffffff);
-//        glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
-//        glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
-//
-//        GL_CHECK_ERROR();
-//
-//        mStencilDrawing = true;
+        if (mCurrentRenderTarget)
+            modelMatrix[5] = -modelMatrix[5]; // Flip by Y for render targets
+        
+        float finalCamMtx[16];
+        Math::mtxMultiply(finalCamMtx, modelMatrix, viewMatrix);
+        Math::mtxMultiply(mMVPMatrix, projMatrix, finalCamMtx);
     }
 
-    void Render::EndRenderToStencilBuffer()
-    {
-//        if (!mStencilDrawing)
-//            return;
-//
-//        DrawPrimitives();
-//
-//        glDisable(GL_STENCIL_TEST);
-//        glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-//
-//        GL_CHECK_ERROR();
-//
-//        mStencilDrawing = false;
-    }
+    void Render::PlatformBeginStencilDrawing()
+    {}
 
-    void Render::EnableStencilTest()
-    {
-//        if (mStencilTest || mStencilDrawing)
-//            return;
-//
-//        DrawPrimitives();
-//
-//        glEnable(GL_STENCIL_TEST);
-//        glStencilFunc(GL_EQUAL, 0x1, 0xffffffff);
-//
-//        GL_CHECK_ERROR();
-//
-//        mStencilTest = true;
-    }
+    void Render::PlatformEndStencilDrawing()
+    {}
 
-    void Render::DisableStencilTest()
-    {
-//        if (!mStencilTest)
-//            return;
-//
-//        DrawPrimitives();
-//
-//        glDisable(GL_STENCIL_TEST);
-//
-//        mStencilTest = false;
-    }
+    void Render::PlatformEnableStencilTest()
+    {}
+
+    void Render::PlatformDisableStencilTest()
+    {}
 
     void Render::ClearStencil()
+    {}
+
+    void Render::PlatformEnableScissorTest()
     {
-//        glClearStencil(0);
-//        glClear(GL_STENCIL_BUFFER_BIT);
-//
-//        GL_CHECK_ERROR();
+        mScissorEnabled = true;
     }
 
-    void Render::EnableScissorTest(const RectI& rect)
+    void Render::PlatformDisableScissorTest()
     {
-        DrawPrimitives();
-        
-        RectI summaryScissorRect = rect;
-        if (!mStackScissors.IsEmpty())
-        {
-            mScissorInfos.Last().mEndDepth = mDrawingDepth;
-            
-            if (!mStackScissors.Last().mRenderTarget)
-            {
-                RectI lastSummaryClipRect = mStackScissors.Last().mSummaryScissorRect;
-                mClippingEverything = !summaryScissorRect.IsIntersects(lastSummaryClipRect);
-                summaryScissorRect = summaryScissorRect.GetIntersection(lastSummaryClipRect);
-            }
-            else
-            {
-                mScissorEnabled = true;
-                mClippingEverything = false;
-            }
-        }
-        else
-        {
-            mScissorEnabled = true;
-            mClippingEverything = false;
-        }
-        
-        mScissorInfos.Add(ScissorInfo(summaryScissorRect, mDrawingDepth));
-        mStackScissors.Add(ScissorStackEntry(rect, summaryScissorRect));
-        
-        mScissorRect = CalculateScreenSpaceScissorRect(summaryScissorRect);
+        mScissorEnabled = false;
     }
 
-    void Render::DisableScissorTest(bool forcible /*= false*/)
+    void Render::PlatformSetScissorRect(const RectI& rect)
     {
-        if (mStackScissors.IsEmpty())
-        {
-            mLog->WarningStr("Can't disable scissor test - no scissor were enabled!");
-            return;
-        }
-        
-        DrawPrimitives();
-        
-        if (forcible)
-        {
-            mScissorEnabled = false;
-            
-            while (!mStackScissors.IsEmpty() && !mStackScissors.Last().mRenderTarget)
-                mStackScissors.PopBack();
-            
-            mScissorInfos.Last().mEndDepth = mDrawingDepth;
-        }
-        else
-        {
-            if (mStackScissors.Count() == 1)
-            {
-                mScissorEnabled = false;
-                mStackScissors.PopBack();
-                
-                mScissorInfos.Last().mEndDepth = mDrawingDepth;
-                mClippingEverything = false;
-            }
-            else
-            {
-                mStackScissors.PopBack();
-                RectI lastClipRect = mStackScissors.Last().mSummaryScissorRect;
-                
-                mScissorInfos.Last().mEndDepth = mDrawingDepth;
-                mScissorInfos.Add(ScissorInfo(lastClipRect, mDrawingDepth));
-                
-                if (mStackScissors.Last().mRenderTarget)
-                {
-                    mScissorEnabled = false;
-                    mClippingEverything = false;
-                }
-                else
-                {
-                    mScissorRect = CalculateScreenSpaceScissorRect(lastClipRect);
-                    mClippingEverything = lastClipRect == RectI();
-                }
-            }
-        }
+        mScissorRect = rect;
     }
 
-    void Render::BindRenderTexture(TextureRef renderTarget)
+    void Render::PlatformBindRenderTarget(const TextureRef& renderTarget)
+    {}
+
+    Vec2I Render::GetPlatformMaxTextureSize()
     {
-        if (!renderTarget)
-        {
-            UnbindRenderTexture();
-            return;
-        }
-
-        if (renderTarget->mUsage != Texture::Usage::RenderTarget)
-        {
-            mLog->Error("Can't set texture as render target: not render target texture");
-            UnbindRenderTexture();
-            return;
-        }
-
-        if (!renderTarget->IsReady())
-        {
-            mLog->Error("Can't set texture as render target: texture isn't ready");
-            UnbindRenderTexture();
-            return;
-        }
-
-        DrawPrimitives();
-
-        if (!mStackScissors.IsEmpty())
-        {
-            mScissorInfos.Last().mEndDepth = mDrawingDepth;
-            mScissorEnabled = false;
-        }
-
-        mStackScissors.Add(ScissorStackEntry(RectI(), RectI(), true));
-
-        mCurrentRenderTarget = renderTarget;
-        
-        SetupViewMatrix(renderTarget->GetSize());
+        return Vec2I(4096, 4096);
     }
 
-    void Render::UnbindRenderTexture()
+    Vec2I Render::GetPlatformDPI()
     {
-        if (!mCurrentRenderTarget)
-            return;
-
-        DrawPrimitives();
-
-        mCurrentRenderTarget = TextureRef();
+        NSScreen *screen = [NSScreen mainScreen];
+        NSDictionary *description = [screen deviceDescription];
+        NSSize displayPixelSize = [[description objectForKey:NSDeviceSize] sizeValue];
+        CGSize displayPhysicalSize = CGDisplayScreenSize([[description objectForKey:@"NSScreenNumber"] unsignedIntValue]);
         
-        SetupViewMatrix(mResolution);
-
-        DisableScissorTest(true);
-        mStackScissors.PopBack();
-        if (!mStackScissors.IsEmpty())
-        {
-            mScissorEnabled = true;
-            mScissorRect = CalculateScreenSpaceScissorRect(mStackScissors.Last().mSummaryScissorRect);
-            mClippingEverything = mScissorRect == RectI();
-        }
+        float mmPerInch = 25.4f;
+        float scale = o2Application.GetGraphicsScale();
+        return Vec2I((displayPixelSize.width / displayPhysicalSize.width) * mmPerInch / scale,
+                     (displayPixelSize.height / displayPhysicalSize.height) * mmPerInch / scale);
     }
 }
 

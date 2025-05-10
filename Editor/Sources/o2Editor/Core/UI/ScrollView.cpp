@@ -61,6 +61,7 @@ namespace Editor
 
         RedrawRenderTarget();
 
+        mRenderTargetSprite->transparency = mResTransparency;
         mRenderTargetSprite->Draw();
 		mListenersLayer->OnDrawn(mRenderTargetSprite->GetBasis());
     }
@@ -196,12 +197,12 @@ namespace Editor
     Basis ScrollView::GetCameraScreenToLocalTransform(const Camera& camera) const
     {
         RectF rectangle = layout->worldRect;
-        Basis identityCamTransform = Transform(rectangle.Size()).basis;
+        Basis identityCamTransform = Basis(rectangle);
         Basis cameraTransform = camera.basis;
 
         Basis sceneToCamTransform = identityCamTransform.Inverted()*cameraTransform;
 
-        return Basis::Translated(rectangle.Center()*-1.0f)*sceneToCamTransform;
+        return sceneToCamTransform;
     }
 
     void ScrollView::UpdateLocalScreenTransforms()
@@ -325,6 +326,9 @@ namespace Editor
                                   xTen ? mGridColor : cellColorSmoothed);
             }
         }
+        
+        if (o2Input.IsKeyDown(VK_F1))
+            o2Render.DrawCross(ScreenToLocalPoint(o2Input.GetCursorPos()), 200, Color4::Green());
     }
 
     void ScrollView::OnCameraTransformChanged()

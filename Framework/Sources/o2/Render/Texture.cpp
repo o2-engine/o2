@@ -83,10 +83,8 @@ namespace o2
     {
         if (mReady)
         {
-            if (mUsage == Usage::RenderTarget)
-                glDeleteFramebuffersEXT(1, &mFrameBuffer);
-
-            glDeleteTextures(1, &mHandle);
+            PlatformDestroy();
+            mReady = false;
         }
 
         mFormat = format;

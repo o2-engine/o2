@@ -70,7 +70,12 @@ namespace o2
 
         return FromLocal(point);
     }
-
+    
+    const Basis& CursorAreaEventListenersLayer::GetLocalToWorldTransform() const
+    {
+        return mLocalToWorldTransform;
+    }
+    
     void CursorAreaEventListenersLayer::Update()
     {
         PROFILE_SAMPLE_FUNC();

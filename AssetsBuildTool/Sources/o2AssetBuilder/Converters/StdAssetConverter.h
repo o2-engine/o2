@@ -11,16 +11,16 @@ namespace o2
     {
     public:
         // Returns vector of processing assets types
-        Vector<const Type*> GetProcessingAssetsTypes() const;
+        Vector<const Type*> GetProcessingAssetsTypes() const override;
 
         // Copies asset
-        void ConvertAsset(const AssetInfo& node);
+        void ConvertAsset(const AssetInfo& node) override;
 
         // Removes asset
-        void RemoveAsset(const AssetInfo& node);
+        void RemoveAsset(const AssetInfo& node) override;
 
         // Moves asset to new path
-        void MoveAsset(const AssetInfo& nodeFrom, const AssetInfo& nodeTo);
+        void MoveAsset(const AssetInfo& nodeFrom, const AssetInfo& nodeTo) override;
 
         IOBJECT(StdAssetConverter);
     };

@@ -106,7 +106,7 @@ const char* GetBuiltAssetsPath()
 #elif defined PLATFORM_ANDROID
     return "AndroidAssets/BuiltAssets/";
 #elif defined PLATFORM_MAC
-    return "BuiltAssets/Mac/Data/";
+    return "../../BuiltAssets/Mac/Data/";
 #elif defined PLATFORM_LINUX
     return "../../BuiltAssets/Linux/Data/";
 #elif defined PLATFORM_IOS
@@ -126,7 +126,7 @@ const char* GetBuiltAssetsTreePath()
 #elif defined PLATFORM_ANDROID
     return "AndroidAssets/AssetsTree.json";
 #elif defined PLATFORM_MAC
-    return "BuiltAssets/Mac/Data.json";
+    return "../../BuiltAssets/Mac/Data.json";
 #elif defined PLATFORM_LINUX
     return "../../BuiltAssets/Linux/Data.json";
 #elif defined PLATFORM_IOS
@@ -148,7 +148,7 @@ const char* GetEditorBuiltAssetsPath()
 #if defined PLATFORM_WINDOWS
     return "../../BuiltAssets/Windows/EditorData/";
 #elif defined PLATFORM_MAC
-    return "BuiltAssets/Mac/EditorData/";
+    return "../../BuiltAssets/Mac/EditorData/";
 #elif defined PLATFORM_LINUX
     return "../../BuiltAssets/Linux/EditorData/";
 #endif
@@ -160,7 +160,7 @@ const char* GetEditorBuiltAssetsTreePath()
 #if defined PLATFORM_WINDOWS
     return "../../BuiltAssets/Windows/EditorData.json";
 #elif defined PLATFORM_MAC
-    return "BuiltAssets/Mac/EditorData.json";
+    return "../../BuiltAssets/Mac/EditorData.json";
 #elif defined PLATFORM_LINUX
     return "../../BuiltAssets/Linux/EditorData.json";
 #endif
@@ -172,7 +172,7 @@ const char* GetBuiltinAssetsPath()
 #if defined PLATFORM_WINDOWS
     return "../../BuiltAssets/Windows/FrameworkData/";
 #elif defined PLATFORM_MAC
-    return "BuiltAssets/Max/FrameworkData/";
+    return "../../BuiltAssets/Max/FrameworkData/";
 #elif defined PLATFORM_LINUX
     return "../../BuiltAssets/Linux/FrameworkData/";
 #else

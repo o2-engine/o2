@@ -2,7 +2,7 @@
 
 #import "RendererView.h"
 
-#import "ShaderTypes.h"
+#import "o2/Render/Mac/ShaderTypes.h"
 #include "o2/Render/Render.h"
 #include "o2/Render/Mac/MetalWrappers.h"
 #include "o2/Application/Application.h"
@@ -25,7 +25,8 @@
 
 - (void)mtkView:(nonnull MTKView *)view drawableSizeWillChange:(CGSize)size
 {
-    o2::ApplicationPlatformWrapper::OnWindowRsized(o2::Vec2I(size.width, size.height));
+    float scale = o2Application.GetGraphicsScale();
+    o2::ApplicationPlatformWrapper::OnWindowRsized(o2::Vec2I(size.width/scale, size.height/scale));
 }
 
 @end
@@ -120,8 +121,8 @@
     NSRect viewRectPixels = [self convertRectToBacking:viewRectPoints];
     
     float scale = o2Application.GetGraphicsScale();
-    auto screenPoint = o2::Vec2F(o2::Math::Floor(pt.x*scale - viewRectPixels.size.width/2),
-                                 o2::Math::Floor(pt.y*scale - viewRectPixels.size.height/2));
+    auto screenPoint = o2::Vec2F(o2::Math::Floor(pt.x - viewRectPixels.size.width/2/scale),
+                                 o2::Math::Floor(pt.y - viewRectPixels.size.height/2/scale));
     
     return screenPoint;
 }
@@ -133,7 +134,7 @@
 
 - (void)mouseDragged:(NSEvent *)event
 {
-    o2Input.OnCursorMoved([self getMousePos:event]);
+    o2Input.OnCursorMoved([self getMousePos:event], 0);
 }
 
 - (void)mouseMoved:(NSEvent *)event
@@ -154,6 +155,11 @@
 - (void)rightMouseUp:(NSEvent *)event
 {
     o2Input.OnAltCursorReleased();
+}
+
+- (void)rightMouseDragged:(NSEvent *)event
+{
+    o2Input.OnCursorMoved([self getMousePos:event], 0);
 }
 
 - (void)scrollWheel:(NSEvent *)event

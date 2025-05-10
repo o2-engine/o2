@@ -9,6 +9,8 @@ namespace o2
     class IEditableAnimation: public IRefCounterable
     {
     public:
+        virtual ~IEditableAnimation() {}
+        
         // Called when animation started to edit. It means that animation must be deactivated
         virtual void BeginAnimationEdit() = 0;
 

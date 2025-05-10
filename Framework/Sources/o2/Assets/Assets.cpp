@@ -17,6 +17,8 @@ namespace o2
     Assets::Assets(RefCounter* refCounter):
         Singleton<Assets>(refCounter)
     {
+        mReady = true;
+        
         mLog = mmake<LogStream>("Assets");
         o2Debug.GetLog()->BindStream(mLog);
 
@@ -27,6 +29,8 @@ namespace o2
 
     Assets::~Assets()
     {
+        mReady = false;
+        
         mCachedAssets.Clear();
         mCachedAssetsByPath.Clear();
         mCachedAssetsByUID.Clear();
@@ -394,10 +398,11 @@ namespace o2
     {
         mAssetsTrees.Clear();
 
+        mMainAssetsTree = mmake<AssetsTree>();
         auto editorAssetsTree = mmake<AssetsTree>();
+
         editorAssetsTree->DeserializeFromString(o2FileSystem.ReadFile(::GetEditorBuiltAssetsTreePath()));
 
-        mMainAssetsTree = mmake<AssetsTree>();
         mMainAssetsTree->DeserializeFromString(o2FileSystem.ReadFile(::GetBuiltAssetsTreePath()));
         mMainAssetsTree->assetsPath = ::GetAssetsPath();
         mMainAssetsTree->builtAssetsPath = ::GetBuiltAssetsPath();
@@ -464,6 +469,9 @@ namespace o2
 
     AssetRef<Asset> Assets::AddAssetCache(Asset* asset)
     {
+        if (!mReady)
+            return nullptr;
+        
         AssetRef<Asset> assetRef(asset);
         mCachedAssets.Add(assetRef);
 
@@ -484,6 +492,9 @@ namespace o2
 
     void Assets::RemoveAssetCache(Asset* asset)
     {
+        if (!mReady)
+            return;
+        
         auto fnd = mCachedAssetsByUID.find(asset->GetUID());
         if (fnd != mCachedAssetsByUID.end())
             mCachedAssetsByUID.erase(fnd);
@@ -497,6 +508,9 @@ namespace o2
 
     AssetRef<Asset> Assets::UpdateAssetCache(Asset* asset, const String& oldPath, const UID& oldUID)
     {
+        if (!mReady)
+            return nullptr;
+        
         AssetRef<Asset> cached;
 
         auto fnd = mCachedAssetsByUID.find(oldUID);
@@ -537,6 +551,9 @@ namespace o2
 #elif PLATFORM_LINUX
         String assetsBuilderPath = "AssetsBuilder";
         String platform = "Linux";
+#elif PLATFORM_MAC
+        String assetsBuilderPath = "AssetsBuilder";
+        String platform = "Mac";
 #endif
 
         //-platform ${O2_PLATFORM} -source "${CMAKE_CURRENT_SOURCE_DIR}/Assets/" -target "${CMAKE_CURRENT_SOURCE_DIR}/BuiltAssets/${O2_PLATFORM}/Data/" -target-tree "${CMAKE_CURRENT_SOURCE_DIR}/BuiltAssets/${O2_PLATFORM}/Data.json" -compressor-config "${CMAKE_CURRENT_SOURCE_DIR}/o2/CompressToolsConfig.json"
