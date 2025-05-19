@@ -25,7 +25,12 @@ namespace o2
         return *player;
     }
 
-    void AnimationState::SetWeight(float weight)
+	float AnimationState::GetDuration() const
+	{
+		return mAnimation ? mAnimation->animation->GetDuration() : 0.0f;
+	}
+
+	void AnimationState::SetWeight(float weight)
     {
         mWeight = weight;
     }
@@ -111,7 +116,12 @@ namespace o2
         return empty;
     }
 
-    void IAnimationState::SetWeight(float weight)
+	float IAnimationState::GetDuration() const
+	{
+		return 0.0f;
+	}
+
+	void IAnimationState::SetWeight(float weight)
     {}
 
     float IAnimationState::GetWeight() const

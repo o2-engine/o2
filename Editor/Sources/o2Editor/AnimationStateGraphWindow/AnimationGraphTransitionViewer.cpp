@@ -37,31 +37,100 @@ namespace Editor
 		mDurationWidget->onDraw = THIS_FUNC(DrawDurationWidget);
 		mSpoiler->AddChild(mDurationWidget);
 
-		// Create drag handles
+		// Create begin time range handle
 		mBeginTimeRangeHandle = mmake<DragHandle>();
-		mBeginTimeRangeHandle->SetRegularDrawable(mmake<Sprite>("ui/UI2_handle_regular.png"));
-		mBeginTimeRangeHandle->SetHoverDrawable(mmake<Sprite>("ui/UI2_handle_select.png"));
-		mBeginTimeRangeHandle->SetPressedDrawable(mmake<Sprite>("ui/UI2_handle_pressed.png"));
-		mBeginTimeRangeHandle->onChangedPos = THIS_FUNC(OnBeginTimeRangeChanged);
+		mBeginTimeRangeHandle->SetRegularDrawable(mmake<Sprite>("ui/UI4_Right_icn.png"));
+		mBeginTimeRangeHandle->SetHoverDrawable(mmake<Sprite>("ui/UI4_Right_icn_select.png"));
+		mBeginTimeRangeHandle->SetPressedDrawable(mmake<Sprite>("ui/UI4_Right_icn_pressed.png"));
+		mBeginTimeRangeHandle->angle = -Math::PI() / 2.0f;
 
+		mBeginTimeRangeHandle->onChangedPos = [this](const Vec2F& pos) { 
+			if (auto transition = mTransition.Lock())
+				transition->transition->beginTimeRange = Math::Clamp(pos.x / mSourceDuration, 0.0f, transition->transition->endTimeRange);
+
+			UpdateHandlesPositions();
+		};
+
+		mBeginTimeRangeHandle->localToScreenTransformFunc = [this](const Vec2F& pos) { 
+			return Vec2F(TimeToPosition(pos.x), mDurationWidget->layout->worldTop - 1);
+		};
+
+		mBeginTimeRangeHandle->screenToLocalTransformFunc = [this](const Vec2F& pos) { 
+			return Vec2F(PositionToTime(pos.x), 0);
+		};
+
+		// Create end time range handle
 		mEndTimeRangeHandle = mmake<DragHandle>();
-		mEndTimeRangeHandle->SetRegularDrawable(mmake<Sprite>("ui/UI2_handle_regular.png"));
-		mEndTimeRangeHandle->SetHoverDrawable(mmake<Sprite>("ui/UI2_handle_select.png"));
-		mEndTimeRangeHandle->SetPressedDrawable(mmake<Sprite>("ui/UI2_handle_pressed.png"));
-		mEndTimeRangeHandle->onChangedPos = THIS_FUNC(OnEndTimeRangeChanged);
+		mEndTimeRangeHandle->SetRegularDrawable(mmake<Sprite>("ui/UI4_Right_icn.png"));
+		mEndTimeRangeHandle->SetHoverDrawable(mmake<Sprite>("ui/UI4_Right_icn_select.png"));
+		mEndTimeRangeHandle->SetPressedDrawable(mmake<Sprite>("ui/UI4_Right_icn_pressed.png"));
+		mEndTimeRangeHandle->angle = -Math::PI() / 2.0f;
 
+		mEndTimeRangeHandle->onChangedPos = [this](const Vec2F& pos) { 
+			if (auto transition = mTransition.Lock())
+				transition->transition->endTimeRange = Math::Clamp(pos.x / mSourceDuration, transition->transition->beginTimeRange, 1.0f);
+
+			UpdateHandlesPositions();
+		};
+
+		mEndTimeRangeHandle->localToScreenTransformFunc = mBeginTimeRangeHandle->localToScreenTransformFunc;
+		mEndTimeRangeHandle->screenToLocalTransformFunc = mBeginTimeRangeHandle->screenToLocalTransformFunc;
+
+		// Create duration handle
 		mDurationHandle = mmake<DragHandle>();
-		mDurationHandle->SetRegularDrawable(mmake<Sprite>("ui/UI2_handle_regular.png"));
-		mDurationHandle->SetHoverDrawable(mmake<Sprite>("ui/UI2_handle_select.png"));
-		mDurationHandle->SetPressedDrawable(mmake<Sprite>("ui/UI2_handle_pressed.png"));
-		mDurationHandle->onChangedPos = THIS_FUNC(OnDurationChanged);
+		mDurationHandle->SetRegularDrawable(mmake<Sprite>("ui/UI4_Right_icn.png"));
+		mDurationHandle->SetHoverDrawable(mmake<Sprite>("ui/UI4_Right_icn_select.png"));
+		mDurationHandle->SetPressedDrawable(mmake<Sprite>("ui/UI4_Right_icn_pressed.png"));
+		mDurationHandle->angle = Math::PI() / 2.0f;
+
+		mDurationHandle->onChangedPos = [this](const Vec2F& pos) { 
+			if (auto transition = mTransition.Lock())
+				transition->transition->duration = Math::Clamp(pos.x - transition->transition->beginTimeRange * mSourceDuration, 0.0f, mDestinationDuration);
+
+			UpdateHandlesPositions();
+		};
+
+		mDurationHandle->localToScreenTransformFunc = [this](const Vec2F& pos) { 
+			return Vec2F(TimeToPosition(pos.x), mDurationWidget->layout->worldTop - mDurationBarHeight*2.0f - 9);
+		};
+
+		mDurationHandle->screenToLocalTransformFunc = [this](const Vec2F& pos) {
+			return Vec2F(PositionToTime(pos.x), 0);
+		};
 
 		// Initialize sprites
-		mSourceRangeSprite = mmake<Sprite>("ui/UI_Window_place.png");
-		mSourceRangeSprite->SetColor(Color4(50, 120, 220, 255));
+		mSourceRangeSprite = mmake<Sprite>("ui/UI4_animation_bar.png");
+		mDestinationRangeSprite = mmake<Sprite>("ui/UI4_animation_bar.png");
 
-		mDestinationRangeSprite = mmake<Sprite>("ui/UI_Window_place.png");
-		mDestinationRangeSprite->SetColor(Color4(220, 120, 50, 255));
+		mRangeSprite = mmake<Sprite>();
+		mRangeSprite->SetColor(Color4(255, 255, 255, 125));
+
+		// Transition mesh
+		//  [0]--------[1]
+		//   |          | \
+		//  [2]--------[3] [4]--------[5] 
+		//                \ |          |
+		//                 [6]--------[7]
+		mTransitionMesh = mmake<Mesh>(TextureRef(), 8, 6);
+		mTransitionMesh->vertexCount = 8;
+		mTransitionMesh->polyCount = 6;
+		mTransitionMesh->indexes[0] = 0; mTransitionMesh->indexes[1] = 1; mTransitionMesh->indexes[2] = 2;
+		mTransitionMesh->indexes[3] = 1; mTransitionMesh->indexes[4] = 3; mTransitionMesh->indexes[5] = 2;
+		mTransitionMesh->indexes[6] = 1; mTransitionMesh->indexes[7] = 4; mTransitionMesh->indexes[8] = 3;
+		mTransitionMesh->indexes[9] = 3; mTransitionMesh->indexes[10] = 4; mTransitionMesh->indexes[11] = 6;
+		mTransitionMesh->indexes[12] = 4; mTransitionMesh->indexes[13] = 5; mTransitionMesh->indexes[14] = 6;
+		mTransitionMesh->indexes[15] = 6; mTransitionMesh->indexes[16] = 5; mTransitionMesh->indexes[17] = 7;
+
+		// State names texts
+		mSourceStateName = mmake<Text>("stdFont.ttf");
+		mSourceStateName->height = 12;
+		mSourceStateName->verAlign = VerAlign::Middle;
+		mSourceStateName->horAlign = HorAlign::Left;
+
+		mDestinationStateName = mmake<Text>("stdFont.ttf");
+		mDestinationStateName->height = 12;
+		mDestinationStateName->verAlign = VerAlign::Middle;
+		mDestinationStateName->horAlign = HorAlign::Left;
 	}
 
 	void AnimationGraphTransitionViewer::OnRefreshed(const Vector<Pair<IObject*, IObject*>>& targetObjects)
@@ -72,62 +141,56 @@ namespace Editor
 		mSpoiler->AddChild(mDurationWidget);
 		mDurationWidget->SetIndexInSiblings(mSpoiler->GetChildren().Count() - 1);
 
-        auto transition = dynamic_cast<AnimationStateGraphEditor::StateTransition*>(targetObjects.Last().first);
-        if (!transition)
+        auto transitionWrapper = dynamic_cast<AnimationStateGraphEditor::StateTransition*>(targetObjects.Last().first);
+        if (!transitionWrapper)
             return;
 
-        mTransition = Ref(transition);
+        mTransition = Ref(transitionWrapper);
 
-//         // Get source and destination animations durations
-//         if (auto sourceState = transition->GetSourceState())
-//         {
-//             mSourceDuration = 1.0f; // Default value
-// 
-//             // Try to get animation component and find animation duration
-//             if (auto graph = sourceState->GetGraph().Lock())
-//             {
-//                 if (auto component = graph->GetComponent().Lock())
-//                 {
-//                     if (auto animationComponent = component->GetAnimationComponent())
-//                     {
-//                         for (auto& animation : sourceState->GetAnimations())
-//                         {
-//                             auto state = animationComponent->GetState(animation->name);
-//                             if (state && state->GetDuration() > 0)
-//                             {
-//                                 mSourceDuration = state->GetDuration();
-//                                 break;
-//                             }
-//                         }
-//                     }
-//                 }
-//             }
-//         }
-// 
-//         if (auto destState = transition->GetDestinationState().Get())
-//         {
-//             mDestinationDuration = 1.0f; // Default value
-// 
-//             // Try to get animation component and find animation duration
-//             if (auto graph = destState->GetGraph().Lock())
-//             {
-//                 if (auto component = graph->GetComponent().Lock())
-//                 {
-//                     if (auto animationComponent = component->GetAnimationComponent())
-//                     {
-//                         for (auto& animation : destState->GetAnimations())
-//                         {
-//                             auto state = animationComponent->GetState(animation->name);
-//                             if (state && state->GetDuration() > 0)
-//                             {
-//                                 mDestinationDuration = state->GetDuration();
-//                                 break;
-//                             }
-//                         }
-//                     }
-//                 }
-//             }
-//         }
+		mSourceDuration      = 1.0f; 
+		mDestinationDuration = 1.0f; 
+
+		auto sourceStateWrapper = transitionWrapper->owner.Lock();
+		if (sourceStateWrapper)
+		{
+			mSourceDuration = 0.0f;
+
+			bool animationNameUpdated = false;
+			for (auto& animation : sourceStateWrapper->animations)
+			{
+				if (auto state = animation->state.Lock())
+				{
+					mSourceDuration = Math::Max(mSourceDuration, state->GetDuration());
+
+					if (!animationNameUpdated && animation->animation)
+					{
+						mSourceStateName->text = animation->animation.Lock()->name;
+						animationNameUpdated = true;
+					}
+				}
+			}
+		}
+
+		auto destinationStateWrapper = transitionWrapper->destination.Lock();
+		if (destinationStateWrapper)
+		{
+			mDestinationDuration = 0.0f;
+
+			bool animationNameUpdated = false;
+			for (auto& animation : destinationStateWrapper->animations)
+			{
+				if (auto state = animation->state.Lock())
+				{
+					mDestinationDuration = Math::Max(mDestinationDuration, state->GetDuration());
+
+					if (!animationNameUpdated && animation->animation)
+					{
+						mDestinationStateName->text = animation->animation.Lock()->name;
+						animationNameUpdated = true;
+					}
+				}
+			}
+		}
 
         // Update handles positions
         UpdateHandlesPositions();
@@ -135,143 +198,155 @@ namespace Editor
 
     void AnimationGraphTransitionViewer::DrawDurationWidget()
     {
-        if (!mTransition)
+        if (!mTransition || mSourceDuration < Math::Epsilon || mDestinationDuration < Math::Epsilon)
             return;
 
-		float durationBarHeight = 25.0f;
-		float durationBarsSpace = 4.0f;
-		float handlesOffset = 10.0f;
+		float durationBarsSpace = 1.0f;
+		float widgetTopDownBorders = 5;
 
-		Color4 solidBarColor(50, 120, 220, 255);
-		Color4 transparentBarColor(50, 120, 220, 0);
+		Color4 solidBarColor(255, 255, 255, 255);
+		Color4 transparentBarColor(255, 255, 255, 0);
 
 		RectF widgetRect = mDurationWidget->layout->GetWorldRect();
+		widgetRect.top -= widgetTopDownBorders;
+		widgetRect.bottom += widgetTopDownBorders;
+
+		float sourceRangeBeginTime = 0.0f;
+		float sourceRangeEndTime = mSourceDuration;
+
+		float destinationRangeBeginTime = mSourceDuration * mTransition.Lock()->transition->beginTimeRange;
+		float destinationRangeEndTime = destinationRangeBeginTime + mDestinationDuration;
+
+		float sourceRangeBeginPosition = TimeToPosition(sourceRangeBeginTime);
+		float sourceRangeEndPosition = TimeToPosition(sourceRangeEndTime);
+		float sourceRangePositionDelta = sourceRangeEndPosition - sourceRangeBeginPosition;
+
+		float destinationRangeBeginPosition = TimeToPosition(destinationRangeBeginTime);
+		float destinationRangeEndPosition = TimeToPosition(destinationRangeEndTime);
+		float destinationRangePositionDelta = destinationRangeEndPosition - destinationRangeBeginPosition;
+
+		float destinationDurationPosition = TimeToPosition(destinationRangeBeginTime + mTransition.Lock()->transition->duration);
 
 		// Source animation duration bars
-		RectF sourceRect(widgetRect.left, widgetRect.top - handlesOffset, widgetRect.right, widgetRect.top - handlesOffset - durationBarHeight);
-
-        float sourceDurationLeft = Math::Lerp(widgetRect.left, widgetRect.right, 0.1f);
-		float sourceDurationRight = Math::Lerp(widgetRect.left, widgetRect.right, 0.9f);
+		RectF sourceRect(widgetRect.left, widgetRect.top, 
+						 widgetRect.right, widgetRect.top - mDurationBarHeight);
 
 		mSourceRangeSprite->SetCornerColors(transparentBarColor, solidBarColor, solidBarColor, transparentBarColor);
 		mSourceRangeSprite->rect = RectF(sourceRect.left, sourceRect.top,
-										 sourceDurationLeft - durationBarsSpace/2.0f, sourceRect.bottom);
+										 sourceRangeBeginPosition - durationBarsSpace, sourceRect.bottom);
 
         mSourceRangeSprite->Draw();
 
-
 		mSourceRangeSprite->SetCornerColors(solidBarColor, solidBarColor, solidBarColor, solidBarColor);
-		mSourceRangeSprite->rect = RectF(sourceDurationLeft + durationBarsSpace/2.0f, sourceRect.top,
-										 sourceDurationRight - durationBarsSpace/2.0f, sourceRect.bottom);
+		float sourceRangeBeginItPosition = sourceRangeBeginPosition;
+		while (sourceRangeBeginItPosition + sourceRangePositionDelta < widgetRect.right)
+		{
+			mSourceRangeSprite->rect = RectF(sourceRangeBeginItPosition + durationBarsSpace, sourceRect.top,
+											 sourceRangeBeginItPosition + sourceRangePositionDelta - durationBarsSpace, sourceRect.bottom);
 
-		mSourceRangeSprite->Draw();
+			sourceRangeBeginItPosition += sourceRangePositionDelta;
+
+			mSourceRangeSprite->Draw();
+		}
 
 		mSourceRangeSprite->SetCornerColors(solidBarColor, transparentBarColor, transparentBarColor, solidBarColor);
-		mSourceRangeSprite->rect = RectF(sourceDurationRight + durationBarsSpace/2.0f, sourceRect.top,
-										 sourceRect.right, sourceRect.bottom);
+		mSourceRangeSprite->rect = RectF(sourceRangeBeginItPosition + durationBarsSpace, sourceRect.top,
+										 sourceRangeBeginItPosition + mHandlesOffset, sourceRect.bottom);
 
 		mSourceRangeSprite->Draw();
 
-        
-//         // Draw source animation duration bar
-//         float sourceHeight = 30.0f;
-//         RectF sourceRect(widgetRect.left, widgetRect.top, widgetRect.right, widgetRect.top + sourceHeight);
-//         o2Render.DrawRect(sourceRect, Color4(50, 120, 220, 255));
-// 
-//         // Draw destination animation duration bar
-//         float destHeight = 30.0f;
-//         RectF destRect(widgetRect.left, widgetRect.top + sourceHeight + 10.0f, 
-//                        widgetRect.right, widgetRect.top + sourceHeight + 10.0f + destHeight);
-//         o2Render.DrawRect(destRect, Color4(220, 120, 50, 255));
-// 
-//         // Draw time markers
-//         float beginPos = TimeToPosition(mTransition->beginTimeRange, true);
-//         float endPos = TimeToPosition(mTransition->endTimeRange, true);
-//         float durationPos = TimeToPosition(mTransition->duration, false);
-// 
-//         // Draw time range connection
-//         o2Render.DrawLine(
-//             Vec2F(widgetRect.left + beginPos, sourceRect.bottom), 
-//             Vec2F(widgetRect.left + durationPos, destRect.top),
-//             Color4(150, 150, 150, 200), 1.0f
-//         );
-// 
-//         o2Render.DrawLine(
-//             Vec2F(widgetRect.left + endPos, sourceRect.bottom), 
-//             Vec2F(widgetRect.left + durationPos + 8.0f, destRect.top),
-//             Color4(150, 150, 150, 200), 1.0f
-//         );
+		// Destination animation duration bars	
+		RectF destRect(widgetRect.left, widgetRect.top - mDurationBarHeight - durationBarsSpace, 
+					   widgetRect.right, widgetRect.top - 2*mDurationBarHeight - durationBarsSpace);
 
-        // Draw handles
+		mDestinationRangeSprite->SetCornerColors(solidBarColor, solidBarColor, solidBarColor, solidBarColor);
+		float destinationRangeBeginItPosition = destinationRangeBeginPosition;
+		while (destinationRangeBeginItPosition + destinationRangePositionDelta < widgetRect.right)
+		{
+			mDestinationRangeSprite->rect = RectF(destinationRangeBeginItPosition + durationBarsSpace, destRect.top,
+												  destinationRangeBeginItPosition + destinationRangePositionDelta - durationBarsSpace, destRect.bottom);
+			destinationRangeBeginItPosition += destinationRangePositionDelta;
+			mDestinationRangeSprite->Draw();
+		}
+
+		mDestinationRangeSprite->SetCornerColors(solidBarColor, transparentBarColor, transparentBarColor, solidBarColor);
+		mDestinationRangeSprite->rect = RectF(destinationRangeBeginItPosition + durationBarsSpace, destRect.top,
+											  destinationRangeBeginItPosition + mHandlesOffset, destRect.bottom);
+
+		mDestinationRangeSprite->Draw();
+
+		// Draw range sprite
+		mRangeSprite->rect = RectF(destinationRangeBeginPosition, sourceRect.top,
+								   mEndTimeRangeHandle->GetScreenPosition().x, sourceRect.bottom);
+		mRangeSprite->Draw();
+
+		// Transition mesh
+		//  [0]--------[1]
+		//   |          | \
+		//  [2]--------[3] [4]--------[5] 
+		//                \ |          |
+		//                 [6]--------[7]
+		auto transitionColor = Color4(0, 156, 141, 255).ABGR();
+		mTransitionMesh->vertices[0] = Vertex(sourceRangeBeginPosition + 2, sourceRect.top - 1, transitionColor, 0, 0);
+		mTransitionMesh->vertices[2] = Vertex(sourceRangeBeginPosition + 2, sourceRect.bottom + 1, transitionColor, 0, 0);
+
+		mTransitionMesh->vertices[1] = Vertex(destinationRangeBeginPosition, sourceRect.top - 1, transitionColor, 0, 0);
+		mTransitionMesh->vertices[3] = Vertex(destinationRangeBeginPosition, sourceRect.bottom + 1, transitionColor, 0, 0);
+
+		mTransitionMesh->vertices[4] = Vertex(destinationDurationPosition, destRect.top - 1, transitionColor, 0, 0);
+		mTransitionMesh->vertices[6] = Vertex(destinationDurationPosition, destRect.bottom + 1, transitionColor, 0, 0);
+
+		float transitionEndPos = destinationRangeBeginPosition + destinationRangePositionDelta - durationBarsSpace - 1;
+		mTransitionMesh->vertices[5] = Vertex(transitionEndPos, destRect.top - 1, transitionColor, 0, 0);
+		mTransitionMesh->vertices[7] = Vertex(transitionEndPos, destRect.bottom + 1, transitionColor, 0, 0);
+		mTransitionMesh->Draw();
+
+		// Draw state names
+		float textBorder = 5.0f;
+		mSourceStateName->rect = RectF(sourceRangeBeginPosition + textBorder, sourceRect.top,
+									   sourceRangeEndPosition - textBorder, sourceRect.bottom);
+
+		mSourceStateName->Draw();
+
+		mDestinationStateName->rect = RectF(destinationRangeBeginPosition + textBorder, destRect.top,
+											destinationRangeEndPosition - textBorder, destRect.bottom);
+
+		mDestinationStateName->Draw();
+
+		// Draw handles
+		mEndTimeRangeHandle->Draw();
         mBeginTimeRangeHandle->Draw();
-        mEndTimeRangeHandle->Draw();
         mDurationHandle->Draw();
     }
 
     void AnimationGraphTransitionViewer::UpdateHandlesPositions()
     {
-        if (!mTransition)
-            return;
+		auto transition = mTransition.Lock();
+		if (!transition)
+			return;
 
-        RectF widgetRect = mDurationWidget->layout->GetWorldRect();
-        
-        // Set positions for handles
-//         float beginPos = TimeToPosition(mTransition->beginTimeRange, true);
-//         float endPos = TimeToPosition(mTransition->endTimeRange, true);
-//         float durationPos = TimeToPosition(mTransition->duration, false);
-// 
-//         mBeginTimeRangeHandle->position = Vec2F(widgetRect.left + beginPos, widgetRect.top + 15.0f);
-//         mEndTimeRangeHandle->position = Vec2F(widgetRect.left + endPos, widgetRect.top + 15.0f);
-//         mDurationHandle->position = Vec2F(widgetRect.left + durationPos, widgetRect.top + 50.0f);
+		mBeginTimeRangeHandle->position = Vec2F(transition->transition->beginTimeRange * mSourceDuration, 0);
+		mEndTimeRangeHandle->position = Vec2F(transition->transition->endTimeRange * mSourceDuration, 0);
+		mDurationHandle->position = Vec2F(transition->transition->duration + transition->transition->beginTimeRange * mSourceDuration, 0);
     }
 
-    void AnimationGraphTransitionViewer::OnBeginTimeRangeChanged(const Vec2F& position)
-    {
-        if (!mTransition)
-            return;
+	float AnimationGraphTransitionViewer::TimeToPosition(float time) const
+	{
+		RectF widgetRect = mDurationWidget->layout->GetWorldRect();
+		float sumDuration = mSourceDuration + mDestinationDuration;
+		float durationScale = (widgetRect.Width() - mHandlesOffset * 2.0f) / sumDuration;
 
-//         auto widgetRect = mDurationWidget->layout->GetWorldRect();
-//         float relativeX = position.x - widgetRect.left;
-//         float newTime = PositionToTime(relativeX, true);
-// 
-//         // Clamp to valid range
-//         newTime = Math::Clamp(newTime, 0.0f, Math::Min(mTransition->endTimeRange, mSourceDuration));
-//         
-//         mTransition->beginTimeRange = newTime;
-        UpdateHandlesPositions();
-    }
+		return time * durationScale + widgetRect.left + mHandlesOffset;
+	}
 
-    void AnimationGraphTransitionViewer::OnEndTimeRangeChanged(const Vec2F& position)
-    {
-        if (!mTransition)
-            return;
+	float AnimationGraphTransitionViewer::PositionToTime(float position) const
+	{
+		RectF widgetRect = mDurationWidget->layout->GetWorldRect();
+		float sumDuration = mSourceDuration + mDestinationDuration;
+		float durationScale = (widgetRect.Width() - mHandlesOffset * 2.0f) / sumDuration;
 
-//         auto widgetRect = mDurationWidget->layout->GetWorldRect();
-//         float relativeX = position.x - widgetRect.left;
-//         float newTime = PositionToTime(relativeX, true);
-// 
-//         // Clamp to valid range
-//         newTime = Math::Clamp(newTime, Math::Max(mTransition->beginTimeRange, 0.0f), mSourceDuration);
-//         
-//         mTransition->endTimeRange = newTime;
-        UpdateHandlesPositions();
-    }
-
-    void AnimationGraphTransitionViewer::OnDurationChanged(const Vec2F& position)
-    {
-        if (!mTransition)
-            return;
-
-//         auto widgetRect = mDurationWidget->layout->GetWorldRect();
-//         float relativeX = position.x - widgetRect.left;
-//         float newTime = PositionToTime(relativeX, false);
-// 
-//         // Clamp to valid range
-//         newTime = Math::Clamp(newTime, 0.0f, mDestinationDuration);
-//         
-//         mTransition->duration = newTime;
-        UpdateHandlesPositions();
-    }
+		return (position - widgetRect.left - mHandlesOffset) / durationScale;
+	}
 }
 // --- META ---
 

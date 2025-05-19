@@ -72,7 +72,7 @@
             },
             "mCaretBlinkDelay": 1.149999976158142,
             "mMultiLine": false,
-            "Id": 14508266127541491258,
+            "Id": 18233092539257903640,
             "Transform": {
                 "minSize": {
                     "x": 30.0,
@@ -105,12 +105,12 @@
                                                             "Value": {
                                                                 "mKeys": [
                                                                     {
-                                                                        "uid": 3091832535586880392,
+                                                                        "uid": 18437366104550590994,
                                                                         "rightSupportPosition": 0.08000000566244126,
                                                                         "supportsType": "Broken"
                                                                     },
                                                                     {
-                                                                        "uid": 16179409453158506096,
+                                                                        "uid": 5309883195208995529,
                                                                         "value": 1.0,
                                                                         "position": 0.20000000298023225,
                                                                         "leftSupportPosition": -0.20000000298023225,
@@ -130,7 +130,7 @@
                             "meta": {
                                 "Type": "o2::DefaultAssetMeta<o2::AnimationAsset>",
                                 "Value": {
-                                    "mId": "b0b1a8f2bdcc6293f9dbb7c50b68b9f3"
+                                    "mId": "083d2dc33b0a22ce31e048bd7cb63f73"
                                 }
                             }
                         }

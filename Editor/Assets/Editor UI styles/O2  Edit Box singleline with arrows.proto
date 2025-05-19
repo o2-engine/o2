@@ -3,11 +3,11 @@
         "Type": "o2::EditBox",
         "Value": {
             "Prototype": {
-                "id": "2d1bc9de661588a251bc2ace26e231e6",
+                "id": "339d137d3af46f83112e1f66211a442d",
                 "path": "Editor UI styles/O2  Edit Box singleline.proto"
             },
-            "PrototypeLink": 8926645254524101399,
-            "Id": 14091277112788532382,
+            "PrototypeLink": 18361699463735310704,
+            "Id": 3356947103602677042,
             "mName": "singleline with arrows",
             "mViewAreaLayout": {
                 "offsetMax": {
@@ -93,8 +93,8 @@
                             }
                         }
                     },
-                    "mUID": 18243179156437349906,
-                    "PrototypeLink": 9438727374839791160
+                    "mUID": 172154412030436014,
+                    "PrototypeLink": 1144532298054957297
                 },
                 {
                     "mDrawable": {
@@ -119,8 +119,8 @@
                             }
                         }
                     },
-                    "mUID": 10869968157201491642,
-                    "PrototypeLink": 4679136951724565477
+                    "mUID": 16879248788989850059,
+                    "PrototypeLink": 5501630202941640501
                 },
                 {
                     "mDrawable": {
@@ -145,8 +145,8 @@
                             }
                         }
                     },
-                    "mUID": 8070869940243471212,
-                    "PrototypeLink": 1966911780778273301
+                    "mUID": 11856492249452808152,
+                    "PrototypeLink": 855029936525502237
                 },
                 {
                     "layout": {
@@ -177,7 +177,7 @@
                             }
                         }
                     },
-                    "mUID": 7437729054232647880,
+                    "mUID": 26176914138874783,
                     "mDepth": 3.0
                 }
             ],

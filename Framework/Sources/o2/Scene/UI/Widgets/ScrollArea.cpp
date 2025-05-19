@@ -32,7 +32,8 @@ namespace o2
 
             mEnableHorScroll = mHorScrollBar->IsEnabled();
         }
-        else mHorScrollBar = nullptr;
+        else 
+            mHorScrollBar = nullptr;
 
         if (mOwnVerScrollBar)
         {
@@ -42,7 +43,8 @@ namespace o2
 
             mEnableVerScroll = mVerScrollBar->IsEnabled();
         }
-        else mVerScrollBar = nullptr;
+        else 
+            mVerScrollBar = nullptr;
 
         RetargetStatesAnimations();
         SetLayoutDirty();

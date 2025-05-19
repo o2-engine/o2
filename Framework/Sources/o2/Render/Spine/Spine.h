@@ -35,6 +35,9 @@ namespace o2
             // Constructor
             Track(const Ref<Spine>& owner, int trackIndex, const String& name);
 
+			// Destructor
+			~Track() override;
+
             // Sets time
             void SetTime(float time) override;
 
@@ -57,12 +60,6 @@ namespace o2
         private:
             // Called for updating animated object, after updating time
             void Evaluate() override;
-
-            // Called when animation starts playing
-            void OnPlay() override;
-
-            // Called when animation stops playing
-            void OnStop() override;
 
             // Called when animation loop state changed
             void OnLoopChanged() override;
@@ -145,8 +142,6 @@ CLASS_METHODS_META(o2::Spine::Track)
     FUNCTION().PUBLIC().SIGNATURE(void, SetWeight, float);
     FUNCTION().PUBLIC().SIGNATURE(float, GetWeight);
     FUNCTION().PRIVATE().SIGNATURE(void, Evaluate);
-    FUNCTION().PRIVATE().SIGNATURE(void, OnPlay);
-    FUNCTION().PRIVATE().SIGNATURE(void, OnStop);
     FUNCTION().PRIVATE().SIGNATURE(void, OnLoopChanged);
 }
 END_META;

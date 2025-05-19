@@ -349,7 +349,6 @@ CLASS_FIELDS_META(o2::Application)
     FIELD().PUBLIC().DEFAULT_VALUE(600).NAME(maxFPS);
     FIELD().PUBLIC().DEFAULT_VALUE(60).NAME(fixedFPS);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mReady);
-    FIELD().PROTECTED().DEFAULT_VALUE(true).NAME(mRunning);
     FIELD().PROTECTED().NAME(mAssets);
     FIELD().PROTECTED().NAME(mEventSystem);
     FIELD().PROTECTED().NAME(mFileSystem);
@@ -403,8 +402,6 @@ CLASS_METHODS_META(o2::Application)
     FUNCTION().PUBLIC().SIGNATURE(String, GetBinPath);
     FUNCTION().PUBLIC().SIGNATURE(float, GetGraphicsScale);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(bool, IsReady);
-    FUNCTION().PUBLIC().SIGNATURE(bool, IsRunning);
-    FUNCTION().PUBLIC().SIGNATURE(void, SetRunning, bool);
 #if  defined PLATFORM_WINDOWS
     FUNCTION().PUBLIC().SIGNATURE(void, Initialize);
     FUNCTION().PUBLIC().SIGNATURE(void, Launch);

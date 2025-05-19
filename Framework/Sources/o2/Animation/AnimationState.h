@@ -39,6 +39,9 @@ namespace o2
         // Returns player
         virtual IAnimation& GetPlayer();
 
+		// Returns animation duration
+        virtual float GetDuration() const;
+
         // Sets state weight (0...1) of blending
         virtual void SetWeight(float weight);
 
@@ -88,6 +91,9 @@ namespace o2
 
         // Returns player
         IAnimation& GetPlayer() override;
+
+		// Returns animation duration
+		float GetDuration() const override;
 
         // Sets state weight
         void SetWeight(float weight) override;
@@ -167,6 +173,7 @@ CLASS_METHODS_META(o2::IAnimationState)
     FUNCTION().PUBLIC().CONSTRUCTOR(const String&);
     FUNCTION().PUBLIC().SIGNATURE(void, Update, float);
     FUNCTION().PUBLIC().SIGNATURE(IAnimation&, GetPlayer);
+    FUNCTION().PUBLIC().SIGNATURE(float, GetDuration);
     FUNCTION().PUBLIC().SIGNATURE(void, SetWeight, float);
     FUNCTION().PUBLIC().SIGNATURE(float, GetWeight);
     FUNCTION().PUBLIC().SIGNATURE(void, SetLooped, bool);
@@ -196,6 +203,7 @@ CLASS_METHODS_META(o2::AnimationState)
     FUNCTION().PUBLIC().CONSTRUCTOR(const String&);
     FUNCTION().PUBLIC().SIGNATURE(void, Update, float);
     FUNCTION().PUBLIC().SIGNATURE(IAnimation&, GetPlayer);
+    FUNCTION().PUBLIC().SIGNATURE(float, GetDuration);
     FUNCTION().PUBLIC().SIGNATURE(void, SetWeight, float);
     FUNCTION().PUBLIC().SIGNATURE(float, GetWeight);
     FUNCTION().PUBLIC().SIGNATURE(void, SetLooped, bool);

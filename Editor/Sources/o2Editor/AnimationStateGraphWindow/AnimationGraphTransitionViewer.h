@@ -35,12 +35,18 @@ namespace Editor
 
 		Ref<Sprite> mSourceRangeSprite;      // Source range sprite
 		Ref<Sprite> mDestinationRangeSprite; // Destination range sprite
+		Ref<Sprite> mRangeSprite;            // Range sprite (from begin to end range)
+		Ref<Mesh>   mTransitionMesh;         // Transition mesh
+
+		Ref<Text> mSourceStateName;      // Source state name text
+		Ref<Text> mDestinationStateName; // Destination state name text
 
 		Ref<DragHandle> mBeginTimeRangeHandle; // Handle for begin time range
 		Ref<DragHandle> mEndTimeRangeHandle;   // Handle for end time range 
 		Ref<DragHandle> mDurationHandle;       // Handle for duration
 
-		float mWidgetWidth = 0.0f; // Width of duration widget
+		static constexpr float mHandlesOffset = 20.0f;     // Handles offset from the edges of the widget
+		static constexpr float mDurationBarHeight = 25.0f; // Height of the duration bar drawable area
 
 		float mSourceAnimationBeginPosition = 0.0f; // Source animation begin position in widget
 		float mSourceAnimationEndPosition = 0.0f;   // Source animation end position in widget
@@ -64,10 +70,11 @@ namespace Editor
         // Update handle positions
         void UpdateHandlesPositions();
 
-        // Handle position changed callbacks
-        void OnBeginTimeRangeChanged(const Vec2F& position);
-        void OnEndTimeRangeChanged(const Vec2F& position);
-        void OnDurationChanged(const Vec2F& position);
+		// Converts time to position in widget
+        float TimeToPosition(float time) const;
+
+		// Converts position in widget to time
+		float PositionToTime(float position) const;
     };
 }
 // --- META ---
@@ -83,10 +90,13 @@ CLASS_FIELDS_META(Editor::AnimationGraphTransitionViewer)
     FIELD().PRIVATE().NAME(mDurationWidget);
     FIELD().PRIVATE().NAME(mSourceRangeSprite);
     FIELD().PRIVATE().NAME(mDestinationRangeSprite);
+    FIELD().PRIVATE().NAME(mRangeSprite);
+    FIELD().PRIVATE().NAME(mTransitionMesh);
+    FIELD().PRIVATE().NAME(mSourceStateName);
+    FIELD().PRIVATE().NAME(mDestinationStateName);
     FIELD().PRIVATE().NAME(mBeginTimeRangeHandle);
     FIELD().PRIVATE().NAME(mEndTimeRangeHandle);
     FIELD().PRIVATE().NAME(mDurationHandle);
-    FIELD().PRIVATE().DEFAULT_VALUE(0.0f).NAME(mWidgetWidth);
     FIELD().PRIVATE().DEFAULT_VALUE(0.0f).NAME(mSourceAnimationBeginPosition);
     FIELD().PRIVATE().DEFAULT_VALUE(0.0f).NAME(mSourceAnimationEndPosition);
     FIELD().PRIVATE().DEFAULT_VALUE(0.0f).NAME(mDestinationAnimationBeginPosition);
@@ -107,9 +117,8 @@ CLASS_METHODS_META(Editor::AnimationGraphTransitionViewer)
     FUNCTION().PRIVATE().SIGNATURE(void, OnRefreshed, _tmp2);
     FUNCTION().PRIVATE().SIGNATURE(void, DrawDurationWidget);
     FUNCTION().PRIVATE().SIGNATURE(void, UpdateHandlesPositions);
-    FUNCTION().PRIVATE().SIGNATURE(void, OnBeginTimeRangeChanged, const Vec2F&);
-    FUNCTION().PRIVATE().SIGNATURE(void, OnEndTimeRangeChanged, const Vec2F&);
-    FUNCTION().PRIVATE().SIGNATURE(void, OnDurationChanged, const Vec2F&);
+    FUNCTION().PRIVATE().SIGNATURE(float, TimeToPosition, float);
+    FUNCTION().PRIVATE().SIGNATURE(float, PositionToTime, float);
 }
 END_META;
 // --- END META ---

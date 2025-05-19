@@ -757,6 +757,15 @@ namespace Editor
 
 				animations.Add(newAnimation);
 			}
+
+			if (auto editor = this->editor.Lock())
+			{
+				if (auto graphComponent = editor->mComponent.Lock())
+				{
+					if (auto animationComponent = graphComponent->GetAnimationComponent())
+						stateAnimation->state = animationComponent->GetState(stateAnimation->name);
+				}
+			}
 		}
 
 		state->SetAnimations(animations);

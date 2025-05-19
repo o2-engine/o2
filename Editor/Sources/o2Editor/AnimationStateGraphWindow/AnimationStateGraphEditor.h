@@ -345,6 +345,7 @@ namespace Editor
         
         REF_COUNTERABLE_IMPL(FrameScrollView, SelectableDragHandlesGroup);
 
+        friend class AnimationGraphTransitionViewer;
         friend class GraphAnimationStateViewer;
 	};
 }

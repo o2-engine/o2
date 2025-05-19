@@ -51,7 +51,7 @@ namespace o2
         auto focusLayer   = sample->AddLayer("focus", mmake<Sprite>("ui/UI4_button_focus.png"), 
                                              Layout::BothStretch(-9, -9, -10, -10));
 
-        Ref<Text> captionText        = mmake<Text>("stdFont.ttf");
+        Ref<Text> captionText    = mmake<Text>("stdFont.ttf");
         captionText->text        = "Button";
         captionText->horAlign    = HorAlign::Middle;
         captionText->verAlign    = VerAlign::Middle;

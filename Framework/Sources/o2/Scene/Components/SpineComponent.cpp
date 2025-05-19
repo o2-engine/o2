@@ -115,7 +115,15 @@ namespace o2
         return IAnimationState::GetPlayer();
     }
 
-    void SpineComponent::AnimationState::SetWeight(float weight)
+	float SpineComponent::AnimationState::GetDuration() const
+	{
+		if (mTrack)
+			return mTrack->GetDuration();
+
+        return 0.0f;
+	}
+
+	void SpineComponent::AnimationState::SetWeight(float weight)
     {
         mWeight = weight;
 
