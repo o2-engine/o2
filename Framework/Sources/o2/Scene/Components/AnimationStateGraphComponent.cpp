@@ -142,8 +142,19 @@ namespace o2
 
     void AnimationStateGraphComponent::CheckStartNextTransition()
     {
-        if (mCurrentTransition || mNextTransitions.IsEmpty() || !mCurrentStatePlayer)
+        if (mCurrentTransition || !mCurrentStatePlayer)
             return;
+
+		// Check planning next exit transition from non looped state
+        if (mNextTransitions.IsEmpty() && !mCurrentStatePlayer->IsLooped())
+        {
+            if (!mCurrentState->GetTransitions().IsEmpty())
+                mNextTransitions.Add(mCurrentState->GetTransitions()[0]);
+        }
+
+		// Do nothing if no next transition planned
+        if (mNextTransitions.IsEmpty())
+			return;
 
         auto nextTransition = mNextTransitions[0];
         float currentRelativeTime = mCurrentStatePlayer->GetTime() / mCurrentStatePlayer->GetDuration();
@@ -233,7 +244,7 @@ namespace o2
     void AnimationStateGraphComponent::StatePlayer::Play()
     {
         for (auto& player : mPlayers)
-            player.second->GetPlayer().Play();
+            player.second->GetPlayer().RewindAndPlay();
 
 		if (auto ownerRef = mOwner.Lock())
 			ownerRef->onStateStarted(Ref(this));
@@ -269,6 +280,14 @@ namespace o2
 
         return mPlayers[0].second->GetPlayer().GetDuration();
     }
+
+	bool AnimationStateGraphComponent::StatePlayer::IsLooped() const
+	{
+        if (mPlayers.IsEmpty())
+            return false;
+
+		return mPlayers[0].second->GetPlayer().GetLoop() == Loop::Repeat;
+	}
 
 	const Vector<Pair<Ref<AnimationGraphState::Animation>, Ref<IAnimationState>>>& AnimationStateGraphComponent::StatePlayer::GetPlayers() const
 	{

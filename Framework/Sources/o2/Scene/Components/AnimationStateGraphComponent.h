@@ -40,6 +40,9 @@ namespace o2
 			// Returns duration of state. Gets value from first animation player
 			float GetDuration() const;
 
+            // Returns if state is looped
+			bool IsLooped() const; 
+
 			// Returns players
             const Vector<Pair<Ref<AnimationGraphState::Animation>, Ref<IAnimationState>>>& GetPlayers() const;
 

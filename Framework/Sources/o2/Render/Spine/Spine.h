@@ -11,6 +11,7 @@
 
 #include "spine/Skeleton.h"
 #include "spine/AnimationState.h"
+#include "spine/Animation.h"
 
 namespace o2
 {
@@ -55,11 +56,18 @@ namespace o2
             String mAnimationName;   // Animation name
             int    mTrackIndex = -1; // Spine track index
 
-            spine::TrackEntry* mTrackEntry = nullptr; // Spine track entry
+			spine::TrackEntry* mTrackEntry = nullptr; // Spine track entry
+			spine::Animation*  mAnimation = nullptr;  // Spine animation
 
         private:
             // Called for updating animated object, after updating time
-            void Evaluate() override;
+			void Evaluate() override;
+            
+			// Called when animation starts playing
+			void OnPlay() override;
+
+			// Called when animation stops playing
+			void OnStop() override;
 
             // Called when animation loop state changed
             void OnLoopChanged() override;
@@ -131,6 +139,7 @@ CLASS_FIELDS_META(o2::Spine::Track)
     FIELD().PRIVATE().NAME(mAnimationName);
     FIELD().PRIVATE().DEFAULT_VALUE(-1).NAME(mTrackIndex);
     FIELD().PRIVATE().DEFAULT_VALUE(nullptr).NAME(mTrackEntry);
+    FIELD().PRIVATE().DEFAULT_VALUE(nullptr).NAME(mAnimation);
 }
 END_META;
 CLASS_METHODS_META(o2::Spine::Track)
@@ -142,6 +151,8 @@ CLASS_METHODS_META(o2::Spine::Track)
     FUNCTION().PUBLIC().SIGNATURE(void, SetWeight, float);
     FUNCTION().PUBLIC().SIGNATURE(float, GetWeight);
     FUNCTION().PRIVATE().SIGNATURE(void, Evaluate);
+    FUNCTION().PRIVATE().SIGNATURE(void, OnPlay);
+    FUNCTION().PRIVATE().SIGNATURE(void, OnStop);
     FUNCTION().PRIVATE().SIGNATURE(void, OnLoopChanged);
 }
 END_META;

@@ -164,11 +164,17 @@ namespace o2
         mAnimationName = name;
 		mTrackIndex = trackIndex;
 
-        if (mOwner && mOwner.Lock()->mAnimationState)
+        if (auto owner = mOwner.Lock())
         {
-            mTrackEntry = mOwner.Lock()->mAnimationState->setAnimation(mTrackIndex, mAnimationName.Data(), mLoop == Loop::Repeat);
-            mDuration = mTrackEntry->getAnimation()->getDuration();
-            ResetBounds();
+            if (owner->mSkeleton)
+            {
+				mAnimation = owner->mSkeleton->getData()->findAnimation(mAnimationName.Data());
+                if (mAnimation)
+                {
+                    mDuration = mAnimation->getDuration();
+                    ResetBounds();
+                }
+            }
         }
     }
 
@@ -213,7 +219,19 @@ namespace o2
         }
     }
 
-    void Spine::Track::OnLoopChanged()
+	void Spine::Track::OnPlay()
+	{
+		if (mOwner && mAnimation)
+            mTrackEntry = mOwner.Lock()->mAnimationState->setAnimation(mTrackIndex, mAnimation, mLoop == Loop::Repeat);
+	}
+
+	void Spine::Track::OnStop()
+	{
+		if (mOwner && mTrackEntry) 
+            mOwner.Lock()->mAnimationState->clearTrack(mTrackIndex);
+	}
+
+	void Spine::Track::OnLoopChanged()
     {
         if (mOwner && mTrackEntry)
             mTrackEntry->setLoop(mLoop == Loop::Repeat);
