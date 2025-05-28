@@ -58,6 +58,9 @@ namespace Editor
     {
         StoreValues(mBeforeChangeValues);
 
+        if (mCommonValue == nullptr)
+            SetValue(mmake<Curve>());
+
         CurveEditorDlg::Show(THIS_FUNC(OnValueChanged),
                              MakeFunction<IPropertyField, void>(this, &CurveProperty::CheckValueChangeCompleted));
 

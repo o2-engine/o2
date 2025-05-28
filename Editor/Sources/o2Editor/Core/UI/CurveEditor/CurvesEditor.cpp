@@ -200,16 +200,6 @@ namespace Editor
             RemoveCurve(info->curve);
     }
 
-    void CurvesEditor::AddCurvesRange(const Ref<Curve>& curveA, const Ref<Curve>& curveB, const Color4& color /*= Color4(-1, -1, -1, -1)*/)
-    {
-
-    }
-
-    void CurvesEditor::AddCurvesRange(const String& idA, const String& idB, const Color4& color /*= Color4::Green()*/)
-    {
-
-    }
-
     void CurvesEditor::SetCurveColor(const Ref<Curve>& curve, const Color4& color)
     {
         for (auto& info : mCurves)
@@ -224,16 +214,6 @@ namespace Editor
                 break;
             }
         }
-    }
-
-    void CurvesEditor::RemoveCurvesRange(const Ref<Curve>& curveA, const Ref<Curve>& curveB)
-    {
-
-    }
-
-    void CurvesEditor::RemoveCurvesRange(const String& idA, const String& idB)
-    {
-
     }
 
     void CurvesEditor::UpdateSelfTransform()
@@ -1224,7 +1204,7 @@ namespace Editor
 
         Ref<CurveInfo> clickedCurveInfo;
         Curve::Key newKey;
-        Vec2F localCursorPos = ScreenToLocalPoint(cursor.position);
+        Vec2F localCursorPos = cursor.position;
 
         for (auto& info : mCurves)
         {
@@ -1417,7 +1397,7 @@ namespace Editor
     {
         Focus();
 
-        mSelectingPressedPoint = ScreenToLocalPoint(cursor.position);
+        mSelectingPressedPoint = cursor.position;
 
         if (!o2Input.IsKeyDown(VK_CONTROL))
         {
@@ -1446,7 +1426,7 @@ namespace Editor
 
         mSelectingHandlesBuf.Clear();
 
-        RectF selectionLocalRect(mSelectingPressedPoint, ScreenToLocalPoint(cursor.position));
+        RectF selectionLocalRect(mSelectingPressedPoint, cursor.position);
 
         for (auto& handle : mHandles)
         {
@@ -2265,21 +2245,6 @@ namespace Editor
     void CurvesEditor::CurveInfo::CompleteCurveManualChange()
     {
         disableChangesHandling = false;
-    }
-
-    CurvesEditor::RangeInfo::RangeInfo()
-    {
-
-    }
-
-    CurvesEditor::RangeInfo::~RangeInfo()
-    {
-
-    }
-
-    void CurvesEditor::RangeInfo::UpdateMesh()
-    {
-
     }
 
     CurvesEditor::KeyHandles::KeyHandles(const CurveHandle& mainSample, const CurveHandle& supportSample,

@@ -114,9 +114,9 @@ namespace Editor
 
 			Ref<AnimationGraphTransition> transition; // Animation transition reference @NO_HEADER
 
-        	TransitionStatus status = TransitionStatus::None;
+        	TransitionStatus status = TransitionStatus::None; // Current transition planning status @EDITOR_IGNORE
 			
-			bool mIsSelected = false; // True when transition is selected
+			bool mIsSelected = false; // True when transition is selected @EDITOR_IGNORE
 
         public:
 			// Default constructor
@@ -142,9 +142,6 @@ namespace Editor
 		protected:
 			// Called when cursor pressed on this
 			void OnCursorPressed(const Input::Cursor& cursor) override;
-
-			// Called when cursor released outside (when this was pressed)
-			void OnCursorPressedOutside(const Input::Cursor& cursor) override;
 
 			// Called when right mouse button was released
 			void OnCursorRightMouseReleased(const Input::Cursor& cursor) override;
@@ -233,7 +230,7 @@ namespace Editor
 		Vec2F            mContextMenuPos;   // Context menu position when right mouse button was pressed
 		Ref<StateWidget> mContextMenuState; // State widget, where context menu was opened
 
-		Ref<StateTransition> mContextMenuTransition; // Transition, where context menu was opened
+		Ref<StateTransition> mSelectedTransition; // Current selected transition
 
 		bool mCreatingTransition = false; // True when creating transition
 
@@ -275,7 +272,10 @@ namespace Editor
 		void RedrawContent() override;
 
 		// Called when selection is changed - some handle was added or removed from selection; updates selected states in property viewer
-		void OnSelectionChanged() override;
+    	void OnSelectionChanged() override;
+
+    	// Deselects all in group
+    	void DeselectAll() override;
 
 		// Initializes context menu items
 		void InitializeContextMenus();
@@ -340,9 +340,6 @@ namespace Editor
 		// Checks if viewers need to be refreshed, uses timer to refresh them (mRefreshViewersTimer)
 		void CheckRefreshViewersTimer(float dt);
         
-		// Clears all selected handles and transitions
-		void ClearSelection();
-        
         REF_COUNTERABLE_IMPL(FrameScrollView, SelectableDragHandlesGroup);
 
         friend class AnimationGraphTransitionViewer;
@@ -377,7 +374,7 @@ CLASS_FIELDS_META(Editor::AnimationStateGraphEditor)
     FIELD().PROTECTED().NAME(mSelectingPressedPoint);
     FIELD().PROTECTED().NAME(mContextMenuPos);
     FIELD().PROTECTED().NAME(mContextMenuState);
-    FIELD().PROTECTED().NAME(mContextMenuTransition);
+    FIELD().PROTECTED().NAME(mSelectedTransition);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mCreatingTransition);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mNeedAdjustView);
     FIELD().PROTECTED().DEFAULT_VALUE(0.0f).NAME(mRefreshViewersTimer);
@@ -406,6 +403,7 @@ CLASS_METHODS_META(Editor::AnimationStateGraphEditor)
     FUNCTION().PROTECTED().SIGNATURE(void, DrawInheritedDepthChildren);
     FUNCTION().PROTECTED().SIGNATURE(void, RedrawContent);
     FUNCTION().PROTECTED().SIGNATURE(void, OnSelectionChanged);
+    FUNCTION().PROTECTED().SIGNATURE(void, DeselectAll);
     FUNCTION().PROTECTED().SIGNATURE(void, InitializeContextMenus);
     FUNCTION().PROTECTED().SIGNATURE(void, RecalculateViewArea);
     FUNCTION().PROTECTED().SIGNATURE(void, DrawHandles);
@@ -427,7 +425,6 @@ CLASS_METHODS_META(Editor::AnimationStateGraphEditor)
     FUNCTION().PROTECTED().SIGNATURE(void, OpenStateContextMenu, const Ref<StateWidget>&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnStatePressed, const Ref<StateWidget>&);
     FUNCTION().PROTECTED().SIGNATURE(void, CheckRefreshViewersTimer, float);
-    FUNCTION().PROTECTED().SIGNATURE(void, ClearSelection);
 }
 END_META;
 
@@ -469,8 +466,8 @@ CLASS_FIELDS_META(Editor::AnimationStateGraphEditor::StateTransition)
     FIELD().PUBLIC().NAME(owner);
     FIELD().PUBLIC().NAME(destination);
     FIELD().PUBLIC().NO_HEADER_ATTRIBUTE().NAME(transition);
-    FIELD().PUBLIC().DEFAULT_VALUE(TransitionStatus::None).NAME(status);
-    FIELD().PUBLIC().DEFAULT_VALUE(false).NAME(mIsSelected);
+    FIELD().PUBLIC().EDITOR_IGNORE_ATTRIBUTE().DEFAULT_VALUE(TransitionStatus::None).NAME(status);
+    FIELD().PUBLIC().EDITOR_IGNORE_ATTRIBUTE().DEFAULT_VALUE(false).NAME(mIsSelected);
 }
 END_META;
 CLASS_METHODS_META(Editor::AnimationStateGraphEditor::StateTransition)
@@ -483,7 +480,6 @@ CLASS_METHODS_META(Editor::AnimationStateGraphEditor::StateTransition)
     FUNCTION().PUBLIC().SIGNATURE(bool, IsSelected);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsUnderPoint, const Vec2F&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnCursorPressed, const Input::Cursor&);
-    FUNCTION().PROTECTED().SIGNATURE(void, OnCursorPressedOutside, const Input::Cursor&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnCursorRightMouseReleased, const Input::Cursor&);
 }
 END_META;

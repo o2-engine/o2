@@ -421,11 +421,11 @@ namespace Editor
     {
         if (o2EditorSceneScreen.GetSelectedObjects().Count() > 0)
         {
-            if (mFrame.IsPointInside(o2EditorSceneScreen.ScreenToScenePoint(cursor.position)))
+            if (mFrame.IsPointInside(cursor.position))
             {
                 mIsDragging = true;
                 mBeginDraggingFrame = mFrame;
-                mBeginDraggingOffset = o2EditorSceneScreen.ScreenToLocalPoint(cursor.position) - mFrame.origin;
+                mBeginDraggingOffset = cursor.position - mFrame.origin;
 
                 SetHandlesEnable(false);
                 HandlePressed();
@@ -445,7 +445,7 @@ namespace Editor
             HandleReleased();
 
             const float hasntMovedThreshold = 2.0f;
-            if (o2EditorSceneScreen.SceneToScreenVector(mFrame.origin - mBeginDraggingFrame.origin).Length() < hasntMovedThreshold)
+            if ((mFrame.origin - mBeginDraggingFrame.origin).Length() < hasntMovedThreshold)
                 SelectionTool::OnCursorReleased(cursor);
         }
         else SelectionTool::OnCursorReleased(cursor);
@@ -467,7 +467,7 @@ namespace Editor
         {
             mSnapLines.Clear();
 
-            Vec2F cursorPos = o2EditorSceneScreen.ScreenToLocalPoint(cursor.position);
+            Vec2F cursorPos = cursor.position;
 
             if (o2Input.IsKeyDown(VK_CONTROL))
             {
@@ -1108,19 +1108,19 @@ namespace Editor
         };
 
         const float snapThresholdPx = 5.0f;
-        Vec2F screenpoint = o2EditorSceneScreen.SceneToScreenPoint(point);
+        Vec2F screenpoint = point;
 
         int i = 0;
         for (auto& snapPoint : snapPoints)
         {
-            Vec2F framePoint = o2EditorSceneScreen.LocalToScreenPoint(snapPoint*frame);
+            Vec2F framePoint = snapPoint*frame;
 
             if ((screenpoint - framePoint).Length() < snapThresholdPx)
             {
                 mSnapLines.Add(SnapLine(snapPointsLines[i][0][0]*frame, snapPointsLines[i][0][1]*frame, mSnapLinesColor));
                 mSnapLines.Add(SnapLine(snapPointsLines[i][1][0]*frame, snapPointsLines[i][1][1]*frame, mSnapLinesColor));
 
-                return o2EditorSceneScreen.ScreenToLocalPoint(framePoint);
+                return framePoint;
             }
 
             i++;
@@ -1333,7 +1333,7 @@ namespace Editor
                 mFrame.xv - transformNonScaled.xv*spriteSize,
                 transformNonScaled.yv*spriteSize);
 
-        return b.IsPointInside(o2EditorSceneScreen.ScreenToLocalPoint(point));
+        return b.IsPointInside(point);
     }
 
     bool FrameTool::IsPointInLeftHandle(const Vec2F& point)
@@ -1345,7 +1345,7 @@ namespace Editor
                 transformNonScaled.xv*spriteSize,
                 mFrame.yv - transformNonScaled.yv*spriteSize);
 
-        return b.IsPointInside(o2EditorSceneScreen.ScreenToLocalPoint(point));
+        return b.IsPointInside(point);
     }
 
     bool FrameTool::IsPointInRightHandle(const Vec2F& point)
@@ -1357,7 +1357,7 @@ namespace Editor
                 transformNonScaled.xv*spriteSize,
                 mFrame.yv - transformNonScaled.yv*spriteSize);
 
-        return b.IsPointInside(o2EditorSceneScreen.ScreenToLocalPoint(point));
+        return b.IsPointInside(point);
     }
 
     bool FrameTool::IsPointInBottomHandle(const Vec2F& point)
@@ -1369,14 +1369,14 @@ namespace Editor
                 mFrame.xv - transformNonScaled.xv*spriteSize,
                 transformNonScaled.yv*spriteSize);
 
-        return b.IsPointInside(o2EditorSceneScreen.ScreenToLocalPoint(point));
+        return b.IsPointInside(point);
     }
 
     bool FrameTool::IsPointInAnchorsCenterHandle(const Vec2F& point)
     {
         float camScale = o2EditorSceneScreen.GetCameraScale().x;
         float handleSize = 10.0f;
-        return (o2EditorSceneScreen.ScreenToLocalPoint(point) - mAnchorsFrame.origin).Length() < handleSize*camScale;
+        return (point - mAnchorsFrame.origin).Length() < handleSize*camScale;
     }
 
     void FrameTool::CheckAnchorsCenterEnabled()

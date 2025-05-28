@@ -57,7 +57,8 @@ namespace o2
     {
         auto state = mmake<AnimationGraphState>();
 
-        state->name = name;
+        if (state->name.IsEmpty())
+            state->name = name;
 
         for (auto& animation : animations)
             state->AddAnimation(animation);

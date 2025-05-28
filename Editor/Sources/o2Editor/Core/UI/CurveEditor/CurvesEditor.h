@@ -64,20 +64,8 @@ namespace Editor
         // Removes all editing curves
         void RemoveAllCurves();
 
-        // Adds curves range with color. It can't be edited, just a solid color between curves
-        void AddCurvesRange(const Ref<Curve>& curveA, const Ref<Curve>& curveB, const Color4& color = Color4::Green());
-
-        // Removes curve range
-        void RemoveCurvesRange(const Ref<Curve>& curveA, const Ref<Curve>& curveB);
-
-        // Adds curves range with color. It can't be edited, just a solid color between curves
-        void AddCurvesRange(const String& idA, const String& idB, const Color4& color = Color4::Green());
-
         // Sets curve color
         void SetCurveColor(const Ref<Curve>& curve, const Color4& color);
-
-        // Removes curve range
-        void RemoveCurvesRange(const String& idA, const String& idB);
 
         // Sets selection rectangle sprite image
         void SetSelectionSpriteImage(const AssetRef<ImageAsset>& image);
@@ -251,24 +239,6 @@ namespace Editor
         };
 
         // -----------------------------------------------
-        // Curve range info. Contains two curves and color
-        // -----------------------------------------------
-        struct RangeInfo: public RefCounterable
-        {
-            Ref<CurveInfo> curveA; // Curve A
-            Ref<CurveInfo> curveB; // Curve B
-
-            Color4    color; // Range color
-            Ref<Mesh> mesh;  // Mesh for drawing range
-
-        public:
-            RangeInfo();
-            ~RangeInfo();
-
-            void UpdateMesh();
-        };
-
-        // -----------------------------------------------
         // Selected handles info. Contains index and flags
         // -----------------------------------------------
         struct SelectedHandlesInfo
@@ -302,8 +272,7 @@ namespace Editor
         CurveHandle    mRangeHandleSample;  // Top range handle sample, uses to copy sprites @SERIALIZABLE
         Ref<CurveInfo> mHandleSamplesStubInfo; // Empty curve info, used int handles samples
 
-        Vector<Ref<CurveInfo>> mCurves; // Editing curves infos list 
-        Vector<Ref<RangeInfo>> mRanges; // Curves ranges list
+        Vector<Ref<CurveInfo>> mCurves; // Editing curves infos list
 
         Vector<Ref<CurveHandle>>        mSupportHandles;                                            // Support points handles list
         Ref<SelectableDragHandlesGroup> mSupportHandlesGroup = mmake<SelectableDragHandlesGroup>(); // Support points handles selection group. They are must be selectable separately from main handles
@@ -531,7 +500,6 @@ CLASS_FIELDS_META(Editor::CurvesEditor)
     FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().NAME(mRangeHandleSample);
     FIELD().PROTECTED().NAME(mHandleSamplesStubInfo);
     FIELD().PROTECTED().NAME(mCurves);
-    FIELD().PROTECTED().NAME(mRanges);
     FIELD().PROTECTED().NAME(mSupportHandles);
     FIELD().PROTECTED().DEFAULT_VALUE(mmake<SelectableDragHandlesGroup>()).NAME(mSupportHandlesGroup);
     FIELD().PROTECTED().NAME(mSelectingHandlesBuf);
@@ -568,11 +536,7 @@ CLASS_METHODS_META(Editor::CurvesEditor)
     FUNCTION().PUBLIC().SIGNATURE(void, RemoveCurve, const Ref<Curve>&);
     FUNCTION().PUBLIC().SIGNATURE(void, RemoveCurve, const String&);
     FUNCTION().PUBLIC().SIGNATURE(void, RemoveAllCurves);
-    FUNCTION().PUBLIC().SIGNATURE(void, AddCurvesRange, const Ref<Curve>&, const Ref<Curve>&, const Color4&);
-    FUNCTION().PUBLIC().SIGNATURE(void, RemoveCurvesRange, const Ref<Curve>&, const Ref<Curve>&);
-    FUNCTION().PUBLIC().SIGNATURE(void, AddCurvesRange, const String&, const String&, const Color4&);
     FUNCTION().PUBLIC().SIGNATURE(void, SetCurveColor, const Ref<Curve>&, const Color4&);
-    FUNCTION().PUBLIC().SIGNATURE(void, RemoveCurvesRange, const String&, const String&);
     FUNCTION().PUBLIC().SIGNATURE(void, SetSelectionSpriteImage, const AssetRef<ImageAsset>&);
     FUNCTION().PUBLIC().SIGNATURE(void, SetTextFont, const Ref<Font>&);
     FUNCTION().PUBLIC().SIGNATURE(void, SetTextBorder, const BorderF&);

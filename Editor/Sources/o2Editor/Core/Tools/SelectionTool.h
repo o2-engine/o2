@@ -32,8 +32,8 @@ namespace Editor
         Vector<Ref<SceneEditableObject>> mCurrentSelectingObjects; // Current selecting objects (when cursor pressed, but not released yet)
         Vector<Ref<SceneEditableObject>> mBeforeSelectingObjects;  // Before selection objects array
 
-        Vec2F mPressPoint;                 // Press point before selecting
-        bool  mSelectingObjects = false; // Is selecting objects now
+        Vec2F mPressPoint;               // Press point before selecting
+        bool  mSelectingByFrame = false; // Is selecting objects now
 
     protected:
         // Returns toggle in menu panel icon name
@@ -93,7 +93,7 @@ CLASS_FIELDS_META(Editor::SelectionTool)
     FIELD().PROTECTED().NAME(mCurrentSelectingObjects);
     FIELD().PROTECTED().NAME(mBeforeSelectingObjects);
     FIELD().PROTECTED().NAME(mPressPoint);
-    FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mSelectingObjects);
+    FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mSelectingByFrame);
 }
 END_META;
 CLASS_METHODS_META(Editor::SelectionTool)

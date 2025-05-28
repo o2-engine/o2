@@ -34,7 +34,7 @@ namespace Editor
         for (auto& object : mCurrentSelectingObjects)
 			o2EditorSceneScreen.DrawObjectSelection(object, o2EditorSceneScreen.GetManyObjectsSelectionColor());
 
-		if (mSelectingObjects)
+		if (mSelectingByFrame)
 			mSelectionSprite->Draw();
     }
 
@@ -49,7 +49,7 @@ namespace Editor
 
     void SelectionTool::OnDisabled()
     {
-        mSelectingObjects = false;
+        mSelectingByFrame = false;
     }
 
     void SelectionTool::OnObjectsSelectionChanged(const Vector<Ref<SceneEditableObject>>& objects)
@@ -62,11 +62,11 @@ namespace Editor
 
     void SelectionTool::OnCursorReleased(const Input::Cursor& cursor)
     {
-        if (mSelectingObjects)
+        if (mSelectingByFrame)
         {
             o2EditorSceneScreen.SelectObjectsWithoutAction(mCurrentSelectingObjects, true);
             mCurrentSelectingObjects.Clear();
-            mSelectingObjects = false;
+            mSelectingByFrame = false;
 
             auto selectionAction = mmake<SelectAction>(o2EditorSceneScreen.GetSelectedObjects(), mBeforeSelectingObjects);
             o2EditorApplication.DoneAction(selectionAction);
@@ -74,7 +74,7 @@ namespace Editor
         else
         {
             bool selected = false;
-            Vec2F sceneSpaceCursor = o2EditorSceneScreen.ScreenToScenePoint(cursor.position);
+            Vec2F sceneSpaceCursor = cursor.position;
             auto& drawnObjects = o2Scene.GetDrawnEditableObjects();
 
             int startIdx = drawnObjects.Count() - 1;
@@ -109,18 +109,18 @@ namespace Editor
 
     void SelectionTool::OnCursorPressBreak(const Input::Cursor& cursor)
     {
-        if (mSelectingObjects)
+        if (mSelectingByFrame)
         {
-            mSelectingObjects = false;
+            mSelectingByFrame = false;
             mCurrentSelectingObjects.Clear();
         }
     }
 
     void SelectionTool::OnCursorStillDown(const Input::Cursor& cursor)
     {
-        if (!mSelectingObjects && (mPressPoint - cursor.position).Length() > 5.0f)
+        if (!mSelectingByFrame && (mPressPoint - cursor.position).Length() > 5.0f)
         {
-            mSelectingObjects = true;
+            mSelectingByFrame = true;
 
             mBeforeSelectingObjects = o2EditorSceneScreen.GetSelectedObjects();
 
@@ -128,7 +128,7 @@ namespace Editor
                 o2EditorSceneScreen.ClearSelectionWithoutAction();
         }
 
-        if (mSelectingObjects && cursor.delta.Length() > 0.1f)
+        if (mSelectingByFrame && cursor.delta.Length() > 0.1f)
         {
             mSelectionSprite->SetRect(RectF(mPressPoint, cursor.position));
             RectF selectionRect(cursor.position, mPressPoint);

@@ -139,7 +139,6 @@ namespace Editor
 			return;
 
 		mSpoiler->AddChild(mDurationWidget);
-		mDurationWidget->SetIndexInSiblings(mSpoiler->GetChildren().Count() - 1);
 
         auto transitionWrapper = dynamic_cast<AnimationStateGraphEditor::StateTransition*>(targetObjects.Last().first);
         if (!transitionWrapper)

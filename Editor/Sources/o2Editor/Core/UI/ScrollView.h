@@ -108,8 +108,8 @@ namespace Editor
         Vec2F  mViewCameraVelocity;                    // Camera movement velocity
         float  mViewCameraPosElasticyCoef = 30.0f;     // Camera position smoothing coefficient
         float  mViewCameraVelocityDampingCoef = 10.0f; // Camera velocity damping coefficient
-        float  mViewCameraMinScale = 0.001f;           // Minimum camera scale
-        float  mViewCameraMaxScale = 10000.0f;         // Maximum camera scale
+        float  mViewCameraMinScale = 0.0001f;          // Minimum camera scale
+        float  mViewCameraMaxScale = 100000.0f;        // Maximum camera scale
 		bool   mViewCameraMoved = false;               // Whether the camera was moved       
                    
         Basis mLocalToScreenTransform; // Transform from local to screen coordinates
@@ -192,8 +192,8 @@ CLASS_FIELDS_META(Editor::ScrollView)
     FIELD().PROTECTED().NAME(mViewCameraVelocity);
     FIELD().PROTECTED().DEFAULT_VALUE(30.0f).NAME(mViewCameraPosElasticyCoef);
     FIELD().PROTECTED().DEFAULT_VALUE(10.0f).NAME(mViewCameraVelocityDampingCoef);
-    FIELD().PROTECTED().DEFAULT_VALUE(0.001f).NAME(mViewCameraMinScale);
-    FIELD().PROTECTED().DEFAULT_VALUE(10000.0f).NAME(mViewCameraMaxScale);
+    FIELD().PROTECTED().DEFAULT_VALUE(0.0001f).NAME(mViewCameraMinScale);
+    FIELD().PROTECTED().DEFAULT_VALUE(100000.0f).NAME(mViewCameraMaxScale);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mViewCameraMoved);
     FIELD().PROTECTED().NAME(mLocalToScreenTransform);
     FIELD().PROTECTED().NAME(mScreenToLocalTransform);

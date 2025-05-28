@@ -96,16 +96,6 @@ namespace Editor
         mInstance->mEditorWidget->RemoveAllCurves();
     }
 
-    void CurveEditorDlg::AddCurvesRange(const Ref<Curve>& curveA, const Ref<Curve>& curveB, const Color4& color /*= Color4::Green()*/)
-    {
-        mInstance->mEditorWidget->AddCurvesRange(curveA, curveB, color);
-    }
-
-    void CurveEditorDlg::RemoveCurvesRange(const Ref<Curve>& curveA, const Ref<Curve>& curveB)
-    {
-        mInstance->mEditorWidget->RemoveCurvesRange(curveA, curveB);
-    }
-
     void CurveEditorDlg::OnCursorPressedOutside()
     {
         mOnChangedCallback();

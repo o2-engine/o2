@@ -139,6 +139,19 @@ namespace Editor
 		}
 	}
 
+	void AnimationStateGraphEditor::DeselectAll()
+	{
+		SelectableDragHandlesGroup::DeselectAll();
+
+    	for (auto& state : mStatesWidgets)
+    	{
+    		for (auto& transition : state->transitions)
+    			transition->SetSelected(false);
+    	}
+
+    	mSelectedTransition = nullptr;
+	}
+
 	void AnimationStateGraphEditor::DrawHandles()
 	{}
 
@@ -546,16 +559,16 @@ namespace Editor
 	void AnimationStateGraphEditor::RemoveCurrentTransition()
 	{
 		auto graph = mGraph.Lock();
-		if (!graph || !mContextMenuTransition)
+		if (!graph || !mSelectedTransition)
 			return;
 
-		auto sourceState = mContextMenuTransition->owner.Lock()->state.Lock();
-		auto transition = mContextMenuTransition->transition;
+		auto sourceState = mSelectedTransition->owner.Lock()->state.Lock();
+		auto transition = mSelectedTransition->transition;
 
 		if (sourceState && transition)
 		{
 			sourceState->RemoveTransition(transition);
-			mContextMenuTransition = nullptr;
+			mSelectedTransition = nullptr;
 			InitializeStates();
 		}
 	}
@@ -593,19 +606,6 @@ namespace Editor
 			for (auto& state : mStatesWidgets)
 				state->animationsListProperty->Refresh();
 		}
-	}
-
-	void AnimationStateGraphEditor::ClearSelection()
-	{
-		DeselectAll();
-
-		for (auto& state : mStatesWidgets)
-		{
-			for (auto& transition : state->transitions)
-				transition->SetSelected(false);
-		}
-
-		mContextMenuTransition = nullptr;
 	}
 
 	const Vec2F AnimationStateGraphEditor::StateWidget::defaultWidgetSize = Vec2F(300, 50);
@@ -908,14 +908,9 @@ namespace Editor
 	void AnimationStateGraphEditor::StateTransition::OnCursorPressed(const Input::Cursor& cursor)
 	{
 		if (auto editorPtr = owner.Lock()->editor.Lock())
-			editorPtr->ClearSelection();
+			editorPtr->DeselectAll();
 
 		SetSelected(true);
-	}
-
-	void AnimationStateGraphEditor::StateTransition::OnCursorPressedOutside(const Input::Cursor& cursor)
-	{
-		SetSelected(false);
 	}
 
 	bool AnimationStateGraphEditor::StateTransition::IsSelected() const
@@ -927,8 +922,16 @@ namespace Editor
 	{
 		mIsSelected = selected;
 
-		if (mIsSelected && transition)
+		if (mIsSelected)
 			o2EditorPropertiesWindow.SetTarget(this);
+
+		if (auto editorPtr = owner.Lock()->editor.Lock())
+		{
+			if (selected)
+				editorPtr->mSelectedTransition = Ref(this);
+			else if (editorPtr->mSelectedTransition == this)
+				editorPtr->mSelectedTransition = nullptr;
+		}
 	}
 
 	void AnimationStateGraphEditor::StateTransition::OnCursorRightMouseReleased(const Input::Cursor& cursor)
@@ -939,7 +942,7 @@ namespace Editor
 		{
 			if (auto editorPtr = ownerPtr->editor.Lock())
 			{
-				editorPtr->mContextMenuTransition = Ref(this);
+				editorPtr->mSelectedTransition = Ref(this);
 				editorPtr->mTransitionContextMenu->Show();
 			}
 		}

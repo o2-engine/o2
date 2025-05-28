@@ -87,7 +87,7 @@ namespace Editor
         Basis mBeginDraggingFrame;  // Frame before dragging any handle
         Vec2F mBeginDraggingOffset; // Offset at beginning dragging from frame origin to cursor
 
-        bool mIsDragging = false;       // Is frame dragging
+        bool mIsDragging = false;      // Is frame dragging
         bool mChangedFromThis = false; // Is objects changed from this, needs to break circular updating
 
         Vector<Basis>        mBeforeTransforms; // Array of objects transformations before changing

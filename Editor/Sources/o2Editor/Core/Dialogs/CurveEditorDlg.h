@@ -44,12 +44,6 @@ namespace Editor
         // Removes all editing curves
         static void RemoveAllEditingCurves();
 
-        // Adds curves range with color. It can't be edited, just a solid color between curves
-        static void AddCurvesRange(const Ref<Curve>& curveA, const Ref<Curve>& curveB, const Color4& color = Color4::Green());
-
-        // Removes curve range
-        static void RemoveCurvesRange(const Ref<Curve>& curveA, const Ref<Curve>& curveB);
-
         REF_COUNTERABLE_IMPL(Singleton<CurveEditorDlg>, CursorEventsListener);
 
     protected:
