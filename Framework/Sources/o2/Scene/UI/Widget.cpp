@@ -1618,6 +1618,11 @@ namespace o2
         return widget.Lock()->GetTransform();
     }
 
+    bool Widget::LayersEditable::IsSupportsSnapping() const
+    {
+        return false;
+    }
+
     Ref<SceneEditableObject> Widget::LayersEditable::GetEditableLink() const
     {
         return prototypeLink.Lock();
@@ -1680,6 +1685,11 @@ namespace o2
     Basis Widget::InternalChildrenEditableEditable::GetTransform() const
     {
         return widget.Lock()->GetTransform();
+    }
+
+    bool Widget::InternalChildrenEditableEditable::IsSupportsSnapping() const
+    {
+        return false;
     }
 
     Ref<SceneEditableObject> Widget::InternalChildrenEditableEditable::GetEditableLink() const

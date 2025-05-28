@@ -476,7 +476,7 @@ namespace Editor
                 cursorPos = CalculateSnapOffset(cursorPos, preTransformed,
                                                 { Vec2F(0, 0), Vec2F(0, 1), Vec2F(0.5f, 0.0f), Vec2F(0.5f, 1.0f), Vec2F(1, 0), Vec2F(1, 1) }, preTransformed.xv.Normalized(),
                                                 { Vec2F(0, 0), Vec2F(1, 0), Vec2F(0.0f, 0.5f), Vec2F(1.0f, 0.5f), Vec2F(0, 1), Vec2F(1, 1) }, preTransformed.yv.Normalized(),
-                                                GetObjectsTransforms(o2Scene.GetAllEditableObjects().Convert<Ref<SceneEditableObject>>([](auto& x) { return x.Lock(); })));
+                                                GetSnapBasisesForAllObjects());
             }
 
             Vec2F delta = cursorPos - mBeginDraggingOffset;
@@ -492,7 +492,8 @@ namespace Editor
 
             TransformObjects(mFrame.Inverted()*transformed);
         }
-        else SelectionTool::OnCursorStillDown(cursor);
+        else
+            SelectionTool::OnCursorStillDown(cursor);
     }
 
     void FrameTool::OnLeftTopHandle(const Vec2F& position)
@@ -1387,15 +1388,26 @@ namespace Editor
         mAnchorsCenter->enabled = enabled && mAnchorsFrameEnabled;
     }
 
-    Vector<Basis> FrameTool::GetObjectsTransforms(const Vector<Ref<SceneEditableObject>>& objects) const
+    Vector<Basis> FrameTool::GetObjectsTransforms(Vector<Ref<SceneEditableObject>> objects) const
     {
         Vector<Basis> res;
+
+        // Exclude selected objects and their children
+        Vector<Ref<SceneEditableObject>> allSelectedObjects;
+        o2EditorSceneScreen.GetSelectedObjects()
+            .ForEach([&](const Ref<SceneEditableObject>& object) { object->GetAllEditableChildren(allSelectedObjects); });
+
+        allSelectedObjects.Add(o2EditorSceneScreen.GetSelectedObjects());
+
+        objects.Remove(allSelectedObjects);
+
+        // Get transforms for existing objects on scene, supported snapping
         for (auto& object : objects)
         {
-            if (!object->IsOnScene())
+            if (!object || !object->IsOnScene())
                 continue;
 
-            if (o2EditorSceneScreen.GetSelectedObjects().Contains(object))
+            if (!object->IsSupportsSnapping())
                 continue;
 
             res.Add(object->GetTransform());

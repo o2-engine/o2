@@ -179,6 +179,11 @@ namespace o2
     void SceneEditableObject::SetLayout(const Layout& layout)
     {}
 
+    bool SceneEditableObject::IsSupportsSnapping() const
+    {
+        return true;
+    }
+
     bool SceneEditableObject::IsSupportsDeleting() const
     {
         return true;

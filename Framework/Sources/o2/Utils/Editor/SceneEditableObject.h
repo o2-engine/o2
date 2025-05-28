@@ -132,6 +132,9 @@ namespace o2
         // Sets layout of object, override when it's supports
         virtual void SetLayout(const Layout& layout);
 
+        // Returns is that type of object can be used to snapping while transforming
+        virtual bool IsSupportsSnapping() const;
+
         // Returns is that type of object can be deleted from editor
         virtual bool IsSupportsDeleting() const;
 
@@ -223,6 +226,7 @@ CLASS_METHODS_META(o2::SceneEditableObject)
     FUNCTION().PUBLIC().SIGNATURE(bool, IsSupportsLayout);
     FUNCTION().PUBLIC().SIGNATURE(Layout, GetLayout);
     FUNCTION().PUBLIC().SIGNATURE(void, SetLayout, const Layout&);
+    FUNCTION().PUBLIC().SIGNATURE(bool, IsSupportsSnapping);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsSupportsDeleting);
     FUNCTION().PUBLIC().SIGNATURE(void, OnChanged);
     FUNCTION().PUBLIC().SIGNATURE(void, OnLockChanged);

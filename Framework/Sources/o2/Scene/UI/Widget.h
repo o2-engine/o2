@@ -547,6 +547,9 @@ namespace o2
             // Returns transform, override when it's supports
             Basis GetTransform() const override;
 
+            // Returns is that type of object can be used to snapping while transforming
+            bool IsSupportsSnapping() const override;
+
             SERIALIZABLE(LayersEditable);
 
             friend class Widget;
@@ -603,6 +606,9 @@ namespace o2
 
             // Returns transform, override when it's supports
             Basis GetTransform() const override;
+
+            // Returns is that type of object can be used to snapping while transforming
+            bool IsSupportsSnapping() const override;
 
             SERIALIZABLE(InternalChildrenEditableEditable);
 
@@ -963,6 +969,7 @@ CLASS_METHODS_META(o2::Widget::LayersEditable)
     FUNCTION().PUBLIC().SIGNATURE(void, SetIndexInSiblings, int);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsSupportsDeleting);
     FUNCTION().PUBLIC().SIGNATURE(Basis, GetTransform);
+    FUNCTION().PUBLIC().SIGNATURE(bool, IsSupportsSnapping);
 #endif
 }
 END_META;
@@ -1001,6 +1008,7 @@ CLASS_METHODS_META(o2::Widget::InternalChildrenEditableEditable)
     FUNCTION().PUBLIC().SIGNATURE(void, SetIndexInSiblings, int);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsSupportsDeleting);
     FUNCTION().PUBLIC().SIGNATURE(Basis, GetTransform);
+    FUNCTION().PUBLIC().SIGNATURE(bool, IsSupportsSnapping);
 #endif
 }
 END_META;

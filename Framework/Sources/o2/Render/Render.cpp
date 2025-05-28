@@ -672,28 +672,31 @@ namespace o2
     }
 
     void Render::DrawAALine(const Vec2F& a, const Vec2F& b, const Color4& color /*= Color4::White()*/,
-                            float width /*= 1.0f*/, LineType lineType /*= LineType::Solid*/)
+                            float width /*= 1.0f*/, LineType lineType /*= LineType::Solid*/,
+                            bool scaleToScreenSpace /*= true*/)
     {
         ULong dcolor = color.ABGR();
         Vertex v[] = { Vertex(a.x, a.y, dcolor, 0, 0), Vertex(b.x, b.y, dcolor, 0, 0) };
-        DrawAAPolyLine(v, 2, width, lineType);
+        DrawAAPolyLine(v, 2, width, lineType, scaleToScreenSpace);
     }
 
     void Render::DrawAALine(const Vector<Vec2F>& points, const Color4& color /*= Color4::White()*/,
-                            float width /*= 1.0f*/, LineType lineType /*= LineType::Solid*/)
+                            float width /*= 1.0f*/, LineType lineType /*= LineType::Solid*/,
+                            bool scaleToScreenSpace /*= true*/)
     {
         ULong dcolor = color.ABGR();
         Vertex* v = mnew Vertex[points.Count()];
         for (int i = 0; i < points.Count(); i++)
             v[i] = Vertex(points[i], dcolor, 0, 0);
 
-        DrawAAPolyLine(v, points.Count(), width, lineType);
+        DrawAAPolyLine(v, points.Count(), width, lineType, scaleToScreenSpace);
         delete[] v;
     }
 
     void Render::DrawAAArrow(const Vec2F& a, const Vec2F& b, const Color4& color /*= Color4::White()*/,
                              const Vec2F& arrowSize /*= Vec2F(10, 10)*/,
-                             float width /*= 1.0f*/, LineType lineType /*= LineType::Solid*/)
+                             float width /*= 1.0f*/, LineType lineType /*= LineType::Solid*/,
+                             bool scaleToScreenSpace /*= true*/)
     {
         ULong dcolor = color.ABGR();
         Vec2F dir = (b - a).Normalized();
@@ -704,11 +707,12 @@ namespace o2
             Vertex(b - dir*arrowSize.x + ndir*arrowSize.y, dcolor, 0, 0), Vertex(b, dcolor, 0, 0),
             Vertex(b - dir*arrowSize.x - ndir*arrowSize.y, dcolor, 0, 0), Vertex(b, dcolor, 0, 0) };
 
-        DrawAAPolyLine(v, 6, width, lineType);
+        DrawAAPolyLine(v, 6, width, lineType, scaleToScreenSpace);
     }
 
     void Render::DrawAARectFrame(const Vec2F& minp, const Vec2F& maxp, const Color4& color /*= Color4::White()*/,
-                                 float width /*= 1.0f*/, LineType lineType /*= LineType::Solid*/)
+                                 float width /*= 1.0f*/, LineType lineType /*= LineType::Solid*/,
+                                 bool scaleToScreenSpace /*= true*/)
     {
         ULong dcolor = color.ABGR();
         Vertex v[] = {
@@ -718,21 +722,24 @@ namespace o2
             Vertex(minp.x, maxp.y, dcolor, 0, 0),
             Vertex(minp.x, minp.y, dcolor, 0, 0)
         };
-        DrawAAPolyLine(v, 5, width, lineType);
+
+        DrawAAPolyLine(v, 5, width, lineType, scaleToScreenSpace);
     }
 
     void Render::DrawAARectFrame(const RectF& rect, const Color4& color /*= Color4::White()*/,
-                                 float width /*= 1.0f*/, LineType lineType /*= LineType::Solid*/)
+                                 float width /*= 1.0f*/, LineType lineType /*= LineType::Solid*/,
+                                 bool scaleToScreenSpace /*= true*/)
     {
-        DrawAARectFrame(rect.LeftBottom(), rect.RightTop(), color, width, lineType);
+        DrawAARectFrame(rect.LeftBottom(), rect.RightTop(), color, width, lineType, scaleToScreenSpace);
     }
 
     void Render::DrawAABasis(const Basis& basis, const Color4& xcolor /*= Color4::Red()*/,
                              const Color4& ycolor /*= Color4::Blue()*/, const Color4& color /*= Color4::White()*/,
-                             float width /*= 1.0f*/, LineType lineType /*= LineType::Solid*/)
+                             float width /*= 1.0f*/, LineType lineType /*= LineType::Solid*/,
+                             bool scaleToScreenSpace /*= true*/)
     {
-        DrawAALine(basis.origin, basis.origin + basis.xv, xcolor, width, lineType);
-        DrawAALine(basis.origin, basis.origin + basis.yv, ycolor, width, lineType);
+        DrawAALine(basis.origin, basis.origin + basis.xv, xcolor, width, lineType, scaleToScreenSpace);
+        DrawAALine(basis.origin, basis.origin + basis.yv, ycolor, width, lineType, scaleToScreenSpace);
 
         Vertex v[] =
         {
@@ -741,19 +748,21 @@ namespace o2
             Vertex(basis.origin + basis.yv, color.ABGR(), 0, 0)
         };
 
-        DrawAAPolyLine(v, 3, width, lineType);
+        DrawAAPolyLine(v, 3, width, lineType, scaleToScreenSpace);
     }
 
     void Render::DrawAACross(const Vec2F& pos, float size /*= 5*/, const Color4& color /*= Color4::White()*/,
-                             float width /*= 1.0f*/, LineType lineType /*= LineType::Solid*/)
+                             float width /*= 1.0f*/, LineType lineType /*= LineType::Solid*/,
+                             bool scaleToScreenSpace /*= true*/)
     {
-        DrawAALine(Vec2F(pos.x - size, pos.y), Vec2F(pos.x + size, pos.y), color, width, lineType);
-        DrawAALine(Vec2F(pos.x, pos.y - size), Vec2F(pos.x, pos.y + size), color, width, lineType);
+        DrawAALine(Vec2F(pos.x - size, pos.y), Vec2F(pos.x + size, pos.y), color, width, lineType, scaleToScreenSpace);
+        DrawAALine(Vec2F(pos.x, pos.y - size), Vec2F(pos.x, pos.y + size), color, width, lineType, scaleToScreenSpace);
     }
 
     void Render::DrawAACircle(const Vec2F& pos, float radius /*= 5*/, const Color4& color /*= Color4::White()*/,
                               int segCount /*= 20*/,
-                              float width /*= 1.0f*/, LineType lineType /*= LineType::Solid*/)
+                              float width /*= 1.0f*/, LineType lineType /*= LineType::Solid*/,
+                              bool scaleToScreenSpace /*= true*/)
     {
         Vertex* v = mnew Vertex[segCount + 1];
         ULong dcolor = color.ABGR();
@@ -765,13 +774,14 @@ namespace o2
             v[i] = Vertex(Vec2F::Rotated(a)*radius + pos, dcolor, 0, 0);
         }
 
-        DrawAAPolyLine(v, segCount + 1, width, lineType);
+        DrawAAPolyLine(v, segCount + 1, width, lineType, scaleToScreenSpace);
         delete[] v;
     }
 
     void Render::DrawAABezierCurve(const Vec2F& p1, const Vec2F& p2, const Vec2F& p3, const Vec2F& p4,
                                    const Color4& color /*= Color4::White()*/,
-                                   float width /*= 1.0f*/, LineType lineType /*= LineType::Solid*/)
+                                   float width /*= 1.0f*/, LineType lineType /*= LineType::Solid*/,
+                                   bool scaleToScreenSpace /*= true*/)
     {
         const int segCount = 20;
         Vertex v[segCount + 1];
@@ -784,12 +794,13 @@ namespace o2
             v[i] = Vertex(p, dcolor, 0, 0);
         }
 
-        DrawAAPolyLine(v, segCount + 1, width, lineType);
+        DrawAAPolyLine(v, segCount + 1, width, lineType, scaleToScreenSpace);
     }
 
     void Render::DrawAABezierCurveArrow(const Vec2F& p1, const Vec2F& p2, const Vec2F& p3, const Vec2F& p4,
                                         const Color4& color /*= Color4::White()*/, const Vec2F& arrowSize /*= Vec2F(10, 10)*/,
-                                        float width /*= 1.0f*/, LineType lineType /*= LineType::Solid*/)
+                                        float width /*= 1.0f*/, LineType lineType /*= LineType::Solid*/,
+                                        bool scaleToScreenSpace /*= true*/)
     {
         const int segCount = 20;
         Vertex v[segCount + 1];
@@ -806,7 +817,7 @@ namespace o2
             lastp = p;
         }
 
-        DrawAAPolyLine(v, segCount + 1, width, lineType);
+        DrawAAPolyLine(v, segCount + 1, width, lineType, scaleToScreenSpace);
 
         dir.Normalize();
         Vec2F ndir = dir.Perpendicular();
@@ -817,7 +828,7 @@ namespace o2
             Vertex(p4, dcolor, 0, 0),
             Vertex(p4 - dir*arrowSize.x - ndir*arrowSize.y, dcolor, 0, 0)
         };
-        DrawAAPolyLine(va, 3, width, lineType);
+        DrawAAPolyLine(va, 3, width, lineType, scaleToScreenSpace);
     }
 
     void Render::DrawLine(const Vec2F& a, const Vec2F& b, const Color4& color /*= Color4::White()*/)

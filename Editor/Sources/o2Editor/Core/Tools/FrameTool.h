@@ -325,7 +325,7 @@ namespace Editor
         void CheckAnchorsCenterEnabled();
 
         // Returns objects' transforms 
-        Vector<Basis> GetObjectsTransforms(const Vector<Ref<SceneEditableObject>>& objects) const;
+        Vector<Basis> GetObjectsTransforms(Vector<Ref<SceneEditableObject>> objects) const;
 
         // Returns all objects' transforms for snapping and including anchors frame when enabled
         Vector<Basis> GetSnapBasisesForAllObjects() const;
@@ -466,7 +466,7 @@ CLASS_METHODS_META(Editor::FrameTool)
     FUNCTION().PROTECTED().SIGNATURE(bool, IsPointInBottomHandle, const Vec2F&);
     FUNCTION().PROTECTED().SIGNATURE(bool, IsPointInAnchorsCenterHandle, const Vec2F&);
     FUNCTION().PROTECTED().SIGNATURE(void, CheckAnchorsCenterEnabled);
-    FUNCTION().PROTECTED().SIGNATURE(Vector<Basis>, GetObjectsTransforms, const Vector<Ref<SceneEditableObject>>&);
+    FUNCTION().PROTECTED().SIGNATURE(Vector<Basis>, GetObjectsTransforms, Vector<Ref<SceneEditableObject>>);
     FUNCTION().PROTECTED().SIGNATURE(Vector<Basis>, GetSnapBasisesForAllObjects);
     FUNCTION().PROTECTED().SIGNATURE(Basis, GetObjectParentAnchorSnapBasis, const Ref<SceneEditableObject>&);
     FUNCTION().PROTECTED().SIGNATURE(Vec2F, CalculateSnapOffset, const Vec2F&, const Basis&, const Vector<Vec2F>&, const Vec2F&, const Vector<Vec2F>&, const Vec2F&, Vector<Basis>);

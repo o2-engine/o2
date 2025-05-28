@@ -178,47 +178,47 @@ namespace o2
 
         // Draws anti-aliased single line with color
         void DrawAALine(const Vec2F& a, const Vec2F& b, const Color4& color = Color4::White(),
-                        float width = 1.0f, LineType lineType = LineType::Solid);
+                        float width = 1.0f, LineType lineType = LineType::Solid, bool scaleToScreenSpace = true);
 
         // Draws anti-aliased single line with color
         void DrawAAArrow(const Vec2F& a, const Vec2F& b, const Color4& color = Color4::White(),
                          const Vec2F& arrowSize = Vec2F(10, 10),
-                         float width = 1.0f, LineType lineType = LineType::Solid);
+                         float width = 1.0f, LineType lineType = LineType::Solid, bool scaleToScreenSpace = true);
 
         // Draws anti-aliased single line with color
         void DrawAALine(const Vector<Vec2F>& points, const Color4& color = Color4::White(),
-                        float width = 1.0f, LineType lineType = LineType::Solid);
+                        float width = 1.0f, LineType lineType = LineType::Solid, bool scaleToScreenSpace = true);
 
         // Draws anti-aliased rect frame with color
         void DrawAARectFrame(const Vec2F& minp, const Vec2F& maxp, const Color4& color = Color4::White(),
-                             float width = 1.0f, LineType lineType = LineType::Solid);
+                             float width = 1.0f, LineType lineType = LineType::Solid, bool scaleToScreenSpace = true);
 
         // Draws anti-aliased rect frame with color
         void DrawAARectFrame(const RectF& rect, const Color4& color = Color4::White(),
-                             float width = 1.0f, LineType lineType = LineType::Solid);
+                             float width = 1.0f, LineType lineType = LineType::Solid, bool scaleToScreenSpace = true);
 
         // Draws anti-aliased basis frame
         void DrawAABasis(const Basis& basis, const Color4& xcolor = Color4::Red(), const Color4& ycolor = Color4::Blue(),
                          const Color4& color = Color4::White(),
-                         float width = 1.0f, LineType lineType = LineType::Solid);
+                         float width = 1.0f, LineType lineType = LineType::Solid, bool scaleToScreenSpace = true);
 
         // Draws anti-aliased cross with color
         void DrawAACross(const Vec2F& pos, float size = 5, const Color4& color = Color4::White(),
-                         float width = 1.0f, LineType lineType = LineType::Solid);
+                         float width = 1.0f, LineType lineType = LineType::Solid, bool scaleToScreenSpace = true);
 
         // Draws anti-aliased circle with color
         void DrawAACircle(const Vec2F& pos, float radius = 5, const Color4& color = Color4::White(), int segCount = 20,
-                          float width = 1.0f, LineType lineType = LineType::Solid);
+                          float width = 1.0f, LineType lineType = LineType::Solid, bool scaleToScreenSpace = true);
 
         // Draws anti-aliased bezier curve with color
         void DrawAABezierCurve(const Vec2F& p1, const Vec2F& p2, const Vec2F& p3, const Vec2F& p4,
                                const Color4& color = Color4::White(),
-                               float width = 1.0f, LineType lineType = LineType::Solid);
+                               float width = 1.0f, LineType lineType = LineType::Solid, bool scaleToScreenSpace = true);
 
         // Draws anti-aliased bezier curve with color
         void DrawAABezierCurveArrow(const Vec2F& p1, const Vec2F& p2, const Vec2F& p3, const Vec2F& p4,
                                     const Color4& color = Color4::White(), const Vec2F& arrowSize = Vec2F(10, 10),
-                                    float width = 1.0f, LineType lineType = LineType::Solid);
+                                    float width = 1.0f, LineType lineType = LineType::Solid, bool scaleToScreenSpace = true);
 
         // Beginning render to stencil buffer
         void BeginRenderToStencilBuffer();
