@@ -65,11 +65,16 @@ if (O2_MEMORY_ANALYZE)
 endif()
 
 if (APPLE)
+    set(O2_PLATFORM "Mac")
     set(O2_PLATFORM "Mac" PARENT_SCOPE)
 elseif (UNIX)
+    set(O2_PLATFORM "Linux")
     set(O2_PLATFORM "Linux" PARENT_SCOPE)
 elseif (WIN32)
+    set(O2_PLATFORM "Windows")
     set(O2_PLATFORM "Windows" PARENT_SCOPE)
+else()
+    message(FATAL_ERROR "Unknown platform, please set O2_PLATFORM manually")
 endif()
 
 set(O2_COMPILE_DEFINITIONS_EXPORT ${O2_COMPILE_DEFINITIONS} PARENT_SCOPE)
@@ -104,7 +109,7 @@ add_subdirectory(CodeTool)
 add_custom_target(o2CopyBuiltinAssets
                   COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_CURRENT_SOURCE_DIR}/Framework/Assets" 
                                                              "${CMAKE_CURRENT_SOURCE_DIR}/../BuiltAssets/${O2_PLATFORM}/FrameworkData"
-                  COMMENT "Copy o2 builtin assets"
+                  COMMENT "Copy o2 builtin assets from ${CMAKE_CURRENT_SOURCE_DIR}/Framework/Assets to ${CMAKE_CURRENT_SOURCE_DIR}/../BuiltAssets/${O2_PLATFORM}/FrameworkData"
 )
 
 # o2 Framework library

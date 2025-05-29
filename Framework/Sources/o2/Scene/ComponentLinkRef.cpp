@@ -72,12 +72,15 @@ namespace o2
         if (auto component = Get())
         {
             auto actor = component->mOwner.Lock();
-            if (actor->mIsAsset)
-                node.AddMember("AssetID") = actor->GetAssetID();
-            else 
-                node.AddMember("ActorID") = actor->GetID();
+            if (actor)
+            {
+                if (actor->mIsAsset)
+                    node.AddMember("AssetID") = actor->GetAssetID();
+                else
+                    node.AddMember("ActorID") = actor->GetID();
 
-            node.AddMember("ComponentId") = component->mId;
+                node.AddMember("ComponentId") = component->mId;
+            }
         }
     }
 

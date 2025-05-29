@@ -33,17 +33,26 @@ namespace o2
         {
             String textureName = (*common)["texture"];
             AssetRef<ImageAsset> image(textureName);
-            TextureSource imageSource = image->GetTextureSource();
-            mTexture = imageSource.texture;
-            mTextureSrcRect = imageSource.sourceRect;
+            if (image)
+            {
+                TextureSource imageSource = image->GetTextureSource();
+                mTexture = imageSource.texture;
+                mTextureSrcRect = imageSource.sourceRect;
 
-            mBaseHeight = (*common)["base"];
-            mLineHeight = (*common)["lineHeight"];
+                mBaseHeight = (*common)["base"];
+                mLineHeight = (*common)["lineHeight"];
+            }
         }
         else
         {
             o2Render.mLog->Error("Failed to get common info in font: " + fileName + ". Bad file format");
             return false;
+        }
+
+        if (!mTexture)
+        {
+			o2Render.mLog->Error("Failed to load texture for Bitmap Font: " + fileName + ". Texture not found");
+			return false;
         }
 
         if (auto chars = doc.FindMember("chars"))

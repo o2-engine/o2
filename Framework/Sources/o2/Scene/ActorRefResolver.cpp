@@ -85,22 +85,25 @@ namespace o2
         if (!mInstance)
             return;
 
-        for (auto& ref : mInstance->mRemapActors)
+		auto remapActors = mInstance->mRemapActors;
+		mInstance->mRemapActors.Clear();
+
+        for (auto& ref : remapActors)
         {
             Actor* res = nullptr;
             if (actors.TryGetValue(ref->Get(), res))
                 ref->Set(res);
         }
 
-        for (auto& ref : mInstance->mRemapComponents)
+		auto remapComponents = mInstance->mRemapComponents;
+		mInstance->mRemapComponents.Clear();
+
+        for (auto& ref : remapComponents)
         {
             Component* res = nullptr;
             if (components.TryGetValue(ref->Get(), res))
                 ref->Set(res);
         }
-
-        mInstance->mRemapActors.Clear();
-        mInstance->mRemapComponents.Clear();
     }
 
     void ActorRefResolver::RequireRemap(BaseActorLinkRef& ref)

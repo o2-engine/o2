@@ -216,8 +216,8 @@ namespace Editor
 
             endNode->name = "End of batch #" + (String)(endNode->batchIdx - mStartBatchIdx);
 
-            auto parent = prevDrawableNode->GetParent();
-            parent.Lock()->AddChild(endNode);
+            if (auto parent = prevDrawableNode->GetParent().Lock())
+                parent->AddChild(endNode);
         }
 
         if (node->object && node->batchIdx >= 0)
