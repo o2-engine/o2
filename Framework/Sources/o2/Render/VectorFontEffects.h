@@ -28,6 +28,7 @@ namespace o2
         bool IsEqual(VectorFont::Effect* other) const override;
 
         SERIALIZABLE(FontStrokeEffect);
+        CLONEABLE_REF(FontStrokeEffect);
     };
 
     // -----------------------
@@ -57,7 +58,8 @@ namespace o2
         // Check effects equals
         bool IsEqual(VectorFont::Effect* other) const override;
 
-        SERIALIZABLE(FontGradientEffect);
+		SERIALIZABLE(FontGradientEffect);
+		CLONEABLE_REF(FontGradientEffect);
     };
 
     class FontColorEffect: public VectorFont::Effect
@@ -78,7 +80,8 @@ namespace o2
         // Check effects equals
         bool IsEqual(VectorFont::Effect* other) const override;
 
-        SERIALIZABLE(FontColorEffect);
+		SERIALIZABLE(FontColorEffect);
+		CLONEABLE_REF(FontColorEffect);
     };
 
     class FontShadowEffect: public VectorFont::Effect
@@ -102,7 +105,8 @@ namespace o2
         // Check effects equals
         bool IsEqual(VectorFont::Effect* other) const override;
 
-        SERIALIZABLE(FontShadowEffect);
+		SERIALIZABLE(FontShadowEffect);
+		CLONEABLE_REF(FontShadowEffect);
     };
 }
 // --- META ---

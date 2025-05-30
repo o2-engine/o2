@@ -15,12 +15,14 @@ namespace o2
     
     void Font::PostRefConstruct()
     {
-        o2Render.OnFontCreated(this);
+        if (Render::IsSingletonInitialzed())
+            o2Render.OnFontCreated(this);
     }
 
     Font::~Font()
     {
-        o2Render.OnFontDestroyed(this);
+		if (Render::IsSingletonInitialzed())
+			o2Render.OnFontDestroyed(this);
     }
 
     float Font::GetHeightPx(int height) const
