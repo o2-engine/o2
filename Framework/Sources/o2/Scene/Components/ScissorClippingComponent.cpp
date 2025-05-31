@@ -14,11 +14,13 @@ namespace o2
     {
         if (enableClipping)
             o2Render.EnableScissorTest(mOwner.Lock()->transform->GetWorldAxisAlignedRect());
+    }
 
+    void ScissorClippingComponent::OnPostDraw()
+    {
         if (enableClipping)
             o2Render.DisableScissorTest();
     }
-
 }
 
 DECLARE_TEMPLATE_CLASS(o2::LinkRef<o2::ScissorClippingComponent>);

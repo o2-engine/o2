@@ -41,7 +41,7 @@ namespace o2
         static void UnlockResolving(int depth = 1);
 
         // Resolves references. Works when lock depth is 0
-        static void ResolveRefs();
+        static void ResolveRefs(bool forcible = false);
 
         // Returns is resolver depth locked
         static bool IsLocked();

@@ -153,37 +153,64 @@ namespace o2
         }
     }
 
-    void ActorRefResolver::ResolveRefs()
+    void ActorRefResolver::ResolveRefs(bool forcible /*= false*/)
     {
         if (!mInstance)
             return;
 
-        if (mInstance->mLockDepth > 0)
+        if (mInstance->mLockDepth > 0 && !forcible)
             return;
 
-        for (auto& def : mInstance->mUnresolvedActorsRefs)
+        for (auto it = mInstance->mUnresolvedActorsRefs.Begin(); it != mInstance->mUnresolvedActorsRefs.End();)
         {
+            auto& unresolvedActor = *it;
             Actor* res = nullptr;
-            if (mInstance->mNewActors.TryGetValue(def.sourceId, res))
-                def.target->Set(res);
+            if (mInstance->mNewActors.TryGetValue(unresolvedActor.sourceId, res))
+            {
+                unresolvedActor.target->Set(res);
+                it = mInstance->mUnresolvedActorsRefs.Remove(it);
+            }
+            else if (auto actor = o2Scene.GetActorByID(unresolvedActor.sourceId))
+            {
+                unresolvedActor.target->Set(actor.Get());
+                it = mInstance->mUnresolvedActorsRefs.Remove(it);
+            }
             else
-                def.target->Set(o2Scene.GetActorByID(def.sourceId).Get());
+                ++it;
         }
 
-        for (auto& def : mInstance->mUnresolvedAssetActorsRefs)
-            def.target->Set(o2Scene.GetAssetActorByID(def.sourceAssetId).Get());
-
-        for (auto& def : mInstance->mUnresolvedComponentsRefs)
+        for (auto it = mInstance->mUnresolvedAssetActorsRefs.Begin(); it != mInstance->mUnresolvedAssetActorsRefs.End();)
         {
-            Component* res = nullptr;
-            if (mInstance->mNewComponents.TryGetValue(def.sourceId, res))
-                def.target->Set(res);
+            auto& unresolvedAssetActor = *it;
+            if (auto actor = o2Scene.GetAssetActorByID(unresolvedAssetActor.sourceAssetId))
+            {
+                unresolvedAssetActor.target->Set(actor.Get());
+                it = mInstance->mUnresolvedAssetActorsRefs.Remove(it);
+            }
+            else
+                ++it;
         }
 
-        mInstance->mNewActors.Clear();
-        mInstance->mNewComponents.Clear();
-        mInstance->mUnresolvedActorsRefs.Clear();
-        mInstance->mUnresolvedComponentsRefs.Clear();
+        for (auto it = mInstance->mUnresolvedComponentsRefs.Begin(); it != mInstance->mUnresolvedComponentsRefs.End();)
+        {
+            auto& unresolvedComponent = *it;
+            Component* res = nullptr;
+            if (mInstance->mNewComponents.TryGetValue(unresolvedComponent.sourceId, res))
+            {
+                unresolvedComponent.target->Set(res);
+                it = mInstance->mUnresolvedComponentsRefs.Remove(it);
+            }
+            else
+                ++it;
+        }
+
+        if (mInstance->mLockDepth == 0)
+        {
+            mInstance->mNewActors.Clear();
+            mInstance->mNewComponents.Clear();
+            mInstance->mUnresolvedActorsRefs.Clear();
+            mInstance->mUnresolvedComponentsRefs.Clear();
+        }
     }
 
     void ActorRefResolver::ActorCreated(Actor* actor)

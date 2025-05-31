@@ -221,7 +221,13 @@ namespace o2
 			component->OnDraw();
 	}
 
-	void Actor::Destroy()
+    void Actor::PostDrawComponents()
+    {
+        for (auto& component : mComponents)
+            component->OnPostDraw();
+    }
+
+    void Actor::Destroy()
     {
         if (Scene::IsSingletonInitialzed())
             o2Scene.DestroyActor(Ref(this));
@@ -236,6 +242,7 @@ namespace o2
         OnDraw();
 		DrawComponents();
         ISceneDrawable::Draw();
+        PostDrawComponents();
     }
 
     void Actor::Update(float dt)

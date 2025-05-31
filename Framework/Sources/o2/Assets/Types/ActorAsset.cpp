@@ -77,6 +77,8 @@ namespace o2
     {
         node["mActor"].Get(mActor);
 
+        ActorRefResolver::ResolveRefs(true);
+
         if (mActor)
         {
             mActor->RemoveFromScene();

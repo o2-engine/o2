@@ -27,7 +27,7 @@ namespace o2
             bool found = false;
             for (auto& otherEff : otherMeta->mEffects)
             {
-                if (eff && eff->IsEqual(otherEff.Get()))
+                if (eff && otherEff && eff->IsEqual(otherEff.Get()))
                 {
                     found = true;
                     break;

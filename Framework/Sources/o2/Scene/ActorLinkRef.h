@@ -391,7 +391,7 @@ namespace o2
     template<typename _actor_type>
     void LinkRef<_actor_type, ENABLE_ACTOR>::Set(Actor* actor)
     {
-        *this = LinkRef(dynamic_cast<_actor_type*>(actor));
+        CopyWithoutRemap(LinkRef(dynamic_cast<_actor_type*>(actor)));
     }
 
     template<typename _actor_type>

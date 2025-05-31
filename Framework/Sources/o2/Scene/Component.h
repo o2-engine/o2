@@ -7,9 +7,9 @@ namespace o2
 {
     class Actor;
     
-        // ---------------------------
-        // Actor's component interface
-        // ---------------------------
+    // ---------------------------
+    // Actor's component interface
+    // ---------------------------
     class Component: public RefCounterable, virtual public ISerializable, virtual public ICloneableRef
     {
     public:
@@ -19,84 +19,84 @@ namespace o2
         GETTER(bool, enabledInHierarchy, IsEnabledInHierarchy); // Is enabled in hierarchy property
         
     public:
-            // Default constructor
+        // Default constructor
         Component();
         
-            // Default constructor with ref counter
+        // Default constructor with ref counter
         explicit Component(RefCounter* refCounter);
         
-            // Copy-constructor
+        // Copy-constructor
         Component(const Component& other);
         
-            // Copy-constructor with ref counter
+        // Copy-constructor with ref counter
         Component(RefCounter* refCounter, const Component& other);
         
-            // Virtual destructor
+        // Virtual destructor
         virtual ~Component();
         
-            // Copy-operator
+        // Copy-operator
         Component& operator=(const Component& other);
         
-            // Returns component id
+        // Returns component id
         SceneUID GetID() const;
         
-            // Regenerates component id
+        // Regenerates component id
         void GenerateNewID();
         
-            // Sets component enable
+        // Sets component enable
         virtual void SetEnabled(bool active);
         
-            // Enables component
+        // Enables component
         void Enable();
         
-            // Disables component
+        // Disables component
         void Disable();
         
-            // Returns is component enabled
+        // Returns is component enabled
         bool IsEnabled() const;
         
-            // Returns is component enabled in hierarchy
+        // Returns is component enabled in hierarchy
         bool IsEnabledInHierarchy() const;
         
-            // Returns prototype link
+        // Returns prototype link
         const WeakRef<Component>& GetPrototypeLink() const;
         
-            // Returns is this linked to specified component with depth links search
+        // Returns is this linked to specified component with depth links search
         bool IsLinkedToComponent(const Ref<Component>& component) const;
         
-            // Returns owner actor
+        // Returns owner actor
         Ref<Actor> GetActor() const;
         
-            // Returns component with type
+        // Returns component with type
         template<typename _type>
         Ref<_type> GetComponent() const;
         
-            // Returns component with type in children
+        // Returns component with type in children
         template<typename _type>
         Ref<_type> GetComponentInChildren() const;
         
-            // Returns components with type
+        // Returns components with type
         template<typename _type>
         Vector<Ref<_type>> GetComponents() const;
         
-            // Returns components with type in children
+        // Returns components with type in children
         template<typename _type>
         Vector<Ref<_type>> GetComponentsInChildren() const;
         
-            // Returns name of component
+        // Returns name of component
         static String GetName();
         
-            // Returns category of component
+        // Returns category of component
         static String GetCategory();
         
-            // Returns name of component icon
+        // Returns name of component icon
         static String GetIcon();
         
-            // Is component visible in create menu
+        // Is component visible in create menu
         static bool IsAvailableFromCreateMenu();
         
 #if IS_EDITOR
-            // Called when component added from editor
+        // Called when component added from editor
         virtual void OnAddedFromEditor() {}
 #endif
         
@@ -114,79 +114,82 @@ namespace o2
         bool mEnabledInHierarchy = false; // Is component enabled in hierarchy
         
     protected:
-            // Beginning serialization callback
+        // Beginning serialization callback
         void OnSerialize(DataValue& node) const override;
         
-            // Completion deserialization callback
+        // Completion deserialization callback
         void OnDeserialized(const DataValue& node) override;
         
-            // Beginning serialization delta callback
+        // Beginning serialization delta callback
         void OnSerializeDelta(DataValue& node, const IObject& origin) const override;
         
-            // Completion deserialization delta callback
+        // Completion deserialization delta callback
         void OnDeserializedDelta(const DataValue& node, const IObject& origin) override;
         
-            // Adds component to scene
+        // Adds component to scene
         virtual void AddToScene();
         
-            // Removes component from scene
+        // Removes component from scene
         virtual void RemoveFromScene();
         
-            // Updates component enable
+        // Updates component enable
         virtual void UpdateEnabledInHierarchy();
         
-            // Sets owner actor
+        // Sets owner actor
         virtual void SetOwnerActor(const Ref<Actor>& actor);
         
-            // Called when actor was included to scene
+        // Called when actor was included to scene
         virtual void OnAddToScene() {}
         
-            // Called when actor was excluded from scene
+        // Called when actor was excluded from scene
         virtual void OnRemoveFromScene() {}
         
-            // Called when component, actor and scene was initialized
+        // Called when component, actor and scene was initialized
         virtual void OnInitialized() {}
         
-            // Called when component started working on first update frame
+        // Called when component started working on first update frame
         virtual void OnStart() {}
         
-            // Called when component will be destroyed
+        // Called when component will be destroyed
         virtual void OnDestroy() {}
         
-            // Updates component
+        // Updates component
         virtual void OnUpdate(float dt) {}
         
-            // Draws component
+        // Draws component
         virtual void OnDraw() {}
-        
-            // Updates component with fixed delta time
+
+        // Draws component after all drawables
+        virtual void OnPostDraw() {}
+
+        // Updates component with fixed delta time
         virtual void OnFixedUpdate(float dt) {}
         
-            // Called when actor enabled in hierarchy
+        // Called when actor enabled in hierarchy
         virtual void OnEnabled() {}
         
-            // Called when actor disabled in hierarchy
+        // Called when actor disabled in hierarchy
         virtual void OnDisabled() {}
         
-            // Called when actor's transform was changed
+        // Called when actor's transform was changed
         virtual void OnTransformUpdated() {}
         
-            // Called when parent changed
+        // Called when parent changed
         virtual void OnParentChanged(const Ref<Actor>& oldParent) {}
         
-            // Called when children list changed
+        // Called when children list changed
         virtual void OnChildrenChanged() {}
         
-            // Called when child actor was added
+        // Called when child actor was added
         virtual void OnChildAdded(const Ref<Actor>& child) {}
         
-            // Called when child actor was removed
+        // Called when child actor was removed
         virtual void OnChildRemoved(const Ref<Actor>& child) {}
         
-            // Called when new component has added to actor
+        // Called when new component has added to actor
         virtual void OnComponentAdded(const Ref<Component>& component) {}
         
-            // Called when component going to be removed from actor
+        // Called when component going to be removed from actor
         virtual void OnComponentRemoving(const Ref<Component>& component) {}
         
         friend class Actor;
@@ -264,6 +267,7 @@ CLASS_METHODS_META(o2::Component)
     FUNCTION().PROTECTED().SIGNATURE(void, OnDestroy);
     FUNCTION().PROTECTED().SIGNATURE(void, OnUpdate, float);
     FUNCTION().PROTECTED().SIGNATURE(void, OnDraw);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnPostDraw);
     FUNCTION().PROTECTED().SIGNATURE(void, OnFixedUpdate, float);
     FUNCTION().PROTECTED().SIGNATURE(void, OnEnabled);
     FUNCTION().PROTECTED().SIGNATURE(void, OnDisabled);
