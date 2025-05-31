@@ -63,12 +63,12 @@ namespace o2
             o2Debug.LogError("Metal is not supported on this device");
             return;
         }
+
+        mGraphicsScale = [[ApplicationPlatformWrapper::view layer] contentsScale];
         
         ApplicationPlatformWrapper::renderer = [[RendererView alloc] initWithMetalKitView:ApplicationPlatformWrapper::view];
         [ApplicationPlatformWrapper::renderer mtkView:ApplicationPlatformWrapper::view drawableSizeWillChange:ApplicationPlatformWrapper::view.drawableSize];
         ApplicationPlatformWrapper::view.delegate = ApplicationPlatformWrapper::renderer;
-        
-        mGraphicsScale = [[ApplicationPlatformWrapper::view layer] contentsScale];
     }
 
     void Application::Shutdown()
@@ -120,11 +120,14 @@ namespace o2
     }
 
     void Application::SetWindowSize(const Vec2I& size)
-    {}
+    {
+        [ApplicationPlatformWrapper::window setContentSize:NSMakeSize(size.x, size.y)];
+    }
 
     Vec2I Application::GetWindowSize() const
     {
-        return Vec2I();
+        NSRect contentRect = [ApplicationPlatformWrapper::window contentRectForFrameRect:[ApplicationPlatformWrapper::window frame]];
+        return Vec2I(contentRect.size.width, contentRect.size.height);
     }
 
     void Application::SetWindowPosition(const Vec2I& position)
@@ -157,14 +160,95 @@ namespace o2
 
     Vec2I Application::GetScreenResolution() const
     {
-        return Vec2I(1000, 1000);
+        NSScreen* mainScreen = [NSScreen mainScreen];
+        CGSize screenSize = [mainScreen frame].size;
+        return Vec2I(screenSize.width, screenSize.height);
     }
 
     void Application::SetCursor(CursorType type)
-    {}
+    {
+        NSCursor* cursor = nil;
+        
+        switch (type)
+        {
+            case CursorType::AppStarting:
+                cursor = [NSCursor disappearingItemCursor];
+                break;
+                
+            case CursorType::Arrow:
+                cursor = [NSCursor arrowCursor];
+                break;
+                
+            case CursorType::Cross:
+                cursor = [NSCursor crosshairCursor];
+                break;
+                
+            case CursorType::Hand:
+                cursor = [NSCursor pointingHandCursor];
+                break;
+                
+            case CursorType::Help:
+                cursor = [NSCursor contextualMenuCursor];
+                break;
+                
+            case CursorType::IBeam:
+                cursor = [NSCursor IBeamCursor];
+                break;
+                
+            case CursorType::Icon:
+                cursor = [NSCursor arrowCursor];
+                break;
+                
+            case CursorType::No:
+                cursor = [NSCursor operationNotAllowedCursor];
+                break;
+                
+            case CursorType::SizeAll:
+                cursor = [NSCursor crosshairCursor];
+                break;
+                
+            case CursorType::SizeNeSw:
+                cursor = [[NSCursor class] performSelector:@selector(_windowResizeNorthEastSouthWestCursor)];
+                break;
+                
+            case CursorType::SizeNS:
+                cursor = [[NSCursor class] performSelector:@selector(_windowResizeNorthSouthCursor)];
+                break;
+                
+            case CursorType::SizeNwSe:
+                cursor = [[NSCursor class] performSelector:@selector(_windowResizeNorthWestSouthEastCursor)];
+                break;
+                
+            case CursorType::SizeWE:
+                cursor = [[NSCursor class] performSelector:@selector(_windowResizeEastWestCursor)];
+                break;
+                
+            case CursorType::UpArrow:
+                cursor = [NSCursor arrowCursor];
+                break;
+                
+            case CursorType::Wait:
+                cursor = [NSCursor disappearingItemCursor];
+                break;
+                
+            default:
+                cursor = [NSCursor arrowCursor];
+                break;
+        }
+        
+        if (cursor)
+        {
+            [cursor set];
+            [[ApplicationPlatformWrapper::view window] invalidateCursorRectsForView:ApplicationPlatformWrapper::view];
+            [ApplicationPlatformWrapper::view addCursorRect:[ApplicationPlatformWrapper::view bounds] cursor:cursor];
+        }
+    }
 
     void Application::SetCursorPosition(const Vec2F& position)
-    {}
+    {
+        CGPoint point = CGPointMake(position.x, position.y);
+        CGWarpMouseCursorPosition(point);
+    }
 
     String Application::GetBinPath() const
     {

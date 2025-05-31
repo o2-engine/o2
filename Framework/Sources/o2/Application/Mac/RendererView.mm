@@ -29,6 +29,12 @@
     o2::ApplicationPlatformWrapper::OnWindowRsized(o2::Vec2I(size.width/scale, size.height/scale));
 }
 
+- (void)resetCursorRects
+{
+    [super resetCursorRects];
+    [self addCursorRect:[self bounds] cursor:[NSCursor currentCursor]];
+}
+
 @end
 
 @implementation ViewController
@@ -47,6 +53,12 @@
                                                        userInfo:nil];
     
     [self addTrackingArea:area];
+}
+
+- (void)resetCursorRects
+{
+    [super resetCursorRects];
+    [self addCursorRect:[self bounds] cursor:[NSCursor currentCursor]];
 }
 
 - (int)getKeyCode:(NSEvent *)event
