@@ -109,5 +109,6 @@ namespace o2
 
         GetSingletonsList().Remove(lastReference);
         lastReference = nullptr;
+        mInstance = nullptr;
     }
 }

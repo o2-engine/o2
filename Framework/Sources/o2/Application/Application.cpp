@@ -350,6 +350,12 @@ namespace o2
         return mGraphicsScale;
     }
 
+    void Application::SetWindowSize(const Vec2I& size)
+    {
+        SetWindowSizePlatform(size);
+        OnResized(size);
+    }
+
     MemoryManager* MemoryManager::mInstance = new MemoryManager();
     CREATE_SINGLETON(Debug);
     CREATE_SINGLETON(FileSystem);

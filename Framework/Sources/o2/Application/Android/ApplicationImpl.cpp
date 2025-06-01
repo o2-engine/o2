@@ -89,7 +89,7 @@ namespace o2
         return false;
     }
 
-    void Application::SetWindowSize(const Vec2I& size)
+    void Application::SetWindowSizePlatform(const Vec2I& size)
     {}
 
     Vec2I Application::GetWindowSize() const

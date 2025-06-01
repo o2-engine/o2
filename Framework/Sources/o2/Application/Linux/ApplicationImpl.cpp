@@ -249,7 +249,7 @@ namespace o2
         return mWindowResizible;
     }
 
-    void Application::SetWindowSize(const Vec2I& size)
+    void Application::SetWindowSizePlatform(const Vec2I& size)
     {
         mWindowedSize = size;
         mLog->Out("Set sindow size: %ix%i", mWindowedSize.x, mWindowedSize.y);

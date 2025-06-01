@@ -119,7 +119,7 @@ namespace o2
         return false;
     }
 
-    void Application::SetWindowSize(const Vec2I& size)
+    void Application::SetWindowSizePlatform(const Vec2I& size)
     {
         [ApplicationPlatformWrapper::window setContentSize:NSMakeSize(size.x, size.y)];
     }

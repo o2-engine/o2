@@ -49,7 +49,8 @@ namespace Editor
 
     WidgetLayerViewer::~WidgetLayerViewer()
     {
-        o2Scene.onObjectsChanged -= THIS_FUNC(OnSceneObjectsChanged);
+        if (Scene::IsSingletonInitialzed())
+            o2Scene.onObjectsChanged -= THIS_FUNC(OnSceneObjectsChanged);
     }
 
     const Type* WidgetLayerViewer::GetViewingObjectType() const

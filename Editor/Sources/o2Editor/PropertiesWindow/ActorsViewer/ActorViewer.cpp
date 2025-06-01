@@ -95,7 +95,8 @@ namespace Editor
 
     ActorViewer::~ActorViewer()
     {
-        o2Scene.onObjectsChanged -= THIS_FUNC(OnSceneObjectsChanged);
+        if (Scene::IsSingletonInitialzed())
+            o2Scene.onObjectsChanged -= THIS_FUNC(OnSceneObjectsChanged);
     }
 
     const Type* ActorViewer::GetViewingObjectType() const

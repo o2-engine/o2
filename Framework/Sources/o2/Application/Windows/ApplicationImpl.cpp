@@ -79,7 +79,6 @@ namespace o2
     {
         if (fullscreen)
         {
-            //mRenderSystem->FrameResized();
             mLog->Out("Setting full screen");
         }
         else
@@ -93,7 +92,6 @@ namespace o2
             SetWindowPos(mHWnd, HWND_NOTOPMOST, mWindowedPos.x, mWindowedPos.y,
                          mWindowedSize.x, mWindowedSize.y, SWP_SHOWWINDOW);
 
-            //mRenderSystem->FrameResized();
             mLog->Out("Complete");
         }
     }
@@ -197,11 +195,11 @@ namespace o2
         return mWindowResizible;
     }
 
-    void Application::SetWindowSize(const Vec2I& size)
+    void Application::SetWindowSizePlatform(const Vec2I& size)
     {
         mWindowedSize = size;
         mLog->Out("Set sindow size: %ix%i", mWindowedSize.x, mWindowedSize.y);
-        SetFullscreen(!mWindowed);
+		SetFullscreen(!mWindowed);
     }
 
     Vec2I Application::GetWindowSize() const

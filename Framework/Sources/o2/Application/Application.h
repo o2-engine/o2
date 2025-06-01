@@ -319,6 +319,9 @@ namespace o2
         // Checks that cursor is near border and moves to opposite border if needs
         void CheckCursorInfiniteMode();
 
+        // Platform-specific window size setting implementation
+        void SetWindowSizePlatform(const Vec2I& size);
+
         friend class WndProcFunc;
         friend struct ApplicationPlatformWrapper;
     };
@@ -453,6 +456,7 @@ CLASS_METHODS_META(o2::Application)
     FUNCTION().PROTECTED().SIGNATURE(void, DeinitializeSystems);
     FUNCTION().PROTECTED().SIGNATURE(void, ProcessFrame);
     FUNCTION().PROTECTED().SIGNATURE(void, CheckCursorInfiniteMode);
+    FUNCTION().PROTECTED().SIGNATURE(void, SetWindowSizePlatform, const Vec2I&);
 }
 END_META;
 // --- END META ---
