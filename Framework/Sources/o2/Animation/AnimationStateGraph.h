@@ -70,9 +70,9 @@ namespace o2
         };
 
     public:
-        String name; // Name of state @SERIALIZABLE
+		// Returns name of state. Name is the first animation name in animations list, if it is not empty
+        const String& GetName() const;
 
-    public:
         // Returns UID of state
         UID GetUID() const;
 
@@ -102,6 +102,9 @@ namespace o2
 
         // Returns transitions
         const Vector<Ref<AnimationGraphTransition>>& GetTransitions() const;
+
+		// Returns graph reference
+        Ref<AnimationStateGraphAsset> GetGraph() const;
 
 		// Sets position of state in graph
         void SetPosition(const Vec2F& position);
@@ -174,7 +177,6 @@ CLASS_BASES_META(o2::AnimationGraphState)
 END_META;
 CLASS_FIELDS_META(o2::AnimationGraphState)
 {
-    FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().NAME(name);
     FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().NAME(mUID);
     FIELD().PROTECTED().EDITOR_PROPERTY_ATTRIBUTE().INVOKE_ON_CHANGE_ATTRIBUTE(ReinitAnimations).SERIALIZABLE_ATTRIBUTE().NAME(mAnimations);
     FIELD().PROTECTED().EDITOR_PROPERTY_ATTRIBUTE().INVOKE_ON_CHANGE_ATTRIBUTE(ReinitTransitions).SERIALIZABLE_ATTRIBUTE().NAME(mTransitions);
@@ -185,6 +187,7 @@ END_META;
 CLASS_METHODS_META(o2::AnimationGraphState)
 {
 
+    FUNCTION().PUBLIC().SIGNATURE(const String&, GetName);
     FUNCTION().PUBLIC().SIGNATURE(UID, GetUID);
     FUNCTION().PUBLIC().SIGNATURE(Ref<Animation>, GetAnimation, const String&);
     FUNCTION().PUBLIC().SIGNATURE(Ref<Animation>, AddAnimation, const String&);
@@ -195,6 +198,7 @@ CLASS_METHODS_META(o2::AnimationGraphState)
     FUNCTION().PUBLIC().SIGNATURE(Ref<AnimationGraphTransition>, AddTransition, const Ref<AnimationGraphState>&);
     FUNCTION().PUBLIC().SIGNATURE(void, RemoveTransition, const Ref<AnimationGraphTransition>&);
     FUNCTION().PUBLIC().SIGNATURE(const Vector<Ref<AnimationGraphTransition>>&, GetTransitions);
+    FUNCTION().PUBLIC().SIGNATURE(Ref<AnimationStateGraphAsset>, GetGraph);
     FUNCTION().PUBLIC().SIGNATURE(void, SetPosition, const Vec2F&);
     FUNCTION().PUBLIC().SIGNATURE(Vec2F, GetPosition);
     FUNCTION().PROTECTED().SIGNATURE(void, ReinitTransitions);

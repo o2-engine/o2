@@ -3681,6 +3681,7 @@ namespace Editor
 		auto back = sample->AddLayer("back", mmake<Sprite>("ui/UI4_animation_state_regular.png"), Layout::BothStretch(-6, -10, -6, -8));
 		auto hover = sample->AddLayer("hover", mmake<Sprite>("ui/UI4_animation_state_hover.png"), Layout::BothStretch(-6, -10, -6, -8));
 		auto pressed = sample->AddLayer("pressed", mmake<Sprite>("ui/UI4_animation_state_pressed.png"), Layout::BothStretch(-6, -10, -6, -8));
+		auto ddefault = sample->AddLayer("default", mmake<Sprite>("ui/UI4_animation_state_default.png"), Layout::BothStretch(-6, -10, -6, -8));
 		auto focus = sample->AddLayer("focus", mmake<Sprite>("ui/UI4_animation_state_frame.png"), Layout::BothStretch(-9, -13, -9, -11));
 		auto borderFinished = sample->AddLayer("borderFinished", mmake<Sprite>("ui/UI4_animation_state_frame.png"), Layout::BothStretch(-6, -10, -6, -8));
 		auto borderPlanned = sample->AddLayer("borderPlanned", mmake<Sprite>("ui/UI4_animation_state_frame.png"), Layout::BothStretch(-6, -10, -6, -8));
@@ -3696,6 +3697,9 @@ namespace Editor
 			->offStateAnimationSpeed = 0.5f;
 
 		sample->AddState("focused", AnimationClip::EaseInOut("layer/focus/transparency", 0.0f, 1.0f, 0.05f))
+			->offStateAnimationSpeed = 0.5f;
+
+		sample->AddState("default", AnimationClip::EaseInOut("layer/default/transparency", 0.0f, 1.0f, 0.05f))
 			->offStateAnimationSpeed = 0.5f;
 
 		sample->AddState("finished", AnimationClip::EaseInOut("layer/borderFinished/transparency", 0.0f, 1.0f, 0.05f))

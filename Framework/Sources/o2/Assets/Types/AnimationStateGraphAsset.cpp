@@ -40,6 +40,8 @@ namespace o2
     void AnimationStateGraphAsset::SetInitialState(const String& name)
     {
         mInitialState = name;
+
+		onInitialStateChanged(mInitialState);
     }
 
     const String& AnimationStateGraphAsset::GetInitialState() const
@@ -47,18 +49,19 @@ namespace o2
         return mInitialState;
     }
 
-    void AnimationStateGraphAsset::AddState(const Ref<AnimationGraphState>& state)
+    Ref<AnimationGraphState> AnimationStateGraphAsset::AddState(const Ref<AnimationGraphState>& state)
     {
         mStates.Add(state);
         state->SetGraph(Ref(this));
+
+		onStateAdded(state);
+
+		return state;
     }
 
-    Ref<AnimationGraphState> AnimationStateGraphAsset::AddState(const String& name, const Vector<String>& animations)
+    Ref<AnimationGraphState> AnimationStateGraphAsset::AddState(const Vector<String>& animations)
     {
         auto state = mmake<AnimationGraphState>();
-
-        if (state->name.IsEmpty())
-            state->name = name;
 
         for (auto& animation : animations)
             state->AddAnimation(animation);
@@ -70,6 +73,7 @@ namespace o2
     void AnimationStateGraphAsset::RemoveState(const Ref<AnimationGraphState>& state)
     {
         mStates.Remove(state);
+		onStateRemoved(state);
     }
 
     void AnimationStateGraphAsset::RemoveState(const String& name)
@@ -79,6 +83,9 @@ namespace o2
 
     void AnimationStateGraphAsset::RemoveAllStates()
     {
+        for (auto& state : mStates)
+            onStateRemoved(state);
+
         mStates.Clear();
     }
 
@@ -86,7 +93,7 @@ namespace o2
     {
         for (auto& state : mStates)
         {
-            if (state->name == name)
+            if (state->GetName() == name)
                 return state;
         }
 
@@ -113,7 +120,7 @@ namespace o2
     {
         Vector<String> names;
         for (auto& state : mStates)
-            names.Add(state->name);
+            names.Add(state->GetName());
 
         return names;
     }

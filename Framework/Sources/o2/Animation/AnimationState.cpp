@@ -42,7 +42,12 @@ namespace o2
 
     void AnimationState::SetLooped(bool looped)
     {
-        player->SetLoop(looped ? Loop::Repeat : Loop::None);
+        Loop loop = looped ? Loop::Repeat : Loop::None;
+
+        player->SetLoop(loop);
+
+        if (mAnimation)
+			mAnimation->animation->SetLoop(loop);
     }
 
     bool AnimationState::IsLooped() const

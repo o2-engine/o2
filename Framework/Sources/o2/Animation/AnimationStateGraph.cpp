@@ -29,7 +29,15 @@ namespace o2
             mDestinationStateRef = state->mGraph.Lock()->GetState(mDestinationState);
     }
 
-    UID AnimationGraphState::GetUID() const
+	const String& AnimationGraphState::GetName() const
+	{
+        if (mAnimations.IsEmpty())
+            return String::empty;
+
+		return mAnimations[0]->name;
+	}
+
+	UID AnimationGraphState::GetUID() const
     {
         return mUID;
     }
@@ -92,6 +100,11 @@ namespace o2
     {
         return mTransitions;
     }
+
+	Ref<AnimationStateGraphAsset> AnimationGraphState::GetGraph() const
+	{
+		return mGraph.Lock();
+	}
 
 	void AnimationGraphState::SetPosition(const Vec2F& position)
 	{

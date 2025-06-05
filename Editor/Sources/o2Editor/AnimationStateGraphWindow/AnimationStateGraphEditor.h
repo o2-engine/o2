@@ -183,6 +183,9 @@ namespace Editor
 			StateWidget(RefCounter* refCounter, const Ref<AnimationStateGraphEditor>& owner,
 						const Ref<AnimationGraphState>& state);
 
+            // Updates state contents
+            void Update();
+
 			// Initializes transitions. Used after states list was initialized
 			void InitializeTransitions();
 
@@ -233,6 +236,7 @@ namespace Editor
 		Ref<StateTransition> mSelectedTransition; // Current selected transition
 
 		bool mCreatingTransition = false; // True when creating transition
+		bool mCreatingState = false;      // True when creating state
 
 		bool mNeedAdjustView = false; // True when need to adjust view scale. This works in update
 
@@ -316,6 +320,15 @@ namespace Editor
 		// Called when transition cancelled, updates states transition animation
 		void OnStateGraphTransitionCancelled(const Ref<AnimationGraphTransition>& transition);
 
+		// Called when initial state was changed, updates visual for states
+        void OnStateGraphInitialStateChanged(const String& stateName);
+
+		// Called when added new state to graph, updates states visual
+		void OnStateGraphStateAdded(const Ref<AnimationGraphState>& state);
+
+		// Called when removed state from graph, updates states visual
+		void OnStateGraphStateRemoved(const Ref<AnimationGraphState>& state);
+
 		// Creates state widget
 		void CreateState();
 
@@ -376,6 +389,7 @@ CLASS_FIELDS_META(Editor::AnimationStateGraphEditor)
     FIELD().PROTECTED().NAME(mContextMenuState);
     FIELD().PROTECTED().NAME(mSelectedTransition);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mCreatingTransition);
+    FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mCreatingState);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mNeedAdjustView);
     FIELD().PROTECTED().DEFAULT_VALUE(0.0f).NAME(mRefreshViewersTimer);
     FIELD().PROTECTED().NAME(mActionsList);
@@ -417,6 +431,9 @@ CLASS_METHODS_META(Editor::AnimationStateGraphEditor)
     FUNCTION().PROTECTED().SIGNATURE(void, OnStateGraphTransitionFinished, const Ref<AnimationGraphTransition>&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnStateGraphTransitionsPlanned, const Vector<Ref<AnimationGraphTransition>>&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnStateGraphTransitionCancelled, const Ref<AnimationGraphTransition>&);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnStateGraphInitialStateChanged, const String&);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnStateGraphStateAdded, const Ref<AnimationGraphState>&);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnStateGraphStateRemoved, const Ref<AnimationGraphState>&);
     FUNCTION().PROTECTED().SIGNATURE(void, CreateState);
     FUNCTION().PROTECTED().SIGNATURE(void, SetCurrentStateInitial);
     FUNCTION().PROTECTED().SIGNATURE(void, StartAddingTransition);
@@ -509,6 +526,7 @@ CLASS_METHODS_META(Editor::AnimationStateGraphEditor::StateWidget)
 
     FUNCTION().PUBLIC().CONSTRUCTOR();
     FUNCTION().PUBLIC().CONSTRUCTOR(RefCounter*, const Ref<AnimationStateGraphEditor>&, const Ref<AnimationGraphState>&);
+    FUNCTION().PUBLIC().SIGNATURE(void, Update);
     FUNCTION().PUBLIC().SIGNATURE(void, InitializeTransitions);
     FUNCTION().PUBLIC().SIGNATURE(void, RemoveWidget);
     FUNCTION().PUBLIC().SIGNATURE(void, DrawTransitions);

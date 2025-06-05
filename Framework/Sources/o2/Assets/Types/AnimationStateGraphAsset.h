@@ -14,6 +14,11 @@ namespace o2
     public:
         PROPERTIES(AnimationStateGraphAsset);
 
+		Function<void(const String& stateName)>               onInitialStateChanged; // Called when initial state changed 
+		Function<void(const Ref<AnimationGraphState>& state)> onStateAdded;          // Called when state added
+		Function<void(const Ref<AnimationGraphState>& state)> onStateRemoved;        // Called when state removed
+
+
     public:
         // Default constructor
         AnimationStateGraphAsset();
@@ -34,10 +39,10 @@ namespace o2
         const String& GetInitialState() const;
 
         // Adds state to graph
-        void AddState(const Ref<AnimationGraphState>& state);
+        Ref<AnimationGraphState> AddState(const Ref<AnimationGraphState>& state);
 
         // Adds state to graph
-        Ref<AnimationGraphState> AddState(const String& name, const Vector<String>& animations);
+        Ref<AnimationGraphState> AddState(const Vector<String>& animations);
 
         // Removes state from graph
         void RemoveState(const Ref<AnimationGraphState>& state);
@@ -100,6 +105,9 @@ CLASS_BASES_META(o2::AnimationStateGraphAsset)
 END_META;
 CLASS_FIELDS_META(o2::AnimationStateGraphAsset)
 {
+    FIELD().PUBLIC().NAME(onInitialStateChanged);
+    FIELD().PUBLIC().NAME(onStateAdded);
+    FIELD().PUBLIC().NAME(onStateRemoved);
     FIELD().PROTECTED().EDITOR_PROPERTY_ATTRIBUTE().SERIALIZABLE_ATTRIBUTE().NAME(mInitialState);
     FIELD().PROTECTED().EDITOR_PROPERTY_ATTRIBUTE().SERIALIZABLE_ATTRIBUTE().NAME(mStates);
 }
@@ -111,8 +119,8 @@ CLASS_METHODS_META(o2::AnimationStateGraphAsset)
     FUNCTION().PUBLIC().CONSTRUCTOR(const AnimationStateGraphAsset&);
     FUNCTION().PUBLIC().SIGNATURE(void, SetInitialState, const String&);
     FUNCTION().PUBLIC().SIGNATURE(const String&, GetInitialState);
-    FUNCTION().PUBLIC().SIGNATURE(void, AddState, const Ref<AnimationGraphState>&);
-    FUNCTION().PUBLIC().SIGNATURE(Ref<AnimationGraphState>, AddState, const String&, const Vector<String>&);
+    FUNCTION().PUBLIC().SIGNATURE(Ref<AnimationGraphState>, AddState, const Ref<AnimationGraphState>&);
+    FUNCTION().PUBLIC().SIGNATURE(Ref<AnimationGraphState>, AddState, const Vector<String>&);
     FUNCTION().PUBLIC().SIGNATURE(void, RemoveState, const Ref<AnimationGraphState>&);
     FUNCTION().PUBLIC().SIGNATURE(void, RemoveState, const String&);
     FUNCTION().PUBLIC().SIGNATURE(void, RemoveAllStates);

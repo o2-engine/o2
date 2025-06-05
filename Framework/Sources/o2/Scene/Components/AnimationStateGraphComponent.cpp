@@ -122,7 +122,7 @@ namespace o2
 	String AnimationStateGraphComponent::GetCurrentStateName() const
     {
         if (mCurrentState)
-            return mCurrentState->name;
+            return mCurrentState->GetName();
 
         return "";
     }
@@ -317,7 +317,7 @@ namespace o2
 	String AnimationStateGraphComponent::GetNextStateName() const
 	{
 		if (mNextState)
-			return mNextState->name;
+			return mNextState->GetName();
 
 		return "";
 	}

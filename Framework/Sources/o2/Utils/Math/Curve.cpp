@@ -80,7 +80,7 @@ namespace o2
         int keyLeftIdx = -1, keyRightIdx = -1;
         SearchKey(mKeys, count, position, keyLeftIdx, keyRightIdx, direction, cacheKey);
 
-        if (keyLeftIdx < 0)
+        if (keyLeftIdx < 0 || keyRightIdx < 0 || keyLeftIdx >= mKeys.Count() || keyRightIdx >= mKeys.Count())
             return 0.0f;
 
         const Key& leftKey = mKeys[keyLeftIdx];

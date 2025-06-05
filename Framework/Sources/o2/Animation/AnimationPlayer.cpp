@@ -52,6 +52,8 @@ namespace o2
             mClip->onTrackAdded += THIS_FUNC(OnClipTrackAdded);
             mClip->onTrackRemove += THIS_FUNC(OnClipTrackRemove);
             mClip->onDurationChange += THIS_FUNC(OnClipDurationChanged);
+
+			mLoop = mClip->mLoop;
         }
 
         BindTracks(true);

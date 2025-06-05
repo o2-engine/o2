@@ -77,6 +77,7 @@ if (O2_TRACY)
 
     set(TRACY_ENABLE ON CACHE BOOL "Enable tracy" FORCE)
     set(TRACY_CALLSTACK ON CACHE BOOL "Enable tracy callstack" FORCE)
+    set(TRACY_ON_DEMAND ON CACHE BOOL "Enable tracy on demand" FORCE)
 
     add_compile_definitions(TRACY_ENABLE)
     

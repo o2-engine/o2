@@ -59,6 +59,13 @@ namespace Editor
 			lastComponent->onTransitionCancelled -= THIS_FUNC(OnStateGraphTransitionCancelled);
 		}
 
+		if (auto graph = mGraph.Lock())
+		{
+			graph->onInitialStateChanged -= THIS_FUNC(OnStateGraphInitialStateChanged);
+			graph->onStateAdded -= THIS_FUNC(OnStateGraphStateAdded);
+			graph->onStateRemoved -= THIS_FUNC(OnStateGraphStateRemoved);
+		}
+
 		mGraph = graph;
 		mComponent = component;
 
@@ -70,6 +77,13 @@ namespace Editor
 			component->onTransitionFinished += THIS_FUNC(OnStateGraphTransitionFinished);
 			component->onTransitionsPlanned += THIS_FUNC(OnStateGraphTransitionsPlanned);
 			component->onTransitionCancelled += THIS_FUNC(OnStateGraphTransitionCancelled);
+		}
+
+		if (auto graph = mGraph.Lock())
+		{
+			graph->onInitialStateChanged += THIS_FUNC(OnStateGraphInitialStateChanged);
+			graph->onStateAdded += THIS_FUNC(OnStateGraphStateAdded);
+			graph->onStateRemoved += THIS_FUNC(OnStateGraphStateRemoved);
 		}
 
 		InitializeStates();
@@ -105,7 +119,7 @@ namespace Editor
 			}
 
 			for (auto& state : mStatesWidgets)
-				state->InitializeTransitions();
+				state->Update();
 		}
 
 		for (auto kv : stateWidgetsCache)
@@ -507,16 +521,41 @@ namespace Editor
 			widget->UpdateState(StateWidget::TransitionState::None);
 	}
 
+	void AnimationStateGraphEditor::OnStateGraphInitialStateChanged(const String& stateName)
+	{
+		InitializeStates();
+	}
+
+	void AnimationStateGraphEditor::OnStateGraphStateAdded(const Ref<AnimationGraphState>& state)
+	{
+		if (mCreatingState)
+			return;
+
+		InitializeStates();
+	}
+
+	void AnimationStateGraphEditor::OnStateGraphStateRemoved(const Ref<AnimationGraphState>& state)
+	{
+		if (mCreatingState)
+			return;
+
+		InitializeStates();
+	}
+
 	void AnimationStateGraphEditor::CreateState()
 	{
 		auto graph = mGraph.Lock();
 		if (!graph)
 			return;
 
-		auto state = graph->AddState("New state", {});
+		mCreatingState = true;
+
+		auto state = graph->AddState(mmake<AnimationGraphState>());
 		state->SetPosition(mContextMenuPos);
 		state->AddAnimation("");
 		InitializeStates();
+
+		mCreatingState = false;
 	}
 
 	void AnimationStateGraphEditor::SetCurrentStateInitial()
@@ -529,7 +568,7 @@ namespace Editor
 		{
 			if (auto state = mStateHandlesMap[handle])
 			{
-				graph->SetInitialState(state->state.Lock()->name);
+				graph->SetInitialState(state->state.Lock()->GetName());
 				break;
 			}
 		}
@@ -575,6 +614,9 @@ namespace Editor
 
 	void AnimationStateGraphEditor::OpenStateContextMenu(const Ref<StateWidget>& state)
 	{
+		DeselectAll();
+		state->dragHandle->SetSelected(true);
+
 		mContextMenuState = state;
 		mStateContextMenu->Show();
 	}
@@ -677,6 +719,20 @@ namespace Editor
 		editor.Lock()->mStateWidgetsContainer->AddChild(widget);
 	}
 
+	void AnimationStateGraphEditor::StateWidget::Update()
+	{
+		InitializeTransitions();
+
+		if (auto strongState = state.Lock())
+		{
+			if (auto graph = strongState->GetGraph())
+			{
+				bool isDefaultState = strongState->GetName() == graph->GetInitialState();
+				widget->SetState("default", isDefaultState);
+			}
+		}
+	}
+
 	void AnimationStateGraphEditor::StateWidget::InitializeTransitions()
 	{
 		transitions.Clear();
@@ -728,12 +784,10 @@ namespace Editor
 		editor.Lock()->OpenStateContextMenu(Ref(this));
 	}
 
-
 	void AnimationStateGraphEditor::StateWidget::OnPressed()
 	{
 		editor.Lock()->OnStatePressed(Ref(this));
 	}
-
 
 	void AnimationStateGraphEditor::StateWidget::OnAnimationsListChanged()
 	{
@@ -825,6 +879,7 @@ namespace Editor
 		if (!stateAnimation)
 			return;
 
+		auto previousName = stateAnimation->name;
 		stateAnimation->name = name;
 
 		auto owner = this->owner.Lock();
@@ -835,7 +890,12 @@ namespace Editor
 		if (!state)
 			return;
 
-		state->name = name;
+		auto graph = state->GetGraph();
+		if (!graph)
+			return;
+
+		if (graph->GetInitialState() == previousName)
+			graph->SetInitialState(name);
 	}
 
 	const String& AnimationStateGraphEditor::StateAnimation::GetName() const
