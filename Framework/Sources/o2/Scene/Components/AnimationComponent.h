@@ -149,6 +149,8 @@ namespace o2
             
             Ref<IValueProxy<_type>> target; // Target value proxy
 
+			_type defaultValue = _type(); // Default value of target, used to mix single value track
+
         public:
             // Destructor
             ~TrackMixer();
@@ -292,7 +294,10 @@ namespace o2
         }
 
         if constexpr (!std::is_same<_valueType, void>::value)
+        {
             newAgent->target = DynamicCast<IValueProxy<_valueType>>(fieldInfo->GetType()->GetValueProxy(fieldPtr));
+            newAgent->defaultValue = newAgent->target->GetValue();
+        }
     }
 
     template<typename _valueType>
@@ -330,15 +335,24 @@ namespace o2
         auto firstValue = tracks[0].second;
 
         float weightsSum = firstValueState->mWeight*firstValueState->mask.GetNodeWeight(path);
-        _type valueSum = firstValue->GetValue();
+        _type valueSum = firstValue->GetValue()*firstValueState->mWeight;
 
-        for (int i = 1; i < tracks.Count(); i++)
+        if (tracks.Count() > 1)
         {
-            auto valueState = tracks[i].first;
-            auto value = tracks[i].second;
+            for (int i = 1; i < tracks.Count(); i++)
+            {
+                auto valueState = tracks[i].first;
+                auto value = tracks[i].second;
 
-            weightsSum += valueState->mWeight*valueState->mask.GetNodeWeight(path);
-            valueSum += value->GetValue();
+                weightsSum += valueState->mWeight*valueState->mask.GetNodeWeight(path);
+                valueSum += value->GetValue()*valueState->mWeight;
+            }
+        }
+        else
+        {
+            float defaultWeight = 1.0f - weightsSum;
+            valueSum += defaultValue*defaultWeight;
+            weightsSum += defaultWeight;
         }
 
         _type resValue = valueSum / weightsSum;

@@ -180,6 +180,9 @@ namespace o2
         // Called when actor initialized, reattaches animation states
         void OnInitialized() override;
 
+        // Resets animation states from animation component (autoplay flag)
+        void ResetAnimationStates();
+
         // Checks if current transition is finished and starts next transition
         void CheckStartNextTransition();
 
@@ -244,6 +247,7 @@ CLASS_METHODS_META(o2::AnimationStateGraphComponent)
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetCategory);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetIcon);
     FUNCTION().PROTECTED().SIGNATURE(void, OnInitialized);
+    FUNCTION().PROTECTED().SIGNATURE(void, ResetAnimationStates);
     FUNCTION().PROTECTED().SIGNATURE(void, CheckStartNextTransition);
     FUNCTION().PROTECTED().SIGNATURE(void, UpdateCurrentTransition, float);
 }

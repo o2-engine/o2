@@ -168,7 +168,9 @@ namespace o2
     }
 
     void AnimationTrack<float>::OnDeserialized(const DataValue& node)
-    {}
+	{
+		curve->onKeysChanged.Add(this, &AnimationTrack<float>::OnCurveChanged);
+	}
 
     AnimationTrack<float> AnimationTrack<float>::Parametric(float begin, float end, float duration,
                                                           float beginCoef, float beginCoefPosition,

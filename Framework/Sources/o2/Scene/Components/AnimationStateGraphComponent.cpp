@@ -132,9 +132,30 @@ namespace o2
         Reset();
     }
 
-    void AnimationStateGraphComponent::Reset()
+	void AnimationStateGraphComponent::ResetAnimationStates()
+	{
+		auto animationComponent = GetAnimationComponent();
+		if (!animationComponent)
+			return;
+
+        for (auto& state : mStateGraph->GetStates())
+        {
+            for (auto& animation : state->GetAnimations())
+            {
+                auto player = animationComponent->GetState(animation->name);
+                if (player)
+                {
+                    player->autoPlay = false;
+                    player->GetPlayer().Stop();
+                }
+			}
+		}
+	}
+
+	void AnimationStateGraphComponent::Reset()
     {
         StopTransition();
+        ResetAnimationStates();
 
         if (mStateGraph)
             ForcePlayState(mStateGraph->GetState(mStateGraph->GetInitialState()));

@@ -254,8 +254,14 @@ namespace Editor
             mViewCameraTargetPos = mViewCamera.position;
         }
 
-		if (mComponent)
-			mComponent.Lock()->GetActor()->Update(dt);
+		if (!o2EditorApplication.IsPlaying())
+		{
+			if (auto component = mComponent.Lock())
+			{
+				if (auto actor = component->GetActor())
+					actor->Update(dt);
+			}
+		}
 
 		CheckRefreshViewersTimer(dt);
     }
@@ -936,7 +942,7 @@ namespace Editor
 
 		auto from = owner.Lock();
 		auto to = destination.Lock();
-		if (!from || !to)
+		if (!from || !to || !from->widget || !to->widget)
 			return false;
 
 		Vec2F fromPoint = from->widget->layout->GetWorldCenter();
