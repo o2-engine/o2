@@ -63,6 +63,10 @@ namespace Editor
         if (mCreateInstanceBtn)
             mCreateInstanceBtn->onClick = THIS_FUNC(OnCreateInstancePressed);
 
+        mEditBtn = mSpoiler->GetInternalWidgetByType<Button>("mainLayout/container/layout/edit");
+        if (mEditBtn)
+            mEditBtn->onClick = THIS_FUNC(OnEditPressed);
+
         auto saveInstanceBtn = mSpoiler->GetInternalWidgetByType<Button>("mainLayout/container/layout/save");
         if (saveInstanceBtn)
             saveInstanceBtn->onClick = THIS_FUNC(OnSaveInstancePressed);
@@ -236,6 +240,21 @@ namespace Editor
 
         Refresh(true);
         mSpoiler->Expand();
+    }
+
+    void AssetProperty::OnEditPressed()
+    {
+        if (mCommonValue && !mValuesDifferent)
+        {
+            auto name = o2FileSystem.GetFileNameWithoutExtension(
+                o2FileSystem.GetPathWithoutDirectories(mCommonValue->GetPath()));
+            
+            o2Debug.Log("Editing asset: " + (String)name);
+        }
+        else
+        {
+            o2Debug.Log("No asset selected for editing");
+        }
     }
 
     void AssetProperty::OnRemoveInstancePressed()

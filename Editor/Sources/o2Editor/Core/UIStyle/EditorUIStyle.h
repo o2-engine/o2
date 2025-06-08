@@ -59,7 +59,12 @@ namespace Editor
 
         void RebuildCreateAssetInstanceBtn();
         void RebuildRemoveAssetInstanceBtn();
-        void RebuildSaveAssetInstanceBtn();
+		void RebuildSaveAssetInstanceBtn();
+
+		void RebuildAnimationStateViewerEditButton();
+		void RebuildAnimationStateViewerPlayToggle();
+		void RebuildAnimationStateViewerLoopToggle();
+		void RebuildAnimationStateViewerProgressBar();
 
         void RebuildFloatProperty();
         void RebuildRedFloatProperty();
@@ -115,7 +120,7 @@ namespace Editor
         void RebuildHorWideScrollbar();
         void RebuildVerWideScrollbar();
         void RebuildHorWideProgressbar();
-        void RebuildVerWideProgressbar();
+		void RebuildVerWideProgressbar();
 
         void RebuildAnimationTree();
         void RebuildAnimationPropertiesTree();
@@ -125,10 +130,6 @@ namespace Editor
         void RebuildAddComponentButton();
         void RebuildAddComponentsTree();
 
-        void RebuildAnimationStateViewerEditButton();
-        void RebuildAnimationStateViewerPlayToggle();
-        void RebuildAnimationStateViewerLoopToggle();
-        void RebuildAnimationStateViewerProgressBar();
         void RebuildAnimationSpoiler();
 
         void RebuildBacklessDropdownButton();
@@ -224,6 +225,10 @@ CLASS_METHODS_META(Editor::EditorUIStyleBuilder)
     FUNCTION().PUBLIC().SIGNATURE(void, RebuildCreateAssetInstanceBtn);
     FUNCTION().PUBLIC().SIGNATURE(void, RebuildRemoveAssetInstanceBtn);
     FUNCTION().PUBLIC().SIGNATURE(void, RebuildSaveAssetInstanceBtn);
+    FUNCTION().PUBLIC().SIGNATURE(void, RebuildAnimationStateViewerEditButton);
+    FUNCTION().PUBLIC().SIGNATURE(void, RebuildAnimationStateViewerPlayToggle);
+    FUNCTION().PUBLIC().SIGNATURE(void, RebuildAnimationStateViewerLoopToggle);
+    FUNCTION().PUBLIC().SIGNATURE(void, RebuildAnimationStateViewerProgressBar);
     FUNCTION().PUBLIC().SIGNATURE(void, RebuildFloatProperty);
     FUNCTION().PUBLIC().SIGNATURE(void, RebuildRedFloatProperty);
     FUNCTION().PUBLIC().SIGNATURE(void, RebuildGreenFloatProperty);
@@ -276,10 +281,6 @@ CLASS_METHODS_META(Editor::EditorUIStyleBuilder)
     FUNCTION().PUBLIC().SIGNATURE(void, RebuildSpoilerWithHead);
     FUNCTION().PUBLIC().SIGNATURE(void, RebuildAddComponentButton);
     FUNCTION().PUBLIC().SIGNATURE(void, RebuildAddComponentsTree);
-    FUNCTION().PUBLIC().SIGNATURE(void, RebuildAnimationStateViewerEditButton);
-    FUNCTION().PUBLIC().SIGNATURE(void, RebuildAnimationStateViewerPlayToggle);
-    FUNCTION().PUBLIC().SIGNATURE(void, RebuildAnimationStateViewerLoopToggle);
-    FUNCTION().PUBLIC().SIGNATURE(void, RebuildAnimationStateViewerProgressBar);
     FUNCTION().PUBLIC().SIGNATURE(void, RebuildAnimationSpoiler);
     FUNCTION().PUBLIC().SIGNATURE(void, RebuildBacklessDropdownButton);
     FUNCTION().PUBLIC().SIGNATURE(void, RebuildMemoryAnalyzerTree);

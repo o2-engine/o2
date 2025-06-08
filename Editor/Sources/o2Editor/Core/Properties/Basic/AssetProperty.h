@@ -66,6 +66,7 @@ namespace Editor
         Ref<Spoiler> mSpoiler;           // Spoiler
         Ref<Label>   mCaption;           // Property name caption
         Ref<Button>  mCreateInstanceBtn; // Create instance button
+        Ref<Button>  mEditBtn;           // Edit asset button
 
         Ref<HorizontalLayout> mHeaderContainer; // Asset controls container: create, save and remove
 
@@ -87,6 +88,9 @@ namespace Editor
 
         // Called when create instance button pressed, creates asset instance
         void OnCreateInstancePressed();
+
+        // Called when edit button pressed, logs asset name
+        void OnEditPressed();
 
         // Called when remove instance button pressed, removes asset instance
         void OnRemoveInstancePressed();
@@ -149,6 +153,7 @@ CLASS_FIELDS_META(Editor::AssetProperty)
     FIELD().PROTECTED().NAME(mSpoiler);
     FIELD().PROTECTED().NAME(mCaption);
     FIELD().PROTECTED().NAME(mCreateInstanceBtn);
+    FIELD().PROTECTED().NAME(mEditBtn);
     FIELD().PROTECTED().NAME(mHeaderContainer);
     FIELD().PROTECTED().NAME(mAssetObjectViewer);
     FIELD().PROTECTED().DEFAULT_VALUE(nullptr).NAME(mAssetType);
@@ -173,6 +178,7 @@ CLASS_METHODS_META(Editor::AssetProperty)
     FUNCTION().PROTECTED().SIGNATURE(void, SetCommonAssetId, const UID&);
     FUNCTION().PROTECTED().SIGNATURE(void, SetAssetIdByUser, const UID&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnCreateInstancePressed);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnEditPressed);
     FUNCTION().PROTECTED().SIGNATURE(void, OnRemoveInstancePressed);
     FUNCTION().PROTECTED().SIGNATURE(void, OnSaveInstancePressed);
     FUNCTION().PROTECTED().SIGNATURE(void, OnTypeSpecialized, const Type&);

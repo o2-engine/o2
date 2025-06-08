@@ -4068,7 +4068,13 @@ namespace Editor
         saveInstanceBtn->name = "save";
         saveInstanceBtn->layout->minHeight = 20;
         saveInstanceBtn->layout->maxWidth = 16;
-        layout->AddChild(saveInstanceBtn);
+		layout->AddChild(saveInstanceBtn);
+
+		auto editBtn = o2UI.CreateWidget<Button>("edit animation state");
+		editBtn->name = "edit";
+		editBtn->layout->minHeight = 20;
+		editBtn->layout->maxWidth = 20;
+		layout->AddChild(editBtn);
 
         auto box = mmake<Widget>();
         box->name = "box";
