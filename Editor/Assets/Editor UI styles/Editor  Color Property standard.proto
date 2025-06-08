@@ -3,7 +3,7 @@
         "Type": "Editor::ColorProperty",
         "Value": {
             "mName": "standard",
-            "Id": 259971357646495465,
+            "Id": 6327340369180686183,
             "Transform": {
                 "minSize": {
                     "x": 0.0,
@@ -15,7 +15,7 @@
                     "Type": "o2::Widget",
                     "Data": {
                         "mName": "container",
-                        "Id": 9729439383939387524,
+                        "Id": 13338655426846299741,
                         "Transform": {
                             "anchorMax": {
                                 "x": 1.0,
@@ -31,7 +31,7 @@
                                 "Type": "o2::HorizontalLayout",
                                 "Data": {
                                     "mName": "layout",
-                                    "Id": 10853445289369988411,
+                                    "Id": 7766185932716949899,
                                     "Transform": {
                                         "anchorMax": {
                                             "x": 1.0,
@@ -47,7 +47,7 @@
                                             "Type": "o2::Widget",
                                             "Data": {
                                                 "mName": "box",
-                                                "Id": 7912921946928356165,
+                                                "Id": 9060040941462559801,
                                                 "Transform": {
                                                     "anchorMax": {
                                                         "x": 1.0,
@@ -90,7 +90,7 @@
                                                                     }
                                                                 }
                                                             },
-                                                            "mUID": 17671523136605990158
+                                                            "mUID": 5300664626283135172
                                                         }
                                                     }
                                                 ],
