@@ -117,6 +117,8 @@ namespace o2
 
     Actor::~Actor()
     {
+        mState = State::Destroyed;
+
         SetPrototype(nullptr);
 
         RemoveAllChildren();
@@ -229,6 +231,8 @@ namespace o2
 
     void Actor::Destroy()
     {
+        SetParent(nullptr);
+
         if (Scene::IsSingletonInitialzed())
             o2Scene.DestroyActor(Ref(this));
         else

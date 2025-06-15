@@ -22,6 +22,9 @@ namespace o2
         class IPlayer: public IAnimation
         {
         public:
+			// Called when animation started playing
+            virtual void OnPlay() {}
+
             // Sets target changing delegate
             virtual void SetTargetDelegate(const Function<void()>& changeEvent) {}
 
@@ -149,6 +152,7 @@ END_META;
 CLASS_METHODS_META(o2::IAnimationTrack::IPlayer)
 {
 
+    FUNCTION().PUBLIC().SIGNATURE(void, OnPlay);
     FUNCTION().PUBLIC().SIGNATURE(void, SetTargetDelegate, const Function<void()>&);
     FUNCTION().PUBLIC().SIGNATURE(void, SetTargetVoid, void*);
     FUNCTION().PUBLIC().SIGNATURE(void, SetTargetVoid, void*, const Function<void()>&);

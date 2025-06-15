@@ -17,7 +17,13 @@ namespace o2
         ScissorClippingComponent();
 
         // Destructor
-        ~ScissorClippingComponent();
+		~ScissorClippingComponent();
+
+		// Returns name of component
+		static String GetName();
+
+		// Returns category of component
+		static String GetCategory();
 
         SERIALIZABLE(ScissorClippingComponent);
         CLONEABLE_REF(ScissorClippingComponent);
@@ -46,6 +52,8 @@ CLASS_METHODS_META(o2::ScissorClippingComponent)
 {
 
     FUNCTION().PUBLIC().CONSTRUCTOR();
+    FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetName);
+    FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetCategory);
     FUNCTION().PRIVATE().SIGNATURE(void, OnDraw);
     FUNCTION().PRIVATE().SIGNATURE(void, OnPostDraw);
 }

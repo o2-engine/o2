@@ -10,7 +10,17 @@ namespace o2
     ScissorClippingComponent::~ScissorClippingComponent()
     {}
 
-    void ScissorClippingComponent::OnDraw()
+	String ScissorClippingComponent::GetName()
+	{
+        return "Scissor clipping";
+	}
+
+	String ScissorClippingComponent::GetCategory()
+	{
+        return "Render";
+	}
+
+	void ScissorClippingComponent::OnDraw()
     {
         if (enableClipping)
             o2Render.EnableScissorTest(mOwner.Lock()->transform->GetWorldAxisAlignedRect());

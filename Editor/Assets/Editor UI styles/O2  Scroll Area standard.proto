@@ -35,7 +35,7 @@
                     "Type": "o2::HorizontalScrollBar",
                     "Value": {
                         "Prototype": {
-                            "id": "5e901fce72925ffb772d467968093186",
+                            "id": "71bc53d708bb2b7605a243807b946958",
                             "path": "Editor UI styles/O2  Horizontal Scroll Bar standard.proto"
                         },
                         "PrototypeLink": 2396346607982954160,
@@ -187,7 +187,7 @@
                     "Type": "o2::VerticalScrollBar",
                     "Value": {
                         "Prototype": {
-                            "id": "712d62a86f3b0a9f67956ec06df75899",
+                            "id": "2259573d3cf66d2a1ffb5ec31f0919ea",
                             "path": "Editor UI styles/O2  Vertical Scroll Bar standard.proto"
                         },
                         "PrototypeLink": 8311025582170325613,
@@ -424,7 +424,7 @@
                             "meta": {
                                 "Type": "o2::DefaultAssetMeta<o2::AnimationAsset>",
                                 "Value": {
-                                    "mId": "760b56b3135c468c3595542439821997"
+                                    "mId": "64ec5dee64390d0378261c183c0f6468"
                                 }
                             }
                         }

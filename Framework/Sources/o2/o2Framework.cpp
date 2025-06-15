@@ -97,6 +97,8 @@ extern void __RegisterClass__o2__SkinningMeshBoneComponent();
 extern void __RegisterClass__o2__SkinningMeshComponent();
 extern void __RegisterClass__o2__SpineComponent();
 extern void __RegisterClass__o2__SpineComponent__AnimationState();
+extern void __RegisterClass__o2__TextSplitterComponent();
+extern void __RegisterClass__o2__TextSymbolComponent();
 extern void __RegisterClass__o2__ISceneDrawable();
 extern void __RegisterClass__o2__BoxCollider();
 extern void __RegisterClass__o2__CircleCollider();
@@ -262,6 +264,8 @@ extern void InitializeTypeso2Framework()
     __RegisterClass__o2__SkinningMeshComponent();
     __RegisterClass__o2__SpineComponent();
     __RegisterClass__o2__SpineComponent__AnimationState();
+    __RegisterClass__o2__TextSplitterComponent();
+    __RegisterClass__o2__TextSymbolComponent();
     __RegisterClass__o2__ISceneDrawable();
     __RegisterClass__o2__BoxCollider();
     __RegisterClass__o2__CircleCollider();

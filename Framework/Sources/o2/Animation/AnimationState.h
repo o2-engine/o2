@@ -29,6 +29,9 @@ namespace o2
     public:
         // Default constructor
         IAnimationState() = default;
+        
+		// Copy-constructor
+		IAnimationState(const IAnimationState& other);
 
         // Constructor with name
         IAnimationState(const String& name);
@@ -82,6 +85,9 @@ namespace o2
     public:
         // Default constructor
         AnimationState() = default;
+
+        // Copy-constructor
+        AnimationState(const AnimationState& other);
 
         // Constructor with name
         AnimationState(const String& name);
@@ -170,6 +176,7 @@ CLASS_METHODS_META(o2::IAnimationState)
 {
 
     FUNCTION().PUBLIC().CONSTRUCTOR();
+    FUNCTION().PUBLIC().CONSTRUCTOR(const IAnimationState&);
     FUNCTION().PUBLIC().CONSTRUCTOR(const String&);
     FUNCTION().PUBLIC().SIGNATURE(void, Update, float);
     FUNCTION().PUBLIC().SIGNATURE(IAnimation&, GetPlayer);
@@ -200,6 +207,7 @@ CLASS_METHODS_META(o2::AnimationState)
 {
 
     FUNCTION().PUBLIC().CONSTRUCTOR();
+    FUNCTION().PUBLIC().CONSTRUCTOR(const AnimationState&);
     FUNCTION().PUBLIC().CONSTRUCTOR(const String&);
     FUNCTION().PUBLIC().SIGNATURE(void, Update, float);
     FUNCTION().PUBLIC().SIGNATURE(IAnimation&, GetPlayer);

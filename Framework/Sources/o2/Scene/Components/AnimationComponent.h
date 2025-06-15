@@ -62,6 +62,9 @@ namespace o2
         // Returns state with specified name. Returns nullptr if can't find state with specified name
         Ref<IAnimationState> GetState(const String& name);
 
+		// Returns first state from states array. Returns nullptr if no states in array
+        Ref<IAnimationState> GetFirstState();
+
         // Returns all states array
         const Vector<Ref<IAnimationState>>& GetStates() const;
 
@@ -70,6 +73,9 @@ namespace o2
 
         // Returns vector of available states names @SCRIPTABLE
         Vector<String> GetStatesNames() const;
+
+		// Plays first state from states array, if no states - returns nullptr @SCRIPTABLE
+        Ref<IAnimationState> PlayFirstState();
 
         // Creates new state and plays him
         Ref<IAnimationState> Play(const Ref<AnimationClip>& animation, const String& name);
@@ -273,6 +279,12 @@ namespace o2
                     return;
                 }
 
+                if (agent->tracks.Contains({ state.Get(), player.Get() }))
+                {
+                    o2Debug.LogWarning("Track already registered at: " + path);
+                    return;
+				}
+
                 agent->tracks.Add({ state.Get(), player.Get() });
                 return;
             }
@@ -397,9 +409,11 @@ CLASS_METHODS_META(o2::AnimationComponent)
     FUNCTION().PUBLIC().SIGNATURE(void, RemoveState, const String&);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, RemoveAllStates);
     FUNCTION().PUBLIC().SIGNATURE(Ref<IAnimationState>, GetState, const String&);
+    FUNCTION().PUBLIC().SIGNATURE(Ref<IAnimationState>, GetFirstState);
     FUNCTION().PUBLIC().SIGNATURE(const Vector<Ref<IAnimationState>>&, GetStates);
     FUNCTION().PUBLIC().SIGNATURE(_tmp1, GetAllStates);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(Vector<String>, GetStatesNames);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(Ref<IAnimationState>, PlayFirstState);
     FUNCTION().PUBLIC().SIGNATURE(Ref<IAnimationState>, Play, const Ref<AnimationClip>&, const String&);
     FUNCTION().PUBLIC().SIGNATURE(Ref<IAnimationState>, Play, const Ref<AnimationClip>&);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(Ref<IAnimationState>, Play, const String&);

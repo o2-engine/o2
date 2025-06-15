@@ -343,7 +343,7 @@ namespace o2
     {
         onChanged();
 
-        if (Scene::IsSingletonInitialzed() && IsOnScene())
+        if (Scene::IsSingletonInitialzed() && IsOnScene() && mState != State::Destroyed && mState != State::Destroying)
             o2Scene.OnObjectChanged(Ref(this));
     }
 

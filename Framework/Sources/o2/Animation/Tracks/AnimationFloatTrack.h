@@ -193,13 +193,18 @@ namespace o2
 
             float mPrevInDurationTime = 0.0f; // Previous evaluation in duration time
             int   mPrevKey = 0;               // Previous evaluation key index
-            int   mPrevKeyApproximation = 0;  // Previous evaluation key approximation index
+			int   mPrevKeyApproximation = 0;  // Previous evaluation key approximation index
+
+			float mRandomRangeCoef = 0.0f; // Random range coefficient for value approximation
 
             float*                  mTarget = nullptr; // Animation target value pointer
             Function<void()>        mTargetDelegate;   // Animation target value change event
             Ref<IValueProxy<float>> mTargetProxy;      // Animation target proxy pointer
 
-        protected:
+		protected:
+			// Called when animation started playing, updates random range coefficient`
+			void OnPlay() override;
+
             // Evaluates value
             void Evaluate() override;
 
@@ -286,6 +291,7 @@ CLASS_FIELDS_META(o2::AnimationTrack<float>::Player)
     FIELD().PROTECTED().DEFAULT_VALUE(0.0f).NAME(mPrevInDurationTime);
     FIELD().PROTECTED().DEFAULT_VALUE(0).NAME(mPrevKey);
     FIELD().PROTECTED().DEFAULT_VALUE(0).NAME(mPrevKeyApproximation);
+    FIELD().PROTECTED().DEFAULT_VALUE(0.0f).NAME(mRandomRangeCoef);
     FIELD().PROTECTED().DEFAULT_VALUE(nullptr).NAME(mTarget);
     FIELD().PROTECTED().NAME(mTargetDelegate);
     FIELD().PROTECTED().NAME(mTargetProxy);
@@ -307,6 +313,7 @@ CLASS_METHODS_META(o2::AnimationTrack<float>::Player)
     FUNCTION().PUBLIC().SIGNATURE(void, SetTrack, const Ref<IAnimationTrack>&);
     FUNCTION().PUBLIC().SIGNATURE(Ref<IAnimationTrack>, GetTrack);
     FUNCTION().PUBLIC().SIGNATURE(float, GetValue);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnPlay);
     FUNCTION().PROTECTED().SIGNATURE(void, Evaluate);
     FUNCTION().PROTECTED().SIGNATURE(void, RegMixer, const Ref<AnimationState>&, const String&);
 }

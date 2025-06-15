@@ -33,7 +33,7 @@ namespace o2
         Vec2F GetValue(float position) const;
 
         // Returns value at time with caching
-        Vec2F GetValue(float position, bool direction, int& cacheTimeKey, int& cacheTimeKeyApprox,
+        Vec2F GetValue(float position, float randomRangeCoef, bool direction, int& cacheTimeKey, int& cacheTimeKeyApprox,
                        int& cacheSplineKey, int& cacheSplineKeyApprox) const;
 
         // Called when beginning keys batch change. After this call all keys modifications will not be update pproximation
@@ -141,11 +141,16 @@ namespace o2
             int   mPrevSplineKey = 0;               // Previous evaluation spline key index
             int   mPrevSplineKeyApproximation = 0;  // Previous evaluation spline key approximation index
 
+			float mRandomRangeCoef = 0.0f; // Random range coefficient for value approximation
+
             Vec2F*                  mTarget = nullptr; // Animation target value pointer
             Function<void()>        mTargetDelegate;   // Animation target value change event
             Ref<IValueProxy<Vec2F>> mTargetProxy;      // Animation target proxy pointer
 
-        protected:
+		protected:
+			// Called when animation started playing, updates random range coefficient`
+            void OnPlay() override;
+
             // Evaluates value
             void Evaluate() override;
 
@@ -177,7 +182,7 @@ CLASS_METHODS_META(o2::AnimationTrack<o2::Vec2F>)
     FUNCTION().PUBLIC().CONSTRUCTOR();
     FUNCTION().PUBLIC().CONSTRUCTOR(const AnimationTrack<Vec2F>&);
     FUNCTION().PUBLIC().SIGNATURE(Vec2F, GetValue, float);
-    FUNCTION().PUBLIC().SIGNATURE(Vec2F, GetValue, float, bool, int&, int&, int&, int&);
+    FUNCTION().PUBLIC().SIGNATURE(Vec2F, GetValue, float, float, bool, int&, int&, int&, int&);
     FUNCTION().PUBLIC().SIGNATURE(void, BeginKeysBatchChange);
     FUNCTION().PUBLIC().SIGNATURE(void, CompleteKeysBatchingChange);
     FUNCTION().PUBLIC().SIGNATURE(float, GetDuration);
@@ -208,6 +213,7 @@ CLASS_FIELDS_META(o2::AnimationTrack<o2::Vec2F>::Player)
     FIELD().PROTECTED().DEFAULT_VALUE(0).NAME(mPrevTimeKeyApproximation);
     FIELD().PROTECTED().DEFAULT_VALUE(0).NAME(mPrevSplineKey);
     FIELD().PROTECTED().DEFAULT_VALUE(0).NAME(mPrevSplineKeyApproximation);
+    FIELD().PROTECTED().DEFAULT_VALUE(0.0f).NAME(mRandomRangeCoef);
     FIELD().PROTECTED().DEFAULT_VALUE(nullptr).NAME(mTarget);
     FIELD().PROTECTED().NAME(mTargetDelegate);
     FIELD().PROTECTED().NAME(mTargetProxy);
@@ -229,6 +235,7 @@ CLASS_METHODS_META(o2::AnimationTrack<o2::Vec2F>::Player)
     FUNCTION().PUBLIC().SIGNATURE(void, SetTrack, const Ref<IAnimationTrack>&);
     FUNCTION().PUBLIC().SIGNATURE(Ref<IAnimationTrack>, GetTrack);
     FUNCTION().PUBLIC().SIGNATURE(Vec2F, GetValue);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnPlay);
     FUNCTION().PROTECTED().SIGNATURE(void, Evaluate);
     FUNCTION().PROTECTED().SIGNATURE(void, RegMixer, const Ref<AnimationState>&, const String&);
 }

@@ -54,6 +54,9 @@ namespace o2
         Vector<Ref<IAnimationTrack::IPlayer>> mTrackPlayers; // Animation clip track players
 
     protected:
+        // Called when animation starts playing
+        void OnPlay() override;
+
         // Evaluates all Animation tracks by time
         void Evaluate() override;
 
@@ -103,6 +106,7 @@ CLASS_METHODS_META(o2::AnimationPlayer)
     FUNCTION().PUBLIC().SIGNATURE(void, SetClip, const Ref<AnimationClip>&);
     FUNCTION().PUBLIC().SIGNATURE(const Ref<AnimationClip>&, GetClip);
     FUNCTION().PUBLIC().SIGNATURE(const Vector<Ref<IAnimationTrack::IPlayer>>&, GetTrackPlayers);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnPlay);
     FUNCTION().PROTECTED().SIGNATURE(void, Evaluate);
     FUNCTION().PROTECTED().SIGNATURE(void, BindTracks, bool);
     FUNCTION().PROTECTED().SIGNATURE(void, BindTrack, const ObjectType*, void*, const Ref<IAnimationTrack>&, bool);

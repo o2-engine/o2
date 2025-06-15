@@ -36,14 +36,14 @@ namespace o2
     Vec2F AnimationTrack<Vec2F>::GetValue(float position) const
     {
         int cacheKey = 0, cacheKeyApporx = 0;
-        return GetValue(position, true, cacheKey, cacheKeyApporx, cacheKey, cacheKeyApporx);
+        return GetValue(position, 0.0f, true, cacheKey, cacheKeyApporx, cacheKey, cacheKeyApporx);
     }
 
-    Vec2F AnimationTrack<Vec2F>::GetValue(float position, bool direction, int& cacheTimeKey, int& cacheTimeKeyApprox,
+    Vec2F AnimationTrack<Vec2F>::GetValue(float position, float randomRangeCoef, bool direction, int& cacheTimeKey, int& cacheTimeKeyApprox,
                                           int& cacheSplineKey, int& cacheSplineKeyApprox) const
     {
-        float timePos = timeCurve->Evaluate(position, 0.0f, direction, cacheTimeKey, cacheTimeKeyApprox);
-        return spline->Evaluate(timePos*spline->Length(), 0.0f, direction, cacheSplineKey, cacheTimeKeyApprox);
+        float timePos = timeCurve->Evaluate(position, randomRangeCoef, direction, cacheTimeKey, cacheTimeKeyApprox);
+        return spline->Evaluate(timePos*spline->Length(), randomRangeCoef, direction, cacheSplineKey, cacheTimeKeyApprox);
     }
 
     void AnimationTrack<Vec2F>::BeginKeysBatchChange()
@@ -183,11 +183,16 @@ namespace o2
     Ref<IAnimationTrack> AnimationTrack<Vec2F>::Player::GetTrack() const
     {
         return mTrack;
-    }
+	}
+
+	void AnimationTrack<Vec2F>::Player::OnPlay()
+	{
+        mRandomRangeCoef = Math::Random(0.0f, 1.0f);
+	}
 
     void AnimationTrack<Vec2F>::Player::Evaluate()
     {
-        mCurrentValue = mTrack->GetValue(mInDurationTime, mInDurationTime > mPrevInDurationTime, 
+        mCurrentValue = mTrack->GetValue(mInDurationTime, mRandomRangeCoef, mInDurationTime > mPrevInDurationTime, 
                                          mPrevTimeKey, mPrevTimeKeyApproximation,
                                          mPrevSplineKey, mPrevSplineKeyApproximation);
 

@@ -3,7 +3,7 @@
 #include "o2/Utils/Editor/Attributes/EditorPropertyAttribute.h"
 #include "o2/Utils/Serialization/Serializable.h"
 
-namespace o2 
+namespace o2
 {
     class Actor;
     

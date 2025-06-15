@@ -325,6 +325,9 @@ namespace o2
         // Completion deserialization delta callback
         void OnDeserializedDelta(const DataValue& node, const IObject& origin) override;
 
+		// Recalculates particles duration from emission duration and particles lifetime
+        void UpdateDuration();
+
         // Checks is particles container initialized
         void CreateParticlesContainer();
 
@@ -540,6 +543,7 @@ CLASS_METHODS_META(o2::ParticlesEmitter)
     FUNCTION().PROTECTED().SIGNATURE(void, OnDeserialized, const DataValue&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnSerializeDelta, DataValue&, const IObject&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnDeserializedDelta, const DataValue&, const IObject&);
+    FUNCTION().PROTECTED().SIGNATURE(void, UpdateDuration);
     FUNCTION().PROTECTED().SIGNATURE(void, CreateParticlesContainer);
     FUNCTION().PROTECTED().SIGNATURE(void, UpdateEmitting, float);
     FUNCTION().PROTECTED().SIGNATURE(void, UpdateEffects, float);

@@ -282,14 +282,19 @@ namespace o2
     float AnimationTrack<float>::Player::GetValue() const
     {
         return mCurrentValue;
-    }
+	}
+
+	void AnimationTrack<float>::Player::OnPlay()
+	{
+        mRandomRangeCoef = Math::Random(0.0f, 1.0f);
+	}
 
     void AnimationTrack<float>::Player::Evaluate()
     {
         if (!mTrack)
             return;
 
-        mCurrentValue = mTrack->curve->Evaluate(mInDurationTime, 0.0f, mInDurationTime > mPrevInDurationTime, mPrevKey, mPrevKeyApproximation);
+        mCurrentValue = mTrack->curve->Evaluate(mInDurationTime, mRandomRangeCoef, mInDurationTime > mPrevInDurationTime, mPrevKey, mPrevKeyApproximation);
         mPrevInDurationTime = mInDurationTime;
 
         if (mTarget)

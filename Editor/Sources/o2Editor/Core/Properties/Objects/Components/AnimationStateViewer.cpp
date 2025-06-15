@@ -104,7 +104,9 @@ namespace Editor
             subscribedPlayer->SetPlaying(play);
         }
 
-        o2Scene.OnObjectChanged(o2EditorSceneScreen.GetSelectedObjects().First());
+        auto selectedObjects = o2EditorSceneScreen.GetSelectedObjects();
+        if (!selectedObjects.IsEmpty())
+            o2Scene.OnObjectChanged(selectedObjects.First());
     }
 
     void AnimationStateViewer::OnLoopToggled(bool looped)

@@ -7,6 +7,52 @@ namespace o2
 {
     FORWARD_REF_IMPL(AnimationComponent);
 
+	IAnimationState::IAnimationState(const String& name) :
+		name(name)
+	{}
+
+	IAnimationState::IAnimationState(const IAnimationState& other) :
+		name(other.name), autoPlay(other.autoPlay), weight(this)
+	{}
+
+	void IAnimationState::Update(float dt)
+	{}
+
+	IAnimation& IAnimationState::GetPlayer()
+	{
+		static IAnimation empty;
+		return empty;
+	}
+
+	float IAnimationState::GetDuration() const
+	{
+		return 0.0f;
+	}
+
+	void IAnimationState::SetWeight(float weight)
+	{}
+
+	float IAnimationState::GetWeight() const
+	{
+		return 1.0f;
+	}
+
+	void IAnimationState::SetLooped(bool looped)
+	{}
+
+	bool IAnimationState::IsLooped() const
+	{
+		return false;
+	}
+
+	void IAnimationState::Register(const Ref<AnimationComponent>& owner)
+	{
+		mOwner = owner;
+	}
+
+	void IAnimationState::Unregister()
+	{}
+
     AnimationState::AnimationState(const String& name):
         IAnimationState(name)
     {
@@ -14,7 +60,14 @@ namespace o2
         player->onTrackPlayerRemove = [&](auto track) { OnTrackPlayerRemove(track); };
     }
 
-    void AnimationState::Update(float dt)
+	AnimationState::AnimationState(const AnimationState& other):
+        IAnimationState(other.name), mAnimation(other.mAnimation), mWeight(other.mWeight)
+    {
+        player->onTrackPlayerAdded = [&](auto track) { OnTrackPlayerAdded(track); };
+        player->onTrackPlayerRemove = [&](auto track) { OnTrackPlayerRemove(track); };
+	}
+
+	void AnimationState::Update(float dt)
     {
         if (mAnimation)
             player->Update(dt);
@@ -67,15 +120,17 @@ namespace o2
     }
 
     void AnimationState::Register(const Ref<AnimationComponent>& owner)
-    {
-        IAnimationState::Register(owner);
+	{
+		IAnimationState::Register(owner);
 
-        player->SetTarget(mOwner.Lock()->GetActor().Get());
+        auto actor = mOwner.Lock()->GetActor();
+        if (!actor)
+            return;
+
+		player->SetClip(mAnimation ? mAnimation->animation : nullptr);
+        player->SetTarget(actor.Get());
         player->SetPlaying(autoPlay);
         player->mAnimationState = Ref(this);
-
-        for (auto& trackPlayer : player->mTrackPlayers)
-            trackPlayer->RegMixer(Ref(this), trackPlayer->GetTrack()->path);
     }
 
     void AnimationState::Unregister()
@@ -107,48 +162,6 @@ namespace o2
     {
         player->SetClip(mAnimation ? mAnimation->animation : nullptr);
     }
-
-    IAnimationState::IAnimationState(const String& name) :
-        name(name)
-    {}
-
-    void IAnimationState::Update(float dt)
-    {}
-
-    IAnimation& IAnimationState::GetPlayer()
-    {
-        static IAnimation empty;
-        return empty;
-    }
-
-	float IAnimationState::GetDuration() const
-	{
-		return 0.0f;
-	}
-
-	void IAnimationState::SetWeight(float weight)
-    {}
-
-    float IAnimationState::GetWeight() const
-    {
-        return 1.0f;
-    }
-
-    void IAnimationState::SetLooped(bool looped)
-    {}
-
-    bool IAnimationState::IsLooped() const
-    {
-        return false;
-    }
-
-    void IAnimationState::Register(const Ref<AnimationComponent>& owner)
-    {
-        mOwner = owner;
-    }
-
-    void IAnimationState::Unregister()
-    {}
 }
 // --- META ---
 

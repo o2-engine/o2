@@ -11,13 +11,14 @@ namespace o2
 
     IRectDrawable::IRectDrawable(const IRectDrawable& other) :
         Transform(other.mSize, other.mPosition, other.mAngle, other.mScale, other.mPivot),
-        mColor(other.mColor), mEnabled(other.mEnabled), color(this), transparency(this), enabled(this)
+        mBlendMode(other.mBlendMode), mColor(other.mColor), mEnabled(other.mEnabled), color(this), transparency(this), enabled(this)
     {}
 
     IRectDrawable& IRectDrawable::operator=(const IRectDrawable& other)
     {
         Transform::operator=(other);
 
+		mBlendMode = other.mBlendMode;
         mColor = other.mColor;
         mEnabled = other.mEnabled;
 
@@ -29,7 +30,7 @@ namespace o2
 
     bool IRectDrawable::operator==(const IRectDrawable& other) const
     {
-        return Transform::operator==(other) && mColor == other.mColor && mEnabled == other.mEnabled;
+        return Transform::operator==(other) && mColor == other.mColor && mEnabled == other.mEnabled && mBlendMode == other.mBlendMode;
     }
 
     bool IRectDrawable::operator!=(const IRectDrawable& other) const

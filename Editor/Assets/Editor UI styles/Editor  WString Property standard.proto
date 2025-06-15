@@ -3,7 +3,7 @@
         "Type": "Editor::WStringProperty",
         "Value": {
             "mName": "standard",
-            "Id": 13791921795627176170,
+            "Id": 15255426680011590821,
             "Transform": {
                 "minSize": {
                     "x": 0.0,
@@ -15,7 +15,7 @@
                     "Type": "o2::Widget",
                     "Data": {
                         "mName": "container",
-                        "Id": 7002481530810410545,
+                        "Id": 16311188839524070886,
                         "Transform": {
                             "anchorMax": {
                                 "x": 1.0,
@@ -31,7 +31,7 @@
                                 "Type": "o2::HorizontalLayout",
                                 "Data": {
                                     "mName": "layout",
-                                    "Id": 13248099433920745145,
+                                    "Id": 14016423009247474515,
                                     "Transform": {
                                         "anchorMax": {
                                             "x": 1.0,
@@ -47,11 +47,11 @@
                                             "Type": "o2::EditBox",
                                             "Data": {
                                                 "Prototype": {
-                                                    "id": "339d137d3af46f83112e1f66211a442d",
+                                                    "id": "51187e4247205c8618a656934fd7269d",
                                                     "path": "Editor UI styles/O2  Edit Box singleline.proto"
                                                 },
                                                 "PrototypeLink": 18361699463735310704,
-                                                "Id": 13550224121493420004,
+                                                "Id": 112669118779312631,
                                                 "Transform": {
                                                     "anchorMax": {
                                                         "x": 1.0,
@@ -151,7 +151,7 @@
                                                                 }
                                                             }
                                                         },
-                                                        "mUID": 2222983384735909362,
+                                                        "mUID": 5613315986295807166,
                                                         "PrototypeLink": 1144532298054957297
                                                     },
                                                     {
@@ -177,7 +177,7 @@
                                                                 }
                                                             }
                                                         },
-                                                        "mUID": 18107253932784040035,
+                                                        "mUID": 5365426011521108138,
                                                         "PrototypeLink": 5501630202941640501
                                                     },
                                                     {
@@ -203,7 +203,7 @@
                                                                 }
                                                             }
                                                         },
-                                                        "mUID": 9164331757098797899,
+                                                        "mUID": 4473636200267316834,
                                                         "PrototypeLink": 855029936525502237
                                                     }
                                                 ],

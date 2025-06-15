@@ -11,7 +11,7 @@ namespace o2
         IRectDrawable(), mShape(mmake<CircleParticlesEmitterShape>())
     {
         mLastTransform = mTransform;
-        mDuration = mEmissionDuration + mParticlesLifetime;
+        UpdateDuration();
     }
 
     ParticlesEmitter::~ParticlesEmitter()
@@ -20,7 +20,7 @@ namespace o2
     ParticlesEmitter::ParticlesEmitter(const ParticlesEmitter& other) :
         IRectDrawable(other), IAnimation(other), mParticlesSource(other.mParticlesSource->CloneAsRef<ParticleSource>()),
         mShape(other.mShape->CloneAsRef<ParticlesEmitterShape>()),
-        mParticlesNumLimit(other.mParticlesNumLimit),
+        mParticlesNumLimit(other.mParticlesNumLimit), mEmitParticlesFromShell(other.mEmitParticlesFromShell),
         mEmittingCoefficient(other.mEmittingCoefficient), mIsParticlesRelative(other.mIsParticlesRelative),
         mParticlesLifetime(other.mParticlesLifetime), mEmitParticlesPerSecond(other.mEmitParticlesPerSecond),
         mInitialAngle(other.mInitialAngle), mInitialAngleRange(other.mInitialAngleRange),
@@ -36,7 +36,8 @@ namespace o2
         for (auto& effect : other.mEffects)
             AddEffect(effect->CloneAsRef<ParticlesEffect>());
 
-        mLastTransform = mTransform;
+		mLastTransform = mTransform;
+		UpdateDuration();
     }
 
     ParticlesEmitter& ParticlesEmitter::operator=(const ParticlesEmitter& other)
@@ -68,12 +69,14 @@ namespace o2
         for (auto& effect : other.mEffects)
             AddEffect(effect->CloneAsRef<ParticlesEffect>());
 
+        mEmitParticlesFromShell = other.mEmitParticlesFromShell;
+
         mParticlesNumLimit = other.mParticlesNumLimit;
 
         mEmittingCoefficient = other.mEmittingCoefficient;
         mIsParticlesRelative = other.mIsParticlesRelative;
 
-        mDuration = other.mDuration;
+		UpdateDuration();
 
         mEmissionDuration = other.mEmissionDuration;
         mParticlesLifetime = other.mParticlesLifetime;
@@ -171,8 +174,7 @@ namespace o2
         IRectDrawable::OnDeserialized(node);
         IAnimation::OnDeserialized(node);
 
-        mDuration = mEmissionDuration + mParticlesLifetime;
-        ResetBounds();
+		UpdateDuration();
 
         OnEffectsListChanged();
         OnChanged();
@@ -193,7 +195,17 @@ namespace o2
         OnChanged();
     }
 
-    void ParticlesEmitter::CreateParticlesContainer()
+	void ParticlesEmitter::UpdateDuration()
+	{
+        if (mLoop == Loop::None)
+            mDuration = mEmissionDuration + mParticlesLifetime;
+        else if (mLoop == Loop::Repeat)
+            mDuration = mEmissionDuration;
+
+        ResetBounds();
+	}
+
+	void ParticlesEmitter::CreateParticlesContainer()
     {
         mParticlesContainer = mParticlesSource->CreateContainer();
         mParticlesContainer->emitter = this;
@@ -201,7 +213,10 @@ namespace o2
 
     void ParticlesEmitter::UpdateEmitting(float dt)
     {
-        if (!mPlaying || mTime > mEmissionDuration)
+        if (!mPlaying)
+            return;
+
+        if (mLoop == Loop::None && mTime > mEmissionDuration)
             return;
 
         mEmitTimeBuffer += dt;
@@ -356,9 +371,13 @@ namespace o2
 
     void ParticlesEmitter::SetDuration(float duration)
     {
-        mDuration = duration;
-        mEmissionDuration = duration - mParticlesLifetime;
-        ResetBounds();
+        if (mLoop == Loop::None)
+            mParticlesLifetime = duration - mEmissionDuration;
+        else if (mLoop == Loop::Repeat)
+			mParticlesLifetime = duration;
+
+		UpdateDuration();
+
         OnChanged();
     }
 
@@ -494,9 +513,8 @@ namespace o2
 
     void ParticlesEmitter::SetEmissionDuration(float duration)
     {
-        mEmissionDuration = duration;
-        mDuration = mEmissionDuration + mParticlesLifetime;
-        ResetBounds();
+		mEmissionDuration = duration;
+		UpdateDuration();
         OnChanged();
     }
 
@@ -507,9 +525,8 @@ namespace o2
 
     void ParticlesEmitter::SetParticlesLifetime(float lifetime)
     {
-        mParticlesLifetime = lifetime;
-        mDuration = mEmissionDuration + mParticlesLifetime;
-        ResetBounds();
+		mParticlesLifetime = lifetime;
+		UpdateDuration();
         OnChanged();
     }
 

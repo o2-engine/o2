@@ -268,8 +268,6 @@ namespace o2
                 value = (double)data.mData.int64Data.intValue;
             else if (data.mData.flagsData.Is(Flags::UInt64))
                 value = (double)data.mData.int64Data.uintValue;
-            else
-                Assert(false, "Trying to get double from not number value");
         }
     };
 

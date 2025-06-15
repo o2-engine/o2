@@ -177,6 +177,9 @@ namespace o2
 
     float Basis::GetShiftFast(const Vec2F& scale) const
     {
+        if (Math::Abs(scale.x) < Math::Epsilon || Math::Abs(scale.y) < Math::Epsilon)
+            return 0.0f;
+
         float proj = yv.Dot(xv/scale.x);
         return proj/scale.y;
     }

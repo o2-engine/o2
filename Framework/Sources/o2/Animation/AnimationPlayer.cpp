@@ -74,9 +74,17 @@ namespace o2
         for (auto& player : mTrackPlayers)
             onTrackPlayerRemove(player);
 
-        mTrackPlayers.Clear();
+		mTrackPlayers.Clear();
 
-        if (!mTarget || !mClip)
+        if (!mClip)
+            return;
+
+		mLoop = mClip->mLoop;
+		mDuration = mClip->GetDuration();
+		mBeginTime = 0.0f;
+		mEndTime = mDuration;
+
+        if (!mTarget)
             return;
 
         const ObjectType* type = dynamic_cast<const ObjectType*>(&mTarget->GetType());
@@ -84,11 +92,6 @@ namespace o2
 
         for (auto& track : mClip->mTracks)
             BindTrack(type, castedTarget, track, errors);
-
-        mLoop = mClip->mLoop;
-        mDuration = mClip->GetDuration();
-        mBeginTime = 0.0f;
-        mEndTime = mDuration;
     }
 
     void AnimationPlayer::BindTrack(const ObjectType* type, void* castedTarget, const Ref<IAnimationTrack>& track, bool errors)
@@ -122,6 +125,9 @@ namespace o2
 
     void AnimationPlayer::OnClipTrackAdded(const Ref<IAnimationTrack>& track)
     {
+        if (!mTarget)
+            return;
+
         const ObjectType* type = dynamic_cast<const ObjectType*>(&mTarget->GetType());
         void* castedTarget = type->DynamicCastFromIObject(mTarget);
 
@@ -139,7 +145,13 @@ namespace o2
         mEndTime = duration;
     }
 
-    void AnimationPlayer::Evaluate()
+	void AnimationPlayer::OnPlay()
+	{
+        for (auto& track : mTrackPlayers)
+			track->OnPlay();
+	}
+
+	void AnimationPlayer::Evaluate()
     {
         for (auto& trackPlayer : mTrackPlayers)
             trackPlayer->ForceSetTime(mInDurationTime, mDuration);

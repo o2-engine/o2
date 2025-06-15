@@ -53,9 +53,9 @@ namespace o2
     {
         mIsUpdatingScene = true;
 
+		UpdateDestroyingEntities();
         UpdateAddedEntities();
         UpdateStartingEntities();
-        UpdateDestroyingEntities();
         UpdateActors(dt);
 
         mIsUpdatingScene = false;
@@ -660,14 +660,17 @@ namespace o2
         if (!actorsNode.IsEmpty())
         {
             mRootActors = actorsNode;
-            mRootActors.Clear();
         }
 
         ActorRefResolver::mInstance->UnlockResolving();
         ActorRefResolver::mInstance->ResolveRefs();
 
-        UpdateAddedEntities();
-        UpdateTransforms();
+		UpdateTransforms();
+		mRootActors.Clear();
+
+		UpdateAddedEntities();
+		UpdateTransforms();
+
         UpdateDestroyingEntities();
 
 #if IS_EDITOR

@@ -97,7 +97,15 @@ namespace o2
         return nullptr;
     }
 
-    const Vector<Ref<IAnimationState>>& AnimationComponent::GetStates() const
+	Ref<IAnimationState> AnimationComponent::GetFirstState()
+	{
+        if (mStates.IsEmpty())
+			return nullptr;
+
+		return mStates[0];
+	}
+
+	const Vector<Ref<IAnimationState>>& AnimationComponent::GetStates() const
     {
         return mStates;
     }
@@ -122,7 +130,18 @@ namespace o2
         return result;
     }
 
-    Ref<IAnimationState> AnimationComponent::Play(const Ref<AnimationClip>& animation, const String& name)
+	Ref<IAnimationState> AnimationComponent::PlayFirstState()
+	{
+        if (mStates.IsEmpty())
+            return nullptr;
+
+		auto state = mStates[0];
+		state->GetPlayer().RewindAndPlay();
+
+		return state;
+	}
+
+	Ref<IAnimationState> AnimationComponent::Play(const Ref<AnimationClip>& animation, const String& name)
     {
         auto state = AddState(name, animation, AnimationMask(), 1.0f);
         state->GetPlayer().Play();
@@ -286,14 +305,12 @@ namespace o2
 
     void AnimationComponent::ReattachAnimationStates()
     {
-        auto statesCopy = mStates;
-        for (auto& state : statesCopy)
+        mValues.Clear();
+
+        for (auto& state : mStates)
         {
-            if (state && !state->mOwner)
-            {
-                mStates.Remove(state);
-                AddState(state);
-            }
+			if (state)
+				state->Register(Ref(this));
         }
     }
 

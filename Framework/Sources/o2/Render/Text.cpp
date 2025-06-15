@@ -367,6 +367,7 @@ namespace o2
             mFont->CheckCharacters(mText, height);
             mFont->CheckCharacters(".", height);
         }
+
         UpdateMesh();
     }
 

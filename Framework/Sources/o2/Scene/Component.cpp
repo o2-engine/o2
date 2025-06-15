@@ -202,9 +202,6 @@ namespace o2
 
         mOwner = actor;
 
-        if (mOwner)
-            OnTransformUpdated();
-
         OnParentChanged(nullptr);
     }
 }

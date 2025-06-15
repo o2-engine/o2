@@ -96,7 +96,7 @@
                     "Type": "o2::HorizontalScrollBar",
                     "Value": {
                         "Prototype": {
-                            "id": "5e901fce72925ffb772d467968093186",
+                            "id": "71bc53d708bb2b7605a243807b946958",
                             "path": "Editor UI styles/O2  Horizontal Scroll Bar standard.proto"
                         },
                         "PrototypeLink": 2396346607982954160,
@@ -246,7 +246,7 @@
                     "Type": "o2::VerticalScrollBar",
                     "Value": {
                         "Prototype": {
-                            "id": "712d62a86f3b0a9f67956ec06df75899",
+                            "id": "2259573d3cf66d2a1ffb5ec31f0919ea",
                             "path": "Editor UI styles/O2  Vertical Scroll Bar standard.proto"
                         },
                         "PrototypeLink": 8311025582170325613,
@@ -604,7 +604,7 @@
                             "meta": {
                                 "Type": "o2::DefaultAssetMeta<o2::AnimationAsset>",
                                 "Value": {
-                                    "mId": "58a453801ac335c0308670e16ed4774b"
+                                    "mId": "7f375cf31b3b02124c800e864aa60e73"
                                 }
                             }
                         }
@@ -706,7 +706,7 @@
                             "meta": {
                                 "Type": "o2::DefaultAssetMeta<o2::AnimationAsset>",
                                 "Value": {
-                                    "mId": "4e372868453835263d411c9249006eaa"
+                                    "mId": "47a4283575ba4b2f530a06855211203d"
                                 }
                             }
                         }
@@ -760,7 +760,7 @@
                             "meta": {
                                 "Type": "o2::DefaultAssetMeta<o2::AnimationAsset>",
                                 "Value": {
-                                    "mId": "48f142c86231646535c32a877b412b07"
+                                    "mId": "3d9d793914c20f39420250fb0203194a"
                                 }
                             }
                         }
@@ -813,7 +813,7 @@
                             "meta": {
                                 "Type": "o2::DefaultAssetMeta<o2::AnimationAsset>",
                                 "Value": {
-                                    "mId": "290473e63b6826ea598b6194291f31e0"
+                                    "mId": "77c669c84c205e41539f667e6e585efc"
                                 }
                             }
                         }
