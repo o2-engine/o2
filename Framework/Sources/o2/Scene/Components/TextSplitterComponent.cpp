@@ -359,6 +359,8 @@ namespace o2
 	}
 
 }
+
+DECLARE_TEMPLATE_CLASS(o2::LinkRef<o2::TextSplitterComponent>);
 // --- META ---
 
 DECLARE_CLASS(o2::TextSplitterComponent, o2__TextSplitterComponent);

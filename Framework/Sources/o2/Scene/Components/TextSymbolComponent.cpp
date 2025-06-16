@@ -25,6 +25,8 @@ namespace o2
 	    return "Text symbol";
     }
 }
+
+DECLARE_TEMPLATE_CLASS(o2::LinkRef<o2::TextSymbolComponent>);
 // --- META ---
 
 DECLARE_CLASS(o2::TextSymbolComponent, o2__TextSymbolComponent);

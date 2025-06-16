@@ -53,7 +53,11 @@ namespace o2
         if (!mImage)
             mImage = DynamicCast<Sprite>(AddLayer("image", mmake<Sprite>())->GetDrawable());
 
-        mImage.Lock()->LoadFromImage(asset);
+        auto image = mImage.Lock();
+        if (image->GetImageAsset() == asset)
+            return;
+
+        image->LoadFromImage(asset);
     }
 
     AssetRef<ImageAsset> Image::GetImageAsset() const
