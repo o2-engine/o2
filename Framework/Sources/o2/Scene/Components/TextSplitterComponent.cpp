@@ -214,6 +214,16 @@ namespace o2
 		return mAutoPlaySymbolsAnimation;
 	}
 
+	String TextSplitterComponent::GetName()
+    {
+	    return "Text splitter";
+    }
+
+	String TextSplitterComponent::GetCategory()
+    {
+	    return "Render";
+    }
+
 	void TextSplitterComponent::RebuildCharacters()
     {
         ClearSymbols();
@@ -252,6 +262,8 @@ namespace o2
                 }
             }
         }
+
+    	GetActor()->UpdateTransform();
     }
 
     void TextSplitterComponent::ClearSymbols()

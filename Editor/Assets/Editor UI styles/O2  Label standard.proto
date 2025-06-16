@@ -4,7 +4,7 @@
         "Value": {
             "mName": "standard",
             "mHorOverflow": "Dots",
-            "Id": 9613259363390956959,
+            "Id": 464193587690890237,
             "Transform": {
                 "minSize": {
                     "x": 20.0,
@@ -35,7 +35,7 @@
                                 "mDotsEndings": true
                             }
                         },
-                        "mUID": 11511876723386816904
+                        "mUID": 2756440743479839408
                     }
                 }
             ],

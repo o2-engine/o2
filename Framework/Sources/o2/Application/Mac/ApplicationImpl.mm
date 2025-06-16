@@ -112,11 +112,13 @@ namespace o2
     }
 
     void Application::SetResizible(bool resizible)
-    {}
+    {
+        [ApplicationPlatformWrapper::window setResizable:resizible];
+    }
 
     bool Application::IsResizible() const
     {
-        return false;
+        return [ApplicationPlatformWrapper::window isResizable];
     }
 
     void Application::SetWindowSizePlatform(const Vec2I& size)
@@ -131,11 +133,15 @@ namespace o2
     }
 
     void Application::SetWindowPosition(const Vec2I& position)
-    {}
+    {
+        [ApplicationPlatformWrapper::window setFrameOrigin:NSMakePoint(position.x, position.y)];
+        [ApplicationPlatformWrapper::window makeKeyAndOrderFront:nil];
+    }
 
     Vec2I Application::GetWindowPosition() const
     {
-        return Vec2I();
+        NSRect frame = [ApplicationPlatformWrapper::window frame];
+        return Vec2I(frame.origin.x, frame.origin.y);
     }
 
     void Application::SetWindowCaption(const String& caption)

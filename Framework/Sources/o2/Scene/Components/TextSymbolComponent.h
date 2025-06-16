@@ -16,6 +16,9 @@ namespace o2
         // Sets texture coordinates for symbol
         void SetTextureAndRect(const TextureRef& texture, const RectF& rect);
 
+        // Returns name of component
+        static String GetName();
+
         SERIALIZABLE(TextSymbolComponent);
         CLONEABLE_REF(TextSymbolComponent);
     };
@@ -37,6 +40,7 @@ CLASS_METHODS_META(o2::TextSymbolComponent)
     FUNCTION().PUBLIC().CONSTRUCTOR();
     FUNCTION().PUBLIC().CONSTRUCTOR(const TextSymbolComponent&);
     FUNCTION().PUBLIC().SIGNATURE(void, SetTextureAndRect, const TextureRef&, const RectF&);
+    FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetName);
 }
 END_META;
 // --- END META ---

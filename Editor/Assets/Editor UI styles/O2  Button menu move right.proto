@@ -3,7 +3,7 @@
         "Type": "o2::Button",
         "Value": {
             "mName": "menu move right",
-            "Id": 7361638650024270878,
+            "Id": 12796004704580960092,
             "Transform": {
                 "minSize": {
                     "x": 20.0,
@@ -42,7 +42,7 @@
                                 }
                             }
                         },
-                        "mUID": 1938176726588079228
+                        "mUID": 14203395646161041236
                     }
                 },
                 {
@@ -81,7 +81,7 @@
                                 }
                             }
                         },
-                        "mUID": 15152933881950134965,
+                        "mUID": 18320103504465300742,
                         "mTransparency": 0.0,
                         "mDepth": 1.0
                     }
@@ -122,7 +122,7 @@
                                 }
                             }
                         },
-                        "mUID": 15515304289760383907,
+                        "mUID": 17089267685179518669,
                         "mTransparency": 0.0,
                         "mDepth": 2.0
                     }
@@ -163,7 +163,7 @@
                                 }
                             }
                         },
-                        "mUID": 6539485918995930564,
+                        "mUID": 3690598659869002801,
                         "mTransparency": 0.0,
                         "mDepth": 3.0
                     }
@@ -199,7 +199,7 @@
                                 }
                             }
                         },
-                        "mUID": 7933381341763854468,
+                        "mUID": 14604241796879396333,
                         "mDepth": 4.0
                     }
                 }
@@ -227,12 +227,12 @@
                                                             "Value": {
                                                                 "mKeys": [
                                                                     {
-                                                                        "uid": 10555950407548506946,
+                                                                        "uid": 11515146350361476635,
                                                                         "rightSupportPosition": 0.04000000283122063,
                                                                         "supportsType": "Broken"
                                                                     },
                                                                     {
-                                                                        "uid": 12927934565885914378,
+                                                                        "uid": 12187911119414071746,
                                                                         "value": 1.0,
                                                                         "position": 0.10000000149011612,
                                                                         "leftSupportPosition": -0.10000000149011612,
@@ -252,7 +252,7 @@
                             "meta": {
                                 "Type": "o2::DefaultAssetMeta<o2::AnimationAsset>",
                                 "Value": {
-                                    "mId": "49f6338a5db55dca28be29af4463700c"
+                                    "mId": "d2a972efa52e642041589de5e1e215cb"
                                 }
                             }
                         }
@@ -280,12 +280,12 @@
                                                             "Value": {
                                                                 "mKeys": [
                                                                     {
-                                                                        "uid": 13696149483794745594,
+                                                                        "uid": 13733016798242035709,
                                                                         "rightSupportPosition": 0.020000001415610315,
                                                                         "supportsType": "Broken"
                                                                     },
                                                                     {
-                                                                        "uid": 13980494954189129498,
+                                                                        "uid": 162942404848340274,
                                                                         "value": 1.0,
                                                                         "position": 0.05000000074505806,
                                                                         "leftSupportPosition": -0.05000000074505806,
@@ -305,7 +305,7 @@
                             "meta": {
                                 "Type": "o2::DefaultAssetMeta<o2::AnimationAsset>",
                                 "Value": {
-                                    "mId": "34745c24207e726c3d0d684a446f13be"
+                                    "mId": "40ca5aad147fbbf2ce7bc0e49a180e11"
                                 }
                             }
                         }
@@ -333,12 +333,12 @@
                                                             "Value": {
                                                                 "mKeys": [
                                                                     {
-                                                                        "uid": 7178158773766435884,
+                                                                        "uid": 13658982413314293310,
                                                                         "rightSupportPosition": 0.020000001415610315,
                                                                         "supportsType": "Broken"
                                                                     },
                                                                     {
-                                                                        "uid": 7919233131110178871,
+                                                                        "uid": 8070635946345335121,
                                                                         "value": 1.0,
                                                                         "position": 0.05000000074505806,
                                                                         "leftSupportPosition": -0.05000000074505806,
@@ -358,7 +358,7 @@
                             "meta": {
                                 "Type": "o2::DefaultAssetMeta<o2::AnimationAsset>",
                                 "Value": {
-                                    "mId": "05035c5360814e6a54087546552b25fb"
+                                    "mId": "713a9eb0ff849ad841ba3f14154242fd"
                                 }
                             }
                         }

@@ -19,6 +19,11 @@ namespace o2
 		SetTextureSrcRect(RectF(rect.left* textureSize.x, rect.top*textureSize.y, 
 								rect.right*textureSize.x, rect.bottom*textureSize.y));
 	}
+
+	String TextSymbolComponent::GetName()
+    {
+	    return "Text symbol";
+    }
 }
 // --- META ---
 

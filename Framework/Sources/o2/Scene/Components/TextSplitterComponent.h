@@ -116,7 +116,13 @@ namespace o2
 		void SetAutoPlaySymbolsAnimation(bool autoPlay);
 
 		// Returns is symbols animation should be started automatically
-		bool IsAutoPlaySymbolsAnimation() const;
+    	bool IsAutoPlaySymbolsAnimation() const;
+
+    	// Returns name of component
+    	static String GetName();
+
+    	// Returns category of component
+    	static String GetCategory();
 
         SERIALIZABLE(TextSplitterComponent);
         CLONEABLE_REF(TextSplitterComponent);
@@ -247,6 +253,8 @@ CLASS_METHODS_META(o2::TextSplitterComponent)
     FUNCTION().PUBLIC().SIGNATURE(float, GetSymbolsAnimationDelay);
     FUNCTION().PUBLIC().SIGNATURE(void, SetAutoPlaySymbolsAnimation, bool);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsAutoPlaySymbolsAnimation);
+    FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetName);
+    FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetCategory);
     FUNCTION().PROTECTED().SIGNATURE(void, OnStart);
     FUNCTION().PROTECTED().SIGNATURE(void, OnDestroy);
     FUNCTION().PROTECTED().SIGNATURE(void, OnEnabled);

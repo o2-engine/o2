@@ -241,7 +241,12 @@ add_dependencies(o2Framework o2FrameworkCodegen)
 if (O2_EDITOR)
     add_library(o2Editor STATIC)
 
-    file(GLOB_RECURSE o2Framework_SOURCES "Editor/Sources/*.cpp" "Editor/Sources/*.h")
+    set(o2Editor_SOURCES_DIRS "Editor/Sources/*.cpp" "Editor/Sources/*.h")
+    if (APPLE)
+        list(APPEND o2Editor_SOURCES_DIRS "Editor/Sources/*.mm" "Editor/Sources/*.m")
+    endif()
+
+    file(GLOB_RECURSE o2Framework_SOURCES ${o2Editor_SOURCES_DIRS})
 
     source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${o2Framework_SOURCES})
 
