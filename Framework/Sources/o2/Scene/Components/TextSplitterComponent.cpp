@@ -13,9 +13,9 @@ namespace o2
     TextSplitterComponent::TextSplitterComponent(const TextSplitterComponent& other):
         Component(other), mText(other.mText), mFont(other.mFont), mHeight(other.mHeight), mSymbolsDistCoef(other.mSymbolsDistCoef),
         mLinesDistCoef(other.mLinesDistCoef), mHorAlign(other.mHorAlign), mVerAlign(other.mVerAlign),
-		mWordWrap(other.mWordWrap), mDotsEndings(other.mDotsEndings), text(this), font(this), height(this), 
-		symbolsDistanceCoef(this), linesDistanceCoef(this), horAlign(this), verAlign(this), wordWrap(this), dotsEndings(this),
-		symbolsAnimationDelay(this), autoPlaySymbolsAnimation(this)
+		mWordWrap(other.mWordWrap), mDotsEndings(other.mDotsEndings), mColor(other.mColor),
+		text(this), font(this), height(this), symbolsDistanceCoef(this), linesDistanceCoef(this), horAlign(this), verAlign(this), 
+		wordWrap(this), dotsEndings(this), symbolsAnimationDelay(this), autoPlaySymbolsAnimation(this), color(this), transparency(this)
     {
         if (mFont)
 			mFont->GetFont()->onCharactersRebuilt += THIS_FUNC(CheckCharactersAndRebuild);
@@ -174,24 +174,11 @@ namespace o2
 
 	void TextSplitterComponent::RunSymbolsAnimation()
 	{
+		StopSymbolsAnimation();
+
 		mSymbolsAnimationTime = 0.0f;
         mSymbolAnimationIndex = 0;
 		mSymbolsAnimationStarted = true;
-
-		auto& children = GetActor()->GetChildren();
-        for (auto& child : children)
-        {
-            if (auto animationCommponent = child->GetComponent<AnimationComponent>())
-            {
-                if (auto animationState = animationCommponent->GetFirstState())
-                {
-                    animationState->GetPlayer().GoToBegin();
-                    animationState->GetPlayer().Stop();
-                    animationCommponent->OnUpdate(0.0f);
-                    animationState->autoPlay = false;
-                }
-            }
-        }
 	}
 
 	void TextSplitterComponent::SetSymbolsAnimationDelay(float delay)
@@ -212,6 +199,31 @@ namespace o2
 	bool TextSplitterComponent::IsAutoPlaySymbolsAnimation() const
 	{
 		return mAutoPlaySymbolsAnimation;
+	}
+
+	void TextSplitterComponent::SetColor(const Color4& color)
+	{
+		if (mColor != color)
+		{
+			mColor = color;
+			UpdateColor();
+		}
+	}
+
+	Color4 TextSplitterComponent::GetColor() const
+	{
+		return mColor;
+	}
+
+	void TextSplitterComponent::SetTransparency(float transparency)
+	{
+		mColor.SetAF(transparency);
+    	UpdateColor();
+	}
+
+	float TextSplitterComponent::GetTransparency() const
+	{
+		return mColor.AF();
 	}
 
 	String TextSplitterComponent::GetName()
@@ -254,6 +266,7 @@ namespace o2
                     symbolComponent = symbolActor->AddComponent<TextSymbolComponent>();
 
 				symbolComponent->SetTextureAndRect(mFont->GetFont()->GetTexture(), symbol.mTexSrc);
+            	symbolComponent->SetColor(mColor);
 
                 if (symbolComponent->GetActor() != symbolActor)
                 {
@@ -286,6 +299,24 @@ namespace o2
 		RebuildCharacters();
 	}
 
+	void TextSplitterComponent::StopSymbolsAnimation()
+    {
+    	auto& children = GetActor()->GetChildren();
+    	for (auto& child : children)
+    	{
+    		if (auto animationCommponent = child->GetComponent<AnimationComponent>())
+    		{
+    			if (auto animationState = animationCommponent->GetFirstState())
+    			{
+    				animationState->GetPlayer().GoToBegin();
+    				animationState->GetPlayer().Stop();
+    				animationCommponent->OnUpdate(0.0f);
+    				animationState->autoPlay = false;
+    			}
+    		}
+    	}
+    }
+
 	void TextSplitterComponent::UpdateSymbolsAnimation(float dt)
 	{
         if (!mSymbolsAnimationStarted)
@@ -314,9 +345,21 @@ namespace o2
 			mSymbolsAnimationStarted = false;
 	}
 
+	void TextSplitterComponent::UpdateColor()
+	{
+		for (auto& child : GetActor()->GetChildren())
+		{
+			auto symbolComponent = child->GetComponentInChildren<TextSymbolComponent>();
+			if (symbolComponent)
+				symbolComponent->SetOverrideColor(mColor);
+		}
+	}
+
 	void TextSplitterComponent::OnStart()
 	{
 		Component::OnStart();
+
+    	StopSymbolsAnimation();
 
 		if (mAutoPlaySymbolsAnimation)
 			RunSymbolsAnimation();

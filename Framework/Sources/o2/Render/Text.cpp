@@ -327,7 +327,7 @@ namespace o2
                 if (currentMesh->polyCount + 2 >= currentMesh->GetMaxPolyCount())
                     currentMesh = mMeshes[++currentMeshIdx];
 
-                unsigned long color = mColor.ABGR();
+                unsigned long color = mResultColor.ABGR();
                 Vec2F points[4] =
                 {
                     transf.Transform(symb.mFrame.LeftTop() - mSymbolsSet.mPosition),
@@ -413,9 +413,9 @@ namespace o2
         return transf;
     }
 
-    void Text::ColorChanged()
+    void Text::OnColorChanged()
     {
-        ULong dcolor = mColor.ABGR();
+        ULong dcolor = mResultColor.ABGR();
         for (auto& mesh : mMeshes)
         {
             for (int i = 0; i < (int)mesh->vertexCount; i++)

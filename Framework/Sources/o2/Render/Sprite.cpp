@@ -356,6 +356,7 @@ namespace o2
         mImageAsset = AssetRef<ImageAsset>();
         mMesh.mTexture = TextureRef();
         mColor = color;
+        mResultColor = color * mOverrideColor;
         mCornersColors[0] = Color4::White();
         mCornersColors[1] = Color4::White();
         mCornersColors[2] = Color4::White();
@@ -432,12 +433,12 @@ namespace o2
         UpdateMesh();
     }
 
-    void Sprite::ColorChanged()
+    void Sprite::OnColorChanged()
     {
         UpdateMesh();
     }
 
-    void Sprite::BlendModeChanged()
+    void Sprite::OnBlendModeChanged()
     {
         mMesh.blendMode = mBlendMode;
     }
@@ -455,7 +456,7 @@ namespace o2
 
         ULong rcc[4];
         for (int i = 0; i < 4; i++)
-            rcc[i] = (mColor*mCornersColors[i]).ABGR();
+            rcc[i] = (mResultColor*mCornersColors[i]).ABGR();
 
         static VertexIndex indexes[] ={ 0, 1, 2, 0, 2, 3 };
 
@@ -490,7 +491,7 @@ namespace o2
 
         ULong rcc[4];
         for (int i = 0; i < 4; i++)
-            rcc[i] = (mColor*mCornersColors[i]).ABGR();
+            rcc[i] = (mResultColor*mCornersColors[i]).ABGR();
 
         static VertexIndex indexes[] ={
             0, 1, 5,    0, 5, 4,    1, 2, 6,    1, 6, 5,    2, 3, 7,    2, 7, 6,
@@ -582,7 +583,7 @@ namespace o2
 
         ULong rcc[4];
         for (int i = 0; i < 4; i++)
-            rcc[i] = (mColor*mCornersColors[i]).ABGR();
+            rcc[i] = (mResultColor*mCornersColors[i]).ABGR();
 
         float uvLeft = mTextureSrcRect.left*invTexSize.x;
         float uvRight = mTextureSrcRect.right*invTexSize.x;
@@ -667,7 +668,7 @@ namespace o2
 
         ULong rcc[4];
         for (int i = 0; i < 4; i++)
-            rcc[i] = (mColor*mCornersColors[i]).ABGR();
+            rcc[i] = (mResultColor*mCornersColors[i]).ABGR();
 
         static VertexIndex indexes[] = { 0, 1, 2, 0, 2, 3 };
 
@@ -716,10 +717,10 @@ namespace o2
             invTexSize.Set(1.0f/mMesh.mTexture->GetSize().x, 1.0f/mMesh.mTexture->GetSize().y);
 
         ULong rcc[4];
-        rcc[0] = (mColor*mCornersColors[0]).ABGR();
-        rcc[1] = (mColor*Math::Lerp(mCornersColors[0], mCornersColors[1], coef)).ABGR();
-        rcc[2] = (mColor*Math::Lerp(mCornersColors[3], mCornersColors[2], coef)).ABGR();
-        rcc[3] = (mColor*mCornersColors[3]).ABGR();
+        rcc[0] = (mResultColor*mCornersColors[0]).ABGR();
+        rcc[1] = (mResultColor*Math::Lerp(mCornersColors[0], mCornersColors[1], coef)).ABGR();
+        rcc[2] = (mResultColor*Math::Lerp(mCornersColors[3], mCornersColors[2], coef)).ABGR();
+        rcc[3] = (mResultColor*mCornersColors[3]).ABGR();
 
         static VertexIndex indexes[] ={ 0, 1, 2, 0, 2, 3 };
 
@@ -750,10 +751,10 @@ namespace o2
             invTexSize.Set(1.0f/mMesh.mTexture->GetSize().x, 1.0f/mMesh.mTexture->GetSize().y);
 
         ULong rcc[4];
-        rcc[0] = (mColor*Math::Lerp(mCornersColors[1], mCornersColors[0], coef)).ABGR();
-        rcc[1] = (mColor*mCornersColors[1]).ABGR();
-        rcc[2] = (mColor*mCornersColors[2]).ABGR();
-        rcc[3] = (mColor*Math::Lerp(mCornersColors[2], mCornersColors[3], coef)).ABGR();
+        rcc[0] = (mResultColor*Math::Lerp(mCornersColors[1], mCornersColors[0], coef)).ABGR();
+        rcc[1] = (mResultColor*mCornersColors[1]).ABGR();
+        rcc[2] = (mResultColor*mCornersColors[2]).ABGR();
+        rcc[3] = (mResultColor*Math::Lerp(mCornersColors[2], mCornersColors[3], coef)).ABGR();
 
         static VertexIndex indexes[] ={ 0, 1, 2, 0, 2, 3 };
 
@@ -784,10 +785,10 @@ namespace o2
             invTexSize.Set(1.0f/mMesh.mTexture->GetSize().x, 1.0f/mMesh.mTexture->GetSize().y);
 
         ULong rcc[4];
-        rcc[0] = (mColor*mCornersColors[0]).ABGR();
-        rcc[1] = (mColor*mCornersColors[1]).ABGR();
-        rcc[2] = (mColor*Math::Lerp(mCornersColors[1], mCornersColors[2], coef)).ABGR();
-        rcc[3] = (mColor*Math::Lerp(mCornersColors[0], mCornersColors[3], coef)).ABGR();
+        rcc[0] = (mResultColor*mCornersColors[0]).ABGR();
+        rcc[1] = (mResultColor*mCornersColors[1]).ABGR();
+        rcc[2] = (mResultColor*Math::Lerp(mCornersColors[1], mCornersColors[2], coef)).ABGR();
+        rcc[3] = (mResultColor*Math::Lerp(mCornersColors[0], mCornersColors[3], coef)).ABGR();
 
         static VertexIndex indexes[] ={ 0, 1, 2, 0, 2, 3 };
 
@@ -817,10 +818,10 @@ namespace o2
             invTexSize.Set(1.0f/mMesh.mTexture->GetSize().x, 1.0f/mMesh.mTexture->GetSize().y);
 
         ULong rcc[4];
-        rcc[0] = (mColor*Math::Lerp(mCornersColors[3], mCornersColors[0], coef)).ABGR();
-        rcc[1] = (mColor*Math::Lerp(mCornersColors[2], mCornersColors[1], coef)).ABGR();
-        rcc[2] = (mColor*mCornersColors[2]).ABGR();
-        rcc[3] = (mColor*mCornersColors[3]).ABGR();
+        rcc[0] = (mResultColor*Math::Lerp(mCornersColors[3], mCornersColors[0], coef)).ABGR();
+        rcc[1] = (mResultColor*Math::Lerp(mCornersColors[2], mCornersColors[1], coef)).ABGR();
+        rcc[2] = (mResultColor*mCornersColors[2]).ABGR();
+        rcc[3] = (mResultColor*mCornersColors[3]).ABGR();
 
         static VertexIndex indexes[] ={ 0, 1, 2, 0, 2, 3 };
 
@@ -852,7 +853,7 @@ namespace o2
 
         ULong cornerResColr[4];
         for (int i = 0; i < 4; i++)
-            cornerResColr[i] = (mColor*mCornersColors[i]).ABGR();
+            cornerResColr[i] = (mResultColor*mCornersColors[i]).ABGR();
 
         float uLeft = mTextureSrcRect.left*invTexSize.x;
         float uRight = mTextureSrcRect.right*invTexSize.x;
@@ -863,8 +864,8 @@ namespace o2
         Vec2F zeroPos    = mTransform.origin + mTransform.xv*0.5f + mTransform.yv;
         Vec2F centerPos  = mTransform.origin + mTransform.xv*0.5f + mTransform.yv*0.5f;
 
-        ULong centerResColr = (mColor*((mCornersColors[0] + mCornersColors[1] + mCornersColors[2] + mCornersColors[3])*0.25f)).ABGR();
-        ULong zeroResColor = (mColor*((mCornersColors[0] + mCornersColors[1])*0.5f)).ABGR();
+        ULong centerResColr = (mResultColor*((mCornersColors[0] + mCornersColors[1] + mCornersColors[2] + mCornersColors[3])*0.25f)).ABGR();
+        ULong zeroResColor = (mResultColor*((mCornersColors[0] + mCornersColors[1])*0.5f)).ABGR();
         float uZero = (uLeft + uRight)*0.5f;
         float uCenter = uZero;
         float vCenter = (vUp + vDown)*0.5f;
@@ -874,7 +875,7 @@ namespace o2
         {
             float dirCoef = 0.5f + dir.x/dir.y*0.5f;
             Vec2F dirPoint = mTransform.origin + mTransform.xv*dirCoef + mTransform.yv;
-            ULong dirColor = (mColor*Math::Lerp(mCornersColors[0], mCornersColors[1], dirCoef)).ABGR();
+            ULong dirColor = (mResultColor*Math::Lerp(mCornersColors[0], mCornersColors[1], dirCoef)).ABGR();
             float uDir = Math::Lerp(uLeft, uRight, dirCoef);
 
             mMesh.vertices[0].Set(zeroPos, zeroResColor, uZero, vUp);
@@ -891,7 +892,7 @@ namespace o2
         {
             float dirCoef = 0.5f + dir.y/dir.x*0.5f;
             Vec2F dirPoint = mTransform.origin + mTransform.xv + mTransform.yv*dirCoef;
-            ULong dirColor = (mColor*Math::Lerp(mCornersColors[2], mCornersColors[1], dirCoef)).ABGR();
+            ULong dirColor = (mResultColor*Math::Lerp(mCornersColors[2], mCornersColors[1], dirCoef)).ABGR();
             float vDir = Math::Lerp(vDown, vUp, dirCoef);
 
             Vec2F cornerPos1 = mTransform.origin + mTransform.yv + mTransform.xv;
@@ -911,7 +912,7 @@ namespace o2
         {
             float dirCoef = 0.5f - dir.x/dir.y*0.5f;
             Vec2F dirPoint = mTransform.origin + mTransform.xv*dirCoef;
-            ULong dirColor = (mColor*Math::Lerp(mCornersColors[3], mCornersColors[2], dirCoef)).ABGR();
+            ULong dirColor = (mResultColor*Math::Lerp(mCornersColors[3], mCornersColors[2], dirCoef)).ABGR();
             float uDir = Math::Lerp(uLeft, uRight, dirCoef);
 
             Vec2F cornerPos1 = mTransform.origin + mTransform.yv + mTransform.xv;
@@ -933,7 +934,7 @@ namespace o2
         {
             float dirCoef = 0.5f - dir.y/dir.x*0.5f;
             Vec2F dirPoint = mTransform.origin + mTransform.yv*dirCoef;
-            ULong dirColor = (mColor*Math::Lerp(mCornersColors[3], mCornersColors[0], dirCoef)).ABGR();
+            ULong dirColor = (mResultColor*Math::Lerp(mCornersColors[3], mCornersColors[0], dirCoef)).ABGR();
             float vDir = Math::Lerp(vDown, vUp, dirCoef);
 
             Vec2F cornerPos1 = mTransform.origin + mTransform.yv + mTransform.xv;
@@ -957,7 +958,7 @@ namespace o2
         {
             float dirCoef = 0.5f + dir.x/dir.y*0.5f;
             Vec2F dirPoint = mTransform.origin + mTransform.xv*dirCoef + mTransform.yv;
-            ULong dirColor = (mColor*Math::Lerp(mCornersColors[0], mCornersColors[1], dirCoef)).ABGR();
+            ULong dirColor = (mResultColor*Math::Lerp(mCornersColors[0], mCornersColors[1], dirCoef)).ABGR();
             float uDir = Math::Lerp(uLeft, uRight, dirCoef);
 
             Vec2F cornerPos0 = mTransform.origin + mTransform.yv;
@@ -992,7 +993,7 @@ namespace o2
 
         ULong cornerResColr[4];
         for (int i = 0; i < 4; i++)
-            cornerResColr[i] = (mColor*mCornersColors[i]).ABGR();
+            cornerResColr[i] = (mResultColor*mCornersColors[i]).ABGR();
 
         float uLeft = mTextureSrcRect.left*invTexSize.x;
         float uRight = mTextureSrcRect.right*invTexSize.x;
@@ -1003,8 +1004,8 @@ namespace o2
         Vec2F zeroPos   = mTransform.origin + mTransform.xv*0.5f + mTransform.yv;
         Vec2F centerPos = mTransform.origin + mTransform.xv*0.5f + mTransform.yv*0.5f;
 
-        ULong centerResColr = (mColor*((mCornersColors[0] + mCornersColors[1] + mCornersColors[2] + mCornersColors[3])*0.25f)).ABGR();
-        ULong zeroResColor = (mColor*((mCornersColors[0] + mCornersColors[1])*0.5f)).ABGR();
+        ULong centerResColr = (mResultColor*((mCornersColors[0] + mCornersColors[1] + mCornersColors[2] + mCornersColors[3])*0.25f)).ABGR();
+        ULong zeroResColor = (mResultColor*((mCornersColors[0] + mCornersColors[1])*0.5f)).ABGR();
         float uZero = (uLeft + uRight)*0.5f;
         float uCenter = uZero;
         float vCenter = (vUp + vDown)*0.5f;
@@ -1014,7 +1015,7 @@ namespace o2
         {
             float dirCoef = 0.5f + dir.x/dir.y*0.5f;
             Vec2F dirPoint = mTransform.origin + mTransform.xv*dirCoef + mTransform.yv;
-            ULong dirColor = (mColor*Math::Lerp(mCornersColors[0], mCornersColors[1], dirCoef)).ABGR();
+            ULong dirColor = (mResultColor*Math::Lerp(mCornersColors[0], mCornersColors[1], dirCoef)).ABGR();
             float uDir = Math::Lerp(uLeft, uRight, dirCoef);
 
             mMesh.vertices[0].Set(zeroPos, zeroResColor, uZero, vUp);
@@ -1031,7 +1032,7 @@ namespace o2
         {
             float dirCoef = 0.5f - dir.y/dir.x*0.5f;
             Vec2F dirPoint = mTransform.origin + mTransform.yv*dirCoef;
-            ULong dirColor = (mColor*Math::Lerp(mCornersColors[2], mCornersColors[1], dirCoef)).ABGR();
+            ULong dirColor = (mResultColor*Math::Lerp(mCornersColors[2], mCornersColors[1], dirCoef)).ABGR();
             float vDir = Math::Lerp(vDown, vUp, dirCoef);
 
             Vec2F cornerPos0 = mTransform.origin + mTransform.yv;
@@ -1051,7 +1052,7 @@ namespace o2
         {
             float dirCoef = 0.5f - dir.x/dir.y*0.5f;
             Vec2F dirPoint = mTransform.origin + mTransform.xv*dirCoef;
-            ULong dirColor = (mColor*Math::Lerp(mCornersColors[3], mCornersColors[2], dirCoef)).ABGR();
+            ULong dirColor = (mResultColor*Math::Lerp(mCornersColors[3], mCornersColors[2], dirCoef)).ABGR();
             float uDir = Math::Lerp(uLeft, uRight, dirCoef);
 
             Vec2F cornerPos0 = mTransform.origin + mTransform.yv;
@@ -1073,7 +1074,7 @@ namespace o2
         {
             float dirCoef = 0.5f + dir.y/dir.x*0.5f;
             Vec2F dirPoint = mTransform.origin + mTransform.yv*dirCoef + mTransform.xv;
-            ULong dirColor = (mColor*Math::Lerp(mCornersColors[3], mCornersColors[0], dirCoef)).ABGR();
+            ULong dirColor = (mResultColor*Math::Lerp(mCornersColors[3], mCornersColors[0], dirCoef)).ABGR();
             float vDir = Math::Lerp(vDown, vUp, dirCoef);
 
             Vec2F cornerPos0 = mTransform.origin + mTransform.yv;
@@ -1097,7 +1098,7 @@ namespace o2
         {
             float dirCoef = 0.5f + dir.x/dir.y*0.5f;
             Vec2F dirPoint = mTransform.origin + mTransform.xv*dirCoef + mTransform.yv;
-            ULong dirColor = (mColor*Math::Lerp(mCornersColors[0], mCornersColors[1], dirCoef)).ABGR();
+            ULong dirColor = (mResultColor*Math::Lerp(mCornersColors[0], mCornersColors[1], dirCoef)).ABGR();
             float uDir = Math::Lerp(uLeft, uRight, dirCoef);
 
             Vec2F cornerPos0 = mTransform.origin + mTransform.yv;

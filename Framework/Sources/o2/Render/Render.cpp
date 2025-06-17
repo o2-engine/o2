@@ -340,6 +340,14 @@ namespace o2
 
     void Render::EnableScissorTest(const RectI& rect)
     {
+        float scale = mCurrentRenderTarget ? 1.0f : o2Application.GetGraphicsScale();
+        Vec2I resolution = mCurrentResolution*scale;
+        RectI invRect(rect.left*2, -rect.top*2, rect.right*2, -rect.bottom*2);
+        
+        // DrawRectFrame(rect, Color4::Red());
+        // DrawRectFrame(invRect, Color4::Blue());
+        
+        
         DrawPrimitives();
 
         RectI summaryScissorRect = rect;
@@ -582,7 +590,10 @@ namespace o2
 
     RectI Render::CalculateScreenSpaceScissorRect(const RectF& cameraSpaceScissorRect) const
     {
-        Basis defaultCameraBasis((Vec2F)mCurrentResolution*-0.5f, Vec2F((float)mCurrentResolution.x, 0.0f), Vec2F(0.0f, (float)mCurrentResolution.y));
+        float scale = mCurrentRenderTarget ? o2Application.GetGraphicsScale() : 1.0f;
+        Vec2F resolution = mCurrentResolution*scale;
+        
+        Basis defaultCameraBasis((Vec2F)resolution*-0.5f, Vec2F((float)resolution.x, 0.0f), Vec2F(0.0f, (float)resolution.y));
         Basis camTransf = mCamera.GetBasis().Inverted()*defaultCameraBasis;
         Basis scissorBasis(cameraSpaceScissorRect.LeftBottom(), Vec2F(cameraSpaceScissorRect.Width(), 0.0f), Vec2F(0.0f, cameraSpaceScissorRect.Height()));
         Basis screenScissorBasis = scissorBasis * camTransf;

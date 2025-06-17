@@ -93,10 +93,8 @@ namespace o2
 
     Color4 Color4::operator/(const Color4& v) const
     {
-        return Color4((int)(255.0f*(RF()/v.RF())),
-            (int)(255.0f*(GF()/v.GF())),
-                      (int)(255.0f*(BF()/v.BF())),
-                      (int)(255.0f*(AF()/v.AF())));
+        return Color4((int)(255.0f*(RF()/v.RF())), (int)(255.0f*(GF()/v.GF())),
+                      (int)(255.0f*(BF()/v.BF())), (int)(255.0f*(AF()/v.AF())));
     }
 
     Color4 Color4::operator/=(const Color4& v)

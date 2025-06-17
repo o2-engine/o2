@@ -263,7 +263,7 @@ namespace o2
         Basis CalculateTextBasis() const;
 
         // Called when color was changed
-        void ColorChanged() override;
+        void OnColorChanged() override;
 
         // Called when basis was changed
         void BasisChanged() override;
@@ -348,7 +348,7 @@ CLASS_METHODS_META(o2::Text)
     FUNCTION().PROTECTED().SIGNATURE(void, TransformMesh, const Basis&);
     FUNCTION().PROTECTED().SIGNATURE(void, PrepareMesh, int);
     FUNCTION().PROTECTED().SIGNATURE(Basis, CalculateTextBasis);
-    FUNCTION().PROTECTED().SIGNATURE(void, ColorChanged);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnColorChanged);
     FUNCTION().PROTECTED().SIGNATURE(void, BasisChanged);
     FUNCTION().PROTECTED().SIGNATURE(void, OnDeserialized, const DataValue&);
 }

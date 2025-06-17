@@ -179,30 +179,36 @@ namespace o2
                 ++it;
         }
 
-        for (auto it = mInstance->mUnresolvedAssetActorsRefs.Begin(); it != mInstance->mUnresolvedAssetActorsRefs.End();)
+        auto unresolvedAssetActorsRefs = mInstance->mUnresolvedAssetActorsRefs;
+        for (auto it = unresolvedAssetActorsRefs.Begin(); it != unresolvedAssetActorsRefs.End();)
         {
             auto& unresolvedAssetActor = *it;
             if (auto actor = o2Scene.GetAssetActorByID(unresolvedAssetActor.sourceAssetId))
             {
                 unresolvedAssetActor.target->Set(actor.Get());
-                it = mInstance->mUnresolvedAssetActorsRefs.Remove(it);
+                it = unresolvedAssetActorsRefs.Remove(it);
             }
             else
                 ++it;
         }
+        
+        mInstance->mUnresolvedAssetActorsRefs = unresolvedAssetActorsRefs;
 
-        for (auto it = mInstance->mUnresolvedComponentsRefs.Begin(); it != mInstance->mUnresolvedComponentsRefs.End();)
+        auto unresolvedComponentsRefs = mInstance->mUnresolvedComponentsRefs;
+        for (auto it = unresolvedComponentsRefs.Begin(); it != unresolvedComponentsRefs.End();)
         {
             auto& unresolvedComponent = *it;
             Component* res = nullptr;
             if (mInstance->mNewComponents.TryGetValue(unresolvedComponent.sourceId, res))
             {
                 unresolvedComponent.target->Set(res);
-                it = mInstance->mUnresolvedComponentsRefs.Remove(it);
+                it = unresolvedComponentsRefs.Remove(it);
             }
             else
                 ++it;
         }
+        
+        mInstance->mUnresolvedComponentsRefs = unresolvedComponentsRefs;
 
         if (mInstance->mLockDepth == 0)
         {

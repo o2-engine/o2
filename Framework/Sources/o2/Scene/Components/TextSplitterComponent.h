@@ -33,6 +33,9 @@ namespace o2
 		PROPERTY(float, symbolsAnimationDelay, SetSymbolsAnimationDelay, GetSymbolsAnimationDelay);        // Symbols animation delay
 		PROPERTY(bool, autoPlaySymbolsAnimation, SetAutoPlaySymbolsAnimation, IsAutoPlaySymbolsAnimation); // If symbols animation should be started automatically
 
+		PROPERTY(Color4, color, SetColor, GetColor);                     // Color of all symbols
+		PROPERTY(float, transparency, SetTransparency, GetTransparency); // Transparency of all symbols @RANGE(0, 1)
+
     public:
 		// Default constructor
         TextSplitterComponent();
@@ -118,6 +121,18 @@ namespace o2
 		// Returns is symbols animation should be started automatically
     	bool IsAutoPlaySymbolsAnimation() const;
 
+		// Sets color of all symbols
+		void SetColor(const Color4& color);
+
+		// Returns color of all symbols
+		Color4 GetColor() const;
+
+		// Sets transparency of all symbols
+		void SetTransparency(float transparency);
+
+		// Returns transparency of all symbols
+		float GetTransparency() const;
+
     	// Returns name of component
     	static String GetName();
 
@@ -147,8 +162,10 @@ namespace o2
 		bool  mAutoPlaySymbolsAnimation = false; // If symbols animation should be started automatically @SERIALIZABLE
 		float mSymbolsAnimationDelay = 0.05f;    // Symbols animation delay, used to run symbols animation @SERIALIZABLE
 		bool  mSymbolsAnimationStarted = false;  // If symbols animation was started
-		int   mSymbolAnimationIndex = 0;         // Current symbol animation index
-		float mSymbolsAnimationTime = 0.0f;      // Symbols animation time
+		int   mSymbolAnimationIndex = 0;         // Current symbol animation index 
+		float mSymbolsAnimationTime = 0.0f;      // Symbols animation time 
+
+		Color4 mColor = Color4::White();         // Color of all symbols @SERIALIZABLE
 
 		Vec2F mLastSize; // Last size of text, used to check if rebuild is needed
 
@@ -180,8 +197,14 @@ namespace o2
 		// Checks test's characters in font and rebuilds mesh. Used when fond is resetting
 		void CheckCharactersAndRebuild();
 
+    	// Stops animations on symbold
+    	void StopSymbolsAnimation();
+
 		// Updates symbols animation, called every frame
 		void UpdateSymbolsAnimation(float dt);
+
+		// Updates color of all symbol components
+		void UpdateColor();
     };
 }
 // --- META ---
@@ -205,6 +228,8 @@ CLASS_FIELDS_META(o2::TextSplitterComponent)
     FIELD().PUBLIC().NAME(dotsEndings);
     FIELD().PUBLIC().NAME(symbolsAnimationDelay);
     FIELD().PUBLIC().NAME(autoPlaySymbolsAnimation);
+    FIELD().PUBLIC().NAME(color);
+    FIELD().PUBLIC().RANGE_ATTRIBUTE(0, 1).NAME(transparency);
     FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().NAME(mFont);
     FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().NAME(mSymbolPrototype);
     FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().NAME(mText);
@@ -220,6 +245,7 @@ CLASS_FIELDS_META(o2::TextSplitterComponent)
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mSymbolsAnimationStarted);
     FIELD().PROTECTED().DEFAULT_VALUE(0).NAME(mSymbolAnimationIndex);
     FIELD().PROTECTED().DEFAULT_VALUE(0.0f).NAME(mSymbolsAnimationTime);
+    FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(Color4::White()).NAME(mColor);
     FIELD().PROTECTED().NAME(mLastSize);
 }
 END_META;
@@ -253,6 +279,10 @@ CLASS_METHODS_META(o2::TextSplitterComponent)
     FUNCTION().PUBLIC().SIGNATURE(float, GetSymbolsAnimationDelay);
     FUNCTION().PUBLIC().SIGNATURE(void, SetAutoPlaySymbolsAnimation, bool);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsAutoPlaySymbolsAnimation);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetColor, const Color4&);
+    FUNCTION().PUBLIC().SIGNATURE(Color4, GetColor);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetTransparency, float);
+    FUNCTION().PUBLIC().SIGNATURE(float, GetTransparency);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetName);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetCategory);
     FUNCTION().PROTECTED().SIGNATURE(void, OnStart);
@@ -264,7 +294,9 @@ CLASS_METHODS_META(o2::TextSplitterComponent)
     FUNCTION().PROTECTED().SIGNATURE(void, RebuildCharacters);
     FUNCTION().PROTECTED().SIGNATURE(void, ClearSymbols);
     FUNCTION().PROTECTED().SIGNATURE(void, CheckCharactersAndRebuild);
+    FUNCTION().PROTECTED().SIGNATURE(void, StopSymbolsAnimation);
     FUNCTION().PROTECTED().SIGNATURE(void, UpdateSymbolsAnimation, float);
+    FUNCTION().PROTECTED().SIGNATURE(void, UpdateColor);
 }
 END_META;
 // --- END META ---

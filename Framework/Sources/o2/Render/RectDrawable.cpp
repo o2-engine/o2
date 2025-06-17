@@ -22,8 +22,8 @@ namespace o2
         mColor = other.mColor;
         mEnabled = other.mEnabled;
 
-        ColorChanged();
-        EnableChanged();
+        OnColorChanged();
+        OnEnableChanged();
 
         return *this;
     }
@@ -41,7 +41,7 @@ namespace o2
     void IRectDrawable::SetColor(const Color4& color)
     {
         mColor = color;
-        ColorChanged();
+        OnColorChanged();
     }
 
     Color4 IRectDrawable::GetColor() const
@@ -49,10 +49,21 @@ namespace o2
         return mColor;
     }
 
+    void IRectDrawable::SetOverrideColor(const Color4 &color)
+    {
+        mOverrideColor = color;
+        UpdateColor();
+    }
+
+    Color4 IRectDrawable::GetOverrideColor() const
+    {
+        return mOverrideColor;
+    }
+
     void IRectDrawable::SetTransparency(float transparency)
     {
         mColor.SetAF(transparency);
-        ColorChanged();
+        UpdateColor();
     }
 
     float IRectDrawable::GetTransparency() const
@@ -63,7 +74,7 @@ namespace o2
     void IRectDrawable::SetBlendMode(BlendMode blendMode)
     {
         mBlendMode = blendMode;
-        BlendModeChanged();
+        OnBlendModeChanged();
     }
 
     BlendMode IRectDrawable::GetBlendMode() const
@@ -74,7 +85,7 @@ namespace o2
     void IRectDrawable::SetEnabled(bool enabled)
     {
         mEnabled = enabled;
-        EnableChanged();
+        OnEnableChanged();
     }
 
     bool IRectDrawable::IsEnabled() const
@@ -85,6 +96,12 @@ namespace o2
     bool IRectDrawable::IsUnderPoint(const Vec2F& point)
     {
         return mDrawingScissorRect.IsInside(point) && Transform::IsPointInside(point);
+    }
+
+    void IRectDrawable::UpdateColor()
+    {
+        mResultColor = mColor * mOverrideColor;
+        OnColorChanged();
     }
 
     FunctionalRectDrawable::FunctionalRectDrawable(const Function<void(const Basis& transform, const Color4& color)>& draw, 

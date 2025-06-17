@@ -15,10 +15,11 @@ namespace o2
     {
     public:
         PROPERTIES(IRectDrawable);
-        PROPERTY(Color4, color, SetColor, GetColor);                     // Color property @SCRIPTABLE
-        PROPERTY(float, transparency, SetTransparency, GetTransparency); // Transparency property, changing alpha in color @SCRIPTABLE @RANGE(0, 1)
-        PROPERTY(BlendMode, blendMode, SetBlendMode, GetBlendMode);      // Blend mode property @SCRIPTABLE
-        PROPERTY(bool, enabled, SetEnabled, IsEnabled);                  // Enable property @SCRIPTABLE
+        PROPERTY(Color4, color, SetColor, GetColor);                         // Color property @SCRIPTABLE
+        PROPERTY(Color4, overrideColor, SetOverrideColor, GetOverrideColor); // Override color property, used to modify color from outside @SCRIPTABLE
+        PROPERTY(float, transparency, SetTransparency, GetTransparency);     // Transparency property, changing alpha in color @SCRIPTABLE @RANGE(0, 1)
+        PROPERTY(BlendMode, blendMode, SetBlendMode, GetBlendMode);          // Blend mode property @SCRIPTABLE
+        PROPERTY(bool, enabled, SetEnabled, IsEnabled);                      // Enable property @SCRIPTABLE
 
     public:
         // Constructor
@@ -30,7 +31,7 @@ namespace o2
         IRectDrawable(const IRectDrawable& other);
 
         // Virtual destructor
-        virtual ~IRectDrawable() {}
+        ~IRectDrawable() override {}
 
         // Assign operator
         IRectDrawable& operator=(const IRectDrawable& other);
@@ -49,6 +50,12 @@ namespace o2
 
         // Returns color
         virtual Color4 GetColor() const;
+
+        // Sets color override, used to modify color from outside
+        virtual void SetOverrideColor(const Color4& color);
+
+        // Returns color override, used to modify color from outside
+        virtual Color4 GetOverrideColor() const;
 
         // Sets transparency. Changing color alpha
         virtual void SetTransparency(float transparency);
@@ -75,19 +82,25 @@ namespace o2
         CLONEABLE_REF(IRectDrawable);
 
     protected:
-        Color4    mColor;                         // Color @SERIALIZABLE
-        BlendMode mBlendMode = BlendMode::Normal; // Blend mode @SERIALIZABLE
-        bool      mEnabled = true;                // True, when drawable enabled and needs to draw @SERIALIZABLE
+        Color4    mColor = Color4::White();         // Color @SERIALIZABLE
+        Color4    mOverrideColor = Color4::White(); // Override color, used to modify color from outside
+        Color4    mResultColor;                     // Result color, calculated from color and override color
+
+        BlendMode mBlendMode = BlendMode::Normal;   // Blend mode @SERIALIZABLE
+        bool      mEnabled = true;                  // True, when drawable enabled and needs to draw @SERIALIZABLE
 
     protected:
+        // Updates result color from color and override color
+        void UpdateColor();
+
         // Called when color was changed
-        virtual void ColorChanged() {}
+        virtual void OnColorChanged() {}
 
         // Called when blend mode was changed
-        virtual void BlendModeChanged() {}
+        virtual void OnBlendModeChanged() {}
 
         // Called when enabling changed
-        virtual void EnableChanged() {}
+        virtual void OnEnableChanged() {}
     };
 
     // -----------------------------
@@ -130,10 +143,13 @@ END_META;
 CLASS_FIELDS_META(o2::IRectDrawable)
 {
     FIELD().PUBLIC().SCRIPTABLE_ATTRIBUTE().NAME(color);
+    FIELD().PUBLIC().SCRIPTABLE_ATTRIBUTE().NAME(overrideColor);
     FIELD().PUBLIC().RANGE_ATTRIBUTE(0, 1).SCRIPTABLE_ATTRIBUTE().NAME(transparency);
     FIELD().PUBLIC().SCRIPTABLE_ATTRIBUTE().NAME(blendMode);
     FIELD().PUBLIC().SCRIPTABLE_ATTRIBUTE().NAME(enabled);
-    FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().NAME(mColor);
+    FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(Color4::White()).NAME(mColor);
+    FIELD().PROTECTED().DEFAULT_VALUE(Color4::White()).NAME(mOverrideColor);
+    FIELD().PROTECTED().NAME(mResultColor);
     FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(BlendMode::Normal).NAME(mBlendMode);
     FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(true).NAME(mEnabled);
 }
@@ -146,6 +162,8 @@ CLASS_METHODS_META(o2::IRectDrawable)
     FUNCTION().PUBLIC().SIGNATURE(void, Draw);
     FUNCTION().PUBLIC().SIGNATURE(void, SetColor, const Color4&);
     FUNCTION().PUBLIC().SIGNATURE(Color4, GetColor);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetOverrideColor, const Color4&);
+    FUNCTION().PUBLIC().SIGNATURE(Color4, GetOverrideColor);
     FUNCTION().PUBLIC().SIGNATURE(void, SetTransparency, float);
     FUNCTION().PUBLIC().SIGNATURE(float, GetTransparency);
     FUNCTION().PUBLIC().SIGNATURE(void, SetBlendMode, BlendMode);
@@ -153,9 +171,10 @@ CLASS_METHODS_META(o2::IRectDrawable)
     FUNCTION().PUBLIC().SIGNATURE(void, SetEnabled, bool);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsEnabled);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsUnderPoint, const Vec2F&);
-    FUNCTION().PROTECTED().SIGNATURE(void, ColorChanged);
-    FUNCTION().PROTECTED().SIGNATURE(void, BlendModeChanged);
-    FUNCTION().PROTECTED().SIGNATURE(void, EnableChanged);
+    FUNCTION().PROTECTED().SIGNATURE(void, UpdateColor);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnColorChanged);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnBlendModeChanged);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnEnableChanged);
 }
 END_META;
 

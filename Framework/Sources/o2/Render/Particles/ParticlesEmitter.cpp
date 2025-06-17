@@ -155,7 +155,7 @@ namespace o2
 #endif
     }
 
-    void ParticlesEmitter::BlendModeChanged()
+    void ParticlesEmitter::OnBlendModeChanged()
     {
         if (mParticlesContainer)
             mParticlesContainer->SetBlendMode(mBlendMode);
