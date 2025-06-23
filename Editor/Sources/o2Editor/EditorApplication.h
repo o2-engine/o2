@@ -121,6 +121,9 @@ namespace Editor
         // Updates scene with fixed delta time
         void FixedUpdateScene(float dt) override;
 
+        // Updates task manager
+        void UpdateTaskManager(float dt) override;
+
         // Draws scene
         void DrawScene() override;
 
@@ -220,6 +223,7 @@ CLASS_METHODS_META(Editor::EditorApplication)
     FUNCTION().PROTECTED().SIGNATURE(void, PostUpdatePhysics);
     FUNCTION().PROTECTED().SIGNATURE(void, UpdateScene, float);
     FUNCTION().PROTECTED().SIGNATURE(void, FixedUpdateScene, float);
+    FUNCTION().PROTECTED().SIGNATURE(void, UpdateTaskManager, float);
     FUNCTION().PROTECTED().SIGNATURE(void, DrawScene);
     FUNCTION().PROTECTED().SIGNATURE(void, DrawUIManager);
     FUNCTION().PROTECTED().SIGNATURE(void, DrawDebug);

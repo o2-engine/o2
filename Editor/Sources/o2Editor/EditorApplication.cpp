@@ -494,6 +494,16 @@ namespace Editor
             mScene->FixedUpdate(dt);
     }
 
+    void EditorApplication::UpdateTaskManager(float dt)
+    {
+        PROFILE_SAMPLE_FUNC();
+
+        ForcePopEditorScopeOnStack scope;
+
+        if (mUpdateStep)
+            mTaskManager->Update(dt);
+    }
+
     void EditorApplication::DrawScene()
     {
     }

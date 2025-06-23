@@ -119,6 +119,11 @@ namespace o2
         mPhysics->PostUpdate();
     }
 
+    void Application::UpdateTaskManager(float dt)
+    {
+        mTaskManager->Update(dt);
+    }
+
     void Application::InitalizeSystems()
     {
         PROFILE_SAMPLE_FUNC();
@@ -205,7 +210,7 @@ namespace o2
 
         mTime->Update(realDt);
         UpdateDebug(dt);
-        mTaskManager->Update(dt);
+        UpdateTaskManager(dt);
         UpdateEventSystem();
 
         mRender->Begin();

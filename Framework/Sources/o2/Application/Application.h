@@ -262,6 +262,9 @@ namespace o2
         // After update physics
         virtual void PostUpdatePhysics();
 
+        // Updates task manager
+        virtual void UpdateTaskManager(float dt);
+
         // Draws scene
         virtual void DrawScene();
 
@@ -437,6 +440,7 @@ CLASS_METHODS_META(o2::Application)
     FUNCTION().PROTECTED().SIGNATURE(void, PreUpdatePhysics);
     FUNCTION().PROTECTED().SIGNATURE(void, UpdatePhysics, float);
     FUNCTION().PROTECTED().SIGNATURE(void, PostUpdatePhysics);
+    FUNCTION().PROTECTED().SIGNATURE(void, UpdateTaskManager, float);
     FUNCTION().PROTECTED().SIGNATURE(void, DrawScene);
     FUNCTION().PROTECTED().SIGNATURE(void, UpdateEventSystem);
     FUNCTION().PROTECTED().SIGNATURE(void, PostUpdateEventSystem);

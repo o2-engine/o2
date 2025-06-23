@@ -111,7 +111,7 @@ namespace Editor
 
         mStepButton = o2UI.CreateWidget<Button>("step");
         mStepButton->onClick = [this]() { OnStepPressed(); };
-        *mStepButton->layout = WidgetLayout::Based(BaseCorner::Left, Vec2F(20, 20), Vec2F(39, 1));
+        *mStepButton->layout = WidgetLayout::Based(BaseCorner::Right, Vec2F(20, 20), Vec2F(-115, 1));
         mStepButton->shortcut = ShortcutKeys(VK_F10);
         mPlayPanel->AddChild(mStepButton);
 
@@ -126,19 +126,13 @@ namespace Editor
         auto playPanelPlayStateAnim = mmake<AnimationClip>();
 
         *playPanelPlayStateAnim->AddTrack<float>("layout/offsetRight") =
-            AnimationTrack<float>::EaseInOut(149.0f, 183.0f, 0.3f);
+            AnimationTrack<float>::EaseInOut(169.0f, 183.0f, 0.3f);
 
         auto visiblePauseBtnAnim = playPanelPlayStateAnim->AddTrack<bool>("child/pause/enabled");
         visiblePauseBtnAnim->AddKey(0.0f, false);
         visiblePauseBtnAnim->AddKey(0.1f, false);
         visiblePauseBtnAnim->AddKey(0.11f, true);
         visiblePauseBtnAnim->AddKey(0.3f, true);
-
-        auto visibleStepBtnAnim = playPanelPlayStateAnim->AddTrack<bool>("child/step/enabled");
-        visibleStepBtnAnim->AddKey(0.0f, false);
-        visibleStepBtnAnim->AddKey(0.25f, false);
-        visibleStepBtnAnim->AddKey(0.26f, true);
-        visibleStepBtnAnim->AddKey(0.3f, true);
 
         mPlayPanel->AddState("playing", playPanelPlayStateAnim);
 
@@ -227,6 +221,7 @@ namespace Editor
 
     void ToolsPanel::OnStepPressed()
     {
+        o2EditorApplication.SetPlaying(true);
         o2EditorApplication.isPaused = true;
         o2EditorApplication.step = true;
     }
