@@ -49,6 +49,9 @@ namespace o2
         // Sets state and initializes references
         void SetState(const Ref<AnimationGraphState>& state);
 
+		// Called when transition changed, makes graph asset dirty
+        void OnChanged();
+
         friend class AnimationGraphState;
     };
 
@@ -130,7 +133,10 @@ namespace o2
         void ReinitTransitions();
 
         // Sets graph and initializes references
-        void SetGraph(const Ref<AnimationStateGraphAsset>& graph);
+		void SetGraph(const Ref<AnimationStateGraphAsset>& graph);
+
+		// Called when state changed, makes graph asset dirty
+		void OnChanged();
 
         friend class AnimationGraphTransition;
         friend class AnimationStateGraphAsset;
@@ -165,6 +171,7 @@ CLASS_METHODS_META(o2::AnimationGraphTransition)
     FUNCTION().PUBLIC().SIGNATURE(Ref<AnimationGraphState>, GetDestinationState);
     FUNCTION().PUBLIC().SIGNATURE(Ref<AnimationGraphState>, GetSourceState);
     FUNCTION().PROTECTED().SIGNATURE(void, SetState, const Ref<AnimationGraphState>&);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnChanged);
 }
 END_META;
 
@@ -203,6 +210,7 @@ CLASS_METHODS_META(o2::AnimationGraphState)
     FUNCTION().PUBLIC().SIGNATURE(Vec2F, GetPosition);
     FUNCTION().PROTECTED().SIGNATURE(void, ReinitTransitions);
     FUNCTION().PROTECTED().SIGNATURE(void, SetGraph, const Ref<AnimationStateGraphAsset>&);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnChanged);
 }
 END_META;
 

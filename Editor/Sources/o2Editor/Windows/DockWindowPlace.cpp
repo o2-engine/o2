@@ -116,7 +116,7 @@ namespace Editor
         mDragHandleAreaMax = mDragHandleLayoutMax.Calculate(layout->GetWorldRect());
     }
 
-    TwoDirection DockWindowPlace::GetResizibleDir() const
+    TwoDirection DockWindowPlace::GetResizibleDir() const                                                              
     {
         return mResizibleDir;
     }

@@ -3035,7 +3035,175 @@ namespace Editor
         o2UI.AddWidgetStyle(sample, "menu properties");
     }
 
-    void EditorUIStyleBuilder::RebuildAddKeyButton()
+	void EditorUIStyleBuilder::RebuildNewAssetMenuButton()
+	{
+		Ref<Button> sample = mmake<Button>();
+		sample->layout->minSize = Vec2F(20, 20);
+
+		auto backLayer = sample->AddLayer("regularBack", mmake<Sprite>("ui/UI4_panel_button.png"),
+										  Layout::BothStretch(-4, -4, -5, -5));
+
+		auto selectLayer = sample->AddLayer("hover", mmake<Sprite>("ui/UI4_panel_button_select.png"),
+											Layout::BothStretch(-4, -4, -5, -5));
+
+		auto pressedLayer = sample->AddLayer("pressed", mmake<Sprite>("ui/UI4_panel_button_pressed.png"),
+											 Layout::BothStretch(-4, -4, -5, -5));
+
+		auto focusLayer = sample->AddLayer("focused", mmake<Sprite>("ui/UI4_panel_button_focus.png"),
+										   Layout::BothStretch(-4, -4, -5, -5));
+
+		auto iconLayer = sample->AddLayer("icon", mmake<Sprite>("ui/UI4_menu_new_asset.png"),
+										  Layout::Based(BaseCorner::Center, Vec2F(20, 20), Vec2F(0, 1)));
+
+
+		sample->AddState("hover", AnimationClip::EaseInOut("layer/hover/transparency", 0.0f, 1.0f, 0.1f))
+			->offStateAnimationSpeed = 1.0f / 4.0f;
+
+		sample->AddState("pressed", AnimationClip::EaseInOut("layer/pressed/transparency", 0.0f, 1.0f, 0.05f))
+			->offStateAnimationSpeed = 0.5f;
+
+		sample->AddState("focused", AnimationClip::EaseInOut("layer/focused/transparency", 0.0f, 1.0f, 0.05f))
+			->offStateAnimationSpeed = 0.5f;
+
+		o2UI.AddWidgetStyle(sample, "menu new asset");
+	}
+
+	void EditorUIStyleBuilder::RebuildOpenAssetMenuButton()
+	{
+		Ref<Button> sample = mmake<Button>();
+		sample->layout->minSize = Vec2F(20, 20);
+
+		auto backLayer = sample->AddLayer("regularBack", mmake<Sprite>("ui/UI4_panel_button.png"),
+										  Layout::BothStretch(-4, -4, -5, -5));
+
+		auto selectLayer = sample->AddLayer("hover", mmake<Sprite>("ui/UI4_panel_button_select.png"),
+											Layout::BothStretch(-4, -4, -5, -5));
+
+		auto pressedLayer = sample->AddLayer("pressed", mmake<Sprite>("ui/UI4_panel_button_pressed.png"),
+											 Layout::BothStretch(-4, -4, -5, -5));
+
+		auto focusLayer = sample->AddLayer("focused", mmake<Sprite>("ui/UI4_panel_button_focus.png"),
+										   Layout::BothStretch(-4, -4, -5, -5));
+
+		auto iconLayer = sample->AddLayer("icon", mmake<Sprite>("ui/UI4_menu_open_asset.png"),
+										  Layout::Based(BaseCorner::Center, Vec2F(20, 20), Vec2F(0, 1)));
+
+
+		sample->AddState("hover", AnimationClip::EaseInOut("layer/hover/transparency", 0.0f, 1.0f, 0.1f))
+			->offStateAnimationSpeed = 1.0f / 4.0f;
+
+		sample->AddState("pressed", AnimationClip::EaseInOut("layer/pressed/transparency", 0.0f, 1.0f, 0.05f))
+			->offStateAnimationSpeed = 0.5f;
+
+		sample->AddState("focused", AnimationClip::EaseInOut("layer/focused/transparency", 0.0f, 1.0f, 0.05f))
+			->offStateAnimationSpeed = 0.5f;
+
+		o2UI.AddWidgetStyle(sample, "menu open asset");
+	}
+
+	void EditorUIStyleBuilder::RebuildSaveAssetMenuButton()
+	{
+		Ref<Button> sample = mmake<Button>();
+		sample->layout->minSize = Vec2F(20, 20);
+
+		auto backLayer = sample->AddLayer("regularBack", mmake<Sprite>("ui/UI4_panel_button.png"),
+										  Layout::BothStretch(-4, -4, -5, -5));
+
+		auto selectLayer = sample->AddLayer("hover", mmake<Sprite>("ui/UI4_panel_button_select.png"),
+											Layout::BothStretch(-4, -4, -5, -5));
+
+		auto pressedLayer = sample->AddLayer("pressed", mmake<Sprite>("ui/UI4_panel_button_pressed.png"),
+											 Layout::BothStretch(-4, -4, -5, -5));
+
+		auto focusLayer = sample->AddLayer("focused", mmake<Sprite>("ui/UI4_panel_button_focus.png"),
+										   Layout::BothStretch(-4, -4, -5, -5));
+
+		auto iconLayer = sample->AddLayer("icon", mmake<Sprite>("ui/UI4_menu_save_asset.png"),
+										  Layout::Based(BaseCorner::Center, Vec2F(20, 20), Vec2F(0, 1)));
+
+
+		sample->AddState("hover", AnimationClip::EaseInOut("layer/hover/transparency", 0.0f, 1.0f, 0.1f))
+			->offStateAnimationSpeed = 1.0f / 4.0f;
+
+		sample->AddState("pressed", AnimationClip::EaseInOut("layer/pressed/transparency", 0.0f, 1.0f, 0.05f))
+			->offStateAnimationSpeed = 0.5f;
+
+		sample->AddState("focused", AnimationClip::EaseInOut("layer/focused/transparency", 0.0f, 1.0f, 0.05f))
+			->offStateAnimationSpeed = 0.5f;
+
+        sample->AddState("inactive", AnimationClip::EaseInOut("layer/icon/transparency", 1.0f, 0.5f, 0.1f))
+			->offStateAnimationSpeed = 0.5f;
+
+		o2UI.AddWidgetStyle(sample, "menu save asset");
+	}
+
+	void EditorUIStyleBuilder::RebuildSaveAsAssetMenuButton()
+	{
+		Ref<Button> sample = mmake<Button>();
+		sample->layout->minSize = Vec2F(20, 20);
+
+		auto backLayer = sample->AddLayer("regularBack", mmake<Sprite>("ui/UI4_panel_button.png"),
+										  Layout::BothStretch(-4, -4, -5, -5));
+
+		auto selectLayer = sample->AddLayer("hover", mmake<Sprite>("ui/UI4_panel_button_select.png"),
+											Layout::BothStretch(-4, -4, -5, -5));
+
+		auto pressedLayer = sample->AddLayer("pressed", mmake<Sprite>("ui/UI4_panel_button_pressed.png"),
+											 Layout::BothStretch(-4, -4, -5, -5));
+
+		auto focusLayer = sample->AddLayer("focused", mmake<Sprite>("ui/UI4_panel_button_focus.png"),
+										   Layout::BothStretch(-4, -4, -5, -5));
+
+		auto iconLayer = sample->AddLayer("icon", mmake<Sprite>("ui/UI4_menu_save_as_asset.png"),
+										  Layout::Based(BaseCorner::Center, Vec2F(20, 20), Vec2F(0, 1)));
+
+
+		sample->AddState("hover", AnimationClip::EaseInOut("layer/hover/transparency", 0.0f, 1.0f, 0.1f))
+			->offStateAnimationSpeed = 1.0f / 4.0f;
+
+		sample->AddState("pressed", AnimationClip::EaseInOut("layer/pressed/transparency", 0.0f, 1.0f, 0.05f))
+			->offStateAnimationSpeed = 0.5f;
+
+		sample->AddState("focused", AnimationClip::EaseInOut("layer/focused/transparency", 0.0f, 1.0f, 0.05f))
+			->offStateAnimationSpeed = 0.5f;
+
+		o2UI.AddWidgetStyle(sample, "menu save as asset");
+	}
+
+	void EditorUIStyleBuilder::RebuildRevertAssetMenuButton()
+	{
+		Ref<Button> sample = mmake<Button>();
+		sample->layout->minSize = Vec2F(20, 20);
+
+		auto backLayer = sample->AddLayer("regularBack", mmake<Sprite>("ui/UI4_panel_button.png"),
+										  Layout::BothStretch(-4, -4, -5, -5));
+
+		auto selectLayer = sample->AddLayer("hover", mmake<Sprite>("ui/UI4_panel_button_select.png"),
+											Layout::BothStretch(-4, -4, -5, -5));
+
+		auto pressedLayer = sample->AddLayer("pressed", mmake<Sprite>("ui/UI4_panel_button_pressed.png"),
+											 Layout::BothStretch(-4, -4, -5, -5));
+
+		auto focusLayer = sample->AddLayer("focused", mmake<Sprite>("ui/UI4_panel_button_focus.png"),
+										   Layout::BothStretch(-4, -4, -5, -5));
+
+		auto iconLayer = sample->AddLayer("icon", mmake<Sprite>("ui/UI4_menu_revert_asset.png"),
+										  Layout::Based(BaseCorner::Center, Vec2F(20, 20), Vec2F(0, 1)));
+
+
+		sample->AddState("hover", AnimationClip::EaseInOut("layer/hover/transparency", 0.0f, 1.0f, 0.1f))
+			->offStateAnimationSpeed = 1.0f / 4.0f;
+
+		sample->AddState("pressed", AnimationClip::EaseInOut("layer/pressed/transparency", 0.0f, 1.0f, 0.05f))
+			->offStateAnimationSpeed = 0.5f;
+
+		sample->AddState("focused", AnimationClip::EaseInOut("layer/focused/transparency", 0.0f, 1.0f, 0.05f))
+			->offStateAnimationSpeed = 0.5f;
+
+		o2UI.AddWidgetStyle(sample, "menu revert asset");
+	}
+
+	void EditorUIStyleBuilder::RebuildAddKeyButton()
     {
         Ref<Button> sample = mmake<Button>();
         sample->layout->minSize = Vec2F(20, 20);

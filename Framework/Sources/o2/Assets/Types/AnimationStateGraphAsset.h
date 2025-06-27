@@ -18,13 +18,18 @@ namespace o2
 		Function<void(const Ref<AnimationGraphState>& state)> onStateAdded;          // Called when state added
 		Function<void(const Ref<AnimationGraphState>& state)> onStateRemoved;        // Called when state removed
 
-
     public:
         // Default constructor
         AnimationStateGraphAsset();
 
+		// Default constructor with reference counter
+		explicit AnimationStateGraphAsset(RefCounter* refCounter);
+
         // Copy-constructor
-        AnimationStateGraphAsset(const AnimationStateGraphAsset& asset);
+        AnimationStateGraphAsset(const AnimationStateGraphAsset& other);
+
+		// Copy-constructor with reference counter
+		AnimationStateGraphAsset(RefCounter* refCounter, const AnimationStateGraphAsset& other);
 
         // Destructor
         ~AnimationStateGraphAsset() override;
@@ -116,7 +121,9 @@ CLASS_METHODS_META(o2::AnimationStateGraphAsset)
 {
 
     FUNCTION().PUBLIC().CONSTRUCTOR();
+    FUNCTION().PUBLIC().CONSTRUCTOR(RefCounter*);
     FUNCTION().PUBLIC().CONSTRUCTOR(const AnimationStateGraphAsset&);
+    FUNCTION().PUBLIC().CONSTRUCTOR(RefCounter*, const AnimationStateGraphAsset&);
     FUNCTION().PUBLIC().SIGNATURE(void, SetInitialState, const String&);
     FUNCTION().PUBLIC().SIGNATURE(const String&, GetInitialState);
     FUNCTION().PUBLIC().SIGNATURE(Ref<AnimationGraphState>, AddState, const Ref<AnimationGraphState>&);

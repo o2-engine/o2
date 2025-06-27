@@ -3,6 +3,7 @@
 #include "o2/Utils/Singleton.h"
 #include "o2/Utils/Types/Containers/Vector.h"
 #include "o2Editor/Dialogs/KeyEditDlg.h"
+#include "o2Editor/Windows/IAssetEditorWindow.h"
 #include "o2Editor/Windows/WindowsLayout.h"
 
 using namespace o2;
@@ -22,6 +23,7 @@ namespace Editor
     FORWARD_CLASS_REF(CurveEditorDlg);
     FORWARD_CLASS_REF(IEditorWindow);
     FORWARD_CLASS_REF(NameEditDlg);
+	FORWARD_CLASS_REF(YesNoCancelDlg);
     FORWARD_CLASS_REF(DockWindowPlace);
 
     // ----------------------
@@ -58,8 +60,13 @@ namespace Editor
         // Saves current windows layout with name
         void SaveCurrentWindowsLayout(const String& name);
 
+		// Returns asset editor by type
+		Ref<IAssetEditorWindow> GetAssetEditor(const Type* type) const;
+
     protected:
-        Vector<Ref<IEditorWindow>> mEditorWindows;    // Editors windows list
+		Vector<Ref<IEditorWindow>>                mEditorWindows; // Editors windows list
+		Map<const Type*, Ref<IAssetEditorWindow>> mAssetEditors;  // Asset editors by type
+
         Ref<DockWindowPlace>       mMainDockPlace;    // Main windows dock place
         Map<String, WindowsLayout> mAvailableLayouts; // Available layouts
 
@@ -67,6 +74,7 @@ namespace Editor
         Ref<CurveEditorDlg> mCurveEditorDlg;   // Curve editor dialog
         Ref<NameEditDlg>    mNameEditDlg;      // Name edit dialog
         Ref<KeyEditDlg>     mKeyEditDlg;       // Key edit dialog
+		Ref<YesNoCancelDlg> mYesNoCanceDlg;    // Yes/No/Cancel dialog
 
     protected:
         // Searches derived from IEditorWindow and creates them

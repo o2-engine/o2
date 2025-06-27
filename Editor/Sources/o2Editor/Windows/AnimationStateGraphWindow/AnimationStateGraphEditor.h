@@ -52,6 +52,9 @@ namespace Editor
         // Sets selection sprite image
         void SetSelectionSpriteImage(const AssetRef<ImageAsset>& image);
 
+		// Turns on or off updating for component
+        void SetPreviewEnabled(bool enabled);
+
         // Updates layout
         void UpdateSelfTransform() override;
 
@@ -211,6 +214,9 @@ namespace Editor
 			// Called when animations list was changed, creates or removes animations in original state
             void OnAnimationsListChanged();
 
+			// Called when dragged, updates state position
+			void OnDragged(const Vec2F& position);
+
 			IOBJECT(StateWidget);
         };
 
@@ -241,6 +247,8 @@ namespace Editor
 		bool mNeedAdjustView = false; // True when need to adjust view scale. This works in update
 
 		float mRefreshViewersTimer = 0.0f; // Timer for refreshing viewers
+
+		bool mPreviewEnabled = true; // True when preview is enabled (turns on or off component update)
 
         ActionsList mActionsList; // Local actions list. It uses when actionFallDown is null
 
@@ -286,6 +294,9 @@ namespace Editor
 
         // Recalculates view area by curves approximated points
 		void RecalculateViewArea();
+
+		// Updates component, called in update, when preview enabled
+		void UpdateComponent(float dt);
 
         // Draws handles
         void DrawHandles();
@@ -392,6 +403,7 @@ CLASS_FIELDS_META(Editor::AnimationStateGraphEditor)
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mCreatingState);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mNeedAdjustView);
     FIELD().PROTECTED().DEFAULT_VALUE(0.0f).NAME(mRefreshViewersTimer);
+    FIELD().PROTECTED().DEFAULT_VALUE(true).NAME(mPreviewEnabled);
     FIELD().PROTECTED().NAME(mActionsList);
 }
 END_META;
@@ -403,6 +415,7 @@ CLASS_METHODS_META(Editor::AnimationStateGraphEditor)
     FUNCTION().PUBLIC().SIGNATURE(void, Draw);
     FUNCTION().PUBLIC().SIGNATURE(void, Update, float);
     FUNCTION().PUBLIC().SIGNATURE(void, SetSelectionSpriteImage, const AssetRef<ImageAsset>&);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetPreviewEnabled, bool);
     FUNCTION().PUBLIC().SIGNATURE(void, UpdateSelfTransform);
     FUNCTION().PUBLIC().SIGNATURE(const Ref<ContextMenu>&, GetContextMenu);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(Ref<RefCounterable>, CastToRefCounterable, const Ref<AnimationStateGraphEditor>&);
@@ -420,6 +433,7 @@ CLASS_METHODS_META(Editor::AnimationStateGraphEditor)
     FUNCTION().PROTECTED().SIGNATURE(void, DeselectAll);
     FUNCTION().PROTECTED().SIGNATURE(void, InitializeContextMenus);
     FUNCTION().PROTECTED().SIGNATURE(void, RecalculateViewArea);
+    FUNCTION().PROTECTED().SIGNATURE(void, UpdateComponent, float);
     FUNCTION().PROTECTED().SIGNATURE(void, DrawHandles);
     FUNCTION().PROTECTED().SIGNATURE(void, DrawSelection);
     FUNCTION().PROTECTED().SIGNATURE(void, DrawTransitions);
@@ -535,6 +549,7 @@ CLASS_METHODS_META(Editor::AnimationStateGraphEditor::StateWidget)
     FUNCTION().PUBLIC().SIGNATURE(void, OpenContextMenu);
     FUNCTION().PUBLIC().SIGNATURE(void, OnPressed);
     FUNCTION().PROTECTED().SIGNATURE(void, OnAnimationsListChanged);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnDragged, const Vec2F&);
 }
 END_META;
 // --- END META ---

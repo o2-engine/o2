@@ -36,8 +36,8 @@ namespace Editor
         // Copy-operator
         ScrollView& operator=(const ScrollView& other);
 
-        // Draws widget, updates render target 
-        void Draw() override;
+        // Draws widget layers, updates render target 
+        void DrawLayers() override;
 
         // Updates drawables, states and widget
         void Update(float dt) override;
@@ -204,7 +204,7 @@ CLASS_METHODS_META(Editor::ScrollView)
 
     FUNCTION().PUBLIC().CONSTRUCTOR(RefCounter*);
     FUNCTION().PUBLIC().CONSTRUCTOR(RefCounter*, const ScrollView&);
-    FUNCTION().PUBLIC().SIGNATURE(void, Draw);
+    FUNCTION().PUBLIC().SIGNATURE(void, DrawLayers);
     FUNCTION().PUBLIC().SIGNATURE(void, Update, float);
     FUNCTION().PUBLIC().SIGNATURE(Vec2F, ScreenToLocalPoint, const Vec2F&);
     FUNCTION().PUBLIC().SIGNATURE(Vec2F, LocalToScreenPoint, const Vec2F&);

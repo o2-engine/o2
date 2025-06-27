@@ -16,14 +16,9 @@ DECLARE_SINGLETON(Editor::AnimationStateGraphWindow);
 
 namespace Editor
 {
-    void AnimationStateGraphWindow::Update(float dt)
-    {
-    }
-
-	void AnimationStateGraphWindow::SetGraph(const Ref<AnimationStateGraphAsset>& graph, 
-                                             const Ref<AnimationStateGraphComponent>& component)
+	const Type& AnimationStateGraphWindow::GetAssetType() const
 	{
-		mEditor->SetGraph(graph, component);
+		return TypeOf(AnimationStateGraphAsset);
 	}
 
 	Ref<RefCounterable> AnimationStateGraphWindow::CastToRefCounterable(const Ref<AnimationStateGraphWindow>& ref)
@@ -32,7 +27,7 @@ namespace Editor
 	}
 
 	AnimationStateGraphWindow::AnimationStateGraphWindow(RefCounter* refCounter) :
-        Singleton<AnimationStateGraphWindow>(refCounter), IEditorWindow(refCounter)
+        Singleton<AnimationStateGraphWindow>(refCounter), IAssetEditorWindow(refCounter)
     {
         InitializeWindow();
     }
@@ -42,28 +37,71 @@ namespace Editor
 
     void AnimationStateGraphWindow::InitializeWindow()
     {
+        IAssetEditorWindow::InitializeWindow();
+
         mWindow->caption = "State Graph";
         mWindow->name = "animation state graph window";
         mWindow->SetIcon(mmake<Sprite>("ui/UI4_log_wnd_icon.png"));
         mWindow->SetIconLayout(Layout::Based(BaseCorner::LeftTop, Vec2F(20, 20), Vec2F(-1, 1)));
-        mWindow->SetViewLayout(Layout::BothStretch(-2, 5, 5, 16));
-        mWindow->SetClippingLayout(Layout::BothStretch(1, 1, 1, 16));
 
 		mEditor = mmake<AnimationStateGraphEditor>();
-		*mEditor->layout = WidgetLayout::BothStretch(5, 5, 5, 5);
+		*mEditor->layout = WidgetLayout::BothStretch(0, 0, 0, 20);
+		mWindow->AddChild(mEditor);
 
 		auto horScroll = o2UI.CreateHorScrollBar();
-		*horScroll->layout = WidgetLayout::HorStretch(VerAlign::Bottom, 0, 0, 10, -10);
-        mEditor->SetHorScrollbar(horScroll);
+		*horScroll->layout = WidgetLayout::HorStretch(VerAlign::Bottom, 5, 15, 10);
+		mEditor->SetHorScrollbar(horScroll);
 
 		auto verScroll = o2UI.CreateVerScrollBar();
-		*verScroll->layout = WidgetLayout::VerStretch(HorAlign::Right, 0, 0, 10, -10);
-        mEditor->SetVerScrollbar(verScroll);
+		*verScroll->layout = WidgetLayout::VerStretch(HorAlign::Right, 5, 15, 10);
+		mEditor->SetVerScrollbar(verScroll);
 
         mEditor->SetSelectionSpriteImage(AssetRef<ImageAsset>("ui/UI_Window_place.png"));
-
-		mWindow->AddChild(mEditor);
     }
+
+	void AnimationStateGraphWindow::OnStartEditingAsset()
+	{
+		if (!mEditingComponent)
+			mEditor->SetGraph(AssetRef<AnimationStateGraphAsset>(mEditingAsset), nullptr);
+	}
+
+	void AnimationStateGraphWindow::OnCompletedEditingAsset()
+	{}
+
+	void AnimationStateGraphWindow::OnStartEditingComponent()
+	{
+		mEditor->SetGraph(AssetRef<AnimationStateGraphAsset>(mEditingAsset),
+						  DynamicCast<AnimationStateGraphComponent>(mEditingComponent));
+	}
+
+	void AnimationStateGraphWindow::OnCompletedEditingComponent()
+	{}
+
+	void AnimationStateGraphWindow::OnComponentPreviewEnabled()
+	{
+		mEditor->SetPreviewEnabled(true);
+	}
+
+	void AnimationStateGraphWindow::OnComponentPreviewDisabled()
+	{
+		mEditor->SetPreviewEnabled(false);
+	}
+
+	void AnimationStateGraphWindow::ComponentSetAsset(const AssetRef<Asset>& asset)
+	{
+		if (!mEditingComponent)
+			return;
+
+		AssetRef<AnimationStateGraphAsset> graphAsset = asset;
+		auto component = DynamicCast<AnimationStateGraphComponent>(mEditingComponent);
+
+		if (graphAsset && component)
+		{
+			component->SetGraph(graphAsset);
+			mEditor->SetGraph(graphAsset, component);
+		}
+	}
+
 }
 // --- META ---
 

@@ -51,6 +51,12 @@ namespace Editor
         void RebuildCurvesMenuToggle();
         void RebuildPropertiesMenuButton();
 
+        void RebuildNewAssetMenuButton();
+		void RebuildOpenAssetMenuButton();
+		void RebuildSaveAssetMenuButton();
+		void RebuildSaveAsAssetMenuButton();
+		void RebuildRevertAssetMenuButton();
+
         void RebuildAddKeyButton();
         void RebuildAddKeyDotButton();
 
@@ -218,6 +224,11 @@ CLASS_METHODS_META(Editor::EditorUIStyleBuilder)
     FUNCTION().PUBLIC().SIGNATURE(void, RebuildAddKeyMenuButton);
     FUNCTION().PUBLIC().SIGNATURE(void, RebuildCurvesMenuToggle);
     FUNCTION().PUBLIC().SIGNATURE(void, RebuildPropertiesMenuButton);
+    FUNCTION().PUBLIC().SIGNATURE(void, RebuildNewAssetMenuButton);
+    FUNCTION().PUBLIC().SIGNATURE(void, RebuildOpenAssetMenuButton);
+    FUNCTION().PUBLIC().SIGNATURE(void, RebuildSaveAssetMenuButton);
+    FUNCTION().PUBLIC().SIGNATURE(void, RebuildSaveAsAssetMenuButton);
+    FUNCTION().PUBLIC().SIGNATURE(void, RebuildRevertAssetMenuButton);
     FUNCTION().PUBLIC().SIGNATURE(void, RebuildAddKeyButton);
     FUNCTION().PUBLIC().SIGNATURE(void, RebuildAddKeyDotButton);
     FUNCTION().PUBLIC().SIGNATURE(void, RebuildAddSmallBtn);

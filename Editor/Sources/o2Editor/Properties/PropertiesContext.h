@@ -23,6 +23,9 @@ namespace Editor
     class PropertiesContext: public RefCounterable
     {
     public:
+		Function<void(const Ref<IPropertyField>&)> onChanged; // Called when some property changed
+
+    public:
         WeakRef<PropertiesContext> parent; // Parent context
 
         Vector<Pair<IObject*, IObject*>>           targets;    // Last set targets

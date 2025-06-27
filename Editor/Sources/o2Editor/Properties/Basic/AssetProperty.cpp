@@ -2,10 +2,11 @@
 #include "AssetProperty.h"
 
 #include "o2/Utils/StringUtils.h"
-#include "o2Editor/Windows/AssetsWindow/AssetIcon.h"
 #include "o2Editor/Dialogs/System/OpenSaveDialog.h"
 #include "o2Editor/Properties/ObjectViewer.h"
 #include "o2Editor/Properties/Properties.h"
+#include "o2Editor/Windows/AssetsWindow/AssetIcon.h"
+#include "o2Editor/Windows/WindowsManager.h"
 
 namespace Editor
 {
@@ -92,6 +93,9 @@ namespace Editor
                     mNameText->text += WString(": " + GetSmartName(mAssetType->GetName()));
 
                 mBox->layer["caption"]->transparency = 0.5f;
+
+                if (mEditBtn)
+                    mEditBtn->enabled = false;
             }
             else
             {
@@ -100,6 +104,9 @@ namespace Editor
 
                 mNameText->text = name;
                 mBox->layer["caption"]->transparency = 1.0f;
+
+				if (mEditBtn)
+					mEditBtn->enabled = o2EditorWindows.GetAssetEditor(mAssetType) != nullptr;
 
                 if (mAvailableToHaveInstance)
                 {
@@ -221,59 +228,47 @@ namespace Editor
     }
 
     void AssetProperty::OnCreateInstancePressed()
-    {
-        SetState("instance", true);
-
-        for (auto& proxy : mValuesProxies)
+	{
+		for (auto& proxy : mValuesProxies)
 		{
 			auto proxyType = dynamic_cast<const ObjectType*>(&proxy.first->GetType());
-            auto assetRef = proxyType->CreateSample();
-			proxy.first->GetValuePtr(assetRef); 
-            
-            if (auto* refPtr = dynamic_cast<BaseAssetRef*>(proxyType->DynamicCastToIObject(assetRef)))
+			auto assetRef = proxyType->CreateSample();
+			proxy.first->GetValuePtr(assetRef);
+
+			if (auto* refPtr = dynamic_cast<BaseAssetRef*>(proxyType->DynamicCastToIObject(assetRef)))
 				refPtr->CreateInstance();
 
 			proxy.first->SetValuePtr(assetRef);
 
 			proxyType->DestroySample(assetRef);
-        }
+		}
 
         Refresh(true);
-        mSpoiler->Expand();
     }
 
     void AssetProperty::OnEditPressed()
     {
         if (mCommonValue && !mValuesDifferent)
         {
-            auto name = o2FileSystem.GetFileNameWithoutExtension(
-                o2FileSystem.GetPathWithoutDirectories(mCommonValue->GetPath()));
-            
-            o2Debug.Log("Editing asset: " + (String)name);
-        }
-        else
-        {
-            o2Debug.Log("No asset selected for editing");
+            if (auto editor = o2EditorWindows.GetAssetEditor(mAssetType))
+            {
+				Ref<Component> component;
+                if (auto parentContext = mParentContext.Lock())
+                {
+                    if (!parentContext->targets.IsEmpty())
+                        component = Ref(dynamic_cast<Component*>(parentContext->targets[0].first));
+				}
+
+				editor->EditAssetWithComponent(mCommonValue, Ref(component));
+			}
         }
     }
 
     void AssetProperty::OnRemoveInstancePressed()
     {
-        SetState("instance", false);
-        mSpoiler->Collapse();
-
-        for (auto& proxy : mValuesProxies)
-        {
-            auto proxyType = dynamic_cast<const ObjectType*>(&proxy.first->GetType());
-            if (auto ptrProxy = DynamicCast<IPointerValueProxy>(proxy.first))
-            {
-                void* rawAssetRefPtr = ptrProxy->GetValueVoidPointer();
-                if (AssetRef<Asset>* refPtr = dynamic_cast<AssetRef<Asset>*>(proxyType->DynamicCastToIObject(rawAssetRefPtr)))
-                    refPtr->RemoveInstance();
-            }
-        }
-
-        Refresh();
+        mCommonValue.RemoveInstance();
+		SetValueByUser(mCommonValue);
+		mSpoiler->Collapse();
     }
 
     void AssetProperty::OnSaveInstancePressed()
@@ -281,19 +276,20 @@ namespace Editor
         String assetTypeName = GetSmartName(mAssetType->GetName());
         Vector<String> extesions = mAssetType->InvokeStatic<Vector<String>>("GetFileExtensions");
         auto extension = !extesions.IsEmpty() ? extesions[0] : String("");
-        String defaultPath = o2Application.GetBinPath() + "\\" + o2Assets.GetAssetsPath().ReplacedAll("/", "\\");
+        String defaultPath = ::GetAssetsPath();
 
-        String path = GetSaveFileNameDialog("Save asset", { { assetTypeName, "*." + extension } },
-                                            defaultPath);
+        String path = GetSaveFileNameDialog("Save asset", { { assetTypeName, "*." + extension } }, defaultPath);
         if (path.IsEmpty()) {
             return;
         }
 
-        String relativePath = o2FileSystem.CanonicalizePath(o2FileSystem.GetPathRelativeToPath(defaultPath, path));
-        relativePath.ReplaceAll("\\", "/");
+		String relativePath = o2FileSystem.GetPathRelativeToPath(path, ::GetAssetsPath());
 
         auto asset = GetProxy(mValuesProxies[0].first);
-        asset->Save(relativePath + "." + extension);
+        asset.SaveInstance(relativePath + "." + extension);
+        o2Assets.RebuildAssets();
+
+        SetValueByUser(asset);
     }
 
     void AssetProperty::OnTypeSpecialized(const Type& type)
@@ -306,10 +302,13 @@ namespace Editor
         auto proxyType = dynamic_cast<const ObjectType*>(&proxy->GetType());
         auto proxySample = proxyType->CreateSample();
         proxy->GetValuePtr(proxySample);
+
         auto objectSample = proxyType->DynamicCastToIObject(proxySample);
         BaseAssetRef* assetSample = dynamic_cast<BaseAssetRef*>(objectSample);
+
         AssetRef<Asset> res = AssetRef<Asset>(*assetSample);
         delete assetSample;
+
         return res;
     }
 
@@ -318,9 +317,16 @@ namespace Editor
         auto proxyType = dynamic_cast<const ObjectType*>(&proxy->GetType());
         auto proxySample = proxyType->CreateSample();
         auto objectSample = proxyType->DynamicCastToIObject(proxySample);
-        BaseAssetRef* assetSample = dynamic_cast<BaseAssetRef*>(objectSample);
-        assetSample->SetAssetBase(const_cast<Asset*>(value.Get()));
+        auto assetSample = dynamic_cast<BaseAssetRef*>(objectSample);
+        auto assetPtr = const_cast<Asset*>(value.Get());
+
+        if (value.IsInstance())
+            assetSample->SetInstance(assetPtr);
+        else
+            assetSample->SetAssetBase(assetPtr);
+
         proxy->SetValuePtr(proxySample);
+
         delete assetSample;
     }
 

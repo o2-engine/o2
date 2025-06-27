@@ -28,6 +28,9 @@ namespace Editor
         // Virtual destructor
         virtual ~IEditorWindow();
 
+		// Initializes window, called after all windows created
+        virtual void Initialize();
+
         // Sets visibility
         virtual void SetVisible(bool visible);
 
@@ -88,6 +91,7 @@ CLASS_METHODS_META(Editor::IEditorWindow)
     FUNCTION().PUBLIC().CONSTRUCTOR(RefCounter*);
     FUNCTION().PUBLIC().CONSTRUCTOR(const IEditorWindow&);
     FUNCTION().PUBLIC().CONSTRUCTOR(RefCounter*, const IEditorWindow&);
+    FUNCTION().PUBLIC().SIGNATURE(void, Initialize);
     FUNCTION().PUBLIC().SIGNATURE(void, SetVisible, bool);
     FUNCTION().PUBLIC().SIGNATURE(void, Update, float);
     FUNCTION().PUBLIC().SIGNATURE(void, Draw);

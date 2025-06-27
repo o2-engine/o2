@@ -20,7 +20,7 @@ namespace o2
     {
     public:
         PROPERTIES(IAnimationState);
-        PROPERTY(float, weight, SetWeight, GetWeight); // State weight
+        PROPERTY(float, weight, SetWeight, GetWeight); // State weight @RANGE(0.0f, 1.0f)
 
     public:
         String name;            // State name @SERIALIZABLE
@@ -125,7 +125,7 @@ namespace o2
     protected:
         AssetRef<AnimationAsset> mAnimation; // Animation @SERIALIZABLE @EDITOR_PROPERTY @INVOKE_ON_CHANGE(OnAnimationChanged)
 
-        float mWeight = 1.0f; // State weight @SERIALIZABLE @EDITOR_PROPERTY
+		float mWeight = 1.0f; // State weight @SERIALIZABLE
 
     protected:
         // Registers animation in state
@@ -166,7 +166,7 @@ CLASS_BASES_META(o2::IAnimationState)
 END_META;
 CLASS_FIELDS_META(o2::IAnimationState)
 {
-    FIELD().PUBLIC().NAME(weight);
+    FIELD().PUBLIC().RANGE_ATTRIBUTE(0.0f, 1.0f).NAME(weight);
     FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().NAME(name);
     FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(true).NAME(autoPlay);
     FIELD().PROTECTED().NAME(mOwner);
@@ -200,7 +200,7 @@ CLASS_FIELDS_META(o2::AnimationState)
     FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().NAME(mask);
     FIELD().PUBLIC().DEFAULT_VALUE(mmake<AnimationPlayer>()).NAME(player);
     FIELD().PROTECTED().EDITOR_PROPERTY_ATTRIBUTE().INVOKE_ON_CHANGE_ATTRIBUTE(OnAnimationChanged).SERIALIZABLE_ATTRIBUTE().NAME(mAnimation);
-    FIELD().PROTECTED().EDITOR_PROPERTY_ATTRIBUTE().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(1.0f).NAME(mWeight);
+    FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(1.0f).NAME(mWeight);
 }
 END_META;
 CLASS_METHODS_META(o2::AnimationState)

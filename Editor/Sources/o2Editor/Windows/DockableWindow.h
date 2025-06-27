@@ -15,13 +15,13 @@ namespace Editor
     {
     public:
         // Default constructor
-        DockableWindow(RefCounter* refCounter);
+        explicit DockableWindow(RefCounter* refCounter);
 
         // Copy-constructor
         DockableWindow(RefCounter* refCounter, const DockableWindow& other);
 
         // Destructor
-        ~DockableWindow();
+        ~DockableWindow() override;
 
         // Copy-operator
         DockableWindow& operator=(const DockableWindow& other);

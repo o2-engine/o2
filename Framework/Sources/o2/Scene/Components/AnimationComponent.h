@@ -210,7 +210,7 @@ namespace o2
         };
 
     protected:
-        Vector<Ref<IAnimationState>> mStates; // Animation states array @SERIALIZABLE @EDITOR_PROPERTY @DEFAULT_TYPE(o2::AnimationState) @INVOKE_ON_CHANGE(ReattachAnimationStates) @DONT_DELETE
+        Vector<Ref<IAnimationState>> mStates; // Animation states array @SERIALIZABLE @EDITOR_PROPERTY @DEFAULT_TYPE(o2::AnimationState) @INVOKE_ON_CHANGE(ReattachAnimationStates) @DONT_DELETE @EXPANDED_BY_DEFAULT
         Vector<Ref<ITrackMixer>>     mValues; // Assigning value agents
 
         BlendState mBlend;  // Current blend parameters
@@ -388,7 +388,7 @@ END_META;
 CLASS_FIELDS_META(o2::AnimationComponent)
 {
     FIELD().PUBLIC().NAME(state);
-    FIELD().PROTECTED().DEFAULT_TYPE_ATTRIBUTE(o2::AnimationState).DONT_DELETE_ATTRIBUTE().EDITOR_PROPERTY_ATTRIBUTE().INVOKE_ON_CHANGE_ATTRIBUTE(ReattachAnimationStates).SERIALIZABLE_ATTRIBUTE().NAME(mStates);
+    FIELD().PROTECTED().DEFAULT_TYPE_ATTRIBUTE(o2::AnimationState).DONT_DELETE_ATTRIBUTE().EDITOR_PROPERTY_ATTRIBUTE().EXPANDED_BY_DEFAULT_ATTRIBUTE().INVOKE_ON_CHANGE_ATTRIBUTE(ReattachAnimationStates).SERIALIZABLE_ATTRIBUTE().NAME(mStates);
     FIELD().PROTECTED().NAME(mValues);
     FIELD().PROTECTED().NAME(mBlend);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mInEditMode);

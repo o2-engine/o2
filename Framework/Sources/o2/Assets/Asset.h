@@ -40,8 +40,11 @@ namespace o2
         GETTER(Ref<AssetMeta>, meta, GetMeta);        // Asset meta information pointer getter
 
     public:
-        // Hidden default constructor
+        // Default constructor
         Asset();
+        
+		// Default constructor with reference counter
+		explicit Asset(RefCounter* refCounter);
 
         // Virtual destructor
         virtual ~Asset();
@@ -131,8 +134,14 @@ namespace o2
         // Constructor with meta, use it as default constructor
         Asset(const Ref<AssetMeta>& meta);
 
+		// Constructor with meta and reference counter, use it as default constructor
+		Asset(RefCounter* refCounter, const Ref<AssetMeta>& meta);
+
         // Copy-constructor
-        Asset(const Asset& asset);
+        Asset(const Asset& other);
+
+		// Copy-constructor with reference counter
+		Asset(RefCounter* refCounter, const Asset& other);
 
         // Returns meta full path (from binary path)
         String GetMetaFullPath() const;
@@ -188,8 +197,19 @@ typedef META_TYPE MetaType;
         GETTER(Ref<Meta>, meta, GetMeta);  // Meta information getter
 
     public:
+		// Default constructor, creates asset with default meta type
         AssetWithDefaultMeta(): Asset(mmake<Meta>()) {}
+
+		// Default constructor with reference counter, creates asset with default meta type
+		explicit AssetWithDefaultMeta(RefCounter* refCounter) : Asset(refCounter, mmake<Meta>()) {}
+
+		// Copy constructor, creates asset with default meta type
         AssetWithDefaultMeta(const AssetWithDefaultMeta<T>& other) : Asset(other), meta(this) {}
+
+		// Copy constructor with reference counter, creates asset with default meta type
+		AssetWithDefaultMeta(RefCounter* refCounter, const AssetWithDefaultMeta<T>& other) : Asset(refCounter, other), meta(this) {}
+
+		// Returns meta information pointer
         Ref<Meta> GetMeta() const { return DynamicCast<Meta>(mInfo.meta); }
 
         SERIALIZABLE(AssetWithDefaultMeta<T>);
@@ -219,6 +239,7 @@ CLASS_METHODS_META(o2::Asset)
 {
 
     FUNCTION().PUBLIC().CONSTRUCTOR();
+    FUNCTION().PUBLIC().CONSTRUCTOR(RefCounter*);
     FUNCTION().PUBLIC().SIGNATURE(void, PostRefConstruct);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(const String&, GetPath);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetPath, const String&);
@@ -244,7 +265,9 @@ CLASS_METHODS_META(o2::Asset)
     FUNCTION().PUBLIC().SIGNATURE(bool, IsEditorAsset);
 #endif
     FUNCTION().PROTECTED().CONSTRUCTOR(const Ref<AssetMeta>&);
+    FUNCTION().PROTECTED().CONSTRUCTOR(RefCounter*, const Ref<AssetMeta>&);
     FUNCTION().PROTECTED().CONSTRUCTOR(const Asset&);
+    FUNCTION().PROTECTED().CONSTRUCTOR(RefCounter*, const Asset&);
     FUNCTION().PROTECTED().SIGNATURE(String, GetMetaFullPath);
     FUNCTION().PROTECTED().SIGNATURE(UID&, ID);
     FUNCTION().PROTECTED().SIGNATURE(const Ref<LogStream>&, GetAssetsLogStream);
@@ -273,7 +296,9 @@ CLASS_METHODS_META(o2::AssetWithDefaultMeta<T>)
 {
 
     FUNCTION().PUBLIC().CONSTRUCTOR();
+    FUNCTION().PUBLIC().CONSTRUCTOR(RefCounter*);
     FUNCTION().PUBLIC().CONSTRUCTOR(const AssetWithDefaultMeta<T>&);
+    FUNCTION().PUBLIC().CONSTRUCTOR(RefCounter*, const AssetWithDefaultMeta<T>&);
     FUNCTION().PUBLIC().SIGNATURE(Ref<Meta>, GetMeta);
 }
 END_META;

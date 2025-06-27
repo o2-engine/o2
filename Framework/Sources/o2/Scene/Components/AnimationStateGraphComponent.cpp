@@ -138,6 +138,9 @@ namespace o2
 		if (!animationComponent)
 			return;
 
+        if (!mStateGraph)
+            return;
+
         for (auto& state : mStateGraph->GetStates())
         {
             for (auto& animation : state->GetAnimations())

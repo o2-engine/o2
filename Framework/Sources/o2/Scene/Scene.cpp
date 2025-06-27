@@ -264,11 +264,11 @@ namespace o2
             if constexpr (IS_EDITOR)
             {
                 o2Render.SetCamera(Camera());
-                o2Render.Clear();
+				o2Render.Clear();
 
-                Text text(o2Assets.GetBuiltAssetsPath() + "debugFont.ttf");
-                text.SetText("No camera");
-                text.Draw();
+				Text text("debugFont.ttf");
+				text.SetText("No camera");
+				text.Draw();
             }
         }
         else

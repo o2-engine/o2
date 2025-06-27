@@ -11,18 +11,31 @@ namespace o2
     {}
 
     Asset::Asset(const Asset& other):
-        mInfo(other.mInfo)
-    {
-        mInfo.meta->mId.Randomize();
-    }
+        Asset(nullptr, other)
+    {}
 
-    Asset::Asset(const Ref<AssetMeta>& meta)
-    {
-        mInfo.meta = meta;
-        mInfo.meta->mId.Randomize();
-    }
+    Asset::Asset(const Ref<AssetMeta>& meta):
+		Asset(nullptr, meta)
+    {}
 
-    void Asset::PostRefConstruct()
+	Asset::Asset(RefCounter* refCounter):
+		RefCounterable(refCounter)
+	{}
+
+	Asset::Asset(RefCounter* refCounter, const Asset& other):
+        RefCounterable(refCounter), mInfo(other.mInfo)
+	{
+		mInfo.meta->mId.Randomize();
+	}
+
+	Asset::Asset(RefCounter* refCounter, const Ref<AssetMeta>& meta):
+		RefCounterable(refCounter)
+	{
+		mInfo.meta = meta;
+		mInfo.meta->mId.Randomize();
+	}
+
+	void Asset::PostRefConstruct()
     {
         if (Assets::IsSingletonInitialzed())
             o2Assets.AddAssetCache(this);
@@ -161,6 +174,8 @@ namespace o2
         metaData.SaveToFile(GetMetaFullPath());
 
         SaveData(GetFullPath());
+
+        mDirty = false;
     }
 
     void Asset::SetDirty(bool dirty /*= true*/)

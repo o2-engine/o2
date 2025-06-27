@@ -98,8 +98,9 @@ namespace o2
         template<typename _other_type, typename _enable = std::enable_if<std::is_convertible<_other_type*, _asset_type*>::value>::type>
         AssetRef<_asset_type>& operator=(const AssetRef<_other_type>& other);
 
-        // Move operator from other asset reference
-        AssetRef<_asset_type>& operator=(Ref<_asset_type>&& other);
+		// Copy operator from other asset reference
+		template<typename _other_type, typename _enable = std::enable_if<std::is_convertible<_other_type*, _asset_type*>::value>::type>
+		AssetRef<_asset_type>& operator=(const Ref<_other_type>& other);
 
         // Move operator from nullptr
         AssetRef<_asset_type>& operator=(std::nullptr_t);
@@ -301,7 +302,7 @@ namespace o2
     template<typename _asset_type>
     bool AssetRef<_asset_type>::operator==(const AssetRef<_asset_type>& other) const
     {
-        return mPtr == other.mPtr;
+        return mPtr == other.mPtr && mIsInstance == other.mIsInstance;
     }
 
     template<typename _asset_type>
@@ -313,7 +314,7 @@ namespace o2
     template<typename _asset_type>
     bool AssetRef<_asset_type>::operator!=(const AssetRef<_asset_type>& other) const
     {
-        return mPtr != other.mPtr;
+        return mPtr != other.mPtr || mIsInstance != other.mIsInstance;
     }
 
     template<typename _asset_type>
@@ -331,13 +332,14 @@ namespace o2
         return *this;
     }
 
-    template<typename _asset_type>
-    AssetRef<_asset_type>& AssetRef<_asset_type>::operator=(Ref<_asset_type>&& other)
-    {
-        mPtr = std::move(other);
-        mIsInstance = false;
-        return *this;
-    }
+	template<typename _asset_type>
+	template<typename _other_type, typename _enable>
+	AssetRef<_asset_type>& AssetRef<_asset_type>::operator=(const Ref<_other_type>& other)
+	{
+		mPtr = other;
+		mIsInstance = false;
+		return *this;
+	}
 
     template<typename _asset_type>
     AssetRef<_asset_type>& AssetRef<_asset_type>::operator=(std::nullptr_t)
@@ -474,13 +476,10 @@ namespace o2
     template<typename _asset_type>
     void AssetRef<_asset_type>::SaveInstance(const String& path)
     {
-        if (!mIsInstance)
-            return;
-
         mPtr->SetPath(path);
         mPtr->Save();
 
-        *this = AssetRef<_asset_type>(path);
+		mIsInstance = false;
     }
 
     template<typename _asset_type>

@@ -38,7 +38,10 @@ namespace Editor
     IEditorWindow::~IEditorWindow()
     {}
 
-    void IEditorWindow::Show()
+	void IEditorWindow::Initialize()
+	{}
+
+	void IEditorWindow::Show()
     {
         SetVisible(true);
     }

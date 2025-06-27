@@ -147,9 +147,7 @@ namespace Editor
 		if (!mSelectedHandles.IsEmpty())
 		{
 			if (auto state = mStateHandlesMap[mSelectedHandles[0]])
-			{
 				o2EditorPropertiesWindow.SetTarget(state->state.Lock().Get());
-			}
 		}
 	}
 
@@ -254,19 +252,26 @@ namespace Editor
             mViewCameraTargetPos = mViewCamera.position;
         }
 
-		if (!o2EditorApplication.IsPlaying())
-		{
-			if (auto component = mComponent.Lock())
-			{
-				if (auto actor = component->GetActor())
-					actor->Update(dt);
-			}
-		}
-
+		UpdateComponent(dt);
 		CheckRefreshViewersTimer(dt);
     }
 
-    void AnimationStateGraphEditor::UpdateSelfTransform()
+	void AnimationStateGraphEditor::UpdateComponent(float dt)
+	{
+		if (mPreviewEnabled)
+		{
+			if (!o2EditorApplication.IsPlaying())
+			{
+				if (auto component = mComponent.Lock())
+				{
+					if (auto actor = component->GetActor())
+						actor->Update(dt);
+				}
+			}
+		}
+	}
+
+	void AnimationStateGraphEditor::UpdateSelfTransform()
     {
         FrameScrollView::UpdateSelfTransform();
 
@@ -289,7 +294,12 @@ namespace Editor
         mSelectionSprite->LoadFromImage(image);
     }
 
-    void AnimationStateGraphEditor::OnEnabled()
+	void AnimationStateGraphEditor::SetPreviewEnabled(bool enabled)
+	{
+		mPreviewEnabled = enabled;
+	}
+
+	void AnimationStateGraphEditor::OnEnabled()
     {
         FrameScrollView::OnEnabled();
 
@@ -389,7 +399,6 @@ namespace Editor
 		if (!mViewCameraMoved)
 		{
 			mContextMenuPos = cursor.position;
-			o2Debug.Log("Right mouse button released at: " + String(mContextMenuPos));
 			mContextMenu->Show();
 		}
 
@@ -559,6 +568,7 @@ namespace Editor
 		auto state = graph->AddState(mmake<AnimationGraphState>());
 		state->SetPosition(mContextMenuPos);
 		state->AddAnimation("");
+
 		InitializeStates();
 
 		mCreatingState = false;
@@ -593,8 +603,9 @@ namespace Editor
 			for (auto& handle : mSelectedHandles)
 			{
 				if (auto state = mStateHandlesMap[handle])
+				{
 					graph->RemoveState(state->state.Lock());
-
+				}
 			}
 
 			InitializeStates();
@@ -662,14 +673,18 @@ namespace Editor
 														const Ref<AnimationGraphState>& state):
 		RefCounterable(refCounter), editor(owner), state(state)
 	{
+		// Create widget
 		widget = o2UI.CreateWidget<VerticalLayout>("ASG state");
 		auto weakWidget = WeakRef(widget);
 
+		// Create drag handle
 		dragHandle = mmake<DragHandle>();
 		dragHandle->SetSelectionGroup(owner);
 		dragHandle->messageFallDownListener = owner.Get();
 		dragHandle->isPointInside = [weakWidget](const Vec2F& p) { return weakWidget ? weakWidget.Lock()->IsUnderPoint(p) : false; };
+		dragHandle->position = state->GetPosition();
 
+		// Add widget states switching by drag handle events
 		dragHandle->onHoverEnter = [weakWidget]() { if (weakWidget) weakWidget.Lock()->SetState("hover", true); };
 		dragHandle->onHoverExit = [weakWidget]() { if (weakWidget) weakWidget.Lock()->SetState("hover", false); };
 		dragHandle->onPressed = [weakWidget]() { if (weakWidget) weakWidget.Lock()->SetState("pressed", true); };
@@ -677,23 +692,17 @@ namespace Editor
 		dragHandle->onSelected = [weakWidget]() { if (weakWidget) weakWidget.Lock()->SetState("focused", true); };
 		dragHandle->onDeselected = [weakWidget]() { if (weakWidget) weakWidget.Lock()->SetState("focused", false); };
 
-		dragHandle->onPressed = [this]() { OnPressed(); };
+		// Add left and right button events
+		dragHandle->onPressed += [this]() { OnPressed(); };
 		dragHandle->onRightButtonReleased = [this](const Input::Cursor&) { OpenContextMenu(); };
 
-        dragHandle->onChangedPos = [weakWidget, this](const Vec2F& pos)
-		{
-			if (auto widget = weakWidget.Lock())
-			{
-				*widget->layout = WidgetLayout::Based(BaseCorner::Center, defaultWidgetSize, pos);
-				this->state.Lock()->SetPosition(pos);
-				editor.Lock()->RecalculateViewArea();
-			}
-		};
+		// Add drag callback
+		dragHandle->onChangedPos = THIS_FUNC(OnDragged);
 
+		// Add draw callback to draw handle
 		widget->onDraw = [this]() { dragHandle->Draw(); };
-
-		dragHandle->position = state->GetPosition();
         
+		// Add states
 		for (auto& animation : state->GetAnimations())
 		{
 			Ref<StateAnimation> stateAnimation = mmake<StateAnimation>();
@@ -711,8 +720,11 @@ namespace Editor
 			animations.Add(stateAnimation);
 		}
 
+		// Create animations list property
 		propertiesContext = mmake<PropertiesContext>();
 		propertiesContext->Set({ Pair<IObject*, IObject*>(this, nullptr) });
+		propertiesContext->onChanged = [this](const Ref<IPropertyField>&) { if (auto state = this->state.Lock()) state->GetGraph()->SetDirty();  };
+
 		animationsListProperty = DynamicCast<VectorProperty>(o2EditorProperties.BuildField(widget, GetType(), "animations", "", propertiesContext));
 		animationsListProperty->SetHeaderEnabled(false);
 		animationsListProperty->SetCaptionIndexesEnabled(false);
@@ -722,6 +734,7 @@ namespace Editor
 
 		*widget->layout = WidgetLayout::Based(BaseCorner::Center, defaultWidgetSize, state->GetPosition());
 
+		// Add widget to editor's container
 		editor.Lock()->mStateWidgetsContainer->AddChild(widget);
 	}
 
@@ -829,6 +842,20 @@ namespace Editor
 		}
 
 		state->SetAnimations(animations);
+	}
+
+	void AnimationStateGraphEditor::StateWidget::OnDragged(const Vec2F& position)
+	{
+		*widget->layout = WidgetLayout::Based(BaseCorner::Center, defaultWidgetSize, position);
+
+		if (auto state = this->state.Lock())
+			state->SetPosition(position);
+
+		if (auto editor = this->editor.Lock())
+		{
+			editor->RecalculateViewArea();
+			editor->onChanged();
+		}
 	}
 
 	void AnimationStateGraphEditor::StateTransition::Draw()

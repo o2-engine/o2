@@ -66,6 +66,7 @@ namespace Editor
     void IPropertyField::SetParentContext(const Ref<PropertiesContext>& context)
     {
         mParentContext = context;
+        onChanged += [this](const Ref<IPropertyField>& p) { if (auto ctx = mParentContext.Lock()) ctx->onChanged(p); };
     }
 
     void IPropertyField::SetCaption(const WString& text)

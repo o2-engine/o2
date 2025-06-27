@@ -52,9 +52,9 @@ namespace Editor
         return *this;
     }
 
-    void ScrollView::Draw()
+    void ScrollView::DrawLayers()
     {
-        Widget::Draw();
+        Widget::DrawLayers();
 
         if (!mReady)
             return;
@@ -363,7 +363,7 @@ namespace Editor
 
     void ScrollView::OnCursorRightMouseStayDown(const Input::Cursor& cursor)
     {
-        if (cursor.delta.Length() > 0.5f)
+        if (cursor.delta.Length() > Math::Epsilon)
         {
             Vec2F delta = cursor.delta*-1.0f;
             mViewCameraVelocity = delta / o2Time.GetDeltaTime();

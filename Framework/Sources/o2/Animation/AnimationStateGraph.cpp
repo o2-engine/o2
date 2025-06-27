@@ -9,6 +9,7 @@ namespace o2
     {
         mDestinationState = state->GetUID();
         mDestinationStateRef = state;
+        OnChanged();
     }
 
     Ref<AnimationGraphState> AnimationGraphTransition::GetDestinationState() const
@@ -28,6 +29,15 @@ namespace o2
         if (state && state->mGraph)
             mDestinationStateRef = state->mGraph.Lock()->GetState(mDestinationState);
     }
+
+	void AnimationGraphTransition::OnChanged()
+	{
+		if (auto sourceState = mSourceStateRef.Lock())
+		{
+			if (auto graph = sourceState->GetGraph())
+				graph->SetDirty();
+		}
+	}
 
 	const String& AnimationGraphState::GetName() const
 	{
@@ -58,6 +68,8 @@ namespace o2
         auto animation = mmake<Animation>();
         animation->name = name;
         mAnimations.Add(animation);
+        
+        OnChanged();
 
         return animation;
     }
@@ -69,12 +81,14 @@ namespace o2
 
     void AnimationGraphState::RemoveAnimation(const Ref<Animation>& animation)
     {
-        mAnimations.Remove(animation);
+		mAnimations.Remove(animation);
+		OnChanged();
     }
 
 	void AnimationGraphState::SetAnimations(const Vector<Ref<Animation>>& animations)
 	{
 		mAnimations = animations;
+		OnChanged();
 	}
 
 	const Vector<Ref<AnimationGraphState::Animation>>& AnimationGraphState::GetAnimations() const
@@ -87,13 +101,15 @@ namespace o2
         auto transition = mmake<AnimationGraphTransition>();
         transition->SetDestinationState(destinationState);
         transition->SetState(Ref(this));
-        mTransitions.Add(transition);
+		mTransitions.Add(transition);
+		OnChanged();
         return transition;
     }
 
     void AnimationGraphState::RemoveTransition(const Ref<AnimationGraphTransition>& transition)
     {
-        mTransitions.Remove(transition);
+		mTransitions.Remove(transition);
+		OnChanged();
     }
 
     const Vector<Ref<AnimationGraphTransition>>& AnimationGraphState::GetTransitions() const
@@ -109,6 +125,7 @@ namespace o2
 	void AnimationGraphState::SetPosition(const Vec2F& position)
 	{
 		mPosition = position;
+		OnChanged();
 	}
 
 	Vec2F AnimationGraphState::GetPosition() const
@@ -130,7 +147,15 @@ namespace o2
         mGraph = graph;
 
         ReinitTransitions();
+        OnChanged();
     }
+
+	void AnimationGraphState::OnChanged()
+	{
+		if (auto graph = mGraph.Lock())
+			graph->SetDirty();
+	}
+
 }
 // --- META ---
 

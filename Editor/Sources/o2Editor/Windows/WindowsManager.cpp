@@ -9,11 +9,13 @@
 #include "o2Editor/Dialogs/CurveEditorDlg.h"
 #include "o2Editor/Dialogs/EditNameDlg.h"
 #include "o2Editor/Dialogs/KeyEditDlg.h"
+#include "o2Editor/Dialogs/YesNoCancelDlg.h"
 #include "o2Editor/EditorConfig.h"
-#include "o2Editor/UIRoot.h"
 #include "o2Editor/UI/Style/EditorUIStyle.h"
+#include "o2Editor/UIRoot.h"
 #include "o2Editor/Windows/DockWindowPlace.h"
 #include "o2Editor/Windows/DockableWindow.h"
+#include "o2Editor/Windows/IAssetEditorWindow.h"
 #include "o2Editor/Windows/IEditorWindow.h"
 #include "o2Editor/Windows/MemoryAnalyzerWindow/MemoryAnalyzerWindow.h"
 
@@ -28,6 +30,7 @@ namespace Editor
         mCurveEditorDlg = mmake<CurveEditorDlg>();
         mNameEditDlg = mmake<NameEditDlg>();
         mKeyEditDlg = mmake<KeyEditDlg>();
+		mYesNoCanceDlg = mmake<YesNoCancelDlg>();
 
         InitializeDock();
         InitializeWindows();
@@ -44,10 +47,17 @@ namespace Editor
     {
         auto windowTypes = TypeOf(IEditorWindow).GetDerivedTypes();
 
+        windowTypes.Remove(&TypeOf(IAssetEditorWindow));
+
         for (auto& type : windowTypes)
         {
             auto newWindow = DynamicCast<IEditorWindow>(type->CreateSampleRef());
+            newWindow->Initialize();
+
             mEditorWindows.Add(newWindow);
+
+            if (auto assetWindow = DynamicCast<IAssetEditorWindow>(newWindow))
+				mAssetEditors[&assetWindow->GetAssetType()] = assetWindow;
         }
 
         for (auto& wnd : mEditorWindows)
@@ -182,4 +192,8 @@ namespace Editor
         mAvailableLayouts[name] = GetWindowsLayout();
     }
 
+	Ref<IAssetEditorWindow> WindowsManager::GetAssetEditor(const Type* type) const
+	{
+		return mAssetEditors.FindKey(type).second;
+	}
 }

@@ -6,18 +6,27 @@ namespace o2
     AnimationStateGraphAsset::AnimationStateGraphAsset()
     {}
 
-    AnimationStateGraphAsset::AnimationStateGraphAsset(const AnimationStateGraphAsset& other)
-    {
-        RemoveAllStates();
+    AnimationStateGraphAsset::AnimationStateGraphAsset(const AnimationStateGraphAsset& other):
+		AnimationStateGraphAsset(nullptr, other)
+    {}
 
-        for (auto& state : other.mStates)
-        {
-            auto newState = state->CloneAsRef<AnimationGraphState>();
-            AddState(newState);
-        }
-    }
+	AnimationStateGraphAsset::AnimationStateGraphAsset(RefCounter* refCounter):
+		AssetWithDefaultMeta<AnimationStateGraphAsset>(refCounter)
+	{}
 
-    AnimationStateGraphAsset::~AnimationStateGraphAsset()
+	AnimationStateGraphAsset::AnimationStateGraphAsset(RefCounter* refCounter, const AnimationStateGraphAsset& other):
+		AssetWithDefaultMeta<AnimationStateGraphAsset>(refCounter, other)
+	{
+		RemoveAllStates();
+
+		for (auto& state : other.mStates)
+		{
+			auto newState = state->CloneAsRef<AnimationGraphState>();
+			AddState(newState);
+		}
+	}
+
+	AnimationStateGraphAsset::~AnimationStateGraphAsset()
     {
         RemoveAllStates();
     }
@@ -32,7 +41,9 @@ namespace o2
         {
             auto newState = state->CloneAsRef<AnimationGraphState>();
             AddState(newState);
-        }
+		}
+
+		SetDirty();
 
         return *this;
     }
@@ -42,6 +53,7 @@ namespace o2
         mInitialState = name;
 
 		onInitialStateChanged(mInitialState);
+		SetDirty();
     }
 
     const String& AnimationStateGraphAsset::GetInitialState() const
@@ -55,6 +67,7 @@ namespace o2
         state->SetGraph(Ref(this));
 
 		onStateAdded(state);
+        SetDirty();
 
 		return state;
     }
@@ -74,6 +87,7 @@ namespace o2
     {
         mStates.Remove(state);
 		onStateRemoved(state);
+		SetDirty();
     }
 
     void AnimationStateGraphAsset::RemoveState(const String& name)
@@ -86,7 +100,8 @@ namespace o2
         for (auto& state : mStates)
             onStateRemoved(state);
 
-        mStates.Clear();
+		mStates.Clear();
+		SetDirty();
     }
 
     Ref<AnimationGraphState> AnimationStateGraphAsset::GetState(const String& name)

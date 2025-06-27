@@ -24,19 +24,19 @@ namespace Editor
     // -------------------------------
     class IPropertyField : public HorizontalLayout
     {
-    public:
-        typedef Pair<Ref<IAbstractValueProxy>, Ref<IAbstractValueProxy>> TargetPair;
-        typedef Vector<Pair<Ref<IAbstractValueProxy>, Ref<IAbstractValueProxy>>> TargetsVec;
+	public:
+		typedef Pair<Ref<IAbstractValueProxy>, Ref<IAbstractValueProxy>> TargetPair;
+		typedef Vector<Pair<Ref<IAbstractValueProxy>, Ref<IAbstractValueProxy>>> TargetsVec;
 
-        typedef Function<void(const Ref<IPropertyField>&)> OnChangedFunc;
-        typedef Function<void(const String&, const Vector<DataDocument>&, const Vector<DataDocument>&)> OnChangeCompletedFunc;
+		typedef Function<void(const Ref<IPropertyField>&)> OnChangedFunc;
+		typedef Function<void(const String&, const Vector<DataDocument>&, const Vector<DataDocument>&)> OnChangeCompletedFunc;
 
     public:
         OnChangedFunc         onChanged;         // Immediate change value by user event
         OnChangeCompletedFunc onChangeCompleted; // Change completed by user event
 
     public:
-        // Default constructor. Searches revert button and sets click action
+        // Default constructor. Searches revert button and sets click action             
         IPropertyField(RefCounter* refCounter);
 
         // Copy-constructor
