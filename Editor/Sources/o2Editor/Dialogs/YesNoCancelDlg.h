@@ -9,59 +9,67 @@ using namespace o2;
 
 namespace o2
 {
-    class Label;
-    class Widget;
-    class WidgetLayer;
-    class Window;
+	class Label;
+	class Widget;
+	class WidgetLayer;
+	class Window;
 }
 
 namespace Editor
 {
-    // -------------------------
-    // Yes/No/Cancel confirmation dialog
-    // -------------------------
-    class YesNoCancelDlg: public Singleton<YesNoCancelDlg>, public CursorEventsListener
-    {
-    public:
-        // Default constructor
-        YesNoCancelDlg(RefCounter* refCounter);
+	// -------------------------
+	// Yes/No/Cancel confirmation dialog
+	// -------------------------
+	class YesNoCancelDlg : public Singleton<YesNoCancelDlg>, public CursorEventsListener
+	{
+	public:
+		// Default constructor
+		YesNoCancelDlg(RefCounter* refCounter);
 
-        // Destructor
-        ~YesNoCancelDlg();
+		// Destructor
+		~YesNoCancelDlg();
 
-        // Shows confirmation dialog with Yes/No/Cancel buttons
-        static void Show(const String& message,
-                         const Function<void()>& onYes,
-                         const Function<void()>& onNo = Function<void()>(),
-                         const Function<void()>& onCancel = Function<void()>());
+		// Shows confirmation dialog with Yes/No/Cancel buttons
+		static void ShowYesNoCancel(const String& message,
+									const Function<void()>& onYes,
+									const Function<void()>& onNo = Function<void()>(),
+									const Function<void()>& onCancel = Function<void()>());
 
-        REF_COUNTERABLE_IMPL(Singleton<YesNoCancelDlg>, CursorEventsListener);
+		// Shows confirmation dialog with Yes/No buttons
+		static void ShowYesNo(const String& message,
+							  const Function<void()>& onYes,
+							  const Function<void()>& onNo = Function<void()>());
 
-    protected:
-        Function<void()> mOnYesCallback;    // On Yes button callback
-        Function<void()> mOnNoCallback;     // On No button callback
-        Function<void()> mOnCancelCallback; // On Cancel button callback
+		REF_COUNTERABLE_IMPL(Singleton<YesNoCancelDlg>, CursorEventsListener);
 
-        Ref<o2::Window> mWindow;      // Dialog window
-        Ref<Label>      mMessageLabel; // Message label
+	protected:
+		Function<void()> mOnYesCallback;    // On Yes button callback
+		Function<void()> mOnNoCallback;     // On No button callback
+		Function<void()> mOnCancelCallback; // On Cancel button callback
 
-    protected:
-        // Calls when hiding dialog
-        void OnHide();
+		Ref<o2::Window> mWindow;      // Dialog window
+		Ref<Label>      mMessageLabel; // Message label
+		Ref<Button>     mYesButton;    // Yes button
+		Ref<Button>     mNoButton;     // No button
+		Ref<Button>     mCancelButton; // Cancel button
 
-        // Initializes message label and buttons
-        void InitializeControls();
+	protected:
+		// Calls when hiding dialog
+		void OnHide();
 
-        // Called when Yes button pressed, calls mOnYesCallback and closes window
-        void OnYesPressed();
+		// Initializes message label and buttons
+		void InitializeControls();
 
-        // Called when No button pressed, calls mOnNoCallback and closes window  
-        void OnNoPressed();
+		// Called when Yes button pressed, calls mOnYesCallback and closes window
+		void OnYesPressed();
 
-        // Called when Cancel button pressed, calls mOnCancelCallback and closes window
-        void OnCancelPressed();
+		// Called when No button pressed, calls mOnNoCallback and closes window  
+		void OnNoPressed();
 
-        // Called when cursor pressed outside from window
-        void OnCursorPressedOutside();
-    };
+		// Called when Cancel button pressed, calls mOnCancelCallback and closes window
+		void OnCancelPressed();
+
+		// Called when cursor pressed outside from window
+		void OnCursorPressedOutside();
+	};
 }

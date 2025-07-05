@@ -99,10 +99,8 @@ namespace Editor
             }
             else
             {
-                auto name = o2FileSystem.GetFileNameWithoutExtension(
-                    o2FileSystem.GetPathWithoutDirectories(mCommonValue->GetPath()));
+                UpdateAssetName();
 
-                mNameText->text = name;
                 mBox->layer["caption"]->transparency = 1.0f;
 
 				if (mEditBtn)
@@ -157,7 +155,15 @@ namespace Editor
         SetState("instance", mAvailableToHaveInstance && allAreInstance && !mValuesDifferent);
     }
 
-    bool AssetProperty::IsAlwaysRefresh() const
+	void AssetProperty::UpdateAssetName()
+	{
+		auto name = o2FileSystem.GetFileNameWithoutExtension(
+			o2FileSystem.GetPathWithoutDirectories(mCommonValue->GetPath()));
+
+		mNameText->text = name;
+	}
+
+	bool AssetProperty::IsAlwaysRefresh() const
     {
         return false;
     }
@@ -365,7 +371,22 @@ namespace Editor
         mBox->SetState("focused", false);
     }
 
-    void AssetProperty::OnDragEnter(const Ref<ISelectableDragableObjectsGroup>& group)
+	void AssetProperty::OnUpdate(float dt)
+	{
+		const float checkAssetNameDelay = 0.3f;
+
+        if (!mValuesDifferent && mCommonValue)
+        {
+            mCheckAssetNameChangeTime -= dt;
+            if (mCheckAssetNameChangeTime < 0.0f)
+            {
+                UpdateAssetName();
+                mCheckAssetNameChangeTime = checkAssetNameDelay;
+            }
+        }
+	}
+
+	void AssetProperty::OnDragEnter(const Ref<ISelectableDragableObjectsGroup>& group)
     {
         auto assetIconsScroll = DynamicCast<AssetsIconsScrollArea>(group);
         if (!assetIconsScroll)

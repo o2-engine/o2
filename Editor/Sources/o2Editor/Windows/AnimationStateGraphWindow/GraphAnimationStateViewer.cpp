@@ -166,13 +166,13 @@ namespace Editor
 
 		if (animationRef)
 		{
-			o2EditorAnimationWindow.SetAnimation(animationRef->animation);
-
-			if (!o2EditorSceneScreen.GetSelectedObjects().IsEmpty())
-				o2EditorAnimationWindow.SetTarget(DynamicCast<Actor>(o2EditorSceneScreen.GetSelectedObjects().Last()));
-
-			o2EditorAnimationWindow.SetAnimationEditable(Ref(mPropertiesContext->FindOnStack<IEditableAnimation>()));
-			o2EditorAnimationWindow.GetWindow()->Focus();
+// 			o2EditorAnimationWindow.SetAnimation(animationRef->animation);
+// 
+// 			if (!o2EditorSceneScreen.GetSelectedObjects().IsEmpty())
+// 				o2EditorAnimationWindow.SetTarget(DynamicCast<Actor>(o2EditorSceneScreen.GetSelectedObjects().Last()));
+// 
+// 			o2EditorAnimationWindow.SetAnimationEditable(Ref(mPropertiesContext->FindOnStack<IEditableAnimation>()));
+// 			o2EditorAnimationWindow.GetWindow()->Focus();
 		}
 	}
 

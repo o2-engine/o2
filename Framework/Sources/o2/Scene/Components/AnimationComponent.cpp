@@ -97,10 +97,15 @@ namespace o2
         return nullptr;
     }
 
-	Ref<IAnimationState> AnimationComponent::GetFirstState()
+	Ref<IAnimationState> AnimationComponent::GetFirstState(bool createIfNotExists /*= false*/)
 	{
         if (mStates.IsEmpty())
-			return nullptr;
+        {
+            if (createIfNotExists)
+                return AddState("default");
+			else
+				return nullptr;
+        }
 
 		return mStates[0];
 	}

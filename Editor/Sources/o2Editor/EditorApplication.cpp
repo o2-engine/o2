@@ -189,12 +189,6 @@ namespace Editor
 
         //FreeConsole();
 
-        auto widget = EditorUIRoot.GetRootWidget()->GetChildWidget("tools panel/play panel");
-        o2EditorAnimationWindow.SetAnimation(widget->GetStateObject("playing")->GetAnimationClip(),
-                                             widget->GetStateObject("playing")->GetAnimationPlayer());
-
-        o2EditorAnimationWindow.SetTarget(widget);
-
         o2Scripts.CollectGarbage();
 
         //o2Scripts.GetGlobal().SetProperty("widget", mmake<Widget>());

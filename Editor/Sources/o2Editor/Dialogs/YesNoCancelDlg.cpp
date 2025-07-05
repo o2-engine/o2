@@ -15,87 +15,101 @@ DECLARE_SINGLETON(Editor::YesNoCancelDlg);
 
 namespace Editor
 {
-    YesNoCancelDlg::YesNoCancelDlg(RefCounter* refCounter):
-        Singleton<YesNoCancelDlg>(refCounter), CursorEventsListener(refCounter)
-    {
-        mWindow = DynamicCast<o2::Window>(EditorUIRoot.AddWidget(o2UI.CreateWindow("Confirmation")));
+	YesNoCancelDlg::YesNoCancelDlg(RefCounter* refCounter) :
+		Singleton<YesNoCancelDlg>(refCounter), CursorEventsListener(refCounter)
+	{
+		mWindow = DynamicCast<o2::Window>(EditorUIRoot.AddWidget(o2UI.CreateWindow("Confirmation")));
 
-        InitializeControls();
+		InitializeControls();
 
-        mWindow->Hide(true);
-        *mWindow->layout = WidgetLayout::Based(BaseCorner::Center, Vec2F(350, 150));
+		mWindow->Hide(true);
+		*mWindow->layout = WidgetLayout::Based(BaseCorner::Center, Vec2F(350, 150));
 
-        mWindow->GetBackCursorListener().onCursorReleased = [&](const Input::Cursor& c) { OnCursorPressedOutside(); };
-        mWindow->onHide = MakeFunction(this, &YesNoCancelDlg::OnHide);
-    }
+		mWindow->GetBackCursorListener().onCursorReleased = [&](const Input::Cursor& c) { OnCursorPressedOutside(); };
+		mWindow->onHide = MakeFunction(this, &YesNoCancelDlg::OnHide);
+	}
 
-    YesNoCancelDlg::~YesNoCancelDlg()
-    {}
+	YesNoCancelDlg::~YesNoCancelDlg()
+	{
+	}
 
-    void YesNoCancelDlg::Show(const String& message, 
-                              const Function<void()>& onYes, 
-                              const Function<void()>& onNo /*= Function<void()>()*/,
-							  const Function<void()>& onCancel /*= Function<void()>()*/)
-    {
-        mInstance->mMessageLabel->SetText(message);
-        mInstance->mWindow->ShowModal();
-        mInstance->mOnYesCallback = onYes;
-        mInstance->mOnNoCallback = onNo;
-        mInstance->mOnCancelCallback = onCancel;
-    }
+	void YesNoCancelDlg::ShowYesNoCancel(const String& message,
+										 const Function<void()>& onYes,
+										 const Function<void()>& onNo /*= Function<void()>()*/,
+										 const Function<void()>& onCancel /*= Function<void()>()*/)
+	{
+		mInstance->mMessageLabel->SetText(message);
+		mInstance->mWindow->ShowModal();
+		mInstance->mOnYesCallback = onYes;
+		mInstance->mOnNoCallback = onNo;
+		mInstance->mOnCancelCallback = onCancel;
+		mInstance->mCancelButton->Show(true);
+	}
 
-    void YesNoCancelDlg::OnHide()
-    {
-        mOnCancelCallback();
-    }
+	void YesNoCancelDlg::ShowYesNo(const String& message, 
+								   const Function<void()>& onYes, 
+								   const Function<void()>& onNo /*= Function<void()>()*/)
+	{
+		mInstance->mMessageLabel->SetText(message);
+		mInstance->mWindow->ShowModal();
+		mInstance->mOnYesCallback = onYes;
+		mInstance->mOnNoCallback = onNo;
+		mInstance->mOnCancelCallback = Function<void()>();
+		mInstance->mCancelButton->Hide(true);
+	}
 
-    void YesNoCancelDlg::InitializeControls()
-    {
-        auto verLayout = o2UI.CreateVerLayout();
-        verLayout->spacing = 15;
+	void YesNoCancelDlg::OnHide()
+	{
+		mOnCancelCallback();
+	}
 
-        mMessageLabel = o2UI.CreateLabel("Confirmation message");
-        mMessageLabel->SetHorAlign(HorAlign::Middle);
-        verLayout->AddChild(mMessageLabel);
+	void YesNoCancelDlg::InitializeControls()
+	{
+		auto verLayout = o2UI.CreateVerLayout();
+		verLayout->spacing = 15;
 
-        auto horLayout = o2UI.CreateHorLayout();
-        horLayout->spacing = 10;
-        
-        auto yesButton = o2UI.CreateButton("Yes", MakeFunction(this, &YesNoCancelDlg::OnYesPressed));
-        horLayout->AddChild(yesButton);
+		mMessageLabel = o2UI.CreateLabel("Confirmation message");
+		mMessageLabel->SetHorAlign(HorAlign::Middle);
+		verLayout->AddChild(mMessageLabel);
 
-        auto noButton = o2UI.CreateButton("No", MakeFunction(this, &YesNoCancelDlg::OnNoPressed));
-        horLayout->AddChild(noButton);
+		auto horLayout = o2UI.CreateHorLayout();
+		horLayout->spacing = 10;
 
-        auto cancelButton = o2UI.CreateButton("Cancel", MakeFunction(this, &YesNoCancelDlg::OnCancelPressed));
-        horLayout->AddChild(cancelButton);
+		mYesButton = o2UI.CreateButton("Yes", MakeFunction(this, &YesNoCancelDlg::OnYesPressed));
+		horLayout->AddChild(mYesButton);
 
-        verLayout->AddChild(horLayout);
+		mNoButton = o2UI.CreateButton("No", MakeFunction(this, &YesNoCancelDlg::OnNoPressed));
+		horLayout->AddChild(mNoButton);
 
-        mWindow->AddChild(verLayout);
-    }
+		mCancelButton = o2UI.CreateButton("Cancel", MakeFunction(this, &YesNoCancelDlg::OnCancelPressed));
+		horLayout->AddChild(mCancelButton);
 
-    void YesNoCancelDlg::OnYesPressed()
-    {
-        mOnYesCallback();
-        mWindow->Hide();
-    }
+		verLayout->AddChild(horLayout);
 
-    void YesNoCancelDlg::OnNoPressed()
-    {
-        mOnNoCallback();
-        mWindow->Hide();
-    }
+		mWindow->AddChild(verLayout);
+	}
 
-    void YesNoCancelDlg::OnCancelPressed()
-    {
-        mOnCancelCallback();
-        mWindow->Hide();
-    }
+	void YesNoCancelDlg::OnYesPressed()
+	{
+		mOnYesCallback();
+		mWindow->Hide();
+	}
 
-    void YesNoCancelDlg::OnCursorPressedOutside()
-    {
-        mOnCancelCallback();
-        mWindow->Hide();
-    }
-} 
+	void YesNoCancelDlg::OnNoPressed()
+	{
+		mOnNoCallback();
+		mWindow->Hide();
+	}
+
+	void YesNoCancelDlg::OnCancelPressed()
+	{
+		mOnCancelCallback();
+		mWindow->Hide();
+	}
+
+	void YesNoCancelDlg::OnCursorPressedOutside()
+	{
+		mOnCancelCallback();
+		mWindow->Hide();
+	}
+}

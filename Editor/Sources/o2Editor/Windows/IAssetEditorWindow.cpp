@@ -11,28 +11,31 @@
 
 namespace Editor
 {
-    IAssetEditorWindow::IAssetEditorWindow():
-        IAssetEditorWindow(nullptr)
-    {}
+	IAssetEditorWindow::IAssetEditorWindow() :
+		IAssetEditorWindow(nullptr)
+	{
+	}
 
-    IAssetEditorWindow::IAssetEditorWindow(RefCounter* refCounter):
-        IEditorWindow(refCounter)
-    {
-        InitializeWindow();
-    }
+	IAssetEditorWindow::IAssetEditorWindow(RefCounter* refCounter) :
+		IEditorWindow(refCounter)
+	{
+		InitializeWindow();
+	}
 
-    IAssetEditorWindow::IAssetEditorWindow(const IAssetEditorWindow& other):
-        IAssetEditorWindow(nullptr, other)
-    {}
+	IAssetEditorWindow::IAssetEditorWindow(const IAssetEditorWindow& other) :
+		IAssetEditorWindow(nullptr, other)
+	{
+	}
 
-    IAssetEditorWindow::IAssetEditorWindow(RefCounter* refCounter, const IAssetEditorWindow& other):
-        IEditorWindow(refCounter, other), mEditingAsset(other.mEditingAsset)
-    {
-        InitializeWindow();
-    }
+	IAssetEditorWindow::IAssetEditorWindow(RefCounter* refCounter, const IAssetEditorWindow& other) :
+		IEditorWindow(refCounter, other), mEditingAsset(other.mEditingAsset)
+	{
+		InitializeWindow();
+	}
 
-    IAssetEditorWindow::~IAssetEditorWindow()
-    {}
+	IAssetEditorWindow::~IAssetEditorWindow()
+	{
+	}
 
 	const Type& IAssetEditorWindow::GetAssetType() const
 	{
@@ -69,7 +72,7 @@ namespace Editor
 			mEditingAssetInstanceCache = mEditingAsset;
 		}
 
-        if (mEditingComponent)
+		if (mEditingComponent)
 			OnStartEditingComponent();
 
 		SetComponentPreview(true);
@@ -101,12 +104,12 @@ namespace Editor
 	}
 
 	const Ref<Asset>& IAssetEditorWindow::GetEditingAsset() const
-    {
-        return mEditingAsset;
-    }
+	{
+		return mEditingAsset;
+	}
 
-    void IAssetEditorWindow::SaveEditingAsset()
-    {
+	void IAssetEditorWindow::SaveEditingAsset()
+	{
 		if (!mEditingAsset || !mEditingAsset->IsDirty())
 			return;
 
@@ -118,7 +121,7 @@ namespace Editor
 			OnAssetSaved();
 			o2Assets.RebuildAssets();
 		}
-    }
+	}
 
 	void IAssetEditorWindow::RevertEditingAsset()
 	{
@@ -137,10 +140,10 @@ namespace Editor
 	}
 
 	void IAssetEditorWindow::OnAssetChanged()
-    {
-        if (mEditingAsset)
-            mEditingAsset->SetDirty(true);
-    }
+	{
+		if (mEditingAsset)
+			mEditingAsset->SetDirty(true);
+	}
 
 	void IAssetEditorWindow::Initialize()
 	{
@@ -153,47 +156,47 @@ namespace Editor
 	}
 
 	void IAssetEditorWindow::InitializeWindow()
-    {
-        mWindow->SetViewLayout(Layout::BothStretch(-1, 0, 0, 18));
+	{
+		mWindow->SetViewLayout(Layout::BothStretch(-1, 0, 0, 18));
 
-        mUpPanel = mmake<HorizontalLayout>();
-        mUpPanel->name = "up panel";
-        *mUpPanel->layout = WidgetLayout::HorStretch(VerAlign::Top, 0, 0, 20, 0);
-        mUpPanel->baseCorner = BaseCorner::Left;
+		mUpPanel = mmake<HorizontalLayout>();
+		mUpPanel->name = "up panel";
+		*mUpPanel->layout = WidgetLayout::HorStretch(VerAlign::Top, 0, 0, 20, 0);
+		mUpPanel->baseCorner = BaseCorner::Left;
 		mUpPanel->expandHeight = true;
-        mUpPanel->expandWidth = false;
-        mUpPanel->AddLayer("back", mmake<Sprite>("ui/UI4_small_panel_back.png"), Layout::BothStretch(-5, -4, -4, -5));
+		mUpPanel->expandWidth = false;
+		mUpPanel->AddLayer("back", mmake<Sprite>("ui/UI4_small_panel_back.png"), Layout::BothStretch(-5, -4, -4, -5));
 		mWindow->AddChild(mUpPanel);
 
 		mPreviewToggle = o2UI.CreateWidget<Toggle>("menu preview");
 		mPreviewToggle->onToggle = THIS_FUNC(OnMenuPreviewToggle);
-        mUpPanel->AddChild(mPreviewToggle);
+		mUpPanel->AddChild(mPreviewToggle);
 
 		mNewAssetButton = o2UI.CreateWidget<Button>("menu new asset");
-        mNewAssetButton->name = "new asset button";
+		mNewAssetButton->name = "new asset button";
 		mNewAssetButton->onClick += THIS_FUNC(OnNewAssetPressed);
 		mUpPanel->AddChild(mNewAssetButton);
 
-        mOpenAssetButton = o2UI.CreateWidget<Button>("menu open asset");
+		mOpenAssetButton = o2UI.CreateWidget<Button>("menu open asset");
 		mOpenAssetButton->name = "open asset button";
 		mOpenAssetButton->onClick += THIS_FUNC(OnOpenAssetPressed);
 		mUpPanel->AddChild(mOpenAssetButton);
 
 		mSaveAssetButton = o2UI.CreateWidget<Button>("menu save asset");
-        mSaveAssetButton->name = "save button";
-        mSaveAssetButton->onClick += THIS_FUNC(SaveEditingAsset);
+		mSaveAssetButton->name = "save button";
+		mSaveAssetButton->onClick += THIS_FUNC(SaveEditingAsset);
 		mUpPanel->AddChild(mSaveAssetButton);
 
-        mSaveAsAssetButton = o2UI.CreateWidget<Button>("menu save as asset");
-        mSaveAsAssetButton->name = "save as button";
+		mSaveAsAssetButton = o2UI.CreateWidget<Button>("menu save as asset");
+		mSaveAsAssetButton->name = "save as button";
 		mSaveAsAssetButton->onClick += THIS_FUNC(OnSaveAsAssetPressed);
-        mUpPanel->AddChild(mSaveAsAssetButton);
+		mUpPanel->AddChild(mSaveAsAssetButton);
 
 		mRevertAssetButton = o2UI.CreateWidget<Button>("menu revert asset");
-        mRevertAssetButton->name = "revert button";
-        mRevertAssetButton->onClick += THIS_FUNC(OnRevertAssetPressed);
+		mRevertAssetButton->name = "revert button";
+		mRevertAssetButton->onClick += THIS_FUNC(OnRevertAssetPressed);
 		mUpPanel->AddChild(mRevertAssetButton);
-    }
+	}
 
 	bool IAssetEditorWindow::IsComponentPreviewAvailable() const
 	{
@@ -202,7 +205,7 @@ namespace Editor
 
 	AssetRef<Asset> IAssetEditorWindow::CreateAssetInstance()
 	{
-        return AssetRef(DynamicCast<Asset>(GetAssetType().CreateSampleRef()));
+		return AssetRef(DynamicCast<Asset>(GetAssetType().CreateSampleRef()));
 	}
 
 	void IAssetEditorWindow::OnMenuPreviewToggle(bool preview)
@@ -218,20 +221,20 @@ namespace Editor
 			return;
 		}
 
-		YesNoCancelDlg::Show("Asset has been modified. Save changes?",
-							 [this, callback]() { SaveEditingAsset(); callback(); },
-							 callback);
+		YesNoCancelDlg::ShowYesNoCancel("Asset has been modified. Save changes?",
+										[this, callback]() { SaveEditingAsset(); callback(); },
+										callback);
 	}
 
 	Map<String, String> IAssetEditorWindow::CreateFileExtensionMap() const
 	{
 		auto& assetType = GetAssetType();
 		auto extensions = assetType.InvokeStatic<Vector<String>>("GetFileExtensions");
-		
+
 		Map<String, String> extensionMap;
 		for (const auto& ext : extensions)
 			extensionMap[assetType.GetName() + " files"] = "*." + ext;
-		
+
 		return extensionMap;
 	}
 
@@ -282,7 +285,10 @@ namespace Editor
 
 	void IAssetEditorWindow::OnRevertAssetPressed()
 	{
-		CheckDirtyAssetAndExecute([this]() { RevertEditingAsset(); });
+		if (!mEditingAsset || !mEditingAsset->IsDirty())
+			return;
+
+		YesNoCancelDlg::ShowYesNo( "Revert changes to asset?", [this]() { RevertEditingAsset(); });
 	}
 }
 // --- META ---

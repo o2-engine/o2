@@ -174,6 +174,9 @@ namespace o2
 
     void Text::SetText(const WString& text)
     {
+        if (text == mText)
+			return;
+
         mText = text;
         CheckCharactersAndRebuildMesh();
     }

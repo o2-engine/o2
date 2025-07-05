@@ -222,6 +222,8 @@ namespace o2
                 UpdateSelfTransform();
             }
 
+			OnUpdate(dt);
+
             if (!mIsClipped)
             {
                 for (auto& state : mStates)

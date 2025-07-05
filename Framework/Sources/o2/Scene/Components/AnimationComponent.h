@@ -63,7 +63,7 @@ namespace o2
         Ref<IAnimationState> GetState(const String& name);
 
 		// Returns first state from states array. Returns nullptr if no states in array
-        Ref<IAnimationState> GetFirstState();
+		Ref<IAnimationState> GetFirstState(bool createIfNotExists = false);
 
         // Returns all states array
         const Vector<Ref<IAnimationState>>& GetStates() const;
@@ -382,7 +382,6 @@ namespace o2
 CLASS_BASES_META(o2::AnimationComponent)
 {
     BASE_CLASS(o2::Component);
-    BASE_CLASS(o2::IEditableAnimation);
 }
 END_META;
 CLASS_FIELDS_META(o2::AnimationComponent)
@@ -409,7 +408,7 @@ CLASS_METHODS_META(o2::AnimationComponent)
     FUNCTION().PUBLIC().SIGNATURE(void, RemoveState, const String&);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, RemoveAllStates);
     FUNCTION().PUBLIC().SIGNATURE(Ref<IAnimationState>, GetState, const String&);
-    FUNCTION().PUBLIC().SIGNATURE(Ref<IAnimationState>, GetFirstState);
+    FUNCTION().PUBLIC().SIGNATURE(Ref<IAnimationState>, GetFirstState, bool);
     FUNCTION().PUBLIC().SIGNATURE(const Vector<Ref<IAnimationState>>&, GetStates);
     FUNCTION().PUBLIC().SIGNATURE(_tmp1, GetAllStates);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(Vector<String>, GetStatesNames);
@@ -423,8 +422,6 @@ CLASS_METHODS_META(o2::AnimationComponent)
     FUNCTION().PUBLIC().SIGNATURE(Ref<IAnimationState>, BlendTo, const Ref<IAnimationState>&, float);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, Stop, const String&);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, StopAll);
-    FUNCTION().PUBLIC().SIGNATURE(void, BeginAnimationEdit);
-    FUNCTION().PUBLIC().SIGNATURE(void, EndAnimationEdit);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetName);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetCategory);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetIcon);

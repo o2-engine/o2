@@ -2,8 +2,7 @@
 
 #include "o2/Utils/Singleton.h"
 #include "o2Editor/Actions/ActionsList.h"
-#include "o2Editor/Windows/IEditorWindow.h"
-
+#include "o2Editor/Windows/IAssetEditorWindow.h"
 using namespace o2;
 
 namespace o2
@@ -27,7 +26,7 @@ namespace Editor
     FORWARD_CLASS_REF(CurvesSheet);
     FORWARD_CLASS_REF(KeyHandlesSheet);
 
-    class AnimationWindow : public Singleton<AnimationWindow>, public IEditorWindow
+    class AnimationWindow : public Singleton<AnimationWindow>, public IAssetEditorWindow
     {
     public:
         // Default constructor
@@ -39,20 +38,14 @@ namespace Editor
         // Updates window logic
         void Update(float dt) override;
 
-        // Sets editing animation
-        void SetAnimation(const Ref<AnimationClip>& animation, Ref<AnimationPlayer> player = nullptr);
-
-        // Sets animation editable
-        void SetAnimationEditable(const Ref<IEditableAnimation>& editable);
-
-        // Sets target actor
-        void SetTarget(const Ref<Actor>& actor);
-
         // Sets curves or handles mode
         void SetCurvesMode(bool enabled);
 
         // Returns is curves mode enabled
         bool IsCurvesMode() const;
+
+		// Returns asset type that this editor window can edit
+        const Type& GetAssetType() const override;
 
         // Dynamic cast to RefCounterable via Singleton<AnimationWindow>
         static Ref<RefCounterable> CastToRefCounterable(const Ref<AnimationWindow>& ref);
@@ -62,23 +55,18 @@ namespace Editor
 
     protected:
         float mTreeViewWidth = 325.0f;    // Width of tree area. Changed by draggable separator
-        float mMinTreeViewWidth = 250.0f; // Minimal tree width
+        float mMinTreeViewWidth = 325.0f; // Minimal tree width
 
-        Ref<Actor>           mTargetActor;       // Target actor on animation
-        Ref<AnimationPlayer> mPlayer;            // Animation player
-        bool                 mOwnPlayer = false; // Is player owned by this
-        Ref<AnimationClip>   mAnimation;         // Editing animation
+		Ref<Actor>           mTargetActor; // Target actor on animation
+		Ref<AnimationPlayer> mPlayer;      // Animation player
 
-        WeakRef<IEditableAnimation> mAnimationEditable; // Editable animation holder. Deactivating when editing animation
+        AssetRef<AnimationAsset> mAnimationAsset; // Editing animation asset
+        Ref<AnimationClip>       mAnimation;      // Editing animation
 
         bool mDisableTimeTracking = false; // When true animation time changes has no effect
 
-        Ref<Widget> mUpPanel;  // Up panel with control buttons
         Ref<Widget> mWorkArea; // Working area with tree and time line
 
-        Ref<HorizontalLayout> mControlsPanel; // Panel with buttons described below
-
-        Ref<Toggle> mPreviewToggle;    // Preview toggle
         Ref<Toggle> mRecordToggle;     // Record toggle
         Ref<Button> mRewindLeft;       // Rewind animation to start button
         Ref<Button> mMoveLeft;         // Move time one frame left
@@ -105,7 +93,7 @@ namespace Editor
         void OnClosed() override;
 
         // Initializes window
-        void InitializeWindow();
+        void InitializeWindow() override;
 
         // Initializes handles sheet
         void InitializeHandlesSheet();
@@ -124,6 +112,36 @@ namespace Editor
 
         // Initializes separator handle view and events
         void InitializeSeparatorHandle();
+
+        // Called when asset editing starts
+        void OnStartEditingAsset() override;
+
+        // Called when asset editing ends
+        void OnCompletedEditingAsset() override;
+
+		// Called when component editing starts
+		void OnStartEditingComponent() override;
+
+		// Called when component editing ends
+		void OnCompletedEditingComponent() override;
+
+		// Returns true if component preview is available for this asset type
+        bool IsComponentPreviewAvailable() const override;
+
+		// Called when component preview is enabled
+        void OnComponentPreviewEnabled() override;
+
+		// Called when component preview is disabled
+		void OnComponentPreviewDisabled() override;
+
+		// Sets current component asset
+        void ComponentSetAsset(const AssetRef<Asset>& asset) override;
+
+        // Called when asset is saved
+        void OnAssetSaved() override;
+
+		// Creates new asset instance by editing asset type
+        AssetRef<Asset> CreateAssetInstance() override;
 
         // Called when editing animation changed. Invokes change methods in tree, curves etc
         void OnAnimationChanged();
@@ -163,23 +181,19 @@ namespace Editor
 CLASS_BASES_META(Editor::AnimationWindow)
 {
     BASE_CLASS(o2::Singleton<AnimationWindow>);
-    BASE_CLASS(Editor::IEditorWindow);
+    BASE_CLASS(Editor::IAssetEditorWindow);
 }
 END_META;
 CLASS_FIELDS_META(Editor::AnimationWindow)
 {
     FIELD().PROTECTED().DEFAULT_VALUE(325.0f).NAME(mTreeViewWidth);
-    FIELD().PROTECTED().DEFAULT_VALUE(250.0f).NAME(mMinTreeViewWidth);
+    FIELD().PROTECTED().DEFAULT_VALUE(325.0f).NAME(mMinTreeViewWidth);
     FIELD().PROTECTED().NAME(mTargetActor);
     FIELD().PROTECTED().NAME(mPlayer);
-    FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mOwnPlayer);
+    FIELD().PROTECTED().NAME(mAnimationAsset);
     FIELD().PROTECTED().NAME(mAnimation);
-    FIELD().PROTECTED().NAME(mAnimationEditable);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mDisableTimeTracking);
-    FIELD().PROTECTED().NAME(mUpPanel);
     FIELD().PROTECTED().NAME(mWorkArea);
-    FIELD().PROTECTED().NAME(mControlsPanel);
-    FIELD().PROTECTED().NAME(mPreviewToggle);
     FIELD().PROTECTED().NAME(mRecordToggle);
     FIELD().PROTECTED().NAME(mRewindLeft);
     FIELD().PROTECTED().NAME(mMoveLeft);
@@ -204,11 +218,9 @@ CLASS_METHODS_META(Editor::AnimationWindow)
 
     FUNCTION().PUBLIC().CONSTRUCTOR(RefCounter*);
     FUNCTION().PUBLIC().SIGNATURE(void, Update, float);
-    FUNCTION().PUBLIC().SIGNATURE(void, SetAnimation, const Ref<AnimationClip>&, Ref<AnimationPlayer>);
-    FUNCTION().PUBLIC().SIGNATURE(void, SetAnimationEditable, const Ref<IEditableAnimation>&);
-    FUNCTION().PUBLIC().SIGNATURE(void, SetTarget, const Ref<Actor>&);
     FUNCTION().PUBLIC().SIGNATURE(void, SetCurvesMode, bool);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsCurvesMode);
+    FUNCTION().PUBLIC().SIGNATURE(const Type&, GetAssetType);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(Ref<RefCounterable>, CastToRefCounterable, const Ref<AnimationWindow>&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnClosed);
     FUNCTION().PROTECTED().SIGNATURE(void, InitializeWindow);
@@ -218,6 +230,16 @@ CLASS_METHODS_META(Editor::AnimationWindow)
     FUNCTION().PROTECTED().SIGNATURE(void, InitializeCurvesSheet);
     FUNCTION().PROTECTED().SIGNATURE(void, InitializeUpPanel);
     FUNCTION().PROTECTED().SIGNATURE(void, InitializeSeparatorHandle);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnStartEditingAsset);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnCompletedEditingAsset);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnStartEditingComponent);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnCompletedEditingComponent);
+    FUNCTION().PROTECTED().SIGNATURE(bool, IsComponentPreviewAvailable);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnComponentPreviewEnabled);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnComponentPreviewDisabled);
+    FUNCTION().PROTECTED().SIGNATURE(void, ComponentSetAsset, const AssetRef<Asset>&);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnAssetSaved);
+    FUNCTION().PROTECTED().SIGNATURE(AssetRef<Asset>, CreateAssetInstance);
     FUNCTION().PROTECTED().SIGNATURE(void, OnAnimationChanged);
     FUNCTION().PROTECTED().SIGNATURE(void, OnAnimationUpdate, float);
     FUNCTION().PROTECTED().SIGNATURE(void, OnPlayPauseToggled, bool);

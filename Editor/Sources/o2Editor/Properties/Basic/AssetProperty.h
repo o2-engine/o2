@@ -74,6 +74,8 @@ namespace Editor
 
         const Type* mAssetType = nullptr; // Type of asset
 
+		float mCheckAssetNameChangeTime = 0.0f; // Time to check asset name changes
+
         bool mAvailableToHaveInstance = false; // Is asset can own an instance
 
     protected:
@@ -110,6 +112,9 @@ namespace Editor
         // Updates value view
         void UpdateValueView() override;
 
+		// Updates asset name text
+        void UpdateAssetName();
+
         // Is required refresh view every time
         bool IsAlwaysRefresh() const override;
 
@@ -132,7 +137,10 @@ namespace Editor
         void OnDragEnter(const Ref<ISelectableDragableObjectsGroup>& group) override;
 
         // Called when some drag listeners was exited from this area
-        void OnDragExit(const Ref<ISelectableDragableObjectsGroup>& group) override;
+		void OnDragExit(const Ref<ISelectableDragableObjectsGroup>& group) override;
+
+		// Called on update with frame dt, checks asset name changes
+		void OnUpdate(float dt) override;
 
         REF_COUNTERABLE_IMPL(TPropertyField<AssetRef<Asset>>);
     };
@@ -157,6 +165,7 @@ CLASS_FIELDS_META(Editor::AssetProperty)
     FIELD().PROTECTED().NAME(mHeaderContainer);
     FIELD().PROTECTED().NAME(mAssetObjectViewer);
     FIELD().PROTECTED().DEFAULT_VALUE(nullptr).NAME(mAssetType);
+    FIELD().PROTECTED().DEFAULT_VALUE(0.0f).NAME(mCheckAssetNameChangeTime);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mAvailableToHaveInstance);
 }
 END_META;
@@ -185,6 +194,7 @@ CLASS_METHODS_META(Editor::AssetProperty)
     FUNCTION().PROTECTED().SIGNATURE(AssetRef<Asset>, GetProxy, const Ref<IAbstractValueProxy>&);
     FUNCTION().PROTECTED().SIGNATURE(void, SetProxy, const Ref<IAbstractValueProxy>&, const AssetRef<Asset>&);
     FUNCTION().PROTECTED().SIGNATURE(void, UpdateValueView);
+    FUNCTION().PROTECTED().SIGNATURE(void, UpdateAssetName);
     FUNCTION().PROTECTED().SIGNATURE(bool, IsAlwaysRefresh);
     FUNCTION().PROTECTED().SIGNATURE(void, OnCursorEnter, const Input::Cursor&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnCursorExit, const Input::Cursor&);
@@ -193,6 +203,7 @@ CLASS_METHODS_META(Editor::AssetProperty)
     FUNCTION().PROTECTED().SIGNATURE(void, OnDropped, const Ref<ISelectableDragableObjectsGroup>&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnDragEnter, const Ref<ISelectableDragableObjectsGroup>&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnDragExit, const Ref<ISelectableDragableObjectsGroup>&);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnUpdate, float);
 }
 END_META;
 // --- END META ---

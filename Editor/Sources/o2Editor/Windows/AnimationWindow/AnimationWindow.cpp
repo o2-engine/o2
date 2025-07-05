@@ -19,7 +19,7 @@ DECLARE_SINGLETON(Editor::AnimationWindow);
 namespace Editor
 {
     AnimationWindow::AnimationWindow(RefCounter* refCounter):
-        IEditorWindow(refCounter), Singleton<AnimationWindow>(refCounter)
+        IAssetEditorWindow(refCounter), Singleton<AnimationWindow>(refCounter)
     {
         InitializeWindow();
     }
@@ -27,11 +27,9 @@ namespace Editor
     AnimationWindow::~AnimationWindow()
     {}
 
-#undef DrawText
-
     void AnimationWindow::Update(float dt)
     {
-        if (mPlayer && mOwnPlayer)
+        if (mPlayer)
             mPlayer->Update(dt);
 
         if (mTargetActor)
@@ -43,82 +41,7 @@ namespace Editor
         if (mPlayer && mPlayer->IsPlaying() != mPlayPauseToggle->GetValue())
             mPlayPauseToggle->SetValue(mPlayer->IsPlaying());
 
-        if (o2Input.IsKeyDown(VK_F1))
-        {
-            int line = 0;
-            for (int i = 0; i < mActionsList->GetUndoActions().Count(); i++, line++)
-                o2Debug.DrawText(Vec2F(0, line*20.0f), mActionsList->GetUndoActions()[i]->GetName());
-
-            for (int i = 0; i < mActionsList->GetRedoActions().Count(); i++, line++)
-                o2Debug.DrawText(Vec2F(0, line*20.0f), mActionsList->GetRedoActions()[i]->GetName(), Color4::Red());
-        }
-    }
-
-    void AnimationWindow::SetAnimation(const Ref<AnimationClip>& animation, Ref<AnimationPlayer> player /*= nullptr*/)
-    {
-        if (mAnimation)
-            mAnimation->onChanged -= THIS_FUNC(OnAnimationChanged);
-
-        if (mPlayer)
-        {
-            mPlayer->onUpdate -= THIS_FUNC(OnAnimationUpdate);
-        }
-
-        if (mAnimationEditable)
-            mAnimationEditable.Lock()->EndAnimationEdit();
-
-        mAnimation = animation;
-        mPlayer = player;
-        mOwnPlayer = false;
-        mAnimationEditable = nullptr;
-
-        if (!mAnimation)
-            return;
-
-        mAnimation->onChanged += THIS_FUNC(OnAnimationChanged);
-
-        if (mPlayer)
-        {
-            mPlayer->Stop();
-            mLoopToggle->SetValue(mPlayer->GetLoop() == Loop::Repeat);
-
-            mPlayer->onUpdate += THIS_FUNC(OnAnimationUpdate);
-        }
-        else if (mAnimation)
-            mLoopToggle->SetValue(mAnimation->GetLoop() == Loop::Repeat);
-
-        mPlayPauseToggle->SetValue(false);
-
-        mHandlesSheet->SetAnimation(animation);
-        mTimeline->SetAnimation(animation, player);
-        mTree->SetAnimation(animation);
-        mCurves->SetAnimation(animation);
-    }
-
-    void AnimationWindow::SetAnimationEditable(const Ref<IEditableAnimation>& editable)
-    {
-        if (mAnimationEditable)
-            mAnimationEditable.Lock()->EndAnimationEdit();
-
-        mAnimationEditable = editable;
-
-        if (mAnimationEditable)
-        {
-            mPreviewToggle->value = true;
-            mAnimationEditable.Lock()->BeginAnimationEdit();
-        }
-    }
-
-    void AnimationWindow::SetTarget(const Ref<Actor>& actor)
-    {
-        mTargetActor = actor;
-
-        if (!mPlayer && mAnimation)
-        {
-            mPlayer = mmake<AnimationPlayer>(mTargetActor.Get(), Ref(mAnimation));
-            SetAnimation(mAnimation, mPlayer);
-            mOwnPlayer = true;
-        }
+        IAssetEditorWindow::Update(dt);
     }
 
     void AnimationWindow::SetCurvesMode(bool enabled)
@@ -135,15 +58,18 @@ namespace Editor
         return mCurves->IsEnabled();
     }
 
-    Ref<RefCounterable> AnimationWindow::CastToRefCounterable(const Ref<AnimationWindow>& ref)
+	const Type& AnimationWindow::GetAssetType() const
+	{
+		return TypeOf(AnimationAsset);
+	}
+
+	Ref<RefCounterable> AnimationWindow::CastToRefCounterable(const Ref<AnimationWindow>& ref)
     {
         return DynamicCast<Singleton<AnimationWindow>>(ref);
     }
 
     void AnimationWindow::OnClosed()
     {
-        SetAnimation(nullptr);
-        SetAnimationEditable(nullptr);
     }
 
     void AnimationWindow::InitializeWindow()
@@ -218,60 +144,43 @@ namespace Editor
 
     void AnimationWindow::InitializeUpPanel()
     {
-        mUpPanel = mmake<Widget>();
-        *mUpPanel->layout = WidgetLayout::HorStretch(VerAlign::Top, 0, 0, 20);
-        mUpPanel->AddLayer("back", mmake<Sprite>("ui/UI4_small_panel_back.png"), Layout::BothStretch(-4, -4, -5, -5));
-        mWindow->AddChild(mUpPanel);
-
-        mControlsPanel = mmake<HorizontalLayout>();
-        mControlsPanel->name = "controls panel";
-        *mControlsPanel->layout = WidgetLayout::Based(BaseCorner::LeftTop, Vec2F(mTreeViewWidth, 20.0f));
-        mControlsPanel->expandWidth = false;
-        mControlsPanel->AddLayer("back", mmake<Sprite>("ui/UI4_square_field.png"), Layout::BothStretch(-4, -4, -5, -5));
-
-        mPreviewToggle = o2UI.CreateWidget<Toggle>("menu preview");
-        mPreviewToggle->onToggle = THIS_FUNC(OnMenuPreviewToggle);
-        mControlsPanel->AddChild(mPreviewToggle);
-
         mRecordToggle = o2UI.CreateWidget<Toggle>("menu record");
         mRecordToggle->onToggle = THIS_FUNC(OnMenuRecordToggle);
-        mControlsPanel->AddChild(mRecordToggle);
+        mUpPanel->AddChild(mRecordToggle);
 
         mRewindLeft = o2UI.CreateWidget<Button>("menu rewind left");
-        mControlsPanel->AddChild(mRewindLeft);
+        mUpPanel->AddChild(mRewindLeft);
 
         mMoveLeft = o2UI.CreateWidget<Button>("menu move left");
-        mControlsPanel->AddChild(mMoveLeft);
+        mUpPanel->AddChild(mMoveLeft);
 
         mPlayPauseToggle = o2UI.CreateWidget<Toggle>("menu play-stop");
         mPlayPauseToggle->SetValue(false);
         mPlayPauseToggle->onToggleByUser = THIS_FUNC(OnPlayPauseToggled);
-        mControlsPanel->AddChild(mPlayPauseToggle);
+        mUpPanel->AddChild(mPlayPauseToggle);
 
         mMoveRight = o2UI.CreateWidget<Button>("menu move right");
-        mControlsPanel->AddChild(mMoveRight);
+        mUpPanel->AddChild(mMoveRight);
 
         mRewindRight = o2UI.CreateWidget<Button>("menu rewind right");
-        mControlsPanel->AddChild(mRewindRight);
+        mUpPanel->AddChild(mRewindRight);
 
         mLoopToggle = o2UI.CreateWidget<Toggle>("menu loop-nonloop");
         mLoopToggle->SetValue(true);
         mLoopToggle->onToggleByUser = THIS_FUNC(OnLoopToggled);
-        mControlsPanel->AddChild(mLoopToggle);
+        mUpPanel->AddChild(mLoopToggle); 
 
         mCurvesToggle = o2UI.CreateWidget<Toggle>("menu curves");
         mCurvesToggle->SetValue(false);
         mCurvesToggle->onToggleByUser = [&](bool value) { SetCurvesMode(value); };
-        mControlsPanel->AddChild(mCurvesToggle);
+        mUpPanel->AddChild(mCurvesToggle); 
 
         mPropertiesButton = o2UI.CreateWidget<Button>("menu properties");
         mPropertiesButton->onClick = [&]() { PropertiesListDlg::Show(mAnimation, mTargetActor); };
-        mControlsPanel->AddChild(mPropertiesButton);
+        mUpPanel->AddChild(mPropertiesButton);
 
         mAddKeyButton = o2UI.CreateWidget<Button>("menu add key");
-        mControlsPanel->AddChild(mAddKeyButton);
-
-        mUpPanel->AddChild(mControlsPanel);
+        mUpPanel->AddChild(mAddKeyButton); 
     }
 
     void AnimationWindow::InitializeSeparatorHandle()
@@ -282,7 +191,6 @@ namespace Editor
 
         mTreeSeparatorHandle->onChangedPos = [&](const Vec2F& point) {
             mTreeViewWidth = Math::Max(point.x, mMinTreeViewWidth);
-            mControlsPanel->layout->right = mTreeViewWidth;
             mTimeline->layout->left = mTreeViewWidth;
             mHandlesSheet->layout->left = mTreeViewWidth;
             mCurves->layout->left = mTreeViewWidth;
@@ -301,6 +209,82 @@ namespace Editor
         mTreeSeparatorHandle->cursorType = CursorType::SizeWE;
 
         mWorkArea->AddChild(mTreeSeparatorHandle);
+    }
+
+    void AnimationWindow::OnStartEditingAsset()
+    {
+        mAnimationAsset = AssetRef<AnimationAsset>(mEditingAsset);
+        mAnimation = mAnimationAsset->animation;
+
+        if (!mAnimation)
+            return;
+
+        mAnimation->onChanged += THIS_FUNC(OnAnimationChanged);
+
+        mLoopToggle->SetValue(mAnimation->GetLoop() == Loop::Repeat);
+        mPlayPauseToggle->SetValue(false);
+
+        mHandlesSheet->SetAnimation(mAnimation);
+        mTimeline->SetAnimation(mAnimation, nullptr);
+        mTree->SetAnimation(mAnimation);
+        mCurves->SetAnimation(mAnimation);
+    }
+
+    void AnimationWindow::OnCompletedEditingAsset()
+    {
+        if (mAnimation)
+            mAnimation->onChanged -= THIS_FUNC(OnAnimationChanged);
+    }
+
+    void AnimationWindow::OnStartEditingComponent()
+    {
+        mTargetActor = mEditingComponent->GetActor();
+		mPlayer = mmake<AnimationPlayer>(mTargetActor.Get(), Ref(mAnimation));
+		mPlayer->onUpdate += THIS_FUNC(OnAnimationUpdate);
+    }
+
+    void AnimationWindow::OnCompletedEditingComponent()
+    {
+		mPlayer->onUpdate -= THIS_FUNC(OnAnimationUpdate);
+		mPlayer = nullptr;
+		mTargetActor = nullptr;
+    }
+
+    bool AnimationWindow::IsComponentPreviewAvailable() const
+    {
+        return true;
+    }
+
+    void AnimationWindow::OnComponentPreviewEnabled()
+    {
+
+    }
+
+    void AnimationWindow::OnComponentPreviewDisabled()
+    {
+
+    }
+
+    void AnimationWindow::ComponentSetAsset(const AssetRef<Asset>& asset)
+    {
+        if (auto animationComponent = DynamicCast<AnimationComponent>(mEditingComponent))
+        {
+            if (AssetRef<AnimationAsset> animationAsset = asset)
+            {
+                if (auto animationState = DynamicCast<AnimationState>(animationComponent->GetFirstState(true)))
+                    animationState->SetAnimation(animationAsset);
+            }
+        }
+    }
+
+    void AnimationWindow::OnAssetSaved()
+    {
+
+    }
+
+    AssetRef<Asset> AnimationWindow::CreateAssetInstance()
+    {
+        return nullptr;
     }
 
     void AnimationWindow::OnAnimationChanged()
@@ -352,13 +336,6 @@ namespace Editor
 
     void AnimationWindow::OnMenuPreviewToggle(bool value)
     {
-        if (mAnimationEditable)
-        {
-            if (value)
-                mAnimationEditable.Lock()->BeginAnimationEdit();
-            else
-                mAnimationEditable.Lock()->EndAnimationEdit();
-        }
     }
 
     void AnimationWindow::OnMenuRecordToggle(bool value)
