@@ -33,10 +33,7 @@ namespace Editor
             mPlayer->Update(dt);
 
         if (mTargetActor)
-        {
-            mTargetActor->Update(dt);
-            mTargetActor->UpdateChildren(dt);
-        }
+            mTargetActor->UpdateTransform();
 
         if (mPlayer && mPlayer->IsPlaying() != mPlayPauseToggle->GetValue())
             mPlayPauseToggle->SetValue(mPlayer->IsPlaying());
@@ -241,6 +238,8 @@ namespace Editor
         mTargetActor = mEditingComponent->GetActor();
 		mPlayer = mmake<AnimationPlayer>(mTargetActor.Get(), Ref(mAnimation));
 		mPlayer->onUpdate += THIS_FUNC(OnAnimationUpdate);
+
+        mTimeline->SetAnimation(mAnimation, mPlayer);
     }
 
     void AnimationWindow::OnCompletedEditingComponent()
@@ -267,24 +266,10 @@ namespace Editor
 
     void AnimationWindow::ComponentSetAsset(const AssetRef<Asset>& asset)
     {
-        if (auto animationComponent = DynamicCast<AnimationComponent>(mEditingComponent))
-        {
-            if (AssetRef<AnimationAsset> animationAsset = asset)
-            {
-                if (auto animationState = DynamicCast<AnimationState>(animationComponent->GetFirstState(true)))
-                    animationState->SetAnimation(animationAsset);
-            }
-        }
     }
 
     void AnimationWindow::OnAssetSaved()
     {
-
-    }
-
-    AssetRef<Asset> AnimationWindow::CreateAssetInstance()
-    {
-        return nullptr;
     }
 
     void AnimationWindow::OnAnimationChanged()

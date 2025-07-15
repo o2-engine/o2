@@ -152,8 +152,7 @@ namespace o2 {
 
         // Sets property value
         template<typename _class_type, typename _res_type, typename ... _args>
-        void
-        SetProperty(const char *name, _class_type *object, _res_type(_class_type::* functionPtr)(_args ... args) const);
+        void SetProperty(const char *name, _class_type *object, _res_type(_class_type::* functionPtr)(_args ... args) const);
 
         // Sets property wrapper. Uses value reference to get/set value from script
         template<typename _type>

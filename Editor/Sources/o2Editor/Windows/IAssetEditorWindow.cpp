@@ -44,10 +44,10 @@ namespace Editor
 
 	void IAssetEditorWindow::EditAsset(const AssetRef<Asset>& asset)
 	{
-		EditAssetWithComponent(asset, nullptr);
+		EditAsset(asset, nullptr);
 	}
 
-	void IAssetEditorWindow::EditAssetWithComponent(const AssetRef<Asset>& asset, const Ref<Component>& component)
+	void IAssetEditorWindow::EditAsset(const AssetRef<Asset>& asset, const Ref<Component>& component)
 	{
 		if (mEditingAsset)
 			OnCompletedEditingAsset();
@@ -64,7 +64,8 @@ namespace Editor
 		}
 
 		mEditingComponent = component;
-		mEditingAsset = asset;
+		mEditingAsset = asset ? asset : CreateAssetInstance();
+		mEditingAssetEditablePreview = DynamicCast<IAssetEditablePreview>(mEditingComponent);
 
 		if (mEditingAsset)
 		{
@@ -76,6 +77,17 @@ namespace Editor
 			OnStartEditingComponent();
 
 		SetComponentPreview(true);
+
+		if (mWindow)
+			mWindow->Focus();
+
+		mEditingAssetProperty = nullptr;
+	}
+
+	void IAssetEditorWindow::EditAsset(const Ref<AssetProperty>& assetProperty, const Ref<Component>& component)
+	{
+		EditAsset(assetProperty->GetCommonValue(), component);
+		mEditingAssetProperty = assetProperty;
 	}
 
 	void IAssetEditorWindow::SetComponentPreview(bool enable)
@@ -91,19 +103,28 @@ namespace Editor
 		mPreviewEnabled = enable;
 
 		if (enable)
+		{
+			if (mEditingAssetEditablePreview)
+				mEditingAssetEditablePreview->BeginPreview();
+
 			OnComponentPreviewEnabled();
+		}
 		else
+		{
+			if (mEditingAssetEditablePreview)
+				mEditingAssetEditablePreview->EndPreview();
+
 			OnComponentPreviewDisabled();
+		}
 	}
 
 	void IAssetEditorWindow::CreateNewAsset()
 	{
 		auto newAsset = CreateAssetInstance();
-		ComponentSetAsset(newAsset);
-		EditAssetWithComponent(newAsset, mEditingComponent);
+		SetComponentAndPropertyAsset(newAsset);
 	}
 
-	const Ref<Asset>& IAssetEditorWindow::GetEditingAsset() const
+	const AssetRef<Asset>& IAssetEditorWindow::GetEditingAsset() const
 	{
 		return mEditingAsset;
 	}
@@ -133,10 +154,7 @@ namespace Editor
 		else
 			mEditingAsset->Reload();
 
-		if (mEditingComponent)
-			ComponentSetAsset(mEditingAsset);
-
-		EditAssetWithComponent(mEditingAsset, mEditingComponent);
+		SetComponentAndPropertyAsset(mEditingAsset);
 	}
 
 	void IAssetEditorWindow::OnAssetChanged()
@@ -203,8 +221,21 @@ namespace Editor
 		return mEditingComponent != nullptr;
 	}
 
-	AssetRef<Asset> IAssetEditorWindow::CreateAssetInstance()
-	{
+    void IAssetEditorWindow::SetComponentAndPropertyAsset(const AssetRef<Asset> &asset)
+    {
+		if (mEditingAssetProperty)
+			mEditingAssetProperty->SetValue(asset);
+
+		if (mEditingComponent)
+			ComponentSetAsset(asset);
+
+		auto tmpAssetProperty = mEditingAssetProperty;
+		EditAsset(asset, mEditingComponent);
+		mEditingAssetProperty = tmpAssetProperty;
+    }
+
+    AssetRef<Asset> IAssetEditorWindow::CreateAssetInstance()
+    {
 		return AssetRef(DynamicCast<Asset>(GetAssetType().CreateSampleRef()));
 	}
 
@@ -252,12 +283,7 @@ namespace Editor
 			{
 				String relativePath = o2FileSystem.GetPathRelativeToPath(fileName, ::GetAssetsPath());
 				if (auto asset = o2Assets.GetAssetRef(relativePath))
-				{
-					if (mEditingComponent)
-						ComponentSetAsset(asset);
-
-					EditAssetWithComponent(asset, mEditingComponent);
-				}
+					SetComponentAndPropertyAsset(asset);
 			}
 		});
 	}
@@ -277,7 +303,7 @@ namespace Editor
 				relativePath += "." + extensions[0];
 
 			mEditingAsset.SaveInstance(relativePath);
-			ComponentSetAsset(mEditingAsset);
+			SetComponentAndPropertyAsset(mEditingAsset);
 			OnAssetSaved();
 			o2Assets.RebuildAssets();
 		}

@@ -251,12 +251,12 @@ namespace o2
         return "ui/UI4_animation_component.png";
     }
 
-    void AnimationComponent::BeginAnimationEdit()
+    void AnimationComponent::BeginPreview()
     {
         mInEditMode = true;
     }
 
-    void AnimationComponent::EndAnimationEdit()
+    void AnimationComponent::EndPreview()
     {
         mInEditMode = false;
     }

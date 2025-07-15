@@ -55,6 +55,9 @@ namespace Editor
         template<typename _type>
         _type* FindOnStack() const;
 
+        // Searches property field by name
+        Ref<IPropertyField> FindPropertyField(const String& name) const;
+
         // Sets properties enabled or disabled
         void SetPropertiesEnabled(bool enabled);
 
@@ -64,7 +67,7 @@ namespace Editor
     template<typename _type>
     _type* PropertiesContext::FindOnStack() const
     {
-        auto contextIt = parent.Lock();
+        auto contextIt = Ref(this);
         while (contextIt)
         {
             if (!contextIt->targets.IsEmpty())

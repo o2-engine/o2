@@ -84,6 +84,8 @@ namespace Editor
             mLooped->value = animationState->IsLooped();
 			mEditBtn->enabled = DynamicCast<AnimationState>(animationState) != nullptr;
         }
+
+        DefaultObjectPropertiesViewer::OnRefreshed(targetObjets);
     }
 
     void AnimationStateViewer::OnFree()
@@ -131,29 +133,9 @@ namespace Editor
         if (mTargetObjects.IsEmpty())
             return;
 
-        auto animationState = dynamic_cast<AnimationState*>(mTargetObjects.Last().first);
-        if (!animationState)
-            return;
-
-        auto animationRef = animationState->GetAnimation();
-        if (!animationRef)
-        {
-            animationRef.CreateInstance();
-            animationState->SetAnimation(animationRef);
-
-            GetSpoiler()->Expand();
-        }
-
-        if (animationRef)
-        {
-//             o2EditorAnimationWindow.SetAnimation(animationRef->animation);
-// 
-//             if (!o2EditorSceneScreen.GetSelectedObjects().IsEmpty())
-//                 o2EditorAnimationWindow.SetTarget(DynamicCast<Actor>(o2EditorSceneScreen.GetSelectedObjects().Last()));
-// 
-//             o2EditorAnimationWindow.SetAnimationEditable(Ref(mPropertiesContext->FindOnStack<IEditableAnimation>()));
-//             o2EditorAnimationWindow.GetWindow()->Focus();
-        }
+        auto animationComponent = Ref(mPropertiesContext->FindOnStack<Component>());
+        if (auto assetProperty = DynamicCast<AssetProperty>(mPropertiesContext->FindPropertyField("mAnimation")))
+            o2EditorAnimationWindow.EditAsset(assetProperty, animationComponent);
     }
 
     void AnimationStateViewer::OnTimeProgressChanged(float value)

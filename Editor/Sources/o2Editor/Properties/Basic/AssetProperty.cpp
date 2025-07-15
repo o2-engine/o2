@@ -108,23 +108,8 @@ namespace Editor
 
                 if (mAvailableToHaveInstance)
                 {
-                    Vector<IObject*> targets;
-
-                    allAreInstance = false;
-                    for (auto& proxy : mValuesProxies)
-                    {
-						auto assetRef = GetProxy(proxy.first);
-						if (assetRef.IsInstance())
-						{
-							targets.Add(assetRef.GetAssetBase());
-							allAreInstance = true;
-						}
-						else
-						{
-							allAreInstance = false;
-							break;
-						}
-                    }
+                    auto instanceInfo = CollectInstanceTargets();
+                    allAreInstance = instanceInfo.allAreInstance;
 
                     if (allAreInstance)
                     {
@@ -137,7 +122,7 @@ namespace Editor
 
                         mCreateInstanceBtn->SetEnabledForcible(false);
                         mAssetObjectViewer->SetEnabled(true);
-                        mAssetObjectViewer->Refresh(targets);
+                        mAssetObjectViewer->Refresh(instanceInfo.targets);
                     }
                     else if (mAssetObjectViewer)
                     {
@@ -161,6 +146,28 @@ namespace Editor
 			o2FileSystem.GetPathWithoutDirectories(mCommonValue->GetPath()));
 
 		mNameText->text = name;
+	}
+
+	AssetProperty::InstanceTargetsInfo AssetProperty::CollectInstanceTargets() const
+	{
+		InstanceTargetsInfo info;
+
+		for (auto& proxy : mValuesProxies)
+		{
+			auto assetRef = GetProxy(proxy.first);
+			if (assetRef.IsInstance())
+			{
+				info.targets.Add(assetRef.GetAssetBase());
+				info.allAreInstance = true;
+			}
+			else
+			{
+				info.allAreInstance = false;
+				break;
+			}
+		}
+
+		return info;
 	}
 
 	bool AssetProperty::IsAlwaysRefresh() const
@@ -216,6 +223,18 @@ namespace Editor
         return mRemoveBtn;
     }
 
+    void AssetProperty::Refresh(bool forcible)
+    {
+        TPropertyField::Refresh(forcible);
+
+        if (mAvailableToHaveInstance && mAssetObjectViewer)
+        {
+            auto instanceInfo = CollectInstanceTargets();
+            if (instanceInfo.allAreInstance)
+                mAssetObjectViewer->Refresh(instanceInfo.targets);
+        }
+    }
+
     void AssetProperty::SetCommonAssetId(const UID& id)
     {
         mCommonValue = id == UID::empty ? AssetRef<Asset>() : AssetRef<Asset>(id);
@@ -260,12 +279,9 @@ namespace Editor
             {
 				Ref<Component> component;
                 if (auto parentContext = mParentContext.Lock())
-                {
-                    if (!parentContext->targets.IsEmpty())
-                        component = Ref(dynamic_cast<Component*>(parentContext->targets[0].first));
-				}
+                    component = Ref(parentContext->FindOnStack<Component>());
 
-				editor->EditAssetWithComponent(mCommonValue, Ref(component));
+				editor->EditAsset(Ref(this), Ref(component));
 			}
         }
     }

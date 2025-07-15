@@ -171,7 +171,7 @@ namespace Editor
 // 			if (!o2EditorSceneScreen.GetSelectedObjects().IsEmpty())
 // 				o2EditorAnimationWindow.SetTarget(DynamicCast<Actor>(o2EditorSceneScreen.GetSelectedObjects().Last()));
 // 
-// 			o2EditorAnimationWindow.SetAnimationEditable(Ref(mPropertiesContext->FindOnStack<IEditableAnimation>()));
+// 			o2EditorAnimationWindow.SetAnimationEditable(Ref(mPropertiesContext->FindOnStack<IAssetEditablePreview>()));
 // 			o2EditorAnimationWindow.GetWindow()->Focus();
 		}
 	}

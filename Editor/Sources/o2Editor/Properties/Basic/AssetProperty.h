@@ -54,6 +54,9 @@ namespace Editor
         // Adds remove button
         Ref<Button> GetRemoveButton() override;
 
+        // Refreshes property view and object viewer
+        void Refresh(bool forcible = false) override;
+
         // Returns true if point is in this object
         bool IsUnderPoint(const Vec2F& point) override;
 
@@ -61,6 +64,13 @@ namespace Editor
         CLONEABLE_REF(AssetProperty);
 
     protected:
+        // Structure containing instance targets information
+        struct InstanceTargetsInfo
+        {
+            Vector<IObject *> targets;
+            bool allAreInstance = false;
+        };
+
         Ref<Widget>  mBox;               // Property edit box
         Ref<Text>    mNameText;          // Asset name text
         Ref<Spoiler> mSpoiler;           // Spoiler
@@ -114,6 +124,9 @@ namespace Editor
 
 		// Updates asset name text
         void UpdateAssetName();
+
+        // Collects instance targets from value proxies. Returns targets and whether all values are instances
+        InstanceTargetsInfo CollectInstanceTargets() const;
 
         // Is required refresh view every time
         bool IsAlwaysRefresh() const override;
@@ -182,6 +195,7 @@ CLASS_METHODS_META(Editor::AssetProperty)
     FUNCTION().PUBLIC().SIGNATURE(void, SetCaption, const WString&);
     FUNCTION().PUBLIC().SIGNATURE(WString, GetCaption);
     FUNCTION().PUBLIC().SIGNATURE(Ref<Button>, GetRemoveButton);
+    FUNCTION().PUBLIC().SIGNATURE(void, Refresh, bool);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsUnderPoint, const Vec2F&);
     FUNCTION().PROTECTED().SIGNATURE(void, InitializeControls);
     FUNCTION().PROTECTED().SIGNATURE(void, SetCommonAssetId, const UID&);
@@ -195,6 +209,7 @@ CLASS_METHODS_META(Editor::AssetProperty)
     FUNCTION().PROTECTED().SIGNATURE(void, SetProxy, const Ref<IAbstractValueProxy>&, const AssetRef<Asset>&);
     FUNCTION().PROTECTED().SIGNATURE(void, UpdateValueView);
     FUNCTION().PROTECTED().SIGNATURE(void, UpdateAssetName);
+    FUNCTION().PROTECTED().SIGNATURE(InstanceTargetsInfo, CollectInstanceTargets);
     FUNCTION().PROTECTED().SIGNATURE(bool, IsAlwaysRefresh);
     FUNCTION().PROTECTED().SIGNATURE(void, OnCursorEnter, const Input::Cursor&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnCursorExit, const Input::Cursor&);

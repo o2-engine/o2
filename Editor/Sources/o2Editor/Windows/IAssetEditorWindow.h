@@ -1,9 +1,12 @@
 #pragma once
 
 #include "IEditorWindow.h"
+
 #include "o2/Assets/Asset.h"
 #include "o2/Assets/AssetRef.h"
+#include "o2Editor/Properties/Basic/AssetProperty.h"
 #include "o2/Scene/UI/Widget.h"
+#include "o2/Utils/Editor/AssetEditablePreview.h"
 #include "o2/Utils/Function/Function.h"
 
 using namespace o2;
@@ -30,7 +33,7 @@ namespace Editor
         IAssetEditorWindow(RefCounter* refCounter, const IAssetEditorWindow& other);
 
         // Virtual destructor
-        virtual ~IAssetEditorWindow();
+        ~IAssetEditorWindow() override;
 
 		// Returns asset type that this editor window can edit
         virtual const Type& GetAssetType() const;
@@ -39,7 +42,10 @@ namespace Editor
         virtual void EditAsset(const AssetRef<Asset>& asset);
 
 		// Sets asset to edit with component
-		virtual void EditAssetWithComponent(const AssetRef<Asset>& asset, const Ref<Component>& component);
+		virtual void EditAsset(const AssetRef<Asset>& asset, const Ref<Component>& component);
+
+        // Sets asset to edit with asset property and component
+        virtual void EditAsset(const Ref<AssetProperty>& assetProperty, const Ref<Component>& component);
 
 		// Enables or disables component preview mode
 		void SetComponentPreview(bool enable);
@@ -54,7 +60,7 @@ namespace Editor
 		virtual void RevertEditingAsset();
 
 		// Returns currently editing asset
-		virtual const Ref<Asset>& GetEditingAsset() const;
+		virtual const AssetRef<Asset>& GetEditingAsset() const;
 
         // Called when asset has changed, marks asset as dirty
         virtual void OnAssetChanged();
@@ -68,8 +74,10 @@ namespace Editor
         IOBJECT(IAssetEditorWindow);
 
     protected:
-        AssetRef<Asset> mEditingAsset;     // Currently editing asset
-        Ref<Component>  mEditingComponent; // Component of the asset being edited
+        AssetRef<Asset>            mEditingAsset;                // Currently editing asset
+        Ref<AssetProperty>         mEditingAssetProperty;        // Property of the asset being edited
+        Ref<Component>             mEditingComponent;            // Component of the asset being edited
+        Ref<IAssetEditablePreview> mEditingAssetEditablePreview; // Asset editable preview of the asset being edited
 
 		DataDocument mEditingAssetInstanceCache; // Cache for asset instance data, used to restore asset state
 
@@ -112,6 +120,9 @@ namespace Editor
 		// Sets current component asset
         virtual void ComponentSetAsset(const AssetRef<Asset>& asset) {}
 
+        // Sets current component and property asset
+        virtual void SetComponentAndPropertyAsset(const AssetRef<Asset>& asset);
+
         // Called when asset is saved
         virtual void OnAssetSaved() {}
 
@@ -150,7 +161,9 @@ END_META;
 CLASS_FIELDS_META(Editor::IAssetEditorWindow)
 {
     FIELD().PROTECTED().NAME(mEditingAsset);
+    FIELD().PROTECTED().NAME(mEditingAssetProperty);
     FIELD().PROTECTED().NAME(mEditingComponent);
+    FIELD().PROTECTED().NAME(mEditingAssetEditablePreview);
     FIELD().PROTECTED().NAME(mEditingAssetInstanceCache);
     FIELD().PROTECTED().NAME(mUpPanel);
     FIELD().PROTECTED().NAME(mPreviewToggle);
@@ -173,12 +186,13 @@ CLASS_METHODS_META(Editor::IAssetEditorWindow)
     FUNCTION().PUBLIC().CONSTRUCTOR(RefCounter*, const IAssetEditorWindow&);
     FUNCTION().PUBLIC().SIGNATURE(const Type&, GetAssetType);
     FUNCTION().PUBLIC().SIGNATURE(void, EditAsset, const AssetRef<Asset>&);
-    FUNCTION().PUBLIC().SIGNATURE(void, EditAssetWithComponent, const AssetRef<Asset>&, const Ref<Component>&);
+    FUNCTION().PUBLIC().SIGNATURE(void, EditAsset, const AssetRef<Asset>&, const Ref<Component>&);
+    FUNCTION().PUBLIC().SIGNATURE(void, EditAsset, const Ref<AssetProperty>&, const Ref<Component>&);
     FUNCTION().PUBLIC().SIGNATURE(void, SetComponentPreview, bool);
     FUNCTION().PUBLIC().SIGNATURE(void, CreateNewAsset);
     FUNCTION().PUBLIC().SIGNATURE(void, SaveEditingAsset);
     FUNCTION().PUBLIC().SIGNATURE(void, RevertEditingAsset);
-    FUNCTION().PUBLIC().SIGNATURE(const Ref<Asset>&, GetEditingAsset);
+    FUNCTION().PUBLIC().SIGNATURE(const AssetRef<Asset>&, GetEditingAsset);
     FUNCTION().PUBLIC().SIGNATURE(void, OnAssetChanged);
     FUNCTION().PUBLIC().SIGNATURE(void, Initialize);
     FUNCTION().PUBLIC().SIGNATURE(void, Update, float);
@@ -191,6 +205,7 @@ CLASS_METHODS_META(Editor::IAssetEditorWindow)
     FUNCTION().PROTECTED().SIGNATURE(void, OnComponentPreviewEnabled);
     FUNCTION().PROTECTED().SIGNATURE(void, OnComponentPreviewDisabled);
     FUNCTION().PROTECTED().SIGNATURE(void, ComponentSetAsset, const AssetRef<Asset>&);
+    FUNCTION().PROTECTED().SIGNATURE(void, SetComponentAndPropertyAsset, const AssetRef<Asset>&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnAssetSaved);
     FUNCTION().PROTECTED().SIGNATURE(AssetRef<Asset>, CreateAssetInstance);
     FUNCTION().PROTECTED().SIGNATURE(void, OnMenuPreviewToggle, bool);

@@ -140,9 +140,6 @@ namespace Editor
         // Called when asset is saved
         void OnAssetSaved() override;
 
-		// Creates new asset instance by editing asset type
-        AssetRef<Asset> CreateAssetInstance() override;
-
         // Called when editing animation changed. Invokes change methods in tree, curves etc
         void OnAnimationChanged();
 
@@ -239,7 +236,6 @@ CLASS_METHODS_META(Editor::AnimationWindow)
     FUNCTION().PROTECTED().SIGNATURE(void, OnComponentPreviewDisabled);
     FUNCTION().PROTECTED().SIGNATURE(void, ComponentSetAsset, const AssetRef<Asset>&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnAssetSaved);
-    FUNCTION().PROTECTED().SIGNATURE(AssetRef<Asset>, CreateAssetInstance);
     FUNCTION().PROTECTED().SIGNATURE(void, OnAnimationChanged);
     FUNCTION().PROTECTED().SIGNATURE(void, OnAnimationUpdate, float);
     FUNCTION().PROTECTED().SIGNATURE(void, OnPlayPauseToggled, bool);

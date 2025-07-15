@@ -72,6 +72,17 @@ namespace Editor
         return properties;
     }
 
+    Ref<IPropertyField> PropertiesContext::FindPropertyField(const String &name) const
+    {
+        for (auto& kv : properties)
+        {
+            if (kv.first->GetName() == name)
+                return kv.second;
+        }
+
+        return nullptr;
+    }
+
     void PropertiesContext::SetPropertiesEnabled(bool enabled)
     {
         for (auto& kv : properties)

@@ -1,11 +1,11 @@
 #pragma once
 
 #include "o2/Animation/AnimationClip.h"
-#include "o2/Animation/Editor/EditableAnimation.h"
 #include "o2/Animation/Tracks/AnimationSubTrack.h"
 #include "o2/Animation/Tracks/AnimationTrack.h"
 #include "o2/Scene/Component.h"
 #include "o2/Utils/Debug/Debug.h"
+#include "o2/Utils/Editor/AssetEditablePreview.h"
 #include "o2/Utils/Editor/Attributes/DefaultTypeAttribute.h"
 #include "o2/Utils/Editor/Attributes/DontDeleteAttribute.h"
 #include "o2/Utils/Editor/Attributes/InvokeOnChangeAttribute.h"
@@ -18,7 +18,7 @@ namespace o2
     // -------------------
     // Animation component
     // -------------------
-    class AnimationComponent: public Component, public IEditableAnimation
+    class AnimationComponent: public Component, public IAssetEditablePreview
     {
     public:
         PROPERTIES(AnimationComponent);
@@ -105,10 +105,10 @@ namespace o2
         void StopAll();
 
         // Called when animation started to edit. It means that animation must be deactivated
-        void BeginAnimationEdit() override;
+        void BeginPreview() override;
 
         // Called when animation finished editing. ANimation must be reactivated
-        void EndAnimationEdit() override;
+        void EndPreview() override;
 
         // Returns name of component
         static String GetName();
@@ -382,6 +382,7 @@ namespace o2
 CLASS_BASES_META(o2::AnimationComponent)
 {
     BASE_CLASS(o2::Component);
+    BASE_CLASS(o2::IAssetEditablePreview);
 }
 END_META;
 CLASS_FIELDS_META(o2::AnimationComponent)
@@ -422,6 +423,8 @@ CLASS_METHODS_META(o2::AnimationComponent)
     FUNCTION().PUBLIC().SIGNATURE(Ref<IAnimationState>, BlendTo, const Ref<IAnimationState>&, float);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, Stop, const String&);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, StopAll);
+    FUNCTION().PUBLIC().SIGNATURE(void, BeginPreview);
+    FUNCTION().PUBLIC().SIGNATURE(void, EndPreview);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetName);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetCategory);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetIcon);
