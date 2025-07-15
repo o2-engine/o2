@@ -158,9 +158,6 @@ namespace Editor
         // Called when menu filter button was pressed
         void OnMenuFilterPressed();
 
-        // Called when menu preview button was pressed
-        void OnMenuPreviewToggle(bool value);
-
         // Called when menu record button was pressed
         void OnMenuRecordToggle(bool value);
 
@@ -242,7 +239,6 @@ CLASS_METHODS_META(Editor::AnimationWindow)
     FUNCTION().PROTECTED().SIGNATURE(void, OnLoopToggled, bool);
     FUNCTION().PROTECTED().SIGNATURE(void, OnSearchEdited, const WString&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnMenuFilterPressed);
-    FUNCTION().PROTECTED().SIGNATURE(void, OnMenuPreviewToggle, bool);
     FUNCTION().PROTECTED().SIGNATURE(void, OnMenuRecordToggle, bool);
 }
 END_META;

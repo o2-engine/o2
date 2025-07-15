@@ -319,10 +319,6 @@ namespace Editor
 
     }
 
-    void AnimationWindow::OnMenuPreviewToggle(bool value)
-    {
-    }
-
     void AnimationWindow::OnMenuRecordToggle(bool value)
     {
 
