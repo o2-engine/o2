@@ -261,6 +261,11 @@ namespace o2
         mInEditMode = false;
     }
 
+    Ref<Actor> AnimationComponent::GetPreviewActor() const
+    {
+        return GetActor();
+    }
+
     void AnimationComponent::OnStart()
     {
         for (auto& state : mStates)

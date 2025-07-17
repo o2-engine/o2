@@ -236,10 +236,8 @@ namespace Editor
     void AnimationWindow::OnStartEditingComponent()
     {
         mTargetActor = mEditingComponent->GetActor();
-		mPlayer = mmake<AnimationPlayer>(mTargetActor.Get(), Ref(mAnimation));
-		mPlayer->onUpdate += THIS_FUNC(OnAnimationUpdate);
 
-        mTimeline->SetAnimation(mAnimation, mPlayer);
+        InitializeAnimationPlayer();
     }
 
     void AnimationWindow::OnCompletedEditingComponent()
@@ -249,27 +247,31 @@ namespace Editor
 		mTargetActor = nullptr;
     }
 
+    void AnimationWindow::InitializeAnimationPlayer()
+    {
+        if (!mTargetActor || !mAnimation)
+            return;
+
+        mPlayer = mmake<AnimationPlayer>(mTargetActor.Get(), Ref(mAnimation));
+        mPlayer->onUpdate += THIS_FUNC(OnAnimationUpdate);
+
+        mTimeline->SetAnimation(mAnimation, mPlayer);
+    }
+
+    void AnimationWindow::OnAssetEditablePreviewEnabled()
+    {
+        mTargetActor = mEditingAssetEditablePreview->GetPreviewActor();
+        InitializeAnimationPlayer();
+    }
+
+    void AnimationWindow::OnAssetEditablePreviewDisabled()
+    {
+        mTargetActor = nullptr;
+    }
+
     bool AnimationWindow::IsComponentPreviewAvailable() const
     {
         return true;
-    }
-
-    void AnimationWindow::OnComponentPreviewEnabled()
-    {
-
-    }
-
-    void AnimationWindow::OnComponentPreviewDisabled()
-    {
-
-    }
-
-    void AnimationWindow::ComponentSetAsset(const AssetRef<Asset>& asset)
-    {
-    }
-
-    void AnimationWindow::OnAssetSaved()
-    {
     }
 
     void AnimationWindow::OnAnimationChanged()

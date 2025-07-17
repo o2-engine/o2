@@ -110,6 +110,9 @@ namespace o2
         // Called when animation finished editing. ANimation must be reactivated
         void EndPreview() override;
 
+        // Returns actor that is being previewed
+        Ref<Actor> GetPreviewActor() const override;
+
         // Returns name of component
         static String GetName();
 
@@ -425,6 +428,7 @@ CLASS_METHODS_META(o2::AnimationComponent)
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, StopAll);
     FUNCTION().PUBLIC().SIGNATURE(void, BeginPreview);
     FUNCTION().PUBLIC().SIGNATURE(void, EndPreview);
+    FUNCTION().PUBLIC().SIGNATURE(Ref<Actor>, GetPreviewActor);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetName);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetCategory);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetIcon);

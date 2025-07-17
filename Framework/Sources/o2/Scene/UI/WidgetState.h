@@ -2,9 +2,10 @@
 #include "o2/Animation/AnimationClip.h"
 #include "o2/Animation/AnimationPlayer.h"
 #include "o2/Assets/Types/AnimationAsset.h"
+#include "o2/Utils/Editor/AssetEditablePreview.h"
+#include "o2/Utils/Editor/Attributes/InvokeOnChangeAttribute.h"
 #include "o2/Utils/Serialization/Serializable.h"
 #include "o2/Utils/Types/String.h"
-#include "o2/Utils/Editor/Attributes/InvokeOnChangeAttribute.h"
 
 namespace o2
 {
@@ -13,7 +14,7 @@ namespace o2
     // -----------------------------------------------------------------------
     // Widget state. Could be true or false, and animates widget by this state
     // -----------------------------------------------------------------------
-    class WidgetState: public ISerializable, public RefCounterable, public ICloneableRef
+    class WidgetState: public ISerializable, public RefCounterable, public ICloneableRef, public IAssetEditablePreview
     {
     public:
         String name; // State name @SERIALIZABLE @SCRIPTABLE
@@ -82,6 +83,9 @@ namespace o2
         // Updates animation
         void Update(float dt);
 
+        // Returns ref counter
+        RefCounter* GetRefCounter() const;    
+
         SERIALIZABLE(WidgetState);
         CLONEABLE_REF(WidgetState);
 
@@ -104,6 +108,15 @@ namespace o2
         // Completion deserialization delta callback
         void OnDeserializedDelta(const DataValue& node, const IObject& origin) override;
 
+        // Called when asset started to preview
+        void BeginPreview() override;
+
+        // Called when asset finished preview
+        void EndPreview() override;
+
+        // Returns actor that is being previewed
+        Ref<Actor> GetPreviewActor() const override;
+
         friend class Widget;
     };
 }
@@ -114,6 +127,7 @@ CLASS_BASES_META(o2::WidgetState)
     BASE_CLASS(o2::ISerializable);
     BASE_CLASS(o2::RefCounterable);
     BASE_CLASS(o2::ICloneableRef);
+    BASE_CLASS(o2::IAssetEditablePreview);
 }
 END_META;
 CLASS_FIELDS_META(o2::WidgetState)
@@ -148,9 +162,13 @@ CLASS_METHODS_META(o2::WidgetState)
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetStateForcible, bool);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(bool, GetState);
     FUNCTION().PUBLIC().SIGNATURE(void, Update, float);
+    FUNCTION().PUBLIC().SIGNATURE(RefCounter*, GetRefCounter);
     FUNCTION().PROTECTED().SIGNATURE(void, OnAnimationChanged);
     FUNCTION().PROTECTED().SIGNATURE(void, OnDeserialized, const DataValue&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnDeserializedDelta, const DataValue&, const IObject&);
+    FUNCTION().PROTECTED().SIGNATURE(void, BeginPreview);
+    FUNCTION().PROTECTED().SIGNATURE(void, EndPreview);
+    FUNCTION().PROTECTED().SIGNATURE(Ref<Actor>, GetPreviewActor);
 }
 END_META;
 // --- END META ---

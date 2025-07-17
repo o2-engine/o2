@@ -1,4 +1,5 @@
 #pragma once
+#include "o2/Scene/Actor.h"
 #include "o2/Utils/Types/Ref.h"
 
 namespace o2
@@ -16,5 +17,8 @@ namespace o2
 
         // Called when asset finished preview
         virtual void EndPreview() = 0;
+
+        // Returns actor that is being previewed
+        virtual Ref<Actor> GetPreviewActor() const { return nullptr; }
     };
 }

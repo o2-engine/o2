@@ -138,8 +138,10 @@ namespace o2
 
             if (!mPlayer->IsPlaying())
             {
-                if (mState) onStateFullyTrue();
-                else onStateFullyFalse();
+                if (mState) 
+                    onStateFullyTrue();
+                else 
+                    onStateFullyFalse();
             }
         }
     }
@@ -163,6 +165,26 @@ namespace o2
     {
         SetState(state);
         return *this;
+    }
+
+    void WidgetState::BeginPreview()
+    {
+        mPlayer->Stop();
+    }
+
+    void WidgetState::EndPreview()
+    {
+        mPlayer->Play();
+    }
+
+    Ref<Actor> WidgetState::GetPreviewActor() const
+    {
+        return mOwner.Lock();
+    }
+
+    RefCounter* WidgetState::GetRefCounter() const
+    {
+        return RefCounterable::GetRefCounter();
     }
 }
 // --- META ---

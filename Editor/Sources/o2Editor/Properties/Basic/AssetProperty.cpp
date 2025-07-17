@@ -281,7 +281,11 @@ namespace Editor
                 if (auto parentContext = mParentContext.Lock())
                     component = Ref(parentContext->FindOnStack<Component>());
 
-				editor->EditAsset(Ref(this), Ref(component));
+                Ref<IAssetEditablePreview> preview;
+                if (auto parentContext = mParentContext.Lock())
+                    preview = Ref(parentContext->FindOnStack<IAssetEditablePreview>());
+
+				editor->EditAsset(Ref(this), component, preview);
 			}
         }
     }

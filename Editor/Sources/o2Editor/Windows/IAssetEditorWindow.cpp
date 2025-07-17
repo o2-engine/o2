@@ -47,7 +47,8 @@ namespace Editor
 		EditAsset(asset, nullptr);
 	}
 
-	void IAssetEditorWindow::EditAsset(const AssetRef<Asset>& asset, const Ref<Component>& component)
+	void IAssetEditorWindow::EditAsset(const AssetRef<Asset>& asset, const Ref<Component>& component,
+                                       const Ref<IAssetEditablePreview>& preview)
 	{
 		if (mEditingAsset)
 			OnCompletedEditingAsset();
@@ -63,9 +64,12 @@ namespace Editor
 			OnCompletedEditingComponent();
 		}
 
+		if (mEditingAssetEditablePreview)
+			OnAssetEditablePreviewDisabled();
+
 		mEditingComponent = component;
 		mEditingAsset = asset ? asset : CreateAssetInstance();
-		mEditingAssetEditablePreview = DynamicCast<IAssetEditablePreview>(mEditingComponent);
+		mEditingAssetEditablePreview = preview ? preview : DynamicCast<IAssetEditablePreview>(mEditingComponent);
 
 		if (mEditingAsset)
 		{
@@ -76,6 +80,9 @@ namespace Editor
 		if (mEditingComponent)
 			OnStartEditingComponent();
 
+		if (mEditingAssetEditablePreview)
+			OnAssetEditablePreviewEnabled();
+
 		SetComponentPreview(true);
 
 		if (mWindow)
@@ -84,9 +91,10 @@ namespace Editor
 		mEditingAssetProperty = nullptr;
 	}
 
-	void IAssetEditorWindow::EditAsset(const Ref<AssetProperty>& assetProperty, const Ref<Component>& component)
+	void IAssetEditorWindow::EditAsset(const Ref<AssetProperty>& assetProperty, const Ref<Component>& component,
+                                       const Ref<IAssetEditablePreview>& preview)
 	{
-		EditAsset(assetProperty->GetCommonValue(), component);
+		EditAsset(assetProperty->GetCommonValue(), component, preview);
 		mEditingAssetProperty = assetProperty;
 	}
 

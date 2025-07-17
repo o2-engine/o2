@@ -113,6 +113,9 @@ namespace Editor
         // Initializes separator handle view and events
         void InitializeSeparatorHandle();
 
+        // Initializes animation player with current target actor and animation
+        void InitializeAnimationPlayer();
+
         // Called when asset editing starts
         void OnStartEditingAsset() override;
 
@@ -125,20 +128,14 @@ namespace Editor
 		// Called when component editing ends
 		void OnCompletedEditingComponent() override;
 
+		// Called when asset editable preview is enabled
+		void OnAssetEditablePreviewEnabled() override;
+
+		// Called when asset editable preview is disabled
+		void OnAssetEditablePreviewDisabled() override;
+
 		// Returns true if component preview is available for this asset type
         bool IsComponentPreviewAvailable() const override;
-
-		// Called when component preview is enabled
-        void OnComponentPreviewEnabled() override;
-
-		// Called when component preview is disabled
-		void OnComponentPreviewDisabled() override;
-
-		// Sets current component asset
-        void ComponentSetAsset(const AssetRef<Asset>& asset) override;
-
-        // Called when asset is saved
-        void OnAssetSaved() override;
 
         // Called when editing animation changed. Invokes change methods in tree, curves etc
         void OnAnimationChanged();
@@ -224,15 +221,14 @@ CLASS_METHODS_META(Editor::AnimationWindow)
     FUNCTION().PROTECTED().SIGNATURE(void, InitializeCurvesSheet);
     FUNCTION().PROTECTED().SIGNATURE(void, InitializeUpPanel);
     FUNCTION().PROTECTED().SIGNATURE(void, InitializeSeparatorHandle);
+    FUNCTION().PROTECTED().SIGNATURE(void, InitializeAnimationPlayer);
     FUNCTION().PROTECTED().SIGNATURE(void, OnStartEditingAsset);
     FUNCTION().PROTECTED().SIGNATURE(void, OnCompletedEditingAsset);
     FUNCTION().PROTECTED().SIGNATURE(void, OnStartEditingComponent);
     FUNCTION().PROTECTED().SIGNATURE(void, OnCompletedEditingComponent);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnAssetEditablePreviewEnabled);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnAssetEditablePreviewDisabled);
     FUNCTION().PROTECTED().SIGNATURE(bool, IsComponentPreviewAvailable);
-    FUNCTION().PROTECTED().SIGNATURE(void, OnComponentPreviewEnabled);
-    FUNCTION().PROTECTED().SIGNATURE(void, OnComponentPreviewDisabled);
-    FUNCTION().PROTECTED().SIGNATURE(void, ComponentSetAsset, const AssetRef<Asset>&);
-    FUNCTION().PROTECTED().SIGNATURE(void, OnAssetSaved);
     FUNCTION().PROTECTED().SIGNATURE(void, OnAnimationChanged);
     FUNCTION().PROTECTED().SIGNATURE(void, OnAnimationUpdate, float);
     FUNCTION().PROTECTED().SIGNATURE(void, OnPlayPauseToggled, bool);

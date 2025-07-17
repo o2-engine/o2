@@ -42,10 +42,12 @@ namespace Editor
         virtual void EditAsset(const AssetRef<Asset>& asset);
 
 		// Sets asset to edit with component
-		virtual void EditAsset(const AssetRef<Asset>& asset, const Ref<Component>& component);
+		virtual void EditAsset(const AssetRef<Asset>& asset, const Ref<Component>& component, 
+                               const Ref<IAssetEditablePreview>& preview = nullptr);
 
         // Sets asset to edit with asset property and component
-        virtual void EditAsset(const Ref<AssetProperty>& assetProperty, const Ref<Component>& component);
+        virtual void EditAsset(const Ref<AssetProperty>& assetProperty, const Ref<Component>& component,
+                               const Ref<IAssetEditablePreview>& preview = nullptr);
 
 		// Enables or disables component preview mode
 		void SetComponentPreview(bool enable);
@@ -117,6 +119,12 @@ namespace Editor
 		// Called when component preview is disabled
 		virtual void OnComponentPreviewDisabled() {}
 
+        // Called when asset editable preview is enabled
+        virtual void OnAssetEditablePreviewEnabled() {}
+
+        // Called when asset editable preview is disabled
+        virtual void OnAssetEditablePreviewDisabled() {}
+
 		// Sets current component asset
         virtual void ComponentSetAsset(const AssetRef<Asset>& asset) {}
 
@@ -186,8 +194,8 @@ CLASS_METHODS_META(Editor::IAssetEditorWindow)
     FUNCTION().PUBLIC().CONSTRUCTOR(RefCounter*, const IAssetEditorWindow&);
     FUNCTION().PUBLIC().SIGNATURE(const Type&, GetAssetType);
     FUNCTION().PUBLIC().SIGNATURE(void, EditAsset, const AssetRef<Asset>&);
-    FUNCTION().PUBLIC().SIGNATURE(void, EditAsset, const AssetRef<Asset>&, const Ref<Component>&);
-    FUNCTION().PUBLIC().SIGNATURE(void, EditAsset, const Ref<AssetProperty>&, const Ref<Component>&);
+    FUNCTION().PUBLIC().SIGNATURE(void, EditAsset, const AssetRef<Asset>&, const Ref<Component>&, const Ref<IAssetEditablePreview>&);
+    FUNCTION().PUBLIC().SIGNATURE(void, EditAsset, const Ref<AssetProperty>&, const Ref<Component>&, const Ref<IAssetEditablePreview>&);
     FUNCTION().PUBLIC().SIGNATURE(void, SetComponentPreview, bool);
     FUNCTION().PUBLIC().SIGNATURE(void, CreateNewAsset);
     FUNCTION().PUBLIC().SIGNATURE(void, SaveEditingAsset);
@@ -204,6 +212,8 @@ CLASS_METHODS_META(Editor::IAssetEditorWindow)
     FUNCTION().PROTECTED().SIGNATURE(bool, IsComponentPreviewAvailable);
     FUNCTION().PROTECTED().SIGNATURE(void, OnComponentPreviewEnabled);
     FUNCTION().PROTECTED().SIGNATURE(void, OnComponentPreviewDisabled);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnAssetEditablePreviewEnabled);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnAssetEditablePreviewDisabled);
     FUNCTION().PROTECTED().SIGNATURE(void, ComponentSetAsset, const AssetRef<Asset>&);
     FUNCTION().PROTECTED().SIGNATURE(void, SetComponentAndPropertyAsset, const AssetRef<Asset>&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnAssetSaved);
