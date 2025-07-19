@@ -18,7 +18,7 @@ namespace o2
     // -------------------
     // Animation component
     // -------------------
-    class AnimationComponent: public Component, public IAssetEditablePreview
+    class AnimationComponent: public Component
     {
     public:
         PROPERTIES(AnimationComponent);
@@ -103,15 +103,6 @@ namespace o2
 
         // Stops all states @SCRIPTABLE
         void StopAll();
-
-        // Called when animation started to edit. It means that animation must be deactivated
-        void BeginPreview() override;
-
-        // Called when animation finished editing. ANimation must be reactivated
-        void EndPreview() override;
-
-        // Returns actor that is being previewed
-        Ref<Actor> GetPreviewActor() const override;
 
         // Returns name of component
         static String GetName();
@@ -217,8 +208,6 @@ namespace o2
         Vector<Ref<ITrackMixer>>     mValues; // Assigning value agents
 
         BlendState mBlend;  // Current blend parameters
-
-        bool mInEditMode = false; // True when some state animation is editing now, disables update
 
     protected:
         // Called when component started, checks states auto play
@@ -385,7 +374,6 @@ namespace o2
 CLASS_BASES_META(o2::AnimationComponent)
 {
     BASE_CLASS(o2::Component);
-    BASE_CLASS(o2::IAssetEditablePreview);
 }
 END_META;
 CLASS_FIELDS_META(o2::AnimationComponent)
@@ -394,7 +382,6 @@ CLASS_FIELDS_META(o2::AnimationComponent)
     FIELD().PROTECTED().DEFAULT_TYPE_ATTRIBUTE(o2::AnimationState).DONT_DELETE_ATTRIBUTE().EDITOR_PROPERTY_ATTRIBUTE().EXPANDED_BY_DEFAULT_ATTRIBUTE().INVOKE_ON_CHANGE_ATTRIBUTE(ReattachAnimationStates).SERIALIZABLE_ATTRIBUTE().NAME(mStates);
     FIELD().PROTECTED().NAME(mValues);
     FIELD().PROTECTED().NAME(mBlend);
-    FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mInEditMode);
 }
 END_META;
 CLASS_METHODS_META(o2::AnimationComponent)
@@ -426,9 +413,6 @@ CLASS_METHODS_META(o2::AnimationComponent)
     FUNCTION().PUBLIC().SIGNATURE(Ref<IAnimationState>, BlendTo, const Ref<IAnimationState>&, float);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, Stop, const String&);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, StopAll);
-    FUNCTION().PUBLIC().SIGNATURE(void, BeginPreview);
-    FUNCTION().PUBLIC().SIGNATURE(void, EndPreview);
-    FUNCTION().PUBLIC().SIGNATURE(Ref<Actor>, GetPreviewActor);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetName);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetCategory);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetIcon);

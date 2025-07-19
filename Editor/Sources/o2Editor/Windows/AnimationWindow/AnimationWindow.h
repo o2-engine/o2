@@ -57,8 +57,9 @@ namespace Editor
         float mTreeViewWidth = 325.0f;    // Width of tree area. Changed by draggable separator
         float mMinTreeViewWidth = 325.0f; // Minimal tree width
 
-		Ref<Actor>           mTargetActor; // Target actor on animation
-		Ref<AnimationPlayer> mPlayer;      // Animation player
+		Ref<Actor>           mTargetActor;              // Target actor on animation
+		Ref<AnimationPlayer> mPreviewPlayer;            // Animation player
+		bool                 mOwnPreviewPlayer = false; // True if this window owns preview player, otherwise it is from target actor
 
         AssetRef<AnimationAsset> mAnimationAsset; // Editing animation asset
         Ref<AnimationClip>       mAnimation;      // Editing animation
@@ -114,7 +115,10 @@ namespace Editor
         void InitializeSeparatorHandle();
 
         // Initializes animation player with current target actor and animation
-        void InitializeAnimationPlayer();
+        void InitializeOwnAnimationPlayer();
+
+		// Initializes external animation player from asset preview interface
+		void InitializeExternalAnimationPlayer();
 
         // Called when asset editing starts
         void OnStartEditingAsset() override;
@@ -180,7 +184,8 @@ CLASS_FIELDS_META(Editor::AnimationWindow)
     FIELD().PROTECTED().DEFAULT_VALUE(325.0f).NAME(mTreeViewWidth);
     FIELD().PROTECTED().DEFAULT_VALUE(325.0f).NAME(mMinTreeViewWidth);
     FIELD().PROTECTED().NAME(mTargetActor);
-    FIELD().PROTECTED().NAME(mPlayer);
+    FIELD().PROTECTED().NAME(mPreviewPlayer);
+    FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mOwnPreviewPlayer);
     FIELD().PROTECTED().NAME(mAnimationAsset);
     FIELD().PROTECTED().NAME(mAnimation);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mDisableTimeTracking);
@@ -221,7 +226,8 @@ CLASS_METHODS_META(Editor::AnimationWindow)
     FUNCTION().PROTECTED().SIGNATURE(void, InitializeCurvesSheet);
     FUNCTION().PROTECTED().SIGNATURE(void, InitializeUpPanel);
     FUNCTION().PROTECTED().SIGNATURE(void, InitializeSeparatorHandle);
-    FUNCTION().PROTECTED().SIGNATURE(void, InitializeAnimationPlayer);
+    FUNCTION().PROTECTED().SIGNATURE(void, InitializeOwnAnimationPlayer);
+    FUNCTION().PROTECTED().SIGNATURE(void, InitializeExternalAnimationPlayer);
     FUNCTION().PROTECTED().SIGNATURE(void, OnStartEditingAsset);
     FUNCTION().PROTECTED().SIGNATURE(void, OnCompletedEditingAsset);
     FUNCTION().PROTECTED().SIGNATURE(void, OnStartEditingComponent);

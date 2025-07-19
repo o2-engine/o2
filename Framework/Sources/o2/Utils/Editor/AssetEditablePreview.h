@@ -21,4 +21,15 @@ namespace o2
         // Returns actor that is being previewed
         virtual Ref<Actor> GetPreviewActor() const { return nullptr; }
     };
+
+	// ----------------------------------------------------------------
+	// Animation asset editable preview interface, that can be used to 
+	// preview animation assets. Also can return animation player
+	// ----------------------------------------------------------------
+    class AnimationAssetEditablePreview : public IAssetEditablePreview
+    {
+    public:
+		// Returns animation player
+		virtual Ref<IAnimation> GetPreviewPlayer() const { return nullptr; }
+    };
 }

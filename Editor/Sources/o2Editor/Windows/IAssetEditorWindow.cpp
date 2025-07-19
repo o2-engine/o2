@@ -113,14 +113,20 @@ namespace Editor
 		if (enable)
 		{
 			if (mEditingAssetEditablePreview)
+			{
 				mEditingAssetEditablePreview->BeginPreview();
+				OnAssetEditablePreviewEnabled();
+			}
 
 			OnComponentPreviewEnabled();
 		}
 		else
 		{
 			if (mEditingAssetEditablePreview)
+			{
+				OnAssetEditablePreviewDisabled();
 				mEditingAssetEditablePreview->EndPreview();
+			}
 
 			OnComponentPreviewDisabled();
 		}

@@ -29,14 +29,14 @@ namespace Editor
 
     void AnimationWindow::Update(float dt)
     {
-        if (mPlayer)
-            mPlayer->Update(dt);
+        if (mPreviewPlayer && mOwnPreviewPlayer)
+            mPreviewPlayer->Update(dt);
 
         if (mTargetActor)
             mTargetActor->UpdateTransform();
 
-        if (mPlayer && mPlayer->IsPlaying() != mPlayPauseToggle->GetValue())
-            mPlayPauseToggle->SetValue(mPlayer->IsPlaying());
+        if (mPreviewPlayer && mPreviewPlayer->IsPlaying() != mPlayPauseToggle->GetValue())
+            mPlayPauseToggle->SetValue(mPreviewPlayer->IsPlaying());
 
         IAssetEditorWindow::Update(dt);
     }
@@ -235,38 +235,72 @@ namespace Editor
 
     void AnimationWindow::OnStartEditingComponent()
     {
-        mTargetActor = mEditingComponent->GetActor();
-
-        InitializeAnimationPlayer();
     }
 
     void AnimationWindow::OnCompletedEditingComponent()
     {
-		mPlayer->onUpdate -= THIS_FUNC(OnAnimationUpdate);
-		mPlayer = nullptr;
-		mTargetActor = nullptr;
-    }
+	}
 
-    void AnimationWindow::InitializeAnimationPlayer()
-    {
+	void AnimationWindow::OnAssetEditablePreviewEnabled()
+	{
+		InitializeOwnAnimationPlayer();
+	}
+
+	void AnimationWindow::OnAssetEditablePreviewDisabled()
+	{
+		InitializeExternalAnimationPlayer();
+	}
+
+    void AnimationWindow::InitializeOwnAnimationPlayer()
+	{
+		// Reset previous player if exists
+        if (mPreviewPlayer)
+			mPreviewPlayer->onUpdate -= THIS_FUNC(OnAnimationUpdate);
+
+		mPreviewPlayer = nullptr;
+
+		// Get target actor from editable preview
+        if (mEditingAssetEditablePreview)
+		    mTargetActor = mEditingAssetEditablePreview->GetPreviewActor();
+
         if (!mTargetActor || !mAnimation)
             return;
 
-        mPlayer = mmake<AnimationPlayer>(mTargetActor.Get(), Ref(mAnimation));
-        mPlayer->onUpdate += THIS_FUNC(OnAnimationUpdate);
+		// Create new own animation player
+		mOwnPreviewPlayer = true;
+        mPreviewPlayer = mmake<AnimationPlayer>(mTargetActor.Get(), Ref(mAnimation));
+        mPreviewPlayer->onUpdate += THIS_FUNC(OnAnimationUpdate);
 
-        mTimeline->SetAnimation(mAnimation, mPlayer);
+		mTimeline->SetAnimation(mAnimation, mPreviewPlayer);
     }
 
-    void AnimationWindow::OnAssetEditablePreviewEnabled()
-    {
-        mTargetActor = mEditingAssetEditablePreview->GetPreviewActor();
-        InitializeAnimationPlayer();
-    }
+	void AnimationWindow::InitializeExternalAnimationPlayer()
+	{
+		// Reset previous player if exists
+		if (mPreviewPlayer)
+			mPreviewPlayer->onUpdate -= THIS_FUNC(OnAnimationUpdate);
 
-    void AnimationWindow::OnAssetEditablePreviewDisabled()
-    {
-        mTargetActor = nullptr;
+		mPreviewPlayer = nullptr;
+
+		// Get target actor and animation player from editable preview
+        if (mEditingAssetEditablePreview)
+        {
+            mTargetActor = mEditingAssetEditablePreview->GetPreviewActor();
+
+            if (auto animationPreviewEditable = DynamicCast<AnimationAssetEditablePreview>(mEditingAssetEditablePreview))
+            {
+                mPreviewPlayer = DynamicCast<AnimationPlayer>(animationPreviewEditable->GetPreviewPlayer());
+				mOwnPreviewPlayer = false;
+            }
+		}
+
+		if (!mTargetActor || !mAnimation || !mPreviewPlayer)
+			return;
+
+		// Subscribe to animation update
+        mPreviewPlayer->onUpdate += THIS_FUNC(OnAnimationUpdate);
+
+        mTimeline->SetAnimation(mAnimation, mPreviewPlayer);
     }
 
     bool AnimationWindow::IsComponentPreviewAvailable() const
@@ -279,24 +313,24 @@ namespace Editor
         mTree->OnAnimationChanged();
         mCurves->OnAnimationChanged();
 
-        if (mPlayer)
-            mPlayer->SetTime(mPlayer->GetTime());
+        if (mPreviewPlayer)
+            mPreviewPlayer->SetTime(mPreviewPlayer->GetTime());
     }
 
     void AnimationWindow::OnAnimationUpdate(float time)
     {
         if (!mDisableTimeTracking)
-            mTimeline->mTimeCursor = mPlayer->GetLoopTime();
+            mTimeline->mTimeCursor = mPreviewPlayer->GetLoopTime();
     }
 
     void AnimationWindow::OnPlayPauseToggled(bool play)
     {
-        if (mPlayer)
+        if (mPreviewPlayer)
         {
-            if (mPlayer->GetLoop() != Loop::Repeat && Math::Equals(mPlayer->GetTime(), mPlayer->GetDuration()))
-                mPlayer->SetTime(0.0f);
+            if (mPreviewPlayer->GetLoop() != Loop::Repeat && Math::Equals(mPreviewPlayer->GetTime(), mPreviewPlayer->GetDuration()))
+                mPreviewPlayer->SetTime(0.0f);
 
-            mPlayer->SetPlaying(play);
+            mPreviewPlayer->SetPlaying(play);
         }
     }
 
@@ -305,8 +339,8 @@ namespace Editor
         if (mAnimation)
             mAnimation->SetLoop(loop ? Loop::Repeat : Loop::None);
 
-        if (mPlayer)
-            mPlayer->SetLoop(loop ? Loop::Repeat : Loop::None);
+        if (mPreviewPlayer)
+            mPreviewPlayer->SetLoop(loop ? Loop::Repeat : Loop::None);
 
         o2Scene.OnObjectChanged(mTargetActor);
     }

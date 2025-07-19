@@ -32,9 +32,6 @@ namespace o2
 
     void AnimationComponent::OnUpdate(float dt)
     {
-        if (mInEditMode)
-            return;
-
         for (auto& state : mStates)
             state->Update(dt);
 
@@ -249,21 +246,6 @@ namespace o2
     String AnimationComponent::GetIcon()
     {
         return "ui/UI4_animation_component.png";
-    }
-
-    void AnimationComponent::BeginPreview()
-    {
-        mInEditMode = true;
-    }
-
-    void AnimationComponent::EndPreview()
-    {
-        mInEditMode = false;
-    }
-
-    Ref<Actor> AnimationComponent::GetPreviewActor() const
-    {
-        return GetActor();
     }
 
     void AnimationComponent::OnStart()

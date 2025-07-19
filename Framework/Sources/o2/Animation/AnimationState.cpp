@@ -69,6 +69,9 @@ namespace o2
 
 	void AnimationState::Update(float dt)
     {
+        if (mInEditMode)
+			return;
+
         if (mAnimation)
             player->Update(dt);
     }
@@ -119,7 +122,12 @@ namespace o2
         return mAnimation;
     }
 
-    void AnimationState::Register(const Ref<AnimationComponent>& owner)
+	RefCounter* AnimationState::GetRefCounter() const
+	{
+        return IAnimationState::GetRefCounter();
+	}
+
+	void AnimationState::Register(const Ref<AnimationComponent>& owner)
 	{
 		IAnimationState::Register(owner);
 
@@ -148,20 +156,44 @@ namespace o2
 
     void AnimationState::OnTrackPlayerAdded(const Ref<IAnimationTrack::IPlayer>& trackPlayer)
     {
-        if (mOwner)
-            mOwner.Lock()->OnStateAnimationTrackAdded(Ref(this), trackPlayer);
+        if (auto owner = mOwner.Lock())
+            owner->OnStateAnimationTrackAdded(Ref(this), trackPlayer);
     }
 
     void AnimationState::OnTrackPlayerRemove(const Ref<IAnimationTrack::IPlayer>& trackPlayer)
     {
-        if (mOwner)
-            mOwner.Lock()->OnStateAnimationTrackRemoved(Ref(this), trackPlayer);
+        if (auto owner = mOwner.Lock())
+            owner->OnStateAnimationTrackRemoved(Ref(this), trackPlayer);
     }
 
     void AnimationState::OnDeserialized(const DataValue& node)
     {
         player->SetClip(mAnimation ? mAnimation->animation : nullptr);
-    }
+	}
+
+	void AnimationState::BeginPreview()
+	{
+        mInEditMode = true;
+	}
+
+	void AnimationState::EndPreview()
+	{
+		mInEditMode = false;
+	}
+
+	Ref<Actor> AnimationState::GetPreviewActor() const
+	{
+        if (auto owner = mOwner.Lock())
+            return owner->GetActor();
+        
+        return nullptr;
+	}
+
+	Ref<IAnimation> AnimationState::GetPreviewPlayer() const
+	{
+		return player;
+	}
+
 }
 // --- META ---
 

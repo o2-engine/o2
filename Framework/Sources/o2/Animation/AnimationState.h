@@ -5,6 +5,7 @@
 #include "o2/Assets/AssetRef.h"
 #include "o2/Assets/Types/AnimationAsset.h"
 #include "o2/Utils/Basic/ICloneable.h"
+#include "o2/Utils/Editor/AssetEditablePreview.h"
 #include "o2/Utils/Editor/Attributes/InvokeOnChangeAttribute.h"
 #include "o2/Utils/Serialization/Serializable.h"
 #include "o2/Utils/Types/Containers/Vector.h"
@@ -76,7 +77,7 @@ namespace o2
     // ---------------
     // Animation state
     // ---------------
-    class AnimationState: public IAnimationState
+    class AnimationState: public IAnimationState, public AnimationAssetEditablePreview
     {
     public:
         AnimationMask        mask;                              // Animation mask @SERIALIZABLE
@@ -119,6 +120,9 @@ namespace o2
         // Returns animation
         const AssetRef<AnimationAsset>& GetAnimation() const;
 
+		// Returns ref counter
+		RefCounter* GetRefCounter() const override;
+
         SERIALIZABLE(AnimationState);
         CLONEABLE_REF(AnimationState);
 
@@ -126,6 +130,8 @@ namespace o2
         AssetRef<AnimationAsset> mAnimation; // Animation @SERIALIZABLE @EDITOR_PROPERTY @INVOKE_ON_CHANGE(OnAnimationChanged)
 
 		float mWeight = 1.0f; // State weight @SERIALIZABLE
+
+		bool mInEditMode = false; // True, if animation is in edit mode (previewing)
 
     protected:
         // Registers animation in state
@@ -144,7 +150,19 @@ namespace o2
         void OnTrackPlayerRemove(const Ref<IAnimationTrack::IPlayer>& trackPlayer);
 
         // It is called when object was deserialized; sets animation into player
-        void OnDeserialized(const DataValue& node) override;
+		void OnDeserialized(const DataValue& node) override;
+
+		// Called when animation started to edit. It means that animation must be deactivated
+		void BeginPreview() override;
+
+		// Called when animation finished editing. ANimation must be reactivated
+		void EndPreview() override;
+
+		// Returns actor that is being previewed
+		Ref<Actor> GetPreviewActor() const override;
+
+		// Returns animation player for previewing
+        Ref<IAnimation> GetPreviewPlayer() const override;
 
         friend class AnimationComponent;
         friend class AnimationClip;
@@ -193,6 +211,7 @@ END_META;
 CLASS_BASES_META(o2::AnimationState)
 {
     BASE_CLASS(o2::IAnimationState);
+    BASE_CLASS(o2::AnimationAssetEditablePreview);
 }
 END_META;
 CLASS_FIELDS_META(o2::AnimationState)
@@ -201,6 +220,7 @@ CLASS_FIELDS_META(o2::AnimationState)
     FIELD().PUBLIC().DEFAULT_VALUE(mmake<AnimationPlayer>()).NAME(player);
     FIELD().PROTECTED().EDITOR_PROPERTY_ATTRIBUTE().INVOKE_ON_CHANGE_ATTRIBUTE(OnAnimationChanged).SERIALIZABLE_ATTRIBUTE().NAME(mAnimation);
     FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(1.0f).NAME(mWeight);
+    FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mInEditMode);
 }
 END_META;
 CLASS_METHODS_META(o2::AnimationState)
@@ -218,12 +238,17 @@ CLASS_METHODS_META(o2::AnimationState)
     FUNCTION().PUBLIC().SIGNATURE(bool, IsLooped);
     FUNCTION().PUBLIC().SIGNATURE(void, SetAnimation, const AssetRef<AnimationAsset>&);
     FUNCTION().PUBLIC().SIGNATURE(const AssetRef<AnimationAsset>&, GetAnimation);
+    FUNCTION().PUBLIC().SIGNATURE(RefCounter*, GetRefCounter);
     FUNCTION().PROTECTED().SIGNATURE(void, Register, const Ref<AnimationComponent>&);
     FUNCTION().PROTECTED().SIGNATURE(void, Unregister);
     FUNCTION().PROTECTED().SIGNATURE(void, OnAnimationChanged);
     FUNCTION().PROTECTED().SIGNATURE(void, OnTrackPlayerAdded, const Ref<IAnimationTrack::IPlayer>&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnTrackPlayerRemove, const Ref<IAnimationTrack::IPlayer>&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnDeserialized, const DataValue&);
+    FUNCTION().PROTECTED().SIGNATURE(void, BeginPreview);
+    FUNCTION().PROTECTED().SIGNATURE(void, EndPreview);
+    FUNCTION().PROTECTED().SIGNATURE(Ref<Actor>, GetPreviewActor);
+    FUNCTION().PROTECTED().SIGNATURE(Ref<IAnimation>, GetPreviewPlayer);
 }
 END_META;
 // --- END META ---

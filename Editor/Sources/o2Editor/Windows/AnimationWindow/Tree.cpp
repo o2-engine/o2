@@ -160,9 +160,9 @@ namespace Editor
         mRootValue = mmake<TrackNode>();
         mRootValue->name = "Track name";
 
-        if (mAnimationWindow->mPlayer)
+        if (mAnimationWindow->mPreviewPlayer)
         {
-            for (auto& trackPlayer : mAnimationWindow->mPlayer->GetTrackPlayers())
+            for (auto& trackPlayer : mAnimationWindow->mPreviewPlayer->GetTrackPlayers())
                 AddAnimationTrack(trackPlayer->GetTrack(), trackPlayer);
         }
         else

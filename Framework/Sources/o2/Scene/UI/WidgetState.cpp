@@ -182,6 +182,11 @@ namespace o2
         return mOwner.Lock();
     }
 
+    Ref<IAnimation> WidgetState::GetPreviewPlayer() const
+    {
+        return mPlayer;
+    }
+
     RefCounter* WidgetState::GetRefCounter() const
     {
         return RefCounterable::GetRefCounter();
