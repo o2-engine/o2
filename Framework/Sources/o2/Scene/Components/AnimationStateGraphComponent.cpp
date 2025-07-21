@@ -145,7 +145,7 @@ namespace o2
         {
             for (auto& animation : state->GetAnimations())
             {
-                auto player = animationComponent->GetState(animation->name);
+                auto player = animationComponent->GetState(animation->GetName());
                 if (player)
                 {
                     player->autoPlay = false;
@@ -166,8 +166,14 @@ namespace o2
 
     void AnimationStateGraphComponent::CheckStartNextTransition()
     {
-        if (mCurrentTransition || !mCurrentStatePlayer)
+        if (mCurrentTransition)
             return;
+
+        if (!mCurrentStatePlayer)
+        {
+            Reset();
+            return;
+        }
 
 		// Check planning next exit transition from non looped state
         if (mNextTransitions.IsEmpty() && !mCurrentStatePlayer->IsLooped())
@@ -248,21 +254,27 @@ namespace o2
                                                           const Ref<AnimationGraphState>& state,
 														  const Ref<AnimationStateGraphComponent>& owner)
     {
-        mPlayers.Clear();
+        if (mState)
+            mState->onChanged -= THIS_FUNC(OnStateChanged);
+
         this->mState = state;
         this->mOwner = owner;
         
         if (!state)
-            return;
-
-        for (auto& animation : state->GetAnimations())
         {
-            auto player = animationComponent->GetState(animation->name);
-            if (!player)
-                continue;
-
-            mPlayers.Add({ animation, player });
+            mPlayers.Clear();
+            return;
         }
+
+        state->onChanged += THIS_FUNC(OnStateChanged);
+
+        InitializePlayers(animationComponent);
+    }
+
+    AnimationStateGraphComponent::StatePlayer::~StatePlayer()
+    {
+        if (mState)
+            mState->onChanged -= THIS_FUNC(OnStateChanged);
     }
 
     void AnimationStateGraphComponent::StatePlayer::Play()
@@ -312,6 +324,33 @@ namespace o2
 
 		return mPlayers[0].second->GetPlayer().GetLoop() == Loop::Repeat;
 	}
+
+    void AnimationStateGraphComponent::StatePlayer::OnStateChanged()
+    {
+        if (auto ownerRef = mOwner.Lock())
+        {
+            auto animationComponent = ownerRef->GetAnimationComponent();
+            if (animationComponent)
+                InitializePlayers(animationComponent);
+        }
+    }
+
+    void AnimationStateGraphComponent::StatePlayer::InitializePlayers(const Ref<AnimationComponent>& animationComponent)
+    {
+        mPlayers.Clear();
+        
+        if (!mState)
+            return;
+
+        for (auto& animation : mState->GetAnimations())
+        {
+            auto player = animationComponent->GetState(animation->GetName());
+            if (!player)
+                continue;
+
+            mPlayers.Add({ animation, player });
+        }
+    }
 
 	const Vector<Pair<Ref<AnimationGraphState::Animation>, Ref<IAnimationState>>>& AnimationStateGraphComponent::StatePlayer::GetPlayers() const
 	{

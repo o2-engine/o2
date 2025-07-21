@@ -183,9 +183,11 @@ namespace Editor
     {
         Widget::Update(dt);
 
-        if (mPlayer) {
+        if (mPlayer)
+        {
             auto playerValue = Wrapper::GetValue(*mPlayer.Lock());
-            if (!Math::Equals(mLastValue, playerValue)) {
+            if (!Math::Equals(mLastValue, playerValue)) 
+            {
                 mPropertyValue = playerValue;
                 mLastValue = mPropertyValue;
                 mPropertyField->Refresh();
@@ -285,7 +287,8 @@ namespace Editor
         PushEditorScopeOnStack scope;
 
         Vector<UInt64> selectedHandles;
-        for (auto& keyHandle : mHandles) {
+        for (auto& keyHandle : mHandles) 
+        {
             if (keyHandle->handle->IsSelected())
                 selectedHandles.Add(keyHandle->keyUid);
         }
@@ -447,7 +450,6 @@ namespace Editor
         mTimeline.Lock()->SetTimeCursor(time);
 
         OnKeysChanged();
-
 
         DataDocument keyData;
         Map<String, Vector<UInt64>> keys = { { mTrackPath, { Wrapper::GetKey(*track, idx).uid } } };

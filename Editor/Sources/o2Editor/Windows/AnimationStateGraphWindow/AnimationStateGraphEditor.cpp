@@ -708,13 +708,13 @@ namespace Editor
 			Ref<StateAnimation> stateAnimation = mmake<StateAnimation>();
 
 			stateAnimation->owner = Ref(this);
-			stateAnimation->name = animation->name;
+			stateAnimation->name = animation->GetName();
 			stateAnimation->animation = animation;
 
 			if (auto graphComponent = owner->mComponent.Lock())
 			{
 				if (auto animationComponent = graphComponent->GetAnimationComponent())
-					stateAnimation->state = animationComponent->GetState(animation->name);
+					stateAnimation->state = animationComponent->GetState(animation->GetName());
 			}
 
 			animations.Add(stateAnimation);
@@ -822,7 +822,7 @@ namespace Editor
 			else
 			{
 				auto newAnimation = mmake<AnimationGraphState::Animation>();
-				newAnimation->name = stateAnimation->name;
+				newAnimation->SetName(stateAnimation->name);
 				newAnimation->weight = stateAnimation->weight;
 
 				stateAnimation->animation = newAnimation;
@@ -912,8 +912,8 @@ namespace Editor
 		if (!stateAnimation)
 			return;
 
-		auto previousName = stateAnimation->name;
-		stateAnimation->name = name;
+		auto previousName = stateAnimation->GetName();
+		stateAnimation->SetName(name);
 
 		auto owner = this->owner.Lock();
 		if (!owner)
@@ -937,7 +937,7 @@ namespace Editor
 		if (!stateAnimation)
 			return String::empty;
 
-		return stateAnimation->name;
+		return stateAnimation->GetName();
 	}
 
 	void AnimationStateGraphEditor::StateAnimation::SetWeight(float weight)

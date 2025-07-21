@@ -163,7 +163,7 @@ namespace Editor
 
 					if (!animationNameUpdated && animation->animation)
 					{
-						mSourceStateName->text = animation->animation.Lock()->name;
+						mSourceStateName->text = animation->animation.Lock()->GetName();
 						animationNameUpdated = true;
 					}
 				}
@@ -184,7 +184,7 @@ namespace Editor
 
 					if (!animationNameUpdated && animation->animation)
 					{
-						mDestinationStateName->text = animation->animation.Lock()->name;
+						mDestinationStateName->text = animation->animation.Lock()->GetName();
 						animationNameUpdated = true;
 					}
 				}

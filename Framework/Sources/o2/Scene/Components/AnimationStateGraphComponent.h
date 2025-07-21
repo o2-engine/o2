@@ -21,6 +21,11 @@ namespace o2
 		struct StatePlayer: public RefCounterable
 		{
 		public:
+            using thisclass = StatePlayer;
+
+            // Destructor
+            ~StatePlayer() override;
+
 			// Setup state player. Initializes animation players
 			void Setup(const Ref<AnimationComponent>& animationComponent, const Ref<AnimationGraphState>& state,
 					   const Ref<AnimationStateGraphComponent>& owner);
@@ -58,6 +63,13 @@ namespace o2
 			Ref<AnimationGraphState> mState; // State reference
 
 			WeakRef<AnimationStateGraphComponent> mOwner; // Owner reference
+
+        private:
+            // Called when state changed
+            void OnStateChanged();
+
+            // Initialize animation players from state animations
+            void InitializePlayers(const Ref<AnimationComponent>& animationComponent);
 		};
 
     public:

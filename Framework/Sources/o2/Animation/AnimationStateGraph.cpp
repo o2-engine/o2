@@ -5,6 +5,41 @@
 
 namespace o2
 {
+    void AnimationGraphState::Animation::OnChanged()
+    {
+        if (auto state = mState.Lock())
+            state->OnChanged();
+
+        onChanged();
+    }
+
+    void AnimationGraphState::Animation::SetName(const String& name)
+    {
+        mName = name;
+        OnChanged();
+    }
+
+    const String& AnimationGraphState::Animation::GetName() const
+    {
+        return mName;
+    }
+
+    void AnimationGraphState::Animation::SetWeight(float weight)
+    {
+        mWeight = weight;   
+        OnChanged();
+    }
+
+    float AnimationGraphState::Animation::GetWeight() const
+    {
+        return mWeight;
+    }
+
+    void AnimationGraphState::Animation::SetState(const Ref<AnimationGraphState>& state)
+    {
+        mState = state;
+    }
+
     void AnimationGraphTransition::SetDestinationState(const Ref<AnimationGraphState>& state)
     {
         mDestinationState = state->GetUID();
@@ -37,6 +72,8 @@ namespace o2
 			if (auto graph = sourceState->GetGraph())
 				graph->SetDirty();
 		}
+
+        onChanged();
 	}
 
 	const String& AnimationGraphState::GetName() const
@@ -44,7 +81,7 @@ namespace o2
         if (mAnimations.IsEmpty())
             return String::empty;
 
-		return mAnimations[0]->name;
+		return mAnimations[0]->GetName();
 	}
 
 	UID AnimationGraphState::GetUID() const
@@ -56,7 +93,7 @@ namespace o2
     {
         for (auto& animation : mAnimations)
         {
-            if (animation->name == name)
+            if (animation->GetName() == name)
                 return animation;
         }
 
@@ -66,7 +103,8 @@ namespace o2
     Ref<AnimationGraphState::Animation> AnimationGraphState::AddAnimation(const String& name)
     {
         auto animation = mmake<Animation>();
-        animation->name = name;
+        animation->SetName(name);
+        animation->SetState(Ref(this));
         mAnimations.Add(animation);
         
         OnChanged();
@@ -88,6 +126,9 @@ namespace o2
 	void AnimationGraphState::SetAnimations(const Vector<Ref<Animation>>& animations)
 	{
 		mAnimations = animations;
+        for (auto& animation : mAnimations)
+            animation->SetState(Ref(this));
+
 		OnChanged();
 	}
 
@@ -102,7 +143,9 @@ namespace o2
         transition->SetDestinationState(destinationState);
         transition->SetState(Ref(this));
 		mTransitions.Add(transition);
+
 		OnChanged();
+
         return transition;
     }
 
@@ -133,8 +176,14 @@ namespace o2
 		return mPosition;
 	}
 
-	void AnimationGraphState::ReinitTransitions()
+	void AnimationGraphState::ReinitStatesAndTransitions()
     {
+        for (auto& animation : mAnimations)
+        {
+            if (animation)
+                animation->SetState(Ref(this));
+        }
+
         for (auto& transition : mTransitions)
         {
             if (transition)
@@ -146,14 +195,15 @@ namespace o2
     {
         mGraph = graph;
 
-        ReinitTransitions();
-        OnChanged();
+        ReinitStatesAndTransitions();
     }
 
 	void AnimationGraphState::OnChanged()
 	{
 		if (auto graph = mGraph.Lock())
 			graph->SetDirty();
+
+        onChanged();
 	}
 
 }

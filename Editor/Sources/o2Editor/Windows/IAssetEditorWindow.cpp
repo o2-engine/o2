@@ -54,18 +54,9 @@ namespace Editor
 			OnCompletedEditingAsset();
 
 		if (mEditingComponent)
-		{
-			if (mPreviewEnabled)
-			{
-				OnComponentPreviewDisabled();
-				mPreviewEnabled = false;
-			}
-
 			OnCompletedEditingComponent();
-		}
 
-		if (mEditingAssetEditablePreview)
-			OnAssetEditablePreviewDisabled();
+		SetComponentPreview(false);
 
 		mEditingComponent = component;
 		mEditingAsset = asset ? asset : CreateAssetInstance();
@@ -79,9 +70,6 @@ namespace Editor
 
 		if (mEditingComponent)
 			OnStartEditingComponent();
-
-		if (mEditingAssetEditablePreview)
-			OnAssetEditablePreviewEnabled();
 
 		SetComponentPreview(true);
 

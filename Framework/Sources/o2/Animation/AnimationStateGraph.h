@@ -26,6 +26,8 @@ namespace o2
         PROPERTIES(AnimationGraphTransition);
         PROPERTY(Ref<AnimationGraphState>, destinationState, SetDestinationState, GetDestinationState); // Destination state property @EDITOR_IGNORE
 
+        Function<void()> onChanged; // Function to call when transition changed
+
     public:
         // Sets destination state
         void SetDestinationState(const Ref<AnimationGraphState>& state);
@@ -66,11 +68,43 @@ namespace o2
         // ---------------------------------------------------------------
         struct Animation : public ISerializable, public RefCounterable
         {
-            String name;          // Name of animation @SERIALIZABLE
-            float  weight = 1.0f; // Weight of animation @SERIALIZABLE
+            PROPERTIES(Animation);
+            PROPERTY(String, name, SetName, GetName); // Name of animation
+            PROPERTY(float, weight, SetWeight, GetWeight); // Weight of animation @RANGE(0.0f, 1.0f)
+
+            Function<void()> onChanged; // Function to call when animation changed
+
+        public:
+            // Sets name of animation
+            void SetName(const String& name);
+
+            // Returns name of animation
+            const String& GetName() const;
+
+            // Sets weight of animation
+            void SetWeight(float weight);
+
+            // Returns weight of animation
+            float GetWeight() const;
+
+            // Sets state and initializes references
+            void SetState(const Ref<AnimationGraphState>& state);
 
             SERIALIZABLE(Animation);;
+
+        protected:
+            WeakRef<AnimationGraphState> mState; // State reference @SERIALIZABLE
+
+            String mName;         // Name of animation @SERIALIZABLE
+            float mWeight = 1.0f; // Weight of animation @SERIALIZABLE
+
+        protected:
+            // Called when animation changed, makes graph asset dirty
+            void OnChanged();
         };
+
+    public:
+        Function<void()> onChanged; // Function to call when state changed
 
     public:
 		// Returns name of state. Name is the first animation name in animations list, if it is not empty
@@ -129,8 +163,8 @@ namespace o2
 		Vec2F mPosition; // Position of state in graph @SERIALIZABLE @EDITOR_PROPERTY
             
     protected:
-        // Reinitializes transitions
-        void ReinitTransitions();
+        // Reinitializes states and transitions
+        void ReinitStatesAndTransitions();
 
         // Sets graph and initializes references
 		void SetGraph(const Ref<AnimationStateGraphAsset>& graph);
@@ -159,6 +193,7 @@ CLASS_FIELDS_META(o2::AnimationGraphTransition)
     FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(true).NAME(backwardAvailable);
     FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().NAME(curve);
     FIELD().PUBLIC().EDITOR_IGNORE_ATTRIBUTE().NAME(destinationState);
+    FIELD().PUBLIC().NAME(onChanged);
     FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().NAME(mDestinationState);
     FIELD().PROTECTED().NAME(mSourceStateRef);
     FIELD().PROTECTED().NAME(mDestinationStateRef);
@@ -184,6 +219,7 @@ CLASS_BASES_META(o2::AnimationGraphState)
 END_META;
 CLASS_FIELDS_META(o2::AnimationGraphState)
 {
+    FIELD().PUBLIC().NAME(onChanged);
     FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().NAME(mUID);
     FIELD().PROTECTED().EDITOR_PROPERTY_ATTRIBUTE().INVOKE_ON_CHANGE_ATTRIBUTE(ReinitAnimations).SERIALIZABLE_ATTRIBUTE().NAME(mAnimations);
     FIELD().PROTECTED().EDITOR_PROPERTY_ATTRIBUTE().INVOKE_ON_CHANGE_ATTRIBUTE(ReinitTransitions).SERIALIZABLE_ATTRIBUTE().NAME(mTransitions);
@@ -208,7 +244,7 @@ CLASS_METHODS_META(o2::AnimationGraphState)
     FUNCTION().PUBLIC().SIGNATURE(Ref<AnimationStateGraphAsset>, GetGraph);
     FUNCTION().PUBLIC().SIGNATURE(void, SetPosition, const Vec2F&);
     FUNCTION().PUBLIC().SIGNATURE(Vec2F, GetPosition);
-    FUNCTION().PROTECTED().SIGNATURE(void, ReinitTransitions);
+    FUNCTION().PROTECTED().SIGNATURE(void, ReinitStatesAndTransitions);
     FUNCTION().PROTECTED().SIGNATURE(void, SetGraph, const Ref<AnimationStateGraphAsset>&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnChanged);
 }
@@ -222,12 +258,23 @@ CLASS_BASES_META(o2::AnimationGraphState::Animation)
 END_META;
 CLASS_FIELDS_META(o2::AnimationGraphState::Animation)
 {
-    FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().NAME(name);
-    FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(1.0f).NAME(weight);
+    FIELD().PUBLIC().NAME(name);
+    FIELD().PUBLIC().RANGE_ATTRIBUTE(0.0f, 1.0f).NAME(weight);
+    FIELD().PUBLIC().NAME(onChanged);
+    FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().NAME(mState);
+    FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().NAME(mName);
+    FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(1.0f).NAME(mWeight);
 }
 END_META;
 CLASS_METHODS_META(o2::AnimationGraphState::Animation)
 {
+
+    FUNCTION().PUBLIC().SIGNATURE(void, SetName, const String&);
+    FUNCTION().PUBLIC().SIGNATURE(const String&, GetName);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetWeight, float);
+    FUNCTION().PUBLIC().SIGNATURE(float, GetWeight);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetState, const Ref<AnimationGraphState>&);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnChanged);
 }
 END_META;
 // --- END META ---

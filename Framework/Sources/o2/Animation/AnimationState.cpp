@@ -137,7 +137,6 @@ namespace o2
 
 		player->SetClip(mAnimation ? mAnimation->animation : nullptr);
         player->SetTarget(actor.Get());
-        player->SetPlaying(autoPlay);
         player->mAnimationState = Ref(this);
     }
 
