@@ -126,12 +126,6 @@ namespace Editor
         // Called when asset editing ends
         void OnCompletedEditingAsset() override;
 
-		// Called when component editing starts
-		void OnStartEditingComponent() override;
-
-		// Called when component editing ends
-		void OnCompletedEditingComponent() override;
-
 		// Called when asset editable preview is enabled
 		void OnAssetEditablePreviewEnabled() override;
 
@@ -230,8 +224,6 @@ CLASS_METHODS_META(Editor::AnimationWindow)
     FUNCTION().PROTECTED().SIGNATURE(void, InitializeExternalAnimationPlayer);
     FUNCTION().PROTECTED().SIGNATURE(void, OnStartEditingAsset);
     FUNCTION().PROTECTED().SIGNATURE(void, OnCompletedEditingAsset);
-    FUNCTION().PROTECTED().SIGNATURE(void, OnStartEditingComponent);
-    FUNCTION().PROTECTED().SIGNATURE(void, OnCompletedEditingComponent);
     FUNCTION().PROTECTED().SIGNATURE(void, OnAssetEditablePreviewEnabled);
     FUNCTION().PROTECTED().SIGNATURE(void, OnAssetEditablePreviewDisabled);
     FUNCTION().PROTECTED().SIGNATURE(bool, IsComponentPreviewAvailable);

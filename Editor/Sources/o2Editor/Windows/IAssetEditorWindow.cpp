@@ -156,9 +156,13 @@ namespace Editor
 			return;
 
 		if (mIsEditingAssetInstance)
-			mEditingAsset = Ref<Asset>(mEditingAssetInstanceCache);
+		{
+			Ref<Asset> asset;
+			mEditingAssetInstanceCache.Get(asset);
+			mEditingAsset = asset;
+		}
 		else
-			mEditingAsset.Lock()->Reload(); // TODO: Reload asset instance
+			mEditingAsset.Lock()->Reload(); 
 
 		SetComponentAndPropertyAsset(mEditingAsset.Lock());
 	}

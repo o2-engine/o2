@@ -68,6 +68,7 @@ namespace Editor
 
     void AnimationWindow::OnClosed()
     {
+        SetComponentPreview(false);
     }
 
     void AnimationWindow::InitializeWindow()
@@ -236,14 +237,6 @@ namespace Editor
         if (auto animation = mAnimation.Lock())
             animation->onChanged -= THIS_FUNC(OnAnimationChanged);
     }
-
-    void AnimationWindow::OnStartEditingComponent()
-    {
-    }
-
-    void AnimationWindow::OnCompletedEditingComponent()
-    {
-	}
 
 	void AnimationWindow::OnAssetEditablePreviewEnabled()
 	{
