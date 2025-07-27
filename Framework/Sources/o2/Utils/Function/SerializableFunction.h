@@ -32,24 +32,24 @@ namespace o2
         {}
 
         // Constructor from IFunction
-        SerializableFunction(const IFunction<_res_type(_args ...)>& func) :
+        explicit SerializableFunction(const IFunction<_res_type(_args ...)>& func) :
             Base(func)
         {}
 
         // Constructor from IFunction
-        SerializableFunction(IFunction<_res_type(_args ...)>&& func) :
-            Base(func)
+        explicit SerializableFunction(IFunction<_res_type(_args ...)>&& func) :
+            Base(std::move(func))
         {}
 
         // Constructor from static function pointer
         template<typename _static_func_type, typename enable = typename std::enable_if<std::is_function<_static_func_type>::value>::type>
-        SerializableFunction(const _static_func_type* func) :
+        explicit SerializableFunction(const _static_func_type* func) :
             Base(func)
         {}
 
         // Constructor from lambda
         template<typename _lambda_type, typename enable = typename std::enable_if<std::is_invocable_r<_res_type, _lambda_type, _args ...>::value && !std::is_base_of<IFunction<_res_type(_args ...)>, _lambda_type>::value>::type>
-        SerializableFunction(const _lambda_type& lambda) :
+        explicitSerializableFunction(const _lambda_type& lambda) :
             Base(lambda)
         {}
 
@@ -57,9 +57,8 @@ namespace o2
         template<typename _lambda_type, typename enable = typename std::enable_if<
             std::is_invocable_r<_res_type, _lambda_type, _args ...>::value &&
             !std::is_base_of<IFunction<_res_type(_args ...)>, typename std::remove_reference<_lambda_type>::type>::value&&
-            std::is_rvalue_reference<_lambda_type&&>::value
-        >::type>
-            SerializableFunction(_lambda_type&& lambda) :
+            std::is_rvalue_reference<_lambda_type&&>::value>::type>
+        explicit SerializableFunction(_lambda_type&& lambda) :
             Base(lambda)
         {}
 
@@ -71,7 +70,7 @@ namespace o2
 
         // Constructor from object and his function
         template<typename _class_type>
-        SerializableFunction(const ObjFunctionPtr<_class_type, _res_type, _args ...>& func) :
+        explicitSerializableFunction(const ObjFunctionPtr<_class_type, _res_type, _args ...>& func) :
             Base(func)
         {}
 
@@ -112,6 +111,20 @@ namespace o2
             Base::operator=(func);
             return *this;
         }
+
+		// Copy operator
+		SerializableFunction<_res_type(_args ...)>& operator=(const Function<_res_type(_args ...)>& other)
+		{
+			Base::operator=(other);
+			return *this;
+		}
+
+		// Move operator
+		SerializableFunction<_res_type(_args ...)>& operator=(Function<_res_type(_args ...)>&& other)
+		{
+			Base::operator=(other);
+			return *this;
+		}
 
         // Copy operator
         SerializableFunction<_res_type(_args ...)>& operator=(const SerializableFunction<_res_type(_args ...)>& other)

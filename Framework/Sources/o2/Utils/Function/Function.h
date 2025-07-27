@@ -404,7 +404,8 @@ namespace o2
     protected:
         enum class DataType { Empty, OneFunction, CoupleOfFunctions };
 
-        static constexpr UInt payloadSize = sizeof(std::vector<void*>);
+        static constexpr UInt extraPayload = 40;
+        static constexpr UInt payloadSize = sizeof(std::vector<void*>) + extraPayload;
         static constexpr UInt dataSize = payloadSize + sizeof(DataType);
 
         struct TypeData
