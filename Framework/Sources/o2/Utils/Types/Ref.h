@@ -22,7 +22,6 @@ namespace o2
 
 #if ENABLE_MEMORY_ANALYZE
         std::vector<MemoryAnalyzeObject*> strongRefPointers; // Pointers to strong reference objects
-        std::vector<MemoryAnalyzeObject*> weakRefPointers;   // Pointers to weak reference objects
 #endif
 
     protected:
@@ -243,6 +242,8 @@ namespace o2
         IObject* GetIObject() const override;
         const std::type_info& GetTypeInfo() const override;
 
+        void MoveReference(MemoryAnalyzeObject* other);
+
         friend class MemoryAnalyzer;
 #endif 
 
@@ -461,7 +462,11 @@ namespace o2
     Ref<_type>::Ref(Ref<_type>&& other) :
         mPtr(other.mPtr)
     {
-        other.mPtr = nullptr;
+		other.mPtr = nullptr;
+
+#if ENABLE_MEMORY_ANALYZE
+		MoveReference(static_cast<MemoryAnalyzeObject*>(&other));
+#endif
     }
 
     template<typename _type>
@@ -478,6 +483,10 @@ namespace o2
         mPtr(other.mPtr)
     {
         other.mPtr = nullptr;
+
+#if ENABLE_MEMORY_ANALYZE
+		MoveReference(static_cast<MemoryAnalyzeObject*>(&other));
+#endif
     }
 
     template<typename _type>
@@ -551,7 +560,11 @@ namespace o2
         DecrementRef();
 
         mPtr = other.mPtr;
-        other.mPtr = nullptr;
+		other.mPtr = nullptr;
+
+#if ENABLE_MEMORY_ANALYZE
+		MoveReference(static_cast<MemoryAnalyzeObject*>(&other));
+#endif
 
         return *this;
     }
@@ -562,7 +575,11 @@ namespace o2
         DecrementRef();
 
         mPtr = other.mPtr;
-        other.mPtr = nullptr;
+		other.mPtr = nullptr;
+
+#if ENABLE_MEMORY_ANALYZE
+		MoveReference(static_cast<MemoryAnalyzeObject*>(&other));
+#endif
 
         return *this;
     }
@@ -659,7 +676,10 @@ namespace o2
     template<typename _type>
     IObject* GetIObjectPtrImpl(_type* ptr)
     {
-        return dynamic_cast<IObject*>(ptr);
+        if constexpr (std::is_base_of<IObject, _type>::value)
+            return dynamic_cast<IObject*>(ptr);
+
+        return nullptr;
     }
 
     template<typename _type>
@@ -696,7 +716,22 @@ namespace o2
     const std::type_info& Ref<_type>::GetTypeInfo() const 
     { 
         return o2::GetTypeInfo(mPtr);
-    }
+	}
 
+	template<typename _type>
+	void Ref<_type>::MoveReference(MemoryAnalyzeObject* other)
+	{
+		if (mPtr)
+		{
+			auto refCounter = GetRefCounter(mPtr);
+			auto& strongRefPointers = refCounter->strongRefPointers;
+            
+			auto it = std::find(strongRefPointers.begin(), strongRefPointers.end(), other);
+			if (it != strongRefPointers.end())
+				strongRefPointers.erase(it);
+
+			strongRefPointers.push_back(static_cast<MemoryAnalyzeObject*>(this));
+		}
+	}
 #endif
 }
