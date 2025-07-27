@@ -55,10 +55,16 @@ namespace Editor
     void CurvesSheet::UpdateCurvesColors()
     {
         auto animationWindow = mAnimationWindow.Lock();
+        if (!animationWindow)
+            return;
+
+        auto animation = animationWindow->mAnimation.Lock();
+        if (!animation)
+            return;
 
         Color4 curveColor(44, 62, 80);
         int colorIdx = 0;
-        for (auto& track : animationWindow->mAnimation->GetTracks())
+        for (auto& track : animation->GetTracks())
         {
             if (auto floatTrack = DynamicCast<AnimationTrack<float>>(track))
             {
@@ -77,12 +83,20 @@ namespace Editor
 
     void CurvesSheet::OnAnimationChanged()
     {
+        auto animationWindow = mAnimationWindow.Lock();
+        if (!animationWindow)
+            return;
+
+        auto animation = animationWindow->mAnimation.Lock();
+        if (!animation)
+            return;
+
         bool changed = false;
 
         // Check new curves
         auto currentCurves = mCurvesEditor->GetCurves();
         Vector<Ref<Curve>> animCurves;
-        for (auto& track : mAnimationWindow.Lock()->mAnimation->GetTracks())
+        for (auto& track : animation->GetTracks())
         {
             Ref<Curve> curve;
             if (auto floatTrack = DynamicCast<AnimationTrack<float>>(track))

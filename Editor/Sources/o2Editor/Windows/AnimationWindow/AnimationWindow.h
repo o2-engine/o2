@@ -57,12 +57,12 @@ namespace Editor
         float mTreeViewWidth = 325.0f;    // Width of tree area. Changed by draggable separator
         float mMinTreeViewWidth = 325.0f; // Minimal tree width
 
-		Ref<Actor>           mTargetActor;              // Target actor on animation
+		WeakRef<Actor>       mTargetActor;              // Target actor on animation
 		Ref<AnimationPlayer> mPreviewPlayer;            // Animation player
 		bool                 mOwnPreviewPlayer = false; // True if this window owns preview player, otherwise it is from target actor
 
-        AssetRef<AnimationAsset> mAnimationAsset; // Editing animation asset
-        Ref<AnimationClip>       mAnimation;      // Editing animation
+        WeakRef<AnimationAsset> mAnimationAsset; // Editing animation asset
+        WeakRef<AnimationClip>  mAnimation;      // Editing animation
 
         bool mDisableTimeTracking = false; // When true animation time changes has no effect
 

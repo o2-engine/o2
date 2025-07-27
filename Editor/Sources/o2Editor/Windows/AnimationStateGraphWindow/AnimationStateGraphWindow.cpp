@@ -62,7 +62,7 @@ namespace Editor
 	void AnimationStateGraphWindow::OnStartEditingAsset()
 	{
 		if (!mEditingComponent)
-			mEditor->SetGraph(AssetRef<AnimationStateGraphAsset>(mEditingAsset), nullptr);
+			mEditor->SetGraph(DynamicCast<AnimationStateGraphAsset>(mEditingAsset.Lock()), nullptr);
 	}
 
 	void AnimationStateGraphWindow::OnCompletedEditingAsset()
@@ -70,8 +70,8 @@ namespace Editor
 
 	void AnimationStateGraphWindow::OnStartEditingComponent()
 	{
-		mEditor->SetGraph(AssetRef<AnimationStateGraphAsset>(mEditingAsset),
-						  DynamicCast<AnimationStateGraphComponent>(mEditingComponent));
+		mEditor->SetGraph(DynamicCast<AnimationStateGraphAsset>(mEditingAsset.Lock()),
+						  DynamicCast<AnimationStateGraphComponent>(mEditingComponent.Lock()));
 	}
 
 	void AnimationStateGraphWindow::OnCompletedEditingComponent()
@@ -93,7 +93,7 @@ namespace Editor
 			return;
 
 		AssetRef<AnimationStateGraphAsset> graphAsset = asset;
-		auto component = DynamicCast<AnimationStateGraphComponent>(mEditingComponent);
+		auto component = DynamicCast<AnimationStateGraphComponent>(mEditingComponent.Lock());
 
 		if (graphAsset && component)
 		{

@@ -192,16 +192,21 @@ namespace Editor
     {
         Map<Ref<AssetInfo>, Pair<String, int>> sortingCache;
         for (auto& assetInfo : mAssetInfos)
-        {
             sortingCache[assetInfo] = { assetInfo->path.ToLowerCase(), assetInfo->meta->GetAssetType()->InvokeStatic<int>("GetEditorSorting") };
-        }
 
 		mAssetInfos.Sort([&](const Ref<AssetInfo>& a, const Ref<AssetInfo>& b)
 						 {
-							 if (a->meta->GetAssetType() == b->meta->GetAssetType())
-								 return sortingCache[a].first < sortingCache[b].first;
+							 int aSorting = sortingCache[a].second;
+							 int bSorting = sortingCache[b].second;
+							 if (aSorting != bSorting)
+								 return aSorting > bSorting;
 
-							 return sortingCache[a].second > sortingCache[b].second;
+							 const String& aPath = sortingCache[a].first;
+							 const String& bPath = sortingCache[b].first;
+							 if (aPath != bPath)
+								 return aPath < bPath;
+
+							 return a->meta->ID() < b->meta->ID();
 						 });
     }
 

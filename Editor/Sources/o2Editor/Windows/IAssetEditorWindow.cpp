@@ -60,7 +60,7 @@ namespace Editor
 
 		mEditingComponent = component;
 		mEditingAsset = asset ? asset : CreateAssetInstance();
-		mEditingAssetEditablePreview = preview ? preview : DynamicCast<IAssetEditablePreview>(mEditingComponent);
+		mEditingAssetEditablePreview = preview ? preview : DynamicCast<IAssetEditablePreview>(component);
 
 		if (mEditingAsset)
 		{
@@ -100,9 +100,9 @@ namespace Editor
 
 		if (enable)
 		{
-			if (mEditingAssetEditablePreview)
+			if (auto editablePreview = mEditingAssetEditablePreview.Lock())
 			{
-				mEditingAssetEditablePreview->BeginPreview();
+				editablePreview->BeginPreview();
 				OnAssetEditablePreviewEnabled();
 			}
 
@@ -110,10 +110,10 @@ namespace Editor
 		}
 		else
 		{
-			if (mEditingAssetEditablePreview)
+			if (auto editablePreview = mEditingAssetEditablePreview.Lock())
 			{
 				OnAssetEditablePreviewDisabled();
-				mEditingAssetEditablePreview->EndPreview();
+				editablePreview->EndPreview();
 			}
 
 			OnComponentPreviewDisabled();
@@ -126,21 +126,25 @@ namespace Editor
 		SetComponentAndPropertyAsset(newAsset);
 	}
 
-	const AssetRef<Asset>& IAssetEditorWindow::GetEditingAsset() const
+	AssetRef<Asset> IAssetEditorWindow::GetEditingAsset() const
 	{
-		return mEditingAsset;
+		return mEditingAsset.Lock();
 	}
 
 	void IAssetEditorWindow::SaveEditingAsset()
 	{
-		if (!mEditingAsset || !mEditingAsset->IsDirty())
+		if (!mEditingAsset)
 			return;
 
-		if (mEditingAsset->GetPath().IsEmpty())
+		auto editingAsset = mEditingAsset.Lock();
+		if (!editingAsset || !editingAsset->IsDirty())
+			return;
+
+		if (editingAsset->GetPath().IsEmpty())
 			OnSaveAsAssetPressed();
 		else
 		{
-			mEditingAsset->Save();
+			editingAsset->Save();
 			OnAssetSaved();
 			o2Assets.RebuildAssets();
 		}
@@ -151,18 +155,18 @@ namespace Editor
 		if (!mEditingAsset)
 			return;
 
-		if (mEditingAsset.IsInstance())
-			mEditingAsset = mEditingAssetInstanceCache;
+		if (mIsEditingAssetInstance)
+			mEditingAsset = Ref<Asset>(mEditingAssetInstanceCache);
 		else
-			mEditingAsset->Reload();
+			mEditingAsset.Lock()->Reload(); // TODO: Reload asset instance
 
-		SetComponentAndPropertyAsset(mEditingAsset);
+		SetComponentAndPropertyAsset(mEditingAsset.Lock());
 	}
 
 	void IAssetEditorWindow::OnAssetChanged()
 	{
-		if (mEditingAsset)
-			mEditingAsset->SetDirty(true);
+		if (auto asset = mEditingAsset.Lock())
+			asset->SetDirty(true);
 	}
 
 	void IAssetEditorWindow::Initialize()
@@ -172,7 +176,17 @@ namespace Editor
 
 	void IAssetEditorWindow::Update(float dt)
 	{
-		mSaveAssetButton->interactable = mEditingAsset && mEditingAsset->IsDirty();
+		CheckAssetAlive();
+
+		mSaveAssetButton->interactable = mEditingAsset && mEditingAsset.Lock()->IsDirty();
+	}
+
+	void IAssetEditorWindow::CheckAssetAlive()
+	{
+		if (mPrevEditingAssetAlive && !mEditingAsset)
+			EditAsset(nullptr);
+
+		mPrevEditingAssetAlive = mEditingAsset != nullptr;
 	}
 
 	void IAssetEditorWindow::InitializeWindow()
@@ -225,14 +239,14 @@ namespace Editor
 
     void IAssetEditorWindow::SetComponentAndPropertyAsset(const AssetRef<Asset> &asset)
     {
-		if (mEditingAssetProperty)
-			mEditingAssetProperty->SetValue(asset);
+		if (auto assetProperty = mEditingAssetProperty.Lock())
+			assetProperty->SetValue(asset);
 
 		if (mEditingComponent)
 			ComponentSetAsset(asset);
 
 		auto tmpAssetProperty = mEditingAssetProperty;
-		EditAsset(asset, mEditingComponent);
+		EditAsset(asset, mEditingComponent.Lock());
 		mEditingAssetProperty = tmpAssetProperty;
     }
 
@@ -248,7 +262,7 @@ namespace Editor
 
 	void IAssetEditorWindow::CheckDirtyAssetAndExecute(const Function<void()>& callback)
 	{
-		if (!mEditingAsset || !mEditingAsset->IsDirty())
+		if (!mEditingAsset || !mEditingAsset.Lock()->IsDirty())
 		{
 			callback();
 			return;
@@ -304,16 +318,22 @@ namespace Editor
 			if (!extensions.IsEmpty() && !relativePath.EndsWith(extensions[0]))
 				relativePath += "." + extensions[0];
 
-			mEditingAsset.SaveInstance(relativePath);
-			SetComponentAndPropertyAsset(mEditingAsset);
-			OnAssetSaved();
-			o2Assets.RebuildAssets();
+			if (auto asset = mEditingAsset.Lock())
+			{
+				asset->SetPath(relativePath);
+				asset->Save();
+
+				SetComponentAndPropertyAsset(asset);
+
+				OnAssetSaved();
+				o2Assets.RebuildAssets();
+			}
 		}
 	}
 
 	void IAssetEditorWindow::OnRevertAssetPressed()
 	{
-		if (!mEditingAsset || !mEditingAsset->IsDirty())
+		if (!mEditingAsset || !mEditingAsset.Lock()->IsDirty())
 			return;
 
 		YesNoCancelDlg::ShowYesNo( "Revert changes to asset?", [this]() { RevertEditingAsset(); });

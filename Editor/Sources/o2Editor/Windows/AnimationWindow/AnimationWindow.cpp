@@ -1,3 +1,4 @@
+#include "o2/Utils/Types/Ref.h"
 #include "o2Editor/stdafx.h"
 #include "AnimationWindow.h"
 
@@ -32,8 +33,8 @@ namespace Editor
         if (mPreviewPlayer && mOwnPreviewPlayer)
             mPreviewPlayer->Update(dt);
 
-        if (mTargetActor)
-            mTargetActor->UpdateTransform();
+        if (auto targetActor = mTargetActor.Lock())
+            targetActor->UpdateTransform();
 
         if (mPreviewPlayer && mPreviewPlayer->IsPlaying() != mPlayPauseToggle->GetValue())
             mPlayPauseToggle->SetValue(mPreviewPlayer->IsPlaying());
@@ -173,7 +174,7 @@ namespace Editor
         mUpPanel->AddChild(mCurvesToggle); 
 
         mPropertiesButton = o2UI.CreateWidget<Button>("menu properties");
-        mPropertiesButton->onClick = [&]() { PropertiesListDlg::Show(mAnimation, mTargetActor); };
+        mPropertiesButton->onClick = [&]() { PropertiesListDlg::Show(mAnimation.Lock(), mTargetActor.Lock()); };
         mUpPanel->AddChild(mPropertiesButton);
 
         mAddKeyButton = o2UI.CreateWidget<Button>("menu add key");
@@ -210,27 +211,30 @@ namespace Editor
 
     void AnimationWindow::OnStartEditingAsset()
     {
-        mAnimationAsset = AssetRef<AnimationAsset>(mEditingAsset);
-        mAnimation = mAnimationAsset->animation;
+        auto animationAsset = DynamicCast<AnimationAsset>(mEditingAsset.Lock());
+        mAnimationAsset = animationAsset;
+
+        auto animation = animationAsset->animation;
+        mAnimation = animation;
 
         if (!mAnimation)
             return;
 
-        mAnimation->onChanged += THIS_FUNC(OnAnimationChanged);
+        animation->onChanged += THIS_FUNC(OnAnimationChanged);
 
-        mLoopToggle->SetValue(mAnimation->GetLoop() == Loop::Repeat);
+        mLoopToggle->SetValue(animation->GetLoop() == Loop::Repeat);
         mPlayPauseToggle->SetValue(false);
 
-        mHandlesSheet->SetAnimation(mAnimation);
-        mTimeline->SetAnimation(mAnimation, nullptr);
-        mTree->SetAnimation(mAnimation);
-        mCurves->SetAnimation(mAnimation);
+        mHandlesSheet->SetAnimation(animation);
+        mTimeline->SetAnimation(animation, nullptr);
+        mTree->SetAnimation(animation);
+        mCurves->SetAnimation(animation);
     }
 
     void AnimationWindow::OnCompletedEditingAsset()
     {
-        if (mAnimation)
-            mAnimation->onChanged -= THIS_FUNC(OnAnimationChanged);
+        if (auto animation = mAnimation.Lock())
+            animation->onChanged -= THIS_FUNC(OnAnimationChanged);
     }
 
     void AnimationWindow::OnStartEditingComponent()
@@ -260,18 +264,20 @@ namespace Editor
 		mPreviewPlayer = nullptr;
 
 		// Get target actor from editable preview
-        if (mEditingAssetEditablePreview)
-		    mTargetActor = mEditingAssetEditablePreview->GetPreviewActor();
+        if (auto editablePreview = mEditingAssetEditablePreview.Lock())
+		    mTargetActor = editablePreview->GetPreviewActor();
 
         if (!mTargetActor || !mAnimation)
             return;
 
+        auto animation = mAnimation.Lock();
+
 		// Create new own animation player
 		mOwnPreviewPlayer = true;
-        mPreviewPlayer = mmake<AnimationPlayer>(mTargetActor.Get(), Ref(mAnimation));
+        mPreviewPlayer = mmake<AnimationPlayer>(mTargetActor.Lock().Get(), Ref(animation));
         mPreviewPlayer->onUpdate += THIS_FUNC(OnAnimationUpdate);
 
-		mTimeline->SetAnimation(mAnimation, mPreviewPlayer);
+		mTimeline->SetAnimation(animation, mPreviewPlayer);
     }
 
 	void AnimationWindow::InitializeExternalAnimationPlayer()
@@ -283,11 +289,11 @@ namespace Editor
 		mPreviewPlayer = nullptr;
 
 		// Get target actor and animation player from editable preview
-        if (mEditingAssetEditablePreview)
+        if (auto editablePreview = mEditingAssetEditablePreview.Lock())
         {
-            mTargetActor = mEditingAssetEditablePreview->GetPreviewActor();
+            mTargetActor = editablePreview->GetPreviewActor();
 
-            if (auto animationPreviewEditable = DynamicCast<AnimationAssetEditablePreview>(mEditingAssetEditablePreview))
+            if (auto animationPreviewEditable = DynamicCast<AnimationAssetEditablePreview>(editablePreview))
             {
                 mPreviewPlayer = DynamicCast<AnimationPlayer>(animationPreviewEditable->GetPreviewPlayer());
 				mOwnPreviewPlayer = false;
@@ -300,7 +306,7 @@ namespace Editor
 		// Subscribe to animation update
         mPreviewPlayer->onUpdate += THIS_FUNC(OnAnimationUpdate);
 
-        mTimeline->SetAnimation(mAnimation, mPreviewPlayer);
+        mTimeline->SetAnimation(mAnimation.Lock(), mPreviewPlayer);
     }
 
     bool AnimationWindow::IsComponentPreviewAvailable() const
@@ -336,13 +342,14 @@ namespace Editor
 
     void AnimationWindow::OnLoopToggled(bool loop)
     {
-        if (mAnimation)
-            mAnimation->SetLoop(loop ? Loop::Repeat : Loop::None);
+        if (auto animation = mAnimation.Lock())
+            animation->SetLoop(loop ? Loop::Repeat : Loop::None);
 
         if (mPreviewPlayer)
             mPreviewPlayer->SetLoop(loop ? Loop::Repeat : Loop::None);
 
-        o2Scene.OnObjectChanged(mTargetActor);
+        if (auto targetActor = mTargetActor.Lock())
+            o2Scene.OnObjectChanged(targetActor);
     }
 
     void AnimationWindow::OnSearchEdited(const WString& search)

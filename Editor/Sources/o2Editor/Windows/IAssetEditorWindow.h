@@ -62,7 +62,7 @@ namespace Editor
 		virtual void RevertEditingAsset();
 
 		// Returns currently editing asset
-		virtual const AssetRef<Asset>& GetEditingAsset() const;
+		virtual AssetRef<Asset> GetEditingAsset() const;
 
         // Called when asset has changed, marks asset as dirty
         virtual void OnAssetChanged();
@@ -76,10 +76,13 @@ namespace Editor
         IOBJECT(IAssetEditorWindow);
 
     protected:
-        AssetRef<Asset>            mEditingAsset;                // Currently editing asset
-        Ref<AssetProperty>         mEditingAssetProperty;        // Property of the asset being edited
-        Ref<Component>             mEditingComponent;            // Component of the asset being edited
-        Ref<IAssetEditablePreview> mEditingAssetEditablePreview; // Asset editable preview of the asset being edited
+        WeakRef<Asset> mEditingAsset;                    // Currently editing asset
+        bool           mIsEditingAssetInstance = false;  // Flag for editing asset instance
+        bool           mPrevEditingAssetAlive = false;   // Previous state of editing asset alive
+
+        WeakRef<AssetProperty>         mEditingAssetProperty;        // Property of the asset being edited
+        WeakRef<Component>             mEditingComponent;            // Component of the asset being edited
+        WeakRef<IAssetEditablePreview> mEditingAssetEditablePreview; // Asset editable preview of the asset being edited
 
 		DataDocument mEditingAssetInstanceCache; // Cache for asset instance data, used to restore asset state
 
@@ -152,6 +155,9 @@ namespace Editor
 		// Called when revert button is pressed
 		virtual void OnRevertAssetPressed();
 
+        // Checks if current asset is alive. Resets editing asset if it is not alive
+        void CheckAssetAlive();
+
 		// Checks if current asset is dirty and shows save dialog, then executes callback
 		void CheckDirtyAssetAndExecute(const Function<void()>& callback);
 
@@ -169,6 +175,8 @@ END_META;
 CLASS_FIELDS_META(Editor::IAssetEditorWindow)
 {
     FIELD().PROTECTED().NAME(mEditingAsset);
+    FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mIsEditingAssetInstance);
+    FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mPrevEditingAssetAlive);
     FIELD().PROTECTED().NAME(mEditingAssetProperty);
     FIELD().PROTECTED().NAME(mEditingComponent);
     FIELD().PROTECTED().NAME(mEditingAssetEditablePreview);
@@ -200,7 +208,7 @@ CLASS_METHODS_META(Editor::IAssetEditorWindow)
     FUNCTION().PUBLIC().SIGNATURE(void, CreateNewAsset);
     FUNCTION().PUBLIC().SIGNATURE(void, SaveEditingAsset);
     FUNCTION().PUBLIC().SIGNATURE(void, RevertEditingAsset);
-    FUNCTION().PUBLIC().SIGNATURE(const AssetRef<Asset>&, GetEditingAsset);
+    FUNCTION().PUBLIC().SIGNATURE(AssetRef<Asset>, GetEditingAsset);
     FUNCTION().PUBLIC().SIGNATURE(void, OnAssetChanged);
     FUNCTION().PUBLIC().SIGNATURE(void, Initialize);
     FUNCTION().PUBLIC().SIGNATURE(void, Update, float);
@@ -223,6 +231,7 @@ CLASS_METHODS_META(Editor::IAssetEditorWindow)
     FUNCTION().PROTECTED().SIGNATURE(void, OnOpenAssetPressed);
     FUNCTION().PROTECTED().SIGNATURE(void, OnSaveAsAssetPressed);
     FUNCTION().PROTECTED().SIGNATURE(void, OnRevertAssetPressed);
+    FUNCTION().PROTECTED().SIGNATURE(void, CheckAssetAlive);
     FUNCTION().PROTECTED().SIGNATURE(void, CheckDirtyAssetAndExecute, const Function<void()>&);
     FUNCTION().PROTECTED().SIGNATURE(_tmp1, CreateFileExtensionMap);
 }

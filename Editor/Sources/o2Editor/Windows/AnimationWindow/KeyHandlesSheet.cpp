@@ -259,7 +259,15 @@ namespace Editor
 
     void KeyHandlesSheet::OnHandleMoved(const Ref<DragHandle>& handle, const Vec2F& cursorPos)
     {
-        for (auto& track : mAnimationWindow.Lock()->mAnimation->GetTracks())
+        auto animationWindow = mAnimationWindow.Lock();
+        if (!animationWindow)
+            return;
+
+        auto animation = animationWindow->mAnimation.Lock();
+        if (!animation)
+            return;
+
+        for (auto& track : animation->GetTracks())
             track->BeginKeysBatchChange();
 
         for (auto& kv : mHandlesGroups)
@@ -277,7 +285,7 @@ namespace Editor
             }
         }
 
-        for (auto& track : mAnimationWindow.Lock()->mAnimation->GetTracks())
+        for (auto& track : animation->GetTracks())
             track->CompleteKeysBatchingChange();
 
         mHandleHasMoved = true;
@@ -356,9 +364,16 @@ namespace Editor
                     return;
 
                 auto animationWindow = mAnimationWindow.Lock();
+                if (!animationWindow)
+                    return;
+                    
+                auto animation = animationWindow->mAnimation.Lock();
+                if (!animation)
+                    return;
+                    
                 float scale = (point.x - mSelectionRect.right) / (mSelectionRect.left - mSelectionRect.right);
 
-                for (auto& track : animationWindow->mAnimation->GetTracks())
+                for (auto& track : animation->GetTracks())
                     track->BeginKeysBatchChange();
 
                 for (auto& handle : GetSelectedHandles())
@@ -367,7 +382,7 @@ namespace Editor
                     handle->onChangedPos(handle->GetPosition());
                 }
 
-                for (auto& track : animationWindow->mAnimation->GetTracks())
+                for (auto& track : animation->GetTracks())
                     track->CompleteKeysBatchingChange();
 
                 mNeedUpdateSelectionFrame = true;
@@ -412,10 +427,16 @@ namespace Editor
                     return;
 
                 auto animationWindow = mAnimationWindow.Lock();
+                if (!animationWindow)
+                    return;
+                    
+                auto animation = animationWindow->mAnimation.Lock();
+                if (!animation)
+                    return;
 
                 float scale = (point.x - mSelectionRect.left) / (mSelectionRect.right - mSelectionRect.left);
 
-                for (auto& track : animationWindow->mAnimation->GetTracks())
+                for (auto& track : animation->GetTracks())
                     track->BeginKeysBatchChange();
 
                 for (auto& handle : GetSelectedHandles())
@@ -424,7 +445,7 @@ namespace Editor
                     handle->onChangedPos(handle->GetPosition());
                 }
 
-                for (auto& track : animationWindow->mAnimation->GetTracks())
+                for (auto& track : animation->GetTracks())
                     track->CompleteKeysBatchingChange();
 
                 mNeedUpdateSelectionFrame = true;
@@ -519,8 +540,14 @@ namespace Editor
                                           bool generateNewUid /*= true*/)
     {
         auto animationWindow = mAnimationWindow.Lock();
+        if (!animationWindow)
+            return;
+            
+        auto animation = animationWindow->mAnimation.Lock();
+        if (!animation)
+            return;
 
-        for (auto& track : animationWindow->mAnimation->GetTracks())
+        for (auto& track : animation->GetTracks())
             track->BeginKeysBatchChange();
 
         if (data.GetMembersCount() == 1 && animationWindow->mTree->GetSelectedObjects().Count() == 1)
@@ -553,7 +580,7 @@ namespace Editor
             }
         }
 
-        for (auto& track : animationWindow->mAnimation->GetTracks())
+        for (auto& track : animation->GetTracks())
             track->CompleteKeysBatchingChange();
     }
 
@@ -597,7 +624,11 @@ namespace Editor
             animationWindow->mActionsList->DoneAction(mmake<AnimationDeleteKeysAction>(keys, data, Ref(this)));
         }
 
-        for (auto& track : animationWindow->mAnimation->GetTracks())
+        auto animation = animationWindow->mAnimation.Lock();
+        if (!animation)
+            return;
+            
+        for (auto& track : animation->GetTracks())
             track->BeginKeysBatchChange();
 
         for (auto& handlesGroup : mHandlesGroups)
@@ -612,7 +643,7 @@ namespace Editor
             }
         }
 
-        for (auto& track : animationWindow->mAnimation->GetTracks())
+        for (auto& track : animation->GetTracks())
             track->CompleteKeysBatchingChange();
     }
 

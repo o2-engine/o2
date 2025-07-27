@@ -140,7 +140,13 @@ namespace Editor
         mContextMenu->AddItem("---");
         mContextMenu->AddItem("Delete property", THIS_FUNC(OnDeletePropertyPressed));
         mContextMenu->AddItem("---");
-        mContextMenu->AddItem("Add properties", [&]() { PropertiesListDlg::Show(mAnimationWindow->mAnimation, mAnimationWindow->mTargetActor); });
+        mContextMenu->AddItem("Add properties", [&]() { 
+            auto animation = mAnimationWindow->mAnimation.Lock();
+            auto targetActor = mAnimationWindow->mTargetActor.Lock();
+            if (!animation || !targetActor)
+                return;
+            PropertiesListDlg::Show(animation, targetActor); 
+        });
 
         onFocused = [&]() { mAnimationWindow->mHandlesSheet->GetContextMenu()->SetItemsMaxPriority(); mContextMenu->SetItemsMaxPriority(); };
         onUnfocused = [&]() { mAnimationWindow->mHandlesSheet->GetContextMenu()->SetItemsMinPriority(); mContextMenu->SetItemsMinPriority(); };
@@ -155,7 +161,11 @@ namespace Editor
         if (!mAnimationWindow->mAnimation)
             return;
 
-        mAnimationValuesCount = mAnimationWindow->mAnimation->GetTracks().Count();
+        auto animation = mAnimationWindow->mAnimation.Lock();
+        if (!animation)
+            return;
+            
+        mAnimationValuesCount = animation->GetTracks().Count();
 
         mRootValue = mmake<TrackNode>();
         mRootValue->name = "Track name";
@@ -167,7 +177,7 @@ namespace Editor
         }
         else
         {
-            for (auto& track : mAnimationWindow->mAnimation->GetTracks())
+            for (auto& track : animation->GetTracks())
                 AddAnimationTrack(track, nullptr);
         }
 
@@ -231,7 +241,11 @@ namespace Editor
 
     void AnimationTree::OnAnimationChanged()
     {
-        if (mAnimationWindow->mAnimation->GetTracks().Count() != mAnimationValuesCount)
+        auto animation = mAnimationWindow->mAnimation.Lock();
+        if (!animation)
+            return;
+            
+        if (animation->GetTracks().Count() != mAnimationValuesCount)
         {
             mAnimationWindow->mHandlesSheet->UnregAllTrackControls();
 
@@ -317,10 +331,14 @@ namespace Editor
 
     void AnimationTree::OnDeletePropertyPressed()
     {
+        auto animation = mAnimationWindow->mAnimation.Lock();
+        if (!animation)
+            return;
+            
         for (auto& obj : GetSelectedObjects())
         {
             TrackNode* data = (TrackNode*)obj;
-            mAnimationWindow->mAnimation->RemoveTrack(data->path);
+            animation->RemoveTrack(data->path);
         }
     }
 
