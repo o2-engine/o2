@@ -20,6 +20,11 @@ namespace o2
         UInt strongReferences = 0; // Strong references count
         UInt weakReferences = 0;   // Weak references count
 
+#if ENABLE_MEMORY_ANALYZE
+        std::vector<MemoryAnalyzeObject*> strongRefPointers; // Pointers to strong reference objects
+        std::vector<MemoryAnalyzeObject*> weakRefPointers;   // Pointers to weak reference objects
+#endif
+
     protected:
         template<typename _type>
         friend class Ref;
@@ -131,6 +136,9 @@ namespace o2
 
 #if ENABLE_MEMORY_ANALYZE
     class IObject;
+
+#include <vector>
+#include <algorithm>
 
 #define OPTIONAL_BASE_REF : public MemoryAnalyzeObject
 #define OPTIONAL_REFS_MANAGE_FORWARD(CLASS)          \
@@ -596,6 +604,9 @@ namespace o2
         {
             auto refCounter = GetRefCounter(mPtr);
             refCounter->strongReferences++;
+#if ENABLE_MEMORY_ANALYZE
+            refCounter->strongRefPointers.push_back(static_cast<MemoryAnalyzeObject*>(this));
+#endif
         }
     }
 
@@ -605,6 +616,13 @@ namespace o2
         if (mPtr)
         {
             auto refCounter = GetRefCounter(mPtr);
+
+#if ENABLE_MEMORY_ANALYZE
+            auto it = std::find(refCounter->strongRefPointers.begin(), refCounter->strongRefPointers.end(), 
+                               static_cast<MemoryAnalyzeObject*>(this));
+            if (it != refCounter->strongRefPointers.end())
+                refCounter->strongRefPointers.erase(it);
+#endif
 
             refCounter->strongReferences--;
             if (refCounter->strongReferences == 0)
