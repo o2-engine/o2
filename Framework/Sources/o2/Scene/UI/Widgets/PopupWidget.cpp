@@ -58,9 +58,7 @@ namespace o2
     }
 
     void PopupWidget::Draw()
-	{
-		mCurrentDrawingLayer = o2Events.GetCurrentCursorAreaEventsLayer();
-    }
+	{}
 
     void PopupWidget::Show(const Ref<PopupWidget>& parent, const Vec2F& position /*= o2Input.GetCursorPos()*/)
     {
@@ -73,7 +71,7 @@ namespace o2
         else 
         {
             mVisiblePopup = Ref(this);
-            mOpenedLayer = mCurrentDrawingLayer;
+            mOpenedLayer = o2Events.GetCurrentCursorAreaEventsLayer();
         }
 
         Widget::Show();

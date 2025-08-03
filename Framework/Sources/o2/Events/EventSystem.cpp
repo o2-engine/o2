@@ -52,7 +52,13 @@ namespace o2
     void EventSystem::Update()
     {
         for (auto& layer : mCursorAreaEventsListenersLayers)
-            layer.Lock()->Update();
+        {
+            if (auto layerPtr = layer.Lock())
+            {
+                mCurrentCursorAreaEventsLayer = layerPtr;
+                layerPtr->Update();
+            }
+        }
 
         for (const Input::Cursor& cursor : o2Input.GetCursors())
         {
@@ -168,6 +174,8 @@ namespace o2
                 line += 20;
             }
         }
+
+        mCurrentCursorAreaEventsLayer = mCursorAreaListenersBasicLayer;
     }
 
     void EventSystem::PostUpdate()

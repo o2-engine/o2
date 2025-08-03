@@ -69,8 +69,7 @@ namespace o2
 
         bool mShownAtFrame = false; // Is popup was shown at current frame
 
-        WeakRef<CursorAreaEventListenersLayer> mOpenedLayer;         // Layer on which this popup was opened
-        WeakRef<CursorAreaEventListenersLayer> mCurrentDrawingLayer; // Current layer during drawing
+        WeakRef<CursorAreaEventListenersLayer> mOpenedLayer; // Layer on which this popup was opened
 
     protected:
         // Checks widget clipping by area
@@ -129,7 +128,6 @@ CLASS_FIELDS_META(o2::PopupWidget)
     FIELD().PROTECTED().NAME(mChildPopup);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mShownAtFrame);
     FIELD().PROTECTED().NAME(mOpenedLayer);
-    FIELD().PROTECTED().NAME(mCurrentDrawingLayer);
 }
 END_META;
 CLASS_METHODS_META(o2::PopupWidget)
