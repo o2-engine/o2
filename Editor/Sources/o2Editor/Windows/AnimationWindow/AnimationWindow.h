@@ -96,6 +96,9 @@ namespace Editor
         // Initializes window
         void InitializeWindow() override;
 
+        // Returns window title
+        String GetWindowTitle() const override;
+
         // Initializes handles sheet
         void InitializeHandlesSheet();
 
@@ -214,6 +217,7 @@ CLASS_METHODS_META(Editor::AnimationWindow)
     FUNCTION().PUBLIC().SIGNATURE_STATIC(Ref<RefCounterable>, CastToRefCounterable, const Ref<AnimationWindow>&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnClosed);
     FUNCTION().PROTECTED().SIGNATURE(void, InitializeWindow);
+    FUNCTION().PROTECTED().SIGNATURE(String, GetWindowTitle);
     FUNCTION().PROTECTED().SIGNATURE(void, InitializeHandlesSheet);
     FUNCTION().PROTECTED().SIGNATURE(void, InitializeTree);
     FUNCTION().PROTECTED().SIGNATURE(void, InitializeTimeline);

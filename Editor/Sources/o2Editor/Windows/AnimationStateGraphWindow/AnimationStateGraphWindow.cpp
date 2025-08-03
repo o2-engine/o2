@@ -59,6 +59,11 @@ namespace Editor
         mEditor->SetSelectionSpriteImage(AssetRef<ImageAsset>("ui/UI_Window_place.png"));
     }
 
+    String AnimationStateGraphWindow::GetWindowTitle() const
+    {
+        return "State Graph";
+    }
+
 	void AnimationStateGraphWindow::OnStartEditingAsset()
 	{
 		if (!mEditingComponent)

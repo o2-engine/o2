@@ -105,6 +105,11 @@ namespace Editor
         PropertiesListDlg::InitializeSingleton();
     }
 
+    String AnimationWindow::GetWindowTitle() const
+    {
+        return "Animation";
+    }
+
     void AnimationWindow::InitializeHandlesSheet()
     {
         mHandlesSheet = mmake<KeyHandlesSheet>();

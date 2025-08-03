@@ -101,6 +101,9 @@ namespace Editor
         // Initializes window and controls
         virtual void InitializeWindow();
 
+        // Returns window title
+        virtual String GetWindowTitle() const;
+
         // Called when asset editing starts
         virtual void OnStartEditingAsset() {}
 
@@ -154,6 +157,9 @@ namespace Editor
 
 		// Called when revert button is pressed
 		virtual void OnRevertAssetPressed();
+
+        // Updates window title
+        void UpdateWindowTitle();
 
         // Checks if current asset is alive. Resets editing asset if it is not alive
         void CheckAssetAlive();
@@ -213,6 +219,7 @@ CLASS_METHODS_META(Editor::IAssetEditorWindow)
     FUNCTION().PUBLIC().SIGNATURE(void, Initialize);
     FUNCTION().PUBLIC().SIGNATURE(void, Update, float);
     FUNCTION().PROTECTED().SIGNATURE(void, InitializeWindow);
+    FUNCTION().PROTECTED().SIGNATURE(String, GetWindowTitle);
     FUNCTION().PROTECTED().SIGNATURE(void, OnStartEditingAsset);
     FUNCTION().PROTECTED().SIGNATURE(void, OnCompletedEditingAsset);
     FUNCTION().PROTECTED().SIGNATURE(void, OnStartEditingComponent);
@@ -231,6 +238,7 @@ CLASS_METHODS_META(Editor::IAssetEditorWindow)
     FUNCTION().PROTECTED().SIGNATURE(void, OnOpenAssetPressed);
     FUNCTION().PROTECTED().SIGNATURE(void, OnSaveAsAssetPressed);
     FUNCTION().PROTECTED().SIGNATURE(void, OnRevertAssetPressed);
+    FUNCTION().PROTECTED().SIGNATURE(void, UpdateWindowTitle);
     FUNCTION().PROTECTED().SIGNATURE(void, CheckAssetAlive);
     FUNCTION().PROTECTED().SIGNATURE(void, CheckDirtyAssetAndExecute, const Function<void()>&);
     FUNCTION().PROTECTED().SIGNATURE(_tmp1, CreateFileExtensionMap);

@@ -58,8 +58,11 @@ namespace Editor
 
 		SetComponentPreview(false);
 
+		AssetRef<Asset> editingAsset = asset ? asset : CreateAssetInstance();
+
 		mEditingComponent = component;
-		mEditingAsset = asset ? asset : CreateAssetInstance();
+		mEditingAsset = editingAsset;
+		mIsEditingAssetInstance = editingAsset.IsInstance();
 		mEditingAssetEditablePreview = preview ? preview : DynamicCast<IAssetEditablePreview>(component);
 
 		if (mEditingAsset)
@@ -72,6 +75,8 @@ namespace Editor
 			OnStartEditingComponent();
 
 		SetComponentPreview(true);
+
+		UpdateWindowTitle();
 
 		if (mWindow)
 			mWindow->Focus();
@@ -124,6 +129,8 @@ namespace Editor
 	{
 		auto newAsset = CreateAssetInstance();
 		SetComponentAndPropertyAsset(newAsset);
+
+		UpdateWindowTitle();
 	}
 
 	AssetRef<Asset> IAssetEditorWindow::GetEditingAsset() const
@@ -148,6 +155,8 @@ namespace Editor
 			OnAssetSaved();
 			o2Assets.RebuildAssets();
 		}
+
+		UpdateWindowTitle();
 	}
 
 	void IAssetEditorWindow::RevertEditingAsset()
@@ -183,6 +192,26 @@ namespace Editor
 		CheckAssetAlive();
 
 		mSaveAssetButton->interactable = mEditingAsset && mEditingAsset.Lock()->IsDirty();
+	}
+
+	void IAssetEditorWindow::UpdateWindowTitle()
+	{
+		if (!mWindow)
+			return;
+
+		String title = GetWindowTitle();
+		if (auto asset = mEditingAsset.Lock())
+		{
+			String assetName;
+			if (asset->GetPath().IsEmpty())
+				assetName = mIsEditingAssetInstance ? "Instance" : "Unnamed";
+			else
+				assetName = o2FileSystem.GetFileNameWithoutExtension(asset->GetPath());
+
+			title += " - " + assetName;
+		}
+
+		mWindow->caption = title;
 	}
 
 	void IAssetEditorWindow::CheckAssetAlive()
@@ -236,6 +265,11 @@ namespace Editor
 		mUpPanel->AddChild(mRevertAssetButton);
 	}
 
+	String IAssetEditorWindow::GetWindowTitle() const
+	{
+		return "Asset Editor";
+	}
+
 	bool IAssetEditorWindow::IsComponentPreviewAvailable() const
 	{
 		return mEditingComponent != nullptr;
@@ -256,7 +290,9 @@ namespace Editor
 
     AssetRef<Asset> IAssetEditorWindow::CreateAssetInstance()
     {
-		return AssetRef(DynamicCast<Asset>(GetAssetType().CreateSampleRef()));
+		AssetRef result(DynamicCast<Asset>(GetAssetType().CreateSampleRef()));
+		result->SetPath("Unnamed");
+		return result;
 	}
 
 	void IAssetEditorWindow::OnMenuPreviewToggle(bool preview)
@@ -304,6 +340,8 @@ namespace Editor
 				String relativePath = o2FileSystem.GetPathRelativeToPath(fileName, ::GetAssetsPath());
 				if (auto asset = o2Assets.GetAssetRef(relativePath))
 					SetComponentAndPropertyAsset(asset);
+
+				UpdateWindowTitle();
 			}
 		});
 	}
@@ -331,6 +369,8 @@ namespace Editor
 
 				OnAssetSaved();
 				o2Assets.RebuildAssets();
+
+				UpdateWindowTitle();
 			}
 		}
 	}

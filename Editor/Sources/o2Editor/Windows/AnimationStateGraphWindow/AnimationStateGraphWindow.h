@@ -40,6 +40,9 @@ namespace Editor
         // Initializes window
 		void InitializeWindow() override;
 
+        // Returns window title
+        String GetWindowTitle() const override;
+
 		// Called when asset editing starts
         void OnStartEditingAsset() override;
 
@@ -82,6 +85,7 @@ CLASS_METHODS_META(Editor::AnimationStateGraphWindow)
     FUNCTION().PUBLIC().SIGNATURE(const Type&, GetAssetType);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(Ref<RefCounterable>, CastToRefCounterable, const Ref<AnimationStateGraphWindow>&);
     FUNCTION().PROTECTED().SIGNATURE(void, InitializeWindow);
+    FUNCTION().PROTECTED().SIGNATURE(String, GetWindowTitle);
     FUNCTION().PROTECTED().SIGNATURE(void, OnStartEditingAsset);
     FUNCTION().PROTECTED().SIGNATURE(void, OnCompletedEditingAsset);
     FUNCTION().PROTECTED().SIGNATURE(void, OnStartEditingComponent);

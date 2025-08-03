@@ -49,7 +49,7 @@ namespace o2
 
         // Constructor from lambda
         template<typename _lambda_type, typename enable = typename std::enable_if<std::is_invocable_r<_res_type, _lambda_type, _args ...>::value && !std::is_base_of<IFunction<_res_type(_args ...)>, _lambda_type>::value>::type>
-        explicitSerializableFunction(const _lambda_type& lambda) :
+        explicit SerializableFunction(const _lambda_type& lambda) :
             Base(lambda)
         {}
 
@@ -70,7 +70,7 @@ namespace o2
 
         // Constructor from object and his function
         template<typename _class_type>
-        explicitSerializableFunction(const ObjFunctionPtr<_class_type, _res_type, _args ...>& func) :
+        explicit SerializableFunction(const ObjFunctionPtr<_class_type, _res_type, _args ...>& func) :
             Base(func)
         {}
 

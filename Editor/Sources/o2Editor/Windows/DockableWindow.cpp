@@ -231,7 +231,12 @@ namespace Editor
         }
 
         if (mAutoCalculateTabWidth)
+        {
             RecalculateTabWidth();
+
+            if (auto parentDock = DynamicCast<DockWindowPlace>(mParent.Lock()))
+                parentDock->ArrangeChildWindows();
+        }
     }
 
     WString DockableWindow::GetCaption() const
