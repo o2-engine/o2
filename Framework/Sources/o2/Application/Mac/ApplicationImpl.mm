@@ -52,10 +52,6 @@ namespace o2
         
         ApplicationPlatformWrapper::view = [[ViewController alloc] init];
         ApplicationPlatformWrapper::view.colorPixelFormat = MTLPixelFormatRGBA8Unorm;
-        [ApplicationPlatformWrapper::window setContentView:ApplicationPlatformWrapper::view];
-        [ApplicationPlatformWrapper::window setInitialFirstResponder:ApplicationPlatformWrapper::view];
-        [ApplicationPlatformWrapper::window makeFirstResponder:ApplicationPlatformWrapper::view];
-        
         ApplicationPlatformWrapper::view.device = MTLCreateSystemDefaultDevice();
         
         if(!ApplicationPlatformWrapper::view.device)
@@ -64,11 +60,16 @@ namespace o2
             return;
         }
 
-        mGraphicsScale = [[ApplicationPlatformWrapper::view layer] contentsScale];
-        
         ApplicationPlatformWrapper::renderer = [[RendererView alloc] initWithMetalKitView:ApplicationPlatformWrapper::view];
         [ApplicationPlatformWrapper::renderer mtkView:ApplicationPlatformWrapper::view drawableSizeWillChange:ApplicationPlatformWrapper::view.drawableSize];
         ApplicationPlatformWrapper::view.delegate = ApplicationPlatformWrapper::renderer;
+        
+        [ApplicationPlatformWrapper::window setContentView:ApplicationPlatformWrapper::view];
+        [ApplicationPlatformWrapper::window setInitialFirstResponder:ApplicationPlatformWrapper::view];
+        
+        mGraphicsScale = [[ApplicationPlatformWrapper::view layer] contentsScale];
+        
+        [ApplicationPlatformWrapper::window makeFirstResponder:ApplicationPlatformWrapper::view];
     }
 
     void Application::Shutdown()
@@ -87,6 +88,8 @@ namespace o2
         OnStarted();
         onStarted.Invoke();
         o2Events.OnApplicationStarted();
+        
+        [ApplicationPlatformWrapper::view initializeMouseTracking];
         
         [NSApp run];
     }

@@ -10,6 +10,8 @@
 
 @interface ViewController : MTKView
 
+- (void)initializeMouseTracking;
+
 @end
 
 #endif

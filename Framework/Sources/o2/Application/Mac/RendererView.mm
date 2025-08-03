@@ -39,15 +39,39 @@
 
 @implementation ViewController
 
+- (BOOL)acceptsFirstResponder {
+    return YES;
+}
+
+- (BOOL)canBecomeKeyView {
+    return YES;
+}
+
+- (BOOL)acceptsFirstMouse:(NSEvent *)theEvent {
+    return YES;
+}
+
+- (void)initializeMouseTracking {
+    [self initTrackingArea];
+}
+
 - (void)updateTrackingAreas {
+    [super updateTrackingAreas];
+    
+    for (NSTrackingArea *area in [self trackingAreas]) {
+        [self removeTrackingArea:area];
+    }
+    
     [self initTrackingArea];
 }
 
 -(void)initTrackingArea {
+    NSRect bounds = [self bounds];
+    
     NSTrackingAreaOptions options = (NSTrackingActiveAlways | NSTrackingInVisibleRect |
                                      NSTrackingMouseEnteredAndExited | NSTrackingMouseMoved);
     
-    NSTrackingArea *area = [[NSTrackingArea alloc] initWithRect:[self bounds]
+    NSTrackingArea *area = [[NSTrackingArea alloc] initWithRect:bounds
                                                         options:options
                                                           owner:self
                                                        userInfo:nil];
