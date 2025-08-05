@@ -1,0 +1,9 @@
+# LLDB initialization file for o2 Framework
+# Auto-loads o2 type formatters
+
+# Import o2 formatters  
+command script import o2_lldb_formatters.py
+
+# Basic LLDB settings
+settings set target.x86-disassembly-flavor intel
+settings set frame-format "frame #${frame.index}: ${frame.pc}{ ${module.file.basename}{:${function.name-with-args}{${frame.no-debug}${function.pc-offset}}}}{ at ${line.file.basename}:${line.number}}{${function.is-optimized} [opt]}\n"

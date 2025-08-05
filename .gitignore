@@ -21,3 +21,4 @@ CodeTool/Bin/o2CodeTool.exe
 AssetsBuildTool/Sources/CodeToolCache.xml
 Editor/Assets/Editor UI styles/rebuildDate.json
 CodeTool/Bin
+Framework/Platforms/__pycache__
