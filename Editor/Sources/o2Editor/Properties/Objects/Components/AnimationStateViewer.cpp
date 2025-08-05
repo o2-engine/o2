@@ -134,8 +134,10 @@ namespace Editor
             return;
 
         auto animationComponent = Ref(mPropertiesContext->FindOnStack<Component>());
+        auto preview = Ref(mPropertiesContext->FindOnStack<IAssetEditablePreview>());
+
         if (auto assetProperty = DynamicCast<AssetProperty>(mPropertiesContext->FindPropertyField("mAnimation")))
-            o2EditorAnimationWindow.EditAsset(assetProperty, animationComponent);
+            o2EditorAnimationWindow.EditAsset(assetProperty, animationComponent, preview);
     }
 
     void AnimationStateViewer::OnTimeProgressChanged(float value)

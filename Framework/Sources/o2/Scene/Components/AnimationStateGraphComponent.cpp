@@ -279,6 +279,8 @@ namespace o2
 
     void AnimationStateGraphComponent::StatePlayer::Play()
     {
+        mIsPlaying = true;
+
         for (auto& player : mPlayers)
             player.second->GetPlayer().RewindAndPlay();
 
@@ -288,6 +290,8 @@ namespace o2
 
     void AnimationStateGraphComponent::StatePlayer::Stop()
     {
+        mIsPlaying = false;
+
         for (auto& player : mPlayers)
             player.second->GetPlayer().Stop();
 
@@ -350,6 +354,9 @@ namespace o2
 
             mPlayers.Add({ animation, player });
         }
+
+        if (mIsPlaying)
+            Play();
     }
 
 	const Vector<Pair<Ref<AnimationGraphState::Animation>, Ref<IAnimationState>>>& AnimationStateGraphComponent::StatePlayer::GetPlayers() const

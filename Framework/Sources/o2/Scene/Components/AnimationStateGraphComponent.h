@@ -60,6 +60,8 @@ namespace o2
 		private:
 			Vector<Pair<Ref<AnimationGraphState::Animation>, Ref<IAnimationState>>> mPlayers; // Animation players
 
+            bool mIsPlaying = false; // Is playing flag
+
 			Ref<AnimationGraphState> mState; // State reference
 
 			WeakRef<AnimationStateGraphComponent> mOwner; // Owner reference
