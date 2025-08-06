@@ -58,7 +58,9 @@ namespace o2
     }
 
     void PopupWidget::Draw()
-	{}
+	{
+		mCurrentDrawingLayer = o2Events.GetCurrentCursorAreaEventsLayer();
+    }
 
     void PopupWidget::Show(const Ref<PopupWidget>& parent, const Vec2F& position /*= o2Input.GetCursorPos()*/)
     {
@@ -66,13 +68,9 @@ namespace o2
         {
             mParentPopup = parent;
             parent->mChildPopup = Ref(this);
-            mOpenedLayer = parent->mOpenedLayer;
         }
         else 
-        {
             mVisiblePopup = Ref(this);
-            mOpenedLayer = o2Events.GetCurrentCursorAreaEventsLayer();
-        }
 
         Widget::Show();
 
@@ -161,9 +159,9 @@ namespace o2
         return false;
     }
 
-    const WeakRef<CursorAreaEventListenersLayer>& PopupWidget::GetOpenedLayer() const
+    const WeakRef<CursorAreaEventListenersLayer>& PopupWidget::GetCurrentDrawingLayer() const
     {
-        return mOpenedLayer;
+        return mCurrentDrawingLayer;
     }
 
     void PopupWidget::CheckClipping(const RectF& clipArea)

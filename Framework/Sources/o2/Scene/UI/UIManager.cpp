@@ -375,7 +375,7 @@ namespace o2
 
         topWidgetsAtLayer.Clear();
 
-        if (PopupWidget::mVisiblePopup && PopupWidget::mVisiblePopup.Lock()->GetOpenedLayer() == currentLayer)
+        if (PopupWidget::mVisiblePopup && PopupWidget::mVisiblePopup.Lock()->GetCurrentDrawingLayer() == currentLayer)
             PopupWidget::mVisiblePopup.Lock()->SpecialDraw();
 
         if (o2Input.IsKeyPressed(VK_TAB))

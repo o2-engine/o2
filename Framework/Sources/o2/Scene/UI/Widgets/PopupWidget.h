@@ -50,8 +50,8 @@ namespace o2
         // Fits size by items
         virtual void FitSizeAndPosition(const Vec2F& position);
 
-        // Returns the layer on which this popup was opened
-        const WeakRef<CursorAreaEventListenersLayer>& GetOpenedLayer() const;
+        // Returns the layer on which this popup should be drawn
+        const WeakRef<CursorAreaEventListenersLayer>& GetCurrentDrawingLayer() const;
 
         // Returns create menu group in editor
         static String GetCreateMenuGroup();
@@ -68,8 +68,8 @@ namespace o2
         WeakRef<PopupWidget> mChildPopup;  // Child visible popup widget
 
         bool mShownAtFrame = false; // Is popup was shown at current frame
-
-        WeakRef<CursorAreaEventListenersLayer> mOpenedLayer; // Layer on which this popup was opened
+        
+        WeakRef<CursorAreaEventListenersLayer> mCurrentDrawingLayer; // Current layer during drawing
 
     protected:
         // Checks widget clipping by area
@@ -127,7 +127,7 @@ CLASS_FIELDS_META(o2::PopupWidget)
     FIELD().PROTECTED().NAME(mParentPopup);
     FIELD().PROTECTED().NAME(mChildPopup);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mShownAtFrame);
-    FIELD().PROTECTED().NAME(mOpenedLayer);
+    FIELD().PROTECTED().NAME(mCurrentDrawingLayer);
 }
 END_META;
 CLASS_METHODS_META(o2::PopupWidget)
@@ -143,7 +143,7 @@ CLASS_METHODS_META(o2::PopupWidget)
     FUNCTION().PUBLIC().SIGNATURE(bool, IsScrollable);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsInputTransparent);
     FUNCTION().PUBLIC().SIGNATURE(void, FitSizeAndPosition, const Vec2F&);
-    FUNCTION().PUBLIC().SIGNATURE(const WeakRef<CursorAreaEventListenersLayer>&, GetOpenedLayer);
+    FUNCTION().PUBLIC().SIGNATURE(const WeakRef<CursorAreaEventListenersLayer>&, GetCurrentDrawingLayer);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetCreateMenuGroup);
     FUNCTION().PROTECTED().SIGNATURE(void, CheckClipping, const RectF&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnEnabled);
