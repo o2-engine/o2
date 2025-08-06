@@ -29,8 +29,9 @@ namespace o2
             mHorScrollBar = GetInternalWidgetByType<HorizontalScrollBar>("horScrollBar");
             mHorScrollBar->GetLayoutData().drivenByParent = true;
             mHorScrollBar->onSmoothChange += THIS_FUNC(OnHorScrollChanged);
+            mHorScrollBar->SetEnabledForcible(false);
 
-            mEnableHorScroll = mHorScrollBar->IsEnabled();
+            mEnableHorScroll = false;
         }
         else 
             mHorScrollBar = nullptr;
@@ -40,8 +41,9 @@ namespace o2
             mVerScrollBar = GetInternalWidgetByType<VerticalScrollBar>("verScrollBar");
             mVerScrollBar->GetLayoutData().drivenByParent = true;
             mVerScrollBar->onSmoothChange += THIS_FUNC(OnVerScrollChanged);
+            mVerScrollBar->SetEnabledForcible(false);
 
-            mEnableVerScroll = mVerScrollBar->IsEnabled();
+            mEnableVerScroll = false;
         }
         else 
             mVerScrollBar = nullptr;
@@ -94,8 +96,9 @@ namespace o2
             mHorScrollBar = GetInternalWidgetByType<HorizontalScrollBar>("horScrollBar");
             mHorScrollBar->onSmoothChange += THIS_FUNC(OnHorScrollChanged);
             mHorScrollBar->GetLayoutData().drivenByParent = true;
+            mHorScrollBar->SetEnabledForcible(false);
 
-            mEnableHorScroll = mHorScrollBar->IsEnabled();
+            mEnableHorScroll = false;
         }
         else mHorScrollBar = nullptr;
 
@@ -104,8 +107,9 @@ namespace o2
             mVerScrollBar = GetInternalWidgetByType<VerticalScrollBar>("verScrollBar");
             mVerScrollBar->onSmoothChange += THIS_FUNC(OnVerScrollChanged);
             mVerScrollBar->GetLayoutData().drivenByParent = true;
-
-            mEnableVerScroll = mVerScrollBar->IsEnabled();
+            mVerScrollBar->SetEnabledForcible(false);
+            
+            mEnableVerScroll = false;
         }
         else mVerScrollBar = nullptr;
 
