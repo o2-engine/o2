@@ -49,7 +49,7 @@ namespace o2
 
     Animate& Animate::Move(float x, float y)
     {
-        CheckPositionAnimatedvalue();
+        CheckPositionAnimatedValue();
         CheckAppliedKeys();
 
         auto container = mmake<KeyContainer<Vec2F>>();
@@ -62,7 +62,7 @@ namespace o2
 
     Animate& Animate::Move(const Vec2F& point)
     {
-        CheckPositionAnimatedvalue();
+        CheckPositionAnimatedValue();
         CheckAppliedKeys();
 
         auto container = mmake<KeyContainer<Vec2F>>();
@@ -185,7 +185,7 @@ namespace o2
         }
     }
 
-    void Animate::CheckPositionAnimatedvalue()
+    void Animate::CheckPositionAnimatedValue()
     {
         if (mPositionAnimatedValue)
             return;

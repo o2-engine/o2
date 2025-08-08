@@ -87,10 +87,10 @@ namespace o2
         // Returns is scroll bars hiding
         bool IsScrollsHiding();
 
-        // Sets is scroll bars will shown when cursor hover them
+        // Sets whether scroll bars will be shown when cursor hovers them
         void SetScrollBarsShowingByCursor(bool showByCursor);
 
-        // Returns is scroll bars will shown when cursor hover them
+        // Returns whether scroll bars will be shown when cursor hovers them
         bool IsScrollBarsShowingByCursor();
 
         // Sets clipping layout
@@ -130,7 +130,7 @@ namespace o2
         bool mOwnHorScrollBar = false; // True, if this widget is owner of mHorScrollBar
         bool mOwnVerScrollBar = false; // True, if this widget is owner of mVerScrollBar
 
-        bool mLayoutUpdated = false; // Is is true when layout was updated on current frame
+        bool mLayoutUpdated = false; // This is true when layout was updated on current frame
 
         Layout mViewAreaLayout = Layout::BothStretch(); // Children view area layout with disabled bars @SERIALIZABLE
         RectF  mAbsoluteViewArea;                       // View area

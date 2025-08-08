@@ -66,7 +66,7 @@ namespace o2
         SERIALIZABLE(SceneLayersList);
 
     protected:
-        bool mAllLayers = true; // When this is true, the list is always returns all existing layers
+        bool mAllLayers = true; // When this is true, the list always returns all existing layers
 
         mutable Vector<String> mLayers; // Scene layers names list @SERIALIZABLE
     };

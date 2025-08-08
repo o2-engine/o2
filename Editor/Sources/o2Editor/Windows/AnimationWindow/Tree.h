@@ -20,7 +20,7 @@ namespace Editor
     // ---------------------
     class AnimationTree : public Tree
     {
-    public:        
+    public:
         // Default constructor
         AnimationTree(RefCounter* refCounter);
 
@@ -74,7 +74,7 @@ namespace Editor
             Ref<IAnimationTrack>          track;
             Ref<IAnimationTrack::IPlayer> player;
 
-            Ref<ITrackControl> trackControl; 
+            Ref<ITrackControl> trackControl;
 
             WeakRef<TrackNode>     parent;
             Vector<Ref<TrackNode>> children;
@@ -102,7 +102,7 @@ namespace Editor
         // Adds Animation track to tree. Creates intermediate nodes when required
         void AddAnimationTrack(const Ref<IAnimationTrack>& track, const Ref<IAnimationTrack::IPlayer>& player = nullptr);
 
-        //Updates tree node width
+        // Updates tree node width
         void UpdateTreeWidth();
 
         // Sets curve view mode

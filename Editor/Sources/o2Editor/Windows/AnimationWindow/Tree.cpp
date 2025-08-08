@@ -1,6 +1,9 @@
 #include "o2Editor/stdafx.h"
 
+#include "o2Editor/Windows/AnimationWindow/Tree.h"
+
 #include "PropertiesListDlg.h"
+#include "TrackControls/SubTrackControl.h"
 #include "o2/Scene/UI/UIManager.h"
 #include "o2/Scene/UI/WidgetLayout.h"
 #include "o2/Scene/UI/Widgets/Button.h"
@@ -9,8 +12,6 @@
 #include "o2Editor/Windows/AnimationWindow/TrackControls/KeyFramesTrackControl.h"
 #include "o2Editor/Windows/AnimationWindow/TrackControls/MapKeyFramesTrackControl.h"
 #include "o2Editor/Windows/AnimationWindow/TrackControls/Vec2KeyFramesTrackControl.h"
-#include "o2Editor/Windows/AnimationWindow/Tree.h"
-#include "TrackControls/SubTrackControl.h"
 
 namespace Editor
 {

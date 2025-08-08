@@ -100,7 +100,8 @@ namespace o2
 
             mEnableHorScroll = false;
         }
-        else mHorScrollBar = nullptr;
+        else 
+            mHorScrollBar = nullptr;
 
         if (mOwnVerScrollBar)
         {
@@ -108,14 +109,17 @@ namespace o2
             mVerScrollBar->onSmoothChange += THIS_FUNC(OnVerScrollChanged);
             mVerScrollBar->GetLayoutData().drivenByParent = true;
             mVerScrollBar->SetEnabledForcible(false);
-            
+
             mEnableVerScroll = false;
         }
-        else mVerScrollBar = nullptr;
+        else 
+            mVerScrollBar = nullptr;
 
         RetargetStatesAnimations();
         UpdateScrollParams();
         SetLayoutDirty();
+        UpdateScrollParams();
+        
         return *this;
     }
 

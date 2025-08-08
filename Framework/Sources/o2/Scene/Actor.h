@@ -35,7 +35,7 @@ namespace o2
 #endif
 
     // ---------------------------------------------------------------------------------------------
-    // Scene actor. This is a basic scene object. All other scene object types is derived from this.
+    // Scene actor. This is a basic scene object. All other scene object types are derived from this.
     // It has an unique id, name, tags, transformation, components and children actors.
     // Can be created from prototype of other actor. 
     // When editor pragma is enabled, it is derived from SceneEditableObject and support all editor 

@@ -121,7 +121,7 @@ namespace o2
             // Registering this in value mixer
             void RegMixer(const Ref<AnimationState>& state, const String& path) override;
 
-            // CHecks and updates sub track time
+            // Checks and updates sub track time
             void UpdateSubTrackDuration();
         };
 

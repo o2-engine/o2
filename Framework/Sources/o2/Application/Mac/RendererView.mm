@@ -26,7 +26,7 @@
 - (void)mtkView:(nonnull MTKView *)view drawableSizeWillChange:(CGSize)size
 {
     float scale = o2Application.GetGraphicsScale();
-    o2::ApplicationPlatformWrapper::OnWindowRsized(o2::Vec2I(size.width/scale, size.height/scale));
+            o2::ApplicationPlatformWrapper::OnWindowResized(o2::Vec2I(size.width/scale, size.height/scale));
 }
 
 - (void)resetCursorRects

@@ -35,7 +35,7 @@ namespace o2
         GETTER(bool, cursorReleased, IsCursorReleased);          // Is cursor released at current frame getter
         GETTER(bool, altCursorPressed, IsRightMousePressed);     // Is alt cursor pressed at current frame getter (right mouse button)
         GETTER(bool, altCursorDown, IsRightMouseDown);           // Is alt cursor down at current frame getter (right mouse button)
-        GETTER(bool, altCursorReleased, IsRightMouseDown);       // Is alt cursor released at current frame getter (right mouse button)
+        GETTER(bool, altCursorReleased, IsRightMouseReleased);   // Is alt cursor released at current frame getter (right mouse button)
         GETTER(bool, alt2CursorPressed, IsMiddleMousePressed);   // Is alt2 cursor pressed at current frame getter (middle mouse button)
         GETTER(bool, alt2CursorDown, IsMiddleMouseDown);         // Is alt2 cursor down at current frame getter (middle mouse button)
         GETTER(bool, alt2CursorReleased, IsMiddleMouseReleased); // Is alt2 cursor released at current frame getter (middle mouse button)
@@ -58,7 +58,7 @@ namespace o2
         // Returns true, if key was pressed and repeated after delay
         bool IsKeyRepeating(KeyboardKey key, float delay = 0.04f, float beginDelay = 0.5f) const;
 
-        // Returns key pressing time.Returns  0, if key not pressed
+        // Returns key pressing time. Returns 0 if key not pressed
         float GetKeyPressingTime(KeyboardKey key) const;
 
         // Returns position of cursor
@@ -156,7 +156,7 @@ namespace o2
         // Call it when alt 2 cursor pressed (medium mouse button)
         void OnAlt2CursorPressed(const Vec2F& pos);
 
-        // Call it when alt 2cursor released (medium mouse button)
+        // Call it when alt 2 cursor released (medium mouse button)
         void OnAlt2CursorReleased();
 
         // Call when changed mouse wheel delta

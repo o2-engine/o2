@@ -17,7 +17,7 @@ namespace o2
     RendererView* ApplicationPlatformWrapper::renderer;
     Vec2I ApplicationPlatformWrapper::resolution;
 
-    void ApplicationPlatformWrapper::OnWindowRsized(const Vec2I& resolution)
+    void ApplicationPlatformWrapper::OnWindowResized(const Vec2I& resolution)
     {
         ApplicationPlatformWrapper::resolution = resolution;
         

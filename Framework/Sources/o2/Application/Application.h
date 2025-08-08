@@ -86,7 +86,7 @@ namespace o2
         // Makes application fullscreen. On mobiles/tablets has no effect, just ignoring
         virtual void SetFullscreen(bool fullscreen = true);
 
-        // Return true, if application is fullscreen On mobiles/tables always true
+        // Returns true if application is fullscreen. On mobiles/tablets always true
         virtual bool IsFullScreen() const;
 
         // Maximize application frame. Available only on PC
@@ -110,7 +110,7 @@ namespace o2
         // Sets application window position. On mobiles/tablets has no effect, just ignoring
         virtual void SetWindowPosition(const Vec2I& position);
 
-        // Returns application window position. On mobiles/tablets return zero vector
+        // Returns application window position. On mobiles/tablets returns zero vector
         virtual Vec2I GetWindowPosition() const;
 
         // Sets application window caption. On mobiles/tablets has no effect, just ignoring
@@ -202,12 +202,12 @@ namespace o2
 #endif
 
     protected:
-        bool mReady = false; // Is all systems is ready
+        bool mReady = false; // Are all systems ready
 
         Ref<Assets>        mAssets;        // Assets
         Ref<EventSystem>   mEventSystem;   // Events processing system
         Ref<FileSystem>    mFileSystem;    // File system
-        Ref<Input>         mInput;         // While application user input message
+        Ref<Input>         mInput;         // Whole application user input message
         Ref<LogStream>     mLog;           // Log stream with id "app", using only for application messages
         Ref<PhysicsWorld>  mPhysics;       // Physics
         Ref<ProjectConfig> mProjectConfig; // Project config
@@ -310,7 +310,7 @@ namespace o2
         // Calling when application window moved. Ignoring on mobiles/tablets
         virtual void OnMoved();
 
-        // Initializing all systems and log. Call it when creating applications
+        // Initializes all systems and log. Call it when creating applications
         virtual void InitalizeSystems();
 
         // Deinitializing systems

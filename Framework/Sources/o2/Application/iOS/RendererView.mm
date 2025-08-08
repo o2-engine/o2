@@ -18,7 +18,7 @@
 
 - (void)mtkView:(nonnull MTKView *)view drawableSizeWillChange:(CGSize)size
 {
-    o2::ApplicationPlatformWrapper::OnWindowRsized(o2::Vec2I(size.width, size.height));
+            o2::ApplicationPlatformWrapper::OnWindowResized(o2::Vec2I(size.width, size.height));
 }
 
 @end

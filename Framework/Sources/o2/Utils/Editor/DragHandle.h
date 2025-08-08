@@ -46,7 +46,7 @@ namespace o2
 
         Function<void()> onBeganDragging; // Drag begin event
 
-        Function<bool(const Vec2F&)> isPointInside; // Checking point inside function. When this is empty, using IRectDrawable inside checking function
+        Function<bool(const Vec2F&)> isPointInside; // Checking point inside function. When this is null, using IRectDrawable inside checking function
 
         Function<Vec2F(const Vec2F&)> screenToLocalTransformFunc; // Screen position to local transformation function
         Function<Vec2F(const Vec2F&)> localToScreenTransformFunc; // Local position to screen transformation function

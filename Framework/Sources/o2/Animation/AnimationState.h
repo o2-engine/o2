@@ -155,7 +155,7 @@ namespace o2
 		// Called when animation started to edit. It means that animation must be deactivated
 		void BeginPreview() override;
 
-		// Called when animation finished editing. ANimation must be reactivated
+		// Called when animation finished editing. Animation must be reactivated
 		void EndPreview() override;
 
 		// Returns actor that is being previewed

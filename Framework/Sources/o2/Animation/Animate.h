@@ -149,7 +149,7 @@ namespace o2
         void CheckColorAnimatedValue();
 
         // Checks position Animation track: creates them if needed
-        void CheckPositionAnimatedvalue();
+        void CheckPositionAnimatedValue();
 
         // Checks scale Animation track: creates them if needed
         void CheckScaleAnimatedValue();

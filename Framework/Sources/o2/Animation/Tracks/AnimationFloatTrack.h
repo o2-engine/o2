@@ -202,7 +202,7 @@ namespace o2
             Ref<IValueProxy<float>> mTargetProxy;      // Animation target proxy pointer
 
 		protected:
-			// Called when animation started playing, updates random range coefficient`
+			// Called when animation started playing, updates random range coefficient
 			void OnPlay() override;
 
             // Evaluates value

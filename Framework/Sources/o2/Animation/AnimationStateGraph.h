@@ -95,8 +95,8 @@ namespace o2
         protected:
             WeakRef<AnimationGraphState> mState; // State reference @SERIALIZABLE
 
-            String mName;         // Name of animation @SERIALIZABLE
-            float mWeight = 1.0f; // Weight of animation @SERIALIZABLE
+            String mName;          // Name of animation @SERIALIZABLE
+            float  mWeight = 1.0f; // Weight of animation @SERIALIZABLE
 
         protected:
             // Called when animation changed, makes graph asset dirty
