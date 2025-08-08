@@ -226,6 +226,15 @@ namespace Editor
         if (!mAnimation)
             return;
 
+        if (mPreviewPlayer)
+        {
+            mPreviewPlayer->onUpdate -= THIS_FUNC(OnAnimationUpdate);
+            mPreviewPlayer = nullptr;
+            mOwnPreviewPlayer = false;
+        }
+
+        mTargetActor = nullptr;
+
         animation->onChanged += THIS_FUNC(OnAnimationChanged);
 
         mLoopToggle->SetValue(animation->GetLoop() == Loop::Repeat);
