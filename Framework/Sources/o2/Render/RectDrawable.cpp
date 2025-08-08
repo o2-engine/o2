@@ -41,7 +41,7 @@ namespace o2
     void IRectDrawable::SetColor(const Color4& color)
     {
         mColor = color;
-        OnColorChanged();
+        UpdateColor();
     }
 
     Color4 IRectDrawable::GetColor() const
