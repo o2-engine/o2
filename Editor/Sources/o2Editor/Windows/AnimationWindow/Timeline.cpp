@@ -86,7 +86,7 @@ namespace Editor
 
     void AnimationTimeline::DrawTimeScale()
     {
-        double beginPos = (double)(mScaleOffset - mSmoothViewScroll*mOneSecondDefaultSize*mSmoothViewZoom);
+        double beginPos = (double)(mScaleOffset - mSmoothViewScroll);
         double endPos = beginPos + mDuration*mOneSecondDefaultSize*mSmoothViewZoom;
 
         Layout beginLayout = mBeginMarkLayout;
@@ -146,30 +146,40 @@ namespace Editor
     void AnimationTimeline::UpdateZooming(float dt)
     {
         if (!Math::Equals(mSmoothViewZoom, mViewZoom, 0.001f))
-        {
-            mSmoothViewZoom = Math::Lerp(mSmoothViewZoom, mViewZoom, dt*mScaleSmoothLerpCoef);
+		{
+			float timeAtCursorBefore = WorldToLocal(o2Input.GetCursorPos().x);
+			mSmoothViewZoom = Math::Lerp(mSmoothViewZoom, mViewZoom, dt * mScaleSmoothLerpCoef);
+			float timeAtCursorAfter = WorldToLocal(o2Input.GetCursorPos().x);
+
+            if (mViewHasZoomed)
+            {
+                float scrollDelta = (timeAtCursorAfter - timeAtCursorBefore) * mOneSecondDefaultSize * mSmoothViewZoom;
+                mViewScroll -= scrollDelta;
+                mSmoothViewScroll -= scrollDelta;
+            }
+
             UpdateScrollBarHandleSize();
 
             onViewChanged();
         }
-
-        mViewHasZoomed = false;
+        else
+            mViewHasZoomed = false;
     }
 
     void AnimationTimeline::UpdateScrollBarHandleSize()
     {
         if (mScrollBar)
-            mScrollBar->SetScrollHandleSize(layout->GetWidth()/mOneSecondDefaultSize/mSmoothViewZoom);
+            mScrollBar->SetScrollHandleSize(layout->GetWidth());
     }
 
     float AnimationTimeline::LocalToWorld(float pos) const
     {
-        return (pos - mSmoothViewScroll)*(mOneSecondDefaultSize*mSmoothViewZoom) + mScaleOffset + layout->GetWorldLeft();
+        return pos*(mOneSecondDefaultSize*mSmoothViewZoom) + mScaleOffset + layout->GetWorldLeft() - mSmoothViewScroll;
     }
 
     float AnimationTimeline::WorldToLocal(float pos) const
     {
-        return (pos - layout->GetWorldLeft() - mScaleOffset)/(mOneSecondDefaultSize*mSmoothViewZoom) + mSmoothViewScroll;
+        return (pos + mSmoothViewScroll - layout->GetWorldLeft() - mScaleOffset)/(mOneSecondDefaultSize*mSmoothViewZoom);
     }
 
     void AnimationTimeline::OnTransformUpdated()
@@ -189,7 +199,8 @@ namespace Editor
 
     void AnimationTimeline::OnCursorRightMousePressed(const Input::Cursor& cursor)
     {
-        mBeginDragViewScrollOffset = WorldToLocal(cursor.position.x);
+        mBeginDragViewScrollOffset = cursor.position.x;
+        mBeginDragViewScroll = mViewScroll;
     }
 
     void AnimationTimeline::OnCursorRightMouseStayDown(const Input::Cursor& cursor)
@@ -204,13 +215,14 @@ namespace Editor
 
         if (mDragViewScroll)
         {
-            mViewScroll -= WorldToLocal(cursor.position.x) - mBeginDragViewScrollOffset;
+            mViewScroll = mBeginDragViewScroll + mBeginDragViewScrollOffset - cursor.position.x;
 
             if (mViewScroll < 0.0f)
                 mViewScroll = mViewScroll/2.0f;
 
-            if (mViewScroll > mDuration)
-                mViewScroll = Math::Lerp(mDuration, mViewScroll, 0.5f);
+			float maxScroll = mDuration*mOneSecondDefaultSize*mSmoothViewZoom;
+            if (mViewScroll > maxScroll)
+                mViewScroll = Math::Lerp(mViewScroll, maxScroll, 0.5f);
 
             mSmoothViewScroll = mViewScroll;
 
@@ -223,7 +235,7 @@ namespace Editor
     {
         if (mDragViewScroll)
         {
-            mViewScrollSpeed = -cursor.delta.x/o2Time.GetDeltaTime()/(mOneSecondDefaultSize*mSmoothViewZoom);
+            mViewScrollSpeed = -cursor.delta.x/o2Time.GetDeltaTime();
             mDragViewScroll = false;
         }
     }
@@ -245,7 +257,7 @@ namespace Editor
             double chunkDuration;
         };
 
-        Cfg configs[] = { { 10, 0.1 }, { 5, 0.1 }, { 2, 0.1 }, { 5, 0.5 }, { 10, 1.0 }, { 5, 1.0 }, { 2, 1.0 }, { 5, 5.0 }, { 6, 30.0 } };
+        Cfg configs[] = { { 5, 0.05 }, { 10, 0.1 }, { 5, 0.1 }, { 2, 0.1 }, { 5, 0.5 }, { 10, 1.0 }, { 5, 1.0 }, { 2, 1.0 }, { 5, 5.0 }, { 6, 30.0 } };
 
         Cfg nearestCfg;
         float nearestCfgScreenChunkSegmentSizeDiff = FLT_MAX;
@@ -286,8 +298,9 @@ namespace Editor
             if (mViewScroll < 0.0f)
                 mViewScroll = Math::Lerp(mViewScroll, 0.0f, dt*mScrollBorderBounceCoef);
 
-            if (mViewScroll > mDuration)
-                mViewScroll = Math::Lerp(mSmoothViewScroll, mDuration, dt*mScrollBorderBounceCoef);
+			float maxScroll = mDuration * mOneSecondDefaultSize * mSmoothViewZoom;
+            if (mViewScroll > maxScroll)
+                mViewScroll = Math::Lerp(mViewScroll, maxScroll, dt*mScrollBorderBounceCoef);
         }
 
         if (!Math::Equals(mViewScroll, mSmoothViewScroll, 0.0001f))
@@ -326,7 +339,7 @@ namespace Editor
         if (mScrollBar)
         {
             mScrollBar->minValue = 0.0f;
-            mScrollBar->maxValue = mDuration;
+            mScrollBar->maxValue = mDuration*(mOneSecondDefaultSize*mViewZoom);
             UpdateScrollBarHandleSize();
         }
     }
@@ -339,7 +352,7 @@ namespace Editor
     void AnimationTimeline::SetViewRange(float left, float right, bool force /*= true*/)
     {
         mViewZoom = (layout->worldRight - layout->worldLeft)/mOneSecondDefaultSize/(right - left);
-        mViewScroll = left + mScaleOffset/mOneSecondDefaultSize/mViewZoom;
+        mViewScroll = left + mScaleOffset;
 
         if (force)
         {

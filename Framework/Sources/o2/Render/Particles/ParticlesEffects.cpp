@@ -48,6 +48,9 @@ namespace o2
 
     void ParticlesColorEffect::Update(float dt, ParticlesEmitter* emitter)
     {
+        if (!colorGradient)
+            return;
+
         auto& particles = GetParticlesDirect(emitter);
 
         CheckDataBufferSize(particles.Count());

@@ -116,10 +116,10 @@ namespace Editor
 
         const float mScaleSmoothLerpCoef = 10.0f; // Scale smooth animation coefficient. More is faster
         const float mMinScale = 0.1f;             // Minimal view zoom 
-        const float mMaxScale = 10.0f;            // Maximal view zoom
+        const float mMaxScale = 30.0f;            // Maximal view zoom
         const float mScaleSense = 0.1f/120.0f;    // Mouse wheel scroll sense coefficient
 
-        const float mScrollSmoothCoef = 15.0f;        // Scroll smooth to target interpolation coefficient
+        const float mScrollSmoothCoef = 10.0f;        // Scroll smooth to target interpolation coefficient
         const float mScrollSpeedDecreaseCoef = 10.0f; // Scroll speed decrease coefficient. More - speed decreasing faster
         const float mScrollBorderBounceCoef = 10.0f;  // Smooth scroll bounds bounce coefficient
 
@@ -135,6 +135,7 @@ namespace Editor
         float mViewScroll = 0.0f;                // Time scroll in seconds
         bool  mDragViewScroll = false;           // It is true when user is dragging view with right button
         float mBeginDragViewScrollOffset = 0.0f; // Offset from cursor to view scroll before starting drag
+		float mBeginDragViewScroll = 0.0f;       // View scroll before starting drag
         float mViewScrollSpeed = 0.0f;           // Speed of inertial scrolling, when user dragged view and released mouse
 
         float mViewZoom = 1.0f;       // Time scale zoom
@@ -225,9 +226,9 @@ CLASS_FIELDS_META(Editor::AnimationTimeline)
     FIELD().PRIVATE().DEFAULT_VALUE(Color4(16, 20, 23, 38)).NAME(mSmallLineColor);
     FIELD().PRIVATE().DEFAULT_VALUE(10.0f).NAME(mScaleSmoothLerpCoef);
     FIELD().PRIVATE().DEFAULT_VALUE(0.1f).NAME(mMinScale);
-    FIELD().PRIVATE().DEFAULT_VALUE(10.0f).NAME(mMaxScale);
+    FIELD().PRIVATE().DEFAULT_VALUE(30.0f).NAME(mMaxScale);
     FIELD().PRIVATE().DEFAULT_VALUE(0.1f/120.0f).NAME(mScaleSense);
-    FIELD().PRIVATE().DEFAULT_VALUE(15.0f).NAME(mScrollSmoothCoef);
+    FIELD().PRIVATE().DEFAULT_VALUE(10.0f).NAME(mScrollSmoothCoef);
     FIELD().PRIVATE().DEFAULT_VALUE(10.0f).NAME(mScrollSpeedDecreaseCoef);
     FIELD().PRIVATE().DEFAULT_VALUE(10.0f).NAME(mScrollBorderBounceCoef);
     FIELD().PRIVATE().NAME(mAnimationWindow);
@@ -238,6 +239,7 @@ CLASS_FIELDS_META(Editor::AnimationTimeline)
     FIELD().PRIVATE().DEFAULT_VALUE(0.0f).NAME(mViewScroll);
     FIELD().PRIVATE().DEFAULT_VALUE(false).NAME(mDragViewScroll);
     FIELD().PRIVATE().DEFAULT_VALUE(0.0f).NAME(mBeginDragViewScrollOffset);
+    FIELD().PRIVATE().DEFAULT_VALUE(0.0f).NAME(mBeginDragViewScroll);
     FIELD().PRIVATE().DEFAULT_VALUE(0.0f).NAME(mViewScrollSpeed);
     FIELD().PRIVATE().DEFAULT_VALUE(1.0f).NAME(mViewZoom);
     FIELD().PRIVATE().DEFAULT_VALUE(1.0f).NAME(mSmoothViewZoom);
