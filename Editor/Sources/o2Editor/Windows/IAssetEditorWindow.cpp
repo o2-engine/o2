@@ -231,38 +231,46 @@ namespace Editor
 		*mUpPanel->layout = WidgetLayout::HorStretch(VerAlign::Top, 0, 0, 20, 0);
 		mUpPanel->baseCorner = BaseCorner::Left;
 		mUpPanel->expandHeight = true;
-		mUpPanel->expandWidth = false;
-		mUpPanel->AddLayer("back", mmake<Sprite>("ui/UI4_small_panel_back.png"), Layout::BothStretch(-5, -4, -4, -5));
+		mUpPanel->expandWidth = true;
+		mUpPanel->AddLayer("back", mmake<Sprite>("ui/UI4_small_panel_back.png"), Layout::BothStretch(-5, -5, -4, -5));
 		mWindow->AddChild(mUpPanel);
+
+		mButtonsPanel = mmake<HorizontalLayout>();
+		mButtonsPanel->name = "buttons panel";
+		*mButtonsPanel->layout = WidgetLayout::HorStretch(VerAlign::Top, 0, 0, 20, 0);
+		mButtonsPanel->baseCorner = BaseCorner::Left;
+		mButtonsPanel->expandHeight = true;
+		mButtonsPanel->expandWidth = false;
+		mUpPanel->AddChild(mButtonsPanel);
 
 		mPreviewToggle = o2UI.CreateWidget<Toggle>("menu preview");
 		mPreviewToggle->onToggle = THIS_FUNC(OnMenuPreviewToggle);
-		mUpPanel->AddChild(mPreviewToggle);
+		mButtonsPanel->AddChild(mPreviewToggle);
 
 		mNewAssetButton = o2UI.CreateWidget<Button>("menu new asset");
 		mNewAssetButton->name = "new asset button";
 		mNewAssetButton->onClick += THIS_FUNC(OnNewAssetPressed);
-		mUpPanel->AddChild(mNewAssetButton);
+		mButtonsPanel->AddChild(mNewAssetButton);
 
 		mOpenAssetButton = o2UI.CreateWidget<Button>("menu open asset");
 		mOpenAssetButton->name = "open asset button";
 		mOpenAssetButton->onClick += THIS_FUNC(OnOpenAssetPressed);
-		mUpPanel->AddChild(mOpenAssetButton);
+		mButtonsPanel->AddChild(mOpenAssetButton);
 
 		mSaveAssetButton = o2UI.CreateWidget<Button>("menu save asset");
 		mSaveAssetButton->name = "save button";
 		mSaveAssetButton->onClick += THIS_FUNC(SaveEditingAsset);
-		mUpPanel->AddChild(mSaveAssetButton);
+		mButtonsPanel->AddChild(mSaveAssetButton);
 
 		mSaveAsAssetButton = o2UI.CreateWidget<Button>("menu save as asset");
 		mSaveAsAssetButton->name = "save as button";
 		mSaveAsAssetButton->onClick += THIS_FUNC(OnSaveAsAssetPressed);
-		mUpPanel->AddChild(mSaveAsAssetButton);
+		mButtonsPanel->AddChild(mSaveAsAssetButton);
 
 		mRevertAssetButton = o2UI.CreateWidget<Button>("menu revert asset");
 		mRevertAssetButton->name = "revert button";
 		mRevertAssetButton->onClick += THIS_FUNC(OnRevertAssetPressed);
-		mUpPanel->AddChild(mRevertAssetButton);
+		mButtonsPanel->AddChild(mRevertAssetButton);
 	}
 
 	String IAssetEditorWindow::GetWindowTitle() const

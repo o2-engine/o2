@@ -86,7 +86,8 @@ namespace Editor
 
 		DataDocument mEditingAssetInstanceCache; // Cache for asset instance data, used to restore asset state
 
-        Ref<HorizontalLayout> mUpPanel; // Upper panel with buttons
+        Ref<HorizontalLayout> mUpPanel;      // Upper panel with buttons and other controls
+        Ref<HorizontalLayout> mButtonsPanel; // Buttons panel
 
         Ref<Toggle> mPreviewToggle;          // Toggle for enabling preview mode while editing asset
         bool        mPreviewEnabled = false; // Flag for preview mode
@@ -188,6 +189,7 @@ CLASS_FIELDS_META(Editor::IAssetEditorWindow)
     FIELD().PROTECTED().NAME(mEditingAssetEditablePreview);
     FIELD().PROTECTED().NAME(mEditingAssetInstanceCache);
     FIELD().PROTECTED().NAME(mUpPanel);
+    FIELD().PROTECTED().NAME(mButtonsPanel);
     FIELD().PROTECTED().NAME(mPreviewToggle);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mPreviewEnabled);
     FIELD().PROTECTED().NAME(mNewAssetButton);

@@ -79,13 +79,13 @@ namespace Editor
         mWindow->name = "animation window";
         mWindow->SetIcon(mmake<Sprite>("ui/UI4_animation_icon.png"));
         mWindow->SetIconLayout(Layout::Based(BaseCorner::LeftTop, Vec2F(20, 20), Vec2F(-1, 1)));
-        mWindow->SetViewLayout(Layout::BothStretch(-2, 0, 0, 18));
+        mWindow->SetViewLayout(Layout::BothStretch(-2, 0, 0, 19));
         mWindow->SetClippingLayout(Layout::BothStretch(-1, 0, 0, 18));
 
         InitializeUpPanel();
 
         mWorkArea = mmake<Widget>();
-        *mWorkArea->layout = WidgetLayout::BothStretch(0, 0, 0, 18);
+        *mWorkArea->layout = WidgetLayout::BothStretch(0, 0, 0, 20);
         mWindow->AddChild(mWorkArea);
 
         InitializeHandlesSheet();
@@ -150,41 +150,41 @@ namespace Editor
     {
         mRecordToggle = o2UI.CreateWidget<Toggle>("menu record");
         mRecordToggle->onToggle = THIS_FUNC(OnMenuRecordToggle);
-        mUpPanel->AddChild(mRecordToggle);
+        mButtonsPanel->AddChild(mRecordToggle);
 
         mRewindLeft = o2UI.CreateWidget<Button>("menu rewind left");
-        mUpPanel->AddChild(mRewindLeft);
+        mButtonsPanel->AddChild(mRewindLeft);
 
         mMoveLeft = o2UI.CreateWidget<Button>("menu move left");
-        mUpPanel->AddChild(mMoveLeft);
+        mButtonsPanel->AddChild(mMoveLeft);
 
         mPlayPauseToggle = o2UI.CreateWidget<Toggle>("menu play-stop");
         mPlayPauseToggle->SetValue(false);
         mPlayPauseToggle->onToggleByUser = THIS_FUNC(OnPlayPauseToggled);
-        mUpPanel->AddChild(mPlayPauseToggle);
+        mButtonsPanel->AddChild(mPlayPauseToggle);
 
         mMoveRight = o2UI.CreateWidget<Button>("menu move right");
-        mUpPanel->AddChild(mMoveRight);
+        mButtonsPanel->AddChild(mMoveRight);
 
         mRewindRight = o2UI.CreateWidget<Button>("menu rewind right");
-        mUpPanel->AddChild(mRewindRight);
+        mButtonsPanel->AddChild(mRewindRight);
 
         mLoopToggle = o2UI.CreateWidget<Toggle>("menu loop-nonloop");
         mLoopToggle->SetValue(true);
         mLoopToggle->onToggleByUser = THIS_FUNC(OnLoopToggled);
-        mUpPanel->AddChild(mLoopToggle); 
+        mButtonsPanel->AddChild(mLoopToggle); 
 
         mCurvesToggle = o2UI.CreateWidget<Toggle>("menu curves");
         mCurvesToggle->SetValue(false);
         mCurvesToggle->onToggleByUser = [&](bool value) { SetCurvesMode(value); };
-        mUpPanel->AddChild(mCurvesToggle); 
+        mButtonsPanel->AddChild(mCurvesToggle); 
 
         mPropertiesButton = o2UI.CreateWidget<Button>("menu properties");
         mPropertiesButton->onClick = [&]() { PropertiesListDlg::Show(mAnimation.Lock(), mTargetActor.Lock()); };
-        mUpPanel->AddChild(mPropertiesButton);
+        mButtonsPanel->AddChild(mPropertiesButton);
 
         mAddKeyButton = o2UI.CreateWidget<Button>("menu add key");
-        mUpPanel->AddChild(mAddKeyButton); 
+        mButtonsPanel->AddChild(mAddKeyButton); 
     }
 
     void AnimationWindow::InitializeSeparatorHandle()

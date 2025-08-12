@@ -907,16 +907,16 @@ namespace Editor
         Ref<Button> sample = mmake<Button>();
 
         auto backLayer = sample->AddLayer("regularBack", mmake<Sprite>("ui/UI4_panel_button.png"),
-                                          Layout::BothStretch(-4, -4, -5, -5));
+                                          Layout::BothStretch(-4, -3, -5, -4));
 
         auto selectLayer = sample->AddLayer("hover", mmake<Sprite>("ui/UI4_panel_button_select.png"),
-                                            Layout::BothStretch(-4, -4, -5, -5));
+                                            Layout::BothStretch(-4, -3, -5, -4));
 
         auto pressedLayer = sample->AddLayer("pressed", mmake<Sprite>("ui/UI4_panel_button_pressed.png"),
-                                             Layout::BothStretch(-4, -4, -5, -5));
+                                             Layout::BothStretch(-4, -3, -5, -4));
 
         auto focusLayer = sample->AddLayer("focused", mmake<Sprite>("ui/UI4_panel_button_focus.png"),
-                                           Layout::BothStretch(-4, -5, -5, -5));
+                                           Layout::BothStretch(-4, -4, -5, -5));
 
         auto arrowLayer = sample->AddLayer("arrow", mmake<Sprite>("ui/UI4_Down_icn.png"),
                                            Layout::Based(BaseCorner::Right, Vec2F(20, 20), Vec2F(0, 0)));
