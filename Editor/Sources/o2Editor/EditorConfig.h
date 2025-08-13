@@ -46,10 +46,10 @@ namespace Editor
         {
         public:
             Vec2I         mWindowSize = Vec2I(800, 600); // Application window size @SERIALIZABLE
-            Vec2I         mWindowPosition;               // Application window position @SERIALIZABLE
-            bool          mMaximized = true;             // Is application window is maximized @SERIALIZABLE
-            WindowsLayout mLayout;                       // Windows layout @SERIALIZABLE
-            String        mLastLoadedScene;              // Last loaded scene @SERIALIZABLE
+            Vec2I         mWindowPosition;                      // Application window position @SERIALIZABLE
+            bool          mMaximized = true;                    // Is application window is maximized @SERIALIZABLE
+            WindowsLayout mLayout;                              // Windows layout @SERIALIZABLE
+            String        mLastLoadedScene;                     // Last loaded scene @SERIALIZABLE
 
             SERIALIZABLE(ProjectConfig);
         };

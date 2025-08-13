@@ -61,6 +61,21 @@ namespace Editor
 		// Reverts the currently editing asset to its last saved state
 		virtual void RevertEditingAsset();
 
+        // Called when new asset button is pressed
+        virtual void MenuCreateNewAsset();
+
+        // Called when open asset button is pressed
+        virtual void MenuOpenAsset();
+
+        // Called when save asset button is pressed
+        virtual void MenuSaveAsset();
+
+        // Called when save as asset button is pressed
+        virtual void MenuSaveAsAsset();
+
+        // Called when revert button is pressed
+        virtual void MenuRevertAsset();
+
 		// Returns currently editing asset
 		virtual AssetRef<Asset> GetEditingAsset() const;
 
@@ -117,6 +132,9 @@ namespace Editor
 		// Called when component editing ends
 		virtual void OnCompletedEditingComponent() {}
 
+        // Returns true if create new asset at startup is enabled
+        virtual bool IsCreateNewAssetAtStartupEnabled() const;
+
 		// Returns true if component preview is available for this asset type
         virtual bool IsComponentPreviewAvailable() const;
 
@@ -146,18 +164,6 @@ namespace Editor
 
 		// Called to toggle preview mode
         virtual void OnMenuPreviewToggle(bool preview);
-
-        // Called when new asset button is pressed
-        virtual void OnNewAssetPressed();
-
-		// Opens file selector and opens asset
-        virtual void OnOpenAssetPressed();
-
-		// Called when save as button is pressed
-		virtual void OnSaveAsAssetPressed();
-
-		// Called when revert button is pressed
-		virtual void OnRevertAssetPressed();
 
         // Updates window title
         void UpdateWindowTitle();
@@ -216,6 +222,11 @@ CLASS_METHODS_META(Editor::IAssetEditorWindow)
     FUNCTION().PUBLIC().SIGNATURE(void, CreateNewAsset);
     FUNCTION().PUBLIC().SIGNATURE(void, SaveEditingAsset);
     FUNCTION().PUBLIC().SIGNATURE(void, RevertEditingAsset);
+    FUNCTION().PUBLIC().SIGNATURE(void, MenuCreateNewAsset);
+    FUNCTION().PUBLIC().SIGNATURE(void, MenuOpenAsset);
+    FUNCTION().PUBLIC().SIGNATURE(void, MenuSaveAsset);
+    FUNCTION().PUBLIC().SIGNATURE(void, MenuSaveAsAsset);
+    FUNCTION().PUBLIC().SIGNATURE(void, MenuRevertAsset);
     FUNCTION().PUBLIC().SIGNATURE(AssetRef<Asset>, GetEditingAsset);
     FUNCTION().PUBLIC().SIGNATURE(void, OnAssetChanged);
     FUNCTION().PUBLIC().SIGNATURE(void, Initialize);
@@ -226,6 +237,7 @@ CLASS_METHODS_META(Editor::IAssetEditorWindow)
     FUNCTION().PROTECTED().SIGNATURE(void, OnCompletedEditingAsset);
     FUNCTION().PROTECTED().SIGNATURE(void, OnStartEditingComponent);
     FUNCTION().PROTECTED().SIGNATURE(void, OnCompletedEditingComponent);
+    FUNCTION().PROTECTED().SIGNATURE(bool, IsCreateNewAssetAtStartupEnabled);
     FUNCTION().PROTECTED().SIGNATURE(bool, IsComponentPreviewAvailable);
     FUNCTION().PROTECTED().SIGNATURE(void, OnComponentPreviewEnabled);
     FUNCTION().PROTECTED().SIGNATURE(void, OnComponentPreviewDisabled);
@@ -236,10 +248,6 @@ CLASS_METHODS_META(Editor::IAssetEditorWindow)
     FUNCTION().PROTECTED().SIGNATURE(void, OnAssetSaved);
     FUNCTION().PROTECTED().SIGNATURE(AssetRef<Asset>, CreateAssetInstance);
     FUNCTION().PROTECTED().SIGNATURE(void, OnMenuPreviewToggle, bool);
-    FUNCTION().PROTECTED().SIGNATURE(void, OnNewAssetPressed);
-    FUNCTION().PROTECTED().SIGNATURE(void, OnOpenAssetPressed);
-    FUNCTION().PROTECTED().SIGNATURE(void, OnSaveAsAssetPressed);
-    FUNCTION().PROTECTED().SIGNATURE(void, OnRevertAssetPressed);
     FUNCTION().PROTECTED().SIGNATURE(void, UpdateWindowTitle);
     FUNCTION().PROTECTED().SIGNATURE(void, CheckAssetAlive);
     FUNCTION().PROTECTED().SIGNATURE(void, CheckDirtyAssetAndExecute, const Function<void()>&);

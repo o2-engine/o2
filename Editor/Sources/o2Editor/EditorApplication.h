@@ -23,6 +23,7 @@ namespace Editor
     FORWARD_CLASS_REF(IAction);
     FORWARD_CLASS_REF(MenuPanel);
     FORWARD_CLASS_REF(Properties);
+    FORWARD_CLASS_REF(SceneWindow);
     FORWARD_CLASS_REF(ToolsPanel);
     FORWARD_CLASS_REF(UIRoot);
     FORWARD_CLASS_REF(WindowsManager);
@@ -83,9 +84,8 @@ namespace Editor
         Ref<ToolsPanel>     mToolsPanel;     // Tools panel
         Ref<MenuPanel>      mMenuPanel;      // Menu panel
 
-        Ref<Properties> mProperties; // Properties manager
-
-        AssetRef<SceneAsset> mLoadedScene; // Current loaded scene
+        Ref<Properties>  mProperties;  // Properties manager
+        Ref<SceneWindow> mSceneWindow; // Scene window reference
 
         DataDocument mSceneDump; // Scene dump, created before playing
 
@@ -193,7 +193,7 @@ CLASS_FIELDS_META(Editor::EditorApplication)
     FIELD().PROTECTED().NAME(mToolsPanel);
     FIELD().PROTECTED().NAME(mMenuPanel);
     FIELD().PROTECTED().NAME(mProperties);
-    FIELD().PROTECTED().NAME(mLoadedScene);
+    FIELD().PROTECTED().NAME(mSceneWindow);
     FIELD().PROTECTED().NAME(mSceneDump);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mIsPlaying);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mPlayingChanged);

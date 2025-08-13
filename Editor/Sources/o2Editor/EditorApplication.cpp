@@ -35,6 +35,7 @@
 #include "o2Editor/Windows/WindowsManager.h"
 #include "o2Editor/Windows/PropertiesWindow/PropertiesWindow.h"
 #include "o2Editor/Windows/SceneWindow/SceneEditScreen.h"
+#include "o2Editor/Windows/SceneWindow/SceneWindow.h"
 #include "o2Editor/Windows/TreeWindow/TreeWindow.h"
 #include "o2Editor/Utils/CommonTextures.h"
 
@@ -49,8 +50,8 @@ namespace Editor
 
     const String& EditorApplication::GetLoadedSceneName() const
     {
-        if (mLoadedScene)
-            return mLoadedScene->GetPath();
+        if (mSceneWindow && mSceneWindow->GetEditingAsset())
+            return mSceneWindow->GetEditingAsset()->GetPath();
 
         return String::empty;
     }
@@ -59,26 +60,17 @@ namespace Editor
     {
         PROFILE_SAMPLE_FUNC();
 
-        ForcePopEditorScopeOnStack scope;
-
-        if (scene)
-            scene->Load();
-
-        mLoadedScene = scene;
-
-        ResetUndoActions();
-
-        if (mLoadedScene)
-            o2EditorConfig.projectConfig.mLastLoadedScene = mLoadedScene->GetPath();
+        if (mSceneWindow)
+        {
+            mSceneWindow->EditAsset(AssetRef<Asset>(scene));
+            ResetUndoActions();
+        }
     }
 
     void EditorApplication::SaveScene()
     {
-        o2Scene.Save(mLoadedScene->GetFullPath());
-        mLoadedScene->Save();
-
-        if (mLoadedScene)
-            o2EditorConfig.projectConfig.mLastLoadedScene = mLoadedScene->GetPath();
+        if (mSceneWindow)
+            mSceneWindow->SaveEditingAsset();
     }
 
     void EditorApplication::SaveSceneAs(const String& path)
@@ -87,26 +79,34 @@ namespace Editor
 
         o2Scene.Save(path);
 
-        mLoadedScene = AssetRef<SceneAsset>::CreateAsset();
-        mLoadedScene->SetPath(relativePath);
-        mLoadedScene->Save();
+        auto newSceneAsset = AssetRef<SceneAsset>::CreateAsset();
+        newSceneAsset->SetPath(relativePath);
+        newSceneAsset->Save();
 
-        if (mLoadedScene)
-            o2EditorConfig.projectConfig.mLastLoadedScene = mLoadedScene->GetPath();
+        if (mSceneWindow)
+        {
+            mSceneWindow->EditAsset(AssetRef<Asset>(newSceneAsset));
+            ResetUndoActions();
+        }
     }
 
     void EditorApplication::MakeNewScene()
     {
-        mLoadedScene = nullptr;
-        o2Scene.Clear();
-
-        ResetUndoActions();
-        o2EditorPropertiesWindow.ResetTargets();
+        if (mSceneWindow)
+        {
+            mSceneWindow->CreateNewAsset();
+            ResetUndoActions();
+            o2EditorPropertiesWindow.ResetTargets();
+        }
     }
 
     bool EditorApplication::IsSceneChanged() const
     {
-        return GetUndoActionsCount() > 0;
+        bool assetChanged = false;
+        if (mSceneWindow && mSceneWindow->GetEditingAsset())
+            assetChanged = mSceneWindow->GetEditingAsset()->IsDirty();
+
+        return assetChanged || GetUndoActionsCount() > 0;
     }
 
     void EditorApplication::SetPlaying(bool playing)
@@ -164,12 +164,16 @@ namespace Editor
         mConfig = mmake<EditorConfig>();
         mConfig->LoadConfigs();
 
+        String lastLoadedScene = o2EditorConfig.projectConfig.mLastLoadedScene;
+
         LoadUIStyle();
 
         mProperties = mmake<Properties>();
         mWindowsManager = mmake<WindowsManager>();
         mMenuPanel = mmake<MenuPanel>();
         mToolsPanel = mmake<ToolsPanel>();
+
+        mSceneWindow = mWindowsManager->GetWindow<SceneWindow>();
 
         if (mConfig->projectConfig.mMaximized)
             o2Application.Maximize();
@@ -185,9 +189,8 @@ namespace Editor
         mScene->UpdateAddedEntities();
         mScene->UpdateDestroyingEntities();
 
-        o2EditorApplication.LoadScene(AssetRef<SceneAsset>(o2EditorConfig.projectConfig.mLastLoadedScene));
-
-        //FreeConsole();
+        if (mSceneWindow && !lastLoadedScene.IsEmpty())
+            mSceneWindow->EditAsset(AssetRef<Asset>(AssetRef<SceneAsset>(lastLoadedScene)));
 
         o2Scripts.CollectGarbage();
 
@@ -363,6 +366,7 @@ namespace Editor
     {
         mConfig = nullptr;
         mWindowsManager = nullptr;
+        mSceneWindow = nullptr;
         mBackground = nullptr;
         mBackSign = nullptr;
         mToolsPanel = nullptr;
@@ -545,7 +549,7 @@ namespace Editor
         mUIRoot->Update(dt);
         mToolsPanel->Update(dt);
 
-        String currentScene = mLoadedScene ? mLoadedScene->GetPath() : String("");
+        String currentScene = GetLoadedSceneName();
 
         o2Application.windowCaption = String("o2 Editor: ") + currentScene +
             "; FPS: " + (String)((int)o2Time.GetFPS()) +
@@ -583,8 +587,9 @@ namespace Editor
         // Debug draw undo actions
         if (o2Input.IsKeyDown(VK_F6))
         {
-            for (int i = 0; i < mActions.Count(); i++)
-                o2Debug.DrawText(Vec2F(0, (float)(20 * i)), (String)i + mActions[i]->GetName());
+            auto actions = GetUndoActions();
+            for (int i = 0; i < actions.Count(); i++)
+                o2Debug.DrawText(Vec2F(0, (float)(20 * i)), (String)i + actions[i]->GetName());
         }
     }
 

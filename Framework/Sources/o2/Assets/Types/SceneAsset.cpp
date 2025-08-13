@@ -25,7 +25,10 @@ namespace o2
 
     void SceneAsset::Load() const
     {
-        o2Scene.Load(GetBuiltFullPath());
+        if (GetPath().IsEmpty())
+            o2Scene.Clear();
+        else    
+            o2Scene.Load(GetBuiltFullPath());
     }
 
     Vector<String> SceneAsset::GetFileExtensions()

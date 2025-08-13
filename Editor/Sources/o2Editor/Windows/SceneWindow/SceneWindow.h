@@ -52,6 +52,9 @@ namespace Editor
         // Called after that all windows was created
         void PostInitializeWindow() override;
 
+        // Returns true if create new asset at startup is enabled
+        bool IsCreateNewAssetAtStartupEnabled() const override;
+
         // Called when asset editing starts
         void OnStartEditingAsset() override;
 
@@ -89,6 +92,7 @@ CLASS_METHODS_META(Editor::SceneWindow)
     FUNCTION().PROTECTED().SIGNATURE(void, InitializeWindow);
     FUNCTION().PROTECTED().SIGNATURE(String, GetWindowTitle);
     FUNCTION().PROTECTED().SIGNATURE(void, PostInitializeWindow);
+    FUNCTION().PROTECTED().SIGNATURE(bool, IsCreateNewAssetAtStartupEnabled);
     FUNCTION().PROTECTED().SIGNATURE(void, OnStartEditingAsset);
     FUNCTION().PROTECTED().SIGNATURE(void, OnCompletedEditingAsset);
     FUNCTION().PROTECTED().SIGNATURE(AssetRef<Asset>, CreateAssetInstance);

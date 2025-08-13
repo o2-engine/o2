@@ -1,4 +1,3 @@
-#include "o2Editor/EditorApplication.h"
 #include "o2Editor/stdafx.h"
 #include "SceneWindow.h"
 
@@ -10,6 +9,8 @@
 #include "o2Editor/Windows/SceneWindow/SceneEditScreen.h"
 #include "o2/Scene/Scene.h"
 #include "o2/Utils/Editor/SceneEditableObject.h"
+#include "o2/Utils/Editor/EditorScope.h"
+#include "o2Editor/EditorConfig.h"
 
 namespace Editor
 {
@@ -67,6 +68,11 @@ namespace Editor
         return TypeOf(SceneAsset);
     }
 
+    bool SceneWindow::IsCreateNewAssetAtStartupEnabled() const
+    {
+        return false;
+    }
+
     void SceneWindow::OnStartEditingAsset()
     {
         if (auto sceneAsset = DynamicCast<SceneAsset>(mEditingAsset.Lock()))
@@ -74,7 +80,8 @@ namespace Editor
             ForcePopEditorScopeOnStack scope;
             sceneAsset->Load();
 
-            o2EditorConfig.projectConfig.mLastLoadedScene = sceneAsset->GetPath();
+            if (EditorConfig::IsSingletonInitialzed())
+                o2EditorConfig.projectConfig.mLastLoadedScene = sceneAsset->GetPath();
         }
     }
 

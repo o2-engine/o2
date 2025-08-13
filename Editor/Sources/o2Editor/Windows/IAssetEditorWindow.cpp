@@ -148,7 +148,7 @@ namespace Editor
 			return;
 
 		if (editingAsset->GetPath().IsEmpty())
-			OnSaveAsAssetPressed();
+			MenuSaveAsAsset();
 		else
 		{
 			editingAsset->Save();
@@ -176,6 +176,69 @@ namespace Editor
 		SetComponentAndPropertyAsset(mEditingAsset.Lock());
 	}
 
+	void IAssetEditorWindow::MenuCreateNewAsset()
+	{
+		CheckDirtyAssetAndExecute([this]() { CreateNewAsset(); });
+	}
+
+	void IAssetEditorWindow::MenuOpenAsset()
+	{
+		CheckDirtyAssetAndExecute([this]() {
+			Map<String, String> extensionMap = CreateFileExtensionMap();
+			String fileName = GetOpenFileNameDialog("Open Asset", extensionMap);
+			if (!fileName.IsEmpty())
+			{
+				String relativePath = o2FileSystem.GetPathRelativeToPath(fileName, ::GetAssetsPath());
+				if (auto asset = o2Assets.GetAssetRef(relativePath))
+					SetComponentAndPropertyAsset(asset);
+
+				UpdateWindowTitle();
+			}
+		});
+	}
+
+	void IAssetEditorWindow::MenuSaveAsset()
+	{
+		SaveEditingAsset();
+	}
+
+	void IAssetEditorWindow::MenuSaveAsAsset()
+	{
+		Map<String, String> extensionMap = CreateFileExtensionMap();
+		String defaultPath = ::GetAssetsPath();
+		String fileName = GetSaveFileNameDialog("Save Asset As", extensionMap, defaultPath);
+
+		if (!fileName.IsEmpty() && mEditingAsset)
+		{
+			String relativePath = o2FileSystem.GetPathRelativeToPath(fileName, defaultPath);
+
+			auto extensions = GetAssetType().InvokeStatic<Vector<String>>("GetFileExtensions");
+			if (!extensions.IsEmpty() && !relativePath.EndsWith(extensions[0]))
+				relativePath += "." + extensions[0];
+
+			if (auto asset = mEditingAsset.Lock())
+			{
+				asset->SetPath(relativePath);
+				asset->Save();
+
+				SetComponentAndPropertyAsset(asset);
+
+				OnAssetSaved();
+				o2Assets.RebuildAssets();
+
+				UpdateWindowTitle();
+			}
+		}
+	}
+
+	void IAssetEditorWindow::MenuRevertAsset()
+	{
+		if (!mEditingAsset || !mEditingAsset.Lock()->IsDirty())
+			return;
+
+		YesNoCancelDlg::ShowYesNo( "Revert changes to asset?", [this]() { RevertEditingAsset(); });
+	}
+
 	void IAssetEditorWindow::OnAssetChanged()
 	{
 		if (auto asset = mEditingAsset.Lock())
@@ -184,7 +247,8 @@ namespace Editor
 
 	void IAssetEditorWindow::Initialize()
 	{
-		CreateNewAsset();
+		if (IsCreateNewAssetAtStartupEnabled())
+			CreateNewAsset();
 	}
 
 	void IAssetEditorWindow::Update(float dt)
@@ -249,27 +313,27 @@ namespace Editor
 
 		mNewAssetButton = o2UI.CreateWidget<Button>("menu new asset");
 		mNewAssetButton->name = "new asset button";
-		mNewAssetButton->onClick += THIS_FUNC(OnNewAssetPressed);
+		mNewAssetButton->onClick += THIS_FUNC(MenuCreateNewAsset);
 		mButtonsPanel->AddChild(mNewAssetButton);
 
 		mOpenAssetButton = o2UI.CreateWidget<Button>("menu open asset");
 		mOpenAssetButton->name = "open asset button";
-		mOpenAssetButton->onClick += THIS_FUNC(OnOpenAssetPressed);
+		mOpenAssetButton->onClick += THIS_FUNC(MenuOpenAsset);
 		mButtonsPanel->AddChild(mOpenAssetButton);
 
 		mSaveAssetButton = o2UI.CreateWidget<Button>("menu save asset");
 		mSaveAssetButton->name = "save button";
-		mSaveAssetButton->onClick += THIS_FUNC(SaveEditingAsset);
+		mSaveAssetButton->onClick += THIS_FUNC(MenuSaveAsset);
 		mButtonsPanel->AddChild(mSaveAssetButton);
 
 		mSaveAsAssetButton = o2UI.CreateWidget<Button>("menu save as asset");
 		mSaveAsAssetButton->name = "save as button";
-		mSaveAsAssetButton->onClick += THIS_FUNC(OnSaveAsAssetPressed);
+		mSaveAsAssetButton->onClick += THIS_FUNC(MenuSaveAsAsset);
 		mButtonsPanel->AddChild(mSaveAsAssetButton);
 
 		mRevertAssetButton = o2UI.CreateWidget<Button>("menu revert asset");
 		mRevertAssetButton->name = "revert button";
-		mRevertAssetButton->onClick += THIS_FUNC(OnRevertAssetPressed);
+		mRevertAssetButton->onClick += THIS_FUNC(MenuRevertAsset);
 		mButtonsPanel->AddChild(mRevertAssetButton);
 	}
 
@@ -281,6 +345,11 @@ namespace Editor
 	bool IAssetEditorWindow::IsComponentPreviewAvailable() const
 	{
 		return mEditingComponent != nullptr;
+	}
+
+	bool IAssetEditorWindow::IsCreateNewAssetAtStartupEnabled() const
+	{
+		return true;
 	}
 
     void IAssetEditorWindow::SetComponentAndPropertyAsset(const AssetRef<Asset> &asset)
@@ -331,64 +400,6 @@ namespace Editor
 			extensionMap[assetType.GetName() + " files"] = "*." + ext;
 
 		return extensionMap;
-	}
-
-	void IAssetEditorWindow::OnNewAssetPressed()
-	{
-		CheckDirtyAssetAndExecute([this]() { CreateNewAsset(); });
-	}
-
-	void IAssetEditorWindow::OnOpenAssetPressed()
-	{
-		CheckDirtyAssetAndExecute([this]() {
-			Map<String, String> extensionMap = CreateFileExtensionMap();
-			String fileName = GetOpenFileNameDialog("Open Asset", extensionMap);
-			if (!fileName.IsEmpty())
-			{
-				String relativePath = o2FileSystem.GetPathRelativeToPath(fileName, ::GetAssetsPath());
-				if (auto asset = o2Assets.GetAssetRef(relativePath))
-					SetComponentAndPropertyAsset(asset);
-
-				UpdateWindowTitle();
-			}
-		});
-	}
-
-	void IAssetEditorWindow::OnSaveAsAssetPressed()
-	{
-		Map<String, String> extensionMap = CreateFileExtensionMap();
-		String defaultPath = ::GetAssetsPath();
-		String fileName = GetSaveFileNameDialog("Save Asset As", extensionMap, defaultPath);
-
-		if (!fileName.IsEmpty() && mEditingAsset)
-		{
-			String relativePath = o2FileSystem.GetPathRelativeToPath(fileName, defaultPath);
-
-			auto extensions = GetAssetType().InvokeStatic<Vector<String>>("GetFileExtensions");
-			if (!extensions.IsEmpty() && !relativePath.EndsWith(extensions[0]))
-				relativePath += "." + extensions[0];
-
-			if (auto asset = mEditingAsset.Lock())
-			{
-				asset->SetPath(relativePath);
-				asset->Save();
-
-				SetComponentAndPropertyAsset(asset);
-
-				OnAssetSaved();
-				o2Assets.RebuildAssets();
-
-				UpdateWindowTitle();
-			}
-		}
-	}
-
-	void IAssetEditorWindow::OnRevertAssetPressed()
-	{
-		if (!mEditingAsset || !mEditingAsset.Lock()->IsDirty())
-			return;
-
-		YesNoCancelDlg::ShowYesNo( "Revert changes to asset?", [this]() { RevertEditingAsset(); });
 	}
 }
 // --- META ---

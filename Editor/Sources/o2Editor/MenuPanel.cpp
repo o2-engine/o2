@@ -226,48 +226,26 @@ namespace Editor
 
     void MenuPanel::OnNewScenePressed()
     {
-        o2Tasks.Invoke([&] { CheckSceneSaving([]() { o2EditorApplication.MakeNewScene(); }); });
+        if (auto sceneWindow = o2EditorWindows.GetWindow<SceneWindow>())
+            sceneWindow->MenuCreateNewAsset();
     }
 
     void MenuPanel::OnOpenScenePressed()
     {
-        o2Tasks.Invoke([&] {
-            auto openDialog = []() {
-                String fileName = GetOpenFileNameDialog("Load scene", { { "o2 Scene", "*.scn" } });
-
-                if (fileName.IsEmpty())
-                    return;
-
-                ForcePopEditorScopeOnStack scope;
-                String assetsPath = o2FileSystem.GetPathRelativeToPath(fileName, ::GetAssetsPath());
-                o2EditorApplication.LoadScene(AssetRef<SceneAsset>(assetsPath));
-            };
-
-            CheckSceneSaving(openDialog);
-        });
+        if (auto sceneWindow = o2EditorWindows.GetWindow<SceneWindow>())
+            sceneWindow->MenuOpenAsset();
     }
 
     void MenuPanel::OnSaveScenePressed()
     {
-        o2Tasks.Invoke([&] {
-            if (o2EditorApplication.GetLoadedSceneName().IsEmpty())
-                OnSaveSceneAsPressed();
-            else
-                o2EditorApplication.SaveScene();
-        });
+        if (auto sceneWindow = o2EditorWindows.GetWindow<SceneWindow>())
+            sceneWindow->MenuSaveAsset();
     }
 
     void MenuPanel::OnSaveSceneAsPressed()
     {
-        String fileName = GetSaveFileNameDialog("Save scene", { { "o2 Scene", "*.scn" } });
-
-        if (fileName.IsEmpty())
-            return;
-
-        if (!fileName.EndsWith(".scn"))
-            fileName += ".scn";
-
-        o2Tasks.Invoke([=] { o2EditorApplication.SaveSceneAs(fileName); });
+        if (auto sceneWindow = o2EditorWindows.GetWindow<SceneWindow>())
+            sceneWindow->MenuSaveAsAsset();
     }
 
     void MenuPanel::OnExitPressed()
