@@ -39,8 +39,10 @@ namespace Editor
     {
         if (mActions.Count() > 0)
         {
-            mActions.Last()->Undo();
+            auto last = mActions.Last();
+            last->Undo();
             mForwardActions.Add(mActions.PopBack());
+            OnActionUndo(last);
         }
     }
 
@@ -48,8 +50,10 @@ namespace Editor
     {
         if (mForwardActions.Count() > 0)
         {
-            mForwardActions.Last()->Redo();
+            auto last = mForwardActions.Last();
+            last->Redo();
             mActions.Add(mForwardActions.PopBack());
+            OnActionDone(last);
         }
     }
 
@@ -58,6 +62,8 @@ namespace Editor
         mActions.Add(action);
 
         mForwardActions.Clear();
+
+        OnActionDone(action);
     }
 
     void ActionsList::DoneActorPropertyChangeAction(const String& path, const Vector<DataDocument>& prevValue,

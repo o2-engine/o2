@@ -27,6 +27,8 @@
 #include "o2Editor/Properties/Properties.h"
 #include "o2Editor/Windows/PropertiesWindow/PropertiesWindow.h"
 #include "o2Editor/Windows/TreeWindow/SceneHierarchyTree.h"
+#include "o2Editor/Windows/WindowsManager.h"
+#include "o2Editor/Windows/SceneWindow/SceneWindow.h"
 
 namespace Editor
 {
@@ -631,7 +633,7 @@ namespace Editor
 
         auto createAction = mmake<CreateAction>(mInstantiatedSceneDragObjects, parent, prevActor);
 
-        o2EditorApplication.DoneAction(createAction);
+        o2EditorSceneWindow.DoneAction(createAction);
     }
 
     void AssetsIconsScrollArea::InstantiateDraggingAssets()

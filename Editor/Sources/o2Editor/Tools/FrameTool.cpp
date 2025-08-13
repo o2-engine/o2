@@ -7,6 +7,8 @@
 #include "o2/Scene/Scene.h"
 #include "o2Editor/Actions/Transform.h"
 #include "o2Editor/EditorApplication.h"
+#include "o2Editor/Windows/WindowsManager.h"
+#include "o2Editor/Windows/SceneWindow/SceneWindow.h"
 #include "o2Editor/Windows/SceneWindow/SceneEditScreen.h"
 #include "o2Editor/Windows/TreeWindow/SceneHierarchyTree.h"
 #include "o2Editor/Windows/TreeWindow/TreeWindow.h"
@@ -298,7 +300,7 @@ namespace Editor
         TransformObjects(transform);
 
         action->Completed();
-        o2EditorApplication.DoneAction(action);
+        o2EditorSceneWindow.DoneAction(action);
     }
 
     void FrameTool::TransformAnchorsObjects(const Basis& transform)
@@ -736,7 +738,7 @@ namespace Editor
     void FrameTool::HandleReleased()
     {
         mTransformAction->Completed();
-        o2EditorApplication.DoneAction(mTransformAction);
+        o2EditorSceneWindow.DoneAction(mTransformAction);
         mTransformAction = nullptr;
 
         mSnapLines.Clear();

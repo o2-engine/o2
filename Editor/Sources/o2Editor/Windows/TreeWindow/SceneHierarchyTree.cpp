@@ -24,6 +24,8 @@
 #include "o2Editor/Actions/PropertyChange.h"
 #include "o2Editor/Actions/Reparent.h"
 #include "o2Editor/EditorApplication.h"
+#include "o2Editor/Windows/WindowsManager.h"
+#include "o2Editor/Windows/SceneWindow/SceneWindow.h"
 #include "o2Editor/Properties/Basic/ActorProperty.h"
 #include "o2Editor/Properties/Basic/ComponentProperty.h"
 #include "o2Editor/UIRoot.h"
@@ -232,7 +234,7 @@ namespace Editor
         o2Scene.ReparentEditableObjects(editableObjects, newParentEditableObject, prevEditableObject);
 
         action->ObjectsReparented(mParent.Lock(), prevEditableObject);
-        o2EditorApplication.DoneAction(action);
+        o2EditorSceneWindow.DoneAction(action);
 
         Tree::OnDraggedObjects(objects, newParent, prevObject);
     }
@@ -249,7 +251,7 @@ namespace Editor
             });
 
         auto action = mmake<EnableAction>(objects, value);
-        o2EditorApplication.DoneAction(action);
+        o2EditorSceneWindow.DoneAction(action);
     }
 
     void SceneHierarchyTree::LockObjectsGroupPressed(bool value)
@@ -264,7 +266,7 @@ namespace Editor
             });
 
         auto action = mmake<LockAction>(objects, value);
-        o2EditorApplication.DoneAction(action);
+        o2EditorSceneWindow.DoneAction(action);
     }
 
     void SceneHierarchyTree::OnNodesSelectionChanged(Vector<void*> objects)
@@ -493,7 +495,7 @@ namespace Editor
 
         auto action = mmake<PropertyChangeAction>(Vector<Ref<SceneEditableObject>>{ mTargetObject }, "name",
                                                   Vector<DataDocument>{ prevData }, Vector<DataDocument>{ newData });
-        o2EditorApplication.DoneAction(action);
+        o2EditorSceneWindow.DoneAction(action);
     }
 }
 

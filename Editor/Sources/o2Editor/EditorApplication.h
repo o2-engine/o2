@@ -3,7 +3,6 @@
 #include "o2/Application/Application.h"
 #include "o2/Events/CursorAreaEventsListenersLayer.h"
 #include "o2/Render/Sprite.h"
-#include "o2Editor/Actions/ActionsList.h"
 #include "o2Editor/EditorConfig.h"
 #include "o2/Assets/Types/SceneAsset.h"
 
@@ -31,7 +30,7 @@ namespace Editor
     // ------------------
     // Editor application
     // ------------------
-    class EditorApplication: public Application, public ActionsList
+    class EditorApplication: public Application
     {
     public:
         bool isPaused = false;  // Is editor scene paused
@@ -72,7 +71,7 @@ namespace Editor
         static Ref<RefCounterable> CastToRefCounterable(const Ref<EditorApplication>& ref);
 
         IOBJECT(EditorApplication);
-        REF_COUNTERABLE_IMPL(Application, ActionsList);
+        REF_COUNTERABLE_IMPL(Application);
 
     protected:
         Ref<Sprite> mBackground; // Background sprite
@@ -178,7 +177,6 @@ namespace Editor
 CLASS_BASES_META(Editor::EditorApplication)
 {
     BASE_CLASS(o2::Application);
-    BASE_CLASS(Editor::ActionsList);
 }
 END_META;
 CLASS_FIELDS_META(Editor::EditorApplication)

@@ -6,6 +6,8 @@
 #include "o2/Utils/Editor/SceneEditableObject.h"
 #include "o2Editor/Actions/Transform.h"
 #include "o2Editor/EditorApplication.h"
+#include "o2Editor/Windows/WindowsManager.h"
+#include "o2Editor/Windows/SceneWindow/SceneWindow.h"
 #include "o2Editor/Windows/SceneWindow/SceneEditScreen.h"
 #include "o2Editor/Windows/TreeWindow/SceneHierarchyTree.h"
 #include "o2Editor/Windows/TreeWindow/TreeWindow.h"
@@ -234,7 +236,7 @@ namespace Editor
     void ScaleTool::HandleReleased()
     {
         mTransformAction->Completed();
-        o2EditorApplication.DoneAction(mTransformAction);
+        o2EditorSceneWindow.DoneAction(mTransformAction);
         mTransformAction = nullptr;
     }
 

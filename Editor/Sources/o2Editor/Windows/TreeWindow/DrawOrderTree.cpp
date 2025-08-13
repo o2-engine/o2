@@ -17,6 +17,8 @@
 #include "o2/Scene/UI/Widgets/Toggle.h"
 #include "o2/Utils/Editor/EditorScope.h"
 #include "o2Editor/Windows/AssetsWindow/AssetIcon.h"
+#include "o2Editor/Windows/WindowsManager.h"
+#include "o2Editor/Windows/SceneWindow/SceneWindow.h"
 #include "o2Editor/Windows/AssetsWindow/AssetsIconsScroll.h"
 #include "o2Editor/Windows/AssetsWindow/AssetsWindow.h"
 #include "o2Editor/Actions/Enable.h"
@@ -284,7 +286,7 @@ namespace Editor
         o2Scene.ReparentEditableObjects(editableObjects, newParentEditableObject, prevEditableObject);
 
         action->ObjectsReparented(mParent.Lock(), prevEditableObject);
-        o2EditorApplication.DoneAction(action);
+        o2EditorSceneWindow.DoneAction(action);
 
         Tree::OnDraggedObjects(objects, newParent, prevObject);
     }
@@ -301,7 +303,7 @@ namespace Editor
             });
 
         auto action = mmake<EnableAction>(objects, value);
-        o2EditorApplication.DoneAction(action);
+        o2EditorSceneWindow.DoneAction(action);
     }
 
     void DrawOrderTree::LockObjectsGroupPressed(bool value)
@@ -316,7 +318,7 @@ namespace Editor
             });
 
         auto action = mmake<LockAction>(objects, value);
-        o2EditorApplication.DoneAction(action);
+        o2EditorSceneWindow.DoneAction(action);
     }
 
     void DrawOrderTree::OnNodesSelectionChanged(Vector<void*> objects)
@@ -560,7 +562,7 @@ namespace Editor
 
             auto action = mmake<PropertyChangeAction>(Vector<Ref<SceneEditableObject>>{ mTarget->object }, "name", 
                                                       Vector<DataDocument>{ prevData }, Vector<DataDocument>{ newData });
-            o2EditorApplication.DoneAction(action);
+            o2EditorSceneWindow.DoneAction(action);
         }
     }
 }

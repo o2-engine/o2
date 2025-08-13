@@ -8,6 +8,8 @@
 #include "o2Editor/Properties/IObjectPropertiesViewer.h"
 #include "o2Editor/Properties/Properties.h"
 #include "o2Editor/UI/SpoilerWithHead.h"
+#include "o2Editor/Windows/WindowsManager.h"
+#include "o2Editor/Windows/SceneWindow/SceneWindow.h"
 
 namespace Editor
 {
@@ -81,7 +83,7 @@ namespace Editor
         }
 
         action->Completed();
-        o2EditorApplication.DoneAction(action);
+        o2EditorSceneWindow.DoneAction(action);
     }
 
 }

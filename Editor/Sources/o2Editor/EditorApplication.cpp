@@ -63,7 +63,7 @@ namespace Editor
         if (mSceneWindow)
         {
             mSceneWindow->EditAsset(AssetRef<Asset>(scene));
-            ResetUndoActions();
+            mSceneWindow->ResetUndoActions();
         }
     }
 
@@ -86,7 +86,7 @@ namespace Editor
         if (mSceneWindow)
         {
             mSceneWindow->EditAsset(AssetRef<Asset>(newSceneAsset));
-            ResetUndoActions();
+            mSceneWindow->ResetUndoActions();
         }
     }
 
@@ -95,7 +95,7 @@ namespace Editor
         if (mSceneWindow)
         {
             mSceneWindow->CreateNewAsset();
-            ResetUndoActions();
+            mSceneWindow->ResetUndoActions();
             o2EditorPropertiesWindow.ResetTargets();
         }
     }
@@ -106,7 +106,7 @@ namespace Editor
         if (mSceneWindow && mSceneWindow->GetEditingAsset())
             assetChanged = mSceneWindow->GetEditingAsset()->IsDirty();
 
-        return assetChanged || GetUndoActionsCount() > 0;
+        return assetChanged || (mSceneWindow ? mSceneWindow->GetUndoActionsCount() > 0 : false);
     }
 
     void EditorApplication::SetPlaying(bool playing)
@@ -189,8 +189,8 @@ namespace Editor
         mScene->UpdateAddedEntities();
         mScene->UpdateDestroyingEntities();
 
-        if (mSceneWindow && !lastLoadedScene.IsEmpty())
-            mSceneWindow->EditAsset(AssetRef<Asset>(AssetRef<SceneAsset>(lastLoadedScene)));
+        if (!lastLoadedScene.IsEmpty())
+            o2EditorSceneWindow.EditAsset(AssetRef<Asset>(AssetRef<SceneAsset>(lastLoadedScene)));
 
         o2Scripts.CollectGarbage();
 
@@ -587,7 +587,7 @@ namespace Editor
         // Debug draw undo actions
         if (o2Input.IsKeyDown(VK_F6))
         {
-            auto actions = GetUndoActions();
+            auto actions = mSceneWindow ? mSceneWindow->GetUndoActions() : Vector<Ref<IAction>>();
             for (int i = 0; i < actions.Count(); i++)
                 o2Debug.DrawText(Vec2F(0, (float)(20 * i)), (String)i + actions[i]->GetName());
         }

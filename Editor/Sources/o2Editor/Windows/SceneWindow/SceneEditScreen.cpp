@@ -29,6 +29,8 @@
 #include "o2Editor/Windows/TreeWindow/DrawOrderTree.h"
 #include "o2Editor/Windows/TreeWindow/SceneHierarchyTree.h"
 #include "o2Editor/Windows/TreeWindow/TreeWindow.h"
+#include "o2Editor/Windows/WindowsManager.h"
+#include "o2Editor/Windows/SceneWindow/SceneWindow.h"
 
 DECLARE_SINGLETON(Editor::SceneEditScreen);
 
@@ -247,7 +249,7 @@ namespace Editor
         if (mSelectedObjects != prevSelectedObjects)
         {
             auto selectionAction = mmake<SelectAction>(mSelectedObjects, prevSelectedObjects);
-            o2EditorApplication.DoneAction(selectionAction);
+            o2EditorSceneWindow.DoneAction(selectionAction);
         }
     }
 
@@ -260,7 +262,7 @@ namespace Editor
         if (mSelectedObjects != prevSelectedObjects)
         {
             auto selectionAction = mmake<SelectAction>(mSelectedObjects, prevSelectedObjects);
-            o2EditorApplication.DoneAction(selectionAction);
+            o2EditorSceneWindow.DoneAction(selectionAction);
         }
     }
 
@@ -278,7 +280,7 @@ namespace Editor
         if (mSelectedObjects != prevSelectedObjects)
         {
             auto selectionAction = mmake<SelectAction>(mSelectedObjects, prevSelectedObjects);
-            o2EditorApplication.DoneAction(selectionAction);
+            o2EditorSceneWindow.DoneAction(selectionAction);
         }
     }
 
@@ -291,7 +293,7 @@ namespace Editor
         if (mSelectedObjects != prevSelectedObjects)
         {
             auto selectionAction = mmake<SelectAction>(mSelectedObjects, prevSelectedObjects);
-            o2EditorApplication.DoneAction(selectionAction);
+            o2EditorSceneWindow.DoneAction(selectionAction);
         }
     }
 
@@ -445,7 +447,8 @@ namespace Editor
             selectedIObjects != o2EditorPropertiesWindow.GetTargets())
         {
             auto selectionAction = mmake<SelectAction>(mSelectedObjects, prevSelectedObjects);
-            o2EditorApplication.DoneAction(selectionAction);
+            if (auto sceneWindow = o2EditorWindows.GetWindow<SceneWindow>())
+                sceneWindow->DoneAction(selectionAction);
 
             onSelectionChanged(mSelectedObjects);
             o2EditorPropertiesWindow.SetTargets(selectedIObjects);

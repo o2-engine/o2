@@ -226,26 +226,22 @@ namespace Editor
 
     void MenuPanel::OnNewScenePressed()
     {
-        if (auto sceneWindow = o2EditorWindows.GetWindow<SceneWindow>())
-            sceneWindow->MenuCreateNewAsset();
+        o2EditorSceneWindow.MenuCreateNewAsset();
     }
 
     void MenuPanel::OnOpenScenePressed()
     {
-        if (auto sceneWindow = o2EditorWindows.GetWindow<SceneWindow>())
-            sceneWindow->MenuOpenAsset();
+        o2EditorSceneWindow.MenuOpenAsset();
     }
 
     void MenuPanel::OnSaveScenePressed()
     {
-        if (auto sceneWindow = o2EditorWindows.GetWindow<SceneWindow>())
-            sceneWindow->MenuSaveAsset();
+        o2EditorSceneWindow.MenuSaveAsset();
     }
 
     void MenuPanel::OnSaveSceneAsPressed()
     {
-        if (auto sceneWindow = o2EditorWindows.GetWindow<SceneWindow>())
-            sceneWindow->MenuSaveAsAsset();
+        o2EditorSceneWindow.MenuSaveAsAsset();
     }
 
     void MenuPanel::OnExitPressed()
@@ -255,12 +251,12 @@ namespace Editor
 
     void MenuPanel::OnUndoPressed()
     {
-        o2EditorApplication.UndoAction();
+        o2EditorSceneWindow.UndoAction();
     }
 
     void MenuPanel::OnRedoPressed()
     {
-        o2EditorApplication.RedoAction();
+        o2EditorSceneWindow.RedoAction();
     }
 
     void MenuPanel::OnShowTreePressed()
@@ -272,9 +268,7 @@ namespace Editor
 
     void MenuPanel::OnShowScenePressed()
     {
-        auto window = o2EditorWindows.GetWindow<SceneWindow>();
-        if (window)
-            window->Show();
+        o2EditorSceneWindow.Show();
     }
 
     void MenuPanel::OnShowAssetsPressed()

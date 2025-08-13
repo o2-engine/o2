@@ -12,22 +12,29 @@
 #include "o2/Utils/Editor/EditorScope.h"
 #include "o2Editor/EditorConfig.h"
 
+DECLARE_SINGLETON(Editor::SceneWindow);
+
 namespace Editor
 {
-    SceneWindow::SceneWindow() :
-        IAssetEditorWindow()
+    SceneWindow::SceneWindow(RefCounter* refCounter) :
+        Singleton<SceneWindow>(refCounter), IAssetEditorWindow(refCounter)
     {
         InitializeWindow();
     }
 
-    SceneWindow::SceneWindow(const SceneWindow& other) :
-        IAssetEditorWindow(other)
+    SceneWindow::SceneWindow(RefCounter* refCounter, const SceneWindow& other) :
+        Singleton<SceneWindow>(refCounter), IAssetEditorWindow(refCounter, other)
     {
         InitializeWindow();
     }
 
     SceneWindow::~SceneWindow()
     {}
+
+    Ref<RefCounterable> SceneWindow::CastToRefCounterable(const Ref<SceneWindow>& ref)
+    {
+        return DynamicCast<Singleton<SceneWindow>>(ref);
+    }
 
     void SceneWindow::InitializeWindow()
     {
@@ -96,6 +103,16 @@ namespace Editor
 
     void SceneWindow::OnAssetSaved()
     {
+    }
+
+    void SceneWindow::OnActionDone(const Ref<IAction>& action)
+    {
+        OnAssetChanged();
+    }
+
+    void SceneWindow::OnActionUndo(const Ref<IAction>& action)
+    {
+        OnAssetChanged();
     }
 
 }

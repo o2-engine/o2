@@ -48,6 +48,13 @@ namespace Editor
         const Vector<Ref<IAction>> GetRedoActions() const;
 
     protected:
+        // Called when an action has been done (including redo)
+        virtual void OnActionDone(const Ref<IAction>& action) {}
+
+        // Called when an action has been undone
+        virtual void OnActionUndo(const Ref<IAction>& action) {}
+
+    protected:
         Vector<Ref<IAction>> mActions;        // Done actions
         Vector<Ref<IAction>> mForwardActions; // Forward actions, what you can redo
     };

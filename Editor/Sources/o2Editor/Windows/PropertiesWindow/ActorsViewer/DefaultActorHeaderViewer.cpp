@@ -14,6 +14,8 @@
 #include "o2/Utils/Editor/EditorScope.h"
 #include "o2Editor/Actions/PropertyChange.h"
 #include "o2Editor/EditorApplication.h"
+#include "o2Editor/Windows/WindowsManager.h"
+#include "o2Editor/Windows/SceneWindow/SceneWindow.h"
 #include "o2Editor/Properties/Basic/AssetProperty.h"
 #include "o2Editor/Properties/Basic/BooleanProperty.h"
 #include "o2Editor/Properties/Basic/FloatProperty.h"
@@ -295,7 +297,7 @@ namespace Editor
                                                      const Vector<DataDocument>& newValue)
     {
         auto action = mmake<PropertyChangeAction>(o2EditorSceneScreen.GetSelectedObjects(), path, prevValue, newValue);
-        o2EditorApplication.DoneAction(action);
+        o2EditorSceneWindow.DoneAction(action);
     }
 
 }

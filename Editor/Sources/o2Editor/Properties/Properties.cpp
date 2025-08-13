@@ -13,6 +13,8 @@
 #include "o2/Utils/StringUtils.h"
 #include "o2/Utils/System/Time/Timer.h"
 #include "o2Editor/EditorApplication.h"
+#include "o2Editor/Windows/WindowsManager.h"
+#include "o2Editor/Windows/SceneWindow/SceneWindow.h"
 #include "o2Editor/Properties/Basic/AssetProperty.h"
 #include "o2Editor/Properties/Basic/EnumProperty.h"
 #include "o2Editor/Properties/Basic/ObjectProperty.h"
@@ -33,9 +35,12 @@ namespace Editor
         InitializeAvailablePropertiesFields();
         InitializeAvailableObjectPropertiesViewers();
 
-        mOnPropertyCompletedChangingUndoCreateDelegate = 
-            MakeFunction<ActionsList, void, const String&, const Vector<DataDocument>&, const Vector<DataDocument>&>(
-            &o2EditorApplication, &EditorApplication::DoneActorPropertyChangeAction);
+        mOnPropertyCompletedChangingUndoCreateDelegate =
+            IPropertyField::OnChangeCompletedFunc([](const String& path,
+                                                     const Vector<DataDocument>& before,
+                                                     const Vector<DataDocument>& after) {
+                o2EditorSceneWindow.DoneActorPropertyChangeAction(path, before, after);
+            });
     }
 
     Properties::~Properties()

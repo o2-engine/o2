@@ -4,6 +4,8 @@
 #include "o2Editor/Properties/IObjectPropertiesViewer.h"
 #include "o2Editor/Properties/Properties.h"
 #include "o2Editor/UI/SpoilerWithHead.h"
+#include "o2Editor/Windows/WindowsManager.h"
+#include "o2Editor/Windows/SceneWindow/SceneWindow.h"
 
 namespace Editor
 {
@@ -57,7 +59,7 @@ namespace Editor
         for (auto& component : mTargetComponents)
             component->GetActor()->OnChanged();
 
-        o2EditorApplication.DoneActorPropertyChangeAction(path, before, after);
+        o2EditorSceneWindow.DoneActorPropertyChangeAction(path, before, after);
     }
 
     void DefaultActorComponentViewer::OnPropertiesEnabled()

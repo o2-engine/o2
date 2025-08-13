@@ -10,6 +10,8 @@
 #include "o2/Utils/Math/Layout.h"
 #include "o2Editor/Actions/PropertyChange.h"
 #include "o2Editor/EditorApplication.h"
+#include "o2Editor/Windows/WindowsManager.h"
+#include "o2Editor/Windows/SceneWindow/SceneWindow.h"
 #include "o2/Utils/Editor/EditorScope.h"
 #include "o2Editor/Properties/Basic/Vector2FloatProperty.h"
 #include "o2Editor/UI/SpoilerWithHead.h"
@@ -186,7 +188,7 @@ namespace Editor
     {
         auto action = mmake<PropertyChangeAction>(o2EditorSceneScreen.GetSelectedObjects(), path, prevValue, newValue);
 
-        o2EditorApplication.DoneAction(action);
+        o2EditorSceneWindow.DoneAction(action);
     }
 
     void DefaultWidgetLayerLayoutViewer::OnPropertyChanged(const Ref<IPropertyField>& field)

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "o2/Utils/Singleton.h"
 #include "o2Editor/Windows/IAssetEditorWindow.h"
 #include "o2/Assets/Types/SceneAsset.h"
 
@@ -13,13 +14,20 @@ namespace Editor
     FORWARD_CLASS_REF(LayersPopup);
     FORWARD_CLASS_REF(SceneEditScreen);
 
+    // Scene window accessor macro
+    #define o2EditorSceneWindow SceneWindow::Instance()
+
     // --------------------
     // Scene editing window
     // --------------------
-    class SceneWindow: public IAssetEditorWindow
+    class SceneWindow: public Singleton<SceneWindow>, public IAssetEditorWindow
     {
     public:
         IOBJECT(SceneWindow);
+        REF_COUNTERABLE_IMPL(IAssetEditorWindow, Singleton<SceneWindow>);
+
+        // Dynamic cast to RefCounterable via Singleton<SceneWindow>
+        static Ref<RefCounterable> CastToRefCounterable(const Ref<SceneWindow>& ref);
 
     protected:
         Ref<SceneEditScreen> mEditWidget; // Scene editing widget
@@ -30,11 +38,11 @@ namespace Editor
         Ref<PopupWidget> mGizomsView; // Gizoms view
 
     public:
-        // Default constructor
-        SceneWindow();
+        // Default constructor with ref counter
+        SceneWindow(RefCounter* refCounter);
 
-        // Copy constructor
-        SceneWindow(const SceneWindow& other);
+        // Copy constructor with ref counter
+        SceneWindow(RefCounter* refCounter, const SceneWindow& other);
 
         // Destructor
         ~SceneWindow();
@@ -66,12 +74,19 @@ namespace Editor
 
         // Called when asset is saved
         void OnAssetSaved() override;
+
+        // Called when an action has been done (including redo)
+        void OnActionDone(const Ref<IAction>& action) override;
+
+        // Called when an action has been undone
+        void OnActionUndo(const Ref<IAction>& action) override;
     };
 }
 // --- META ---
 
 CLASS_BASES_META(Editor::SceneWindow)
 {
+    BASE_CLASS(o2::Singleton<SceneWindow>);
     BASE_CLASS(Editor::IAssetEditorWindow);
 }
 END_META;
@@ -86,8 +101,9 @@ END_META;
 CLASS_METHODS_META(Editor::SceneWindow)
 {
 
-    FUNCTION().PUBLIC().CONSTRUCTOR();
-    FUNCTION().PUBLIC().CONSTRUCTOR(const SceneWindow&);
+    FUNCTION().PUBLIC().SIGNATURE_STATIC(Ref<RefCounterable>, CastToRefCounterable, const Ref<SceneWindow>&);
+    FUNCTION().PUBLIC().CONSTRUCTOR(RefCounter*);
+    FUNCTION().PUBLIC().CONSTRUCTOR(RefCounter*, const SceneWindow&);
     FUNCTION().PUBLIC().SIGNATURE(const Type&, GetAssetType);
     FUNCTION().PROTECTED().SIGNATURE(void, InitializeWindow);
     FUNCTION().PROTECTED().SIGNATURE(String, GetWindowTitle);
@@ -97,6 +113,8 @@ CLASS_METHODS_META(Editor::SceneWindow)
     FUNCTION().PROTECTED().SIGNATURE(void, OnCompletedEditingAsset);
     FUNCTION().PROTECTED().SIGNATURE(AssetRef<Asset>, CreateAssetInstance);
     FUNCTION().PROTECTED().SIGNATURE(void, OnAssetSaved);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnActionDone, const Ref<IAction>&);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnActionUndo, const Ref<IAction>&);
 }
 END_META;
 // --- END META ---

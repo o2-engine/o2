@@ -31,6 +31,8 @@
 #include "o2Editor/Windows/SceneWindow/SceneEditScreen.h"
 #include "o2Editor/Windows/TreeWindow/DrawOrderTree.h"
 #include "o2Editor/Windows/TreeWindow/SceneHierarchyTree.h"
+#include "o2Editor/Windows/WindowsManager.h"
+#include "o2Editor/Windows/SceneWindow/SceneWindow.h"
 
 DECLARE_SINGLETON(Editor::TreeWindow);
 
@@ -397,7 +399,7 @@ namespace Editor
             auto action = mmake<CreateAction>(Vector<Ref<SceneEditableObject>>{ newObject }, parentObject,
                                               parentChilds.Count() > 1 ? parentChilds[parentChilds.Count() - 2] : Ref<SceneEditableObject>());
 
-            o2EditorApplication.DoneAction(action);
+            o2EditorSceneWindow.DoneAction(action);
         }
         else
         {
@@ -405,7 +407,7 @@ namespace Editor
             auto action = mmake<CreateAction>(Vector<Ref<SceneEditableObject>>{ newObject }, nullptr,
                                               sceneObjects.Count() > 1 ? sceneObjects[sceneObjects.Count() - 2] : nullptr);
 
-            o2EditorApplication.DoneAction(action);
+            o2EditorSceneWindow.DoneAction(action);
         }
 
         newObject->UpdateTransform();
@@ -479,7 +481,7 @@ namespace Editor
         mSceneTree->UpdateNodesView();
 
         auto action = mmake<CreateAction>(objects, parent, prevObject);
-        o2EditorApplication.DoneAction(action);
+        o2EditorSceneWindow.DoneAction(action);
 
         mSceneTree->SetSelectedObjects(objects);
     }
@@ -492,7 +494,7 @@ namespace Editor
         o2EditorSceneScreen.ClearSelectionWithoutAction();
 
         auto action = mmake<DeleteAction>(selectedObjects);
-        o2EditorApplication.DoneAction(action);
+        o2EditorSceneWindow.DoneAction(action);
 
         for (auto& object : selectedObjects)
         {
@@ -557,7 +559,7 @@ namespace Editor
 
         bool value = selectedObjects.Count() > 0 ? !selectedObjects.Last()->IsLocked() : true;
         auto action = mmake<LockAction>(selectedObjects, value);
-        o2EditorApplication.DoneAction(action);
+        o2EditorSceneWindow.DoneAction(action);
 
         for (auto& object : selectedObjects)
         {
@@ -571,7 +573,7 @@ namespace Editor
 
         bool value = selectedObjects.Count() > 0 ? !selectedObjects.Last()->IsEnabled() : true;
         auto action = mmake<LockAction>(selectedObjects, value);
-        o2EditorApplication.DoneAction(action);
+        o2EditorSceneWindow.DoneAction(action);
 
         for (auto& object : selectedObjects)
         {

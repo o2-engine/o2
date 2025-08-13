@@ -6,6 +6,8 @@
 #include "o2/Utils/Editor/SceneEditableObject.h"
 #include "o2Editor/Actions/Select.h"
 #include "o2Editor/EditorApplication.h"
+#include "o2Editor/Windows/WindowsManager.h"
+#include "o2Editor/Windows/SceneWindow/SceneWindow.h"
 #include "o2Editor/Windows/SceneWindow/SceneEditScreen.h"
 #include "o2Editor/Windows/TreeWindow/TreeWindow.h"
 
@@ -69,7 +71,7 @@ namespace Editor
             mSelectingByFrame = false;
 
             auto selectionAction = mmake<SelectAction>(o2EditorSceneScreen.GetSelectedObjects(), mBeforeSelectingObjects);
-            o2EditorApplication.DoneAction(selectionAction);
+            o2EditorSceneWindow.DoneAction(selectionAction);
         }
         else
         {
@@ -97,7 +99,7 @@ namespace Editor
 
                     auto selectionAction = mmake<SelectAction>(o2EditorSceneScreen.GetSelectedObjects(),
                                                                mBeforeSelectingObjects);
-                    o2EditorApplication.DoneAction(selectionAction);
+                    o2EditorSceneWindow.DoneAction(selectionAction);
                     break;
                 }
             }

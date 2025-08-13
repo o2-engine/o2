@@ -1,6 +1,7 @@
 #pragma once
 
 #include "IEditorWindow.h"
+#include "o2Editor/Actions/ActionsList.h"
 
 #include "o2/Assets/Asset.h"
 #include "o2/Assets/AssetRef.h"
@@ -17,7 +18,7 @@ namespace Editor
 	// Asset editor window interface for editing assets
 	// Base interface for all asset editor windows
 	// ------------------------------------------------
-    class IAssetEditorWindow: public IEditorWindow
+    class IAssetEditorWindow: public IEditorWindow, public ActionsList
     {
     public:
         // Default constructor
@@ -89,6 +90,8 @@ namespace Editor
 		void Update(float dt) override;
 
         IOBJECT(IAssetEditorWindow);
+        REF_COUNTERABLE_IMPL(IEditorWindow, ActionsList);
+        static Ref<RefCounterable> CastToRefCounterable(const Ref<IAssetEditorWindow>& ref) { return DynamicCast<IEditorWindow>(ref); }
 
     protected:
         WeakRef<Asset> mEditingAsset;                    // Currently editing asset
@@ -183,6 +186,7 @@ namespace Editor
 CLASS_BASES_META(Editor::IAssetEditorWindow)
 {
     BASE_CLASS(Editor::IEditorWindow);
+    BASE_CLASS(Editor::ActionsList);
 }
 END_META;
 CLASS_FIELDS_META(Editor::IAssetEditorWindow)
@@ -231,6 +235,7 @@ CLASS_METHODS_META(Editor::IAssetEditorWindow)
     FUNCTION().PUBLIC().SIGNATURE(void, OnAssetChanged);
     FUNCTION().PUBLIC().SIGNATURE(void, Initialize);
     FUNCTION().PUBLIC().SIGNATURE(void, Update, float);
+    FUNCTION().PUBLIC().SIGNATURE_STATIC(Ref<RefCounterable>, CastToRefCounterable, const Ref<IAssetEditorWindow>&);
     FUNCTION().PROTECTED().SIGNATURE(void, InitializeWindow);
     FUNCTION().PROTECTED().SIGNATURE(String, GetWindowTitle);
     FUNCTION().PROTECTED().SIGNATURE(void, OnStartEditingAsset);
