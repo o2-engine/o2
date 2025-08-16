@@ -111,22 +111,14 @@ namespace Editor
 
         mStepButton = o2UI.CreateWidget<Button>("step");
         mStepButton->onClick = [this]() { OnStepPressed(); };
-        *mStepButton->layout = WidgetLayout::Based(BaseCorner::Right, Vec2F(20, 20), Vec2F(-115, 1));
+        *mStepButton->layout = WidgetLayout::Based(BaseCorner::Right, Vec2F(20, 20), Vec2F(-5, 1));
         mStepButton->shortcut = ShortcutKeys(VK_F10);
         mPlayPanel->AddChild(mStepButton);
-
-        mDevicesList = o2UI.CreateDropdown("backless");
-        mDevicesList->name = "devices list";
-        *mDevicesList->layout = WidgetLayout::Based(BaseCorner::Right, Vec2F(115, 20), Vec2F(-3, 1));
-        mPlayPanel->AddChild(mDevicesList);
-
-        mDevicesList->AddItems({ "iPhone", "Editor", "Simulator" });
-        mDevicesList->selectedItemPos = 0;
 
         auto playPanelPlayStateAnim = mmake<AnimationClip>();
 
         *playPanelPlayStateAnim->AddTrack<float>("layout/offsetRight") =
-            AnimationTrack<float>::EaseInOut(169.0f, 183.0f, 0.3f);
+            AnimationTrack<float>::EaseInOut(59.0f, 73.0f, 0.3f);
 
         auto visiblePauseBtnAnim = playPanelPlayStateAnim->AddTrack<bool>("child/pause/enabled");
         visiblePauseBtnAnim->AddKey(0.0f, false);

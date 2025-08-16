@@ -56,11 +56,10 @@ namespace Editor
 
         Ref<Widget> mPanelRoot; // Root panel widget
 
-        Ref<Widget>   mPlayPanel;    // Play panel widget
-        Ref<Toggle>   mPlayToggle;    // Play toggle
-        Ref<Toggle>   mPauseToggle;    // Pause toggle
-        Ref<Button>   mStepButton;    // Step button
-        Ref<DropDown> mDevicesList;    // Devices list dropdown
+        Ref<Widget>   mPlayPanel;   // Play panel widget
+        Ref<Toggle>   mPlayToggle;  // Play toggle
+        Ref<Toggle>   mPauseToggle; // Pause toggle
+        Ref<Button>   mStepButton;  // Step button
 
         Ref<HorizontalLayout> mToolsPanel;        // Tools panel layout
         Ref<ToggleGroup>      mToolsTogglesGroup; // Group for toggles
