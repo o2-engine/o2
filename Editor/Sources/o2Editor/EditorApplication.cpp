@@ -415,11 +415,13 @@ namespace Editor
             mSceneDump.Clear();
             o2Scene.Save(mSceneDump);
             o2Scene.Load(mSceneDump);
+            o2EditorTree.RestoreExpandedFromCache();
         }
         else
         {
             o2EditorSceneScreen.ClearSelection();
             o2Scene.Load(mSceneDump);
+            o2EditorTree.RestoreExpandedFromCache();
         }
 
         mPlayingChanged = false;

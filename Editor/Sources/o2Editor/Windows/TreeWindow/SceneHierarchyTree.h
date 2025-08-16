@@ -48,6 +48,7 @@ namespace Editor
 
         // Deattaches from scene events
         void DeattachFromSceneEvents();
+
         // Returns ui node for object
         Ref<TreeNode> GetNode(const Ref<SceneEditableObject>& object);
 
@@ -75,6 +76,9 @@ namespace Editor
         // Scrolls view to object's tree node
         void ScrollTo(const Ref<SceneEditableObject>& object);
 
+        // Restores expanded state from cache
+        void RestoreExpandedFromCache();
+
         // Sets watching editor UI state
         void SetEditorWatching(bool watching);
 
@@ -94,6 +98,8 @@ namespace Editor
 
         Ref<ActorProperty>     mDragActorPropertyField;     // Actor property field under cursor when dragging actor
         Ref<ComponentProperty> mDragComponentPropertyField; // Component property field under cursor when dragging actor
+
+        Vector<SceneUID> mExpandedActorsCache; // Expanded actors cache, used to restore expanded state after scene reload
 
         bool mWatchEditor = false;
 
@@ -163,6 +169,12 @@ namespace Editor
 
         // Called when some selectable listeners was dropped to this
         void OnDropped(const Ref<ISelectableDragableObjectsGroup>& group) override;
+
+        // Called when node was expanded
+        void OnNodeExpanded(void* object) override;
+
+        // Called when node was collapsed
+        void OnNodeCollapsed(void* object) override;
 
         friend class SceneHierarchyTreeNode;
     };
@@ -244,6 +256,7 @@ CLASS_FIELDS_META(Editor::SceneHierarchyTree)
     FIELD().PROTECTED().NAME(mAttachedToSceneEvents);
     FIELD().PROTECTED().NAME(mDragActorPropertyField);
     FIELD().PROTECTED().NAME(mDragComponentPropertyField);
+    FIELD().PROTECTED().NAME(mExpandedActorsCache);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mWatchEditor);
 }
 END_META;
@@ -264,6 +277,7 @@ CLASS_METHODS_META(Editor::SceneHierarchyTree)
     FUNCTION().PUBLIC().SIGNATURE(void, DeselectObject, const Ref<SceneEditableObject>&);
     FUNCTION().PUBLIC().SIGNATURE(void, DeselectAllObjects);
     FUNCTION().PUBLIC().SIGNATURE(void, ScrollTo, const Ref<SceneEditableObject>&);
+    FUNCTION().PUBLIC().SIGNATURE(void, RestoreExpandedFromCache);
     FUNCTION().PUBLIC().SIGNATURE(void, SetEditorWatching, bool);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsEditorWatching);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetCreateMenuCategory);
@@ -289,6 +303,8 @@ CLASS_METHODS_META(Editor::SceneHierarchyTree)
     FUNCTION().PROTECTED().SIGNATURE(void, OnDragExit, const Ref<ISelectableDragableObjectsGroup>&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnDraggedAbove, const Ref<ISelectableDragableObjectsGroup>&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnDropped, const Ref<ISelectableDragableObjectsGroup>&);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnNodeExpanded, void*);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnNodeCollapsed, void*);
 }
 END_META;
 

@@ -57,6 +57,9 @@ namespace Editor
         // Updates current tree
         void UpdateTreeView();
 
+        // Restores expanded state from cache
+        void RestoreExpandedFromCache();
+
         // Expands all actor's parents nodes in tree and highlights actor
         void HighlightObjectTreeNode(const Ref<SceneEditableObject>& targetObject);
 
@@ -231,6 +234,7 @@ CLASS_METHODS_META(Editor::TreeWindow)
     FUNCTION().PUBLIC().SIGNATURE(bool, IsTreeFocused);
     FUNCTION().PUBLIC().SIGNATURE(void, SetSelectedObjects, const Vector<Ref<SceneEditableObject>>&);
     FUNCTION().PUBLIC().SIGNATURE(void, UpdateTreeView);
+    FUNCTION().PUBLIC().SIGNATURE(void, RestoreExpandedFromCache);
     FUNCTION().PUBLIC().SIGNATURE(void, HighlightObjectTreeNode, const Ref<SceneEditableObject>&);
     FUNCTION().PUBLIC().SIGNATURE(void, SetWidgetsLayersVisible, bool);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsWidgetsLayersVisible);

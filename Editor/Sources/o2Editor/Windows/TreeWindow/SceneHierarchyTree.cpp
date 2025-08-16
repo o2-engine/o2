@@ -26,6 +26,7 @@
 #include "o2Editor/EditorApplication.h"
 #include "o2Editor/Windows/WindowsManager.h"
 #include "o2Editor/Windows/SceneWindow/SceneWindow.h"
+#include "o2Editor/Windows/TreeWindow/TreeWindow.h"
 #include "o2Editor/Properties/Basic/ActorProperty.h"
 #include "o2Editor/Properties/Basic/ComponentProperty.h"
 #include "o2Editor/UIRoot.h"
@@ -157,6 +158,35 @@ namespace Editor
     String SceneHierarchyTree::GetCreateMenuCategory()
     {
         return "UI/Editor";
+    }
+
+    void SceneHierarchyTree::RestoreExpandedFromCache()
+    {
+        UpdateNodesView(true);
+
+        auto expandedActors = mExpandedActorsCache;
+        mExpandedActorsCache.Clear();
+
+        for (auto& id : expandedActors)
+        {
+            auto obj = o2Scene.GetEditableObjectByID(id).Get();
+            if (!obj)
+                continue;
+
+            ExpandParentObjects(obj);
+
+            auto node = mAllNodes.FindOrDefault([&](auto& x) { return x->object == obj; });
+            if (node)
+            {
+                if (node->widget)
+                    node->widget->SetExpanded(true);
+                else
+                    Tree::ExpandNode(node);
+            }
+        }
+
+        UpdateNodeExpanding(mExpandNodeTime);
+        SetLayoutDirty();
     }
 
     void SceneHierarchyTree::Initialize()
@@ -341,6 +371,18 @@ namespace Editor
         else Tree::OnDropped(group);
     }
 
+    void SceneHierarchyTree::OnNodeExpanded(void* object)
+    {
+        auto uid = ((SceneEditableObject*)object)->GetID();
+        if (!mExpandedActorsCache.Contains(uid))
+            mExpandedActorsCache.Add(uid);
+    }
+
+    void SceneHierarchyTree::OnNodeCollapsed(void* object)
+    {
+        mExpandedActorsCache.Remove(((SceneEditableObject*)object)->GetID());
+    }
+
     void SceneHierarchyTree::OnObjectCreated(const Ref<SceneEditableObject>& object)
     {
         Tree::OnObjectCreated(object.Get(), object->GetEditableParent().Get());
@@ -431,7 +473,7 @@ namespace Editor
 
         if (auto actor = DynamicCast<Actor>(object))
         {
-            mLinkBtn->SetEnabled(actor->GetPrototype().IsValid());
+            mLinkBtn->SetEnabledForcible(actor->GetPrototype().IsValid());
             mLinkBtnHalfHideState->SetState(!actor->GetPrototypeDirectly().IsValid());
 
             if (actor->GetPrototype())
@@ -442,14 +484,15 @@ namespace Editor
                 };
             }
         }
-        else mLinkBtn->SetEnabled(false);
+        else 
+            mLinkBtn->SetEnabledForcible(false);
 
         if (object->IsSupportsDisabling())
         {
             mEnableToggle->SetValue(object->IsEnabled());
-            mEnableToggle->SetEnabled(true);
+            mEnableToggle->SetEnabledForcible(true);
         }
-        else mEnableToggle->SetEnabled(false);
+        else mEnableToggle->SetEnabledForcible(false);
 
         mLockToggle->SetValue(object->IsLocked());
         mLockToggleLockedState->SetState(object->IsLockedInHierarchy());

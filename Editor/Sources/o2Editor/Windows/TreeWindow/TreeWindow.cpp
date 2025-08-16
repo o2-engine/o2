@@ -93,6 +93,12 @@ namespace Editor
             mDrawOrderTree->UpdateNodesView();
     }
 
+    void TreeWindow::RestoreExpandedFromCache()
+    {
+        if (mSceneTree->IsEnabled())
+            mSceneTree->RestoreExpandedFromCache();
+    }
+
     void TreeWindow::HighlightObjectTreeNode(const Ref<SceneEditableObject>& targetObject)
     {
         if (mSceneTree->IsEnabled())

@@ -1254,6 +1254,8 @@ namespace o2
             StartExpandingAnimation(ExpandState::Expanding, node, newNodes.Count());
         }
 
+        OnNodeExpanded(node->object);
+
         mIsNeedUdateLayout = true;
     }
 
@@ -1274,6 +1276,8 @@ namespace o2
             mExpandingNodeState = ExpandState::Collaping;
         else
             StartExpandingAnimation(ExpandState::Collaping, node, collapseNodesCount);
+
+        OnNodeCollapsed(node->object);
 
         mIsNeedUdateLayout = true;
     }

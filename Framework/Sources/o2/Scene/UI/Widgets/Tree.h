@@ -39,6 +39,9 @@ namespace o2
 
         Function<void(Vector<void*>, void*, void*)> onDraggedObjects; // Objects dragged event
 
+        Function<void(void*)> onNodeExpanded;  // Node expanded event
+        Function<void(void*)> onNodeCollapsed; // Node collapsed event
+
     public:
         // Default constructor
         explicit Tree(RefCounter* refCounter);
@@ -345,6 +348,12 @@ namespace o2
         // Called when objects was dragged in new parent in position next of prevObject
         virtual void OnDraggedObjects(Vector<void*> objects, void* newParent, void* prevObject);
 
+        // Called when node was expanded
+        virtual void OnNodeExpanded(void* object) {}
+
+        // Called when node was collapsed
+        virtual void OnNodeCollapsed(void* object) {}
+
 // ISelectableDragableObjectsGroup implementation
 
         // Returns selected objects in group
@@ -616,6 +625,8 @@ CLASS_FIELDS_META(o2::Tree)
     FIELD().PUBLIC().NAME(onNodeRightButtonClicked);
     FIELD().PUBLIC().NAME(onObjectsSelectionChanged);
     FIELD().PUBLIC().NAME(onDraggedObjects);
+    FIELD().PUBLIC().NAME(onNodeExpanded);
+    FIELD().PUBLIC().NAME(onNodeCollapsed);
     FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(RearrangeType::Enabled).NAME(mRearrangeType);
     FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(true).NAME(mMultiSelectAvailable);
     FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().NAME(mNodeWidgetSample);
@@ -731,6 +742,8 @@ CLASS_METHODS_META(o2::Tree)
     FUNCTION().PROTECTED().SIGNATURE(void, OnNodeRBClick, const Ref<TreeNode>&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnNodesSelectionChanged, Vector<void*>);
     FUNCTION().PROTECTED().SIGNATURE(void, OnDraggedObjects, Vector<void*>, void*, void*);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnNodeExpanded, void*);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnNodeCollapsed, void*);
     FUNCTION().PROTECTED().SIGNATURE(Vector<Ref<SelectableDragableObject>>, GetSelectedDragObjects);
     FUNCTION().PROTECTED().SIGNATURE(Vector<Ref<SelectableDragableObject>>, GetAllObjects);
     FUNCTION().PROTECTED().SIGNATURE(void, Select, const Ref<SelectableDragableObject>&);
