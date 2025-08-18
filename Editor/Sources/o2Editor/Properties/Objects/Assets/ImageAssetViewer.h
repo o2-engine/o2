@@ -1,5 +1,6 @@
 #pragma once
 
+#include "o2/Scene/UI/Widgets/Label.h"
 #include "o2Editor/Properties/Objects/DefaultObjectPropertiesViewer.h"
 
 using namespace o2;
@@ -31,6 +32,8 @@ namespace Editor
         IOBJECT(ImageAssetViewer);
 
     private:
+        Ref<Label> mSizeLabel; // Size label
+        
         Ref<ImageSlicesEditorWidget> mSlicesEditor; // Slices editor widget
 
         Vector<Ref<IAbstractValueProxy>> mAtlasProxies;  // Atlas proxies for property, converts UID to AssetRef<AtlasAsset> and back
@@ -53,6 +56,7 @@ CLASS_BASES_META(Editor::ImageAssetViewer)
 END_META;
 CLASS_FIELDS_META(Editor::ImageAssetViewer)
 {
+    FIELD().PRIVATE().NAME(mSizeLabel);
     FIELD().PRIVATE().NAME(mSlicesEditor);
     FIELD().PRIVATE().NAME(mAtlasProxies);
     FIELD().PRIVATE().NAME(mAtlasProperty);

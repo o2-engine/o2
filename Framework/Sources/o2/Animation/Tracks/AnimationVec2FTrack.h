@@ -78,9 +78,8 @@ namespace o2
         {
         public:
             PROPERTIES(Player);
-            GETTER(o2::Vec2F, value, GetValue);                           // Current value getter
-            SETTER(o2::Vec2F*, target, SetTarget);                        // Bind target setter
-            SETTER(Function<void()>, targetDelegate, SetTargetDelegate);  // Bind target change event setter  
+            GETTER(o2::Vec2F, value, GetValue);    // Current value getter
+            SETTER(o2::Vec2F*, target, SetTarget); // Bind target setter
 
         public:
             // Default constructor
@@ -95,12 +94,6 @@ namespace o2
             // Sets target pointer
             void SetTarget(Vec2F* value);
 
-            // Sets target pointer and change event
-            void SetTarget(Vec2F* value, const Function<void()>& changeEvent);
-
-            // Sets target change event
-            void SetTargetDelegate(const Function<void()>& changeEvent) override;
-
             // Sets target property pointer
             void SetTargetProxy(const Ref<IValueProxy<Vec2F>>& setter);
 
@@ -112,9 +105,6 @@ namespace o2
 
             // Sets target by void pointer
             void SetTargetVoid(void* target) override;
-
-            // Sets target by void pointer and change event
-            void SetTargetVoid(void* target, const Function<void()>& changeEvent) override;
 
             // Sets target property by void pointer
             void SetTargetProxy(const Ref<IAbstractValueProxy>& targetProxy) override;
@@ -144,7 +134,6 @@ namespace o2
 			float mRandomRangeCoef = 0.0f; // Random range coefficient for value approximation
 
             Vec2F*                  mTarget = nullptr; // Animation target value pointer
-            Function<void()>        mTargetDelegate;   // Animation target value change event
             Ref<IValueProxy<Vec2F>> mTargetProxy;      // Animation target proxy pointer
 
 		protected:
@@ -205,7 +194,6 @@ CLASS_FIELDS_META(o2::AnimationTrack<o2::Vec2F>::Player)
 {
     FIELD().PUBLIC().NAME(value);
     FIELD().PUBLIC().NAME(target);
-    FIELD().PUBLIC().NAME(targetDelegate);
     FIELD().PROTECTED().NAME(mTrack);
     FIELD().PROTECTED().NAME(mCurrentValue);
     FIELD().PROTECTED().DEFAULT_VALUE(0.0f).NAME(mPrevInDurationTime);
@@ -215,7 +203,6 @@ CLASS_FIELDS_META(o2::AnimationTrack<o2::Vec2F>::Player)
     FIELD().PROTECTED().DEFAULT_VALUE(0).NAME(mPrevSplineKeyApproximation);
     FIELD().PROTECTED().DEFAULT_VALUE(0.0f).NAME(mRandomRangeCoef);
     FIELD().PROTECTED().DEFAULT_VALUE(nullptr).NAME(mTarget);
-    FIELD().PROTECTED().NAME(mTargetDelegate);
     FIELD().PROTECTED().NAME(mTargetProxy);
 }
 END_META;
@@ -224,13 +211,10 @@ CLASS_METHODS_META(o2::AnimationTrack<o2::Vec2F>::Player)
 
     FUNCTION().PUBLIC().CONSTRUCTOR();
     FUNCTION().PUBLIC().SIGNATURE(void, SetTarget, Vec2F*);
-    FUNCTION().PUBLIC().SIGNATURE(void, SetTarget, Vec2F*, const Function<void()>&);
-    FUNCTION().PUBLIC().SIGNATURE(void, SetTargetDelegate, const Function<void()>&);
     FUNCTION().PUBLIC().SIGNATURE(void, SetTargetProxy, const Ref<IValueProxy<Vec2F>>&);
     FUNCTION().PUBLIC().SIGNATURE(void, SetTrack, const Ref<AnimationTrack<Vec2F>>&);
     FUNCTION().PUBLIC().SIGNATURE(const Ref<AnimationTrack<Vec2F>>&, GetTrackT);
     FUNCTION().PUBLIC().SIGNATURE(void, SetTargetVoid, void*);
-    FUNCTION().PUBLIC().SIGNATURE(void, SetTargetVoid, void*, const Function<void()>&);
     FUNCTION().PUBLIC().SIGNATURE(void, SetTargetProxy, const Ref<IAbstractValueProxy>&);
     FUNCTION().PUBLIC().SIGNATURE(void, SetTrack, const Ref<IAnimationTrack>&);
     FUNCTION().PUBLIC().SIGNATURE(Ref<IAnimationTrack>, GetTrack);

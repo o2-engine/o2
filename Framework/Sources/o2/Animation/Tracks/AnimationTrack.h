@@ -141,9 +141,8 @@ namespace o2
         {
         public:
             PROPERTIES(Player);
-            GETTER(_type, value, GetValue);                               // Current value getter
-            SETTER(_type*, target, SetTarget);                            // Bind target setter
-            SETTER(Function<void()>, targetDelegate, SetTargetDelegate);  // Bind target change event setter
+            GETTER(_type, value, GetValue);    // Current value getter
+            SETTER(_type*, target, SetTarget); // Bind target setter
 
         public:
             // Default constructor
@@ -158,12 +157,6 @@ namespace o2
             // Sets target pointer
             void SetTarget(_type* value);
 
-            // Sets target pointer and change event
-            void SetTarget(_type* value, const Function<void()>& changeEvent);
-
-            // Sets target change event
-            void SetTargetDelegate(const Function<void()>& changeEvent) override;
-
             // Sets target property pointer
             void SetTargetProxy(const Ref<IValueProxy<_type>>& proxy);
 
@@ -175,9 +168,6 @@ namespace o2
 
             // Sets target by void pointer
             void SetTargetVoid(void* target) override;
-
-            // Sets target by void pointer and change event
-            void SetTargetVoid(void* target, const Function<void()>& changeEvent) override;
 
             // Sets target property by void pointer
             void SetTargetProxy(const Ref<IAbstractValueProxy>& targetProxy) override;
@@ -203,7 +193,6 @@ namespace o2
             int   mPrevKeyApproximation = 0;  // Previous evaluation key approximation index
 
             _type*                  mTarget = nullptr; // Animation target value pointer
-            Function<void()>        mTargetDelegate;   // Animation target value change event
             Ref<IValueProxy<_type>> mTargetProxy;      // Animation target proxy pointer
 
         protected:
@@ -797,28 +786,12 @@ namespace o2
     {
         mTargetProxy = nullptr;
         mTarget = value;
-        mTargetDelegate.Clear();
-    }
-
-    template<typename _type>
-    void AnimationTrack<_type>::Player::SetTarget(_type* value, const Function<void()>& changeEvent)
-    {
-        mTargetProxy = nullptr;
-        mTarget = value;
-        mTargetDelegate = changeEvent;
-    }
-
-    template<typename _type>
-    void AnimationTrack<_type>::Player::SetTargetDelegate(const Function<void()>& changeEvent)
-    {
-        mTargetDelegate = changeEvent;
     }
 
     template<typename _type>
     void AnimationTrack<_type>::Player::SetTargetProxy(const Ref<IValueProxy<_type>>& proxy)
     {
         mTarget = nullptr;
-        mTargetDelegate.Clear();
         mTargetProxy = proxy;
     }
 
@@ -826,12 +799,6 @@ namespace o2
     void AnimationTrack<_type>::Player::SetTargetVoid(void* target)
     {
         SetTarget((_type*)target);
-    }
-
-    template<typename _type>
-    void AnimationTrack<_type>::Player::SetTargetVoid(void* target, const Function<void()>& changeEvent)
-    {
-        SetTarget((_type*)target, changeEvent);
     }
 
     template<typename _type>
@@ -874,16 +841,19 @@ namespace o2
     template<typename _type>
     void AnimationTrack<_type>::Player::Evaluate()
     {
+        mPrevInDurationTime = mInDurationTime;
+
+        if (mTrack->GetKeys().IsEmpty())
+        {
+            mCurrentValue = mTarget ? *mTarget : mTargetProxy ? mTargetProxy->GetValue() : _type();
+            return;
+        }
+
         mCurrentValue = mTrack->GetValue(mInDurationTime, mInDurationTime > mPrevInDurationTime,
                                          mPrevKey, mPrevKeyApproximation);
 
-        mPrevInDurationTime = mInDurationTime;
-
         if (mTarget)
-        {
             *mTarget = mCurrentValue;
-            mTargetDelegate();
-        }
         else if (mTargetProxy)
             mTargetProxy->SetValue(mCurrentValue);
     }
@@ -957,14 +927,12 @@ CLASS_FIELDS_META(o2::AnimationTrack<_type>::Player)
 {
     FIELD().PUBLIC().NAME(value);
     FIELD().PUBLIC().NAME(target);
-    FIELD().PUBLIC().NAME(targetDelegate);
     FIELD().PROTECTED().NAME(mTrack);
     FIELD().PROTECTED().NAME(mCurrentValue);
     FIELD().PROTECTED().DEFAULT_VALUE(0.0f).NAME(mPrevInDurationTime);
     FIELD().PROTECTED().DEFAULT_VALUE(0).NAME(mPrevKey);
     FIELD().PROTECTED().DEFAULT_VALUE(0).NAME(mPrevKeyApproximation);
     FIELD().PROTECTED().DEFAULT_VALUE(nullptr).NAME(mTarget);
-    FIELD().PROTECTED().NAME(mTargetDelegate);
     FIELD().PROTECTED().NAME(mTargetProxy);
 }
 END_META;
@@ -974,13 +942,10 @@ CLASS_METHODS_META(o2::AnimationTrack<_type>::Player)
 
     FUNCTION().PUBLIC().CONSTRUCTOR();
     FUNCTION().PUBLIC().SIGNATURE(void, SetTarget, _type*);
-    FUNCTION().PUBLIC().SIGNATURE(void, SetTarget, _type*, const Function<void()>&);
-    FUNCTION().PUBLIC().SIGNATURE(void, SetTargetDelegate, const Function<void()>&);
     FUNCTION().PUBLIC().SIGNATURE(void, SetTargetProxy, const Ref<IValueProxy<_type>>&);
     FUNCTION().PUBLIC().SIGNATURE(void, SetTrack, const Ref<AnimationTrack<_type>>&);
     FUNCTION().PUBLIC().SIGNATURE(const Ref<AnimationTrack<_type>>&, GetTrackT);
     FUNCTION().PUBLIC().SIGNATURE(void, SetTargetVoid, void*);
-    FUNCTION().PUBLIC().SIGNATURE(void, SetTargetVoid, void*, const Function<void()>&);
     FUNCTION().PUBLIC().SIGNATURE(void, SetTargetProxy, const Ref<IAbstractValueProxy>&);
     FUNCTION().PUBLIC().SIGNATURE(void, SetTrack, const Ref<IAnimationTrack>&);
     FUNCTION().PUBLIC().SIGNATURE(Ref<IAnimationTrack>, GetTrack);

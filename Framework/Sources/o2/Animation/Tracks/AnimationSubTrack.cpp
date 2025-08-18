@@ -94,24 +94,7 @@ namespace o2
         mTarget = value;
         mTarget->SetSubControlled(true);
 
-        mTargetDelegate.Clear();
-
         UpdateSubTrackDuration();
-    }
-
-    void AnimationSubTrack::Player::SetTarget(IAnimation* value, const Function<void()>& changeEvent)
-    {
-        mTarget = value;
-        mTarget->SetSubControlled(true);
-
-        mTargetDelegate = changeEvent;
-
-        UpdateSubTrackDuration();
-    }
-
-    void AnimationSubTrack::Player::SetTargetDelegate(const Function<void()>& changeEvent)
-    {
-        mTargetDelegate = changeEvent;
     }
 
     void AnimationSubTrack::Player::SetTrack(const Ref<AnimationSubTrack>& track)
@@ -159,11 +142,6 @@ namespace o2
         SetTarget((IAnimation*)target);
     }
 
-    void AnimationSubTrack::Player::SetTargetVoid(void* target, const Function<void()>& changeEvent)
-    {
-        SetTarget((IAnimation*)target, changeEvent);
-    }
-
     void AnimationSubTrack::Player::SetTargetProxy(const Ref<IAbstractValueProxy>& targetProxy)
     {}
 
@@ -191,8 +169,6 @@ namespace o2
                 mTarget->SetTime(subTrackTime);
             }
         }
-
-        mTargetDelegate();
     }
 
     void AnimationSubTrack::Player::RegMixer(const Ref<AnimationState>& state, const String& path)

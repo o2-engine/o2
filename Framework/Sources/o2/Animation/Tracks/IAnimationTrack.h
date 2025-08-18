@@ -25,14 +25,8 @@ namespace o2
 			// Called when animation started playing
             virtual void OnPlay() {}
 
-            // Sets target changing delegate
-            virtual void SetTargetDelegate(const Function<void()>& changeEvent) {}
-
             // Sets target by void pointer
             virtual void SetTargetVoid(void* target) {}
-
-            // Sets target by void pointer and change event
-            virtual void SetTargetVoid(void* target, const Function<void()>& changeEvent) {}
 
             // Sets target property by void pointer
             virtual void SetTargetProxy(const Ref<IAbstractValueProxy>& targetProxy) {}
@@ -153,9 +147,7 @@ CLASS_METHODS_META(o2::IAnimationTrack::IPlayer)
 {
 
     FUNCTION().PUBLIC().SIGNATURE(void, OnPlay);
-    FUNCTION().PUBLIC().SIGNATURE(void, SetTargetDelegate, const Function<void()>&);
     FUNCTION().PUBLIC().SIGNATURE(void, SetTargetVoid, void*);
-    FUNCTION().PUBLIC().SIGNATURE(void, SetTargetVoid, void*, const Function<void()>&);
     FUNCTION().PUBLIC().SIGNATURE(void, SetTargetProxy, const Ref<IAbstractValueProxy>&);
     FUNCTION().PUBLIC().SIGNATURE(void, SetTrack, const Ref<IAnimationTrack>&);
     FUNCTION().PUBLIC().SIGNATURE(void*, AdjustTargetType, void*, const Type&);

@@ -479,6 +479,7 @@ namespace Editor
         {
             mScene->UpdateAddedEntities();
             mScene->UpdateDestroyingEntities();
+            mScene->UpdateTransforms();
         }
 
         CheckPlayingSwitch();

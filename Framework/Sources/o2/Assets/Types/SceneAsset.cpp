@@ -40,7 +40,9 @@ namespace o2
     {}
 
     void SceneAsset::SaveData(const String& path) const
-    {}
+    {
+        o2Scene.Save(path);
+    }
 }
 
 DECLARE_TEMPLATE_CLASS(o2::AssetWithDefaultMeta<o2::SceneAsset>);

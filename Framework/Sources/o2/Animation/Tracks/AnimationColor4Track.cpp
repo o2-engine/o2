@@ -317,25 +317,11 @@ namespace o2
     {
         mTargetProxy = nullptr;
         mTarget = value;
-        mTargetDelegate.Clear();
-    }
-
-    void AnimationTrack<Color4>::Player::SetTarget(Color4* value, const Function<void()>& changeEvent)
-    {
-        mTargetProxy = nullptr;
-        mTarget = value;
-        mTargetDelegate = changeEvent;
-    }
-
-    void AnimationTrack<Color4>::Player::SetTargetDelegate(const Function<void()>& changeEvent)
-    {
-        mTargetDelegate = changeEvent;
     }
 
     void AnimationTrack<Color4>::Player::SetTargetProxy(const Ref<IValueProxy<Color4>>& proxy)
     {
         mTarget = nullptr;
-        mTargetDelegate.Clear();
         mTargetProxy = proxy;
     }
 
@@ -348,11 +334,6 @@ namespace o2
     void AnimationTrack<Color4>::Player::SetTargetVoid(void* target)
     {
         SetTarget((Color4*)target);
-    }
-
-    void AnimationTrack<Color4>::Player::SetTargetVoid(void* target, const Function<void()>& changeEvent)
-    {
-        SetTarget((Color4*)target, changeEvent);
     }
 
     void AnimationTrack<Color4>::Player::SetTargetProxy(const Ref<IAbstractValueProxy>& targetProxy)
@@ -382,16 +363,20 @@ namespace o2
 
     void AnimationTrack<Color4>::Player::Evaluate()
     {
-        mCurrentValue = mTrack->GetValue(mInDurationTime, mInDurationTime > mPrevInDurationTime, 
-                                         mPrevKey, mPrevKeyApproximation);
 
         mPrevInDurationTime = mInDurationTime;
 
-        if (mTarget)
+        if (mTrack->GetKeys().IsEmpty())
         {
-            *mTarget = mCurrentValue;
-            mTargetDelegate();
+            mCurrentValue = mTarget ? *mTarget : mTargetProxy ? mTargetProxy->GetValue() : Color4();
+            return;
         }
+
+        mCurrentValue = mTrack->GetValue(mInDurationTime, mInDurationTime > mPrevInDurationTime, 
+                                         mPrevKey, mPrevKeyApproximation);
+
+        if (mTarget)
+            *mTarget = mCurrentValue;
         else if (mTargetProxy)
             mTargetProxy->SetValue(mCurrentValue);
     }

@@ -110,9 +110,8 @@ namespace o2
         {
         public:
             PROPERTIES(Player);
-            GETTER(o2::Color4, value, GetValue);                           // Current value getter
-            SETTER(o2::Color4*, target, SetTarget);                        // Bind target setter
-            SETTER(Function<void()>, targetDelegate, SetTargetDelegate);   // Bind target change event setter  
+            GETTER(o2::Color4, value, GetValue);    // Current value getter
+            SETTER(o2::Color4*, target, SetTarget); // Bind target setter
 
         public:
             // Default constructor
@@ -125,13 +124,7 @@ namespace o2
             operator Color4() const;
 
             // Sets target pointer
-            void SetTarget(Color4* value);
-
-            // Sets target pointer and change event
-            void SetTarget(Color4* value, const Function<void()>& changeEvent);
-
-            // Sets target change event
-            void SetTargetDelegate(const Function<void()>& changeEvent) override;
+                void SetTarget(Color4* value);
 
             // Sets target property pointer
             void SetTargetProxy(const Ref<IValueProxy<Color4>>& setter);
@@ -144,9 +137,6 @@ namespace o2
 
             // Sets target by void pointer
             void SetTargetVoid(void* target) override;
-
-            // Sets target by void pointer and change event
-            void SetTargetVoid(void* target, const Function<void()>& changeEvent) override;
 
             // Sets target property by void pointer
             void SetTargetProxy(const Ref<IAbstractValueProxy>& targetProxy) override;
@@ -171,8 +161,7 @@ namespace o2
             int   mPrevKey = 0;               // Previous evaluation key index
             int   mPrevKeyApproximation = 0;  // Previous evaluation key approximation index
 
-            Color4*                  mTarget = nullptr; // Animation target value pointer
-            Function<void()>         mTargetDelegate;   // Animation target value change event
+            Color4*                  mTarget = nullptr; // Animation target value pointer   
             Ref<IValueProxy<Color4>> mTargetProxy;      // Animation target proxy pointer
 
         protected:
@@ -288,14 +277,12 @@ CLASS_FIELDS_META(o2::AnimationTrack<o2::Color4>::Player)
 {
     FIELD().PUBLIC().NAME(value);
     FIELD().PUBLIC().NAME(target);
-    FIELD().PUBLIC().NAME(targetDelegate);
     FIELD().PROTECTED().NAME(mTrack);
     FIELD().PROTECTED().NAME(mCurrentValue);
     FIELD().PROTECTED().DEFAULT_VALUE(0.0f).NAME(mPrevInDurationTime);
     FIELD().PROTECTED().DEFAULT_VALUE(0).NAME(mPrevKey);
     FIELD().PROTECTED().DEFAULT_VALUE(0).NAME(mPrevKeyApproximation);
     FIELD().PROTECTED().DEFAULT_VALUE(nullptr).NAME(mTarget);
-    FIELD().PROTECTED().NAME(mTargetDelegate);
     FIELD().PROTECTED().NAME(mTargetProxy);
 }
 END_META;
@@ -304,13 +291,10 @@ CLASS_METHODS_META(o2::AnimationTrack<o2::Color4>::Player)
 
     FUNCTION().PUBLIC().CONSTRUCTOR();
     FUNCTION().PUBLIC().SIGNATURE(void, SetTarget, Color4*);
-    FUNCTION().PUBLIC().SIGNATURE(void, SetTarget, Color4*, const Function<void()>&);
-    FUNCTION().PUBLIC().SIGNATURE(void, SetTargetDelegate, const Function<void()>&);
     FUNCTION().PUBLIC().SIGNATURE(void, SetTargetProxy, const Ref<IValueProxy<Color4>>&);
     FUNCTION().PUBLIC().SIGNATURE(void, SetTrack, const Ref<AnimationTrack<Color4>>&);
     FUNCTION().PUBLIC().SIGNATURE(const Ref<AnimationTrack<Color4>>&, GetTrackT);
     FUNCTION().PUBLIC().SIGNATURE(void, SetTargetVoid, void*);
-    FUNCTION().PUBLIC().SIGNATURE(void, SetTargetVoid, void*, const Function<void()>&);
     FUNCTION().PUBLIC().SIGNATURE(void, SetTargetProxy, const Ref<IAbstractValueProxy>&);
     FUNCTION().PUBLIC().SIGNATURE(void, SetTrack, const Ref<IAnimationTrack>&);
     FUNCTION().PUBLIC().SIGNATURE(Ref<IAnimationTrack>, GetTrack);

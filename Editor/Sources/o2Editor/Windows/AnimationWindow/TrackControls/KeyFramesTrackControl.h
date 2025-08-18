@@ -114,16 +114,25 @@ namespace Editor
         bool mDisableHandlesUpdate = false;  // It is true when handles are changing and combining or updating is not available
 
     private:
+        // Initializes controls
         void InitializeControls();
+
+        // Initializes handles
         void InitializeHandles();
 
+        // Called when track was set
         virtual void OnSetTrack() {}
+
+        // Called when keys were changed
         virtual void OnKeysChanged() {}
 
+        // Creates handle
         Ref<AnimationKeyDragHandle> CreateHandle();
 
+        // Checks if new key can be created at time. If there is a key at time, button is disabled.
         void CheckCanCreateKey(float time);
 
+        // Called when property was changed, adds new key
         void OnPropertyChanged();
     };
 

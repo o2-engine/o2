@@ -173,8 +173,8 @@ namespace o2
 	}
 
     AnimationTrack<float> AnimationTrack<float>::Parametric(float begin, float end, float duration,
-                                                          float beginCoef, float beginCoefPosition,
-                                                          float endCoef, float endCoefPosition)
+                                                            float beginCoef, float beginCoefPosition,
+                                                            float endCoef, float endCoefPosition)
     {
         AnimationTrack<float> res;
         res.curve = mmake<Curve>(Curve::Parametric(begin, end, duration, beginCoef, beginCoefPosition, endCoef, endCoefPosition));
@@ -221,25 +221,11 @@ namespace o2
     {
         mTargetProxy = nullptr;
         mTarget = value;
-        mTargetDelegate.Clear();
-    }
-
-    void AnimationTrack<float>::Player::SetTarget(float* value, const Function<void()>& changeEvent)
-    {
-        mTargetProxy = nullptr;
-        mTarget = value;
-        mTargetDelegate = changeEvent;
-    }
-
-    void AnimationTrack<float>::Player::SetTargetDelegate(const Function<void()>& changeEvent)
-    {
-        mTargetDelegate = changeEvent;
     }
 
     void AnimationTrack<float>::Player::SetTargetProxy(const Ref<IValueProxy<float>>& proxy)
     {
         mTarget = nullptr;
-        mTargetDelegate.Clear();
         mTargetProxy = proxy;
     }
 
@@ -257,11 +243,6 @@ namespace o2
     void AnimationTrack<float>::Player::SetTargetVoid(void* target)
     {
         SetTarget((float*)target);
-    }
-
-    void AnimationTrack<float>::Player::SetTargetVoid(void* target, const Function<void()>& changeEvent)
-    {
-        SetTarget((float*)target, changeEvent);
     }
 
     void AnimationTrack<float>::Player::SetTargetProxy(const Ref<IAbstractValueProxy>& targetProxy)
@@ -294,14 +275,18 @@ namespace o2
         if (!mTrack)
             return;
 
-        mCurrentValue = mTrack->curve->Evaluate(mInDurationTime, mRandomRangeCoef, mInDurationTime > mPrevInDurationTime, mPrevKey, mPrevKeyApproximation);
         mPrevInDurationTime = mInDurationTime;
 
-        if (mTarget)
+        if (mTrack->curve->IsEmpty())
         {
-            *mTarget = mCurrentValue;
-            mTargetDelegate();
+            mCurrentValue = mTarget ? *mTarget : mTargetProxy ? mTargetProxy->GetValue() : 0.0f;
+            return;
         }
+
+        mCurrentValue = mTrack->curve->Evaluate(mInDurationTime, mRandomRangeCoef, mInDurationTime > mPrevInDurationTime, mPrevKey, mPrevKeyApproximation);
+
+        if (mTarget)
+            *mTarget = mCurrentValue;
         else if (mTargetProxy)
             mTargetProxy->SetValue(mCurrentValue);
     }

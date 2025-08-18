@@ -61,8 +61,7 @@ namespace o2
         {
         public:
             PROPERTIES(Player);
-            SETTER(IAnimation*, target, SetTarget);                      // Bind target setter
-            SETTER(Function<void()>, targetDelegate, SetTargetDelegate); // Bind target change event setter
+            SETTER(IAnimation*, target, SetTarget); // Bind target setter
 
         public:
             // Default constructor
@@ -74,12 +73,6 @@ namespace o2
             // Sets target pointer
             void SetTarget(IAnimation* value);
 
-            // Sets target pointer and change event
-            void SetTarget(IAnimation* value, const Function<void()>& changeEvent);
-
-            // Sets target change event
-            void SetTargetDelegate(const Function<void()>& changeEvent) override;
-
             // Sets animation track
             void SetTrack(const Ref<AnimationSubTrack>& track);
 
@@ -88,9 +81,6 @@ namespace o2
 
             // Sets target by void pointer
             void SetTargetVoid(void* target) override;
-
-            // Sets target by void pointer and change event
-            void SetTargetVoid(void* target, const Function<void()>& changeEvent) override;
 
             // Sets target property by void pointer
             void SetTargetProxy(const Ref<IAbstractValueProxy>& targetProxy) override;
@@ -111,8 +101,7 @@ namespace o2
 
             float mPrevInDurationTime = 0.0f; // Previous evaluation in duration time
 
-            IAnimation*      mTarget = nullptr; // Animation target value pointer
-            Function<void()> mTargetDelegate;   // Animation target value change event
+            IAnimation* mTarget = nullptr; // Animation target value pointer
 
         protected:
             // Evaluates value
@@ -180,11 +169,9 @@ END_META;
 CLASS_FIELDS_META(o2::AnimationSubTrack::Player)
 {
     FIELD().PUBLIC().NAME(target);
-    FIELD().PUBLIC().NAME(targetDelegate);
     FIELD().PROTECTED().DEFAULT_VALUE(nullptr).NAME(mTrack);
     FIELD().PROTECTED().DEFAULT_VALUE(0.0f).NAME(mPrevInDurationTime);
     FIELD().PROTECTED().DEFAULT_VALUE(nullptr).NAME(mTarget);
-    FIELD().PROTECTED().NAME(mTargetDelegate);
 }
 END_META;
 CLASS_METHODS_META(o2::AnimationSubTrack::Player)
@@ -192,12 +179,9 @@ CLASS_METHODS_META(o2::AnimationSubTrack::Player)
 
     FUNCTION().PUBLIC().CONSTRUCTOR();
     FUNCTION().PUBLIC().SIGNATURE(void, SetTarget, IAnimation*);
-    FUNCTION().PUBLIC().SIGNATURE(void, SetTarget, IAnimation*, const Function<void()>&);
-    FUNCTION().PUBLIC().SIGNATURE(void, SetTargetDelegate, const Function<void()>&);
     FUNCTION().PUBLIC().SIGNATURE(void, SetTrack, const Ref<AnimationSubTrack>&);
     FUNCTION().PUBLIC().SIGNATURE(const Ref<AnimationSubTrack>&, GetTrackT);
     FUNCTION().PUBLIC().SIGNATURE(void, SetTargetVoid, void*);
-    FUNCTION().PUBLIC().SIGNATURE(void, SetTargetVoid, void*, const Function<void()>&);
     FUNCTION().PUBLIC().SIGNATURE(void, SetTargetProxy, const Ref<IAbstractValueProxy>&);
     FUNCTION().PUBLIC().SIGNATURE(void, SetTrack, const Ref<IAnimationTrack>&);
     FUNCTION().PUBLIC().SIGNATURE(void*, AdjustTargetType, void*, const Type&);

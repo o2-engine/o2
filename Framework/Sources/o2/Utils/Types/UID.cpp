@@ -78,9 +78,6 @@ namespace o2
 
     WString UID::ToString() const
     {
-        if (!data)
-            return "null";
-
         char st[33];
         st[32] = '\0';
         for (int i = 0; i < 16; i += 4)

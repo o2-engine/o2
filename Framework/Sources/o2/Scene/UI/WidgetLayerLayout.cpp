@@ -172,7 +172,7 @@ namespace o2
 
     float WidgetLayerLayout::GetOffsetLeft() const
     {
-        return mAnchorMin.x;
+        return mOffsetMin.x;
     }
 
     void WidgetLayerLayout::SetoffsetRight(float value)
@@ -194,7 +194,7 @@ namespace o2
 
     float WidgetLayerLayout::GetOffsetBottom() const
     {
-        return mAnchorMin.y;
+        return mOffsetMin.y;
     }
 
     void WidgetLayerLayout::SetOffsetTop(float value)

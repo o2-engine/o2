@@ -122,25 +122,11 @@ namespace o2
     {
         mTargetProxy = nullptr;
         mTarget = value;
-        mTargetDelegate.Clear();
-    }
-
-    void AnimationTrack<Vec2F>::Player::SetTarget(Vec2F* value, const Function<void()>& changeEvent)
-    {
-        mTargetProxy = nullptr;
-        mTarget = value;
-        mTargetDelegate = changeEvent;
-    }
-
-    void AnimationTrack<Vec2F>::Player::SetTargetDelegate(const Function<void()>& changeEvent)
-    {
-        mTargetDelegate = changeEvent;
     }
 
     void AnimationTrack<Vec2F>::Player::SetTargetProxy(const Ref<IValueProxy<Vec2F>>& proxy)
     {
         mTarget = nullptr;
-        mTargetDelegate.Clear();
         mTargetProxy = proxy;
     }
 
@@ -153,11 +139,6 @@ namespace o2
     void AnimationTrack<Vec2F>::Player::SetTargetVoid(void* target)
     {
         SetTarget((Vec2F*)target);
-    }
-
-    void AnimationTrack<Vec2F>::Player::SetTargetVoid(void* target, const Function<void()>& changeEvent)
-    {
-        SetTarget((Vec2F*)target, changeEvent);
     }
 
     void AnimationTrack<Vec2F>::Player::SetTargetProxy(const Ref<IAbstractValueProxy>& targetProxy)
@@ -192,17 +173,20 @@ namespace o2
 
     void AnimationTrack<Vec2F>::Player::Evaluate()
     {
+        if (mTrack->timeCurve->IsEmpty())
+        {
+            mCurrentValue = mTarget ? *mTarget : mTargetProxy ? mTargetProxy->GetValue() : Vec2F();
+            return;
+        }
+
         mCurrentValue = mTrack->GetValue(mInDurationTime, mRandomRangeCoef, mInDurationTime > mPrevInDurationTime, 
-                                         mPrevTimeKey, mPrevTimeKeyApproximation,
-                                         mPrevSplineKey, mPrevSplineKeyApproximation);
+                          mPrevTimeKey, mPrevTimeKeyApproximation,
+                        mPrevSplineKey, mPrevSplineKeyApproximation);
 
         mPrevInDurationTime = mInDurationTime;
 
         if (mTarget)
-        {
             *mTarget = mCurrentValue;
-            mTargetDelegate();
-        }
         else if (mTargetProxy)
             mTargetProxy->SetValue(mCurrentValue);
     }

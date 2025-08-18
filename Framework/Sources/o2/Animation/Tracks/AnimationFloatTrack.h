@@ -134,9 +134,8 @@ namespace o2
         {
         public:
             PROPERTIES(Player);
-            GETTER(float, value, GetValue);                              // Current value getter 
-            SETTER(float*, target, SetTarget);                           // Bind target setter
-            SETTER(Function<void()>, targetDelegate, SetTargetDelegate); // Bind target change event setter
+            GETTER(float, value, GetValue);    // Current value getter 
+            SETTER(float*, target, SetTarget); // Bind target setter
 
         public:
             // Default constructor
@@ -151,12 +150,6 @@ namespace o2
             // Sets target pointer
             void SetTarget(float* value);
 
-            // Sets target pointer and change event
-            void SetTarget(float* value, const Function<void()>& changeEvent);
-
-            // Sets target change event
-            void SetTargetDelegate(const Function<void()>& changeEvent) override;
-
             // Sets target property pointer
             void SetTargetProxy(const Ref<IValueProxy<float>>& proxy);
 
@@ -168,9 +161,6 @@ namespace o2
 
             // Sets target by void pointer
             void SetTargetVoid(void* target) override;
-
-            // Sets target by void pointer and change event
-            void SetTargetVoid(void* target, const Function<void()>& changeEvent) override;
 
             // Sets target property by void pointer
             void SetTargetProxy(const Ref<IAbstractValueProxy>& targetProxy) override;
@@ -198,7 +188,6 @@ namespace o2
 			float mRandomRangeCoef = 0.0f; // Random range coefficient for value approximation
 
             float*                  mTarget = nullptr; // Animation target value pointer
-            Function<void()>        mTargetDelegate;   // Animation target value change event
             Ref<IValueProxy<float>> mTargetProxy;      // Animation target proxy pointer
 
 		protected:
@@ -285,7 +274,6 @@ CLASS_FIELDS_META(o2::AnimationTrack<float>::Player)
 {
     FIELD().PUBLIC().NAME(value);
     FIELD().PUBLIC().NAME(target);
-    FIELD().PUBLIC().NAME(targetDelegate);
     FIELD().PROTECTED().DEFAULT_VALUE(nullptr).NAME(mTrack);
     FIELD().PROTECTED().NAME(mCurrentValue);
     FIELD().PROTECTED().DEFAULT_VALUE(0.0f).NAME(mPrevInDurationTime);
@@ -293,7 +281,6 @@ CLASS_FIELDS_META(o2::AnimationTrack<float>::Player)
     FIELD().PROTECTED().DEFAULT_VALUE(0).NAME(mPrevKeyApproximation);
     FIELD().PROTECTED().DEFAULT_VALUE(0.0f).NAME(mRandomRangeCoef);
     FIELD().PROTECTED().DEFAULT_VALUE(nullptr).NAME(mTarget);
-    FIELD().PROTECTED().NAME(mTargetDelegate);
     FIELD().PROTECTED().NAME(mTargetProxy);
 }
 END_META;
@@ -302,13 +289,10 @@ CLASS_METHODS_META(o2::AnimationTrack<float>::Player)
 
     FUNCTION().PUBLIC().CONSTRUCTOR();
     FUNCTION().PUBLIC().SIGNATURE(void, SetTarget, float*);
-    FUNCTION().PUBLIC().SIGNATURE(void, SetTarget, float*, const Function<void()>&);
-    FUNCTION().PUBLIC().SIGNATURE(void, SetTargetDelegate, const Function<void()>&);
     FUNCTION().PUBLIC().SIGNATURE(void, SetTargetProxy, const Ref<IValueProxy<float>>&);
     FUNCTION().PUBLIC().SIGNATURE(void, SetTrack, const Ref<AnimationTrack<float>>&);
     FUNCTION().PUBLIC().SIGNATURE(const Ref<AnimationTrack<float>>&, GetTrackT);
     FUNCTION().PUBLIC().SIGNATURE(void, SetTargetVoid, void*);
-    FUNCTION().PUBLIC().SIGNATURE(void, SetTargetVoid, void*, const Function<void()>&);
     FUNCTION().PUBLIC().SIGNATURE(void, SetTargetProxy, const Ref<IAbstractValueProxy>&);
     FUNCTION().PUBLIC().SIGNATURE(void, SetTrack, const Ref<IAnimationTrack>&);
     FUNCTION().PUBLIC().SIGNATURE(Ref<IAnimationTrack>, GetTrack);

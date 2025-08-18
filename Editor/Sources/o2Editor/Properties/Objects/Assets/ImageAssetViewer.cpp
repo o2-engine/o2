@@ -30,6 +30,10 @@ namespace Editor
     {
         PushEditorScopeOnStack scope;
 
+        mSizeLabel = o2UI.CreateLabel("Size: 0x0");
+        mSizeLabel->layout->minHeight = 20;
+        mSpoiler->AddChild(mSizeLabel);
+
         mSlicesEditor = mmake<ImageSlicesEditorWidget>();
         mSpoiler->AddChild(mSlicesEditor);
 
@@ -43,6 +47,9 @@ namespace Editor
     {
         if (!targetObjets.IsEmpty())
         {
+            auto image = dynamic_cast<ImageAsset*>(targetObjets.Last().first);
+            mSizeLabel->SetText("Size: " + String(image->GetSize().x) + "x" + String(image->GetSize().y));
+
             mSlicesEditor->Setup(AssetRef<ImageAsset>(dynamic_cast<ImageAsset*>(targetObjets.Last().first)->GetUID()),
                                  DynamicCast<BorderIProperty>(mPropertiesContext->properties[TypeOf(ImageAsset).GetField("sliceBorder")]));
         }
