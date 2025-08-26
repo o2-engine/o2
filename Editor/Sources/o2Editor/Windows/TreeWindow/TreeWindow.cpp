@@ -63,18 +63,10 @@ namespace Editor
         return mDrawOrderTree;
     }
 
-    void TreeWindow::FocusTree()
-    {
-        if (mSceneTree->IsEnabled())
-            mSceneTree->Focus();
-        else
-            mDrawOrderTree->Focus();
-    }
-
-    bool TreeWindow::IsTreeFocused() const
-    {
-        return mSceneTree->IsFocused() || mDrawOrderTree->IsFocused();
-    }
+	void TreeWindow::OnSceneFocused()
+	{
+		mTreeContextMenu->SetItemsMaxPriority();
+	}
 
     void TreeWindow::SetSelectedObjects(const Vector<Ref<SceneEditableObject>>& objects)
     {

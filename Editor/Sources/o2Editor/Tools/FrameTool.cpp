@@ -230,7 +230,7 @@ namespace Editor
 
     void FrameTool::OnKeyPressed(const Input::Key& key)
     {
-        if (!o2EditorTree.IsTreeFocused())
+        if (!o2EditorSceneWindow.IsFocused())
             return;
 
         if (key == VK_LEFT)
@@ -250,7 +250,7 @@ namespace Editor
 
     void FrameTool::OnKeyStayDown(const Input::Key& key)
     {
-        if (!o2EditorTree.IsTreeFocused())
+        if (!o2EditorSceneWindow.IsFocused())
             return;
 
         if (key.pressedTime < 0.3f)

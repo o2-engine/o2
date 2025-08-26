@@ -686,7 +686,7 @@ namespace o2
     {}
 
     DataDocument::DataDocument(const DataDocument& other) :
-        DataValue(other, *this), mAllocator()
+        DataValue(static_cast<const DataValue&>(other), *this), mAllocator()
     {}
 
     DataDocument::DataDocument(DataDocument&& other) :

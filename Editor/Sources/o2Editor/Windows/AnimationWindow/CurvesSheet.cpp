@@ -130,7 +130,17 @@ namespace Editor
             UpdateCurvesColors();
     }
 
-    String CurvesSheet::GetCreateMenuCategory()
+	void CurvesSheet::OnAnimationWindowFocused()
+	{
+        mCurvesEditor->OnFocusedByRoot();
+	}
+
+	void CurvesSheet::OnAnimationWindowUnfocused()
+	{
+		mCurvesEditor->OnUnfocusedByRoot();
+	}
+
+	String CurvesSheet::GetCreateMenuCategory()
     {
         return "UI/Editor";
     }

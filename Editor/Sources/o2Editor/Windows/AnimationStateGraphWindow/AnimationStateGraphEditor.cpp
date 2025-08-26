@@ -299,22 +299,6 @@ namespace Editor
 		mPreviewEnabled = enabled;
 	}
 
-	void AnimationStateGraphEditor::OnEnabled()
-    {
-        FrameScrollView::OnEnabled();
-
-        mContextMenu->SetItemsMaxPriority();
-        mStateContextMenu->SetItemsMaxPriority();
-    }
-
-    void AnimationStateGraphEditor::OnDisabled()
-    {
-        FrameScrollView::OnDisabled();
-
-        mContextMenu->SetItemsMinPriority();
-        mStateContextMenu->SetItemsMinPriority();
-    }
-
     void AnimationStateGraphEditor::OnScrolled(float scroll)
     {
         Vec2F newScale = mViewCameraTargetScale;
@@ -429,8 +413,8 @@ namespace Editor
 		AddChild(mStateContextMenu);
 		AddChild(mTransitionContextMenu);
 
-		onShow = [&]() { mContextMenu->SetItemsMaxPriority(); };
-		onHide = [&]() { mContextMenu->SetItemsMinPriority(); };
+		onFocused = [&]() { mContextMenu->SetItemsMaxPriority(); };
+		onUnfocused = [&]() { mContextMenu->SetItemsMinPriority(); };
     }
 
     void AnimationStateGraphEditor::RecalculateViewArea()

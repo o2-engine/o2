@@ -291,21 +291,17 @@ namespace Editor
         mNeedAdjustView = true;
     }
 
-    void CurvesEditor::OnEnabled()
-    {
-        FrameScrollView::OnEnabled();
+	void CurvesEditor::OnFocusedByRoot()
+	{
+		mContextMenu->SetItemsMaxPriority();
+	}
 
-        mContextMenu->SetItemsMaxPriority();
-    }
-
-    void CurvesEditor::OnDisabled()
-    {
-        FrameScrollView::OnDisabled();
-
+	void CurvesEditor::OnUnfocusedByRoot()
+	{
         mContextMenu->SetItemsMinPriority();
-    }
+	}
 
-    void CurvesEditor::OnScrolled(float scroll)
+	void CurvesEditor::OnScrolled(float scroll)
     {
         Vec2F newScale = mViewCameraTargetScale;
 
@@ -1817,10 +1813,7 @@ namespace Editor
     {
         if (actionsListDelegate) {
             actionsListDelegate->DoneAction(action);
-            return;
         }
-
-        mActionsList.DoneAction(action);
     }
 
     void CurvesEditor::OnEditPressed()
@@ -2063,16 +2056,12 @@ namespace Editor
     {
         if (actionsListDelegate)
             actionsListDelegate->UndoAction();
-        else
-            mActionsList.UndoAction();
     }
 
     void CurvesEditor::OnRedoPressed()
     {
         if (actionsListDelegate)
             actionsListDelegate->RedoAction();
-        else
-            mActionsList.RedoAction();
     }
 
     CurvesEditor::CurveInfo::CurveInfo()

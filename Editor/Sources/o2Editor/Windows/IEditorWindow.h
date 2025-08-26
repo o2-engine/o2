@@ -49,6 +49,9 @@ namespace Editor
         // Hides window
         void Hide();
 
+		// Returns is window is focused
+		bool IsFocused() const;
+
         // Returns window
         const Ref<DockableWindow>& GetWindow() const;
 
@@ -66,6 +69,12 @@ namespace Editor
 
         // Called when editor window has closed
         virtual void OnClosed() {}
+
+		// Called when window has focused
+		virtual void OnFocused() {}
+
+		// Called when window has lost focus
+		virtual void OnUnfocused() {}
 
         friend class WindowsManager;
         friend class WindowsLayout;
@@ -98,10 +107,13 @@ CLASS_METHODS_META(Editor::IEditorWindow)
     FUNCTION().PUBLIC().SIGNATURE(bool, IsVisible);
     FUNCTION().PUBLIC().SIGNATURE(void, Show);
     FUNCTION().PUBLIC().SIGNATURE(void, Hide);
+    FUNCTION().PUBLIC().SIGNATURE(bool, IsFocused);
     FUNCTION().PUBLIC().SIGNATURE(const Ref<DockableWindow>&, GetWindow);
     FUNCTION().PROTECTED().SIGNATURE(void, PostInitializeWindow);
     FUNCTION().PROTECTED().SIGNATURE(void, OnOpened);
     FUNCTION().PROTECTED().SIGNATURE(void, OnClosed);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnFocused);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnUnfocused);
 }
 END_META;
 // --- END META ---

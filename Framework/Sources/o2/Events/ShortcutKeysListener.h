@@ -35,7 +35,7 @@ namespace o2
 
     private:
         ShortcutKeys mShortcut;
-        bool         mEnabled;
+        bool         mEnabled = true;
 
     protected:
         // This event calling when shortcut hit and this listener has max priority
@@ -44,6 +44,32 @@ namespace o2
         friend class ShortcutKeysListenersManager;
     };
 
+	// -----------------------------------------------------------------------------------------------
+	// Functional shortcut keys listener. Contains onShortcutPressed event, calls it when shortcut hit
+	// -----------------------------------------------------------------------------------------------
+    class FunctionalShortcutKeysListener : public RefCounterable, public ShortcutKeysListener
+    {
+    public:
+		Function<void()> onShortcutPressed; 
+
+    public:
+		// Default constructor
+		FunctionalShortcutKeysListener() = default;
+
+		// Constructor with onShortcutPressed event
+		FunctionalShortcutKeysListener(const Function<void()>& onShortcutPressed);
+
+		// Returns reference counter
+		RefCounter* GetRefCounter() const override;
+
+	protected:
+		// This event calling when shortcut hit and this listener has max priority, calls onShortcutPressed event
+		void OnShortcutPressed() override;
+    };
+
+	// -------------------------------------------------------------------------------------
+	// Shortcut keys listeners manager. Sends events to listeners when shortcut keys pressed
+	// -------------------------------------------------------------------------------------
     class ShortcutKeysListenersManager: public Singleton<ShortcutKeysListenersManager>, public KeyboardEventsListener
     {
     public:

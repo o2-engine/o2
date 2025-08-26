@@ -35,6 +35,12 @@ namespace Editor
         // Called when animation changed, checks count of animation tracks, updates curves
         void OnAnimationChanged();
 
+		// Called when animation window focused, proxying focus to curves editor
+		void OnAnimationWindowFocused();
+
+		// Called when animation window unfocused, proxying unfocus to curves editor
+		void OnAnimationWindowUnfocused();
+
         // Returns create menu category in editor
         static String GetCreateMenuCategory();
 
@@ -83,6 +89,8 @@ CLASS_METHODS_META(Editor::CurvesSheet)
     FUNCTION().PUBLIC().SIGNATURE(void, SetAnimation, const Ref<AnimationClip>&);
     FUNCTION().PUBLIC().SIGNATURE(void, UpdateCurvesColors);
     FUNCTION().PUBLIC().SIGNATURE(void, OnAnimationChanged);
+    FUNCTION().PUBLIC().SIGNATURE(void, OnAnimationWindowFocused);
+    FUNCTION().PUBLIC().SIGNATURE(void, OnAnimationWindowUnfocused);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetCreateMenuCategory);
     FUNCTION().PRIVATE().SIGNATURE(void, InitializeControls);
     FUNCTION().PRIVATE().SIGNATURE(void, SetCameraAsTimelineView);

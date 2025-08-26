@@ -613,7 +613,10 @@ namespace Editor
 
     void SceneEditScreen::OnCursorPressed(const Input::Cursor& cursor)
     {
-        o2EditorTree.FocusTree();
+        if (mParentWidget)
+			mParentWidget.Lock()->Focus();
+
+        o2EditorTree.OnSceneFocused();
 
         if (mEnabledTool && !IsHandleWorking(cursor))
             mEnabledTool->OnCursorPressed(cursor);
@@ -656,8 +659,11 @@ namespace Editor
     }
 
     void SceneEditScreen::OnCursorRightMousePressed(const Input::Cursor& cursor)
-    {
-        o2EditorTree.FocusTree();
+	{
+		if (mParentWidget)
+			mParentWidget.Lock()->Focus();
+
+		o2EditorTree.OnSceneFocused();
 
         if (mEnabledTool && !IsHandleWorking(cursor))
             mEnabledTool->OnCursorRightMousePressed(cursor);

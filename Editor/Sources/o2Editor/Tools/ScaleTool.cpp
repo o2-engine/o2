@@ -181,7 +181,7 @@ namespace Editor
 
     void ScaleTool::OnKeyPressed(const Input::Key& key)
     {
-        if (!o2EditorTree.IsTreeFocused())
+        if (!o2EditorSceneWindow.IsFocused())
             return;
 
         if (key == VK_CONTROL)
@@ -195,7 +195,7 @@ namespace Editor
 
     void ScaleTool::OnKeyReleased(const Input::Key& key)
     {
-        if (!o2EditorTree.IsTreeFocused())
+        if (!o2EditorSceneWindow.IsFocused())
             return;
 
         if (key == VK_CONTROL)

@@ -258,6 +258,11 @@ namespace Editor
 		mSaveAssetButton->interactable = mEditingAsset && mEditingAsset.Lock()->IsDirty();
 	}
 
+	Ref<RefCounterable> IAssetEditorWindow::CastToRefCounterable(const Ref<IAssetEditorWindow>& ref)
+	{
+		return DynamicCast<IEditorWindow>(ref);
+	}
+
 	void IAssetEditorWindow::UpdateWindowTitle()
 	{
 		if (!mWindow)
@@ -335,11 +340,31 @@ namespace Editor
 		mRevertAssetButton->name = "revert button";
 		mRevertAssetButton->onClick += THIS_FUNC(MenuRevertAsset);
 		mButtonsPanel->AddChild(mRevertAssetButton);
+
+		mUndoActionListener = mmake<FunctionalShortcutKeysListener>();
+		mUndoActionListener->onShortcutPressed = [this]() { UndoAction(); };
+		mUndoActionListener->SetShortcut(ShortcutKeys('Z', true));
+
+		mRedoActionListener = mmake<FunctionalShortcutKeysListener>();
+		mRedoActionListener->onShortcutPressed = [this]() { RedoAction(); };
+		mRedoActionListener->SetShortcut(ShortcutKeys('Y', true));
 	}
 
 	String IAssetEditorWindow::GetWindowTitle() const
 	{
 		return "Asset Editor";
+	}
+
+	void IAssetEditorWindow::OnFocused()
+	{
+		mUndoActionListener->SetMaxPriority();
+		mRedoActionListener->SetMaxPriority();
+	}
+
+	void IAssetEditorWindow::OnUnfocused()
+	{
+		mUndoActionListener->SetMinPriority();
+		mRedoActionListener->SetMinPriority();
 	}
 
 	bool IAssetEditorWindow::IsComponentPreviewAvailable() const

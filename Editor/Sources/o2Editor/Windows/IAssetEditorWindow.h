@@ -5,10 +5,11 @@
 
 #include "o2/Assets/Asset.h"
 #include "o2/Assets/AssetRef.h"
-#include "o2Editor/Properties/Basic/AssetProperty.h"
+#include "o2/Events/ShortcutKeysListener.h"
 #include "o2/Scene/UI/Widget.h"
 #include "o2/Utils/Editor/AssetEditablePreview.h"
 #include "o2/Utils/Function/Function.h"
+#include "o2Editor/Properties/Basic/AssetProperty.h"
 
 using namespace o2;
 
@@ -89,9 +90,11 @@ namespace Editor
 		// Updates window logic; updates save icon state
 		void Update(float dt) override;
 
+		// Casts Ref<IAssetEditorWindow> to Ref<RefCounterable>
+		static Ref<RefCounterable> CastToRefCounterable(const Ref<IAssetEditorWindow>& ref);
+
         IOBJECT(IAssetEditorWindow);
         REF_COUNTERABLE_IMPL(IEditorWindow, ActionsList);
-        static Ref<RefCounterable> CastToRefCounterable(const Ref<IAssetEditorWindow>& ref) { return DynamicCast<IEditorWindow>(ref); }
 
     protected:
         WeakRef<Asset> mEditingAsset;                    // Currently editing asset
@@ -116,12 +119,21 @@ namespace Editor
 		Ref<Button> mSaveAsAssetButton; // Save as button
 		Ref<Button> mRevertAssetButton; // Reset button
 
+		Ref<FunctionalShortcutKeysListener> mUndoActionListener; // Listener for undo action shortcut
+		Ref<FunctionalShortcutKeysListener> mRedoActionListener; // Listener for redo action shortcut
+
     protected:
         // Initializes window and controls
         virtual void InitializeWindow();
 
         // Returns window title
         virtual String GetWindowTitle() const;
+
+		// Called when window is focused, updates shortcut listeners priority
+		void OnFocused() override;
+
+		// Called when window is unfocused, updates shortcut listeners priority
+		void OnUnfocused() override;
 
         // Called when asset editing starts
         virtual void OnStartEditingAsset() {}
@@ -207,6 +219,8 @@ CLASS_FIELDS_META(Editor::IAssetEditorWindow)
     FIELD().PROTECTED().NAME(mSaveAssetButton);
     FIELD().PROTECTED().NAME(mSaveAsAssetButton);
     FIELD().PROTECTED().NAME(mRevertAssetButton);
+    FIELD().PROTECTED().NAME(mUndoActionListener);
+    FIELD().PROTECTED().NAME(mRedoActionListener);
 }
 END_META;
 CLASS_METHODS_META(Editor::IAssetEditorWindow)
@@ -238,6 +252,8 @@ CLASS_METHODS_META(Editor::IAssetEditorWindow)
     FUNCTION().PUBLIC().SIGNATURE_STATIC(Ref<RefCounterable>, CastToRefCounterable, const Ref<IAssetEditorWindow>&);
     FUNCTION().PROTECTED().SIGNATURE(void, InitializeWindow);
     FUNCTION().PROTECTED().SIGNATURE(String, GetWindowTitle);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnFocused);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnUnfocused);
     FUNCTION().PROTECTED().SIGNATURE(void, OnStartEditingAsset);
     FUNCTION().PROTECTED().SIGNATURE(void, OnCompletedEditingAsset);
     FUNCTION().PROTECTED().SIGNATURE(void, OnStartEditingComponent);

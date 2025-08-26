@@ -65,6 +65,9 @@ namespace Editor
 
         mEditorWidget->SetSelectionSpriteImage(AssetRef<ImageAsset>("ui/UI_Window_place.png"));
 
+		mWindow->onFocused += [&]() { mEditorWidget->OnFocusedByRoot(); };
+		mWindow->onUnfocused += [&]() { mEditorWidget->OnUnfocusedByRoot(); };
+
         mWindow->AddChild(mEditorWidget);
     }
 

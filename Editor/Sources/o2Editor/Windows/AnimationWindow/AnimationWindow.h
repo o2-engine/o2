@@ -96,6 +96,12 @@ namespace Editor
         // Initializes window
         void InitializeWindow() override;
 
+		// Called when window has focused, calls focus events in child widgets
+		void OnFocused() override;
+
+		// Called when window has unfocused, calls unfocus events in child widgets
+		void OnUnfocused() override;
+
         // Returns window title
         String GetWindowTitle() const override;
 
@@ -217,6 +223,8 @@ CLASS_METHODS_META(Editor::AnimationWindow)
     FUNCTION().PUBLIC().SIGNATURE_STATIC(Ref<RefCounterable>, CastToRefCounterable, const Ref<AnimationWindow>&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnClosed);
     FUNCTION().PROTECTED().SIGNATURE(void, InitializeWindow);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnFocused);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnUnfocused);
     FUNCTION().PROTECTED().SIGNATURE(String, GetWindowTitle);
     FUNCTION().PROTECTED().SIGNATURE(void, InitializeHandlesSheet);
     FUNCTION().PROTECTED().SIGNATURE(void, InitializeTree);

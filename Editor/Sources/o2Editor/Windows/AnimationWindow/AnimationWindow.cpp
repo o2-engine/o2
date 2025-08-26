@@ -105,7 +105,17 @@ namespace Editor
         PropertiesListDlg::InitializeSingleton();
     }
 
-    String AnimationWindow::GetWindowTitle() const
+	void AnimationWindow::OnFocused()
+	{
+        mCurves->OnAnimationWindowFocused();
+	}
+
+	void AnimationWindow::OnUnfocused()
+	{
+        mCurves->OnAnimationWindowUnfocused();
+	}
+
+	String AnimationWindow::GetWindowTitle() const
     {
         return "Animation";
     }

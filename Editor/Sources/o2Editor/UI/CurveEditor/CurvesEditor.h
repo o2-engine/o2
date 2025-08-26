@@ -91,6 +91,12 @@ namespace Editor
         // Enables curves scale adjusting. When it is true, all curves adopts their size to be in the same view range
         void SetAdjustCurvesScale(bool enable);
 
+		// Called when editor root window was focused. Updates context menu priority
+        void OnFocusedByRoot();
+
+		// Called when editor root window was unfocused. Updates context menu priority
+		void OnUnfocusedByRoot();
+
         // Updates layout
         void UpdateSelfTransform() override;
 
@@ -304,15 +310,7 @@ namespace Editor
 
         Vector<CurveKeysInfo> mBeforeTransformKeys; // Stored selected keys before handles transformed
 
-        ActionsList mActionsList; // Local actions list. It uses when actionFallDown is null
-
     protected:
-        // Called when visible was changed. Sets context menu items priority
-        void OnEnabled() override;
-
-        // Called when visible was changed. Sets context menu items priority
-        void OnDisabled() override;
-
         // Called when scrolling
         void OnScrolled(float scroll) override;
 
@@ -519,7 +517,6 @@ CLASS_FIELDS_META(Editor::CurvesEditor)
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mIsViewScrolling);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mNeedAdjustView);
     FIELD().PROTECTED().NAME(mBeforeTransformKeys);
-    FIELD().PROTECTED().NAME(mActionsList);
 }
 END_META;
 CLASS_METHODS_META(Editor::CurvesEditor)
@@ -544,11 +541,11 @@ CLASS_METHODS_META(Editor::CurvesEditor)
     FUNCTION().PUBLIC().SIGNATURE(void, SetSupportHandleImages, const AssetRef<ImageAsset>&, const AssetRef<ImageAsset>&, const AssetRef<ImageAsset>&, const AssetRef<ImageAsset>&);
     FUNCTION().PUBLIC().SIGNATURE(void, SetRangeHandleImages, const AssetRef<ImageAsset>&, const AssetRef<ImageAsset>&, const AssetRef<ImageAsset>&, const AssetRef<ImageAsset>&);
     FUNCTION().PUBLIC().SIGNATURE(void, SetAdjustCurvesScale, bool);
+    FUNCTION().PUBLIC().SIGNATURE(void, OnFocusedByRoot);
+    FUNCTION().PUBLIC().SIGNATURE(void, OnUnfocusedByRoot);
     FUNCTION().PUBLIC().SIGNATURE(void, UpdateSelfTransform);
     FUNCTION().PUBLIC().SIGNATURE(const Ref<ContextMenu>&, GetContextMenu);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(Ref<RefCounterable>, CastToRefCounterable, const Ref<CurvesEditor>&);
-    FUNCTION().PROTECTED().SIGNATURE(void, OnEnabled);
-    FUNCTION().PROTECTED().SIGNATURE(void, OnDisabled);
     FUNCTION().PROTECTED().SIGNATURE(void, OnScrolled, float);
     FUNCTION().PROTECTED().SIGNATURE(Ref<Curve>, FindCurve, const String&);
     FUNCTION().PROTECTED().SIGNATURE(void, InitializeContextMenu);

@@ -160,7 +160,8 @@ namespace Editor
     void IObjectPropertiesViewer::OnFieldChangeCompleted(const String& path, const Vector<DataDocument>& before,
                                                          const Vector<DataDocument>& after)
     {
-        onChangeCompleted(this->path + "/" + path, before, after);
+		String finalPath = this->path.IsEmpty() ? path : this->path + "/" + path;
+        onChangeCompleted(finalPath, before, after);
     }
 
 }

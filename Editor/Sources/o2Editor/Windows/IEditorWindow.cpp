@@ -18,8 +18,10 @@ namespace Editor
     {
         mWindow = o2UI.CreateWidget<DockableWindow>();
         mWindow->layout->size = Vec2F(200, 200);
-        mWindow->onOpened = THIS_FUNC(OnOpened);
-        mWindow->onClosed = THIS_FUNC(OnClosed);
+        mWindow->onOpened += THIS_FUNC(OnOpened);
+        mWindow->onClosed += THIS_FUNC(OnClosed);
+		mWindow->onFocused += THIS_FUNC(OnFocused);
+		mWindow->onUnfocused += THIS_FUNC(OnUnfocused);
 
         EditorUIRoot.AddWidget(mWindow);
     }
@@ -51,7 +53,12 @@ namespace Editor
         SetVisible(false);
     }
 
-    const Ref<DockableWindow>& IEditorWindow::GetWindow() const
+	bool IEditorWindow::IsFocused() const
+	{
+		return mWindow->IsFocused();
+	}
+
+	const Ref<DockableWindow>& IEditorWindow::GetWindow() const
     {
         return mWindow;
     }

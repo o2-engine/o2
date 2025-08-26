@@ -188,7 +188,7 @@ namespace Editor
 
     void MoveTool::OnKeyPressed(const Input::Key& key)
     {
-        if (!o2EditorTree.IsTreeFocused())
+        if (!o2EditorSceneWindow.IsFocused())
             return;
 
         float delta = o2Input.IsKeyDown(VK_SHIFT) ? snapStep : 1.0f;
@@ -218,7 +218,7 @@ namespace Editor
 
     void MoveTool::OnKeyStayDown(const Input::Key& key)
     {
-        if (!o2EditorTree.IsTreeFocused())
+        if (!o2EditorSceneWindow.IsFocused())
             return;
 
         float delta = o2Input.IsKeyDown(VK_SHIFT) ? snapStep : 1.0f;

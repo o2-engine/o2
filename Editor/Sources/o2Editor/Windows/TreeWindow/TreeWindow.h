@@ -45,11 +45,8 @@ namespace Editor
         // Returns draw order tree widget
         const Ref<DrawOrderTree>& GetDrawOrderTree() const;
 
-        // Enables focus on current tree
-        void FocusTree();
-
-        // Returns is current tree focused
-        bool IsTreeFocused() const;
+		// Called when scene was focused, updates context menu priority
+		void OnSceneFocused();
 
         // Sets selected objects
         void SetSelectedObjects(const Vector<Ref<SceneEditableObject>>& objects);
@@ -230,8 +227,7 @@ CLASS_METHODS_META(Editor::TreeWindow)
     FUNCTION().PUBLIC().CONSTRUCTOR(RefCounter*, const TreeWindow&);
     FUNCTION().PUBLIC().SIGNATURE(const Ref<SceneHierarchyTree>&, GetSceneTree);
     FUNCTION().PUBLIC().SIGNATURE(const Ref<DrawOrderTree>&, GetDrawOrderTree);
-    FUNCTION().PUBLIC().SIGNATURE(void, FocusTree);
-    FUNCTION().PUBLIC().SIGNATURE(bool, IsTreeFocused);
+    FUNCTION().PUBLIC().SIGNATURE(void, OnSceneFocused);
     FUNCTION().PUBLIC().SIGNATURE(void, SetSelectedObjects, const Vector<Ref<SceneEditableObject>>&);
     FUNCTION().PUBLIC().SIGNATURE(void, UpdateTreeView);
     FUNCTION().PUBLIC().SIGNATURE(void, RestoreExpandedFromCache);

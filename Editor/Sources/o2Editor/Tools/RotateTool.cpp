@@ -257,7 +257,7 @@ namespace Editor
 
     void RotateTool::OnCursorStillDown(const Input::Cursor& cursor)
     {
-        if (!o2EditorTree.IsTreeFocused())
+        if (!o2EditorSceneWindow.IsFocused())
             return;
 
         if (mRingPressed)
@@ -296,7 +296,7 @@ namespace Editor
 
     void RotateTool::OnKeyPressed(const Input::Key& key)
     {
-        if (!o2EditorTree.IsTreeFocused())
+        if (!o2EditorSceneWindow.IsFocused())
             return;
 
         float angle = o2Input.IsKeyDown(VK_SHIFT) ? angleSnapStep : 1.0f;

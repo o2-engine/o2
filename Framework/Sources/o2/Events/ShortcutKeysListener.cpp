@@ -5,7 +5,7 @@ namespace o2
 {
     DECLARE_SINGLETON(ShortcutKeysListenersManager);
 
-       ShortcutKeysListener::~ShortcutKeysListener()
+    ShortcutKeysListener::~ShortcutKeysListener()
     {
         ShortcutKeysListenersManager::UnRegister(mShortcut, this);
     }
@@ -48,9 +48,23 @@ namespace o2
     bool ShortcutKeysListener::IsEnabled() const
     {
         return mEnabled;
-    }
+	}
 
-    ShortcutKeysListenersManager::ShortcutKeysListenersManager(RefCounter* refCounter):
+	FunctionalShortcutKeysListener::FunctionalShortcutKeysListener(const Function<void()>& onShortcutPressed):
+		onShortcutPressed(onShortcutPressed)
+	{}
+
+	void FunctionalShortcutKeysListener::OnShortcutPressed()
+	{
+        onShortcutPressed();
+	}
+
+	RefCounter* FunctionalShortcutKeysListener::GetRefCounter() const
+	{
+		return RefCounterable::GetRefCounter();
+	}
+
+	ShortcutKeysListenersManager::ShortcutKeysListenersManager(RefCounter* refCounter) :
         Singleton<ShortcutKeysListenersManager>(refCounter)
     {}
 
