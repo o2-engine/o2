@@ -749,8 +749,6 @@ namespace Editor
         mContextMenu->AddItem("Delete", [&]() { OnContextDeletePressed(); }, AssetRef<ImageAsset>(), ShortcutKeys(VK_DELETE));
 
         onFocused = [&]() { mContextMenu->SetItemsMaxPriority(); };
-        onUnfocused = [&]() {
-            mContextMenu->SetItemsMinPriority(); };
 
         AddInternalWidget(mContextMenu);
     }

@@ -108,7 +108,6 @@ namespace Editor
         mContextMenu->AddItem("Delete", [&]() { OnContextDeletePressed(); }, AssetRef<ImageAsset>(), ShortcutKeys(VK_DELETE));
 
         mFoldersTree->onFocused = [&]() { mContextMenu->SetItemsMaxPriority(); };
-        mFoldersTree->onUnfocused = [&]() { mContextMenu->SetItemsMinPriority(); };
 
         AddChild(mContextMenu);
     }

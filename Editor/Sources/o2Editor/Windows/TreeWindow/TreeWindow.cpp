@@ -231,8 +231,7 @@ namespace Editor
 
         mWindow->AddChild(mTreeContextMenu);
 
-        mSceneTree->onFocused = [&]() { mTreeContextMenu->SetItemsMaxPriority(); };
-        mSceneTree->onUnfocused = [&]() { mTreeContextMenu->SetItemsMinPriority(); };
+        mSceneTree->onFocused = THIS_FUNC(OnSceneFocused);
     }
 
     void TreeWindow::InitializeCreateMenu()

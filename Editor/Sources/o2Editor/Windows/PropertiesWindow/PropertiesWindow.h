@@ -89,6 +89,9 @@ namespace Editor
 
         // Called when some property field was changed
         void OnPropertyChanged(const Ref<IPropertyField>& field);
+
+		// Called when window was focused, calls focus delegate from scene tree
+        void OnFocusedWindow();
     };
 }
 // --- META ---
@@ -128,6 +131,7 @@ CLASS_METHODS_META(Editor::PropertiesWindow)
     FUNCTION().PROTECTED().SIGNATURE(void, InitializeViewers);
     FUNCTION().PROTECTED().SIGNATURE(void, OnPrivateFieldsVisibleChanged, bool);
     FUNCTION().PROTECTED().SIGNATURE(void, OnPropertyChanged, const Ref<IPropertyField>&);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnFocusedWindow);
 }
 END_META;
 // --- END META ---

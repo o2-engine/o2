@@ -297,9 +297,7 @@ namespace Editor
 	}
 
 	void CurvesEditor::OnUnfocusedByRoot()
-	{
-        mContextMenu->SetItemsMinPriority();
-	}
+	{}
 
 	void CurvesEditor::OnScrolled(float scroll)
     {

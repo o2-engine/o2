@@ -362,10 +362,7 @@ namespace Editor
 	}
 
 	void IAssetEditorWindow::OnUnfocused()
-	{
-		mUndoActionListener->SetMinPriority();
-		mRedoActionListener->SetMinPriority();
-	}
+	{}
 
 	bool IAssetEditorWindow::IsComponentPreviewAvailable() const
 	{

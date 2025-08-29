@@ -414,7 +414,6 @@ namespace Editor
 		AddChild(mTransitionContextMenu);
 
 		onFocused = [&]() { mContextMenu->SetItemsMaxPriority(); };
-		onUnfocused = [&]() { mContextMenu->SetItemsMinPriority(); };
     }
 
     void AnimationStateGraphEditor::RecalculateViewArea()

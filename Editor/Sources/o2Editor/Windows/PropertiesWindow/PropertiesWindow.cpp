@@ -11,6 +11,7 @@
 #include "o2Editor/Windows/PropertiesWindow/DefaultPropertiesViewer.h"
 #include "o2Editor/Windows/PropertiesWindow/IPropertiesViewer.h"
 #include "o2Editor/Windows/PropertiesWindow/WidgetLayerViewer/WidgetLayerViewer.h"
+#include "o2Editor/Windows/TreeWindow/TreeWindow.h"
 
 
 DECLARE_SINGLETON(Editor::PropertiesWindow);
@@ -43,6 +44,8 @@ namespace Editor
         mWindow->SetIconLayout(Layout::Based(BaseCorner::LeftTop, Vec2F(20, 20), Vec2F(-1, 2)));
         mWindow->SetViewLayout(Layout::BothStretch(-2, 0, 0, 18));
         mWindow->SetClippingLayout(Layout::BothStretch(-1, -2, 0, 15));
+
+		mWindow->onFocused += THIS_FUNC(OnFocusedWindow);
 
         InitializeWindowContext();
     }
@@ -84,7 +87,12 @@ namespace Editor
         mTargetsChanged = true;
     }
 
-    void PropertiesWindow::SetTarget(IObject* target)
+	void PropertiesWindow::OnFocusedWindow()
+	{
+		o2EditorTree.OnSceneFocused();
+	}
+
+	void PropertiesWindow::SetTarget(IObject* target)
     {
         if (target == nullptr)
             SetTargets(Vector<IObject*>());
