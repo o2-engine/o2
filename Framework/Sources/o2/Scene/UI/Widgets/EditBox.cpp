@@ -1121,13 +1121,17 @@ namespace o2
 
         if (unicode != 0 && unicode != 8)
         {
-            if (unicode == 13)
-                unicode = 10;
+            const char16_t returnChar = 13;
+            const char16_t newlineChar = 10;
+            const char16_t tabChar = 9;
+            
+            if (unicode == returnChar) 
+                unicode = newlineChar;
 
-            if (unicode == 10 && !mMultiLine)
+            if (unicode == newlineChar && !mMultiLine)
                 return;
 
-            if (unicode == 9)
+            if (unicode == tabChar)
                 return;
 
             if (mAvailableSymbols.Length() > 0)

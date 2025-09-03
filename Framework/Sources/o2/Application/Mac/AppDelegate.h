@@ -2,8 +2,10 @@
 
 #import <Cocoa/Cocoa.h>
 
-@interface AppDelegate : NSObject <NSApplicationDelegate>
+@interface O2Application : NSApplication
+@end
 
+@interface AppDelegate : NSObject <NSApplicationDelegate>
 @end
 
 #endif

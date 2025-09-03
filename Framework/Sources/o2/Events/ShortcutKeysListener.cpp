@@ -130,6 +130,8 @@ namespace o2
 
     void ShortcutKeysListenersManager::OnKeyPressed(const Input::Key& key)
     {
+        //o2Debug.Log("ShortcutKeysListenersManager::OnKeyPressed: " + String(key.keyCode));
+
         for (auto& kv : mListeners)
         {
             if (kv.first.IsPressed() && !kv.second.IsEmpty())

@@ -224,7 +224,7 @@
 #define VK_Y              XK_y
 #define VK_Z              XK_z
 
-#else
+#elif defined PLATFORM_MAC
 
 #define VK_F1             -122
 #define VK_F2             -120
@@ -255,9 +255,6 @@
 #define VK_OEM_2          -44
 
 #define VK_ESCAPE         -53
-
-//#define VK_SCROLL       -107
-//#define VK_PAUSE        -113
 
 #define VK_BACK           -51
 #define VK_TAB            -48
@@ -303,41 +300,44 @@
 #define VK_DIVIDE         -75
 #define VK_RETURN_NUMPAD  -76
 
-#define VK_0 29
-#define VK_1 18
-#define VK_2 19
-#define VK_3 20
-#define VK_4 21
-#define VK_5 23
-#define VK_6 22
-#define VK_7 26
-#define VK_8 28
-#define VK_9 25
-#define VK_A 0
-#define VK_B 11
-#define VK_C 8
-#define VK_D 2
-#define VK_E 14
-#define VK_F 3
-#define VK_G 5
-#define VK_H 4
-#define VK_I 34
-#define VK_J 38
-#define VK_K 40
-#define VK_L 37
-#define VK_M 46
-#define VK_N 45
-#define VK_O 31
-#define VK_P 35
-#define VK_Q 12
-#define VK_R 15
-#define VK_S 1
-#define VK_T 17
-#define VK_U 32
-#define VK_V 9
-#define VK_W 13
-#define VK_X 7
-#define VK_Y 16
-#define VK_Z 6
+#define VK_0 48
+#define VK_1 49
+#define VK_2 50
+#define VK_3 51
+#define VK_4 52
+#define VK_5 53
+#define VK_6 54
+#define VK_7 55
+#define VK_8 56
+#define VK_9 57
+#define VK_A 'A'
+#define VK_B 'B'    
+#define VK_C 'C'
+#define VK_D 'D'
+#define VK_E 'E'
+#define VK_F 'F'
+#define VK_G 'G'
+#define VK_H 'H'
+#define VK_I 'I'
+#define VK_J 'J'
+#define VK_K 'K'
+#define VK_L 'L'
+#define VK_M 'M'
+#define VK_N 'N'
+#define VK_O 'O'
+#define VK_P 'P'
+#define VK_Q 'Q'
+#define VK_R 'R'
+#define VK_S 'S'
+#define VK_T 'T'
+#define VK_U 'U'
+#define VK_V 'V'
+#define VK_W 'W'
+#define VK_X 'X'
+#define VK_Y 'Y'
+#define VK_Z 'Z'
 
 #endif
+
+// Cross-platform virtual key codes
+#define VK_CTRL_CMD       -1000  // Ctrl on Windows/Linux, Cmd on Mac

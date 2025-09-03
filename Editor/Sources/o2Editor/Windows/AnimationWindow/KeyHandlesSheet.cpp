@@ -459,17 +459,17 @@ namespace Editor
     {
         mContextMenu = o2UI.CreateWidget<ContextMenu>();
 
-        mContextMenu->AddItem("Copy", [&]() { CopyKeys(); }, AssetRef<ImageAsset>(), ShortcutKeys('C', true));
-        mContextMenu->AddItem("Cut", [&]() { CopyKeys(); DeleteKeys(GetSelectedKeys()); }, AssetRef<ImageAsset>(), ShortcutKeys('X', true));
-        mContextMenu->AddItem("Paste", [&]() { PasteKeys(); }, AssetRef<ImageAsset>(), ShortcutKeys('V', true));
+        mContextMenu->AddItem("Copy", [&]() { CopyKeys(); }, AssetRef<ImageAsset>(), ShortcutKeys({VK_C, VK_CTRL_CMD}));
+        mContextMenu->AddItem("Cut", [&]() { CopyKeys(); DeleteKeys(GetSelectedKeys()); }, AssetRef<ImageAsset>(), ShortcutKeys({VK_X, VK_CTRL_CMD}));
+        mContextMenu->AddItem("Paste", [&]() { PasteKeys(); }, AssetRef<ImageAsset>(), ShortcutKeys({VK_V, VK_CTRL_CMD}));
         mContextMenu->AddItem("---");
-        mContextMenu->AddItem("Delete", [&]() { DeleteKeys(GetSelectedKeys()); }, AssetRef<ImageAsset>(), ShortcutKeys(VK_DELETE));
+        mContextMenu->AddItem("Delete", [&]() { DeleteKeys(GetSelectedKeys()); }, AssetRef<ImageAsset>(), ShortcutKeys({VK_DELETE}));
         mContextMenu->AddItem("---");
-        mContextMenu->AddItem("Select all", [&]() { SelectAll(); }, AssetRef<ImageAsset>(), ShortcutKeys('A', true));
+        mContextMenu->AddItem("Select all", [&]() { SelectAll(); }, AssetRef<ImageAsset>(), ShortcutKeys({VK_A, VK_CTRL_CMD}));
         mContextMenu->AddItem("Deselect all", [&]() { DeselectAll(); });
         mContextMenu->AddItem("---");
-        mContextMenu->AddItem("Undo", [&]() { mAnimationWindow.Lock()->mActionsList->UndoAction(); }, AssetRef<ImageAsset>(), ShortcutKeys('Z', true));
-        mContextMenu->AddItem("Redo", [&]() { mAnimationWindow.Lock()->mActionsList->RedoAction(); }, AssetRef<ImageAsset>(), ShortcutKeys('Y', true));
+        mContextMenu->AddItem("Undo", [&]() { mAnimationWindow.Lock()->mActionsList->UndoAction(); }, AssetRef<ImageAsset>(), ShortcutKeys({VK_Z, VK_CTRL_CMD}));
+        mContextMenu->AddItem("Redo", [&]() { mAnimationWindow.Lock()->mActionsList->RedoAction(); }, AssetRef<ImageAsset>(), ShortcutKeys({VK_Y, VK_CTRL_CMD}));
 
         AddChild(mContextMenu);
 

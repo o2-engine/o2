@@ -176,9 +176,8 @@ namespace o2
     {
         Vector<Ref<CursorAreaEventsListener>> res;
         Vec2F localCursorPos = ToLocal(cursorPos);
-        for (auto& listenerWeak : cursorEventAreaListeners)
+        for (auto& listener : cursorEventAreaListeners)
         {
-            auto listener = listenerWeak.Lock();
             if (!listener || !listener->IsUnderPoint(localCursorPos) || !listener->mScissorRect.IsInside(localCursorPos) || !listener->mInteractable)
                 continue;
 
@@ -229,9 +228,8 @@ namespace o2
     {
         auto localCursor = ConvertLocalCursor(cursor);
 
-        for (auto& listenerWeak : cursorEventAreaListeners)
+        for (auto& listener : cursorEventAreaListeners)
         {
-            auto listener = listenerWeak.Lock();
             if (!listener || !listener->IsUnderPoint(localCursor.position) || !listener->mScissorRect.IsInside(localCursor.position))
                 continue;
 
@@ -279,9 +277,8 @@ namespace o2
     {
         auto localCursor = ConvertLocalCursor(cursor);
 
-        for (auto& listenerWeak : cursorEventAreaListeners)
+        for (auto& listener : cursorEventAreaListeners)
         {
-            auto listener = listenerWeak.Lock();
             if (listener && !listener->IsUnderPoint(localCursor.position))
                 listener->OnCursorPressedOutside(localCursor);
         }
@@ -352,9 +349,8 @@ namespace o2
     {
         auto localCursor = ConvertLocalCursor(cursor);
 
-        for (auto& listenerWeak : cursorEventAreaListeners)
+        for (auto& listener : cursorEventAreaListeners)
         {
-            auto listener = listenerWeak.Lock();
             if (listener && !listener->IsUnderPoint(localCursor.position))
                 listener->OnCursorReleasedOutside(localCursor);
         }

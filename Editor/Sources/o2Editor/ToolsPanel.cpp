@@ -106,13 +106,13 @@ namespace Editor
         mPauseToggle = o2UI.CreateWidget<Toggle>("pause");
         mPauseToggle->onToggle = [this](bool value) { OnPauseToggled(value); };
         *mPauseToggle->layout = WidgetLayout::Based(BaseCorner::Left, Vec2F(20, 20), Vec2F(22, 1));
-        mPauseToggle->shortcut = ShortcutKeys(VK_F11);
+        mPauseToggle->shortcut = ShortcutKeys({VK_F11});
         mPlayPanel->AddChild(mPauseToggle);
 
         mStepButton = o2UI.CreateWidget<Button>("step");
         mStepButton->onClick = [this]() { OnStepPressed(); };
         *mStepButton->layout = WidgetLayout::Based(BaseCorner::Right, Vec2F(20, 20), Vec2F(-5, 1));
-        mStepButton->shortcut = ShortcutKeys(VK_F10);
+        mStepButton->shortcut = ShortcutKeys({VK_F10});
         mPlayPanel->AddChild(mStepButton);
 
         auto playPanelPlayStateAnim = mmake<AnimationClip>();

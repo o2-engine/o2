@@ -64,6 +64,9 @@ namespace o2
         // Constructor from basic string
         TString(const std::basic_string<T>& data);
 
+        // Explicit constructor from char value
+        explicit TString(char value);
+
         // Explicit constructor from boolean value
         explicit TString(bool value);
 

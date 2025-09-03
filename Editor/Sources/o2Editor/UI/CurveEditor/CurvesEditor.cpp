@@ -342,16 +342,16 @@ namespace Editor
 
             ContextMenu::Item::Separator(),
 
-            mmake<ContextMenu::Item>("Copy keys", THIS_FUNC(OnCopyPressed), "", AssetRef<ImageAsset>(), ShortcutKeys('C', true)),
-            mmake<ContextMenu::Item>("Cut keys", THIS_FUNC(OnCutPressed), "", AssetRef<ImageAsset>(), ShortcutKeys('X', true)),
-            mmake<ContextMenu::Item>("Paste keys", THIS_FUNC(OnPastePressed), "", AssetRef<ImageAsset>(), ShortcutKeys('V', true)),
-            mmake<ContextMenu::Item>("Delete keys", THIS_FUNC(OnDeletePressed), "", AssetRef<ImageAsset>(), ShortcutKeys(VK_DELETE)),
+            mmake<ContextMenu::Item>("Copy keys", THIS_FUNC(OnCopyPressed), "", AssetRef<ImageAsset>(), ShortcutKeys({VK_C, VK_CTRL_CMD})),
+            mmake<ContextMenu::Item>("Cut keys", THIS_FUNC(OnCutPressed), "", AssetRef<ImageAsset>(), ShortcutKeys({VK_X, VK_CTRL_CMD})),
+            mmake<ContextMenu::Item>("Paste keys", THIS_FUNC(OnPastePressed), "", AssetRef<ImageAsset>(), ShortcutKeys({VK_V, VK_CTRL_CMD})),
+            mmake<ContextMenu::Item>("Delete keys", THIS_FUNC(OnDeletePressed), "", AssetRef<ImageAsset>(), ShortcutKeys({VK_DELETE})),
             mmake<ContextMenu::Item>("Insert key", THIS_FUNC(OnInsertPressed)),
 
             ContextMenu::Item::Separator(),
 
-            mmake<ContextMenu::Item>("Undo", THIS_FUNC(OnUndoPressed), "", AssetRef<ImageAsset>(), ShortcutKeys('Z', true)),
-            mmake<ContextMenu::Item>("Redo", THIS_FUNC(OnRedoPressed), "", AssetRef<ImageAsset>(), ShortcutKeys('Z', true, true))
+            mmake<ContextMenu::Item>("Undo", THIS_FUNC(OnUndoPressed), "", AssetRef<ImageAsset>(), ShortcutKeys({VK_Z, VK_CTRL_CMD})),
+            mmake<ContextMenu::Item>("Redo", THIS_FUNC(OnRedoPressed), "", AssetRef<ImageAsset>(), ShortcutKeys({VK_Z, VK_CTRL_CMD, VK_SHIFT}))
             }
         );
 

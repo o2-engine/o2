@@ -82,6 +82,11 @@ namespace o2
     }
 
     template<typename T>
+    TString<T>::TString(char value):
+        std::basic_string<T>(1, value)
+    {}
+
+    template<typename T>
     TString<T>::TString(bool value)
     {
         *this = value ? "true" : "false";

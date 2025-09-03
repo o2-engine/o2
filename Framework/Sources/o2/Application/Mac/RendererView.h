@@ -8,7 +8,10 @@
 
 @end
 
-@interface ViewController : MTKView
+@interface ViewController : MTKView {
+    NSMutableSet<NSNumber *> *pressedKeysWithCmd;
+    NSMutableSet<NSNumber *> *currentlyPressedKeys;
+}
 
 - (void)initializeMouseTracking;
 

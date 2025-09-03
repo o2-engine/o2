@@ -16,7 +16,7 @@ namespace o2
 		Basis  renderBasis;    // Camera render basis after layer content drawing moment
 		Camera camera;         // Camera used to draw this layer
 
-		Vector<WeakRef<CursorAreaEventsListener>> cursorEventAreaListeners; // List of contained cursor event listeners
+		Vector<Ref<CursorAreaEventsListener>> cursorEventAreaListeners; // List of contained cursor event listeners
 
         bool isEditor      = false; // Is this layer drawn in editor scope
         bool isTransparent = false; // Is this layer transparent to input other listeners

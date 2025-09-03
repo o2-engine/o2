@@ -343,11 +343,11 @@ namespace Editor
 
 		mUndoActionListener = mmake<FunctionalShortcutKeysListener>();
 		mUndoActionListener->onShortcutPressed = [this]() { UndoAction(); };
-		mUndoActionListener->SetShortcut(ShortcutKeys('Z', true));
+		mUndoActionListener->SetShortcut(ShortcutKeys({VK_Z, VK_CTRL_CMD}));
 
 		mRedoActionListener = mmake<FunctionalShortcutKeysListener>();
 		mRedoActionListener->onShortcutPressed = [this]() { RedoAction(); };
-		mRedoActionListener->SetShortcut(ShortcutKeys('Y', true));
+		mRedoActionListener->SetShortcut(ShortcutKeys({VK_Y, VK_CTRL_CMD}));
 	}
 
 	String IAssetEditorWindow::GetWindowTitle() const

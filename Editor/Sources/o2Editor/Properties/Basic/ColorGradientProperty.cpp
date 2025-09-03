@@ -58,7 +58,7 @@ namespace Editor
 
         mHandleContextMenu = o2UI.CreateWidget<ContextMenu>();
         mHandleContextMenu->AddItem("Change color", [=]() { OpenKeyColorPick(mSelectedHandleUID); }, nullptr, ShortcutKeys("Double click"));
-        mHandleContextMenu->AddItem("Delete key", [=]() { DeleteKey(mSelectedHandleUID); }, nullptr, ShortcutKeys(VK_DELETE));
+        mHandleContextMenu->AddItem("Delete key", [=]() { DeleteKey(mSelectedHandleUID); }, nullptr, ShortcutKeys({VK_DELETE}));
         mBox->AddChild(mHandleContextMenu);
     }
 

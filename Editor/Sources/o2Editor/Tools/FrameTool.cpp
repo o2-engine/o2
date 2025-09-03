@@ -166,7 +166,7 @@ namespace Editor
 
     ShortcutKeys FrameTool::GetShortcut() const
     {
-        return ShortcutKeys('T');
+        return ShortcutKeys({ VK_T });
     }
 
     void FrameTool::DrawScene()

@@ -38,7 +38,7 @@ namespace Editor
 
     ShortcutKeys RotateTool::GetShortcut() const
     {
-        return ShortcutKeys('E');
+        return ShortcutKeys({ VK_E });
     }
 
     void RotateTool::Update(float dt)

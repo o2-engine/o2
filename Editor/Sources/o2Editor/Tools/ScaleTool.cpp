@@ -58,7 +58,7 @@ namespace Editor
 
     ShortcutKeys ScaleTool::GetShortcut() const
     {
-        return ShortcutKeys('R');
+        return ShortcutKeys({VK_R});
     }
 
     void ScaleTool::Update(float dt)

@@ -38,7 +38,7 @@ namespace o2
     
     void Application::InitializePlatform()
     {
-        [NSApplication sharedApplication];
+        [O2Application sharedApplication];
         [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
         [NSApp activateIgnoringOtherApps:YES];        
         [NSApp setDelegate:[[AppDelegate alloc] init]];

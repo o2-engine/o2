@@ -225,7 +225,6 @@ namespace o2
         return mReleasedKeys;
     }
 
-
     void Input::PreUpdate()
     {
         PROFILE_SAMPLE_FUNC();
@@ -240,6 +239,8 @@ namespace o2
 
     void Input::OnKeyPressed(KeyboardKey key)
     {
+        //o2Debug.Log("OnKeyPressed: %d", key);
+
         auto msg = mmake<InputKeyPressedMsg>();
         msg->key = key;
         mInputQueue.Add(msg);
@@ -247,6 +248,8 @@ namespace o2
 
     void Input::OnKeyReleased(KeyboardKey key)
     {
+        //o2Debug.Log("OnKeyReleased: %d", key);
+        
         auto msg = mmake<InputKeyReleasedMsg>();
         msg->key = key;
         mInputQueue.Add(msg);
@@ -488,12 +491,31 @@ namespace o2
     bool Input::InputKeyPressedMsg::Apply()
     {
         o2Input.OnKeyPressedMsgApply(key);
+
+    #if defined PLATFORM_MAC
+        if (key == VK_COMMAND)
+            o2Input.OnKeyPressedMsgApply(VK_CTRL_CMD);
+    #elif defined PLATFORM_WINDOWS || defined PLATFORM_LINUX
+        if (key == VK_CONTROL)
+            o2Input.OnKeyPressedMsgApply(VK_CTRL_CMD);
+    #endif
+
         return true;
     }
 
     bool Input::InputKeyReleasedMsg::Apply()
     {
-        return o2Input.OnKeyReleasedMsgApply(key);
+        bool result = o2Input.OnKeyReleasedMsgApply(key);
+
+    #if defined PLATFORM_MAC
+        if (key == VK_COMMAND)
+            o2Input.OnKeyReleasedMsgApply(VK_CTRL_CMD);
+    #elif defined PLATFORM_WINDOWS || defined PLATFORM_LINUX
+        if (key == VK_CONTROL)
+            o2Input.OnKeyReleasedMsgApply(VK_CTRL_CMD);
+    #endif
+
+        return result;
     }
 
     bool Input::InputMouseWheelMsg::Apply()

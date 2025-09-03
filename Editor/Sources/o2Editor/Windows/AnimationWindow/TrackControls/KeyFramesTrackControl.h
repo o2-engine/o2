@@ -451,7 +451,11 @@ namespace Editor
 
         typename Wrapper::KeyType key;
         key.position = time;
-        key.value = Wrapper::GetValue(*track, time);
+
+        if (!Wrapper::GetKeys(*track).IsEmpty())
+            key.value = Wrapper::GetValue(*track, time);
+        else
+            key.value = mPropertyValue;
 
         int idx = Wrapper::AddKey(*track, key);
 

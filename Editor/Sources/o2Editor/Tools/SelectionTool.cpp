@@ -28,7 +28,7 @@ namespace Editor
 
     ShortcutKeys SelectionTool::GetShortcut() const
     {
-        return ShortcutKeys('Q');
+        return ShortcutKeys({VK_Q});
     }
 
     void SelectionTool::DrawScene()

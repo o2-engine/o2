@@ -291,7 +291,7 @@ namespace Editor
 
     ShortcutKeys MoveTool::GetShortcut() const
     {
-        return ShortcutKeys('W');
+        return ShortcutKeys({ VK_W });
     }
 
 }

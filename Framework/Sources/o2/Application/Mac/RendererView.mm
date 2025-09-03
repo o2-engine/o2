@@ -39,6 +39,33 @@
 
 @implementation ViewController
 
+- (instancetype)init {
+    self = [super init];
+    if (self) {
+        pressedKeysWithCmd = [[NSMutableSet alloc] init];
+        currentlyPressedKeys = [[NSMutableSet alloc] init];
+    }
+    return self;
+}
+
+- (instancetype)initWithFrame:(NSRect)frame {
+    self = [super initWithFrame:frame];
+    if (self) {
+        pressedKeysWithCmd = [[NSMutableSet alloc] init];
+        currentlyPressedKeys = [[NSMutableSet alloc] init];
+    }
+    return self;
+}
+
+- (instancetype)initWithCoder:(NSCoder *)coder {
+    self = [super initWithCoder:coder];
+    if (self) {
+        pressedKeysWithCmd = [[NSMutableSet alloc] init];
+        currentlyPressedKeys = [[NSMutableSet alloc] init];
+    }
+    return self;
+}
+
 - (BOOL)acceptsFirstResponder {
     return YES;
 }
@@ -50,6 +77,23 @@
 - (BOOL)acceptsFirstMouse:(NSEvent *)theEvent {
     return YES;
 }
+
+- (void)viewDidMoveToWindow {
+    [super viewDidMoveToWindow];
+    if (self.window) {
+        [self.window makeFirstResponder:self];
+        o2Debug.Log("View became first responder: %s", [self.window firstResponder] == self ? "YES" : "NO");
+    }
+}
+
+- (void)awakeFromNib {
+    [super awakeFromNib];
+    if (self.window) {
+        [self.window makeFirstResponder:self];
+    }
+}
+
+
 
 - (void)initializeMouseTracking {
     [self initTrackingArea];
@@ -112,25 +156,43 @@
 
 - (void)keyDown:(NSEvent *)event
 {
-    o2Input.OnKeyPressed([self getKeyCode:event]);
+    int keyCode = [self getKeyCode:event];
+    bool cmdPressed = (event.modifierFlags & NSEventModifierFlagCommand) != 0;
+    bool isRepeat = [event isARepeat];
+    
+    if (isRepeat || [currentlyPressedKeys containsObject:@(keyCode)]) {
+        return;
+    }
+    
+    [currentlyPressedKeys addObject:@(keyCode)];
+    o2Input.OnKeyPressed(keyCode);
+    
+    if (cmdPressed) {
+        [pressedKeysWithCmd addObject:@(keyCode)];
+    }
 }
 
 - (void)keyUp:(NSEvent *)event
 {
-    o2Input.OnKeyReleased([self getKeyCode:event]);
+    int keyCode = [self getKeyCode:event];
+    
+    [currentlyPressedKeys removeObject:@(keyCode)];
+    o2Input.OnKeyReleased(keyCode);
+    
+    [pressedKeysWithCmd removeObject:@(keyCode)];
 }
 
 - (void)flagsChanged:(NSEvent*)event
 {
-    bool shift = event.modifierFlags & NSShiftKeyMask;
-    bool alt = event.modifierFlags & NSAlternateKeyMask;
-    bool ctrl = event.modifierFlags & NSControlKeyMask;
-    bool command = event.modifierFlags & NSCommandKeyMask;
+    bool shift = event.modifierFlags & NSEventModifierFlagShift;
+    bool alt = event.modifierFlags & NSEventModifierFlagOption;
+    bool ctrl = event.modifierFlags & NSEventModifierFlagControl;
+    bool command = event.modifierFlags & NSEventModifierFlagCommand;
     
-    static bool prevShift = shift;
-    static bool prevAlt = alt;
-    static bool prevCtrl = ctrl;
-    static bool prevCommand = command;
+    static bool prevShift = false;
+    static bool prevAlt = false;
+    static bool prevCtrl = false;
+    static bool prevCommand = false;
     
     if (shift != prevShift)
         shift ? o2Input.OnKeyPressed(VK_SHIFT) : o2Input.OnKeyReleased(VK_SHIFT);
@@ -141,8 +203,20 @@
     if (ctrl != prevCtrl)
         ctrl ? o2Input.OnKeyPressed(VK_CONTROL) : o2Input.OnKeyReleased(VK_CONTROL);
     
-    if (command != prevCommand)
-        command ? o2Input.OnKeyPressed(VK_COMMAND) : o2Input.OnKeyReleased(VK_COMMAND);
+    if (command != prevCommand) {
+        if (command) {
+            o2Input.OnKeyPressed(VK_COMMAND);
+        } else {
+            o2Input.OnKeyReleased(VK_COMMAND);
+            
+            for (NSNumber *keyCodeNumber in pressedKeysWithCmd) {
+                int keyCode = [keyCodeNumber intValue];
+                o2Input.OnKeyReleased(keyCode);
+                [currentlyPressedKeys removeObject:@(keyCode)];
+            }
+            [pressedKeysWithCmd removeAllObjects];
+        }
+    }
     
     prevShift = shift;
     prevAlt = alt;

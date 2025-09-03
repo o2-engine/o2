@@ -2,7 +2,7 @@
 
 #include "o2/Utils/Types/CommonTypes.h"
 #include "o2/Utils/Serialization/Serializable.h"
-#include "o2/Utils/Types/String.h"
+#include "o2/Utils/Types/Containers/Vector.h"
 
 namespace o2
 {
@@ -12,10 +12,7 @@ namespace o2
     class ShortcutKeys: public ISerializable
     {
     public:
-        bool        control = false; // Is control (or command) should be pressed // @SERIALIZABLE
-        bool        shift = false;   // Is shift should be pressed // @SERIALIZABLE
-        bool        alt = false;     // Is alt should be pressed // @SERIALIZABLE
-        KeyboardKey key;             // What key should be pressed // @SERIALIZABLE
+        Vector<KeyboardKey> keys; // Keys that should be pressed // @SERIALIZABLE
 
         String custromString; // Custom string representation
 
@@ -23,8 +20,8 @@ namespace o2
         // Default constructor
         ShortcutKeys();
 
-        // Constructor by key and modifiers
-        ShortcutKeys(KeyboardKey key, bool control = false, bool shift = false, bool alt = false);
+        // Constructor by array of keys
+        ShortcutKeys(const Vector<KeyboardKey>& keys);
 
         // Constructor by custom string
         ShortcutKeys(const String& customString);
@@ -48,6 +45,13 @@ namespace o2
         bool operator<(const ShortcutKeys& other) const;
 
         SERIALIZABLE(ShortcutKeys);
+
+    private:
+        static const std::unordered_map<KeyboardKey, String> mKeyNames;
+            
+    private:
+        // Normalize key: convert lowercase to uppercase for macOS
+        KeyboardKey NormalizeKey(KeyboardKey key) const;
     };
 }
 // --- META ---
@@ -59,10 +63,7 @@ CLASS_BASES_META(o2::ShortcutKeys)
 END_META;
 CLASS_FIELDS_META(o2::ShortcutKeys)
 {
-    FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(false).NAME(control);
-    FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(false).NAME(shift);
-    FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(false).NAME(alt);
-    FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().NAME(key);
+    FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().NAME(keys);
     FIELD().PUBLIC().NAME(custromString);
 }
 END_META;
@@ -70,12 +71,13 @@ CLASS_METHODS_META(o2::ShortcutKeys)
 {
 
     FUNCTION().PUBLIC().CONSTRUCTOR();
-    FUNCTION().PUBLIC().CONSTRUCTOR(KeyboardKey, bool, bool, bool);
+    FUNCTION().PUBLIC().CONSTRUCTOR(const Vector<KeyboardKey>&);
     FUNCTION().PUBLIC().CONSTRUCTOR(const String&);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsPressed);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsDown);
     FUNCTION().PUBLIC().SIGNATURE(String, AsString);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsEmpty);
+    FUNCTION().PRIVATE().SIGNATURE(KeyboardKey, NormalizeKey, KeyboardKey);
 }
 END_META;
 // --- END META ---

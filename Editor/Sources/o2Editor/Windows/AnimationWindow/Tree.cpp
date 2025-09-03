@@ -136,8 +136,8 @@ namespace Editor
         mContextMenu = o2UI.CreateWidget<ContextMenu>();
 
         mContextMenu->AddItem("New", [&]() {});
-        mContextMenu->AddItem("Save", [&]() {}, AssetRef<ImageAsset>(), ShortcutKeys('S', true));
-        mContextMenu->AddItem("Save as...", [&]() {}, AssetRef<ImageAsset>(), ShortcutKeys('S', true, true));
+        mContextMenu->AddItem("Save", [&]() {}, AssetRef<ImageAsset>(), ShortcutKeys({VK_S, VK_CTRL_CMD}));
+        mContextMenu->AddItem("Save as...", [&]() {}, AssetRef<ImageAsset>(), ShortcutKeys({VK_S, VK_CTRL_CMD, VK_SHIFT}));
         mContextMenu->AddItem("---");
         mContextMenu->AddItem("Delete property", THIS_FUNC(OnDeletePropertyPressed));
         mContextMenu->AddItem("---");
