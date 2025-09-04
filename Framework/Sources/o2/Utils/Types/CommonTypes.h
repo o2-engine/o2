@@ -1,6 +1,7 @@
 #pragma once
 
 #include "o2/Utils/Reflection/Enum.h"
+#include "o2/Application/VKCodes.h"
 #include <cstdint>
 
 namespace o2

@@ -1,15 +1,16 @@
 #include "o2Editor/stdafx.h"
 #include "SelectionTool.h"
 
+#include "o2/Application/VKCodes.h"
 #include "o2/Render/Sprite.h"
 #include "o2/Scene/Scene.h"
 #include "o2/Utils/Editor/SceneEditableObject.h"
 #include "o2Editor/Actions/Select.h"
 #include "o2Editor/EditorApplication.h"
-#include "o2Editor/Windows/WindowsManager.h"
-#include "o2Editor/Windows/SceneWindow/SceneWindow.h"
 #include "o2Editor/Windows/SceneWindow/SceneEditScreen.h"
+#include "o2Editor/Windows/SceneWindow/SceneWindow.h"
 #include "o2Editor/Windows/TreeWindow/TreeWindow.h"
+#include "o2Editor/Windows/WindowsManager.h"
 
 namespace Editor
 {

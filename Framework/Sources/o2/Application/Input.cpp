@@ -1,9 +1,10 @@
 #include "o2/stdafx.h"
 #include "Input.h"
 
-#include "o2/Utils/System/Time/Time.h"
+#include "o2/Application/VKCodes.h"
 #include "o2/Config/ProjectConfig.h"
 #include "o2/Utils/Debug/Profiling/SimpleProfiler.h"
+#include "o2/Utils/System/Time/Time.h"
 
 namespace o2
 {
