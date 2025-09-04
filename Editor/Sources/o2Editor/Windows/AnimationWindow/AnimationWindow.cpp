@@ -294,7 +294,10 @@ namespace Editor
         mPreviewPlayer = mmake<AnimationPlayer>(mTargetActor.Lock().Get(), Ref(animation));
         mPreviewPlayer->onUpdate += THIS_FUNC(OnAnimationUpdate);
 
+		mPreviewPlayer->SetTime(0.0f);
+
 		mTimeline->SetAnimation(animation, mPreviewPlayer);
+		mTree->SetAnimation(animation);
     }
 
 	void AnimationWindow::InitializeExternalAnimationPlayer()
@@ -321,9 +324,12 @@ namespace Editor
 			return;
 
 		// Subscribe to animation update
-        mPreviewPlayer->onUpdate += THIS_FUNC(OnAnimationUpdate);
+		mPreviewPlayer->onUpdate += THIS_FUNC(OnAnimationUpdate);
 
-        mTimeline->SetAnimation(mAnimation.Lock(), mPreviewPlayer);
+		mPreviewPlayer->SetTime(0.0f);
+
+		mTimeline->SetAnimation(mAnimation.Lock(), mPreviewPlayer);
+		mTree->SetAnimation(mAnimation.Lock());
     }
 
     bool AnimationWindow::IsComponentPreviewAvailable() const

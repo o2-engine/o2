@@ -83,10 +83,10 @@ namespace Editor
         }
         
         if (mEditBox)
-            mEditBox->SetEnabled(!mUsingDropDown);
+            mEditBox->SetEnabledForcible(!mUsingDropDown);
             
         if (mEditBoxDropDown)
-            mEditBoxDropDown->SetEnabled(mUsingDropDown);
+            mEditBoxDropDown->SetEnabledForcible(mUsingDropDown);
     }
 
     void StringProperty::OnEdited(const WString& data)

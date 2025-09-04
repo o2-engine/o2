@@ -170,10 +170,10 @@ namespace o2
         TaskManager::DestroySingleton(mTaskManager);
         UIManager::DestroySingleton(mUIManager);
         EventSystem::DestroySingleton(mEventSystem);
-        o2Debug.DeinitializeFont();
+		o2Debug.DeinitializeFont();
+		Assets::DestroySingleton(mAssets);
         Render::DestroySingleton(mRender);
         Time::DestroySingleton(mTime);
-        Assets::DestroySingleton(mAssets);
         
         mLog = nullptr;
     }
