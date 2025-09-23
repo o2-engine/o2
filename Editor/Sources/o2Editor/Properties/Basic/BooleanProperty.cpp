@@ -31,7 +31,7 @@ namespace Editor
         if (mToggle)
         {
             mToggle->layout->minHeight = 10;
-            mToggle->onToggleByUser = [&](bool value) { SetValueByUser(value); };
+            mToggle->onToggleByUser = [&](bool value) { SetValueByUserAndComplete(value); };
             mToggle->SetValueUnknown();
         }
     }

@@ -124,7 +124,7 @@ namespace Editor
         if (!mCommonValue)
             mCommonValue = o2Scene.GetDefaultLayer();
 
-        //SetValueByUser(Ref<SceneLayer>(name));
+        //SetValueByUserAndComplete(Ref<SceneLayer>(name));
     }
 
     bool SceneLayerRefProperty::IsAlwaysRefresh() const

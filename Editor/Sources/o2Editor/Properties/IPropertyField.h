@@ -28,7 +28,7 @@ namespace Editor
 		typedef Pair<Ref<IAbstractValueProxy>, Ref<IAbstractValueProxy>> TargetPair;
 		typedef Vector<Pair<Ref<IAbstractValueProxy>, Ref<IAbstractValueProxy>>> TargetsVec;
 
-		typedef Function<void(const Ref<IPropertyField>&)> OnChangedFunc;
+		typedef Function<void(const Ref<IPropertyField>& field, bool byUser)> OnChangedFunc;
 		typedef Function<void(const String&, const Vector<DataDocument>&, const Vector<DataDocument>&)> OnChangeCompletedFunc;
 
     public:
@@ -191,7 +191,7 @@ namespace Editor
         virtual bool IsValueRevertable() const;
 
         // Called when field value changed
-        virtual void OnValueChanged();
+        virtual void OnValueChanged(bool byUser);
 
         // Enable property event function
         virtual void OnPropertyEnabled() {}
@@ -245,7 +245,7 @@ namespace Editor
         static const Type* GetValueTypeStatic();
 
         // Sets value
-        void SetValue(const _type& value);
+        void SetValue(const _type& value, bool byUser = false);
 
         // Sets value as unknown
         void SetUnknownValue(const _type& defaultValue = _type());
@@ -277,10 +277,10 @@ namespace Editor
         virtual void SetProxy(const Ref<IAbstractValueProxy>& proxy, const _type& value);
 
         // Sets common value
-        virtual void SetCommonValue(const _type& value);
+        virtual void SetCommonValue(const _type& value, bool byUser = false);
 
         // Sets value, checks value changed, calls onChangeCompleted
-        void SetValueByUser(const _type& value);
+        void SetValueByUserAndComplete(const _type& value);
 
         // Updates value view
         virtual void UpdateValueView() {}
@@ -483,7 +483,7 @@ namespace Editor
     }
 
     template<typename _type>
-    void TPropertyField<_type>::SetValueByUser(const _type& value)
+    void TPropertyField<_type>::SetValueByUserAndComplete(const _type& value)
     {
         StoreValues(mBeforeChangeValues);
         SetValue(value);
@@ -491,13 +491,13 @@ namespace Editor
     }
 
     template<typename _type>
-    void TPropertyField<_type>::SetCommonValue(const _type& value)
+    void TPropertyField<_type>::SetCommonValue(const _type& value, bool byUser /*= false*/)
     {
         mCommonValue = value;
         mValuesDifferent = false;
 
         UpdateValueView();
-        OnValueChanged();
+        OnValueChanged(byUser);
     }
 
     template<typename _type>
@@ -536,16 +536,16 @@ namespace Editor
         mValuesDifferent = true;
 
         UpdateValueView();
-        OnValueChanged();
+        OnValueChanged(false);
     }
 
     template<typename _type>
-    void TPropertyField<_type>::SetValue(const _type& value)
+    void TPropertyField<_type>::SetValue(const _type& value, bool byUser)
     {
         for (auto& ptr : mValuesProxies)
             SetProxy(ptr.first, value);
 
-        SetCommonValue(value);
+        SetCommonValue(value, byUser);
     }
 
     template<typename _type>
@@ -656,7 +656,7 @@ CLASS_METHODS_META(Editor::IPropertyField)
     FUNCTION().PROTECTED().SIGNATURE(void, CheckValueChangeCompleted);
     FUNCTION().PROTECTED().SIGNATURE(void, CheckRevertableState);
     FUNCTION().PROTECTED().SIGNATURE(bool, IsValueRevertable);
-    FUNCTION().PROTECTED().SIGNATURE(void, OnValueChanged);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnValueChanged, bool);
     FUNCTION().PROTECTED().SIGNATURE(void, OnPropertyEnabled);
     FUNCTION().PROTECTED().SIGNATURE(void, OnPropertyDisabled);
     FUNCTION().PROTECTED().SIGNATURE(void, FreeValuesProxies);
@@ -688,7 +688,7 @@ CLASS_METHODS_META(Editor::TPropertyField<_type>)
     FUNCTION().PUBLIC().SIGNATURE(void, Revert);
     FUNCTION().PUBLIC().SIGNATURE(const Type*, GetValueType);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(const Type*, GetValueTypeStatic);
-    FUNCTION().PUBLIC().SIGNATURE(void, SetValue, const _type&);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetValue, const _type&, bool);
     FUNCTION().PUBLIC().SIGNATURE(void, SetUnknownValue, const _type&);
     FUNCTION().PUBLIC().SIGNATURE(_type, GetCommonValue);
     FUNCTION().PROTECTED().SIGNATURE(void, OnTypeSpecialized, const Type&);
@@ -696,8 +696,8 @@ CLASS_METHODS_META(Editor::TPropertyField<_type>)
     FUNCTION().PROTECTED().SIGNATURE(void, StoreValues, Vector<DataDocument>&);
     FUNCTION().PROTECTED().SIGNATURE(_type, GetProxy, const Ref<IAbstractValueProxy>&);
     FUNCTION().PROTECTED().SIGNATURE(void, SetProxy, const Ref<IAbstractValueProxy>&, const _type&);
-    FUNCTION().PROTECTED().SIGNATURE(void, SetCommonValue, const _type&);
-    FUNCTION().PROTECTED().SIGNATURE(void, SetValueByUser, const _type&);
+    FUNCTION().PROTECTED().SIGNATURE(void, SetCommonValue, const _type&, bool);
+    FUNCTION().PROTECTED().SIGNATURE(void, SetValueByUserAndComplete, const _type&);
     FUNCTION().PROTECTED().SIGNATURE(void, UpdateValueView);
     FUNCTION().PROTECTED().SIGNATURE(bool, IsAlwaysRefresh);
 }

@@ -45,7 +45,7 @@ namespace Editor
         }
     }
 
-    void CurveProperty::OnValueChanged()
+    void CurveProperty::OnValueChanged(bool byUser)
     {
         for (auto& ptr : mValuesProxies)
             SetProxy(ptr.first, mCommonValue);
@@ -61,8 +61,7 @@ namespace Editor
         if (mCommonValue == nullptr)
             SetValue(mmake<Curve>());
 
-        CurveEditorDlg::Show(THIS_FUNC(OnValueChanged),
-                             MakeFunction<IPropertyField, void>(this, &CurveProperty::CheckValueChangeCompleted));
+		CurveEditorDlg::Show([this]() { OnValueChanged(true); }, [this]() { CheckValueChangeCompleted(); });
 
         CurveEditorDlg::RemoveAllEditingCurves();
         CurveEditorDlg::AddEditingCurve("property", mCommonValue, Color4(44, 62, 80));

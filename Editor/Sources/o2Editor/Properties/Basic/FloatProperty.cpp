@@ -116,7 +116,7 @@ namespace Editor
         if (mUsesRange)
             mProgress->value = value;
 
-        SetValueByUser(value);
+        SetValueByUserAndComplete(value);
     }
 
     void FloatProperty::OnEditedValue(float value)
@@ -126,13 +126,13 @@ namespace Editor
         else
             mEditBox->text = (WString)mCommonValue;
 
-        SetValueByUser(value);
+        SetValueByUserAndComplete(value);
     }
 
     void FloatProperty::OnDragHandleMoved(const Input::Cursor& cursor)
     {
         float multiplier = Math::Abs(cursor.delta.y) < 20 ? 0.01f : 0.05f;
-        SetValue(mCommonValue + cursor.delta.y*multiplier);
+        SetValue(mCommonValue + cursor.delta.y*multiplier, true);
     }
 
     void FloatProperty::OnKeyReleased(const Input::Key& key)
@@ -145,27 +145,27 @@ namespace Editor
 
         if (key == VK_UP)
         {
-            SetValueByUser(Math::Ceil(mCommonValue + 0.01f));
+            SetValueByUserAndComplete(Math::Ceil(mCommonValue + 0.01f));
             mEditBox->SelectAll();
         }
 
         if (key == VK_DOWN)
         {
-            SetValueByUser(Math::Floor(mCommonValue - 0.01f));
+            SetValueByUserAndComplete(Math::Floor(mCommonValue - 0.01f));
             mEditBox->SelectAll();
         }
     }
 
     void FloatProperty::OnMoveHandlePressed(const Input::Cursor& cursor)
     {
-        StoreValues(mBeforeChangeValues);
+        BeginUserChanging();
         o2Application.SetCursorInfiniteMode(true);
     }
 
     void FloatProperty::OnMoveHandleReleased(const Input::Cursor& cursor)
     {
         o2Application.SetCursorInfiniteMode(false);
-        CheckValueChangeCompleted();
+		EndUserChanging();
     }
 }
 

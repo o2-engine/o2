@@ -94,6 +94,8 @@ namespace o2
 
         Vector<Ref<DragableObject>> mDragListeners; // Drag events listeners
 
+		bool mClearingBuffers = false; // True when clearing buffers of cursor listeners lists. Used to avoid recursive calls
+
     private:
         // Called when cursor enters this object
         void OnCursorEnter(const Input::Cursor& cursor) override;

@@ -26,7 +26,7 @@ namespace Editor
     {
         mXProperty = GetChildByType<FloatProperty>("container/layout/properties/x");
         mXProperty->SetValuePath("x");
-        mXProperty->onChanged = [&](const Ref<IPropertyField>& field) { onChanged(field); };
+        mXProperty->onChanged = [&](const Ref<IPropertyField>& field, bool byUser) { onChanged(field, byUser); };
         mXProperty->onChangeCompleted = [&](const String& path, const Vector<DataDocument>& before, const Vector<DataDocument>& after)
         {
             onChangeCompleted(mValuesPath + "/" + path, before, after);
@@ -34,7 +34,7 @@ namespace Editor
 
         mYProperty = GetChildByType<FloatProperty>("container/layout/properties/y");
         mYProperty->SetValuePath("x");
-        mYProperty->onChanged = [&](const Ref<IPropertyField>& field) { onChanged(field); };
+        mYProperty->onChanged = [&](const Ref<IPropertyField>& field, bool byUser) { onChanged(field, byUser); };
         mYProperty->onChangeCompleted = [&](const String& path, const Vector<DataDocument>& before, const Vector<DataDocument>& after)
         {
             onChangeCompleted(mValuesPath + "/" + path, before, after);

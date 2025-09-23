@@ -50,7 +50,7 @@ namespace Editor
                                        const Vector<DataDocument>& newValue);
 
         // Called when some property changed, updates owner widgets
-        void OnPropertyChanged(const Ref<IPropertyField>& field);
+        void OnPropertyChanged(const Ref<IPropertyField>& field, bool byUser);
     };
 }
 // --- META ---
@@ -80,7 +80,7 @@ CLASS_METHODS_META(Editor::DefaultWidgetLayerLayoutViewer)
     FUNCTION().PROTECTED().SIGNATURE(void, OnPropertiesEnabled);
     FUNCTION().PROTECTED().SIGNATURE(void, OnPropertiesDisabled);
     FUNCTION().PROTECTED().SIGNATURE(void, OnPropertyChangeCompleted, const String&, const Vector<DataDocument>&, const Vector<DataDocument>&);
-    FUNCTION().PROTECTED().SIGNATURE(void, OnPropertyChanged, const Ref<IPropertyField>&);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnPropertyChanged, const Ref<IPropertyField>&, bool);
 }
 END_META;
 // --- END META ---

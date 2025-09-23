@@ -23,7 +23,7 @@ namespace Editor
     class PropertiesContext: public RefCounterable
     {
     public:
-		Function<void(const Ref<IPropertyField>&)> onChanged; // Called when some property changed
+		Function<void(const Ref<IPropertyField>& field, bool byUser)> onChanged; // Called when some property changed
 
     public:
         WeakRef<PropertiesContext> parent; // Parent context

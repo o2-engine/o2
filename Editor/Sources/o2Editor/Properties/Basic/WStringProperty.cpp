@@ -45,7 +45,7 @@ namespace Editor
         if (mValuesDifferent && data == "--")
             return;
 
-        SetValueByUser(data);
+        SetValueByUserAndComplete(data);
     }
 }
 

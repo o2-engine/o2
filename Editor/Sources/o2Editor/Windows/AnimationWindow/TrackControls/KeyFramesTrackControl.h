@@ -274,7 +274,7 @@ namespace Editor
         mPropertyField = DynamicCast<IPropertyField>(o2UI.CreateWidget(*fieldProto, "standard"));
         mPropertyValueProxy = mmake<PointerValueProxy<TrackValueType>>(&mPropertyValue);
         mPropertyField->SetValueProxy({ DynamicCast<IAbstractValueProxy>(mPropertyValueProxy) });
-        mPropertyField->onChangeCompleted = [&](const String&, const Vector<DataDocument>&, const Vector<DataDocument>&) { OnPropertyChanged(); };
+        mPropertyField->onChanged = [&](const Ref<IPropertyField>& field, bool byUser) { if (byUser) OnPropertyChanged(); };
         *mPropertyField->layout = WidgetLayout::BothStretch(0, 0, 20, 0);
 
         mAddKeyButton = o2UI.CreateWidget<Button>("add key");
@@ -474,13 +474,14 @@ namespace Editor
     void KeyFramesTrackControl<AnimationTrackType>::OnPropertyChanged()
     {
         auto trackRef = mTrack.Lock();
+		auto timeline = mTimeline.Lock();
 
-        auto time = mTimeline.Lock()->GetTimeCursor();
+        auto time = timeline->GetTimeCursor();
         int keyIdx = -1;
         int i = 0;
         for (auto& key : Wrapper::GetKeys(*trackRef))
         {
-            if (mTimeline.Lock()->IsSameTime(key.position, time))
+            if (timeline->IsSameTime(key.position, time))
             {
                 keyIdx = i;
                 break;
@@ -503,6 +504,8 @@ namespace Editor
             Wrapper::AddKey(*trackRef, key);
             InitializeHandles();
         }
+
+		timeline->SetTimeCursor(time);
 
         OnKeysChanged();
     }

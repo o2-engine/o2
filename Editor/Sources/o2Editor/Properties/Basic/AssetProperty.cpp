@@ -242,7 +242,7 @@ namespace Editor
 
         UpdateValueView();
         CheckRevertableState();
-        OnValueChanged();
+        OnValueChanged(false);
     }
 
     void AssetProperty::SetAssetIdByUser(const UID& id)
@@ -293,7 +293,7 @@ namespace Editor
     void AssetProperty::OnRemoveInstancePressed()
     {
         mCommonValue.RemoveInstance();
-		SetValueByUser(mCommonValue);
+		SetValueByUserAndComplete(mCommonValue);
 		mSpoiler->Collapse();
     }
 
@@ -315,7 +315,7 @@ namespace Editor
         asset.SaveInstance(relativePath + "." + extension);
         o2Assets.RebuildAssets();
 
-        SetValueByUser(asset);
+        SetValueByUserAndComplete(asset);
     }
 
     void AssetProperty::OnTypeSpecialized(const Type& type)

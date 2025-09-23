@@ -23,7 +23,7 @@ namespace Editor
     class IObjectPropertiesViewer : public IObject, public RefCounterable
     {
     public:
-        typedef Function<void(const Ref<IPropertyField>&)> OnChangedFunc;
+        typedef Function<void(const Ref<IPropertyField>& field, bool byUser)> OnChangedFunc;
         typedef Function<void(const String&, const Vector<DataDocument>&, const Vector<DataDocument>&)> OnChangeCompletedFunc;
 
     public:

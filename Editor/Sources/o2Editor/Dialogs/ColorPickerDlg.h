@@ -41,7 +41,7 @@ namespace Editor
         ~ColorPickerDlg();
 
         // Shows color picking window. Delegate onChanged is called when color changed and onCompleted when ok pressed
-        static void Show(const Color4& color, const Function<void(const Color4&)>& onChanged,
+        static void Show(const Color4& color, const Function<void(const Color4& value, bool byUser)>& onChanged,
                          const Function<void()>& onCompleted = {});
 
         REF_COUNTERABLE_IMPL(Singleton<ColorPickerDlg>, CursorEventsListener);
@@ -80,8 +80,8 @@ namespace Editor
         };
 
     protected:
-        Function<void(const Color4&)> mOnChangedCallback;   // On changed callback
-        Function<void()>              mOnCompletedCallback; // On completed callback
+        Function<void(const Color4& value, bool byUser)> mOnChangedCallback;   // On changed callback
+        Function<void()>                                 mOnCompletedCallback; // On completed callback
 
         Color4 mColorValue; // Current color value
 

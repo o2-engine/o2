@@ -117,7 +117,7 @@ namespace Editor
         void AddProperty(const String& name, const Type* type, int idx);
 
         // Called when count property changing
-        void OnCountChanged(const Ref<IPropertyField>& def);
+        void OnCountChanged(const Ref<IPropertyField>& def, bool byUser);
 
         // Called when expanding spoiler, refreshing properties
         void OnExpand();
@@ -231,7 +231,7 @@ CLASS_METHODS_META(Editor::ScriptValueProperty)
     FUNCTION().PROTECTED().SIGNATURE(void, InitializeControls);
     FUNCTION().PROTECTED().SIGNATURE(PropertiesList, GetCommonProperties, _tmp1, bool&);
     FUNCTION().PROTECTED().SIGNATURE(void, AddProperty, const String&, const Type*, int);
-    FUNCTION().PROTECTED().SIGNATURE(void, OnCountChanged, const Ref<IPropertyField>&);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnCountChanged, const Ref<IPropertyField>&, bool);
     FUNCTION().PROTECTED().SIGNATURE(void, OnExpand);
     FUNCTION().PROTECTED().SIGNATURE(void, Resize, int);
     FUNCTION().PROTECTED().SIGNATURE(void, Remove, int);

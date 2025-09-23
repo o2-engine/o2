@@ -171,7 +171,7 @@ namespace Editor
 
                     mAddButton->Hide(true);
 
-                    onChanged(Ref(this));
+                    onChanged(Ref(this), false);
                     o2EditorSceneScreen.OnSceneChanged();
                 }
             }
@@ -227,7 +227,7 @@ namespace Editor
 
                 mSpoiler->SetLayoutDirty();
 
-                onChanged(Ref(this));
+                onChanged(Ref(this), false);
                 o2EditorSceneScreen.OnSceneChanged();
             }
         }
@@ -431,7 +431,7 @@ namespace Editor
         mValuePropertiesPool.Add(def);
     }
 
-    void VectorProperty::OnCountChanged(const Ref<IPropertyField>& def)
+    void VectorProperty::OnCountChanged(const Ref<IPropertyField>& def, bool byUser)
     {
         if (mIsRefreshing)
             return;
@@ -588,7 +588,7 @@ namespace Editor
         if (prevValues != newValues)
             onChangeCompleted(mValuesPath + "/count", prevValues, newValues);
 
-        onChanged(Ref(this));
+        onChanged(Ref(this), true);
         o2EditorSceneScreen.OnSceneChanged();
     }
 
@@ -612,7 +612,7 @@ namespace Editor
         if (prevValues != newValues)
             onChangeCompleted(mValuesPath, prevValues, newValues);
 
-        onChanged(Ref(this));
+        onChanged(Ref(this), true);
         o2EditorSceneScreen.OnSceneChanged();
     }
 

@@ -38,7 +38,7 @@ namespace Editor
     ColorPickerDlg::~ColorPickerDlg()
     {}
 
-    void ColorPickerDlg::Show(const Color4& color, const Function<void(const Color4&)>& onChanged,
+    void ColorPickerDlg::Show(const Color4& color, const Function<void(const Color4& value, bool byUser)>& onChanged,
                               const Function<void()>& onCompleted/* = Function<void()>()*/)
     {
         mInstance->mColorValue = color;
@@ -310,7 +310,7 @@ namespace Editor
 
     void ColorPickerDlg::OnColorChanged(ParameterType changedParameter)
     {
-        mOnChangedCallback(mColorValue);
+        mOnChangedCallback(mColorValue, true);
         UpdateValues(changedParameter);
     }
 
@@ -367,7 +367,7 @@ namespace Editor
 
     void ColorPickerDlg::OnCursorPressedOutside()
     {
-        mOnChangedCallback(mColorValue);
+        mOnChangedCallback(mColorValue, true);
         mWindow->Hide();
     }
 

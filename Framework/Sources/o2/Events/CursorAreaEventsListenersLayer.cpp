@@ -144,8 +144,12 @@ namespace o2
 
     void CursorAreaEventListenersLayer::PostUpdate()
     {
+        mClearingBuffers = true;
+
         cursorEventAreaListeners.Clear();
         mDragListeners.Clear();
+
+        mClearingBuffers = false;
     }
 
     void CursorAreaEventListenersLayer::BreakCursorEvent()
@@ -164,11 +168,17 @@ namespace o2
 
     void CursorAreaEventListenersLayer::UnregCursorAreaListener(CursorAreaEventsListener* listener)
     {
+        if (mClearingBuffers)
+			return;
+
         cursorEventAreaListeners.RemoveFirst([&](auto& x) { return x == listener; });
     }
 
     void CursorAreaEventListenersLayer::UnregDragListener(DragableObject* listener)
     {
+		if (mClearingBuffers)
+			return;
+
         mDragListeners.RemoveFirst([&](auto& x) { return x == listener; });
     }
 

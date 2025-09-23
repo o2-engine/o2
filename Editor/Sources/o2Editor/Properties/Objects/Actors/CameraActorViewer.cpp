@@ -32,7 +32,7 @@ namespace Editor
         mTypeProperty = o2EditorProperties.BuildFieldType<EnumProperty>(mSpoiler, cameraActorType, "mType", "",
                                                                         mPropertiesContext, mOnChildFieldChangeCompleted, onChanged);
 
-        mTypeProperty->onChanged += [&](auto& x) { OnTypeSelected(); };
+        mTypeProperty->onChanged += [&](auto& x, bool) { OnTypeSelected(); };
 
         mHiddenTypeProperties = o2UI.CreateWidget<VerticalLayout>();
         mHiddenTypeProperties->expandWidth = true;

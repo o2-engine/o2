@@ -66,7 +66,7 @@ namespace Editor
     void IPropertyField::SetParentContext(const Ref<PropertiesContext>& context)
     {
         mParentContext = context;
-        onChanged += [this](const Ref<IPropertyField>& p) { if (auto ctx = mParentContext.Lock()) ctx->onChanged(p); };
+        onChanged += [this](const Ref<IPropertyField>& p, bool byUser) { if (auto ctx = mParentContext.Lock()) ctx->onChanged(p, byUser); };
     }
 
     void IPropertyField::SetCaption(const WString& text)
@@ -258,10 +258,10 @@ namespace Editor
             *revertState = isRevertable;
     }
 
-    void IPropertyField::OnValueChanged()
+    void IPropertyField::OnValueChanged(bool byUser)
     {
         CheckRevertableState();
-        onChanged(Ref(this));
+        onChanged(Ref(this), byUser);
 
         if (SceneEditScreen::IsSingletonInitialzed())
             o2EditorSceneScreen.OnSceneChanged();

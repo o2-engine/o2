@@ -64,7 +64,7 @@ namespace Editor
         }
     }
 
-    void TagsProperty::SetCommonValue(const TagGroup& value)
+    void TagsProperty::SetCommonValue(const TagGroup& value, bool byUser)
     {
         mCommonValue = value;
         mValuesDifferent = false;
@@ -77,7 +77,7 @@ namespace Editor
         mEditBox->text = res;
         mPushingTag = false;
 
-        OnValueChanged();
+        OnValueChanged(byUser);
     }
 
     void TagsProperty::OnEditBoxChanged(const WString& text)
@@ -113,7 +113,7 @@ namespace Editor
                 tagsValue.AddTag(tagName);
         }
 
-        SetValueByUser(tagsValue);
+        SetValueByUserAndComplete(tagsValue);
     }
 
     void TagsProperty::PushTag(String name)

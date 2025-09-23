@@ -154,7 +154,7 @@ namespace Editor
         void FreeValueProperty(const Ref<IPropertyField>& def);
 
         // Called when count property changing
-        void OnCountChanged(const Ref<IPropertyField>& def);
+        void OnCountChanged(const Ref<IPropertyField>& def, bool byUser);
 
         // Sets new count of elements in vector
         void Resize(int newCount);
@@ -239,7 +239,7 @@ CLASS_METHODS_META(Editor::VectorProperty)
     FUNCTION().PROTECTED().SIGNATURE(void*, GetProxyValuePointer, const Ref<IAbstractValueProxy>&);
     FUNCTION().PROTECTED().SIGNATURE(Ref<IPropertyField>, GetFreeValueProperty);
     FUNCTION().PROTECTED().SIGNATURE(void, FreeValueProperty, const Ref<IPropertyField>&);
-    FUNCTION().PROTECTED().SIGNATURE(void, OnCountChanged, const Ref<IPropertyField>&);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnCountChanged, const Ref<IPropertyField>&, bool);
     FUNCTION().PROTECTED().SIGNATURE(void, Resize, int);
     FUNCTION().PROTECTED().SIGNATURE(void, Remove, int);
     FUNCTION().PROTECTED().SIGNATURE(void, OnAddPressed);

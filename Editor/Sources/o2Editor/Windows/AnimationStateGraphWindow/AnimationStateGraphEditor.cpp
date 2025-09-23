@@ -706,7 +706,7 @@ namespace Editor
 		// Create animations list property
 		propertiesContext = mmake<PropertiesContext>();
 		propertiesContext->Set({ Pair<IObject*, IObject*>(this, nullptr) });
-		propertiesContext->onChanged = [this](const Ref<IPropertyField>&) { if (auto state = this->state.Lock()) state->GetGraph()->SetDirty();  };
+		propertiesContext->onChanged = [this](const Ref<IPropertyField>&, bool) { if (auto state = this->state.Lock()) state->GetGraph()->SetDirty();  };
 
 		animationsListProperty = DynamicCast<VectorProperty>(o2EditorProperties.BuildField(widget, GetType(), "animations", "", propertiesContext));
 		animationsListProperty->SetHeaderEnabled(false);

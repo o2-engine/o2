@@ -26,7 +26,7 @@ namespace Editor
     {
         mLeftProperty = GetChildByType<IntegerProperty>("container/layout/properties/left");
         mLeftProperty->SetValuePath("left");
-        mLeftProperty->onChanged = [&](const Ref<IPropertyField>& field) { onChanged(field); };
+        mLeftProperty->onChanged = [&](const Ref<IPropertyField>& field, bool byUser) { onChanged(field, byUser); };
         mLeftProperty->onChangeCompleted = [&](const String& path, const Vector<DataDocument>& before, const Vector<DataDocument>& after)
         {
             onChangeCompleted(mValuesPath + "/" + path, before, after);
@@ -34,7 +34,7 @@ namespace Editor
 
         mBottomProperty = GetChildByType<IntegerProperty>("container/layout/properties/bottom");
         mBottomProperty->SetValuePath("bottom");
-        mBottomProperty->onChanged = [&](const Ref<IPropertyField>& field) { onChanged(field); };
+        mBottomProperty->onChanged = [&](const Ref<IPropertyField>& field, bool byUser) { onChanged(field, byUser); };
         mBottomProperty->onChangeCompleted = [&](const String& path, const Vector<DataDocument>& before, const Vector<DataDocument>& after)
         {
             onChangeCompleted(mValuesPath + "/" + path, before, after);
@@ -42,7 +42,7 @@ namespace Editor
 
         mRightProperty = GetChildByType<IntegerProperty>("container/layout/properties/right");
         mRightProperty->SetValuePath("right");
-        mRightProperty->onChanged = [&](const Ref<IPropertyField>& field) { onChanged(field); };
+        mRightProperty->onChanged = [&](const Ref<IPropertyField>& field, bool byUser) { onChanged(field, byUser); };
         mRightProperty->onChangeCompleted = [&](const String& path, const Vector<DataDocument>& before, const Vector<DataDocument>& after)
         {
             onChangeCompleted(mValuesPath + "/" + path, before, after);
@@ -50,7 +50,7 @@ namespace Editor
 
         mTopProperty = GetChildByType<IntegerProperty>("container/layout/properties/top");
         mTopProperty->SetValuePath("top");
-        mTopProperty->onChanged = [&](const Ref<IPropertyField>& field) { onChanged(field); };
+        mTopProperty->onChanged = [&](const Ref<IPropertyField>& field, bool byUser) { onChanged(field, byUser); };
         mTopProperty->onChangeCompleted = [&](const String& path, const Vector<DataDocument>& before, const Vector<DataDocument>& after)
         {
             onChangeCompleted(mValuesPath + "/" + path, before, after);

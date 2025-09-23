@@ -45,7 +45,7 @@ namespace Editor
         mLayersContext->RemoveAllItems();
 
         mLayersContext->AddToggleItem("All layers", o2Scene.GetLayers().All([&](auto& x) { return mCommonValue.HasLayer(x); }),
-                                      [&](bool b) { if (b) SetValueByUser(o2Scene.GetLayers()); else SetValueByUser({}); });
+                                      [&](bool b) { if (b) SetValueByUserAndComplete(o2Scene.GetLayers()); else SetValueByUserAndComplete({}); });
 
         mLayersContext->AddItem("---");
 
@@ -58,7 +58,7 @@ namespace Editor
             else
                 copy.RemoveLayer(layer);
 
-            SetValueByUser(copy);
+            SetValueByUserAndComplete(copy);
         });
 
         mLayersContext->Show(mPropertyButton->layout->GetWorldLeftBottom());

@@ -191,7 +191,7 @@ namespace Editor
         o2EditorSceneWindow.DoneAction(action);
     }
 
-    void DefaultWidgetLayerLayoutViewer::OnPropertyChanged(const Ref<IPropertyField>& field)
+    void DefaultWidgetLayerLayoutViewer::OnPropertyChanged(const Ref<IPropertyField>& field, bool byUser)
     {
         for (auto& layer : mLayers) {
             layer->GetOwnerWidget().Lock()->UpdateTransform();

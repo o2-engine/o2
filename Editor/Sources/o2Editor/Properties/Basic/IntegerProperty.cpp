@@ -61,12 +61,12 @@ namespace Editor
         if (mValuesDifferent && data == "--")
             return;
 
-        SetValueByUser((const int)data);
+        SetValueByUserAndComplete((const int)data);
     }
 
     void IntegerProperty::OnDragHandleMoved(const Input::Cursor& cursor)
     {
-        SetValue(mCommonValue + (int)cursor.delta.y);
+        SetValue(mCommonValue + (int)cursor.delta.y, true);
     }
 
     void IntegerProperty::OnKeyReleased(const Input::Key& key)
@@ -79,27 +79,27 @@ namespace Editor
 
         if (key == VK_UP)
         {
-            SetValueByUser(mCommonValue + 1);
+            SetValueByUserAndComplete(mCommonValue + 1);
             mEditBox->SelectAll();
         }
 
         if (key == VK_DOWN)
         {
-            SetValueByUser(mCommonValue - 1);
+            SetValueByUserAndComplete(mCommonValue - 1);
             mEditBox->SelectAll();
         }
     }
 
     void IntegerProperty::OnMoveHandlePressed(const Input::Cursor& cursor)
     {
-        StoreValues(mBeforeChangeValues);
+		BeginUserChanging();
         o2Application.SetCursorInfiniteMode(true);
     }
 
     void IntegerProperty::OnMoveHandleReleased(const Input::Cursor& cursor)
     {
         o2Application.SetCursorInfiniteMode(false);
-        CheckValueChangeCompleted();
+        EndUserChanging();
     }
 }
 

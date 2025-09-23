@@ -81,7 +81,7 @@ namespace Editor
         if (mUpdatingValue)
             return;
 
-        SetValueByUser(mEntries.FindValue(name).first);
+        SetValueByUserAndComplete(mEntries.FindValue(name).first);
     }
 }
 

@@ -44,7 +44,7 @@ namespace Editor
         mModeProperty = o2EditorProperties.BuildFieldType<EnumProperty>(commonFieldsLayout, spriteType, "mode", "",
                                                                         mPropertiesContext, mOnChildFieldChangeCompleted, onChanged);
 
-        mModeProperty->onChanged += [&](auto& x) { OnModeSelected(); };
+        mModeProperty->onChanged += [&](auto& x, bool) { OnModeSelected(); };
 
         mHiddenProperties = o2UI.CreateWidget<VerticalLayout>();
         mHiddenProperties->expandWidth = true;

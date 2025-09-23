@@ -222,7 +222,7 @@ namespace Editor
     void ComponentProperty::OnKeyPressed(const Input::Key& key)
     {
         if (mBox && mBox->IsFocused() && (key == VK_DELETE || key == VK_BACK))
-            SetValueByUser(nullptr);
+            SetValueByUserAndComplete(nullptr);
     }
 
     void ComponentProperty::OnDropped(const Ref<ISelectableDragableObjectsGroup>& group)
@@ -255,7 +255,7 @@ namespace Editor
             return;
 
         if (auto actor = DynamicCast<Actor>(actorsTree->GetSelectedObjects()[0]))
-            SetValueByUser(actor->GetComponent(mComponentType));
+            SetValueByUserAndComplete(actor->GetComponent(mComponentType));
         else
             return;
 
@@ -291,7 +291,7 @@ namespace Editor
             return;
 
         auto actor = o2Scene.GetAssetActorByID(assetsIconsScroll->GetSelectedAssets().Last()->meta->ID());
-        SetValueByUser(actor->GetComponent(mComponentType));
+        SetValueByUserAndComplete(actor->GetComponent(mComponentType));
 
         o2Application.SetCursor(CursorType::Arrow);
         mBox->Focus();

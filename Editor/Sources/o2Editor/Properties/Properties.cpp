@@ -123,7 +123,7 @@ namespace Editor
 
         if (auto invokeOnChangeAttribute = fieldInfo->GetAttribute<InvokeOnChangeAttribute>())
         {
-            fieldWidget->onChanged += [&, invokeOnChangeAttribute](const Ref<IPropertyField>&) {
+            fieldWidget->onChanged += [&, invokeOnChangeAttribute](const Ref<IPropertyField>& field, bool byUser) {
                 for (auto& target : context->targets) 
                 {
                     auto& targetType = target.first->GetType();

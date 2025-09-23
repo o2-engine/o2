@@ -43,7 +43,7 @@ namespace Editor
         void InitializeControls();
 
         // Called when common curve changed in curve edit dialog, tells to drawing content
-        void OnValueChanged() override;
+        void OnValueChanged(bool byUser) override;
 
         // Called when box pressed and shows color picking dialog
         void OnClicked();
@@ -69,7 +69,7 @@ CLASS_METHODS_META(Editor::CurveProperty)
     FUNCTION().PUBLIC().CONSTRUCTOR(RefCounter*);
     FUNCTION().PUBLIC().CONSTRUCTOR(RefCounter*, const CurveProperty&);
     FUNCTION().PROTECTED().SIGNATURE(void, InitializeControls);
-    FUNCTION().PROTECTED().SIGNATURE(void, OnValueChanged);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnValueChanged, bool);
     FUNCTION().PROTECTED().SIGNATURE(void, OnClicked);
 }
 END_META;

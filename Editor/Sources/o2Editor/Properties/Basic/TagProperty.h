@@ -41,7 +41,7 @@ namespace Editor
         void UpdateValueView() override;
 
         // Sets common value
-        void SetCommonValue(const TagGroup& value) override;
+        void SetCommonValue(const TagGroup& value, bool byUser) override;
 
         // Searches controls widgets and layers and initializes them
         void InitializeControls();
@@ -82,7 +82,7 @@ CLASS_METHODS_META(Editor::TagsProperty)
     FUNCTION().PUBLIC().CONSTRUCTOR(RefCounter*);
     FUNCTION().PUBLIC().CONSTRUCTOR(RefCounter*, const TagsProperty&);
     FUNCTION().PROTECTED().SIGNATURE(void, UpdateValueView);
-    FUNCTION().PROTECTED().SIGNATURE(void, SetCommonValue, const TagGroup&);
+    FUNCTION().PROTECTED().SIGNATURE(void, SetCommonValue, const TagGroup&, bool);
     FUNCTION().PROTECTED().SIGNATURE(void, InitializeControls);
     FUNCTION().PROTECTED().SIGNATURE(void, UpdateContextData, const WString&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnEditBoxChanged, const WString&);

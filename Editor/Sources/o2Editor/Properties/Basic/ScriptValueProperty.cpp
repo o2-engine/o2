@@ -337,7 +337,7 @@ namespace Editor
         mBuiltProperties.Add(name, prop);
     }
 
-    void ScriptValueProperty::OnCountChanged(const Ref<IPropertyField>& def)
+    void ScriptValueProperty::OnCountChanged(const Ref<IPropertyField>& def, bool byUser)
     {
         if (mIsRefreshing)
             return;
