@@ -28,7 +28,7 @@ namespace Editor
             if (mBuiltObjectType)
             {
                 o2EditorProperties.BuildObjectProperties(mSpoiler, mBuiltObjectType, mPropertiesContext, "",
-                                                         mOnChildFieldChangeCompleted, onChanged);
+                                                         mOnPropertyChangeCompleted, mOnPropertyChanged);
 
                 mBuiltWithHiddenProperties = o2EditorProperties.IsPrivateFieldsVisible();
             }

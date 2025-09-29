@@ -38,7 +38,7 @@ namespace Editor
         mSpoiler->AddChild(mSlicesEditor);
 
         mAtlasProperty = DynamicCast<AssetProperty>(o2EditorProperties.CreateRegularField(
-            &TypeOf(AssetRef<AtlasAsset>), "Atlas", mOnChildFieldChangeCompleted, onChanged));
+            &TypeOf(AssetRef<AtlasAsset>), "Atlas", mOnPropertyChangeCompleted, mOnPropertyChanged));
 
         mSpoiler->AddChild(mAtlasProperty);
     }

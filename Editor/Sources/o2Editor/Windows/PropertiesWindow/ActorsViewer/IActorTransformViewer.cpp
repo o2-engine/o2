@@ -68,6 +68,17 @@ namespace Editor
         return mPropertiesEnabled;
     }
 
+    void IActorTransformViewer::OnPropertyChanged(const Ref<IPropertyField>& field, bool byUser)
+    {
+        onPropertyChanged(field, byUser);
+    }
+
+    void IActorTransformViewer::OnPropertyChangeCompleted(const String& path, const Vector<DataDocument>& before, 
+                                                          const Vector<DataDocument>& after)
+    {
+        onPropertyChangeCompleted(path, before, after);
+    }
+
 }
 // --- META ---
 

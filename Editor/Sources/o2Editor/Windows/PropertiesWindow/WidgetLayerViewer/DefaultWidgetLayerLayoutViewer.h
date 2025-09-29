@@ -45,12 +45,12 @@ namespace Editor
         // Disable viewer event function
         void OnPropertiesDisabled() override;
 
-        // Called when some property change completed, stores action for undo
-        void OnPropertyChangeCompleted(const String& path, const Vector<DataDocument>& prevValue, 
-                                       const Vector<DataDocument>& newValue);
+        // Called when some property changed
+        void OnPropertyChanged(const Ref<IPropertyField>& field, bool byUser) override;
 
-        // Called when some property changed, updates owner widgets
-        void OnPropertyChanged(const Ref<IPropertyField>& field, bool byUser);
+        // Called when some property change completed
+        void OnPropertyChangeCompleted(const String& path, const Vector<DataDocument>& before, 
+                                       const Vector<DataDocument>& after) override;
     };
 }
 // --- META ---
@@ -79,8 +79,8 @@ CLASS_METHODS_META(Editor::DefaultWidgetLayerLayoutViewer)
     FUNCTION().PUBLIC().SIGNATURE(void, Refresh);
     FUNCTION().PROTECTED().SIGNATURE(void, OnPropertiesEnabled);
     FUNCTION().PROTECTED().SIGNATURE(void, OnPropertiesDisabled);
-    FUNCTION().PROTECTED().SIGNATURE(void, OnPropertyChangeCompleted, const String&, const Vector<DataDocument>&, const Vector<DataDocument>&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnPropertyChanged, const Ref<IPropertyField>&, bool);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnPropertyChangeCompleted, const String&, const Vector<DataDocument>&, const Vector<DataDocument>&);
 }
 END_META;
 // --- END META ---

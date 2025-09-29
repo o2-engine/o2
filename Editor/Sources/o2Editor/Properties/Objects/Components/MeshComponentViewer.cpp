@@ -31,7 +31,7 @@ namespace Editor
     void MeshComponentViewer::RebuildProperties(const Vector<Pair<IObject*, IObject*>>& targetObjets)
     {
         o2EditorProperties.BuildObjectProperties(mSpoiler, &TypeOf(MeshComponent), mPropertiesContext, "",
-                                                 mOnChildFieldChangeCompleted, onChanged);
+                                                 mOnPropertyChangeCompleted, mOnPropertyChanged);
 
         mFitAndCenterButton = o2UI.CreateButton("Fit and centerize", THIS_FUNC(FitAndCenterize));
 

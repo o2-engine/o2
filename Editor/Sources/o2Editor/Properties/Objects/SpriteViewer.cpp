@@ -27,22 +27,22 @@ namespace Editor
         mSpoiler->AddChild(commonFieldsLayout);
 
         mImageProperty = o2EditorProperties.BuildFieldType<AssetProperty>(commonFieldsLayout, spriteType, "image", "",
-                                                                          mPropertiesContext, mOnChildFieldChangeCompleted, onChanged);
+                                                                          mPropertiesContext, mOnPropertyChangeCompleted, mOnPropertyChanged);
 
         mSizePivotProperty = o2EditorProperties.BuildFieldType<Vec2FProperty>(commonFieldsLayout, spriteType, "szPivot", "",
-                                                                              mPropertiesContext, mOnChildFieldChangeCompleted, onChanged);
+                                                                              mPropertiesContext, mOnPropertyChangeCompleted, mOnPropertyChanged);
 
         mPivotProperty = o2EditorProperties.BuildFieldType<Vec2FProperty>(commonFieldsLayout, spriteType, "pivot", "",
-                                                                          mPropertiesContext, mOnChildFieldChangeCompleted, onChanged);
+                                                                          mPropertiesContext, mOnPropertyChangeCompleted, mOnPropertyChanged);
 
         mColorProperty = o2EditorProperties.BuildFieldType<ColorProperty>(commonFieldsLayout, spriteType, "color", "",
-                                                                          mPropertiesContext, mOnChildFieldChangeCompleted, onChanged);
+                                                                          mPropertiesContext, mOnPropertyChangeCompleted, mOnPropertyChanged);
 
         mAlphaProperty = o2EditorProperties.BuildFieldType<FloatProperty>(commonFieldsLayout, spriteType, "transparency", "",
-                                                                          mPropertiesContext, mOnChildFieldChangeCompleted, onChanged);
+                                                                          mPropertiesContext, mOnPropertyChangeCompleted, mOnPropertyChanged);
 
         mModeProperty = o2EditorProperties.BuildFieldType<EnumProperty>(commonFieldsLayout, spriteType, "mode", "",
-                                                                        mPropertiesContext, mOnChildFieldChangeCompleted, onChanged);
+                                                                        mPropertiesContext, mOnPropertyChangeCompleted, mOnPropertyChanged);
 
         mModeProperty->onChanged += [&](auto& x, bool) { OnModeSelected(); };
 
@@ -61,7 +61,7 @@ namespace Editor
         mFillPropertiesSpoiler->AddChildWidget(fillSpace);
 
         mFillProperty = o2EditorProperties.BuildFieldType<FloatProperty>(mFillPropertiesSpoiler, spriteType, "fill", "",
-                                                                         mPropertiesContext, mOnChildFieldChangeCompleted, onChanged);
+                                                                         mPropertiesContext, mOnPropertyChangeCompleted, onChanged);
 
         // Slice properties
         mSlicedPropertiesSpoiler = o2UI.CreateWidget<Spoiler>();
@@ -75,7 +75,7 @@ namespace Editor
 
         slicesEditorSpoiler->SetCaption("Slices");
         mSliceBorderProperty = o2EditorProperties.BuildFieldType<BorderIProperty>(slicesEditorSpoiler, spriteType, "sliceBorder", "",
-                                                                                  mPropertiesContext, mOnChildFieldChangeCompleted, onChanged);
+                                                                                  mPropertiesContext, mOnPropertyChangeCompleted, mOnPropertyChanged);
 
         mSlicesEditor = mmake<ImageSlicesEditorWidget>();
         slicesEditorSpoiler->AddChildWidget(mSlicesEditor);
@@ -90,7 +90,7 @@ namespace Editor
         mTiledPropertiesSpoiler->AddChildWidget(tiledSpace);
 
         mTileScaleProperty = o2EditorProperties.BuildFieldType<FloatProperty>(mTiledPropertiesSpoiler, spriteType, "tileScale", "",
-                                                                              mPropertiesContext, mOnChildFieldChangeCompleted, onChanged);
+                                                                              mPropertiesContext, mOnPropertyChangeCompleted, mOnPropertyChanged);
     }
 
     void SpriteViewer::OnRefreshed(const Vector<Pair<IObject*, IObject*>>& targetObjets)

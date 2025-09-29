@@ -5,10 +5,7 @@
 #include "o2/Scene/Component.h"
 #include "o2/Scene/UI/UIManager.h"
 #include "o2/Scene/UI/WidgetLayout.h"
-#include "o2/Scene/UI/Widgets/Button.h"
-#include "o2/Scene/UI/Widgets/EditBox.h"
 #include "o2/Scene/UI/Widgets/ScrollArea.h"
-#include "o2/Scene/UI/Widgets/Tree.h"
 #include "o2/Scene/UI/Widgets/VerticalLayout.h"
 #include "o2/Utils/Editor/EditorScope.h"
 #include "o2Editor/Properties/Properties.h"
@@ -31,7 +28,13 @@ namespace Editor
 
         // Create viewers
         mHeaderViewer = mmake<DefaultActorHeaderViewer>();
+        mHeaderViewer->onPropertyChanged = THIS_FUNC(OnPropertyChanged);
+        mHeaderViewer->onPropertyChangeCompleted = THIS_FUNC(OnPropertyChangeCompleted);
+
         mTransformViewer = mmake<DefaultActorTransformViewer>();
+        mTransformViewer->onPropertyChanged = THIS_FUNC(OnPropertyChanged);
+        mTransformViewer->onPropertyChangeCompleted = THIS_FUNC(OnPropertyChangeCompleted);
+
         mDefaultComponentViewer = mmake<DefaultActorComponentViewer>();
         mDefaultActorPropertiesViewer = mmake<DefaultActorPropertiesViewer>();
 
@@ -212,6 +215,8 @@ namespace Editor
         auto propertiesViewer = mActorPropertiesViewersPool[type];
 
         propertiesViewer->SetTargetActors(mTargetActors);
+        propertiesViewer->onPropertyChanged = THIS_FUNC(OnPropertyChanged);
+        propertiesViewer->onPropertyChangeCompleted = THIS_FUNC(OnPropertyChangeCompleted);
 
         if (!propertiesViewer->IsEmpty())
             viewersWidgets.Add(propertiesViewer->GetWidget());
@@ -299,6 +304,8 @@ namespace Editor
             mComponentsViewers.Add(componentViewer);
 
             componentViewer->SetTargetComponents(pair.second);
+            componentViewer->onPropertyChanged = THIS_FUNC(OnPropertyChanged);
+            componentViewer->onPropertyChangeCompleted = THIS_FUNC(OnPropertyChangeCompleted);
 
             if (lastComponentViewers.Contains(componentViewer))
                 lastComponentViewers.Remove(componentViewer);
@@ -337,6 +344,16 @@ namespace Editor
         mTargetActors.Clear();
     }
 
+    void ActorViewer::OnPropertyChanged(const Ref<IPropertyField>& field, bool byUser)
+    {
+        IPropertiesViewer::OnPropertyChanged(field, byUser);
+    }
+
+    void ActorViewer::OnPropertyChangeCompleted(const String& path, const Vector<DataDocument>& before, 
+                                       const Vector<DataDocument>& after)
+    {
+        IPropertiesViewer::OnPropertyChangeCompleted(path, before, after);
+    }
 }
 // --- META ---
 

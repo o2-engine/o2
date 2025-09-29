@@ -98,7 +98,9 @@ namespace Editor
 
         Ref<PropertiesContext> mPropertiesContext; // Field properties information
 
-        OnChangeCompletedFunc mOnChildFieldChangeCompleted; // Default field change completed callback, calls
+        OnChangedFunc mOnPropertyChanged; // Default property change callback, calls onChanged from this
+
+        OnChangeCompletedFunc mOnPropertyChangeCompleted; // Default field change completed callback, calls
                                                             // inChangeCompleted from this with full combined path
 
     protected:
@@ -117,9 +119,12 @@ namespace Editor
         // ThCalled when the viewer is freed
         virtual void OnFree() {}
 
-        // Called when some child field were changed
-        void OnFieldChangeCompleted(const String& path, const Vector<DataDocument>& before, 
-                                    const Vector<DataDocument>& after);
+        // Called when some property changed
+        void OnPropertyChanged(const Ref<IPropertyField>& field, bool byUser);
+
+        // Called when some child property were changed
+        void OnPropertyChangeCompleted(const String& path, const Vector<DataDocument>& before, 
+                                       const Vector<DataDocument>& after);
 
         friend class Properties;
     };
@@ -186,7 +191,8 @@ CLASS_FIELDS_META(Editor::IObjectPropertiesViewer)
     FIELD().PROTECTED().NAME(mTargetObjects);
     FIELD().PROTECTED().DEFAULT_VALUE(&TypeOf(IObject)).NAME(mRealObjectType);
     FIELD().PROTECTED().NAME(mPropertiesContext);
-    FIELD().PROTECTED().NAME(mOnChildFieldChangeCompleted);
+    FIELD().PROTECTED().NAME(mOnPropertyChanged);
+    FIELD().PROTECTED().NAME(mOnPropertyChangeCompleted);
 }
 END_META;
 CLASS_METHODS_META(Editor::IObjectPropertiesViewer)
@@ -219,7 +225,8 @@ CLASS_METHODS_META(Editor::IObjectPropertiesViewer)
     FUNCTION().PROTECTED().SIGNATURE(void, RebuildProperties, _tmp3);
     FUNCTION().PROTECTED().SIGNATURE(void, OnRefreshed, _tmp4);
     FUNCTION().PROTECTED().SIGNATURE(void, OnFree);
-    FUNCTION().PROTECTED().SIGNATURE(void, OnFieldChangeCompleted, const String&, const Vector<DataDocument>&, const Vector<DataDocument>&);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnPropertyChanged, const Ref<IPropertyField>&, bool);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnPropertyChangeCompleted, const String&, const Vector<DataDocument>&, const Vector<DataDocument>&);
 }
 END_META;
 

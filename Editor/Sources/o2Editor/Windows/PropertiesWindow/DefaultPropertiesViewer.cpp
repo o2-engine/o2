@@ -1,8 +1,10 @@
+#include "o2Editor/Windows/PropertiesWindow/IPropertiesViewer.h"
 #include "o2Editor/stdafx.h"
 #include "DefaultPropertiesViewer.h"
 
 #include "o2Editor/Properties/Properties.h"
 #include "o2Editor/Properties/ObjectViewer.h"
+#include "o2Editor/Properties/IPropertyField.h"
 
 namespace Editor
 {
@@ -15,8 +17,12 @@ namespace Editor
         scrollArea->name = "scroll area";
         mContentWidget = scrollArea;
 
+        using thisclass = DefaultPropertiesViewer;
+
         mViewer = mmake<ObjectViewer>();
         *mViewer->layout = WidgetLayout::BothStretch(5, 0, 5, 5);
+        mViewer->onPropertyChanged = THIS_FUNC(OnPropertyChanged);
+        mViewer->onPropertyChangeCompleted = THIS_FUNC(OnPropertyChangeCompleted);
         mContentWidget->AddChild(mViewer);
     }
 
@@ -47,6 +53,17 @@ namespace Editor
     {
         if (mViewer)
             mViewer->OnPropertiesDisabled();
+    }
+
+    void DefaultPropertiesViewer::OnPropertyChanged(const Ref<IPropertyField>& field, bool byUser)
+    {
+        IPropertiesViewer::OnPropertyChanged(field, byUser);
+    }
+
+    void DefaultPropertiesViewer::OnPropertyChangeCompleted(const String& path, const Vector<DataDocument>& before, 
+                                       const Vector<DataDocument>& after)
+    {
+        IPropertiesViewer::OnPropertyChangeCompleted(path, before, after);
     }
 
 }

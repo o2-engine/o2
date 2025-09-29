@@ -1,5 +1,8 @@
 #include "o2Editor/stdafx.h"
 #include "IWidgetLayerHeadViewer.h"
+
+#include "o2/Scene/UI/Widget.h"
+
 namespace Editor
 {
     void IWidgetLayerHeaderViewer::SetPropertiesEnabled(bool enabled)
@@ -18,6 +21,17 @@ namespace Editor
     bool IWidgetLayerHeaderViewer::IsPropertiesEnabled() const
     {
         return mPropertiesEnabled;
+    }
+
+    void IWidgetLayerHeaderViewer::OnPropertyChanged(const Ref<IPropertyField>& field, bool byUser)
+    {
+        onPropertyChanged(field, byUser);
+    }
+
+    void IWidgetLayerHeaderViewer::OnPropertyChangeCompleted(const String& path, const Vector<DataDocument>& before, 
+                                       const Vector<DataDocument>& after)
+    {
+        onPropertyChangeCompleted(path, before, after);
     }
 }
 // --- META ---

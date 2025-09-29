@@ -1,5 +1,6 @@
 #pragma once
 
+#include "o2/Utils/Basic/IObject.h"
 #include "o2/Utils/Singleton.h"
 #include "o2Editor/Properties/IPropertyField.h"
 #include "o2Editor/Windows/IEditorWindow.h"
@@ -27,6 +28,12 @@ namespace Editor
     // ------------------------
     class PropertiesWindow: public Singleton<PropertiesWindow>, public IEditorWindow
     {
+    public:
+        Function<void(const Vector<IObject*>& targets, const Ref<IPropertyField>& field, bool byUser)> onPropertyChanged; // Called when property changed
+
+        Function<void(const Vector<IObject*>& targets, const String& path, 
+                      const Vector<DataDocument>& before, const Vector<DataDocument>& after)> onPropertyChangeCompleted; // Called when property change completed
+
     public:
         // Default constructor
         PropertiesWindow(RefCounter* refCounter);
@@ -88,7 +95,11 @@ namespace Editor
         void OnPrivateFieldsVisibleChanged(bool visible);
 
         // Called when some property field was changed
-        void OnPropertyChanged(const Ref<IPropertyField>& field);
+        void OnPropertyChanged(const Vector<IObject*>& targets, const Ref<IPropertyField>& field, bool byUser);
+
+        // Called when some property change completed
+        void OnPropertyChangeCompleted(const Vector<IObject*>& targets, const String& path, const Vector<DataDocument>& before, 
+                                       const Vector<DataDocument>& after);
 
 		// Called when window was focused, calls focus delegate from scene tree
         void OnFocusedWindow();
@@ -104,6 +115,8 @@ CLASS_BASES_META(Editor::PropertiesWindow)
 END_META;
 CLASS_FIELDS_META(Editor::PropertiesWindow)
 {
+    FIELD().PUBLIC().NAME(onPropertyChanged);
+    FIELD().PUBLIC().NAME(onPropertyChangeCompleted);
     FIELD().PROTECTED().NAME(mTargets);
     FIELD().PROTECTED().NAME(mCurrentViewer);
     FIELD().PROTECTED().NAME(mViewers);
@@ -130,7 +143,8 @@ CLASS_METHODS_META(Editor::PropertiesWindow)
     FUNCTION().PROTECTED().SIGNATURE(void, InitializeWindowContext);
     FUNCTION().PROTECTED().SIGNATURE(void, InitializeViewers);
     FUNCTION().PROTECTED().SIGNATURE(void, OnPrivateFieldsVisibleChanged, bool);
-    FUNCTION().PROTECTED().SIGNATURE(void, OnPropertyChanged, const Ref<IPropertyField>&);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnPropertyChanged, const Vector<IObject*>&, const Ref<IPropertyField>&, bool);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnPropertyChangeCompleted, const Vector<IObject*>&, const String&, const Vector<DataDocument>&, const Vector<DataDocument>&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnFocusedWindow);
 }
 END_META;

@@ -100,6 +100,13 @@ namespace Editor
         // Disable viewer event function
         void OnPropertiesDisabled() override;
 
+        // Called when some property changed
+        void OnPropertyChanged(const Ref<IPropertyField>& field, bool byUser) override;
+
+        // Called when some property change completed
+        void OnPropertyChangeCompleted(const String& path, const Vector<DataDocument>& before, 
+                                       const Vector<DataDocument>& after) override;
+
         friend class AddComponentPanel;
     };
 
@@ -148,6 +155,8 @@ CLASS_METHODS_META(Editor::ActorViewer)
     FUNCTION().PROTECTED().SIGNATURE(_tmp1, GetGroupedComponents);
     FUNCTION().PROTECTED().SIGNATURE(void, OnPropertiesEnabled);
     FUNCTION().PROTECTED().SIGNATURE(void, OnPropertiesDisabled);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnPropertyChanged, const Ref<IPropertyField>&, bool);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnPropertyChangeCompleted, const String&, const Vector<DataDocument>&, const Vector<DataDocument>&);
 }
 END_META;
 // --- END META ---

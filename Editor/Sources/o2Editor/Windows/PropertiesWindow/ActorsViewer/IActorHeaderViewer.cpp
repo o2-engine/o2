@@ -22,6 +22,17 @@ namespace Editor
     {
         return mPropertiesEnabled;
     }
+
+    void IActorHeaderViewer::OnPropertyChanged(const Ref<IPropertyField>& field, bool byUser)
+    {
+        onPropertyChanged(field, byUser);
+    }
+
+    void IActorHeaderViewer::OnPropertyChangeCompleted(const String& path, const Vector<DataDocument>& before, 
+                                       const Vector<DataDocument>& after)
+    {
+        onPropertyChangeCompleted(path, before, after);
+    }
 }
 // --- META ---
 

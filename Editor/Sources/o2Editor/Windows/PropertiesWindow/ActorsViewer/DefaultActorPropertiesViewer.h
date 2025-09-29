@@ -44,15 +44,18 @@ namespace Editor
         Ref<IObjectPropertiesViewer> mViewer; // Actor properties viewer
 
     protected:
-        // Called when some property changed, marks Actor as changed and calls default Undo create callback
-        void OnPropertyChanged(const String& path, const Vector<DataDocument>& before,
-                               const Vector<DataDocument>& after);
-
         // Enable viewer event function
         void OnPropertiesEnabled() override;
 
         // Disable viewer event function
         void OnPropertiesDisabled() override;
+
+        // Called when some property changed
+        void OnPropertyChanged(const Ref<IPropertyField>& field, bool byUser) override;
+
+        // Called when some property change completed
+        void OnPropertyChangeCompleted(const String& path, const Vector<DataDocument>& before, 
+                                       const Vector<DataDocument>& after) override;
     };
 }
 // --- META ---
@@ -78,9 +81,10 @@ CLASS_METHODS_META(Editor::DefaultActorPropertiesViewer)
     FUNCTION().PUBLIC().SIGNATURE(void, SpecializeActorType, const Type*);
     FUNCTION().PUBLIC().SIGNATURE(void, Refresh);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsEmpty);
-    FUNCTION().PROTECTED().SIGNATURE(void, OnPropertyChanged, const String&, const Vector<DataDocument>&, const Vector<DataDocument>&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnPropertiesEnabled);
     FUNCTION().PROTECTED().SIGNATURE(void, OnPropertiesDisabled);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnPropertyChanged, const Ref<IPropertyField>&, bool);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnPropertyChangeCompleted, const String&, const Vector<DataDocument>&, const Vector<DataDocument>&);
 }
 END_META;
 // --- END META ---

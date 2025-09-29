@@ -39,7 +39,7 @@ namespace Editor
                 o2EditorProperties.FreeObjectViewer(mViewer);
 
             mViewer = o2EditorProperties.CreateObjectViewer(mComponentType, (String)"component:" + mComponentType->GetName(),
-                                                            THIS_FUNC(OnPropertyChanged));
+                                                            THIS_FUNC(OnPropertyChangeCompleted), THIS_FUNC(OnPropertyChanged));
 
             mViewer->CheckCreateSpoiler(mSpoiler);
             mViewer->SetHeaderEnabled(false);
@@ -53,15 +53,6 @@ namespace Editor
         }
     }
 
-    void DefaultActorComponentViewer::OnPropertyChanged(const String& path, const Vector<DataDocument>& before,
-                                                        const Vector<DataDocument>& after)
-    {
-        for (auto& component : mTargetComponents)
-            component->GetActor()->OnChanged();
-
-        o2EditorSceneWindow.DoneActorPropertyChangeAction(path, before, after);
-    }
-
     void DefaultActorComponentViewer::OnPropertiesEnabled()
     {
         if (mViewer)
@@ -72,6 +63,22 @@ namespace Editor
     {
         if (mViewer)
             mViewer->OnPropertiesDisabled();
+    }
+
+    void DefaultActorComponentViewer::OnPropertyChanged(const Ref<IPropertyField>& field, bool byUser)
+    {
+        IActorComponentViewer::OnPropertyChanged(field, byUser);
+    }
+
+    void DefaultActorComponentViewer::OnPropertyChangeCompleted(const String& path, const Vector<DataDocument>& before, 
+                                                                const Vector<DataDocument>& after)
+    {
+        IActorComponentViewer::OnPropertyChangeCompleted(path, before, after);
+
+        for (auto& component : mTargetComponents)
+            component->GetActor()->OnChanged();
+
+        o2EditorSceneWindow.DoneActorPropertyChangeAction(path, before, after);
     }
 
 }

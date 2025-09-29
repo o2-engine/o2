@@ -68,6 +68,16 @@ namespace Editor
         return mPropertiesEnabled;
     }
 
+    void IWidgetLayerPropertiesViewer::OnPropertyChanged(const Ref<IPropertyField>& field, bool byUser)
+    {
+        onPropertyChanged(field, byUser);
+    }
+
+    void IWidgetLayerPropertiesViewer::OnPropertyChangeCompleted(const String& path, const Vector<DataDocument>& before, 
+                                       const Vector<DataDocument>& after)
+    {
+        onPropertyChangeCompleted(path, before, after);
+    }
 }
 // --- META ---
 

@@ -13,9 +13,12 @@ namespace Editor
     {
         mPropertiesContext = mmake<PropertiesContext>();
 
-        mOnChildFieldChangeCompleted =
+        mOnPropertyChanged =
+            MakeFunction<IObjectPropertiesViewer, void, const Ref<IPropertyField>&, bool>(this, &IObjectPropertiesViewer::OnPropertyChanged);
+
+        mOnPropertyChangeCompleted =
             MakeFunction<IObjectPropertiesViewer, void, const String&,
-            const Vector<DataDocument>&, const Vector<DataDocument>&>(this, &IObjectPropertiesViewer::OnFieldChangeCompleted);
+            const Vector<DataDocument>&, const Vector<DataDocument>&>(this, &IObjectPropertiesViewer::OnPropertyChangeCompleted);
     }
 
     void IObjectPropertiesViewer::SetHeaderEnabled(bool enabled)
@@ -157,8 +160,13 @@ namespace Editor
         return true;
     }
 
-    void IObjectPropertiesViewer::OnFieldChangeCompleted(const String& path, const Vector<DataDocument>& before,
-                                                         const Vector<DataDocument>& after)
+    void IObjectPropertiesViewer::OnPropertyChanged(const Ref<IPropertyField>& field, bool byUser)
+    {
+        onChanged(field, byUser);
+    }
+
+    void IObjectPropertiesViewer::OnPropertyChangeCompleted(const String& path, const Vector<DataDocument>& before,
+                                                            const Vector<DataDocument>& after)
     {
 		String finalPath = this->path.IsEmpty() ? path : this->path + "/" + path;
         onChangeCompleted(finalPath, before, after);

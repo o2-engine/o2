@@ -71,7 +71,7 @@ namespace Editor
         horSeparatorContainer->AddChild(horSeparator);
 
         o2EditorProperties.BuildObjectProperties(mSpoiler, &TypeOf(ParticlesEmitterComponent), mPropertiesContext, "",
-                                                 mOnChildFieldChangeCompleted, onChanged);
+                                                 mOnPropertyChangeCompleted, mOnPropertyChanged);
 
         mSceneLayer = mmake<SceneLayer>();
         mSceneLayer->viewer = Ref(this);

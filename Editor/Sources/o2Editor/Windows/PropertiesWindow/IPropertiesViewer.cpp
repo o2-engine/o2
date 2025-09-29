@@ -21,6 +21,11 @@ namespace Editor
         return nullptr;
     }
 
+    void IPropertiesViewer::SetTargets(const Vector<IObject*>& targets)
+    {
+        mTargets = targets;
+    }
+
     void IPropertiesViewer::Refresh()
     {}
 
@@ -40,6 +45,17 @@ namespace Editor
     bool IPropertiesViewer::IsEnabled() const
     {
         return mPropertiesEnabled;
+    }
+
+    void IPropertiesViewer::OnPropertyChanged(const Ref<IPropertyField>& field, bool byUser)
+    {
+        onPropertyChanged(mTargets, field, byUser);
+    }
+
+    void IPropertiesViewer::OnPropertyChangeCompleted(const String& path, const Vector<DataDocument>& before, 
+                                                     const Vector<DataDocument>& after)
+    {
+        onPropertyChangeCompleted(mTargets, path, before, after);
     }
 
 }

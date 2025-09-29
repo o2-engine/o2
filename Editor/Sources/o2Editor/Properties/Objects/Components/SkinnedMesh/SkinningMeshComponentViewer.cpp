@@ -34,7 +34,7 @@ namespace Editor
     void SkinningMeshComponentViewer::RebuildProperties(const Vector<Pair<IObject*, IObject*>>& targetObjets)
     {
         o2EditorProperties.BuildObjectProperties(mSpoiler, &TypeOf(SkinningMeshComponent), mPropertiesContext, "",
-            mOnChildFieldChangeCompleted, onChanged);
+            mOnPropertyChangeCompleted, mOnPropertyChanged);
 
         mFitAndCenterButton = o2UI.CreateButton("Fit and centerize image", THIS_FUNC(FitAndCenterize));
         mEditSkeletonButton = o2UI.CreateButton("Edit skeleton", THIS_FUNC(OnEditSkeletonPressed));

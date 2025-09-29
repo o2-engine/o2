@@ -20,17 +20,17 @@ namespace Editor
 
         // Basic properties
         o2EditorProperties.BuildFieldType<ColorProperty>(mSpoiler, cameraActorType, "drawLayers", "",
-                                                         mPropertiesContext, mOnChildFieldChangeCompleted, onChanged);
+                                                         mPropertiesContext, mOnPropertyChangeCompleted, mOnPropertyChanged);
 
         o2EditorProperties.BuildFieldType<BooleanProperty>(mSpoiler, cameraActorType, "fillBackground", "",
-                                                                   mPropertiesContext, mOnChildFieldChangeCompleted, onChanged);
+                                                                   mPropertiesContext, mOnPropertyChangeCompleted, mOnPropertyChanged);
 
         o2EditorProperties.BuildFieldType<SceneLayersListProperty>(mSpoiler, cameraActorType, "fillColor", "",
-                                                                   mPropertiesContext, mOnChildFieldChangeCompleted, onChanged);
+                                                                   mPropertiesContext, mOnPropertyChangeCompleted, mOnPropertyChanged);
 
         // Type
         mTypeProperty = o2EditorProperties.BuildFieldType<EnumProperty>(mSpoiler, cameraActorType, "mType", "",
-                                                                        mPropertiesContext, mOnChildFieldChangeCompleted, onChanged);
+                                                                        mPropertiesContext, mOnPropertyChangeCompleted, mOnPropertyChanged);
 
         mTypeProperty->onChanged += [&](auto& x, bool) { OnTypeSelected(); };
 
@@ -45,7 +45,7 @@ namespace Editor
         mHiddenTypeProperties->AddChild(mSizePropertySpoiler);
 
         mSizeProperty = o2EditorProperties.BuildFieldType<Vec2FProperty>(mSizePropertySpoiler, cameraActorType, "mFixedOrFittedSize", "",
-                                                                         mPropertiesContext, mOnChildFieldChangeCompleted, onChanged);
+                                                                         mPropertiesContext, mOnPropertyChangeCompleted, mOnPropertyChanged);
 
         mSizeProperty->SetCaption("Size");
 
@@ -54,7 +54,7 @@ namespace Editor
         mHiddenTypeProperties->AddChild(mUnitsPropertySpoiler);
 
         mUnitsProperty = o2EditorProperties.BuildFieldType<EnumProperty>(mUnitsPropertySpoiler, cameraActorType, "mUnits", "",
-                                                                         mPropertiesContext, mOnChildFieldChangeCompleted, onChanged);
+                                                                         mPropertiesContext, mOnPropertyChangeCompleted, mOnPropertyChanged);
     }
 
     void CameraActorViewer::OnTypeSelected()

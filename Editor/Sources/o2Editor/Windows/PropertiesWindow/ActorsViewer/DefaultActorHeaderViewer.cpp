@@ -38,19 +38,22 @@ namespace Editor
         mEnableProperty = o2UI.CreateWidget<BooleanProperty>("actor head enable");
         *mEnableProperty->layout = WidgetLayout::Based(BaseCorner::LeftTop, Vec2F(20, 20), Vec2F(1, 0));
         mEnableProperty->SetValuePath("enabled");
-        mEnableProperty->onChangeCompleted = THIS_FUNC(OnPropertyChanged);
+        mEnableProperty->onChanged = THIS_FUNC(OnPropertyChanged);
+        mEnableProperty->onChangeCompleted = THIS_FUNC(OnPropertyChangeCompleted);
         mDataView->AddChild(mEnableProperty);
 
         mNameProperty = o2UI.CreateWidget<StringProperty>("actor head name");
         *mNameProperty->layout = WidgetLayout::HorStretch(VerAlign::Top, 21, 15, 17, 2);
         mNameProperty->SetValuePath("name");
-        mNameProperty->onChangeCompleted = THIS_FUNC(OnPropertyChanged);
+        mNameProperty->onChanged = THIS_FUNC(OnPropertyChanged);
+        mNameProperty->onChangeCompleted = THIS_FUNC(OnPropertyChangeCompleted);
         mDataView->AddChild(mNameProperty);
 
         mLockProperty = o2UI.CreateWidget<BooleanProperty>("actor head lock");
         *mLockProperty->layout = WidgetLayout::Based(BaseCorner::RightTop, Vec2F(20, 20), Vec2F(2, -1));
         mLockProperty->SetValuePath("locked");
-        mLockProperty->onChangeCompleted = THIS_FUNC(OnPropertyChanged);
+        mLockProperty->onChanged = THIS_FUNC(OnPropertyChanged);
+        mLockProperty->onChangeCompleted = THIS_FUNC(OnPropertyChangeCompleted);
         mDataView->AddChild(mLockProperty);
 
 
@@ -90,7 +93,8 @@ namespace Editor
         mTagsProperty = o2UI.CreateWidget<TagsProperty>("actor head tags");
         *mTagsProperty->layout = WidgetLayout::HorStretch(VerAlign::Bottom, 21, 3, 17, 23);
         mTagsProperty->SetValuePath("tags");
-        mTagsProperty->onChangeCompleted = THIS_FUNC(OnPropertyChanged);
+        mTagsProperty->onChanged = THIS_FUNC(OnPropertyChanged);
+        mTagsProperty->onChangeCompleted = THIS_FUNC(OnPropertyChangeCompleted);
         mDataView->AddChild(mTagsProperty);
 
         auto layerImg = o2UI.CreateImage("ui/UI4_layer_big.png");
@@ -102,7 +106,8 @@ namespace Editor
         mLayerProperty->name = "layer";
         mLayerProperty->SetValuePath("layer");
         mLayerProperty->SetUseInheritedValue(true);
-        mLayerProperty->onChangeCompleted = THIS_FUNC(OnPropertyChanged);
+        mLayerProperty->onChanged = THIS_FUNC(OnPropertyChanged);
+        mLayerProperty->onChangeCompleted = THIS_FUNC(OnPropertyChangeCompleted);
         mLayerProperty->onSelectedInheritedValue = THIS_FUNC(OnSelectedInheritedLayer);
         mDataView->AddChild(mLayerProperty);
 
@@ -110,7 +115,8 @@ namespace Editor
         *mDepthProperty->layout = WidgetLayout::Based(BaseCorner::RightBottom, Vec2F(70, 17), Vec2F(-3, 3));
         mDepthProperty->name = "depth";
         mDepthProperty->SetValuePath("depth");
-        mDepthProperty->onChangeCompleted = THIS_FUNC(OnPropertyChanged);
+        mDepthProperty->onChanged = THIS_FUNC(OnPropertyChanged);
+        mDepthProperty->onChangeCompleted = THIS_FUNC(OnPropertyChangeCompleted);
         mDataView->AddChild(mDepthProperty);
 
         auto depthInheritStateAnim = AnimationClip::EaseInOut("child/layer/layout/offsetRight", -75.0f, -3.0f, 0.2f);
@@ -292,11 +298,17 @@ namespace Editor
 
         return applyActors;
     }
-
-    void DefaultActorHeaderViewer::OnPropertyChanged(const String& path, const Vector<DataDocument>& prevValue,
-                                                     const Vector<DataDocument>& newValue)
+    void DefaultActorHeaderViewer::OnPropertyChanged(const Ref<IPropertyField>& field, bool byUser)
     {
-        auto action = mmake<PropertyChangeAction>(o2EditorSceneScreen.GetSelectedObjects(), path, prevValue, newValue);
+        IActorHeaderViewer::OnPropertyChanged(field, byUser);
+    }
+
+    void DefaultActorHeaderViewer::OnPropertyChangeCompleted(const String& path, const Vector<DataDocument>& before, 
+                                       const Vector<DataDocument>& after)
+    {
+        IActorHeaderViewer::OnPropertyChangeCompleted(path, before, after);
+
+        auto action = mmake<PropertyChangeAction>(o2EditorSceneScreen.GetSelectedObjects(), path, before, after);
         o2EditorSceneWindow.DoneAction(action);
     }
 

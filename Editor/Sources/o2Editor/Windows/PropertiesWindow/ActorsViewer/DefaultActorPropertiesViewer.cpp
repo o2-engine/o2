@@ -44,7 +44,7 @@ namespace Editor
             if (mViewer)
                 o2EditorProperties.FreeObjectViewer(mViewer);
 
-            mViewer = o2EditorProperties.CreateObjectViewer(mActorType, "", THIS_FUNC(OnPropertyChanged));
+            mViewer = o2EditorProperties.CreateObjectViewer(mActorType, "", THIS_FUNC(OnPropertyChangeCompleted), THIS_FUNC(OnPropertyChanged));
             mViewer->CheckCreateSpoiler(mSpoiler);
             mViewer->SetHeaderEnabled(false);
         }
@@ -62,15 +62,6 @@ namespace Editor
         return mViewer && mViewer->IsEmpty();
     }
 
-    void DefaultActorPropertiesViewer::OnPropertyChanged(const String& path, const Vector<DataDocument>& before, 
-                                                         const Vector<DataDocument>& after)
-    {
-        for (auto& actors : mTargetActors)
-            actors->OnChanged();
-
-        o2EditorSceneWindow.DoneActorPropertyChangeAction(path, before, after);
-    }
-
     void DefaultActorPropertiesViewer::OnPropertiesEnabled()
     {
         if (mViewer)
@@ -83,6 +74,21 @@ namespace Editor
             mViewer->OnPropertiesDisabled();
     }
 
+    void DefaultActorPropertiesViewer::OnPropertyChanged(const Ref<IPropertyField>& field, bool byUser)
+    {
+        IActorPropertiesViewer::OnPropertyChanged(field, byUser);
+    }
+
+    void DefaultActorPropertiesViewer::OnPropertyChangeCompleted(const String& path, const Vector<DataDocument>& before, 
+                                       const Vector<DataDocument>& after)
+    {
+        IActorPropertiesViewer::OnPropertyChangeCompleted(path, before, after);
+
+        for (auto& actors : mTargetActors)
+            actors->OnChanged();
+
+        o2EditorSceneWindow.DoneActorPropertyChangeAction(path, before, after);
+    }
 }
 // --- META ---
 

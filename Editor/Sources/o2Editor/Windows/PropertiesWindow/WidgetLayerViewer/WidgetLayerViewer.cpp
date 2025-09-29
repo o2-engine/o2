@@ -20,8 +20,16 @@ namespace Editor
         PushEditorScopeOnStack scope;
 
         mHeaderViewer = mmake<DefaultWidgetLayerHeaderViewer>();
+        mHeaderViewer->onPropertyChanged = THIS_FUNC(OnPropertyChanged);
+        mHeaderViewer->onPropertyChangeCompleted = THIS_FUNC(OnPropertyChangeCompleted);
+
         mLayoutViewer = mmake<DefaultWidgetLayerLayoutViewer>();
+        mLayoutViewer->onPropertyChanged = THIS_FUNC(OnPropertyChanged);
+        mLayoutViewer->onPropertyChangeCompleted = THIS_FUNC(OnPropertyChangeCompleted);
+
         mPropertiesViewer = mmake<DefaultWidgetLayerPropertiesViewer>();
+        mPropertiesViewer->onPropertyChanged = THIS_FUNC(OnPropertyChanged);
+        mPropertiesViewer->onPropertyChangeCompleted = THIS_FUNC(OnPropertyChangeCompleted);
 
         auto scrollArea = o2UI.CreateScrollArea("backless");
         scrollArea->SetViewLayout(Layout::BothStretch(0, 0, 15, 0));
@@ -121,6 +129,17 @@ namespace Editor
 
     void WidgetLayerViewer::Draw()
     {}
+
+    void WidgetLayerViewer::OnPropertyChanged(const Ref<IPropertyField>& field, bool byUser)
+    {
+        IPropertiesViewer::OnPropertyChanged(field, byUser);
+    }
+
+    void WidgetLayerViewer::OnPropertyChangeCompleted(const String& path, const Vector<DataDocument>& before, 
+                                       const Vector<DataDocument>& after)
+    {
+        IPropertiesViewer::OnPropertyChangeCompleted(path, before, after);
+    }
 }
 // --- META ---
 

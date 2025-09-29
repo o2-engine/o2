@@ -67,6 +67,13 @@ namespace Editor
         // Disable viewer event function
         void OnPropertiesDisabled() override;
 
+        // Called when some property changed
+        void OnPropertyChanged(const Ref<IPropertyField>& field, bool byUser) override;
+
+        // Called when some property change completed
+        void OnPropertyChangeCompleted(const String& path, const Vector<DataDocument>& before, 
+                                       const Vector<DataDocument>& after) override;
+
         // Updates viewer
         void Update(float dt) override;
 
@@ -104,6 +111,8 @@ CLASS_METHODS_META(Editor::WidgetLayerViewer)
     FUNCTION().PROTECTED().SIGNATURE(void, SetTargets, const Vector<IObject*>&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnPropertiesEnabled);
     FUNCTION().PROTECTED().SIGNATURE(void, OnPropertiesDisabled);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnPropertyChanged, const Ref<IPropertyField>&, bool);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnPropertyChangeCompleted, const String&, const Vector<DataDocument>&, const Vector<DataDocument>&);
     FUNCTION().PROTECTED().SIGNATURE(void, Update, float);
     FUNCTION().PROTECTED().SIGNATURE(void, Draw);
 }

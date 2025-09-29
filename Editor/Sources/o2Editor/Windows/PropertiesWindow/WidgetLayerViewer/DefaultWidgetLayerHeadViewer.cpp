@@ -26,19 +26,22 @@ namespace Editor
         mEnableProperty = o2UI.CreateWidget<BooleanProperty>("actor head enable");
         *mEnableProperty->layout = WidgetLayout::Based(BaseCorner::LeftTop, Vec2F(20, 20), Vec2F(1, 0));
         mEnableProperty->SetValuePath("enabled");
-        mEnableProperty->onChangeCompleted = THIS_FUNC(OnPropertyChanged);
+        mEnableProperty->onChanged = THIS_FUNC(OnPropertyChanged);
+        mEnableProperty->onChangeCompleted = THIS_FUNC(OnPropertyChangeCompleted);
         mDataView->AddChild(mEnableProperty);
 
         mNameProperty = o2UI.CreateWidget<StringProperty>("actor head name");
         *mNameProperty->layout = WidgetLayout::HorStretch(VerAlign::Top, 21, 15, 17, 2);
         mNameProperty->SetValuePath("name");
-        mNameProperty->onChangeCompleted = THIS_FUNC(OnPropertyChanged);
+        mNameProperty->onChanged = THIS_FUNC(OnPropertyChanged);
+        mNameProperty->onChangeCompleted = THIS_FUNC(OnPropertyChangeCompleted);
         mDataView->AddChild(mNameProperty);
 
         mLockProperty = o2UI.CreateWidget<BooleanProperty>("actor head lock");
         *mLockProperty->layout = WidgetLayout::Based(BaseCorner::RightTop, Vec2F(20, 20), Vec2F(2, -1));
         mLockProperty->SetValuePath("locked");
-        mLockProperty->onChangeCompleted = THIS_FUNC(OnPropertyChanged);
+        mLockProperty->onChanged = THIS_FUNC(OnPropertyChanged);
+        mLockProperty->onChangeCompleted = THIS_FUNC(OnPropertyChangeCompleted);
         mDataView->AddChild(mLockProperty);
     }
 
@@ -89,10 +92,17 @@ namespace Editor
         mLockProperty->SetPropertyEnabled(false);
     }
 
-    void DefaultWidgetLayerHeaderViewer::OnPropertyChanged(const String& path, const Vector<DataDocument>& prevValue,
-                                                           const Vector<DataDocument>& newValue)
+    void DefaultWidgetLayerHeaderViewer::OnPropertyChanged(const Ref<IPropertyField>& field, bool byUser)
     {
-        auto action = mmake<PropertyChangeAction>(o2EditorSceneScreen.GetSelectedObjects(), path, prevValue, newValue);
+        IWidgetLayerHeaderViewer::OnPropertyChanged(field, byUser);
+    }
+
+    void DefaultWidgetLayerHeaderViewer::OnPropertyChangeCompleted(const String& path, const Vector<DataDocument>& before, 
+                                       const Vector<DataDocument>& after)
+    {
+        IWidgetLayerHeaderViewer::OnPropertyChangeCompleted(path, before, after);
+
+        auto action = mmake<PropertyChangeAction>(o2EditorSceneScreen.GetSelectedObjects(), path, before, after);
         o2EditorSceneWindow.DoneAction(action);
     }
 

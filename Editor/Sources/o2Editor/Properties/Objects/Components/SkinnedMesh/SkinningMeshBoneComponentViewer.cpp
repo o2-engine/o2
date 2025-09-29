@@ -26,7 +26,7 @@ namespace Editor
     void SkinningMeshBoneComponentViewer::RebuildProperties(const Vector<Pair<IObject*, IObject*>>& targetObjets)
     {
         o2EditorProperties.BuildObjectProperties(mSpoiler, &TypeOf(SkinningMeshBoneComponent), mPropertiesContext, "",
-                                                 mOnChildFieldChangeCompleted, onChanged);
+                                                 mOnPropertyChangeCompleted, mOnPropertyChanged);
     }
 
     void SkinningMeshBoneComponentViewer::OnRefreshed(const Vector<Pair<IObject*, IObject*>>& targetObjets)

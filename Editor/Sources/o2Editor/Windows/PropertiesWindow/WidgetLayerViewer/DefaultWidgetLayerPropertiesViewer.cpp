@@ -38,7 +38,7 @@ namespace Editor
     {
         if (!mViewer)
         {
-            mViewer = o2EditorProperties.CreateObjectViewer(&TypeOf(WidgetLayer), "");
+            mViewer = o2EditorProperties.CreateObjectViewer(&TypeOf(WidgetLayer), "", THIS_FUNC(OnPropertyChangeCompleted), THIS_FUNC(OnPropertyChanged));
             mViewer->CheckCreateSpoiler(mSpoiler);
 			mViewer->SetHeaderEnabled(false);
             mFitSizeButton->SetParent(mSpoiler);
@@ -84,6 +84,19 @@ namespace Editor
 
         action->Completed();
         o2EditorSceneWindow.DoneAction(action);
+    }
+
+    void DefaultWidgetLayerPropertiesViewer::OnPropertyChanged(const Ref<IPropertyField>& field, bool byUser)
+    {
+        IWidgetLayerPropertiesViewer::OnPropertyChanged(field, byUser);
+    }
+
+    void DefaultWidgetLayerPropertiesViewer::OnPropertyChangeCompleted(const String& path, const Vector<DataDocument>& before, 
+                                       const Vector<DataDocument>& after)
+    {
+        IWidgetLayerPropertiesViewer::OnPropertyChangeCompleted(path, before, after);
+
+        o2EditorSceneWindow.DoneActorPropertyChangeAction(path, before, after);
     }
 
 }

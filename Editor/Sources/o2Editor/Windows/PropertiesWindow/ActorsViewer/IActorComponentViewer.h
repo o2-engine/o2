@@ -26,6 +26,14 @@ namespace Editor
     class IActorComponentViewer: public IObject, virtual public RefCounterable
     {
     public:
+        typedef Function<void(const Ref<IPropertyField>& field, bool byUser)> OnPropertyChangedFunc;
+        typedef Function<void(const String& path, const Vector<DataDocument>& before, 
+                               const Vector<DataDocument>& after)> OnPropertyChangeCompletedFunc;
+
+        OnPropertyChangedFunc         onPropertyChanged;         // Called when property changed
+        OnPropertyChangeCompletedFunc onPropertyChangeCompleted; // Called when property change completed
+
+    public:
         // Default constructor. Initializes data widget
         IActorComponentViewer();
 
@@ -76,6 +84,13 @@ namespace Editor
         // Disable viewer event function
         virtual void OnPropertiesDisabled() {}
 
+        // Called when some property changed
+        virtual void OnPropertyChanged(const Ref<IPropertyField>& field, bool byUser);
+
+        // Called when some property change completed
+        virtual void OnPropertyChangeCompleted(const String& path, const Vector<DataDocument>& before, 
+                                       const Vector<DataDocument>& after);
+
         friend class ActorViewer;
     };
 }
@@ -89,6 +104,8 @@ CLASS_BASES_META(Editor::IActorComponentViewer)
 END_META;
 CLASS_FIELDS_META(Editor::IActorComponentViewer)
 {
+    FIELD().PUBLIC().NAME(onPropertyChanged);
+    FIELD().PUBLIC().NAME(onPropertyChangeCompleted);
     FIELD().PROTECTED().NAME(mTargetComponents);
     FIELD().PROTECTED().NAME(mSpoiler);
     FIELD().PROTECTED().NAME(mRemoveButton);
@@ -110,6 +127,8 @@ CLASS_METHODS_META(Editor::IActorComponentViewer)
     FUNCTION().PROTECTED().SIGNATURE(void, RemoveTargetComponents);
     FUNCTION().PROTECTED().SIGNATURE(void, OnPropertiesEnabled);
     FUNCTION().PROTECTED().SIGNATURE(void, OnPropertiesDisabled);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnPropertyChanged, const Ref<IPropertyField>&, bool);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnPropertyChangeCompleted, const String&, const Vector<DataDocument>&, const Vector<DataDocument>&);
 }
 END_META;
 // --- END META ---

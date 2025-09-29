@@ -41,7 +41,7 @@ namespace Editor
                 o2EditorProperties.FreeObjectViewer(mPropertiesViewer);
             }
 
-            mPropertiesViewer = o2EditorProperties.CreateObjectViewer(objectType, "");
+            mPropertiesViewer = o2EditorProperties.CreateObjectViewer(objectType, "", THIS_FUNC(OnPropertyChangeCompleted), THIS_FUNC(OnPropertyChanged));
             mPropertiesViewer->CheckCreateSpoiler(Ref(this));
             mPropertiesViewer->SetHeaderEnabled(false);
             mPropertiesViewer->SetParentContext(mParentContext);
@@ -92,6 +92,16 @@ namespace Editor
             mPropertiesViewer->OnPropertiesDisabled();
     }
 
+    void ObjectViewer::OnPropertyChanged(const Ref<IPropertyField>& field, bool byUser)
+    {
+        onPropertyChanged(field, byUser);
+    }
+
+    void ObjectViewer::OnPropertyChangeCompleted(const String& path, const Vector<DataDocument>& before, 
+                                                 const Vector<DataDocument>& after)
+    {
+        onPropertyChangeCompleted(path, before, after);
+    }
 }
 
 DECLARE_TEMPLATE_CLASS(o2::LinkRef<Editor::ObjectViewer>);

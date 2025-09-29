@@ -3,14 +3,9 @@
 
 #include "o2/Scene/UI/WidgetLayout.h"
 #include "o2/Scene/UI/Widgets/ContextMenu.h"
-#include "o2Editor/Properties/Objects/Assets/ImageAssetViewer.h"
-#include "o2Editor/Properties/Objects/Assets/VectorFontAssetViewer.h"
-#include "o2Editor/Properties/Objects/DefaultObjectPropertiesViewer.h"
 #include "o2Editor/Properties/Properties.h"
-#include "o2Editor/Windows/PropertiesWindow/AssetPropertiesViewer.h"
 #include "o2Editor/Windows/PropertiesWindow/DefaultPropertiesViewer.h"
 #include "o2Editor/Windows/PropertiesWindow/IPropertiesViewer.h"
-#include "o2Editor/Windows/PropertiesWindow/WidgetLayerViewer/WidgetLayerViewer.h"
 #include "o2Editor/Windows/TreeWindow/TreeWindow.h"
 
 
@@ -82,9 +77,17 @@ namespace Editor
             mCurrentViewer->SetTargets(mTargets);
     }
 
-    void PropertiesWindow::OnPropertyChanged(const Ref<IPropertyField>& field)
+    void PropertiesWindow::OnPropertyChanged(const Vector<IObject*>& targets, const Ref<IPropertyField>& field, bool byUser)
     {
         mTargetsChanged = true;
+
+        onPropertyChanged(targets, field, byUser);
+    }
+
+    void PropertiesWindow::OnPropertyChangeCompleted(const Vector<IObject*>& targets, const String& path, const Vector<DataDocument>& before, 
+                                                     const Vector<DataDocument>& after)
+    {
+        onPropertyChangeCompleted(targets, path, before, after);
     }
 
 	void PropertiesWindow::OnFocusedWindow()
@@ -117,10 +120,15 @@ namespace Editor
 
         if (objectViewer != mCurrentViewer)
         {
+            using thisclass = PropertiesWindow;
+            
             if (mCurrentViewer)
             {
                 mCurrentViewer->mContentWidget->Hide(true);
                 mCurrentViewer->SetPropertiesEnabled(false);
+
+                mCurrentViewer->onPropertyChanged -= THIS_FUNC(OnPropertyChanged);
+                mCurrentViewer->onPropertyChangeCompleted -= THIS_FUNC(OnPropertyChangeCompleted);
             }
 
             mCurrentViewer = objectViewer;
@@ -130,6 +138,9 @@ namespace Editor
                 mCurrentViewer->mContentWidget->SetParent(mWindow);
                 *mCurrentViewer->mContentWidget->layout = WidgetLayout::BothStretch();
                 mCurrentViewer->mContentWidget->Show(true);
+
+                mCurrentViewer->onPropertyChanged += THIS_FUNC(OnPropertyChanged);
+                mCurrentViewer->onPropertyChangeCompleted += THIS_FUNC(OnPropertyChangeCompleted);
             }
         }
 
