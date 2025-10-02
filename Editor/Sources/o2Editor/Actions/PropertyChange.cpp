@@ -8,87 +8,62 @@
 
 namespace Editor
 {
-    PropertyChangeAction::PropertyChangeAction()
-    {}
+	PropertyChangeAction::PropertyChangeAction()
+	{
+	}
 
-    PropertyChangeAction::PropertyChangeAction(const Vector<Ref<SceneEditableObject>>& objects,
-                                               const String& propertyPath,
-                                               const Vector<DataDocument>& beforeValues,
-                                               const Vector<DataDocument>& afterValues) :
-        objectsIds(objects.Convert<SceneUID>([](const auto& x) { return x->GetID(); })),
-        propertyPath(propertyPath), beforeValues(beforeValues), afterValues(afterValues)
-    {}
+	PropertyChangeAction::PropertyChangeAction(const Vector<Ref<SceneEditableObject>>& objects,
+											   const String& propertyPath,
+											   const Vector<DataDocument>& beforeValues,
+											   const Vector<DataDocument>& afterValues) :
+		objectsIds(objects.Convert<SceneUID>([](const auto& x) { return x->GetID(); })),
+		propertyPath(propertyPath), beforeValues(beforeValues), afterValues(afterValues)
+	{
+	}
 
-    String PropertyChangeAction::GetName() const
-    {
-        return "Property changed";
-    }
+	String PropertyChangeAction::GetName() const
+	{
+		return "Property changed";
+	}
 
-    void PropertyChangeAction::Redo()
-    {
-        SetProperties(afterValues);
-    }
+	void PropertyChangeAction::Redo()
+	{
+		SetProperties(afterValues);
+	}
 
-    void PropertyChangeAction::Undo()
-    {
-        SetProperties(beforeValues);
-    }
+	void PropertyChangeAction::Undo()
+	{
+		SetProperties(beforeValues);
+	}
 
-    void PropertyChangeAction::SetProperties(Vector<DataDocument>& values)
-    {
-        Vector<Ref<SceneEditableObject>> objects = objectsIds.Convert<Ref<SceneEditableObject>>([](SceneUID id) { 
-            return o2Scene.GetEditableObjectByID(id); });
+	void PropertyChangeAction::SetProperties(Vector<DataDocument>& values)
+	{
+		Vector<Ref<SceneEditableObject>> objects = objectsIds.Convert<Ref<SceneEditableObject>>([](SceneUID id) {
+			return o2Scene.GetEditableObjectByID(id); });
 
-        const Type* componentType = nullptr;
-        String finalPropertyPath = propertyPath;
-        if (propertyPath.StartsWith("component:"))
-        {
-            int c = ((String)"component:").Length();
+		int idx = 0;
+		for (auto& object : objects)
+		{
+			if (!object)
+				continue;
 
-            String typeName = propertyPath.SubStr(c, propertyPath.Find('/', c));
+			const FieldInfo* fi = nullptr;
+			void* ptr = nullptr;
 
-            c += typeName.Length() + 1;
-            finalPropertyPath.Erase(0, c);
+			if (auto objectType = dynamic_cast<const ObjectType*>(&object->GetType()))
+			{
+				void* realTypeObject = objectType->DynamicCastFromIObject(dynamic_cast<IObject*>(object.Get()));
+				ptr = objectType->GetFieldPtr(realTypeObject, propertyPath, fi);
+			}
 
-            componentType = o2Reflection.GetType(typeName);
-        }
+			if (fi && ptr)
+				fi->Deserialize(ptr, values[idx]);
 
-        int i = 0;
-        for (auto& object : objects)
-        {
-            if (!object)
-                continue;
+			object->OnChanged();
 
-            const FieldInfo* fi = nullptr;
-            void* ptr = nullptr;
-
-            if (componentType)
-            {
-                if (auto actor = DynamicCast<Actor>(object))
-                {
-                    auto component = actor->GetComponent(componentType);
-                    if (component)
-                        ptr = component->GetType().GetFieldPtr(component.Get(), finalPropertyPath, fi);
-                }
-            }
-            else
-            {
-                auto objectType = dynamic_cast<const ObjectType*>(&object->GetType());
-                if (objectType)
-                {
-                    void* realTypeObject = objectType->DynamicCastFromIObject(dynamic_cast<IObject*>(object.Get()));
-                    ptr = objectType->GetFieldPtr(realTypeObject, finalPropertyPath, fi);
-                }
-            }
-
-            if (fi && ptr)
-                fi->Deserialize(ptr, values[i]);
-
-            object->OnChanged();
-
-            i++;
-        }
-    }
+			idx++;
+		}
+	}
 }
 // --- META ---
 

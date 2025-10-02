@@ -467,7 +467,7 @@ namespace Editor
         DataDocument keyData;
         Map<String, Vector<UInt64>> keys = { { mTrackPath, { Wrapper::GetKey(*track, idx).uid } } };
         handlesSheet->SerializeKeys(keyData, keys, 0);
-        handlesSheet->mAnimationWindow.Lock()->mActionsList->DoneAction(mmake<AnimationAddKeysAction>(keys, keyData, handlesSheet));
+        handlesSheet->mAnimationWindow.Lock()->DoneAction(mmake<AnimationAddKeysAction>(keys, keyData, handlesSheet));
     }
 
     template<typename AnimationTrackType>

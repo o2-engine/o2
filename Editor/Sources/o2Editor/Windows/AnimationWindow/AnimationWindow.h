@@ -30,7 +30,7 @@ namespace Editor
     {
     public:
         // Default constructor
-        AnimationWindow(RefCounter* refCounter);
+        explicit AnimationWindow(RefCounter* refCounter);
 
         // Destructor
         ~AnimationWindow();
@@ -66,6 +66,8 @@ namespace Editor
 
         bool mDisableTimeTracking = false; // When true animation time changes has no effect
 
+		bool mRecording = false; // True when recording is enabled
+
         Ref<Widget> mWorkArea; // Working area with tree and time line
 
         Ref<Toggle> mRecordToggle;     // Record toggle
@@ -86,8 +88,6 @@ namespace Editor
         Ref<CurvesSheet>         mCurves;       // Animation curves sheet
 
         Ref<WidgetDragHandle> mTreeSeparatorHandle; // Tree separator handle. When it moves, it changes size of all dependent widgets
-
-        Ref<ActionsList> mActionsList = mmake<ActionsList>(); // List of actions in animation editor, also injecting into curves editor
 
     protected:
         // Called when editor window has closed
@@ -165,6 +165,10 @@ namespace Editor
         // Called when menu record button was pressed
         void OnMenuRecordToggle(bool value);
 
+		// Called when some property was changed in properties window, subscribes to properties window events
+		void OnPropertyChangeCompleted(const Vector<IObject*>& targets, const String& path, const Vector<DataDocument>& before,
+									   const Vector<DataDocument>& after);
+
         friend class AnimationTimeline;
         friend class AnimationTree;
         friend class CurvesSheet;
@@ -192,6 +196,7 @@ CLASS_FIELDS_META(Editor::AnimationWindow)
     FIELD().PROTECTED().NAME(mAnimationAsset);
     FIELD().PROTECTED().NAME(mAnimation);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mDisableTimeTracking);
+    FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mRecording);
     FIELD().PROTECTED().NAME(mWorkArea);
     FIELD().PROTECTED().NAME(mRecordToggle);
     FIELD().PROTECTED().NAME(mRewindLeft);
@@ -209,7 +214,6 @@ CLASS_FIELDS_META(Editor::AnimationWindow)
     FIELD().PROTECTED().NAME(mHandlesSheet);
     FIELD().PROTECTED().NAME(mCurves);
     FIELD().PROTECTED().NAME(mTreeSeparatorHandle);
-    FIELD().PROTECTED().DEFAULT_VALUE(mmake<ActionsList>()).NAME(mActionsList);
 }
 END_META;
 CLASS_METHODS_META(Editor::AnimationWindow)
@@ -246,6 +250,7 @@ CLASS_METHODS_META(Editor::AnimationWindow)
     FUNCTION().PROTECTED().SIGNATURE(void, OnSearchEdited, const WString&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnMenuFilterPressed);
     FUNCTION().PROTECTED().SIGNATURE(void, OnMenuRecordToggle, bool);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnPropertyChangeCompleted, const Vector<IObject*>&, const String&, const Vector<DataDocument>&, const Vector<DataDocument>&);
 }
 END_META;
 // --- END META ---

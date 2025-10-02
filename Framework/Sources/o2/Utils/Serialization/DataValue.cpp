@@ -712,13 +712,13 @@ namespace o2
 
     DataDocument& DataDocument::operator=(const DataDocument& other)
     {
-        DataValue::operator=(other);
+        DataValue::operator=(static_cast<const DataValue&>(other));
         return *this;
     }
 
     DataDocument& DataDocument::operator=(DataDocument&& other)
     {
-        DataValue::operator=(other);
+        DataValue::operator=(static_cast<DataValue&&>(other));
         mAllocator = other.mAllocator;
         return *this;
     }

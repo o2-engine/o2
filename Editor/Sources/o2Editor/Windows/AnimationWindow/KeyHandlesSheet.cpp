@@ -253,7 +253,7 @@ namespace Editor
         DataDocument data;
         auto selectedKeys = GetSelectedKeys();
         SerializeKeys(data, selectedKeys, 0);
-        mAnimationWindow.Lock()->mActionsList->DoneAction(mmake<AnimationKeysChangeAction>(selectedKeys, mBeforeChangeKeysData,
+        mAnimationWindow.Lock()->DoneAction(mmake<AnimationKeysChangeAction>(selectedKeys, mBeforeChangeKeysData,
                                                                                            data, Ref(this)));
     }
 
@@ -468,8 +468,8 @@ namespace Editor
         mContextMenu->AddItem("Select all", [&]() { SelectAll(); }, AssetRef<ImageAsset>(), ShortcutKeys({VK_A, VK_CTRL_CMD}));
         mContextMenu->AddItem("Deselect all", [&]() { DeselectAll(); });
         mContextMenu->AddItem("---");
-        mContextMenu->AddItem("Undo", [&]() { mAnimationWindow.Lock()->mActionsList->UndoAction(); }, AssetRef<ImageAsset>(), ShortcutKeys({VK_Z, VK_CTRL_CMD}));
-        mContextMenu->AddItem("Redo", [&]() { mAnimationWindow.Lock()->mActionsList->RedoAction(); }, AssetRef<ImageAsset>(), ShortcutKeys({VK_Y, VK_CTRL_CMD}));
+        mContextMenu->AddItem("Undo", [&]() { mAnimationWindow.Lock()->UndoAction(); }, AssetRef<ImageAsset>(), ShortcutKeys({VK_Z, VK_CTRL_CMD}));
+        mContextMenu->AddItem("Redo", [&]() { mAnimationWindow.Lock()->RedoAction(); }, AssetRef<ImageAsset>(), ShortcutKeys({VK_Y, VK_CTRL_CMD}));
 
         AddChild(mContextMenu);
 
@@ -610,7 +610,7 @@ namespace Editor
 
         data.Clear();
         SerializeKeys(data, keys, 0);
-        animationWindow->mActionsList->DoneAction(mmake<AnimationAddKeysAction>(keys, data, Ref(this)));
+        animationWindow->DoneAction(mmake<AnimationAddKeysAction>(keys, data, Ref(this)));
     }
 
     void KeyHandlesSheet::DeleteKeys(const Map<String, Vector<UInt64>>& keys, bool createAction /*= true*/)
@@ -621,7 +621,7 @@ namespace Editor
         {
             DataDocument data;
             SerializeKeys(data, keys, 0);
-            animationWindow->mActionsList->DoneAction(mmake<AnimationDeleteKeysAction>(keys, data, Ref(this)));
+            animationWindow->DoneAction(mmake<AnimationDeleteKeysAction>(keys, data, Ref(this)));
         }
 
         auto animation = animationWindow->mAnimation.Lock();

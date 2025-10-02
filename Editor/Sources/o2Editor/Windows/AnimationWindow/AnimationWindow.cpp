@@ -8,12 +8,13 @@
 #include "o2/Scene/UI/Widgets/Button.h"
 #include "o2/Scene/UI/Widgets/Toggle.h"
 #include "o2/Utils/Editor/DragHandle.h"
+#include "o2/Utils/Editor/EditorScope.h"
 #include "o2Editor/Windows/AnimationWindow/CurvesSheet.h"
 #include "o2Editor/Windows/AnimationWindow/KeyHandlesSheet.h"
 #include "o2Editor/Windows/AnimationWindow/PropertiesListDlg.h"
 #include "o2Editor/Windows/AnimationWindow/Timeline.h"
 #include "o2Editor/Windows/AnimationWindow/Tree.h"
-#include "o2/Utils/Editor/EditorScope.h"
+#include "o2Editor/Windows/PropertiesWindow/PropertiesWindow.h"
 
 DECLARE_SINGLETON(Editor::AnimationWindow);
 
@@ -387,8 +388,55 @@ namespace Editor
 
     void AnimationWindow::OnMenuRecordToggle(bool value)
     {
+		mRecording = value;
 
+		if (mRecording)
+			o2EditorPropertiesWindow.onPropertyChangeCompleted += THIS_FUNC(OnPropertyChangeCompleted);
+		else
+			o2EditorPropertiesWindow.onPropertyChangeCompleted -= THIS_FUNC(OnPropertyChangeCompleted);
     }
+
+	void AnimationWindow::OnPropertyChangeCompleted(const Vector<IObject*>& targets, const String& path,
+                                                    const Vector<DataDocument>& before, const Vector<DataDocument>& after)
+	{
+        if (!mRecording)
+            return;
+
+		auto targetActorEditable = dynamic_cast<SceneEditableObject*>(mTargetActor.Lock().Get());
+        if (!targetActorEditable)
+			return;
+
+        for (auto target : targets)
+        {
+			auto targetEditable = dynamic_cast<SceneEditableObject*>(target);
+            if (!targetEditable)
+				continue;
+
+			bool isTargetInHierarchy = false;
+            String targetHierarchyPath;
+
+			auto targetEditableIt = targetEditable;
+            while (targetEditableIt)
+            {
+                if (targetEditableIt == targetActorEditable)
+                {
+					isTargetInHierarchy = true;
+                    break;
+                }
+
+				targetHierarchyPath = "children/" + targetEditableIt->GetName() + "/" + targetHierarchyPath;
+				targetEditableIt = targetEditableIt->GetEditableParent().Get();
+            }
+
+			if (!isTargetInHierarchy)
+				continue;
+
+			String trackPath = targetHierarchyPath + path;
+			o2Debug.Log("Recording property change on track: " + trackPath);
+
+            break;
+		}
+	}
 
 }
 // --- META ---

@@ -6,7 +6,16 @@
 
 namespace Editor
 {
-    ActionsList::~ActionsList()
+
+	ActionsList::ActionsList():
+        ActionsList(nullptr)
+	{}
+
+    ActionsList::ActionsList(RefCounter* refCounter) :
+        RefCounterable(refCounter)
+    {}
+
+	ActionsList::~ActionsList()
     {}
 
     int ActionsList::GetUndoActionsCount() const

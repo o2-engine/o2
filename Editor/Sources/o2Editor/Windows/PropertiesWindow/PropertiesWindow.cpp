@@ -3,11 +3,12 @@
 
 #include "o2/Scene/UI/WidgetLayout.h"
 #include "o2/Scene/UI/Widgets/ContextMenu.h"
+#include "o2Editor/Actions/ActionsList.h"
 #include "o2Editor/Properties/Properties.h"
 #include "o2Editor/Windows/PropertiesWindow/DefaultPropertiesViewer.h"
 #include "o2Editor/Windows/PropertiesWindow/IPropertiesViewer.h"
+#include "o2Editor/Windows/SceneWindow/SceneWindow.h"
 #include "o2Editor/Windows/TreeWindow/TreeWindow.h"
-
 
 DECLARE_SINGLETON(Editor::PropertiesWindow);
 
@@ -88,6 +89,8 @@ namespace Editor
                                                      const Vector<DataDocument>& after)
     {
         onPropertyChangeCompleted(targets, path, before, after);
+
+        o2EditorSceneWindow.DoneActorPropertyChangeAction(path, before, after);
     }
 
 	void PropertiesWindow::OnFocusedWindow()

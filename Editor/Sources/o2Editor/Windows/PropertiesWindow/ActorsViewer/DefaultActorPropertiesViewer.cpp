@@ -86,8 +86,6 @@ namespace Editor
 
         for (auto& actors : mTargetActors)
             actors->OnChanged();
-
-        o2EditorSceneWindow.DoneActorPropertyChangeAction(path, before, after);
     }
 }
 // --- META ---

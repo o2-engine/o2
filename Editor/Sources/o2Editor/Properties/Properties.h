@@ -51,29 +51,29 @@ namespace Editor
 
         // Builds layout viewer by type for objects
         void BuildObjectProperties(const Ref<VerticalLayout>& layout, const Type* type, const Ref<PropertiesContext>& context, const String& path,
-                                   const IPropertyField::OnChangeCompletedFunc& onChangeCompleted = mOnPropertyCompletedChangingUndoCreateDelegate,
+                                   const IPropertyField::OnChangeCompletedFunc& onChangeCompleted = IPropertyField::OnChangeCompletedFunc::empty,
                                    const IPropertyField::OnChangedFunc& onChanged = IPropertyField::OnChangedFunc::empty);
 
         // Builds layout viewer by fields
         void BuildObjectProperties(const Ref<VerticalLayout>& layout, Vector<const FieldInfo*> fields, const Ref<PropertiesContext>& context, const String& path,
-                                   const IPropertyField::OnChangeCompletedFunc& onChangeCompleted = mOnPropertyCompletedChangingUndoCreateDelegate,
+                                   const IPropertyField::OnChangeCompletedFunc& onChangeCompleted = IPropertyField::OnChangeCompletedFunc::empty,
                                    const IPropertyField::OnChangedFunc& onChanged = IPropertyField::OnChangedFunc::empty);
 
         // Build layout viewer for field
         Ref<IPropertyField> BuildField(const Ref<VerticalLayout>& layout, const FieldInfo* fieldInfo, const Ref<PropertiesContext>& context, const String& path,
-                                       const IPropertyField::OnChangeCompletedFunc& onChangeCompleted = mOnPropertyCompletedChangingUndoCreateDelegate,
+                                       const IPropertyField::OnChangeCompletedFunc& onChangeCompleted = IPropertyField::OnChangeCompletedFunc::empty,
                                        const IPropertyField::OnChangedFunc& onChanged = IPropertyField::OnChangedFunc::empty);
 
         // Build layout viewer for field
         Ref<IPropertyField> BuildField(const Ref<VerticalLayout>& layout, const Type& objectType, const String& fieldName, const String& path,
                                        const Ref<PropertiesContext>& context,
-                                       const IPropertyField::OnChangeCompletedFunc& onChangeCompleted = mOnPropertyCompletedChangingUndoCreateDelegate,
+                                       const IPropertyField::OnChangeCompletedFunc& onChangeCompleted = IPropertyField::OnChangeCompletedFunc::empty,
                                        const IPropertyField::OnChangedFunc& onChanged = IPropertyField::OnChangedFunc::empty);
 
         // Build layout viewer for fields
         void BuildFields(const Ref<VerticalLayout>& layout, const Type& objectType, const Vector<String>& fieldsNames, const String& path,
                          const Ref<PropertiesContext>& context,
-                         const IPropertyField::OnChangeCompletedFunc& onChangeCompleted = mOnPropertyCompletedChangingUndoCreateDelegate,
+                         const IPropertyField::OnChangeCompletedFunc& onChangeCompleted = IPropertyField::OnChangeCompletedFunc::empty,
                          const IPropertyField::OnChangedFunc& onChanged = IPropertyField::OnChangedFunc::empty);
 
         // Build layout viewer for field
@@ -105,37 +105,37 @@ namespace Editor
 
         // Creates field property by type 
         Ref<IPropertyField> CreateFieldProperty(const Type* type, const String& name,
-                                                const IPropertyField::OnChangeCompletedFunc& onChangeCompleted = mOnPropertyCompletedChangingUndoCreateDelegate,
+                                                const IPropertyField::OnChangeCompletedFunc& onChangeCompleted = IPropertyField::OnChangeCompletedFunc::empty,
                                                 const IPropertyField::OnChangedFunc& onChanged = IPropertyField::OnChangedFunc::empty);
 
         // Creates regular primitive property field
         Ref<IPropertyField> CreateRegularField(const Type* type, const String& name,
-                                               const IPropertyField::OnChangeCompletedFunc& onChangeCompleted = mOnPropertyCompletedChangingUndoCreateDelegate,
+                                               const IPropertyField::OnChangeCompletedFunc& onChangeCompleted = IPropertyField::OnChangeCompletedFunc::empty,
                                                const IPropertyField::OnChangedFunc& onChanged = IPropertyField::OnChangedFunc::empty);
 
         // Creates regular enumerate primitive property field
         Ref<IPropertyField> CreateEnumField(const Type* type, const String& name,
-                                            const IPropertyField::OnChangeCompletedFunc& onChangeCompleted = mOnPropertyCompletedChangingUndoCreateDelegate,
+                                            const IPropertyField::OnChangeCompletedFunc& onChangeCompleted = IPropertyField::OnChangeCompletedFunc::empty,
                                             const IPropertyField::OnChangedFunc& onChanged = IPropertyField::OnChangedFunc::empty);
 
         // Creates object field
         Ref<IPropertyField> CreateObjectField(const String& name,
-                                              const IPropertyField::OnChangeCompletedFunc& onChangeCompleted = mOnPropertyCompletedChangingUndoCreateDelegate,
+                                              const IPropertyField::OnChangeCompletedFunc& onChangeCompleted = IPropertyField::OnChangeCompletedFunc::empty,
                                               const IPropertyField::OnChangedFunc& onChanged = IPropertyField::OnChangedFunc::empty);
 
         // Creates object pointer field
         Ref<IPropertyField> CreateObjectPtrField(const ObjectType* basicType, const String& name,
-                                                 const IPropertyField::OnChangeCompletedFunc& onChangeCompleted = mOnPropertyCompletedChangingUndoCreateDelegate,
+                                                 const IPropertyField::OnChangeCompletedFunc& onChangeCompleted = IPropertyField::OnChangeCompletedFunc::empty,
                                                  const IPropertyField::OnChangedFunc& onChanged = IPropertyField::OnChangedFunc::empty);
 
         // Creates vector field
         Ref<IPropertyField> CreateVectorField(const Type* type, const String& name,
-                                              const IPropertyField::OnChangeCompletedFunc& onChangeCompleted = mOnPropertyCompletedChangingUndoCreateDelegate,
+                                              const IPropertyField::OnChangeCompletedFunc& onChangeCompleted = IPropertyField::OnChangeCompletedFunc::empty,
                                               const IPropertyField::OnChangedFunc& onChanged = IPropertyField::OnChangedFunc::empty);
 
         // Returns object properties viewer
         Ref<IObjectPropertiesViewer> CreateObjectViewer(const Type* type, const String& path,
-                                                        const IPropertyField::OnChangeCompletedFunc& onChangeCompleted = mOnPropertyCompletedChangingUndoCreateDelegate,
+                                                        const IPropertyField::OnChangeCompletedFunc& onChangeCompleted = IPropertyField::OnChangeCompletedFunc::empty,
                                                         const IPropertyField::OnChangedFunc& onChanged = IPropertyField::OnChangedFunc::empty);
 
         // Free object viewer, store in pool for reuse
@@ -157,8 +157,6 @@ namespace Editor
         TypePropertyMap               mPropertiesPool;              // Pool of properties, grouped by property type
         TypeObjectPropertiesViewerMap mObjectPropertiesViewersPool; // Pool of object properties viewers, grouped by object type
 
-        static IPropertyField::OnChangeCompletedFunc mOnPropertyCompletedChangingUndoCreateDelegate;
-
     protected:
         // Initializes available properties fields samples
         void InitializeAvailablePropertiesFields();
@@ -171,14 +169,14 @@ namespace Editor
 
         // Builds layout viewer by fields without filtering
         void BuildFields(const Ref<VerticalLayout>& layout, Vector<const FieldInfo*> fields, const Ref<PropertiesContext>& context, const String& path,
-                         const IPropertyField::OnChangeCompletedFunc& onChangeCompleted = mOnPropertyCompletedChangingUndoCreateDelegate,
+                         const IPropertyField::OnChangeCompletedFunc& onChangeCompleted = IPropertyField::OnChangeCompletedFunc::empty,
                          const IPropertyField::OnChangedFunc& onChanged = IPropertyField::OnChangedFunc::empty);
     };
 
     template<typename PropertyFieldType>
     Ref<PropertyFieldType> Properties::BuildFieldType(const Ref<VerticalLayout>& layout, const FieldInfo* fieldInfo,
                                                       const Ref<PropertiesContext>& context, const String& path,
-                                                      const IPropertyField::OnChangeCompletedFunc& onChangeCompleted /*= mOnPropertyCompletedChangingUndoCreateDelegate*/,
+                                                      const IPropertyField::OnChangeCompletedFunc& onChangeCompleted /*= IPropertyField::OnChangeCompletedFunc::empty*/,
                                                       const IPropertyField::OnChangedFunc& onChanged /*= IPropertyField::OnChangedFunc::empty*/)
     {
         return DynamicCast<PropertyFieldType>(BuildField(layout, fieldInfo, context, path, onChangeCompleted, onChanged));
@@ -187,7 +185,7 @@ namespace Editor
     template<typename PropertyFieldType>
     Ref<PropertyFieldType> Properties::BuildFieldType(const Ref<VerticalLayout>& layout, const Type& objectType, const String& fieldName,
                                                       const String& path, const Ref<PropertiesContext>& context,
-                                                      const IPropertyField::OnChangeCompletedFunc& onChangeCompleted /*= mOnPropertyCompletedChangingUndoCreateDelegate*/,
+                                                      const IPropertyField::OnChangeCompletedFunc& onChangeCompleted /*= IPropertyField::OnChangeCompletedFunc::empty*/,
                                                       const IPropertyField::OnChangedFunc& onChanged /*= IPropertyField::OnChangedFunc::empty*/)
     {
         return DynamicCast<PropertyFieldType>(BuildField(layout, objectType, fieldName, path, context, onChangeCompleted, onChanged));

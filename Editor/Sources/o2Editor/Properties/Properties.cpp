@@ -27,20 +27,19 @@ DECLARE_SINGLETON(Editor::Properties);
 
 namespace Editor
 {
-    Editor::IPropertyField::OnChangeCompletedFunc Properties::mOnPropertyCompletedChangingUndoCreateDelegate;
 
     Properties::Properties(RefCounter* refCounter):
         Singleton<Properties>(refCounter)
     {
         InitializeAvailablePropertiesFields();
         InitializeAvailableObjectPropertiesViewers();
-
-        mOnPropertyCompletedChangingUndoCreateDelegate =
-            IPropertyField::OnChangeCompletedFunc([](const String& path,
-                                                     const Vector<DataDocument>& before,
-                                                     const Vector<DataDocument>& after) {
-                o2EditorSceneWindow.DoneActorPropertyChangeAction(path, before, after);
-            });
+// 
+//         IPropertyField::OnChangeCompletedFunc::empty =
+//             IPropertyField::OnChangeCompletedFunc([](const String& path,
+//                                                      const Vector<DataDocument>& before,
+//                                                      const Vector<DataDocument>& after) {
+//                 o2EditorSceneWindow.DoneActorPropertyChangeAction(path, before, after);
+//             });
     }
 
     Properties::~Properties()
@@ -99,7 +98,7 @@ namespace Editor
 
     Ref<IPropertyField> Properties::BuildField(const Ref<VerticalLayout>& layout, const FieldInfo* fieldInfo,
                                                const Ref<PropertiesContext>& context, const String& path,
-                                               const IPropertyField::OnChangeCompletedFunc& onChangeCompleted /*= mOnPropertyCompletedChangingUndoCreateDelegate*/,
+                                               const IPropertyField::OnChangeCompletedFunc& onChangeCompleted /*= IPropertyField::OnChangeCompletedFunc::empty*/,
                                                const IPropertyField::OnChangedFunc& onChanged /*= IPropertyField::OnChangedFunc::empty*/)
     {
         Timer timer;
@@ -144,7 +143,7 @@ namespace Editor
 
     Ref<IPropertyField> Properties::BuildField(const Ref<VerticalLayout>& layout, const Type& objectType, const String& fieldName, const String& path,
                                                const Ref<PropertiesContext>& context,
-                                               const IPropertyField::OnChangeCompletedFunc& onChangeCompleted /*= mOnPropertyCompletedChangingUndoCreateDelegate*/,
+                                               const IPropertyField::OnChangeCompletedFunc& onChangeCompleted /*= IPropertyField::OnChangeCompletedFunc::empty*/,
                                                const IPropertyField::OnChangedFunc& onChanged /*= IPropertyField::OnChangedFunc::empty*/)
     {
         return BuildField(layout, objectType.GetField(fieldName), context, path, onChangeCompleted, onChanged);
@@ -152,7 +151,7 @@ namespace Editor
 
     void Properties::BuildFields(const Ref<VerticalLayout>& layout, Vector<const FieldInfo*> fields,
                                  const Ref<PropertiesContext>& context, const String& path,
-                                 const IPropertyField::OnChangeCompletedFunc& onChangeCompleted /*= mOnPropertyCompletedChangingUndoCreateDelegate*/,
+                                 const IPropertyField::OnChangeCompletedFunc& onChangeCompleted /*= IPropertyField::OnChangeCompletedFunc::empty*/,
                                  const IPropertyField::OnChangedFunc& onChanged /*= IPropertyField::OnChangedFunc::empty*/)
     {
         Timer timer; 
@@ -194,7 +193,7 @@ namespace Editor
 
     void Properties::BuildFields(const Ref<VerticalLayout>& layout, const Type& objectType, const Vector<String>& fieldsNames,
                                  const String& path, const Ref<PropertiesContext>& context,
-                                 const IPropertyField::OnChangeCompletedFunc& onChangeCompleted /*= mOnPropertyCompletedChangingUndoCreateDelegate*/, 
+                                 const IPropertyField::OnChangeCompletedFunc& onChangeCompleted /*= IPropertyField::OnChangeCompletedFunc::empty*/, 
                                  const IPropertyField::OnChangedFunc& onChanged /*= IPropertyField::OnChangedFunc::empty*/)
     {
         for (auto& name : fieldsNames)
@@ -276,7 +275,7 @@ namespace Editor
 
     void Properties::BuildObjectProperties(const Ref<VerticalLayout>& layout, const Type* type,
                                            const Ref<PropertiesContext>& context, const String& path,
-                                           const IPropertyField::OnChangeCompletedFunc& onChangeCompleted /*= mOnPropertyCompletedChangingUndoCreateDelegate*/,
+                                           const IPropertyField::OnChangeCompletedFunc& onChangeCompleted /*= IPropertyField::OnChangeCompletedFunc::empty*/,
                                            const IPropertyField::OnChangedFunc& onChanged /*= IPropertyField::OnChangedFunc::empty*/)
     {
         BuildObjectProperties(layout, type->GetFieldsWithBaseClasses(), context, path, onChangeCompleted, onChanged);
@@ -284,7 +283,7 @@ namespace Editor
 
     void Properties::BuildObjectProperties(const Ref<VerticalLayout>& layout, Vector<const FieldInfo*> fields,
                                            const Ref<PropertiesContext>& context, const String& path,
-                                           const IPropertyField::OnChangeCompletedFunc& onChangeCompleted /*= mOnPropertyCompletedChangingUndoCreateDelegate*/,
+                                           const IPropertyField::OnChangeCompletedFunc& onChangeCompleted /*= IPropertyField::OnChangeCompletedFunc::empty*/,
                                            const IPropertyField::OnChangedFunc& onChanged /*= IPropertyField::OnChangedFunc::empty*/)
     {
         PushEditorScopeOnStack scope;
@@ -328,7 +327,7 @@ namespace Editor
     }
 
     Ref<IPropertyField> Properties::CreateFieldProperty(const Type* type, const String& name, 
-                                                        const IPropertyField::OnChangeCompletedFunc& onChangeCompleted /*= mOnPropertyCompletedChangingUndoCreateDelegate*/,
+                                                        const IPropertyField::OnChangeCompletedFunc& onChangeCompleted /*= IPropertyField::OnChangeCompletedFunc::empty*/,
                                                         const IPropertyField::OnChangedFunc& onChanged /*= IPropertyField::OnChangedFunc::empty*/)
     {
         PushEditorScopeOnStack enterScope;
@@ -387,7 +386,7 @@ namespace Editor
     }
 
     Ref<IPropertyField> Properties::CreateRegularField(const Type* type, const String& name,
-                                                       const IPropertyField::OnChangeCompletedFunc& onChangeCompleted /*= mOnPropertyCompletedChangingUndoCreateDelegate*/,
+                                                       const IPropertyField::OnChangeCompletedFunc& onChangeCompleted /*= IPropertyField::OnChangeCompletedFunc::empty*/,
                                                        const IPropertyField::OnChangedFunc& onChanged /*= IPropertyField::OnChangedFunc::empty*/)
     {
         const Type* fieldPropertyType = GetFieldPropertyType(type);
@@ -409,7 +408,7 @@ namespace Editor
     }
 
     Ref<IPropertyField> Properties::CreateEnumField(const Type* type, const String& name,
-                                                    const IPropertyField::OnChangeCompletedFunc& onChangeCompleted /*= mOnPropertyCompletedChangingUndoCreateDelegate*/,
+                                                    const IPropertyField::OnChangeCompletedFunc& onChangeCompleted /*= IPropertyField::OnChangeCompletedFunc::empty*/,
                                                     const IPropertyField::OnChangedFunc& onChanged /*= IPropertyField::OnChangedFunc::empty*/)
     {
         Ref<EnumProperty> fieldProperty;
@@ -428,7 +427,7 @@ namespace Editor
     }
 
     Ref<IPropertyField> Properties::CreateObjectField(const String& name,
-                                                      const IPropertyField::OnChangeCompletedFunc& onChangeCompleted /*= mOnPropertyCompletedChangingUndoCreateDelegate*/,
+                                                      const IPropertyField::OnChangeCompletedFunc& onChangeCompleted /*= IPropertyField::OnChangeCompletedFunc::empty*/,
                                                       const IPropertyField::OnChangedFunc& onChanged /*= IPropertyField::OnChangedFunc::empty*/)
     {
         Ref<ObjectProperty> fieldProperty;
@@ -447,7 +446,7 @@ namespace Editor
     }
 
     Ref<IPropertyField> Properties::CreateObjectPtrField(const ObjectType* basicType, const String& name,
-                                                         const IPropertyField::OnChangeCompletedFunc& onChangeCompleted /*= mOnPropertyCompletedChangingUndoCreateDelegate*/,
+                                                         const IPropertyField::OnChangeCompletedFunc& onChangeCompleted /*= IPropertyField::OnChangeCompletedFunc::empty*/,
                                                          const IPropertyField::OnChangedFunc& onChanged /*= IPropertyField::OnChangedFunc::empty*/)
     {
         Ref<ObjectPtrProperty> fieldProperty;
@@ -467,7 +466,7 @@ namespace Editor
     }
 
     Ref<IPropertyField> Properties::CreateVectorField(const Type* type, const String& name,
-                                                      const IPropertyField::OnChangeCompletedFunc& onChangeCompleted /*= mOnPropertyCompletedChangingUndoCreateDelegate*/,
+                                                      const IPropertyField::OnChangeCompletedFunc& onChangeCompleted /*= IPropertyField::OnChangeCompletedFunc::empty*/,
                                                       const IPropertyField::OnChangedFunc& onChanged /*= IPropertyField::OnChangedFunc::empty*/)
     {
         Ref<VectorProperty> fieldProperty;
@@ -486,7 +485,7 @@ namespace Editor
     }
 
     Ref<IObjectPropertiesViewer> Properties::CreateObjectViewer(const Type* type, const String& path, 
-                                                                const IPropertyField::OnChangeCompletedFunc& onChangeCompleted /*= mOnPropertyCompletedChangingUndoCreateDelegate*/,
+                                                                const IPropertyField::OnChangeCompletedFunc& onChangeCompleted /*= IPropertyField::OnChangeCompletedFunc::empty*/,
                                                                 const IPropertyField::OnChangedFunc& onChanged /*= IPropertyField::OnChangedFunc::empty*/)
     {
         auto viewerType = GetClosesBasedTypeObjectViewer(type);

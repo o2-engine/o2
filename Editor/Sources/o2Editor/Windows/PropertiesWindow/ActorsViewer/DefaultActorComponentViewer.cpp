@@ -38,7 +38,7 @@ namespace Editor
             if (mViewer)
                 o2EditorProperties.FreeObjectViewer(mViewer);
 
-            mViewer = o2EditorProperties.CreateObjectViewer(mComponentType, (String)"component:" + mComponentType->GetName(),
+            mViewer = o2EditorProperties.CreateObjectViewer(mComponentType, (String)"component/" + mComponentType->GetName(),
                                                             THIS_FUNC(OnPropertyChangeCompleted), THIS_FUNC(OnPropertyChanged));
 
             mViewer->CheckCreateSpoiler(mSpoiler);

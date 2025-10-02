@@ -10,6 +10,12 @@ namespace Editor
     class ActionsList: public RefCounterable
     {
     public:
+		// Default constructor
+        ActionsList();
+
+		// Constructor with ref counter
+		explicit ActionsList(RefCounter* refCounter);
+
         // Destructor. Destroys stored actions
         ~ActionsList();
 

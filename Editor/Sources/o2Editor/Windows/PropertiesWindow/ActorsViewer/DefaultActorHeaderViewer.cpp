@@ -307,9 +307,6 @@ namespace Editor
                                        const Vector<DataDocument>& after)
     {
         IActorHeaderViewer::OnPropertyChangeCompleted(path, before, after);
-
-        auto action = mmake<PropertyChangeAction>(o2EditorSceneScreen.GetSelectedObjects(), path, before, after);
-        o2EditorSceneWindow.DoneAction(action);
     }
 
 }

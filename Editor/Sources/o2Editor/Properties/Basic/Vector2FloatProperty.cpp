@@ -33,7 +33,7 @@ namespace Editor
         };
 
         mYProperty = GetChildByType<FloatProperty>("container/layout/properties/y");
-        mYProperty->SetValuePath("x");
+        mYProperty->SetValuePath("y");
         mYProperty->onChanged = [&](const Ref<IPropertyField>& field, bool byUser) { onChanged(field, byUser); };
         mYProperty->onChangeCompleted = [&](const String& path, const Vector<DataDocument>& before, const Vector<DataDocument>& after)
         {

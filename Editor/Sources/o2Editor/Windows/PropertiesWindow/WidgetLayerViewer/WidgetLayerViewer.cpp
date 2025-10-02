@@ -97,7 +97,9 @@ namespace Editor
     }
 
     void WidgetLayerViewer::SetTargets(const Vector<IObject*>& targets)
-    {
+	{
+		IPropertiesViewer::SetTargets(targets);
+
         PushEditorScopeOnStack scope;
 
         mTargetLayers = targets.Convert<WidgetLayer*>([](auto x) { return dynamic_cast<WidgetLayer*>(x); });

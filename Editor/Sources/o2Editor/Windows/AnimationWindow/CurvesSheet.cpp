@@ -49,7 +49,7 @@ namespace Editor
 
         UpdateCurvesColors();
 
-        mCurvesEditor->actionsListDelegate = mAnimationWindow.Lock()->mActionsList;
+        mCurvesEditor->actionsListDelegate = mAnimationWindow.Lock();
     }
 
     void CurvesSheet::UpdateCurvesColors()

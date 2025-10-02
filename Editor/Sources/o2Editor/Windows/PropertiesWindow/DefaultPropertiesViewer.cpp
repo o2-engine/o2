@@ -38,8 +38,8 @@ namespace Editor
     }
 
     void DefaultPropertiesViewer::SetTargets(const Vector<IObject*>& targets)
-    {
-        mTargets = targets;
+	{
+		IPropertiesViewer::SetTargets(targets);
         Refresh();
     }
 

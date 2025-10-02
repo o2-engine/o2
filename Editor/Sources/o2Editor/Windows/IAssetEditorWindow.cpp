@@ -17,7 +17,7 @@ namespace Editor
 	}
 
 	IAssetEditorWindow::IAssetEditorWindow(RefCounter* refCounter) :
-		IEditorWindow(refCounter)
+		IEditorWindow(refCounter), ActionsList(refCounter)
 	{
 		InitializeWindow();
 	}
