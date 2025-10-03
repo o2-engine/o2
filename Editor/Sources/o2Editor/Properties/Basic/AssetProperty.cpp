@@ -237,6 +237,8 @@ namespace Editor
 
     void AssetProperty::SetCommonAssetId(const UID& id)
     {
+		onBeforeChange(Ref(this), false);
+
         mCommonValue = id == UID::empty ? AssetRef<Asset>() : AssetRef<Asset>(id);
         mValuesDifferent = false;
 

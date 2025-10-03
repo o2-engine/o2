@@ -66,6 +66,8 @@ namespace Editor
 
     void TagsProperty::SetCommonValue(const TagGroup& value, bool byUser)
     {
+		onBeforeChange(Ref(this), byUser);
+
         mCommonValue = value;
         mValuesDifferent = false;
 

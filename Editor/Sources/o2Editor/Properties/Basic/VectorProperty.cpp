@@ -559,6 +559,8 @@ namespace Editor
 
     void VectorProperty::Resize(int newCount)
     {
+		onBeforeChange(Ref(this), true);
+
         newCount = Math::Max(0, newCount);
 
         Vector<DataDocument> prevValues, newValues;
@@ -594,6 +596,8 @@ namespace Editor
 
     void VectorProperty::Remove(int idx)
     {
+		onBeforeChange(Ref(this), true);
+
         Vector<DataDocument> prevValues, newValues;
 
         for (auto& obj : mTargetObjects)

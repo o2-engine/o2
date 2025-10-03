@@ -32,7 +32,8 @@ namespace Editor
 		typedef Function<void(const String&, const Vector<DataDocument>&, const Vector<DataDocument>&)> OnChangeCompletedFunc;
 
     public:
-        OnChangedFunc         onChanged;         // Immediate change value by user event
+		OnChangedFunc         onBeforeChange;    // Before change value event
+        OnChangedFunc         onChanged;         // Immediate change value event
         OnChangeCompletedFunc onChangeCompleted; // Change completed by user event
 
     public:
@@ -493,6 +494,8 @@ namespace Editor
     template<typename _type>
     void TPropertyField<_type>::SetCommonValue(const _type& value, bool byUser /*= false*/)
     {
+		onBeforeChange(Ref(this), byUser);
+
         mCommonValue = value;
         mValuesDifferent = false;
 
@@ -532,6 +535,8 @@ namespace Editor
     template<typename _type>
     void TPropertyField<_type>::SetUnknownValue(const _type& defaultValue /*= _type()*/)
     {
+		onBeforeChange(Ref(this), false);
+
         mCommonValue = defaultValue;
         mValuesDifferent = true;
 
@@ -608,6 +613,7 @@ CLASS_BASES_META(Editor::IPropertyField)
 END_META;
 CLASS_FIELDS_META(Editor::IPropertyField)
 {
+    FIELD().PUBLIC().NAME(onBeforeChange);
     FIELD().PUBLIC().NAME(onChanged);
     FIELD().PUBLIC().NAME(onChangeCompleted);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mPropertyEnabled);
