@@ -54,11 +54,11 @@ namespace Editor
 		}
 
 		mBoxContextMenu = o2UI.CreateWidget<ContextMenu>();
-		mBoxContextMenu->AddItem("Add key", [=]() { AddNewKey(mBoxPressedCursor); }, nullptr, ShortcutKeys("Double click"));
+		mBoxContextMenu->AddItem("Add key", [=]() { AddNewKey(mBoxPressedCursor); }, nullptr, ShortcutKeys::FromCusromSString("Double click"));
 		mBox->AddChild(mBoxContextMenu);
 
 		mHandleContextMenu = o2UI.CreateWidget<ContextMenu>();
-		mHandleContextMenu->AddItem("Change color", [=]() { OpenKeyColorPick(mSelectedHandleUID); }, nullptr, ShortcutKeys("Double click"));
+		mHandleContextMenu->AddItem("Change color", [=]() { OpenKeyColorPick(mSelectedHandleUID); }, nullptr, ShortcutKeys::FromCusromSString("Double click"));
 		mHandleContextMenu->AddItem("Delete key", [=]() { DeleteKey(mSelectedHandleUID); }, nullptr, ShortcutKeys({ VK_DELETE }));
 		mBox->AddChild(mHandleContextMenu);
 	}

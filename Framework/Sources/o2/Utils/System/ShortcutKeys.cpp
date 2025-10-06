@@ -69,9 +69,12 @@ namespace o2
         keys(keys)
     {}
 
-    ShortcutKeys::ShortcutKeys(const String& customString):
-        custromString(customString)
-    {}
+    ShortcutKeys ShortcutKeys::FromCustomString(const String& str)
+    {
+        ShortcutKeys res;
+        res.custromString = str;
+        return res;
+    }
 
     KeyboardKey ShortcutKeys::NormalizeKey(KeyboardKey key) const
     {
