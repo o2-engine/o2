@@ -26,35 +26,27 @@ namespace Editor
     {
         mLeftProperty = GetChildByType<IntegerProperty>("container/layout/properties/left");
         mLeftProperty->SetValuePath("left");
-        mLeftProperty->onChanged = [&](const Ref<IPropertyField>& field, bool byUser) { onChanged(field, byUser); };
-        mLeftProperty->onChangeCompleted = [&](const String& path, const Vector<DataDocument>& before, const Vector<DataDocument>& after)
-        {
-            onChangeCompleted(mValuesPath + "/" + path, before, after);
-        };
+        mLeftProperty->onBeforeChange = THIS_FUNC(OnPropertyBeforeChange);
+        mLeftProperty->onChanged = THIS_FUNC(OnPropertyChanged);
+        mLeftProperty->onChangeCompleted = THIS_FUNC(OnPropertyChangeCompleted);
 
         mBottomProperty = GetChildByType<IntegerProperty>("container/layout/properties/bottom");
         mBottomProperty->SetValuePath("bottom");
-        mBottomProperty->onChanged = [&](const Ref<IPropertyField>& field, bool byUser) { onChanged(field, byUser); };
-        mBottomProperty->onChangeCompleted = [&](const String& path, const Vector<DataDocument>& before, const Vector<DataDocument>& after)
-        {
-            onChangeCompleted(mValuesPath + "/" + path, before, after);
-        };
+        mBottomProperty->onBeforeChange = THIS_FUNC(OnPropertyBeforeChange);
+        mBottomProperty->onChanged = THIS_FUNC(OnPropertyChanged);
+        mBottomProperty->onChangeCompleted = THIS_FUNC(OnPropertyChangeCompleted);
 
         mRightProperty = GetChildByType<IntegerProperty>("container/layout/properties/right");
         mRightProperty->SetValuePath("right");
-        mRightProperty->onChanged = [&](const Ref<IPropertyField>& field, bool byUser) { onChanged(field, byUser); };
-        mRightProperty->onChangeCompleted = [&](const String& path, const Vector<DataDocument>& before, const Vector<DataDocument>& after)
-        {
-            onChangeCompleted(mValuesPath + "/" + path, before, after);
-        };
+        mRightProperty->onBeforeChange = THIS_FUNC(OnPropertyBeforeChange);
+        mRightProperty->onChanged = THIS_FUNC(OnPropertyChanged);
+        mRightProperty->onChangeCompleted = THIS_FUNC(OnPropertyChangeCompleted);
 
         mTopProperty = GetChildByType<IntegerProperty>("container/layout/properties/top");
         mTopProperty->SetValuePath("top");
-        mTopProperty->onChanged = [&](const Ref<IPropertyField>& field, bool byUser) { onChanged(field, byUser); };
-        mTopProperty->onChangeCompleted = [&](const String& path, const Vector<DataDocument>& before, const Vector<DataDocument>& after)
-        {
-            onChangeCompleted(mValuesPath + "/" + path, before, after);
-        };
+        mTopProperty->onBeforeChange = THIS_FUNC(OnPropertyBeforeChange);
+        mTopProperty->onChanged = THIS_FUNC(OnPropertyChanged);
+        mTopProperty->onChangeCompleted = THIS_FUNC(OnPropertyChangeCompleted);
     }
 
     void BorderIProperty::SetValue(const BorderI& value)
@@ -113,9 +105,40 @@ namespace Editor
         mBottomProperty->SetUnknownValue(defaultValue);
     }
 
+    void BorderIProperty::StoreValues(Vector<DataDocument>& data) const
+    {
+        data.Clear();
+        for (auto& ptr : mValuesProxies)
+        {
+            data.Add(DataDocument());
+            data.Last() = GetProxy<BorderI>(ptr.first);
+        }
+    }
+
+    void BorderIProperty::OnPropertyBeforeChange(const Ref<IPropertyField>& field, bool byUser)
+    {
+        if (mIsTargetProxiesProperties && byUser)
+            BeginUserChanging();
+    }
+
+    void BorderIProperty::OnPropertyChanged(const Ref<IPropertyField>& field, bool byUser)
+    {
+        onChanged(field, byUser);
+    }
+
+    void BorderIProperty::OnPropertyChangeCompleted(const String& path, const Vector<DataDocument>& before, const Vector<DataDocument>& after)
+    {
+        if (mIsTargetProxiesProperties)
+            EndUserChanging();
+        else
+            onChangeCompleted(mValuesPath + "/" + path, before, after);
+    }
+
     void BorderIProperty::SetValueAndPrototypeProxy(const TargetsVec& targets)
     {
         mValuesProxies = targets;
+
+        mIsTargetProxiesProperties = targets.IsEmpty() ? false : dynamic_cast<IPropertyValueProxy*>(targets[0].first.Get()) != nullptr;
 
         mLeftProperty->SetValueAndPrototypeProxy(targets.Convert<TargetPair>([](const TargetPair& x) {
             return TargetPair(mmake<LeftValueProxy>(x.first), x.second ? mmake<LeftValueProxy>(x.second) : nullptr); }));

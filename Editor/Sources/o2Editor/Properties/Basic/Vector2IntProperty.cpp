@@ -26,19 +26,15 @@ namespace Editor
     {
         mXProperty = GetChildByType<IntegerProperty>("container/layout/properties/x");
         mXProperty->SetValuePath("x");
-        mXProperty->onChanged = [&](const Ref<IPropertyField>& field, bool byUser) { onChanged(field, byUser); };
-        mXProperty->onChangeCompleted = [&](const String& path, const Vector<DataDocument>& before, const Vector<DataDocument>& after)
-        {
-            onChangeCompleted(mValuesPath + "/" + path, before, after);
-        };
+        mXProperty->onBeforeChange = THIS_FUNC(OnPropertyBeforeChange);
+        mXProperty->onChanged = THIS_FUNC(OnPropertyChanged);
+        mXProperty->onChangeCompleted = THIS_FUNC(OnPropertyChangeCompleted);
 
         mYProperty = GetChildByType<IntegerProperty>("container/layout/properties/y");
         mYProperty->SetValuePath("y");
-        mYProperty->onChanged = [&](const Ref<IPropertyField>& field, bool byUser) { onChanged(field, byUser); };
-        mYProperty->onChangeCompleted = [&](const String& path, const Vector<DataDocument>& before, const Vector<DataDocument>& after)
-        {
-            onChangeCompleted(mValuesPath + "/" + path, before, after);
-        };
+        mYProperty->onBeforeChange = THIS_FUNC(OnPropertyBeforeChange);
+        mYProperty->onChanged = THIS_FUNC(OnPropertyChanged);
+        mYProperty->onChangeCompleted = THIS_FUNC(OnPropertyChangeCompleted);
     }
 
     void Vec2IProperty::SetValue(const Vec2I& value)
@@ -73,9 +69,40 @@ namespace Editor
         mYProperty->SetUnknownValue(defaultValue);
     }
 
+    void Vec2IProperty::StoreValues(Vector<DataDocument>& data) const
+    {
+        data.Clear();
+        for (auto& ptr : mValuesProxies)
+        {
+            data.Add(DataDocument());
+            data.Last() = GetProxy<Vec2I>(ptr.first);
+        }
+    }
+
+    void Vec2IProperty::OnPropertyBeforeChange(const Ref<IPropertyField>& field, bool byUser)
+    {
+        if (mIsTargetProxiesProperties && byUser)
+            BeginUserChanging();
+    }
+
+    void Vec2IProperty::OnPropertyChanged(const Ref<IPropertyField>& field, bool byUser)
+    {
+        onChanged(field, byUser);
+    }
+
+    void Vec2IProperty::OnPropertyChangeCompleted(const String& path, const Vector<DataDocument>& before, const Vector<DataDocument>& after)
+    {
+        if (mIsTargetProxiesProperties)
+            EndUserChanging();
+        else
+            onChangeCompleted(mValuesPath + "/" + path, before, after);
+    }
+
     void Vec2IProperty::SetValueAndPrototypeProxy(const TargetsVec& targets)
     {
         mValuesProxies = targets;
+
+        mIsTargetProxiesProperties = targets.IsEmpty() ? false : dynamic_cast<IPropertyValueProxy*>(targets[0].first.Get()) != nullptr;
 
         mXProperty->SetValueAndPrototypeProxy(targets.Convert<TargetPair>([](const TargetPair& x) {
             return TargetPair(mmake<XValueProxy>(x.first), x.second ? mmake<XValueProxy>(x.second) : nullptr); }));
@@ -90,7 +117,7 @@ namespace Editor
             return;
 
         mXProperty->Refresh(forcible);
-        mXProperty->Refresh(forcible);
+        mYProperty->Refresh(forcible);
 
         CheckRevertableState();
     }
@@ -101,7 +128,7 @@ namespace Editor
             return;
 
         mXProperty->Refresh();
-        mXProperty->Refresh();
+        mYProperty->Refresh();
 
         CheckRevertableState();
     }

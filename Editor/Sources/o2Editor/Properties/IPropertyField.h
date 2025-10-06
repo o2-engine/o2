@@ -487,7 +487,7 @@ namespace Editor
     void TPropertyField<_type>::SetValueByUserAndComplete(const _type& value)
     {
         StoreValues(mBeforeChangeValues);
-        SetValue(value);
+        SetValue(value, true);
         CheckValueChangeCompleted();
     }
 
@@ -547,10 +547,10 @@ namespace Editor
     template<typename _type>
     void TPropertyField<_type>::SetValue(const _type& value, bool byUser)
     {
+        SetCommonValue(value, byUser);
+
         for (auto& ptr : mValuesProxies)
             SetProxy(ptr.first, value);
-
-        SetCommonValue(value, byUser);
     }
 
     template<typename _type>

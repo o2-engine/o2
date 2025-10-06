@@ -159,11 +159,20 @@ namespace o2
         Function<_type()>     mGetter; // Getter function
     };
 
+    // -----------------------------------------------------------------------
+    // Property value proxy interface. Used to identify property value proxies
+    // ----------------------------------------------------------------------
+    class IPropertyValueProxy
+    {
+    public:
+        bool IsProperty() const { return true; }
+    };
+
     // -------------------------------------------------------------------------
     // Property proxy, uses setter and getter from property to set and get value
     // -------------------------------------------------------------------------
     template<typename _type, typename _property_type>
-    class PropertyValueProxy : public IValueProxy<_type>
+    class PropertyValueProxy : public IValueProxy<_type>, public IPropertyValueProxy
     {
     public:
         // Default constructor

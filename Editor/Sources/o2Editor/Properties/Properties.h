@@ -79,14 +79,14 @@ namespace Editor
         // Build layout viewer for field
         template<typename PropertyFieldType>
         Ref<PropertyFieldType> BuildFieldType(const Ref<VerticalLayout>& layout, const FieldInfo* fieldInfo, const Ref<PropertiesContext>& context, const String& path,
-                                              const IPropertyField::OnChangeCompletedFunc& onChangeCompleted = mOnPropertyCompletedChangingUndoCreateDelegate,
+                                              const IPropertyField::OnChangeCompletedFunc& onChangeCompleted = IPropertyField::OnChangeCompletedFunc::empty,
                                               const IPropertyField::OnChangedFunc& onChanged = IPropertyField::OnChangedFunc::empty);
 
         // Build layout viewer for field
         template<typename PropertyFieldType>
         Ref<PropertyFieldType> BuildFieldType(const Ref<VerticalLayout>& layout, const Type& objectType, const String& fieldName, const String& path,
                                               const Ref<PropertiesContext>& context,
-                                              const IPropertyField::OnChangeCompletedFunc& onChangeCompleted = mOnPropertyCompletedChangingUndoCreateDelegate,
+                                              const IPropertyField::OnChangeCompletedFunc& onChangeCompleted = IPropertyField::OnChangeCompletedFunc::empty,
                                               const IPropertyField::OnChangedFunc& onChanged = IPropertyField::OnChangedFunc::empty);
 
         // Checks that property with type can be created

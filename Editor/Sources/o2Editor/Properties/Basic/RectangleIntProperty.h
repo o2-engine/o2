@@ -80,9 +80,23 @@ namespace Editor
         Ref<IntegerProperty> mTopProperty;    // Top value property
         Ref<IntegerProperty> mBottomProperty; // Bottom value property
 
+        bool mIsTargetProxiesProperties = false; // Is target proxies types is properties
+
     protected:
         // Searches controls widgets and layers and initializes them
         void InitializeControls();
+
+        // Stores values to data
+        void StoreValues(Vector<DataDocument>& data) const override;
+
+        // Called when some property before change, sets value via proxy
+        void OnPropertyBeforeChange(const Ref<IPropertyField>& field, bool byUser);
+
+        // Called when some property changed, sets value via proxy
+        void OnPropertyChanged(const Ref<IPropertyField>& field, bool byUser);
+
+        // Called when some property change completed, sets value via proxy
+        void OnPropertyChangeCompleted(const String& path, const Vector<DataDocument>& before, const Vector<DataDocument>& after);
 
     protected:
 
@@ -148,6 +162,7 @@ CLASS_FIELDS_META(Editor::RectIProperty)
     FIELD().PROTECTED().NAME(mRightProperty);
     FIELD().PROTECTED().NAME(mTopProperty);
     FIELD().PROTECTED().NAME(mBottomProperty);
+    FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mIsTargetProxiesProperties);
 }
 END_META;
 CLASS_METHODS_META(Editor::RectIProperty)
@@ -172,6 +187,10 @@ CLASS_METHODS_META(Editor::RectIProperty)
     FUNCTION().PUBLIC().SIGNATURE(const Type*, GetValueType);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(const Type*, GetValueTypeStatic);
     FUNCTION().PROTECTED().SIGNATURE(void, InitializeControls);
+    FUNCTION().PROTECTED().SIGNATURE(void, StoreValues, Vector<DataDocument>&);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnPropertyBeforeChange, const Ref<IPropertyField>&, bool);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnPropertyChanged, const Ref<IPropertyField>&, bool);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnPropertyChangeCompleted, const String&, const Vector<DataDocument>&, const Vector<DataDocument>&);
 }
 END_META;
 // --- END META ---

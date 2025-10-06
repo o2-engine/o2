@@ -5,6 +5,8 @@ Based on Framework.natvis
 """
 
 import lldb
+import struct
+import traceback
 
 def __lldb_init_module(debugger, internal_dict):
     """Called when module is imported by LLDB"""
@@ -44,6 +46,13 @@ def __lldb_init_module(debugger, internal_dict):
     
     # Sprite formatter
     debugger.HandleCommand('type summary add -F o2_lldb_formatters.sprite_summary "o2::Sprite"')
+    
+    # DataValue formatter
+    debugger.HandleCommand('type summary add -F o2_lldb_formatters.datavalue_summary "o2::DataValue"')
+    debugger.HandleCommand('type synthetic add -l o2_lldb_formatters.DataValueSyntheticProvider "o2::DataValue"')
+    
+    # DataMember formatter
+    debugger.HandleCommand('type summary add -F o2_lldb_formatters.datamember_summary "o2::DataMember"')
     
     print("o2 Framework LLDB formatters loaded")
 
@@ -213,3 +222,286 @@ def sprite_summary(valobj, internal_dict):
     pivot_str = vec2_summary(pivot, {}) if pivot.IsValid() else "?"
     
     return f"(position={pos_str}, size={size_str}, scale={scale_str}, pivot={pivot_str}, angle={angle})"
+
+
+def datamember_summary(valobj, internal_dict):
+    """Format o2::DataMember"""
+    try:
+        target = valobj.GetTarget()
+        datavalue_type = target.FindFirstType("o2::DataValue")
+        if not datavalue_type.IsValid():
+            return "DataMember(? no type)"
+        
+        datavalue_size = datavalue_type.GetByteSize()
+        
+        data_addr = valobj.GetLoadAddress()
+        if data_addr == lldb.LLDB_INVALID_ADDRESS:
+            addr = valobj.GetAddress()
+            if addr.IsValid():
+                data_addr = addr.GetLoadAddress(target)
+        
+        if data_addr == lldb.LLDB_INVALID_ADDRESS:
+            return "DataMember(? no addr)"
+        
+        name = valobj.CreateValueFromAddress("name", data_addr, datavalue_type)
+        value = valobj.CreateValueFromAddress("value", data_addr + datavalue_size, datavalue_type)
+        
+        if name.IsValid() and value.IsValid():
+            name_str = datavalue_summary(name, {})
+            value_str = datavalue_summary(value, {})
+            return f"{{ {name_str} : {value_str} }}"
+        
+        return "DataMember(? invalid)"
+    except Exception as e:
+        return f"DataMember(? {str(e)[:30]})"
+
+
+def datavalue_summary(valobj, internal_dict):
+    """Format o2::DataValue"""
+    debug = False
+    log = []
+    
+    try:
+        error = lldb.SBError()
+        process = valobj.GetProcess()
+        
+        data_addr = valobj.GetLoadAddress()
+        if data_addr == lldb.LLDB_INVALID_ADDRESS:
+            addr = valobj.GetAddress()
+            if addr.IsValid():
+                data_addr = addr.GetLoadAddress(valobj.GetTarget())
+        
+        if data_addr == lldb.LLDB_INVALID_ADDRESS:
+            return "? (no addr)"
+        
+        if debug:
+            log.append(f"data_addr={hex(data_addr)}")
+        
+        flags_offset = 16
+        flags_addr = data_addr + flags_offset
+        flags_data = process.ReadUnsignedFromMemory(flags_addr, 4, error)
+        
+        if not error.Success():
+            return f"? (flags read error: {error.GetCString()})"
+        
+        flags = flags_data
+        
+        if debug:
+            log.append(f"flags={hex(flags)}")
+        
+        if flags == 0:
+            return "? (flags=0)"
+        
+        Null = 1 << 10
+        BoolTrue = 1 << 11
+        BoolFalse = 1 << 12
+        ShortString = 1 << 13
+        StringRef = 1 << 14
+        StringCopy = 1 << 15
+        Int = 1 << 1
+        UInt = 1 << 2
+        Int64 = 1 << 3
+        UInt64 = 1 << 4
+        Double = 1 << 5
+        Object = 1 << 8
+        Array = 1 << 9
+        
+        if flags & Null:
+            return "null"
+        
+        if flags & BoolTrue:
+            return "true"
+        
+        if flags & BoolFalse:
+            return "false"
+        
+        if flags & ShortString:
+            result = process.ReadCStringFromMemory(data_addr, 15, error)
+            if error.Success() and result:
+                return f'"{result}"'
+            return f'? (ShortString error: {error.GetCString() if not error.Success() else "empty"})'
+        
+        if flags & (StringRef | StringCopy):
+            ptr_val = process.ReadPointerFromMemory(data_addr, error)
+            if not error.Success():
+                return f'? (StringPtr read error: {error.GetCString()})'
+            if ptr_val == 0:
+                return '? (StringPtr null)'
+            result = process.ReadCStringFromMemory(ptr_val, 256, error)
+            if error.Success() and result:
+                return f'"{result}"'
+            return f'? (String read error: {error.GetCString() if not error.Success() else "empty"})'
+        
+        if flags & Int:
+            int_val = process.ReadSignedFromMemory(data_addr, 4, error)
+            if error.Success():
+                return str(int_val)
+            return f"? (Int error: {error.GetCString()})"
+        
+        if flags & UInt:
+            uint_val = process.ReadUnsignedFromMemory(data_addr, 4, error)
+            if error.Success():
+                return str(uint_val)
+            return f"? (UInt error: {error.GetCString()})"
+        
+        if flags & Int64:
+            int64_val = process.ReadSignedFromMemory(data_addr, 8, error)
+            if error.Success():
+                return str(int64_val)
+            return f"? (Int64 error: {error.GetCString()})"
+        
+        if flags & UInt64:
+            uint64_val = process.ReadUnsignedFromMemory(data_addr, 8, error)
+            if error.Success():
+                return str(uint64_val)
+            return f"? (UInt64 error: {error.GetCString()})"
+        
+        if flags & Double:
+            data = process.ReadMemory(data_addr, 8, error)
+            if error.Success():
+                double_val = struct.unpack('d', data)[0]
+                return str(double_val)
+            return f"? (Double error: {error.GetCString()})"
+        
+        if flags & Object:
+            count = process.ReadUnsignedFromMemory(data_addr + 8, 4, error)
+            if error.Success():
+                return f"Object members={count}"
+            return f"Object members=? (error: {error.GetCString()})"
+        
+        if flags & Array:
+            count = process.ReadUnsignedFromMemory(data_addr + 8, 4, error)
+            if error.Success():
+                return f"Array elements={count}"
+            return f"Array elements=? (error: {error.GetCString()})"
+        
+        return f"? (no matching flags: {hex(flags)})"
+    except Exception as e:
+        tb = traceback.format_exc()
+        return f"? (exception: {str(e)[:50]})"
+
+
+class DataValueSyntheticProvider:
+    """Synthetic children provider for o2::DataValue"""
+    
+    def __init__(self, valobj, internal_dict):
+        self.valobj = valobj
+        self.update()
+    
+    def update(self):
+        """Called when the variable changes"""
+        try:
+            error = lldb.SBError()
+            process = self.valobj.GetProcess()
+            
+            data_addr = self.valobj.GetLoadAddress()
+            if data_addr == lldb.LLDB_INVALID_ADDRESS:
+                addr = self.valobj.GetAddress()
+                if addr.IsValid():
+                    data_addr = addr.GetLoadAddress(self.valobj.GetTarget())
+            
+            if data_addr == lldb.LLDB_INVALID_ADDRESS:
+                self.count = 0
+                self.is_object = False
+                self.is_array = False
+                return
+            
+            flags_offset = 16
+            flags_addr = data_addr + flags_offset
+            flags = process.ReadUnsignedFromMemory(flags_addr, 4, error)
+            
+            if not error.Success():
+                self.count = 0
+                self.is_object = False
+                self.is_array = False
+                return
+            
+            Object = 1 << 8
+            Array = 1 << 9
+            
+            self.is_object = bool(flags & Object)
+            self.is_array = bool(flags & Array)
+            
+            if self.is_object:
+                ptr_addr = process.ReadPointerFromMemory(data_addr, error)
+                if error.Success() and ptr_addr != 0:
+                    self.count = process.ReadUnsignedFromMemory(data_addr + 8, 4, error)
+                    if error.Success():
+                        self.members_addr = ptr_addr
+                    else:
+                        self.count = 0
+                else:
+                    self.count = 0
+            elif self.is_array:
+                ptr_addr = process.ReadPointerFromMemory(data_addr, error)
+                if error.Success() and ptr_addr != 0:
+                    self.count = process.ReadUnsignedFromMemory(data_addr + 8, 4, error)
+                    if error.Success():
+                        self.elements_addr = ptr_addr
+                    else:
+                        self.count = 0
+                else:
+                    self.count = 0
+            else:
+                self.count = 0
+        except:
+            self.count = 0
+            self.is_object = False
+            self.is_array = False
+    
+    def num_children(self):
+        """Return number of children"""
+        return self.count
+    
+    def has_children(self):
+        """Return whether this value has children"""
+        return self.count > 0
+    
+    def get_child_index(self, name):
+        """Return index of child with given name"""
+        try:
+            if name.startswith('[') and name.endswith(']'):
+                return int(name[1:-1])
+        except:
+            pass
+        return -1
+    
+    def get_child_at_index(self, index):
+        """Return child at given index"""
+        if index < 0 or index >= self.count:
+            return None
+        
+        try:
+            target = self.valobj.GetTarget()
+            
+            if self.is_object:
+                if not hasattr(self, 'members_addr') or self.members_addr == 0:
+                    return None
+                
+                member_type = target.FindFirstType("o2::DataMember")
+                if not member_type.IsValid():
+                    return None
+                
+                member_size = member_type.GetByteSize()
+                offset = index * member_size
+                member_addr = self.members_addr + offset
+                
+                return self.valobj.CreateValueFromAddress(f'[{index}]', member_addr, member_type)
+            
+            elif self.is_array:
+                if not hasattr(self, 'elements_addr') or self.elements_addr == 0:
+                    return None
+                
+                element_type = target.FindFirstType("o2::DataValue")
+                if not element_type.IsValid():
+                    return None
+                
+                element_size = element_type.GetByteSize()
+                offset = index * element_size
+                element_addr = self.elements_addr + offset
+                
+                return self.valobj.CreateValueFromAddress(f'[{index}]', element_addr, element_type)
+        except:
+            pass
+        
+        return None

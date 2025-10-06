@@ -686,13 +686,13 @@ namespace o2
     {}
 
     DataDocument::DataDocument(const DataDocument& other) :
-        mAllocator()
+        DataValue(*this), mAllocator()
     {
 		*this = other;
     }
 
     DataDocument::DataDocument(DataDocument&& other) :
-        DataValue(other), mAllocator(other.mAllocator)
+        DataValue(other, *this), mAllocator(other.mAllocator)
     {}
 
     DataDocument::~DataDocument()
