@@ -472,6 +472,9 @@ namespace Editor
 				fieldType = propertyType->GetValueType();
         }
 
+        if (!fieldType)
+            return;
+
         auto existingTrack = animation->GetTrack(path);
         if (!existingTrack)
         {
@@ -486,39 +489,52 @@ namespace Editor
         if (!existingTrack)
 			return;
 
+		auto fieldValueProxy = fieldInfo->GetType()->GetValueProxy(fieldPtr);
+
         if (fieldType == &TypeOf(float))
         {
-			auto floatTrack = DynamicCast<AnimationTrack<float>>(existingTrack);
-			float value = fieldInfo->GetValue<float>(fieldPtr);
-
-			if (floatTrack)
-				floatTrack->AddKey(mTimeline->mTimeCursor, value);
+            if (auto floatTrack = DynamicCast<AnimationTrack<float>>(existingTrack))
+            {
+                if (auto floatProxy = DynamicCast<IValueProxy<float>>(fieldValueProxy))
+                {
+                    float value = floatProxy->GetValue();
+                    floatTrack->AddKey(mTimeline->mTimeCursor, value);
+				}
+            }
         }
         else if (fieldType == &TypeOf(int))
         {
-            auto intTrack = DynamicCast<AnimationTrack<int>>(existingTrack);
-            int value = fieldInfo->GetValue<int>(fieldPtr);
-
-            if (intTrack)
-                intTrack->AddKey(mTimeline->mTimeCursor, value);
+            if (auto intTrack = DynamicCast<AnimationTrack<int>>(existingTrack))
+            {
+                if (auto intProxy = DynamicCast<IValueProxy<int>>(fieldValueProxy))
+                {
+                    int value = intProxy->GetValue();
+                    intTrack->AddKey(mTimeline->mTimeCursor, value);
+                }
+            }
         }
         else if (fieldType == &TypeOf(Vec2F))
 		{
-			auto vec2Track = DynamicCast<AnimationTrack<Vec2F>>(existingTrack);
-            Vec2F value = fieldInfo->GetValue<Vec2F>(fieldPtr);
-
-// 			if (vec2Track)
-// 				vec2Track->AddKey(mTimeline->mTimeCursor, value);
+			if (auto vec2Track = DynamicCast<AnimationTrack<Vec2F>>(existingTrack))
+			{
+				if (auto vec2Proxy = DynamicCast<IValueProxy<Vec2F>>(fieldValueProxy))
+				{
+					Vec2F value = vec2Proxy->GetValue();
+					//vec2Track->spline->A
+				}
+			}
         }
 		else if (fieldType == &TypeOf(Color4)) 
         {
-            auto colorTrack = DynamicCast<AnimationTrack<Color4>>(existingTrack);
-			Color4 value = fieldInfo->GetValue<Color4>(fieldPtr);
-
-            if (colorTrack)
-                colorTrack->AddKey(mTimeline->mTimeCursor, value);
+            if (auto colorTrack = DynamicCast<AnimationTrack<Color4>>(existingTrack))
+            {
+                if (auto colorProxy = DynamicCast<IValueProxy<Color4>>(fieldValueProxy))
+                {
+                    Color4 value = colorProxy->GetValue();
+                    colorTrack->AddKey(mTimeline->mTimeCursor, value);
+                }
+			}
 		}
-
 
 		mTree->OnAnimationChanged();
 	}
