@@ -169,6 +169,9 @@ namespace Editor
 		void OnPropertyChangeCompleted(const Vector<IObject*>& targets, const String& path, const Vector<DataDocument>& before,
 									   const Vector<DataDocument>& after);
 
+		// Creates new animation track for specified property path
+		void AddTrackKey(const String& path);
+
         friend class AnimationTimeline;
         friend class AnimationTree;
         friend class CurvesSheet;
@@ -251,6 +254,7 @@ CLASS_METHODS_META(Editor::AnimationWindow)
     FUNCTION().PROTECTED().SIGNATURE(void, OnMenuFilterPressed);
     FUNCTION().PROTECTED().SIGNATURE(void, OnMenuRecordToggle, bool);
     FUNCTION().PROTECTED().SIGNATURE(void, OnPropertyChangeCompleted, const Vector<IObject*>&, const String&, const Vector<DataDocument>&, const Vector<DataDocument>&);
+    FUNCTION().PROTECTED().SIGNATURE(void, AddTrackKey, const String&);
 }
 END_META;
 // --- END META ---

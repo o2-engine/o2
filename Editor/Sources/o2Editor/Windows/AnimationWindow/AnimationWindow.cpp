@@ -434,8 +434,93 @@ namespace Editor
 			String trackPath = targetHierarchyPath + path;
 			o2Debug.Log("Recording property change on track: " + trackPath);
 
+			AddTrackKey(trackPath);
+
             break;
 		}
+	}
+
+	void AnimationWindow::AddTrackKey(const String& path)
+	{
+		auto animation = mAnimation.Lock();
+        if (!animation)
+			return;
+
+		auto targetEditable = DynamicCast<SceneEditableObject>(mTargetActor.Lock());
+        if (!targetEditable)
+			return;
+
+		const FieldInfo* fieldInfo = nullptr;
+		void* fieldPtr = nullptr;
+
+		if (auto objectType = dynamic_cast<const ObjectType*>(&targetEditable->GetType()))
+		{
+			void* realTypeObject = objectType->DynamicCastFromIObject(dynamic_cast<IObject*>(targetEditable.Get()));
+            fieldPtr = objectType->GetFieldPtr(realTypeObject, path, fieldInfo);
+		}
+
+        if (!fieldInfo || !fieldPtr)
+        {
+            o2Debug.LogError("Failed to add key: field '" + path + "' not found");
+            return;
+		}
+
+		const Type* fieldType = fieldInfo->GetType();
+        if (fieldType->GetUsage() == Type::Usage::Property)
+        {
+            if (auto propertyType = dynamic_cast<const PropertyType*>(fieldType))
+				fieldType = propertyType->GetValueType();
+        }
+
+        auto existingTrack = animation->GetTrack(path);
+        if (!existingTrack)
+        {
+            existingTrack = animation->AddTrack(path, *fieldType);
+            if (!existingTrack)
+            {
+                o2Debug.LogError("Failed to add key: can't create track for field '" + path + "'");
+                return;
+            }
+        }
+
+        if (!existingTrack)
+			return;
+
+        if (fieldType == &TypeOf(float))
+        {
+			auto floatTrack = DynamicCast<AnimationTrack<float>>(existingTrack);
+			float value = fieldInfo->GetValue<float>(fieldPtr);
+
+			if (floatTrack)
+				floatTrack->AddKey(mTimeline->mTimeCursor, value);
+        }
+        else if (fieldType == &TypeOf(int))
+        {
+            auto intTrack = DynamicCast<AnimationTrack<int>>(existingTrack);
+            int value = fieldInfo->GetValue<int>(fieldPtr);
+
+            if (intTrack)
+                intTrack->AddKey(mTimeline->mTimeCursor, value);
+        }
+        else if (fieldType == &TypeOf(Vec2F))
+		{
+			auto vec2Track = DynamicCast<AnimationTrack<Vec2F>>(existingTrack);
+            Vec2F value = fieldInfo->GetValue<Vec2F>(fieldPtr);
+
+// 			if (vec2Track)
+// 				vec2Track->AddKey(mTimeline->mTimeCursor, value);
+        }
+		else if (fieldType == &TypeOf(Color4)) 
+        {
+            auto colorTrack = DynamicCast<AnimationTrack<Color4>>(existingTrack);
+			Color4 value = fieldInfo->GetValue<Color4>(fieldPtr);
+
+            if (colorTrack)
+                colorTrack->AddKey(mTimeline->mTimeCursor, value);
+		}
+
+
+		mTree->OnAnimationChanged();
 	}
 
 }

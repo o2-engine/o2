@@ -63,9 +63,12 @@ namespace o2
         // Returns is contains Animation track by path (some like "path/abc/cde")
         bool ContainsTrack(const String& path) const;
 
+		// Returns Animation track by path (some like "path/abc/cde")
+		Ref<IAnimationTrack> GetTrack(const String& path);
+
         // Returns Animation track by path (some like "path/abc/cde")
         template<typename _type>
-        Ref<AnimationTrack<_type>> GetTrack(const String& path);
+        Ref<AnimationTrack<_type>> GetTrackByType(const String& path);
 
         // Adds animation track with specified path
         template<typename _type>
@@ -216,7 +219,7 @@ namespace o2
     }
 
     template<typename _type>
-    Ref<AnimationTrack<_type>> AnimationClip::GetTrack(const String& path)
+    Ref<AnimationTrack<_type>> AnimationClip::GetTrackByType(const String& path)
     {
         for (auto& track : mTracks) {
             if (track->path == path)
@@ -260,6 +263,7 @@ CLASS_METHODS_META(o2::AnimationClip)
     FUNCTION().PUBLIC().SIGNATURE(Vector<Ref<IAnimationTrack>>&, GetTracks);
     FUNCTION().PUBLIC().SIGNATURE(const Vector<Ref<IAnimationTrack>>&, GetTracks);
     FUNCTION().PUBLIC().SIGNATURE(bool, ContainsTrack, const String&);
+    FUNCTION().PUBLIC().SIGNATURE(Ref<IAnimationTrack>, GetTrack, const String&);
     FUNCTION().PUBLIC().SIGNATURE(Ref<IAnimationTrack>, AddTrack, const String&, const Type&);
     FUNCTION().PUBLIC().SIGNATURE(void, RemoveTrack, const String&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnTrackChanged);

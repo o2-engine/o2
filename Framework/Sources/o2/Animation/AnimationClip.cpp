@@ -94,7 +94,18 @@ namespace o2
         return false;
     }
 
-    Ref<IAnimationTrack> AnimationClip::AddTrack(const String& path, const Type& type)
+	Ref<IAnimationTrack> AnimationClip::GetTrack(const String& path)
+	{
+        for (auto& track : mTracks)
+        {
+            if (track->path == path)
+                return track;
+		}
+
+		return nullptr;
+	}
+
+	Ref<IAnimationTrack> AnimationClip::AddTrack(const String& path, const Type& type)
     {
         const Type* animType = nullptr;
 

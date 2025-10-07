@@ -42,7 +42,7 @@ namespace Editor
 
     void ToolsPanel::AddToolToggle(const Ref<Toggle>& toggle)
     {
-        if (!toggle->GetStateObject("visible")->GetAnimationClip()->GetTrack<float>("layout/minWidth"))
+        if (!toggle->GetStateObject("visible")->GetAnimationClip()->GetTrackByType<float>("layout/minWidth"))
         {
             *toggle->GetStateObject("visible")->GetAnimationClip()->AddTrack<float>("layout/minWidth") =
                 AnimationTrack<float>::EaseInOut(0.0f, 20.0f, 0.2f);
