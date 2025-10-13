@@ -24,9 +24,7 @@ namespace o2
     }
 
     Text::Text(const Text& text):
-        IRectDrawable(text), mUpdatingMesh(false), font(this), text(this), height(this), verAlign(this),
-        horAlign(this), wordWrap(this), dotsEngings(this), symbolsDistanceCoef(this), linesDistanceCoef(this),
-        fontAsset(this)
+        IRectDrawable(text), mUpdatingMesh(false)
     {
         mText = text.mText;
         mFont = text.mFont;

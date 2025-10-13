@@ -13,8 +13,7 @@ namespace o2
 
     WidgetLayer::WidgetLayer(RefCounter* refCounter, const WidgetLayer& other) :
         WidgetLayerBase(refCounter), mDepth(other.mDepth), name(other.name), layout(other.layout),
-        mTransparency(other.mTransparency), interactableLayout(other.interactableLayout), mUID(Math::Random()),
-        depth(this), transparency(this)
+        mTransparency(other.mTransparency), interactableLayout(other.interactableLayout), mUID(Math::Random())
     {
         if (other.mCopyVisitor)
             other.mCopyVisitor->OnCopy(&other, this);

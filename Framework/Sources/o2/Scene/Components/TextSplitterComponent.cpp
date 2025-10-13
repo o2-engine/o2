@@ -13,9 +13,7 @@ namespace o2
     TextSplitterComponent::TextSplitterComponent(const TextSplitterComponent& other):
         Component(other), mText(other.mText), mFont(other.mFont), mHeight(other.mHeight), mSymbolsDistCoef(other.mSymbolsDistCoef),
         mLinesDistCoef(other.mLinesDistCoef), mHorAlign(other.mHorAlign), mVerAlign(other.mVerAlign),
-		mWordWrap(other.mWordWrap), mDotsEndings(other.mDotsEndings), mColor(other.mColor),
-		text(this), font(this), height(this), symbolsDistanceCoef(this), linesDistanceCoef(this), horAlign(this), verAlign(this), 
-		wordWrap(this), dotsEndings(this), symbolsAnimationDelay(this), autoPlaySymbolsAnimation(this), color(this), transparency(this)
+		mWordWrap(other.mWordWrap), mDotsEndings(other.mDotsEndings), mColor(other.mColor)
     {
         if (mFont)
 			mFont->GetFont()->onCharactersRebuilt += THIS_FUNC(CheckCharactersAndRebuild);

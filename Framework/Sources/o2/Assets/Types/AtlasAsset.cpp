@@ -93,7 +93,7 @@ namespace o2
     {}
 
     AtlasAsset::AtlasAsset(const AtlasAsset& other) :
-        Asset(other), mImages(other.mImages), mPages(other.mPages), meta(this), images(this), pages(this)
+        Asset(other), mImages(other.mImages), mPages(other.mPages)
     {
         for (auto& page : mPages)
             page.mOwner = WeakRef(this);

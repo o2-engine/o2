@@ -30,8 +30,7 @@ namespace o2
         ScrollArea(refCounter, other), mMultiLine(other.mMultiLine), mWordWrap(other.mWordWrap), mMaxLineChars(other.mMaxLineChars),
         mMaxLinesCount(other.mMaxLinesCount), mText(other.mText), mLastText(other.mText),
         mAvailableSymbols(other.mAvailableSymbols), mSelectionColor(other.mSelectionColor),
-        mCaretBlinkDelay(other.mCaretBlinkDelay), text(this), caret(this),
-        selectionBegin(this), selectionEnd(this)
+        mCaretBlinkDelay(other.mCaretBlinkDelay)
     {
         mSelectionMesh = mmake<Mesh>();
         mTextDrawable  = other.mTextDrawable->CloneAsRef<Text>();

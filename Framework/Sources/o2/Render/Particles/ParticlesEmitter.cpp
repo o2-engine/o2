@@ -26,12 +26,7 @@ namespace o2
         mInitialAngle(other.mInitialAngle), mInitialAngleRange(other.mInitialAngleRange),
         mInitialSize(other.mInitialSize), mInitialSizeRange(other.mInitialSizeRange),
         mInitialSpeed(other.mInitialSpeed), mInitialSpeedRangle(other.mInitialSpeedRangle),
-        mInitialMoveDirection(other.mInitialMoveDirection), mInitialMoveDirectionRange(other.mInitialMoveDirectionRange),
-        emittingCoefficient(this), particlesRelative(this), maxParticles(this),
-        particlesLifetime(this), particlesPerSecond(this), initialAngle(this), initialAngleRange(this),
-        initialSize(this), initialSizeRange(this), initialSpeed(this), initialSpeedRange(this), initialAngleSpeed(this),
-        initialAngleSpeedRange(this), moveDirection(this), moveDirectionRange(this),
-        particlesSource(this), shape(this)
+        mInitialMoveDirection(other.mInitialMoveDirection), mInitialMoveDirectionRange(other.mInitialMoveDirectionRange)
     {
         for (auto& effect : other.mEffects)
             AddEffect(effect->CloneAsRef<ParticlesEffect>());

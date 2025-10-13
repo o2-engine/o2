@@ -814,7 +814,7 @@ namespace o2
     }
 
     ContextMenuItem::ContextMenuItem(RefCounter* refCounter, const ContextMenuItem& other) :
-        Widget(refCounter, other), text(this)
+        Widget(refCounter, other)
     {
         mSubMenu = FindChildByType<ContextMenu>();
         if (mSubMenu)

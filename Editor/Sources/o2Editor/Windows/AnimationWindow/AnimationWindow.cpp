@@ -520,7 +520,12 @@ namespace Editor
 				if (auto vec2Proxy = DynamicCast<IValueProxy<Vec2F>>(fieldValueProxy))
 				{
 					Vec2F value = vec2Proxy->GetValue();
-					//vec2Track->spline->A
+					vec2Track->spline->InsertKey(vec2Track->spline->GetNextKey(mTimeline->mTimeCursor), value);
+
+                    if (vec2Track->timeCurve->GetKeys().IsEmpty())
+                        vec2Track->timeCurve->InsertKey(mTimeline->mTimeCursor, 0.0f);
+                    else if (vec2Track->timeCurve->GetKeys().Count() == 1)
+                        vec2Track->timeCurve->InsertKey(mTimeline->mTimeCursor, 1.0f);
 				}
 			}
         }

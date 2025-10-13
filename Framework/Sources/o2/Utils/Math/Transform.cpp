@@ -14,11 +14,7 @@ namespace o2
     Transform::Transform(const Transform& other):
         mSize(other.mSize), mPosition(other.mPosition), mAngle(other.mAngle), mScale(other.mScale),
         mPivot(other.mPivot), mShear(other.mShear), mTransform(other.mTransform),
-        mNonSizedTransform(other.mNonSizedTransform), position(this), size(this), width(this), height(this), scale(this),
-        scaleX(this), scaleY(this), pivot(this), worldPivot(this), szPivot(this), angle(this), angleDegree(this), shear(this),
-        basis(this), nonSizedBasis(this), rect(this), AABB(this), leftTop(this), leftBottom(this),
-        rightTop(this), rightBottom(this), right(this), left(this), up(this), down(this),
-        lookAtPoint(this)
+        mNonSizedTransform(other.mNonSizedTransform)
     {}
 
     void Transform::OnDeserialized(const DataValue& node)
@@ -84,6 +80,28 @@ namespace o2
     Vec2F Transform::GetPosition() const
     {
         return mPosition;
+    }
+
+    void Transform::SetPositionX(float value)
+    {
+        mPosition.x = value;
+        UpdateTransform();
+    }
+
+    float Transform::GetPositionX() const
+    {
+        return mPosition.x;
+    }
+    
+    void Transform::SetPositionY(float value)
+    {
+        mPosition.y = value;
+        UpdateTransform();
+    }
+    
+    float Transform::GetPositionY() const
+    {
+        return mPosition.y;
     }
 
     void Transform::SetSize(const Vec2F& size)

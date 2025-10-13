@@ -90,6 +90,28 @@ namespace o2
         return mData->position;
     }
 
+    void ActorTransform::SetPositionX(float value)
+    {
+        mData->position.x = value;
+        SetDirty();
+    }
+
+    float ActorTransform::GetPositionX() const
+    {
+        return mData->position.x;
+    }
+
+    void ActorTransform::SetPositionY(float value)
+    {
+        mData->position.y = value;
+        SetDirty();
+    }
+
+    float ActorTransform::GetPositionY() const
+    {
+        return mData->position.y;
+    }
+
     void ActorTransform::SetSize(const Vec2F& size)
     {
         mData->size = size;

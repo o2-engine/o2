@@ -10,7 +10,7 @@ namespace o2
     {}
 
     BinaryAsset::BinaryAsset(const BinaryAsset& other):
-        AssetWithDefaultMeta<BinaryAsset>(other), data(this), dataSize(this)
+        AssetWithDefaultMeta<BinaryAsset>(other)
     {
         if (other.mDataSize > 0)
         {

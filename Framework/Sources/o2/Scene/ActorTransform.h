@@ -25,6 +25,8 @@ namespace o2
         GETTER(Ref<Actor>, actor, GetOwnerActor); // Owner actor getter 
 
         PROPERTY(Vec2F, position, SetPosition, GetPosition);            // Position property
+        PROPERTY(float, positionX, SetPositionX, GetPositionX);         // Position property by X
+        PROPERTY(float, positionY, SetPositionY, GetPositionY);         // Position property by Y
         PROPERTY(Vec2F, size, SetSize, GetSize);                        // Size property
         PROPERTY(float, width, SetWidth, GetWidth);                     // Width property
         PROPERTY(float, height, SetHeight, GetHeight);                  // Height property
@@ -49,9 +51,6 @@ namespace o2
         PROPERTY(Vec2F, rightTop, SetRightTop, GetRightTop);          // Right top corner property
         PROPERTY(Vec2F, rightBottom, SetRightBottom, GetRightBottom); // Right bottom corner property
         PROPERTY(Vec2F, center, SetCenter, GetCenter);                // Center position property
-        PROPERTY(Vec2F, rightDir, SetRightDir, GetRightDir);          // X axis direction property
-        PROPERTY(Vec2F, leftDir, SetLeftDir, GetLeftDir);             // Negative X axis direction property
-        PROPERTY(Vec2F, upDir, SetUpDir, GetUpDir);                   // Y axis direction property
         PROPERTY(Vec2F, downDir, SetDownDir, GetDownDir);             // Negative Y axis direction property
         PROPERTY(float, right, SetRight, GetRight);                   // Right border position property
         PROPERTY(float, left, SetLeft, GetLeft);                      // Left border position property
@@ -70,10 +69,7 @@ namespace o2
         PROPERTY(Vec2F, worldRightTop, SetWorldRightTop, GetWorldRightTop);          // World Right top corner property
         PROPERTY(Vec2F, worldRightBottom, SetWorldRightBottom, GetWorldRightBottom); // World Right bottom corner property
         PROPERTY(Vec2F, worldCenter, SetWorldCenter, GetWorldCenter);                // World center property
-        PROPERTY(Vec2F, worldRightDir, SetWorldRightDir, GetWorldRightDir);          // World X axis direction property
-        PROPERTY(Vec2F, worldLeftDir, SetWorldLeftDir, GetWorldLeftDir);             // World Negative X axis direction property
         PROPERTY(Vec2F, worldUpDir, SetWorldUpDir, GetWorldUpDir);                   // World Y axis direction property
-        PROPERTY(Vec2F, worldDownDir, SetWorldDownDir, GetWorldDownDir);             // World Negative Y axis direction property
 
         PROPERTY(float, worldRight, SetWorldRight, GetWorldRight);    // World Right border position property
         PROPERTY(float, worldLeft, SetWorldLeft, GetWorldLeft);       // World Left border position property
@@ -119,6 +115,18 @@ namespace o2
 
         // Returns position @SCRIPTABLE
         Vec2F GetPosition() const;
+
+        // Sets position by X @SCRIPTABLE
+        virtual void SetPositionX(float value);
+
+        // Returns position by X @SCRIPTABLE
+        float GetPositionX() const;
+
+        // Sets position by Y @SCRIPTABLE
+        virtual void SetPositionY(float value);
+
+        // Returns position by Y @SCRIPTABLE
+        float GetPositionY() const;
 
         // Sets size @SCRIPTABLE
         virtual void SetSize(const Vec2F& size);
@@ -525,6 +533,8 @@ CLASS_FIELDS_META(o2::ActorTransform)
 {
     FIELD().PUBLIC().NAME(actor);
     FIELD().PUBLIC().NAME(position);
+    FIELD().PUBLIC().NAME(positionX);
+    FIELD().PUBLIC().NAME(positionY);
     FIELD().PUBLIC().NAME(size);
     FIELD().PUBLIC().NAME(width);
     FIELD().PUBLIC().NAME(height);
@@ -545,9 +555,6 @@ CLASS_FIELDS_META(o2::ActorTransform)
     FIELD().PUBLIC().NAME(rightTop);
     FIELD().PUBLIC().NAME(rightBottom);
     FIELD().PUBLIC().NAME(center);
-    FIELD().PUBLIC().NAME(rightDir);
-    FIELD().PUBLIC().NAME(leftDir);
-    FIELD().PUBLIC().NAME(upDir);
     FIELD().PUBLIC().NAME(downDir);
     FIELD().PUBLIC().NAME(right);
     FIELD().PUBLIC().NAME(left);
@@ -564,10 +571,7 @@ CLASS_FIELDS_META(o2::ActorTransform)
     FIELD().PUBLIC().NAME(worldRightTop);
     FIELD().PUBLIC().NAME(worldRightBottom);
     FIELD().PUBLIC().NAME(worldCenter);
-    FIELD().PUBLIC().NAME(worldRightDir);
-    FIELD().PUBLIC().NAME(worldLeftDir);
     FIELD().PUBLIC().NAME(worldUpDir);
-    FIELD().PUBLIC().NAME(worldDownDir);
     FIELD().PUBLIC().NAME(worldRight);
     FIELD().PUBLIC().NAME(worldLeft);
     FIELD().PUBLIC().NAME(worldTop);
@@ -588,6 +592,10 @@ CLASS_METHODS_META(o2::ActorTransform)
     FUNCTION().PUBLIC().SIGNATURE(void, Update);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetPosition, const Vec2F&);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(Vec2F, GetPosition);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetPositionX, float);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(float, GetPositionX);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetPositionY, float);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(float, GetPositionY);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetSize, const Vec2F&);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(Vec2F, GetSize);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetWidth, float);

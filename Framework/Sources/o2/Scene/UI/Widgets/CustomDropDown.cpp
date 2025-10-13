@@ -21,7 +21,7 @@ namespace o2
 
     CustomDropDown::CustomDropDown(RefCounter* refCounter, const CustomDropDown& other):
         Widget(refCounter, other), DrawableCursorEventsListener(this), mClipLayout(other.mClipLayout),
-        mMaxListItems(other.mMaxListItems), selectedItem(this), selectedItemPos(this), itemsCount(this)
+        mMaxListItems(other.mMaxListItems)
     {
         mItemsList = FindInternalWidgetByType<CustomList>();
         mItemsList->onSelectedItem += [&](auto x) { OnItemSelected(); };

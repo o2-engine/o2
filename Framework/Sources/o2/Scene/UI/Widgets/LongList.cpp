@@ -19,7 +19,7 @@ namespace o2
 
     LongList::LongList(RefCounter* refCounter, const LongList& other):
         ScrollArea(refCounter, other), mHoverLayout(other.mHoverLayout),
-        mSelectionLayout(other.mSelectionLayout), selectedItemPos(this)
+        mSelectionLayout(other.mSelectionLayout)
     {
         mItemSample = other.mItemSample->CloneAsRef<Widget>();
         mSelectionDrawable = other.mSelectionDrawable->CloneAsRef<Sprite>();

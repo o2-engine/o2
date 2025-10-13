@@ -154,10 +154,10 @@ namespace Editor
     KeyFramesTrackControl<AnimationTrackType>::~KeyFramesTrackControl()
     {
         if (mTrack)
-            mTrack.Lock()->onKeysChanged -= THIS_SUBSCRIPTION(UpdateHandles, []() {});
+            mTrack.Lock()->onKeysChanged -= THIS_FUNC(UpdateHandles);
 
         if (mPlayer)
-            mPlayer.Lock()->onUpdate -= THIS_SUBSCRIPTION(CheckCanCreateKey, []() {});
+            mPlayer.Lock()->onUpdate -= THIS_FUNC(CheckCanCreateKey);
     }
 
     template<typename AnimationTrackType>
@@ -210,19 +210,19 @@ namespace Editor
         mTrackPath = path;
 
         if (mTrack)
-            mTrack.Lock()->onKeysChanged -= THIS_SUBSCRIPTION(UpdateHandles, []() {});
+            mTrack.Lock()->onKeysChanged -= THIS_FUNC(UpdateHandles);
 
         if (mPlayer)
-            mPlayer.Lock()->onUpdate -= THIS_SUBSCRIPTION(CheckCanCreateKey, []() {});
+            mPlayer.Lock()->onUpdate -= THIS_FUNC(CheckCanCreateKey);
 
         mTrack = DynamicCast<AnimationTrackType>(track);
         mPlayer = DynamicCast<TrackPlayerType>(player);
 
         if (mTrack)
-            mTrack.Lock()->onKeysChanged += THIS_SUBSCRIPTION(UpdateHandles, [&]() { mTrack = nullptr; });
+            mTrack.Lock()->onKeysChanged += THIS_FUNC(UpdateHandles);
 
         if (mPlayer)
-            mPlayer.Lock()->onUpdate += THIS_SUBSCRIPTION(CheckCanCreateKey, [&]() { mPlayer = nullptr; });
+            mPlayer.Lock()->onUpdate += THIS_FUNC(CheckCanCreateKey);
 
         InitializeHandles();
         CheckCanCreateKey(mTimeline.Lock()->GetTimeCursor());

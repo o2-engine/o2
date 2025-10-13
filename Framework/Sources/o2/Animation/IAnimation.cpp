@@ -19,9 +19,7 @@ namespace o2
     IAnimation::IAnimation(RefCounter* refCounter, const IAnimation& other):
         RefCounterable(refCounter), mTime(other.mTime), mDuration(other.mDuration), mBeginTime(other.mBeginTime), mEndTime(other.mEndTime),
         mDirection(other.mDirection), mSpeed(other.mSpeed), mLoop(other.mLoop),
-        mPlaying(other.mPlaying), mInDurationTime(other.mInDurationTime),
-        playing(this), reversed(this), speed(this), time(this), relTime(this),
-        beginBound(this), endBound(this), loop(this), duration(this)
+        mPlaying(other.mPlaying), mInDurationTime(other.mInDurationTime)
     {}
 
     IAnimation::~IAnimation()

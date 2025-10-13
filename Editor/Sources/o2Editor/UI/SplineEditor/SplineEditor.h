@@ -20,6 +20,9 @@ namespace Editor
         // ---------------------------------------------------
         struct ISplineWrapper : public RefCounterable
         {
+            Function<void()> onChangedOutside; // Called when spline was changed outside of this editor
+
+        public:
             // Virtual destructor
             virtual ~ISplineWrapper() {}
 
@@ -143,6 +146,7 @@ namespace Editor
 
     protected:
         Ref<ISplineWrapper> mSplineWrapper; // Spline getters and setters wrapper
+        Subscription mSubscription;
 
         PointHandles              mHandlesSample; // Samples of handles for cloning
         Vector<Ref<PointHandles>> mSplineHandles; // Spline handles
@@ -170,6 +174,9 @@ namespace Editor
 
         // Initializes all spline handles
         void InitializeHandles();
+
+        // Updates handles positions
+        void UpdateHandles();
 
         // Checks that support handles are in same position for dragging symmteric
         void CheckDragFromZero(int i, const Ref<PointHandles>& handles);

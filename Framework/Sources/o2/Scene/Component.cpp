@@ -12,8 +12,7 @@ namespace o2
     {}
 
     Component::Component(RefCounter* refCounter, const Component& other) :
-        RefCounterable(refCounter), mEnabled(other.mEnabled), mEnabledInHierarchy(false), mId(Math::Random()),
-        actor(this), enabled(this), enabledInHierarchy(this)
+        RefCounterable(refCounter), mEnabled(other.mEnabled), mEnabledInHierarchy(false), mId(Math::Random())
     {
         ActorRefResolver::ComponentCreated(this);
     }

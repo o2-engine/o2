@@ -13,7 +13,7 @@ namespace o2
     {}
 
     Button::Button(RefCounter* refCounter, const Button& other) :
-        Widget(refCounter, other), caption(this), icon(this)
+        Widget(refCounter, other)
     {
         mCaptionText = GetLayerDrawable<Text>("caption");
         mIconSprite = GetLayerDrawable<Sprite>("icon");

@@ -73,7 +73,7 @@ namespace o2
         IAnimationTrack() {}
 
         // Copy-constructor
-        IAnimationTrack(const IAnimationTrack& other): duration(this), loop(other.loop), path(other.path) {}
+        IAnimationTrack(const IAnimationTrack& other): loop(other.loop), path(other.path) {}
 
         // Copy operator
         IAnimationTrack& operator=(const IAnimationTrack& other);

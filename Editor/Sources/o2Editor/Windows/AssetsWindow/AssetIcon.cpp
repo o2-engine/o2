@@ -17,7 +17,7 @@ namespace Editor
     }
 
     AssetIcon::AssetIcon(RefCounter* refCounter, const AssetIcon& other):
-        Widget(refCounter, other), assetName(this)
+        Widget(refCounter, other)
     {
         mNameText = FindChildByType<Label>();
 

@@ -283,7 +283,7 @@ namespace o2
 
     template<typename _type>
     AnimationTrack<_type>::AnimationTrack(const AnimationTrack<_type>& other):
-        IAnimationTrack(other), mKeys(other.mKeys), keys(this)
+        IAnimationTrack(other), mKeys(other.mKeys)
     {}
 
     template<typename _type>

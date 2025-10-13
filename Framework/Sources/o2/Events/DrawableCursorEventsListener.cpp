@@ -14,7 +14,7 @@ namespace o2
     }
 
     DrawableCursorEventsListener::DrawableCursorEventsListener(const DrawableCursorEventsListener& other):
-        CursorAreaEventsListener(other), mEventHandleDrawable(nullptr), eventHandleDrawable(this)
+        CursorAreaEventsListener(other), mEventHandleDrawable(nullptr)
     {
         SetEventHandleDrawable(other.mEventHandleDrawable);
     }

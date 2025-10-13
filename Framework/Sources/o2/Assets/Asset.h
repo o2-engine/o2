@@ -204,10 +204,10 @@ typedef META_TYPE MetaType;
 		explicit AssetWithDefaultMeta(RefCounter* refCounter) : Asset(refCounter, mmake<Meta>()) {}
 
 		// Copy constructor, creates asset with default meta type
-        AssetWithDefaultMeta(const AssetWithDefaultMeta<T>& other) : Asset(other), meta(this) {}
+        AssetWithDefaultMeta(const AssetWithDefaultMeta<T>& other) : Asset(other) {}
 
 		// Copy constructor with reference counter, creates asset with default meta type
-		AssetWithDefaultMeta(RefCounter* refCounter, const AssetWithDefaultMeta<T>& other) : Asset(refCounter, other), meta(this) {}
+		AssetWithDefaultMeta(RefCounter* refCounter, const AssetWithDefaultMeta<T>& other) : Asset(refCounter, other) {}
 
 		// Returns meta information pointer
         Ref<Meta> GetMeta() const { return DynamicCast<Meta>(mInfo.meta); }

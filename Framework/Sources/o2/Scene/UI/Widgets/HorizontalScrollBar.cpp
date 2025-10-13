@@ -15,8 +15,7 @@ namespace o2
     HorizontalScrollBar::HorizontalScrollBar(RefCounter* refCounter, const HorizontalScrollBar& other) :
         Widget(refCounter, other), DrawableCursorEventsListener(this), mValue(other.mValue), mMinValue(other.mMinValue),
         mMaxValue(other.mMaxValue), mScrollSense(other.mScrollSense), mScrollHandleSize(other.mScrollHandleSize),
-        mHandlePressed(false), mScrollhandleMinPxSize(other.mScrollhandleMinPxSize), mSmoothValue(other.mValue), 
-        value(this), minValue(this), maxValue(this), scrollSense(this), scrollSize(this)
+        mHandlePressed(false), mScrollhandleMinPxSize(other.mScrollhandleMinPxSize), mSmoothValue(other.mValue)
     {
         mHandleLayer = FindLayer("handle");
         mBackLayer = FindLayer("back");

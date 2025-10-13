@@ -12,7 +12,7 @@ namespace o2
 	{}
 
 	IAnimationState::IAnimationState(const IAnimationState& other) :
-		name(other.name), autoPlay(other.autoPlay), weight(this)
+		name(other.name), autoPlay(other.autoPlay)
 	{}
 
 	void IAnimationState::Update(float dt)

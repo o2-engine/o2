@@ -13,8 +13,7 @@ namespace o2
 
     VerticalProgress::VerticalProgress(RefCounter* refCounter, const VerticalProgress& other) :
         Widget(refCounter, other), DrawableCursorEventsListener(this), mValue(other.mValue), mMinValue(other.mMinValue),
-        mMaxValue(other.mMaxValue), mOrientation(other.mOrientation), mScrollSense(other.mScrollSense), value(this),
-        minValue(this), maxValue(this), scrollSense(this)
+        mMaxValue(other.mMaxValue), mOrientation(other.mOrientation), mScrollSense(other.mScrollSense)
     {
         mBarLayer = FindLayer("bar");
         mBackLayer = FindLayer("back");

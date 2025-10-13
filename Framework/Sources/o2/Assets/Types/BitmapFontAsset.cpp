@@ -13,7 +13,7 @@ namespace o2
     {}
 
     BitmapFontAsset::BitmapFontAsset(const BitmapFontAsset& asset):
-        FontAsset(asset), meta(this)
+        FontAsset(asset)
     {}
 
     BitmapFontAsset& BitmapFontAsset::operator=(const BitmapFontAsset& asset)

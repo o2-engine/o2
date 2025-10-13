@@ -15,7 +15,7 @@ namespace o2
     }
 
     List::List(RefCounter* refCounter, const List& other):
-        CustomList(refCounter, other), value(this), values(this)
+        CustomList(refCounter, other)
     {
         RetargetStatesAnimations();
     }

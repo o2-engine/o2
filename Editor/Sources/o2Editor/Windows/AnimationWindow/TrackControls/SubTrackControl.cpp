@@ -56,13 +56,13 @@ namespace Editor
         mTrackPath = path;
 
         if (mTrack)
-            mTrack.Lock()->onKeysChanged -= THIS_SUBSCRIPTION(UpdateHandles, []() {});
+            mTrack.Lock()->onKeysChanged -= THIS_FUNC(UpdateHandles);
 
         mTrack = DynamicCast<AnimationSubTrack>(track);
         mPlayer = DynamicCast<AnimationSubTrack::Player>(player);
 
         if (mTrack)
-            mTrack.Lock()->onKeysChanged += THIS_SUBSCRIPTION(UpdateHandles, [&]() { mTrack = nullptr; });
+            mTrack.Lock()->onKeysChanged += THIS_FUNC(UpdateHandles);
 
         SetupTrackHandles();
     }

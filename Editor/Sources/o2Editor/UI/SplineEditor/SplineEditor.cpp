@@ -205,6 +205,8 @@ namespace Editor
         if (!mSplineWrapper)
             return;
 
+        mSubscription = MakeSubscription(mSplineWrapper->onChangedOutside, Function<void()>([=]() { OnSplineChanged(); }));
+
         InitializeHandles();
     }
 
@@ -231,8 +233,12 @@ namespace Editor
 
     void SplineEditor::OnSplineChanged()
     {
-        ClearHandles();
-        InitializeHandles();
+        bool keysCountChanged = mSplineWrapper->GetPointsCount() != mSplineHandles.Count();
+        if (keysCountChanged)
+        {
+            ClearHandles();
+            InitializeHandles();
+        }
     }
 
     void SplineEditor::InitializeHandles()
@@ -292,6 +298,23 @@ namespace Editor
             handles->rightRangeHandle->screenToLocalTransformFunc = [&](const Vec2F& p) { return mSplineWrapper->WorldToLocal(p); };
 
             mSplineHandles.Add(handles);
+        }
+    }
+
+    void SplineEditor::UpdateHandles()
+    {
+        if (!mSplineWrapper)
+            return;
+
+        for (int i = 0; i < mSplineWrapper->GetPointsCount(); i++)
+        {
+            mSplineHandles[i]->position->SetPosition(mSplineWrapper->GetPointPos(i));
+
+            mSplineHandles[i]->prevSupport->SetPosition(mSplineWrapper->GetPointPrevSupportPos(i));
+            mSplineHandles[i]->nextSupport->SetPosition(mSplineWrapper->GetPointNextSupportPos(i));
+
+            mSplineHandles[i]->leftRangeHandle->SetPosition(GetRangeHandlePos(i, mSplineHandles[i], true));
+            mSplineHandles[i]->rightRangeHandle->SetPosition(GetRangeHandlePos(i, mSplineHandles[i], false));
         }
     }
 

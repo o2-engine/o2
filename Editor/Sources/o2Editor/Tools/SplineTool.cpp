@@ -160,6 +160,7 @@ namespace Editor
         wrapper->spline = spline;
         wrapper->getOrigin = getOrigin;
         wrapper->tool = Ref(this);
+        spline->onKeysChanged += [=]() { wrapper->onChangedOutside(); };
         splineEditor->SetSpline(wrapper);
     }
 

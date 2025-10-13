@@ -31,7 +31,7 @@ namespace o2
     }
 
     DragHandle::DragHandle(RefCounter* refCounter, const DragHandle& other) :
-        RefCounterable(refCounter), angle(this), position(this), enabled(this)
+        RefCounterable(refCounter)
     {
         if (other.mRegularDrawable)
             mRegularDrawable = other.mRegularDrawable->CloneAsRef<IRectDrawable>();

@@ -12,8 +12,7 @@ namespace o2
         Resize(vertexCount, polyCount, bonesCount);
     }
 
-    SkinningMesh::SkinningMesh(const SkinningMesh& other):
-        texture(this), maxPolyCount(this), maxVertexCount(this)
+    SkinningMesh::SkinningMesh(const SkinningMesh& other)
     {
         SetTexture(other.mTexture);
         Resize(other.mMaxVertexCount, other.mMaxPolyCount, other.mMaxBonesCount);

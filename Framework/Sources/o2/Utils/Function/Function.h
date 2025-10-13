@@ -5,6 +5,7 @@
 #include <vector>
 #include <cstring>
 #include "o2/Utils/Memory/MemoryManager.h"
+#include "o2/Utils/Types/Ref.h"
 
 namespace o2
 {
@@ -916,6 +917,9 @@ namespace o2
             if (otherFuncPtr)
                 return *otherFuncPtr == *this;
 
+            if (mData.typeData.type == DataType::OneFunction)
+                return OneFunctionRef().Equals(other);
+
             return false;
         }
 
@@ -1015,117 +1019,4 @@ namespace o2
     }
 
 #define THIS_FUNC(NAME) MakeFunction(this, &thisclass::NAME)
-
-    template <typename UnusedType>
-    class Subscription;
-
-    // ------------------------
-    // Function holder delegate
-    // ------------------------
-    template<typename _res_type, typename ... _args>
-    class Subscription <_res_type(_args ...)> : public IFunction<_res_type(_args ...)>
-    {
-        Function<_res_type(_args ...)> mFunction;
-        Function<void()> mOnDestroy;
-        int* mRefs = mnew int;
-
-    public:
-        // Constructor
-        Subscription(const Function<_res_type(_args ...)>& function, const Function<void()>& onDestroy) :
-            mFunction(function), mOnDestroy(onDestroy)
-        {
-            (*mRefs) = 1;
-        }
-
-        // Copy-constructor
-        Subscription(const Subscription& other) :
-            mFunction(other.mFunction), mOnDestroy(other.mOnDestroy), mRefs(other.mRefs)
-        {
-            (*mRefs)++;
-        }
-
-        ~Subscription()
-        {
-            DecreaseRefs();
-        }
-
-        // Copy-operator
-        Subscription& operator=(const Subscription& other)
-        {
-            DecreaseRefs();
-
-            mFunction = other.mFunction;
-            mOnDestroy = other.mOnDestroy;
-            mRefs = other.mRefs;
-            (*mRefs)++;
-
-            return *this;
-        }
-
-        // Equal operator
-        bool operator==(const Subscription& other) const
-        {
-            return mFunction == other.mFunction;
-        }
-
-        // Not equal operator
-        bool operator!=(const Subscription& other) const
-        {
-            return mFunction != other.mFunction;
-        }
-
-        // Returns cloned copy of this
-        IFunction<_res_type(_args ...)>* MakeClone() const override
-        {
-            return mnew Subscription(*this);
-        }
-
-        // Returns cloned emplace copy of this in memory
-        IFunction<_res_type(_args ...)>* MakeClone(void* memory) const override
-        {
-            return new (memory) Subscription(*this);
-        }
-
-        // Invokes function with arguments as functor
-        _res_type Invoke(_args ... args) const override
-        {
-            return mFunction.Invoke(args ...);
-        }
-
-        // Returns true if functions is equal
-        bool Equals(const IFunction<_res_type(_args ...)>* other) const override
-        {
-            const Subscription* otherFuncPtr = dynamic_cast<const Subscription*>(other);
-            if (otherFuncPtr)
-                return *otherFuncPtr == *this;
-
-            return false;
-        }
-
-        // Returns size of function
-        UInt GetSizeOf() const override
-        {
-            return sizeof(*this);
-        }
-
-    protected:
-        void DecreaseRefs()
-        {
-            (*mRefs)--;
-            if ((*mRefs) == 0)
-            {
-                mOnDestroy.Invoke();
-                delete mRefs;
-            }
-        }
-    };
-
-    template<typename _class_type, typename _res_type, typename ... _args>
-    Subscription<_res_type(_args ...)> MakeSubscription(_class_type* object, _res_type(_class_type::* functionPtr)(_args ... args),
-                                                        const Function<void()>& onDestroy)
-    {
-        return Subscription<_res_type(_args ...)>(MakeFunction(object, functionPtr), onDestroy);
-    }
-
-#define THIS_SUBSCRIPTION(NAME, ON_DESTROY) MakeSubscription(this, &thisclass::NAME, ON_DESTROY)
 }

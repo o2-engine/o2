@@ -13,7 +13,7 @@ namespace o2
 
     ISceneDrawable::ISceneDrawable(const ISceneDrawable& other) :
         mDrawingDepth(other.mDrawingDepth), 
-        mInheritDrawingDepthFromParent(other.mInheritDrawingDepthFromParent), drawDepth(this)
+        mInheritDrawingDepthFromParent(other.mInheritDrawingDepthFromParent)
     {}
 
     ISceneDrawable::~ISceneDrawable()

@@ -146,7 +146,7 @@ namespace Editor
 
         info->AdjustScale();
 
-        info->curve->onKeysChanged += MakeSubscription(info.Get(), &CurveInfo::OnCurveChanged, [=]() { info->curve = nullptr; });
+        info->curve->onKeysChanged += MakeFunction(info.Get(), &CurveInfo::OnCurveChanged);
 
         if (color == Color4(44, 62, 80) && !mCurves.IsEmpty())
             info->color = Color4::SomeColor(mCurves.Count());
@@ -2075,7 +2075,7 @@ namespace Editor
         }
 
         if (curve)
-            curve->onKeysChanged -= MakeSubscription(this, &CurveInfo::OnCurveChanged, []() {});
+            curve->onKeysChanged -= MakeFunction(this, &CurveInfo::OnCurveChanged);
     }
 
     void CurvesEditor::CurveInfo::UpdateHandles()

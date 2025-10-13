@@ -14,9 +14,7 @@ namespace o2
     GridLayout::GridLayout(RefCounter* refCounter, const GridLayout& other):
         Widget(refCounter, other), mBaseCorner(other.mBaseCorner), mSpacing(other.mSpacing), mBorder(other.mBorder),
         mFitByChildren(other.mFitByChildren), mCellSize(other.mCellSize), mArrangeAxis(other.mArrangeAxis),
-        mArrangeAxisMaxCells(other.mArrangeAxisMaxCells), baseCorner(this), cellSize(this), arrangeAxisMaxCells(this),
-        arrangeAxis(this), spacing(this), border(this), borderLeft(this), borderRight(this),
-        borderTop(this), borderBottom(this), fitByChildren(this)
+        mArrangeAxisMaxCells(other.mArrangeAxisMaxCells)
     {
         RetargetStatesAnimations();
         SetLayoutDirty();

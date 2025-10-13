@@ -52,7 +52,7 @@ namespace o2
     {}
 
     VectorFontAsset::VectorFontAsset(const VectorFontAsset& asset):
-        FontAsset(asset), meta(this)
+        FontAsset(asset)
     {}
 
     VectorFontAsset& VectorFontAsset::operator=(const VectorFontAsset& asset)

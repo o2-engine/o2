@@ -138,7 +138,7 @@ namespace Editor
     MapKeyFramesTrackControl::HandlesGroup<TrackType>::~HandlesGroup()
     {
         if (track)
-            track.Lock()->onKeysChanged -= THIS_SUBSCRIPTION(HandlesGroup<TrackType>::UpdateHandles, [&]() {});
+            track.Lock()->onKeysChanged -= MakeFunction(this, &HandlesGroup<TrackType>::UpdateHandles);
     }
 
     template<typename TrackType>
@@ -148,8 +148,7 @@ namespace Editor
         this->trackPath = trackPath;
 
         track = DynamicCast<TrackType>(itrack);
-        track.Lock()->onKeysChanged += THIS_SUBSCRIPTION(HandlesGroup<TrackType>::UpdateHandles,
-                                                         [&]() { track = nullptr; });
+        track.Lock()->onKeysChanged += MakeFunction(this, &HandlesGroup<TrackType>::UpdateHandles);
 
         trackControl.Lock()->mTracks.Add(itrack);
 

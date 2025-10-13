@@ -10,8 +10,7 @@ namespace o2
     CursorAreaEventsListener::CursorAreaEventsListener()
     {}
 
-    CursorAreaEventsListener::CursorAreaEventsListener(const CursorAreaEventsListener& other):
-        interactable(this)
+    CursorAreaEventsListener::CursorAreaEventsListener(const CursorAreaEventsListener& other)
     {}
 
     CursorAreaEventsListener::~CursorAreaEventsListener()

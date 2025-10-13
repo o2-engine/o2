@@ -14,11 +14,7 @@ namespace o2
     }
 
     WidgetLayout::WidgetLayout(const WidgetLayout& other) :
-        ActorTransform(mnew WidgetLayoutData()), anchorMin(this), anchorMax(this), offsetMin(this), offsetMax(this),
-        anchorLeft(this), anchorRight(this), anchorBottom(this), anchorTop(this), offsetLeft(this),
-        offsetBottom(this), offsetTop(this), minSize(this), minWidth(this), minHeight(this),
-        maxSize(this), maxWidth(this), maxHeight(this), weight(this), widthWeight(this),
-        heigthWeight(this), offsetRight(this)
+        ActorTransform(mnew WidgetLayoutData())
     {
         mData = static_cast<WidgetLayoutData*>(ActorTransform::mData);
 

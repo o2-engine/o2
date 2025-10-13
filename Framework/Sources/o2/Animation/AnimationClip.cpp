@@ -13,7 +13,7 @@ namespace o2
     {}
 
     AnimationClip::AnimationClip(RefCounter* refCounter, const AnimationClip& other):
-        RefCounterable(refCounter), loop(this), duration(this)
+        RefCounterable(refCounter)
     {
         for (auto& track : other.mTracks)
         {

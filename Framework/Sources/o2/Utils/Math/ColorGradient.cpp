@@ -22,7 +22,7 @@ namespace o2
     }
 
     ColorGradient::ColorGradient(const ColorGradient& other) :
-        mKeys(other.mKeys), keys(this), length(this)
+        mKeys(other.mKeys)
     { }
 
     bool ColorGradient::operator!=(const ColorGradient& other) const

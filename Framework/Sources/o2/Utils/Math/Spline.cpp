@@ -15,7 +15,7 @@ namespace o2
     }
 
     Spline::Spline(const Spline& other) :
-        mKeys(other.mKeys), keys(this), length(this)
+        mKeys(other.mKeys)
     { }
 
     bool Spline::operator!=(const Spline& other) const
@@ -327,6 +327,17 @@ namespace o2
         }
 
         return Key();
+    }
+
+    int Spline::GetNextKey(float position) const
+    {
+        for (int i = 0; i < mKeys.Count(); i++)
+        {
+            if (mKeys[i].position > position)
+                return i;
+        }
+
+        return 0;
     }
 
     int Spline::FindKeyIdx(UInt64 uid) const

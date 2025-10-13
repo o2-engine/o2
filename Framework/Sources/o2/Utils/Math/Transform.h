@@ -17,6 +17,8 @@ namespace o2
     public:
         PROPERTIES(Transform);
         PROPERTY(Vec2F, position, SetPosition, GetPosition);            // Position property @EDITOR_IGNORE @ANIMATABLE @SCRIPTABLE
+        PROPERTY(float, positionX, SetPositionX, GetPositionX);         // Position property by X @EDITOR_IGNORE @ANIMATABLE @SCRIPTABLE
+        PROPERTY(float, positionY, SetPositionY, GetPositionY);         // Position property by Y @EDITOR_IGNORE @ANIMATABLE @SCRIPTABLE
         PROPERTY(Vec2F, size, SetSize, GetSize);                        // Size property @EDITOR_IGNORE @SCRIPTABLE
         PROPERTY(float, width, SetWidth, GetWidth);                     // Width property @EDITOR_IGNORE @ANIMATABLE @SCRIPTABLE
         PROPERTY(float, height, SetHeight, GetHeight);                  // Height property @EDITOR_IGNORE @ANIMATABLE @SCRIPTABLE
@@ -42,12 +44,7 @@ namespace o2
         PROPERTY(Vec2F, rightBottom, SetRightBottom, GetRightBottom); // Left top corner property @EDITOR_IGNORE @ANIMATABLE @SCRIPTABLE
         PROPERTY(Vec2F, center, SetCenter, GetCenter);                // Center property @EDITOR_IGNORE @ANIMATABLE @SCRIPTABLE
 
-        PROPERTY(Vec2F, right, SetRight, GetRight); // X Axis direction property @EDITOR_IGNORE @ANIMATABLE @SCRIPTABLE
-        PROPERTY(Vec2F, left, SetLeft, GetLeft);    // Negative X Axis direction property @EDITOR_IGNORE @ANIMATABLE @SCRIPTABLE
-        PROPERTY(Vec2F, up, SetUp, GetUp);          // Y Axis direction property @EDITOR_IGNORE @ANIMATABLE @SCRIPTABLE
-        PROPERTY(Vec2F, down, SetDown, GetDown);    // Negative Y Axis direction property @EDITOR_IGNORE @ANIMATABLE @SCRIPTABLE
-
-        SETTER(Vec2F, lookAtPoint, LookAt); // Look at point setter @EDITOR_IGNORE @ANIMATABLE
+        PROPERTY(Vec2F, up, SetUp, GetUp); // Y Axis direction property @EDITOR_IGNORE @ANIMATABLE @SCRIPTABLE
 
     public:
         // Constructor
@@ -74,6 +71,18 @@ namespace o2
 
         // Returns position
         virtual Vec2F GetPosition() const;
+
+        // Sets position by X
+        virtual void SetPositionX(float value);
+
+        // Returns position by X
+        virtual float GetPositionX() const;
+
+        // Sets position by Y
+        virtual void SetPositionY(float value);
+
+        // Returns position by Y
+        virtual float GetPositionY() const;
 
         // Sets size
         virtual void SetSize(const Vec2F& size);
@@ -285,6 +294,8 @@ END_META;
 CLASS_FIELDS_META(o2::Transform)
 {
     FIELD().PUBLIC().ANIMATABLE_ATTRIBUTE().EDITOR_IGNORE_ATTRIBUTE().SCRIPTABLE_ATTRIBUTE().NAME(position);
+    FIELD().PUBLIC().ANIMATABLE_ATTRIBUTE().EDITOR_IGNORE_ATTRIBUTE().SCRIPTABLE_ATTRIBUTE().NAME(positionX);
+    FIELD().PUBLIC().ANIMATABLE_ATTRIBUTE().EDITOR_IGNORE_ATTRIBUTE().SCRIPTABLE_ATTRIBUTE().NAME(positionY);
     FIELD().PUBLIC().EDITOR_IGNORE_ATTRIBUTE().SCRIPTABLE_ATTRIBUTE().NAME(size);
     FIELD().PUBLIC().ANIMATABLE_ATTRIBUTE().EDITOR_IGNORE_ATTRIBUTE().SCRIPTABLE_ATTRIBUTE().NAME(width);
     FIELD().PUBLIC().ANIMATABLE_ATTRIBUTE().EDITOR_IGNORE_ATTRIBUTE().SCRIPTABLE_ATTRIBUTE().NAME(height);
@@ -306,11 +317,7 @@ CLASS_FIELDS_META(o2::Transform)
     FIELD().PUBLIC().ANIMATABLE_ATTRIBUTE().EDITOR_IGNORE_ATTRIBUTE().SCRIPTABLE_ATTRIBUTE().NAME(rightTop);
     FIELD().PUBLIC().ANIMATABLE_ATTRIBUTE().EDITOR_IGNORE_ATTRIBUTE().SCRIPTABLE_ATTRIBUTE().NAME(rightBottom);
     FIELD().PUBLIC().ANIMATABLE_ATTRIBUTE().EDITOR_IGNORE_ATTRIBUTE().SCRIPTABLE_ATTRIBUTE().NAME(center);
-    FIELD().PUBLIC().ANIMATABLE_ATTRIBUTE().EDITOR_IGNORE_ATTRIBUTE().SCRIPTABLE_ATTRIBUTE().NAME(right);
-    FIELD().PUBLIC().ANIMATABLE_ATTRIBUTE().EDITOR_IGNORE_ATTRIBUTE().SCRIPTABLE_ATTRIBUTE().NAME(left);
     FIELD().PUBLIC().ANIMATABLE_ATTRIBUTE().EDITOR_IGNORE_ATTRIBUTE().SCRIPTABLE_ATTRIBUTE().NAME(up);
-    FIELD().PUBLIC().ANIMATABLE_ATTRIBUTE().EDITOR_IGNORE_ATTRIBUTE().SCRIPTABLE_ATTRIBUTE().NAME(down);
-    FIELD().PUBLIC().ANIMATABLE_ATTRIBUTE().EDITOR_IGNORE_ATTRIBUTE().NAME(lookAtPoint);
     FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().SERIALIZE_IF_ATTRIBUTE(IsSerializeEnabled).NAME(mPosition);
     FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().SERIALIZE_IF_ATTRIBUTE(IsSerializeEnabled).NAME(mSize);
     FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().SERIALIZE_IF_ATTRIBUTE(IsSerializeEnabled).NAME(mScale);
@@ -329,6 +336,10 @@ CLASS_METHODS_META(o2::Transform)
     FUNCTION().PUBLIC().CONSTRUCTOR(const Transform&);
     FUNCTION().PUBLIC().SIGNATURE(void, SetPosition, const Vec2F&);
     FUNCTION().PUBLIC().SIGNATURE(Vec2F, GetPosition);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetPositionX, float);
+    FUNCTION().PUBLIC().SIGNATURE(float, GetPositionX);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetPositionY, float);
+    FUNCTION().PUBLIC().SIGNATURE(float, GetPositionY);
     FUNCTION().PUBLIC().SIGNATURE(void, SetSize, const Vec2F&);
     FUNCTION().PUBLIC().SIGNATURE(Vec2F, GetSize);
     FUNCTION().PUBLIC().SIGNATURE(void, SetWidth, float);

@@ -16,7 +16,7 @@ namespace o2
     }
 
     DropDown::DropDown(RefCounter* refCounter, const DropDown& other):
-        CustomDropDown(refCounter, other), value(this)
+        CustomDropDown(refCounter, other)
     {
         RetargetStatesAnimations();
         mSelectedText = GetLayerDrawable<Text>("selectedText");

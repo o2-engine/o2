@@ -10,7 +10,7 @@ namespace o2
 
     WidgetState::WidgetState(const WidgetState& state):
         name(state.name), mState(state.mState), 
-        offStateAnimationSpeed(state.offStateAnimationSpeed), state(this), animationAsset(this), animationClip(this)
+        offStateAnimationSpeed(state.offStateAnimationSpeed)
     {
         mAnimation = state.mAnimation;
         mPlayer->SetClip(mAnimation ? mAnimation->animation : nullptr);

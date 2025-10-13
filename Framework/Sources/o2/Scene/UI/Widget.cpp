@@ -49,8 +49,7 @@ namespace o2
 
     Widget::Widget(RefCounter* refCounter, const Widget& other) :
         Actor(refCounter, mnew WidgetLayout(*other.layout), other), layout(dynamic_cast<WidgetLayout*>(transform)),
-        mTransparency(other.mTransparency), transparency(this), resTransparency(this),
-        childrenWidgets(this), layers(this), states(this), childWidget(this), layer(this), state(this)
+        mTransparency(other.mTransparency)
     {
 #if IS_EDITOR
         InitEditables();

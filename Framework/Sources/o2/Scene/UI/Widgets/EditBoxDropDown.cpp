@@ -29,7 +29,7 @@ namespace o2
 
     EditBoxDropDown::EditBoxDropDown(RefCounter* refCounter, const EditBoxDropDown& other):
         Widget(refCounter, other), DrawableCursorEventsListener(this),
-        mMaxListItems(other.mMaxListItems), text(this), selectedItemPos(this), itemsCount(this)
+        mMaxListItems(other.mMaxListItems)
     {
         mEditBox = FindInternalWidgetByType<EditBox>();
         

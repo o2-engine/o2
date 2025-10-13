@@ -129,6 +129,9 @@ namespace o2
         // Returns key by uid
         Key FindKey(UInt64 uid) const;
 
+        // Returns next key at position
+        int GetNextKey(float position) const;
+
         // Returns key index by uid
         int FindKeyIdx(UInt64 uid) const;
 
@@ -306,6 +309,7 @@ CLASS_METHODS_META(o2::Spline)
     FUNCTION().PUBLIC().SIGNATURE(const Vector<Key>&, GetKeys);
     FUNCTION().PUBLIC().SIGNATURE(Key, GetKey, int);
     FUNCTION().PUBLIC().SIGNATURE(Key, FindKey, UInt64);
+    FUNCTION().PUBLIC().SIGNATURE(int, GetNextKey, float);
     FUNCTION().PUBLIC().SIGNATURE(int, FindKeyIdx, UInt64);
     FUNCTION().PUBLIC().SIGNATURE(void, SetKeys, const Vector<Key>&);
     FUNCTION().PUBLIC().SIGNATURE(void, SetKey, const Key&, int);

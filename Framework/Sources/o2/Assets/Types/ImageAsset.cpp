@@ -15,8 +15,7 @@ namespace o2
     {}
 
     ImageAsset::ImageAsset(const ImageAsset& other):
-        Asset(other), mAtlasPage(other.mAtlasPage), mSourceRect(other.mSourceRect), bitmap(this), atlas(this), sliceBorder(this),
-        atlasPage(this), atlasRect(this), size(this), width(this), height(this), meta(this)
+        Asset(other), mAtlasPage(other.mAtlasPage), mSourceRect(other.mSourceRect)
     {
         if (other.mBitmap)
             mBitmap = Ref(other.mBitmap->Clone());

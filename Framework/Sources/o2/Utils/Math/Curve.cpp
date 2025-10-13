@@ -22,7 +22,7 @@ namespace o2
     }
 
     Curve::Curve(const Curve& other) :
-        mKeys(other.mKeys), keys(this), length(this)
+        mKeys(other.mKeys)
     { }
 
     bool Curve::operator!=(const Curve& other) const

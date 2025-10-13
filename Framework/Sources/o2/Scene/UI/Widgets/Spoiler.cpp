@@ -26,7 +26,7 @@ namespace o2
     }
 
     Spoiler::Spoiler(RefCounter* refCounter, const Spoiler& other):
-        VerticalLayout(refCounter, other), caption(this), headHeight(this), expanded(this), mHeadHeight(other.mHeadHeight)
+        VerticalLayout(refCounter, other), mHeadHeight(other.mHeadHeight)
     {
         mExpandState = GetStateObject("expand");
         if (!mExpandState)

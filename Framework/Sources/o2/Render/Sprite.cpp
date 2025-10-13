@@ -95,9 +95,7 @@ namespace o2
     Sprite::Sprite(const Sprite& other):
         mImageAsset(other.mImageAsset), mTextureSrcRect(other.mTextureSrcRect), IRectDrawable(other), 
         mMesh(other.mMesh), mMode(other.mMode), mFill(other.mFill), mSlices(other.mSlices),
-        mMeshBuildFunc(other.mMeshBuildFunc), mTileScale(other.mTileScale),
-        texture(this), textureSrcRect(this), image(this), imageName(this), leftTopColor(this), rightTopColor(this),
-        leftBottomColor(this), rightBottomColor(this), mode(this), fill(this), tileScale(this), sliceBorder(this)
+        mMeshBuildFunc(other.mMeshBuildFunc), mTileScale(other.mTileScale)
     {
         for (int i = 0; i < 4; i++)
             mCornersColors[i] = other.mCornersColors[i];

@@ -38,8 +38,7 @@ namespace o2
 
 	CustomList::CustomList(RefCounter* refCounter, const CustomList& other) :
 		ScrollArea(refCounter, other), mHoverLayout(other.mHoverLayout),
-		mSelectionLayout(other.mSelectionLayout), selectedItem(this), selectedItems(this),
-		selectedItemPos(this), itemsCount(this)
+		mSelectionLayout(other.mSelectionLayout)
 	{
 		mVerLayout = FindChildByType<VerticalLayout>();
 

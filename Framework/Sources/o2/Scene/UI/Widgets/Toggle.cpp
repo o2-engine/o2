@@ -16,8 +16,7 @@ namespace o2
     {}
 
     Toggle::Toggle(RefCounter* refCounter, const Toggle& other) :
-        Widget(refCounter, other), DrawableCursorEventsListener(this), mToggleGroup(nullptr), value(this), caption(this),
-        toggleGroup(this)
+        Widget(refCounter, other), DrawableCursorEventsListener(this), mToggleGroup(nullptr)
     {
         mCaptionText = GetLayerDrawable<Text>("caption");
         mBackLayer = FindLayer("back");

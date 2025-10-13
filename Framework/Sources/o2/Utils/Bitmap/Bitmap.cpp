@@ -23,8 +23,7 @@ namespace o2
         Load(fileName, type);
     }
 
-    Bitmap::Bitmap(const Bitmap& other):
-        data(this), size(this), format(this)
+    Bitmap::Bitmap(const Bitmap& other)
     {
         short bpp[] ={ 4, 3 };
 

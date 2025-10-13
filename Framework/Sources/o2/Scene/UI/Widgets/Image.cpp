@@ -13,7 +13,7 @@ namespace o2
     }
 
     Image::Image(RefCounter* refCounter, const Image& other):
-        Widget(refCounter, other), image(this), imageAsset(this), imageName(this)
+        Widget(refCounter, other)
     {
         mImage = GetLayerDrawable<Sprite>("image");
         if (!mImage)

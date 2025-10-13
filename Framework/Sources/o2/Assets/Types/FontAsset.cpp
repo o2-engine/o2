@@ -12,7 +12,7 @@ namespace o2
     {}
 
     FontAsset::FontAsset(const FontAsset& other) :
-        Asset(other), mFont(other.mFont), font(this)
+        Asset(other), mFont(other.mFont)
     {}
 
     FontAsset::FontAsset(const Ref<AssetMeta>& meta):
