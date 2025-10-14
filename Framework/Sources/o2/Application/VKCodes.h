@@ -119,7 +119,6 @@
 
 #elif defined PLATFORM_LINUX
 
-#include <X11/Xlib.h>
 #include <X11/keysym.h>
 
 #define VK_BACK           XK_BackSpace

@@ -23,9 +23,6 @@ namespace o2
         // Constructor by array of keys
         ShortcutKeys(const Vector<KeyboardKey>& keys);
 
-        // Constructor by custom string
-        ShortcutKeys(const String& customString);
-
         // Returns true if all keys are pressed
         bool IsPressed() const;
 
@@ -43,6 +40,9 @@ namespace o2
 
         // Less operator
         bool operator<(const ShortcutKeys& other) const;
+
+        // Builds with custom string
+        static ShortcutKeys FromCustomString(const String& str);
 
         SERIALIZABLE(ShortcutKeys);
 
@@ -72,11 +72,11 @@ CLASS_METHODS_META(o2::ShortcutKeys)
 
     FUNCTION().PUBLIC().CONSTRUCTOR();
     FUNCTION().PUBLIC().CONSTRUCTOR(const Vector<KeyboardKey>&);
-    FUNCTION().PUBLIC().CONSTRUCTOR(const String&);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsPressed);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsDown);
     FUNCTION().PUBLIC().SIGNATURE(String, AsString);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsEmpty);
+    FUNCTION().PUBLIC().SIGNATURE_STATIC(ShortcutKeys, FromCustomString, const String&);
     FUNCTION().PRIVATE().SIGNATURE(KeyboardKey, NormalizeKey, KeyboardKey);
 }
 END_META;
