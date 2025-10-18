@@ -35,6 +35,8 @@ namespace o2
         PROPERTY(float, scaleY, SetScaleY, GetScaleY);                  // Scale property by Y
         PROPERTY(Vec2F, pivot, SetPivot, GetPivot);                     // Pivot property, in local space
         PROPERTY(Vec2F, szPivot, SetSizePivot, GetSizePivot);           // Pivot in size space property
+        PROPERTY(float, pivotX, SetPivotX, GetPivotX);                 // Pivot property by X
+        PROPERTY(float, pivotY, SetPivotY, GetPivotY);                 // Pivot property by Y
         PROPERTY(float, angle, SetAngle, GetAngle);                     // Rotation angle in radians
         PROPERTY(float, angleDegree, SetAngleDegrees, GetAngleDegrees); // Rotation angle in degrees
         PROPERTY(float, shear, SetShear, GetShear);                     // Shear property
@@ -157,6 +159,18 @@ namespace o2
 
         // Returns size pivot, in local space, where (0, 0) - left down corner, (size.x, size.y) - right top @SCRIPTABLE
         Vec2F GetSizePivot() const;
+
+        // Sets pivot by X @SCRIPTABLE
+        void SetPivotX(float value);
+
+        // Returns pivot by X @SCRIPTABLE
+        float GetPivotX() const;
+
+        // Sets pivot by Y @SCRIPTABLE
+        void SetPivotY(float value);
+        
+        // Returns pivot by Y @SCRIPTABLE
+        float GetPivotY() const;
 
         // Sets scale @SCRIPTABLE
         void SetScale(const Vec2F& scale);
@@ -543,6 +557,8 @@ CLASS_FIELDS_META(o2::ActorTransform)
     FIELD().PUBLIC().NAME(scaleY);
     FIELD().PUBLIC().NAME(pivot);
     FIELD().PUBLIC().NAME(szPivot);
+    FIELD().PUBLIC().NAME(pivotX);
+    FIELD().PUBLIC().NAME(pivotY);
     FIELD().PUBLIC().NAME(angle);
     FIELD().PUBLIC().NAME(angleDegree);
     FIELD().PUBLIC().NAME(shear);
@@ -606,6 +622,10 @@ CLASS_METHODS_META(o2::ActorTransform)
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(Vec2F, GetPivot);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetSizePivot, const Vec2F&);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(Vec2F, GetSizePivot);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetPivotX, float);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(float, GetPivotX);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetPivotY, float);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(float, GetPivotY);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetScale, const Vec2F&);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetScaleX, float);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetScaleY, float);

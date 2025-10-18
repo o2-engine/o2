@@ -58,6 +58,12 @@ namespace Editor
         // Returns is values different
         bool IsValuesDifferent() const;
 
+        // Returns X property
+        const Ref<FloatProperty>& GetXProperty() const;
+
+        // Returns Y property
+        const Ref<FloatProperty>& GetYProperty() const;
+
         // Returns editing by this field type
         const Type* GetValueType() const override;
 
@@ -145,6 +151,8 @@ CLASS_METHODS_META(Editor::Vec2FProperty)
     FUNCTION().PUBLIC().SIGNATURE(void, SetYUnknownValue, float);
     FUNCTION().PUBLIC().SIGNATURE(Vec2F, GetCommonValue);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsValuesDifferent);
+    FUNCTION().PUBLIC().SIGNATURE(const Ref<FloatProperty>&, GetXProperty);
+    FUNCTION().PUBLIC().SIGNATURE(const Ref<FloatProperty>&, GetYProperty);
     FUNCTION().PUBLIC().SIGNATURE(const Type*, GetValueType);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(const Type*, GetValueTypeStatic);
     FUNCTION().PROTECTED().SIGNATURE(void, InitializeControls);

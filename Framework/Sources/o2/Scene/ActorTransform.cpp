@@ -92,8 +92,7 @@ namespace o2
 
     void ActorTransform::SetPositionX(float value)
     {
-        mData->position.x = value;
-        SetDirty();
+        SetPosition(Vec2F(value, mData->position.y));
     }
 
     float ActorTransform::GetPositionX() const
@@ -103,8 +102,7 @@ namespace o2
 
     void ActorTransform::SetPositionY(float value)
     {
-        mData->position.y = value;
-        SetDirty();
+        SetPosition(Vec2F(mData->position.x, value));
     }
 
     float ActorTransform::GetPositionY() const
@@ -166,6 +164,26 @@ namespace o2
         return mData->pivot*mData->size;
     }
 
+    void ActorTransform::SetPivotX(float value)
+    {
+        SetPivot(Vec2F(value, mData->pivot.y));
+    }
+
+    float ActorTransform::GetPivotX() const
+    {
+        return mData->pivot.x;
+    }
+
+    void ActorTransform::SetPivotY(float value)
+    {
+        SetPivot(Vec2F(mData->pivot.x, value));
+    }
+
+    float ActorTransform::GetPivotY() const
+    {
+        return mData->pivot.y;
+    }
+    
     void ActorTransform::SetRect(const RectF& rect)
     {
         mData->size = rect.Size();

@@ -157,7 +157,7 @@ namespace Editor
 
         mLayerProperty->SelectValueAndPrototypeFunctional<Ref<SceneLayer>, Actor>(
             actors, prototypes, [](Actor* x) { return x->GetLayer(); },
-            [](Actor* x, const Ref<SceneLayer>& l) { x->SetLayer(l->GetName()); });
+            [](Actor* x, const Ref<SceneLayer>& l) { if (l) x->SetLayer(l->GetName()); });
 
         mDepthProperty->SelectValueAndPrototypeProperties<Actor, decltype(Actor::drawDepth)>(
             actors, prototypes, [](Actor* x) { return &x->drawDepth; });

@@ -43,7 +43,7 @@ namespace o2
 
         PROPERTY(Vec2F, weight, SetWeight, GetWeight);                   // Layout weight property
         PROPERTY(float, widthWeight, SetWidthWeight, GetWidthWeight);    // Width layout weight property
-        PROPERTY(float, heigthWeight, SetHeightWeight, GetHeightWeight); // Height layout weight property
+        PROPERTY(float, heightWeight, SetHeightWeight, GetHeightWeight); // Height layout weight property
 
     public:
         // Default constructor, creates both stretching layout  
@@ -353,7 +353,7 @@ CLASS_FIELDS_META(o2::WidgetLayout)
     FIELD().PUBLIC().NAME(maxHeight);
     FIELD().PUBLIC().NAME(weight);
     FIELD().PUBLIC().NAME(widthWeight);
-    FIELD().PUBLIC().NAME(heigthWeight);
+    FIELD().PUBLIC().NAME(heightWeight);
     FIELD().PROTECTED().NAME(mData);
 }
 END_META;

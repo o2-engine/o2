@@ -143,6 +143,16 @@ namespace Editor
         return mXProperty->IsValuesDifferent() || mYProperty->IsValuesDifferent();
     }
 
+    const Ref<FloatProperty>& Vec2FProperty::GetXProperty() const
+    {
+        return mXProperty;
+    }
+
+    const Ref<FloatProperty>& Vec2FProperty::GetYProperty() const
+    {
+        return mYProperty;
+    }
+
     const Type* Vec2FProperty::GetValueType() const
     {
         return GetValueTypeStatic();

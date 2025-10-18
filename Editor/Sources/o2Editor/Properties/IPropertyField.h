@@ -245,11 +245,11 @@ namespace Editor
         // Returns editing by this field type by static function, can't be changed during runtime
         static const Type* GetValueTypeStatic();
 
-        // Sets value
-        void SetValue(const _type& value, bool byUser = false);
-
         // Sets value as unknown
         void SetUnknownValue(const _type& defaultValue = _type());
+
+        // Sets common value and proxies
+        virtual void SetValue(const _type& value, bool byUser = false);
 
         // Returns value
         _type GetCommonValue() const;
@@ -276,9 +276,6 @@ namespace Editor
 
         // Sets value to proxy
         virtual void SetProxy(const Ref<IAbstractValueProxy>& proxy, const _type& value);
-
-        // Sets common value
-        virtual void SetCommonValue(const _type& value, bool byUser = false);
 
         // Sets value, checks value changed, calls onChangeCompleted
         void SetValueByUserAndComplete(const _type& value);
@@ -466,7 +463,7 @@ namespace Editor
                 SetUnknownValue();
         }
         else if (lastCommonValue != newCommonValue || lastDifferent || IsAlwaysRefresh() || forcible)
-            SetCommonValue(newCommonValue);
+            SetValue(newCommonValue, false);
 
         CheckRevertableState();
     }
@@ -492,12 +489,15 @@ namespace Editor
     }
 
     template<typename _type>
-    void TPropertyField<_type>::SetCommonValue(const _type& value, bool byUser /*= false*/)
+    void TPropertyField<_type>::SetValue(const _type& value, bool byUser /*= false*/)
     {
 		onBeforeChange(Ref(this), byUser);
 
         mCommonValue = value;
         mValuesDifferent = false;
+
+        for (auto& ptr : mValuesProxies)
+            SetProxy(ptr.first, value);
 
         UpdateValueView();
         OnValueChanged(byUser);
@@ -542,15 +542,6 @@ namespace Editor
 
         UpdateValueView();
         OnValueChanged(false);
-    }
-
-    template<typename _type>
-    void TPropertyField<_type>::SetValue(const _type& value, bool byUser)
-    {
-        SetCommonValue(value, byUser);
-
-        for (auto& ptr : mValuesProxies)
-            SetProxy(ptr.first, value);
     }
 
     template<typename _type>
@@ -694,15 +685,14 @@ CLASS_METHODS_META(Editor::TPropertyField<_type>)
     FUNCTION().PUBLIC().SIGNATURE(void, Revert);
     FUNCTION().PUBLIC().SIGNATURE(const Type*, GetValueType);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(const Type*, GetValueTypeStatic);
-    FUNCTION().PUBLIC().SIGNATURE(void, SetValue, const _type&, bool);
     FUNCTION().PUBLIC().SIGNATURE(void, SetUnknownValue, const _type&);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetValue, const _type&, bool);
     FUNCTION().PUBLIC().SIGNATURE(_type, GetCommonValue);
     FUNCTION().PROTECTED().SIGNATURE(void, OnTypeSpecialized, const Type&);
     FUNCTION().PROTECTED().SIGNATURE(bool, IsValueRevertable);
     FUNCTION().PROTECTED().SIGNATURE(void, StoreValues, Vector<DataDocument>&);
     FUNCTION().PROTECTED().SIGNATURE(_type, GetProxy, const Ref<IAbstractValueProxy>&);
     FUNCTION().PROTECTED().SIGNATURE(void, SetProxy, const Ref<IAbstractValueProxy>&, const _type&);
-    FUNCTION().PROTECTED().SIGNATURE(void, SetCommonValue, const _type&, bool);
     FUNCTION().PROTECTED().SIGNATURE(void, SetValueByUserAndComplete, const _type&);
     FUNCTION().PROTECTED().SIGNATURE(void, UpdateValueView);
     FUNCTION().PROTECTED().SIGNATURE(bool, IsAlwaysRefresh);

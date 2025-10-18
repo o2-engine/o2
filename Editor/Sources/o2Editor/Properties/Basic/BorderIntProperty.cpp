@@ -51,30 +51,30 @@ namespace Editor
 
     void BorderIProperty::SetValue(const BorderI& value)
     {
-        mLeftProperty->SetValue(value.left);
-        mBottomProperty->SetValue(value.bottom);
-        mRightProperty->SetValue(value.right);
-        mTopProperty->SetValue(value.top);
+        mLeftProperty->SetValue(value.left, true);
+        mBottomProperty->SetValue(value.bottom, true);
+        mRightProperty->SetValue(value.right, true);
+        mTopProperty->SetValue(value.top, true);
     }
 
     void BorderIProperty::SetValueLeft(int value)
     {
-        mLeftProperty->SetValue(value);
+        mLeftProperty->SetValue(value, true);
     }
 
     void BorderIProperty::SetValueRight(int value)
     {
-        mRightProperty->SetValue(value);
+        mRightProperty->SetValue(value, true);
     }
 
     void BorderIProperty::SetValueTop(int value)
     {
-        mTopProperty->SetValue(value);
+        mTopProperty->SetValue(value, true);
     }
 
     void BorderIProperty::SetValueBottom(int value)
     {
-        mBottomProperty->SetValue(value);
+        mBottomProperty->SetValue(value, true);
     }
 
     void BorderIProperty::SetUnknownValue(const BorderI& defaultValue /*= BorderI()*/)

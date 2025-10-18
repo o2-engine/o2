@@ -38,9 +38,12 @@ namespace Editor
 
         mPositionProperty = o2UI.CreateWidget<Vec2FProperty>("colored");
         *mPositionProperty->layout = WidgetLayout::HorStretch(VerAlign::Top, 20, 0, 20, 0);
-        mPositionProperty->SetValuePath("transform/position");
-        mPositionProperty->onChanged = THIS_FUNC(OnPropertyChanged);
-        mPositionProperty->onChangeCompleted = THIS_FUNC(OnPropertyChangeCompleted);
+        mPositionProperty->GetXProperty()->SetValuePath("transform/positionX");
+        mPositionProperty->GetYProperty()->SetValuePath("transform/positionY");
+        mPositionProperty->GetXProperty()->onChanged = THIS_FUNC(OnPropertyChanged);
+        mPositionProperty->GetYProperty()->onChanged = THIS_FUNC(OnPropertyChanged);
+        mPositionProperty->GetXProperty()->onChangeCompleted = THIS_FUNC(OnPropertyChangeCompleted);
+        mPositionProperty->GetYProperty()->onChangeCompleted = THIS_FUNC(OnPropertyChangeCompleted);
         positionPropertyContainer->AddChild(mPositionProperty);
 
         // Pivot
@@ -55,9 +58,12 @@ namespace Editor
 
         mPivotProperty = o2UI.CreateWidget<Vec2FProperty>("colored");
         *mPivotProperty->layout = WidgetLayout::HorStretch(VerAlign::Top, 20, 0, 20, 0);
-        mPivotProperty->SetValuePath("transform/pivot");
-        mPivotProperty->onChanged = THIS_FUNC(OnPropertyChanged);
-        mPivotProperty->onChangeCompleted = THIS_FUNC(OnPropertyChangeCompleted);
+        mPivotProperty->GetXProperty()->SetValuePath("transform/pivotX");
+        mPivotProperty->GetYProperty()->SetValuePath("transform/pivotY");
+        mPivotProperty->GetXProperty()->onChanged = THIS_FUNC(OnPropertyChanged);
+        mPivotProperty->GetYProperty()->onChanged = THIS_FUNC(OnPropertyChanged);
+        mPivotProperty->GetXProperty()->onChangeCompleted = THIS_FUNC(OnPropertyChangeCompleted);
+        mPivotProperty->GetYProperty()->onChangeCompleted = THIS_FUNC(OnPropertyChangeCompleted);
         pivotPropertyContainer->AddChild(mPivotProperty);
 
         // Size
@@ -72,9 +78,12 @@ namespace Editor
 
         mSizeProperty = o2UI.CreateWidget<Vec2FProperty>("colored");
         *mSizeProperty->layout = WidgetLayout::HorStretch(VerAlign::Top, 20, 0, 20, 0);
-        mSizeProperty->SetValuePath("transform/size");
-        mSizeProperty->onChanged = THIS_FUNC(OnPropertyChanged);
-        mSizeProperty->onChangeCompleted = THIS_FUNC(OnPropertyChangeCompleted);
+        mSizeProperty->GetXProperty()->SetValuePath("transform/width");
+        mSizeProperty->GetYProperty()->SetValuePath("transform/height");
+        mSizeProperty->GetXProperty()->onChanged = THIS_FUNC(OnPropertyChanged);
+        mSizeProperty->GetYProperty()->onChanged = THIS_FUNC(OnPropertyChanged);
+        mSizeProperty->GetXProperty()->onChangeCompleted = THIS_FUNC(OnPropertyChangeCompleted);
+        mSizeProperty->GetYProperty()->onChangeCompleted = THIS_FUNC(OnPropertyChangeCompleted);
         sizePropertyContainer->AddChild(mSizeProperty);
 
         // Scale
@@ -89,9 +98,12 @@ namespace Editor
 
         mScaleProperty = o2UI.CreateWidget<Vec2FProperty>("colored");
         *mScaleProperty->layout = WidgetLayout::HorStretch(VerAlign::Top, 20, 0, 20, 0);
-        mScaleProperty->SetValuePath("transform/scale");
-        mScaleProperty->onChanged = THIS_FUNC(OnPropertyChanged);
-        mScaleProperty->onChangeCompleted = THIS_FUNC(OnPropertyChangeCompleted);
+        mScaleProperty->GetXProperty()->SetValuePath("transform/scaleX");
+        mScaleProperty->GetYProperty()->SetValuePath("transform/scaleY");
+        mScaleProperty->GetXProperty()->onChanged = THIS_FUNC(OnPropertyChanged);
+        mScaleProperty->GetYProperty()->onChanged = THIS_FUNC(OnPropertyChanged);
+        mScaleProperty->GetXProperty()->onChangeCompleted = THIS_FUNC(OnPropertyChangeCompleted);
+        mScaleProperty->GetYProperty()->onChangeCompleted = THIS_FUNC(OnPropertyChangeCompleted);
         scalePropertyContainer->AddChild(mScaleProperty);
 
         // Rotation
@@ -148,9 +160,12 @@ namespace Editor
         *mAnchorRightTopProperty->layout = WidgetLayout::HorStretch(VerAlign::Top, 20, 0, 20, 0);
         mAnchorRightTopProperty->GetChildByType<Label>("container/layout/properties/x label")->text = "R";
         mAnchorRightTopProperty->GetChildByType<Label>("container/layout/properties/y label")->text = "T";
-        mAnchorRightTopProperty->SetValuePath("layout/anchorMax");
-        mAnchorRightTopProperty->onChanged = THIS_FUNC(OnPropertyChanged);
-        mAnchorRightTopProperty->onChangeCompleted = THIS_FUNC(OnPropertyChangeCompleted);
+        mAnchorRightTopProperty->GetXProperty()->SetValuePath("layout/anchorRight");
+        mAnchorRightTopProperty->GetYProperty()->SetValuePath("layout/anchorTop");
+        mAnchorRightTopProperty->GetXProperty()->onChanged = THIS_FUNC(OnPropertyChanged);
+        mAnchorRightTopProperty->GetYProperty()->onChanged = THIS_FUNC(OnPropertyChanged);
+        mAnchorRightTopProperty->GetXProperty()->onChangeCompleted = THIS_FUNC(OnPropertyChangeCompleted);
+        mAnchorRightTopProperty->GetYProperty()->onChangeCompleted = THIS_FUNC(OnPropertyChangeCompleted);
         rightTopAnchorPropertyContainer->AddChild(mAnchorRightTopProperty);
 
         // Left bottom
@@ -163,9 +178,12 @@ namespace Editor
         *mAnchorLeftBottomProperty->layout = WidgetLayout::HorStretch(VerAlign::Top, 20, 0, 20, 0);
         mAnchorLeftBottomProperty->GetChildByType<Label>("container/layout/properties/x label")->text = "L";
         mAnchorLeftBottomProperty->GetChildByType<Label>("container/layout/properties/y label")->text = "B";
-        mAnchorLeftBottomProperty->SetValuePath("layout/anchorMin");
-        mAnchorLeftBottomProperty->onChanged = THIS_FUNC(OnPropertyChanged);
-        mAnchorLeftBottomProperty->onChangeCompleted = THIS_FUNC(OnPropertyChangeCompleted);
+        mAnchorLeftBottomProperty->GetXProperty()->SetValuePath("layout/anchorLeft");
+        mAnchorLeftBottomProperty->GetYProperty()->SetValuePath("layout/anchorBottom");
+        mAnchorLeftBottomProperty->GetXProperty()->onChanged = THIS_FUNC(OnPropertyChanged);
+        mAnchorLeftBottomProperty->GetYProperty()->onChanged = THIS_FUNC(OnPropertyChanged);
+        mAnchorLeftBottomProperty->GetXProperty()->onChangeCompleted = THIS_FUNC(OnPropertyChangeCompleted);
+        mAnchorLeftBottomProperty->GetYProperty()->onChangeCompleted = THIS_FUNC(OnPropertyChangeCompleted);
         leftBottomAnchorPropertyContainer->AddChild(mAnchorLeftBottomProperty);
 
         // Offsets
@@ -183,9 +201,12 @@ namespace Editor
         *mOffsetRightTopProperty->layout = WidgetLayout::HorStretch(VerAlign::Top, 20, 0, 20, 0);
         mOffsetRightTopProperty->GetChildByType<Label>("container/layout/properties/x label")->text = "R";
         mOffsetRightTopProperty->GetChildByType<Label>("container/layout/properties/y label")->text = "T";
-        mOffsetRightTopProperty->SetValuePath("layout/offsetMax");
-        mOffsetRightTopProperty->onChanged = THIS_FUNC(OnPropertyChanged);
-        mOffsetRightTopProperty->onChangeCompleted = THIS_FUNC(OnPropertyChangeCompleted);
+        mOffsetRightTopProperty->GetXProperty()->SetValuePath("layout/offsetRight");
+        mOffsetRightTopProperty->GetYProperty()->SetValuePath("layout/offsetTop");
+        mOffsetRightTopProperty->GetXProperty()->onChanged = THIS_FUNC(OnPropertyChanged);
+        mOffsetRightTopProperty->GetYProperty()->onChanged = THIS_FUNC(OnPropertyChanged);
+        mOffsetRightTopProperty->GetXProperty()->onChangeCompleted = THIS_FUNC(OnPropertyChangeCompleted);
+        mOffsetRightTopProperty->GetYProperty()->onChangeCompleted = THIS_FUNC(OnPropertyChangeCompleted);
         rightTopOffsetPropertyContainer->AddChild(mOffsetRightTopProperty);
 
         // Left bottom
@@ -198,9 +219,12 @@ namespace Editor
         *mOffsetLeftBottomProperty->layout = WidgetLayout::HorStretch(VerAlign::Top, 20, 0, 20, 0);
         mOffsetLeftBottomProperty->GetChildByType<Label>("container/layout/properties/x label")->text = "L";
         mOffsetLeftBottomProperty->GetChildByType<Label>("container/layout/properties/y label")->text = "B";
-        mOffsetLeftBottomProperty->SetValuePath("layout/offsetMin");
-        mOffsetLeftBottomProperty->onChanged = THIS_FUNC(OnPropertyChanged);
-        mOffsetLeftBottomProperty->onChangeCompleted = THIS_FUNC(OnPropertyChangeCompleted);
+        mOffsetLeftBottomProperty->GetXProperty()->SetValuePath("layout/offsetLeft");
+        mOffsetLeftBottomProperty->GetYProperty()->SetValuePath("layout/offsetBottom");
+        mOffsetLeftBottomProperty->GetXProperty()->onChanged = THIS_FUNC(OnPropertyChanged);
+        mOffsetLeftBottomProperty->GetYProperty()->onChanged = THIS_FUNC(OnPropertyChanged);
+        mOffsetLeftBottomProperty->GetXProperty()->onChangeCompleted = THIS_FUNC(OnPropertyChangeCompleted);
+        mOffsetLeftBottomProperty->GetYProperty()->onChangeCompleted = THIS_FUNC(OnPropertyChangeCompleted);
         leftBottomOffsetPropertyContainer->AddChild(mOffsetLeftBottomProperty);
 
         // Min size
@@ -215,9 +239,12 @@ namespace Editor
 
         mMinSizeProperty = o2UI.CreateWidget<Vec2FProperty>("colored");
         *mMinSizeProperty->layout = WidgetLayout::HorStretch(VerAlign::Top, 20, 0, 20, 0);
-        mMinSizeProperty->SetValuePath("layout/minSize");
-        mMinSizeProperty->onChanged = THIS_FUNC(OnPropertyChanged);
-        mMinSizeProperty->onChangeCompleted = THIS_FUNC(OnPropertyChangeCompleted);
+        mMinSizeProperty->GetXProperty()->SetValuePath("layout/minWidth");
+        mMinSizeProperty->GetYProperty()->SetValuePath("layout/minHeight");
+        mMinSizeProperty->GetXProperty()->onChanged = THIS_FUNC(OnPropertyChanged);
+        mMinSizeProperty->GetYProperty()->onChanged = THIS_FUNC(OnPropertyChanged);
+        mMinSizeProperty->GetXProperty()->onChangeCompleted = THIS_FUNC(OnPropertyChangeCompleted);
+        mMinSizeProperty->GetYProperty()->onChangeCompleted = THIS_FUNC(OnPropertyChangeCompleted);
         minSizePropertyContainer->AddChild(mMinSizeProperty);
 
         // Max size
@@ -232,9 +259,12 @@ namespace Editor
 
         mMaxSizeProperty = o2UI.CreateWidget<Vec2FProperty>("colored");
         *mMaxSizeProperty->layout = WidgetLayout::HorStretch(VerAlign::Top, 20, 0, 20, 0);
-        mMaxSizeProperty->SetValuePath("layout/maxSize");
-        mMaxSizeProperty->onChanged = THIS_FUNC(OnPropertyChanged);
-        mMaxSizeProperty->onChangeCompleted = THIS_FUNC(OnPropertyChangeCompleted);
+        mMaxSizeProperty->GetXProperty()->SetValuePath("layout/maxWidth");
+        mMaxSizeProperty->GetYProperty()->SetValuePath("layout/maxHeight");
+        mMaxSizeProperty->GetXProperty()->onChanged = THIS_FUNC(OnPropertyChanged);
+        mMaxSizeProperty->GetYProperty()->onChanged = THIS_FUNC(OnPropertyChanged);
+        mMaxSizeProperty->GetXProperty()->onChangeCompleted = THIS_FUNC(OnPropertyChangeCompleted);
+        mMaxSizeProperty->GetYProperty()->onChangeCompleted = THIS_FUNC(OnPropertyChangeCompleted);
         maxSizePropertyContainer->AddChild(mMaxSizeProperty);
 
         // Weight
@@ -249,9 +279,12 @@ namespace Editor
 
         mWeightProperty = o2UI.CreateWidget<Vec2FProperty>("colored");
         *mWeightProperty->layout = WidgetLayout::HorStretch(VerAlign::Top, 20, 0, 20, 0);
-        mWeightProperty->SetValuePath("layout/weight");
-        mWeightProperty->onChanged = THIS_FUNC(OnPropertyChanged);
-        mWeightProperty->onChangeCompleted = THIS_FUNC(OnPropertyChangeCompleted);
+        mWeightProperty->GetXProperty()->SetValuePath("layout/widthWeight");
+        mWeightProperty->GetYProperty()->SetValuePath("layout/heightWeight");
+        mWeightProperty->GetXProperty()->onChanged = THIS_FUNC(OnPropertyChanged);
+        mWeightProperty->GetYProperty()->onChanged = THIS_FUNC(OnPropertyChanged);
+        mWeightProperty->GetXProperty()->onChangeCompleted = THIS_FUNC(OnPropertyChangeCompleted);
+        mWeightProperty->GetYProperty()->onChangeCompleted = THIS_FUNC(OnPropertyChangeCompleted);
         weightPropertyContainer->AddChild(mWeightProperty);
     }
 
@@ -264,17 +297,30 @@ namespace Editor
 
         auto prototypes = actors.Convert<Actor*>([](Actor* x) { return x->GetPrototypeLink().Get(); });
 
-        mPositionProperty->SelectValueAndPrototypeProperties<Actor, decltype(ActorTransform::position)>(
-            actors, prototypes, [](Actor* x) { return &x->transform->position; });
 
-        mPivotProperty->SelectValueAndPrototypeProperties<Actor, decltype(ActorTransform::pivot)>(
-            actors, prototypes, [](Actor* x) { return &x->transform->pivot; });
+        mPositionProperty->GetXProperty()->SelectValueAndPrototypeProperties<Actor, decltype(ActorTransform::positionX)>(
+            actors, prototypes, [](Actor* x) { return &x->transform->positionX; });
 
-        mScaleProperty->SelectValueAndPrototypeProperties<Actor, decltype(ActorTransform::scale)>(
-            actors, prototypes, [](Actor* x) { return &x->transform->scale; });
+        mPositionProperty->GetYProperty()->SelectValueAndPrototypeProperties<Actor, decltype(ActorTransform::positionY)>(
+            actors, prototypes, [](Actor* x) { return &x->transform->positionY; });
 
-        mSizeProperty->SelectValueAndPrototypeProperties<Actor, decltype(ActorTransform::size)>(
-            actors, prototypes, [](Actor* x) { return &x->transform->size; });
+        mPivotProperty->GetXProperty()->SelectValueAndPrototypeProperties<Actor, decltype(ActorTransform::pivotX)>(
+            actors, prototypes, [](Actor* x) { return &x->transform->pivotX; });
+
+        mPivotProperty->GetYProperty()->SelectValueAndPrototypeProperties<Actor, decltype(ActorTransform::pivotY)>(
+            actors, prototypes, [](Actor* x) { return &x->transform->pivotY; });
+
+        mScaleProperty->GetXProperty()->SelectValueAndPrototypeProperties<Actor, decltype(ActorTransform::scaleX)>(
+            actors, prototypes, [](Actor* x) { return &x->transform->scaleX; });
+
+        mScaleProperty->GetYProperty()->SelectValueAndPrototypeProperties<Actor, decltype(ActorTransform::scaleY)>(
+            actors, prototypes, [](Actor* x) { return &x->transform->scaleY; });
+
+        mSizeProperty->GetXProperty()->SelectValueAndPrototypeProperties<Actor, decltype(ActorTransform::width)>(
+            actors, prototypes, [](Actor* x) { return &x->transform->width; });
+
+        mSizeProperty->GetYProperty()->SelectValueAndPrototypeProperties<Actor, decltype(ActorTransform::height)>(
+            actors, prototypes, [](Actor* x) { return &x->transform->height; });
 
         mRotationProperty->SelectValueAndPrototypeProperties<Actor, decltype(ActorTransform::angleDegree)>(
             actors, prototypes, [](Actor* x) { return &x->transform->angleDegree; });
@@ -294,26 +340,47 @@ namespace Editor
             auto widgetPrototypes = targetWidgets.Convert<Widget*>(
                 [](Actor* x) { return dynamic_cast<Widget*>(x->GetPrototypeLink().Get()); });
 
-            mAnchorRightTopProperty->SelectValueAndPrototypeProperties<Widget, decltype(WidgetLayout::anchorMax)>(
-                targetWidgets, widgetPrototypes, [](Widget* x) { return &x->layout->anchorMax; });
+            mAnchorRightTopProperty->GetXProperty()->SelectValueAndPrototypeProperties<Widget, decltype(WidgetLayout::anchorRight)>(
+                targetWidgets, widgetPrototypes, [](Widget* x) { return &x->layout->anchorRight; });
 
-            mAnchorLeftBottomProperty->SelectValueAndPrototypeProperties<Widget, decltype(WidgetLayout::anchorMin)>(
-                targetWidgets, widgetPrototypes, [](Widget* x) { return &x->layout->anchorMin; });
+            mAnchorRightTopProperty->GetYProperty()->SelectValueAndPrototypeProperties<Widget, decltype(WidgetLayout::anchorTop)>(
+                targetWidgets, widgetPrototypes, [](Widget* x) { return &x->layout->anchorTop; });
 
-            mOffsetRightTopProperty->SelectValueAndPrototypeProperties<Widget, decltype(WidgetLayout::offsetMax)>(
-                targetWidgets, widgetPrototypes, [](Widget* x) { return &x->layout->offsetMax; });
+            mAnchorLeftBottomProperty->GetXProperty()->SelectValueAndPrototypeProperties<Widget, decltype(WidgetLayout::anchorLeft)>(
+                targetWidgets, widgetPrototypes, [](Widget* x) { return &x->layout->anchorLeft; });
 
-            mOffsetLeftBottomProperty->SelectValueAndPrototypeProperties<Widget, decltype(WidgetLayout::offsetMin)>(
-                targetWidgets, widgetPrototypes, [](Widget* x) { return &x->layout->offsetMin; });
+            mAnchorLeftBottomProperty->GetYProperty()->SelectValueAndPrototypeProperties<Widget, decltype(WidgetLayout::anchorBottom)>(
+                targetWidgets, widgetPrototypes, [](Widget* x) { return &x->layout->anchorBottom; });
 
-            mMinSizeProperty->SelectValueAndPrototypeProperties<Widget, decltype(WidgetLayout::minSize)>(
-                targetWidgets, widgetPrototypes, [](Widget* x) { return &x->layout->minSize; });
+            mOffsetRightTopProperty->GetXProperty()->SelectValueAndPrototypeProperties<Widget, decltype(WidgetLayout::offsetRight)>(
+                targetWidgets, widgetPrototypes, [](Widget* x) { return &x->layout->offsetRight; });
 
-            mMaxSizeProperty->SelectValueAndPrototypeProperties<Widget, decltype(WidgetLayout::maxSize)>(
-                targetWidgets, widgetPrototypes, [](Widget* x) { return &x->layout->maxSize; });
+            mOffsetRightTopProperty->GetYProperty()->SelectValueAndPrototypeProperties<Widget, decltype(WidgetLayout::offsetTop)>(
+                targetWidgets, widgetPrototypes, [](Widget* x) { return &x->layout->offsetTop; });
 
-            mWeightProperty->SelectValueAndPrototypeProperties<Widget, decltype(WidgetLayout::weight)>(
-                targetWidgets, widgetPrototypes, [](Widget* x) { return &x->layout->weight; });
+            mOffsetLeftBottomProperty->GetXProperty()->SelectValueAndPrototypeProperties<Widget, decltype(WidgetLayout::offsetLeft)>(
+                targetWidgets, widgetPrototypes, [](Widget* x) { return &x->layout->offsetLeft; });
+
+            mOffsetLeftBottomProperty->GetYProperty()->SelectValueAndPrototypeProperties<Widget, decltype(WidgetLayout::offsetBottom)>(
+                targetWidgets, widgetPrototypes, [](Widget* x) { return &x->layout->offsetBottom; });
+
+            mMinSizeProperty->GetXProperty()->SelectValueAndPrototypeProperties<Widget, decltype(WidgetLayout::minWidth)>(
+                targetWidgets, widgetPrototypes, [](Widget* x) { return &x->layout->minWidth; });
+
+            mMinSizeProperty->GetYProperty()->SelectValueAndPrototypeProperties<Widget, decltype(WidgetLayout::minHeight)>(
+                targetWidgets, widgetPrototypes, [](Widget* x) { return &x->layout->minHeight; });
+
+            mMaxSizeProperty->GetXProperty()->SelectValueAndPrototypeProperties<Widget, decltype(WidgetLayout::maxWidth)>(
+                targetWidgets, widgetPrototypes, [](Widget* x) { return &x->layout->maxWidth; });
+
+            mMaxSizeProperty->GetYProperty()->SelectValueAndPrototypeProperties<Widget, decltype(WidgetLayout::maxHeight)>(
+                targetWidgets, widgetPrototypes, [](Widget* x) { return &x->layout->maxHeight; });
+
+            mWeightProperty->GetXProperty()->SelectValueAndPrototypeProperties<Widget, decltype(WidgetLayout::widthWeight)>(
+                targetWidgets, widgetPrototypes, [](Widget* x) { return &x->layout->widthWeight; });
+
+            mWeightProperty->GetYProperty()->SelectValueAndPrototypeProperties<Widget, decltype(WidgetLayout::heightWeight)>(
+                targetWidgets, widgetPrototypes, [](Widget* x) { return &x->layout->heightWeight; });
         }
     }
 
@@ -374,6 +441,9 @@ namespace Editor
 
     void DefaultActorTransformViewer::OnPropertyChanged(const Ref<IPropertyField>& field, bool byUser)
     {
+        for (auto& actor : mTargetActors)
+            actor->UpdateSelfTransform();
+
         IActorTransformViewer::OnPropertyChanged(field, byUser);
     }
 
