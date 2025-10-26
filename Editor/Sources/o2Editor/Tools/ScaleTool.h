@@ -1,7 +1,7 @@
 #pragma once
 
 #include "o2/Utils/Math/Basis.h"
-#include "o2Editor/Tools/SelectionTool.h"
+#include "o2Editor/Tools/ITransformTool.h"
 #include "o2Editor/Windows/SceneWindow/SceneDragHandle.h"
 
 namespace Editor
@@ -11,7 +11,7 @@ namespace Editor
     // -------------------------
     // Scale objects editor tool
     // -------------------------
-    class ScaleTool: public SelectionTool
+    class ScaleTool: public ITransformTool
     {
     public:
         float bothScaleSence = 0.01f;
@@ -107,7 +107,7 @@ namespace Editor
 
 CLASS_BASES_META(Editor::ScaleTool)
 {
-    BASE_CLASS(Editor::SelectionTool);
+    BASE_CLASS(Editor::ITransformTool);
 }
 END_META;
 CLASS_FIELDS_META(Editor::ScaleTool)

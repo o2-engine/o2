@@ -225,8 +225,11 @@ namespace Editor
                 [](auto& x) { return x->GetTransform(); });
 
             mTransformAction = mmake<TransformAction>(o2EditorSceneScreen.GetTopSelectedObjects());
+
+            onTransformBegin();
         }
-        else SelectionTool::OnCursorPressed(cursor);
+        else 
+            SelectionTool::OnCursorPressed(cursor);
     }
 
     void RotateTool::OnCursorReleased(const Input::Cursor& cursor)
@@ -238,8 +241,11 @@ namespace Editor
             mTransformAction->Completed();
             o2EditorSceneWindow.DoneAction(mTransformAction);
             mTransformAction = nullptr;
+
+            onTransformEnd();
         }
-        else SelectionTool::OnCursorReleased(cursor);
+        else 
+            SelectionTool::OnCursorReleased(cursor);
     }
 
     void RotateTool::OnCursorPressBreak(const Input::Cursor& cursor)
@@ -251,8 +257,11 @@ namespace Editor
             mTransformAction->Completed();
             o2EditorSceneWindow.DoneAction(mTransformAction);
             mTransformAction = nullptr;
+
+            onTransformEnd();
         }
-        else SelectionTool::OnCursorPressBreak(cursor);
+        else 
+            SelectionTool::OnCursorPressBreak(cursor);
     }
 
     void RotateTool::OnCursorStillDown(const Input::Cursor& cursor)
@@ -278,20 +287,25 @@ namespace Editor
                     {
                         mSnapAngleAccumulated -= dir*angleStepRad;
 
-                        if (o2Input.IsKeyDown(VK_CONTROL)) RotateObjectsSeparated(angleStepRad*dir);
-                        else RotateObjects(angleStepRad*dir);
+                        if (o2Input.IsKeyDown(VK_CONTROL)) 
+                            RotateObjectsSeparated(angleStepRad*dir);
+                        else 
+                            RotateObjects(angleStepRad*dir);
                     }
                 }
                 else
                 {
-                    if (o2Input.IsKeyDown(VK_CONTROL)) RotateObjectsSeparated(angleDelta);
-                    else RotateObjects(angleDelta);
+                    if (o2Input.IsKeyDown(VK_CONTROL)) 
+                        RotateObjectsSeparated(angleDelta);
+                    else 
+                        RotateObjects(angleDelta);
                 }
 
                 mCurrentRotateAngle += angleDelta;
             }
         }
-        else SelectionTool::OnCursorStillDown(cursor);
+        else 
+            SelectionTool::OnCursorStillDown(cursor);
     }
 
     void RotateTool::OnKeyPressed(const Input::Key& key)
@@ -303,14 +317,18 @@ namespace Editor
 
         if (key == VK_LEFT || key == VK_DOWN)
         {
-            if (o2Input.IsKeyDown(VK_CONTROL)) RotateObjectsSeparatedWithAction(Math::Deg2rad(-angle));
-            else RotateObjectsWithAction(Math::Deg2rad(-angle));
+            if (o2Input.IsKeyDown(VK_CONTROL)) 
+                RotateObjectsSeparatedWithAction(Math::Deg2rad(-angle));
+            else 
+                RotateObjectsWithAction(Math::Deg2rad(-angle));
         }
 
         if (key == VK_RIGHT || key == VK_UP)
         {
-            if (o2Input.IsKeyDown(VK_CONTROL)) RotateObjectsSeparatedWithAction(Math::Deg2rad(-angle));
-            else RotateObjectsWithAction(Math::Deg2rad(angle));
+            if (o2Input.IsKeyDown(VK_CONTROL)) 
+                RotateObjectsSeparatedWithAction(Math::Deg2rad(-angle));
+            else 
+                RotateObjectsWithAction(Math::Deg2rad(angle));
         }
 
         SelectionTool::OnKeyPressed(key);
@@ -325,14 +343,18 @@ namespace Editor
 
         if (key == VK_LEFT || key == VK_DOWN)
         {
-            if (o2Input.IsKeyDown(VK_CONTROL)) RotateObjectsSeparatedWithAction(Math::Deg2rad(-angle));
-            else RotateObjectsWithAction(Math::Deg2rad(-angle));
+            if (o2Input.IsKeyDown(VK_CONTROL)) 
+                RotateObjectsSeparatedWithAction(Math::Deg2rad(-angle));
+            else 
+                RotateObjectsWithAction(Math::Deg2rad(-angle));
         }
 
         if (key == VK_RIGHT || key == VK_UP)
         {
-            if (o2Input.IsKeyDown(VK_CONTROL)) RotateObjectsSeparatedWithAction(Math::Deg2rad(-angle));
-            else RotateObjectsWithAction(Math::Deg2rad(angle));
+            if (o2Input.IsKeyDown(VK_CONTROL)) 
+                RotateObjectsSeparatedWithAction(Math::Deg2rad(-angle));
+            else 
+                RotateObjectsWithAction(Math::Deg2rad(angle));
         }
     }
 

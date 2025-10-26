@@ -3,32 +3,33 @@
 #include "o2/Utils/Reflection/Enum.h"
 #include "o2/Application/VKCodes.h"
 #include <cstdint>
-
 namespace o2
 {
-    typedef std::uint64_t UInt64;
-    typedef std::uint32_t UInt32;
-    typedef std::uint16_t UInt16;
-    typedef std::uint8_t  UInt8;
+    template<typename... Types>
+    class Variant;
+    using UInt64 = std::uint64_t;
+    using UInt32 = std::uint32_t;
+    using UInt16 = std::uint16_t;
+    using UInt8  = std::uint8_t;
 
-    typedef std::int64_t  Int64;
-    typedef std::int32_t  Int32;
-    typedef std::int16_t  Int16;
-    typedef std::int8_t   Int8;
+    using Int64  = std::int64_t;
+    using Int32  = std::int32_t;
+    using Int16  = std::int16_t;
+    using Int8   = std::int8_t;
 
-    typedef unsigned int  UInt;
-    typedef unsigned long ULong;
+    using UInt   = unsigned int;
+    using ULong  = unsigned long;
 
-    typedef std::byte Byte;
+    using Byte = std::byte;
 
-    typedef unsigned int VertexIndex;
+    using VertexIndex = unsigned int;
 
-    typedef int KeyboardKey;
-    typedef int CursorId;
+    using KeyboardKey = int;
+    using CursorId = int;
     
-    typedef UInt Color32Bit;
+    using Color32Bit = UInt;
 
-    typedef UInt64 SceneUID;
+    using SceneUID = UInt64;
 
     enum class BaseCorner { Left, Right, Top, Bottom, Center, LeftBottom, LeftTop, RightBottom, RightTop };
 

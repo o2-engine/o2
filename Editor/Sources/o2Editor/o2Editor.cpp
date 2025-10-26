@@ -57,6 +57,7 @@ extern void __RegisterClass__Editor__TextViewer();
 extern void __RegisterClass__Editor__CustomFrameTool();
 extern void __RegisterClass__Editor__FrameTool();
 extern void __RegisterClass__Editor__IEditTool();
+extern void __RegisterClass__Editor__ITransformTool();
 extern void __RegisterClass__Editor__MeshTopologyTool();
 extern void __RegisterClass__Editor__MeshWeightsTool();
 extern void __RegisterClass__Editor__MoveTool();
@@ -216,6 +217,7 @@ extern void InitializeTypeso2Editor()
     __RegisterClass__Editor__CustomFrameTool();
     __RegisterClass__Editor__FrameTool();
     __RegisterClass__Editor__IEditTool();
+    __RegisterClass__Editor__ITransformTool();
     __RegisterClass__Editor__MeshTopologyTool();
     __RegisterClass__Editor__MeshWeightsTool();
     __RegisterClass__Editor__MoveTool();

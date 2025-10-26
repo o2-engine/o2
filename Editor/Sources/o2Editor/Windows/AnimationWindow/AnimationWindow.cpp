@@ -1,3 +1,4 @@
+#include "o2/Utils/Math/Math.h"
 #include "o2/Utils/Types/Ref.h"
 #include "o2Editor/stdafx.h"
 #include "AnimationWindow.h"
@@ -9,12 +10,14 @@
 #include "o2/Scene/UI/Widgets/Toggle.h"
 #include "o2/Utils/Editor/DragHandle.h"
 #include "o2/Utils/Editor/EditorScope.h"
+#include "o2Editor/Tools/ITransformTool.h"
 #include "o2Editor/Windows/AnimationWindow/CurvesSheet.h"
 #include "o2Editor/Windows/AnimationWindow/KeyHandlesSheet.h"
 #include "o2Editor/Windows/AnimationWindow/PropertiesListDlg.h"
 #include "o2Editor/Windows/AnimationWindow/Timeline.h"
 #include "o2Editor/Windows/AnimationWindow/Tree.h"
 #include "o2Editor/Windows/PropertiesWindow/PropertiesWindow.h"
+#include "o2Editor/Windows/SceneWindow/SceneEditScreen.h"
 
 DECLARE_SINGLETON(Editor::AnimationWindow);
 
@@ -391,9 +394,54 @@ namespace Editor
 		mRecording = value;
 
 		if (mRecording)
+        {
 			o2EditorPropertiesWindow.onPropertyChangeCompleted += THIS_FUNC(OnPropertyChangeCompleted);
+
+            for (auto& tool : o2EditorSceneScreen.GetTools())
+            {
+                if (auto transformTool = DynamicCast<ITransformTool>(tool))
+                {
+                    transformTool->onTransformBegin += THIS_FUNC(OnToolTransformBegin);
+                    transformTool->onTransformEnd += THIS_FUNC(OnToolTransformEnd);
+                }
+            }
+        }
 		else
+        {
 			o2EditorPropertiesWindow.onPropertyChangeCompleted -= THIS_FUNC(OnPropertyChangeCompleted);
+
+            for (auto& tool : o2EditorSceneScreen.GetTools())
+            {
+                if (auto transformTool = DynamicCast<ITransformTool>(tool))
+                {
+                    transformTool->onTransformBegin -= THIS_FUNC(OnToolTransformBegin);
+                    transformTool->onTransformEnd -= THIS_FUNC(OnToolTransformEnd);
+                }
+            }
+        }
+    }
+
+    bool AnimationWindow::CheckObjectIsUnderHierachy(const Ref<SceneEditableObject>& object, String& hierarchyPath)
+    {
+        auto targetActorEditable = dynamic_cast<SceneEditableObject*>(mTargetActor.Lock().Get());
+        if (!targetActorEditable)
+            return false;
+
+        bool isUnderHierarchy = false;
+        auto objectIt = object;
+        while (objectIt)
+        {
+            if (objectIt == targetActorEditable)
+            {
+                isUnderHierarchy = true;
+                break;
+            }
+
+            hierarchyPath = "child/" + objectIt->GetName() + "/" + hierarchyPath;
+            objectIt = objectIt->GetEditableParent();
+        }
+
+        return isUnderHierarchy;
     }
 
 	void AnimationWindow::OnPropertyChangeCompleted(const Vector<IObject*>& targets, const String& path,
@@ -412,35 +460,165 @@ namespace Editor
             if (!targetEditable)
 				continue;
 
-			bool isTargetInHierarchy = false;
             String targetHierarchyPath;
+			bool isTargetUnderHierarchy = CheckObjectIsUnderHierachy(Ref(targetEditable), targetHierarchyPath);
 
-			auto targetEditableIt = targetEditable;
-            while (targetEditableIt)
-            {
-                if (targetEditableIt == targetActorEditable)
-                {
-					isTargetInHierarchy = true;
-                    break;
-                }
-
-				targetHierarchyPath = "children/" + targetEditableIt->GetName() + "/" + targetHierarchyPath;
-				targetEditableIt = targetEditableIt->GetEditableParent().Get();
-            }
-
-			if (!isTargetInHierarchy)
+			if (!isTargetUnderHierarchy)
 				continue;
 
 			String trackPath = targetHierarchyPath + path;
 			o2Debug.Log("Recording property change on track: " + trackPath);
 
-			AddTrackKey(trackPath);
+			AddTrackKey(trackPath, mTimeline->mTimeCursor, {});
 
             break;
 		}
 	}
 
-	void AnimationWindow::AddTrackKey(const String& path)
+    Vector<AnimationWindow::TransformState> AnimationWindow::StoreObjectsTransforms()
+    {
+        Vector<TransformState> transforms;
+
+        for (auto& object : o2EditorSceneScreen.GetSelectedObjects())
+        {
+            TransformState transform;
+            transform.object = object;
+
+            if (auto actor = DynamicCast<Actor>(object))
+            {
+                transform.position = actor->transform->GetPosition();
+                transform.size = actor->transform->GetSize();
+                transform.scale = actor->transform->GetScale();
+                transform.pivot = actor->transform->GetPivot();
+                transform.angle = actor->transform->GetAngleDegrees();
+                transform.shear = actor->transform->GetShear();
+            }
+
+            if (auto widget = DynamicCast<Widget>(object))
+            {
+                transform.anchorMin = widget->layout->GetAnchorMin();
+                transform.anchorMax = widget->layout->GetAnchorMax();
+                transform.offsetMin = widget->layout->GetOffsetMin();
+                transform.offsetMax = widget->layout->GetOffsetMax();
+            }
+
+            transforms.Add(transform);
+        }
+
+        return transforms;
+    }
+
+    void AnimationWindow::OnToolTransformBegin()
+    {
+        mBeforeTransforms = StoreObjectsTransforms();
+    }
+
+    void AnimationWindow::OnToolTransformEnd()
+    {
+        auto afterTransforms = StoreObjectsTransforms();
+        
+        const float time = mTimeline->mTimeCursor;
+
+        mDisableTimeTracking = true;
+
+        for (auto& beforeTransform : mBeforeTransforms)
+        {
+            String hierarchyPath;
+            bool isUnderHierarchy = CheckObjectIsUnderHierachy(beforeTransform.object.Lock(), hierarchyPath);
+            if (!isUnderHierarchy)
+                continue;
+
+            auto afterTransform = afterTransforms.Find([&](const TransformState& transform) {
+                return transform.object == beforeTransform.object;
+            });
+
+            if (!afterTransform)
+                continue;
+
+            if (beforeTransform == *afterTransform)
+                continue;
+
+            const float epsilon = 0.01f;
+
+            if (auto widget = DynamicCast<Widget>(beforeTransform.object.Lock()))
+            {
+                if (!Math::Equals(beforeTransform.anchorMax.x, afterTransform->anchorMax.x, epsilon))
+                    AddTrackKey(hierarchyPath + "layout/anchorRight", time, afterTransform->anchorMax.x);
+
+                if (!Math::Equals(beforeTransform.anchorMax.y, afterTransform->anchorMax.y, epsilon))
+                    AddTrackKey(hierarchyPath + "layout/anchorTop", time, afterTransform->anchorMax.y);
+
+                if (!Math::Equals(beforeTransform.anchorMin.x, afterTransform->anchorMin.x, epsilon))
+                    AddTrackKey(hierarchyPath + "layout/anchorLeft", time, afterTransform->anchorMin.x);
+
+                if (!Math::Equals(beforeTransform.anchorMin.y, afterTransform->anchorMin.y, epsilon))
+                    AddTrackKey(hierarchyPath + "layout/anchorBottom", time, afterTransform->anchorMin.y);
+
+                if (!Math::Equals(beforeTransform.offsetMax.x, afterTransform->offsetMax.x, epsilon))
+                    AddTrackKey(hierarchyPath + "layout/offsetRight", time, afterTransform->offsetMax.x);
+
+                if (!Math::Equals(beforeTransform.offsetMax.y, afterTransform->offsetMax.y, epsilon))
+                    AddTrackKey(hierarchyPath + "layout/offsetTop", time, afterTransform->offsetMax.y);
+
+                if (!Math::Equals(beforeTransform.offsetMin.x, afterTransform->offsetMin.x, epsilon))
+                    AddTrackKey(hierarchyPath + "layout/offsetLeft", time, afterTransform->offsetMin.x);
+
+                if (!Math::Equals(beforeTransform.offsetMin.y, afterTransform->offsetMin.y, epsilon))
+                    AddTrackKey(hierarchyPath + "layout/offsetBottom", time, afterTransform->offsetMin.y);
+            }
+            else if (auto actor = DynamicCast<Actor>(beforeTransform.object.Lock()))
+            {
+                if (!Math::Equals(beforeTransform.position.x, afterTransform->position.x, epsilon))
+                    AddTrackKey(hierarchyPath + "transform/positionX", time, afterTransform->position.x);
+
+                if (!Math::Equals(beforeTransform.position.y, afterTransform->position.y, epsilon))
+                    AddTrackKey(hierarchyPath + "transform/positionY", time, afterTransform->position.y);
+
+                if (!Math::Equals(beforeTransform.size.x, afterTransform->size.x, epsilon))
+                    AddTrackKey(hierarchyPath + "transform/width", time, afterTransform->size.x);
+
+                if (!Math::Equals(beforeTransform.size.y, afterTransform->size.y, epsilon))
+                    AddTrackKey(hierarchyPath + "transform/height", time, afterTransform->size.y);
+
+                if (!Math::Equals(beforeTransform.scale.x, afterTransform->scale.x, epsilon))
+                    AddTrackKey(hierarchyPath + "transform/scaleX", time, afterTransform->scale.x);
+
+                if (!Math::Equals(beforeTransform.scale.y, afterTransform->scale.y, epsilon))
+                    AddTrackKey(hierarchyPath + "transform/scaleY", time, afterTransform->scale.y);
+
+                if (!Math::Equals(beforeTransform.pivot.x, afterTransform->pivot.x, epsilon))
+                    AddTrackKey(hierarchyPath + "transform/pivotX", time, afterTransform->pivot.x);
+
+                if (!Math::Equals(beforeTransform.pivot.y, afterTransform->pivot.y, epsilon))
+                    AddTrackKey(hierarchyPath + "transform/pivotY", time, afterTransform->pivot.y);
+
+                if (!Math::Equals(beforeTransform.angle, afterTransform->angle, epsilon))
+                    AddTrackKey(hierarchyPath + "transform/angleDegrees", time, afterTransform->angle);
+
+                if (!Math::Equals(beforeTransform.shear, afterTransform->shear, epsilon))
+                    AddTrackKey(hierarchyPath + "transform/shear", time, afterTransform->shear);
+            }
+        }
+
+        mDisableTimeTracking = false;
+
+        mTimeline->SetTimeCursor(time);
+    }
+
+    Ref<IAnimationTrack> AnimationWindow::FindOrCreateTrack(const String& path, const Type& type)
+    {
+        auto animation = mAnimation.Lock();
+        if (!animation)
+            return nullptr;
+
+        auto existingTrack = animation->GetTrack(path);
+        if (existingTrack)
+            return existingTrack;
+
+        return animation->AddTrack(path, type);
+    }
+
+	void AnimationWindow::AddTrackKey(const String& path, float time, const Variant<float, int, Vec2F, Color4>& value)
 	{
 		auto animation = mAnimation.Lock();
         if (!animation)
@@ -475,75 +653,78 @@ namespace Editor
         if (!fieldType)
             return;
 
-        auto existingTrack = animation->GetTrack(path);
-        if (!existingTrack)
-        {
-            existingTrack = animation->AddTrack(path, *fieldType);
-            if (!existingTrack)
-            {
-                o2Debug.LogError("Failed to add key: can't create track for field '" + path + "'");
-                return;
-            }
-        }
-
-        if (!existingTrack)
-			return;
-
 		auto fieldValueProxy = fieldInfo->GetType()->GetValueProxy(fieldPtr);
 
         if (fieldType == &TypeOf(float))
         {
-            if (auto floatTrack = DynamicCast<AnimationTrack<float>>(existingTrack))
+            if (auto floatProxy = DynamicCast<IValueProxy<float>>(fieldValueProxy))
             {
-                if (auto floatProxy = DynamicCast<IValueProxy<float>>(fieldValueProxy))
+                float keyValue = value.Holds<float>() ? value.Get<float>() : floatProxy->GetValue();
+                if (auto floatTrack = DynamicCast<AnimationTrack<float>>(FindOrCreateTrack(path, *fieldType)))
                 {
-                    float value = floatProxy->GetValue();
-                    floatTrack->AddKey(mTimeline->mTimeCursor, value);
-				}
-            }
+                    floatTrack->RemoveKey(time);
+                    floatTrack->AddKey(time, keyValue);
+                }
+			}
         }
         else if (fieldType == &TypeOf(int))
-        {
-            if (auto intTrack = DynamicCast<AnimationTrack<int>>(existingTrack))
+        {   
+            if (auto intProxy = DynamicCast<IValueProxy<int>>(fieldValueProxy))
             {
-                if (auto intProxy = DynamicCast<IValueProxy<int>>(fieldValueProxy))
+                int keyValue = value.Holds<int>() ? value.Get<int>() : intProxy->GetValue();
+                if (auto intTrack = DynamicCast<AnimationTrack<int>>(FindOrCreateTrack(path, *fieldType)))
                 {
-                    int value = intProxy->GetValue();
-                    intTrack->AddKey(mTimeline->mTimeCursor, value);
+                    intTrack->RemoveKey(time);
+                    intTrack->AddKey(time, keyValue);
                 }
-            }
+			}
         }
         else if (fieldType == &TypeOf(Vec2F))
 		{
-			if (auto vec2Track = DynamicCast<AnimationTrack<Vec2F>>(existingTrack))
-			{
-				if (auto vec2Proxy = DynamicCast<IValueProxy<Vec2F>>(fieldValueProxy))
-				{
-					Vec2F value = vec2Proxy->GetValue();
-					vec2Track->spline->InsertKey(vec2Track->spline->GetNextKey(mTimeline->mTimeCursor), value);
+            if (auto vec2Proxy = DynamicCast<IValueProxy<Vec2F>>(fieldValueProxy))
+            {
+                Vec2F keyValue = value.Holds<Vec2F>() ? value.Get<Vec2F>() : vec2Proxy->GetValue();
+                if (auto vec2Track = DynamicCast<AnimationTrack<Vec2F>>(FindOrCreateTrack(path, *fieldType)))
+                {
+                    vec2Track->spline->InsertKey(vec2Track->spline->GetNextKey(time), keyValue);
 
                     if (vec2Track->timeCurve->GetKeys().IsEmpty())
-                        vec2Track->timeCurve->InsertKey(mTimeline->mTimeCursor, 0.0f);
+                        vec2Track->timeCurve->InsertKey(time, 0.0f);
                     else if (vec2Track->timeCurve->GetKeys().Count() == 1)
-                        vec2Track->timeCurve->InsertKey(mTimeline->mTimeCursor, 1.0f);
-				}
+                        vec2Track->timeCurve->InsertKey(time, 1.0f);
+                }
 			}
         }
 		else if (fieldType == &TypeOf(Color4)) 
         {
-            if (auto colorTrack = DynamicCast<AnimationTrack<Color4>>(existingTrack))
+            if (auto colorProxy = DynamicCast<IValueProxy<Color4>>(fieldValueProxy))
             {
-                if (auto colorProxy = DynamicCast<IValueProxy<Color4>>(fieldValueProxy))
+                Color4 keyValue = value.Holds<Color4>() ? value.Get<Color4>() : colorProxy->GetValue();
+                if (auto colorTrack = DynamicCast<AnimationTrack<Color4>>(FindOrCreateTrack(path, *fieldType)))
                 {
-                    Color4 value = colorProxy->GetValue();
-                    colorTrack->AddKey(mTimeline->mTimeCursor, value);
+                    colorTrack->RemoveKey(time);
+                    colorTrack->AddKey(time, keyValue);
                 }
 			}
-		}
+        }
 
 		mTree->OnAnimationChanged();
 	}
 
+    bool AnimationWindow::TransformState::operator==(const TransformState& other) const
+    {
+        return object == other.object &&
+               position == other.position &&
+               size == other.size &&
+               scale == other.scale &&
+               pivot == other.pivot &&
+               Math::Equals(angle, other.angle) &&
+               Math::Equals(shear, other.shear) &&
+               anchorMin == other.anchorMin &&
+               anchorMax == other.anchorMax &&
+               offsetMin == other.offsetMin &&
+               offsetMax == other.offsetMax;
+    }
 }
 // --- META ---
 

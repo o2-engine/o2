@@ -2,7 +2,7 @@
 
 #include "o2/Utils/Editor/SceneEditableObject.h"
 #include "o2/Utils/Math/Basis.h"
-#include "o2Editor/Tools/SelectionTool.h"
+#include "o2Editor/Tools/ITransformTool.h"
 #include "o2Editor/Windows/SceneWindow/SceneDragHandle.h"
 
 using namespace o2;
@@ -20,7 +20,7 @@ namespace Editor
     // -------------------
     // Rotate objects tool
     // -------------------
-    class RotateTool: public SelectionTool
+    class RotateTool: public ITransformTool
     {
     public:
         float angleSnapStep = 15.0f; // Rotation angle step in degree
@@ -133,7 +133,7 @@ namespace Editor
 
 CLASS_BASES_META(Editor::RotateTool)
 {
-    BASE_CLASS(Editor::SelectionTool);
+    BASE_CLASS(Editor::ITransformTool);
 }
 END_META;
 CLASS_FIELDS_META(Editor::RotateTool)

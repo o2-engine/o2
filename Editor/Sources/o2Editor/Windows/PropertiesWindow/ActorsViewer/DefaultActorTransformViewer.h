@@ -47,6 +47,8 @@ namespace Editor
         Ref<Vec2FProperty> mMaxSizeProperty;
         Ref<Vec2FProperty> mWeightProperty;
 
+        Vector<Ref<IPropertyField>> mAllProperties;
+
     protected:
         // Enable viewer event function
         void OnPropertiesEnabled() override;
@@ -87,6 +89,7 @@ CLASS_FIELDS_META(Editor::DefaultActorTransformViewer)
     FIELD().PROTECTED().NAME(mMinSizeProperty);
     FIELD().PROTECTED().NAME(mMaxSizeProperty);
     FIELD().PROTECTED().NAME(mWeightProperty);
+    FIELD().PROTECTED().NAME(mAllProperties);
 }
 END_META;
 CLASS_METHODS_META(Editor::DefaultActorTransformViewer)

@@ -89,7 +89,7 @@ namespace o2
         onStarted.Invoke();
         o2Events.OnApplicationStarted();
         
-        [ApplicationPlatformWrapper::view initializeMouseTracking];
+        [(ViewController*)ApplicationPlatformWrapper::view initializeMouseTracking];
         
         [NSApp run];
     }
@@ -106,22 +106,27 @@ namespace o2
 
     void Application::Maximize()
     {
-        [ApplicationPlatformWrapper::window setIsZoomed:true];
+        [ApplicationPlatformWrapper::window zoom:nil];
     }
 
     bool Application::IsMaximized() const
     {
-        return true;
+        return [ApplicationPlatformWrapper::window isZoomed];
     }
 
     void Application::SetResizible(bool resizible)
     {
-        [ApplicationPlatformWrapper::window setResizable:resizible];
+        NSWindowStyleMask currentMask = [ApplicationPlatformWrapper::window styleMask];
+        if (resizible) {
+            [ApplicationPlatformWrapper::window setStyleMask:currentMask | NSWindowStyleMaskResizable];
+        } else {
+            [ApplicationPlatformWrapper::window setStyleMask:currentMask & ~NSWindowStyleMaskResizable];
+        }
     }
 
     bool Application::IsResizible() const
     {
-        return [ApplicationPlatformWrapper::window isResizable];
+        return ([ApplicationPlatformWrapper::window styleMask] & NSWindowStyleMaskResizable) != 0;
     }
 
     void Application::SetWindowSizePlatform(const Vec2I& size)

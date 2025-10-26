@@ -117,6 +117,8 @@ namespace Editor
             [](auto& x) { return x->GetTransform(); });
 
         mTransformAction = mmake<TransformAction>(o2EditorSceneScreen.GetTopSelectedObjects());
+
+        onTransformBegin();
     }
 
     void MoveTool::HandleReleased()
@@ -124,6 +126,8 @@ namespace Editor
         mTransformAction->Completed();
         o2EditorSceneWindow.DoneAction(mTransformAction);
         mTransformAction = nullptr;
+
+        onTransformEnd();
     }
 
     void MoveTool::HandlesMoved(const Vec2F& delta, bool snapHor /*= false*/, bool spanVer /*= false*/)

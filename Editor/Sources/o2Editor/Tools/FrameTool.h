@@ -1,6 +1,6 @@
 #pragma once
 
-#include "o2Editor/Tools/SelectionTool.h"
+#include "o2Editor/Tools/ITransformTool.h"
 #include "o2Editor/Windows/SceneWindow/SceneDragHandle.h"
 #include "o2/Utils/Math/Basis.h"
 
@@ -18,7 +18,7 @@ namespace Editor
     // ----------------------------------
     // Editor frame and pivot moving tool
     // ----------------------------------
-    class FrameTool: public SelectionTool
+    class FrameTool: public ITransformTool
     {
     public:
         // Default constructor
@@ -344,7 +344,7 @@ namespace Editor
 
 CLASS_BASES_META(Editor::FrameTool)
 {
-    BASE_CLASS(Editor::SelectionTool);
+    BASE_CLASS(Editor::ITransformTool);
 }
 END_META;
 CLASS_FIELDS_META(Editor::FrameTool)

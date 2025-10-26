@@ -150,7 +150,8 @@ namespace Editor
             auto lastSelectedObject = selectedObjects.Last();
             UpdateHandlesAngleAndPositions(-lastSelectedObject->GetTransform().xv.Normalized().Angle(Vec2F::Right()));
         }
-        else UpdateHandlesAngleAndPositions(0.0f);
+        else
+            UpdateHandlesAngleAndPositions(0.0f);
     }
 
     void ScaleTool::UpdateHandlesAngleAndPositions(float angle)
@@ -231,6 +232,8 @@ namespace Editor
             [](auto& x) { return x->GetTransform(); });
 
         mTransformAction = mmake<TransformAction>(o2EditorSceneScreen.GetTopSelectedObjects());
+
+        onTransformBegin();
     }
 
     void ScaleTool::HandleReleased()
@@ -238,6 +241,8 @@ namespace Editor
         mTransformAction->Completed();
         o2EditorSceneWindow.DoneAction(mTransformAction);
         mTransformAction = nullptr;
+
+        onTransformEnd();
     }
 
 }

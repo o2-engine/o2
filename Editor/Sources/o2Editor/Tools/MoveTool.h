@@ -1,7 +1,7 @@
 #pragma once
 
 #include "o2/Utils/Math/Basis.h"
-#include "o2Editor/Tools/SelectionTool.h"
+#include "o2Editor/Tools/ITransformTool.h"
 #include "o2Editor/Windows/SceneWindow/SceneDragHandle.h"
 
 namespace o2
@@ -16,7 +16,7 @@ namespace Editor
     // ------------------------
     // Move objects editor tool
     // ------------------------
-    class MoveTool: public SelectionTool
+    class MoveTool: public ITransformTool
     {
     public:
         float snapStep = 10.0f; // Moving snap step
@@ -105,7 +105,7 @@ namespace Editor
 
 CLASS_BASES_META(Editor::MoveTool)
 {
-    BASE_CLASS(Editor::SelectionTool);
+    BASE_CLASS(Editor::ITransformTool);
 }
 END_META;
 CLASS_FIELDS_META(Editor::MoveTool)

@@ -38,7 +38,7 @@ namespace o2
         PROPERTY(float, pivotX, SetPivotX, GetPivotX);                 // Pivot property by X
         PROPERTY(float, pivotY, SetPivotY, GetPivotY);                 // Pivot property by Y
         PROPERTY(float, angle, SetAngle, GetAngle);                     // Rotation angle in radians
-        PROPERTY(float, angleDegree, SetAngleDegrees, GetAngleDegrees); // Rotation angle in degrees
+        PROPERTY(float, angleDegrees, SetAngleDegrees, GetAngleDegrees); // Rotation angle in degrees
         PROPERTY(float, shear, SetShear, GetShear);                     // Shear property
 
         PROPERTY(Basis, basis, SetBasis, GetBasis);                         // Transformation basis property
@@ -560,7 +560,7 @@ CLASS_FIELDS_META(o2::ActorTransform)
     FIELD().PUBLIC().NAME(pivotX);
     FIELD().PUBLIC().NAME(pivotY);
     FIELD().PUBLIC().NAME(angle);
-    FIELD().PUBLIC().NAME(angleDegree);
+    FIELD().PUBLIC().NAME(angleDegrees);
     FIELD().PUBLIC().NAME(shear);
     FIELD().PUBLIC().NAME(basis);
     FIELD().PUBLIC().NAME(nonSizedBasis);

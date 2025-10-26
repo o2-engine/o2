@@ -431,6 +431,7 @@ namespace Editor
 
                 SetHandlesEnable(false);
                 HandlePressed();
+                onTransformBegin();
                 return;
             }
         }
@@ -450,7 +451,8 @@ namespace Editor
             if ((mFrame.origin - mBeginDraggingFrame.origin).Length() < hasntMovedThreshold)
                 SelectionTool::OnCursorReleased(cursor);
         }
-        else SelectionTool::OnCursorReleased(cursor);
+        else
+            SelectionTool::OnCursorReleased(cursor);
     }
 
     void FrameTool::OnCursorPressBreak(const Input::Cursor& cursor)
@@ -460,7 +462,8 @@ namespace Editor
             mIsDragging = false;
             SetHandlesEnable(true);
         }
-        else SelectionTool::OnCursorPressBreak(cursor);
+        else
+            SelectionTool::OnCursorPressBreak(cursor);
     }
 
     void FrameTool::OnCursorStillDown(const Input::Cursor& cursor)
@@ -733,6 +736,8 @@ namespace Editor
         mTransformAction = mmake<TransformAction>(o2EditorSceneScreen.GetTopSelectedObjects());
 
         mBeginDraggingFrame = mFrame;
+
+        onTransformBegin();
     }
 
     void FrameTool::HandleReleased()
@@ -743,6 +748,8 @@ namespace Editor
 
         mSnapLines.Clear();
         o2EditorSceneScreen.NeedRedraw();
+
+        onTransformEnd();
     }
 
     Basis FrameTool::GetLeftTopHandleTransformed(const Vec2F& position)
@@ -776,7 +783,8 @@ namespace Editor
                 transformedFrame.origin -= xd;
                 transformedFrame.xv += xd;
             }
-            else transformedFrame.yv = transformedFrame.yv.Normalized()*transformedFrame.xv.Length()/aspect;
+            else
+                transformedFrame.yv = transformedFrame.yv.Normalized()*transformedFrame.xv.Length()/aspect;
         }
 
         return transformedFrame;

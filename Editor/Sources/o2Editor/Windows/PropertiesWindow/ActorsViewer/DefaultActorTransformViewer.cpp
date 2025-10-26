@@ -286,6 +286,33 @@ namespace Editor
         mWeightProperty->GetXProperty()->onChangeCompleted = THIS_FUNC(OnPropertyChangeCompleted);
         mWeightProperty->GetYProperty()->onChangeCompleted = THIS_FUNC(OnPropertyChangeCompleted);
         weightPropertyContainer->AddChild(mWeightProperty);
+
+        mAllProperties = { 
+            mPositionProperty->GetXProperty(),
+            mPositionProperty->GetYProperty(),
+            mPivotProperty->GetXProperty(),
+            mPivotProperty->GetYProperty(),
+            mScaleProperty->GetXProperty(),
+            mScaleProperty->GetYProperty(),
+            mSizeProperty->GetXProperty(),
+            mSizeProperty->GetYProperty(),
+            mRotationProperty,
+            mShearProperty,
+            mAnchorRightTopProperty->GetXProperty(),
+            mAnchorRightTopProperty->GetYProperty(),
+            mAnchorLeftBottomProperty->GetXProperty(),
+            mAnchorLeftBottomProperty->GetYProperty(),
+            mOffsetRightTopProperty->GetXProperty(),
+            mOffsetRightTopProperty->GetYProperty(),
+            mOffsetLeftBottomProperty->GetXProperty(),
+            mOffsetLeftBottomProperty->GetYProperty(),
+            mMinSizeProperty->GetXProperty(),
+            mMinSizeProperty->GetYProperty(),
+            mMaxSizeProperty->GetXProperty(),
+            mMaxSizeProperty->GetYProperty(),
+            mWeightProperty->GetXProperty(),
+            mWeightProperty->GetYProperty(),
+        };
     }
 
     DefaultActorTransformViewer::~DefaultActorTransformViewer()
@@ -322,8 +349,8 @@ namespace Editor
         mSizeProperty->GetYProperty()->SelectValueAndPrototypeProperties<Actor, decltype(ActorTransform::height)>(
             actors, prototypes, [](Actor* x) { return &x->transform->height; });
 
-        mRotationProperty->SelectValueAndPrototypeProperties<Actor, decltype(ActorTransform::angleDegree)>(
-            actors, prototypes, [](Actor* x) { return &x->transform->angleDegree; });
+        mRotationProperty->SelectValueAndPrototypeProperties<Actor, decltype(ActorTransform::angleDegrees)>(
+            actors, prototypes, [](Actor* x) { return &x->transform->angleDegrees; });
 
         mShearProperty->SelectValueAndPrototypeProperties<Actor, decltype(ActorTransform::shear)>(
             actors, prototypes, [](Actor* x) { return &x->transform->shear; });
@@ -386,57 +413,20 @@ namespace Editor
 
     void DefaultActorTransformViewer::Refresh()
     {
-        mPositionProperty->Refresh();
-        mPivotProperty->Refresh();
-        mScaleProperty->Refresh();
-        mSizeProperty->Refresh();
-        mRotationProperty->Refresh();
-        mShearProperty->Refresh();
-
-        if (mLayoutEnabled)
-        {
-            mAnchorRightTopProperty->Refresh();
-            mAnchorLeftBottomProperty->Refresh();
-            mOffsetRightTopProperty->Refresh();
-            mOffsetLeftBottomProperty->Refresh();
-            mMinSizeProperty->Refresh();
-            mMaxSizeProperty->Refresh();
-            mWeightProperty->Refresh();
-        }
+        for (auto& property : mAllProperties)
+            property->Refresh();
     }
 
     void DefaultActorTransformViewer::OnPropertiesEnabled()
     {
-        mPositionProperty->SetPropertyEnabled(true);
-        mPivotProperty->SetPropertyEnabled(true);
-        mScaleProperty->SetPropertyEnabled(true);
-        mSizeProperty->SetPropertyEnabled(true);
-        mRotationProperty->SetPropertyEnabled(true);
-        mShearProperty->SetPropertyEnabled(true);
-        mAnchorRightTopProperty->SetPropertyEnabled(true);
-        mAnchorLeftBottomProperty->SetPropertyEnabled(true);
-        mOffsetRightTopProperty->SetPropertyEnabled(true);
-        mOffsetLeftBottomProperty->SetPropertyEnabled(true);
-        mMinSizeProperty->SetPropertyEnabled(true);
-        mMaxSizeProperty->SetPropertyEnabled(true);
-        mWeightProperty->SetPropertyEnabled(true);
+        for (auto& property : mAllProperties)
+            property->SetPropertyEnabled(true);
     }
 
     void DefaultActorTransformViewer::OnPropertiesDisabled()
     {
-        mPositionProperty->SetPropertyEnabled(false);
-        mPivotProperty->SetPropertyEnabled(false);
-        mScaleProperty->SetPropertyEnabled(false);
-        mSizeProperty->SetPropertyEnabled(false);
-        mRotationProperty->SetPropertyEnabled(false);
-        mShearProperty->SetPropertyEnabled(false);
-        mAnchorRightTopProperty->SetPropertyEnabled(false);
-        mAnchorLeftBottomProperty->SetPropertyEnabled(false);
-        mOffsetRightTopProperty->SetPropertyEnabled(false);
-        mOffsetLeftBottomProperty->SetPropertyEnabled(false);
-        mMinSizeProperty->SetPropertyEnabled(false);
-        mMaxSizeProperty->SetPropertyEnabled(false);
-        mWeightProperty->SetPropertyEnabled(false);
+        for (auto& property : mAllProperties)
+            property->SetPropertyEnabled(false);
     }
 
     void DefaultActorTransformViewer::OnPropertyChanged(const Ref<IPropertyField>& field, bool byUser)

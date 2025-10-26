@@ -1,5 +1,6 @@
 #pragma once
 
+#include "o2/Utils/Math/Math.h"
 #include "o2/Utils/Singleton.h"
 #include "o2Editor/Actions/ActionsList.h"
 #include "o2Editor/Windows/IAssetEditorWindow.h"
@@ -54,6 +55,27 @@ namespace Editor
         REF_COUNTERABLE_IMPL(IEditorWindow, Singleton<AnimationWindow>);
 
     protected:
+        // Object transform state, used to store transform before changing for recording keys
+        struct TransformState
+        {
+            WeakRef<SceneEditableObject> object;
+
+            Vec2F position;
+            Vec2F size;
+            Vec2F scale;
+            Vec2F pivot;
+            float angle;
+            float shear;
+
+            Vec2F anchorMin;
+            Vec2F anchorMax;
+            Vec2F offsetMin;
+            Vec2F offsetMax;
+
+            bool operator==(const TransformState& other) const;
+        };
+
+    protected:
         float mTreeViewWidth = 325.0f;    // Width of tree area. Changed by draggable separator
         float mMinTreeViewWidth = 325.0f; // Minimal tree width
 
@@ -88,6 +110,8 @@ namespace Editor
         Ref<CurvesSheet>         mCurves;       // Animation curves sheet
 
         Ref<WidgetDragHandle> mTreeSeparatorHandle; // Tree separator handle. When it moves, it changes size of all dependent widgets
+
+        Vector<TransformState> mBeforeTransforms; // Transforms before changing for recording keys
 
     protected:
         // Called when editor window has closed
@@ -169,8 +193,23 @@ namespace Editor
 		void OnPropertyChangeCompleted(const Vector<IObject*>& targets, const String& path, const Vector<DataDocument>& before,
 									   const Vector<DataDocument>& after);
 
+        // Checks if object is under hierarchy of target actor
+        bool CheckObjectIsUnderHierachy(const Ref<SceneEditableObject>& object, String& hierarchyPath);
+
+        // Stores transforms of selected objects
+        Vector<TransformState> StoreObjectsTransforms();
+
+        // Called when transform tool begins, stores transforms before changing for recording keys
+        void OnToolTransformBegin();
+
+        // Called when transform tool ends, checks transforms and records keys if needed
+        void OnToolTransformEnd();
+
+        // Adds track for specified property path
+        Ref<IAnimationTrack> FindOrCreateTrack(const String& path, const Type& type);
+
 		// Creates new animation track for specified property path
-		void AddTrackKey(const String& path);
+		void AddTrackKey(const String& path, float time, const Variant<float, int, Vec2F, Color4>& value);
 
         friend class AnimationTimeline;
         friend class AnimationTree;
@@ -217,10 +256,13 @@ CLASS_FIELDS_META(Editor::AnimationWindow)
     FIELD().PROTECTED().NAME(mHandlesSheet);
     FIELD().PROTECTED().NAME(mCurves);
     FIELD().PROTECTED().NAME(mTreeSeparatorHandle);
+    FIELD().PROTECTED().NAME(mBeforeTransforms);
 }
 END_META;
 CLASS_METHODS_META(Editor::AnimationWindow)
 {
+
+    typedef const Variant<float, int, Vec2F, Color4>& _tmp1;
 
     FUNCTION().PUBLIC().CONSTRUCTOR(RefCounter*);
     FUNCTION().PUBLIC().SIGNATURE(void, Update, float);
@@ -254,7 +296,12 @@ CLASS_METHODS_META(Editor::AnimationWindow)
     FUNCTION().PROTECTED().SIGNATURE(void, OnMenuFilterPressed);
     FUNCTION().PROTECTED().SIGNATURE(void, OnMenuRecordToggle, bool);
     FUNCTION().PROTECTED().SIGNATURE(void, OnPropertyChangeCompleted, const Vector<IObject*>&, const String&, const Vector<DataDocument>&, const Vector<DataDocument>&);
-    FUNCTION().PROTECTED().SIGNATURE(void, AddTrackKey, const String&);
+    FUNCTION().PROTECTED().SIGNATURE(bool, CheckObjectIsUnderHierachy, const Ref<SceneEditableObject>&, String&);
+    FUNCTION().PROTECTED().SIGNATURE(Vector<TransformState>, StoreObjectsTransforms);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnToolTransformBegin);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnToolTransformEnd);
+    FUNCTION().PROTECTED().SIGNATURE(Ref<IAnimationTrack>, FindOrCreateTrack, const String&, const Type&);
+    FUNCTION().PROTECTED().SIGNATURE(void, AddTrackKey, const String&, float, _tmp1);
 }
 END_META;
 // --- END META ---

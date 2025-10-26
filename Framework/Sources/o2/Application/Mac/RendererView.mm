@@ -29,12 +29,6 @@
             o2::ApplicationPlatformWrapper::OnWindowResized(o2::Vec2I(size.width/scale, size.height/scale));
 }
 
-- (void)resetCursorRects
-{
-    [super resetCursorRects];
-    [self addCursorRect:[self bounds] cursor:[NSCursor currentCursor]];
-}
-
 @end
 
 @implementation ViewController

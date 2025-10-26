@@ -43,6 +43,7 @@
 #include "o2/Utils/Types/Containers/Map.h"
 #include "o2/Utils/Types/Containers/Vector.h"
 #include "o2/Utils/Types/String.h"
+#include "o2/Utils/Types/Variant.h"
 #include "o2/Utils/Function/Subscription.h"
 
 #if IS_SCRIPTING_SUPPORTED
