@@ -45,6 +45,9 @@ namespace Editor
         // Draws selection
         void Draw() override;
 
+		// Draws selection frame
+		void DrawSelectionFrame();
+
         // Updates draw order for correct handles and sheet input processing
         void UpdateInputDrawOrder();
 
@@ -269,6 +272,7 @@ CLASS_METHODS_META(Editor::KeyHandlesSheet)
     FUNCTION().PUBLIC().SIGNATURE(void, SetAnimation, const Ref<AnimationClip>&);
     FUNCTION().PUBLIC().SIGNATURE(void, Update, float);
     FUNCTION().PUBLIC().SIGNATURE(void, Draw);
+    FUNCTION().PUBLIC().SIGNATURE(void, DrawSelectionFrame);
     FUNCTION().PUBLIC().SIGNATURE(void, UpdateInputDrawOrder);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsUnderPoint, const Vec2F&);
     FUNCTION().PUBLIC().SIGNATURE(void, RegTrackControl, const Ref<ITrackControl>&, const std::string&);

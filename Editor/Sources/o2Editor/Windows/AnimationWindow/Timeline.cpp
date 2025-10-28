@@ -352,7 +352,7 @@ namespace Editor
     void AnimationTimeline::SetViewRange(float left, float right, bool force /*= true*/)
     {
         mViewZoom = (layout->worldRight - layout->worldLeft)/mOneSecondDefaultSize/(right - left);
-        mViewScroll = left + mScaleOffset;
+        mViewScroll = left*(mOneSecondDefaultSize*mViewZoom) + mScaleOffset;
 
         if (force)
         {

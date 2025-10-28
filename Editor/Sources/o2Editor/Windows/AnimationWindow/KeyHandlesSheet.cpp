@@ -57,42 +57,45 @@ namespace Editor
             return;
 
         Widget::OnDrawn();
-        CursorAreaEventsListener::OnDrawn();
+		CursorAreaEventsListener::OnDrawn();
 
-        o2Render.EnableScissorTest(layout->GetWorldRect());
-
-        if (mSelectionFrame->enabled)
-        {
-            auto offsets = mIsFrameSelecting ? mSelectionFrameCursorOffsets : mSelectionFrameOffsets;
-            auto animationWindow = mAnimationWindow.Lock();
-            RectF selectionFrameRect = RectF(animationWindow->mTimeline->LocalToWorld(mSelectionRect.left) + offsets.left,
-                                             animationWindow->mTree->GetLineWorldPosition(mSelectionRect.top) + offsets.top,
-                                             animationWindow->mTimeline->LocalToWorld(mSelectionRect.right) + offsets.right,
-                                             animationWindow->mTree->GetLineWorldPosition(mSelectionRect.bottom) + offsets.bottom);
-
-            mSelectionFrame->SetRect(selectionFrameRect);
-            mSelectionFrame->Draw();
-
-            mLeftFrameDragHandle->SetDrawablesSize(Vec2F(10, selectionFrameRect.Height()));
-            mRightFrameDragHandle->SetDrawablesSize(Vec2F(10, selectionFrameRect.Height()));
-
-            if (!mIsFrameSelecting)
-            {
-                mCenterFrameDragHandle->Draw();
-                mLeftFrameDragHandle->Draw();
-                mRightFrameDragHandle->Draw();
-            }
-        }
-
-        o2Render.DisableScissorTest();
-
-        DrawDebugFrame();
-
-        if (mNeedUpdateSelectionFrame)
-            UpdateSelectionFrame();
+		DrawDebugFrame();
     }
 
-    void KeyHandlesSheet::UpdateInputDrawOrder()
+	void KeyHandlesSheet::DrawSelectionFrame()
+	{
+		o2Render.EnableScissorTest(layout->GetWorldRect());
+
+		if (mSelectionFrame->enabled)
+		{
+			auto offsets = mIsFrameSelecting ? mSelectionFrameCursorOffsets : mSelectionFrameOffsets;
+			auto animationWindow = mAnimationWindow.Lock();
+			RectF selectionFrameRect = RectF(animationWindow->mTimeline->LocalToWorld(mSelectionRect.left) + offsets.left,
+				animationWindow->mTree->GetLineWorldPosition(mSelectionRect.top) + offsets.top,
+				animationWindow->mTimeline->LocalToWorld(mSelectionRect.right) + offsets.right,
+				animationWindow->mTree->GetLineWorldPosition(mSelectionRect.bottom) + offsets.bottom);
+
+			mSelectionFrame->SetRect(selectionFrameRect);
+			mSelectionFrame->Draw();
+
+			mLeftFrameDragHandle->SetDrawablesSize(Vec2F(10, selectionFrameRect.Height()));
+			mRightFrameDragHandle->SetDrawablesSize(Vec2F(10, selectionFrameRect.Height()));
+
+			if (!mIsFrameSelecting)
+			{
+				mCenterFrameDragHandle->Draw();
+				mLeftFrameDragHandle->Draw();
+				mRightFrameDragHandle->Draw();
+			}
+		}
+
+		o2Render.DisableScissorTest();
+
+		if (mNeedUpdateSelectionFrame)
+			UpdateSelectionFrame();
+	}
+
+	void KeyHandlesSheet::UpdateInputDrawOrder()
     {
         if (!mResEnabledInHierarchy)
             return;

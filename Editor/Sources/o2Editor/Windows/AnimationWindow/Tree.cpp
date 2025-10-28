@@ -52,7 +52,7 @@ namespace Editor
         DrawZebraBack();
         o2Render.DisableScissorTest();
 
-        mAnimationWindow->mHandlesSheet->Draw();
+        mAnimationWindow->mHandlesSheet->DrawSelectionFrame();
 
         // Disable zebra
         auto buf = mZebraBackLine;

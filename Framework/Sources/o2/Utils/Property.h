@@ -78,7 +78,7 @@ namespace o2
     public:                                                                                                                \
         typedef TYPE valueType;                                                                                            \
                                                                                                                            \
-        NAME##_GET_PROPERTY() {}                                                                                            \
+        NAME##_GET_PROPERTY() {}                                                                                           \
                                                                                                                            \
         operator valueType() { return GetThis()->GETTER(); }                                                               \
         bool operator==(const valueType& value) const { return GetThis()->GETTER() == value; }                             \
