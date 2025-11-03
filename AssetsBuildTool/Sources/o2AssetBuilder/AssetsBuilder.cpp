@@ -75,7 +75,7 @@ namespace o2
             o2FileSystem.WriteFile(mBuiltAssetsTreePath, mBuiltAssetsTree->SerializeToString());
         }
 
-        mLog->Out("Completed for " + (String)timer.GetDeltaTime() + " seconds");
+        mLog->Out("Assets builder: Completed. Source: " + mSourceAssetsPath + ", Target: " + mBuiltAssetsPath + ", Time: " + (String)timer.GetDeltaTime() + " seconds");
 
         return mModifiedAssets;
     }
