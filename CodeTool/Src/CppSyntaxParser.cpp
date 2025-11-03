@@ -774,7 +774,9 @@ void CppSyntaxParser::ParseClassOrStruct(SyntaxSection& section, int& caret,
 
         section.mSections.push_back(newClass);
 
-        ParseSyntaxSection(*newClass, newClass->mData, *newClass->mFile, protectionSection);
+        // For class, default protection is Private; for struct, it's Public
+        SyntaxProtectionSection initialProtection = isClass ? SyntaxProtectionSection::Private : SyntaxProtectionSection::Public;
+        ParseSyntaxSection(*newClass, newClass->mData, *newClass->mFile, initialProtection);
     }
 }
 
@@ -901,6 +903,7 @@ void CppSyntaxParser::ParseEnum(SyntaxSection& section, int& caret,
     newEnum->mFullName = section.GetFullName().empty() ? name : section.GetFullName() + "::" + name;
     newEnum->mFile = section.mFile;
     newEnum->mOwnerSection = &section;
+    newEnum->mClassSection = protectionSection;
 
     for (auto& x : content)
     {

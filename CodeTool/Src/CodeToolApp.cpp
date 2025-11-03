@@ -626,6 +626,10 @@ void CodeToolApplication::UpdateSourceReflection(SyntaxFile* file)
         if (owner && owner->IsClass() && ((SyntaxClass*)owner)->IsTemplate())
             continue;
 
+        // Skip non-public enums inside classes (they can't be accessed from outside)
+        if (owner && owner->IsClass() && enm->GetClassSection() != SyntaxProtectionSection::Public)
+            continue;
+
         metaEnums.push_back(enm);
     }
 
@@ -1029,7 +1033,10 @@ string CodeToolApplication::GetEnumMeta(SyntaxEnum* enm)
     res += "\nENUM_META(" + enm->GetFullName() + ")\n{\n";
 
     for (auto e : enm->GetEntries())
-        res += "    ENUM_ENTRY(" + e.first + ");\n";
+    {
+        if (!e.first.empty())  // Skip empty enum entry names
+            res += "    ENUM_ENTRY(" + e.first + ");\n";
+    }
 
     res += "}\nEND_ENUM_META;\n";
 
