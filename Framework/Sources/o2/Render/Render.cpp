@@ -32,7 +32,7 @@ namespace o2
         mMaxTextureSize = GetPlatformMaxTextureSize();
         mDPI = GetPlatformDPI();
 
-        InitializeSandardShader();
+        InitializeStandardShader();
         InitializeWhiteTexture();
         InitializeFreeType();
         InitializeLinesIndexBuffer();

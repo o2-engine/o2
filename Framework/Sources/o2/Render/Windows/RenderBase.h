@@ -2,7 +2,9 @@
 
 #ifdef PLATFORM_WINDOWS
 
+#include "../API/OpenGL/GLSLShader.h"
 #include "o2/Render/TextureRef.h"
+#include "o2/Render/API/OpenGL/GPUProgram.h"
 #include "o2/Render/Windows/OpenGL.h"
 #include "o2/Utils/Math/Vector2.h"
 #include "o2/Utils/Types/CommonTypes.h"
@@ -18,12 +20,9 @@ namespace o2
         HGLRC mGLContext; // OpenGL context
         HDC   mHDC;       // Windows frame device context
 
-        GLuint mStdShader;               // Standard shader program
-        GLint  mStdShaderMvpUniform;     // Standard shader matrix input parameter
-        GLint  mStdShaderTextureSample;  // Standard shader texture sample input parameter
-        GLint  mStdShaderPosAttribute;   // Standard shader vertex position attribute
-        GLint  mStdShaderColorAttribute; // Standard shader vertex color attribute
-        GLint  mStdShaderUVAttribute;    // Standard shader texture coords attribute
+        Ref<GLSLShader> mVertexShader;
+        Ref<GLSLShader> mFragmentShader;
+        Ref<GPUProgram> mGPUProgram;
 
         const static int mBuffersPoolsSize = 3;       // Count of buffers in pools
         GLuint mVertexBuffersPool[mBuffersPoolsSize]; // Batch vertices buffer

@@ -66,7 +66,7 @@ namespace o2
     void Render::DeinitializePlatform()
     {}
 
-    void Render::InitializeSandardShader()
+    void Render::InitializeStandardShader()
     {
         const char* fragShader = " \
                                                                         \n \

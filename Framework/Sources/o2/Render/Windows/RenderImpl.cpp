@@ -9,6 +9,7 @@
 #include "o2/Events/EventSystem.h"
 #include "o2/Render/Font.h"
 #include "o2/Render/Mesh.h"
+#include "../API/OpenGL/OpenGLUtils.h"
 #include "o2/Render/Sprite.h"
 #include "o2/Render/Texture.h"
 #include "o2/Utils/Debug/Debug.h"
@@ -133,143 +134,33 @@ namespace o2
         }
     }
 
-    void Render::InitializeSandardShader()
+    void Render::InitializeStandardShader()
     {
-        const char* fragShader = " \
-                                                                        \n \
-        varying vec4 v_color;                                           \n \
-        varying vec2 v_texCoords;                                       \n \
-                                                                        \n \
-        uniform sampler2D u_texture;                                    \n \
-                                                                        \n \
-        void main()                                                     \n \
-        {                                                               \n \
-            gl_FragColor = v_color * texture2D(u_texture, v_texCoords); \n \
-        }";
+        mVertexShader = mmake<GLSLShader>();
+        mVertexShader->LoadFromFile(GetAssetsPath() + String("Shaders/standard.vs"));
+        mFragmentShader = mmake<GLSLShader>();
+        mFragmentShader->LoadFromFile(GetAssetsPath() + String("Shaders/standard.fs"));
 
-        const char* vtxShader = " \
-        uniform mat4 u_transformMatrix;                           \n \
-                                                                  \n \
-        attribute vec4 a_position;                                \n \
-        attribute vec4 a_color;                                   \n \
-        attribute vec2 a_texCoords;                               \n \
-                                                                  \n \
-        varying vec4 v_color;                                     \n \
-        varying vec2 v_texCoords;                                 \n \
-                                                                  \n \
-        void main()                                               \n \
-        {                                                         \n \
-            v_color = a_color;                                    \n \
-            v_texCoords = a_texCoords;                            \n \
-            gl_Position = u_transformMatrix * a_position;         \n \
-        }";
+        mGPUProgram = mmake<GPUProgram>(mVertexShader, mFragmentShader);
+        mGPUProgram->Link();
 
-        mStdShader = BuildShaderProgram(vtxShader, fragShader);
-        GL_CHECK_ERROR();
-
-        mStdShaderMvpUniform = glGetUniformLocation(mStdShader, "u_transformMatrix");
-        GL_CHECK_ERROR();
-
-        mStdShaderTextureSample = glGetUniformLocation(mStdShader, "u_texture");
-        GL_CHECK_ERROR();
-
-        mStdShaderPosAttribute = glGetAttribLocation(mStdShader, "a_position");
-        GL_CHECK_ERROR();
-
-        mStdShaderColorAttribute = glGetAttribLocation(mStdShader, "a_color");
-        GL_CHECK_ERROR();
-
-        mStdShaderUVAttribute = glGetAttribLocation(mStdShader, "a_texCoords");
-        GL_CHECK_ERROR();
-
-        glUseProgram(mStdShader);
-        GL_CHECK_ERROR();
-
-        glVertexAttribPointer((GLuint)mStdShaderPosAttribute, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), &((Vertex*)0)->x);
-        glEnableVertexAttribArray((GLuint)mStdShaderPosAttribute);
-        GL_CHECK_ERROR();
-
-        glVertexAttribPointer((GLuint)mStdShaderColorAttribute, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(Vertex), &((Vertex*)0)->color);
-        glEnableVertexAttribArray((GLuint)mStdShaderColorAttribute);
-        GL_CHECK_ERROR();
-
-        glVertexAttribPointer((GLuint)mStdShaderUVAttribute, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), &((Vertex*)0)->tu);
-        glEnableVertexAttribArray((GLuint)mStdShaderUVAttribute);
-        GL_CHECK_ERROR();
-    }
-
-    GLuint RenderBase::LoadShader(GLenum shaderType, const char* source)
-    {
-        GLuint shader = glCreateShader(shaderType);
-
-        if (shader)
+        if (const auto posAttrib = mGPUProgram->GetParameter(VS_POSITION))
         {
-            glShaderSource(shader, 1, &source, NULL);
-            glCompileShader(shader);
-
-            GLint compiled = 0;
-            glGetShaderiv(shader, GL_COMPILE_STATUS, &compiled);
-
-            if (!compiled)
-            {
-                GLint infoLen = 0;
-                glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &infoLen);
-
-                if (infoLen > 0)
-                {
-                    char* infoLog = (char*)malloc(sizeof(char) * infoLen);
-                    glGetShaderInfoLog(shader, infoLen, NULL, infoLog);
-                    o2Debug.LogError((String)"Error compiling shader:\n" + infoLog);
-                    free(infoLog);
-                }
-
-                glDeleteShader(shader);
-                shader = 0;
-            }
+            O2_GL_CHECK_ERROR(glVertexAttribPointer(posAttrib, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), &((Vertex*)0)->x));
+            O2_GL_CHECK_ERROR(glEnableVertexAttribArray(posAttrib));
         }
 
-        return shader;
-    }
-
-    GLuint RenderBase::BuildShaderProgram(const char* vertexSource, const char* fragmentSource)
-    {
-        GLuint vertexShader = LoadShader(GL_VERTEX_SHADER, vertexSource);
-        if (!vertexShader)
-            return 0;
-
-        GLuint fragmentShader = LoadShader(GL_FRAGMENT_SHADER, fragmentSource);
-        if (!fragmentShader)
-            return 0;
-
-        GLuint program = glCreateProgram();
-        if (program)
+        if (const auto colorAttrib = mGPUProgram->GetParameter(VS_COLOR))
         {
-            glAttachShader(program, vertexShader);
-            glAttachShader(program, fragmentShader);
-
-            GLint linkStatus;
-            glLinkProgram(program);
-            glGetProgramiv(program, GL_LINK_STATUS, &linkStatus);
-
-            if (!linkStatus)
-            {
-                GLint infoLen = 0;
-                glGetProgramiv(program, GL_INFO_LOG_LENGTH, &infoLen);
-
-                if (infoLen > 0)
-                {
-                    char* infoLog = (char*)malloc(sizeof(char) * infoLen);
-                    glGetProgramInfoLog(program, infoLen, NULL, infoLog);
-                    o2Debug.LogError((String)"Error linking shader:\n" + infoLog);
-                    free(infoLog);
-                }
-
-                glDeleteProgram(program);
-                program = 0;
-            }
+            O2_GL_CHECK_ERROR(glVertexAttribPointer(colorAttrib, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(Vertex), &((Vertex*)0)->color));
+            O2_GL_CHECK_ERROR(glEnableVertexAttribArray(colorAttrib));
         }
 
-        return program;
+        if (const auto texCoordsAttrib = mGPUProgram->GetParameter(VS_TEX_COORDS))
+        {
+            O2_GL_CHECK_ERROR(glVertexAttribPointer(texCoordsAttrib, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), &((Vertex*)0)->tu));
+            O2_GL_CHECK_ERROR(glEnableVertexAttribArray(texCoordsAttrib));
+        }
     }
 
     void RenderBase::BindNextPoolBuffers()
@@ -278,21 +169,20 @@ namespace o2
         if (mCurrentBufferIdx == mBuffersPoolsSize)
             mCurrentBufferIdx = 0;
 
-        glBindBuffer(GL_ARRAY_BUFFER, mVertexBuffersPool[mCurrentBufferIdx]);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mIndexBuffersPool[mCurrentBufferIdx]);
-        GL_CHECK_ERROR();
+        O2_GL_CHECK_ERROR(glBindBuffer(GL_ARRAY_BUFFER, mVertexBuffersPool[mCurrentBufferIdx]));
+        O2_GL_CHECK_ERROR(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mIndexBuffersPool[mCurrentBufferIdx]));
 
-        glVertexAttribPointer((GLuint)mStdShaderPosAttribute, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), &((Vertex*)0)->x);
-        glEnableVertexAttribArray((GLuint)mStdShaderPosAttribute);
-        GL_CHECK_ERROR();
+        const auto posAttrib = mGPUProgram->GetParameter(VS_POSITION);
+        O2_GL_CHECK_ERROR(glVertexAttribPointer(posAttrib, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), &((Vertex*)0)->x));
+        O2_GL_CHECK_ERROR(glEnableVertexAttribArray(posAttrib));
 
-        glVertexAttribPointer((GLuint)mStdShaderColorAttribute, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(Vertex), &((Vertex*)0)->color);
-        glEnableVertexAttribArray((GLuint)mStdShaderColorAttribute);
-        GL_CHECK_ERROR();
+        const auto colorAttrib = mGPUProgram->GetParameter(VS_COLOR);
+        O2_GL_CHECK_ERROR(glVertexAttribPointer(colorAttrib, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(Vertex), &((Vertex*)0)->color));
+        O2_GL_CHECK_ERROR(glEnableVertexAttribArray(colorAttrib));
 
-        glVertexAttribPointer((GLuint)mStdShaderUVAttribute, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), &((Vertex*)0)->tu);
-        glEnableVertexAttribArray((GLuint)mStdShaderUVAttribute);
-        GL_CHECK_ERROR();
+        const auto texCoordsAttrib = mGPUProgram->GetParameter(VS_TEX_COORDS);
+        O2_GL_CHECK_ERROR(glVertexAttribPointer(texCoordsAttrib, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), &((Vertex*)0)->tu));
+        O2_GL_CHECK_ERROR(glEnableVertexAttribArray(texCoordsAttrib));
 
         mVertexBufferIdx = 0;
         mIndexBufferIdx = 0;
@@ -323,7 +213,7 @@ namespace o2
         // Bind texture
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, mCurrentDrawTexture ? mCurrentDrawTexture->mHandle : mWhiteTexture->mHandle);
-        glUniform1i(mStdShaderTextureSample, 0);
+        glUniform1i(mGPUProgram->GetParameter(FS_TEX_SAMPLE), 0);
         GL_CHECK_ERROR();
 
         // Set blend mode
@@ -364,7 +254,7 @@ namespace o2
         //         glBindFramebufferEXT(GL_FRAMEBUFFER, 0);
         //         GL_CHECK_ERROR();
 
-        glUseProgram(mStdShader);
+        glUseProgram(mGPUProgram->GetId());
         GL_CHECK_ERROR();
 
         BindNextPoolBuffers();
@@ -373,20 +263,20 @@ namespace o2
         glBindTexture(GL_TEXTURE_2D, 0);
         GL_CHECK_ERROR();
 
-        glUniform1i(mStdShaderTextureSample, 0);
+        glUniform1i(mGPUProgram->GetParameter(FS_TEX_SAMPLE), 0);
         GL_CHECK_ERROR();
 
-        glVertexAttribPointer((GLuint)mStdShaderPosAttribute, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), &((Vertex*)0)->x);
-        glEnableVertexAttribArray((GLuint)mStdShaderPosAttribute);
-        GL_CHECK_ERROR();
+        const auto posAttrib = mGPUProgram->GetParameter(VS_POSITION);
+        O2_GL_CHECK_ERROR(glVertexAttribPointer(posAttrib, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), &((Vertex*)0)->x));
+        O2_GL_CHECK_ERROR(glEnableVertexAttribArray(posAttrib));
 
-        glVertexAttribPointer((GLuint)mStdShaderColorAttribute, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(Vertex), &((Vertex*)0)->color);
-        glEnableVertexAttribArray((GLuint)mStdShaderColorAttribute);
-        GL_CHECK_ERROR();
+        const auto colorAttrib = mGPUProgram->GetParameter(VS_COLOR);
+        O2_GL_CHECK_ERROR(glVertexAttribPointer(colorAttrib, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(Vertex), &((Vertex*)0)->color));
+        O2_GL_CHECK_ERROR(glEnableVertexAttribArray(colorAttrib));
 
-        glVertexAttribPointer((GLuint)mStdShaderUVAttribute, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), &((Vertex*)0)->tu);
-        glEnableVertexAttribArray((GLuint)mStdShaderUVAttribute);
-        GL_CHECK_ERROR();
+        const auto texCoordsAttrib = mGPUProgram->GetParameter(VS_TEX_COORDS);
+        O2_GL_CHECK_ERROR(glVertexAttribPointer(texCoordsAttrib, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), &((Vertex*)0)->tu));
+        O2_GL_CHECK_ERROR(glEnableVertexAttribArray(texCoordsAttrib));
     }
 
     void Render::Clear(const Color4& color /*= Color4::Blur()*/)
@@ -407,7 +297,7 @@ namespace o2
         Math::mtxMultiply(mvp, projMatrix, finalCamMtx);
         
         glViewport(0, 0, mCurrentResolution.x, mCurrentResolution.y);
-        glUniformMatrix4fv(mStdShaderMvpUniform, 1, GL_FALSE, mvp);
+        glUniformMatrix4fv(mGPUProgram->GetParameter(VS_MVP), 1, GL_FALSE, mvp);
 
         GL_CHECK_ERROR();
     }

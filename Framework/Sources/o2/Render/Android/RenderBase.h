@@ -32,7 +32,7 @@ namespace o2
         GLuint BuildShaderProgram(const char* vertexSource, const char* fragmentSource);
 
         // Initializes standard shader
-        void InitializeSandardShader();
+        void InitializeStandardShader();
     };
 };
 

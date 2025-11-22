@@ -52,7 +52,7 @@ namespace o2
 
         //glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
 
-        InitializeSandardShader();
+        InitializeStandardShader();
 
         GL_CHECK_ERROR();
 
@@ -164,7 +164,7 @@ namespace o2
         return program;
     }
 
-    void RenderBase::InitializeSandardShader()
+    void RenderBase::InitializeStandardShader()
     {
         const char* fragShader = " precision mediump float;             \n \
                                                                         \n \

@@ -52,6 +52,8 @@ extern PFNGLCREATEPROGRAMPROC             glCreateProgram;
 extern PFNGLATTACHSHADERPROC              glAttachShader;
 extern PFNGLLINKPROGRAMPROC               glLinkProgram;
 extern PFNGLGETPROGRAMIVPROC              glGetProgramiv;
+extern PFNGLGETACTIVEATTRIBPROC           glGetActiveAttrib;
+extern PFNGLGETACTIVEUNIFORMPROC          glGetActiveUniform;
 extern PFNGLGETPROGRAMINFOLOGPROC         glGetProgramInfoLog;
 extern PFNGLUSEPROGRAMPROC                glUseProgram;
 extern PFNGLGETUNIFORMLOCATIONPROC        glGetUniformLocation;

@@ -382,7 +382,7 @@ namespace o2
         void InitializeFreeType();
 
         // Initializes standard shader
-        void InitializeSandardShader();
+        void InitializeStandardShader();
 
         // Deinitializes platform specific part of render
         void DeinitializePlatform();

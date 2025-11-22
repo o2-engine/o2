@@ -96,7 +96,7 @@ namespace o2
     void Render::DeinitializePlatform()
     {}
 
-    void Render::InitializeSandardShader()
+    void Render::InitializeStandardShader()
     {}
 
     void Render::PlatformBegin()
