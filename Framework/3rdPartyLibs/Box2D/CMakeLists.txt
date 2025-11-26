@@ -170,6 +170,7 @@ if(BOX2D_BUILD_STATIC)
 		CLEAN_DIRECT_OUTPUT 1
 		VERSION ${BOX2D_VERSION}
 	)
+	target_include_directories(Box2D PUBLIC "../")
 endif()
 
 # These are used to create visual studio folders.

@@ -9,9 +9,9 @@
 #include "o2/Utils/Property.h"
 #include "o2/Utils/Types/CommonTypes.h"
 
-#include "spine/Skeleton.h"
-#include "spine/AnimationState.h"
-#include "spine/Animation.h"
+#include "3rdPartyLibs/Spine/spine-cpp/include/spine/Skeleton.h"
+#include "3rdPartyLibs/Spine/spine-cpp/include/spine/AnimationState.h"
+#include "3rdPartyLibs/Spine/spine-cpp/include/spine/Animation.h"
 
 namespace o2
 {
