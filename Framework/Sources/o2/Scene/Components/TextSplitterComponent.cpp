@@ -255,7 +255,7 @@ namespace o2
             for (auto& symbol : line.mSymbols)
             {
                 auto symbolActor = mSymbolPrototype ? mSymbolPrototype->CloneAsRef<Actor>() : mmake<Actor>();
-				symbolActor->name = String("Symbol: ") + symbol.mCharId;
+				symbolActor->name = String("Symbol: ") + String(symbol.mCharId);
 				symbolActor->SetParent(GetActor());
 				symbolActor->transform->worldRect = symbol.mFrame;
 

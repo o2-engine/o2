@@ -142,7 +142,6 @@ source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${o2Framework_SOURCES})
 
 set(o2Framework_INCLUDES 
         "Framework/Sources"
-        "Framework/3rdPartyLibs"
         "Framework/3rdPartyLibs/rapidjson/include"
         "Framework/3rdPartyLibs/FreeType/include"
         "Framework/3rdPartyLibs/jerryscript/jerry-core/include"
@@ -164,7 +163,6 @@ target_compile_definitions(o2Framework PUBLIC ${O2_COMPILE_DEFINITIONS})
 target_link_libraries(o2Framework 
     PUBLIC 
         Box2D 
-        libpng 
         zlib 
         FreeType 
         pugixml 
