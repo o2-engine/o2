@@ -139,6 +139,7 @@ namespace o2
         friend class CursorAreaEventsListener;
         friend class CursorEventsListener;
         friend class DragableObject;
+        friend class Integration;
         friend class KeyboardEventsListener;
         friend class WndProcFunc;
     };

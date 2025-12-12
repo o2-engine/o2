@@ -494,6 +494,7 @@ namespace o2
         friend class BitmapFont;
         friend class BitmapFontAsset;
         friend class Font;
+        friend class Integration;
         friend class RenderBase;
         friend class Sprite;
         friend class Texture;

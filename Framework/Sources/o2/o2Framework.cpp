@@ -48,6 +48,7 @@ extern void __RegisterClass__o2__VectorFontAsset();
 extern void __RegisterClass__o2__VectorFontAsset__Meta();
 extern void __RegisterClass__o2__PhysicsConfig();
 extern void __RegisterClass__o2__ProjectConfig();
+extern void __RegisterClass__o2__Integration();
 extern void __RegisterClass__o2__Camera();
 extern void __RegisterClass__o2__ParticleSource();
 extern void __RegisterClass__o2__SingleSpriteParticleSource();
@@ -215,6 +216,7 @@ extern void InitializeTypeso2Framework()
     __RegisterClass__o2__VectorFontAsset__Meta();
     __RegisterClass__o2__PhysicsConfig();
     __RegisterClass__o2__ProjectConfig();
+    __RegisterClass__o2__Integration();
     __RegisterClass__o2__Camera();
     __RegisterClass__o2__ParticleSource();
     __RegisterClass__o2__SingleSpriteParticleSource();

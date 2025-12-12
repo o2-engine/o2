@@ -32,7 +32,7 @@ namespace Editor
     AssetsWindow::AssetsWindow(RefCounter* refCounter):
         Singleton<AssetsWindow>(refCounter), IEditorWindow(refCounter)
     {
-        if (Application::IsReady())
+        if (Application::IsSingletonInitialzed() && o2Application.IsReady())
             InitializeWindow();
     }
 

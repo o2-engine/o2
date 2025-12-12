@@ -176,11 +176,12 @@ namespace o2
         // Tries to load style "ui_style.json"
         void TryLoadStyle();
 
-        friend class Application;
         friend class BaseApplication;
         friend class CustomDropDown;
+        friend class Integration;
         friend class Tree;
         friend class Widget;
+		friend class Application;
     };
 
     template<typename _type>
