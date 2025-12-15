@@ -5,7 +5,6 @@
 #include <vector>
 #include <cstring>
 #include "o2/Utils/Memory/MemoryManager.h"
-#include "o2/Utils/Types/Ref.h"
 
 namespace o2
 {

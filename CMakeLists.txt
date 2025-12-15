@@ -157,13 +157,12 @@ set(o2Framework_INCLUDES
 
 target_sources(o2Framework PRIVATE ${o2Framework_SOURCES})
 target_include_directories(o2Framework PUBLIC ${o2Framework_INCLUDES})
-target_precompile_headers(o2Framework PUBLIC "Framework/Sources/o2/stdafx.h")
+target_precompile_headers(o2Framework PRIVATE "Framework/Sources/o2/stdafx.h")
 target_compile_definitions(o2Framework PUBLIC ${O2_COMPILE_DEFINITIONS})
 
 target_link_libraries(o2Framework 
     PUBLIC 
         Box2D 
-        zlib 
         FreeType 
         pugixml 
         jerry-core 
@@ -248,7 +247,7 @@ add_custom_target(o2FrameworkCodegen
 add_dependencies(o2FrameworkCodegen o2CodeTool)
 
 # dependencies
-add_dependencies(o2Framework Box2D jerry-core jerry-ext jerry-port-default libpng zlib FreeType)
+add_dependencies(o2Framework Box2D jerry-core jerry-ext jerry-port-default libpng FreeType)
 add_dependencies(o2Framework o2CodeTool)
 add_dependencies(o2Framework o2CopyBuiltinAssets)
 add_dependencies(o2Framework o2FrameworkCodegen)
@@ -273,7 +272,7 @@ if (O2_EDITOR)
             ${o2Framework_INCLUDES}
     )
 
-    target_precompile_headers(o2Editor PUBLIC "Editor/Sources/o2Editor/stdafx.h")
+    target_precompile_headers(o2Editor PRIVATE "Editor/Sources/o2Editor/stdafx.h")
     target_compile_definitions(o2Editor PUBLIC ${O2_COMPILE_DEFINITIONS})
     target_link_libraries(o2Editor PUBLIC o2Framework)
 
