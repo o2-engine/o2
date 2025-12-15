@@ -244,8 +244,9 @@ namespace o2
         // Returns regular or editor drawables by current context
         Vector<Ref<IDbgDrawable>>& GetCurrentScopeDrawables();
 
-        friend class Singleton<Debug>;
-        friend class BaseApplication;
         friend class Application;
+        friend class BaseApplication;
+        friend class Integration;
+        friend class Singleton<Debug>;
     };
 }

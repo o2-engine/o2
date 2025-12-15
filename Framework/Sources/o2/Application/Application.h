@@ -1,12 +1,6 @@
 #pragma once
 
-#include "o2/Events/CursorAreaEventsListenersLayer.h"
-#include "o2/Utils/Function/Function.h"
-#include "o2/Utils/Math/Vector2.h"
-#include "o2/Utils/Property.h"
-#include "o2/Utils/Singleton.h"
-#include "o2/Utils/System/Time/Timer.h"
-#include "o2/Utils/Types/String.h"
+#include "o2/Integration.h"
 
 #if defined PLATFORM_WINDOWS
 #include "o2/Application/Windows/ApplicationBase.h"
@@ -27,27 +21,10 @@
 
 namespace o2
 {
-    FORWARD_CLASS_REF(Assets);
-    FORWARD_CLASS_REF(EventSystem);
-    FORWARD_CLASS_REF(FileSystem);
-    FORWARD_CLASS_REF(Input);
-    FORWARD_CLASS_REF(LogStream);
-    FORWARD_CLASS_REF(PhysicsWorld);
-    FORWARD_CLASS_REF(ProjectConfig);
-    FORWARD_CLASS_REF(Render);
-    FORWARD_CLASS_REF(Scene);
-    FORWARD_CLASS_REF(TaskManager);
-    FORWARD_CLASS_REF(Time);
-    FORWARD_CLASS_REF(UIManager);
-
-#if IS_SCRIPTING_SUPPORTED
-    FORWARD_CLASS_REF(ScriptEngine);
-#endif
-
-    // -----------
-    // Application
-    // -----------
-    class Application: public Singleton<Application>, public IObject, public ApplicationBase
+    // -------------------------------------------------------------------------
+	// Application. Exdends integration interface, used to handle engine systems
+	// -------------------------------------------------------------------------
+    class Application: public Singleton<Application>, public ApplicationBase, public Integration
     {
     public:
         PROPERTIES(Application);
@@ -63,12 +40,8 @@ namespace o2
         Function<void()> onDeactivated; // On deactivated event callbacks
         Function<void()> onStarted;     // On started event callbacks
         Function<void()> onClosing;     // On closing event callbacks
-        Function<void()> onResizing;    // On resized app window callbacks. Ignoring on mobiles/tables
-        Function<void()> onMoving;      // On moving app window callbacks. Ignoring on mobiles/tables
-
-    public:
-        int maxFPS = 600;  // Maximum frames per second
-        int fixedFPS = 60; // Fixed frames per second
+        Function<void()> onResizing;    // On resized app window callbacks. Ignoring on mobiles/tablets
+        Function<void()> onMoving;      // On moving app window callbacks. Ignoring on mobiles/tablets
 
     public:
         // Default constructor
@@ -76,9 +49,6 @@ namespace o2
 
         // Destructor 
         virtual ~Application();
-
-        // Returns pointer to log object
-        virtual const Ref<LogStream>& GetLog() const;
 
         // Shutting down application
         virtual void Shutdown();
@@ -139,18 +109,12 @@ namespace o2
 
         // Returns is cursor infinite mode enabled
         virtual bool IsCursorInfiniteModeOn() const;
-
-        // Is application run in editor
-        virtual bool IsEditor() const;
-
-        // Returns application's path
-        virtual String GetBinPath() const;
         
         // Returns graphics scale
-        virtual float GetGraphicsScale() const;
+		virtual float GetGraphicsScale() const;
 
-        // Returns is application ready to use
-        static bool IsReady();
+		// Returns application's path
+		virtual String GetBinPath() const;
 
         IOBJECT(Application);
 
@@ -200,130 +164,47 @@ namespace o2
         virtual void Launch();
 
 #endif
-
     protected:
-        bool mReady = false; // Are all systems ready
-
-        Ref<Assets>        mAssets;        // Assets
-        Ref<EventSystem>   mEventSystem;   // Events processing system
-        Ref<FileSystem>    mFileSystem;    // File system
-        Ref<Input>         mInput;         // Whole application user input message
-        Ref<LogStream>     mLog;           // Log stream with id "app", using only for application messages
-        Ref<PhysicsWorld>  mPhysics;       // Physics
-        Ref<ProjectConfig> mProjectConfig; // Project config
-        Ref<Render>        mRender;        // Graphics render
-        Ref<Scene>         mScene;         // Scene
-        Ref<TaskManager>   mTaskManager;   // Tasks manager
-        Ref<Time>          mTime;          // Time utilities
-        Ref<UIManager>     mUIManager;     // UI manager>
-
-#if IS_SCRIPTING_SUPPORTED
-        Ref<ScriptEngine>  mScriptingEngine; // Scripting engine
-#endif
-
-        Timer mTimer; // Timer for detecting delta time for update
-
         bool  mCursorInfiniteModeEnabled = false; // Is cursor infinite mode enabled
         Vec2F mCursorCorrectionDelta;             // Cursor corrections delta - result of infinite cursors offset
-
-        float mAccumulatedDT = 0.0f; // Accumulated delta time for fixed FPS update
-        
-        Ref<CursorAreaEventListenersLayer> mMainListenersLayer; // Main listeners layer, required for processing default scaled camera
         
         float mGraphicsScale = 1.0f; // Application graphics scale. Used in mac for retina displays
 
         Vec2I  mWindowedSize; // Size of window
 
-    protected:
-        // Basic initialization for all platforms
-        virtual void BasicInitialize();
-        
+    protected:        
         // Platform-specific initializations
-        void InitializePlatform();
-        
-        // Deinitializes application
-        virtual void Deinitialize();
-
-        // It is called when application frame resized
-        virtual void OnResized(const Vec2I& size);
-
-        // Updates scene
-        virtual void UpdateScene(float dt);
-
-        // Updates scene with fixed delta time
-        virtual void FixedUpdateScene(float dt);
-
-        // Before update physics
-        virtual void PreUpdatePhysics();
-
-        // Updates physics
-        virtual void UpdatePhysics(float dt);
-
-        // After update physics
-        virtual void PostUpdatePhysics();
-
-        // Updates task manager
-        virtual void UpdateTaskManager(float dt);
-
-        // Draws scene
-        virtual void DrawScene();
-
-        // Updates event system
-        virtual void UpdateEventSystem();
-
-        // Post updates event system
-        virtual void PostUpdateEventSystem();
-
-        // Draws UI manager
-        virtual void DrawUIManager();
-
-        // Draws debug
-        virtual void DrawDebug();
-
-        // Updates debug
-        virtual void UpdateDebug(float dt);
-
-        // Calling on updating
-        virtual void OnUpdate(float dt);
-
-        // Calling on updating by fixed FPS
-        virtual void OnFixedUpdate(float dt);
-
-        // Calling on drawing
-        virtual void OnDraw();
-
-        // Calling when application activated
-        virtual void OnActivated();
-
-        // Calling when application deactivated
-        virtual void OnDeactivated();
-
-        // Calling when application is starting
-        virtual void OnStarted();
-
-        // Calling when application is closing
-        virtual void OnClosing();
-
-        // Calling when application window resized. Ignoring on mobiles/tablets
-        virtual void OnResizing();
-
-        // Calling when application window moved. Ignoring on mobiles/tablets
-        virtual void OnMoved();
-
-        // Initializes all systems and log. Call it when creating applications
-        virtual void InitalizeSystems();
-
-        // Deinitializing systems
-        virtual void DeinitializeSystems();
-
-        // Processing frame update, drawing and input messages
-        virtual void ProcessFrame();
+        void InitializePlatform() override;
 
         // Checks that cursor is near border and moves to opposite border if needs
         void CheckCursorInfiniteMode();
 
         // Platform-specific window size setting implementation
-        void SetWindowSizePlatform(const Vec2I& size);
+		void SetWindowSizePlatform(const Vec2I& size);
+
+		// Processing frame update, drawing and input messages
+		void ProcessFrame() override;
+
+		// It is called when application frame resized
+		void OnResized(const Vec2I& size) override;
+
+		// Calling when application activated
+        virtual void OnActivated() {}
+
+		// Calling when application deactivated
+        virtual void OnDeactivated() {}
+
+		// Calling when application is starting
+        virtual void OnStarted() {}
+
+		// Calling when application is closing
+        virtual void OnClosing() {}
+
+		// Calling when application window resized. Ignoring on mobiles/tablets
+        virtual void OnResizing() {}
+
+		// Calling when application window moved. Ignoring on mobiles/tablets
+        virtual void OnMoved() {}
 
         friend class WndProcFunc;
         friend struct ApplicationPlatformWrapper;
@@ -334,8 +215,8 @@ namespace o2
 CLASS_BASES_META(o2::Application)
 {
     BASE_CLASS(o2::Singleton<Application>);
-    BASE_CLASS(o2::IObject);
     BASE_CLASS(o2::ApplicationBase);
+    BASE_CLASS(o2::Integration);
 }
 END_META;
 CLASS_FIELDS_META(o2::Application)
@@ -352,29 +233,8 @@ CLASS_FIELDS_META(o2::Application)
     FIELD().PUBLIC().NAME(onClosing);
     FIELD().PUBLIC().NAME(onResizing);
     FIELD().PUBLIC().NAME(onMoving);
-    FIELD().PUBLIC().DEFAULT_VALUE(600).NAME(maxFPS);
-    FIELD().PUBLIC().DEFAULT_VALUE(60).NAME(fixedFPS);
-    FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mReady);
-    FIELD().PROTECTED().NAME(mAssets);
-    FIELD().PROTECTED().NAME(mEventSystem);
-    FIELD().PROTECTED().NAME(mFileSystem);
-    FIELD().PROTECTED().NAME(mInput);
-    FIELD().PROTECTED().NAME(mLog);
-    FIELD().PROTECTED().NAME(mPhysics);
-    FIELD().PROTECTED().NAME(mProjectConfig);
-    FIELD().PROTECTED().NAME(mRender);
-    FIELD().PROTECTED().NAME(mScene);
-    FIELD().PROTECTED().NAME(mTaskManager);
-    FIELD().PROTECTED().NAME(mTime);
-    FIELD().PROTECTED().NAME(mUIManager);
-#if  IS_SCRIPTING_SUPPORTED
-    FIELD().PROTECTED().NAME(mScriptingEngine);
-#endif
-    FIELD().PROTECTED().NAME(mTimer);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mCursorInfiniteModeEnabled);
     FIELD().PROTECTED().NAME(mCursorCorrectionDelta);
-    FIELD().PROTECTED().DEFAULT_VALUE(0.0f).NAME(mAccumulatedDT);
-    FIELD().PROTECTED().NAME(mMainListenersLayer);
     FIELD().PROTECTED().DEFAULT_VALUE(1.0f).NAME(mGraphicsScale);
     FIELD().PROTECTED().NAME(mWindowedSize);
 }
@@ -383,7 +243,6 @@ CLASS_METHODS_META(o2::Application)
 {
 
     FUNCTION().PUBLIC().CONSTRUCTOR(RefCounter*);
-    FUNCTION().PUBLIC().SIGNATURE(const Ref<LogStream>&, GetLog);
     FUNCTION().PUBLIC().SIGNATURE(void, Shutdown);
     FUNCTION().PUBLIC().SIGNATURE(void, SetFullscreen, bool);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsFullScreen);
@@ -404,10 +263,8 @@ CLASS_METHODS_META(o2::Application)
     FUNCTION().PUBLIC().SIGNATURE(void, SetCursorPosition, const Vec2F&);
     FUNCTION().PUBLIC().SIGNATURE(void, SetCursorInfiniteMode, bool);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsCursorInfiniteModeOn);
-    FUNCTION().PUBLIC().SIGNATURE(bool, IsEditor);
-    FUNCTION().PUBLIC().SIGNATURE(String, GetBinPath);
     FUNCTION().PUBLIC().SIGNATURE(float, GetGraphicsScale);
-    FUNCTION().PUBLIC().SIGNATURE_STATIC(bool, IsReady);
+    FUNCTION().PUBLIC().SIGNATURE(String, GetBinPath);
 #if  defined PLATFORM_WINDOWS
     FUNCTION().PUBLIC().SIGNATURE(void, Initialize);
     FUNCTION().PUBLIC().SIGNATURE(void, Launch);
@@ -431,36 +288,17 @@ CLASS_METHODS_META(o2::Application)
     FUNCTION().PUBLIC().SIGNATURE(void, Initialize);
     FUNCTION().PUBLIC().SIGNATURE(void, Launch);
 #endif
-    FUNCTION().PROTECTED().SIGNATURE(void, BasicInitialize);
     FUNCTION().PROTECTED().SIGNATURE(void, InitializePlatform);
-    FUNCTION().PROTECTED().SIGNATURE(void, Deinitialize);
+    FUNCTION().PROTECTED().SIGNATURE(void, CheckCursorInfiniteMode);
+    FUNCTION().PROTECTED().SIGNATURE(void, SetWindowSizePlatform, const Vec2I&);
+    FUNCTION().PROTECTED().SIGNATURE(void, ProcessFrame);
     FUNCTION().PROTECTED().SIGNATURE(void, OnResized, const Vec2I&);
-    FUNCTION().PROTECTED().SIGNATURE(void, UpdateScene, float);
-    FUNCTION().PROTECTED().SIGNATURE(void, FixedUpdateScene, float);
-    FUNCTION().PROTECTED().SIGNATURE(void, PreUpdatePhysics);
-    FUNCTION().PROTECTED().SIGNATURE(void, UpdatePhysics, float);
-    FUNCTION().PROTECTED().SIGNATURE(void, PostUpdatePhysics);
-    FUNCTION().PROTECTED().SIGNATURE(void, UpdateTaskManager, float);
-    FUNCTION().PROTECTED().SIGNATURE(void, DrawScene);
-    FUNCTION().PROTECTED().SIGNATURE(void, UpdateEventSystem);
-    FUNCTION().PROTECTED().SIGNATURE(void, PostUpdateEventSystem);
-    FUNCTION().PROTECTED().SIGNATURE(void, DrawUIManager);
-    FUNCTION().PROTECTED().SIGNATURE(void, DrawDebug);
-    FUNCTION().PROTECTED().SIGNATURE(void, UpdateDebug, float);
-    FUNCTION().PROTECTED().SIGNATURE(void, OnUpdate, float);
-    FUNCTION().PROTECTED().SIGNATURE(void, OnFixedUpdate, float);
-    FUNCTION().PROTECTED().SIGNATURE(void, OnDraw);
     FUNCTION().PROTECTED().SIGNATURE(void, OnActivated);
     FUNCTION().PROTECTED().SIGNATURE(void, OnDeactivated);
     FUNCTION().PROTECTED().SIGNATURE(void, OnStarted);
     FUNCTION().PROTECTED().SIGNATURE(void, OnClosing);
     FUNCTION().PROTECTED().SIGNATURE(void, OnResizing);
     FUNCTION().PROTECTED().SIGNATURE(void, OnMoved);
-    FUNCTION().PROTECTED().SIGNATURE(void, InitalizeSystems);
-    FUNCTION().PROTECTED().SIGNATURE(void, DeinitializeSystems);
-    FUNCTION().PROTECTED().SIGNATURE(void, ProcessFrame);
-    FUNCTION().PROTECTED().SIGNATURE(void, CheckCursorInfiniteMode);
-    FUNCTION().PROTECTED().SIGNATURE(void, SetWindowSizePlatform, const Vec2I&);
 }
 END_META;
 // --- END META ---
