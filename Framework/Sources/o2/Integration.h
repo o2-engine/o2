@@ -8,6 +8,10 @@
 #include "o2/Utils/System/Time/Timer.h"
 #include "o2/Utils/Types/String.h"
 
+// Integration access macros
+#define o2Integration o2::Integration::Instance()
+
+
 namespace o2
 {
     FORWARD_CLASS_REF(Assets);
@@ -30,7 +34,7 @@ namespace o2
     // ----------------------------------------------------------------------------------
 	// o2 engine integration class. Initializes and holds main systems, updates and draws
 	// ----------------------------------------------------------------------------------
-    class Integration: public IObject
+    class Integration: public IObject, public Singleton<Integration>
     {
     public:
         int maxFPS = 600;  // Maximum frames per second
@@ -38,7 +42,7 @@ namespace o2
 
     public:
         // Default constructor
-        Integration();
+        Integration(RefCounter* refCounter);
 
         // Destructor 
         virtual ~Integration();
@@ -50,7 +54,34 @@ namespace o2
         virtual bool IsEditor() const;
 
         // Returns is integration ready to use
-        bool IsReady();
+		bool IsReady();
+
+		// Sets inside content size
+        virtual void SetContentSize(const Vec2I& size) {}
+
+		// Returns inside content size
+        virtual Vec2I GetContentSize() const { return Vec2I(); }
+
+		// Returns device screen resolution
+        virtual Vec2I GetScreenResolution() const { return Vec2I(); }
+
+		// Sets cursor type
+        virtual void SetCursor(CursorType type) {}
+
+		// Sets cursor position
+        virtual void SetCursorPosition(const Vec2F& position) {}
+
+		// Sets cursor infinite moves mode
+        virtual void SetCursorInfiniteMode(bool enabled) {}
+
+		// Returns is cursor infinite mode enabled
+		virtual bool IsCursorInfiniteModeOn() const { return false; }
+
+		// Returns graphics scale
+		virtual float GetGraphicsScale() const { return 1.0f; }
+
+		// Returns application's path
+		virtual String GetBinPath() const { return String(); }
 
         IOBJECT(Integration);
 
@@ -80,75 +111,105 @@ namespace o2
         
         Ref<CursorAreaEventListenersLayer> mMainListenersLayer; // Main listeners layer, required for processing default scaled camera
 
-    protected:
-		// Initializes integration
-        virtual void Initialize();
+	protected:
+		// Basic initialization for all platforms
+		virtual void BasicInitialize();
 
-        // Basic initialization for all platforms
-        virtual void BasicInitialize();
-        
-        // Platform-specific initializations
+		// Platform-specific initializations
 		virtual void InitializePlatform();
 
 		// Initializes all systems and log. Called when creating integration
 		virtual void InitalizeSystems();
-        
-        // Deinitializes integration
+
+		// Initializes render system
+		virtual void InitiazeRender();
+
+		// Initializes UI styles
+		virtual void InitilizeUIStyles();
+
+		// Deinitializes integration
 		virtual void Deinitialize();
 
 		// Deinitializing systems
 		virtual void DeinitializeSystems();
 
-        // It is called when integration frame resized
+		// It is called when integration frame resized
 		virtual void OnResized(const Vec2I& size);
 
 		// Processing frame update, drawing and input messages
 		virtual void ProcessFrame();
 
-        // Updates scene
-        virtual void UpdateScene(float dt);
+		// Calculates delta time and syncs to max FPS
+		virtual void CalculateAndSyncFPS(float& dt, float& realDt);
 
-        // Updates scene with fixed delta time
-        virtual void FixedUpdateScene(float dt);
+		// First stage of frame update
+		virtual void PreUpdateFrame(float dt, float realDt);
 
-        // Before update physics
-        virtual void PreUpdatePhysics();
+		// Updates scene with fixed delta time
+		virtual void UpdateFrameFixed(float dt);
 
-        // Updates physics
-        virtual void UpdatePhysics(float dt);
+		// Main stage of frame update
+		virtual void MainUpdateFrame(float dt);
 
-        // After update physics
-        virtual void PostUpdatePhysics();
+		// Pre drawing frame
+        virtual void PreDrawFrame();
 
-        // Updates task manager
-        virtual void UpdateTaskManager(float dt);
+		// Drawing frame
+		virtual void DrawFrame();
 
-        // Draws scene
-        virtual void DrawScene();
+		// Post drawing frame
+		virtual void PostDrawFrame();
 
-        // Updates event system
-        virtual void UpdateEventSystem();
+		// Last stage of frame update
+		virtual void PostUpdateFrame(float dt);
 
-        // Post updates event system
-        virtual void PostUpdateEventSystem();
+		// Updates scene
+		virtual void UpdateScene(float dt);
 
-        // Draws UI manager
-        virtual void DrawUIManager();
+		// Updates scene with fixed delta time
+		virtual void FixedUpdateScene(float dt);
 
-        // Draws debug
-        virtual void DrawDebug();
+		// Before update physics
+		virtual void PreUpdatePhysics();
 
-        // Updates debug
-        virtual void UpdateDebug(float dt);
+		// Updates physics
+		virtual void UpdatePhysics(float dt);
 
-        // Calling on updating
-        virtual void OnUpdate(float dt) {}
+		// After update physics
+		virtual void PostUpdatePhysics();
 
-        // Calling on updating by fixed FPS
-        virtual void OnFixedUpdate(float dt) {}
+		// Updates task manager
+		virtual void UpdateTaskManager(float dt);
 
-        // Calling on drawing
-        virtual void OnDraw() {}
+		// Draws scene
+		virtual void DrawScene();
+
+		// Updates event system
+		virtual void UpdateEventSystem();
+
+		// Post updates event system
+		virtual void PostUpdateEventSystem();
+
+		// Draws UI manager
+		virtual void DrawUIManager();
+
+		// Draws debug
+		virtual void DrawDebug();
+
+		// Updates debug
+		virtual void UpdateDebug(float dt);
+
+		// Calling on updating
+		virtual void OnUpdate(float dt) {}
+
+		// Calling on updating by fixed FPS
+		virtual void OnFixedUpdate(float dt) {}
+
+		// Calling on drawing
+		virtual void OnDraw() {}
+
+		friend class WndProcFunc;
+		friend struct ApplicationPlatformWrapper;
     };
 }
 // --- META ---
@@ -156,6 +217,7 @@ namespace o2
 CLASS_BASES_META(o2::Integration)
 {
     BASE_CLASS(o2::IObject);
+    BASE_CLASS(o2::Singleton<Integration>);
 }
 END_META;
 CLASS_FIELDS_META(o2::Integration)
@@ -186,18 +248,36 @@ END_META;
 CLASS_METHODS_META(o2::Integration)
 {
 
-    FUNCTION().PUBLIC().CONSTRUCTOR();
+    FUNCTION().PUBLIC().CONSTRUCTOR(RefCounter*);
     FUNCTION().PUBLIC().SIGNATURE(const Ref<LogStream>&, GetLog);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsEditor);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsReady);
-    FUNCTION().PROTECTED().SIGNATURE(void, Initialize);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetContentSize, const Vec2I&);
+    FUNCTION().PUBLIC().SIGNATURE(Vec2I, GetContentSize);
+    FUNCTION().PUBLIC().SIGNATURE(Vec2I, GetScreenResolution);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetCursor, CursorType);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetCursorPosition, const Vec2F&);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetCursorInfiniteMode, bool);
+    FUNCTION().PUBLIC().SIGNATURE(bool, IsCursorInfiniteModeOn);
+    FUNCTION().PUBLIC().SIGNATURE(float, GetGraphicsScale);
+    FUNCTION().PUBLIC().SIGNATURE(String, GetBinPath);
     FUNCTION().PROTECTED().SIGNATURE(void, BasicInitialize);
     FUNCTION().PROTECTED().SIGNATURE(void, InitializePlatform);
     FUNCTION().PROTECTED().SIGNATURE(void, InitalizeSystems);
+    FUNCTION().PROTECTED().SIGNATURE(void, InitiazeRender);
+    FUNCTION().PROTECTED().SIGNATURE(void, InitilizeUIStyles);
     FUNCTION().PROTECTED().SIGNATURE(void, Deinitialize);
     FUNCTION().PROTECTED().SIGNATURE(void, DeinitializeSystems);
     FUNCTION().PROTECTED().SIGNATURE(void, OnResized, const Vec2I&);
     FUNCTION().PROTECTED().SIGNATURE(void, ProcessFrame);
+    FUNCTION().PROTECTED().SIGNATURE(void, CalculateAndSyncFPS, float&, float&);
+    FUNCTION().PROTECTED().SIGNATURE(void, PreUpdateFrame, float, float);
+    FUNCTION().PROTECTED().SIGNATURE(void, UpdateFrameFixed, float);
+    FUNCTION().PROTECTED().SIGNATURE(void, MainUpdateFrame, float);
+    FUNCTION().PROTECTED().SIGNATURE(void, PreDrawFrame);
+    FUNCTION().PROTECTED().SIGNATURE(void, DrawFrame);
+    FUNCTION().PROTECTED().SIGNATURE(void, PostDrawFrame);
+    FUNCTION().PROTECTED().SIGNATURE(void, PostUpdateFrame, float);
     FUNCTION().PROTECTED().SIGNATURE(void, UpdateScene, float);
     FUNCTION().PROTECTED().SIGNATURE(void, FixedUpdateScene, float);
     FUNCTION().PROTECTED().SIGNATURE(void, PreUpdatePhysics);

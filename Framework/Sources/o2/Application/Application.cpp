@@ -6,7 +6,7 @@ namespace o2
     DECLARE_SINGLETON(Application);
 
     Application::Application(RefCounter* refCounter):
-        Singleton<Application>(refCounter)
+        Integration(refCounter)
     {}
 
     Application::~Application()

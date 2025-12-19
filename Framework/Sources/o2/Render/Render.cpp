@@ -1,10 +1,10 @@
 #include "o2/stdafx.h"
 #include "o2/Render/Render.h"
 
-#include "o2/Application/Application.h"
 #include "o2/Application/Input.h"
 #include "o2/Assets/Assets.h"
 #include "o2/Assets/Types/AtlasAsset.h"
+#include "o2/Integration.h"
 #include "o2/Render/Font.h"
 #include "o2/Render/Mesh.h"
 #include "o2/Render/Sprite.h"
@@ -28,7 +28,7 @@ namespace o2
 
         InitializePlatform();
 
-        mResolution = o2Application.GetContentSize();
+        mResolution = o2Integration.GetContentSize();
         mMaxTextureSize = GetPlatformMaxTextureSize();
         mDPI = GetPlatformDPI();
 
@@ -340,7 +340,7 @@ namespace o2
 
     void Render::EnableScissorTest(const RectI& rect)
     {
-        float scale = mCurrentRenderTarget ? 1.0f : o2Application.GetGraphicsScale();
+        float scale = mCurrentRenderTarget ? 1.0f : o2Integration.GetGraphicsScale();
         Vec2I resolution = Vec2I(Vec2F(mCurrentResolution)*scale);
         RectI invRect(rect.left*2, -rect.top*2, rect.right*2, -rect.bottom*2);
         
@@ -499,7 +499,7 @@ namespace o2
 
     void Render::OnFrameResized()
     {
-        mResolution = o2Application.GetContentSize();
+        mResolution = o2Integration.GetContentSize();
     }
 
     Vec2I Render::GetResolution() const
@@ -590,7 +590,7 @@ namespace o2
 
     RectI Render::CalculateScreenSpaceScissorRect(const RectF& cameraSpaceScissorRect) const
     {
-        float scale = mCurrentRenderTarget ? o2Application.GetGraphicsScale() : 1.0f;
+        float scale = mCurrentRenderTarget ? o2Integration.GetGraphicsScale() : 1.0f;
 		Vec2I resolution = Vec2I(Vec2F(mCurrentResolution) * scale);
         
         Basis defaultCameraBasis((Vec2F)resolution*-0.5f, Vec2F((float)resolution.x, 0.0f), Vec2F(0.0f, (float)resolution.y));

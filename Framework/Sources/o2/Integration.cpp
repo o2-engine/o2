@@ -46,16 +46,14 @@ namespace o2
     FORWARD_REF_IMPL(ScriptEngine);
 #endif
 
-	Integration::Integration()
+	DECLARE_SINGLETON(Integration);
+
+	Integration::Integration(RefCounter* refCounter):
+        Singleton<Integration>(refCounter)
     {}
 
     Integration::~Integration()
     {}
-
-	void Integration::Initialize()
-	{
-        BasicInitialize();
-	}
 
 	void Integration::BasicInitialize()
     {
@@ -63,11 +61,8 @@ namespace o2
 
         InitalizeSystems();
         InitializePlatform();
-
-        mRender = mmake<Render>();
-
-        o2Debug.InitializeFont();
-        o2UI.TryLoadStyle();
+        InitiazeRender();
+		InitilizeUIStyles();
 
         mReady = true;
     }
@@ -161,7 +156,19 @@ namespace o2
         mLog->Out("Initialized");
     }
 
-    void Integration::DeinitializeSystems()
+	void Integration::InitiazeRender()
+	{
+		mRender = mmake<Render>();
+
+		o2Debug.InitializeFont();
+	}
+
+	void Integration::InitilizeUIStyles()
+	{
+		o2UI.TryLoadStyle();
+	}
+
+	void Integration::DeinitializeSystems()
     {
         Scene::DestroySingleton(mScene);
         Input::DestroySingleton(mInput);
@@ -186,82 +193,112 @@ namespace o2
             return;
 
         float dt = 0, realDt = 0;
+		CalculateAndSyncFPS(dt, realDt);
 
-        {
-            PROFILE_SAMPLE("ProcessFrame:Begin");
+		PreUpdateFrame(dt, realDt);
+        MainUpdateFrame(dt);
+		UpdateFrameFixed(dt);
 
-            float maxFPSDeltaTime = 1.0f/(float)maxFPS;
+		PreDrawFrame();
+        DrawFrame();
+        PostDrawFrame();
 
-            realDt = mTimer.GetDeltaTime();
-
-            if (realDt < maxFPSDeltaTime)
-            {
-                std::this_thread::sleep_for(std::chrono::milliseconds((int)((maxFPSDeltaTime - realDt)*1000.0f)));
-                realDt = maxFPSDeltaTime;
-            }
-
-            dt = Math::Clamp(realDt, 0.001f, 0.05f);
-        }
-
-        mInput->PreUpdate();
-
-        mTime->Update(realDt);
-        UpdateDebug(dt);
-        UpdateTaskManager(dt);
-        UpdateEventSystem();
-
-        mRender->Begin();
-
-        OnUpdate(dt);
-        UpdateScene(dt);
-
-        {
-            PROFILE_SAMPLE("ProcessFrame:Fixed update loop");
-
-            mAccumulatedDT += dt;
-            float fixedDT = 1.0f/(float)fixedFPS;
-            while (mAccumulatedDT > fixedDT)
-            {
-                OnFixedUpdate(fixedDT);
-                FixedUpdateScene(fixedDT);
-
-                PreUpdatePhysics();
-                UpdatePhysics(fixedDT);
-                PostUpdatePhysics();
-
-                mAccumulatedDT -= fixedDT;
-            }
-        }
-
-        PostUpdateEventSystem();
-        
-        mMainListenersLayer->OnBeginDraw();
-        mRender->SetCamera(Camera());
-        mMainListenersLayer->camera = o2Render.GetCamera();
-
-        DrawScene();
-        OnDraw();
-
-        DrawUIManager();
-        DrawDebug();
-
-        mMainListenersLayer->OnEndDraw();
-        mMainListenersLayer->OnDrawn(Camera::Default().GetBasis());
-        
-        if (o2Input.IsKeyDown(VK_F1))
-            mRender->DrawCross(o2Input.cursorPos.Get(), 20, Color4::Red());
-
-        mRender->End();
-
-        mInput->Update(dt);
-        mUIManager->Update();
-
-        mAssets->CheckAssetsUnload();
+		PostUpdateFrame(dt);
 
         PROFILE_FRAME();
     }
 
-    void Integration::DrawScene()
+	void Integration::CalculateAndSyncFPS(float& dt, float& realDt)
+	{
+		PROFILE_SAMPLE("ProcessFrame:Begin");
+
+		float maxFPSDeltaTime = 1.0f / (float)maxFPS;
+
+		realDt = mTimer.GetDeltaTime();
+
+		if (realDt < maxFPSDeltaTime)
+		{
+			std::this_thread::sleep_for(std::chrono::milliseconds((int)((maxFPSDeltaTime - realDt) * 1000.0f)));
+			realDt = maxFPSDeltaTime;
+		}
+
+		dt = Math::Clamp(realDt, 0.001f, 0.05f);
+	}
+
+	void Integration::PreUpdateFrame(float dt, float realDt)
+	{
+		mInput->PreUpdate();
+
+		mTime->Update(realDt);
+		UpdateDebug(dt);
+		UpdateTaskManager(dt);
+		UpdateEventSystem();
+	}
+
+	void Integration::UpdateFrameFixed(float dt)
+	{
+		PROFILE_SAMPLE("ProcessFrame:Fixed update loop");
+
+		mAccumulatedDT += dt;
+		float fixedDT = 1.0f / (float)fixedFPS;
+		while (mAccumulatedDT > fixedDT)
+		{
+			OnFixedUpdate(fixedDT);
+			FixedUpdateScene(fixedDT);
+
+			PreUpdatePhysics();
+			UpdatePhysics(fixedDT);
+			PostUpdatePhysics();
+
+			mAccumulatedDT -= fixedDT;
+		}
+	}
+
+	void Integration::MainUpdateFrame(float dt)
+	{
+		OnUpdate(dt);
+		UpdateScene(dt);
+
+		PostUpdateEventSystem();
+	}
+
+	void Integration::PreDrawFrame()
+	{
+		mRender->Begin();
+
+		mMainListenersLayer->OnBeginDraw();
+		mRender->SetCamera(Camera());
+		mMainListenersLayer->camera = o2Render.GetCamera();
+	}
+
+	void Integration::DrawFrame()
+	{
+		DrawScene();
+		OnDraw();
+		DrawUIManager();
+		DrawDebug();
+	}
+
+	void Integration::PostDrawFrame()
+	{
+		mMainListenersLayer->OnEndDraw();
+		mMainListenersLayer->OnDrawn(Camera::Default().GetBasis());
+
+		if (o2Input.IsKeyDown(VK_F1))
+			mRender->DrawCross(o2Input.cursorPos.Get(), 20, Color4::Red());
+
+		mRender->End();
+	}
+
+	void Integration::PostUpdateFrame(float dt)
+	{
+		mInput->Update(dt);
+		mUIManager->Update();
+
+		mAssets->CheckAssetsUnload();
+	}
+
+	void Integration::DrawScene()
     {
         PROFILE_SAMPLE_FUNC();
         mScene->Draw();

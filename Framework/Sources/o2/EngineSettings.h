@@ -37,6 +37,12 @@
 #define IS_SCRIPTING_SUPPORTED false
 #endif
 
+#if defined(O2_PLATFORM_INITIALIZATION_ENABLED)
+#define IS_PLATFORM_INITIALIZATION_ENABLED true
+#else
+#define IS_PLATFORM_INITIALIZATION_ENABLED false
+#endif
+
 // Current working platform
 o2::Platform GetEnginePlatform();
 

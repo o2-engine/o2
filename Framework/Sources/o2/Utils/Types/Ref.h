@@ -344,10 +344,10 @@ namespace o2
 
 #if ENABLE_MEMORY_MANAGE
     // Special macro for making new object and returning reference to it with storing location and line of creation for debug
-#define mmake RefMaker(__FILE__, __LINE__).Make
+#define mmake o2::RefMaker(__FILE__, __LINE__).Make
 #else
     // Special macro for making new object and returning reference to it with storing location and line of creation for debug
-#define mmake RefMaker().Make
+#define mmake o2::RefMaker().Make
 #endif
 
     // ------------------------------

@@ -3,6 +3,7 @@
 #include "o2/Utils/Reflection/Enum.h"
 #include "o2/Application/VKCodes.h"
 #include <cstdint>
+
 namespace o2
 {
     template<typename... Types>
@@ -20,7 +21,11 @@ namespace o2
     using UInt   = unsigned int;
     using ULong  = unsigned long;
 
+#if __cplusplus >= 201703L
     using Byte = std::byte;
+#else
+    using Byte = unsigned char;
+#endif
 
     using VertexIndex = unsigned int;
 
