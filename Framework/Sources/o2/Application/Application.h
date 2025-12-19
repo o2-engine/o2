@@ -17,14 +17,14 @@
 #endif
 
 // Application access macros
-#define o2Application o2::Application::Instance()
+#define o2Application dynamic_cast<o2::Application&>(o2Integration)
 
 namespace o2
 {
     // -------------------------------------------------------------------------
 	// Application. Exdends integration interface, used to handle engine systems
 	// -------------------------------------------------------------------------
-    class Application: public Singleton<Application>, public ApplicationBase, public Integration
+    class Application: public ApplicationBase, public Integration
     {
     public:
         PROPERTIES(Application);
@@ -90,31 +90,31 @@ namespace o2
         virtual String GetWindowCaption() const;
 
         // Sets inside content size
-        virtual void SetContentSize(const Vec2I& size);
+        void SetContentSize(const Vec2I& size) override;
 
         // Returns inside content size
-        virtual Vec2I GetContentSize() const;
+        Vec2I GetContentSize() const override;
 
         // Returns device screen resolution
-        virtual Vec2I GetScreenResolution() const;
+        Vec2I GetScreenResolution() const override;
 
         // Sets cursor type
-        virtual void SetCursor(CursorType type);
+        void SetCursor(CursorType type) override;
 
         // Sets cursor position
-        virtual void SetCursorPosition(const Vec2F& position);
+        void SetCursorPosition(const Vec2F& position) override;
 
         // Sets cursor infinite moves mode
-        virtual void SetCursorInfiniteMode(bool enabled);
+        void SetCursorInfiniteMode(bool enabled) override;
 
         // Returns is cursor infinite mode enabled
-        virtual bool IsCursorInfiniteModeOn() const;
+        bool IsCursorInfiniteModeOn() const override;
         
         // Returns graphics scale
-		virtual float GetGraphicsScale() const;
+		float GetGraphicsScale() const override;
 
 		// Returns application's path
-		virtual String GetBinPath() const;
+		String GetBinPath() const override;
 
         IOBJECT(Application);
 
@@ -214,7 +214,6 @@ namespace o2
 
 CLASS_BASES_META(o2::Application)
 {
-    BASE_CLASS(o2::Singleton<Application>);
     BASE_CLASS(o2::ApplicationBase);
     BASE_CLASS(o2::Integration);
 }

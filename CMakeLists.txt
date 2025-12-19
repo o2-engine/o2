@@ -26,6 +26,9 @@ option(O2_EDITOR "Enables o2 editor." ON)
 option(O2_ASAN "Enables ASAN (address sanitizer)." OFF)
 option(O2_TRACY "Enables Tracy profiling" ON)
 option(O2_MEMORY_ANALYZE "Enables memory analyzing (slows down)" OFF)
+option(O2_PLATFORM_INITIALIZATION_ENABLED "Enables platform initialization" ON)
+option(O2_ENABLE_LINK_ZLIB "Enables linking zlib library" ON)
+option(O2_ENABLE_LINK_LIBPNG "Enables linking libpng library" ON)
 
 # Common definitions
 set(O2_COMPILE_DEFINITIONS SCRIPTING_BACKEND_JERRYSCRIPT _CRT_SECURE_NO_WARNINGS)
@@ -62,6 +65,10 @@ endif()
 
 if (O2_MEMORY_ANALYZE)
     list(APPEND O2_COMPILE_DEFINITIONS MEMORY_ANALYZE_ENABLE)
+endif()
+
+if (O2_PLATFORM_INITIALIZATION_ENABLED)
+    list(APPEND O2_COMPILE_DEFINITIONS O2_PLATFORM_INITIALIZATION_ENABLED)
 endif()
 
 if (APPLE)
@@ -171,6 +178,14 @@ target_link_libraries(o2Framework
         spine-cpp
 )
 
+if (O2_ENABLE_LINK_LIBPNG)
+    target_link_libraries(o2Framework PUBLIC libpng)
+endif()
+
+if (O2_ENABLE_LINK_ZLIB)
+    target_link_libraries(o2Framework PUBLIC zlib)
+endif()
+
 if (O2_TRACY)
     list(APPEND o2Framework_INCLUDES "Framework/3rdPartyLibs/tracy/public")
     target_link_libraries(o2Framework PUBLIC Tracy::TracyClient)
@@ -247,7 +262,12 @@ add_custom_target(o2FrameworkCodegen
 add_dependencies(o2FrameworkCodegen o2CodeTool)
 
 # dependencies
-add_dependencies(o2Framework Box2D jerry-core jerry-ext jerry-port-default libpng FreeType)
+add_dependencies(o2Framework Box2D jerry-core jerry-ext jerry-port-default FreeType)
+
+if (O2_ENABLE_LINK_LIBPNG)
+    add_dependencies(o2Framework libpng)
+endif()
+
 add_dependencies(o2Framework o2CodeTool)
 add_dependencies(o2Framework o2CopyBuiltinAssets)
 add_dependencies(o2Framework o2FrameworkCodegen)

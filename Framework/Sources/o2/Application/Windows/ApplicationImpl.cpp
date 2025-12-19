@@ -290,7 +290,7 @@ namespace o2
 
     LRESULT WndProcFunc::WndProc(HWND wnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
     {
-        auto app = Application::InstancePtr();
+        auto& app = o2Application;
 
         POINT pt;
         RECT rt;
@@ -300,107 +300,107 @@ namespace o2
         ScreenToClient(wnd, &pt);
         Vec2F cursorPos = Vec2F((float)pt.x, (float)-pt.y);
 
-        if (app->mRender)
-            cursorPos -= Vec2F(Math::Round(app->mRender->mResolution.x*0.5f),
-                               Math::Round(-app->mRender->mResolution.y*0.5f));
+        if (app.mRender)
+            cursorPos -= Vec2F(Math::Round(app.mRender->mResolution.x*0.5f),
+                               Math::Round(-app.mRender->mResolution.y*0.5f));
 
         float wheelDelta;
 
-        if (app->IsReady())
+        if (app.IsReady())
         {
             switch (uMsg)
             {
             case WM_LBUTTONDOWN:
             case WM_TOUCH:
-            SetCapture(app->mHWnd);
-            app->mInput->OnCursorPressed(cursorPos);
+            SetCapture(app.mHWnd);
+            app.mInput->OnCursorPressed(cursorPos);
             break;
 
             case WM_LBUTTONUP:
-            app->mInput->OnCursorReleased();
+            app.mInput->OnCursorReleased();
             ReleaseCapture();
             break;
 
             case WM_RBUTTONDOWN:
-            SetCapture(app->mHWnd);
-            app->mInput->OnAltCursorPressed(cursorPos);
+            SetCapture(app.mHWnd);
+            app.mInput->OnAltCursorPressed(cursorPos);
             break;
 
             case WM_RBUTTONUP:
-            app->mInput->OnAltCursorReleased();
+            app.mInput->OnAltCursorReleased();
             ReleaseCapture();
             break;
 
             case WM_MBUTTONDOWN:
-            SetCapture(app->mHWnd);
-            app->mInput->OnAlt2CursorPressed(cursorPos);
+            SetCapture(app.mHWnd);
+            app.mInput->OnAlt2CursorPressed(cursorPos);
             break;
 
             case WM_MBUTTONUP:
-            app->mInput->OnAlt2CursorReleased();
+            app.mInput->OnAlt2CursorReleased();
             ReleaseCapture();
             break;
 
             case WM_KEYDOWN:
             case WM_SYSKEYDOWN:
             key = (int)wParam;
-            app->mInput->OnKeyPressed(key);
+            app.mInput->OnKeyPressed(key);
             break;
 
             case WM_KEYUP:
             case WM_SYSKEYUP:
-            app->mInput->OnKeyReleased((int)wParam);
+            app.mInput->OnKeyReleased((int)wParam);
             break;
 
             case WM_MOUSEMOVE:
-            app->mInput->OnCursorMoved(cursorPos, 0);
-            app->mInput->GetCursor()->delta -= app->mCursorCorrectionDelta;
-            app->mCursorCorrectionDelta = Vec2F();
+            app.mInput->OnCursorMoved(cursorPos, 0);
+            app.mInput->GetCursor()->delta -= app.mCursorCorrectionDelta;
+            app.mCursorCorrectionDelta = Vec2F();
             break;
 
             case WM_MOUSEWHEEL:
             wheelDelta = GET_WHEEL_DELTA_WPARAM(wParam);
-            app->mInput->OnMouseWheel(wheelDelta);
+            app.mInput->OnMouseWheel(wheelDelta);
             break;
 
             case WM_ACTIVATEAPP:
             case WM_ENABLE:
             if (wParam == TRUE)
             {
-                app->mActive = true;
-                app->OnActivated();
-                app->onActivated.Invoke();
+                app.mActive = true;
+                app.OnActivated();
+                app.onActivated.Invoke();
                 o2Events.OnApplicationActivated();
             }
             else
             {
-                app->mActive = false;
-                app->OnDeactivated();
-                app->onDeactivated.Invoke();
+                app.mActive = false;
+                app.OnDeactivated();
+                app.onDeactivated.Invoke();
                 o2Events.OnApplicationDeactivated();
             }
             break;
 
             case WM_SIZE:
-            GetWindowRect(app->mHWnd, &rt);
+            GetWindowRect(app.mHWnd, &rt);
             size.x = rt.right - rt.left; size.y = rt.bottom - rt.top;
 
-            if (size.x > 0 && size.y > 0 && size != app->mWindowedSize)
-                app->OnResized(size);
+            if (size.x > 0 && size.y > 0 && size != app.mWindowedSize)
+                app.OnResized(size);
 
-            app->ProcessFrame();
+            app.ProcessFrame();
 
             break;
 
             case WM_MOVE:
-            GetWindowRect(app->mHWnd, &rt);
+            GetWindowRect(app.mHWnd, &rt);
             pos.x = rt.left; pos.y = rt.top;
 
-            if (pos.x < 10000 && pos.y < 10000 && pos != app->mWindowedPos)
+            if (pos.x < 10000 && pos.y < 10000 && pos != app.mWindowedPos)
             {
-                app->mWindowedPos = pos;
-                app->OnMoved();
-                app->onMoving.Invoke();
+                app.mWindowedPos = pos;
+                app.OnMoved();
+                app.onMoving.Invoke();
             }
             break;
 
