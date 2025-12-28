@@ -90,11 +90,16 @@ set(BOX2D_VERSION 1)
 add_subdirectory(Box2D)
 
 # other libraries
-add_subdirectory(libpng)
 add_subdirectory(zlib)
 add_subdirectory(FreeType)
 add_subdirectory(pugixml)
 add_subdirectory(boost)
+
+# Prefer cocos2d-x external libpng (ext_png) when available (integrated build),
+# otherwise fall back to o2 bundled libpng (standalone build).
+if(NOT TARGET ext_png)
+    add_subdirectory(libpng)
+endif()
 
 # spine
 set(SPINE_SANITIZE OFF)
@@ -105,11 +110,14 @@ if(MSVC)
     target_compile_options(jerry-core PRIVATE "/MP")
     target_compile_options(jerry-ext PRIVATE "/MP")
     target_compile_options(jerry-port-default PRIVATE "/MP")
-    target_compile_options(libpng PRIVATE "/MP")
     target_compile_options(zlib PRIVATE "/MP")
     target_compile_options(FreeType PRIVATE "/MP")
     target_compile_options(pugixml PRIVATE "/MP")
     target_compile_options(spine-cpp PRIVATE "/MP")
+
+    if(TARGET libpng)
+        target_compile_options(libpng PRIVATE "/MP")
+    endif()
 endif()
 
 set_target_properties(Box2D PROPERTIES FOLDER o2/3rdPartyLibs)
@@ -117,11 +125,14 @@ set_target_properties(jerry-core PROPERTIES FOLDER o2/3rdPartyLibs)
 set_target_properties(jerry-ext PROPERTIES FOLDER o2/3rdPartyLibs)
 set_target_properties(jerry-port-default PROPERTIES FOLDER o2/3rdPartyLibs)
 set_target_properties(amalgam PROPERTIES FOLDER o2/3rdPartyLibs)
-set_target_properties(libpng PROPERTIES FOLDER o2/3rdPartyLibs)
 set_target_properties(zlib PROPERTIES FOLDER o2/3rdPartyLibs)
 set_target_properties(FreeType PROPERTIES FOLDER o2/3rdPartyLibs)
 set_target_properties(pugixml PROPERTIES FOLDER o2/3rdPartyLibs)
 set_target_properties(spine-cpp PROPERTIES FOLDER o2/3rdPartyLibs)
+
+if(TARGET libpng)
+    set_target_properties(libpng PROPERTIES FOLDER o2/3rdPartyLibs)
+endif()
 
 if(MSVC)
     set_target_properties(boost_stacktrace_windbg_cached PROPERTIES FOLDER o2/3rdPartyLibs)

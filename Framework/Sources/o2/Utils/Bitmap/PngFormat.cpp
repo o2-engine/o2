@@ -1,7 +1,7 @@
 #include "o2/stdafx.h"
 #include "PngFormat.h"
 
-#include "3rdPartyLibs/libpng/png.h"
+#include <png.h>
 #include "o2/Utils/Debug/Debug.h"
 #include "o2/Utils/FileSystem/File.h"
 #include "o2/Utils/Bitmap/Bitmap.h"

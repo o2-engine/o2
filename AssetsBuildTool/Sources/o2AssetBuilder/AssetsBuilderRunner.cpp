@@ -11,7 +11,6 @@ extern void InitializeTypesAssetsBuildTool();
 int main(int argc, char* argv[])
 {
     InitializeTypesAssetsBuildTool();
-    InitializeTypesGameLib();
     INITIALIZE_O2;
 
     const auto platformKey = "-platform";

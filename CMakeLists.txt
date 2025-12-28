@@ -178,11 +178,29 @@ target_link_libraries(o2Framework
 )
 
 if (O2_ENABLE_LINK_LIBPNG)
-    target_link_libraries(o2Framework PUBLIC libpng)
+    if(TARGET ext_png)
+        # Use cocos2d-x external libpng/zlib in integrated builds
+        target_link_libraries(o2Framework PUBLIC ext_png)
+        if(TARGET ext_zlib)
+            target_link_libraries(o2Framework PUBLIC ext_zlib)
+        endif()
+    elseif(TARGET libpng)
+        # Fallback for standalone o2 build
+        target_link_libraries(o2Framework PUBLIC libpng)
+    else()
+        message(FATAL_ERROR "O2_ENABLE_LINK_LIBPNG is ON but neither ext_png (cocos2d-x) nor bundled libpng target exists")
+    endif()
 endif()
 
 if (O2_ENABLE_LINK_ZLIB)
     target_link_libraries(o2Framework PUBLIC zlib)
+endif()
+
+# Make sure png headers are available even if linking is disabled (code may still compile).
+if(TARGET ext_png)
+    target_include_directories(o2Framework PRIVATE $<TARGET_PROPERTY:ext_png,INTERFACE_INCLUDE_DIRECTORIES>)
+elseif(TARGET libpng)
+    target_include_directories(o2Framework PRIVATE $<TARGET_PROPERTY:libpng,INTERFACE_INCLUDE_DIRECTORIES>)
 endif()
 
 if (O2_TRACY)
@@ -262,7 +280,9 @@ add_dependencies(o2FrameworkCodegen o2CodeTool)
 add_dependencies(o2Framework Box2D jerry-core jerry-ext jerry-port-default FreeType)
 
 if (O2_ENABLE_LINK_LIBPNG)
-    add_dependencies(o2Framework libpng)
+    if(TARGET libpng)
+        add_dependencies(o2Framework libpng)
+    endif()
 endif()
 
 add_dependencies(o2Framework o2CodeTool)
