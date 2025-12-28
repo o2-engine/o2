@@ -30,7 +30,7 @@ namespace o2
         mWindowResizible = true;
         mActive = false;
 
-        if (mNeedPlatformInitialization)
+        if (IsNeedPlatformInitialization())
         {
             mLog->Out("Initializing window..");
 

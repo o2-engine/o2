@@ -26,7 +26,6 @@ option(O2_EDITOR "Enables o2 editor." ON)
 option(O2_ASAN "Enables ASAN (address sanitizer)." OFF)
 option(O2_TRACY "Enables Tracy profiling" ON)
 option(O2_MEMORY_ANALYZE "Enables memory analyzing (slows down)" OFF)
-option(O2_PLATFORM_INITIALIZATION_ENABLED "Enables platform initialization" ON)
 option(O2_ENABLE_LINK_ZLIB "Enables linking zlib library" ON)
 option(O2_ENABLE_LINK_LIBPNG "Enables linking libpng library" ON)
 
@@ -132,7 +131,7 @@ add_subdirectory(CodeTool)
 add_custom_target(o2CopyBuiltinAssets
                   COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_CURRENT_SOURCE_DIR}/Framework/Assets" 
                                                              "${CMAKE_CURRENT_SOURCE_DIR}/../BuiltAssets/${O2_PLATFORM}/FrameworkData"
-                  COMMENT "Copy o2 builtin assets from ${CMAKE_CURRENT_SOURCE_DIR}/Framework/Assets to ${CMAKE_CURRENT_SOURCE_DIR}/../BuiltAssets/${O2_PLATFORM}/FrameworkData"
+                  COMMENT "Copy o2 builtin assets from ${CMAKE_CURRENT_SOURCE_DIR}/Framework/Assets to ${CMAKE_CURRENT_SOURCE_DIR}/../BuiltAssets/${O2_PLATFORM}/FrameworkData\n"
 )
 
 # o2 Framework library
@@ -255,7 +254,7 @@ endif()
 # Codegen
 add_custom_target(o2FrameworkCodegen
                   COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/CodeTool/Bin/o2CodeTool -project o2Framework -sources "${CMAKE_CURRENT_SOURCE_DIR}/Framework/Sources/o2"
-                  COMMENT "Run CodeTool: ${CMAKE_CURRENT_SOURCE_DIR}/CodeTool/Bin/o2CodeTool -project o2Framework -sources \"${CMAKE_CURRENT_SOURCE_DIR}/Framework/Sources/o2\""
+                  COMMENT "Run CodeTool: ${CMAKE_CURRENT_SOURCE_DIR}/CodeTool/Bin/o2CodeTool -project o2Framework -sources \"${CMAKE_CURRENT_SOURCE_DIR}/Framework/Sources/o2\"\n"
 )
 add_dependencies(o2FrameworkCodegen o2CodeTool)
 
@@ -301,7 +300,7 @@ if (O2_EDITOR)
     # Codegen
     add_custom_target(o2EditorCodegen
                       COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/CodeTool/Bin/o2CodeTool -project o2Editor -sources "${CMAKE_CURRENT_SOURCE_DIR}/Editor/Sources/o2Editor" -parent_projects "${CMAKE_CURRENT_SOURCE_DIR}/Framework/Sources/o2/CodeToolCache.xml"
-                      COMMENT "Run CodeTool: ${CMAKE_CURRENT_SOURCE_DIR}/CodeTool/Bin/o2CodeTool -project o2Editor -sources \"${CMAKE_CURRENT_SOURCE_DIR}/Editor/Sources/o2Editor\" -parent_projects \"${CMAKE_CURRENT_SOURCE_DIR}/Framework/Sources/o2/CodeToolCache.xml\""
+                      COMMENT "Run CodeTool: ${CMAKE_CURRENT_SOURCE_DIR}/CodeTool/Bin/o2CodeTool -project o2Editor -sources \"${CMAKE_CURRENT_SOURCE_DIR}/Editor/Sources/o2Editor\" -parent_projects \"${CMAKE_CURRENT_SOURCE_DIR}/Framework/Sources/o2/CodeToolCache.xml\"\n"
     )
     add_dependencies(o2EditorCodegen o2CodeTool)
 

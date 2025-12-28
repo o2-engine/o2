@@ -37,12 +37,6 @@
 #define IS_SCRIPTING_SUPPORTED false
 #endif
 
-#if defined(O2_PLATFORM_INITIALIZATION_ENABLED)
-#define IS_PLATFORM_INITIALIZATION_ENABLED true
-#else
-#define IS_PLATFORM_INITIALIZATION_ENABLED false
-#endif
-
 // Current working platform
 o2::Platform GetEnginePlatform();
 
@@ -116,7 +110,8 @@ const char* GetAndroidAssetsPath();
 // --------------------
 // Other configurations
 // --------------------
-
-#ifndef _HAS_ITERATOR_DEBUGGING
-#define _HAS_ITERATOR_DEBUGGING 0
+#if defined(_MSC_VER) && !defined(_DEBUG)
+    #ifndef _HAS_ITERATOR_DEBUGGING
+        #define _HAS_ITERATOR_DEBUGGING 0
+    #endif
 #endif

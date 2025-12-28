@@ -60,7 +60,10 @@ namespace o2
         PROFILE_SAMPLE_FUNC();
 
         InitalizeSystems();
-        InitializePlatform();
+
+        if (IsNeedPlatformInitialization()) 
+            InitializePlatform();
+
         InitiazeRender();
 		InitilizeUIStyles();
 

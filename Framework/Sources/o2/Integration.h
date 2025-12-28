@@ -83,6 +83,9 @@ namespace o2
 		// Returns application's path
 		virtual String GetBinPath() const { return String(); }
 
+		// Returns is platform-specific initialization needed
+		virtual bool IsNeedPlatformInitialization() const { return true; }
+
         IOBJECT(Integration);
 
     protected:
@@ -261,6 +264,7 @@ CLASS_METHODS_META(o2::Integration)
     FUNCTION().PUBLIC().SIGNATURE(bool, IsCursorInfiniteModeOn);
     FUNCTION().PUBLIC().SIGNATURE(float, GetGraphicsScale);
     FUNCTION().PUBLIC().SIGNATURE(String, GetBinPath);
+    FUNCTION().PUBLIC().SIGNATURE(bool, IsNeedPlatformInitialization);
     FUNCTION().PROTECTED().SIGNATURE(void, BasicInitialize);
     FUNCTION().PROTECTED().SIGNATURE(void, InitializePlatform);
     FUNCTION().PROTECTED().SIGNATURE(void, InitalizeSystems);

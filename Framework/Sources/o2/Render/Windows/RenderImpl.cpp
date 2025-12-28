@@ -22,7 +22,7 @@ namespace o2
     {
         mLog->Out("Initializing OpenGL render..");
 
-        if constexpr (IS_PLATFORM_INITIALIZATION_ENABLED)
+        if (Integration::IsSingletonInitialzed() && o2Integration.IsNeedPlatformInitialization())
         {
             GLuint pixelFormat;
             static PIXELFORMATDESCRIPTOR pfd = // pfd Tells Windows How We Want Things To Be
@@ -342,7 +342,7 @@ namespace o2
 
     void Render::PlatformEnd()
     {
-        if constexpr (IS_PLATFORM_INITIALIZATION_ENABLED)
+        if (Integration::IsSingletonInitialzed() && o2Integration.IsNeedPlatformInitialization())
             SwapBuffers(mHDC);
 
         GL_CHECK_ERROR();

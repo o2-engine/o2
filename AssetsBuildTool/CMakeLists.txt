@@ -24,7 +24,7 @@ if(WIN32)
                        COMMENT "Run CodeTool:"
                             "-project AssetsBuildTool "
                             "-sources \"${CMAKE_CURRENT_SOURCE_DIR}/Sources\" "
-                            "-parent_projects \"${CMAKE_CURRENT_SOURCE_DIR}/../Framework/Sources/o2/CodeToolCache.xml\"")
+                            "-parent_projects \"${CMAKE_CURRENT_SOURCE_DIR}/../Framework/Sources/o2/CodeToolCache.xml\"\n")
 endif()
 
 add_dependencies(o2AssetsBuilder o2Framework)

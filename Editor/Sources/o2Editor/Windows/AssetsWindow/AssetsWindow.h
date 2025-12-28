@@ -16,6 +16,7 @@ namespace o2
     FORWARD_CLASS_REF(GridLayout);
     FORWARD_CLASS_REF(Label);
     FORWARD_CLASS_REF(ScrollArea);
+    FORWARD_CLASS_REF(Spoiler);
     FORWARD_CLASS_REF(Tree);
     FORWARD_CLASS_REF(TreeNode);
     FORWARD_CLASS_REF(Widget);
