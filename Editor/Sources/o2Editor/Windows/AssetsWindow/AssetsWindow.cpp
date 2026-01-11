@@ -129,6 +129,7 @@ namespace Editor
         mAssetsGridScroll = o2UI.CreateWidget<AssetsIconsScrollArea>();
         *mAssetsGridScroll->layout = WidgetLayout(0.5f, 1.0f, 1.0f, 0.0f, 0.0f, -18.0f, 0.0f, 18.0f);
         mWindow->AddChild(mAssetsGridScroll);
+        mWindow->AddInternalWidget(mAssetsGridScroll->GetContextMenu());
 
         mAssetsGridScroll->onAssetsSelected = [&](const Vector<String>& assetsPaths) {
             if (!assetsPaths.IsEmpty())

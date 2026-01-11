@@ -2,12 +2,8 @@
 #include "AssetsIconsScroll.h"
 
 #include "o2/Animation/AnimationClip.h"
-#include "o2/Animation/Tracks/AnimationFloatTrack.h"
-#include "o2/Application/Application.h"
 #include "o2/Application/VKCodes.h"
 #include "o2/Assets/Assets.h"
-#include "o2/Assets/Types/AnimationAsset.h"
-#include "o2/Assets/Types/DataAsset.h"
 #include "o2/Assets/Types/FolderAsset.h"
 #include "o2/Render/Render.h"
 #include "o2/Render/Sprite.h"
@@ -16,8 +12,6 @@
 #include "o2/Scene/UI/UIManager.h"
 #include "o2/Scene/UI/WidgetLayer.h"
 #include "o2/Scene/UI/Widgets/EditBox.h"
-#include "o2/Scene/UI/Widgets/GridLayout.h"
-#include "o2/Scene/UI/Widgets/Label.h"
 #include "o2/Utils/Editor/EditorScope.h"
 #include "o2/Utils/FileSystem/FileSystem.h"
 #include "o2/Utils/StringUtils.h"
@@ -29,7 +23,6 @@
 #include "o2Editor/Windows/PropertiesWindow/PropertiesWindow.h"
 #include "o2Editor/Windows/SceneWindow/SceneWindow.h"
 #include "o2Editor/Windows/TreeWindow/SceneHierarchyTree.h"
-#include "o2Editor/Windows/WindowsManager.h"
 
 namespace Editor
 {
@@ -292,6 +285,11 @@ namespace Editor
         mSelectedAssets.Clear();
 
         OnAssetsSelected();
+    }
+
+    const Ref<ContextMenu>& AssetsIconsScrollArea::GetContextMenu() const
+    {
+        return mContextMenu;
     }
 
     const Vector<Ref<AssetInfo>>& AssetsIconsScrollArea::GetSelectedAssets() const
@@ -750,8 +748,6 @@ namespace Editor
         mContextMenu->AddItem("Delete", [&]() { OnContextDeletePressed(); }, AssetRef<ImageAsset>(), ShortcutKeys({VK_DELETE}));
 
         onFocused = [&]() { mContextMenu->SetItemsMaxPriority(); };
-
-        AddInternalWidget(mContextMenu);
     }
 
     void AssetsIconsScrollArea::InitializeCreateContext()

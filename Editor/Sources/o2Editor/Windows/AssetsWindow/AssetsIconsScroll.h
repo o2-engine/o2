@@ -72,10 +72,13 @@ namespace Editor
         void HighlightAsset(const UID& id);
 
         // Selects asset
-        void SelectAsset(const UID& id, bool scroll = true);
+        void SelectAsset(const UID& id, bool scrsoll = true);
 
         // Deselects all assets
         void DeselectAllAssets();
+
+        // Returns context menu
+        const Ref<ContextMenu>& GetContextMenu() const;
 
         // Returns selected assets infos
         const Vector<Ref<AssetInfo>>& GetSelectedAssets() const;
@@ -126,8 +129,8 @@ namespace Editor
 
         Ref<ContextMenu> mContextMenu; // Assets Context menu
                                 
-        Vector<Ref<AssetInfo>> mSelectedAssets;          // Selected assets icons @IGNORE
-        Vector<AssetRef<Asset>>     mSelectedPreloadedAssets; // Preloaded selected assets
+        Vector<Ref<AssetInfo>>  mSelectedAssets;          // Selected assets icons @IGNORE
+        Vector<AssetRef<Asset>> mSelectedPreloadedAssets; // Preloaded selected assets
 
         AssetRef<Asset> mNewAsset; // Temporary new asset. Used when creating new asset
                                 
@@ -406,6 +409,7 @@ CLASS_METHODS_META(Editor::AssetsIconsScrollArea)
     FUNCTION().PUBLIC().SIGNATURE(void, HighlightAsset, const UID&);
     FUNCTION().PUBLIC().SIGNATURE(void, SelectAsset, const UID&, bool);
     FUNCTION().PUBLIC().SIGNATURE(void, DeselectAllAssets);
+    FUNCTION().PUBLIC().SIGNATURE(const Ref<ContextMenu>&, GetContextMenu);
     FUNCTION().PUBLIC().SIGNATURE(const Vector<Ref<AssetInfo>>&, GetSelectedAssets);
     FUNCTION().PUBLIC().SIGNATURE(Ref<AssetIcon>, GetIconUnderPoint, const Vec2F&);
     FUNCTION().PUBLIC().SIGNATURE(const Ref<Sprite>&, GetHighlightDrawable);
