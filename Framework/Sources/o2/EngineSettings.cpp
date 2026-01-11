@@ -172,7 +172,7 @@ const char* GetBuiltinAssetsPath()
 #if defined PLATFORM_WINDOWS
     return "../../BuiltAssets/Windows/FrameworkData/";
 #elif defined PLATFORM_MAC
-    return "../../BuiltAssets/Max/FrameworkData/";
+    return "../../BuiltAssets/Mac/FrameworkData/";
 #elif defined PLATFORM_LINUX
     return "../../BuiltAssets/Linux/FrameworkData/";
 #else
