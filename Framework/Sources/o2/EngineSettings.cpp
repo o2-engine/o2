@@ -28,7 +28,7 @@ o2::DeviceType GetDeviceType()
 const char* GetProjectPath()
 {
     if constexpr (IS_EDITOR)
-        return "../../../../../..";
+        return "../../../../..";
     else
         return "AndroidAssets/";
 }
@@ -36,7 +36,7 @@ const char* GetProjectPath()
 const char* GetProjectSettingPath()
 {
 #if defined PLATFORM_MAC || defined PLATFORM_WINDOWS || defined PLATFORM_LINUX
-    return "../../../../../../ProjectSettings.json";
+    return "../../../../../ProjectSettings.json";
 #else
     return "ProjectSettings.json";
 #endif
@@ -74,7 +74,7 @@ bool IsRenderDrawCallsDebugEnabled()
 const char* GetProjectRootPath()
 {
 #if defined PLATFORM_MAC || defined PLATFORM_WINDOWS || defined PLATFORM_LINUX
-    return "../../../../../../";
+    return "../../../../../";
 #else
     return "";
 #endif
@@ -102,13 +102,13 @@ const char* GetAssetsPath()
 const char* GetBuiltAssetsPath()
 {
 #if defined PLATFORM_WINDOWS
-    return "../../../../../../BuiltAssets/Windows/Data/";
+    return "../../../../../BuiltAssets/Windows/Data/";
 #elif defined PLATFORM_ANDROID
     return "AndroidAssets/BuiltAssets/";
 #elif defined PLATFORM_MAC
-    return "../../../../../../BuiltAssets/Mac/Data/";
+    return "../../../../../BuiltAssets/Mac/Data/";
 #elif defined PLATFORM_LINUX
-    return "../../../../../../BuiltAssets/Linux/Data/";
+    return "../../../../../BuiltAssets/Linux/Data/";
 #elif defined PLATFORM_IOS
     return "Data/";
 #endif
@@ -122,13 +122,13 @@ const char* GetBasicAtlasPath()
 const char* GetBuiltAssetsTreePath()
 {
 #if defined PLATFORM_WINDOWS
-    return "../../../../../../BuiltAssets/Windows/Data.json";
+    return "../../../../../BuiltAssets/Windows/Data.json";
 #elif defined PLATFORM_ANDROID
     return "AndroidAssets/AssetsTree.json";
 #elif defined PLATFORM_MAC
-    return "../../../../../../BuiltAssets/Mac/Data.json";
+    return "../../../../../BuiltAssets/Mac/Data.json";
 #elif defined PLATFORM_LINUX
-    return "../../../../../../BuiltAssets/Linux/Data.json";
+    return "../../../../../BuiltAssets/Linux/Data.json";
 #elif defined PLATFORM_IOS
     return "Data.json";
 #endif
@@ -137,7 +137,7 @@ const char* GetBuiltAssetsTreePath()
 const char* GetEditorAssetsPath()
 {
 #if defined PLATFORM_WINDOWS || defined PLATFORM_MAC || defined PLATFORM_LINUX
-    return "../../../../../../o2/Editor/Assets/";
+    return "../../../../../o2/Editor/Assets/";
 #else
     return "";
 #endif
@@ -146,11 +146,11 @@ const char* GetEditorAssetsPath()
 const char* GetEditorBuiltAssetsPath()
 {
 #if defined PLATFORM_WINDOWS
-    return "../../../../../../BuiltAssets/Windows/EditorData/";
+    return "../../../../../BuiltAssets/Windows/EditorData/";
 #elif defined PLATFORM_MAC
-    return "../../../../../../BuiltAssets/Mac/EditorData/";
+    return "../../../../../BuiltAssets/Mac/EditorData/";
 #elif defined PLATFORM_LINUX
-    return "../../../../../../BuiltAssets/Linux/EditorData/";
+    return "../../../../../BuiltAssets/Linux/EditorData/";
 #endif
     return "";
 }
@@ -158,11 +158,11 @@ const char* GetEditorBuiltAssetsPath()
 const char* GetEditorBuiltAssetsTreePath()
 {
 #if defined PLATFORM_WINDOWS
-    return "../../../../../../BuiltAssets/Windows/EditorData.json";
+    return "../../../../../BuiltAssets/Windows/EditorData.json";
 #elif defined PLATFORM_MAC
-    return "../../../../../../BuiltAssets/Mac/EditorData.json";
+    return "../../../../../BuiltAssets/Mac/EditorData.json";
 #elif defined PLATFORM_LINUX
-    return "../../../../../../BuiltAssets/Linux/EditorData.json";
+    return "../../../../../BuiltAssets/Linux/EditorData.json";
 #endif
     return "";
 }
@@ -170,11 +170,11 @@ const char* GetEditorBuiltAssetsTreePath()
 const char* GetBuiltinAssetsPath()
 {
 #if defined PLATFORM_WINDOWS
-    return "../../../../../../BuiltAssets/Windows/FrameworkData/";
+    return "../../../../../BuiltAssets/Windows/FrameworkData/";
 #elif defined PLATFORM_MAC
-    return "../../../../../../BuiltAssets/Max/FrameworkData/";
+    return "../../../../../BuiltAssets/Max/FrameworkData/";
 #elif defined PLATFORM_LINUX
-    return "../../../../../../BuiltAssets/Linux/FrameworkData/";
+    return "../../../../../BuiltAssets/Linux/FrameworkData/";
 #else
     return "FrameworkAssets/";
 #endif

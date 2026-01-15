@@ -580,7 +580,8 @@ namespace Editor
 
         PushEditorScopeOnStack scope;
 
-        o2Render.Clear();
+        o2Render.ResetState();
+        //o2Render.Clear();
 
         mBackground->Draw();
         mBackSign->Draw();
