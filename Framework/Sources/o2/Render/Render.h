@@ -424,7 +424,7 @@ namespace o2
         void SetupViewMatrix(const Vec2I& viewSize);
 
         // Updates render transformations for camera
-        void UpdateCameraTransforms();
+        void UpdateCameraTransforms(bool force = false);
 
         // Platform specific setup camera transforms
         void PlatformSetupCameraTransforms(float* modelMatrix, float* viewMatrix, float* projMatrix);

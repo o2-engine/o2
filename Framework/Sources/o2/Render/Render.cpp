@@ -196,7 +196,7 @@ namespace o2
 
     void Render::CheckVertexBufferTexCoordFlipByTextureFormat()
     {
-        PROFILE_SAMPLE_FUNC();
+        //PROFILE_SAMPLE_FUNC();
 
         static const Vector<TextureFormat> flipFormats = { TextureFormat::DXT5 };
 
@@ -241,7 +241,7 @@ namespace o2
 
         PlatformResetState();
         SetupViewMatrix(mResolution);
-        UpdateCameraTransforms();
+        UpdateCameraTransforms(true);
     }
 
     void Render::EndCustomRender()
@@ -249,11 +249,11 @@ namespace o2
         ResetState();
     }
 
-    void Render::UpdateCameraTransforms()
+    void Render::UpdateCameraTransforms(bool force /*= false*/)
     {
         PROFILE_SAMPLE_FUNC();
 
-        if (mCurrentResolution == mPrevResolution && mCamera == mPrevCamera)
+        if (!force && mCurrentResolution == mPrevResolution && mCamera == mPrevCamera)
             return;
 
         DrawPrimitives();
