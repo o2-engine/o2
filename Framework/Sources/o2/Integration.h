@@ -34,7 +34,7 @@ namespace o2
     // ----------------------------------------------------------------------------------
 	// o2 engine integration class. Initializes and holds main systems, updates and draws
 	// ----------------------------------------------------------------------------------
-    class Integration: public IObject, public Singleton<Integration>
+    class Integration : public IObject, public Singleton<Integration>
     {
     public:
         int maxFPS = 600;  // Maximum frames per second
@@ -54,37 +54,40 @@ namespace o2
         virtual bool IsEditor() const;
 
         // Returns is integration ready to use
-		bool IsReady();
+        bool IsReady();
 
-		// Sets inside content size
+        // Sets inside content size
         virtual void SetContentSize(const Vec2I& size) {}
 
-		// Returns inside content size
+        // Returns inside content size
         virtual Vec2I GetContentSize() const { return Vec2I(); }
 
-		// Returns device screen resolution
+        // Returns device screen resolution
         virtual Vec2I GetScreenResolution() const { return Vec2I(); }
 
-		// Sets cursor type
+        // Sets cursor type
         virtual void SetCursor(CursorType type) {}
 
-		// Sets cursor position
+        // Sets cursor position
         virtual void SetCursorPosition(const Vec2F& position) {}
 
-		// Sets cursor infinite moves mode
+        // Sets cursor infinite moves mode
         virtual void SetCursorInfiniteMode(bool enabled) {}
 
-		// Returns is cursor infinite mode enabled
-		virtual bool IsCursorInfiniteModeOn() const { return false; }
+        // Returns is cursor infinite mode enabled
+        virtual bool IsCursorInfiniteModeOn() const { return false; }
 
-		// Returns graphics scale
-		virtual float GetGraphicsScale() const { return 1.0f; }
+        // Returns graphics scale
+        virtual float GetGraphicsScale() const { return 1.0f; }
 
-		// Returns application's path
-		virtual String GetBinPath() const { return String(); }
+        // Returns application's path
+        virtual String GetBinPath() const { return String(); }
 
-		// Returns is platform-specific initialization needed
-		virtual bool IsNeedPlatformInitialization() const { return true; }
+        // Returns is platform-specific initialization needed
+        virtual bool IsNeedPlatformInitialization() const { return true; }
+
+        // Draws external renderers
+        virtual void DrawExternal() {}
 
         IOBJECT(Integration);
 
@@ -265,6 +268,7 @@ CLASS_METHODS_META(o2::Integration)
     FUNCTION().PUBLIC().SIGNATURE(float, GetGraphicsScale);
     FUNCTION().PUBLIC().SIGNATURE(String, GetBinPath);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsNeedPlatformInitialization);
+    FUNCTION().PUBLIC().SIGNATURE(void, DrawExternal);
     FUNCTION().PROTECTED().SIGNATURE(void, BasicInitialize);
     FUNCTION().PROTECTED().SIGNATURE(void, InitializePlatform);
     FUNCTION().PROTECTED().SIGNATURE(void, InitalizeSystems);

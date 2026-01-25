@@ -361,13 +361,14 @@ namespace o2
         glClear(GL_STENCIL_BUFFER_BIT);
         GL_CHECK_ERROR();
 
-        //         glBindFramebufferEXT(GL_FRAMEBUFFER, 0);
-        //         GL_CHECK_ERROR();
+		PlatformBindRenderTarget(mCurrentRenderTarget);
 
         glUseProgram(mStdShader);
         GL_CHECK_ERROR();
 
-        BindNextPoolBuffers();
+		glBindBuffer(GL_ARRAY_BUFFER, mVertexBuffersPool[mCurrentBufferIdx]);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mIndexBuffersPool[mCurrentBufferIdx]);
+		GL_CHECK_ERROR();
 
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, 0);

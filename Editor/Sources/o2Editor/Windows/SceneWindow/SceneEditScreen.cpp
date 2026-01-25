@@ -1,6 +1,7 @@
 #include "o2Editor/stdafx.h"
 #include "SceneEditScreen.h"
 
+#include "o2/Integration.h"
 #include "o2/Physics/PhysicsWorld.h"
 #include "o2/Render/Render.h"
 #include "o2/Render/Sprite.h"
@@ -11,7 +12,6 @@
 #include "o2/Scene/UI/UIManager.h"
 #include "o2/Scene/UI/Widgets/Tree.h"
 #include "o2/Utils/Math/Math.h"
-#include "o2Editor/Windows/AssetsWindow/AssetsIconsScroll.h"
 #include "o2Editor/Actions/Select.h"
 #include "o2Editor/EditorApplication.h"
 #include "o2Editor/Tools/FrameTool.h"
@@ -22,15 +22,15 @@
 #include "o2Editor/Tools/SelectionTool.h"
 #include "o2Editor/ToolsPanel.h"
 #include "o2Editor/UIRoot.h"
-#include "o2Editor/Windows/WindowsManager.h"
+#include "o2Editor/Windows/AssetsWindow/AssetsIconsScroll.h"
 #include "o2Editor/Windows/PropertiesWindow/PropertiesWindow.h"
 #include "o2Editor/Windows/SceneWindow/SceneDragHandle.h"
 #include "o2Editor/Windows/SceneWindow/SceneEditorLayer.h"
+#include "o2Editor/Windows/SceneWindow/SceneWindow.h"
 #include "o2Editor/Windows/TreeWindow/DrawOrderTree.h"
 #include "o2Editor/Windows/TreeWindow/SceneHierarchyTree.h"
 #include "o2Editor/Windows/TreeWindow/TreeWindow.h"
 #include "o2Editor/Windows/WindowsManager.h"
-#include "o2Editor/Windows/SceneWindow/SceneWindow.h"
 
 DECLARE_SINGLETON(Editor::SceneEditScreen);
 
@@ -165,6 +165,9 @@ namespace Editor
     void SceneEditScreen::RedrawContent()
     {
         DrawGrid();
+
+        o2Integration.DrawExternal();
+
         DrawObjects();
         o2Debug.Draw(false);
         DrawSelection();

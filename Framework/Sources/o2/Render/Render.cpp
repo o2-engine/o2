@@ -240,7 +240,6 @@ namespace o2
         mCurrentDrawTexture = nullptr;
 
         PlatformResetState();
-        SetupViewMatrix(mResolution);
         UpdateCameraTransforms(true);
     }
 
@@ -258,8 +257,8 @@ namespace o2
 
         DrawPrimitives();
 
-        Vec2F resf = (Vec2F)mCurrentResolution;
-        Vec2F halfRes(Math::Round(resf.x / 2.0f), Math::Round(resf.y / 2.0f));
+        Vec2F currentResolution = (Vec2F)mCurrentResolution;
+        Vec2F halfRes(Math::Round(currentResolution.x / 2.0f), Math::Round(currentResolution.y / 2.0f));
 
         // Projection matrix
         float projMatrix[16];
@@ -275,7 +274,7 @@ namespace o2
         };
 
         // View matrix
-        Basis defaultCameraBasis((Vec2F)mCurrentResolution * -0.5f, Vec2F::Right() * resf.x, Vec2F().Up() * resf.y);
+        Basis defaultCameraBasis(currentResolution * -0.5f, Vec2F::Right() * currentResolution.x, Vec2F().Up() * currentResolution.y);
         Basis camTransf = mCamera.GetBasis().Inverted() * defaultCameraBasis;
         mViewScale = Vec2F(camTransf.xv.Length(), camTransf.yv.Length());
         mInvViewScale = Vec2F(1.0f / mViewScale.x, 1.0f / mViewScale.y);
