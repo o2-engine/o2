@@ -31,6 +31,7 @@ namespace o2
             virtual void* GetData() const { return nullptr; }
             virtual IObject* TryCastToIObject() const { return nullptr; }
             virtual const Type* GetType() const { return nullptr; }
+            virtual IDataContainer* Clone() const { return nullptr; }
         };
 
         template<typename _type>
@@ -44,6 +45,7 @@ namespace o2
             void* GetData() const override;
             IObject* TryCastToIObject() const override;
             const Type* GetType() const override;
+            IDataContainer* Clone() const override;
         };
 
         struct IFunctionContainer

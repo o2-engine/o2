@@ -1,3 +1,5 @@
+#include "o2/Scripts/ScriptValueDef.h"
+#include "o2/Utils/Debug/Debug.h"
 #include "o2/stdafx.h"
 
 #if defined(SCRIPTING_BACKEND_JERRYSCRIPT)
@@ -107,13 +109,25 @@ namespace o2
             return res;
         }
         else if (type == ValueType::Object)
-        {
-            ScriptValue res = EmptyObject();
-            ForEachProperties([&](const ScriptValue& name, const ScriptValue& value)
-                              {
-                                  res[name] = value.Copy();
-                                  return true;
-                              });
+        {    
+            ScriptValue res;
+            ForEachProperties([&](const ScriptValue &name, const ScriptValue &value) {
+                o2Debug.Log(L"Copying property: " + name.ToString());
+                res.SetProperty(name, value.Copy());
+                return true;
+            });
+
+            res.SetPrototype(GetPrototype());
+
+            void* dataPtr = nullptr;
+            jerry_get_object_native_pointer(jvalue, &dataPtr, &GetDataDeleter().info);
+            auto dataContainer = (IDataContainer*)dataPtr;
+            if (dataContainer)
+            {
+                auto clonedDataContainer = dataContainer->Clone();
+                jerry_set_object_native_pointer(res.jvalue, clonedDataContainer, &GetDataDeleter().info);
+            }
+
             return res;
         }
 
@@ -216,22 +230,17 @@ namespace o2
     void ScriptValue::ForEachProperties(const Function<bool(const ScriptValue& name, const ScriptValue& value)>& func, 
                                         bool withPrototypes /*= true*/) const
     {
-        struct Helper
-        {
-            static bool IterateFunc(const jerry_value_t property_name, const jerry_value_t property_value, void* user_data_p)
-            {
-                auto func = (Function<bool(const ScriptValue&, const ScriptValue&)>*)user_data_p;
-                ScriptValue name, value;
-                name.AcquireValue(property_name);
-                value.AcquireValue(property_value);
-                return (*func)(name, value);
-            }
-        };
-
         if (GetValueType() != ValueType::Object)
             return;
 
-        jerry_foreach_object_property(jvalue, &Helper::IterateFunc, (void*)&func);
+        auto allProperties = GetPropertyNames();
+        for (int i = 0; i < allProperties.GetLength(); i++)
+        {
+            ScriptValue key = allProperties.GetElement(i);
+            ScriptValue value = GetProperty(key);
+            if (!func(key, value))
+                return;
+        }
 
         if (withPrototypes)
             GetPrototype().ForEachProperties(func, withPrototypes);
@@ -276,7 +285,17 @@ namespace o2
     {
         ScriptValue res;
 
-        res.AcquireValue(jerry_object_get_property_names(jvalue, JERRY_PROPERTY_FILTER_TRAVERSE_PROTOTYPE_CHAIN));
+        jerry_property_filter_t filter = (jerry_property_filter_t)(JERRY_PROPERTY_FILTER_ALL 
+            | JERRY_PROPERTY_FILTER_EXLCUDE_SYMBOLS
+            | JERRY_PROPERTY_FILTER_EXLCUDE_NON_CONFIGURABLE
+            | JERRY_PROPERTY_FILTER_EXLCUDE_NON_ENUMERABLE
+            | JERRY_PROPERTY_FILTER_EXLCUDE_NON_WRITABLE
+            | JERRY_PROPERTY_FILTER_EXLCUDE_SYMBOLS
+            | JERRY_PROPERTY_FILTER_EXLCUDE_INTEGER_INDICES
+            | JERRY_PROPERTY_FILTER_INTEGER_INDICES_AS_NUMBER
+        );
+
+        res.AcquireValue(jerry_object_get_property_names(jvalue, filter));
 
         return res;
     }
@@ -335,6 +354,8 @@ namespace o2
 
     void ScriptValue::AddElement(const ScriptValue& value)
     {
+        o2Debug.Log(L"AddElement: " + value.Dump());
+        
         SetElement(value, GetLength());
     }
 

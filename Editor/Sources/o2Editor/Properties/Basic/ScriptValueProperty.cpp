@@ -46,9 +46,7 @@ namespace Editor
         mSpoiler = o2UI.CreateWidget<Spoiler>("expand with caption");
         AddChild(mSpoiler);
 
-        if (mSpoiler)
-            mSpoiler->onExpand = THIS_FUNC(OnExpand);
-
+        mSpoiler->onExpand = THIS_FUNC(OnExpand);
         mSpoiler->borderTop = 5;
 
         mHeaderContainer = mmake<HorizontalLayout>();
@@ -85,8 +83,8 @@ namespace Editor
         }
     }
 
-    ScriptValueProperty::PropertiesList ScriptValueProperty::GetCommonProperties(
-        const Vector<Pair<ScriptValue, ScriptValue>>& values, bool& isArray) const
+    ScriptValueProperty::PropertiesList ScriptValueProperty::GetCommonProperties(const Vector<Pair<ScriptValue, ScriptValue>>& values, 
+        bool& isArray) const
     {
         PropertiesList res;
 
@@ -272,6 +270,9 @@ namespace Editor
                 {
                     auto& name = kv.first;
                     auto prop = commonProperties.Find([&](auto& x) { return x.first == name; });
+                    if (!prop)
+                        continue;
+
                     auto value = prop->second[0].first->Get();
                     auto type = value.GetValueType();
                     auto field = kv.second;

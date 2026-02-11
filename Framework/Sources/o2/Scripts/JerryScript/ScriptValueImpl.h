@@ -66,6 +66,21 @@ namespace o2
         return &TypeOf(_type);
     }
 
+    template<typename _type>
+    ScriptValueBase::IDataContainer* ScriptValueBase::DataContainer<_type>::Clone() const
+    {
+        if (!data)
+            return nullptr;
+
+        _type* clonedData = nullptr;    
+        if constexpr (std::is_copy_constructible<_type>::value)
+            clonedData = mnew _type(*data);
+
+        auto clonedContainer = mnew DataContainer<_type>(clonedData);
+        clonedContainer->isDataOwner = true;
+        return clonedContainer;
+    }
+
     template<typename _invocable_type, typename _res_type, typename ... _args>
     struct ScriptFunctionContainer :
         public ScriptValueBase::DataContainer<_invocable_type>,

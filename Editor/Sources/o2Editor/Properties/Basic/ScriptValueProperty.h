@@ -84,7 +84,7 @@ namespace Editor
         Map<String, Ref<IPropertyField>>    mBuiltProperties;    // Built properties by names
 
         bool mHeaderEnabled = false; // Is no header attribute exists
-        bool mExpanded = false; // True when must be expanded after creating object viewer
+        bool mExpanded = false;      // True when must be expanded after creating object viewer
 
         bool mNeedUpdateProxies = false; // True when targets changed and required to refresh script values proxies
 
