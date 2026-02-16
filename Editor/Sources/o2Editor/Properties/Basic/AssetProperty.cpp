@@ -417,7 +417,7 @@ namespace Editor
         if (mAssetType)
         {
             auto lastSelectedAsset = assetIconsScroll->GetSelectedAssets().Last();
-            if (!lastSelectedAsset->meta->GetAssetType()->IsBasedOn(*mAssetType))
+            if (!lastSelectedAsset || !lastSelectedAsset->meta->GetAssetType()->IsBasedOn(*mAssetType))
                 return;
         }
 

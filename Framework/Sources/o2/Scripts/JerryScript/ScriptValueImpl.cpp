@@ -112,7 +112,6 @@ namespace o2
         {    
             ScriptValue res;
             ForEachProperties([&](const ScriptValue &name, const ScriptValue &value) {
-                o2Debug.Log(L"Copying property: " + name.ToString());
                 res.SetProperty(name, value.Copy());
                 return true;
             });

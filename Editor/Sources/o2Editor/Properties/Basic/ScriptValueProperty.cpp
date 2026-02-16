@@ -203,26 +203,27 @@ namespace Editor
         if (IsExpanded())
         {
             // Check that last built properties are same
-            bool changedProperties = false;
-            for (auto& kv : commonProperties)
+            bool changedProperties = mPreviousBuiltTypes.Count() != commonProperties.Count();
+            if (!changedProperties)
             {
-                if (!mPreviousBuiltTypes.ContainsKey(kv.first) ||
-                    mPreviousBuiltTypes[kv.first] != kv.second[0].first->Get().GetValueType())
+                for (auto& kv : commonProperties)
                 {
-                    changedProperties = true;
-                    break;
+                    if (!mPreviousBuiltTypes.ContainsKey(kv.first) ||
+                        mPreviousBuiltTypes[kv.first] != kv.second[0].first->Get().GetValueType())
+                    {
+                        changedProperties = true;
+                        break;
+                    }
                 }
             }
-
+            
             // Rebuild properties if needed
             if (changedProperties || forcible)
             {
                 mPreviousBuiltTypes.Clear();
                 for (auto& kv : mBuiltProperties)
                 {
-                    mSpoiler->RemoveChild(kv.second, false);
                     kv.second->RemoveLayer("drag");
-                    kv.second->SetValueAndPrototypeProxy({});
                     o2EditorProperties.FreeProperty(kv.second);
                 }
 

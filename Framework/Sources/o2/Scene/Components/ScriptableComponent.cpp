@@ -29,6 +29,9 @@ namespace o2
 
     void ScriptableComponent::SetScript(const AssetRef<JavaScriptAsset>& script)
     {
+        if (mScript == script)
+            return;
+
         mScript = script;
         LoadScriptAndCreateObject();
     }

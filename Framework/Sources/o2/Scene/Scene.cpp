@@ -555,12 +555,19 @@ namespace o2
 
     Ref<Actor> Scene::GetAssetActorByID(const UID& id)
     {
-        auto cached = mAssetsCache.FindOrDefault([=](const AssetRef<ActorAsset>& x) { return x->GetUID() == id; });
+        auto cached = mAssetsCache.FindOrDefault([=](const AssetRef<ActorAsset>& x) { 
+            if (x) 
+                return x->GetUID() == id; 
+            else
+                return false; 
+        });
 
         if (!cached)
         {
             cached = AssetRef<ActorAsset>(id);
             mAssetsCache.Add(cached);
+
+            return nullptr;
         }
 
         return cached->GetActor();
