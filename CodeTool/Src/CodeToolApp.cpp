@@ -52,6 +52,7 @@ void CodeToolApplication::SetArguments(char** args, int nargs)
     mXCodeProjectPath = argsMap["xcode_project"];
     mNeedReset = argsMap.find("reset") != argsMap.end() || argsMap.find("r") != argsMap.end() || true;
     mVerbose = argsMap.find("verbose") != argsMap.end() || argsMap.find("v") != argsMap.end();
+	mExcludeMode = argsMap.find("exclude_mode") != argsMap.end() || argsMap.find("e") != argsMap.end();
 
     mCache.parentProjects = Split(argsMap["parent_projects"], ' ');
 }
@@ -514,7 +515,7 @@ void CodeToolApplication::UpdateCodeReflection()
 
 void CodeToolApplication::UpdateRegistratorsSource()
 {
-    string registratorSourceFileName = mProjectName + ".cpp";
+    string registratorSourceFileName = mProjectName + "ReflectionRegister.cpp";
     string registratorSourcePath = mSourcesPath + "/" + registratorSourceFileName;
 
     string fileData;
@@ -557,7 +558,7 @@ void CodeToolApplication::ParseSource(const string& path, const TimeStamp& editD
 
     // parse source
     SyntaxFile* syntaxFile = new SyntaxFile();
-    mParser->ParseFile(*syntaxFile, path, editDate);
+    mParser->ParseFile(*syntaxFile, path, editDate, mExcludeMode);
     mParsedFiles.push_back(syntaxFile);
 
     mCache.originalFiles.push_back(syntaxFile);
@@ -638,6 +639,9 @@ void CodeToolApplication::UpdateSourceReflection(SyntaxFile* file)
 
     for (auto enm : metaEnums)
     {
+        if (enm->GetEntries().empty())
+			continue;
+
         AddBeginMeta(hasSourceMeta, cppSource);
         cppSource += GetEnumMeta(enm);
 

@@ -93,6 +93,7 @@ vector<string> Split(const string& s, char delim)
 CppSyntaxParser::CppSyntaxParser()
 {
     InitializeParsers();
+	InitializeReplaces();
 }
 
 CppSyntaxParser::~CppSyntaxParser()
@@ -133,11 +134,36 @@ void CppSyntaxParser::InitializeParsers()
     mParsers.push_back(new ExpressionParser("PROPERTIES", &CppSyntaxParser::ParseProperties, true, false));
     mParsers.push_back(new ExpressionParser("PROPERTY", &CppSyntaxParser::ParseProperty, true, false));
     mParsers.push_back(new ExpressionParser("GETTER", &CppSyntaxParser::ParseGetter, true, false));
-    mParsers.push_back(new ExpressionParser("SETTER", &CppSyntaxParser::ParseSetter, true, false));
-    mParsers.push_back(new ExpressionParser("ACCESSOR", &CppSyntaxParser::ParseAccessor, true, false));
+	mParsers.push_back(new ExpressionParser("SETTER", &CppSyntaxParser::ParseSetter, true, false));
+	mParsers.push_back(new ExpressionParser("ACCESSOR", &CppSyntaxParser::ParseAccessor, true, false));
+	mParsers.push_back(new ExpressionParser("NS_CC_BEGIN", &CppSyntaxParser::ParseCocosNamespace, true, true));
 }
 
-void CppSyntaxParser::ParseFile(SyntaxFile& file, const string& filePath, const TimeStamp& fileEditDate)
+void CppSyntaxParser::InitializeReplaces()
+{
+	mReplaces.push_back({ "CC_DLL", "     " });
+	mReplaces.push_back({ "@}", "  " });
+	mReplaces.push_back({ "@{", "  " });
+	mReplaces.push_back({ "CC_CONSTRUCTOR_ACCESS", "public" });
+	mReplaces.push_back({ "CC_BACKEND_BEGIN", "namespace cocos2d{ namespace backend{" });
+	mReplaces.push_back({ "CC_BACKEND_END", "} }" });
+	mReplaces.push_back({ "\\\n", " " });
+}
+
+void CppSyntaxParser::ProcessReplaces(string& data)
+{
+    for (auto& replace : mReplaces)
+    {
+        auto caret = data.find(replace.first);
+        while (caret != string::npos)
+        {
+            data.replace(caret, replace.first.length(), replace.second);
+            caret = data.find(replace.first, caret + replace.second.length());
+        }
+	}
+}
+
+void CppSyntaxParser::ParseFile(SyntaxFile& file, const string& filePath, const TimeStamp& fileEditDate, bool excludeMode)
 {
     file.mPath = filePath;
     file.mLastEditedDate = fileEditDate;
@@ -154,7 +180,16 @@ void CppSyntaxParser::ParseFile(SyntaxFile& file, const string& filePath, const 
     if (file.mData.find("@CODETOOLIGNORE") != string::npos)
         return;
 
-    ParseSyntaxSection(*file.mGlobalNamespace, file.mData, file, SyntaxProtectionSection::Public);
+    if (excludeMode)
+    {
+        if (file.mData.find("@CODETOOL_NON_EXCLUDE") == string::npos)
+			return;
+    }
+
+	string data = file.mData;
+	ProcessReplaces(data);
+
+    ParseSyntaxSection(*file.mGlobalNamespace, data, file, SyntaxProtectionSection::Public);
 }
 
 void CppSyntaxParser::ParseSyntaxSection(SyntaxSection& section, const string& source, SyntaxFile& file,
@@ -195,9 +230,16 @@ void CppSyntaxParser::ParseSyntaxSection(SyntaxSection& section, const string& s
             if (!success)
                 continue;
 
+			printf("Found keyword %s in file %s caret is %i\n", keyWord, file.mPath.c_str(), caret);
+
+			int prevCaret = caret;
+
             ParserDelegate pd = parser->parser;
             (this->*pd)(section, caret, protectionSection);
             parsedByKeywork = true;
+
+            if (caret < prevCaret)
+				caret = prevCaret + 1;
 
             break;
         }
@@ -570,7 +612,7 @@ void CppSyntaxParser::ParseMultilineComment(SyntaxSection& section, int& caret,
     int begin = caret;
     caret += (int)strlen("/*");
     int end = (int)section.mData.find("*/", caret);
-    caret = end;
+    caret = end + 2;
 
     SyntaxComment* comment = new SyntaxComment();
     string sub = section.mData.substr(begin + 2, end - 4 - begin);
@@ -892,7 +934,18 @@ void CppSyntaxParser::ParseEnum(SyntaxSection& section, int& caret,
     string blockRaw = ReadBlock(section.mData, caret);
     string block = Trim(blockRaw, " {}\r\t\n");
     RemoveComments(block);
+
+	int typePos = (int)block.find(':');
+    if (typePos != string::npos)
+    {
+        string type = block.substr(typePos + 1);
+        block.erase(typePos);
+	}
+
     auto content = Split(block, ',');
+
+    if (name.empty())
+        return;
 
     SyntaxEnum* newEnum = new SyntaxEnum();
     newEnum->mBegin = begin;
@@ -920,9 +973,19 @@ void CppSyntaxParser::ParseEnum(SyntaxSection& section, int& caret,
             string sub2 = x.substr(valuePos + 1);
             value = Trim(sub2, " \n\t\r");
         }
-        else name = x;
+        else 
+            name = x;
+
+        if (name.empty())
+			continue;
 
         newEnum->mEntries[name] = value;
+    }
+
+    if (newEnum->mEntries.empty())
+    {
+        delete newEnum;
+        return;
     }
 
     section.mEnums.push_back(newEnum);
@@ -1159,6 +1222,34 @@ void CppSyntaxParser::ParseAccessor(SyntaxSection& section, int& caret, SyntaxPr
         res->mDefine = mCurrentDefine;
 
     section.mVariables.push_back(res);
+}
+
+void CppSyntaxParser::ParseCocosNamespace(SyntaxSection& section, int& caret, SyntaxProtectionSection& protectionSection)
+{
+	int begin = caret;
+	caret += (int)strlen("NS_CC_BEGIN");
+
+	string namespaceName = "cocos2d";
+
+	int namespacePos = (int)section.mData.find("NS_CC_END", caret);
+	string blockRaw = section.mData.substr(caret, namespacePos - caret);
+	string block = Trim(blockRaw, " \r\t\n");
+
+	SyntaxNamespace* newNamespace = new SyntaxNamespace();
+	newNamespace->mBegin = begin;
+	newNamespace->mLength = caret - begin;
+	newNamespace->mLine = GetLineNumber(section.mData, caret);
+
+	newNamespace->mData = block;
+	newNamespace->mName = namespaceName;
+	newNamespace->mFullName = section.mFullName.empty() ? namespaceName : section.mFullName + "::" + namespaceName;
+	newNamespace->mFile = section.mFile;
+	newNamespace->mParentSection = &section;
+	section.mSections.push_back(newNamespace);
+
+	ParseSyntaxSection(*newNamespace, newNamespace->mData, *section.mFile, SyntaxProtectionSection::Public);
+
+	caret = namespacePos + (int)strlen("NS_CC_END");
 }
 
 string CppSyntaxParser::ReadWord(const string& data, int& caret,
