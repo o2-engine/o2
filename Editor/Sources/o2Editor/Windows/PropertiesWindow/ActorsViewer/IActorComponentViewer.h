@@ -13,6 +13,7 @@ namespace o2
     class Actor;
     class Button;
     class Component;
+    class ContextMenu;
     class Widget;
 }
 
@@ -69,14 +70,25 @@ namespace Editor
     protected:
         Vector<Ref<Component>> mTargetComponents; // Target components
 
-        Ref<SpoilerWithHead> mSpoiler;      // Component's spoiler
-        Ref<Button>          mRemoveButton; // Remove component button
+        Ref<SpoilerWithHead> mSpoiler;       // Component's spoiler
+        Ref<Button>          mRemoveButton;  // Remove component button
+        Ref<Button>          mOptionsButton; // Options button with dropdown menu
+        Ref<ContextMenu>     mOptionsMenu;   // Options dropdown menu
 
         bool mPropertiesEnabled = false; // Is viewer enabled 
 
     protected:
         // Removes target components
         void RemoveTargetComponents();
+
+        // Copies current component to clipboard
+        void CopyComponent();
+
+        // Cuts current component (copy + remove)
+        void CutComponent();
+
+        // Pastes component from clipboard to same actor
+        void PasteComponent();
 
         // Enable viewer event function
         virtual void OnPropertiesEnabled() {}
@@ -109,6 +121,8 @@ CLASS_FIELDS_META(Editor::IActorComponentViewer)
     FIELD().PROTECTED().NAME(mTargetComponents);
     FIELD().PROTECTED().NAME(mSpoiler);
     FIELD().PROTECTED().NAME(mRemoveButton);
+    FIELD().PROTECTED().NAME(mOptionsButton);
+    FIELD().PROTECTED().NAME(mOptionsMenu);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mPropertiesEnabled);
 }
 END_META;
@@ -125,6 +139,9 @@ CLASS_METHODS_META(Editor::IActorComponentViewer)
     FUNCTION().PUBLIC().SIGNATURE(void, SetPropertiesEnabled, bool);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsPropertiesEnabled);
     FUNCTION().PROTECTED().SIGNATURE(void, RemoveTargetComponents);
+    FUNCTION().PROTECTED().SIGNATURE(void, CopyComponent);
+    FUNCTION().PROTECTED().SIGNATURE(void, CutComponent);
+    FUNCTION().PROTECTED().SIGNATURE(void, PasteComponent);
     FUNCTION().PROTECTED().SIGNATURE(void, OnPropertiesEnabled);
     FUNCTION().PROTECTED().SIGNATURE(void, OnPropertiesDisabled);
     FUNCTION().PROTECTED().SIGNATURE(void, OnPropertyChanged, const Ref<IPropertyField>&, bool);

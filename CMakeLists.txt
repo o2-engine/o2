@@ -207,6 +207,7 @@ if (UNIX)
         find_library(METALKIT MetalKit)
         find_library(FOUNDATION Foundation)
         find_library(OBJC objc)
+        find_library(APPLICATION_SERVICES ApplicationServices)
 
         target_link_libraries(o2Framework
                 PRIVATE
@@ -216,6 +217,7 @@ if (UNIX)
                     ${FOUNDATION}
                     ${OBJC}
                     ${METALKIT}
+                    ${APPLICATION_SERVICES}
         )
 
         set(METAL_SHADERS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Framework/Sources/o2/Render/Mac")
