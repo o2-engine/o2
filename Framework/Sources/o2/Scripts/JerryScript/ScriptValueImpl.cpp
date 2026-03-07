@@ -353,8 +353,6 @@ namespace o2
 
     void ScriptValue::AddElement(const ScriptValue& value)
     {
-        o2Debug.Log(L"AddElement: " + value.Dump());
-        
         SetElement(value, GetLength());
     }
 

@@ -27,8 +27,8 @@ namespace o2
         virtual ~IObject() 
         {
 #if IS_SCRIPTING_SUPPORTED
-            if (mScriptValueCache)
-                delete mScriptValueCache;
+            //if (mScriptValueCache)
+            //    delete mScriptValueCache;
 #endif
         }
 

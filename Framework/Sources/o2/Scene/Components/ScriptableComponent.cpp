@@ -1,3 +1,4 @@
+#include "o2/Utils/Debug/Debug.h"
 #include "o2/stdafx.h"
 #include "ScriptableComponent.h"
 
@@ -81,6 +82,8 @@ namespace o2
             mInstance = classObj.Construct({});
             mClass = classObj;
 
+            //o2Debug.LogStr(L"Instance: " + mInstance.Dump());
+
             mOnStartFunc = mInstance.GetProperty("OnStart");
             mOnEnabledFunc = mInstance.GetProperty("OnEnabled");
             mOnDisabledFunc = mInstance.GetProperty("OnDisabled");
@@ -119,7 +122,10 @@ namespace o2
         if (mInstance.IsObject())
         {
             if (auto objectNode = node.FindMember("mInstance"))
+            {
                 objectNode->Get(mInstance);
+                //o2Debug.LogStr(L"Instance: " + mInstance.Dump());
+            }
         }
     }
 
