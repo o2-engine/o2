@@ -164,7 +164,7 @@ namespace Editor
         {
             auto actor = comp->GetActor();
             DataDocument componentData = data;
-            auto component = (Ref<Component>)componentData;
+            Ref<Component> component = componentData;
             actor->AddComponent(component);
             component->OnAddedFromEditor();
             targets.Add((IObject*)actor.Get());

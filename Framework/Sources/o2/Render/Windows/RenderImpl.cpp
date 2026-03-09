@@ -18,35 +18,93 @@
 
 namespace o2
 {
+    namespace
+    {
+        typedef HGLRC(WINAPI* PFN_wglCreateContextAttribsARB)(HDC hDC, HGLRC hShareContext, const int* piAttribList);
+
+        bool CreateGLContextWithAttribs(HDC hdc, HGLRC& outContext, o2::LogStream* log)
+        {
+            static PIXELFORMATDESCRIPTOR pfd = {
+                sizeof(PIXELFORMATDESCRIPTOR), 1,
+                PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER,
+                PFD_TYPE_RGBA, 32, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                24, 8, 0, PFD_MAIN_PLANE, 0, 0, 0, 0
+            };
+
+            int pixelFormat = ChoosePixelFormat(hdc, &pfd);
+            if (!pixelFormat || !SetPixelFormat(hdc, pixelFormat, &pfd))
+            {
+                if (log) log->Error("Can't Set The PixelFormat.");
+                return false;
+            }
+
+            HGLRC tempCtx = wglCreateContext(hdc);
+            if (!tempCtx || !wglMakeCurrent(hdc, tempCtx))
+            {
+                if (tempCtx) wglDeleteContext(tempCtx);
+                if (log) log->Error("Can't create temporary GL context.");
+                return false;
+            }
+
+            auto wglCreateContextAttribsARB = (PFN_wglCreateContextAttribsARB)wglGetProcAddress("wglCreateContextAttribsARB");
+            if (!wglCreateContextAttribsARB)
+            {
+                wglMakeCurrent(NULL, NULL);
+                wglDeleteContext(tempCtx);
+                if (log) log->Out("WGL_ARB_create_context not available.");
+                return false;
+            }
+
+            wglMakeCurrent(NULL, NULL);
+            wglDeleteContext(tempCtx);
+
+            struct VersionRequest { int major; int minor; int profileMask; };
+            VersionRequest versions[] = {
+                { 3, 3, WGL_CONTEXT_COMPATIBILITY_PROFILE_BIT_ARB },
+                { 3, 2, WGL_CONTEXT_COMPATIBILITY_PROFILE_BIT_ARB },
+                { 3, 0, 0 },
+                { 2, 1, 0 },
+                { 0, 0, 0 }
+            };
+
+            for (int i = 0; versions[i].major != 0; i++)
+            {
+                int attribs[16];
+                int n = 0;
+                if (versions[i].major > 0)
+                {
+                    attribs[n++] = WGL_CONTEXT_MAJOR_VERSION_ARB;
+                    attribs[n++] = versions[i].major;
+                    attribs[n++] = WGL_CONTEXT_MINOR_VERSION_ARB;
+                    attribs[n++] = versions[i].minor;
+                }
+                if (versions[i].profileMask != 0)
+                {
+                    attribs[n++] = WGL_CONTEXT_PROFILE_MASK_ARB;
+                    attribs[n++] = versions[i].profileMask;
+                }
+                attribs[n] = 0;
+
+                outContext = wglCreateContextAttribsARB(hdc, NULL, attribs);
+                if (outContext)
+                {
+                    if (log) log->Out("Created OpenGL " + o2::String(versions[i].major) + "." + o2::String(versions[i].minor) + " via wglCreateContextAttribsARB");
+                    return true;
+                }
+                SetLastError(0);
+            }
+
+            if (log) log->Error("wglCreateContextAttribsARB failed for all versions.");
+            return false;
+        }
+    }
+
     void Render::InitializePlatform()
     {
         mLog->Out("Initializing OpenGL render..");
 
         if constexpr (IS_PLATFORM_INITIALIZATION_ENABLED)
         {
-            GLuint pixelFormat;
-            static PIXELFORMATDESCRIPTOR pfd = // pfd Tells Windows How We Want Things To Be
-            {
-                sizeof(PIXELFORMATDESCRIPTOR), // Size Of This Pixel Format Descriptor
-                1,                             // Version Number
-                PFD_DRAW_TO_WINDOW |           // Format Must Support Window
-                PFD_SUPPORT_OPENGL |           // Format Must Support OpenGL
-                PFD_DOUBLEBUFFER,              // Must Support Double Buffering
-                PFD_TYPE_RGBA,                 // Request An RGBA Format
-                32,                            // Select Our Color Depth
-                0, 0, 0, 0, 0, 0,              // Color Bits Ignored
-                0,                             // No Alpha Buffer
-                0,                             // Shift Bit Ignored
-                0,                             // No Accumulation Buffer
-                0, 0, 0, 0,                    // Accumulation Bits Ignored
-                16,                            // 16Bit Z-Buffer (Depth Buffer)  
-                1,                             // No Stencil Buffer
-                0,                             // No Auxiliary Buffer
-                PFD_MAIN_PLANE,                // Main Drawing Layer
-                0,                             // Reserved
-                0, 0, 0                        // Layer Masks Ignored
-            };
-
             mHDC = GetDC(o2Application.mHWnd);
             if (!mHDC)
             {
@@ -54,24 +112,31 @@ namespace o2
                 return;
             }
 
-            pixelFormat = ChoosePixelFormat(mHDC, &pfd);
-            if (!pixelFormat)
+            if (!CreateGLContextWithAttribs(mHDC, mGLContext, mLog.Get()))
             {
-                mLog->Error("Can't Find A Suitable PixelFormat.\n");
-                return;
-            }
-
-            if (!SetPixelFormat(mHDC, pixelFormat, &pfd))
-            {
-                mLog->Error("Can't Set The PixelFormat.\n");
-                return;
-            }
-
-            mGLContext = wglCreateContext(mHDC);
-            if (!mGLContext)
-            {
-                mLog->Error("Can't Create A GL Rendering Context.\n");
-                return;
+                int pf = GetPixelFormat(mHDC);
+                if (!pf)
+                {
+                    static PIXELFORMATDESCRIPTOR pfd = {
+                        sizeof(PIXELFORMATDESCRIPTOR), 1,
+                        PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER,
+                        PFD_TYPE_RGBA, 32, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                        24, 8, 0, PFD_MAIN_PLANE, 0, 0, 0, 0
+                    };
+                    pf = ChoosePixelFormat(mHDC, &pfd);
+                    if (!pf || !SetPixelFormat(mHDC, pf, &pfd))
+                    {
+                        mLog->Error("Can't Set The PixelFormat.\n");
+                        return;
+                    }
+                }
+                mGLContext = wglCreateContext(mHDC);
+                if (!mGLContext)
+                {
+                    mLog->Error("Can't Create A GL Rendering Context.\n");
+                    return;
+                }
+                mLog->Out("Using legacy wglCreateContext.");
             }
 
             if (!wglMakeCurrent(mHDC, mGLContext))
