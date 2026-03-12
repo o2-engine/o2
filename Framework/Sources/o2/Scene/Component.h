@@ -2,6 +2,7 @@
 
 #include "o2/Utils/Editor/Attributes/EditorPropertyAttribute.h"
 #include "o2/Utils/Serialization/Serializable.h"
+#include "o2/Utils/Basic/ICloneable.h"
 
 namespace o2
 {

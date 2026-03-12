@@ -316,6 +316,11 @@ endif()
 # assets build tool
 add_subdirectory(AssetsBuildTool)
 
+# tests
+if(O2_TESTS)
+    add_subdirectory(Tests)
+endif()
+
 # group in IDE
 set_target_properties(o2Framework PROPERTIES FOLDER o2)
 set_target_properties(o2AssetsBuilder PROPERTIES FOLDER o2)

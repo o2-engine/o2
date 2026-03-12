@@ -3,6 +3,7 @@
 #include "o2/Events/KeyboardEventsListener.h"
 #include "o2/Render/Text.h"
 #include "o2/Scene/UI/Widget.h"
+#include "o2/Scene/UI/Widgets/Spoiler.h"
 #include "o2/Utils/Editor/DragAndDrop.h"
 #include "o2/Utils/FileSystem/FileSystem.h"
 #include "o2Editor/Windows/AssetsWindow/AssetsIconsScroll.h"
