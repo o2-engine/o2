@@ -44,7 +44,7 @@ namespace o2
 
     VectorFont::~VectorFont()
     {
-        if (mFreeTypeFace)
+        if (mFreeTypeFace && mFreeTypeFace->internal)
             FT_Done_Face(mFreeTypeFace);
     }
 
