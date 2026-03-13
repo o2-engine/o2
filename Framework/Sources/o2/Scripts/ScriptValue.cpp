@@ -28,9 +28,8 @@ namespace o2
         else if (valType == ValueType::Function)
         {
 #if SCRIPTING_BACKEND_JERRYSCRIPT
-            void* ptr = nullptr;
-            jerry_get_object_native_pointer(jvalue, &ptr, &GetDataDeleter().info);
-            res += ptr ? "c-function" : "function";
+            auto container = GetNativeContainer(jvalue);
+            res += container ? "c-function" : "function";
 #else
             res += "function";
 #endif

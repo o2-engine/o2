@@ -118,9 +118,7 @@ namespace o2
 
             res.SetPrototype(GetPrototype());
 
-            void* dataPtr = nullptr;
-            jerry_get_object_native_pointer(jvalue, &dataPtr, &GetDataDeleter().info);
-            auto dataContainer = (IDataContainer*)dataPtr;
+            auto dataContainer = GetNativeContainer(jvalue);
             if (dataContainer)
             {
                 auto clonedDataContainer = dataContainer->Clone();
@@ -192,26 +190,6 @@ namespace o2
             return dataContainer->GetData();
 
         return nullptr;
-    }
-
-    bool ScriptValue::IsObjectContainerOwner() const
-    {
-        void* dataPtr = nullptr;
-        jerry_get_object_native_pointer(jvalue, &dataPtr, &GetDataDeleter().info);
-        auto dataContainer = (IDataContainer*)dataPtr;
-        if (dataContainer)
-            return dataContainer->isDataOwner;
-
-        return false;
-    }
-
-    void ScriptValue::SetObjectOwnership(bool own)
-    {
-        void* dataPtr = nullptr;
-        jerry_get_object_native_pointer(jvalue, &dataPtr, &GetDataDeleter().info);
-        auto dataContainer = (IDataContainer*)dataPtr;
-        if (dataContainer)
-            dataContainer->isDataOwner = own;
     }
 
     ScriptValue ScriptValue::Construct(const Vector<ScriptValue>& args)
@@ -435,14 +413,18 @@ namespace o2
         delete (IDataContainer*)ptr;
     }
 
+    ScriptValueBase::IDataContainer* ScriptValueBase::GetNativeContainer(jerry_value_t jval)
+    {
+        void* ptr = nullptr;
+        jerry_get_object_native_pointer(jval, &ptr, &GetDataDeleter().info);
+        return (IDataContainer*)ptr;
+    }
+
     jerry_value_t ScriptValueBase::CallFunction(const jerry_value_t function_obj,
                                                 const jerry_value_t this_val,
                                                 const jerry_value_t args_p[], const jerry_length_t args_count)
     {
-        void* ptr = nullptr;
-        jerry_get_object_native_pointer(function_obj, &ptr, &GetDataDeleter().info);
-
-        IFunctionContainer* container = dynamic_cast<IFunctionContainer*>((IDataContainer*)ptr);
+        auto container = static_cast<IFunctionContainer*>(GetNativeContainer(function_obj));
         return container->Invoke(this_val, (jerry_value_t*)args_p, args_count);
     }
 
@@ -451,10 +433,7 @@ namespace o2
                                                     const jerry_value_t args_p[],
                                                     const jerry_length_t args_count)
     {
-        void* ptr = nullptr;
-        jerry_get_object_native_pointer(function_obj, &ptr, &GetDataDeleter().info);
-
-        ISetterWrapperContainer* container = dynamic_cast<ISetterWrapperContainer*>((IDataContainer*)ptr);
+        auto container = static_cast<ISetterWrapperContainer*>(GetNativeContainer(function_obj));
         container->Set(args_p[0]);
 
         return jerry_create_undefined();
@@ -465,11 +444,27 @@ namespace o2
                                                     const jerry_value_t args_p[],
                                                     const jerry_length_t args_count)
     {
-        void* ptr = nullptr;
-        jerry_get_object_native_pointer(function_obj, &ptr, &GetDataDeleter().info);
-
-        IGetterWrapperContainer* container = dynamic_cast<IGetterWrapperContainer*>((IDataContainer*)ptr);
+        auto container = static_cast<IGetterWrapperContainer*>(GetNativeContainer(function_obj));
         return container->Get();
+    }
+
+    jerry_value_t ScriptValueBase::PrototypeDescriptorGetter(const jerry_value_t function_obj,
+                                                             const jerry_value_t this_val,
+                                                             const jerry_value_t args_p[],
+                                                             const jerry_length_t args_count)
+    {
+        auto container = static_cast<IPrototypeGetter*>(GetNativeContainer(function_obj));
+        return container->GetFrom(this_val);
+    }
+
+    jerry_value_t ScriptValueBase::PrototypeDescriptorSetter(const jerry_value_t function_obj,
+                                                             const jerry_value_t this_val,
+                                                             const jerry_value_t args_p[],
+                                                             const jerry_length_t args_count)
+    {
+        auto container = static_cast<IPrototypeSetter*>(GetNativeContainer(function_obj));
+        container->SetTo(this_val, args_p[0]);
+        return jerry_create_undefined();
     }
 
     ScriptValue*& ScriptValuePrototypes::GetVec2Prototype()

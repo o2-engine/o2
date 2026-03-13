@@ -19,9 +19,13 @@ namespace o2
     {
         data.jvalue = jerry_create_object();
         if constexpr (std::is_pointer<__type>::value)
-            data.SetContainingObject(value, false);
+            data.SetContainingObject(value);
         else
-            data.SetContainingObject(mnew __type(value), true);
+        {
+            auto dataContainer = mnew ScriptValueBase::DataContainer<__type>(value);
+            jerry_set_object_native_pointer(data.jvalue, (ScriptValueBase::IDataContainer*)dataContainer,
+                                             &ScriptValueBase::GetDataDeleter().info);
+        }
     }
 
     template<>
@@ -415,9 +419,7 @@ namespace o2
 
         static void Read(_ptr_type& value, const ScriptValue& data)
         {
-            void* dataPtr = nullptr;
-            jerry_get_object_native_pointer(data.jvalue, &dataPtr, &GetDataDeleter().info);
-            auto dataContainer = (IDataContainer*)dataPtr;
+            auto dataContainer = GetNativeContainer(data.jvalue);
             if (dataContainer)
             {
                 auto object = dataContainer->TryCastToIObject();
@@ -524,8 +526,7 @@ namespace o2
         {
             data.jvalue = jerry_create_external_function(&CallFunction);
 
-            IDataContainer* funcContainer = new ScriptFunctionContainer<Function<_res_type(_args ...)>, _res_type, _args ...>(
-                mnew Function<_res_type(_args ...)>(value));
+            IDataContainer* funcContainer = new ScriptFunctionContainer<Function<_res_type(_args ...)>, _res_type, _args ...>(value);
 
             jerry_set_object_native_pointer(data.jvalue, funcContainer, &GetDataDeleter().info);
         }

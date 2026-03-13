@@ -16,6 +16,7 @@ namespace o2
 
     public:
         TestScriptObject() = default;
+        TestScriptObject(RefCounter* refCounter, int v, const String& n) : RefCounterable(refCounter), value(v), name(n) {} // @SCRIPTABLE
         TestScriptObject(int v, const String& n) : value(v), name(n) {}
 
         int GetValue() const { return value; }
@@ -27,9 +28,14 @@ namespace o2
         float GetScore() const { return score; }
         void SetScore(float s) { score = s; }
 
-        int Add(int a, int b) const { return a + b; }
-        String Concat(const String& a, const String& b) const { return a + b; }
-        float Multiply(float a, float b) const { return a * b; }
+        int Add(int a, int b) const { return a + b; }                              // @SCRIPTABLE
+        String Concat(const String& a, const String& b) const { return a + b; }   // @SCRIPTABLE
+        float Multiply(float a, float b) const { return a * b; }                  // @SCRIPTABLE
+
+        void SetAll(int v, const String& n, float s) { value = v; name = n; score = s; } // @SCRIPTABLE
+        int GetDoubleValue() const { return value * 2; }                                  // @SCRIPTABLE
+        String GetDescription() const { return name + ":" + (String)value; }              // @SCRIPTABLE
+        void AddToScore(float delta) { score += delta; }                                  // @SCRIPTABLE
 
         IOBJECT(TestScriptObject);
     };
@@ -53,16 +59,21 @@ CLASS_METHODS_META(o2::TestScriptObject)
 {
 
     FUNCTION().PUBLIC().CONSTRUCTOR();
-    FUNCTION().PUBLIC().CONSTRUCTOR(int, const String&);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().CONSTRUCTOR(RefCounter*, int, const String&);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().CONSTRUCTOR(int, const String&);
     FUNCTION().PUBLIC().SIGNATURE(int, GetValue);
     FUNCTION().PUBLIC().SIGNATURE(void, SetValue, int);
     FUNCTION().PUBLIC().SIGNATURE(String, GetName);
     FUNCTION().PUBLIC().SIGNATURE(void, SetName, const String&);
     FUNCTION().PUBLIC().SIGNATURE(float, GetScore);
     FUNCTION().PUBLIC().SIGNATURE(void, SetScore, float);
-    FUNCTION().PUBLIC().SIGNATURE(int, Add, int, int);
-    FUNCTION().PUBLIC().SIGNATURE(String, Concat, const String&, const String&);
-    FUNCTION().PUBLIC().SIGNATURE(float, Multiply, float, float);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(int, Add, int, int);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(String, Concat, const String&, const String&);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(float, Multiply, float, float);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetAll, int, const String&, float);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(int, GetDoubleValue);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(String, GetDescription);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, AddToScore, float);
 }
 END_META;
 // --- END META ---

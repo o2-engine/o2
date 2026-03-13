@@ -94,18 +94,16 @@ namespace o2 {
         // Returns type of containing native object type
         const Type *GetObjectContainerType() const;
 
-        // Sets containing object
+        // Sets containing object. Stores Ref<_type> for RefCounterable types, value for others
         template<typename _type>
-        void SetContainingObject(_type *object, bool owner = true);
+        void SetContainingObject(_type *object);
 
         // Returns pointer to containing object
         void *GetContainingObject() const;
 
-        // Returns is object memory is handling GC. When it's true, containing object will be destroyed by GC. 
-        bool IsObjectContainerOwner() const;
-
-        // Sets containing object ownership. When it's true, containing object will be destroyed by GC. 
-        void SetObjectOwnership(bool own);
+        // Sets prototype property wrapper for prototype-based field access
+        template<typename _object_type, typename _field_type>
+        void SetPrototypePropertyWrapper(const ScriptValue &name, void* (*pointerGetter)(void*));
 
         // Constructs object from this
         ScriptValue Construct(const Vector<ScriptValue> &args);

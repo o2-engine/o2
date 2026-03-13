@@ -159,6 +159,168 @@ TEST(ScriptValue, ObjectFieldWriteFromScript) {
     EXPECT_FLOAT_EQ(obj->score, 2.5f);
 }
 
+TEST(ScriptValue, ObjectMethodCallFromCpp) {
+    auto obj = mmake<TestScriptObject>();
+
+    ScriptValue sv = obj->GetScriptValue();
+    EXPECT_TRUE(sv.IsObject());
+
+    ScriptValue addFunc = sv.GetProperty("Add");
+    EXPECT_TRUE(addFunc.IsFunction());
+    int addResult = addFunc.Invoke<int>(sv, 3, 7);
+    EXPECT_EQ(addResult, 10);
+
+    ScriptValue concatFunc = sv.GetProperty("Concat");
+    EXPECT_TRUE(concatFunc.IsFunction());
+    String concatResult = concatFunc.Invoke<String>(sv, String("Hello, "), String("World!"));
+    EXPECT_EQ(concatResult, "Hello, World!");
+
+    ScriptValue multiplyFunc = sv.GetProperty("Multiply");
+    EXPECT_TRUE(multiplyFunc.IsFunction());
+    float multiplyResult = multiplyFunc.Invoke<float>(sv, 3.0f, 4.0f);
+    EXPECT_FLOAT_EQ(multiplyResult, 12.0f);
+}
+
+TEST(ScriptValue, ConstructFromScript) {
+    o2Scripts.Eval("var constructed = new o2.TestScriptObject(42, 'hello');");
+
+    ScriptValue sv = o2Scripts.GetGlobal().GetProperty("constructed");
+    EXPECT_TRUE(sv.IsObject());
+    EXPECT_EQ(sv.GetProperty("value").GetValue<int>(), 42);
+    EXPECT_EQ(sv.GetProperty("name").ToString(), "hello");
+
+    int addRes = sv.GetProperty("Add").Invoke<int>(sv, 1, 2);
+    EXPECT_EQ(addRes, 3);
+}
+
+TEST(ScriptValue, ObjectMethodCallFromScript) {
+    auto obj = mmake<TestScriptObject>();
+
+    o2Scripts.GetGlobal().SetProperty("testObj2", obj->GetScriptValue());
+    o2Scripts.CollectGarbage();
+
+    o2Scripts.Eval("var addRes = testObj2.Add(6, 7);");
+    EXPECT_EQ(o2Scripts.GetGlobal().GetProperty("addRes").GetValue<int>(), 13);
+
+    o2Scripts.Eval("var concatRes = testObj2.Concat('foo', 'bar');");
+    EXPECT_EQ(o2Scripts.GetGlobal().GetProperty("concatRes").ToString(), "foobar");
+
+    o2Scripts.Eval("var mulRes = testObj2.Multiply(2.5, 4.0);");
+    EXPECT_FLOAT_EQ(o2Scripts.GetGlobal().GetProperty("mulRes").GetValue<float>(), 10.0f);
+}
+
+
+TEST(ScriptValue, MethodMutatesStateFromScript) {
+    auto obj = mmake<TestScriptObject>();
+    obj->value = 1;
+    obj->name = "old";
+    obj->score = 0.0f;
+
+    o2Scripts.GetGlobal().SetProperty("mutObj", obj->GetScriptValue());
+    o2Scripts.CollectGarbage();
+
+    o2Scripts.Eval("mutObj.SetAll(99, 'new', 7.5);");
+    EXPECT_EQ(obj->value, 99);
+    EXPECT_EQ(obj->name, "new");
+    EXPECT_FLOAT_EQ(obj->score, 7.5f);
+
+    o2Scripts.Eval("mutObj.AddToScore(2.5);");
+    EXPECT_FLOAT_EQ(obj->score, 10.0f);
+}
+
+TEST(ScriptValue, MethodReadsStateFromScript) {
+    auto obj = mmake<TestScriptObject>();
+    obj->value = 21;
+    obj->name = "item";
+
+    o2Scripts.GetGlobal().SetProperty("readObj", obj->GetScriptValue());
+    o2Scripts.CollectGarbage();
+
+    o2Scripts.Eval("var dv = readObj.GetDoubleValue();");
+    EXPECT_EQ(o2Scripts.GetGlobal().GetProperty("dv").GetValue<int>(), 42);
+
+    o2Scripts.Eval("var desc = readObj.GetDescription();");
+    EXPECT_EQ(o2Scripts.GetGlobal().GetProperty("desc").ToString(), "item:21");
+}
+
+TEST(ScriptValue, FieldReadFromScript) {
+    auto obj = mmake<TestScriptObject>();
+    obj->value = 77;
+    obj->name = "alpha";
+    obj->score = 1.5f;
+
+    o2Scripts.GetGlobal().SetProperty("fieldObj", obj->GetScriptValue());
+    o2Scripts.CollectGarbage();
+
+    o2Scripts.Eval("var fv = fieldObj.value; var fn = fieldObj.name; var fs = fieldObj.score;");
+    EXPECT_EQ(o2Scripts.GetGlobal().GetProperty("fv").GetValue<int>(), 77);
+    EXPECT_EQ(o2Scripts.GetGlobal().GetProperty("fn").ToString(), "alpha");
+    EXPECT_FLOAT_EQ(o2Scripts.GetGlobal().GetProperty("fs").GetValue<float>(), 1.5f);
+}
+
+TEST(ScriptValue, FieldWriteThenMethodReads) {
+    auto obj = mmake<TestScriptObject>();
+
+    o2Scripts.GetGlobal().SetProperty("fmObj", obj->GetScriptValue());
+    o2Scripts.CollectGarbage();
+
+    o2Scripts.Eval("fmObj.value = 10; fmObj.name = 'test';");
+    EXPECT_EQ(obj->value, 10);
+    EXPECT_EQ(obj->name, "test");
+
+    o2Scripts.Eval("var fmDbl = fmObj.GetDoubleValue();");
+    EXPECT_EQ(o2Scripts.GetGlobal().GetProperty("fmDbl").GetValue<int>(), 20);
+
+    o2Scripts.Eval("var fmDesc = fmObj.GetDescription();");
+    EXPECT_EQ(o2Scripts.GetGlobal().GetProperty("fmDesc").ToString(), "test:10");
+}
+
+TEST(ScriptValue, MultipleInstancesSharePrototype) {
+    auto obj1 = mmake<TestScriptObject>();
+    obj1->value = 10;
+    obj1->name = "first";
+    obj1->score = 1.0f;
+
+    auto obj2 = mmake<TestScriptObject>();
+    obj2->value = 20;
+    obj2->name = "second";
+    obj2->score = 2.0f;
+
+    o2Scripts.GetGlobal().SetProperty("inst1", obj1->GetScriptValue());
+    o2Scripts.GetGlobal().SetProperty("inst2", obj2->GetScriptValue());
+    o2Scripts.CollectGarbage();
+
+    o2Scripts.Eval("var v1 = inst1.value; var v2 = inst2.value;");
+    EXPECT_EQ(o2Scripts.GetGlobal().GetProperty("v1").GetValue<int>(), 10);
+    EXPECT_EQ(o2Scripts.GetGlobal().GetProperty("v2").GetValue<int>(), 20);
+
+    o2Scripts.Eval("inst1.value = 111; inst2.value = 222;");
+    EXPECT_EQ(obj1->value, 111);
+    EXPECT_EQ(obj2->value, 222);
+
+    o2Scripts.Eval("var d1 = inst1.GetDoubleValue(); var d2 = inst2.GetDoubleValue();");
+    EXPECT_EQ(o2Scripts.GetGlobal().GetProperty("d1").GetValue<int>(), 222);
+    EXPECT_EQ(o2Scripts.GetGlobal().GetProperty("d2").GetValue<int>(), 444);
+
+    o2Scripts.Eval("inst1.AddToScore(5.0); inst2.AddToScore(10.0);");
+    EXPECT_FLOAT_EQ(obj1->score, 6.0f);
+    EXPECT_FLOAT_EQ(obj2->score, 12.0f);
+}
+
+TEST(ScriptValue, ConstructedObjectFieldsAndMethods) {
+    o2Scripts.Eval(
+        "var cObj = new o2.TestScriptObject(5, 'built');"
+        "cObj.score = 9.9;"
+        "var cDbl = cObj.GetDoubleValue();"
+        "var cDesc = cObj.GetDescription();"
+        "cObj.AddToScore(0.1);"
+        "var cScore = cObj.score;"
+    );
+
+    EXPECT_EQ(o2Scripts.GetGlobal().GetProperty("cDbl").GetValue<int>(), 10);
+    EXPECT_EQ(o2Scripts.GetGlobal().GetProperty("cDesc").ToString(), "built:5");
+    EXPECT_FLOAT_EQ(o2Scripts.GetGlobal().GetProperty("cScore").GetValue<float>(), 10.0f);
+}
 
 #else
 

@@ -2,60 +2,60 @@
 
 #include "o2/Utils/Reflection/Type.h"
 #include "o2/Utils/Reflection/TypeTraits.h"
+#include "o2/Utils/Reflection/BaseTypeProcessor.h"
 #include "o2/Utils/Debug/Debug.h"
 #include <type_traits>
 #include <functional>
 
 #if defined(SCRIPTING_BACKEND_JERRYSCRIPT)
 
-#if __cplusplus < 202002L
-namespace std
-{
-    template<typename F, typename... FRONT_ARGS>
-    auto bind_front(F&& f, FRONT_ARGS&&... front_args)
-    {
-        // front_args are copied because multiple invocations of this closure are possible
-        return [captured_f = std::forward<F>(f), front_args...](auto&&... back_args) {
-            return std::invoke(captured_f, front_args...,
-                               std::forward<decltype(back_args)>(back_args)...);
-        };
-    }
-}
-#endif
-
 namespace o2
 {
+    // Helper to detect Ref<T>
+    template<typename T> struct IsRefType : std::false_type {};
+    template<typename T> struct IsRefType<Ref<T>> : std::true_type {};
+
+    template<typename T> struct RefInnerType { using type = T; };
+    template<typename T> struct RefInnerType<Ref<T>> { using type = T; };
+
     // ------------------------------
-    // ScriptValueBase implementation
+    // DataContainer - stores by value
     // ------------------------------
 
     template<typename _type>
-    ScriptValueBase::DataContainer<_type>::DataContainer(_type* data) :
-        data(data)
-    {
-    }
+    ScriptValueBase::DataContainer<_type>::DataContainer(const _type& d) :
+        data(d)
+    {}
 
     template<typename _type>
-    ScriptValueBase::DataContainer<_type>::~DataContainer()
-    {
-        if (isDataOwner && data)
-            delete data;
-    }
+    ScriptValueBase::DataContainer<_type>::DataContainer(_type&& d) :
+        data(std::move(d))
+    {}
 
     template<typename _type>
     void* ScriptValueBase::DataContainer<_type>::GetData() const
     {
-        if constexpr (std::is_const<_type>::value)
+        if constexpr (IsRefType<_type>::value)
+            return data.Get();
+        else if constexpr (std::is_const<_type>::value)
             return nullptr;
         else
-            return const_cast<_type*>(data);
+            return const_cast<_type*>(&data);
     }
 
     template<typename _type>
     IObject* ScriptValueBase::DataContainer<_type>::TryCastToIObject() const
     {
-        if constexpr (std::is_base_of<IObject, _type>::value)
-            return dynamic_cast<IObject*>(data);
+        if constexpr (IsRefType<_type>::value)
+        {
+            using inner = typename RefInnerType<_type>::type;
+            if constexpr (std::is_base_of<IObject, inner>::value)
+                return dynamic_cast<IObject*>(data.Get());
+        }
+        else if constexpr (std::is_base_of<IObject, _type>::value)
+        {
+            return dynamic_cast<IObject*>(const_cast<_type*>(&data));
+        }
 
         return nullptr;
     }
@@ -63,56 +63,93 @@ namespace o2
     template<typename _type>
     const Type* ScriptValueBase::DataContainer<_type>::GetType() const
     {
-        return &TypeOf(_type);
+        if constexpr (IsRefType<_type>::value)
+            return &TypeOf(typename RefInnerType<_type>::type);
+        else
+            return &TypeOf(_type);
     }
 
     template<typename _type>
     ScriptValueBase::IDataContainer* ScriptValueBase::DataContainer<_type>::Clone() const
     {
-        if (!data)
-            return nullptr;
-
-        _type* clonedData = nullptr;    
         if constexpr (std::is_copy_constructible<_type>::value)
-            clonedData = mnew _type(*data);
+            return mnew DataContainer<_type>(data);
+        else
+            return nullptr;
+    }
 
-        auto clonedContainer = mnew DataContainer<_type>(clonedData);
-        clonedContainer->isDataOwner = true;
-        return clonedContainer;
+    // -------------------------------------------------------
+    // Function containers - store callable by value, override
+    // Invoke directly for minimal overhead
+    // -------------------------------------------------------
+
+    template<typename T>
+    static auto ConvertJerryArg(jerry_value_t* args, size_t index, int count)
+        -> typename RemoveConstAndRef<T>::type
+    {
+        using CleanT = typename RemoveConstAndRef<T>::type;
+        if (index >= (size_t)count) return CleanT{};
+        ScriptValue tmp;
+        tmp.AcquireValue(args[index]);
+        return tmp.GetValue<CleanT>();
     }
 
     template<typename _invocable_type, typename _res_type, typename ... _args>
-    struct ScriptFunctionContainer :
-        public ScriptValueBase::DataContainer<_invocable_type>,
-        public ScriptValueBase::TFunctionContainer<_res_type, int, _args ...>
+    struct ScriptFunctionContainer : public ScriptValueBase::IFunctionContainer
     {
-        ScriptFunctionContainer(_invocable_type* function) :
-            ScriptValueBase::DataContainer<_invocable_type>(function)
+        _invocable_type data;
+
+        ScriptFunctionContainer(const _invocable_type& function) : data(function) {}
+        ScriptFunctionContainer(_invocable_type&& function) : data(std::move(function)) {}
+
+        jerry_value_t Invoke(jerry_value_t thisValue, jerry_value_t* args, int argsCount) override
         {
+            return InvokeImpl(args, argsCount, std::index_sequence_for<_args...>{});
         }
 
-        _res_type InvokeT(int, _args ... args) const override
+        template<size_t... Is>
+        jerry_value_t InvokeImpl(jerry_value_t* args, int argsCount, std::index_sequence<Is...>)
         {
-            if constexpr (sizeof...(_args) > 0)
-                return (*this->data)(args...);
+            if constexpr (std::is_void<_res_type>::value)
+            {
+                data(ConvertJerryArg<_args>(args, Is, argsCount)...);
+                return jerry_create_undefined();
+            }
             else
-                return (*this->data)();
+            {
+                ScriptValue res(data(ConvertJerryArg<_args>(args, Is, argsCount)...));
+                return jerry_acquire_value(res.jvalue);
+            }
         }
     };
 
     template<typename _invocable_type, typename _res_type, typename ... _args>
-    struct ScriptThisFunctionContainer :
-        public ScriptValueBase::DataContainer<_invocable_type>,
-        public ScriptValueBase::TFunctionContainer<_res_type, ScriptValue, _args ...>
+    struct ScriptThisFunctionContainer : public ScriptValueBase::IFunctionContainer
     {
-        ScriptThisFunctionContainer(_invocable_type* function) :
-            ScriptValueBase::DataContainer<_invocable_type>(function)
+        _invocable_type data;
+
+        ScriptThisFunctionContainer(const _invocable_type& function) : data(function) {}
+
+        jerry_value_t Invoke(jerry_value_t thisValue, jerry_value_t* args, int argsCount) override
         {
+            ScriptValue thisObj;
+            thisObj.AcquireValue(thisValue);
+            return InvokeImpl(thisObj, args, argsCount, std::index_sequence_for<_args...>{});
         }
 
-        _res_type InvokeT(ScriptValue this_, _args ... args) const override
+        template<size_t... Is>
+        jerry_value_t InvokeImpl(ScriptValue& thisObj, jerry_value_t* args, int argsCount, std::index_sequence<Is...>)
         {
-            return (*this->data)(this_, args ...);
+            if constexpr (std::is_void<_res_type>::value)
+            {
+                data(thisObj, ConvertJerryArg<_args>(args, Is, argsCount)...);
+                return jerry_create_undefined();
+            }
+            else
+            {
+                ScriptValue res(data(thisObj, ConvertJerryArg<_args>(args, Is, argsCount)...));
+                return jerry_acquire_value(res.jvalue);
+            }
         }
     };
 
@@ -124,66 +161,93 @@ namespace o2
     };
 
     template<bool isConst, typename _class_type, typename _res_type, typename ... _args>
-    struct ScriptClassFunctionContainer :
-        public ScriptValueBase::DataContainer<typename ScriptClassFunction<isConst, _class_type, _res_type, _args ...>::type>,
-        public ScriptValueBase::TFunctionContainer<_res_type, _class_type*, _args ...>
+    struct ScriptClassFunctionContainer : public ScriptValueBase::IFunctionContainer
     {
         using FuncType = typename ScriptClassFunction<isConst, _class_type, _res_type, _args ...>::type;
+        FuncType funcPtr;
 
-        ScriptClassFunctionContainer(FuncType functionPtr) :
-            ScriptValueBase::DataContainer<FuncType>(mnew FuncType(functionPtr))
+        ScriptClassFunctionContainer(FuncType fp) : funcPtr(fp) {}
+
+        jerry_value_t Invoke(jerry_value_t thisValue, jerry_value_t* args, int argsCount) override
         {
+            auto container = ScriptValueBase::GetNativeContainer(thisValue);
+            _class_type* thisObj = static_cast<_class_type*>(container->GetData());
+            return InvokeImpl(thisObj, args, argsCount, std::index_sequence_for<_args...>{});
         }
 
-        _res_type InvokeT(_class_type* this_, _args ... args) const override
+        template<size_t... Is>
+        jerry_value_t InvokeImpl(_class_type* obj, jerry_value_t* args, int argsCount, std::index_sequence<Is...>)
         {
-            return (this_->*(*this->data))(args ...);
+            if constexpr (std::is_void<_res_type>::value)
+            {
+                (obj->*funcPtr)(ConvertJerryArg<_args>(args, Is, argsCount)...);
+                return jerry_create_undefined();
+            }
+            else
+            {
+                ScriptValue res((obj->*funcPtr)(ConvertJerryArg<_args>(args, Is, argsCount)...));
+                return jerry_acquire_value(res.jvalue);
+            }
         }
     };
 
-    template<typename _res_type, typename _this_type, typename ... _args>
-    jerry_value_t ScriptValueBase::TFunctionContainer<_res_type, _this_type, _args ...>::Invoke(jerry_value_t thisValue,
-                                                                                                jerry_value_t* args, int argsCount)
+    // -------------------------------------------------------
+    // Prototype-based field getter/setter containers
+    // -------------------------------------------------------
+
+    template<typename _object_type, typename _field_type>
+    struct PrototypeFieldGetter : public ScriptValueBase::IPrototypeGetter
     {
-        using ThisClass = ScriptValueBase::TFunctionContainer<_res_type, _this_type, _args ...>;
+        void* (*pointerGetter)(void*) = nullptr;
 
-        ScriptValue thisValueObj;
-        thisValueObj.AcquireValue(thisValue);
-
-        if constexpr (sizeof...(_args) > 0)
+        jerry_value_t GetFrom(jerry_value_t this_val) override
         {
-            std::tuple<_this_type, typename RemoveConstAndRef<_args>::type...> argst;
+            auto container = ScriptValueBase::GetNativeContainer(this_val);
+            if (!container) return jerry_create_undefined();
 
-            if constexpr (!std::is_void<_this_type>::value)
-                std::get<0>(argst) = thisValueObj;
+            auto objectPtr = static_cast<_object_type*>(container->GetData());
+            if (!objectPtr) return jerry_create_undefined();
 
-            UnpackArgs<1, 0, _this_type, typename RemoveConstAndRef<_args>::type...>(argst, args, argsCount);
+            auto fieldPtr = static_cast<_field_type*>(pointerGetter(objectPtr));
 
-            if constexpr (std::is_void<_res_type>::value)
-            {
-                std::apply(std::bind_front(&ThisClass::InvokeT, this), argst);
-                return jerry_create_undefined();
-            }
+            ScriptValue tmp;
+            if constexpr (IsProperty<_field_type>::value)
+                tmp.SetValue<typename ExtractPropertyValueType<_field_type>::type>(fieldPtr->Get());
             else
-            {
-                ScriptValue res(std::apply(std::bind_front(&ThisClass::InvokeT, this), argst));
-                return jerry_acquire_value(res.jvalue);
-            }
+                tmp.SetValue<_field_type>(*fieldPtr);
+
+            return jerry_acquire_value(tmp.jvalue);
         }
-        else
+    };
+
+    template<typename _object_type, typename _field_type>
+    struct PrototypeFieldSetter : public ScriptValueBase::IPrototypeSetter
+    {
+        void* (*pointerGetter)(void*) = nullptr;
+
+        void SetTo(jerry_value_t this_val, jerry_value_t value) override
         {
-            if constexpr (std::is_void<_res_type>::value)
-            {
-                InvokeT(thisValueObj);
-                return jerry_create_undefined();
-            }
+            auto container = ScriptValueBase::GetNativeContainer(this_val);
+            if (!container) return;
+
+            auto objectPtr = static_cast<_object_type*>(container->GetData());
+            if (!objectPtr) return;
+
+            auto fieldPtr = static_cast<_field_type*>(pointerGetter(objectPtr));
+
+            ScriptValue tmp;
+            tmp.AcquireValue(value);
+
+            if constexpr (IsProperty<_field_type>::value)
+                fieldPtr->Set(tmp.GetValue<typename ExtractPropertyValueType<_field_type>::type>());
             else
-            {
-                ScriptValue res(InvokeT(thisValueObj));
-                return jerry_acquire_value(res.jvalue);
-            }
+                *fieldPtr = tmp.GetValue<_field_type>();
         }
-    }
+    };
+
+    // -------------------------------------------------------
+    // Wrapper container implementations
+    // -------------------------------------------------------
 
     template<typename _type>
     jerry_value_t ScriptValueBase::PointerGetterWrapperContainer<_type>::Get()
@@ -231,21 +295,6 @@ namespace o2
         ScriptValue tmp;
         tmp.AcquireValue(value);
         setter(tmp.GetValue<_type>());
-    }
-
-    template<size_t _i /*= 0*/, size_t _j /*= 0*/, typename... _args>
-    void ScriptValueBase::UnpackArgs(std::tuple<_args ...>& argst, jerry_value_t* args, int argsCount)
-    {
-        if (_j < argsCount)
-        {
-            ScriptValue tmp;
-            tmp.AcquireValue(args[_j]);
-            using x = typename std::remove_reference<decltype(std::get<_i>(argst))>::type;
-            std::get<_i>(argst) = tmp.GetValue<x>();
-
-            if constexpr (_i + 1 != sizeof...(_args))
-                UnpackArgs<_i + 1, _j + 1>(argst, args, argsCount);
-        }
     }
 
     // --------------------------
@@ -299,8 +348,14 @@ namespace o2
         return Construct(argsValues);
     }
 
+    template<typename T, typename = void>
+    struct HasRefCounterMethod : std::false_type {};
+
+    template<typename T>
+    struct HasRefCounterMethod<T, std::void_t<decltype(std::declval<const T&>().GetStrongReferencesCount())>> : std::true_type {};
+
     template<typename _type>
-    void ScriptValue::SetContainingObject(_type* object, bool owner /*= true*/)
+    void ScriptValue::SetContainingObject(_type* object)
     {
         if (!object)
         {
@@ -308,24 +363,22 @@ namespace o2
             return;
         }
 
-        auto dataContainer = mnew DataContainer<_type>(object);
-        dataContainer->isDataOwner = owner;
-        jerry_set_object_native_pointer(jvalue, (IDataContainer*)dataContainer, &GetDataDeleter().info);
+        if constexpr (HasRefCounterMethod<_type>::value)
+        {
+            auto dataContainer = mnew DataContainer<Ref<_type>>(Ref<_type>(object));
+            jerry_set_object_native_pointer(jvalue, (IDataContainer*)dataContainer, &GetDataDeleter().info);
+        }
+        else if constexpr (!std::is_abstract<_type>::value && std::is_copy_constructible<_type>::value)
+        {
+            auto dataContainer = mnew DataContainer<_type>(*object);
+            jerry_set_object_native_pointer(jvalue, (IDataContainer*)dataContainer, &GetDataDeleter().info);
+        }
 
         if constexpr (std::is_base_of<IObject, _type>::value)
         {
-            object->ReflectIntoScriptValue(*this);
             SetPrototype(_type::GetScriptPrototype());
         }
-
-        SetProperty("FreeOwnership", Function<ScriptValue()>(
-            [d = dataContainer, j = jvalue]() {
-                d->isDataOwner = false;
-                ScriptValue th; th.AcquireValue(j);
-                return th;
-            }));
     }
-
 
     template<typename _type>
     void ScriptValue::SetProperty(const char* name, const _type& value)
@@ -466,6 +519,39 @@ namespace o2
         jerry_free_property_descriptor_fields(&propertyDescriptor);
     }
 
+    template<typename _object_type, typename _field_type>
+    void ScriptValue::SetPrototypePropertyWrapper(const ScriptValue& name, void* (*pointerGetter)(void*))
+    {
+        if (GetValueType() != ValueType::Object)
+        {
+            jerry_release_value(jvalue);
+            jvalue = jerry_create_object();
+        }
+
+        jerry_property_descriptor_t propertyDescriptor;
+        jerry_init_property_descriptor_fields(&propertyDescriptor);
+
+        propertyDescriptor.is_enumerable = true;
+        propertyDescriptor.is_enumerable_defined = true;
+
+        propertyDescriptor.is_get_defined = true;
+        propertyDescriptor.getter = jerry_create_external_function(PrototypeDescriptorGetter);
+        auto getterContainer = new PrototypeFieldGetter<_object_type, _field_type>();
+        getterContainer->pointerGetter = pointerGetter;
+        jerry_set_object_native_pointer(propertyDescriptor.getter, getterContainer, &GetDataDeleter().info);
+
+        propertyDescriptor.is_set_defined = true;
+        propertyDescriptor.setter = jerry_create_external_function(PrototypeDescriptorSetter);
+        auto setterContainer = new PrototypeFieldSetter<_object_type, _field_type>();
+        setterContainer->pointerGetter = pointerGetter;
+        jerry_set_object_native_pointer(propertyDescriptor.setter, setterContainer, &GetDataDeleter().info);
+
+        jerry_value_t newPropertyValue = jerry_define_own_property(jvalue, name.jvalue, &propertyDescriptor);
+        jerry_release_value(newPropertyValue);
+
+        jerry_free_property_descriptor_fields(&propertyDescriptor);
+    }
+
     template<typename _res_type, typename ... _args>
     _res_type ScriptValue::Invoke(_args ... args) const
     {
@@ -491,10 +577,9 @@ namespace o2
     {
         Accept(jerry_create_external_function(&CallFunction));
 
-        IDataContainer* funcContainer = mnew ScriptThisFunctionContainer<Function<_res_type(ScriptValue, _args ...)>, _res_type, _args ...>(
-            mnew Function<_res_type(ScriptValue, _args ...)>(func));
+        auto funcContainer = mnew ScriptThisFunctionContainer<Function<_res_type(ScriptValue, _args ...)>, _res_type, _args ...>(func);
 
-        jerry_set_object_native_pointer(jvalue, funcContainer, &GetDataDeleter().info);
+        jerry_set_object_native_pointer(jvalue, (IDataContainer*)funcContainer, &GetDataDeleter().info);
     }
 
     template<typename _class_type, typename _res_type, typename ... _args>
@@ -533,6 +618,10 @@ namespace o2
         return res;
     }
 
+    // -------------------------------------------------------
+    // ScriptPrototypeProcessor - handles prototype setup for
+    // class methods and fields marked @SCRIPTABLE
+    // -------------------------------------------------------
 
     class Type;
 
@@ -542,6 +631,8 @@ namespace o2
         bool hasBaseClass = false;
 
     public:
+        // --- Function processing ---
+
         struct BaseFunctionProcessor : public BaseTypeProcessor::FunctionProcessor
         {
             ScriptPrototypeProcessor& processor;
@@ -577,6 +668,79 @@ namespace o2
 
         BaseFunctionProcessor StartFunction() { return BaseFunctionProcessor(*this); }
 
+        // --- Field processing ---
+
+        struct BaseFieldProcessor
+        {
+            ScriptPrototypeProcessor& processor;
+            ProtectSection section = ProtectSection::Public;
+
+            BaseFieldProcessor(ScriptPrototypeProcessor& proc) : processor(proc) {}
+
+            template<typename _attribute_type, typename ... _args>
+            auto AddAttribute(_args ... args);
+
+            template<typename _type>
+            BaseFieldProcessor& SetDefaultValue(const _type& value) { return *this; }
+
+            BaseFieldProcessor& SetProtectSection(ProtectSection sect)
+            {
+                section = sect;
+                return *this;
+            }
+
+            template<typename _object_type, typename _field_type>
+            BaseFieldProcessor& FieldBasics(_object_type* object, Type* type, const char* name,
+                                            void* (*pointerGetter)(void*), _field_type& field)
+            {
+                return *this;
+            }
+        };
+
+        struct FieldProcessor : public BaseFieldProcessor
+        {
+            FieldProcessor(ScriptPrototypeProcessor& proc, ProtectSection sect)
+                : BaseFieldProcessor(proc) { section = sect; }
+
+            template<typename _attribute_type, typename ... _args>
+            FieldProcessor& AddAttribute(_args ... args) { return *this; }
+
+            template<typename _type>
+            FieldProcessor& SetDefaultValue(const _type& value) { return *this; }
+
+            template<typename _object_type, typename _field_type>
+            FieldProcessor& FieldBasics(_object_type* object, Type* type, const char* name,
+                                        void* (*pointerGetter)(void*), _field_type& field)
+            {
+                if (section != ProtectSection::Public)
+                    return *this;
+
+                if constexpr (std::is_copy_constructible<_field_type>::value)
+                {
+                    _object_type::GetScriptPrototype().template SetPrototypePropertyWrapper<_object_type, _field_type>(
+                        ScriptValue(name), pointerGetter);
+                }
+
+                return *this;
+            }
+        };
+
+        BaseFieldProcessor StartField() { return BaseFieldProcessor(*this); }
+
+        // --- Base type and lifecycle ---
+
+        template<typename _object_type>
+        void Start(_object_type* object, Type* type) {}
+
+        template<typename _object_type>
+        void StartBases(_object_type* object, Type* type) {}
+
+        template<typename _object_type>
+        void StartFields(_object_type* object, Type* type) {}
+
+        template<typename _object_type>
+        void StartMethods(_object_type* object, Type* type) {}
+
         template<typename _object_type, typename _base_type>
         void BaseType(_object_type* object, Type* type, const char* name)
         {
@@ -603,19 +767,62 @@ namespace o2
             return *this;
     }
 
-    template<typename _object_type, typename ... _args>
-    void ScriptPrototypeProcessor::FunctionProcessor::Constructor(_object_type* object, Type* type)
+    template<typename _attribute_type, typename ... _args>
+    auto ScriptPrototypeProcessor::BaseFieldProcessor::AddAttribute(_args ... args)
+    {
+        if constexpr (std::is_same<ScriptableAttribute, _attribute_type>::value)
+            return ScriptPrototypeProcessor::FieldProcessor(processor, section);
+        else
+            return *this;
+    }
+
+    template<typename _object_type, typename ... _script_args>
+    void RegisterScriptConstructor(Type* type)
     {
         ScriptValue thisFunc;
-        thisFunc.SetThisFunction<void, _args ...>(Function<void(ScriptValue thisValue, _args ...)>(
-            [](ScriptValue thisValue, _args ... args)
+        thisFunc.SetThisFunction<void, _script_args ...>(Function<void(ScriptValue thisValue, _script_args ...)>(
+            [](ScriptValue thisValue, _script_args ... args)
             {
-                _object_type* sample = mnew _object_type(args ...);
-                thisValue.SetContainingObject(sample, true);
+                if constexpr (std::is_base_of<RefCounterable, _object_type>::value)
+                {
+                    auto sample = mmake<_object_type>(args ...);
+                    thisValue.SetContainingObject(sample.Get());
+                }
+                else
+                {
+                    _object_type* sample = mnew _object_type(args ...);
+                    thisValue.SetContainingObject(sample);
+                }
                 thisValue.SetPrototype(_object_type::GetScriptPrototype());
             }));
 
         ScriptPrototypeProcessor::RegisterTypeConstructor(type, thisFunc);
+    }
+
+    template<typename _object_type, typename _first, typename ... _rest>
+    void RegisterScriptConstructorStripped(Type* type, std::tuple<_first, _rest...>*)
+    {
+        RegisterScriptConstructor<_object_type, _rest...>(type);
+    }
+
+    template<typename _tuple>
+    struct FirstArgIsRefCounter : std::false_type {};
+
+    template<typename _first, typename ... _rest>
+    struct FirstArgIsRefCounter<std::tuple<_first, _rest...>>
+        : std::is_same<_first, RefCounter*> {};
+
+    template<typename _object_type, typename ... _args>
+    void ScriptPrototypeProcessor::FunctionProcessor::Constructor(_object_type* object, Type* type)
+    {
+        if constexpr (FirstArgIsRefCounter<std::tuple<_args...>>::value)
+        {
+            RegisterScriptConstructorStripped<_object_type>(type, static_cast<std::tuple<_args...>*>(nullptr));
+        }
+        else
+        {
+            RegisterScriptConstructor<_object_type, _args...>(type);
+        }
     }
 
     template<typename _object_type, typename _res_type, typename ... _args>

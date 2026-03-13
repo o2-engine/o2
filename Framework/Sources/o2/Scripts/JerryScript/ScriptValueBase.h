@@ -15,17 +15,12 @@ namespace o2
     public:
         virtual ~ScriptValueBase();
 
-        // Releases current value and acquires new
         void AcquireValue(jerry_value_t v);
-
-        // Releases current value and accepts new. After this class will release value
         void Accept(jerry_value_t v);
 
     public:
         struct IDataContainer
         {
-            bool isDataOwner = true;
-
             virtual ~IDataContainer() = default;
 
             virtual void* GetData() const { return nullptr; }
@@ -37,10 +32,11 @@ namespace o2
         template<typename _type>
         struct DataContainer : public IDataContainer
         {
-            _type* data;
+            _type data;
 
-            DataContainer(_type* data);
-            ~DataContainer() override;
+            DataContainer(const _type& d);
+            DataContainer(_type&& d);
+            ~DataContainer() override = default;
 
             void* GetData() const override;
             IObject* TryCastToIObject() const override;
@@ -48,17 +44,9 @@ namespace o2
             IDataContainer* Clone() const override;
         };
 
-        struct IFunctionContainer
+        struct IFunctionContainer : public IDataContainer
         {
             virtual jerry_value_t Invoke(jerry_value_t thisValue, jerry_value_t* args, int argsCount) = 0;
-        };
-
-        template<typename _res_type, typename _this_type, typename ... _args>
-        struct TFunctionContainer: public IFunctionContainer
-        {
-            jerry_value_t Invoke(jerry_value_t thisValue, jerry_value_t* args, int argsCount) override;
-
-            virtual _res_type InvokeT(_this_type this_, _args ... args) const = 0;
         };
 
         struct ISetterWrapperContainer : public IDataContainer
@@ -69,6 +57,16 @@ namespace o2
         struct IGetterWrapperContainer : public IDataContainer
         {
             virtual jerry_value_t Get() = 0;
+        };
+
+        struct IPrototypeGetter : public IDataContainer
+        {
+            virtual jerry_value_t GetFrom(jerry_value_t this_val) = 0;
+        };
+
+        struct IPrototypeSetter : public IDataContainer
+        {
+            virtual void SetTo(jerry_value_t this_val, jerry_value_t value) = 0;
         };
 
         template<typename _type>
@@ -127,9 +125,11 @@ namespace o2
             static void Free(void* ptr);
         };
 
-    protected:
         static DataContainerDeleter& GetDataDeleter();
 
+        static IDataContainer* GetNativeContainer(jerry_value_t jval);
+
+    protected:
         static jerry_value_t CallFunction(const jerry_value_t function_obj,
                                           const jerry_value_t this_val,
                                           const jerry_value_t args_p[],
@@ -145,8 +145,15 @@ namespace o2
                                               const jerry_value_t args_p[],
                                               const jerry_length_t args_count);
 
-        template<size_t _i = 0, size_t _j = 0, typename... _args>
-        static void UnpackArgs(std::tuple<_args ...>& argst, jerry_value_t* args, int argsCount);
+        static jerry_value_t PrototypeDescriptorGetter(const jerry_value_t function_obj,
+                                                       const jerry_value_t this_val,
+                                                       const jerry_value_t args_p[],
+                                                       const jerry_length_t args_count);
+
+        static jerry_value_t PrototypeDescriptorSetter(const jerry_value_t function_obj,
+                                                       const jerry_value_t this_val,
+                                                       const jerry_value_t args_p[],
+                                                       const jerry_length_t args_count);
 
         friend class ScriptEngine;
     };

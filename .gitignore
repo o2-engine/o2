@@ -25,3 +25,4 @@ Framework/Platforms/__pycache__
 Editor/Assets/Editor UI styles
 .cache
 build
+Tests/Sources/CodeToolCache.xml

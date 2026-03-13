@@ -148,7 +148,7 @@ namespace o2
 
     inline void IObject::SetScriptValueContainer(ScriptValue& value) const
     {
-        value.SetContainingObject(const_cast<IObject*>(this), false);
+        value.SetContainingObject(const_cast<IObject*>(this));
     }
 
     inline ScriptValue IObject::GetScriptPrototype()
