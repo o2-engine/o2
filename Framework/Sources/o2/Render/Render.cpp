@@ -6,7 +6,9 @@
 #include "o2/Assets/Types/AtlasAsset.h"
 #include "o2/Integration.h"
 #include "o2/Render/Font.h"
+#include "o2/Render/Material.h"
 #include "o2/Render/Mesh.h"
+#include "o2/Render/Shader.h"
 #include "o2/Render/Sprite.h"
 #include "o2/Render/Texture.h"
 #include "o2/Utils/Debug/Debug.h"
@@ -32,7 +34,7 @@ namespace o2
         mMaxTextureSize = GetPlatformMaxTextureSize();
         mDPI = GetPlatformDPI();
 
-        InitializeSandardShader();
+        InitializeDefaultMaterial();
         InitializeWhiteTexture();
         InitializeFreeType();
         InitializeLinesIndexBuffer();
@@ -51,6 +53,9 @@ namespace o2
 
         mSolidLineTexture = nullptr;
         mDashLineTexture = nullptr;
+
+        mCurrentMaterial = nullptr;
+        mDefaultMaterial = nullptr;
 
         DeinitializePlatform();
 
@@ -102,6 +107,40 @@ namespace o2
         FT_Done_FreeType(mFreeTypeLib);
     }
 
+    void Render::InitializeDefaultMaterial()
+    {
+        PlatformInitializeDefaultMaterial();
+    }
+
+    void Render::BindMaterial(const Ref<Material>& material)
+    {
+        if (!material)
+            return;
+
+        if (!material->IsReady())
+            material->Build();
+
+        if (!material->IsReady())
+            return;
+
+        if (material == mCurrentMaterial)
+            return;
+
+		mCurrentMaterial = material;
+
+        PlatformBindMaterial(material);
+    }
+
+    const Ref<Material>& Render::GetCurrentMaterial() const
+    {
+        return mCurrentMaterial;
+    }
+
+    const Ref<Material>& Render::GetDefaultMaterial() const
+    {
+        return mDefaultMaterial;
+    }
+
     void Render::Begin()
     {
         PROFILE_SAMPLE_FUNC();
@@ -122,6 +161,8 @@ namespace o2
         mScissorInfos.Clear();
         mStackScissors.Clear();
 
+        BindMaterial(mDefaultMaterial);
+
         PlatformBegin();
         SetupViewMatrix(mResolution);
         UpdateCameraTransforms();
@@ -134,7 +175,7 @@ namespace o2
 
     void Render::DrawBuffer(PrimitiveType primitiveType, Vertex* vertices, UInt verticesCount,
                             VertexIndex* indexes, UInt elementsCount, const TextureRef& texture,
-                            BlendMode blendMode)
+                            const Ref<Material>& material)
     {
         //PROFILE_SAMPLE_FUNC();
 
@@ -152,17 +193,16 @@ namespace o2
         else
             indexesCount = elementsCount * 3;
 
-        if (mCurrentDrawTexture != texture ||
-            mLastDrawVertex + verticesCount >= mVertexBufferSize ||
-            mLastDrawIdx + indexesCount >= mIndexBufferSize ||
-            mCurrentPrimitiveType != primitiveType ||
-            mCurrentBlendMode != blendMode)
+        Ref<Material> drawMaterial = material ? material : mDefaultMaterial;
+
+        if (CheckBatchBreak(texture, primitiveType, drawMaterial, verticesCount, indexesCount))
         {
             DrawPrimitives();
 
             mCurrentDrawTexture = texture;
             mCurrentPrimitiveType = primitiveType;
-            mCurrentBlendMode = blendMode;
+
+            BindMaterial(drawMaterial);
         }
 
         PlatformUploadBuffers(vertices, verticesCount, indexes, indexesCount);
@@ -172,6 +212,19 @@ namespace o2
 
         if (primitiveType != PrimitiveType::Line)
             mTrianglesCount += elementsCount;
+    }
+
+    bool Render::CheckBatchBreak(const TextureRef& texture, PrimitiveType primitiveType,
+                                  const Ref<Material>& material, UInt verticesCount, UInt indexesCount) const
+    {
+        size_t materialHash = material ? material->GetHash() : 0;
+		size_t currentBatchMaterialHash = mCurrentMaterial ? mCurrentMaterial->GetHash() : 0;
+
+        return mCurrentDrawTexture != texture ||
+               mLastDrawVertex + verticesCount >= mVertexBufferSize ||
+               mLastDrawIdx + indexesCount >= mIndexBufferSize ||
+               mCurrentPrimitiveType != primitiveType ||
+               currentBatchMaterialHash != materialHash;
     }
 
     void Render::DrawPrimitives()
@@ -345,8 +398,7 @@ namespace o2
         RectI invRect(rect.left*2, -rect.top*2, rect.right*2, -rect.bottom*2);
         
         // DrawRectFrame(rect, Color4::Red());
-        // DrawRectFrame(invRect, Color4::Blue());
-        
+        // DrawRectFrame(invRect, Color4::Blue());        
         
         DrawPrimitives();
 
@@ -1063,7 +1115,7 @@ namespace o2
         if (mesh->polyCount > 0)
         {
             DrawBuffer(PrimitiveType::Polygon, mesh->vertices, mesh->vertexCount,
-                       mesh->indexes, mesh->polyCount, mesh->mTexture, mesh->blendMode);
+                       mesh->indexes, mesh->polyCount, mesh->mTexture, mesh->GetMaterial());
         }
     }
 
@@ -1098,7 +1150,7 @@ namespace o2
 
     void Render::DrawPolyLine(Vertex* vertices, int count, float width /*= 1.0f*/)
     {
-        DrawBuffer(PrimitiveType::Line, vertices, count, mHardLinesIndexData, count - 1, mSolidLineTexture, BlendMode::Normal);
+        DrawBuffer(PrimitiveType::Line, vertices, count, mHardLinesIndexData, count - 1, mSolidLineTexture, mDefaultMaterial);
     }
 
     void Render::DrawAAPolyLine(Vertex* vertices, int count, float width /*= 1.0f*/,

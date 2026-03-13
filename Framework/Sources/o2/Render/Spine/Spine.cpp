@@ -77,12 +77,6 @@ namespace o2
     void Spine::Draw()
     {
         static spine::SkeletonRenderer skeletonRenderer;
-        static Map<spine::BlendMode, BlendMode> blendModes = {
-            { spine::BlendMode_Normal, BlendMode::Normal },
-            { spine::BlendMode_Additive, BlendMode::Add },
-            { spine::BlendMode_Multiply, BlendMode::Normal },
-            { spine::BlendMode_Screen, BlendMode::Normal }
-        };
 
         spine::RenderCommand* command = skeletonRenderer.render(*mSkeleton);
         while (command) 
@@ -115,10 +109,8 @@ namespace o2
             for (int i = 0, n = command->numIndices; i < n; ++i)
                 mIndices.Add(indices[i]);
 
-            BlendMode blendMode = blendModes[command->blendMode];
             TextureRef textureRef = TextureRef((Texture*)command->texture);
-
-            o2Render.DrawBuffer(PrimitiveType::Polygon, mVertices.Data(), command->numVertices, mIndices.Data(), command->numIndices/3, textureRef, blendMode);
+            o2Render.DrawBuffer(PrimitiveType::Polygon, mVertices.Data(), command->numVertices, mIndices.Data(), command->numIndices/3, textureRef, o2Render.GetDefaultMaterial());
 
             if (o2Input.IsKeyDown(VK_F3))
                 o2Render.DrawMeshBufferWire(mVertices.Data(), command->numVertices, mIndices.Data(), command->numIndices/3, Color4::Red());

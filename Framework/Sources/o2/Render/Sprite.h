@@ -214,8 +214,8 @@ namespace o2
         // Called when color was changed
         void OnColorChanged() override;
 
-        // Called when blend mode was changed
-        void OnBlendModeChanged() override;
+        // Called when material was changed (propagates to mesh)
+        void OnMaterialChanged() override;
 
         // Initialized texture by image: uses atlas part or texture
         void InitializeTexture();
@@ -344,7 +344,7 @@ CLASS_METHODS_META(o2::Sprite)
     FUNCTION().PUBLIC().SIGNATURE(void, OnDeserializedDelta, const DataValue&, const IObject&);
     FUNCTION().PROTECTED().SIGNATURE(void, BasisChanged);
     FUNCTION().PROTECTED().SIGNATURE(void, OnColorChanged);
-    FUNCTION().PROTECTED().SIGNATURE(void, OnBlendModeChanged);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnMaterialChanged);
     FUNCTION().PROTECTED().SIGNATURE(void, InitializeTexture);
     FUNCTION().PROTECTED().SIGNATURE(void, UpdateMesh);
     FUNCTION().PROTECTED().SIGNATURE(void, BuildDefaultMesh);

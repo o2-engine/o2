@@ -32,6 +32,7 @@ namespace Editor
     protected:
         Ref<ColorProperty>   mColorProperty;
         Ref<FloatProperty>   mAlphaProperty;
+        Ref<AssetProperty>   mMaterialProperty;
         Ref<AssetProperty>   mFontProperty;
         Ref<WStringProperty> mTextProperty;
         Ref<FloatProperty>   mHeightProperty;
@@ -58,6 +59,7 @@ CLASS_FIELDS_META(Editor::TextViewer)
 {
     FIELD().PROTECTED().NAME(mColorProperty);
     FIELD().PROTECTED().NAME(mAlphaProperty);
+    FIELD().PROTECTED().NAME(mMaterialProperty);
     FIELD().PROTECTED().NAME(mFontProperty);
     FIELD().PROTECTED().NAME(mTextProperty);
     FIELD().PROTECTED().NAME(mHeightProperty);

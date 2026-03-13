@@ -143,8 +143,8 @@ namespace Editor
             VertexIndex indexes[] = { 0, 1, 2,  0, 2, 3,  0, 3, 4,  0, 4, 5 };
 
             o2Render.DrawAAPolyLine(vertices.Data(), vertices.Count(), 3.0f);
-            o2Render.DrawBuffer(PrimitiveType::Polygon, vertices.Data(), vertices.Count(), indexes, 4, TextureRef::Null(), 
-                                BlendMode::Normal);
+            o2Render.DrawBuffer(PrimitiveType::Polygon, vertices.Data(), vertices.Count(), indexes, 4, TextureRef::Null(),
+                                o2Render.GetDefaultMaterial());
             //o2Render.DrawAABasis(transform);
         };
 

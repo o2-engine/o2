@@ -27,8 +27,6 @@ namespace o2
         UInt vertexCount; // Current vertices count
         UInt polyCount;   // Current polygons in mesh
 
-        BlendMode blendMode; // Blend mode
-
     public:
         // Constructor
         Mesh(TextureRef texture = TextureRef(), UInt vertexCount = 4, UInt polyCount = 2);

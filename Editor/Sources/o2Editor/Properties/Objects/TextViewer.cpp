@@ -20,6 +20,7 @@ namespace Editor
 
         mColorProperty = o2EditorProperties.BuildFieldType<ColorProperty>(mSpoiler, textType, "color", "", mPropertiesContext, mOnPropertyChangeCompleted, mOnPropertyChanged);
         mAlphaProperty = o2EditorProperties.BuildFieldType<FloatProperty>(mSpoiler, textType, "transparency", "", mPropertiesContext, mOnPropertyChangeCompleted, mOnPropertyChanged);
+        mMaterialProperty = o2EditorProperties.BuildFieldType<AssetProperty>(mSpoiler, textType, "material", "", mPropertiesContext, mOnPropertyChangeCompleted, mOnPropertyChanged);
         mFontProperty = o2EditorProperties.BuildFieldType<AssetProperty>(mSpoiler, textType, "fontAsset", "", mPropertiesContext, mOnPropertyChangeCompleted, mOnPropertyChanged);
         mTextProperty = o2EditorProperties.BuildFieldType<WStringProperty>(mSpoiler, textType, "text", "", mPropertiesContext, mOnPropertyChangeCompleted, mOnPropertyChanged);
         mHeightProperty = o2EditorProperties.BuildFieldType<FloatProperty>(mSpoiler, textType, "height", "", mPropertiesContext, mOnPropertyChangeCompleted, mOnPropertyChanged);

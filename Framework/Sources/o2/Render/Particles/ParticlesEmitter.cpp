@@ -150,10 +150,10 @@ namespace o2
 #endif
     }
 
-    void ParticlesEmitter::OnBlendModeChanged()
+    void ParticlesEmitter::OnMaterialChanged()
     {
         if (mParticlesContainer)
-            mParticlesContainer->SetBlendMode(mBlendMode);
+            mParticlesContainer->SetMaterial(GetMaterial());
     }
 
     void ParticlesEmitter::OnSerialize(o2::DataValue& node) const

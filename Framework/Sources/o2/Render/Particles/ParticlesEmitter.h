@@ -311,7 +311,7 @@ namespace o2
 
     protected:
         // Called when blend mode was changed
-        void OnBlendModeChanged() override;
+        void OnMaterialChanged() override;
 
         // Beginning serialization callback
         void OnSerialize(DataValue& node) const override;
@@ -538,7 +538,7 @@ CLASS_METHODS_META(o2::ParticlesEmitter)
     FUNCTION().PUBLIC().SIGNATURE(void, SetEmitParticlesMoveDirectionRange, float);
     FUNCTION().PUBLIC().SIGNATURE(float, GetEmitParticlesMoveDirectionRange);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(Ref<RefCounterable>, CastToRefCounterable, const Ref<ParticlesEmitter>&);
-    FUNCTION().PROTECTED().SIGNATURE(void, OnBlendModeChanged);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnMaterialChanged);
     FUNCTION().PROTECTED().SIGNATURE(void, OnSerialize, DataValue&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnDeserialized, const DataValue&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnSerializeDelta, DataValue&, const IObject&);

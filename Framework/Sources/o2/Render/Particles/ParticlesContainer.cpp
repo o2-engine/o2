@@ -3,9 +3,9 @@
 
 namespace o2
 {
-    void SingleSpriteParticlesContainer::SetBlendMode(BlendMode blendMode)
+    void SingleSpriteParticlesContainer::SetMaterial(const Ref<Material>& material)
     {
-        mParticlesMesh.blendMode = blendMode;
+        mParticlesMesh.SetMaterial(material);
     }
 
     void SingleSpriteParticlesContainer::Update(Vector<Particle>& particles, int maxParticles)
@@ -79,9 +79,9 @@ namespace o2
         return container;
     }
 
-    void MultiSpriteParticlesContainer::SetBlendMode(BlendMode blendMode)
+    void MultiSpriteParticlesContainer::SetMaterial(const Ref<Material>& material)
     {
-        mParticlesMesh.blendMode = blendMode;
+        mParticlesMesh.SetMaterial(material);
     }
 
     void MultiSpriteParticlesContainer::Update(Vector<Particle>& particles, int maxParticles)

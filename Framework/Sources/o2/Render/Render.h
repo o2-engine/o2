@@ -20,6 +20,7 @@
 #endif
 
 #include "o2/Render/Camera.h"
+#include "o2/Render/Material.h"
 #include "o2/Render/TextureRef.h"
 #include "o2/Utils/Math/Vertex.h"
 #include "o2/Utils/Singleton.h"
@@ -34,7 +35,9 @@ namespace o2
 
     class CursorAreaEventListenersLayer;
     class Font;
+    class Material;
     class Mesh;
+    class Shader;
     class Sprite;
 
     // ------------------
@@ -265,10 +268,10 @@ namespace o2
         // Draws mesh
         void DrawMesh(Mesh* mesh);
 
-        // Draws data from buffer with specified texture and primitive type
+        // Draws data from buffer with specified texture and primitive type. Material defines blend mode; pass nullptr for default material (Normal blend).
         void DrawBuffer(PrimitiveType primitiveType, Vertex* vertices, UInt verticesCount,
                         VertexIndex* indexes, UInt elementsCount, const TextureRef& texture,
-                        BlendMode blendMode);
+                        const Ref<Material>& material);
 
         // Platform specific upload vertex and index buffers
         void PlatformUploadBuffers(Vertex* vertices, UInt verticesCount,
@@ -306,9 +309,17 @@ namespace o2
         // Returns scissor infos at current frame
         const Vector<ScissorInfo>& GetScissorInfos() const;
 
+        // Binds material for rendering. nullptr is ignored (no-op).
+        void BindMaterial(const Ref<Material>& material);
+
+        // Returns current bound material
+        const Ref<Material>& GetCurrentMaterial() const;
+
+        // Returns default material
+        const Ref<Material>& GetDefaultMaterial() const;
+
     protected:
         PrimitiveType mCurrentPrimitiveType = PrimitiveType::Polygon; // Type of drawing primitives for next DIP
-        BlendMode     mCurrentBlendMode = BlendMode::Normal;          // Current blend mode for next DIP
 
         TextureRef mCurrentDrawTexture = nullptr; // Stored texture ptr from last DIP
         UInt       mLastDrawVertex;               // Last vertex idx for next DIP
@@ -316,6 +327,9 @@ namespace o2
         UInt       mTrianglesCount;               // Triangles count for next DIP
         UInt       mFrameTrianglesCount;          // Total triangles at current frame
         UInt       mDrawCallsCount;               // DrawIndexedPrimitives calls count
+
+        Ref<Material> mDefaultMaterial; // Default material, loaded from Shaders/Default (Windows) or from mStdShader (other platforms)
+        Ref<Material> mCurrentMaterial; // Currently bound material
 
         Ref<LogStream> mLog; // Render log stream
 
@@ -404,6 +418,19 @@ namespace o2
 
         // Platform specific end of rendering
         void PlatformEnd();
+
+        // Checks whether a batch break is needed for the given draw state
+        bool CheckBatchBreak(const TextureRef& texture, PrimitiveType primitiveType,
+                             const Ref<Material>& material, UInt verticesCount, UInt indexesCount) const;
+
+        // Initializes default material (calls platform to load shaders and set mDefaultMaterial, mStdShader*)
+        void InitializeDefaultMaterial();
+
+        // Platform: load default shader files, compile, create default material, set mDefaultMaterial and mStdShader*
+        void PlatformInitializeDefaultMaterial();
+
+        // Platform specific material binding
+        void PlatformBindMaterial(const Ref<Material>& material);
 
         // Send buffers to draw
         void DrawPrimitives();
@@ -495,7 +522,9 @@ namespace o2
         friend class BitmapFontAsset;
         friend class Font;
         friend class Integration;
+        friend class Material;
         friend class RenderBase;
+        friend class Shader;
         friend class Sprite;
         friend class Texture;
         friend class TextureRef;

@@ -8,11 +8,14 @@
 #include "o2/Assets/Assets.h"
 #include "o2/Events/EventSystem.h"
 #include "o2/Render/Font.h"
+#include "o2/Render/Material.h"
 #include "o2/Render/Mesh.h"
+#include "o2/Render/Shader.h"
 #include "o2/Render/Sprite.h"
 #include "o2/Render/Texture.h"
 #include "o2/Utils/Debug/Debug.h"
 #include "o2/Utils/Debug/Log/LogStream.h"
+#include "o2/Utils/FileSystem/FileSystem.h"
 #include "o2/Utils/Math/Geometry.h"
 #include "o2/Utils/Math/Interpolation.h"
 
@@ -200,141 +203,43 @@ namespace o2
 
     void Render::InitializeSandardShader()
     {
-        const char* fragShader = " \
-                                                                        \n \
-        varying vec4 v_color;                                           \n \
-        varying vec2 v_texCoords;                                       \n \
-                                                                        \n \
-        uniform sampler2D u_texture;                                    \n \
-                                                                        \n \
-        void main()                                                     \n \
-        {                                                               \n \
-            gl_FragColor = v_color * texture2D(u_texture, v_texCoords); \n \
-        }";
-
-        const char* vtxShader = " \
-        uniform mat4 u_transformMatrix;                           \n \
-                                                                  \n \
-        attribute vec4 a_position;                                \n \
-        attribute vec4 a_color;                                   \n \
-        attribute vec2 a_texCoords;                               \n \
-                                                                  \n \
-        varying vec4 v_color;                                     \n \
-        varying vec2 v_texCoords;                                 \n \
-                                                                  \n \
-        void main()                                               \n \
-        {                                                         \n \
-            v_color = a_color;                                    \n \
-            v_texCoords = a_texCoords;                            \n \
-            gl_Position = u_transformMatrix * a_position;         \n \
-        }";
-
-        mStdShader = BuildShaderProgram(vtxShader, fragShader);
-        GL_CHECK_ERROR();
-
-        mStdShaderMvpUniform = glGetUniformLocation(mStdShader, "u_transformMatrix");
-        GL_CHECK_ERROR();
-
-        mStdShaderTextureSample = glGetUniformLocation(mStdShader, "u_texture");
-        GL_CHECK_ERROR();
-
-        mStdShaderPosAttribute = glGetAttribLocation(mStdShader, "a_position");
-        GL_CHECK_ERROR();
-
-        mStdShaderColorAttribute = glGetAttribLocation(mStdShader, "a_color");
-        GL_CHECK_ERROR();
-
-        mStdShaderUVAttribute = glGetAttribLocation(mStdShader, "a_texCoords");
-        GL_CHECK_ERROR();
-
-        glUseProgram(mStdShader);
-        GL_CHECK_ERROR();
-
-        glVertexAttribPointer((GLuint)mStdShaderPosAttribute, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), &((Vertex*)0)->x);
-        glEnableVertexAttribArray((GLuint)mStdShaderPosAttribute);
-        GL_CHECK_ERROR();
-
-        glVertexAttribPointer((GLuint)mStdShaderColorAttribute, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(Vertex), &((Vertex*)0)->color);
-        glEnableVertexAttribArray((GLuint)mStdShaderColorAttribute);
-        GL_CHECK_ERROR();
-
-        glVertexAttribPointer((GLuint)mStdShaderUVAttribute, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), &((Vertex*)0)->tu);
-        glEnableVertexAttribArray((GLuint)mStdShaderUVAttribute);
-        GL_CHECK_ERROR();
+        // Not used on Windows: default material is built in PlatformInitializeDefaultMaterial().
     }
 
-    GLuint RenderBase::LoadShader(GLenum shaderType, const char* source)
+    void Render::PlatformInitializeDefaultMaterial()
     {
-        GLuint shader = glCreateShader(shaderType);
+        String basePath = GetBuiltinAssetsPath();
+        String vSource = FileSystem::ReadFile(basePath + "Shaders/Default.vsh");
+        String fSource = FileSystem::ReadFile(basePath + "Shaders/Default.fsh");
 
-        if (shader)
+        if (vSource.IsEmpty() || fSource.IsEmpty())
         {
-            glShaderSource(shader, 1, &source, NULL);
-            glCompileShader(shader);
-
-            GLint compiled = 0;
-            glGetShaderiv(shader, GL_COMPILE_STATUS, &compiled);
-
-            if (!compiled)
-            {
-                GLint infoLen = 0;
-                glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &infoLen);
-
-                if (infoLen > 0)
-                {
-                    char* infoLog = (char*)malloc(sizeof(char) * infoLen);
-                    glGetShaderInfoLog(shader, infoLen, NULL, infoLog);
-                    o2Debug.LogError((String)"Error compiling shader:\n" + infoLog);
-                    free(infoLog);
-                }
-
-                glDeleteShader(shader);
-                shader = 0;
-            }
+            o2Debug.LogError("Failed to load default shader files (FrameworkData/Shaders/Default.vsh, FrameworkData/Shaders/Default.fsh). \n"
+                             "Ensure they are in BuiltAssets.");
+            return;
         }
 
-        return shader;
-    }
+        Ref<Shader> vShader = mmake<Shader>();
+        Ref<Shader> fShader = mmake<Shader>();
+        vShader->Compile(vSource, Shader::Type::Vertex);
+        fShader->Compile(fSource, Shader::Type::Fragment);
 
-    GLuint RenderBase::BuildShaderProgram(const char* vertexSource, const char* fragmentSource)
-    {
-        GLuint vertexShader = LoadShader(GL_VERTEX_SHADER, vertexSource);
-        if (!vertexShader)
-            return 0;
-
-        GLuint fragmentShader = LoadShader(GL_FRAGMENT_SHADER, fragmentSource);
-        if (!fragmentShader)
-            return 0;
-
-        GLuint program = glCreateProgram();
-        if (program)
+        if (!vShader->IsReady() || !fShader->IsReady())
         {
-            glAttachShader(program, vertexShader);
-            glAttachShader(program, fragmentShader);
-
-            GLint linkStatus;
-            glLinkProgram(program);
-            glGetProgramiv(program, GL_LINK_STATUS, &linkStatus);
-
-            if (!linkStatus)
-            {
-                GLint infoLen = 0;
-                glGetProgramiv(program, GL_INFO_LOG_LENGTH, &infoLen);
-
-                if (infoLen > 0)
-                {
-                    char* infoLog = (char*)malloc(sizeof(char) * infoLen);
-                    glGetProgramInfoLog(program, infoLen, NULL, infoLog);
-                    o2Debug.LogError((String)"Error linking shader:\n" + infoLog);
-                    free(infoLog);
-                }
-
-                glDeleteProgram(program);
-                program = 0;
-            }
+            o2Debug.LogError("Failed to compile default shaders (FrameworkData/Shaders/Default.vsh, FrameworkData/Shaders/Default.fsh).");
+            return;
         }
 
-        return program;
+        mDefaultMaterial = mmake<Material>();
+        mDefaultMaterial->SetVertexShader(vShader);
+        mDefaultMaterial->SetFragmentShader(fShader);
+        mDefaultMaterial->SetBlendMode(BlendMode::Normal);
+        if (!mDefaultMaterial->Build())
+        {
+            o2Debug.LogError("Failed to build default material from Shaders/Default.");
+            mDefaultMaterial = nullptr;
+            return;
+        }
     }
 
     void RenderBase::BindNextPoolBuffers()
@@ -347,16 +252,16 @@ namespace o2
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mIndexBuffersPool[mCurrentBufferIdx]);
         GL_CHECK_ERROR();
 
-        glVertexAttribPointer((GLuint)mStdShaderPosAttribute, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), &((Vertex*)0)->x);
-        glEnableVertexAttribArray((GLuint)mStdShaderPosAttribute);
+        glVertexAttribPointer((GLuint)mActivePosAttribute, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), &((Vertex*)0)->x);
+        glEnableVertexAttribArray((GLuint)mActivePosAttribute);
         GL_CHECK_ERROR();
 
-        glVertexAttribPointer((GLuint)mStdShaderColorAttribute, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(Vertex), &((Vertex*)0)->color);
-        glEnableVertexAttribArray((GLuint)mStdShaderColorAttribute);
+        glVertexAttribPointer((GLuint)mActiveColorAttribute, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(Vertex), &((Vertex*)0)->color);
+        glEnableVertexAttribArray((GLuint)mActiveColorAttribute);
         GL_CHECK_ERROR();
 
-        glVertexAttribPointer((GLuint)mStdShaderUVAttribute, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), &((Vertex*)0)->tu);
-        glEnableVertexAttribArray((GLuint)mStdShaderUVAttribute);
+        glVertexAttribPointer((GLuint)mActiveUVAttribute, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), &((Vertex*)0)->tu);
+        glEnableVertexAttribArray((GLuint)mActiveUVAttribute);
         GL_CHECK_ERROR();
 
         mVertexBufferIdx = 0;
@@ -388,14 +293,8 @@ namespace o2
         // Bind texture
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, mCurrentDrawTexture ? mCurrentDrawTexture->mHandle : mWhiteTexture->mHandle);
-        glUniform1i(mStdShaderTextureSample, 0);
+        glUniform1i(mActiveTextureSample, 0);
         GL_CHECK_ERROR();
-
-        // Set blend mode
-        if (mCurrentBlendMode == BlendMode::Add)
-            glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
-        else
-            glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 
         // Draw
         glDrawElements(primitiveType[(int)mCurrentPrimitiveType], mLastDrawIdx, GL_UNSIGNED_INT, (void*)(mIndexBufferIdx * sizeof(VertexIndex)));
@@ -426,31 +325,26 @@ namespace o2
         glClear(GL_STENCIL_BUFFER_BIT);
         GL_CHECK_ERROR();
 
-        //         glBindFramebufferEXT(GL_FRAMEBUFFER, 0);
-        //         GL_CHECK_ERROR();
-
-        glUseProgram(mStdShader);
-        GL_CHECK_ERROR();
-
+		BindMaterial(mDefaultMaterial);
         BindNextPoolBuffers();
 
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, 0);
         GL_CHECK_ERROR();
 
-        glUniform1i(mStdShaderTextureSample, 0);
+        glUniform1i(mActiveTextureSample, 0);
         GL_CHECK_ERROR();
 
-        glVertexAttribPointer((GLuint)mStdShaderPosAttribute, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), &((Vertex*)0)->x);
-        glEnableVertexAttribArray((GLuint)mStdShaderPosAttribute);
+        glVertexAttribPointer((GLuint)mActivePosAttribute, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), &((Vertex*)0)->x);
+        glEnableVertexAttribArray((GLuint)mActivePosAttribute);
         GL_CHECK_ERROR();
 
-        glVertexAttribPointer((GLuint)mStdShaderColorAttribute, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(Vertex), &((Vertex*)0)->color);
-        glEnableVertexAttribArray((GLuint)mStdShaderColorAttribute);
+        glVertexAttribPointer((GLuint)mActiveColorAttribute, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(Vertex), &((Vertex*)0)->color);
+        glEnableVertexAttribArray((GLuint)mActiveColorAttribute);
         GL_CHECK_ERROR();
 
-        glVertexAttribPointer((GLuint)mStdShaderUVAttribute, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), &((Vertex*)0)->tu);
-        glEnableVertexAttribArray((GLuint)mStdShaderUVAttribute);
+        glVertexAttribPointer((GLuint)mActiveUVAttribute, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), &((Vertex*)0)->tu);
+        glEnableVertexAttribArray((GLuint)mActiveUVAttribute);
         GL_CHECK_ERROR();
     }
 
@@ -466,13 +360,12 @@ namespace o2
 
     void Render::PlatformSetupCameraTransforms(float* modelMatrix, float* viewMatrix, float* projMatrix)
     {
-        float mvp[16];
         float finalCamMtx[16];
         Math::mtxMultiply(finalCamMtx, modelMatrix, viewMatrix);
-        Math::mtxMultiply(mvp, projMatrix, finalCamMtx);
+        Math::mtxMultiply(mCurrentMvp, projMatrix, finalCamMtx);
         
         glViewport(0, 0, mCurrentResolution.x, mCurrentResolution.y);
-        glUniformMatrix4fv(mStdShaderMvpUniform, 1, GL_FALSE, mvp);
+        glUniformMatrix4fv(mActiveMvpUniform, 1, GL_FALSE, mCurrentMvp);
 
         GL_CHECK_ERROR();
     }
@@ -569,6 +462,44 @@ namespace o2
         ReleaseDC(0, dc);
 
         return dpi;
+    }
+
+    void Render::PlatformBindMaterial(const Ref<Material>& material)
+    {
+        if (material->mProgram != mActiveProgram)
+        {
+            mActiveProgram = material->mProgram;
+            mActiveMvpUniform = material->mTransformUniform;
+            mActiveTextureSample = material->mTextureUniform;
+            mActivePosAttribute = material->mPositionAttribute;
+            mActiveColorAttribute = material->mColorAttribute;
+            mActiveUVAttribute = material->mTexCoordsAttribute;
+
+            glUseProgram(mActiveProgram);
+            GL_CHECK_ERROR();
+
+            glVertexAttribPointer((GLuint)mActivePosAttribute, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), &((Vertex*)0)->x);
+            glEnableVertexAttribArray((GLuint)mActivePosAttribute);
+
+            glVertexAttribPointer((GLuint)mActiveColorAttribute, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(Vertex), &((Vertex*)0)->color);
+            glEnableVertexAttribArray((GLuint)mActiveColorAttribute);
+
+            glVertexAttribPointer((GLuint)mActiveUVAttribute, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), &((Vertex*)0)->tu);
+            glEnableVertexAttribArray((GLuint)mActiveUVAttribute);
+            GL_CHECK_ERROR();
+
+            glUniformMatrix4fv(mActiveMvpUniform, 1, GL_FALSE, mCurrentMvp);
+            GL_CHECK_ERROR();
+        }
+
+        material->ApplyParams();
+
+        if (material->GetBlendMode() == BlendMode::Add)
+            glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+        else
+            glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+
+        GL_CHECK_ERROR();
     }
 }
 

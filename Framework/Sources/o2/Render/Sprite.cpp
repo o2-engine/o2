@@ -436,9 +436,9 @@ namespace o2
         UpdateMesh();
     }
 
-    void Sprite::OnBlendModeChanged()
+    void Sprite::OnMaterialChanged()
     {
-        mMesh.blendMode = mBlendMode;
+        mMesh.SetMaterial(GetMaterial());
     }
 
     void Sprite::UpdateMesh()

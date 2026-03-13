@@ -912,27 +912,34 @@ namespace Editor
 
     void AssetsIconsScrollArea::CreateAsset(const Type* assetType)
     {
-        String newAssetName = "New " + GetSmartName(assetType->GetName());
+        String newAssetName = "New " + GetSmartName(assetType->GetName()).ReplacedAll(": ", " ");
+
+        auto extesions = assetType->InvokeStatic<Vector<String>>("GetFileExtensions");
+        auto extension = !extesions.IsEmpty() ? extesions[0] : String("");
+        String initialPath = mCurrentPath.IsEmpty() ? newAssetName : mCurrentPath + "/" + newAssetName;
+        if (!extension.IsEmpty())
+            initialPath += "." + extension;
 
         auto objectType = dynamic_cast<const ObjectType*>(assetType);
 
         mNewAsset = DynamicCast<Asset>(objectType->CreateSampleRef());
-        mNewAsset->SetPath(mCurrentPath + "/" + newAssetName);
+        mNewAsset->SetPath(initialPath);
         mAssetInfos.Add(mmake<AssetInfo>(mNewAsset->GetInfo()));
 
         SortAssetInfos();
         OnItemsUpdated(true);
-        ScrollTo((void*)&mNewAsset->GetInfo());
 
-        auto icon = DynamicCast<AssetIcon>(mChildWidgets.FindOrDefault([=](const Ref<Widget>& x) {
-            return DynamicCast<AssetIcon>(x)->GetAssetInfo() == &mNewAsset->GetInfo(); 
-        }));
-
-        if (!icon)
+        int newIdx = mAssetInfos.IndexOf([&](const Ref<AssetInfo>& x) { return x->path == initialPath; });
+        if (newIdx < 0)
             return;
 
-        auto extesions = assetType->InvokeStatic<Vector<String>>("GetFileExtensions");
-        auto extension = !extesions.IsEmpty() ? extesions[0] : String("");
+        Ref<AssetInfo> newAssetInfo = mAssetInfos[newIdx];
+        ScrollTo((void*)&mAssetInfos[newIdx]);
+
+        UpdateVisibleItems();
+        auto icon = FindVisibleIcon(newAssetInfo);
+        if (!icon)
+            return;
 
         StartAssetRenaming(icon, newAssetName,
                            [&, extension](const String& name)

@@ -29,6 +29,9 @@ namespace Editor
         mImageProperty = o2EditorProperties.BuildFieldType<AssetProperty>(commonFieldsLayout, spriteType, "image", "",
                                                                           mPropertiesContext, mOnPropertyChangeCompleted, mOnPropertyChanged);
 
+        mMaterialProperty = o2EditorProperties.BuildFieldType<AssetProperty>(commonFieldsLayout, spriteType, "material", "",
+                                                                             mPropertiesContext, mOnPropertyChangeCompleted, mOnPropertyChanged);
+
         mSizePivotProperty = o2EditorProperties.BuildFieldType<Vec2FProperty>(commonFieldsLayout, spriteType, "szPivot", "",
                                                                               mPropertiesContext, mOnPropertyChangeCompleted, mOnPropertyChanged);
 

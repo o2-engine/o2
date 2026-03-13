@@ -1,6 +1,8 @@
 #include "o2/stdafx.h"
 #include "RectDrawable.h"
 
+#include "o2/Render/Material.h"
+
 namespace o2
 {
     IRectDrawable::IRectDrawable(const Vec2F& size /*= Vec2F()*/, const Vec2F& position /*= Vec2F()*/,
@@ -11,16 +13,16 @@ namespace o2
 
     IRectDrawable::IRectDrawable(const IRectDrawable& other) :
         Transform(other.mSize, other.mPosition, other.mAngle, other.mScale, other.mPivot),
-        mBlendMode(other.mBlendMode), mColor(other.mColor), mEnabled(other.mEnabled)
+        mColor(other.mColor), mEnabled(other.mEnabled), mMaterialAsset(other.mMaterialAsset)
     {}
 
     IRectDrawable& IRectDrawable::operator=(const IRectDrawable& other)
     {
         Transform::operator=(other);
 
-		mBlendMode = other.mBlendMode;
         mColor = other.mColor;
         mEnabled = other.mEnabled;
+        mMaterialAsset = other.mMaterialAsset;
 
         OnColorChanged();
         OnEnableChanged();
@@ -30,7 +32,8 @@ namespace o2
 
     bool IRectDrawable::operator==(const IRectDrawable& other) const
     {
-        return Transform::operator==(other) && mColor == other.mColor && mEnabled == other.mEnabled && mBlendMode == other.mBlendMode;
+        return Transform::operator==(other) && mColor == other.mColor && mEnabled == other.mEnabled
+            && mMaterialAsset == other.mMaterialAsset;
     }
 
     bool IRectDrawable::operator!=(const IRectDrawable& other) const
@@ -71,17 +74,6 @@ namespace o2
         return mColor.AF();
     }
 
-    void IRectDrawable::SetBlendMode(BlendMode blendMode)
-    {
-        mBlendMode = blendMode;
-        OnBlendModeChanged();
-    }
-
-    BlendMode IRectDrawable::GetBlendMode() const
-    {
-        return mBlendMode;
-    }
-
     void IRectDrawable::SetEnabled(bool enabled)
     {
         mEnabled = enabled;
@@ -96,6 +88,30 @@ namespace o2
     bool IRectDrawable::IsUnderPoint(const Vec2F& point)
     {
         return mDrawingScissorRect.IsInside(point) && Transform::IsPointInside(point);
+    }
+
+    void IRectDrawable::SetMaterialAsset(const AssetRef<MaterialAsset>& asset)
+    {
+        mMaterialAsset = asset;
+        IDrawable::SetMaterial(asset ? asset->GetMaterial() : Ref<Material>());
+    }
+
+    const AssetRef<MaterialAsset>& IRectDrawable::GetMaterialAsset() const
+    {
+        return mMaterialAsset;
+    }
+
+    void IRectDrawable::SetMaterial(const Ref<Material>& material)
+    {
+        mMaterialAsset = nullptr;
+        IDrawable::SetMaterial(material);
+    }
+
+    Ref<Material> IRectDrawable::GetMaterial() const
+    {
+        if (mMaterialAsset)
+            return mMaterialAsset->GetMaterial();
+        return IDrawable::GetMaterial();
     }
 
     void IRectDrawable::UpdateColor()

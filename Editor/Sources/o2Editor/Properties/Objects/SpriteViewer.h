@@ -34,6 +34,7 @@ namespace Editor
         Ref<VerticalLayout> mHiddenProperties; // Hidden properties container
 
         Ref<AssetProperty> mImageProperty;     // Image asset property
+        Ref<AssetProperty> mMaterialProperty;  // Material asset property
         Ref<ColorProperty> mColorProperty;     // Color property
         Ref<FloatProperty> mAlphaProperty;     // Alpha property
         Ref<Vec2FProperty> mSizePivotProperty; // Size pivot property
@@ -72,6 +73,7 @@ CLASS_FIELDS_META(Editor::SpriteViewer)
 {
     FIELD().PROTECTED().NAME(mHiddenProperties);
     FIELD().PROTECTED().NAME(mImageProperty);
+    FIELD().PROTECTED().NAME(mMaterialProperty);
     FIELD().PROTECTED().NAME(mColorProperty);
     FIELD().PROTECTED().NAME(mAlphaProperty);
     FIELD().PROTECTED().NAME(mSizePivotProperty);

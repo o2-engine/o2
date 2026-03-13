@@ -1,5 +1,6 @@
 #pragma once
 
+#include "o2/Assets/Types/MaterialAsset.h"
 #include "o2/Render/IDrawable.h"
 #include "o2/Utils/Editor/Attributes/RangeAttribute.h"
 #include "o2/Utils/Math/Color.h"
@@ -15,11 +16,11 @@ namespace o2
     {
     public:
         PROPERTIES(IRectDrawable);
-        PROPERTY(Color4, color, SetColor, GetColor);                         // Color property @SCRIPTABLE
-        PROPERTY(Color4, overrideColor, SetOverrideColor, GetOverrideColor); // Override color property, used to modify color from outside @SCRIPTABLE
-        PROPERTY(float, transparency, SetTransparency, GetTransparency);     // Transparency property, changing alpha in color @SCRIPTABLE @RANGE(0, 1)
-        PROPERTY(BlendMode, blendMode, SetBlendMode, GetBlendMode);          // Blend mode property @SCRIPTABLE
-        PROPERTY(bool, enabled, SetEnabled, IsEnabled);                      // Enable property @SCRIPTABLE
+        PROPERTY(Color4, color, SetColor, GetColor);                                     // Color property @SCRIPTABLE
+        PROPERTY(Color4, overrideColor, SetOverrideColor, GetOverrideColor);             // Override color property, used to modify color from outside @SCRIPTABLE
+        PROPERTY(float, transparency, SetTransparency, GetTransparency);                 // Transparency property, changing alpha in color @SCRIPTABLE @RANGE(0, 1)
+        PROPERTY(bool, enabled, SetEnabled, IsEnabled);                                   // Enable property @SCRIPTABLE
+        PROPERTY(AssetRef<MaterialAsset>, material, SetMaterialAsset, GetMaterialAsset);  // Material (asset) for rendering @SCRIPTABLE
 
     public:
         // Constructor
@@ -63,12 +64,6 @@ namespace o2
         // Returns transparency(color alpha)
         virtual float GetTransparency() const;
 
-        // Sets blend mode
-        virtual void SetBlendMode(BlendMode blendMode);
-
-        // Returns blend mode
-        virtual BlendMode GetBlendMode() const;
-
         // Sets enabled
         virtual void SetEnabled(bool enabled);
 
@@ -78,16 +73,29 @@ namespace o2
         // Returns true if point is under drawable
         bool IsUnderPoint(const Vec2F& point) override;
 
+        // Sets material by asset reference. GetMaterial() will return asset's material.
+        void SetMaterialAsset(const AssetRef<MaterialAsset>& asset);
+
+        // Returns material asset reference, or null if not set. GetMaterial() will return asset's material if asset is set.
+        const AssetRef<MaterialAsset>& GetMaterialAsset() const;
+
+        // Sets material for rendering. Pass nullptr for default material. Clears material asset.
+        void SetMaterial(const Ref<Material>& material) override;
+
+        // Returns current material (from material asset if set, else direct override; may be null)
+        Ref<Material> GetMaterial() const override;
+
         SERIALIZABLE(IRectDrawable);
         CLONEABLE_REF(IRectDrawable);
 
     protected:
-        Color4    mColor = Color4::White();         // Color @SERIALIZABLE
-        Color4    mOverrideColor = Color4::White(); // Override color, used to modify color from outside
-        Color4    mResultColor;                     // Result color, calculated from color and override color
+        Color4 mColor = Color4::White();         // Color @SERIALIZABLE
+        Color4 mOverrideColor = Color4::White();  // Override color, used to modify color from outside
+        Color4 mResultColor;                      // Result color, calculated from color and override color
 
-        BlendMode mBlendMode = BlendMode::Normal;   // Blend mode @SERIALIZABLE
-        bool      mEnabled = true;                  // True, when drawable enabled and needs to draw @SERIALIZABLE
+        bool mEnabled = true; // True, when drawable enabled and needs to draw @SERIALIZABLE
+
+        AssetRef<MaterialAsset> mMaterialAsset;   // Material asset (when set, GetMaterial uses its material) @SERIALIZABLE
 
     protected:
         // Updates result color from color and override color
@@ -95,9 +103,6 @@ namespace o2
 
         // Called when color was changed
         virtual void OnColorChanged() {}
-
-        // Called when blend mode was changed
-        virtual void OnBlendModeChanged() {}
 
         // Called when enabling changed
         virtual void OnEnableChanged() {}
@@ -145,13 +150,13 @@ CLASS_FIELDS_META(o2::IRectDrawable)
     FIELD().PUBLIC().SCRIPTABLE_ATTRIBUTE().NAME(color);
     FIELD().PUBLIC().SCRIPTABLE_ATTRIBUTE().NAME(overrideColor);
     FIELD().PUBLIC().RANGE_ATTRIBUTE(0, 1).SCRIPTABLE_ATTRIBUTE().NAME(transparency);
-    FIELD().PUBLIC().SCRIPTABLE_ATTRIBUTE().NAME(blendMode);
     FIELD().PUBLIC().SCRIPTABLE_ATTRIBUTE().NAME(enabled);
+    FIELD().PUBLIC().SCRIPTABLE_ATTRIBUTE().NAME(material);
     FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(Color4::White()).NAME(mColor);
     FIELD().PROTECTED().DEFAULT_VALUE(Color4::White()).NAME(mOverrideColor);
     FIELD().PROTECTED().NAME(mResultColor);
-    FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(BlendMode::Normal).NAME(mBlendMode);
     FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(true).NAME(mEnabled);
+    FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().NAME(mMaterialAsset);
 }
 END_META;
 CLASS_METHODS_META(o2::IRectDrawable)
@@ -166,14 +171,15 @@ CLASS_METHODS_META(o2::IRectDrawable)
     FUNCTION().PUBLIC().SIGNATURE(Color4, GetOverrideColor);
     FUNCTION().PUBLIC().SIGNATURE(void, SetTransparency, float);
     FUNCTION().PUBLIC().SIGNATURE(float, GetTransparency);
-    FUNCTION().PUBLIC().SIGNATURE(void, SetBlendMode, BlendMode);
-    FUNCTION().PUBLIC().SIGNATURE(BlendMode, GetBlendMode);
     FUNCTION().PUBLIC().SIGNATURE(void, SetEnabled, bool);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsEnabled);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsUnderPoint, const Vec2F&);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetMaterialAsset, const AssetRef<MaterialAsset>&);
+    FUNCTION().PUBLIC().SIGNATURE(const AssetRef<MaterialAsset>&, GetMaterialAsset);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetMaterial, const Ref<Material>&);
+    FUNCTION().PUBLIC().SIGNATURE(Ref<Material>, GetMaterial);
     FUNCTION().PROTECTED().SIGNATURE(void, UpdateColor);
     FUNCTION().PROTECTED().SIGNATURE(void, OnColorChanged);
-    FUNCTION().PROTECTED().SIGNATURE(void, OnBlendModeChanged);
     FUNCTION().PROTECTED().SIGNATURE(void, OnEnableChanged);
 }
 END_META;

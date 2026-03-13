@@ -18,12 +18,14 @@ namespace o2
         HGLRC mGLContext; // OpenGL context
         HDC   mHDC;       // Windows frame device context
 
-        GLuint mStdShader;               // Standard shader program
-        GLint  mStdShaderMvpUniform;     // Standard shader matrix input parameter
-        GLint  mStdShaderTextureSample;  // Standard shader texture sample input parameter
-        GLint  mStdShaderPosAttribute;   // Standard shader vertex position attribute
-        GLint  mStdShaderColorAttribute; // Standard shader vertex color attribute
-        GLint  mStdShaderUVAttribute;    // Standard shader texture coords attribute
+        GLuint mActiveProgram;           // Currently active shader program
+        GLint  mActiveMvpUniform;        // Currently active transform uniform location
+        GLint  mActiveTextureSample;     // Currently active texture sampler uniform location
+        GLint  mActivePosAttribute;      // Currently active position attribute location
+        GLint  mActiveColorAttribute;    // Currently active color attribute location
+        GLint  mActiveUVAttribute;       // Currently active texcoords attribute location
+
+        float  mCurrentMvp[16];          // Cached MVP matrix for material rebinding
 
         const static int mBuffersPoolsSize = 3;       // Count of buffers in pools
         GLuint mVertexBuffersPool[mBuffersPoolsSize]; // Batch vertices buffer
@@ -38,13 +40,7 @@ namespace o2
         UInt         mIndexBufferSize;           // Maximum size of index buffer
 
     protected:
-        // Builds vertex and fragment shaders
-        GLuint LoadShader(GLenum shaderType, const char* source);
-
-        // Builds vertex and fragment shaders
-        GLuint BuildShaderProgram(const char* vertexSource, const char* fragmentSource);
-
-        // BInds next buffers from pool
+        // Binds next buffers from pool
         void BindNextPoolBuffers();
     };
 };
