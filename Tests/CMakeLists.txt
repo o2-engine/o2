@@ -5,7 +5,10 @@ FetchContent_Declare(
     GIT_TAG v1.14.0
 )
 set(BUILD_GMOCK OFF CACHE BOOL "" FORCE)
+set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(googletest)
+set_target_properties(gtest PROPERTIES FOLDER o2/3rdPartyLibs)
+set_target_properties(gtest_main PROPERTIES FOLDER o2/3rdPartyLibs)
 
 # Codegen for Tests (reflection, TestScriptObject etc.)
 set(o2Tests_CODEGEN_OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/Sources/o2Tests.cpp)

@@ -164,7 +164,7 @@ set(o2Framework_INCLUDES
 
 target_sources(o2Framework PRIVATE ${o2Framework_SOURCES})
 target_include_directories(o2Framework PUBLIC ${o2Framework_INCLUDES})
-target_precompile_headers(o2Framework PRIVATE "Framework/Sources/o2/stdafx.h")
+target_precompile_headers(o2Framework PUBLIC "Framework/Sources/o2/stdafx.h")
 target_compile_definitions(o2Framework PUBLIC ${O2_COMPILE_DEFINITIONS})
 
 target_link_libraries(o2Framework 
