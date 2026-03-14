@@ -253,21 +253,6 @@ namespace o2
         Math::mtxMultiply(mMVPMatrix, projMatrix, finalCamMtx);
     }
 
-    void Render::PlatformBeginStencilDrawing()
-    {}
-
-    void Render::PlatformEndStencilDrawing()
-    {}
-
-    void Render::PlatformEnableStencilTest()
-    {}
-
-    void Render::PlatformDisableStencilTest()
-    {}
-
-    void Render::ClearStencil()
-    {}
-
     void Render::PlatformEnableScissorTest()
     {
         mScissorEnabled = true;

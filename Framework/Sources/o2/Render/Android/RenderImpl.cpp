@@ -19,7 +19,7 @@
 namespace o2
 {
     Render::Render() :
-        mReady(false), mStencilDrawing(false), mStencilTest(false), mClippingEverything(false)
+        mReady(false), mClippingEverything(false)
     {
         mVertexBufferSize = USHRT_MAX;
         mIndexBufferSize = USHRT_MAX;
@@ -383,73 +383,6 @@ namespace o2
 
         GL_CHECK_ERROR();
 
-    }
-
-    void Render::BeginRenderToStencilBuffer()
-    {
-        if (mStencilDrawing || mStencilTest)
-            return;
-
-        DrawPrimitives();
-
-        glEnable(GL_STENCIL_TEST);
-        glStencilFunc(GL_ALWAYS, 0x1, 0xffffffff);
-        glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
-        glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
-
-        GL_CHECK_ERROR();
-
-        mStencilDrawing = true;
-    }
-
-    void Render::EndRenderToStencilBuffer()
-    {
-        if (!mStencilDrawing)
-            return;
-
-        DrawPrimitives();
-
-        glDisable(GL_STENCIL_TEST);
-        glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-
-        GL_CHECK_ERROR();
-
-        mStencilDrawing = false;
-    }
-
-    void Render::EnableStencilTest()
-    {
-        if (mStencilTest || mStencilDrawing)
-            return;
-
-        DrawPrimitives();
-
-        glEnable(GL_STENCIL_TEST);
-        glStencilFunc(GL_EQUAL, 0x1, 0xffffffff);
-
-        GL_CHECK_ERROR();
-
-        mStencilTest = true;
-    }
-
-    void Render::DisableStencilTest()
-    {
-        if (!mStencilTest)
-            return;
-
-        DrawPrimitives();
-
-        glDisable(GL_STENCIL_TEST);
-
-        mStencilTest = false;
-    }
-
-    void Render::ClearStencil()
-    {
-        glClearStencil(0);
-        glClear(GL_STENCIL_BUFFER_BIT);
-
-        GL_CHECK_ERROR();
     }
 
     void Render::EnableScissorTest(const RectI& rect)

@@ -319,7 +319,7 @@ namespace o2
 
         mImageAsset = image;
 
-        InitializeTexture();
+        InitializeTextureAndMaterial();
 
         mSlices = image->GetMeta()->sliceBorder;
 
@@ -1134,7 +1134,7 @@ namespace o2
     void Sprite::OnDeserialized(const DataValue& node)
     {
         if (mImageAsset)
-            InitializeTexture();
+            InitializeTextureAndMaterial();
 
         SpriteMode mode = mMode;
         mMode = (SpriteMode)((int)mode + 1);
@@ -1150,16 +1150,17 @@ namespace o2
     {
         if (mImageAsset)
         {
-            InitializeTexture();
+            InitializeTextureAndMaterial();
             UpdateMesh();
         }
     }
 
-    void Sprite::InitializeTexture()
+    void Sprite::InitializeTextureAndMaterial()
     {
         auto atlasSpriteSource = mImageAsset->GetTextureSource();
         mMesh.mTexture = atlasSpriteSource.texture;
-        mTextureSrcRect = atlasSpriteSource.sourceRect;
+		mTextureSrcRect = atlasSpriteSource.sourceRect;
+		mMesh.SetMaterial(GetMaterial());
     }
 }
 // --- META ---

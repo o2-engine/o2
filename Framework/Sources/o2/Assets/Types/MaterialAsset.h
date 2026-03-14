@@ -64,6 +64,9 @@ namespace o2
         // Returns true because materials can be created from the editor
         static bool IsAvailableToCreateFromEditor() { return true; }
 
+        // Is asset reference available to contain instance inside
+        static bool IsReferenceCanOwnInstance() { return true; }
+
         ASSET_TYPE(MaterialAsset, Meta);
 
     protected:
@@ -123,6 +126,7 @@ CLASS_METHODS_META(o2::MaterialAsset)
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetEditorIcon);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(int, GetEditorSorting);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(bool, IsAvailableToCreateFromEditor);
+    FUNCTION().PUBLIC().SIGNATURE_STATIC(bool, IsReferenceCanOwnInstance);
     FUNCTION().PROTECTED().SIGNATURE(void, LoadData, const String&);
     FUNCTION().PROTECTED().SIGNATURE(void, SaveData, const String&);
     FUNCTION().PROTECTED().SIGNATURE(void, BuildMaterial);

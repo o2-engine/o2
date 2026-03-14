@@ -3,6 +3,7 @@
 #ifdef PLATFORM_WINDOWS
 
 #include "o2/Render/Windows/OpenGL.h"
+#include "o2/Utils/Types/Containers/Vector.h"
 
 namespace o2
 {
@@ -21,6 +22,9 @@ namespace o2
         GLint mPositionAttribute = -1;  // Location of a_position attribute
         GLint mColorAttribute = -1;     // Location of a_color attribute
         GLint mTexCoordsAttribute = -1; // Location of a_texCoords attribute
+
+        // Cached uniform locations for custom params (filled in PlatformBuild, used in PlatformApplyParams)
+        mutable Vector<GLint> mParamUniformLocations;
     };
 }
 

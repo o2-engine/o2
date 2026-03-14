@@ -174,7 +174,7 @@ namespace o2
     }
 
     void Render::DrawBuffer(PrimitiveType primitiveType, Vertex* vertices, UInt verticesCount,
-                            VertexIndex* indexes, UInt elementsCount, const TextureRef& texture,
+                            VertexIndex* indexes, UInt elementsCount, const TextureRef& overrideTexture,
                             const Ref<Material>& material)
     {
         //PROFILE_SAMPLE_FUNC();
@@ -194,6 +194,12 @@ namespace o2
             indexesCount = elementsCount * 3;
 
         Ref<Material> drawMaterial = material ? material : mDefaultMaterial;
+
+        TextureRef materialTexture;
+        if (drawMaterial)
+            materialTexture = drawMaterial->GetTexture();
+
+        TextureRef texture = overrideTexture ? overrideTexture : materialTexture;
 
         if (CheckBatchBreak(texture, primitiveType, drawMaterial, verticesCount, indexesCount))
         {
@@ -345,50 +351,6 @@ namespace o2
 
         mPrevCamera = mCamera;
         mPrevResolution = mCurrentResolution;
-    }
-
-    void Render::BeginRenderToStencilBuffer()
-    {
-        if (mStencilDrawing || mStencilTest)
-            return;
-
-        DrawPrimitives();
-        PlatformBeginStencilDrawing();
-
-        mStencilDrawing = true;
-    }
-
-    void Render::EndRenderToStencilBuffer()
-    {
-        if (!mStencilDrawing)
-            return;
-
-        DrawPrimitives(); 
-        PlatformEndStencilDrawing();
-
-        mStencilDrawing = false;
-    }
-
-    void Render::EnableStencilTest()
-    {
-        if (mStencilTest || mStencilDrawing)
-            return;
-
-        DrawPrimitives();
-        PlatformEnableStencilTest();
-
-        mStencilTest = true;
-    }
-
-    void Render::DisableStencilTest()
-    {
-        if (!mStencilTest)
-            return;
-
-        DrawPrimitives();
-        PlatformDisableStencilTest();
-
-        mStencilTest = false;
     }
 
     void Render::EnableScissorTest(const RectI& rect)
@@ -1066,11 +1028,6 @@ namespace o2
             Vertex(p4 - dir*arrowSize.x - ndir*arrowSize.y, dcolor, 0, 0)
         };
         DrawPolyLine(va, 3);
-    }
-
-    bool Render::IsStencilTestEnabled() const
-    {
-        return mStencilTest;
     }
 
     RectI Render::GetScissorRect() const

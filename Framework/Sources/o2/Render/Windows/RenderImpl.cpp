@@ -321,10 +321,6 @@ namespace o2
         glDisable(GL_SCISSOR_TEST);
         GL_CHECK_ERROR();
 
-        glClearStencil(0);
-        glClear(GL_STENCIL_BUFFER_BIT);
-        GL_CHECK_ERROR();
-
 		BindMaterial(mDefaultMaterial);
         BindNextPoolBuffers();
 
@@ -353,7 +349,7 @@ namespace o2
         PROFILE_SAMPLE_FUNC();
 
         glClearColor(color.RF(), color.GF(), color.BF(), color.AF());
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         GL_CHECK_ERROR();
     }
@@ -377,45 +373,6 @@ namespace o2
             Vertex& v = ((Vertex*)mVertexData)[i];
             v.tv = 1.0f - v.tv;
         }
-    }
-
-    void Render::PlatformBeginStencilDrawing()
-    {
-        glEnable(GL_STENCIL_TEST);
-        glStencilFunc(GL_ALWAYS, 0x1, 0xffffffff);
-        glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
-        glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
-
-        GL_CHECK_ERROR();
-    }
-
-    void Render::PlatformEndStencilDrawing()
-    {
-        glDisable(GL_STENCIL_TEST);
-        glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-
-        GL_CHECK_ERROR();
-    }
-
-    void Render::PlatformEnableStencilTest()
-    {
-        glEnable(GL_STENCIL_TEST);
-        glStencilFunc(GL_EQUAL, 0x1, 0xffffffff);
-
-        GL_CHECK_ERROR();
-    }
-
-    void Render::PlatformDisableStencilTest()
-    {
-        glDisable(GL_STENCIL_TEST);
-    }
-
-    void Render::ClearStencil()
-    {
-        glClearStencil(0);
-        glClear(GL_STENCIL_BUFFER_BIT);
-
-        GL_CHECK_ERROR();
     }
 
     void Render::PlatformEnableScissorTest()

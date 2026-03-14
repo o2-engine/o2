@@ -196,14 +196,17 @@ namespace o2
         CLONEABLE_REF(Sprite);
 
     protected:
-        RectI         mTextureSrcRect;             // Texture source rectangle
-        Color4        mCornersColors[4];           // Corners colors
-        AssetRef<ImageAsset> mImageAsset;                 // Image asset @SERIALIZABLE
-        SpriteMode    mMode = SpriteMode::Default; // Drawing mode @SERIALIZABLE
-        BorderI       mSlices;                     // Slice borders @SERIALIZABLE
-        float         mFill = 1.0f;                // Sprite fillness @SERIALIZABLE
-        float         mTileScale = 1.0f;           // Scale of tiles in tiled mode. 1.0f is default and equals to default image size @SERIALIZABLE
-        Mesh          mMesh;                       // Drawing mesh
+        Color4 mCornersColors[4]; // Corners colors
+
+        RectI                mTextureSrcRect; // Texture source rectangle
+        AssetRef<ImageAsset> mImageAsset;     // Image asset @SERIALIZABLE
+
+        SpriteMode           mMode = SpriteMode::Default; // Drawing mode @SERIALIZABLE
+        BorderI              mSlices;                     // Slice borders @SERIALIZABLE
+        float                mFill = 1.0f;                // Sprite fillness @SERIALIZABLE
+        float                mTileScale = 1.0f;           // Scale of tiles in tiled mode. 1.0f is default and equals to default image size @SERIALIZABLE
+        
+        Mesh mMesh; // Drawing mesh
 
         void(Sprite::*mMeshBuildFunc)(); // Mesh building function pointer (by mode)
 
@@ -218,7 +221,7 @@ namespace o2
         void OnMaterialChanged() override;
 
         // Initialized texture by image: uses atlas part or texture
-        void InitializeTexture();
+        void InitializeTextureAndMaterial();
 
         // Updates mesh geometry
         void UpdateMesh();
@@ -280,8 +283,8 @@ CLASS_FIELDS_META(o2::Sprite)
     FIELD().PUBLIC().SCRIPTABLE_ATTRIBUTE().NAME(fill);
     FIELD().PUBLIC().SCRIPTABLE_ATTRIBUTE().NAME(tileScale);
     FIELD().PUBLIC().SCRIPTABLE_ATTRIBUTE().NAME(sliceBorder);
-    FIELD().PROTECTED().NAME(mTextureSrcRect);
     FIELD().PROTECTED().NAME(mCornersColors);
+    FIELD().PROTECTED().NAME(mTextureSrcRect);
     FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().NAME(mImageAsset);
     FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(SpriteMode::Default).NAME(mMode);
     FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().NAME(mSlices);
@@ -345,7 +348,7 @@ CLASS_METHODS_META(o2::Sprite)
     FUNCTION().PROTECTED().SIGNATURE(void, BasisChanged);
     FUNCTION().PROTECTED().SIGNATURE(void, OnColorChanged);
     FUNCTION().PROTECTED().SIGNATURE(void, OnMaterialChanged);
-    FUNCTION().PROTECTED().SIGNATURE(void, InitializeTexture);
+    FUNCTION().PROTECTED().SIGNATURE(void, InitializeTextureAndMaterial);
     FUNCTION().PROTECTED().SIGNATURE(void, UpdateMesh);
     FUNCTION().PROTECTED().SIGNATURE(void, BuildDefaultMesh);
     FUNCTION().PROTECTED().SIGNATURE(void, BuildSlicedMesh);

@@ -223,24 +223,6 @@ namespace o2
                                     const Color4& color = Color4::White(), const Vec2F& arrowSize = Vec2F(10, 10),
                                     float width = 1.0f, LineType lineType = LineType::Solid, bool scaleToScreenSpace = true);
 
-        // Beginning render to stencil buffer
-        void BeginRenderToStencilBuffer();
-
-        // Finishing rendering in stencil buffer
-        void EndRenderToStencilBuffer();
-
-        // Enabling stencil test
-        void EnableStencilTest();
-
-        // Disabling stencil test
-        void DisableStencilTest();
-
-        // Returns true, if stencil test enabled
-        bool IsStencilTestEnabled() const;
-
-        // Clearing stencil buffer
-        void ClearStencil();
-
         // Returns scissor rect
         RectI GetScissorRect() const;
 
@@ -268,9 +250,11 @@ namespace o2
         // Draws mesh
         void DrawMesh(Mesh* mesh);
 
-        // Draws data from buffer with specified texture and primitive type. Material defines blend mode; pass nullptr for default material (Normal blend).
+        // Draws data from buffer with specified override texture and primitive type.
+        // Material defines blend mode and default texture; pass nullptr for default material (Normal blend).
+        // If overrideTexture is non-null, it is used; otherwise material's texture is used (if any).
         void DrawBuffer(PrimitiveType primitiveType, Vertex* vertices, UInt verticesCount,
-                        VertexIndex* indexes, UInt elementsCount, const TextureRef& texture,
+                        VertexIndex* indexes, UInt elementsCount, const TextureRef& overrideTexture,
                         const Ref<Material>& material);
 
         // Platform specific upload vertex and index buffers
@@ -322,13 +306,13 @@ namespace o2
         PrimitiveType mCurrentPrimitiveType = PrimitiveType::Polygon; // Type of drawing primitives for next DIP
 
         TextureRef mCurrentDrawTexture = nullptr; // Stored texture ptr from last DIP
-        UInt       mLastDrawVertex;               // Last vertex idx for next DIP
-        UInt       mLastDrawIdx;                  // Last vertex index for next DIP
-        UInt       mTrianglesCount;               // Triangles count for next DIP
-        UInt       mFrameTrianglesCount;          // Total triangles at current frame
-        UInt       mDrawCallsCount;               // DrawIndexedPrimitives calls count
+        UInt       mLastDrawVertex = 0;           // Last vertex idx for next DIP
+        UInt       mLastDrawIdx = 0;              // Last vertex index for next DIP
+        UInt       mTrianglesCount = 0;           // Triangles count for next DIP
+        UInt       mFrameTrianglesCount = 0;      // Total triangles at current frame
+        UInt       mDrawCallsCount = 0;           // DrawIndexedPrimitives calls count
 
-        Ref<Material> mDefaultMaterial; // Default material, loaded from Shaders/Default (Windows) or from mStdShader (other platforms)
+        Ref<Material> mDefaultMaterial; // Default material, loaded from Shaders/Default 
         Ref<Material> mCurrentMaterial; // Currently bound material
 
         Ref<LogStream> mLog; // Render log stream
@@ -348,9 +332,6 @@ namespace o2
         Vec2F  mViewScale;         // Current view scale, depends on camera
         Vec2F  mInvViewScale;      // Inverted mViewScale
         Vec2I  mDPI;               // Current device screen DPI
-
-        bool mStencilDrawing = false; // True, if drawing in stencil buffer
-        bool mStencilTest = false;    // True, if drawing with stencil test
 
         Vector<ScissorInfo>       mScissorInfos;               // Scissor clipping depth infos vector
         Vector<ScissorStackEntry> mStackScissors;              // Stack of scissors clippings
@@ -455,18 +436,6 @@ namespace o2
 
         // Platform specific setup camera transforms
         void PlatformSetupCameraTransforms(float* modelMatrix, float* viewMatrix, float* projMatrix);
-
-        // Platform specific begin of stencil drawing
-        void PlatformBeginStencilDrawing();
-
-        // Platform specific end of stencil drawing
-        void PlatformEndStencilDrawing();
-
-        // Platform specific setup stencil test
-        void PlatformEnableStencilTest();
-
-        // Platform specific disable stencil test
-        void PlatformDisableStencilTest();
 
         // Platform specific enable scissor test
         void PlatformEnableScissorTest();

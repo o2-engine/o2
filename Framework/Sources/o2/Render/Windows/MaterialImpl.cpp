@@ -48,6 +48,10 @@ namespace o2
         mColorAttribute = glGetAttribLocation(program, "a_color");
         mTexCoordsAttribute = glGetAttribLocation(program, "a_texCoords");
 
+        mParamUniformLocations.Resize(mParams.Count());
+        for (int i = 0; i < mParams.Count(); i++)
+            mParamUniformLocations[i] = glGetUniformLocation(program, mParams[i]->GetName().Data());
+
         return true;
     }
 
@@ -59,17 +63,26 @@ namespace o2
             mProgram = 0;
         }
 
+        mParamUniformLocations.Clear();
         mReady = false;
     }
 
     void Material::PlatformApplyParams() const
     {
-        for (const auto& param : mParams)
+        if (mParamUniformLocations.Count() != mParams.Count())
         {
-            GLint loc = glGetUniformLocation(mProgram, param->GetName().Data());
+            mParamUniformLocations.Resize(mParams.Count());
+            for (int i = 0; i < mParams.Count(); i++)
+                mParamUniformLocations[i] = glGetUniformLocation(mProgram, mParams[i]->GetName().Data());
+        }
+
+        for (int i = 0; i < mParams.Count(); i++)
+        {
+            GLint loc = mParamUniformLocations[i];
             if (loc < 0)
                 continue;
 
+            const auto& param = mParams[i];
             if (auto* fp = dynamic_cast<ShaderParamFloat*>(param.Get()))
                 glUniform1f(loc, fp->GetValue());
             else if (auto* v2p = dynamic_cast<ShaderParamVec2*>(param.Get()))

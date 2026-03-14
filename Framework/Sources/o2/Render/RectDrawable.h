@@ -89,7 +89,7 @@ namespace o2
         CLONEABLE_REF(IRectDrawable);
 
     protected:
-        Color4 mColor = Color4::White();         // Color @SERIALIZABLE
+        Color4 mColor = Color4::White();          // Color @SERIALIZABLE
         Color4 mOverrideColor = Color4::White();  // Override color, used to modify color from outside
         Color4 mResultColor;                      // Result color, calculated from color and override color
 

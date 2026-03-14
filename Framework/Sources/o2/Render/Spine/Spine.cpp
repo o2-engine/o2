@@ -110,7 +110,8 @@ namespace o2
                 mIndices.Add(indices[i]);
 
             TextureRef textureRef = TextureRef((Texture*)command->texture);
-            o2Render.DrawBuffer(PrimitiveType::Polygon, mVertices.Data(), command->numVertices, mIndices.Data(), command->numIndices/3, textureRef, o2Render.GetDefaultMaterial());
+            o2Render.DrawBuffer(PrimitiveType::Polygon, mVertices.Data(), command->numVertices,
+                                mIndices.Data(), command->numIndices/3, textureRef, o2Render.GetDefaultMaterial());
 
             if (o2Input.IsKeyDown(VK_F3))
                 o2Render.DrawMeshBufferWire(mVertices.Data(), command->numVertices, mIndices.Data(), command->numIndices/3, Color4::Red());
