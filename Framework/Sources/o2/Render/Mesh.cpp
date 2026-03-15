@@ -5,100 +5,163 @@
 
 namespace o2
 {
-    Mesh::Mesh(TextureRef texture /*= TextureRef()*/, UInt vertexCount /*= 4*/, UInt polyCount /*= 2*/):
-        vertices(nullptr), indexes(nullptr), mMaxPolyCount(0), mMaxVertexCount(0), vertexCount(0), polyCount(0)
-    {
-        SetTexture(texture);
-        Resize(vertexCount, polyCount);
-    }
+	Mesh::Mesh(TextureRef texture /*= TextureRef()*/, UInt vertexCount /*= 4*/, UInt polyCount /*= 2*/):
+		mVertexType(Vertex::Type())
+	{
+		SetTexture(texture);
+		Resize(vertexCount, polyCount);
+	}
 
-    Mesh::Mesh(const Mesh& mesh):
-        vertices(nullptr), indexes(nullptr), mMaxPolyCount(0), mMaxVertexCount(0), vertexCount(0), polyCount(0)
-    {
-        SetTexture(mesh.mTexture);
-        Resize(mesh.mMaxVertexCount, mesh.mMaxPolyCount);
+	Mesh::Mesh(const Mesh& mesh):
+		mVertexType(mesh.mVertexType)
+	{
+		SetTexture(mesh.mTexture);
+		mTextureSrcRect = mesh.mTextureSrcRect;
 
-        vertexCount = mesh.vertexCount;
-        polyCount = mesh.polyCount;
+		size_t stride = mVertexType.GetStride();
 
-        memcpy(vertices, mesh.vertices, mesh.mMaxVertexCount*sizeof(Vertex));
-        memcpy(indexes, mesh.indexes, mesh.mMaxPolyCount*3*sizeof(VertexIndex));
-    }
+		mVertexData = mnew UInt8[mesh.mMaxVertexCount * stride];
+		mIndexData = mnew VertexIndex[mesh.mMaxPolyCount * 3];
 
-    Mesh::~Mesh()
-    {
-        delete[] vertices;
-        delete[] indexes;
-    }
+		mMaxVertexCount = mesh.mMaxVertexCount;
+		mMaxPolyCount = mesh.mMaxPolyCount;
 
-    Mesh& Mesh::operator=(const Mesh& other)
-    {
-        SetTexture(other.mTexture);
-        Resize(other.mMaxVertexCount, other.mMaxPolyCount);
+		vertexCount = mesh.vertexCount;
+		polyCount = mesh.polyCount;
 
-        vertexCount = other.vertexCount;
-        polyCount = other.polyCount;
+		memcpy(mVertexData, mesh.mVertexData, mesh.mMaxVertexCount * stride);
+		memcpy(mIndexData, mesh.mIndexData, mesh.mMaxPolyCount * 3 * sizeof(VertexIndex));
+	}
 
-        memcpy(vertices, other.vertices, other.mMaxVertexCount*sizeof(Vertex));
-        memcpy(indexes, other.indexes, other.mMaxPolyCount*3*sizeof(VertexIndex));
+	Mesh::~Mesh()
+	{
+		delete[] mVertexData;
+		delete[] mIndexData;
+	}
 
-        return *this;
-    }
+	Mesh& Mesh::operator=(const Mesh& other)
+	{
+		SetTexture(other.mTexture);
+		mTextureSrcRect = other.mTextureSrcRect;
+		mVertexType = other.mVertexType;
 
-    void Mesh::Resize(UInt vertexCount, UInt polyCount)
-    {
-        if (vertices) delete[] vertices;
-        if (indexes) delete[] indexes;
+		size_t stride = mVertexType.GetStride();
 
-        vertices = new Vertex[vertexCount];
-        indexes = new VertexIndex[polyCount*3];
+		if (mVertexData)
+			delete[] mVertexData;
 
-        mMaxVertexCount = vertexCount;
-        mMaxPolyCount = polyCount;
+		if (mIndexData)
+			delete[] mIndexData;
 
-        vertexCount = 0;
-        polyCount = 0;
-    }
+		mVertexData = mnew UInt8[other.mMaxVertexCount * stride];
+		mIndexData = mnew VertexIndex[other.mMaxPolyCount * 3];
 
-    void Mesh::Draw()
-    {
-        o2Render.DrawMesh(this);
-        OnDrawn();
-    }
+		mMaxVertexCount = other.mMaxVertexCount;
+		mMaxPolyCount = other.mMaxPolyCount;
 
-    void Mesh::SetTexture(const TextureRef& texture)
-    {
-        mTexture = texture;
-    }
+		vertexCount = other.vertexCount;
+		polyCount = other.polyCount;
 
-    const TextureRef& Mesh::GetTexture() const
-    {
-        return mTexture;
-    }
+		memcpy(mVertexData, other.mVertexData, other.mMaxVertexCount * stride);
+		memcpy(mIndexData, other.mIndexData, other.mMaxPolyCount * 3 * sizeof(VertexIndex));
 
-    void Mesh::SetMaxVertexCount(const UInt& count)
-    {
-        delete[] vertices;
-        vertices = new Vertex[count];
-        mMaxVertexCount = count;
-        vertexCount = 0;
-    }
+		return *this;
+	}
 
-    void Mesh::SetMaxPolyCount(const UInt& count)
-    {
-        delete[] indexes;
-        indexes = new VertexIndex[count*3];
-        mMaxPolyCount = count;
-        polyCount = 0;
-    }
+	void Mesh::Resize(UInt vertexCount, UInt polyCount)
+	{
+		size_t stride = mVertexType.GetStride();
 
-    UInt Mesh::GetMaxVertexCount() const
-    {
-        return mMaxVertexCount;
-    }
+		if (mVertexData)
+			delete[] mVertexData;
 
-    UInt Mesh::GetMaxPolyCount() const
-    {
-        return mMaxPolyCount;
-    }
+		if (mIndexData)
+			delete[] mIndexData;
+
+		mVertexData = mnew UInt8[vertexCount * stride];
+		mIndexData = mnew VertexIndex[polyCount * 3];
+
+		mMaxVertexCount = vertexCount;
+		mMaxPolyCount = polyCount;
+
+		this->vertexCount = 0;
+		this->polyCount = 0;
+	}
+
+	UInt8* Mesh::GetVertexData()
+	{ 
+		return mVertexData;
+	}
+
+	const UInt8* Mesh::GetVertexData() const
+	{ 
+		return mVertexData;
+	}
+
+	const VertexType& Mesh::GetVertexType() const 
+	{ 
+		return mVertexType; 
+	}
+
+	VertexIndex* Mesh::GetIndexes()
+	{ 
+		return mIndexData; 
+	}
+
+	const VertexIndex* Mesh::GetIndexes() const 
+	{ 
+		return mIndexData;
+	}
+
+	void Mesh::Draw()
+	{
+		o2Render.DrawMesh(this);
+		OnDrawn();
+	}
+
+	void Mesh::SetTexture(const TextureRef& texture)
+	{
+		mTexture = texture;
+	}
+
+	const TextureRef& Mesh::GetTexture() const
+	{
+		return mTexture;
+	}
+
+	void Mesh::SetTextureSrcRect(const RectI& rect)
+	{
+		mTextureSrcRect = rect;
+	}
+
+	const RectI& Mesh::GetTextureSrcRect() const
+	{
+		return mTextureSrcRect;
+	}
+
+	void Mesh::SetMaxVertexCount(const UInt& count)
+	{
+		delete[] mVertexData;
+		mVertexData = mnew UInt8[count * mVertexType.GetStride()];
+		mMaxVertexCount = count;
+		vertexCount = 0;
+	}
+
+	void Mesh::SetMaxPolyCount(const UInt& count)
+	{
+		delete[] mIndexData;
+		mIndexData = mnew VertexIndex[count * 3];
+		mMaxPolyCount = count;
+		polyCount = 0;
+	}
+
+	UInt Mesh::GetMaxVertexCount() const
+	{
+		return mMaxVertexCount;
+	}
+
+	UInt Mesh::GetMaxPolyCount() const
+	{
+		return mMaxPolyCount;
+	}
 }

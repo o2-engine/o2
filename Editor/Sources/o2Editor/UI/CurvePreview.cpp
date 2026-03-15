@@ -140,13 +140,15 @@ namespace Editor
 
                 Color4 meshColor = mCurveColor; meshColor.a /= 2;
 
-                mMesh->vertices[0] = Vertex(lastTopPoint, meshColor.ABGR(), 0, 0);
-                mMesh->vertices[1] = Vertex(lastBottomPoint, meshColor.ABGR(), 0, 0);
-                mMesh->vertices[2] = Vertex(topPoint, meshColor.ABGR(), 0, 0);
-                mMesh->vertices[3] = Vertex(bottomPoint, meshColor.ABGR(), 0, 0);
+                Vertex* cv = mMesh->GetVertices<Vertex>();
+                VertexIndex* idx = mMesh->GetIndexes();
+                cv[0] = Vertex(lastTopPoint, meshColor.ABGR(), 0, 0);
+                cv[1] = Vertex(lastBottomPoint, meshColor.ABGR(), 0, 0);
+                cv[2] = Vertex(topPoint, meshColor.ABGR(), 0, 0);
+                cv[3] = Vertex(bottomPoint, meshColor.ABGR(), 0, 0);
 
-                mMesh->indexes[0] = 0; mMesh->indexes[1] = 1; mMesh->indexes[2] = 2;
-                mMesh->indexes[3] = 2; mMesh->indexes[4] = 1; mMesh->indexes[5] = 3;
+                idx[0] = 0; idx[1] = 1; idx[2] = 2;
+                idx[3] = 2; idx[4] = 1; idx[5] = 3;
 
                 mMesh->vertexCount = 4;
                 mMesh->polyCount = 2;

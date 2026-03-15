@@ -651,6 +651,8 @@ namespace Editor
 
             //o2Render.DrawLine(curve->approximatedPoints, curve->color);
 
+            Vertex* verts = mCurvesMesh->GetVertices<Vertex>();
+            VertexIndex* idx = mCurvesMesh->GetIndexes();
             float cameraLeftPos = mViewCamera.GetRect().left;
             float cameraRightPos = mViewCamera.GetRect().right;
             for (int i = 1; i < curve->approximatedPoints.Count(); i++)
@@ -672,13 +674,13 @@ namespace Editor
                 Color4 meshColor = curve->color;
                 meshColor.a /= 2;
 
-                mCurvesMesh->vertices[0] = Vertex(leftTop, meshColor.ABGR(), 0, 0);
-                mCurvesMesh->vertices[1] = Vertex(leftBottom, meshColor.ABGR(), 0, 0);
-                mCurvesMesh->vertices[2] = Vertex(rightTop, meshColor.ABGR(), 0, 0);
-                mCurvesMesh->vertices[3] = Vertex(rightBottom, meshColor.ABGR(), 0, 0);
+                verts[0] = Vertex(leftTop, meshColor.ABGR(), 0, 0);
+                verts[1] = Vertex(leftBottom, meshColor.ABGR(), 0, 0);
+                verts[2] = Vertex(rightTop, meshColor.ABGR(), 0, 0);
+                verts[3] = Vertex(rightBottom, meshColor.ABGR(), 0, 0);
 
-                mCurvesMesh->indexes[0] = 0; mCurvesMesh->indexes[1] = 1; mCurvesMesh->indexes[2] = 2;
-                mCurvesMesh->indexes[3] = 2; mCurvesMesh->indexes[4] = 1; mCurvesMesh->indexes[5] = 3;
+                idx[0] = 0; idx[1] = 1; idx[2] = 2;
+                idx[3] = 2; idx[4] = 1; idx[5] = 3;
 
                 mCurvesMesh->vertexCount = 4;
                 mCurvesMesh->polyCount = 2;

@@ -89,8 +89,8 @@ namespace o2
 
     void SkinningMesh::Draw()
     {
-        o2Render.DrawBuffer(PrimitiveType::Polygon, mRenderVertexBuffer, vertexCount, indexes, polyCount, mTexture,
-                            o2Render.GetDefaultMaterial());
+        o2Render.DrawBuffer(PrimitiveType::Polygon, mRenderVertexBuffer, vertexCount, indexes, polyCount,
+                            GetMaterial(), mTexture);
         OnDrawn();
     }
 

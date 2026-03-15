@@ -114,12 +114,13 @@ namespace Editor
 		mTransitionMesh = mmake<Mesh>(TextureRef(), 8, 6);
 		mTransitionMesh->vertexCount = 8;
 		mTransitionMesh->polyCount = 6;
-		mTransitionMesh->indexes[0] = 0; mTransitionMesh->indexes[1] = 1; mTransitionMesh->indexes[2] = 2;
-		mTransitionMesh->indexes[3] = 1; mTransitionMesh->indexes[4] = 3; mTransitionMesh->indexes[5] = 2;
-		mTransitionMesh->indexes[6] = 1; mTransitionMesh->indexes[7] = 4; mTransitionMesh->indexes[8] = 3;
-		mTransitionMesh->indexes[9] = 3; mTransitionMesh->indexes[10] = 4; mTransitionMesh->indexes[11] = 6;
-		mTransitionMesh->indexes[12] = 4; mTransitionMesh->indexes[13] = 5; mTransitionMesh->indexes[14] = 6;
-		mTransitionMesh->indexes[15] = 6; mTransitionMesh->indexes[16] = 5; mTransitionMesh->indexes[17] = 7;
+		VertexIndex* transIdx = mTransitionMesh->GetIndexes();
+		transIdx[0] = 0; transIdx[1] = 1; transIdx[2] = 2;
+		transIdx[3] = 1; transIdx[4] = 3; transIdx[5] = 2;
+		transIdx[6] = 1; transIdx[7] = 4; transIdx[8] = 3;
+		transIdx[9] = 3; transIdx[10] = 4; transIdx[11] = 6;
+		transIdx[12] = 4; transIdx[13] = 5; transIdx[14] = 6;
+		transIdx[15] = 6; transIdx[16] = 5; transIdx[17] = 7;
 
 		// State names texts
 		mSourceStateName = mmake<Text>("stdFont.ttf");
@@ -286,18 +287,19 @@ namespace Editor
 		//                \ |          |
 		//                 [6]--------[7]
 		auto transitionColor = Color4(0, 156, 141, 255).ABGR();
-		mTransitionMesh->vertices[0] = Vertex(sourceRangeBeginPosition + 2, sourceRect.top - 1, transitionColor, 0, 0);
-		mTransitionMesh->vertices[2] = Vertex(sourceRangeBeginPosition + 2, sourceRect.bottom + 1, transitionColor, 0, 0);
+		Vertex* verts = mTransitionMesh->GetVertices<Vertex>();
+		verts[0] = Vertex(sourceRangeBeginPosition + 2, sourceRect.top - 1, transitionColor, 0, 0);
+		verts[2] = Vertex(sourceRangeBeginPosition + 2, sourceRect.bottom + 1, transitionColor, 0, 0);
 
-		mTransitionMesh->vertices[1] = Vertex(destinationRangeBeginPosition, sourceRect.top - 1, transitionColor, 0, 0);
-		mTransitionMesh->vertices[3] = Vertex(destinationRangeBeginPosition, sourceRect.bottom + 1, transitionColor, 0, 0);
+		verts[1] = Vertex(destinationRangeBeginPosition, sourceRect.top - 1, transitionColor, 0, 0);
+		verts[3] = Vertex(destinationRangeBeginPosition, sourceRect.bottom + 1, transitionColor, 0, 0);
 
-		mTransitionMesh->vertices[4] = Vertex(destinationDurationPosition, destRect.top - 1, transitionColor, 0, 0);
-		mTransitionMesh->vertices[6] = Vertex(destinationDurationPosition, destRect.bottom + 1, transitionColor, 0, 0);
+		verts[4] = Vertex(destinationDurationPosition, destRect.top - 1, transitionColor, 0, 0);
+		verts[6] = Vertex(destinationDurationPosition, destRect.bottom + 1, transitionColor, 0, 0);
 
 		float transitionEndPos = destinationRangeBeginPosition + destinationRangePositionDelta - durationBarsSpace - 1;
-		mTransitionMesh->vertices[5] = Vertex(transitionEndPos, destRect.top - 1, transitionColor, 0, 0);
-		mTransitionMesh->vertices[7] = Vertex(transitionEndPos, destRect.bottom + 1, transitionColor, 0, 0);
+		verts[5] = Vertex(transitionEndPos, destRect.top - 1, transitionColor, 0, 0);
+		verts[7] = Vertex(transitionEndPos, destRect.bottom + 1, transitionColor, 0, 0);
 		mTransitionMesh->Draw();
 
 		// Draw state names

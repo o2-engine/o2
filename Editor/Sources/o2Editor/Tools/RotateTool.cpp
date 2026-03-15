@@ -107,6 +107,8 @@ namespace Editor
         mRotateRingFillMesh->polyCount = mRotateRingSegs * 2;
         float segAngle = 2.0f*Math::PI() / (float)mRotateRingSegs;
 
+        Vertex* fillVerts = mRotateRingFillMesh->GetVertices<Vertex>();
+        VertexIndex* fillIdx = mRotateRingFillMesh->GetIndexes();
         float angle = 0.0f;
         int i = 0;
         while (angle < 2.0f*Math::PI())
@@ -126,18 +128,18 @@ namespace Editor
             if (angle < Math::PI()*0.5f || (angle >= Math::PI() - FLT_EPSILON && angle <= Math::PI()*1.5f + FLT_EPSILON))
                 currFillColor = fillColorUL2;
 
-            mRotateRingFillMesh->vertices[vi] = Vertex(pinside, currFillColor, 0.0f, 0.0f);
-            mRotateRingFillMesh->vertices[vi + 1] = Vertex(poutside, currFillColor, 0.0f, 0.0f);
-            mRotateRingFillMesh->vertices[vi + 2] = Vertex(pinsideNext, currFillColor, 0.0f, 0.0f);
-            mRotateRingFillMesh->vertices[vi + 3] = Vertex(poutsideNext, currFillColor, 0.0f, 0.0f);
+            fillVerts[vi] = Vertex(pinside, currFillColor, 0.0f, 0.0f);
+            fillVerts[vi + 1] = Vertex(poutside, currFillColor, 0.0f, 0.0f);
+            fillVerts[vi + 2] = Vertex(pinsideNext, currFillColor, 0.0f, 0.0f);
+            fillVerts[vi + 3] = Vertex(poutsideNext, currFillColor, 0.0f, 0.0f);
 
-            mRotateRingFillMesh->indexes[pi] = vi;
-            mRotateRingFillMesh->indexes[pi + 1] = vi + 1;
-            mRotateRingFillMesh->indexes[pi + 2] = vi + 3;
+            fillIdx[pi] = vi;
+            fillIdx[pi + 1] = vi + 1;
+            fillIdx[pi + 2] = vi + 3;
 
-            mRotateRingFillMesh->indexes[pi + 3] = vi;
-            mRotateRingFillMesh->indexes[pi + 4] = vi + 3;
-            mRotateRingFillMesh->indexes[pi + 5] = vi + 2;
+            fillIdx[pi + 3] = vi;
+            fillIdx[pi + 4] = vi + 3;
+            fillIdx[pi + 5] = vi + 2;
 
             angle = angleNext;
         }
@@ -154,6 +156,8 @@ namespace Editor
         ULong angleRingColor = direction > 0.0f ? mRotateMeshClockwiseColor.ABGR() : mRotateMeshCClockwiseColor.ABGR();
         int reqAngleMeshSegs = Math::CeilToInt(Math::Abs(mCurrentRotateAngle - mPressAngle) / segAngle) + 1;
         mAngleMesh->Resize(reqAngleMeshSegs * 4, reqAngleMeshSegs * 2);
+        Vertex* angleVerts = mAngleMesh->GetVertices<Vertex>();
+        VertexIndex* angleIdx = mAngleMesh->GetIndexes();
         while (direction > 0.0f ? angle < mCurrentRotateAngle : angle > mCurrentRotateAngle)
         {
             float angleNext = angle + segAngle*direction;
@@ -169,18 +173,18 @@ namespace Editor
             int pi = i * 6;
             i++;
 
-            mAngleMesh->vertices[vi] = Vertex(pinside, angleRingColor, 0.0f, 0.0f);
-            mAngleMesh->vertices[vi + 1] = Vertex(poutside, angleRingColor, 0.0f, 0.0f);
-            mAngleMesh->vertices[vi + 2] = Vertex(pinsideNext, angleRingColor, 0.0f, 0.0f);
-            mAngleMesh->vertices[vi + 3] = Vertex(poutsideNext, angleRingColor, 0.0f, 0.0f);
+            angleVerts[vi] = Vertex(pinside, angleRingColor, 0.0f, 0.0f);
+            angleVerts[vi + 1] = Vertex(poutside, angleRingColor, 0.0f, 0.0f);
+            angleVerts[vi + 2] = Vertex(pinsideNext, angleRingColor, 0.0f, 0.0f);
+            angleVerts[vi + 3] = Vertex(poutsideNext, angleRingColor, 0.0f, 0.0f);
 
-            mAngleMesh->indexes[pi] = vi;
-            mAngleMesh->indexes[pi + 1] = vi + 1;
-            mAngleMesh->indexes[pi + 2] = vi + 3;
+            angleIdx[pi] = vi;
+            angleIdx[pi + 1] = vi + 1;
+            angleIdx[pi + 2] = vi + 3;
 
-            mAngleMesh->indexes[pi + 3] = vi;
-            mAngleMesh->indexes[pi + 4] = vi + 3;
-            mAngleMesh->indexes[pi + 5] = vi + 2;
+            angleIdx[pi + 3] = vi;
+            angleIdx[pi + 4] = vi + 3;
+            angleIdx[pi + 5] = vi + 2;
 
             mAngleMesh->vertexCount = i * 4;
             mAngleMesh->polyCount = i * 2;

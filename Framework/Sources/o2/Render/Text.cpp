@@ -337,21 +337,23 @@ namespace o2
                     transf.Transform(symb.mFrame.LeftBottom() - mSymbolsSet.mPosition)
                 };
 
-                currentMesh->vertices[currentMesh->vertexCount++] = Vertex(points[0], color, symb.mTexSrc.left, 1.0f - symb.mTexSrc.top);
-                currentMesh->vertices[currentMesh->vertexCount++] = Vertex(points[1], color, symb.mTexSrc.right, 1.0f - symb.mTexSrc.top);
-                currentMesh->vertices[currentMesh->vertexCount++] = Vertex(points[2], color, symb.mTexSrc.right, 1.0f - symb.mTexSrc.bottom);
-                currentMesh->vertices[currentMesh->vertexCount++] = Vertex(points[3], color, symb.mTexSrc.left, 1.0f - symb.mTexSrc.bottom);
+                Vertex* verts = currentMesh->GetVertices<Vertex>();
+                verts[currentMesh->vertexCount++] = Vertex(points[0], color, symb.mTexSrc.left, 1.0f - symb.mTexSrc.top);
+                verts[currentMesh->vertexCount++] = Vertex(points[1], color, symb.mTexSrc.right, 1.0f - symb.mTexSrc.top);
+                verts[currentMesh->vertexCount++] = Vertex(points[2], color, symb.mTexSrc.right, 1.0f - symb.mTexSrc.bottom);
+                verts[currentMesh->vertexCount++] = Vertex(points[3], color, symb.mTexSrc.left, 1.0f - symb.mTexSrc.bottom);
 
+                VertexIndex* idx = currentMesh->GetIndexes();
                 int pp = currentMesh->polyCount*3;
-                currentMesh->indexes[pp] = currentMesh->vertexCount - 4;
-                currentMesh->indexes[pp + 1] = currentMesh->vertexCount - 3;
-                currentMesh->indexes[pp + 2] = currentMesh->vertexCount - 2;
+                idx[pp] = currentMesh->vertexCount - 4;
+                idx[pp + 1] = currentMesh->vertexCount - 3;
+                idx[pp + 2] = currentMesh->vertexCount - 2;
                 currentMesh->polyCount++;
 
                 pp += 3;
-                currentMesh->indexes[pp] = currentMesh->vertexCount - 4;
-                currentMesh->indexes[pp + 1] = currentMesh->vertexCount - 2;
-                currentMesh->indexes[pp + 2] = currentMesh->vertexCount - 1;
+                idx[pp] = currentMesh->vertexCount - 4;
+                idx[pp + 1] = currentMesh->vertexCount - 2;
+                idx[pp + 2] = currentMesh->vertexCount - 1;
                 currentMesh->polyCount++;
             }
         }
@@ -419,8 +421,9 @@ namespace o2
         ULong dcolor = mResultColor.ABGR();
         for (auto& mesh : mMeshes)
         {
+            Vertex* verts = mesh->GetVertices<Vertex>();
             for (int i = 0; i < (int)mesh->vertexCount; i++)
-                mesh->vertices[i].color = dcolor;
+                verts[i].color = dcolor;
         }
     }
 
@@ -453,9 +456,10 @@ namespace o2
 
         for (auto& mesh : mMeshes)
         {
+            Vertex* verts = mesh->GetVertices<Vertex>();
             for (unsigned int i = 0; i < mesh->vertexCount; i++)
             {
-                Vertex* vx = &mesh->vertices[i];
+                Vertex* vx = &verts[i];
                 bas.Transform(vx->x, vx->y);
             }
         }

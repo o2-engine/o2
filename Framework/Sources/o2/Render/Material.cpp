@@ -105,6 +105,24 @@ namespace o2
         return h;
     }
 
+    // === TextureSampler ===
+
+    TextureRef TextureSampler::GetTexture() const
+    {
+        if (image)
+            return image->GetTextureSource().texture;
+
+        return TextureRef();
+    }
+
+    RectI TextureSampler::GetSrcRect() const
+    {
+        if (image)
+            return image->GetTextureSource().sourceRect;
+
+        return RectI();
+    }
+
     // === Material ===
 
     Material::Material()
@@ -115,6 +133,7 @@ namespace o2
         mFragmentShader(other.mFragmentShader),
         mTexture(other.mTexture),
         mBlendMode(other.mBlendMode),
+        mSamplers(other.mSamplers),
         mHashDirty(true)
     {
         for (auto& param : other.mParams)
@@ -205,6 +224,37 @@ namespace o2
         mHashDirty = true;
     }
 
+    void Material::AddTextureSampler(const TextureSampler& sampler)
+    {
+        for (int i = 0; i < mSamplers.Count(); i++)
+        {
+            if (mSamplers[i].samplerUniformName == sampler.samplerUniformName)
+            {
+                mSamplers[i] = sampler;
+                mHashDirty = true;
+                return;
+            }
+        }
+        mSamplers.Add(sampler);
+        mHashDirty = true;
+    }
+
+    void Material::RemoveTextureSampler(const String& samplerUniformName)
+    {
+        mSamplers.RemoveFirst([&](const TextureSampler& s) { return s.samplerUniformName == samplerUniformName; });
+        mHashDirty = true;
+    }
+
+    const Vector<TextureSampler>& Material::GetTextureSamplers() const
+    {
+        return mSamplers;
+    }
+
+    int Material::GetTotalTextureChannelsCount() const
+    {
+        return 1 + mSamplers.Count();
+    }
+
     bool Material::Build()
     {
         PlatformDestroy();
@@ -280,4 +330,6 @@ DECLARE_CLASS(o2::ShaderParamVec2, o2__ShaderParamVec2);
 DECLARE_CLASS(o2::ShaderParamColor, o2__ShaderParamColor);
 
 DECLARE_CLASS(o2::ShaderParamInt, o2__ShaderParamInt);
+
+DECLARE_CLASS(o2::TextureSampler, o2__TextureSampler);
 // --- END META ---

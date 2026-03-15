@@ -13,7 +13,8 @@ namespace o2
         AssetWithDefaultMeta<MaterialAsset>(asset),
         mBlendMode(asset.mBlendMode),
         mVertexShaderAsset(asset.mVertexShaderAsset),
-        mFragmentShaderAsset(asset.mFragmentShaderAsset)
+        mFragmentShaderAsset(asset.mFragmentShaderAsset),
+        mSamplers(asset.mSamplers)
     {
         for (auto& param : asset.mParams)
             mParams.Add(param->CloneAsRef<IShaderParam>());
@@ -27,6 +28,7 @@ namespace o2
         mBlendMode = asset.mBlendMode;
         mVertexShaderAsset = asset.mVertexShaderAsset;
         mFragmentShaderAsset = asset.mFragmentShaderAsset;
+        mSamplers = asset.mSamplers;
 
         mParams.Clear();
         for (auto& param : asset.mParams)
@@ -44,8 +46,7 @@ namespace o2
     void MaterialAsset::SetBlendMode(BlendMode blendMode)
     {
         mBlendMode = blendMode;
-        if (mMaterial)
-            mMaterial->SetBlendMode(mBlendMode);
+        BuildMaterial();
     }
 
     BlendMode MaterialAsset::GetBlendMode() const
@@ -93,7 +94,8 @@ namespace o2
 
     void MaterialAsset::BuildMaterial()
     {
-        mMaterial = mmake<Material>();
+        if (!mMaterial)
+            mMaterial = mmake<Material>();
 
         if (mVertexShaderAsset && mVertexShaderAsset->GetShader())
             mMaterial->SetVertexShader(mVertexShaderAsset->GetShader());
@@ -102,6 +104,10 @@ namespace o2
             mMaterial->SetFragmentShader(mFragmentShaderAsset->GetShader());
 
         mMaterial->SetParams(mParams);
+
+        for (auto& sampler : mSamplers)
+            mMaterial->AddTextureSampler(sampler);
+
         mMaterial->Build();
         mMaterial->SetBlendMode(mBlendMode);
     }

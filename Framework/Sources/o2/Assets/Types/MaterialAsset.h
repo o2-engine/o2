@@ -76,6 +76,7 @@ namespace o2
         AssetRef<VertexShaderAsset>   mVertexShaderAsset;   // Vertex shader asset reference @SERIALIZABLE
         AssetRef<FragmentShaderAsset> mFragmentShaderAsset; // Fragment shader asset reference @SERIALIZABLE
         Vector<Ref<IShaderParam>>     mParams;              // Shader parameter values @SERIALIZABLE @EDITOR_PROPERTY @EXPANDED_BY_DEFAULT
+        Vector<TextureSampler>        mSamplers;            // Additional texture samplers @SERIALIZABLE @EDITOR_PROPERTY @EXPANDED_BY_DEFAULT
 
     protected:
         // Loads material data from serialized file
@@ -108,6 +109,7 @@ CLASS_FIELDS_META(o2::MaterialAsset)
     FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().NAME(mVertexShaderAsset);
     FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().NAME(mFragmentShaderAsset);
     FIELD().PROTECTED().EDITOR_PROPERTY_ATTRIBUTE().EXPANDED_BY_DEFAULT_ATTRIBUTE().SERIALIZABLE_ATTRIBUTE().NAME(mParams);
+    FIELD().PROTECTED().EDITOR_PROPERTY_ATTRIBUTE().EXPANDED_BY_DEFAULT_ATTRIBUTE().SERIALIZABLE_ATTRIBUTE().NAME(mSamplers);
 }
 END_META;
 CLASS_METHODS_META(o2::MaterialAsset)

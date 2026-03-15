@@ -61,6 +61,7 @@ extern void __RegisterClass__o2__ShaderParamFloat();
 extern void __RegisterClass__o2__ShaderParamVec2();
 extern void __RegisterClass__o2__ShaderParamColor();
 extern void __RegisterClass__o2__ShaderParamInt();
+extern void __RegisterClass__o2__TextureSampler();
 extern void __RegisterClass__o2__ParticleSource();
 extern void __RegisterClass__o2__SingleSpriteParticleSource();
 extern void __RegisterClass__o2__MultiSpriteParticleSource();
@@ -240,6 +241,7 @@ extern void InitializeTypeso2Framework()
     __RegisterClass__o2__ShaderParamVec2();
     __RegisterClass__o2__ShaderParamColor();
     __RegisterClass__o2__ShaderParamInt();
+    __RegisterClass__o2__TextureSampler();
     __RegisterClass__o2__ParticleSource();
     __RegisterClass__o2__SingleSpriteParticleSource();
     __RegisterClass__o2__MultiSpriteParticleSource();

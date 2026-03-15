@@ -750,8 +750,9 @@ namespace o2
         sc.a = (int)(((float)sc.a)*mResTransparency);
         ULong selectionClr = sc.ABGR();
 
+        Vertex* verts = mSelectionMesh->GetVertices<Vertex>();
         for (UInt i = 0; i < mSelectionMesh->vertexCount; i++)
-            mSelectionMesh->vertices[i].color = selectionClr;
+            verts[i].color = selectionClr;
     }
 
     void EditBox::UpdateLayersLayouts()
@@ -947,19 +948,21 @@ namespace o2
 
         unsigned long color = mSelectionColor.ABGR();
 
-        mSelectionMesh->vertices[mSelectionMesh->vertexCount++] = Vertex(rect.LeftBottom(), color, 0.0f, 0.0f);
-        mSelectionMesh->vertices[mSelectionMesh->vertexCount++] = Vertex(rect.LeftTop(), color, 0.0f, 0.0f);
-        mSelectionMesh->vertices[mSelectionMesh->vertexCount++] = Vertex(rect.RightTop(), color, 0.0f, 0.0f);
-        mSelectionMesh->vertices[mSelectionMesh->vertexCount++] = Vertex(rect.RightBottom(), color, 0.0f, 0.0f);
+        Vertex* selVerts = mSelectionMesh->GetVertices<Vertex>();
+        selVerts[mSelectionMesh->vertexCount++] = Vertex(rect.LeftBottom(), color, 0.0f, 0.0f);
+        selVerts[mSelectionMesh->vertexCount++] = Vertex(rect.LeftTop(), color, 0.0f, 0.0f);
+        selVerts[mSelectionMesh->vertexCount++] = Vertex(rect.RightTop(), color, 0.0f, 0.0f);
+        selVerts[mSelectionMesh->vertexCount++] = Vertex(rect.RightBottom(), color, 0.0f, 0.0f);
 
-        mSelectionMesh->indexes[mSelectionMesh->polyCount * 3] = mSelectionMesh->vertexCount - 4;
-        mSelectionMesh->indexes[mSelectionMesh->polyCount * 3 + 1] = mSelectionMesh->vertexCount - 3;
-        mSelectionMesh->indexes[mSelectionMesh->polyCount * 3 + 2] = mSelectionMesh->vertexCount - 2;
+        VertexIndex* idx = mSelectionMesh->GetIndexes();
+        idx[mSelectionMesh->polyCount * 3] = mSelectionMesh->vertexCount - 4;
+        idx[mSelectionMesh->polyCount * 3 + 1] = mSelectionMesh->vertexCount - 3;
+        idx[mSelectionMesh->polyCount * 3 + 2] = mSelectionMesh->vertexCount - 2;
         mSelectionMesh->polyCount++;
 
-        mSelectionMesh->indexes[mSelectionMesh->polyCount * 3] = mSelectionMesh->vertexCount - 4;
-        mSelectionMesh->indexes[mSelectionMesh->polyCount * 3 + 1] = mSelectionMesh->vertexCount - 2;
-        mSelectionMesh->indexes[mSelectionMesh->polyCount * 3 + 2] = mSelectionMesh->vertexCount - 1;
+        idx[mSelectionMesh->polyCount * 3] = mSelectionMesh->vertexCount - 4;
+        idx[mSelectionMesh->polyCount * 3 + 1] = mSelectionMesh->vertexCount - 2;
+        idx[mSelectionMesh->polyCount * 3 + 2] = mSelectionMesh->vertexCount - 1;
         mSelectionMesh->polyCount++;
     }
 

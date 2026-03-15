@@ -52,6 +52,13 @@ namespace o2
         for (int i = 0; i < mParams.Count(); i++)
             mParamUniformLocations[i] = glGetUniformLocation(program, mParams[i]->GetName().Data());
 
+        mSamplerLocations.Resize(mSamplers.Count());
+        for (int i = 0; i < mSamplers.Count(); i++)
+        {
+            mSamplerLocations[i].samplerUniform = glGetUniformLocation(program, mSamplers[i].samplerUniformName.Data());
+            mSamplerLocations[i].texCoordsAttribute = glGetAttribLocation(program, mSamplers[i].texCoordsAttrName.Data());
+        }
+
         return true;
     }
 
@@ -64,6 +71,7 @@ namespace o2
         }
 
         mParamUniformLocations.Clear();
+        mSamplerLocations.Clear();
         mReady = false;
     }
 
@@ -94,6 +102,10 @@ namespace o2
         }
 
         GL_CHECK_ERROR();
+    }
+
+    void Material::PlatformBindSamplers() const
+    {
     }
 }
 

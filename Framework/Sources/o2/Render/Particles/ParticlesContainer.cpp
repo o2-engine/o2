@@ -16,6 +16,7 @@ namespace o2
         mParticlesMesh.vertexCount = 0;
         mParticlesMesh.polyCount = 0;
         int polyIndex = 0;
+        VertexIndex* idx = mParticlesMesh.GetIndexes();
 
         RectF textureSrcRect;
         Vec2F imageSize(10, 10);
@@ -51,18 +52,19 @@ namespace o2
             Vec2F o(particle.position);
             ULong colr = particle.color.ABGR();
 
-            mParticlesMesh.vertices[mParticlesMesh.vertexCount++].Set(o - xv + yv, colr, uvLeft, uvUp);
-            mParticlesMesh.vertices[mParticlesMesh.vertexCount++].Set(o + xv + yv, colr, uvRight, uvUp);
-            mParticlesMesh.vertices[mParticlesMesh.vertexCount++].Set(o + xv - yv, colr, uvRight, uvDown);
-            mParticlesMesh.vertices[mParticlesMesh.vertexCount++].Set(o - xv - yv, colr, uvLeft, uvDown);
+            Vertex* verts = mParticlesMesh.GetVertices<Vertex>();
+            verts[mParticlesMesh.vertexCount++].Set(o - xv + yv, colr, uvLeft, uvUp);
+            verts[mParticlesMesh.vertexCount++].Set(o + xv + yv, colr, uvRight, uvUp);
+            verts[mParticlesMesh.vertexCount++].Set(o + xv - yv, colr, uvRight, uvDown);
+            verts[mParticlesMesh.vertexCount++].Set(o - xv - yv, colr, uvLeft, uvDown);
 
-            mParticlesMesh.indexes[polyIndex++] = mParticlesMesh.vertexCount - 4;
-            mParticlesMesh.indexes[polyIndex++] = mParticlesMesh.vertexCount - 3;
-            mParticlesMesh.indexes[polyIndex++] = mParticlesMesh.vertexCount - 2;
+            idx[polyIndex++] = mParticlesMesh.vertexCount - 4;
+            idx[polyIndex++] = mParticlesMesh.vertexCount - 3;
+            idx[polyIndex++] = mParticlesMesh.vertexCount - 2;
 
-            mParticlesMesh.indexes[polyIndex++] = mParticlesMesh.vertexCount - 4;
-            mParticlesMesh.indexes[polyIndex++] = mParticlesMesh.vertexCount - 2;
-            mParticlesMesh.indexes[polyIndex++] = mParticlesMesh.vertexCount - 1;
+            idx[polyIndex++] = mParticlesMesh.vertexCount - 4;
+            idx[polyIndex++] = mParticlesMesh.vertexCount - 2;
+            idx[polyIndex++] = mParticlesMesh.vertexCount - 1;
             mParticlesMesh.polyCount += 2;
         }
     }
@@ -92,6 +94,7 @@ namespace o2
         mParticlesMesh.vertexCount = 0;
         mParticlesMesh.polyCount = 0;
         int polyIndex = 0;
+        VertexIndex* idx = mParticlesMesh.GetIndexes();
 
         Vec2F invTexSize(1.0f, 1.0f);
 
@@ -139,18 +142,19 @@ namespace o2
             Vec2F o(particle.position);
             ULong colr = particle.color.ABGR();
 
-            mParticlesMesh.vertices[mParticlesMesh.vertexCount++].Set(o - xv + yv, colr, imageInfo.uv.left, imageInfo.uv.top);
-            mParticlesMesh.vertices[mParticlesMesh.vertexCount++].Set(o + xv + yv, colr, imageInfo.uv.right, imageInfo.uv.top);
-            mParticlesMesh.vertices[mParticlesMesh.vertexCount++].Set(o + xv - yv, colr, imageInfo.uv.right, imageInfo.uv.bottom);
-            mParticlesMesh.vertices[mParticlesMesh.vertexCount++].Set(o - xv - yv, colr, imageInfo.uv.left, imageInfo.uv.bottom);
+            Vertex* verts = mParticlesMesh.GetVertices<Vertex>();
+            verts[mParticlesMesh.vertexCount++].Set(o - xv + yv, colr, imageInfo.uv.left, imageInfo.uv.top);
+            verts[mParticlesMesh.vertexCount++].Set(o + xv + yv, colr, imageInfo.uv.right, imageInfo.uv.top);
+            verts[mParticlesMesh.vertexCount++].Set(o + xv - yv, colr, imageInfo.uv.right, imageInfo.uv.bottom);
+            verts[mParticlesMesh.vertexCount++].Set(o - xv - yv, colr, imageInfo.uv.left, imageInfo.uv.bottom);
 
-            mParticlesMesh.indexes[polyIndex++] = mParticlesMesh.vertexCount - 4;
-            mParticlesMesh.indexes[polyIndex++] = mParticlesMesh.vertexCount - 3;
-            mParticlesMesh.indexes[polyIndex++] = mParticlesMesh.vertexCount - 2;
+            idx[polyIndex++] = mParticlesMesh.vertexCount - 4;
+            idx[polyIndex++] = mParticlesMesh.vertexCount - 3;
+            idx[polyIndex++] = mParticlesMesh.vertexCount - 2;
 
-            mParticlesMesh.indexes[polyIndex++] = mParticlesMesh.vertexCount - 4;
-            mParticlesMesh.indexes[polyIndex++] = mParticlesMesh.vertexCount - 2;
-            mParticlesMesh.indexes[polyIndex++] = mParticlesMesh.vertexCount - 1;
+            idx[polyIndex++] = mParticlesMesh.vertexCount - 4;
+            idx[polyIndex++] = mParticlesMesh.vertexCount - 2;
+            idx[polyIndex++] = mParticlesMesh.vertexCount - 1;
             mParticlesMesh.polyCount += 2;
         }
     }

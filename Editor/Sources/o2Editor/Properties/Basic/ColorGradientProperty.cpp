@@ -274,13 +274,15 @@ namespace Editor
 			auto key = mGradient->GetKeys()[0];
 			auto color32 = key.color.ARGB();
 
-			mMesh.vertices[0].Set(mTransform * Vec2F(0, 0), color32, 0.0f, 0.0f);
-			mMesh.vertices[1].Set(mTransform * Vec2F(1, 0), color32, 0.0f, 0.0f);
-			mMesh.vertices[2].Set(mTransform * Vec2F(1, 1), color32, 0.0f, 0.0f);
-			mMesh.vertices[3].Set(mTransform * Vec2F(0, 1), color32, 0.0f, 0.0f);
+			Vertex* verts = mMesh.GetVertices<Vertex>();
+			VertexIndex* idx = mMesh.GetIndexes();
+			verts[0].Set(mTransform * Vec2F(0, 0), color32, 0.0f, 0.0f);
+			verts[1].Set(mTransform * Vec2F(1, 0), color32, 0.0f, 0.0f);
+			verts[2].Set(mTransform * Vec2F(1, 1), color32, 0.0f, 0.0f);
+			verts[3].Set(mTransform * Vec2F(0, 1), color32, 0.0f, 0.0f);
 
-			mMesh.indexes[0] = 0; mMesh.indexes[1] = 1; mMesh.indexes[2] = 2;
-			mMesh.indexes[3] = 2; mMesh.indexes[4] = 3; mMesh.indexes[5] = 0;
+			idx[0] = 0; idx[1] = 1; idx[2] = 2;
+			idx[3] = 2; idx[4] = 3; idx[5] = 0;
 
 			return;
 		}
@@ -295,6 +297,8 @@ namespace Editor
 		float prevXPos = 0.0f;
 		Color4 prevColor = mGradient->GetKeys()[0].color;
 
+		Vertex* verts = mMesh.GetVertices<Vertex>();
+		VertexIndex* idx = mMesh.GetIndexes();
 		for (int i = 0; i < segments; i++)
 		{
 			auto key = mGradient->GetKeys()[i + 1];
@@ -304,19 +308,19 @@ namespace Editor
 			auto prevColor32 = prevColor.ABGR();
 			auto color32 = key.color.ABGR();
 
-			mMesh.vertices[vertexIndex + 0].Set(mTransform * Vec2F(prevXPos, 0), prevColor32, 0.0f, 0.0f);
-			mMesh.vertices[vertexIndex + 1].Set(mTransform * Vec2F(xPos, 0), color32, 0.0f, 0.0f);
-			mMesh.vertices[vertexIndex + 2].Set(mTransform * Vec2F(xPos, 1), color32, 0.0f, 0.0f);
-			mMesh.vertices[vertexIndex + 3].Set(mTransform * Vec2F(prevXPos, 1), prevColor32, 0.0f, 0.0f);
+			verts[vertexIndex + 0].Set(mTransform * Vec2F(prevXPos, 0), prevColor32, 0.0f, 0.0f);
+			verts[vertexIndex + 1].Set(mTransform * Vec2F(xPos, 0), color32, 0.0f, 0.0f);
+			verts[vertexIndex + 2].Set(mTransform * Vec2F(xPos, 1), color32, 0.0f, 0.0f);
+			verts[vertexIndex + 3].Set(mTransform * Vec2F(prevXPos, 1), prevColor32, 0.0f, 0.0f);
 
 			int polyIndex = i * 2 * 3;
-			mMesh.indexes[polyIndex + 0] = vertexIndex + 0;
-			mMesh.indexes[polyIndex + 1] = vertexIndex + 1;
-			mMesh.indexes[polyIndex + 2] = vertexIndex + 2;
+			idx[polyIndex + 0] = vertexIndex + 0;
+			idx[polyIndex + 1] = vertexIndex + 1;
+			idx[polyIndex + 2] = vertexIndex + 2;
 
-			mMesh.indexes[polyIndex + 3] = vertexIndex + 2;
-			mMesh.indexes[polyIndex + 4] = vertexIndex + 3;
-			mMesh.indexes[polyIndex + 5] = vertexIndex + 0;
+			idx[polyIndex + 3] = vertexIndex + 2;
+			idx[polyIndex + 4] = vertexIndex + 3;
+			idx[polyIndex + 5] = vertexIndex + 0;
 
 			prevXPos = xPos;
 			prevColor = key.color;

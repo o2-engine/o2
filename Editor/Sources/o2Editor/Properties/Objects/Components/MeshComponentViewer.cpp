@@ -167,14 +167,16 @@ namespace Editor
         if (!viewerRef->mTypeTargetObjects.IsEmpty())
         {
             auto& mesh = viewerRef->mTypeTargetObjects[0].first->GetMesh();
+            const Vertex* verts = mesh.GetVertices<Vertex>();
+            const VertexIndex* idx = mesh.GetIndexes();
 
             Color4 wireColor(0, 0, 0, 100);
             Vector<Vertex> verticies;
             for (UInt i = 0; i < mesh.polyCount; i++)
             {
-                auto v = o2EditorSceneScreen.LocalToScreenPoint(mesh.vertices[mesh.indexes[i*3]]);
-                auto v1 = o2EditorSceneScreen.LocalToScreenPoint(mesh.vertices[mesh.indexes[i*3 + 1]]);
-                auto v2 = o2EditorSceneScreen.LocalToScreenPoint(mesh.vertices[mesh.indexes[i*3 + 2]]);
+                auto v = o2EditorSceneScreen.LocalToScreenPoint(verts[idx[i*3]]);
+                auto v1 = o2EditorSceneScreen.LocalToScreenPoint(verts[idx[i*3 + 1]]);
+                auto v2 = o2EditorSceneScreen.LocalToScreenPoint(verts[idx[i*3 + 2]]);
 
                 verticies.Clear();
                 verticies.Add(Vertex(v.x, v.y, 0.0f, wireColor.ARGB(), 0.0f, 0.0f));

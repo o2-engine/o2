@@ -111,6 +111,7 @@ namespace o2
     {
         if (mMaterialAsset)
             return mMaterialAsset->GetMaterial();
+
         return IDrawable::GetMaterial();
     }
 

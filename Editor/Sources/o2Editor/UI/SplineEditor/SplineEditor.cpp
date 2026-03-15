@@ -49,8 +49,9 @@ namespace Editor
         mCurvesMesh->Resize(4, 2);
         mCurvesMesh->vertexCount = 4;
         mCurvesMesh->polyCount = 2;
-        mCurvesMesh->indexes[0] = 0; mCurvesMesh->indexes[1] = 1; mCurvesMesh->indexes[2] = 2;
-        mCurvesMesh->indexes[3] = 2; mCurvesMesh->indexes[4] = 1; mCurvesMesh->indexes[5] = 3;
+        VertexIndex* idx = mCurvesMesh->GetIndexes();
+        idx[0] = 0; idx[1] = 1; idx[2] = 2;
+        idx[3] = 2; idx[4] = 1; idx[5] = 3;
     }
 
     SplineEditor::~SplineEditor()
@@ -74,12 +75,13 @@ namespace Editor
         Color4 meshColor = mSplineColor;
         meshColor.a /= 2;
 
+        Vertex* verts = mCurvesMesh->GetVertices<Vertex>();
         for (int i = 1; i < leftRange.Count(); i++)
         {
-            mCurvesMesh->vertices[0] = Vertex(leftRange[i - 1], meshColor.ABGR(), 0, 0);
-            mCurvesMesh->vertices[1] = Vertex(leftRange[i], meshColor.ABGR(), 0, 0);
-            mCurvesMesh->vertices[2] = Vertex(rightRange[i - 1], meshColor.ABGR(), 0, 0);
-            mCurvesMesh->vertices[3] = Vertex(rightRange[i], meshColor.ABGR(), 0, 0);
+            verts[0] = Vertex(leftRange[i - 1], meshColor.ABGR(), 0, 0);
+            verts[1] = Vertex(leftRange[i], meshColor.ABGR(), 0, 0);
+            verts[2] = Vertex(rightRange[i - 1], meshColor.ABGR(), 0, 0);
+            verts[3] = Vertex(rightRange[i], meshColor.ABGR(), 0, 0);
 
             mCurvesMesh->Draw();
         }

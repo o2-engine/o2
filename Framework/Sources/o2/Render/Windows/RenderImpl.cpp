@@ -149,37 +149,35 @@ namespace o2
             }
         }
 
-        // Get OpenGL extensions
         GetGLExtensions(mLog.Get());
 
         GL_CHECK_ERROR();
 
-        // Initialize buffers
         mVertexBufferSize = USHRT_MAX;
         mIndexBufferSize = USHRT_MAX;
+        mCurrentBatchVertexType = Vertex::Type();
+        mVertexBufferByteSize = mVertexBufferSize * sizeof(Vertex);
 
-        mVertexData = mnew UInt8[mVertexBufferSize * sizeof(Vertex)];
+        mVertexData = mnew UInt8[mVertexBufferByteSize];
         mVertexIndexData = mnew VertexIndex[mIndexBufferSize * sizeof(VertexIndex)];
 
         for (int i = 0; i < mBuffersPoolsSize; i++)
         {
             glGenBuffers(1, &mVertexBuffersPool[i]);
             glBindBuffer(GL_ARRAY_BUFFER, mVertexBuffersPool[i]);
-            glBufferData(GL_ARRAY_BUFFER, mVertexBufferSize * sizeof(Vertex), mVertexData, GL_DYNAMIC_DRAW);
+            glBufferData(GL_ARRAY_BUFFER, mVertexBufferByteSize, mVertexData, GL_DYNAMIC_DRAW);
 
             glGenBuffers(1, &mIndexBuffersPool[i]);
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mIndexBuffersPool[i]);
             glBufferData(GL_ELEMENT_ARRAY_BUFFER, (GLsizeiptr)(mIndexBufferSize * sizeof(VertexIndex)), mVertexIndexData, GL_DYNAMIC_DRAW);
         }
 
-        // Configure OpenGL
         glEnable(GL_BLEND);
         glDisable(GL_DEPTH_TEST);
         glDisable(GL_CULL_FACE);
         glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
         glLineWidth(1.0f);
         
-        // Disable VSync
         wglSwapIntervalEXT(0);
 
         mLog->Out("GL_VENDOR: " + (String)(char*)glGetString(GL_VENDOR));
@@ -203,7 +201,6 @@ namespace o2
 
     void Render::InitializeSandardShader()
     {
-        // Not used on Windows: default material is built in PlatformInitializeDefaultMaterial().
     }
 
     void Render::PlatformInitializeDefaultMaterial()
@@ -242,7 +239,7 @@ namespace o2
         }
     }
 
-    void RenderBase::BindNextPoolBuffers()
+    void Render::PlatformBindNextPoolBuffers()
     {
         mCurrentBufferIdx++;
         if (mCurrentBufferIdx == mBuffersPoolsSize)
@@ -252,15 +249,21 @@ namespace o2
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mIndexBuffersPool[mCurrentBufferIdx]);
         GL_CHECK_ERROR();
 
-        glVertexAttribPointer((GLuint)mActivePosAttribute, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), &((Vertex*)0)->x);
+        size_t stride = mCurrentBatchVertexType.GetStride();
+        if (stride == 0) stride = sizeof(Vertex);
+
+        glVertexAttribPointer((GLuint)mActivePosAttribute, 3, GL_FLOAT, GL_FALSE, (GLsizei)stride,
+                              (void*)mCurrentBatchVertexType.GetParamOffset(VertexParam::Position));
         glEnableVertexAttribArray((GLuint)mActivePosAttribute);
         GL_CHECK_ERROR();
 
-        glVertexAttribPointer((GLuint)mActiveColorAttribute, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(Vertex), &((Vertex*)0)->color);
+        glVertexAttribPointer((GLuint)mActiveColorAttribute, 4, GL_UNSIGNED_BYTE, GL_TRUE, (GLsizei)stride,
+                              (void*)mCurrentBatchVertexType.GetParamOffset(VertexParam::Color));
         glEnableVertexAttribArray((GLuint)mActiveColorAttribute);
         GL_CHECK_ERROR();
 
-        glVertexAttribPointer((GLuint)mActiveUVAttribute, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), &((Vertex*)0)->tu);
+        glVertexAttribPointer((GLuint)mActiveUVAttribute, 2, GL_FLOAT, GL_FALSE, (GLsizei)stride,
+                              (void*)mCurrentBatchVertexType.GetParamOffset(VertexParam::TexCoord0));
         glEnableVertexAttribArray((GLuint)mActiveUVAttribute);
         GL_CHECK_ERROR();
 
@@ -270,33 +273,24 @@ namespace o2
 
     void Render::PlatformBegin()
     {
-        BindNextPoolBuffers();
-    }
-
-    void Render::PlatformUploadBuffers(Vertex* vertices, UInt verticesCount, VertexIndex* indexes, UInt indexesCount)
-    {
-        memcpy(&mVertexData[mLastDrawVertex * sizeof(Vertex)], vertices, sizeof(Vertex) * verticesCount);
-
-        for (UInt i = mLastDrawIdx, j = 0; j < indexesCount; i++, j++)
-            mVertexIndexData[i] = mVertexBufferIdx + mLastDrawVertex + indexes[j];
+        PlatformBindNextPoolBuffers();
     }
 
     void Render::PlatformDrawPrimitives()
     {
         static const GLenum primitiveType[3]{ GL_TRIANGLES, GL_TRIANGLES, GL_LINES };
 
-        // Upload data to GPU
-        glBufferSubData(GL_ARRAY_BUFFER, mVertexBufferIdx * sizeof(Vertex), mLastDrawVertex * sizeof(Vertex), mVertexData);
+        size_t stride = mCurrentBatchVertexType.GetStride();
+
+        glBufferSubData(GL_ARRAY_BUFFER, mVertexBufferIdx * stride, mLastDrawVertex * stride, mVertexData);
         glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, mIndexBufferIdx * sizeof(VertexIndex), mLastDrawIdx * sizeof(VertexIndex), mVertexIndexData);
         GL_CHECK_ERROR();
 
-        // Bind texture
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, mCurrentDrawTexture ? mCurrentDrawTexture->mHandle : mWhiteTexture->mHandle);
         glUniform1i(mActiveTextureSample, 0);
         GL_CHECK_ERROR();
 
-        // Draw
         glDrawElements(primitiveType[(int)mCurrentPrimitiveType], mLastDrawIdx, GL_UNSIGNED_INT, (void*)(mIndexBufferIdx * sizeof(VertexIndex)));
         GL_CHECK_ERROR();
 
@@ -322,7 +316,7 @@ namespace o2
         GL_CHECK_ERROR();
 
 		BindMaterial(mDefaultMaterial);
-        BindNextPoolBuffers();
+        PlatformBindNextPoolBuffers();
 
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, 0);
@@ -331,15 +325,21 @@ namespace o2
         glUniform1i(mActiveTextureSample, 0);
         GL_CHECK_ERROR();
 
-        glVertexAttribPointer((GLuint)mActivePosAttribute, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), &((Vertex*)0)->x);
+        size_t stride = mCurrentBatchVertexType.GetStride();
+        if (stride == 0) stride = sizeof(Vertex);
+
+        glVertexAttribPointer((GLuint)mActivePosAttribute, 3, GL_FLOAT, GL_FALSE, (GLsizei)stride,
+                              (void*)mCurrentBatchVertexType.GetParamOffset(VertexParam::Position));
         glEnableVertexAttribArray((GLuint)mActivePosAttribute);
         GL_CHECK_ERROR();
 
-        glVertexAttribPointer((GLuint)mActiveColorAttribute, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(Vertex), &((Vertex*)0)->color);
+        glVertexAttribPointer((GLuint)mActiveColorAttribute, 4, GL_UNSIGNED_BYTE, GL_TRUE, (GLsizei)stride,
+                              (void*)mCurrentBatchVertexType.GetParamOffset(VertexParam::Color));
         glEnableVertexAttribArray((GLuint)mActiveColorAttribute);
         GL_CHECK_ERROR();
 
-        glVertexAttribPointer((GLuint)mActiveUVAttribute, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), &((Vertex*)0)->tu);
+        glVertexAttribPointer((GLuint)mActiveUVAttribute, 2, GL_FLOAT, GL_FALSE, (GLsizei)stride,
+                              (void*)mCurrentBatchVertexType.GetParamOffset(VertexParam::TexCoord0));
         glEnableVertexAttribArray((GLuint)mActiveUVAttribute);
         GL_CHECK_ERROR();
     }
@@ -368,10 +368,13 @@ namespace o2
 
     void Render::PlatformFlipVerticesUV()
     {
+        size_t stride = mCurrentBatchVertexType.GetStride();
+        size_t tvOffset = mCurrentBatchVertexType.GetParamOffset(VertexParam::TexCoord0) + sizeof(float);
+
         for (UInt i = 0; i < mLastDrawVertex; i++)
         {
-            Vertex& v = ((Vertex*)mVertexData)[i];
-            v.tv = 1.0f - v.tv;
+            float& tv = *reinterpret_cast<float*>(&mVertexData[i * stride + tvOffset]);
+            tv = 1.0f - tv;
         }
     }
 
@@ -435,14 +438,35 @@ namespace o2
             glUseProgram(mActiveProgram);
             GL_CHECK_ERROR();
 
-            glVertexAttribPointer((GLuint)mActivePosAttribute, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), &((Vertex*)0)->x);
+            size_t stride = mCurrentBatchVertexType.GetStride();
+            if (stride == 0)
+                stride = sizeof(Vertex);
+
+            glVertexAttribPointer((GLuint)mActivePosAttribute, 3, GL_FLOAT, GL_FALSE, (GLsizei)stride,
+                                  (void*)mCurrentBatchVertexType.GetParamOffset(VertexParam::Position));
             glEnableVertexAttribArray((GLuint)mActivePosAttribute);
 
-            glVertexAttribPointer((GLuint)mActiveColorAttribute, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(Vertex), &((Vertex*)0)->color);
+            glVertexAttribPointer((GLuint)mActiveColorAttribute, 4, GL_UNSIGNED_BYTE, GL_TRUE, (GLsizei)stride,
+                                  (void*)mCurrentBatchVertexType.GetParamOffset(VertexParam::Color));
             glEnableVertexAttribArray((GLuint)mActiveColorAttribute);
 
-            glVertexAttribPointer((GLuint)mActiveUVAttribute, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), &((Vertex*)0)->tu);
+            glVertexAttribPointer((GLuint)mActiveUVAttribute, 2, GL_FLOAT, GL_FALSE, (GLsizei)stride,
+                                  (void*)mCurrentBatchVertexType.GetParamOffset(VertexParam::TexCoord0));
             glEnableVertexAttribArray((GLuint)mActiveUVAttribute);
+
+            // Bind additional texcoord attributes for extra samplers
+            const UInt texCoordParams[] = { VertexParam::TexCoord1, VertexParam::TexCoord2 };
+            for (int i = 0; i < material->mSamplerLocations.Count(); i++)
+            {
+                GLint attrLoc = material->mSamplerLocations[i].texCoordsAttribute;
+                if (attrLoc >= 0 && i < 2 && mCurrentBatchVertexType.HasParam(texCoordParams[i]))
+                {
+                    glVertexAttribPointer((GLuint)attrLoc, 2, GL_FLOAT, GL_FALSE, (GLsizei)stride,
+                                          (void*)mCurrentBatchVertexType.GetParamOffset(texCoordParams[i]));
+                    glEnableVertexAttribArray((GLuint)attrLoc);
+                }
+            }
+
             GL_CHECK_ERROR();
 
             glUniformMatrix4fv(mActiveMvpUniform, 1, GL_FALSE, mCurrentMvp);
@@ -450,6 +474,23 @@ namespace o2
         }
 
         material->ApplyParams();
+
+        // Bind additional texture samplers
+        for (int i = 0; i < material->mSamplerLocations.Count() && i < material->mSamplers.Count(); i++)
+        {
+            const auto& loc = material->mSamplerLocations[i];
+            TextureRef tex = material->mSamplers[i].GetTexture();
+            if (!tex)
+                continue;
+
+            GLint texUnit = i + 1;
+            glActiveTexture(GL_TEXTURE0 + texUnit);
+            glBindTexture(GL_TEXTURE_2D, tex->mHandle);
+
+            if (loc.samplerUniform >= 0)
+                glUniform1i(loc.samplerUniform, texUnit);
+        }
+        glActiveTexture(GL_TEXTURE0);
 
         if (material->GetBlendMode() == BlendMode::Add)
             glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);

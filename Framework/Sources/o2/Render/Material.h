@@ -12,8 +12,10 @@
 // #include "o2/Render/Linux/MaterialBase.h"
 #endif
 
+#include "o2/Assets/Types/ImageAsset.h"
 #include "o2/Render/Shader.h"
 #include "o2/Render/TextureRef.h"
+#include "o2/Render/TextureSource.h"
 #include "o2/Utils/Basic/ICloneable.h"
 #include "o2/Utils/Math/Color.h"
 #include "o2/Utils/Math/Vector2.h"
@@ -190,6 +192,30 @@ namespace o2
     };
 
     // -----------------------------------------------------------------------
+    // Texture sampler attribute for a material. Binds a texture (from an
+    // ImageAsset) to a named sampler uniform in the shader, along with
+    // a texcoord attribute and src rect for UV remapping.
+    // -----------------------------------------------------------------------
+    struct TextureSampler : public ISerializable
+    {
+        String               samplerUniformName; // Shader uniform name (e.g. "u_texture2") @SERIALIZABLE
+        String               texCoordsAttrName;  // Shader attribute name (e.g. "a_texCoords2") @SERIALIZABLE
+        AssetRef<ImageAsset> image;              // Source image asset (provides texture + src rect) @SERIALIZABLE
+
+        TextureRef GetTexture() const;
+        RectI      GetSrcRect() const;
+
+        bool operator==(const TextureSampler& other) const
+        {
+            return samplerUniformName == other.samplerUniformName &&
+                   texCoordsAttrName == other.texCoordsAttrName &&
+                   image == other.image;
+        }
+
+        SERIALIZABLE(TextureSampler);
+    };
+
+    // -----------------------------------------------------------------------
     // Material render primitive. Combines a vertex shader, a fragment shader,
     // an optional texture, and a set of shader parameters into a single
     // rendering state. Links shaders into a GPU program and caches uniform
@@ -249,6 +275,18 @@ namespace o2
         // Replaces all shader parameters
         void SetParams(const Vector<Ref<IShaderParam>>& params);
 
+        // Adds a texture sampler attribute. Invalidates the program
+        void AddTextureSampler(const TextureSampler& sampler);
+
+        // Removes a texture sampler by uniform name. Invalidates the program
+        void RemoveTextureSampler(const String& samplerUniformName);
+
+        // Returns all texture samplers
+        const Vector<TextureSampler>& GetTextureSamplers() const;
+
+        // Returns the total number of texture channels (1 primary + extra samplers)
+        int GetTotalTextureChannelsCount() const;
+
         // Links the vertex and fragment shaders into a GPU program. Returns true on success
         bool Build();
 
@@ -283,11 +321,12 @@ namespace o2
 		Ref<Shader> mVertexShader;   // Vertex shader reference
 		Ref<Shader> mFragmentShader; // Fragment shader reference
 
-        TextureRef mTexture; // Optional material texture
+        TextureRef mTexture; // Optional primary material texture
 
         BlendMode mBlendMode = BlendMode::Normal; // Blend mode for rendering
 
-        Vector<Ref<IShaderParam>> mParams; // Shader parameter list
+        Vector<Ref<IShaderParam>> mParams;     // Shader parameter list
+        Vector<TextureSampler>    mSamplers;   // Additional texture samplers
 
         size_t mHash = 0;         // Cached material state hash
         bool   mHashDirty = true; // True when hash needs recomputation
@@ -305,6 +344,9 @@ namespace o2
 
         // Platform-specific uniform application
         void PlatformApplyParams() const;
+
+        // Platform-specific binding of additional texture samplers
+        void PlatformBindSamplers() const;
 
         // Computes the material state hash using std::hash
         size_t ComputeHash() const;
@@ -423,6 +465,26 @@ CLASS_METHODS_META(o2::ShaderParamInt)
     FUNCTION().PUBLIC().SIGNATURE(int, GetValue);
     FUNCTION().PUBLIC().SIGNATURE(void, SetValue, int);
     FUNCTION().PUBLIC().SIGNATURE(size_t, ComputeHash);
+}
+END_META;
+
+CLASS_BASES_META(o2::TextureSampler)
+{
+    BASE_CLASS(o2::ISerializable);
+}
+END_META;
+CLASS_FIELDS_META(o2::TextureSampler)
+{
+    FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().NAME(samplerUniformName);
+    FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().NAME(texCoordsAttrName);
+    FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().NAME(image);
+}
+END_META;
+CLASS_METHODS_META(o2::TextureSampler)
+{
+
+    FUNCTION().PUBLIC().SIGNATURE(TextureRef, GetTexture);
+    FUNCTION().PUBLIC().SIGNATURE(RectI, GetSrcRect);
 }
 END_META;
 // --- END META ---

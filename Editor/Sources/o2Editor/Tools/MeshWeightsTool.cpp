@@ -61,17 +61,20 @@ namespace Editor
                 debugMesh.Resize(mesh.vertexCount, mesh.polyCount);
             }
 
+            auto* meshVerts = mesh.vertices;
+            Vertex* debugVerts = debugMesh.GetVertices<Vertex>();
             auto zeroWeightColor = Color4::HSL(zeroWeightColorHue, weightMeshSaturation, weightMeshLight, weightMeshAlpha).ABGR();
             for (UInt i = 0; i < mesh.vertexCount; i++)
-                debugMesh.vertices[i].Set(mesh.vertices[i], zeroWeightColor, 0, 0);
+                debugVerts[i].Set(meshVerts[i], zeroWeightColor, 0, 0);
 
             for (auto& p : boneComponent->vertexWeights)
             {
                 float hue = Math::Lerp(zeroWeightColorHue, oneWeightColorHue, p.second);
-                debugMesh.vertices[p.first].color = Color4::HSL(hue, weightMeshSaturation, weightMeshLight, weightMeshAlpha).ABGR();
+                debugVerts[p.first].color = Color4::HSL(hue, weightMeshSaturation, weightMeshLight, weightMeshAlpha).ABGR();
             }
 
-            memcpy(debugMesh.indexes, mesh.indexes, sizeof(VertexIndex)*mesh.polyCount*3);
+            VertexIndex* debugIdx = debugMesh.GetIndexes();
+            memcpy(debugIdx, mesh.indexes, sizeof(VertexIndex)*mesh.polyCount*3);
 
             debugMesh.vertexCount = mesh.vertexCount;
             debugMesh.polyCount = mesh.polyCount;
@@ -85,12 +88,13 @@ namespace Editor
 
     void MeshWeightsTool::SceneLayer::DrawMeshWire(auto& mesh)
     {
+        auto* verts = mesh.vertices;
         Color4 wireColor = Color4::White();
         for (UInt i = 0; i < mesh.polyCount; i++)
         {
-            Vec2F p0 = mesh.vertices[mesh.indexes[i*3]];
-            Vec2F p1 = mesh.vertices[mesh.indexes[i*3 + 1]];
-            Vec2F p2 = mesh.vertices[mesh.indexes[i*3 + 2]];
+            Vec2F p0 = verts[mesh.indexes[i*3]];
+            Vec2F p1 = verts[mesh.indexes[i*3 + 1]];
+            Vec2F p2 = verts[mesh.indexes[i*3 + 2]];
 
             Vertex vertices[] =
             {
@@ -118,9 +122,10 @@ namespace Editor
         if (!meshComponent)
             return;
 
-        auto& vertices = meshComponent->GetMesh().vertices;
+        auto& mesh = meshComponent->GetMesh();
+        auto* vertices = mesh.vertices;
         auto& vertexWeights = toolRef->boneComponent->vertexWeights;
-        int vertexCount = meshComponent->GetMesh().vertexCount;
+        int vertexCount = mesh.vertexCount;
 
         Vec2F localCursorPos = o2EditorSceneScreen.ScreenToLocalPoint(toolRef->mCursosPos);
 

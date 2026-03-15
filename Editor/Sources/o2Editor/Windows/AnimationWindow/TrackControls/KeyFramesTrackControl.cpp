@@ -144,25 +144,27 @@ namespace Editor
 
             o2Render.EnableScissorTest(timeline->layout->GetWorldRect());
 
+            Vertex* verts = mesh.GetVertices<Vertex>();
+            VertexIndex* idx = mesh.GetIndexes();
             for (int i = 0; i < track->GetKeys().Count(); i++)
             {
                 auto& key = track->GetKeys()[i];
                 float keyPos = timeline->LocalToWorld(key.position);
                 int nv = i*2;
 
-                mesh.vertices[nv] = Vertex(keyPos, layout->GetWorldTop() - 5, key.value.ABGR(), 0, 0);
-                mesh.vertices[nv + 1] = Vertex(keyPos, layout->GetWorldBottom() + 4, key.value.ABGR(), 0, 0);
+                verts[nv] = Vertex(keyPos, layout->GetWorldTop() - 5, key.value.ABGR(), 0, 0);
+                verts[nv + 1] = Vertex(keyPos, layout->GetWorldBottom() + 4, key.value.ABGR(), 0, 0);
 
                 if (i > 0)
                 {
                     int np = (i - 1)*2;
 
-                    mesh.indexes[np*3] = nv - 2;
-                    mesh.indexes[np*3 + 1] = nv;
-                    mesh.indexes[np*3 + 2] = nv - 1;
-                    mesh.indexes[np*3 + 3] = nv;
-                    mesh.indexes[np*3 + 4] = nv + 1;
-                    mesh.indexes[np*3 + 5] = nv - 1;
+                    idx[np*3] = nv - 2;
+                    idx[np*3 + 1] = nv;
+                    idx[np*3 + 2] = nv - 1;
+                    idx[np*3 + 3] = nv;
+                    idx[np*3 + 4] = nv + 1;
+                    idx[np*3 + 5] = nv - 1;
                 }
             }
 
@@ -211,6 +213,8 @@ namespace Editor
             Color4 trueColor(44, 62, 80);
             Color4 falseColor(0, 0, 0, 0);
 
+            Vertex* verts = mesh.GetVertices<Vertex>();
+            VertexIndex* idx = mesh.GetIndexes();
             for (int i = 1; i < track->GetKeys().Count(); i++)
             {
                 auto& key = track->GetKeys()[i];
@@ -224,17 +228,17 @@ namespace Editor
 
                 auto color = (prevKey.value ? trueColor : falseColor).ABGR();
 
-                mesh.vertices[nv] = Vertex(prevKeyPos, layout->GetWorldTop() - lineOffset, color, 0, 0);
-                mesh.vertices[nv + 1] = Vertex(keyPos, layout->GetWorldTop() - lineOffset, color, 0, 0);
-                mesh.vertices[nv + 2] = Vertex(keyPos, layout->GetWorldBottom() + lineOffset, color, 0, 0);
-                mesh.vertices[nv + 3] = Vertex(prevKeyPos, layout->GetWorldBottom() + lineOffset, color, 0, 0);
+                verts[nv] = Vertex(prevKeyPos, layout->GetWorldTop() - lineOffset, color, 0, 0);
+                verts[nv + 1] = Vertex(keyPos, layout->GetWorldTop() - lineOffset, color, 0, 0);
+                verts[nv + 2] = Vertex(keyPos, layout->GetWorldBottom() + lineOffset, color, 0, 0);
+                verts[nv + 3] = Vertex(prevKeyPos, layout->GetWorldBottom() + lineOffset, color, 0, 0);
 
-                mesh.indexes[np*3] = nv;
-                mesh.indexes[np*3 + 1] = nv + 1;
-                mesh.indexes[np*3 + 2] = nv + 2;
-                mesh.indexes[np*3 + 3] = nv;
-                mesh.indexes[np*3 + 4] = nv + 2;
-                mesh.indexes[np*3 + 5] = nv + 3;
+                idx[np*3] = nv;
+                idx[np*3 + 1] = nv + 1;
+                idx[np*3 + 2] = nv + 2;
+                idx[np*3 + 3] = nv;
+                idx[np*3 + 4] = nv + 2;
+                idx[np*3 + 5] = nv + 3;
             }
 
             mesh.Draw();

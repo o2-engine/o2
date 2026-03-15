@@ -131,11 +131,12 @@ namespace o2
         auto delta = newTransform*mTransform.Inverted();
         mTransform = newTransform;
 
+        Vertex* verts = mMesh.GetVertices<Vertex>();
         for (int i = 0; i < mMesh.vertexCount; i++)
         {
-            auto v = mMesh.vertices[i];
+            auto v = verts[i];
             Vec2F newPos = v*delta;
-            mMesh.vertices[i].Set(newPos, v.z, v.color, v.tu, v.tv);
+            verts[i].Set(newPos, v.z, v.color, v.tu, v.tv);
         }
     }
 
@@ -194,21 +195,23 @@ namespace o2
         RectF imageUV = RectF(imageRect.left*invTexSize.x, 1.0f - imageRect.top*invTexSize.y,
                               imageRect.right*invTexSize.x, 1.0f - imageRect.bottom*invTexSize.y);
 
+        Vertex* verts = mMesh.GetVertices<Vertex>();
         for (int i = 0; i < triangulation.vertices.size(); i++)
         {
             Vec2F p(triangulation.vertices[i].x, triangulation.vertices[i].y);
             Vec2F coef((p.x - mImageMapping.left)/mImageMapping.Width(), (p.y - mImageMapping.bottom)/mImageMapping.Height());
-            mMesh.vertices[i].Set(p*mTransform, 1.0f,
-                                  mColor.ARGB(),
-                                  imageUV.left + coef.x*imageUV.Width(),
-                                  imageUV.bottom + coef.y*imageUV.Height());
+            verts[i].Set(p*mTransform, 1.0f,
+                         mColor.ARGB(),
+                         imageUV.left + coef.x*imageUV.Width(),
+                         imageUV.bottom + coef.y*imageUV.Height());
         }
 
+        VertexIndex* idx = mMesh.GetIndexes();
         for (int i = 0; i < triangulation.triangles.size(); i++)
         {
-            mMesh.indexes[i*3] = triangulation.triangles[i].vertices[0];
-            mMesh.indexes[i*3 + 1] = triangulation.triangles[i].vertices[1];
-            mMesh.indexes[i*3 + 2] = triangulation.triangles[i].vertices[2];
+            idx[i*3] = triangulation.triangles[i].vertices[0];
+            idx[i*3 + 1] = triangulation.triangles[i].vertices[1];
+            idx[i*3 + 2] = triangulation.triangles[i].vertices[2];
         }
 
         mMesh.SetTexture(texture);

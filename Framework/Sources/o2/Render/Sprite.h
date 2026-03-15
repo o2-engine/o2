@@ -18,9 +18,9 @@ namespace o2
     {
     public:
         PROPERTIES(Sprite);
-        PROPERTY(TextureRef, texture, SetTexture, GetTexture);                       // Texture property @SCRIPTABLE
+        PROPERTY(TextureRef, texture, SetTexture, GetTexture);                         // Texture property @SCRIPTABLE
         PROPERTY(RectI, textureSrcRect, SetTextureSrcRect, GetTextureSrcRect);         // Texture source rectangle property @SCRIPTABLE
-        PROPERTY(AssetRef<ImageAsset>, image, SetImageAsset, GetImageAsset);                  // Sets image asset @SCRIPTABLE
+        PROPERTY(AssetRef<ImageAsset>, image, SetImageAsset, GetImageAsset);           // Sets image asset @SCRIPTABLE
         PROPERTY(String, imageName, LoadFromImage, GetImageName);                      // Sets image asset path @SCRIPTABLE
         PROPERTY(Color4, leftTopColor, SetLeftTopColor, GetLeftTopCorner);             // Color of left top corner property @SCRIPTABLE
         PROPERTY(Color4, rightTopColor, SetRightTopColor, GetRightTopCorner);          // Color of right top corner property @SCRIPTABLE
@@ -201,10 +201,10 @@ namespace o2
         RectI                mTextureSrcRect; // Texture source rectangle
         AssetRef<ImageAsset> mImageAsset;     // Image asset @SERIALIZABLE
 
-        SpriteMode           mMode = SpriteMode::Default; // Drawing mode @SERIALIZABLE
-        BorderI              mSlices;                     // Slice borders @SERIALIZABLE
-        float                mFill = 1.0f;                // Sprite fillness @SERIALIZABLE
-        float                mTileScale = 1.0f;           // Scale of tiles in tiled mode. 1.0f is default and equals to default image size @SERIALIZABLE
+		SpriteMode mMode = SpriteMode::Default; // Drawing mode @SERIALIZABLE
+		BorderI    mSlices;                     // Slice borders @SERIALIZABLE
+		float      mFill = 1.0f;                // Sprite fillness @SERIALIZABLE
+		float      mTileScale = 1.0f;           // Scale of tiles in tiled mode. 1.0f is default and equals to default image size @SERIALIZABLE
         
         Mesh mMesh; // Drawing mesh
 

@@ -31,475 +31,500 @@
 
 namespace o2
 {
-    FORWARD_CLASS_REF(AtlasAsset);
-
-    class CursorAreaEventListenersLayer;
-    class Font;
-    class Material;
-    class Mesh;
-    class Shader;
-    class Sprite;
-
-    // ------------------
-    // 2D Graphics render
-    // ------------------
-    class Render: public RenderBase, public Singleton<Render>
-    {
-    public:
-        // ---------------------
-        // Scissor clipping info
-        // ---------------------
-        struct ScissorInfo
-        {
-            float beginDepth = 0.0f; // Drawing depth on enabling clipping
-            float endDepth = 0.0f;   // Drawing depth on disabling clipping
-            RectI scissorRect;       // Scissor clipping rectangle
-
-        public:
-            ScissorInfo();
-            ScissorInfo(const RectI& rect, float beginDepth);
+	FORWARD_CLASS_REF(AtlasAsset);
+
+	class CursorAreaEventListenersLayer;
+	class Font;
+	class Material;
+	class Mesh;
+	class Shader;
+	class Sprite;
+
+	// ------------------
+	// 2D Graphics render
+	// ------------------
+	class Render: public RenderBase, public Singleton<Render>
+	{
+	public:
+		// ---------------------
+		// Scissor clipping info
+		// ---------------------
+		struct ScissorInfo
+		{
+			float beginDepth = 0.0f; // Drawing depth on enabling clipping
+			float endDepth = 0.0f;   // Drawing depth on disabling clipping
+			RectI scissorRect;       // Scissor clipping rectangle
+
+		public:
+			ScissorInfo();
+			ScissorInfo(const RectI& rect, float beginDepth);
 
-            bool operator==(const ScissorInfo& other) const;
-        };
-
-        // --------------------------------
-        // Scissor clipping stack info item
-        // --------------------------------
-        struct ScissorStackEntry
-        {
-            RectI scissorRect;          // Clipping scissor rectangle
-            RectI summaryScissorRect;   // Real clipping rectangle: summary of top clipping rectangles
-            bool  renderTarget = false; // Is render target turned on this step
+			bool operator==(const ScissorInfo& other) const;
+		};
+
+		// --------------------------------
+		// Scissor clipping stack info item
+		// --------------------------------
+		struct ScissorStackEntry
+		{
+			RectI scissorRect;          // Clipping scissor rectangle
+			RectI summaryScissorRect;   // Real clipping rectangle: summary of top clipping rectangles
+			bool  renderTarget = false; // Is render target turned on this step
 
-        public:
-            ScissorStackEntry();
-            ScissorStackEntry(const RectI& rect, const RectI& summaryRect, bool renderTarget = false);
+		public:
+			ScissorStackEntry();
+			ScissorStackEntry(const RectI& rect, const RectI& summaryRect, bool renderTarget = false);
 
-            bool operator==(const ScissorStackEntry& other) const;
-        };
+			bool operator==(const ScissorStackEntry& other) const;
+		};
 
-    public:
-        PROPERTIES(Render);
-        PROPERTY(Camera, camera, SetCamera, GetCamera);                           // Current camera property
-        PROPERTY(RectI, scissorRect, EnableScissorTest, GetScissorRect);          // Scissor rect property
-        PROPERTY(TextureRef, renderTexture, BindRenderTexture, GetRenderTexture); // Render target texture property
-        GETTER(Vec2I, resolution, GetResolution);                                 // Screen resolution getter
-        GETTER(Vec2I, maxTextureSize, GetMaxTextureSize);                         // Maximal texture size getter
+	public:
+		PROPERTIES(Render);
+		PROPERTY(Camera, camera, SetCamera, GetCamera);                           // Current camera property
+		PROPERTY(RectI, scissorRect, EnableScissorTest, GetScissorRect);          // Scissor rect property
+		PROPERTY(TextureRef, renderTexture, BindRenderTexture, GetRenderTexture); // Render target texture property
+		GETTER(Vec2I, resolution, GetResolution);                                 // Screen resolution getter
+		GETTER(Vec2I, maxTextureSize, GetMaxTextureSize);                         // Maximal texture size getter
 
-    public:
-        Function<void()> preRender;  // Pre rendering event. Call after beginning drawing. Clearing every frame
-        Function<void()> postRender; // Post rendering event. Call before ending drawing. Clearing every frame
+	public:
+		Function<void()> preRender;  // Pre rendering event. Call after beginning drawing. Clearing every frame
+		Function<void()> postRender; // Post rendering event. Call before ending drawing. Clearing every frame
 
-    public:
-        // Default constructor
-        Render(RefCounter* refCounter);
+	public:
+		// Default constructor
+		Render(RefCounter* refCounter);
 
-        // Destructor
-        ~Render();
+		// Destructor
+		~Render();
 
-        // Beginning rendering
-        void Begin();
+		// Beginning rendering
+		void Begin();
 
-        // Finishing rendering
-        void End();
+		// Finishing rendering
+		void End();
 
-        // Flushes current state and gets ready to draw manually
-        void BeginCustomRender();
+		// Flushes current state and gets ready to draw manually
+		void BeginCustomRender();
 
-        // Finishes custom rendering, restores state and cameras
-        void EndCustomRender();
-
-        // Resets render's state
-        void ResetState();
+		// Finishes custom rendering, restores state and cameras
+		void EndCustomRender();
+
+		// Resets render's state
+		void ResetState();
 
-        // Clearing current frame buffer with color
-        void Clear(const Color4& color = Color4::Gray());
+		// Clearing current frame buffer with color
+		void Clear(const Color4& color = Color4::Gray());
 
-        // Returns resolution of rendering frame
-        Vec2I GetResolution() const;
-
-        // Returns current buffer resolution
-        Vec2I GetCurrentResolution() const;
-
-        // Returns device's screen dpi
-        Vec2I GetDPI() const;
+		// Returns resolution of rendering frame
+		Vec2I GetResolution() const;
+
+		// Returns current buffer resolution
+		Vec2I GetCurrentResolution() const;
+
+		// Returns device's screen dpi
+		Vec2I GetDPI() const;
 
-        // Returns current draw calls count 
-        int GetDrawCallsCount() const;
+		// Returns current draw calls count 
+		int GetDrawCallsCount() const;
 
-        // Returns current drawn primitives
-        int GetDrawnPrimitives() const;
+		// Returns current drawn primitives
+		int GetDrawnPrimitives() const;
 
-        // Binding camera. NULL - standard camera
-        void SetCamera(const Camera& camera);
+		// Binding camera. NULL - standard camera
+		void SetCamera(const Camera& camera);
 
-        // Returns current camera
-        Camera GetCamera() const;
+		// Returns current camera
+		Camera GetCamera() const;
 
-        // Draws polygon
-        void DrawFilledPolygon(const Vector<Vec2F>& points, const Color4& color = Color4::White());
+		// Draws polygon
+		void DrawFilledPolygon(const Vector<Vec2F>& points, const Color4& color = Color4::White());
 
-        // Draws polygon
-        void DrawFilledPolygon(const Vertex* points, int vertexCount);
+		// Draws polygon
+		void DrawFilledPolygon(const Vertex* points, int vertexCount);
 
-        // Draws single line with color
-        void DrawLine(const Vec2F& a, const Vec2F& b, const Color4& color = Color4::White());
+		// Draws single line with color
+		void DrawLine(const Vec2F& a, const Vec2F& b, const Color4& color = Color4::White());
 
-        // Draws single line with color
-        void DrawArrow(const Vec2F& a, const Vec2F& b, const Color4& color = Color4::White(),
-                       const Vec2F& arrowSize = Vec2F(10, 10));
+		// Draws single line with color
+		void DrawArrow(const Vec2F& a, const Vec2F& b, const Color4& color = Color4::White(),
+					   const Vec2F& arrowSize = Vec2F(10, 10));
 
-        // Draws single line with color
-        void DrawLine(const Vector<Vec2F>& points, const Color4& color = Color4::White());
+		// Draws single line with color
+		void DrawLine(const Vector<Vec2F>& points, const Color4& color = Color4::White());
 
-        // Draws rect frame with color
-        void DrawRectFrame(const Vec2F& minp, const Vec2F& maxp, const Color4& color = Color4::White());
+		// Draws rect frame with color
+		void DrawRectFrame(const Vec2F& minp, const Vec2F& maxp, const Color4& color = Color4::White());
 
-        // Draws rect frame with color
-        void DrawRectFrame(const RectF& rect, const Color4& color = Color4::White());
+		// Draws rect frame with color
+		void DrawRectFrame(const RectF& rect, const Color4& color = Color4::White());
 
-        // Draws basis frame
-        void DrawBasis(const Basis& basis, const Color4& xcolor = Color4::Red(), const Color4& ycolor = Color4::Blue(),
-                       const Color4& color = Color4::White());
+		// Draws basis frame
+		void DrawBasis(const Basis& basis, const Color4& xcolor = Color4::Red(), const Color4& ycolor = Color4::Blue(),
+					   const Color4& color = Color4::White());
 
-        // Draws cross with color
-        void DrawCross(const Vec2F& pos, float size = 5, const Color4& color = Color4::White());
+		// Draws cross with color
+		void DrawCross(const Vec2F& pos, float size = 5, const Color4& color = Color4::White());
 
-        // Draws circle with color
-        void DrawCircle(const Vec2F& pos, float radius = 5, const Color4& color = Color4::White(), int segCount = 20);
+		// Draws circle with color
+		void DrawCircle(const Vec2F& pos, float radius = 5, const Color4& color = Color4::White(), int segCount = 20);
 
-        // Draws filled circle with color
-        void DrawFilledCircle(const Vec2F& pos, float radius = 5, const Color4& color = Color4::White(), int segCount = 20);
+		// Draws filled circle with color
+		void DrawFilledCircle(const Vec2F& pos, float radius = 5, const Color4& color = Color4::White(), int segCount = 20);
 
-        // Draws bezier curve with color
-        void DrawBezierCurve(const Vec2F& p1, const Vec2F& p2, const Vec2F& p3, const Vec2F& p4,
-                             const Color4& color = Color4::White());
+		// Draws bezier curve with color
+		void DrawBezierCurve(const Vec2F& p1, const Vec2F& p2, const Vec2F& p3, const Vec2F& p4,
+							 const Color4& color = Color4::White());
 
-        // Draws bezier curve with color
-        void DrawBezierCurveArrow(const Vec2F& p1, const Vec2F& p2, const Vec2F& p3, const Vec2F& p4,
-                                  const Color4& color = Color4::White(), const Vec2F& arrowSize = Vec2F(10, 10));
+		// Draws bezier curve with color
+		void DrawBezierCurveArrow(const Vec2F& p1, const Vec2F& p2, const Vec2F& p3, const Vec2F& p4,
+								  const Color4& color = Color4::White(), const Vec2F& arrowSize = Vec2F(10, 10));
 
-        // Draws anti-aliased single line with color
-        void DrawAALine(const Vec2F& a, const Vec2F& b, const Color4& color = Color4::White(),
-                        float width = 1.0f, LineType lineType = LineType::Solid, bool scaleToScreenSpace = true);
+		// Draws anti-aliased single line with color
+		void DrawAALine(const Vec2F& a, const Vec2F& b, const Color4& color = Color4::White(),
+						float width = 1.0f, LineType lineType = LineType::Solid, bool scaleToScreenSpace = true);
 
-        // Draws anti-aliased single line with color
-        void DrawAAArrow(const Vec2F& a, const Vec2F& b, const Color4& color = Color4::White(),
-                         const Vec2F& arrowSize = Vec2F(10, 10),
-                         float width = 1.0f, LineType lineType = LineType::Solid, bool scaleToScreenSpace = true);
+		// Draws anti-aliased single line with color
+		void DrawAAArrow(const Vec2F& a, const Vec2F& b, const Color4& color = Color4::White(),
+						 const Vec2F& arrowSize = Vec2F(10, 10),
+						 float width = 1.0f, LineType lineType = LineType::Solid, bool scaleToScreenSpace = true);
 
-        // Draws anti-aliased single line with color
-        void DrawAALine(const Vector<Vec2F>& points, const Color4& color = Color4::White(),
-                        float width = 1.0f, LineType lineType = LineType::Solid, bool scaleToScreenSpace = true);
+		// Draws anti-aliased single line with color
+		void DrawAALine(const Vector<Vec2F>& points, const Color4& color = Color4::White(),
+						float width = 1.0f, LineType lineType = LineType::Solid, bool scaleToScreenSpace = true);
 
-        // Draws anti-aliased rect frame with color
-        void DrawAARectFrame(const Vec2F& minp, const Vec2F& maxp, const Color4& color = Color4::White(),
-                             float width = 1.0f, LineType lineType = LineType::Solid, bool scaleToScreenSpace = true);
+		// Draws anti-aliased rect frame with color
+		void DrawAARectFrame(const Vec2F& minp, const Vec2F& maxp, const Color4& color = Color4::White(),
+							 float width = 1.0f, LineType lineType = LineType::Solid, bool scaleToScreenSpace = true);
 
-        // Draws anti-aliased rect frame with color
-        void DrawAARectFrame(const RectF& rect, const Color4& color = Color4::White(),
-                             float width = 1.0f, LineType lineType = LineType::Solid, bool scaleToScreenSpace = true);
+		// Draws anti-aliased rect frame with color
+		void DrawAARectFrame(const RectF& rect, const Color4& color = Color4::White(),
+							 float width = 1.0f, LineType lineType = LineType::Solid, bool scaleToScreenSpace = true);
 
-        // Draws anti-aliased basis frame
-        void DrawAABasis(const Basis& basis, const Color4& xcolor = Color4::Red(), const Color4& ycolor = Color4::Blue(),
-                         const Color4& color = Color4::White(),
-                         float width = 1.0f, LineType lineType = LineType::Solid, bool scaleToScreenSpace = true);
+		// Draws anti-aliased basis frame
+		void DrawAABasis(const Basis& basis, const Color4& xcolor = Color4::Red(), const Color4& ycolor = Color4::Blue(),
+						 const Color4& color = Color4::White(),
+						 float width = 1.0f, LineType lineType = LineType::Solid, bool scaleToScreenSpace = true);
 
-        // Draws anti-aliased cross with color
-        void DrawAACross(const Vec2F& pos, float size = 5, const Color4& color = Color4::White(),
-                         float width = 1.0f, LineType lineType = LineType::Solid, bool scaleToScreenSpace = true);
+		// Draws anti-aliased cross with color
+		void DrawAACross(const Vec2F& pos, float size = 5, const Color4& color = Color4::White(),
+						 float width = 1.0f, LineType lineType = LineType::Solid, bool scaleToScreenSpace = true);
 
-        // Draws anti-aliased circle with color
-        void DrawAACircle(const Vec2F& pos, float radius = 5, const Color4& color = Color4::White(), int segCount = 20,
-                          float width = 1.0f, LineType lineType = LineType::Solid, bool scaleToScreenSpace = true);
+		// Draws anti-aliased circle with color
+		void DrawAACircle(const Vec2F& pos, float radius = 5, const Color4& color = Color4::White(), int segCount = 20,
+						  float width = 1.0f, LineType lineType = LineType::Solid, bool scaleToScreenSpace = true);
 
-        // Draws anti-aliased bezier curve with color
-        void DrawAABezierCurve(const Vec2F& p1, const Vec2F& p2, const Vec2F& p3, const Vec2F& p4,
-                               const Color4& color = Color4::White(),
-                               float width = 1.0f, LineType lineType = LineType::Solid, bool scaleToScreenSpace = true);
+		// Draws anti-aliased bezier curve with color
+		void DrawAABezierCurve(const Vec2F& p1, const Vec2F& p2, const Vec2F& p3, const Vec2F& p4,
+							   const Color4& color = Color4::White(),
+							   float width = 1.0f, LineType lineType = LineType::Solid, bool scaleToScreenSpace = true);
 
-        // Draws anti-aliased bezier curve with color
-        void DrawAABezierCurveArrow(const Vec2F& p1, const Vec2F& p2, const Vec2F& p3, const Vec2F& p4,
-                                    const Color4& color = Color4::White(), const Vec2F& arrowSize = Vec2F(10, 10),
-                                    float width = 1.0f, LineType lineType = LineType::Solid, bool scaleToScreenSpace = true);
+		// Draws anti-aliased bezier curve with color
+		void DrawAABezierCurveArrow(const Vec2F& p1, const Vec2F& p2, const Vec2F& p3, const Vec2F& p4,
+									const Color4& color = Color4::White(), const Vec2F& arrowSize = Vec2F(10, 10),
+									float width = 1.0f, LineType lineType = LineType::Solid, bool scaleToScreenSpace = true);
 
-        // Returns scissor rect
-        RectI GetScissorRect() const;
+		// Returns scissor rect
+		RectI GetScissorRect() const;
 
-        // Returns result scissor rect of all scissor stack
-        RectI GetResScissorRect() const;
+		// Returns result scissor rect of all scissor stack
+		RectI GetResScissorRect() const;
 
-        // Returns scissors stack
-        const Vector<ScissorStackEntry>& GetScissorsStack() const;
+		// Returns scissors stack
+		const Vector<ScissorStackEntry>& GetScissorsStack() const;
 
-        // Enabling scissor test
-        void EnableScissorTest(const RectI& rect);
+		// Enabling scissor test
+		void EnableScissorTest(const RectI& rect);
 
-        // Disabling scissor test
-        void DisableScissorTest(bool forcible = false);
+		// Disabling scissor test
+		void DisableScissorTest(bool forcible = false);
 
-        // Returns true, if scissor test enabled
-        bool IsScissorTestEnabled() const;
+		// Returns true, if scissor test enabled
+		bool IsScissorTestEnabled() const;
 
-        // Returns true when specified rectangle is fully clipped by current scissor test
-        bool IsClippedByScissor(const RectF& rect) const;
+		// Returns true when specified rectangle is fully clipped by current scissor test
+		bool IsClippedByScissor(const RectF& rect) const;
 
-        // Returns true when specified point is clipped by current scissor test
-        bool IsClippedByScissor(const Vec2F& point) const;
+		// Returns true when specified point is clipped by current scissor test
+		bool IsClippedByScissor(const Vec2F& point) const;
 
-        // Draws mesh
-        void DrawMesh(Mesh* mesh);
+		// Draws mesh
+		void DrawMesh(Mesh* mesh);
 
-        // Draws data from buffer with specified override texture and primitive type.
-        // Material defines blend mode and default texture; pass nullptr for default material (Normal blend).
-        // If overrideTexture is non-null, it is used; otherwise material's texture is used (if any).
-        void DrawBuffer(PrimitiveType primitiveType, Vertex* vertices, UInt verticesCount,
-                        VertexIndex* indexes, UInt elementsCount, const TextureRef& overrideTexture,
-                        const Ref<Material>& material);
+		// Draws data from buffer. Vertex type describes the source vertex format.
+		// If allowVertexConversion is true, vertices will be converted to match the material's texcoord requirements
+		// by remapping 0..1 UVs through texSrcRect. If false and types don't match, asserts.
+		void DrawBuffer(PrimitiveType primitiveType, const UInt8* vertices, UInt verticesCount, const VertexType& vertexType,
+						VertexIndex* indexes, UInt elementsCount,
+						const Ref<Material>& material, const TextureRef& overrideTexture, const RectI& texSrcRect = RectI(), 
+						bool allowVertexConversion = false);
 
-        // Platform specific upload vertex and index buffers
-        void PlatformUploadBuffers(Vertex* vertices, UInt verticesCount,
-                                   VertexIndex* indexes, UInt indexesCount);
+		// Convenience overload for typed Vertex data
+		void DrawBuffer(PrimitiveType primitiveType, const Vertex* vertices, UInt verticesCount,
+						VertexIndex* indexes, UInt elementsCount, 
+						const Ref<Material>& material, const TextureRef& overrideTexture, const RectI& texSrcRect = RectI(),
+						bool allowVertexConversion = false);
 
-        // Draws mesh wire
-        void DrawMeshWire(Mesh* mesh, const Color4& color = Color4::White());
+		// Fills the CPU-side batch buffer with vertex/index data, applying UV remapping if needed
+		void UploadBuffers(const UInt8* vertices, UInt verticesCount, const VertexType& srcVertexType,
+						   VertexIndex* indexes, UInt indexesCount, const RectI& texSrcRect,
+						   const TextureRef& texture, bool allowVertexConversion);
 
-        // Draws mesh buffer wire
-        void DrawMeshBufferWire(Vertex* vertices, UInt verticesCount, VertexIndex* indexes, UInt elementsCount,
-                                const Color4& color = Color4::White());
+		// Draws mesh wire
+		void DrawMeshWire(Mesh* mesh, const Color4& color = Color4::White());
 
-        // Draws hard poly line. Vertices - buffer of vertex pairs for each line
-        void DrawPolyLine(Vertex* vertices, int count, float width = 1.0f);
+		// Draws mesh buffer wire
+		void DrawMeshBufferWire(Vertex* vertices, UInt verticesCount, VertexIndex* indexes, UInt elementsCount,
+								const Color4& color = Color4::White());
 
-        // Draws anti-aliased lines
-        void DrawAAPolyLine(Vertex* vertices, int count, float width = 1.0f, LineType lineType = LineType::Solid,
-                            bool scaleToScreenSpace = true);
+		// Draws hard poly line. Vertices - buffer of vertex pairs for each line
+		void DrawPolyLine(Vertex* vertices, int count, float width = 1.0f);
 
-        // Binding render target
-        void BindRenderTexture(TextureRef renderTarget);
+		// Draws anti-aliased lines
+		void DrawAAPolyLine(Vertex* vertices, int count, float width = 1.0f, LineType lineType = LineType::Solid,
+							bool scaleToScreenSpace = true);
 
-        // Unbinding render target
-        void UnbindRenderTexture();
+		// Binding render target
+		void BindRenderTexture(TextureRef renderTarget);
 
-        // Returns current render target. Returns NULL if no render target
-        TextureRef GetRenderTexture() const;
+		// Unbinding render target
+		void UnbindRenderTexture();
 
-        // Returns maximum texture size
-        Vec2I GetMaxTextureSize() const;
+		// Returns current render target. Returns NULL if no render target
+		TextureRef GetRenderTexture() const;
 
-        // Returns last draw depth of mesh
-        float GetDrawingDepth();
+		// Returns maximum texture size
+		Vec2I GetMaxTextureSize() const;
 
-        // Returns scissor infos at current frame
-        const Vector<ScissorInfo>& GetScissorInfos() const;
+		// Returns last draw depth of mesh
+		float GetDrawingDepth();
 
-        // Binds material for rendering. nullptr is ignored (no-op).
-        void BindMaterial(const Ref<Material>& material);
+		// Returns scissor infos at current frame
+		const Vector<ScissorInfo>& GetScissorInfos() const;
 
-        // Returns current bound material
-        const Ref<Material>& GetCurrentMaterial() const;
+		// Binds material for rendering. nullptr is ignored (no-op).
+		void BindMaterial(const Ref<Material>& material);
 
-        // Returns default material
-        const Ref<Material>& GetDefaultMaterial() const;
+		// Returns current bound material
+		const Ref<Material>& GetCurrentMaterial() const;
 
-    protected:
-        PrimitiveType mCurrentPrimitiveType = PrimitiveType::Polygon; // Type of drawing primitives for next DIP
+		// Returns default material
+		const Ref<Material>& GetDefaultMaterial() const;
 
-        TextureRef mCurrentDrawTexture = nullptr; // Stored texture ptr from last DIP
-        UInt       mLastDrawVertex = 0;           // Last vertex idx for next DIP
-        UInt       mLastDrawIdx = 0;              // Last vertex index for next DIP
-        UInt       mTrianglesCount = 0;           // Triangles count for next DIP
-        UInt       mFrameTrianglesCount = 0;      // Total triangles at current frame
-        UInt       mDrawCallsCount = 0;           // DrawIndexedPrimitives calls count
+	protected:
+		PrimitiveType mCurrentPrimitiveType = PrimitiveType::Polygon; // Type of drawing primitives for next DIP
 
-        Ref<Material> mDefaultMaterial; // Default material, loaded from Shaders/Default 
-        Ref<Material> mCurrentMaterial; // Currently bound material
+		TextureRef mCurrentDrawTexture = nullptr; // Stored texture ptr from last DIP
+		VertexType mCurrentBatchVertexType;       // Vertex type of the current batch
+		UInt       mLastDrawVertex = 0;           // Last vertex idx for next DIP
+		UInt       mLastDrawIdx = 0;              // Last vertex index for next DIP
+		UInt       mTrianglesCount = 0;           // Triangles count for next DIP
+		UInt       mFrameTrianglesCount = 0;      // Total triangles at current frame
+		UInt       mDrawCallsCount = 0;           // DrawIndexedPrimitives calls count
 
-        Ref<LogStream> mLog; // Render log stream
+		UInt8*       mVertexData = nullptr;       // CPU-side vertex batch buffer
+		UInt         mVertexBufferSize = 0;       // Max vertex count in batch buffer
+		UInt         mVertexBufferByteSize = 0;   // Max byte size of vertex batch buffer
+		VertexIndex* mVertexIndexData = nullptr;  // CPU-side index batch buffer
+		int          mVertexBufferIdx = 0;        // Current vertex offset in batch (for GPU upload)
+		UInt         mIndexBufferSize = 0;        // Max index count in batch buffer
+		int          mIndexBufferIdx = 0;         // Current index offset in batch (for GPU upload)
 
-        TextureRef mWhiteTexture; // Default white texture
+		Ref<Material> mDefaultMaterial; // Default material, loaded from Shaders/Default 
+		Ref<Material> mCurrentMaterial; // Currently bound material
 
-        Vector<TextureRef> mTextures; // Loaded textures
-        Vector<Ref<Font>>  mFonts;    // Loaded fonts
+		Ref<LogStream> mLog; // Render log stream
 
-        Camera mCamera;     // Camera transformation
-        Camera mPrevCamera; // Previous camera transformation
+		TextureRef mWhiteTexture; // Default white texture
 
-        Vec2I  mResolution;        // Primary back buffer size
-        Vec2I  mCurrentResolution; // Current back buffer size
-        Vec2I  mPrevResolution;    // Previous back buffer size
+		Vector<TextureRef> mTextures; // Loaded textures
+		Vector<Ref<Font>>  mFonts;    // Loaded fonts
 
-        Vec2F  mViewScale;         // Current view scale, depends on camera
-        Vec2F  mInvViewScale;      // Inverted mViewScale
-        Vec2I  mDPI;               // Current device screen DPI
+		Camera mCamera;     // Camera transformation
+		Camera mPrevCamera; // Previous camera transformation
 
-        Vector<ScissorInfo>       mScissorInfos;               // Scissor clipping depth infos vector
-        Vector<ScissorStackEntry> mStackScissors;              // Stack of scissors clippings
-        bool                      mClippingEverything = false; // Is everything clipped
+		Vec2I  mResolution;        // Primary back buffer size
+		Vec2I  mCurrentResolution; // Current back buffer size
+		Vec2I  mPrevResolution;    // Previous back buffer size
 
-        TextureRef mCurrentRenderTarget; // Current render target. NULL if rendering in back buffer
+		Vec2F  mViewScale;         // Current view scale, depends on camera
+		Vec2F  mInvViewScale;      // Inverted mViewScale
+		Vec2I  mDPI;               // Current device screen DPI
 
-        float mDrawingDepth = 0.0f; // Current drawing depth, increments after each drawing drawables
+		Vector<ScissorInfo>       mScissorInfos;               // Scissor clipping depth infos vector
+		Vector<ScissorStackEntry> mStackScissors;              // Stack of scissors clippings
+		bool                      mClippingEverything = false; // Is everything clipped
 
-        FT_Library mFreeTypeLib; // FreeType library, for rendering fonts
+		TextureRef mCurrentRenderTarget; // Current render target. NULL if rendering in back buffer
 
-        Vector<Sprite*>         mSprites; // All sprites
-        Vector<Ref<AtlasAsset>> mAtlases; // All atlases
+		float mDrawingDepth = 0.0f; // Current drawing depth, increments after each drawing drawables
 
-        VertexIndex* mHardLinesIndexData = nullptr; // Index data buffer
-        TextureRef   mSolidLineTexture;             // Solid line texture
-        TextureRef   mDashLineTexture;              // Dash line texture
+		FT_Library mFreeTypeLib; // FreeType library, for rendering fonts
 
-        Vec2I mMaxTextureSize; // Max texture size
+		Vector<Sprite*>         mSprites; // All sprites
+		Vector<Ref<AtlasAsset>> mAtlases; // All atlases
 
-        bool mReady = false; // True, if render is ready to draw
+		VertexIndex* mHardLinesIndexData = nullptr; // Index data buffer
+		TextureRef   mSolidLineTexture;             // Solid line texture
+		TextureRef   mDashLineTexture;              // Dash line texture
 
-    protected:
-        // Don't copy
-        Render(const Render& other) = delete;
+		Vec2I mMaxTextureSize; // Max texture size
 
-        // Don't copy
-        Render& operator=(const Render& other);
+		bool mReady = false; // True, if render is ready to draw
 
-        // Initializes platform specific part of render
-        void InitializePlatform();
+	protected:
+		// Don't copy
+		Render(const Render& other) = delete;
 
-        // Initialized white texture
-        void InitializeWhiteTexture();
+		// Don't copy
+		Render& operator=(const Render& other);
 
-        // Initializes index buffer for drawing lines - pairs of lines beginnings and ends
-        void InitializeLinesIndexBuffer();
+		// Initializes platform specific part of render
+		void InitializePlatform();
 
-        // Initializes lines textures
-        void InitializeLinesTextures();
+		// Initialized white texture
+		void InitializeWhiteTexture();
 
-        // Initializes free type library
-        void InitializeFreeType();
+		// Initializes index buffer for drawing lines - pairs of lines beginnings and ends
+		void InitializeLinesIndexBuffer();
 
-        // Initializes standard shader
-        void InitializeSandardShader();
+		// Initializes lines textures
+		void InitializeLinesTextures();
 
-        // Deinitializes platform specific part of render
-        void DeinitializePlatform();
+		// Initializes free type library
+		void InitializeFreeType();
 
-        // Deinitializes free type library
-        void DeinitializeFreeType();
+		// Initializes standard shader
+		void InitializeSandardShader();
 
-        // Returns platform specific max texture size
-        Vec2I GetPlatformMaxTextureSize();
+		// Deinitializes platform specific part of render
+		void DeinitializePlatform();
 
-        // Returns platform specific DPI
-        Vec2I GetPlatformDPI();
+		// Deinitializes free type library
+		void DeinitializeFreeType();
 
-        // Called when target frame or window was resized
-        void OnFrameResized();
+		// Returns platform specific max texture size
+		Vec2I GetPlatformMaxTextureSize();
 
-        // Platform specific begin of rendering
-        void PlatformBegin();
+		// Returns platform specific DPI
+		Vec2I GetPlatformDPI();
 
-        // Platform specific end of rendering
-        void PlatformEnd();
+		// Called when target frame or window was resized
+		void OnFrameResized();
 
-        // Checks whether a batch break is needed for the given draw state
-        bool CheckBatchBreak(const TextureRef& texture, PrimitiveType primitiveType,
-                             const Ref<Material>& material, UInt verticesCount, UInt indexesCount) const;
+		// Platform specific: binds next GPU buffer from pool and configures vertex attributes
+		void PlatformBindNextPoolBuffers();
 
-        // Initializes default material (calls platform to load shaders and set mDefaultMaterial, mStdShader*)
-        void InitializeDefaultMaterial();
+		// Platform specific begin of rendering
+		void PlatformBegin();
 
-        // Platform: load default shader files, compile, create default material, set mDefaultMaterial and mStdShader*
-        void PlatformInitializeDefaultMaterial();
+		// Platform specific end of rendering
+		void PlatformEnd();
 
-        // Platform specific material binding
-        void PlatformBindMaterial(const Ref<Material>& material);
+		// Checks whether a batch break is needed for the given draw state
+		bool CheckBatchBreak(const TextureRef& texture, PrimitiveType primitiveType,
+							 const Ref<Material>& material, const VertexType& batchVertexType,
+							 UInt verticesCount, UInt indexesCount) const;
 
-        // Send buffers to draw
-        void DrawPrimitives();
+		// Initializes default material (calls platform to load shaders and set mDefaultMaterial, mStdShader*)
+		void InitializeDefaultMaterial();
 
-        // Platform specific draw primitives (draw call)
-        void PlatformDrawPrimitives();
+		// Platform: load default shader files, compile, create default material, set mDefaultMaterial and mStdShader*
+		void PlatformInitializeDefaultMaterial();
 
-        // Checks vertex buffer for texture coordinate flip by texture format
-        void CheckVertexBufferTexCoordFlipByTextureFormat();
+		// Platform specific material binding
+		void PlatformBindMaterial(const Ref<Material>& material);
 
-        // Platform specific flips current vertex buffer UX by Y
-        void PlatformFlipVerticesUV();
+		// Send buffers to draw
+		void DrawPrimitives();
 
-        // Platform specific reset renderer state
-        void PlatformResetState();
+		// Platform specific draw primitives (draw call)
+		void PlatformDrawPrimitives();
 
-        // Sets orthographic view matrix by view size
-        void SetupViewMatrix(const Vec2I& viewSize);
+		// Checks vertex buffer for texture coordinate flip by texture format
+		void CheckVertexBufferTexCoordFlipByTextureFormat();
 
-        // Updates render transformations for camera
-        void UpdateCameraTransforms();
+		// Platform specific flips current vertex buffer UX by Y
+		void PlatformFlipVerticesUV();
 
-        // Platform specific setup camera transforms
-        void PlatformSetupCameraTransforms(float* modelMatrix, float* viewMatrix, float* projMatrix);
+		// Platform specific reset renderer state
+		void PlatformResetState();
 
-        // Platform specific enable scissor test
-        void PlatformEnableScissorTest();
+		// Sets orthographic view matrix by view size
+		void SetupViewMatrix(const Vec2I& viewSize);
 
-        // Platform specific disable scissor test
-        void PlatformDisableScissorTest();
+		// Updates render transformations for camera
+		void UpdateCameraTransforms();
 
-        // Platform specific set scissor rect
-        void PlatformSetScissorRect(const RectI& rect);
+		// Platform specific setup camera transforms
+		void PlatformSetupCameraTransforms(float* modelMatrix, float* viewMatrix, float* projMatrix);
 
-        // Platform specific bind render target
-        void PlatformBindRenderTarget(const TextureRef& renderTarget);
+		// Platform specific enable scissor test
+		void PlatformEnableScissorTest();
 
-        // Calculates screen space scissor clipping rectangle from camera space rectangle
-        RectI CalculateScreenSpaceScissorRect(const RectF& cameraSpaceScissorRect) const;
+		// Platform specific disable scissor test
+		void PlatformDisableScissorTest();
 
-        // Check textures for unloading
-        void CheckTexturesUnloading();
+		// Platform specific set scissor rect
+		void PlatformSetScissorRect(const RectI& rect);
 
-        // Checks font for unloading
-        void CheckFontsUnloading();
+		// Platform specific bind render target
+		void PlatformBindRenderTarget(const TextureRef& renderTarget);
 
-        // Called when assets was rebuilded
-        void OnAssetsRebuilt(const Vector<UID>& changedAssets);
+		// Remaps UV coordinates from 0..1 range to texture source rect
+		static void RemapUV(float srcU, float srcV, const RectI& srcRect,
+							const Vec2F& invTexSize, float& outU, float& outV);
 
-        // Called when sprite created, registers it in render
-        static void OnSpriteCreated(Sprite* sprite);
+		// Calculates screen space scissor clipping rectangle from camera space rectangle
+		RectI CalculateScreenSpaceScissorRect(const RectF& cameraSpaceScissorRect) const;
 
-        // Called when sprite destroyed, unregisters it from render
-        static void OnSpriteDestroyed(Sprite* sprite);
+		// Check textures for unloading
+		void CheckTexturesUnloading();
 
-        // Called when texture created, registers it in render
-        void OnTextureCreated(Texture* texture);
+		// Checks font for unloading
+		void CheckFontsUnloading();
 
-        // Called when texture destroyed, unregisters it from render
-        void OnTextureDestroyed(Texture* texture);
+		// Called when assets was rebuilded
+		void OnAssetsRebuilt(const Vector<UID>& changedAssets);
 
-        // Called when atlas created, registers it in render
-        void OnAtlasCreated(AtlasAsset* atlas);
+		// Called when sprite created, registers it in render
+		static void OnSpriteCreated(Sprite* sprite);
 
-        // Called when atlas destroyed, unregisters it from render
-        void OnAtlasDestroyed(AtlasAsset* atlas);
+		// Called when sprite destroyed, unregisters it from render
+		static void OnSpriteDestroyed(Sprite* sprite);
 
-        // Called when font created, registers it in render
-        void OnFontCreated(Font* font);
+		// Called when texture created, registers it in render
+		void OnTextureCreated(Texture* texture);
 
-        // Called when font destroyed, unregisters it from render
-        void OnFontDestroyed(Font* font);
+		// Called when texture destroyed, unregisters it from render
+		void OnTextureDestroyed(Texture* texture);
 
-        friend class Application;
-        friend class AtlasAsset;
-        friend class BitmapFont;
-        friend class BitmapFontAsset;
-        friend class Font;
-        friend class Integration;
-        friend class Material;
-        friend class RenderBase;
-        friend class Shader;
-        friend class Sprite;
-        friend class Texture;
-        friend class TextureRef;
-        friend class VectorFont;
-        friend class VectorFontAsset;
-        friend class WndProcFunc;
-        friend struct ApplicationPlatformWrapper;
-    };
+		// Called when atlas created, registers it in render
+		void OnAtlasCreated(AtlasAsset* atlas);
+
+		// Called when atlas destroyed, unregisters it from render
+		void OnAtlasDestroyed(AtlasAsset* atlas);
+
+		// Called when font created, registers it in render
+		void OnFontCreated(Font* font);
+
+		// Called when font destroyed, unregisters it from render
+		void OnFontDestroyed(Font* font);
+
+		friend class Application;
+		friend class AtlasAsset;
+		friend class BitmapFont;
+		friend class BitmapFontAsset;
+		friend class Font;
+		friend class Integration;
+		friend class Material;
+		friend class RenderBase;
+		friend class Shader;
+		friend class Sprite;
+		friend class Texture;
+		friend class TextureRef;
+		friend class VectorFont;
+		friend class VectorFontAsset;
+		friend class WndProcFunc;
+		friend struct ApplicationPlatformWrapper;
+	};
 }

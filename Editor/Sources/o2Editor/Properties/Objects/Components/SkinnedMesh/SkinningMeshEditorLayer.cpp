@@ -49,14 +49,15 @@ namespace Editor
         if (mesh)
         {
             auto& renderMesh = mesh->GetMesh();
+            auto* verts = renderMesh.vertices;
 
             Color4 wireColor(0, 0, 0, 100);
             Vector<Vertex> verticies;
             for (UInt i = 0; i < renderMesh.polyCount; i++)
             {
-                auto v = o2EditorSceneScreen.LocalToScreenPoint(renderMesh.vertices[renderMesh.indexes[i * 3]]);
-                auto v1 = o2EditorSceneScreen.LocalToScreenPoint(renderMesh.vertices[renderMesh.indexes[i * 3 + 1]]);
-                auto v2 = o2EditorSceneScreen.LocalToScreenPoint(renderMesh.vertices[renderMesh.indexes[i * 3 + 2]]);
+                auto v = o2EditorSceneScreen.LocalToScreenPoint(verts[renderMesh.indexes[i * 3]]);
+                auto v1 = o2EditorSceneScreen.LocalToScreenPoint(verts[renderMesh.indexes[i * 3 + 1]]);
+                auto v2 = o2EditorSceneScreen.LocalToScreenPoint(verts[renderMesh.indexes[i * 3 + 2]]);
 
                 verticies.Clear();
                 verticies.Add(Vertex(v.x, v.y, 0.0f, wireColor.ABGR(), 0.0f, 0.0f));
