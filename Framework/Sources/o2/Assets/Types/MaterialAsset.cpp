@@ -6,58 +6,45 @@
 namespace o2
 {
     MaterialAsset::MaterialAsset():
-        AssetWithDefaultMeta<MaterialAsset>()
+        AssetWithDefaultMeta<MaterialAsset>(),
+        Material()
     {}
 
     MaterialAsset::MaterialAsset(const MaterialAsset& asset):
         AssetWithDefaultMeta<MaterialAsset>(asset),
-        mBlendMode(asset.mBlendMode),
+        Material(asset),
         mVertexShaderAsset(asset.mVertexShaderAsset),
-        mFragmentShaderAsset(asset.mFragmentShaderAsset),
-        mSamplers(asset.mSamplers)
+        mFragmentShaderAsset(asset.mFragmentShaderAsset)
     {
-        for (auto& param : asset.mParams)
-            mParams.Add(param->CloneAsRef<IShaderParam>());
-
-        BuildMaterial();
+        RebuildMaterial();
     }
 
     MaterialAsset& MaterialAsset::operator=(const MaterialAsset& asset)
     {
         Asset::operator=(asset);
-        mBlendMode = asset.mBlendMode;
+
         mVertexShaderAsset = asset.mVertexShaderAsset;
         mFragmentShaderAsset = asset.mFragmentShaderAsset;
-        mSamplers = asset.mSamplers;
+
+        Material::SetVertexShader(asset.Material::GetVertexShader());
+        Material::SetFragmentShader(asset.Material::GetFragmentShader());
+        SetTexture(asset.GetTexture());
+        Material::SetBlendMode(asset.Material::GetBlendMode());
 
         mParams.Clear();
         for (auto& param : asset.mParams)
             mParams.Add(param->CloneAsRef<IShaderParam>());
+        mSamplers = asset.mSamplers;
 
-        BuildMaterial();
+        RebuildMaterial();
+
         return *this;
-    }
-
-    Ref<Material> MaterialAsset::GetMaterial() const
-    {
-        return mMaterial;
-    }
-
-    void MaterialAsset::SetBlendMode(BlendMode blendMode)
-    {
-        mBlendMode = blendMode;
-        BuildMaterial();
-    }
-
-    BlendMode MaterialAsset::GetBlendMode() const
-    {
-        return mBlendMode;
     }
 
     void MaterialAsset::SetVertexShader(const AssetRef<VertexShaderAsset>& shader)
     {
         mVertexShaderAsset = shader;
-        BuildMaterial();
+        RebuildMaterial();
     }
 
     const AssetRef<VertexShaderAsset>& MaterialAsset::GetVertexShader() const
@@ -68,7 +55,7 @@ namespace o2
     void MaterialAsset::SetFragmentShader(const AssetRef<FragmentShaderAsset>& shader)
     {
         mFragmentShaderAsset = shader;
-        BuildMaterial();
+        RebuildMaterial();
     }
 
     const AssetRef<FragmentShaderAsset>& MaterialAsset::GetFragmentShader() const
@@ -84,7 +71,7 @@ namespace o2
     void MaterialAsset::LoadData(const String& path)
     {
         Asset::LoadData(path);
-        BuildMaterial();
+        RebuildMaterial();
     }
 
     void MaterialAsset::SaveData(const String& path) const
@@ -92,24 +79,24 @@ namespace o2
         Asset::SaveData(path);
     }
 
-    void MaterialAsset::BuildMaterial()
+    Ref<RefCounterable> MaterialAsset::CastToRefCounterable(const Ref<MaterialAsset>& ref)
     {
-        if (!mMaterial)
-            mMaterial = mmake<Material>();
+        return DynamicCast<Asset>(ref);
+    }
 
+    void MaterialAsset::RebuildMaterial()
+    {
         if (mVertexShaderAsset && mVertexShaderAsset->GetShader())
-            mMaterial->SetVertexShader(mVertexShaderAsset->GetShader());
+            Material::SetVertexShader(mVertexShaderAsset->GetShader());
+        else
+            Material::SetVertexShader(Ref<Shader>());
 
         if (mFragmentShaderAsset && mFragmentShaderAsset->GetShader())
-            mMaterial->SetFragmentShader(mFragmentShaderAsset->GetShader());
+            Material::SetFragmentShader(mFragmentShaderAsset->GetShader());
+        else
+            Material::SetFragmentShader(Ref<Shader>());
 
-        mMaterial->SetParams(mParams);
-
-        for (auto& sampler : mSamplers)
-            mMaterial->AddTextureSampler(sampler);
-
-        mMaterial->Build();
-        mMaterial->SetBlendMode(mBlendMode);
+        Build();
     }
 }
 

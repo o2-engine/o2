@@ -1,8 +1,7 @@
 #include "o2/stdafx.h"
 #include "FragmentShaderAsset.h"
 
-#include <fstream>
-#include <sstream>
+#include "o2/Utils/FileSystem/FileSystem.h"
 
 namespace o2
 {
@@ -32,13 +31,7 @@ namespace o2
 
     void FragmentShaderAsset::LoadData(const String& path)
     {
-        std::ifstream file(path.Data());
-        if (!file.is_open())
-            return;
-
-        std::stringstream ss;
-        ss << file.rdbuf();
-        String source(ss.str().c_str());
+		String source = o2FileSystem.ReadFile(path);
 
         mShader = mmake<Shader>();
         mShader->SetFileName(path);

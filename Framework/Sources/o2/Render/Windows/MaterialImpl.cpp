@@ -103,10 +103,6 @@ namespace o2
 
         GL_CHECK_ERROR();
     }
-
-    void Material::PlatformBindSamplers() const
-    {
-    }
 }
 
 #endif // PLATFORM_WINDOWS

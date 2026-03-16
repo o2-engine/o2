@@ -93,7 +93,7 @@ namespace o2
     void IRectDrawable::SetMaterialAsset(const AssetRef<MaterialAsset>& asset)
     {
         mMaterialAsset = asset;
-        IDrawable::SetMaterial(asset ? asset->GetMaterial() : Ref<Material>());
+        IDrawable::SetMaterial(asset ? asset.GetRef() : Ref<Material>());
     }
 
     const AssetRef<MaterialAsset>& IRectDrawable::GetMaterialAsset() const
@@ -110,7 +110,7 @@ namespace o2
     Ref<Material> IRectDrawable::GetMaterial() const
     {
         if (mMaterialAsset)
-            return mMaterialAsset->GetMaterial();
+            return mMaterialAsset.GetRef();
 
         return IDrawable::GetMaterial();
     }

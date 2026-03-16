@@ -203,9 +203,10 @@ namespace o2
     public:
         DataValue& node;
         const _origin_type& origin;
+        const IObject& originObj;
 
     public:
-        SerializeDeltaTypeProcessor(DataValue& node, const _origin_type& origin):node(node), origin(origin) {}
+        SerializeDeltaTypeProcessor(DataValue& node, const _origin_type& origin, const IObject& originObj):node(node), origin(origin), originObj(originObj) {}
 
         template<typename _object_type>
         void StartBases(_object_type* object, Type* type) {}
@@ -217,7 +218,7 @@ namespace o2
         void BaseType(_object_type* object, Type* type, const char* name)
         {
             if constexpr (std::is_base_of<ISerializable, _base_type>::value && !std::is_same<ISerializable, _base_type>::value)
-                object->_base_type::SerializeDeltaBasic(node, origin);
+                object->_base_type::SerializeDeltaBasic(node, originObj);
         }
 
         BaseFieldProcessor StartField()
@@ -295,9 +296,10 @@ namespace o2
     public:
         const DataValue& node;
         const _origin_type& origin;
+        const IObject& originObj;
 
     public:
-        DeserializeDeltaTypeProcessor(const DataValue& node, const _origin_type& origin):node(node), origin(origin) {}
+        DeserializeDeltaTypeProcessor(const DataValue& node, const _origin_type& origin, const IObject& originObj):node(node), origin(origin), originObj(originObj) {}
 
         template<typename _object_type>
         void StartBases(_object_type* object, Type* type) {}
@@ -309,7 +311,7 @@ namespace o2
         void BaseType(_object_type* object, Type* type, const char* name)
         {
             if constexpr (std::is_base_of<ISerializable, _base_type>::value && !std::is_same<ISerializable, _base_type>::value)
-                object->_base_type::DeserializeDeltaBasic(node, origin);
+                object->_base_type::DeserializeDeltaBasic(node, originObj);
         }
 
         BaseFieldProcessor StartField()

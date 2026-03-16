@@ -202,15 +202,14 @@ namespace o2
         String               texCoordsAttrName;  // Shader attribute name (e.g. "a_texCoords2") @SERIALIZABLE
         AssetRef<ImageAsset> image;              // Source image asset (provides texture + src rect) @SERIALIZABLE
 
+    public:
+		// Returns the texture reference from the image asset, or null if no image
         TextureRef GetTexture() const;
-        RectI      GetSrcRect() const;
 
-        bool operator==(const TextureSampler& other) const
-        {
-            return samplerUniformName == other.samplerUniformName &&
-                   texCoordsAttrName == other.texCoordsAttrName &&
-                   image == other.image;
-        }
+		// Returns the source rectangle from the image asset, or an empty rect if no image
+        RectI GetSrcRect() const;
+
+        bool operator==(const TextureSampler& other) const;
 
         SERIALIZABLE(TextureSampler);
     };
@@ -221,13 +220,13 @@ namespace o2
     // rendering state. Links shaders into a GPU program and caches uniform
     // and attribute locations. Provides a hash for efficient batch comparison.
     // -----------------------------------------------------------------------
-    class Material : public MaterialBase, public RefCounterable
+    class Material : public MaterialBase, public ISerializable, public RefCounterable, public ICloneableRef
     {
     public:
         PROPERTIES(Material);
-        GETTER(bool, ready, IsReady);                                // Ready state getter
+        GETTER(bool, ready, IsReady);                               // Ready state getter
         PROPERTY(TextureRef, texture, SetTexture, GetTexture);      // Material texture property
-        PROPERTY(BlendMode, blendMode, SetBlendMode, GetBlendMode);   // Blend mode for rendering @SCRIPTABLE
+        PROPERTY(BlendMode, blendMode, SetBlendMode, GetBlendMode); // Blend mode for rendering @SCRIPTABLE
 
     public:
         // Default constructor
@@ -317,25 +316,24 @@ namespace o2
         // Returns texture coordinate attribute location
         int GetTexCoordsAttribute() const;
 
+        SERIALIZABLE(Material);
+
     protected:
 		Ref<Shader> mVertexShader;   // Vertex shader reference
 		Ref<Shader> mFragmentShader; // Fragment shader reference
 
         TextureRef mTexture; // Optional primary material texture
 
-        BlendMode mBlendMode = BlendMode::Normal; // Blend mode for rendering
+        BlendMode mBlendMode = BlendMode::Normal; // Blend mode for rendering @SERIALIZABLE
 
-        Vector<Ref<IShaderParam>> mParams;     // Shader parameter list
-        Vector<TextureSampler>    mSamplers;   // Additional texture samplers
+		Vector<Ref<IShaderParam>> mParams;   // Shader parameter list @SERIALIZABLE @EDITOR_PROPERTY @EXPANDED_BY_DEFAULT
+		Vector<TextureSampler>    mSamplers; // Additional texture samplers @SERIALIZABLE @EDITOR_PROPERTY @EXPANDED_BY_DEFAULT
 
         size_t mHash = 0;         // Cached material state hash
         bool   mHashDirty = true; // True when hash needs recomputation
         bool   mReady = false;    // True when program is linked successfully
 
     protected:
-        // Called after reference creation
-        void PostRefConstruct();
-
         // Platform-specific program linking
         bool PlatformBuild();
 
@@ -345,11 +343,11 @@ namespace o2
         // Platform-specific uniform application
         void PlatformApplyParams() const;
 
-        // Platform-specific binding of additional texture samplers
-        void PlatformBindSamplers() const;
-
         // Computes the material state hash using std::hash
-        size_t ComputeHash() const;
+		size_t ComputeHash() const;
+
+		// Completion deserialization delta callback
+		void OnDeserializedDelta(const DataValue& node, const IObject& origin) override;
 
         friend class Render;
         friend class Ref<Material>;
@@ -485,6 +483,69 @@ CLASS_METHODS_META(o2::TextureSampler)
 
     FUNCTION().PUBLIC().SIGNATURE(TextureRef, GetTexture);
     FUNCTION().PUBLIC().SIGNATURE(RectI, GetSrcRect);
+}
+END_META;
+
+CLASS_BASES_META(o2::Material)
+{
+    BASE_CLASS(o2::MaterialBase);
+    BASE_CLASS(o2::ISerializable);
+    BASE_CLASS(o2::RefCounterable);
+    BASE_CLASS(o2::ICloneableRef);
+}
+END_META;
+CLASS_FIELDS_META(o2::Material)
+{
+    FIELD().PUBLIC().NAME(ready);
+    FIELD().PUBLIC().NAME(texture);
+    FIELD().PUBLIC().SCRIPTABLE_ATTRIBUTE().NAME(blendMode);
+    FIELD().PROTECTED().NAME(mVertexShader);
+    FIELD().PROTECTED().NAME(mFragmentShader);
+    FIELD().PROTECTED().NAME(mTexture);
+    FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(BlendMode::Normal).NAME(mBlendMode);
+    FIELD().PROTECTED().EDITOR_PROPERTY_ATTRIBUTE().EXPANDED_BY_DEFAULT_ATTRIBUTE().SERIALIZABLE_ATTRIBUTE().NAME(mParams);
+    FIELD().PROTECTED().EDITOR_PROPERTY_ATTRIBUTE().EXPANDED_BY_DEFAULT_ATTRIBUTE().SERIALIZABLE_ATTRIBUTE().NAME(mSamplers);
+    FIELD().PROTECTED().DEFAULT_VALUE(0).NAME(mHash);
+    FIELD().PROTECTED().DEFAULT_VALUE(true).NAME(mHashDirty);
+    FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mReady);
+}
+END_META;
+CLASS_METHODS_META(o2::Material)
+{
+
+    FUNCTION().PUBLIC().CONSTRUCTOR();
+    FUNCTION().PUBLIC().CONSTRUCTOR(const Material&);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetVertexShader, const Ref<Shader>&);
+    FUNCTION().PUBLIC().SIGNATURE(const Ref<Shader>&, GetVertexShader);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetFragmentShader, const Ref<Shader>&);
+    FUNCTION().PUBLIC().SIGNATURE(const Ref<Shader>&, GetFragmentShader);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetTexture, const TextureRef&);
+    FUNCTION().PUBLIC().SIGNATURE(const TextureRef&, GetTexture);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetBlendMode, BlendMode);
+    FUNCTION().PUBLIC().SIGNATURE(BlendMode, GetBlendMode);
+    FUNCTION().PUBLIC().SIGNATURE(void, AddParam, const Ref<IShaderParam>&);
+    FUNCTION().PUBLIC().SIGNATURE(void, RemoveParam, const String&);
+    FUNCTION().PUBLIC().SIGNATURE(const Vector<Ref<IShaderParam>>&, GetParams);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetParams, const Vector<Ref<IShaderParam>>&);
+    FUNCTION().PUBLIC().SIGNATURE(void, AddTextureSampler, const TextureSampler&);
+    FUNCTION().PUBLIC().SIGNATURE(void, RemoveTextureSampler, const String&);
+    FUNCTION().PUBLIC().SIGNATURE(const Vector<TextureSampler>&, GetTextureSamplers);
+    FUNCTION().PUBLIC().SIGNATURE(int, GetTotalTextureChannelsCount);
+    FUNCTION().PUBLIC().SIGNATURE(bool, Build);
+    FUNCTION().PUBLIC().SIGNATURE(bool, IsReady);
+    FUNCTION().PUBLIC().SIGNATURE(size_t, GetHash);
+    FUNCTION().PUBLIC().SIGNATURE(void, InvalidateHash);
+    FUNCTION().PUBLIC().SIGNATURE(void, ApplyParams);
+    FUNCTION().PUBLIC().SIGNATURE(int, GetTransformUniform);
+    FUNCTION().PUBLIC().SIGNATURE(int, GetTextureUniform);
+    FUNCTION().PUBLIC().SIGNATURE(int, GetPositionAttribute);
+    FUNCTION().PUBLIC().SIGNATURE(int, GetColorAttribute);
+    FUNCTION().PUBLIC().SIGNATURE(int, GetTexCoordsAttribute);
+    FUNCTION().PROTECTED().SIGNATURE(bool, PlatformBuild);
+    FUNCTION().PROTECTED().SIGNATURE(void, PlatformDestroy);
+    FUNCTION().PROTECTED().SIGNATURE(void, PlatformApplyParams);
+    FUNCTION().PROTECTED().SIGNATURE(size_t, ComputeHash);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnDeserializedDelta, const DataValue&, const IObject&);
 }
 END_META;
 // --- END META ---
