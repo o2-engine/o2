@@ -14,7 +14,10 @@ namespace o2
     IRectDrawable::IRectDrawable(const IRectDrawable& other) :
         Transform(other.mSize, other.mPosition, other.mAngle, other.mScale, other.mPivot),
         mColor(other.mColor), mEnabled(other.mEnabled), mMaterialAsset(other.mMaterialAsset)
-    {}
+    {
+        if (!mMaterialAsset && mMaterial)
+			mMaterial = mMaterial->CloneAsRef<Material>();
+    }
 
     IRectDrawable& IRectDrawable::operator=(const IRectDrawable& other)
     {
@@ -24,8 +27,12 @@ namespace o2
         mEnabled = other.mEnabled;
         mMaterialAsset = other.mMaterialAsset;
 
+		if (!mMaterialAsset && mMaterial)
+			mMaterial = mMaterial->CloneAsRef<Material>();
+
         OnColorChanged();
         OnEnableChanged();
+        OnMaterialChanged();
 
         return *this;
     }
@@ -33,7 +40,7 @@ namespace o2
     bool IRectDrawable::operator==(const IRectDrawable& other) const
     {
         return Transform::operator==(other) && mColor == other.mColor && mEnabled == other.mEnabled
-            && mMaterialAsset == other.mMaterialAsset;
+            && mMaterialAsset == other.mMaterialAsset && mMaterial == other.mMaterial;
     }
 
     bool IRectDrawable::operator!=(const IRectDrawable& other) const

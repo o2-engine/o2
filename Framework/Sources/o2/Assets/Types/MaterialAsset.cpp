@@ -68,17 +68,6 @@ namespace o2
         return { "mat" };
     }
 
-    void MaterialAsset::LoadData(const String& path)
-    {
-        Asset::LoadData(path);
-        RebuildMaterial();
-    }
-
-    void MaterialAsset::SaveData(const String& path) const
-    {
-        Asset::SaveData(path);
-    }
-
     Ref<RefCounterable> MaterialAsset::CastToRefCounterable(const Ref<MaterialAsset>& ref)
     {
         return DynamicCast<Asset>(ref);
@@ -98,6 +87,17 @@ namespace o2
 
         Build();
     }
+
+	void MaterialAsset::OnDeserialized(const DataValue& node)
+	{
+		RebuildMaterial();
+	}
+
+	void MaterialAsset::OnDeserializedDelta(const DataValue& node, const IObject& origin)
+	{
+        OnDeserialized(node);
+	}
+
 }
 
 DECLARE_TEMPLATE_CLASS(o2::AssetWithDefaultMeta<o2::MaterialAsset>);

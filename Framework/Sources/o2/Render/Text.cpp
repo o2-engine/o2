@@ -360,6 +360,14 @@ namespace o2
 
         currentMesh->SetTexture(mFont->mTexture);
 
+        Vec2F tangent = mTransform.xv.Normalized();
+        for (auto& mesh : mMeshes)
+        {
+            Vertex* verts = mesh->GetVertices<Vertex>();
+            for (UInt i = 0; i < mesh->vertexCount; i++)
+                verts[i].SetNormal(tangent);
+        }
+
         mUpdatingMesh = false;
     }
 

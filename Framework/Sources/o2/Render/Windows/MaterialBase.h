@@ -29,6 +29,7 @@ namespace o2
         GLint mPositionAttribute = -1;  // Location of a_position attribute
         GLint mColorAttribute = -1;     // Location of a_color attribute
         GLint mTexCoordsAttribute = -1; // Location of a_texCoords attribute (primary)
+        GLint mNormalAttribute = -1;    // Location of a_normal attribute
 
         // Cached uniform locations for custom params (filled in PlatformBuild, used in PlatformApplyParams)
         mutable Vector<GLint> mParamUniformLocations;

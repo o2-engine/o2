@@ -267,6 +267,14 @@ namespace o2
         glEnableVertexAttribArray((GLuint)mActiveUVAttribute);
         GL_CHECK_ERROR();
 
+        if (mActiveNormalAttribute >= 0 && mCurrentBatchVertexType.HasParam(VertexParam::Normal))
+        {
+            glVertexAttribPointer((GLuint)mActiveNormalAttribute, 3, GL_FLOAT, GL_FALSE, (GLsizei)stride,
+                                  (void*)mCurrentBatchVertexType.GetParamOffset(VertexParam::Normal));
+            glEnableVertexAttribArray((GLuint)mActiveNormalAttribute);
+            GL_CHECK_ERROR();
+        }
+
         mVertexBufferIdx = 0;
         mIndexBufferIdx = 0;
     }
@@ -342,6 +350,14 @@ namespace o2
                               (void*)mCurrentBatchVertexType.GetParamOffset(VertexParam::TexCoord0));
         glEnableVertexAttribArray((GLuint)mActiveUVAttribute);
         GL_CHECK_ERROR();
+
+        if (mActiveNormalAttribute >= 0 && mCurrentBatchVertexType.HasParam(VertexParam::Normal))
+        {
+            glVertexAttribPointer((GLuint)mActiveNormalAttribute, 3, GL_FLOAT, GL_FALSE, (GLsizei)stride,
+                                  (void*)mCurrentBatchVertexType.GetParamOffset(VertexParam::Normal));
+            glEnableVertexAttribArray((GLuint)mActiveNormalAttribute);
+            GL_CHECK_ERROR();
+        }
     }
 
     void Render::Clear(const Color4& color /*= Color4::Blur()*/)
@@ -434,6 +450,7 @@ namespace o2
             mActivePosAttribute = material->mPositionAttribute;
             mActiveColorAttribute = material->mColorAttribute;
             mActiveUVAttribute = material->mTexCoordsAttribute;
+            mActiveNormalAttribute = material->mNormalAttribute;
 
             glUseProgram(mActiveProgram);
             GL_CHECK_ERROR();
@@ -453,6 +470,13 @@ namespace o2
             glVertexAttribPointer((GLuint)mActiveUVAttribute, 2, GL_FLOAT, GL_FALSE, (GLsizei)stride,
                                   (void*)mCurrentBatchVertexType.GetParamOffset(VertexParam::TexCoord0));
             glEnableVertexAttribArray((GLuint)mActiveUVAttribute);
+
+            if (mActiveNormalAttribute >= 0 && mCurrentBatchVertexType.HasParam(VertexParam::Normal))
+            {
+                glVertexAttribPointer((GLuint)mActiveNormalAttribute, 3, GL_FLOAT, GL_FALSE, (GLsizei)stride,
+                                      (void*)mCurrentBatchVertexType.GetParamOffset(VertexParam::Normal));
+                glEnableVertexAttribArray((GLuint)mActiveNormalAttribute);
+            }
 
             // Bind additional texcoord attributes for extra samplers
             const UInt texCoordParams[] = { VertexParam::TexCoord1, VertexParam::TexCoord2 };

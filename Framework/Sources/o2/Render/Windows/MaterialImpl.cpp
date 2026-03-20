@@ -47,6 +47,7 @@ namespace o2
         mPositionAttribute = glGetAttribLocation(program, "a_position");
         mColorAttribute = glGetAttribLocation(program, "a_color");
         mTexCoordsAttribute = glGetAttribLocation(program, "a_texCoords");
+        mNormalAttribute = glGetAttribLocation(program, "a_normal");
 
         mParamUniformLocations.Resize(mParams.Count());
         for (int i = 0; i < mParams.Count(); i++)
@@ -81,7 +82,10 @@ namespace o2
         {
             mParamUniformLocations.Resize(mParams.Count());
             for (int i = 0; i < mParams.Count(); i++)
-                mParamUniformLocations[i] = glGetUniformLocation(mProgram, mParams[i]->GetName().Data());
+            {
+                if (mParams[i])
+                    mParamUniformLocations[i] = glGetUniformLocation(mProgram, mParams[i]->GetName().Data());
+            }
         }
 
         for (int i = 0; i < mParams.Count(); i++)

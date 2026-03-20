@@ -4,27 +4,27 @@
 namespace o2
 {
 	Vertex::Vertex():
-		x(0), y(0), color(0), tu(0), tv(0), z(1)
+		x(0), y(0), color(0), tu(0), tv(0), z(1), nx(1), ny(0), nz(0)
 	{}
 
 	Vertex::Vertex(float vx, float vy):
-		x(vx), y(vy), z(1), color(0), tu(0), tv(0)
+		x(vx), y(vy), z(1), color(0), tu(0), tv(0), nx(1), ny(0), nz(0)
 	{}
 
 	Vertex::Vertex(float vx, float vy, float vz):
-		x(vx), y(vy), z(vz), color(0), tu(0), tv(0)
+		x(vx), y(vy), z(vz), color(0), tu(0), tv(0), nx(1), ny(0), nz(0)
 	{}
 
 	Vertex::Vertex(float vx, float vy, float vz, Color32Bit vcolor, float vtu, float vtv):
-		x(vx), y(vy), z(vz), color(vcolor), tu(vtu), tv(vtv)
+		x(vx), y(vy), z(vz), color(vcolor), tu(vtu), tv(vtv), nx(1), ny(0), nz(0)
 	{}
 
 	Vertex::Vertex(float vx, float vy, Color32Bit vcolor, float vtu, float vtv):
-		x(vx), y(vy), z(1), color(vcolor), tu(vtu), tv(vtv)
+		x(vx), y(vy), z(1), color(vcolor), tu(vtu), tv(vtv), nx(1), ny(0), nz(0)
 	{}
 
 	Vertex::Vertex(const Vec2F& pos, Color32Bit vcolor, float vtu, float vtv):
-		x(pos.x), y(pos.y), z(1), color(vcolor), tu(vtu), tv(vtv)
+		x(pos.x), y(pos.y), z(1), color(vcolor), tu(vtu), tv(vtv), nx(1), ny(0), nz(0)
 	{}
 
 	void Vertex::Set(const Vec2F& pos, Color32Bit ccolor, float u, float v)
@@ -87,6 +87,16 @@ namespace o2
 		return Vec2F(x, y);
 	}
 
+	void Vertex::SetNormal(float nnx, float nny, float nnz)
+	{
+		nx = nnx; ny = nny; nz = nnz;
+	}
+
+	void Vertex::SetNormal(const Vec2F& tangent)
+	{
+		nx = tangent.x; ny = tangent.y; nz = 0;
+	}
+
 	size_t Vertex::ParamOffset(UInt param)
 	{
 		switch (param)
@@ -94,13 +104,14 @@ namespace o2
 			case VertexParam::Position:  return offsetof(Vertex, x);
 			case VertexParam::Color:     return offsetof(Vertex, color);
 			case VertexParam::TexCoord0: return offsetof(Vertex, tu);
+			case VertexParam::Normal:    return offsetof(Vertex, nx);
 			default: return 0;
 		}
 	}
 
 	VertexType Vertex::Type()
 	{
-		return VertexType(VertexParam::Position | VertexParam::Color | VertexParam::TexCoord0,
+		return VertexType(VertexParam::Position | VertexParam::Color | VertexParam::TexCoord0 | VertexParam::Normal,
 						  sizeof(Vertex), &Vertex::ParamOffset);
 	}
 
@@ -156,6 +167,7 @@ namespace o2
 			case VertexParam::Color:     return offsetof(Vertex2Tex, color);
 			case VertexParam::TexCoord0: return offsetof(Vertex2Tex, tu);
 			case VertexParam::TexCoord1: return offsetof(Vertex2Tex, tu2);
+			case VertexParam::Normal:    return offsetof(Vertex2Tex, nx);
 			default: return 0;
 		}
 	}
@@ -163,12 +175,12 @@ namespace o2
 	VertexType Vertex2Tex::Type()
 	{
 		return VertexType(
-			VertexParam::Position | VertexParam::Color | VertexParam::TexCoord0 | VertexParam::TexCoord1,
+			VertexParam::Position | VertexParam::Color | VertexParam::TexCoord0 | VertexParam::TexCoord1 | VertexParam::Normal,
 			sizeof(Vertex2Tex), &Vertex2Tex::ParamOffset);
 	}
 
 	Vertex2Tex::Vertex2Tex():
-		x(0), y(0), z(1), color(0), tu(0), tv(0), tu2(0), tv2(0)
+		x(0), y(0), z(1), color(0), tu(0), tv(0), tu2(0), tv2(0), nx(1), ny(0), nz(0)
 	{}
 
 	size_t Vertex3Tex::ParamOffset(UInt param)
@@ -180,6 +192,7 @@ namespace o2
 			case VertexParam::TexCoord0: return offsetof(Vertex3Tex, tu);
 			case VertexParam::TexCoord1: return offsetof(Vertex3Tex, tu2);
 			case VertexParam::TexCoord2: return offsetof(Vertex3Tex, tu3);
+			case VertexParam::Normal:    return offsetof(Vertex3Tex, nx);
 			default: return 0;
 		}
 	}
@@ -187,11 +200,11 @@ namespace o2
 	VertexType Vertex3Tex::Type()
 	{
 		return VertexType(VertexParam::Position | VertexParam::Color | VertexParam::TexCoord0 |
-						  VertexParam::TexCoord1 | VertexParam::TexCoord2,
+						  VertexParam::TexCoord1 | VertexParam::TexCoord2 | VertexParam::Normal,
 						  sizeof(Vertex3Tex), &Vertex3Tex::ParamOffset);
 	}
 
 	Vertex3Tex::Vertex3Tex():
-		x(0), y(0), z(1), color(0), tu(0), tv(0), tu2(0), tv2(0), tu3(0), tv3(0)
+		x(0), y(0), z(1), color(0), tu(0), tv(0), tu2(0), tv2(0), tu3(0), tv3(0), nx(1), ny(0), nz(0)
 	{}
 }

@@ -333,6 +333,11 @@ namespace o2
 		return mTexCoordsAttribute;
 	}
 
+	int Material::GetNormalAttribute() const
+	{
+		return mNormalAttribute;
+	}
+
 	void Material::ApplyParams() const
 	{
 		PlatformApplyParams();

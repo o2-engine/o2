@@ -79,6 +79,7 @@ namespace o2
 		float x, y, z;
 		Color32Bit color;
 		float tu, tv;
+		float nx, ny, nz;
 
 	public:
 		Vertex();
@@ -103,6 +104,9 @@ namespace o2
 		void SetUV(float u, float v);
 		void SetUV(const Vec2F& uv);
 
+		void SetNormal(float nnx, float nny, float nnz);
+		void SetNormal(const Vec2F& tangent);
+
 		static size_t ParamOffset(UInt param);
 		static VertexType Type();
 	};
@@ -116,6 +120,7 @@ namespace o2
 		Color32Bit color;
 		float tu, tv;
 		float tu2, tv2;
+		float nx, ny, nz;
 
 	public:
 		Vertex2Tex();
@@ -134,6 +139,7 @@ namespace o2
 		float tu, tv;
 		float tu2, tv2;
 		float tu3, tv3;
+		float nx, ny, nz;
 
 	public:
 		Vertex3Tex();

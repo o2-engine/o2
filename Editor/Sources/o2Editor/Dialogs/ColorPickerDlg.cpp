@@ -225,6 +225,8 @@ namespace Editor
 
         mColorValue.SetHSL(mColorHProperty.progressBar->value, anchorPos.y, anchorPos.x);
         UpdateValues(ParameterType::Picker);
+
+        OnColorChanged(ParameterType::Picker);
     }
 
     void ColorPickerDlg::UpdateColorPickHandle()

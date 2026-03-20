@@ -70,20 +70,14 @@ namespace o2
         AssetRef<FragmentShaderAsset> mFragmentShaderAsset; // Fragment shader asset reference @SERIALIZABLE
 
     protected:
-        // Loads material data from serialized file
-        void LoadData(const String& path) override;
-
-        // Saves material data to file
-        void SaveData(const String& path) const override;
-
         // Builds the material from current shader assets and parameters
         void RebuildMaterial();
 
         // Disambiguate On* callbacks from diamond ISerializable inheritance
         void OnSerialize(DataValue& node) const override {}
-        void OnDeserialized(const DataValue& node) override {}
+        void OnDeserialized(const DataValue& node) override;
         void OnSerializeDelta(DataValue& node, const IObject& origin) const override {}
-        void OnDeserializedDelta(const DataValue& node, const IObject& origin) override {}
+        void OnDeserializedDelta(const DataValue& node, const IObject& origin) override;
 
     public:
 #if IS_SCRIPTING_SUPPORTED
@@ -126,8 +120,6 @@ CLASS_METHODS_META(o2::MaterialAsset)
     FUNCTION().PUBLIC().SIGNATURE_STATIC(bool, IsAvailableToCreateFromEditor);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(bool, IsReferenceCanOwnInstance);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(Ref<RefCounterable>, CastToRefCounterable, const Ref<MaterialAsset>&);
-    FUNCTION().PROTECTED().SIGNATURE(void, LoadData, const String&);
-    FUNCTION().PROTECTED().SIGNATURE(void, SaveData, const String&);
     FUNCTION().PROTECTED().SIGNATURE(void, RebuildMaterial);
     FUNCTION().PROTECTED().SIGNATURE(void, OnSerialize, DataValue&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnDeserialized, const DataValue&);

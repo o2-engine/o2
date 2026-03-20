@@ -445,6 +445,11 @@ namespace o2
     void Sprite::UpdateMesh()
     {
         (this->*mMeshBuildFunc)();
+
+        Vec2F tangent = mTransform.xv.Normalized();
+        Vertex* verts = mMesh.GetVertices<Vertex>();
+        for (UInt i = 0; i < mMesh.vertexCount; i++)
+            verts[i].SetNormal(tangent);
     }
 
     void Sprite::BuildDefaultMesh()

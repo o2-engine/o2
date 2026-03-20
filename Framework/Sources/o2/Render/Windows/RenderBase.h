@@ -25,6 +25,7 @@ namespace o2
         GLint  mActivePosAttribute;      // Currently active position attribute location
         GLint  mActiveColorAttribute;    // Currently active color attribute location
         GLint  mActiveUVAttribute;       // Currently active texcoords attribute location
+        GLint  mActiveNormalAttribute = -1; // Currently active normal attribute location
 
         float  mCurrentMvp[16];          // Cached MVP matrix for material rebinding
 

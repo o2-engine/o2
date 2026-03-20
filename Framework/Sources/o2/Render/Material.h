@@ -316,6 +316,9 @@ namespace o2
         // Returns texture coordinate attribute location
         int GetTexCoordsAttribute() const;
 
+        // Returns normal attribute location
+        int GetNormalAttribute() const;
+
         SERIALIZABLE(Material);
 
     protected:
@@ -541,6 +544,7 @@ CLASS_METHODS_META(o2::Material)
     FUNCTION().PUBLIC().SIGNATURE(int, GetPositionAttribute);
     FUNCTION().PUBLIC().SIGNATURE(int, GetColorAttribute);
     FUNCTION().PUBLIC().SIGNATURE(int, GetTexCoordsAttribute);
+    FUNCTION().PUBLIC().SIGNATURE(int, GetNormalAttribute);
     FUNCTION().PROTECTED().SIGNATURE(bool, PlatformBuild);
     FUNCTION().PROTECTED().SIGNATURE(void, PlatformDestroy);
     FUNCTION().PROTECTED().SIGNATURE(void, PlatformApplyParams);
