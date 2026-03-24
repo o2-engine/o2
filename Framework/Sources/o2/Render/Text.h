@@ -4,7 +4,7 @@
 #include "o2/Assets/Types/BitmapFontAsset.h"
 #include "o2/Assets/Types/VectorFontAsset.h"
 #include "o2/Render/Font.h"
-#include "o2/Render/RectDrawable.h"
+#include "o2/Render/IRectDrawable.h"
 #include "o2/Utils/Types/String.h"
 
 namespace o2
@@ -246,7 +246,6 @@ namespace o2
         bool mUpdatingMesh; // True, when mesh is already updating
 
     protected:
-
         // Updating meshes
         void UpdateMesh();
 
@@ -262,11 +261,14 @@ namespace o2
         // Calculates and returns text basis
         Basis CalculateTextBasis() const;
 
-        // Called when color was changed
-        void OnColorChanged() override;
-
         // Called when basis was changed
-        void BasisChanged() override;
+		void BasisChanged() override;
+
+		// Called when color was changed
+		void OnColorChanged() override;
+
+		// Called when material or material asset was changed (by user or code)
+		void OnMaterialChanged() override;
 
         // Calling when deserializing
         void OnDeserialized(const DataValue& node) override;
@@ -348,8 +350,9 @@ CLASS_METHODS_META(o2::Text)
     FUNCTION().PROTECTED().SIGNATURE(void, TransformMesh, const Basis&);
     FUNCTION().PROTECTED().SIGNATURE(void, PrepareMesh, int);
     FUNCTION().PROTECTED().SIGNATURE(Basis, CalculateTextBasis);
-    FUNCTION().PROTECTED().SIGNATURE(void, OnColorChanged);
     FUNCTION().PROTECTED().SIGNATURE(void, BasisChanged);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnColorChanged);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnMaterialChanged);
     FUNCTION().PROTECTED().SIGNATURE(void, OnDeserialized, const DataValue&);
 }
 END_META;

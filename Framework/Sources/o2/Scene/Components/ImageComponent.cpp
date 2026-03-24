@@ -23,12 +23,6 @@ namespace o2
         mSerializeEnabled = false;
     }
 
-    ImageComponent::ImageComponent(const UID& imageId) :
-        Sprite(imageId)
-    {
-        mSerializeEnabled = false;
-    }
-
     ImageComponent::ImageComponent(TextureRef texture, const RectI& srcRect) :
         Sprite(texture, srcRect)
     {

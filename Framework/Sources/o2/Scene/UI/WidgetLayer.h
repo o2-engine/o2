@@ -1,6 +1,6 @@
 #pragma once
 
-#include "o2/Render/RectDrawable.h"
+#include "o2/Render/IRectDrawable.h"
 #include "o2/Scene/UI/WidgetLayerLayout.h"
 #include "o2/Utils/Basic/ITree.h"
 #include "o2/Utils/Editor/Attributes/ExpandedByDefaultAttribute.h"

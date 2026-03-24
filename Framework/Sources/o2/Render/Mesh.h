@@ -68,21 +68,6 @@ namespace o2
 		// Returns const index buffer pointer
         const VertexIndex* GetIndexes() const;
 
-        // Drawing mesh
-        void Draw();
-
-        // Sets texture
-        void SetTexture(const TextureRef& texture);
-
-        // Returns texture ptr
-        const TextureRef& GetTexture() const;
-
-        // Sets texture source rect in pixel coordinates (for atlas sub-images)
-        void SetTextureSrcRect(const RectI& rect);
-
-        // Returns texture source rect
-        const RectI& GetTextureSrcRect() const;
-
         // Sets max vertex count buffer
         void SetMaxVertexCount(const UInt& count);
 
@@ -93,7 +78,22 @@ namespace o2
         UInt GetMaxVertexCount() const;
 
         // Returns max polygons count
-        UInt GetMaxPolyCount() const;
+		UInt GetMaxPolyCount() const;
+
+		// Drawing mesh
+		void Draw();
+
+		// Sets texture
+		void SetTexture(const TextureRef& texture);
+
+		// Returns texture ptr
+		const TextureRef& GetTexture() const;
+
+		// Sets texture source rect in pixel coordinates (for atlas sub-images)
+		void SetTextureSrcRect(const RectI& rect);
+
+		// Returns texture source rect
+		const RectI& GetTextureSrcRect() const;
 
         CLONEABLE_REF(Mesh);
 

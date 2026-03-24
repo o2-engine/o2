@@ -2,6 +2,7 @@
 
 #include "o2/Assets/Types/MaterialAsset.h"
 #include "o2/Render/IDrawable.h"
+#include "o2/Render/Material.h"
 #include "o2/Utils/Editor/Attributes/RangeAttribute.h"
 #include "o2/Utils/Math/Color.h"
 #include "o2/Utils/Math/Transform.h"
@@ -19,8 +20,9 @@ namespace o2
         PROPERTY(Color4, color, SetColor, GetColor);                                     // Color property @SCRIPTABLE
         PROPERTY(Color4, overrideColor, SetOverrideColor, GetOverrideColor);             // Override color property, used to modify color from outside @SCRIPTABLE
         PROPERTY(float, transparency, SetTransparency, GetTransparency);                 // Transparency property, changing alpha in color @SCRIPTABLE @RANGE(0, 1)
-        PROPERTY(bool, enabled, SetEnabled, IsEnabled);                                   // Enable property @SCRIPTABLE
-        PROPERTY(AssetRef<MaterialAsset>, material, SetMaterialAsset, GetMaterialAsset);  // Material (asset) for rendering @SCRIPTABLE
+		PROPERTY(bool, enabled, SetEnabled, IsEnabled);                                  // Enable property @SCRIPTABLE
+		PROPERTY(AssetRef<MaterialAsset>, material, SetMaterialAsset, GetMaterialAsset); // Material (asset) for rendering @SCRIPTABLE
+		ACCESSOR(Ref<IShaderParam>, shaderParam, String, GetShaderParam, GetAllShaderParamsMap); // Shader parameter accessor by name
 
     public:
         // Constructor
@@ -85,6 +87,12 @@ namespace o2
         // Returns current material (from material asset if set, else direct override; may be null)
         Ref<Material> GetMaterial() const override;
 
+        // Returns a shader parameter by uniform name from the current material, or nullptr if not found
+        Ref<IShaderParam> GetShaderParam(const String& name) const;
+
+        // Returns all shader parameters from the current material as a name-to-parameter map
+        Map<String, Ref<IShaderParam>> GetAllShaderParamsMap() const;
+
         SERIALIZABLE(IRectDrawable);
         CLONEABLE_REF(IRectDrawable);
 
@@ -106,6 +114,9 @@ namespace o2
 
         // Called when enabling changed
         virtual void OnEnableChanged() {}
+
+		// Called when material or material asset was changed (by user or code)
+        void OnMaterialChanged() override;
     };
 
     // -----------------------------
@@ -152,6 +163,7 @@ CLASS_FIELDS_META(o2::IRectDrawable)
     FIELD().PUBLIC().RANGE_ATTRIBUTE(0, 1).SCRIPTABLE_ATTRIBUTE().NAME(transparency);
     FIELD().PUBLIC().SCRIPTABLE_ATTRIBUTE().NAME(enabled);
     FIELD().PUBLIC().SCRIPTABLE_ATTRIBUTE().NAME(material);
+    FIELD().PUBLIC().NAME(shaderParam);
     FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(Color4::White()).NAME(mColor);
     FIELD().PROTECTED().DEFAULT_VALUE(Color4::White()).NAME(mOverrideColor);
     FIELD().PROTECTED().NAME(mResultColor);
@@ -161,6 +173,8 @@ CLASS_FIELDS_META(o2::IRectDrawable)
 END_META;
 CLASS_METHODS_META(o2::IRectDrawable)
 {
+
+    typedef Map<String, Ref<IShaderParam>> _tmp1;
 
     FUNCTION().PUBLIC().CONSTRUCTOR(const Vec2F&, const Vec2F&, float, const Vec2F&, const Color4&, const Vec2F&);
     FUNCTION().PUBLIC().CONSTRUCTOR(const IRectDrawable&);
@@ -178,9 +192,12 @@ CLASS_METHODS_META(o2::IRectDrawable)
     FUNCTION().PUBLIC().SIGNATURE(const AssetRef<MaterialAsset>&, GetMaterialAsset);
     FUNCTION().PUBLIC().SIGNATURE(void, SetMaterial, const Ref<Material>&);
     FUNCTION().PUBLIC().SIGNATURE(Ref<Material>, GetMaterial);
+    FUNCTION().PUBLIC().SIGNATURE(Ref<IShaderParam>, GetShaderParam, const String&);
+    FUNCTION().PUBLIC().SIGNATURE(_tmp1, GetAllShaderParamsMap);
     FUNCTION().PROTECTED().SIGNATURE(void, UpdateColor);
     FUNCTION().PROTECTED().SIGNATURE(void, OnColorChanged);
     FUNCTION().PROTECTED().SIGNATURE(void, OnEnableChanged);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnMaterialChanged);
 }
 END_META;
 

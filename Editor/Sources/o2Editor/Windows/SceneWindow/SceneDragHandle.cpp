@@ -2,7 +2,7 @@
 #include "SceneDragHandle.h"
 
 #include "o2/Application/Application.h"
-#include "o2/Render/RectDrawable.h"
+#include "o2/Render/IRectDrawable.h"
 #include "o2Editor/Windows/WindowsManager.h"
 #include "o2Editor/Windows/SceneWindow/SceneEditScreen.h"
 #include "o2Editor/Windows/SceneWindow/SceneWindow.h"

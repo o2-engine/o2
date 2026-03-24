@@ -34,6 +34,14 @@ namespace o2
 		tu = u; tv = v;
 	}
 
+	void Vertex::Set(const Vec2F& pos, Color32Bit ccolor, float u, float v, const Vec2F& normal)
+	{
+		x = pos.x; y = pos.y;
+		color = ccolor;
+		tu = u; tv = v;
+		nx = normal.x; ny = normal.y; nz = 0;
+	}
+
 	void Vertex::Set(float px, float py, Color32Bit ccolor, float u, float v)
 	{
 		x = px; y = py;

@@ -6,7 +6,7 @@
 #include "o2/Render/Particles/ParticlesContainer.h"
 #include "o2/Render/Particles/ParticlesEffects.h"
 #include "o2/Render/Particles/ParticlesEmitterShapes.h"
-#include "o2/Render/RectDrawable.h"
+#include "o2/Render/IRectDrawable.h"
 #include "o2/Utils/Editor/Attributes/GroupAttribute.h"
 #include "o2/Utils/Editor/Attributes/NameAttribute.h"
 #include "o2/Utils/Editor/Attributes/RangeAttribute.h"

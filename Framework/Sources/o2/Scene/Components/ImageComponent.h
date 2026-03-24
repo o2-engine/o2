@@ -26,9 +26,6 @@ namespace o2
         // Constructor from image asset by path
         explicit ImageComponent(const String& imagePath);
 
-        // Constructor from image asset by id
-        explicit ImageComponent(const UID& imageId);
-
         // Constructor from color
         explicit ImageComponent(const Color4& color);
 
@@ -116,7 +113,6 @@ CLASS_METHODS_META(o2::ImageComponent)
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().CONSTRUCTOR();
     FUNCTION().PUBLIC().CONSTRUCTOR(const AssetRef<ImageAsset>&);
     FUNCTION().PUBLIC().CONSTRUCTOR(const String&);
-    FUNCTION().PUBLIC().CONSTRUCTOR(const UID&);
     FUNCTION().PUBLIC().CONSTRUCTOR(const Color4&);
     FUNCTION().PUBLIC().CONSTRUCTOR(const Bitmap&);
     FUNCTION().PUBLIC().CONSTRUCTOR(const Sprite&);

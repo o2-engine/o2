@@ -435,7 +435,16 @@ namespace o2
         }
     }
 
-    void Text::BasisChanged()
+
+	void Text::OnMaterialChanged()
+	{
+        for (auto& mesh : mMeshes)
+			mesh->SetMaterial(GetMaterial());
+
+		IRectDrawable::OnMaterialChanged();
+	}
+
+	void Text::BasisChanged()
     {
         if (mSymbolsSet.mAreaSize != mSize)
             CheckCharactersAndRebuildMesh();

@@ -207,6 +207,27 @@ namespace o2
 		return mBlendMode;
 	}
 
+	Ref<IShaderParam> Material::GetShaderParam(const String& name) const
+	{
+		for (auto& param : mParams)
+		{
+			if (param->GetName() == name)
+				return param;
+		}
+
+		return nullptr;
+	}
+
+	Map<String, Ref<IShaderParam>> Material::GetAllShaderParamsMap() const
+	{
+		Map<String, Ref<IShaderParam>> result;
+
+		for (auto& param : mParams)
+			result[param->GetName()] = param;
+
+		return result;
+	}
+
 	void Material::AddParam(const Ref<IShaderParam>& param)
 	{
 		for (int i = 0; i < mParams.Count(); i++)

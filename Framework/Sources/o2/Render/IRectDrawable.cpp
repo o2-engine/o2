@@ -1,5 +1,5 @@
 #include "o2/stdafx.h"
-#include "RectDrawable.h"
+#include "IRectDrawable.h"
 
 #include "o2/Render/Material.h"
 
@@ -15,8 +15,6 @@ namespace o2
         Transform(other.mSize, other.mPosition, other.mAngle, other.mScale, other.mPivot),
         mColor(other.mColor), mEnabled(other.mEnabled), mMaterialAsset(other.mMaterialAsset)
     {
-        if (!mMaterialAsset && mMaterial)
-			mMaterial = mMaterial->CloneAsRef<Material>();
     }
 
     IRectDrawable& IRectDrawable::operator=(const IRectDrawable& other)
@@ -25,13 +23,11 @@ namespace o2
 
         mColor = other.mColor;
         mEnabled = other.mEnabled;
-        mMaterialAsset = other.mMaterialAsset;
+		mMaterialAsset = other.mMaterialAsset;
 
-		if (!mMaterialAsset && mMaterial)
-			mMaterial = mMaterial->CloneAsRef<Material>();
+        UpdateColor();
 
-        OnColorChanged();
-        OnEnableChanged();
+		OnEnableChanged();
         OnMaterialChanged();
 
         return *this;
@@ -40,7 +36,7 @@ namespace o2
     bool IRectDrawable::operator==(const IRectDrawable& other) const
     {
         return Transform::operator==(other) && mColor == other.mColor && mEnabled == other.mEnabled
-            && mMaterialAsset == other.mMaterialAsset && mMaterial == other.mMaterial;
+            && mMaterialAsset == other.mMaterialAsset;
     }
 
     bool IRectDrawable::operator!=(const IRectDrawable& other) const
@@ -122,13 +118,29 @@ namespace o2
         return IDrawable::GetMaterial();
     }
 
+    Ref<IShaderParam> IRectDrawable::GetShaderParam(const String& name) const
+    {
+        auto mat = GetMaterial();
+        return mat ? mat->GetShaderParam(name) : nullptr;
+    }
+
+    Map<String, Ref<IShaderParam>> IRectDrawable::GetAllShaderParamsMap() const
+    {
+        auto mat = GetMaterial();
+        return mat ? mat->GetAllShaderParamsMap() : Map<String, Ref<IShaderParam>>();
+    }
+
     void IRectDrawable::UpdateColor()
     {
         mResultColor = mColor * mOverrideColor;
         OnColorChanged();
     }
 
-    FunctionalRectDrawable::FunctionalRectDrawable(const Function<void(const Basis& transform, const Color4& color)>& draw, 
+	void IRectDrawable::OnMaterialChanged()
+	{
+	}
+
+	FunctionalRectDrawable::FunctionalRectDrawable(const Function<void(const Basis& transform, const Color4& color)>& draw,
                                                    const Vec2F& size /*= Vec2F()*/, const Vec2F& position /*= Vec2F()*/, 
                                                    float angle /*= 0.0f*/, const Vec2F& scale /*= Vec2F(1.0f, 1.0f)*/, 
                                                    const Color4& color /*= Color4::White()*/, const Vec2F& pivot /*= Vec2F(0.5f, 0.5f)*/):

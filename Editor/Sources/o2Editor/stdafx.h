@@ -34,7 +34,7 @@
 #include "o2/Render/Particles/ParticlesEffects.h"
 #include "o2/Render/Particles/ParticlesEmitter.h"
 #include "o2/Render/Particles/ParticlesEmitterShapes.h"
-#include "o2/Render/RectDrawable.h"
+#include "o2/Render/IRectDrawable.h"
 #include "o2/Render/Texture.h"
 #include "o2/Render/TextureRef.h"
 #include "o2/Render/VectorFont.h"

@@ -95,6 +95,7 @@ namespace o2
 		operator Vec2F() const;
 
 		void Set(const Vec2F& pos, Color32Bit ccolor, float u, float v);
+		void Set(const Vec2F& pos, Color32Bit ccolor, float u, float v, const Vec2F& normal);
 		void Set(float px, float py, Color32Bit ccolor, float u, float v);
 		void Set(const Vec2F& pos, float cz, Color32Bit ccolor, float u, float v);
 

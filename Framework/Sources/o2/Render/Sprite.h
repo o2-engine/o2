@@ -2,7 +2,7 @@
 
 #include "o2/Assets/Types/ImageAsset.h"
 #include "o2/Render/Mesh.h"
-#include "o2/Render/RectDrawable.h"
+#include "o2/Render/IRectDrawable.h"
 #include "o2/Render/TextureRef.h"
 #include "o2/Utils/Editor/Attributes/ScriptableAttribute.h"
 #include "o2/Utils/Math/Border.h"
@@ -40,9 +40,6 @@ namespace o2
 
         // Constructor from image asset by path @SCRIPTABLE
         explicit Sprite(const String& imagePath);
-
-        // Constructor from image asset by id
-        explicit Sprite(UID imageId);
 
         // Constructor from color
         explicit Sprite(const Color4& color);
@@ -221,7 +218,7 @@ namespace o2
         void OnMaterialChanged() override;
 
         // Initialized texture by image: uses atlas part or texture
-        void InitializeTextureAndMaterial();
+        void UpdateMaterial();
 
         // Updates mesh geometry
         void UpdateMesh();
@@ -299,7 +296,6 @@ CLASS_METHODS_META(o2::Sprite)
     FUNCTION().PUBLIC().CONSTRUCTOR();
     FUNCTION().PUBLIC().CONSTRUCTOR(const AssetRef<ImageAsset>&);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().CONSTRUCTOR(const String&);
-    FUNCTION().PUBLIC().CONSTRUCTOR(UID);
     FUNCTION().PUBLIC().CONSTRUCTOR(const Color4&);
     FUNCTION().PUBLIC().CONSTRUCTOR(const Bitmap&);
     FUNCTION().PUBLIC().CONSTRUCTOR(TextureRef, const RectI&);
@@ -348,7 +344,7 @@ CLASS_METHODS_META(o2::Sprite)
     FUNCTION().PROTECTED().SIGNATURE(void, BasisChanged);
     FUNCTION().PROTECTED().SIGNATURE(void, OnColorChanged);
     FUNCTION().PROTECTED().SIGNATURE(void, OnMaterialChanged);
-    FUNCTION().PROTECTED().SIGNATURE(void, InitializeTextureAndMaterial);
+    FUNCTION().PROTECTED().SIGNATURE(void, UpdateMaterial);
     FUNCTION().PROTECTED().SIGNATURE(void, UpdateMesh);
     FUNCTION().PROTECTED().SIGNATURE(void, BuildDefaultMesh);
     FUNCTION().PROTECTED().SIGNATURE(void, BuildSlicedMesh);

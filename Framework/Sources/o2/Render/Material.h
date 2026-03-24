@@ -22,6 +22,7 @@
 #include "o2/Utils/Property.h"
 #include "o2/Utils/Serialization/Serializable.h"
 #include "o2/Utils/Types/CommonTypes.h"
+#include "o2/Utils/Types/Containers/Map.h"
 #include "o2/Utils/Types/Containers/Vector.h"
 
 #include <functional>
@@ -224,8 +225,8 @@ namespace o2
     {
     public:
         PROPERTIES(Material);
-        GETTER(bool, ready, IsReady);                               // Ready state getter
-        PROPERTY(TextureRef, texture, SetTexture, GetTexture);      // Material texture property
+        GETTER(bool, ready, IsReady);                                          // Ready state getter
+        PROPERTY(TextureRef, texture, SetTexture, GetTexture);                 // Material texture property @EDITOR_IGNORE
         PROPERTY(BlendMode, blendMode, SetBlendMode, GetBlendMode); // Blend mode for rendering @SCRIPTABLE
 
     public:
@@ -261,6 +262,12 @@ namespace o2
 
         // Returns blend mode
         BlendMode GetBlendMode() const;
+
+        // Returns a shader parameter by uniform name, or nullptr if not found
+        Ref<IShaderParam> GetShaderParam(const String& name) const;
+
+        // Returns all shader parameters as a name-to-parameter map
+        Map<String, Ref<IShaderParam>> GetAllShaderParamsMap() const;
 
         // Adds a shader parameter, replacing any existing parameter with the same name
         void AddParam(const Ref<IShaderParam>& param);
@@ -500,7 +507,7 @@ END_META;
 CLASS_FIELDS_META(o2::Material)
 {
     FIELD().PUBLIC().NAME(ready);
-    FIELD().PUBLIC().NAME(texture);
+    FIELD().PUBLIC().EDITOR_IGNORE_ATTRIBUTE().NAME(texture);
     FIELD().PUBLIC().SCRIPTABLE_ATTRIBUTE().NAME(blendMode);
     FIELD().PROTECTED().NAME(mVertexShader);
     FIELD().PROTECTED().NAME(mFragmentShader);
@@ -516,6 +523,8 @@ END_META;
 CLASS_METHODS_META(o2::Material)
 {
 
+    typedef Map<String, Ref<IShaderParam>> _tmp1;
+
     FUNCTION().PUBLIC().CONSTRUCTOR();
     FUNCTION().PUBLIC().CONSTRUCTOR(const Material&);
     FUNCTION().PUBLIC().SIGNATURE(void, SetVertexShader, const Ref<Shader>&);
@@ -526,6 +535,8 @@ CLASS_METHODS_META(o2::Material)
     FUNCTION().PUBLIC().SIGNATURE(const TextureRef&, GetTexture);
     FUNCTION().PUBLIC().SIGNATURE(void, SetBlendMode, BlendMode);
     FUNCTION().PUBLIC().SIGNATURE(BlendMode, GetBlendMode);
+    FUNCTION().PUBLIC().SIGNATURE(Ref<IShaderParam>, GetShaderParam, const String&);
+    FUNCTION().PUBLIC().SIGNATURE(_tmp1, GetAllShaderParamsMap);
     FUNCTION().PUBLIC().SIGNATURE(void, AddParam, const Ref<IShaderParam>&);
     FUNCTION().PUBLIC().SIGNATURE(void, RemoveParam, const String&);
     FUNCTION().PUBLIC().SIGNATURE(const Vector<Ref<IShaderParam>>&, GetParams);

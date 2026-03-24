@@ -19,7 +19,6 @@ namespace o2
         REF_COUNTERABLE_IMPL(Asset, Material);
 
         PROPERTIES(MaterialAsset);
-        PROPERTY(BlendMode, blendMode, SetBlendMode, GetBlendMode);                                    // Blend mode (inherited from Material) @EDITOR_PROPERTY
 		PROPERTY(AssetRef<VertexShaderAsset>, vertexShader, SetVertexShader, GetVertexShader);         // Vertex shader asset reference @EDITOR_PROPERTY
 		PROPERTY(AssetRef<FragmentShaderAsset>, fragmentShader, SetFragmentShader, GetFragmentShader); // Fragment shader asset reference @EDITOR_PROPERTY
 
@@ -98,7 +97,6 @@ CLASS_BASES_META(o2::MaterialAsset)
 END_META;
 CLASS_FIELDS_META(o2::MaterialAsset)
 {
-    FIELD().PUBLIC().EDITOR_PROPERTY_ATTRIBUTE().NAME(blendMode);
     FIELD().PUBLIC().EDITOR_PROPERTY_ATTRIBUTE().NAME(vertexShader);
     FIELD().PUBLIC().EDITOR_PROPERTY_ATTRIBUTE().NAME(fragmentShader);
     FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().NAME(mVertexShaderAsset);
