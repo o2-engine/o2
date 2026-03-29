@@ -26,7 +26,7 @@ namespace o2
 
     Vector<String> FragmentShaderAsset::GetFileExtensions()
     {
-        return { "fsh" };
+        return { "frag" };
     }
 
     void FragmentShaderAsset::LoadData(const String& path)
@@ -36,6 +36,10 @@ namespace o2
         mShader = mmake<Shader>();
         mShader->SetFileName(path);
         mShader->Compile(source, Shader::Type::Fragment);
+
+#if IS_EDITOR
+        mShader->SetFileEditDate(o2FileSystem.GetFileInfo(path).editDate);
+#endif
     }
 }
 

@@ -146,6 +146,11 @@ namespace o2
             LoadDDS(fileName);
         else
             o2Render.mLog->Error("Failed to load texture from file " + fileName);
+
+#if IS_EDITOR
+        if (mReady && !mFileName.IsEmpty())
+            mFileEditDate = o2FileSystem.GetFileInfo(mFileName).editDate;
+#endif
     }
 
     void Texture::Create(UID atlasAssetId, int page)
@@ -216,7 +221,10 @@ namespace o2
     void Texture::Reload()
     {
         if (!mFileName.IsEmpty())
+        {
             Create(mFileName);
+            o2Render.mLog->Out("Reloaded texture " + mFileName);
+        }
     }
 
     Vec2I Texture::GetSize() const
@@ -258,6 +266,18 @@ namespace o2
     {
         return mAtlasPage;
     }
+
+#if IS_EDITOR
+    const TimeStamp& Texture::GetFileEditDate() const
+    {
+        return mFileEditDate;
+    }
+
+    void Texture::SetFileEditDate(const TimeStamp& date)
+    {
+        mFileEditDate = date;
+    }
+#endif
 }
 // --- META ---
 

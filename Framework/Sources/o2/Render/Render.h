@@ -310,6 +310,11 @@ namespace o2
 		// Returns default material
 		const Ref<Material>& GetDefaultMaterial() const;
 
+#if IS_EDITOR
+		// Reloads all shader and texture assets from disk on editor activation
+		void ReloadAssetsOnActivation();
+#endif
+
 	protected:
 		PrimitiveType mCurrentPrimitiveType = PrimitiveType::Polygon; // Type of drawing primitives for next DIP
 

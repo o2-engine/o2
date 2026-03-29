@@ -16,12 +16,14 @@ namespace o2
     class IRectDrawable: public Transform, public virtual IDrawable, virtual public RefCounterable, virtual public ICloneableRef
     {
     public:
-        PROPERTIES(IRectDrawable);
-        PROPERTY(Color4, color, SetColor, GetColor);                                     // Color property @SCRIPTABLE
-        PROPERTY(Color4, overrideColor, SetOverrideColor, GetOverrideColor);             // Override color property, used to modify color from outside @SCRIPTABLE
-        PROPERTY(float, transparency, SetTransparency, GetTransparency);                 // Transparency property, changing alpha in color @SCRIPTABLE @RANGE(0, 1)
-		PROPERTY(bool, enabled, SetEnabled, IsEnabled);                                  // Enable property @SCRIPTABLE
-		PROPERTY(AssetRef<MaterialAsset>, material, SetMaterialAsset, GetMaterialAsset); // Material (asset) for rendering @SCRIPTABLE
+		PROPERTIES(IRectDrawable);
+		PROPERTY(bool, enabled, SetEnabled, IsEnabled); // Enable property @SCRIPTABLE
+
+		PROPERTY(Color4, color, SetColor, GetColor);                         // Color property @SCRIPTABLE
+		PROPERTY(Color4, overrideColor, SetOverrideColor, GetOverrideColor); // Override color property, used to modify color from outside @SCRIPTABLE
+		PROPERTY(float, transparency, SetTransparency, GetTransparency);     // Transparency property, changing alpha in color @SCRIPTABLE @RANGE(0, 1)
+
+		PROPERTY(AssetRef<MaterialAsset>, material, SetMaterialAsset, GetMaterialAsset);         // Material (asset) for rendering @SCRIPTABLE
 		ACCESSOR(Ref<IShaderParam>, shaderParam, String, GetShaderParam, GetAllShaderParamsMap); // Shader parameter accessor by name
 
     public:
@@ -158,10 +160,10 @@ CLASS_BASES_META(o2::IRectDrawable)
 END_META;
 CLASS_FIELDS_META(o2::IRectDrawable)
 {
+    FIELD().PUBLIC().SCRIPTABLE_ATTRIBUTE().NAME(enabled);
     FIELD().PUBLIC().SCRIPTABLE_ATTRIBUTE().NAME(color);
     FIELD().PUBLIC().SCRIPTABLE_ATTRIBUTE().NAME(overrideColor);
     FIELD().PUBLIC().RANGE_ATTRIBUTE(0, 1).SCRIPTABLE_ATTRIBUTE().NAME(transparency);
-    FIELD().PUBLIC().SCRIPTABLE_ATTRIBUTE().NAME(enabled);
     FIELD().PUBLIC().SCRIPTABLE_ATTRIBUTE().NAME(material);
     FIELD().PUBLIC().NAME(shaderParam);
     FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(Color4::White()).NAME(mColor);

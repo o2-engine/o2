@@ -13,6 +13,7 @@
 #endif
 
 #include "o2/Utils/Property.h"
+#include "o2/Utils/System/Time/TimeStamp.h"
 #include "o2/Utils/Types/CommonTypes.h"
 #include "o2/Utils/Types/Ref.h"
 #include "o2/Utils/Types/String.h"
@@ -70,6 +71,14 @@ namespace o2
         // Sets shader file name for identification
         void SetFileName(const String& fileName);
 
+#if IS_EDITOR
+        // Returns the file modification timestamp recorded at last load
+        const TimeStamp& GetFileEditDate() const;
+
+        // Sets the file modification timestamp
+        void SetFileEditDate(const TimeStamp& date);
+#endif
+
     protected:
         Type   mType = Type::Vertex; // Shader stage type
         String mSource;              // GLSL source code
@@ -85,6 +94,10 @@ namespace o2
 
         // Platform-specific destruction
         void PlatformDestroy();
+
+#if IS_EDITOR
+        TimeStamp mFileEditDate; // File modification time at last load
+#endif
 
         friend class Render;
         friend class Material;

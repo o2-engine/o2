@@ -18,6 +18,7 @@
 
 #include "o2/Utils/Math/Vector2.h"
 #include "o2/Utils/Property.h"
+#include "o2/Utils/System/Time/TimeStamp.h"
 #include "o2/Utils/Types/String.h"
 #include "o2/Utils/Types/UID.h"
 
@@ -131,6 +132,14 @@ namespace o2
         // Returns atlas page
         int GetAtlasPage() const;
 
+#if IS_EDITOR
+        // Returns the file modification timestamp recorded at last load
+        const TimeStamp& GetFileEditDate() const;
+
+        // Sets the file modification timestamp
+        void SetFileEditDate(const TimeStamp& date);
+#endif
+
     protected:
         Vec2I mSize; // Size of texture
 
@@ -144,6 +153,10 @@ namespace o2
         int mAtlasPage;    // Atlas page
 
         bool mReady; // Is texture ready to use
+
+#if IS_EDITOR
+        TimeStamp mFileEditDate; // File modification time at last load
+#endif
 
     protected:
         // It is called after reference initialization at object construction, registers texture in render

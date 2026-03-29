@@ -1,9 +1,12 @@
 #include "o2/stdafx.h"
 #include "o2/Render/Render.h"
 
+#include "o2/Application/Application.h"
 #include "o2/Application/Input.h"
 #include "o2/Assets/Assets.h"
 #include "o2/Assets/Types/AtlasAsset.h"
+#include "o2/Assets/Types/MaterialAsset.h"
+#include "o2/Assets/Types/ShaderAsset.h"
 #include "o2/Integration.h"
 #include "o2/Render/Font.h"
 #include "o2/Render/Material.h"
@@ -13,6 +16,7 @@
 #include "o2/Render/Texture.h"
 #include "o2/Utils/Debug/Debug.h"
 #include "o2/Utils/Debug/Log/LogStream.h"
+#include "o2/Utils/FileSystem/FileSystem.h"
 #include "o2/Utils/Math/Geometry.h"
 #include "o2/Utils/Math/Interpolation.h"
 
@@ -42,6 +46,10 @@ namespace o2
 
 		if (IsDevMode())
 			o2Assets.onAssetsRebuilt += MakeFunction(this, &Render::OnAssetsRebuilt);
+
+#if IS_EDITOR
+		o2Application.onActivated += MakeFunction(this, &Render::ReloadAssetsOnActivation);
+#endif
 
 		mReady = true;
 	}
@@ -1326,4 +1334,78 @@ namespace o2
 	{
 		return scissorRect == other.scissorRect;
 	}
+
+#if IS_EDITOR
+	void Render::ReloadAssetsOnActivation()
+	{
+		o2Assets.RebuildAssets();
+
+		int reloadedShaders = 0;
+		for (auto& asset : o2Assets.mCachedAssets)
+		{
+			auto shaderAsset = DynamicCast<ShaderAsset>(asset.GetRef());
+			if (!shaderAsset || !shaderAsset->GetShader())
+				continue;
+
+			String path = shaderAsset->GetFullPath();
+			TimeStamp currentDate = o2FileSystem.GetFileInfo(path).editDate;
+			if (currentDate == shaderAsset->GetShader()->GetFileEditDate())
+				continue;
+
+			String source = o2FileSystem.ReadFile(path);
+			if (source.IsEmpty())
+				continue;
+
+			auto shader = shaderAsset->GetShader();
+			if (shader->Compile(source, shader->GetShaderType()))
+			{
+				shader->SetFileEditDate(currentDate);
+				reloadedShaders++;
+			}
+			else
+				mLog->Error("Failed to recompile shader: " + shaderAsset->GetPath());
+		}
+
+		if (reloadedShaders > 0)
+		{
+			for (auto& asset : o2Assets.mCachedAssets)
+			{
+				auto materialAsset = DynamicCast<MaterialAsset>(asset.GetRef());
+				if (materialAsset)
+					materialAsset->Build();
+			}
+
+			if (mDefaultMaterial)
+				mDefaultMaterial->Build();
+
+			mCurrentMaterial = nullptr;
+		}
+
+		int reloadedTextures = 0;
+		for (auto& tex : mTextures)
+		{
+			if (!tex || tex->GetFileName().IsEmpty())
+				continue;
+
+			TimeStamp currentDate = o2FileSystem.GetFileInfo(tex->GetFileName()).editDate;
+			if (currentDate == tex->GetFileEditDate())
+				continue;
+
+			tex->Reload();
+			reloadedTextures++;
+		}
+
+		if (reloadedTextures > 0)
+		{
+			for (auto& atlas : mAtlases)
+				atlas->ReloadPages();
+
+			for (auto& spr : mSprites)
+				spr->ReloadImage();
+		}
+
+		if (reloadedShaders > 0 || reloadedTextures > 0)
+			mLog->Out("Reloaded " + (String)reloadedShaders + " shaders, " + (String)reloadedTextures + " textures");
+	}
+#endif
 }

@@ -63,6 +63,18 @@ namespace o2
 
     void Shader::PostRefConstruct()
     {}
+
+#if IS_EDITOR
+    const TimeStamp& Shader::GetFileEditDate() const
+    {
+        return mFileEditDate;
+    }
+
+    void Shader::SetFileEditDate(const TimeStamp& date)
+    {
+        mFileEditDate = date;
+    }
+#endif
 }
 // --- META ---
 

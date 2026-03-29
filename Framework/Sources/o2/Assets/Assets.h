@@ -18,6 +18,7 @@ namespace Editor
 namespace o2
 {
     class LogStream;
+    class Render;
     struct AssetInfo;
 
     FORWARD_CLASS_REF(Asset);
@@ -206,6 +207,7 @@ namespace o2
 
         friend class Asset;
         friend class FolderAsset;
+        friend class Render;
         friend class Editor::EditorApplication;
     };
 }
