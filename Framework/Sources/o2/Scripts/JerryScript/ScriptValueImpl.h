@@ -18,6 +18,31 @@ namespace o2
     template<typename T> struct RefInnerType { using type = T; };
     template<typename T> struct RefInnerType<Ref<T>> { using type = T; };
 
+    // Helper to extract types from member function pointers
+    template<typename _type> struct MemberFuncTraits;
+
+    template<typename _class_type, typename _res_type, typename ... _args>
+    struct MemberFuncTraits<_res_type(_class_type::*)(_args ...)>
+    {
+        using ClassType = _class_type;
+        using ResType = _res_type;
+        using ArgsTuple = std::tuple<_args ...>;
+        static constexpr size_t Arity = sizeof...(_args);
+        static constexpr bool IsConst = false;
+        template<size_t _idx> using ArgType = std::tuple_element_t<_idx, ArgsTuple>;
+    };
+
+    template<typename _class_type, typename _res_type, typename ... _args>
+    struct MemberFuncTraits<_res_type(_class_type::*)(_args ...) const>
+    {
+        using ClassType = _class_type;
+        using ResType = _res_type;
+        using ArgsTuple = std::tuple<_args ...>;
+        static constexpr size_t Arity = sizeof...(_args);
+        static constexpr bool IsConst = true;
+        template<size_t _idx> using ArgType = std::tuple_element_t<_idx, ArgsTuple>;
+    };
+
     // ------------------------------
     // DataContainer - stores by value
     // ------------------------------
@@ -153,43 +178,46 @@ namespace o2
         }
     };
 
-    template<bool isConst, typename _class_type, typename _res_type, typename ... _args>
-    struct ScriptClassFunction
+    // -------------------------------------------------------
+    // Direct class method handler - one unique C function per
+    // member pointer, no heap container on the function object
+    // -------------------------------------------------------
+
+    template<auto _func_ptr, size_t ... _idx>
+    static jerry_value_t ClassMethodCallImpl(const jerry_value_t this_val,
+                                             const jerry_value_t args_p[],
+                                             const jerry_length_t args_count,
+                                             std::index_sequence<_idx...>)
     {
-        using type = typename std::conditional<isConst, _res_type(_class_type::*)(_args ... args) const,
-                                                        _res_type(_class_type::*)(_args ... args)>::type;
-    };
+        using _traits = MemberFuncTraits<decltype(_func_ptr)>;
+        using _class_type = typename _traits::ClassType;
+        using _res_type = typename _traits::ResType;
 
-    template<bool isConst, typename _class_type, typename _res_type, typename ... _args>
-    struct ScriptClassFunctionContainer : public ScriptValueBase::IFunctionContainer
+        auto container = ScriptValueBase::GetNativeContainer(this_val);
+        _class_type* obj = static_cast<_class_type*>(container->GetData());
+
+        if constexpr (std::is_void_v<_res_type>)
+        {
+            (obj->*_func_ptr)(ConvertJerryArg<typename _traits::template ArgType<_idx>>((jerry_value_t*)args_p, _idx, args_count)...);
+            return jerry_create_undefined();
+        }
+        else
+        {
+            ScriptValue res((obj->*_func_ptr)(ConvertJerryArg<typename _traits::template ArgType<_idx>>((jerry_value_t*)args_p, _idx, args_count)...));
+            return jerry_acquire_value(res.jvalue);
+        }
+    }
+
+    template<auto _func_ptr>
+    static jerry_value_t ClassMethodCallHandler(const jerry_value_t function_obj,
+                                                const jerry_value_t this_val,
+                                                const jerry_value_t args_p[],
+                                                const jerry_length_t args_count)
     {
-        using FuncType = typename ScriptClassFunction<isConst, _class_type, _res_type, _args ...>::type;
-        FuncType funcPtr;
-
-        ScriptClassFunctionContainer(FuncType fp) : funcPtr(fp) {}
-
-        jerry_value_t Invoke(jerry_value_t thisValue, jerry_value_t* args, int argsCount) override
-        {
-            auto container = ScriptValueBase::GetNativeContainer(thisValue);
-            _class_type* thisObj = static_cast<_class_type*>(container->GetData());
-            return InvokeImpl(thisObj, args, argsCount, std::index_sequence_for<_args...>{});
-        }
-
-        template<size_t... Is>
-        jerry_value_t InvokeImpl(_class_type* obj, jerry_value_t* args, int argsCount, std::index_sequence<Is...>)
-        {
-            if constexpr (std::is_void<_res_type>::value)
-            {
-                (obj->*funcPtr)(ConvertJerryArg<_args>(args, Is, argsCount)...);
-                return jerry_create_undefined();
-            }
-            else
-            {
-                ScriptValue res((obj->*funcPtr)(ConvertJerryArg<_args>(args, Is, argsCount)...));
-                return jerry_acquire_value(res.jvalue);
-            }
-        }
-    };
+        using _traits = MemberFuncTraits<decltype(_func_ptr)>;
+        return ClassMethodCallImpl<_func_ptr>(this_val, args_p, args_count,
+                                              std::make_index_sequence<_traits::Arity>{});
+    }
 
     // -------------------------------------------------------
     // Prototype-based field getter/setter containers
@@ -386,52 +414,6 @@ namespace o2
         SetProperty(ScriptValue(name), ScriptValue(value));
     }
 
-    template<typename _class_type, typename _res_type, typename ... _args>
-    void ScriptValue::SetProperty(const char* name, _class_type* object, _res_type(_class_type::* functionPtr)(_args ... args))
-    {
-        if constexpr (std::is_same<void, _res_type>::value)
-        {
-            SetProperty(name, std::function<void(_args ...)>(
-                [object, functionPtr](_args ... args)
-                {
-                    (object->*functionPtr)(args ...);
-                }));
-        }
-        else
-        {
-            using __res_type = typename std::remove_const<typename std::remove_reference<_res_type>::type>::type;
-            SetProperty(name, std::function<__res_type(_args ...)>(
-                [object, functionPtr](_args ... args)
-                {
-                    __res_type res = (object->*functionPtr)(args ...);
-                    return res;
-                }));
-        }
-    }
-
-    template<typename _class_type, typename _res_type, typename ... _args>
-    void ScriptValue::SetProperty(const char* name, _class_type* object, _res_type(_class_type::* functionPtr)(_args ... args) const)
-    {
-        if constexpr (std::is_same<void, _res_type>::value)
-        {
-            SetProperty(name, std::function<void(_args ...)>(
-                [object, functionPtr](_args ... args)
-                {
-                    (object->*functionPtr)(args ...);
-                }));
-        }
-        else
-        {
-            using __res_type = typename std::remove_const<typename std::remove_reference<_res_type>::type>::type;
-            SetProperty(name, std::function<__res_type(_args ...)>(
-                [object, functionPtr](_args ... args)
-                {
-                    __res_type res = (object->*functionPtr)(args ...);
-                    return res;
-                }));
-        }
-    }
-
     template<typename _type>
     void ScriptValue::SetPropertyWrapper(const ScriptValue& name, _type& value)
     {
@@ -573,49 +555,13 @@ namespace o2
     }
 
     template<typename _res_type, typename ... _args>
-    void ScriptValue::SetThisFunction(const Function<_res_type(ScriptValue, _args ...)>& func)
+    void ScriptValue::SetFunction(const Function<_res_type(ScriptValue, _args ...)>& func)
     {
         Accept(jerry_create_external_function(&CallFunction));
 
         auto funcContainer = mnew ScriptThisFunctionContainer<Function<_res_type(ScriptValue, _args ...)>, _res_type, _args ...>(func);
 
         jerry_set_object_native_pointer(jvalue, (IDataContainer*)funcContainer, &GetDataDeleter().info);
-    }
-
-    template<typename _class_type, typename _res_type, typename ... _args>
-    void ScriptValue::SetClassFunction(_res_type(_class_type::* functionPtr)(_args ... args))
-    {
-        Accept(jerry_create_external_function(&CallFunction));
-
-        IDataContainer* funcContainer = mnew ScriptClassFunctionContainer<false, _class_type, _res_type, _args ...>(functionPtr);
-
-        jerry_set_object_native_pointer(jvalue, funcContainer, &GetDataDeleter().info);
-    }
-
-    template<typename _class_type, typename _res_type, typename ... _args>
-    void ScriptValue::SetClassFunction(_res_type(_class_type::* functionPtr)(_args ... args) const)
-    {
-        Accept(jerry_create_external_function(&CallFunction));
-
-        IDataContainer* funcContainer = mnew ScriptClassFunctionContainer<true, _class_type, _res_type, _args ...>(functionPtr);
-
-        jerry_set_object_native_pointer(jvalue, funcContainer, &GetDataDeleter().info);
-    }
-
-    template<typename _class_type, typename _res_type, typename ... _args>
-    ScriptValue ScriptValue::ClassFunction(_res_type(_class_type::* functionPtr)(_args ... args))
-    {
-        ScriptValue res;
-        res.SetClassFunction(functionPtr);
-        return res;
-    }
-
-    template<typename _class_type, typename _res_type, typename ... _args>
-    ScriptValue ScriptValue::ClassFunction(_res_type(_class_type::* functionPtr)(_args ... args) const)
-    {
-        ScriptValue res;
-        res.SetClassFunction(functionPtr);
-        return res;
     }
 
     // -------------------------------------------------------
@@ -653,13 +599,8 @@ namespace o2
             template<typename _object_type, typename ... _args>
             void Constructor(_object_type* object, Type* type);
 
-            template<typename _object_type, typename _res_type, typename ... _args>
-            void Signature(_object_type* object, Type* type, const char* name,
-                           _res_type(_object_type::* pointer)(_args ...));
-
-            template<typename _object_type, typename _res_type, typename ... _args>
-            void Signature(_object_type* object, Type* type, const char* name,
-                           _res_type(_object_type::* pointer)(_args ...) const);
+            template<auto pointer, typename _object_type>
+            void Signature(_object_type* object, Type* type, const char* name);
 
             template<typename _object_type, typename _res_type, typename ... _args>
             void SignatureStatic(_object_type* object, Type* type, const char* name,
@@ -780,7 +721,7 @@ namespace o2
     void RegisterScriptConstructor(Type* type)
     {
         ScriptValue thisFunc;
-        thisFunc.SetThisFunction<void, _script_args ...>(Function<void(ScriptValue thisValue, _script_args ...)>(
+        thisFunc.SetFunction<void, _script_args ...>(Function<void(ScriptValue thisValue, _script_args ...)>(
             [](ScriptValue thisValue, _script_args ... args)
             {
                 if constexpr (std::is_base_of<RefCounterable, _object_type>::value)
@@ -825,18 +766,12 @@ namespace o2
         }
     }
 
-    template<typename _object_type, typename _res_type, typename ... _args>
-    void ScriptPrototypeProcessor::FunctionProcessor::Signature(_object_type* object, Type* type, const char* name,
-                                                                      _res_type(_object_type::* pointer)(_args ...))
+    template<auto pointer, typename _object_type>
+    void ScriptPrototypeProcessor::FunctionProcessor::Signature(_object_type* object, Type* type, const char* name)
     {
-        _object_type::GetScriptPrototype().SetProperty(name, ScriptValue::ClassFunction<_object_type, _res_type, _args ...>(pointer));
-    }
-
-    template<typename _object_type, typename _res_type, typename ... _args>
-    void ScriptPrototypeProcessor::FunctionProcessor::Signature(_object_type* object, Type* type, const char* name,
-                                                                      _res_type(_object_type::* pointer)(_args ...) const)
-    {
-        _object_type::GetScriptPrototype().SetProperty(name, ScriptValue::ClassFunction<_object_type, _res_type, _args ...>(pointer));
+        ScriptValue funcVal;
+        funcVal.Accept(jerry_create_external_function(&ClassMethodCallHandler<pointer>));
+        _object_type::GetScriptPrototype().SetProperty(name, funcVal);
     }
 
     template<typename _object_type, typename _res_type, typename ... _args>

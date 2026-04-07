@@ -144,14 +144,6 @@ namespace o2 {
         template<typename _type>
         void SetProperty(const char *name, const _type &value);
 
-        // Sets property value
-        template<typename _class_type, typename _res_type, typename ... _args>
-        void SetProperty(const char *name, _class_type *object, _res_type(_class_type::* functionPtr)(_args ... args));
-
-        // Sets property value
-        template<typename _class_type, typename _res_type, typename ... _args>
-        void SetProperty(const char *name, _class_type *object, _res_type(_class_type::* functionPtr)(_args ... args) const);
-
         // Sets property wrapper. Uses value reference to get/set value from script
         template<typename _type>
         void SetPropertyWrapper(const ScriptValue &name, _type &value);
@@ -233,23 +225,7 @@ namespace o2 {
 
         // Sets function with passed this value
         template<typename _res_type, typename ... _args>
-        void SetThisFunction(const Function<_res_type(ScriptValue, _args ...)> &func);
-
-        // Sets function from class. This must contain
-        template<typename _class_type, typename _res_type, typename ... _args>
-        void SetClassFunction(_res_type(_class_type::* functionPtr)(_args ... args));
-
-        // Sets function from class. This must contain
-        template<typename _class_type, typename _res_type, typename ... _args>
-        void SetClassFunction(_res_type(_class_type::* functionPtr)(_args ... args) const);
-
-        // Creates script value from class function
-        template<typename _class_type, typename _res_type, typename ... _args>
-        static ScriptValue ClassFunction(_res_type(_class_type::* functionPtr)(_args ... args));
-
-        // Creates script value from class function
-        template<typename _class_type, typename _res_type, typename ... _args>
-        static ScriptValue ClassFunction(_res_type(_class_type::* functionPtr)(_args ... args) const);
+        void SetFunction(const Function<_res_type(ScriptValue, _args ...)> &func);
 
     private:
         template<typename ... _args>

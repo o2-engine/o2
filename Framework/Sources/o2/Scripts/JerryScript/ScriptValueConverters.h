@@ -2,6 +2,7 @@
 
 #if defined(SCRIPTING_BACKEND_JERRYSCRIPT)
 #include "o2/Utils/Reflection/Type.h"
+#include "o2/Utils/Types/Ref.h"
 
 namespace o2
 {
@@ -427,6 +428,32 @@ namespace o2
             }
             else
                 value = nullptr;
+        }
+    };
+
+    template<typename T>
+    struct ScriptValue::Converter<Ref<T>, void_t<decltype(std::declval<T*>()->GetScriptValue())>>
+    {
+        static constexpr bool isSupported = true;
+
+        static void Write(const Ref<T>& value, ScriptValue& data)
+        {
+            data.jvalue = jerry_create_undefined();
+            if (value)
+                data = value->GetScriptValue();
+        }
+
+        static void Read(Ref<T>& value, const ScriptValue& data)
+        {
+            auto dataContainer = GetNativeContainer(data.jvalue);
+            if (dataContainer)
+            {
+                auto* object = dataContainer->TryCastToIObject();
+                T* typed = dynamic_cast<T*>(object);
+                value = typed ? Ref<T>(typed) : Ref<T>();
+            }
+            else
+                value = Ref<T>();
         }
     };
 

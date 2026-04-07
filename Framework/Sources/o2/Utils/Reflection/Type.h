@@ -857,8 +857,14 @@ typedef void* (*GetValuePointerFuncPtr)(void*);
 #define FUNCTION() \
     processor.StartFunction()
 
+template<typename _class_type, typename _res_type, typename ... _args>
+constexpr auto ResolveMethodPtr(_res_type(_class_type::*ptr)(_args ...)) { return ptr; }
+
+template<typename _class_type, typename _res_type, typename ... _args>
+constexpr auto ResolveMethodPtr(_res_type(_class_type::*ptr)(_args ...) const) { return ptr; }
+
 #define SIGNATURE(RETURN_TYPE, NAME, ...) \
-    template Signature<thisclass, RETURN_TYPE, ##__VA_ARGS__>(object, type, #NAME, &thisclass::NAME)
+    template Signature<ResolveMethodPtr<thisclass, RETURN_TYPE, ##__VA_ARGS__>(&thisclass::NAME)>(object, type, #NAME)
 
 #define CONSTRUCTOR(...) \
     template Constructor<thisclass, ##__VA_ARGS__>(object, type)

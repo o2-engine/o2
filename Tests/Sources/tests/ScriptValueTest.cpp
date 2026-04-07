@@ -6,6 +6,11 @@
 #include "o2/Utils/Types/Containers/Vector.h"
 #include "tests/TestScriptObject.h"
 
+#if IS_SCRIPTING_SUPPORTED
+#include "o2/Scene/Actor.h"
+#include "o2/Scene/UI/Widgets/Image.h"
+#endif
+
 using namespace o2;
 
 #if IS_SCRIPTING_SUPPORTED
@@ -320,6 +325,108 @@ TEST(ScriptValue, ConstructedObjectFieldsAndMethods) {
     EXPECT_EQ(o2Scripts.GetGlobal().GetProperty("cDbl").GetValue<int>(), 10);
     EXPECT_EQ(o2Scripts.GetGlobal().GetProperty("cDesc").ToString(), "built:5");
     EXPECT_FLOAT_EQ(o2Scripts.GetGlobal().GetProperty("cScore").GetValue<float>(), 10.0f);
+}
+
+// JS function invoked from C++; argument is another native object (ScriptValue / Jerry native pointer).
+// Using a scriptable method on the argument checks it is the real binding, not a plain object.
+TEST(ScriptValue, ScriptFunctionWithNativeObjectArgument) {
+    auto other = mmake<TestScriptObject>();
+    other->value = 21;
+    other->name = "arg";
+
+    o2Scripts.Eval("function readNativeOther(other) { return other.GetDoubleValue(); }");
+    o2Scripts.CollectGarbage();
+
+    ScriptValue fn = o2Scripts.GetGlobal().GetProperty("readNativeOther");
+    EXPECT_TRUE(fn.IsFunction());
+
+    ScriptValue otherSv = other->GetScriptValue();
+    EXPECT_TRUE(otherSv.IsObject());
+    EXPECT_TRUE(otherSv.IsObjectContainer());
+
+    int result = fn.Invoke<int>(ScriptValue(), otherSv);
+    EXPECT_EQ(result, 42);
+
+    // Same flow from pure script: pass global holding native container into a function
+    o2Scripts.GetGlobal().SetProperty("scriptArgObj", otherSv);
+    o2Scripts.CollectGarbage();
+    o2Scripts.Eval("function sumWithOther(o) { return o.value + o.GetDoubleValue(); } var scriptPassSum = sumWithOther(scriptArgObj);");
+    EXPECT_EQ(o2Scripts.GetGlobal().GetProperty("scriptPassSum").GetValue<int>(), 63);
+}
+
+TEST(ScriptValue, NativeMethodTakesNativeObjectFromScript) {
+    auto a = mmake<TestScriptObject>();
+    a->value = 10;
+    a->name = "left";
+    auto b = mmake<TestScriptObject>();
+    b->value = 32;
+    b->name = "right";
+
+    o2Scripts.GetGlobal().SetProperty("sumLeft", a->GetScriptValue());
+    o2Scripts.GetGlobal().SetProperty("sumRight", b->GetScriptValue());
+    o2Scripts.CollectGarbage();
+
+    o2Scripts.Eval("var sumNativePair = sumLeft.SumValueWith(sumRight);");
+    EXPECT_EQ(o2Scripts.GetGlobal().GetProperty("sumNativePair").GetValue<int>(), 42);
+
+    o2Scripts.Eval("var sumNativeRev = sumRight.SumValueWith(sumLeft);");
+    EXPECT_EQ(o2Scripts.GetGlobal().GetProperty("sumNativeRev").GetValue<int>(), 42);
+
+    o2Scripts.Eval("var newPair = new o2.TestScriptObject(3, 'x'); var sumConstructed = newPair.SumValueWith(sumLeft);");
+    EXPECT_EQ(o2Scripts.GetGlobal().GetProperty("sumConstructed").GetValue<int>(), 13);
+}
+
+TEST(ScriptValue, NativeMethodTakesNativeObjectFromCpp) {
+    auto a = mmake<TestScriptObject>();
+    a->value = 7;
+    auto b = mmake<TestScriptObject>();
+    b->value = 5;
+
+    ScriptValue svA = a->GetScriptValue();
+    ScriptValue sumFn = svA.GetProperty("SumValueWith");
+    EXPECT_TRUE(sumFn.IsFunction());
+
+    int r = sumFn.Invoke<int>(svA, b);
+    EXPECT_EQ(r, 12);
+}
+
+TEST(ScriptValue, NativeStoresRefPassedFromScript) {
+    auto host = mmake<TestScriptObject>();
+    host->value = 100;
+    auto partner = mmake<TestScriptObject>();
+    partner->value = 5;
+
+    o2Scripts.GetGlobal().SetProperty("refHost", host->GetScriptValue());
+    o2Scripts.GetGlobal().SetProperty("refPartner", partner->GetScriptValue());
+    o2Scripts.CollectGarbage();
+
+    o2Scripts.Eval("refHost.SetLinkedPartner(refPartner); var sumLinked = refHost.SumWithLinkedPartner();");
+    EXPECT_EQ(o2Scripts.GetGlobal().GetProperty("sumLinked").GetValue<int>(), 105);
+
+    partner->value = 10;
+    o2Scripts.Eval("var sumLinked2 = refHost.SumWithLinkedPartner();");
+    EXPECT_EQ(o2Scripts.GetGlobal().GetProperty("sumLinked2").GetValue<int>(), 110);
+}
+
+// Mirrors Assets/Scripts/Reel.js CreateImages loop body: AssetRefImageAsset, new Image, imageAsset, SetParent(Actor).
+TEST(ScriptValue, ReelJsStyleImageWidgetCreateAndParent) {
+    auto container = mmake<Actor>();
+    o2Scripts.GetGlobal().SetProperty("reelImagesContainer", container->GetScriptValue());
+    o2Scripts.CollectGarbage();
+
+    o2Scripts.Eval(
+        "var rotatingImage = { info: { regularImage: new o2.AssetRefImageAsset() }, image: null };"
+        "var imageAsset = rotatingImage.info.regularImage;"
+        "var img = new o2.Image();"
+        "img.imageAsset = imageAsset;"
+        "img.SetParent(reelImagesContainer, false);"
+        "rotatingImage.image = img;"
+    );
+
+    EXPECT_EQ(container->GetChildren().Count(), 1);
+    Ref<Image> imageChild = DynamicCast<Image>(container->GetChildren()[0]);
+    EXPECT_TRUE(imageChild);
+    EXPECT_EQ(imageChild->GetParent().Lock(), container);
 }
 
 #else
