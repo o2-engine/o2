@@ -9,12 +9,52 @@
 
 namespace o2
 {
+    namespace
+    {
+        String FormatErrorLogMessage(const jerry_value_t error_object)
+        {
+            jerry_value_t strValue = jerry_value_to_string(error_object);
+            ScriptValue msgSv;
+            msgSv.AcquireValue(strValue);
+            jerry_release_value(strValue);
+            String msg = msgSv.GetValue<String>();
+
+            jerry_value_t backtrace = jerry_get_backtrace(32);
+            if (!jerry_value_is_array(backtrace))
+            {
+                jerry_release_value(backtrace);
+                return msg;
+            }
+
+            const uint32_t len = jerry_get_array_length(backtrace);
+            if (len == 0)
+            {
+                jerry_release_value(backtrace);
+                return msg;
+            }
+
+            msg += " at ";
+            for (uint32_t i = 0; i < len; i++)
+            {
+                jerry_value_t frame = jerry_get_property_by_index(backtrace, i);
+                if (i > 0)
+                    msg += " <- ";
+
+                ScriptValue frameSv;
+                frameSv.AcquireValue(frame);
+                jerry_release_value(frame);
+                msg += frameSv.GetValue<String>();
+            }
+
+            jerry_release_value(backtrace);
+            return msg;
+        }
+    } // namespace
+
     void ScriptEngineBase::ErrorCallback(const jerry_value_t error_object, void* user_p)
     {
-        auto strValue = jerry_value_to_string(error_object);
-        ScriptValue tmp;
-        tmp.AcquireValue(strValue);
-        o2Scripts.mLog->ErrorStr(tmp.GetValue<String>());
+        (void)user_p;
+        o2Scripts.mLog->ErrorStr(FormatErrorLogMessage(error_object));
     }
 
     jerry_value_t ScriptEngineBase::PrintCallback(const jerry_value_t func_obj_val, const jerry_value_t this_p,
