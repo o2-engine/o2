@@ -1,4 +1,5 @@
 #include "o2/Scripts/ScriptValueDef.h"
+#include "o2/Scripts/JerryScript/ScriptValueContainerAllocator.h"
 #include "o2/Utils/Debug/Debug.h"
 #include "o2/stdafx.h"
 
@@ -48,6 +49,12 @@ namespace o2
         jvalue = jerry_acquire_value(other.jvalue);
     }
 
+    ScriptValue::ScriptValue(ScriptValue&& other) noexcept
+    {
+        jvalue = other.jvalue;
+        other.jvalue = jerry_create_undefined();
+    }
+
     ScriptValue ScriptValue::operator[](const ScriptValue& name) const
     {
         return GetProperty(name);
@@ -79,6 +86,17 @@ namespace o2
         return *this;
     }
 
+    ScriptValue& ScriptValue::operator=(ScriptValue&& other) noexcept
+    {
+        if (this != &other)
+        {
+            jerry_release_value(jvalue);
+            jvalue = other.jvalue;
+            other.jvalue = jerry_create_undefined();
+        }
+        return *this;
+    }
+
     ScriptValue::ValueType ScriptValue::GetValueType() const
     {
         if (jerry_value_is_array(jvalue))
@@ -103,7 +121,8 @@ namespace o2
         if (type == ValueType::Array) 
         {
             ScriptValue res = EmptyArray();
-            for (int i = 0; i < GetLength(); i++)
+            int length = GetLength();
+            for (int i = 0; i < length; i++)
                 res.AddElement(GetElement(i).Copy());
 
             return res;
@@ -211,7 +230,8 @@ namespace o2
             return;
 
         auto allProperties = GetPropertyNames();
-        for (int i = 0; i < allProperties.GetLength(); i++)
+        int length = allProperties.GetLength();
+        for (int i = 0; i < length; i++)
         {
             ScriptValue key = allProperties.GetElement(i);
             ScriptValue value = GetProperty(key);
@@ -267,7 +287,6 @@ namespace o2
             | JERRY_PROPERTY_FILTER_EXLCUDE_NON_CONFIGURABLE
             | JERRY_PROPERTY_FILTER_EXLCUDE_NON_ENUMERABLE
             | JERRY_PROPERTY_FILTER_EXLCUDE_NON_WRITABLE
-            | JERRY_PROPERTY_FILTER_EXLCUDE_SYMBOLS
             | JERRY_PROPERTY_FILTER_EXLCUDE_INTEGER_INDICES
             | JERRY_PROPERTY_FILTER_INTEGER_INDICES_AS_NUMBER
         );
@@ -388,8 +407,7 @@ namespace o2
             auto res = jerry_call_function(jvalue, thisValue.jvalue, valuesBuf, args.Count());
 
             ScriptValue resValue;
-            jerry_release_value(resValue.jvalue);
-            resValue.jvalue = res;
+            resValue.Accept(res);
 
             return resValue;
         }
@@ -410,7 +428,19 @@ namespace o2
 
     void ScriptValueBase::DataContainerDeleter::Free(void* ptr)
     {
-        delete (IDataContainer*)ptr;
+        auto* container = static_cast<IDataContainer*>(ptr);
+        if (container)
+            container->Destroy();
+    }
+
+    void* ScriptValueBase::AllocateContainerMemory(size_t size, size_t alignment)
+    {
+        return ScriptContainerAllocator::GetInstance().Allocate(size, alignment);
+    }
+
+    void ScriptValueBase::FreeContainerMemory(void* ptr)
+    {
+        ScriptContainerAllocator::GetInstance().Free(ptr);
     }
 
     ScriptValueBase::IDataContainer* ScriptValueBase::GetNativeContainer(jerry_value_t jval)
@@ -488,6 +518,161 @@ namespace o2
     ScriptValue*& ScriptValuePrototypes::GetColor4Prototype()
     {
         static ScriptValue* value;
+        return value;
+    }
+
+    namespace
+    {
+        const ScriptValue& GetCachedPropertyKey(ScriptValue*& storage, const char* name)
+        {
+            if (!storage)
+                storage = mnew ScriptValue(name);
+
+            return *storage;
+        }
+
+        void ReleaseCachedScriptValue(ScriptValue*& value)
+        {
+            delete value;
+            value = nullptr;
+        }
+    }
+
+    void ScriptValuePropertyKeys::Initialize()
+    {
+        GetX();
+        GetY();
+        GetLeft();
+        GetBottom();
+        GetRight();
+        GetTop();
+        GetR();
+        GetG();
+        GetB();
+        GetA();
+    }
+
+    void ScriptValuePropertyKeys::Deinitialize()
+    {
+        ReleaseCachedScriptValue(XStorage());
+        ReleaseCachedScriptValue(YStorage());
+        ReleaseCachedScriptValue(LeftStorage());
+        ReleaseCachedScriptValue(BottomStorage());
+        ReleaseCachedScriptValue(RightStorage());
+        ReleaseCachedScriptValue(TopStorage());
+        ReleaseCachedScriptValue(RStorage());
+        ReleaseCachedScriptValue(GStorage());
+        ReleaseCachedScriptValue(BStorage());
+        ReleaseCachedScriptValue(AStorage());
+    }
+
+    const ScriptValue& ScriptValuePropertyKeys::GetX()
+    {
+        return GetCachedPropertyKey(XStorage(), "x");
+    }
+
+    const ScriptValue& ScriptValuePropertyKeys::GetY()
+    {
+        return GetCachedPropertyKey(YStorage(), "y");
+    }
+
+    const ScriptValue& ScriptValuePropertyKeys::GetLeft()
+    {
+        return GetCachedPropertyKey(LeftStorage(), "left");
+    }
+
+    const ScriptValue& ScriptValuePropertyKeys::GetBottom()
+    {
+        return GetCachedPropertyKey(BottomStorage(), "bottom");
+    }
+
+    const ScriptValue& ScriptValuePropertyKeys::GetRight()
+    {
+        return GetCachedPropertyKey(RightStorage(), "right");
+    }
+
+    const ScriptValue& ScriptValuePropertyKeys::GetTop()
+    {
+        return GetCachedPropertyKey(TopStorage(), "top");
+    }
+
+    const ScriptValue& ScriptValuePropertyKeys::GetR()
+    {
+        return GetCachedPropertyKey(RStorage(), "r");
+    }
+
+    const ScriptValue& ScriptValuePropertyKeys::GetG()
+    {
+        return GetCachedPropertyKey(GStorage(), "g");
+    }
+
+    const ScriptValue& ScriptValuePropertyKeys::GetB()
+    {
+        return GetCachedPropertyKey(BStorage(), "b");
+    }
+
+    const ScriptValue& ScriptValuePropertyKeys::GetA()
+    {
+        return GetCachedPropertyKey(AStorage(), "a");
+    }
+
+    ScriptValue*& ScriptValuePropertyKeys::XStorage()
+    {
+        static ScriptValue* value = nullptr;
+        return value;
+    }
+
+    ScriptValue*& ScriptValuePropertyKeys::YStorage()
+    {
+        static ScriptValue* value = nullptr;
+        return value;
+    }
+
+    ScriptValue*& ScriptValuePropertyKeys::LeftStorage()
+    {
+        static ScriptValue* value = nullptr;
+        return value;
+    }
+
+    ScriptValue*& ScriptValuePropertyKeys::BottomStorage()
+    {
+        static ScriptValue* value = nullptr;
+        return value;
+    }
+
+    ScriptValue*& ScriptValuePropertyKeys::RightStorage()
+    {
+        static ScriptValue* value = nullptr;
+        return value;
+    }
+
+    ScriptValue*& ScriptValuePropertyKeys::TopStorage()
+    {
+        static ScriptValue* value = nullptr;
+        return value;
+    }
+
+    ScriptValue*& ScriptValuePropertyKeys::RStorage()
+    {
+        static ScriptValue* value = nullptr;
+        return value;
+    }
+
+    ScriptValue*& ScriptValuePropertyKeys::GStorage()
+    {
+        static ScriptValue* value = nullptr;
+        return value;
+    }
+
+    ScriptValue*& ScriptValuePropertyKeys::BStorage()
+    {
+        static ScriptValue* value = nullptr;
+        return value;
+    }
+
+    ScriptValue*& ScriptValuePropertyKeys::AStorage()
+    {
+        static ScriptValue* value = nullptr;
         return value;
     }
 
@@ -570,11 +755,9 @@ namespace o2
     {
         String constructor;
         auto nspace = GetNameSpaceAndConstructor(o2Scripts.GetGlobal(), type->GetName(), constructor);
-        auto t1 = constructorFunc.GetValueType();
         ScriptValue proto;
         proto.SetProperty("type", ScriptValue(type));
         constructorFunc.SetPrototype(proto);
-        auto t2 = proto.GetValueType();
         nspace.SetProperty(constructor.Data(), constructorFunc);
     }
 

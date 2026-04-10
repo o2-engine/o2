@@ -2,6 +2,7 @@
 
 #if defined(SCRIPTING_BACKEND_JERRYSCRIPT)
 #include "o2/Utils/Reflection/Type.h"
+#include "o2/Utils/Types/Ref.h"
 
 namespace o2
 {
@@ -22,7 +23,7 @@ namespace o2
             data.SetContainingObject(value);
         else
         {
-            auto dataContainer = mnew ScriptValueBase::DataContainer<__type>(value);
+            auto dataContainer = ScriptValueBase::CreateContainer<ScriptValueBase::DataContainer<__type>>(value);
             jerry_set_object_native_pointer(data.jvalue, (ScriptValueBase::IDataContainer*)dataContainer,
                                              &ScriptValueBase::GetDataDeleter().info);
         }
@@ -172,7 +173,7 @@ namespace o2
 
         static void Read(UInt64& value, const ScriptValue& data)
         {
-            value = (Int64)jerry_value_as_integer(data.jvalue);
+            value = (UInt64)jerry_value_as_integer(data.jvalue);
         }
     };
 
@@ -251,14 +252,14 @@ namespace o2
         {
             data.jvalue = jerry_create_object();
             data.SetPrototype(*ScriptValuePrototypes::GetVec2Prototype());
-            data.SetProperty(ScriptValue("x"), ScriptValue(value.x));
-            data.SetProperty(ScriptValue("y"), ScriptValue(value.y));
+            data.SetProperty(ScriptValuePropertyKeys::GetX(), ScriptValue(value.x));
+            data.SetProperty(ScriptValuePropertyKeys::GetY(), ScriptValue(value.y));
         }
 
         static void Read(Vec2F& value, const ScriptValue& data)
         {
-            value.x = data.GetProperty(ScriptValue("x"));
-            value.y = data.GetProperty(ScriptValue("y"));
+            value.x = data.GetProperty(ScriptValuePropertyKeys::GetX()).GetValue<float>();
+            value.y = data.GetProperty(ScriptValuePropertyKeys::GetY()).GetValue<float>();
         }
     };
 
@@ -271,14 +272,14 @@ namespace o2
         {
             data.jvalue = jerry_create_object();
             data.SetPrototype(*ScriptValuePrototypes::GetVec2Prototype());
-            data.SetProperty(ScriptValue("x"), ScriptValue(value.x));
-            data.SetProperty(ScriptValue("y"), ScriptValue(value.y));
+            data.SetProperty(ScriptValuePropertyKeys::GetX(), ScriptValue(value.x));
+            data.SetProperty(ScriptValuePropertyKeys::GetY(), ScriptValue(value.y));
         }
 
         static void Read(Vec2I& value, const ScriptValue& data)
         {
-            value.x = data.GetProperty(ScriptValue("x"));
-            value.y = data.GetProperty(ScriptValue("y"));
+            value.x = data.GetProperty(ScriptValuePropertyKeys::GetX()).GetValue<int>();
+            value.y = data.GetProperty(ScriptValuePropertyKeys::GetY()).GetValue<int>();
         }
     };
 
@@ -291,18 +292,18 @@ namespace o2
         {
             data.jvalue = jerry_create_object();
             data.SetPrototype(*ScriptValuePrototypes::GetRectPrototype());
-            data.SetProperty(ScriptValue("left"), ScriptValue(value.left));
-            data.SetProperty(ScriptValue("bottom"), ScriptValue(value.bottom));
-            data.SetProperty(ScriptValue("right"), ScriptValue(value.right));
-            data.SetProperty(ScriptValue("top"), ScriptValue(value.top));
+            data.SetProperty(ScriptValuePropertyKeys::GetLeft(), ScriptValue(value.left));
+            data.SetProperty(ScriptValuePropertyKeys::GetBottom(), ScriptValue(value.bottom));
+            data.SetProperty(ScriptValuePropertyKeys::GetRight(), ScriptValue(value.right));
+            data.SetProperty(ScriptValuePropertyKeys::GetTop(), ScriptValue(value.top));
         }
 
         static void Read(RectF& value, const ScriptValue& data)
         {
-            value.left = data.GetProperty(ScriptValue("left"));
-            value.bottom = data.GetProperty(ScriptValue("bottom"));
-            value.right = data.GetProperty(ScriptValue("right"));
-            value.top = data.GetProperty(ScriptValue("top"));
+            value.left = data.GetProperty(ScriptValuePropertyKeys::GetLeft()).GetValue<float>();
+            value.bottom = data.GetProperty(ScriptValuePropertyKeys::GetBottom()).GetValue<float>();
+            value.right = data.GetProperty(ScriptValuePropertyKeys::GetRight()).GetValue<float>();
+            value.top = data.GetProperty(ScriptValuePropertyKeys::GetTop()).GetValue<float>();
         }
     };
 
@@ -315,18 +316,18 @@ namespace o2
         {
             data.jvalue = jerry_create_object();
             data.SetPrototype(*ScriptValuePrototypes::GetRectPrototype());
-            data.SetProperty(ScriptValue("left"), ScriptValue(value.left));
-            data.SetProperty(ScriptValue("bottom"), ScriptValue(value.bottom));
-            data.SetProperty(ScriptValue("right"), ScriptValue(value.right));
-            data.SetProperty(ScriptValue("top"), ScriptValue(value.top));
+            data.SetProperty(ScriptValuePropertyKeys::GetLeft(), ScriptValue(value.left));
+            data.SetProperty(ScriptValuePropertyKeys::GetBottom(), ScriptValue(value.bottom));
+            data.SetProperty(ScriptValuePropertyKeys::GetRight(), ScriptValue(value.right));
+            data.SetProperty(ScriptValuePropertyKeys::GetTop(), ScriptValue(value.top));
         }
 
         static void Read(RectI& value, const ScriptValue& data)
         {
-            value.left = data.GetProperty(ScriptValue("left"));
-            value.bottom = data.GetProperty(ScriptValue("bottom"));
-            value.right = data.GetProperty(ScriptValue("right"));
-            value.top = data.GetProperty(ScriptValue("top"));
+            value.left = data.GetProperty(ScriptValuePropertyKeys::GetLeft()).GetValue<int>();
+            value.bottom = data.GetProperty(ScriptValuePropertyKeys::GetBottom()).GetValue<int>();
+            value.right = data.GetProperty(ScriptValuePropertyKeys::GetRight()).GetValue<int>();
+            value.top = data.GetProperty(ScriptValuePropertyKeys::GetTop()).GetValue<int>();
         }
     };
 
@@ -339,18 +340,18 @@ namespace o2
         {
             data.jvalue = jerry_create_object();
             data.SetPrototype(*ScriptValuePrototypes::GetBorderPrototype());
-            data.SetProperty(ScriptValue("left"), ScriptValue(value.left));
-            data.SetProperty(ScriptValue("bottom"), ScriptValue(value.bottom));
-            data.SetProperty(ScriptValue("right"), ScriptValue(value.right));
-            data.SetProperty(ScriptValue("top"), ScriptValue(value.top));
+            data.SetProperty(ScriptValuePropertyKeys::GetLeft(), ScriptValue(value.left));
+            data.SetProperty(ScriptValuePropertyKeys::GetBottom(), ScriptValue(value.bottom));
+            data.SetProperty(ScriptValuePropertyKeys::GetRight(), ScriptValue(value.right));
+            data.SetProperty(ScriptValuePropertyKeys::GetTop(), ScriptValue(value.top));
         }
 
         static void Read(BorderF& value, const ScriptValue& data)
         {
-            value.left = data.GetProperty(ScriptValue("left"));
-            value.bottom = data.GetProperty(ScriptValue("bottom"));
-            value.right = data.GetProperty(ScriptValue("right"));
-            value.top = data.GetProperty(ScriptValue("top"));
+            value.left = data.GetProperty(ScriptValuePropertyKeys::GetLeft()).GetValue<float>();
+            value.bottom = data.GetProperty(ScriptValuePropertyKeys::GetBottom()).GetValue<float>();
+            value.right = data.GetProperty(ScriptValuePropertyKeys::GetRight()).GetValue<float>();
+            value.top = data.GetProperty(ScriptValuePropertyKeys::GetTop()).GetValue<float>();
         }
     };
 
@@ -363,18 +364,18 @@ namespace o2
         {
             data.jvalue = jerry_create_object();
             data.SetPrototype(*ScriptValuePrototypes::GetBorderPrototype());
-            data.SetProperty(ScriptValue("left"), ScriptValue(value.left));
-            data.SetProperty(ScriptValue("bottom"), ScriptValue(value.bottom));
-            data.SetProperty(ScriptValue("right"), ScriptValue(value.right));
-            data.SetProperty(ScriptValue("top"), ScriptValue(value.top));
+            data.SetProperty(ScriptValuePropertyKeys::GetLeft(), ScriptValue(value.left));
+            data.SetProperty(ScriptValuePropertyKeys::GetBottom(), ScriptValue(value.bottom));
+            data.SetProperty(ScriptValuePropertyKeys::GetRight(), ScriptValue(value.right));
+            data.SetProperty(ScriptValuePropertyKeys::GetTop(), ScriptValue(value.top));
         }
 
         static void Read(BorderI& value, const ScriptValue& data)
         {
-            value.left = data.GetProperty(ScriptValue("left"));
-            value.bottom = data.GetProperty(ScriptValue("bottom"));
-            value.right = data.GetProperty(ScriptValue("right"));
-            value.top = data.GetProperty(ScriptValue("top"));
+            value.left = data.GetProperty(ScriptValuePropertyKeys::GetLeft()).GetValue<int>();
+            value.bottom = data.GetProperty(ScriptValuePropertyKeys::GetBottom()).GetValue<int>();
+            value.right = data.GetProperty(ScriptValuePropertyKeys::GetRight()).GetValue<int>();
+            value.top = data.GetProperty(ScriptValuePropertyKeys::GetTop()).GetValue<int>();
         }
     };
 
@@ -387,18 +388,18 @@ namespace o2
         {
             data.jvalue = jerry_create_object();
             data.SetPrototype(*ScriptValuePrototypes::GetColor4Prototype());
-            data.SetProperty(ScriptValue("r"), ScriptValue(value.r));
-            data.SetProperty(ScriptValue("g"), ScriptValue(value.g));
-            data.SetProperty(ScriptValue("b"), ScriptValue(value.b));
-            data.SetProperty(ScriptValue("a"), ScriptValue(value.a));
+            data.SetProperty(ScriptValuePropertyKeys::GetR(), ScriptValue(value.r));
+            data.SetProperty(ScriptValuePropertyKeys::GetG(), ScriptValue(value.g));
+            data.SetProperty(ScriptValuePropertyKeys::GetB(), ScriptValue(value.b));
+            data.SetProperty(ScriptValuePropertyKeys::GetA(), ScriptValue(value.a));
         }
 
         static void Read(Color4& value, const ScriptValue& data)
         {
-            value.r = data.GetProperty(ScriptValue("r"));
-            value.g = data.GetProperty(ScriptValue("g"));
-            value.b = data.GetProperty(ScriptValue("b"));
-            value.a = data.GetProperty(ScriptValue("a"));
+            value.r = data.GetProperty(ScriptValuePropertyKeys::GetR()).GetValue<int>();
+            value.g = data.GetProperty(ScriptValuePropertyKeys::GetG()).GetValue<int>();
+            value.b = data.GetProperty(ScriptValuePropertyKeys::GetB()).GetValue<int>();
+            value.a = data.GetProperty(ScriptValuePropertyKeys::GetA()).GetValue<int>();
         }
     };
 
@@ -427,6 +428,32 @@ namespace o2
             }
             else
                 value = nullptr;
+        }
+    };
+
+    template<typename T>
+    struct ScriptValue::Converter<Ref<T>, void_t<decltype(std::declval<T*>()->GetScriptValue())>>
+    {
+        static constexpr bool isSupported = true;
+
+        static void Write(const Ref<T>& value, ScriptValue& data)
+        {
+            data.jvalue = jerry_create_undefined();
+            if (value)
+                data = value->GetScriptValue();
+        }
+
+        static void Read(Ref<T>& value, const ScriptValue& data)
+        {
+            auto dataContainer = GetNativeContainer(data.jvalue);
+            if (dataContainer)
+            {
+                auto* object = dataContainer->TryCastToIObject();
+                T* typed = dynamic_cast<T*>(object);
+                value = typed ? Ref<T>(typed) : Ref<T>();
+            }
+            else
+                value = Ref<T>();
         }
     };
 
@@ -472,8 +499,9 @@ namespace o2
             if (data.GetValueType() == ValueType::Object)
             {
                 value.Clear();
-                data.ForEachProperties([&](const ScriptValue& name, const ScriptValue& value) {
-                    value[name.GetValue<_key>()] = name.GetValue<_value>();
+                data.ForEachProperties([&](const ScriptValue& propName, const ScriptValue& propValue) {
+                    value[propName.GetValue<_key>()] = propValue.GetValue<_value>();
+                    return true;
                 });
             }
         }
@@ -526,7 +554,7 @@ namespace o2
         {
             data.jvalue = jerry_create_external_function(&CallFunction);
 
-            IDataContainer* funcContainer = new ScriptFunctionContainer<Function<_res_type(_args ...)>, _res_type, _args ...>(value);
+            IDataContainer* funcContainer = ScriptValueBase::CreateContainer<ScriptFunctionContainer<Function<_res_type(_args ...)>, _res_type, _args ...>>(value);
 
             jerry_set_object_native_pointer(data.jvalue, funcContainer, &GetDataDeleter().info);
         }

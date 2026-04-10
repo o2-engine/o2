@@ -16,28 +16,48 @@ namespace o2
 
     public:
         TestScriptObject() = default;
-        TestScriptObject(RefCounter* refCounter, int v, const String& n) : RefCounterable(refCounter), value(v), name(n) {} // @SCRIPTABLE
-        TestScriptObject(int v, const String& n) : value(v), name(n) {}
+        // @SCRIPTABLE
+        TestScriptObject(RefCounter* refCounter, int v, const String& n);
+        // @SCRIPTABLE
+        TestScriptObject(int v, const String& n);
 
-        int GetValue() const { return value; }
-        void SetValue(int v) { value = v; }
+        int GetValue() const;
+        void SetValue(int v);
 
-        String GetName() const { return name; }
-        void SetName(const String& n) { name = n; }
+        String GetName() const;
+        void SetName(const String& n);
 
-        float GetScore() const { return score; }
-        void SetScore(float s) { score = s; }
+        float GetScore() const;
+        void SetScore(float s);
 
-        int Add(int a, int b) const { return a + b; }                              // @SCRIPTABLE
-        String Concat(const String& a, const String& b) const { return a + b; }   // @SCRIPTABLE
-        float Multiply(float a, float b) const { return a * b; }                  // @SCRIPTABLE
+        // @SCRIPTABLE
+        int Add(int a, int b) const;
+        // @SCRIPTABLE
+        String Concat(const String& a, const String& b) const;
+        // @SCRIPTABLE
+        float Multiply(float a, float b) const;
 
-        void SetAll(int v, const String& n, float s) { value = v; name = n; score = s; } // @SCRIPTABLE
-        int GetDoubleValue() const { return value * 2; }                                  // @SCRIPTABLE
-        String GetDescription() const { return name + ":" + (String)value; }              // @SCRIPTABLE
-        void AddToScore(float delta) { score += delta; }                                  // @SCRIPTABLE
+        // @SCRIPTABLE
+        void SetAll(int v, const String& n, float s);
+        // @SCRIPTABLE
+        int GetDoubleValue() const;
+        // @SCRIPTABLE
+        String GetDescription() const;
+        // @SCRIPTABLE
+        void AddToScore(float delta);
+
+        // @SCRIPTABLE
+        int SumValueWith(const Ref<TestScriptObject>& other) const;
+
+        // @SCRIPTABLE
+        void SetLinkedPartner(const Ref<TestScriptObject>& other);
+        // @SCRIPTABLE
+        int SumWithLinkedPartner() const;
 
         IOBJECT(TestScriptObject);
+
+    private:
+        Ref<TestScriptObject> linkedPartner;
     };
 }
 // --- META ---
@@ -53,6 +73,7 @@ CLASS_FIELDS_META(o2::TestScriptObject)
     FIELD().PUBLIC().SCRIPTABLE_ATTRIBUTE().DEFAULT_VALUE(0).NAME(value);
     FIELD().PUBLIC().SCRIPTABLE_ATTRIBUTE().DEFAULT_VALUE("default").NAME(name);
     FIELD().PUBLIC().SCRIPTABLE_ATTRIBUTE().DEFAULT_VALUE(0.0f).NAME(score);
+    FIELD().PRIVATE().NAME(linkedPartner);
 }
 END_META;
 CLASS_METHODS_META(o2::TestScriptObject)
@@ -74,6 +95,9 @@ CLASS_METHODS_META(o2::TestScriptObject)
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(int, GetDoubleValue);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(String, GetDescription);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, AddToScore, float);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(int, SumValueWith, const Ref<TestScriptObject>&);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetLinkedPartner, const Ref<TestScriptObject>&);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(int, SumWithLinkedPartner);
 }
 END_META;
 // --- END META ---

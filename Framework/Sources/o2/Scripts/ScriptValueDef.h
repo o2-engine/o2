@@ -43,6 +43,9 @@ namespace o2 {
         // Copy constructor. Copies reference on value
         ScriptValue(const ScriptValue &other);
 
+        // Move constructor. Transfers ownership of value
+        ScriptValue(ScriptValue &&other) noexcept;
+
         // Check equals operator
         bool operator==(const ScriptValue &other) const;
 
@@ -51,7 +54,7 @@ namespace o2 {
 
         // Cast to type operator
         template<typename _type>
-        operator _type() const;
+        explicit operator _type() const;
 
         // Property accessor operator
         ScriptValue operator[](const ScriptValue &name) const;
@@ -61,6 +64,9 @@ namespace o2 {
 
         // Copy-operator. Copies reference on value
         ScriptValue &operator=(const ScriptValue &other);
+
+        // Move-operator. Transfers ownership of value
+        ScriptValue &operator=(ScriptValue &&other) noexcept;
 
         // Assign value operator
         template<typename _type>
@@ -94,7 +100,7 @@ namespace o2 {
         // Returns type of containing native object type
         const Type *GetObjectContainerType() const;
 
-        // Sets containing object. Stores Ref<_type> for RefCounterable types, value for others
+        // Sets containing object. Stores Ref<_type> for RefCounterable types, non-owning pointer for IObject types, value for others
         template<typename _type>
         void SetContainingObject(_type *object);
 
@@ -143,14 +149,6 @@ namespace o2 {
         // Sets property value
         template<typename _type>
         void SetProperty(const char *name, const _type &value);
-
-        // Sets property value
-        template<typename _class_type, typename _res_type, typename ... _args>
-        void SetProperty(const char *name, _class_type *object, _res_type(_class_type::* functionPtr)(_args ... args));
-
-        // Sets property value
-        template<typename _class_type, typename _res_type, typename ... _args>
-        void SetProperty(const char *name, _class_type *object, _res_type(_class_type::* functionPtr)(_args ... args) const);
 
         // Sets property wrapper. Uses value reference to get/set value from script
         template<typename _type>
@@ -233,23 +231,7 @@ namespace o2 {
 
         // Sets function with passed this value
         template<typename _res_type, typename ... _args>
-        void SetThisFunction(const Function<_res_type(ScriptValue, _args ...)> &func);
-
-        // Sets function from class. This must contain
-        template<typename _class_type, typename _res_type, typename ... _args>
-        void SetClassFunction(_res_type(_class_type::* functionPtr)(_args ... args));
-
-        // Sets function from class. This must contain
-        template<typename _class_type, typename _res_type, typename ... _args>
-        void SetClassFunction(_res_type(_class_type::* functionPtr)(_args ... args) const);
-
-        // Creates script value from class function
-        template<typename _class_type, typename _res_type, typename ... _args>
-        static ScriptValue ClassFunction(_res_type(_class_type::* functionPtr)(_args ... args));
-
-        // Creates script value from class function
-        template<typename _class_type, typename _res_type, typename ... _args>
-        static ScriptValue ClassFunction(_res_type(_class_type::* functionPtr)(_args ... args) const);
+        void SetFunction(const Function<_res_type(ScriptValue, _args ...)> &func);
 
     private:
         template<typename ... _args>
@@ -325,6 +307,38 @@ namespace o2
         static ScriptValue*& GetRectPrototype();
         static ScriptValue*& GetBorderPrototype();
         static ScriptValue*& GetColor4Prototype();
+    };
+
+    // ------------------------------------------------
+    // Cached frequently used script object property keys
+    // ------------------------------------------------
+    struct ScriptValuePropertyKeys
+    {
+        static void Initialize();
+        static void Deinitialize();
+
+        static const ScriptValue& GetX();
+        static const ScriptValue& GetY();
+        static const ScriptValue& GetLeft();
+        static const ScriptValue& GetBottom();
+        static const ScriptValue& GetRight();
+        static const ScriptValue& GetTop();
+        static const ScriptValue& GetR();
+        static const ScriptValue& GetG();
+        static const ScriptValue& GetB();
+        static const ScriptValue& GetA();
+
+    private:
+        static ScriptValue*& XStorage();
+        static ScriptValue*& YStorage();
+        static ScriptValue*& LeftStorage();
+        static ScriptValue*& BottomStorage();
+        static ScriptValue*& RightStorage();
+        static ScriptValue*& TopStorage();
+        static ScriptValue*& RStorage();
+        static ScriptValue*& GStorage();
+        static ScriptValue*& BStorage();
+        static ScriptValue*& AStorage();
     };
 }
 

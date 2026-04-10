@@ -24,13 +24,7 @@ namespace o2
     {
     public:
         // Virtual destructor
-        virtual ~IObject() 
-        {
-#if IS_SCRIPTING_SUPPORTED
-            //if (mScriptValueCache)
-            //    delete mScriptValueCache;
-#endif
-        }
+        virtual ~IObject() {}
 
         // Returns type
         virtual const Type& GetType() const { return *type; }
@@ -52,8 +46,6 @@ namespace o2
     protected:
         // Sets this into script value as containing object
         virtual void SetScriptValueContainer(ScriptValue& value) const;
-
-        mutable ScriptValue* mScriptValueCache = nullptr; // Cached script value
 #endif
 
         template<typename _type>
@@ -134,13 +126,9 @@ namespace o2
 {
     inline ScriptValue IObject::GetScriptValue() const
     {
-        if (!mScriptValueCache)
-        {
-            mScriptValueCache = mnew ScriptValue(ScriptValue::EmptyObject());
-            SetScriptValueContainer(*mScriptValueCache);
-        }
-
-        return *mScriptValueCache;
+        ScriptValue result = ScriptValue::EmptyObject();
+        SetScriptValueContainer(result);
+        return result;
     }
 
     inline void IObject::ReflectIntoScriptValue(ScriptValue& scriptValue) const
