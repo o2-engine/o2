@@ -43,6 +43,9 @@ namespace o2 {
         // Copy constructor. Copies reference on value
         ScriptValue(const ScriptValue &other);
 
+        // Move constructor. Transfers ownership of value
+        ScriptValue(ScriptValue &&other) noexcept;
+
         // Check equals operator
         bool operator==(const ScriptValue &other) const;
 
@@ -51,7 +54,7 @@ namespace o2 {
 
         // Cast to type operator
         template<typename _type>
-        operator _type() const;
+        explicit operator _type() const;
 
         // Property accessor operator
         ScriptValue operator[](const ScriptValue &name) const;
@@ -61,6 +64,9 @@ namespace o2 {
 
         // Copy-operator. Copies reference on value
         ScriptValue &operator=(const ScriptValue &other);
+
+        // Move-operator. Transfers ownership of value
+        ScriptValue &operator=(ScriptValue &&other) noexcept;
 
         // Assign value operator
         template<typename _type>

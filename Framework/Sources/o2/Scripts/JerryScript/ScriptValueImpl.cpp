@@ -49,6 +49,12 @@ namespace o2
         jvalue = jerry_acquire_value(other.jvalue);
     }
 
+    ScriptValue::ScriptValue(ScriptValue&& other) noexcept
+    {
+        jvalue = other.jvalue;
+        other.jvalue = jerry_create_undefined();
+    }
+
     ScriptValue ScriptValue::operator[](const ScriptValue& name) const
     {
         return GetProperty(name);
@@ -80,6 +86,17 @@ namespace o2
         return *this;
     }
 
+    ScriptValue& ScriptValue::operator=(ScriptValue&& other) noexcept
+    {
+        if (this != &other)
+        {
+            jerry_release_value(jvalue);
+            jvalue = other.jvalue;
+            other.jvalue = jerry_create_undefined();
+        }
+        return *this;
+    }
+
     ScriptValue::ValueType ScriptValue::GetValueType() const
     {
         if (jerry_value_is_array(jvalue))
@@ -104,7 +121,8 @@ namespace o2
         if (type == ValueType::Array) 
         {
             ScriptValue res = EmptyArray();
-            for (int i = 0; i < GetLength(); i++)
+            int length = GetLength();
+            for (int i = 0; i < length; i++)
                 res.AddElement(GetElement(i).Copy());
 
             return res;
@@ -212,7 +230,8 @@ namespace o2
             return;
 
         auto allProperties = GetPropertyNames();
-        for (int i = 0; i < allProperties.GetLength(); i++)
+        int length = allProperties.GetLength();
+        for (int i = 0; i < length; i++)
         {
             ScriptValue key = allProperties.GetElement(i);
             ScriptValue value = GetProperty(key);
@@ -268,7 +287,6 @@ namespace o2
             | JERRY_PROPERTY_FILTER_EXLCUDE_NON_CONFIGURABLE
             | JERRY_PROPERTY_FILTER_EXLCUDE_NON_ENUMERABLE
             | JERRY_PROPERTY_FILTER_EXLCUDE_NON_WRITABLE
-            | JERRY_PROPERTY_FILTER_EXLCUDE_SYMBOLS
             | JERRY_PROPERTY_FILTER_EXLCUDE_INTEGER_INDICES
             | JERRY_PROPERTY_FILTER_INTEGER_INDICES_AS_NUMBER
         );
@@ -389,8 +407,7 @@ namespace o2
             auto res = jerry_call_function(jvalue, thisValue.jvalue, valuesBuf, args.Count());
 
             ScriptValue resValue;
-            jerry_release_value(resValue.jvalue);
-            resValue.jvalue = res;
+            resValue.Accept(res);
 
             return resValue;
         }
@@ -583,11 +600,9 @@ namespace o2
     {
         String constructor;
         auto nspace = GetNameSpaceAndConstructor(o2Scripts.GetGlobal(), type->GetName(), constructor);
-        auto t1 = constructorFunc.GetValueType();
         ScriptValue proto;
         proto.SetProperty("type", ScriptValue(type));
         constructorFunc.SetPrototype(proto);
-        auto t2 = proto.GetValueType();
         nspace.SetProperty(constructor.Data(), constructorFunc);
     }
 

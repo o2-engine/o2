@@ -511,6 +511,166 @@ TEST(ScriptValue, NativeContainerPoolStressAndGarbageCollection) {
     SUCCEED();
 }
 
+TEST(ScriptValue, MoveConstructor) {
+    ScriptValue original(42);
+    EXPECT_EQ(original.GetValue<int>(), 42);
+
+    ScriptValue moved(std::move(original));
+    EXPECT_EQ(moved.GetValue<int>(), 42);
+    EXPECT_TRUE(original.IsUndefined());
+}
+
+TEST(ScriptValue, MoveAssignment) {
+    ScriptValue a(100);
+    ScriptValue b("hello");
+
+    a = std::move(b);
+    EXPECT_EQ(a.ToString(), "hello");
+    EXPECT_TRUE(b.IsUndefined());
+
+    ScriptValue obj = ScriptValue::EmptyObject();
+    obj.SetProperty("key", ScriptValue(7));
+    ScriptValue target;
+    target = std::move(obj);
+    EXPECT_TRUE(target.IsObject());
+    EXPECT_EQ(target.GetProperty("key").GetValue<int>(), 7);
+    EXPECT_TRUE(obj.IsUndefined());
+}
+
+TEST(ScriptValue, MoveDoesNotAcquire) {
+    ScriptValue arr = ScriptValue::EmptyArray();
+    arr.AddElement(ScriptValue(1));
+    arr.AddElement(ScriptValue(2));
+
+    ScriptValue moved = std::move(arr);
+    EXPECT_TRUE(moved.IsArray());
+    EXPECT_EQ(moved.GetLength(), 2);
+    EXPECT_EQ(moved.GetElement(0).GetValue<int>(), 1);
+}
+
+TEST(ScriptValue, MapConverterRoundTrip) {
+    Map<String, int> original;
+    original["alpha"] = 1;
+    original["beta"] = 2;
+    original["gamma"] = 3;
+
+    ScriptValue sv(original);
+    EXPECT_TRUE(sv.IsObject());
+
+    Map<String, int> restored = sv.GetValue<Map<String, int>>();
+    EXPECT_EQ(restored.Count(), 3);
+    EXPECT_EQ(restored["alpha"], 1);
+    EXPECT_EQ(restored["beta"], 2);
+    EXPECT_EQ(restored["gamma"], 3);
+}
+
+TEST(ScriptValue, MapConverterEmpty) {
+    Map<String, float> empty;
+    ScriptValue sv(empty);
+    EXPECT_TRUE(sv.IsObject());
+
+    Map<String, float> restored = sv.GetValue<Map<String, float>>();
+    EXPECT_EQ(restored.Count(), 0);
+}
+
+TEST(ScriptValue, EnumRoundTrip) {
+    ScriptValue sv(ScriptValue::ValueType::Object);
+    EXPECT_EQ(sv.GetValueType(), ScriptValue::ValueType::String);
+    EXPECT_EQ(sv.ToString(), "Object");
+
+    auto restored = sv.GetValue<ScriptValue::ValueType>();
+    EXPECT_EQ(restored, ScriptValue::ValueType::Object);
+}
+
+TEST(ScriptValue, EnumFromNumber) {
+    ScriptValue sv((int)ScriptValue::ValueType::Bool);
+    auto restored = sv.GetValue<ScriptValue::ValueType>();
+    EXPECT_EQ(restored, ScriptValue::ValueType::Bool);
+}
+
+TEST(ScriptValue, UInt64LargeValue) {
+    UInt64 large = 4294967296ULL;
+    ScriptValue sv(large);
+    UInt64 back = sv.GetValue<UInt64>();
+    EXPECT_EQ(back, large);
+}
+
+TEST(ScriptValue, EmptyStringRoundTrip) {
+    ScriptValue sv(String(""));
+    EXPECT_EQ(sv.GetValueType(), ScriptValue::ValueType::String);
+    EXPECT_EQ(sv.ToString(), "");
+    EXPECT_EQ(sv.GetValue<String>(), "");
+}
+
+TEST(ScriptValue, RemoveProperty) {
+    ScriptValue obj = ScriptValue::EmptyObject();
+    obj.SetProperty("a", ScriptValue(1));
+    obj.SetProperty("b", ScriptValue(2));
+    EXPECT_EQ(obj.GetProperty("a").GetValue<int>(), 1);
+
+    obj.RemoveProperty(ScriptValue("a"));
+    EXPECT_TRUE(obj.GetProperty("a").IsUndefined());
+    EXPECT_EQ(obj.GetProperty("b").GetValue<int>(), 2);
+}
+
+TEST(ScriptValue, RemoveElement) {
+    ScriptValue arr = ScriptValue::EmptyArray();
+    arr.AddElement(ScriptValue(10));
+    arr.AddElement(ScriptValue(20));
+    arr.AddElement(ScriptValue(30));
+    EXPECT_EQ(arr.GetLength(), 3);
+
+    arr.RemoveElement(1);
+    EXPECT_EQ(arr.GetElement(0).GetValue<int>(), 10);
+    EXPECT_EQ(arr.GetElement(2).GetValue<int>(), 30);
+}
+
+TEST(ScriptValue, CopyDeepClonesArray) {
+    ScriptValue arr = ScriptValue::EmptyArray();
+    arr.AddElement(ScriptValue(1));
+    arr.AddElement(ScriptValue(2));
+
+    ScriptValue copied = arr.Copy();
+    EXPECT_TRUE(copied.IsArray());
+    EXPECT_EQ(copied.GetLength(), 2);
+    EXPECT_EQ(copied.GetElement(0).GetValue<int>(), 1);
+
+    copied.SetElement(ScriptValue(99), 0);
+    EXPECT_EQ(arr.GetElement(0).GetValue<int>(), 1);
+    EXPECT_EQ(copied.GetElement(0).GetValue<int>(), 99);
+}
+
+TEST(ScriptValue, CopyDeepClonesObject) {
+    ScriptValue obj = ScriptValue::EmptyObject();
+    obj.SetProperty("x", ScriptValue(10));
+
+    ScriptValue copied = obj.Copy();
+    EXPECT_TRUE(copied.IsObject());
+    EXPECT_EQ(copied.GetProperty("x").GetValue<int>(), 10);
+
+    copied.SetProperty("x", ScriptValue(99));
+    EXPECT_EQ(obj.GetProperty("x").GetValue<int>(), 10);
+    EXPECT_EQ(copied.GetProperty("x").GetValue<int>(), 99);
+}
+
+TEST(ScriptValue, ExplicitCast) {
+    ScriptValue sv(42);
+    int val = static_cast<int>(sv);
+    EXPECT_EQ(val, 42);
+
+    ScriptValue svStr("test");
+    String str = static_cast<String>(svStr);
+    EXPECT_EQ(str, "test");
+}
+
+TEST(ScriptValue, DumpPrimitives) {
+    EXPECT_EQ(ScriptValue(42).Dump(), "42");
+    EXPECT_EQ(ScriptValue(true).Dump(), "true");
+    EXPECT_EQ(ScriptValue(false).Dump(), "false");
+    EXPECT_EQ(ScriptValue("hello").Dump(), "hello");
+    EXPECT_EQ(ScriptValue().Dump(), "Undefined");
+}
+
 #else
 
 TEST(ScriptValue, ScriptingDisabled) {

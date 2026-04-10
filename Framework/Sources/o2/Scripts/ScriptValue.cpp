@@ -7,25 +7,28 @@ namespace o2
     {
         String res;
 
-        auto valType = GetValueType();
-        if (valType == ValueType::Array)
+        switch (GetValueType())
         {
-            res += "[ " + (String)GetLength() + "\n";
+        case ValueType::Array:
+        {
+            int length = GetLength();
+            res += "[ " + (String)length + "\n";
 
-            for (int i = 0; i < GetLength(); i++)
+            for (int i = 0; i < length; i++)
                 res += (*this)[i].Dump(tab + "  ") + ",\n";
 
             res += tab + "]";
+            break;
         }
-        else if (valType == ValueType::Bool)
-        {
+        case ValueType::Bool:
             res += (GetValue<bool>() ? String("true") : String("false"));
-        }
-        else if (valType == ValueType::Error)
-        {
+            break;
+
+        case ValueType::Error:
             res += "Error: " + GetError();
-        }
-        else if (valType == ValueType::Function)
+            break;
+
+        case ValueType::Function:
         {
 #if SCRIPTING_BACKEND_JERRYSCRIPT
             auto container = GetNativeContainer(jvalue);
@@ -33,28 +36,29 @@ namespace o2
 #else
             res += "function";
 #endif
+            break;
         }
-        else if (valType == ValueType::None)
-        {
+        case ValueType::None:
             res += "none";
-        }
-        else if (valType == ValueType::Null)
-        {
+            break;
+
+        case ValueType::Null:
             res += "null";
-        }
-        else if (valType == ValueType::Number)
-        {
+            break;
+
+        case ValueType::Number:
             res += (String)GetValue<float>();
-        }
-        else if (valType == ValueType::String)
-        {
+            break;
+
+        case ValueType::String:
             res += GetValue<String>();
-        }
-        else if (valType == ValueType::Undefined)
-        {
+            break;
+
+        case ValueType::Undefined:
             res += "Undefined";
-        }
-        else if (valType == ValueType::Object)
+            break;
+
+        case ValueType::Object:
         {
             res += "\n" + tab + "{\n";
 
@@ -63,11 +67,14 @@ namespace o2
                 return true;
             }, false);
 
-
             if (GetPrototype().GetValueType() != ValueType::Null)
                 res += tab + "  prototype : " + GetPrototype().Dump(tab + "  ") + ",\n";
 
             res += tab + "}";
+            break;
+        }
+        default:
+            break;
         }
 
         return res;

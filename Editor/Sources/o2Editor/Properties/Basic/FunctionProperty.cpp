@@ -385,9 +385,11 @@ namespace Editor
                     String("toLocaleString"), String("hasOwnProperty"), String("isPrototypeOf"), String("propertyIsEnumerable") };
 
                 ScriptValue instance = scriptingComponent->GetInstance();
-                Vector<ScriptValue> properties = instance.GetPropertyNames();
-                for (auto& prop : properties)
+                ScriptValue properties = instance.GetPropertyNames();
+                int propsCount = properties.GetLength();
+                for (int pi = 0; pi < propsCount; pi++)
                 {
+                    ScriptValue prop = properties.GetElement(pi);
                     ScriptValue propValue = instance.GetProperty(prop);
                     if (propValue.IsFunction())
                     {

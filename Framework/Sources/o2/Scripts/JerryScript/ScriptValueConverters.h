@@ -173,7 +173,7 @@ namespace o2
 
         static void Read(UInt64& value, const ScriptValue& data)
         {
-            value = (Int64)jerry_value_as_integer(data.jvalue);
+            value = (UInt64)jerry_value_as_integer(data.jvalue);
         }
     };
 
@@ -258,8 +258,8 @@ namespace o2
 
         static void Read(Vec2F& value, const ScriptValue& data)
         {
-            value.x = data.GetProperty(ScriptValue("x"));
-            value.y = data.GetProperty(ScriptValue("y"));
+            value.x = data.GetProperty(ScriptValue("x")).GetValue<float>();
+            value.y = data.GetProperty(ScriptValue("y")).GetValue<float>();
         }
     };
 
@@ -278,8 +278,8 @@ namespace o2
 
         static void Read(Vec2I& value, const ScriptValue& data)
         {
-            value.x = data.GetProperty(ScriptValue("x"));
-            value.y = data.GetProperty(ScriptValue("y"));
+            value.x = data.GetProperty(ScriptValue("x")).GetValue<int>();
+            value.y = data.GetProperty(ScriptValue("y")).GetValue<int>();
         }
     };
 
@@ -300,10 +300,10 @@ namespace o2
 
         static void Read(RectF& value, const ScriptValue& data)
         {
-            value.left = data.GetProperty(ScriptValue("left"));
-            value.bottom = data.GetProperty(ScriptValue("bottom"));
-            value.right = data.GetProperty(ScriptValue("right"));
-            value.top = data.GetProperty(ScriptValue("top"));
+            value.left = data.GetProperty(ScriptValue("left")).GetValue<float>();
+            value.bottom = data.GetProperty(ScriptValue("bottom")).GetValue<float>();
+            value.right = data.GetProperty(ScriptValue("right")).GetValue<float>();
+            value.top = data.GetProperty(ScriptValue("top")).GetValue<float>();
         }
     };
 
@@ -324,10 +324,10 @@ namespace o2
 
         static void Read(RectI& value, const ScriptValue& data)
         {
-            value.left = data.GetProperty(ScriptValue("left"));
-            value.bottom = data.GetProperty(ScriptValue("bottom"));
-            value.right = data.GetProperty(ScriptValue("right"));
-            value.top = data.GetProperty(ScriptValue("top"));
+            value.left = data.GetProperty(ScriptValue("left")).GetValue<int>();
+            value.bottom = data.GetProperty(ScriptValue("bottom")).GetValue<int>();
+            value.right = data.GetProperty(ScriptValue("right")).GetValue<int>();
+            value.top = data.GetProperty(ScriptValue("top")).GetValue<int>();
         }
     };
 
@@ -348,10 +348,10 @@ namespace o2
 
         static void Read(BorderF& value, const ScriptValue& data)
         {
-            value.left = data.GetProperty(ScriptValue("left"));
-            value.bottom = data.GetProperty(ScriptValue("bottom"));
-            value.right = data.GetProperty(ScriptValue("right"));
-            value.top = data.GetProperty(ScriptValue("top"));
+            value.left = data.GetProperty(ScriptValue("left")).GetValue<float>();
+            value.bottom = data.GetProperty(ScriptValue("bottom")).GetValue<float>();
+            value.right = data.GetProperty(ScriptValue("right")).GetValue<float>();
+            value.top = data.GetProperty(ScriptValue("top")).GetValue<float>();
         }
     };
 
@@ -372,10 +372,10 @@ namespace o2
 
         static void Read(BorderI& value, const ScriptValue& data)
         {
-            value.left = data.GetProperty(ScriptValue("left"));
-            value.bottom = data.GetProperty(ScriptValue("bottom"));
-            value.right = data.GetProperty(ScriptValue("right"));
-            value.top = data.GetProperty(ScriptValue("top"));
+            value.left = data.GetProperty(ScriptValue("left")).GetValue<int>();
+            value.bottom = data.GetProperty(ScriptValue("bottom")).GetValue<int>();
+            value.right = data.GetProperty(ScriptValue("right")).GetValue<int>();
+            value.top = data.GetProperty(ScriptValue("top")).GetValue<int>();
         }
     };
 
@@ -396,10 +396,10 @@ namespace o2
 
         static void Read(Color4& value, const ScriptValue& data)
         {
-            value.r = data.GetProperty(ScriptValue("r"));
-            value.g = data.GetProperty(ScriptValue("g"));
-            value.b = data.GetProperty(ScriptValue("b"));
-            value.a = data.GetProperty(ScriptValue("a"));
+            value.r = data.GetProperty(ScriptValue("r")).GetValue<int>();
+            value.g = data.GetProperty(ScriptValue("g")).GetValue<int>();
+            value.b = data.GetProperty(ScriptValue("b")).GetValue<int>();
+            value.a = data.GetProperty(ScriptValue("a")).GetValue<int>();
         }
     };
 
@@ -499,8 +499,9 @@ namespace o2
             if (data.GetValueType() == ValueType::Object)
             {
                 value.Clear();
-                data.ForEachProperties([&](const ScriptValue& name, const ScriptValue& value) {
-                    value[name.GetValue<_key>()] = name.GetValue<_value>();
+                data.ForEachProperties([&](const ScriptValue& propName, const ScriptValue& propValue) {
+                    value[propName.GetValue<_key>()] = propValue.GetValue<_value>();
+                    return true;
                 });
             }
         }
