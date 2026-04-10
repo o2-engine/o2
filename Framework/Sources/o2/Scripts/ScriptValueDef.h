@@ -308,6 +308,38 @@ namespace o2
         static ScriptValue*& GetBorderPrototype();
         static ScriptValue*& GetColor4Prototype();
     };
+
+    // ------------------------------------------------
+    // Cached frequently used script object property keys
+    // ------------------------------------------------
+    struct ScriptValuePropertyKeys
+    {
+        static void Initialize();
+        static void Deinitialize();
+
+        static const ScriptValue& GetX();
+        static const ScriptValue& GetY();
+        static const ScriptValue& GetLeft();
+        static const ScriptValue& GetBottom();
+        static const ScriptValue& GetRight();
+        static const ScriptValue& GetTop();
+        static const ScriptValue& GetR();
+        static const ScriptValue& GetG();
+        static const ScriptValue& GetB();
+        static const ScriptValue& GetA();
+
+    private:
+        static ScriptValue*& XStorage();
+        static ScriptValue*& YStorage();
+        static ScriptValue*& LeftStorage();
+        static ScriptValue*& BottomStorage();
+        static ScriptValue*& RightStorage();
+        static ScriptValue*& TopStorage();
+        static ScriptValue*& RStorage();
+        static ScriptValue*& GStorage();
+        static ScriptValue*& BStorage();
+        static ScriptValue*& AStorage();
+    };
 }
 
 #endif // IS_SCRIPTING_SUPPORTED

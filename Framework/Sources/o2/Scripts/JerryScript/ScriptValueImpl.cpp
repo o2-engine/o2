@@ -521,6 +521,161 @@ namespace o2
         return value;
     }
 
+    namespace
+    {
+        const ScriptValue& GetCachedPropertyKey(ScriptValue*& storage, const char* name)
+        {
+            if (!storage)
+                storage = mnew ScriptValue(name);
+
+            return *storage;
+        }
+
+        void ReleaseCachedScriptValue(ScriptValue*& value)
+        {
+            delete value;
+            value = nullptr;
+        }
+    }
+
+    void ScriptValuePropertyKeys::Initialize()
+    {
+        GetX();
+        GetY();
+        GetLeft();
+        GetBottom();
+        GetRight();
+        GetTop();
+        GetR();
+        GetG();
+        GetB();
+        GetA();
+    }
+
+    void ScriptValuePropertyKeys::Deinitialize()
+    {
+        ReleaseCachedScriptValue(XStorage());
+        ReleaseCachedScriptValue(YStorage());
+        ReleaseCachedScriptValue(LeftStorage());
+        ReleaseCachedScriptValue(BottomStorage());
+        ReleaseCachedScriptValue(RightStorage());
+        ReleaseCachedScriptValue(TopStorage());
+        ReleaseCachedScriptValue(RStorage());
+        ReleaseCachedScriptValue(GStorage());
+        ReleaseCachedScriptValue(BStorage());
+        ReleaseCachedScriptValue(AStorage());
+    }
+
+    const ScriptValue& ScriptValuePropertyKeys::GetX()
+    {
+        return GetCachedPropertyKey(XStorage(), "x");
+    }
+
+    const ScriptValue& ScriptValuePropertyKeys::GetY()
+    {
+        return GetCachedPropertyKey(YStorage(), "y");
+    }
+
+    const ScriptValue& ScriptValuePropertyKeys::GetLeft()
+    {
+        return GetCachedPropertyKey(LeftStorage(), "left");
+    }
+
+    const ScriptValue& ScriptValuePropertyKeys::GetBottom()
+    {
+        return GetCachedPropertyKey(BottomStorage(), "bottom");
+    }
+
+    const ScriptValue& ScriptValuePropertyKeys::GetRight()
+    {
+        return GetCachedPropertyKey(RightStorage(), "right");
+    }
+
+    const ScriptValue& ScriptValuePropertyKeys::GetTop()
+    {
+        return GetCachedPropertyKey(TopStorage(), "top");
+    }
+
+    const ScriptValue& ScriptValuePropertyKeys::GetR()
+    {
+        return GetCachedPropertyKey(RStorage(), "r");
+    }
+
+    const ScriptValue& ScriptValuePropertyKeys::GetG()
+    {
+        return GetCachedPropertyKey(GStorage(), "g");
+    }
+
+    const ScriptValue& ScriptValuePropertyKeys::GetB()
+    {
+        return GetCachedPropertyKey(BStorage(), "b");
+    }
+
+    const ScriptValue& ScriptValuePropertyKeys::GetA()
+    {
+        return GetCachedPropertyKey(AStorage(), "a");
+    }
+
+    ScriptValue*& ScriptValuePropertyKeys::XStorage()
+    {
+        static ScriptValue* value = nullptr;
+        return value;
+    }
+
+    ScriptValue*& ScriptValuePropertyKeys::YStorage()
+    {
+        static ScriptValue* value = nullptr;
+        return value;
+    }
+
+    ScriptValue*& ScriptValuePropertyKeys::LeftStorage()
+    {
+        static ScriptValue* value = nullptr;
+        return value;
+    }
+
+    ScriptValue*& ScriptValuePropertyKeys::BottomStorage()
+    {
+        static ScriptValue* value = nullptr;
+        return value;
+    }
+
+    ScriptValue*& ScriptValuePropertyKeys::RightStorage()
+    {
+        static ScriptValue* value = nullptr;
+        return value;
+    }
+
+    ScriptValue*& ScriptValuePropertyKeys::TopStorage()
+    {
+        static ScriptValue* value = nullptr;
+        return value;
+    }
+
+    ScriptValue*& ScriptValuePropertyKeys::RStorage()
+    {
+        static ScriptValue* value = nullptr;
+        return value;
+    }
+
+    ScriptValue*& ScriptValuePropertyKeys::GStorage()
+    {
+        static ScriptValue* value = nullptr;
+        return value;
+    }
+
+    ScriptValue*& ScriptValuePropertyKeys::BStorage()
+    {
+        static ScriptValue* value = nullptr;
+        return value;
+    }
+
+    ScriptValue*& ScriptValuePropertyKeys::AStorage()
+    {
+        static ScriptValue* value = nullptr;
+        return value;
+    }
+
     void FixNamespace(String& path)
     {
         path.ReplaceAll("::", "");

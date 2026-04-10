@@ -119,6 +119,7 @@ namespace o2
         delete ScriptValuePrototypes::GetRectPrototype();
         delete ScriptValuePrototypes::GetBorderPrototype();
         delete ScriptValuePrototypes::GetColor4Prototype();
+        ScriptValuePropertyKeys::Deinitialize();
         //jerry_cleanup();
     }
 
@@ -192,6 +193,7 @@ namespace o2
         ScriptValuePrototypes::GetRectPrototype() = mnew ScriptValue(o2Scripts.Eval("Rect.prototype"));
         ScriptValuePrototypes::GetBorderPrototype() = mnew ScriptValue(o2Scripts.Eval("Border.prototype"));
         ScriptValuePrototypes::GetColor4Prototype() = mnew ScriptValue(o2Scripts.Eval("Color4.prototype"));
+        ScriptValuePropertyKeys::Initialize();
     }
 }
 
