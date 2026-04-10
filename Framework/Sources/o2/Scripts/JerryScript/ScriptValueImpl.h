@@ -98,7 +98,7 @@ namespace o2
     ScriptValueBase::IDataContainer* ScriptValueBase::DataContainer<_type>::Clone() const
     {
         if constexpr (std::is_copy_constructible<_type>::value)
-            return mnew DataContainer<_type>(data);
+            return CreateContainer<DataContainer<_type>>(data);
         else
             return nullptr;
     }
@@ -132,7 +132,7 @@ namespace o2
     template<typename _type>
     ScriptValueBase::IDataContainer* ScriptValueBase::PointerDataContainer<_type>::Clone() const
     {
-        return mnew PointerDataContainer<_type>(data);
+        return CreateContainer<PointerDataContainer<_type>>(data);
     }
 
     // -------------------------------------------------------
@@ -152,7 +152,7 @@ namespace o2
     }
 
     template<typename _invocable_type, typename _res_type, typename ... _args>
-    struct ScriptFunctionContainer : public ScriptValueBase::IFunctionContainer
+    struct ScriptFunctionContainer : public ScriptValueBase::TPoolContainer<ScriptFunctionContainer<_invocable_type, _res_type, _args...>, ScriptValueBase::IFunctionContainer>
     {
         _invocable_type data;
 
@@ -181,7 +181,7 @@ namespace o2
     };
 
     template<typename _invocable_type, typename _res_type, typename ... _args>
-    struct ScriptThisFunctionContainer : public ScriptValueBase::IFunctionContainer
+    struct ScriptThisFunctionContainer : public ScriptValueBase::TPoolContainer<ScriptThisFunctionContainer<_invocable_type, _res_type, _args...>, ScriptValueBase::IFunctionContainer>
     {
         _invocable_type data;
 
@@ -256,7 +256,7 @@ namespace o2
     // -------------------------------------------------------
 
     template<typename _object_type, typename _field_type>
-    struct PrototypeFieldGetter : public ScriptValueBase::IPrototypeGetter
+    struct PrototypeFieldGetter : public ScriptValueBase::TPoolContainer<PrototypeFieldGetter<_object_type, _field_type>, ScriptValueBase::IPrototypeGetter>
     {
         void* (*pointerGetter)(void*) = nullptr;
 
@@ -281,7 +281,7 @@ namespace o2
     };
 
     template<typename _object_type, typename _field_type>
-    struct PrototypeFieldSetter : public ScriptValueBase::IPrototypeSetter
+    struct PrototypeFieldSetter : public ScriptValueBase::TPoolContainer<PrototypeFieldSetter<_object_type, _field_type>, ScriptValueBase::IPrototypeSetter>
     {
         void* (*pointerGetter)(void*) = nullptr;
 
@@ -425,17 +425,17 @@ namespace o2
 
         if constexpr (HasRefCounterMethod<_type>::value)
         {
-            auto dataContainer = mnew DataContainer<Ref<_type>>(Ref<_type>(object));
+            auto dataContainer = CreateContainer<DataContainer<Ref<_type>>>(Ref<_type>(object));
             jerry_set_object_native_pointer(jvalue, (IDataContainer*)dataContainer, &GetDataDeleter().info);
         }
         else if constexpr (std::is_base_of<IObject, _type>::value)
         {
-            auto dataContainer = mnew PointerDataContainer<_type>(object);
+            auto dataContainer = CreateContainer<PointerDataContainer<_type>>(object);
             jerry_set_object_native_pointer(jvalue, (IDataContainer*)dataContainer, &GetDataDeleter().info);
         }
         else if constexpr (!std::is_abstract<_type>::value && std::is_copy_constructible<_type>::value)
         {
-            auto dataContainer = mnew DataContainer<_type>(*object);
+            auto dataContainer = CreateContainer<DataContainer<_type>>(*object);
             jerry_set_object_native_pointer(jvalue, (IDataContainer*)dataContainer, &GetDataDeleter().info);
         }
 
@@ -471,13 +471,13 @@ namespace o2
 
         if constexpr (IsProperty<_type>::value)
         {
-            auto getterWrapperContainer = new PropertyGetterWrapperContainer<_type>();
+            auto getterWrapperContainer = CreateContainer<PropertyGetterWrapperContainer<_type>>();
             getterWrapperContainer->propertyPtr = &value;
             jerry_set_object_native_pointer(propertyDescriptor.getter, getterWrapperContainer, &GetDataDeleter().info);
         }
         else
         {
-            auto getterWrapperContainer = new PointerGetterWrapperContainer<_type>();
+            auto getterWrapperContainer = CreateContainer<PointerGetterWrapperContainer<_type>>();
             getterWrapperContainer->dataPtr = &value;
             jerry_set_object_native_pointer(propertyDescriptor.getter, getterWrapperContainer, &GetDataDeleter().info);
         }
@@ -487,13 +487,13 @@ namespace o2
 
         if constexpr (IsProperty<_type>::value)
         {
-            auto setterWrapperContainer = new PropertySetterWrapperContainer<_type>();
+            auto setterWrapperContainer = CreateContainer<PropertySetterWrapperContainer<_type>>();
             setterWrapperContainer->propertyPtr = &value;
             jerry_set_object_native_pointer(propertyDescriptor.setter, setterWrapperContainer, &GetDataDeleter().info);
         }
         else
         {
-            auto setterWrapperContainer = new PointerSetterWrapperContainer<_type>();
+            auto setterWrapperContainer = CreateContainer<PointerSetterWrapperContainer<_type>>();
             setterWrapperContainer->dataPtr = &value;
             jerry_set_object_native_pointer(propertyDescriptor.setter, setterWrapperContainer, &GetDataDeleter().info);
         }
@@ -522,13 +522,13 @@ namespace o2
 
         propertyDescriptor.is_get_defined = true;
         propertyDescriptor.getter = jerry_create_external_function(DescriptorGetter);
-        auto getterWrapperContainer = new FunctionalGetterWrapperContainer<_type>();
+        auto getterWrapperContainer = CreateContainer<FunctionalGetterWrapperContainer<_type>>();
         getterWrapperContainer->getter = getter;
         jerry_set_object_native_pointer(propertyDescriptor.getter, getterWrapperContainer, &GetDataDeleter().info);
 
         propertyDescriptor.is_set_defined = true;
         propertyDescriptor.setter = jerry_create_external_function(DescriptorSetter);
-        auto setterWrapperContainer = new FunctionalSetterWrapperContainer<_type>();
+        auto setterWrapperContainer = CreateContainer<FunctionalSetterWrapperContainer<_type>>();
         setterWrapperContainer->setter = setter;
         jerry_set_object_native_pointer(propertyDescriptor.setter, setterWrapperContainer, &GetDataDeleter().info);
 
@@ -555,13 +555,13 @@ namespace o2
 
         propertyDescriptor.is_get_defined = true;
         propertyDescriptor.getter = jerry_create_external_function(PrototypeDescriptorGetter);
-        auto getterContainer = new PrototypeFieldGetter<_object_type, _field_type>();
+        auto getterContainer = CreateContainer<PrototypeFieldGetter<_object_type, _field_type>>();
         getterContainer->pointerGetter = pointerGetter;
         jerry_set_object_native_pointer(propertyDescriptor.getter, getterContainer, &GetDataDeleter().info);
 
         propertyDescriptor.is_set_defined = true;
         propertyDescriptor.setter = jerry_create_external_function(PrototypeDescriptorSetter);
-        auto setterContainer = new PrototypeFieldSetter<_object_type, _field_type>();
+        auto setterContainer = CreateContainer<PrototypeFieldSetter<_object_type, _field_type>>();
         setterContainer->pointerGetter = pointerGetter;
         jerry_set_object_native_pointer(propertyDescriptor.setter, setterContainer, &GetDataDeleter().info);
 
@@ -596,7 +596,7 @@ namespace o2
     {
         Accept(jerry_create_external_function(&CallFunction));
 
-        auto funcContainer = mnew ScriptThisFunctionContainer<Function<_res_type(ScriptValue, _args ...)>, _res_type, _args ...>(func);
+        auto funcContainer = CreateContainer<ScriptThisFunctionContainer<Function<_res_type(ScriptValue, _args ...)>, _res_type, _args ...>>(func);
 
         jerry_set_object_native_pointer(jvalue, (IDataContainer*)funcContainer, &GetDataDeleter().info);
     }

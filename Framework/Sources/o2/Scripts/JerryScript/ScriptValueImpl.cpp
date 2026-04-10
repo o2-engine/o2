@@ -1,4 +1,5 @@
 #include "o2/Scripts/ScriptValueDef.h"
+#include "o2/Scripts/JerryScript/ScriptValueContainerAllocator.h"
 #include "o2/Utils/Debug/Debug.h"
 #include "o2/stdafx.h"
 
@@ -410,7 +411,19 @@ namespace o2
 
     void ScriptValueBase::DataContainerDeleter::Free(void* ptr)
     {
-        delete (IDataContainer*)ptr;
+        auto* container = static_cast<IDataContainer*>(ptr);
+        if (container)
+            container->Destroy();
+    }
+
+    void* ScriptValueBase::AllocateContainerMemory(size_t size, size_t alignment)
+    {
+        return ScriptContainerAllocator::GetInstance().Allocate(size, alignment);
+    }
+
+    void ScriptValueBase::FreeContainerMemory(void* ptr)
+    {
+        ScriptContainerAllocator::GetInstance().Free(ptr);
     }
 
     ScriptValueBase::IDataContainer* ScriptValueBase::GetNativeContainer(jerry_value_t jval)

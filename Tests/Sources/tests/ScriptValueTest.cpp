@@ -15,6 +15,15 @@ using namespace o2;
 
 #if IS_SCRIPTING_SUPPORTED
 
+namespace
+{
+    struct LargeNativePayload
+    {
+        int  value = 0;
+        char padding[1024] = {};
+    };
+}
+
 TEST(ScriptValue, PrimitiveTypes) {
     ScriptValue vInt(42);
     EXPECT_EQ(vInt.GetValue<int>(), 42);
@@ -442,6 +451,64 @@ TEST(ScriptValue, GetTransformReturnsLiveNativeObject) {
     auto pivot = image.Get()->o2::Actor::GetTransform()->GetPivot();
     EXPECT_FLOAT_EQ(pivot.x, 0.25f);
     EXPECT_FLOAT_EQ(pivot.y, 0.75f);
+}
+
+TEST(ScriptValue, LargeOwnedContainerFallback) {
+    LargeNativePayload payload;
+    payload.value = 77;
+    payload.padding[0] = 'A';
+    payload.padding[std::size(payload.padding) - 1] = 'Z';
+
+    ScriptValue value(payload);
+    LargeNativePayload restored = value.GetValue<LargeNativePayload>();
+
+    EXPECT_EQ(restored.value, 77);
+    EXPECT_EQ(restored.padding[0], 'A');
+    EXPECT_EQ(restored.padding[std::size(restored.padding) - 1], 'Z');
+}
+
+TEST(ScriptValue, NativeContainerPoolStressAndGarbageCollection) {
+    const int objectsCount = 512;
+
+    Vector<Ref<TestScriptObject>> objects;
+    ScriptValue values = ScriptValue::EmptyArray();
+
+    for (int i = 0; i < objectsCount; i++) {
+        auto object = mmake<TestScriptObject>();
+        object->value = i;
+        object->score = (float)i*0.5f;
+        objects.Add(object);
+
+        values.AddElement(object->GetScriptValue());
+        values.AddElement(ScriptValue(Function<int(int)>([base = i](int arg) {
+            return base + arg;
+        })));
+    }
+
+    o2Scripts.GetGlobal().SetProperty("pooledStressValues", values);
+    o2Scripts.CollectGarbage();
+
+    EXPECT_EQ(o2Scripts.GetGlobal().GetProperty("pooledStressValues").GetElement(0).GetProperty("value").GetValue<int>(), 0);
+    EXPECT_EQ(o2Scripts.GetGlobal().GetProperty("pooledStressValues").GetElement(1).Invoke<int>(5), 5);
+
+    o2Scripts.Eval(
+        "var pooledStressSum = 0;"
+        "for (var i = 0; i < pooledStressValues.length; i += 2)"
+        "    pooledStressSum += pooledStressValues[i].value;"
+    );
+
+    EXPECT_EQ(o2Scripts.GetGlobal().GetProperty("pooledStressSum").GetValue<int>(), objectsCount*(objectsCount - 1)/2);
+
+    o2Scripts.GetGlobal().RemoveProperty(ScriptValue("pooledStressValues"));
+    o2Scripts.GetGlobal().RemoveProperty(ScriptValue("pooledStressSum"));
+
+    values = ScriptValue();
+    objects.Clear();
+
+    for (int i = 0; i < 5; i++)
+        o2Scripts.CollectGarbage();
+
+    SUCCEED();
 }
 
 #else

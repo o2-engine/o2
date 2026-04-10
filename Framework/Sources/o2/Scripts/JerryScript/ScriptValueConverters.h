@@ -23,7 +23,7 @@ namespace o2
             data.SetContainingObject(value);
         else
         {
-            auto dataContainer = mnew ScriptValueBase::DataContainer<__type>(value);
+            auto dataContainer = ScriptValueBase::CreateContainer<ScriptValueBase::DataContainer<__type>>(value);
             jerry_set_object_native_pointer(data.jvalue, (ScriptValueBase::IDataContainer*)dataContainer,
                                              &ScriptValueBase::GetDataDeleter().info);
         }
@@ -553,7 +553,7 @@ namespace o2
         {
             data.jvalue = jerry_create_external_function(&CallFunction);
 
-            IDataContainer* funcContainer = new ScriptFunctionContainer<Function<_res_type(_args ...)>, _res_type, _args ...>(value);
+            IDataContainer* funcContainer = ScriptValueBase::CreateContainer<ScriptFunctionContainer<Function<_res_type(_args ...)>, _res_type, _args ...>>(value);
 
             jerry_set_object_native_pointer(data.jvalue, funcContainer, &GetDataDeleter().info);
         }
