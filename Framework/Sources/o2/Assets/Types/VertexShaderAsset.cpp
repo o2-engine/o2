@@ -31,14 +31,15 @@ namespace o2
 
     void VertexShaderAsset::LoadData(const String& path)
     {
-		String source = o2FileSystem.ReadFile(path);
+        String sourcePath = Shader::ResolvePlatformSourcePath(path);
+        String source = o2FileSystem.ReadFile(sourcePath);
 
         mShader = mmake<Shader>();
-        mShader->SetFileName(path);
+        mShader->SetFileName(sourcePath);
         mShader->Compile(source, Shader::Type::Vertex);
 
 #if IS_EDITOR
-        mShader->SetFileEditDate(o2FileSystem.GetFileInfo(path).editDate);
+        mShader->SetFileEditDate(o2FileSystem.GetFileInfo(sourcePath).editDate);
 #endif
     }
 }

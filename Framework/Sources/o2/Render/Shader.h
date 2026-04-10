@@ -5,7 +5,7 @@
 #elif defined PLATFORM_ANDROID
 // #include "o2/Render/Android/ShaderBase.h"
 #elif defined PLATFORM_MAC
-// #include "o2/Render/Mac/ShaderBase.h"
+#include "o2/Render/Mac/ShaderBase.h"
 #elif defined PLATFORM_IOS
 // #include "o2/Render/iOS/ShaderBase.h"
 #elif defined(PLATFORM_LINUX)
@@ -70,6 +70,9 @@ namespace o2
 
         // Sets shader file name for identification
         void SetFileName(const String& fileName);
+
+        // Resolves a platform-specific shader source path from the logical asset path
+        static String ResolvePlatformSourcePath(const String& sourcePath);
 
 #if IS_EDITOR
         // Returns the file modification timestamp recorded at last load

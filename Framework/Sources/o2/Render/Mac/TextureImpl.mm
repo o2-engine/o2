@@ -18,21 +18,26 @@ namespace o2
     
     bool Texture::PlatformCreate()
     {
+        if (!mImpl)
+            mImpl = mnew MTLTextureImpl();
+
         MTLTextureDescriptor *textureDescriptor = [[MTLTextureDescriptor alloc] init];
-        textureDescriptor.pixelFormat = MTLPixelFormatRGBA8Unorm;
+        textureDescriptor.pixelFormat = mUsage == Usage::RenderTarget ? RenderDevice::view.colorPixelFormat : MTLPixelFormatRGBA8Unorm;
         textureDescriptor.width = mSize.x;
         textureDescriptor.height = mSize.y;
         
-        if (usage == Usage::RenderTarget)
+        if (mUsage == Usage::RenderTarget)
             textureDescriptor.usage = MTLTextureUsageRenderTarget|MTLTextureUsageShaderRead;
         
         mImpl->texture = [RenderDevice::device newTextureWithDescriptor:textureDescriptor];
 
-        return true;
+        return mImpl->texture != nil;
     }
 
     void Texture::PlatformDestroy()
     {
+        if (mImpl)
+            mImpl->texture = nil;
     }
 
     void Texture::PlatformUploadData(const Vec2I& size, Byte* data, TextureFormat format)

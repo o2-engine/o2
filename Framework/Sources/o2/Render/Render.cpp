@@ -183,15 +183,26 @@ namespace o2
 			indexesCount = elementsCount * 3;
 
 		Ref<Material> drawMaterial = material ? material : mDefaultMaterial;
+		if (!drawMaterial)
+		{
+			mLog->Error("DrawBuffer skipped: no material is available for the current draw call");
+			return;
+		}
+
 		TextureRef texture = overrideTexture ? overrideTexture : drawMaterial->GetTexture();
 
 		// Determine batch vertex type: expand with extra texcoords if material needs them
 		VertexType batchVertexType = vertexType;
+
+#if defined PLATFORM_MAC
+		batchVertexType = Vertex3Tex::Type();
+#else
 		int materialTexChannels = drawMaterial ? drawMaterial->GetTotalTextureChannelsCount() : 1;
 		if (materialTexChannels > 1 && !batchVertexType.HasParam(VertexParam::TexCoord1))
 			batchVertexType = Vertex2Tex::Type();
 		if (materialTexChannels > 2 && !batchVertexType.HasParam(VertexParam::TexCoord2))
 			batchVertexType = Vertex3Tex::Type();
+#endif
 
 		if (CheckBatchBreak(texture, primitiveType, drawMaterial, batchVertexType, verticesCount, indexesCount))
 		{
@@ -1347,7 +1358,7 @@ namespace o2
 			if (!shaderAsset || !shaderAsset->GetShader())
 				continue;
 
-			String path = shaderAsset->GetFullPath();
+			String path = Shader::ResolvePlatformSourcePath(shaderAsset->GetFullPath());
 			TimeStamp currentDate = o2FileSystem.GetFileInfo(path).editDate;
 			if (currentDate == shaderAsset->GetShader()->GetFileEditDate())
 				continue;

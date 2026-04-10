@@ -165,6 +165,11 @@ namespace o2
 
 	void Material::SetVertexShader(const Ref<Shader>& shader)
 	{
+		if (mVertexShader == shader)
+			return;
+
+		PlatformDestroy();
+		mReady = false;
 		mVertexShader = shader;
 		mHashDirty = true;
 	}
@@ -176,6 +181,11 @@ namespace o2
 
 	void Material::SetFragmentShader(const Ref<Shader>& shader)
 	{
+		if (mFragmentShader == shader)
+			return;
+
+		PlatformDestroy();
+		mReady = false;
 		mFragmentShader = shader;
 		mHashDirty = true;
 	}
@@ -198,6 +208,11 @@ namespace o2
 
 	void Material::SetBlendMode(BlendMode blendMode)
 	{
+		if (mBlendMode == blendMode)
+			return;
+
+		PlatformDestroy();
+		mReady = false;
 		mBlendMode = blendMode;
 		mHashDirty = true;
 	}
@@ -268,12 +283,16 @@ namespace o2
 		{
 			if (mSamplers[i].samplerUniformName == sampler.samplerUniformName)
 			{
+				PlatformDestroy();
+				mReady = false;
 				mSamplers[i] = sampler;
 				mHashDirty = true;
 				return;
 			}
 		}
 
+		PlatformDestroy();
+		mReady = false;
 		mSamplers.Add(sampler);
 
 		mHashDirty = true;
@@ -281,7 +300,13 @@ namespace o2
 
 	void Material::RemoveTextureSampler(const String& samplerUniformName)
 	{
-		mSamplers.RemoveFirst([&](const TextureSampler& s) { return s.samplerUniformName == samplerUniformName; });
+		int samplerIdx = mSamplers.IndexOf([&](const TextureSampler& s) { return s.samplerUniformName == samplerUniformName; });
+		if (samplerIdx < 0)
+			return;
+
+		mSamplers.RemoveAt(samplerIdx);
+		PlatformDestroy();
+		mReady = false;
 		mHashDirty = true;
 	}
 
@@ -369,10 +394,26 @@ namespace o2
 		size_t h = 0;
 		h ^= std::hash<UInt>()(mProgram) + 0x9e3779b9 + (h << 6) + (h >> 2);
 
+		if (mVertexShader)
+			h ^= std::hash<size_t>()((size_t)mVertexShader.Get()) + 0x9e3779b9 + (h << 6) + (h >> 2);
+
+		if (mFragmentShader)
+			h ^= std::hash<size_t>()((size_t)mFragmentShader.Get()) + 0x9e3779b9 + (h << 6) + (h >> 2);
+
 		if (mTexture)
 			h ^= std::hash<size_t>()((size_t)mTexture.Get()) + 0x9e3779b9 + (h << 6) + (h >> 2);
 
 		h ^= std::hash<int>()(static_cast<int>(mBlendMode)) + 0x9e3779b9 + (h << 6) + (h >> 2);
+
+		for (const auto& sampler : mSamplers)
+		{
+			h ^= std::hash<std::string>()(std::string(sampler.samplerUniformName.Data(), sampler.samplerUniformName.Length())) + 0x9e3779b9 + (h << 6) + (h >> 2);
+			h ^= std::hash<std::string>()(std::string(sampler.texCoordsAttrName.Data(), sampler.texCoordsAttrName.Length())) + 0x9e3779b9 + (h << 6) + (h >> 2);
+
+			TextureRef samplerTexture = sampler.GetTexture();
+			if (samplerTexture)
+				h ^= std::hash<size_t>()((size_t)samplerTexture.Get()) + 0x9e3779b9 + (h << 6) + (h >> 2);
+		}
 
 		for (const auto& param : mParams)
 			h ^= param->ComputeHash() + 0x9e3779b9 + (h << 6) + (h >> 2);

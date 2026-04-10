@@ -3,169 +3,201 @@
 #ifdef PLATFORM_MAC
 #include <simd/matrix.h>
 
-#include "o2/Render/Render.h"
-#include "o2/Render/Mac/MetalWrappers.h"
-#include "o2/Render/Mac/ShaderTypes.h"
 #include "o2/Application/Application.h"
 #include "o2/Application/Mac/ApplicationPlatformWrapper.h"
-#include "o2/Assets/Assets.h"
-#include "o2/Render/Font.h"
-#include "o2/Render/Mesh.h"
-#include "o2/Render/Sprite.h"
+#include "o2/Render/Material.h"
+#include "o2/Render/Mac/MetalWrappers.h"
+#include "o2/Render/Mac/ShaderTypes.h"
+#include "o2/Render/Render.h"
+#include "o2/Render/Shader.h"
 #include "o2/Render/Texture.h"
 #include "o2/Utils/Debug/Debug.h"
 #include "o2/Utils/Debug/Log/LogStream.h"
-#include "o2/Utils/Math/Geometry.h"
-#include "o2/Utils/Math/Interpolation.h"
-#include "o2/Application/Input.h"
-#include "o2/Utils/Function/Function.h"
+#include "o2/Utils/FileSystem/FileSystem.h"
 
 namespace o2
 {
     MTKView*                    RenderDevice::view;
     id<MTLDevice>               RenderDevice::device;
     id<MTLCommandQueue>         RenderDevice::commandQueue;
-    id<MTLLibrary>              RenderDevice::defaultLibrary;
-    id<MTLRenderPipelineState>  RenderDevice::pipelineState;
-    id<MTLRenderCommandEncoder> RenderDevice::renderEncoder;
     id<MTLCommandBuffer>        RenderDevice::commandBuffer;
 
     id<MTLBuffer> RenderDevice::vertexBuffers[2];
     id<MTLBuffer> RenderDevice::indexBuffers[2];
-    id<MTLBuffer> RenderDevice::uniformBuffers[2];
 
     id<MTLBuffer> RenderDevice::vertexBuffer;
     id<MTLBuffer> RenderDevice::indexBuffer;
-    id<MTLBuffer> RenderDevice::uniformBuffer;
+    int           RenderDevice::currentBufferIndex;
 
-    void RenderDevice::Initialize()
+    namespace
+    {
+        NSUInteger AlignBufferOffset(NSUInteger value)
+        {
+            static const NSUInteger alignment = 256;
+            return ((value + alignment - 1) / alignment) * alignment;
+        }
+
+        void MtxConvert(const float* origin, matrix_float4x4& dst)
+        {
+            dst.columns[0][0] = origin[0];  dst.columns[0][1] = origin[1];  dst.columns[0][2] = origin[2];  dst.columns[0][3] = origin[3];
+            dst.columns[1][0] = origin[4];  dst.columns[1][1] = origin[5];  dst.columns[1][2] = origin[6];  dst.columns[1][3] = origin[7];
+            dst.columns[2][0] = origin[8];  dst.columns[2][1] = origin[9];  dst.columns[2][2] = origin[10]; dst.columns[2][3] = origin[11];
+            dst.columns[3][0] = origin[12]; dst.columns[3][1] = origin[13]; dst.columns[3][2] = origin[14]; dst.columns[3][3] = origin[15];
+        }
+
+        String LoadResolvedShaderSource(const String& path)
+        {
+            return FileSystem::ReadFile(Shader::ResolvePlatformSourcePath(path));
+        }
+    }
+
+    void RenderDevice::Initialize(UInt vertexBufferByteSize, UInt indexBufferSize)
     {
         RenderDevice::view = ApplicationPlatformWrapper::view;
         device = ApplicationPlatformWrapper::view.device;
+        commandQueue = [device newCommandQueue];
+        currentBufferIndex = 0;
+
+        NSUInteger vertexBufferLength = (NSUInteger)vertexBufferByteSize;
+        NSUInteger indexBufferLength = (NSUInteger)indexBufferSize * sizeof(VertexIndex);
 
         for (int i = 0; i < 2; i++)
         {
-            vertexBuffers[i] = [device newBufferWithLength:o2Render.mVertexBufferSize*sizeof(MetalVertex2)
+            vertexBuffers[i] = [device newBufferWithLength:vertexBufferLength
                                                    options:MTLResourceStorageModeShared];
 
-            indexBuffers[i] = [device newBufferWithLength:o2Render.mIndexBufferSize*sizeof(UInt)
+            indexBuffers[i] = [device newBufferWithLength:indexBufferLength
                                                   options:MTLResourceStorageModeShared];
-
-            uniformBuffers[i] = [device newBufferWithLength:o2Render.mUniformBufferSize*sizeof(Uniforms)
-                                                    options:MTLResourceStorageModeShared];
         }
 
-        NSError *error = nil;
-        defaultLibrary = [device newLibraryWithURL:[NSBundle.mainBundle URLForResource:@"PetStoryShaders" withExtension:@"metallib"] error:&error];
-        if (!defaultLibrary) {
-            NSLog(@"Can't create metal library: %@", error);
-            exit(EXIT_FAILURE);
-        }
-
-        id<MTLFunction> vertexFunction = [defaultLibrary newFunctionWithName:@"vertexShader"];
-        id<MTLFunction> fragmentFunction = [defaultLibrary newFunctionWithName:@"fragmentShader"];
-
-        // Set up a descriptor for creating a pipeline state object
-        MTLRenderPipelineDescriptor *pipelineStateDescriptor = [[MTLRenderPipelineDescriptor alloc] init];
-        pipelineStateDescriptor.label = @"Default";
-        pipelineStateDescriptor.vertexFunction = vertexFunction;
-        pipelineStateDescriptor.fragmentFunction = fragmentFunction;
-        pipelineStateDescriptor.colorAttachments[0].pixelFormat                 = view.colorPixelFormat;
-        pipelineStateDescriptor.colorAttachments[0].blendingEnabled             = YES;
-        pipelineStateDescriptor.colorAttachments[0].rgbBlendOperation           = MTLBlendOperationAdd;
-        pipelineStateDescriptor.colorAttachments[0].alphaBlendOperation         = MTLBlendOperationAdd;
-        pipelineStateDescriptor.colorAttachments[0].sourceRGBBlendFactor        = MTLBlendFactorSourceAlpha;
-        pipelineStateDescriptor.colorAttachments[0].destinationRGBBlendFactor   = MTLBlendFactorOneMinusSourceAlpha;
-        pipelineStateDescriptor.colorAttachments[0].sourceAlphaBlendFactor      = MTLBlendFactorOne;
-        pipelineStateDescriptor.colorAttachments[0].destinationAlphaBlendFactor = MTLBlendFactorOneMinusSourceAlpha;
-
-
-        pipelineState = [device newRenderPipelineStateWithDescriptor:pipelineStateDescriptor
-                                                               error:&error];
-
-        commandQueue = [device newCommandQueue];
+        vertexBuffer = vertexBuffers[0];
+        indexBuffer = indexBuffers[0];
     }
 
     void Render::InitializePlatform()
     {
         mLog->Out("Initializing Metal render..");
 
-        RenderDevice::Initialize();
+        mVertexBufferSize = USHRT_MAX;
+        mIndexBufferSize = USHRT_MAX;
+        mVertexBufferByteSize = mVertexBufferSize * sizeof(Vertex3Tex);
+        mVertexData = mnew UInt8[mVertexBufferByteSize];
+        mVertexIndexData = mnew VertexIndex[mIndexBufferSize];
+        mCurrentBatchVertexType = Vertex3Tex::Type();
+
+        RenderDevice::Initialize(mVertexBufferByteSize, mIndexBufferSize);
     }
 
     void Render::DeinitializePlatform()
-    {}
+    {
+        delete[] mVertexData;
+        delete[] mVertexIndexData;
+        mVertexData = nullptr;
+        mVertexIndexData = nullptr;
+
+        RenderDevice::commandBuffer = nil;
+        RenderDevice::vertexBuffer = nil;
+        RenderDevice::indexBuffer = nil;
+        RenderDevice::vertexBuffers[0] = nil;
+        RenderDevice::vertexBuffers[1] = nil;
+        RenderDevice::indexBuffers[0] = nil;
+        RenderDevice::indexBuffers[1] = nil;
+        RenderDevice::commandQueue = nil;
+        RenderDevice::device = nil;
+        RenderDevice::view = nil;
+    }
 
     void Render::InitializeSandardShader()
     {}
 
+    void Render::PlatformInitializeDefaultMaterial()
+    {
+        String basePath = GetBuiltinAssetsPath();
+        String vertexPath = Shader::ResolvePlatformSourcePath(basePath + "Shaders/Default.vsh");
+        String fragmentPath = Shader::ResolvePlatformSourcePath(basePath + "Shaders/Default.fsh");
+
+        String vertexSource = LoadResolvedShaderSource(basePath + "Shaders/Default.vsh");
+        String fragmentSource = LoadResolvedShaderSource(basePath + "Shaders/Default.fsh");
+
+        if (vertexSource.IsEmpty() || fragmentSource.IsEmpty())
+        {
+            o2Debug.LogError("Failed to load default Metal shader files (" + vertexPath + ", " + fragmentPath + ")");
+            return;
+        }
+
+        Ref<Shader> vertexShader = mmake<Shader>();
+        Ref<Shader> fragmentShader = mmake<Shader>();
+        vertexShader->SetFileName(vertexPath);
+        fragmentShader->SetFileName(fragmentPath);
+        vertexShader->Compile(vertexSource, Shader::Type::Vertex);
+        fragmentShader->Compile(fragmentSource, Shader::Type::Fragment);
+
+        if (!vertexShader->IsReady() || !fragmentShader->IsReady())
+        {
+            o2Debug.LogError("Failed to compile default Metal shaders");
+            return;
+        }
+
+        mDefaultMaterial = mmake<Material>();
+        mDefaultMaterial->SetVertexShader(vertexShader);
+        mDefaultMaterial->SetFragmentShader(fragmentShader);
+        mDefaultMaterial->SetBlendMode(BlendMode::Normal);
+        if (!mDefaultMaterial->Build())
+        {
+            o2Debug.LogError("Failed to build default Metal material");
+            mDefaultMaterial = nullptr;
+        }
+    }
+
     void Render::PlatformBegin()
     {
-        int currentBuffers = RenderDevice::vertexBuffer == RenderDevice::vertexBuffers[0] ? 1 : 0;
-        RenderDevice::vertexBuffer = RenderDevice::vertexBuffers[currentBuffers];
-        RenderDevice::indexBuffer = RenderDevice::indexBuffers[currentBuffers];
-        RenderDevice::uniformBuffer = RenderDevice::uniformBuffers[currentBuffers];
+        RenderDevice::currentBufferIndex = (RenderDevice::currentBufferIndex + 1) % 2;
+        RenderDevice::vertexBuffer = RenderDevice::vertexBuffers[RenderDevice::currentBufferIndex];
+        RenderDevice::indexBuffer = RenderDevice::indexBuffers[RenderDevice::currentBufferIndex];
         
         RenderDevice::commandBuffer = [RenderDevice::commandQueue commandBuffer];
         RenderDevice::commandBuffer.label = @"Default";
         
         mVertexBufferOffset = 0;
         mIndexBufferOffset = 0;
-        mUniformBufferOffset = 0;
-    }
-
-    void Render::PlatformUploadBuffers(Vertex* vertices, UInt verticesCount, VertexIndex* indexes, UInt indexesCount)
-    {
-        MetalVertex2* dstVertexBuffer = (MetalVertex2*)((Byte*)[RenderDevice::vertexBuffer contents] + mVertexBufferOffset);
-        for (UInt i = 0; i < verticesCount; i++)
-        {
-            UInt vi = mLastDrawVertex + i;
-            dstVertexBuffer[vi].x = vertices[i].x;
-            dstVertexBuffer[vi].y = vertices[i].y;
-            dstVertexBuffer[vi].z = vertices[i].z;
-            dstVertexBuffer[vi].tu = vertices[i].tu;
-            dstVertexBuffer[vi].tv = vertices[i].tv;
-            
-            Color4 c; c.SetABGR(vertices[i].color);
-            dstVertexBuffer[vi].color = { c.RF(), c.GF(), c.BF(), c.AF() };
-        }
-        
-        UInt* dstIndexBuffer =(UInt*)((Byte*)[RenderDevice::indexBuffer contents] + mIndexBufferOffset);
-        for (UInt i = mLastDrawIdx, j = 0; j < indexesCount; i++, j++)
-            dstIndexBuffer[i] = mLastDrawVertex + indexes[j];
-    }
-    
-    void MtxConvert(float* origin, matrix_float4x4& dst)
-    {
-        dst.columns[0][0] = origin[0];  dst.columns[0][1] = origin[1];  dst.columns[0][2] = origin[2];  dst.columns[0][3] = origin[3];
-        dst.columns[1][0] = origin[4];  dst.columns[1][1] = origin[5];  dst.columns[1][2] = origin[6];  dst.columns[1][3] = origin[7];
-        dst.columns[2][0] = origin[8];  dst.columns[2][1] = origin[9];  dst.columns[2][2] = origin[10]; dst.columns[2][3] = origin[11];
-        dst.columns[3][0] = origin[12]; dst.columns[3][1] = origin[13]; dst.columns[3][2] = origin[14]; dst.columns[3][3] = origin[15];
+        mVertexBufferIdx = 0;
+        mIndexBufferIdx = 0;
     }
     
     void Render::PlatformDrawPrimitives()
     {
+        if (!mCurrentMaterial || !mCurrentMaterial->mImpl || !mCurrentMaterial->mImpl->pipelineState)
+            return;
+
         MTLRenderPassDescriptor *renderPassDescriptor = RenderDevice::view.currentRenderPassDescriptor;
-        if(renderPassDescriptor != nil)
+        if (renderPassDescriptor != nil)
         {
             if (mNeedClear)
             {
                 [renderPassDescriptor.colorAttachments[0] setClearColor:
                  MTLClearColorMake(mClearColor.RF(), mClearColor.GF(), mClearColor.BF(), mClearColor.AF())];
+                [renderPassDescriptor.colorAttachments[0] setLoadAction:MTLLoadActionClear];
                 
                 mNeedClear = false;
             }
             else
                 [renderPassDescriptor.colorAttachments[0] setLoadAction:MTLLoadActionLoad];
+
+            [renderPassDescriptor.colorAttachments[0] setStoreAction:MTLStoreActionStore];
             
             if (mCurrentRenderTarget)
                 renderPassDescriptor.colorAttachments[0].texture = mCurrentRenderTarget->mImpl->texture;
+
+            NSUInteger vertexDataSize = (NSUInteger)mLastDrawVertex * sizeof(Vertex3Tex);
+            NSUInteger indexDataSize = (NSUInteger)mLastDrawIdx * sizeof(VertexIndex);
+            memcpy((Byte*)[RenderDevice::vertexBuffer contents] + mVertexBufferOffset, mVertexData, vertexDataSize);
+            memcpy((Byte*)[RenderDevice::indexBuffer contents] + mIndexBufferOffset, mVertexIndexData, indexDataSize);
 
             auto renderEncoder = [RenderDevice::commandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
             renderEncoder.label = @"Default";
             
             float scale = mCurrentRenderTarget ? 1.0f : o2Application.GetGraphicsScale();
-            [renderEncoder setViewport:(MTLViewport){0.0, 0.0, (double)(mCurrentResolution.x * scale), (double)(mCurrentResolution.y * scale), -1.0, 1.0 }];
+            [renderEncoder setViewport:(MTLViewport){0.0, 0.0, (double)(mCurrentResolution.x * scale), (double)(mCurrentResolution.y * scale), 0.0, 1.0 }];
             
             if (mScissorEnabled && mCurrentRenderTarget == nullptr)
             {
@@ -187,24 +219,47 @@ namespace o2
                 }];
             }
             
-            [renderEncoder setRenderPipelineState:RenderDevice::pipelineState];
+            [renderEncoder setRenderPipelineState:mCurrentMaterial->mImpl->pipelineState];
             
             [renderEncoder setVertexBuffer:RenderDevice::vertexBuffer offset:mVertexBufferOffset atIndex:0];
             
-            if (mCurrentDrawTexture)
+            TextureRef primaryTexture = mCurrentDrawTexture ? mCurrentDrawTexture : mWhiteTexture;
+            if (primaryTexture && mCurrentMaterial->GetTextureUniform() >= 0)
             {
-                [renderEncoder setFragmentTexture:mCurrentDrawTexture->mImpl->texture atIndex:0];
+                [renderEncoder setFragmentTexture:primaryTexture->mImpl->texture atIndex:(NSUInteger)mCurrentMaterial->GetTextureUniform()];
             }
-            else {
-                [renderEncoder setFragmentTexture:mWhiteTexture->mImpl->texture atIndex:0];
+
+            for (int i = 0; i < mCurrentMaterial->mSamplerLocations.Count() && i < mCurrentMaterial->mSamplers.Count(); i++)
+            {
+                const auto& samplerLocation = mCurrentMaterial->mSamplerLocations[i];
+                if (samplerLocation.textureIndex < 0)
+                    continue;
+
+                TextureRef samplerTexture = mCurrentMaterial->mSamplers[i].GetTexture();
+                if (!samplerTexture)
+                    continue;
+
+                [renderEncoder setFragmentTexture:samplerTexture->mImpl->texture atIndex:(NSUInteger)samplerLocation.textureIndex];
             }
             
+            mCurrentMaterial->ApplyParams();
+
             Uniforms uniforms;
             MtxConvert(mMVPMatrix, uniforms.mvpMatrix);
-            
-            Uniforms* dstUniformsBuffer = (Uniforms*)((Byte*)[RenderDevice::uniformBuffer contents] + mUniformBufferOffset);
-            memcpy(dstUniformsBuffer, &uniforms, sizeof(Uniforms));
-            [renderEncoder setVertexBuffer:RenderDevice::uniformBuffer offset:mUniformBufferOffset atIndex:1];
+            [renderEncoder setVertexBytes:&uniforms length:sizeof(Uniforms) atIndex:1];
+
+            if (mCurrentMaterial->mImpl->materialParamsIndex >= 0 && !mCurrentMaterial->mImpl->materialParamsData.empty())
+            {
+                const void* paramsData = mCurrentMaterial->mImpl->materialParamsData.data();
+                NSUInteger paramsSize = mCurrentMaterial->mImpl->materialParamsSize;
+                NSUInteger paramsIndex = (NSUInteger)mCurrentMaterial->mImpl->materialParamsIndex;
+
+                if (mCurrentMaterial->mImpl->bindParamsToVertex)
+                    [renderEncoder setVertexBytes:paramsData length:paramsSize atIndex:paramsIndex];
+
+                if (mCurrentMaterial->mImpl->bindParamsToFragment)
+                    [renderEncoder setFragmentBytes:paramsData length:paramsSize atIndex:paramsIndex];
+            }
             
             static const MTLPrimitiveType primitiveType[3]{ MTLPrimitiveTypeTriangle, MTLPrimitiveTypeTriangle, MTLPrimitiveTypeLine };
             
@@ -214,20 +269,26 @@ namespace o2
             [renderEncoder endEncoding];
         }
 
-        mVertexBufferOffset += (sizeof(MetalVertex2)*mLastDrawVertex/256 + 1)*256;
-        mIndexBufferOffset += (sizeof(UInt)*mLastDrawIdx/256 + 1)*256;
-        mUniformBufferOffset += (sizeof(Uniforms)/256 + 1)*256;
+        mVertexBufferOffset = AlignBufferOffset(mVertexBufferOffset + (NSUInteger)mLastDrawVertex * sizeof(Vertex3Tex));
+        mIndexBufferOffset = AlignBufferOffset(mIndexBufferOffset + (NSUInteger)mLastDrawIdx * sizeof(VertexIndex));
     }
 
     void Render::PlatformEnd()
     {
-        [RenderDevice::commandBuffer presentDrawable:RenderDevice::view.currentDrawable];
+        if (!RenderDevice::commandBuffer)
+            return;
+
+        if (!mCurrentRenderTarget && RenderDevice::view.currentDrawable)
+            [RenderDevice::commandBuffer presentDrawable:RenderDevice::view.currentDrawable];
+
         [RenderDevice::commandBuffer commit];
     }
 
     void Render::PlatformResetState()
     {
-        
+        mCurrentBatchVertexType = Vertex3Tex::Type();
+        mVertexBufferIdx = 0;
+        mIndexBufferIdx = 0;
     }
 
     void Render::Clear(const Color4& color /*= Color4::Blur()*/)
@@ -238,7 +299,7 @@ namespace o2
 
     void Render::PlatformFlipVerticesUV()
     {
-        MetalVertex2* dstVertexBuffer = (MetalVertex2*)((Byte*)[RenderDevice::vertexBuffer contents] + mVertexBufferOffset);
+        Vertex3Tex* dstVertexBuffer = reinterpret_cast<Vertex3Tex*>(mVertexData);
         for (UInt i = 0; i < mLastDrawVertex; i++)
             dstVertexBuffer[i].tv = 1.0f - dstVertexBuffer[i].tv;
     }
@@ -251,6 +312,20 @@ namespace o2
         float finalCamMtx[16];
         Math::mtxMultiply(finalCamMtx, modelMatrix, viewMatrix);
         Math::mtxMultiply(mMVPMatrix, projMatrix, finalCamMtx);
+
+        // Shared projection matrices are OpenGL-style and produce clip-space z in [-w, w].
+        // Metal expects clip-space z in [0, w], so convert it once at the platform level.
+        static const float metalClipSpaceFix[16] =
+        {
+            1.0f, 0.0f, 0.0f, 0.0f,
+            0.0f, 1.0f, 0.0f, 0.0f,
+            0.0f, 0.0f, 0.5f, 0.0f,
+            0.0f, 0.0f, 0.5f, 1.0f
+        };
+
+        float metalMvp[16];
+        Math::mtxMultiply(metalMvp, metalClipSpaceFix, mMVPMatrix);
+        memcpy(mMVPMatrix, metalMvp, sizeof(mMVPMatrix));
     }
 
     void Render::PlatformEnableScissorTest()
@@ -288,6 +363,9 @@ namespace o2
         return Vec2I((displayPixelSize.width / displayPhysicalSize.width) * mmPerInch / scale,
                      (displayPixelSize.height / displayPhysicalSize.height) * mmPerInch / scale);
     }
+
+    void Render::PlatformBindMaterial(const Ref<Material>& material)
+    {}
 }
 
 #endif // PLATFORM_MAC

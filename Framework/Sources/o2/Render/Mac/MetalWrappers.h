@@ -2,34 +2,61 @@
 
 #import <MetalKit/MetalKit.h>
 
+#include "o2/Utils/Types/CommonTypes.h"
+
+#include <string>
+#include <unordered_map>
+#include <vector>
+
 namespace o2
 {
     struct RenderDevice
     {
     public:
         // Initializes renderer
-        static void Initialize();
+        static void Initialize(UInt vertexBufferByteSize, UInt indexBufferSize);
         
     public:
         static MTKView*                    view;
         static id<MTLDevice>               device;
-        static id<MTLLibrary>              defaultLibrary;
         static id<MTLCommandQueue>         commandQueue;
-        static id<MTLRenderPipelineState>  pipelineState;
-        static id<MTLRenderCommandEncoder> renderEncoder;
         static id<MTLCommandBuffer>        commandBuffer;
         
         static id<MTLBuffer> vertexBuffers[2];
         static id<MTLBuffer> indexBuffers[2];
-        static id<MTLBuffer> uniformBuffers[2];
         
         static id<MTLBuffer> vertexBuffer;
         static id<MTLBuffer> indexBuffer;
-        static id<MTLBuffer> uniformBuffer;
+        static int           currentBufferIndex;
     };
     
     struct MTLTextureImpl
     {
         id<MTLTexture> texture;
+    };
+
+    struct MTLShaderImpl
+    {
+        id<MTLLibrary> library = nil;
+        id<MTLFunction> function = nil;
+    };
+
+    struct MetalParamBinding
+    {
+        NSUInteger offset = 0;
+        MTLDataType dataType = MTLDataTypeNone;
+    };
+
+    struct MTLMaterialImpl
+    {
+        id<MTLRenderPipelineState> pipelineState = nil;
+
+        int materialParamsIndex = -1;
+        bool bindParamsToVertex = false;
+        bool bindParamsToFragment = false;
+
+        NSUInteger materialParamsSize = 0;
+        std::unordered_map<std::string, MetalParamBinding> paramBindings;
+        std::vector<Byte> materialParamsData;
     };
 }

@@ -22,6 +22,12 @@ namespace o2
 		PROPERTY(AssetRef<VertexShaderAsset>, vertexShader, SetVertexShader, GetVertexShader);         // Vertex shader asset reference @EDITOR_PROPERTY
 		PROPERTY(AssetRef<FragmentShaderAsset>, fragmentShader, SetFragmentShader, GetFragmentShader); // Fragment shader asset reference @EDITOR_PROPERTY
 
+        template<typename _cast_type>
+        Ref<_cast_type> CloneAsRef() const
+        {
+            return AssetWithDefaultMeta<MaterialAsset>::template CloneAsRef<_cast_type>();
+        }
+
     public:
         // Default constructor
         MaterialAsset();

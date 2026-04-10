@@ -5,7 +5,7 @@
 #elif defined PLATFORM_ANDROID
 // #include "o2/Render/Android/MaterialBase.h"
 #elif defined PLATFORM_MAC
-// #include "o2/Render/Mac/MaterialBase.h"
+#include "o2/Render/Mac/MaterialBase.h"
 #elif defined PLATFORM_IOS
 // #include "o2/Render/iOS/MaterialBase.h"
 #elif defined(PLATFORM_LINUX)
@@ -221,7 +221,7 @@ namespace o2
     // rendering state. Links shaders into a GPU program and caches uniform
     // and attribute locations. Provides a hash for efficient batch comparison.
     // -----------------------------------------------------------------------
-    class Material : public MaterialBase, public ISerializable, public RefCounterable, public ICloneableRef
+    class Material : public MaterialBase, virtual public ISerializable, public RefCounterable, virtual public ICloneableRef
     {
     public:
         PROPERTIES(Material);

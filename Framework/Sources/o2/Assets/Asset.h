@@ -27,7 +27,7 @@ namespace o2
     // -------------------------------------------------------------------------------------------------
     // Basic asset interface. Contains copy of asset, without caching. For regular use assets references
     // -------------------------------------------------------------------------------------------------
-    class Asset : public ISerializable, public RefCounterable, public ICloneableRef
+    class Asset : virtual public ISerializable, public RefCounterable, virtual public ICloneableRef
     {
     public:
         typedef AssetMeta MetaType;

@@ -61,6 +61,18 @@ namespace o2
         mFileName = fileName;
     }
 
+    String Shader::ResolvePlatformSourcePath(const String& sourcePath)
+    {
+#if defined PLATFORM_MAC
+        if (sourcePath.EndsWith(".metal"))
+            return sourcePath;
+
+        return sourcePath + ".metal";
+#else
+        return sourcePath;
+#endif
+    }
+
     void Shader::PostRefConstruct()
     {}
 
