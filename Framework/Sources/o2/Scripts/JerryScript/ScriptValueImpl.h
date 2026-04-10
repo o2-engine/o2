@@ -103,6 +103,38 @@ namespace o2
             return nullptr;
     }
 
+    template<typename _type>
+    ScriptValueBase::PointerDataContainer<_type>::PointerDataContainer(_type* d) :
+        data(d)
+    {}
+
+    template<typename _type>
+    void* ScriptValueBase::PointerDataContainer<_type>::GetData() const
+    {
+        return data;
+    }
+
+    template<typename _type>
+    IObject* ScriptValueBase::PointerDataContainer<_type>::TryCastToIObject() const
+    {
+        if constexpr (std::is_base_of<IObject, _type>::value)
+            return dynamic_cast<IObject*>(data);
+
+        return nullptr;
+    }
+
+    template<typename _type>
+    const Type* ScriptValueBase::PointerDataContainer<_type>::GetType() const
+    {
+        return &TypeOf(_type);
+    }
+
+    template<typename _type>
+    ScriptValueBase::IDataContainer* ScriptValueBase::PointerDataContainer<_type>::Clone() const
+    {
+        return mnew PointerDataContainer<_type>(data);
+    }
+
     // -------------------------------------------------------
     // Function containers - store callable by value, override
     // Invoke directly for minimal overhead
@@ -394,6 +426,11 @@ namespace o2
         if constexpr (HasRefCounterMethod<_type>::value)
         {
             auto dataContainer = mnew DataContainer<Ref<_type>>(Ref<_type>(object));
+            jerry_set_object_native_pointer(jvalue, (IDataContainer*)dataContainer, &GetDataDeleter().info);
+        }
+        else if constexpr (std::is_base_of<IObject, _type>::value)
+        {
+            auto dataContainer = mnew PointerDataContainer<_type>(object);
             jerry_set_object_native_pointer(jvalue, (IDataContainer*)dataContainer, &GetDataDeleter().info);
         }
         else if constexpr (!std::is_abstract<_type>::value && std::is_copy_constructible<_type>::value)

@@ -44,6 +44,20 @@ namespace o2
             IDataContainer* Clone() const override;
         };
 
+        template<typename _type>
+        struct PointerDataContainer : public IDataContainer
+        {
+            _type* data = nullptr;
+
+            explicit PointerDataContainer(_type* d);
+            ~PointerDataContainer() override = default;
+
+            void* GetData() const override;
+            IObject* TryCastToIObject() const override;
+            const Type* GetType() const override;
+            IDataContainer* Clone() const override;
+        };
+
         struct IFunctionContainer : public IDataContainer
         {
             virtual jerry_value_t Invoke(jerry_value_t thisValue, jerry_value_t* args, int argsCount) = 0;

@@ -429,6 +429,21 @@ TEST(ScriptValue, ReelJsStyleImageWidgetCreateAndParent) {
     EXPECT_EQ(imageChild->GetParent().Lock(), container);
 }
 
+TEST(ScriptValue, GetTransformReturnsLiveNativeObject) {
+    auto image = mmake<Image>();
+    o2Scripts.GetGlobal().SetProperty("liveTransformImage", image->GetScriptValue());
+    o2Scripts.CollectGarbage();
+
+    o2Scripts.Eval(
+        "liveTransformImage.GetTransform().SetPivotX(0.25);"
+        "liveTransformImage.GetTransform().SetPivotY(0.75);"
+    );
+
+    auto pivot = image.Get()->o2::Actor::GetTransform()->GetPivot();
+    EXPECT_FLOAT_EQ(pivot.x, 0.25f);
+    EXPECT_FLOAT_EQ(pivot.y, 0.75f);
+}
+
 #else
 
 TEST(ScriptValue, ScriptingDisabled) {

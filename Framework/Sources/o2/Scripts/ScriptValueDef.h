@@ -94,7 +94,7 @@ namespace o2 {
         // Returns type of containing native object type
         const Type *GetObjectContainerType() const;
 
-        // Sets containing object. Stores Ref<_type> for RefCounterable types, value for others
+        // Sets containing object. Stores Ref<_type> for RefCounterable types, non-owning pointer for IObject types, value for others
         template<typename _type>
         void SetContainingObject(_type *object);
 
