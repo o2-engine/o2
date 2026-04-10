@@ -385,6 +385,11 @@ namespace o2
 
     }
 
+    VertexType Render::PlatformResolveBatchVertexType(const VertexType& sourceVertexType, const Ref<Material>& material) const
+    {
+        return ResolveBatchVertexTypeByMaterial(sourceVertexType, material);
+    }
+
     void Render::EnableScissorTest(const RectI& rect)
     {
         DrawPrimitives();

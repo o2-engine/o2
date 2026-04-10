@@ -1,95 +1,6 @@
 #include "o2/stdafx.h"
 #include "EngineSettings.h"
 
-#include <filesystem>
-#include <map>
-#include <vector>
-
-#if defined PLATFORM_MAC
-#include <mach-o/dyld.h>
-#endif
-
-namespace
-{
-    namespace fs = std::filesystem;
-
-    bool IsProjectRoot(const fs::path& path)
-    {
-        if (path.empty())
-            return false;
-
-        std::error_code error;
-        return fs::exists(path / "ProjectSettings.json", error) &&
-               fs::exists(path / "Assets", error) &&
-               fs::exists(path / "o2", error);
-    }
-
-    const o2::String& ResolveProjectRootPath()
-    {
-        static o2::String resolvedPath;
-        static bool initialized = false;
-        if (initialized)
-            return resolvedPath;
-
-        initialized = true;
-
-        std::error_code error;
-        std::vector<fs::path> candidates;
-        fs::path current = fs::current_path(error);
-        if (!error)
-        {
-            candidates.emplace_back(current);
-            candidates.emplace_back(current / "..");
-            candidates.emplace_back(current / "../..");
-        }
-
-#if defined PLATFORM_MAC
-        uint32_t executablePathSize = 0;
-        _NSGetExecutablePath(nullptr, &executablePathSize);
-        std::string executablePath(executablePathSize, '\0');
-        if (_NSGetExecutablePath(executablePath.data(), &executablePathSize) == 0)
-        {
-            fs::path executableDir = fs::path(executablePath.c_str()).parent_path();
-            candidates.emplace_back(executableDir);
-            candidates.emplace_back(executableDir / "..");
-            candidates.emplace_back(executableDir / "../..");
-        }
-#endif
-
-        for (auto& candidate : candidates)
-        {
-            fs::path normalized = candidate.lexically_normal();
-            if (!IsProjectRoot(normalized))
-                continue;
-
-            resolvedPath = normalized.string().c_str();
-            if (!resolvedPath.EndsWith("/"))
-                resolvedPath += "/";
-
-            return resolvedPath;
-        }
-
-        resolvedPath = current.empty() ? "./" : current.lexically_normal().string().c_str();
-        if (!resolvedPath.EndsWith("/"))
-            resolvedPath += "/";
-
-        return resolvedPath;
-    }
-
-    const o2::String& BuildPath(const char* relativePath)
-    {
-        static std::map<std::string, o2::String> cache;
-
-        auto existing = cache.find(relativePath);
-        if (existing != cache.end())
-            return existing->second;
-
-        o2::String value = ResolveProjectRootPath() + relativePath;
-        value.ReplaceAll("\\", "/");
-        return cache.emplace(relativePath, value).first->second;
-    }
-}
-
 o2::Platform GetEnginePlatform()
 {
 #ifdef PLATFORM_WINDOWS
@@ -125,7 +36,7 @@ const char* GetProjectPath()
 const char* GetProjectSettingPath()
 {
 #if defined PLATFORM_MAC || defined PLATFORM_WINDOWS || defined PLATFORM_LINUX
-    return BuildPath("ProjectSettings.json").Data();
+    return "../../ProjectSettings.json";
 #else
     return "ProjectSettings.json";
 #endif
@@ -163,7 +74,7 @@ bool IsRenderDrawCallsDebugEnabled()
 const char* GetProjectRootPath()
 {
 #if defined PLATFORM_MAC || defined PLATFORM_WINDOWS || defined PLATFORM_LINUX
-    return ResolveProjectRootPath().Data();
+    return "../../";
 #else
     return "";
 #endif
@@ -176,19 +87,28 @@ const char* GetAssetsRootPath()
 
 const char* GetAssetsPath()
 {
-    return BuildPath("Assets/").Data();
+    static char path[256] = "";
+    static bool initialized = false;
+    if (!initialized)
+    {
+        initialized = true;
+        strcat(path, GetProjectRootPath());
+        strcat(path, GetAssetsRootPath());
+    }
+
+    return path;
 }
 
 const char* GetBuiltAssetsPath()
 {
 #if defined PLATFORM_WINDOWS
-    return BuildPath("BuiltAssets/Windows/Data/").Data();
+    return "../../BuiltAssets/Windows/Data/";
 #elif defined PLATFORM_ANDROID
     return "AndroidAssets/BuiltAssets/";
 #elif defined PLATFORM_MAC
-    return BuildPath("BuiltAssets/Mac/Data/").Data();
+    return "../../BuiltAssets/Mac/Data/";
 #elif defined PLATFORM_LINUX
-    return BuildPath("BuiltAssets/Linux/Data/").Data();
+    return "../../BuiltAssets/Linux/Data/";
 #elif defined PLATFORM_IOS
     return "Data/";
 #endif
@@ -202,13 +122,13 @@ const char* GetBasicAtlasPath()
 const char* GetBuiltAssetsTreePath()
 {
 #if defined PLATFORM_WINDOWS
-    return BuildPath("BuiltAssets/Windows/Data.json").Data();
+    return "../../BuiltAssets/Windows/Data.json";
 #elif defined PLATFORM_ANDROID
     return "AndroidAssets/AssetsTree.json";
 #elif defined PLATFORM_MAC
-    return BuildPath("BuiltAssets/Mac/Data.json").Data();
+    return "../../BuiltAssets/Mac/Data.json";
 #elif defined PLATFORM_LINUX
-    return BuildPath("BuiltAssets/Linux/Data.json").Data();
+    return "../../BuiltAssets/Linux/Data.json";
 #elif defined PLATFORM_IOS
     return "Data.json";
 #endif
@@ -217,7 +137,7 @@ const char* GetBuiltAssetsTreePath()
 const char* GetEditorAssetsPath()
 {
 #if defined PLATFORM_WINDOWS || defined PLATFORM_MAC || defined PLATFORM_LINUX
-    return BuildPath("o2/Editor/Assets/").Data();
+    return "../../o2/Editor/Assets/";
 #else
     return "";
 #endif
@@ -226,11 +146,11 @@ const char* GetEditorAssetsPath()
 const char* GetEditorBuiltAssetsPath()
 {
 #if defined PLATFORM_WINDOWS
-    return BuildPath("BuiltAssets/Windows/EditorData/").Data();
+    return "../../BuiltAssets/Windows/EditorData/";
 #elif defined PLATFORM_MAC
-    return BuildPath("BuiltAssets/Mac/EditorData/").Data();
+    return "../../BuiltAssets/Mac/EditorData/";
 #elif defined PLATFORM_LINUX
-    return BuildPath("BuiltAssets/Linux/EditorData/").Data();
+    return "../../BuiltAssets/Linux/EditorData/";
 #endif
     return "";
 }
@@ -238,11 +158,11 @@ const char* GetEditorBuiltAssetsPath()
 const char* GetEditorBuiltAssetsTreePath()
 {
 #if defined PLATFORM_WINDOWS
-    return BuildPath("BuiltAssets/Windows/EditorData.json").Data();
+    return "../../BuiltAssets/Windows/EditorData.json";
 #elif defined PLATFORM_MAC
-    return BuildPath("BuiltAssets/Mac/EditorData.json").Data();
+    return "../../BuiltAssets/Mac/EditorData.json";
 #elif defined PLATFORM_LINUX
-    return BuildPath("BuiltAssets/Linux/EditorData.json").Data();
+    return "../../BuiltAssets/Linux/EditorData.json";
 #endif
     return "";
 }
@@ -250,11 +170,11 @@ const char* GetEditorBuiltAssetsTreePath()
 const char* GetBuiltinAssetsPath()
 {
 #if defined PLATFORM_WINDOWS
-    return BuildPath("BuiltAssets/Windows/FrameworkData/").Data();
+    return "../../BuiltAssets/Windows/FrameworkData/";
 #elif defined PLATFORM_MAC
-    return BuildPath("BuiltAssets/Mac/FrameworkData/").Data();
+    return "../../BuiltAssets/Mac/FrameworkData/";
 #elif defined PLATFORM_LINUX
-    return BuildPath("BuiltAssets/Linux/FrameworkData/").Data();
+    return "../../BuiltAssets/Linux/FrameworkData/";
 #else
     return "FrameworkAssets/";
 #endif

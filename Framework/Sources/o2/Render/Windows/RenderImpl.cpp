@@ -360,6 +360,11 @@ namespace o2
         }
     }
 
+    VertexType Render::PlatformResolveBatchVertexType(const VertexType& sourceVertexType, const Ref<Material>& material) const
+    {
+        return ResolveBatchVertexTypeByMaterial(sourceVertexType, material);
+    }
+
     void Render::Clear(const Color4& color /*= Color4::Blur()*/)
     {
         PROFILE_SAMPLE_FUNC();

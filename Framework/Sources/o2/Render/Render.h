@@ -430,6 +430,10 @@ namespace o2
 							 const Ref<Material>& material, const VertexType& batchVertexType,
 							 UInt verticesCount, UInt indexesCount) const;
 
+		// Resolves a batch vertex layout using the default material-driven texcoord expansion rules
+		VertexType ResolveBatchVertexTypeByMaterial(const VertexType& sourceVertexType,
+											        const Ref<Material>& material) const;
+
 		// Initializes default material (calls platform to load shaders and set mDefaultMaterial, mStdShader*)
 		void InitializeDefaultMaterial();
 
@@ -438,6 +442,10 @@ namespace o2
 
 		// Platform specific material binding
 		void PlatformBindMaterial(const Ref<Material>& material);
+
+		// Platform specific batch vertex layout selection
+		VertexType PlatformResolveBatchVertexType(const VertexType& sourceVertexType,
+										          const Ref<Material>& material) const;
 
 		// Send buffers to draw
 		void DrawPrimitives();

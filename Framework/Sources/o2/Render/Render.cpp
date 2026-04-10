@@ -192,17 +192,7 @@ namespace o2
 		TextureRef texture = overrideTexture ? overrideTexture : drawMaterial->GetTexture();
 
 		// Determine batch vertex type: expand with extra texcoords if material needs them
-		VertexType batchVertexType = vertexType;
-
-#if defined PLATFORM_MAC
-		batchVertexType = Vertex3Tex::Type();
-#else
-		int materialTexChannels = drawMaterial ? drawMaterial->GetTotalTextureChannelsCount() : 1;
-		if (materialTexChannels > 1 && !batchVertexType.HasParam(VertexParam::TexCoord1))
-			batchVertexType = Vertex2Tex::Type();
-		if (materialTexChannels > 2 && !batchVertexType.HasParam(VertexParam::TexCoord2))
-			batchVertexType = Vertex3Tex::Type();
-#endif
+		VertexType batchVertexType = PlatformResolveBatchVertexType(vertexType, drawMaterial);
 
 		if (CheckBatchBreak(texture, primitiveType, drawMaterial, batchVertexType, verticesCount, indexesCount))
 		{
@@ -240,6 +230,21 @@ namespace o2
 			currentBatchMaterialHash != materialHash ||
 			mLastDrawVertex + verticesCount >= effectiveVertexCapacity ||
 			mLastDrawIdx + indexesCount >= mIndexBufferSize;
+	}
+
+	VertexType Render::ResolveBatchVertexTypeByMaterial(const VertexType& sourceVertexType,
+											 const Ref<Material>& material) const
+	{
+		VertexType batchVertexType = sourceVertexType;
+
+		int materialTexChannels = material ? material->GetTotalTextureChannelsCount() : 1;
+		if (materialTexChannels > 1 && !batchVertexType.HasParam(VertexParam::TexCoord1))
+			batchVertexType = Vertex2Tex::Type();
+
+		if (materialTexChannels > 2 && !batchVertexType.HasParam(VertexParam::TexCoord2))
+			batchVertexType = Vertex3Tex::Type();
+
+		return batchVertexType;
 	}
 
 	void Render::UploadBuffers(const UInt8* vertices, UInt verticesCount, const VertexType& srcVertexType,
