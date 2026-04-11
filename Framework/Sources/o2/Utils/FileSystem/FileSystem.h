@@ -35,8 +35,14 @@ namespace o2
         AAssetManager* GetAssetManager() const;
 #elif defined PLATFORM_MAC || defined PLATFORM_IOS
         // Returns bundle path
-        const String& GetBundlePath() const;
+    static const String& GetBundlePath();
+
+    // Returns bundle path for relative resource path
+    static String GetBundlePath(const String& relativePath);
 #endif
+
+    // Returns runtime-readable path for file access
+    static String GetPathForReading(const String& path);
 
         // Returns info of paths and files of specified path
         FolderInfo GetFolderInfo(const String& path) const;

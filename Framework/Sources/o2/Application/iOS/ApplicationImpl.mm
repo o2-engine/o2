@@ -18,15 +18,26 @@ namespace o2
     RendererViewDelegate* ApplicationPlatformWrapper::renderer;
     Vec2I ApplicationPlatformWrapper::resolution;
 
+    String GetIOSBundlePath()
+    {
+        return [[[NSBundle mainBundle] bundlePath] UTF8String];
+    }
+
+    void ApplicationPlatformWrapper::InitializeApplication()
+    {
+        o2Application.InitializePlatform();
+        o2Application.Launch();
+    }
+
     void ApplicationPlatformWrapper::OnWindowResized(const Vec2I& resolution)
     {
         ApplicationPlatformWrapper::resolution = resolution;
         
-        if (Render::IsSingletonInitialzed())
-            o2Render.OnFrameResized();
+        if (Application::IsSingletonInitialzed())
+            o2Application.OnResized(resolution);
     }
 
-    void Application::Run(int argc, char * argv[])
+    void Application::Run(int argc, char** argv)
     {
         InitalizeSystems();
         UIApplicationMain(argc, argv, nil, NSStringFromClass([AppDelegate class]));
@@ -34,7 +45,7 @@ namespace o2
     
     void Application::InitializePlatform()
     {        
-        mRender = mnew Render();
+        mRender = mmake<Render>();
         
         o2Debug.InitializeFont();
         o2UI.TryLoadStyle();
@@ -124,7 +135,8 @@ namespace o2
 
     Vec2I Application::GetScreenResolution() const
     {
-        return Vec2I(1000, 1000);
+        CGSize size = UIScreen.mainScreen.nativeBounds.size;
+        return Vec2I((int)size.width, (int)size.height);
     }
 
     void Application::SetCursor(CursorType type)
@@ -135,7 +147,7 @@ namespace o2
 
     String Application::GetBinPath() const
     {
-        return "";
+        return GetIOSBundlePath();
     }
 }
 

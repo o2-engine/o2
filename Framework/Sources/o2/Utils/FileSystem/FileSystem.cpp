@@ -17,6 +17,57 @@ namespace fs = std::filesystem;
 
 namespace o2
 {
+#ifdef PLATFORM_IOS
+    String GetIOSBundlePath();
+#endif
+
+#if defined PLATFORM_MAC || defined PLATFORM_IOS
+    const String& FileSystem::GetBundlePath()
+    {
+        static String bundlePath;
+
+#if defined PLATFORM_IOS
+        bundlePath = GetIOSBundlePath();
+        if (!bundlePath.IsEmpty() && !bundlePath.EndsWith("/"))
+            bundlePath += "/";
+#else
+        bundlePath = "";
+#endif
+
+        return bundlePath;
+    }
+
+    String FileSystem::GetBundlePath(const String& relativePath)
+    {
+#if defined PLATFORM_IOS
+        if (relativePath.IsEmpty() || relativePath.StartsWith("/"))
+            return relativePath;
+
+        const auto& bundlePath = GetBundlePath();
+        if (bundlePath.IsEmpty())
+            return relativePath;
+
+        return bundlePath + relativePath;
+#else
+        return relativePath;
+#endif
+    }
+#endif
+
+    String FileSystem::GetPathForReading(const String& path)
+    {
+#ifdef PLATFORM_IOS
+        fs::path directPath(path.Data());
+        if (path.IsEmpty() || path.StartsWith("/") || fs::exists(directPath))
+            return path;
+
+        String bundlePath = GetBundlePath(path);
+        if (!bundlePath.IsEmpty() && fs::exists(fs::path(bundlePath.Data())))
+            return bundlePath;
+#endif
+
+        return path;
+    }
 
     FileSystem::FileSystem(RefCounter* refCounter):
         Singleton<FileSystem>(refCounter)
@@ -87,7 +138,7 @@ namespace o2
         FolderInfo res;
         res.path = path;
 
-        fs::path fullPath(path.Data());
+        fs::path fullPath(FileSystem::GetPathForReading(path).Data());
         if (!fs::exists(fullPath))
         {
             mInstance->mLog->Error("Failed GetPathInfo: Error opening directory " + path);
@@ -144,7 +195,7 @@ namespace o2
         FileInfo res;
         res.path = "invalid_file";
 
-        fs::path fullPath(path.Data());
+        fs::path fullPath(FileSystem::GetPathForReading(path).Data());
 
         if (!fs::exists(fullPath))
             return res;
@@ -232,12 +283,14 @@ namespace o2
 
     bool FileSystem::IsFolderExist(const String& path) const
     {
-        return fs::exists(path.Data());
+        fs::path fullPath(FileSystem::GetPathForReading(path).Data());
+        return fs::exists(fullPath);
     }
 
     bool FileSystem::IsFileExist(const String& path) const
     {
-        return fs::exists(path.Data());
+        fs::path fullPath(FileSystem::GetPathForReading(path).Data());
+        return fs::exists(fullPath);
     }
 
     String FileSystem::GetPathRelativeToPath(const String& from, const String& to)

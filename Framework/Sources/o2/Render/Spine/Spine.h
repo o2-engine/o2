@@ -104,6 +104,9 @@ namespace o2
         // Updates spine animation
         void Update(float dt);
 
+        // Returns whether skeleton and animation state were created successfully
+        bool IsLoaded() const;
+
         // Returns spine animation names
         const Vector<String>& GetAnimationNames() const;
 

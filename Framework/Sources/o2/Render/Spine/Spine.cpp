@@ -76,6 +76,9 @@ namespace o2
 
     void Spine::Draw()
     {
+        if (!mSkeleton || !mAnimationState)
+            return;
+
         static spine::SkeletonRenderer skeletonRenderer;
 
         spine::RenderCommand* command = skeletonRenderer.render(*mSkeleton);
@@ -134,6 +137,11 @@ namespace o2
         mSkeleton->updateWorldTransform(spine::Physics::Physics_Update);
     }
 
+    bool Spine::IsLoaded() const
+    {
+        return mSkeleton != nullptr && mAnimationState != nullptr;
+    }
+
     const Vector<String>& Spine::GetAnimationNames() const
     {
         return mAnimationNames;
@@ -141,6 +149,9 @@ namespace o2
 
     Ref<Spine::Track> Spine::GetTrack(const String& name)
     {
+        if (!IsLoaded())
+            return nullptr;
+
         int trackIndex = mAnimationNames.IndexOf(name);
         if (trackIndex == -1)
         {

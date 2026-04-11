@@ -1,6 +1,7 @@
 #include "o2/stdafx.h"
 #include "File.h"
 
+#include "o2/Utils/FileSystem/FileSystem.h"
 #include "o2/Utils/Reflection/Reflection.h"
 
 namespace o2
@@ -35,13 +36,14 @@ namespace o2
     {
         Close();
 
-        mIfstream.open(filename, std::ios::binary);
+        String actualFilename = FileSystem::GetPathForReading(filename);
+        mIfstream.open(actualFilename, std::ios::binary);
 
         if (!mIfstream.is_open())
             return false;
 
         mOpened = true;
-        mFilename = filename;
+        mFilename = actualFilename;
 
         return true;
     }

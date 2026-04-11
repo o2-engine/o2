@@ -148,7 +148,7 @@ namespace o2
         
 #elif defined PLATFORM_IOS
         // Initializes engine and runs it
-        virtual void Run(int argc, char * argv[]);
+    virtual void Run(int argc, char** argv);
         
         // Updates frame
         void Update();
@@ -279,7 +279,7 @@ CLASS_METHODS_META(o2::Application)
     FUNCTION().PUBLIC().SIGNATURE(void, Update);
 #endif
 #if  defined PLATFORM_IOS
-    FUNCTION().PUBLIC().SIGNATURE(void, Run, int, char);
+    FUNCTION().PUBLIC().SIGNATURE(void, Run, int, char**);
     FUNCTION().PUBLIC().SIGNATURE(void, Update);
     FUNCTION().PUBLIC().SIGNATURE(void, Launch);
 #endif

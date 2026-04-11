@@ -16,7 +16,11 @@ namespace o2
 #if IS_EDITOR
     typedef SceneEditableObject WidgetLayerBase;
 #else
-    struct WidgetLayerBase : public ISerializable, public RefCounterable, public ICloneableRef {};
+    struct WidgetLayerBase : virtual public ISerializable, public RefCounterable, public ICloneableRef
+    {
+        WidgetLayerBase() = default;
+        WidgetLayerBase(RefCounter* refCounter): RefCounterable(refCounter) {}
+    };
 #endif
 
     // ---------------------

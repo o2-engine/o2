@@ -51,14 +51,23 @@ namespace o2
 
     void SpineComponent::LoadSpine()
     {
+        mSpineRenderer = nullptr;
+
         if (!mSpineAsset)
             return;
 
-        mSpineRenderer = mmake<Spine>(mSpineAsset);
+        auto spineRenderer = mmake<Spine>(mSpineAsset);
+        if (!spineRenderer->IsLoaded())
+            return;
+
+        mSpineRenderer = spineRenderer;
     }
 
     void SpineComponent::CreateAnimationStates()
     {
+        if (!mSpineRenderer)
+            return;
+
         auto names = mSpineRenderer->GetAnimationNames();
         for (auto& name : names)
         {
@@ -152,12 +161,16 @@ namespace o2
     void SpineComponent::AnimationState::Register(const Ref<AnimationComponent>& owner)
     {
         IAnimationState::Register(owner);
+        mTrack = nullptr;
 
         if (auto spineComponent = DynamicCast<SpineComponent>(owner))
         {
             if (spineComponent->mSpineRenderer)
             {
                 mTrack = spineComponent->mSpineRenderer->GetTrack(name);
+                if (!mTrack)
+                    return;
+
                 mTrack->SetLoop(looped ? Loop::Repeat : Loop::None);
                 mTrack->SetWeight(mWeight);
             }

@@ -349,8 +349,13 @@ namespace o2
 
     void Widget::DrawDebugFrame()
     {
+#if defined PLATFORM_IOS
+        if (!IsUIDebugEnabled())
+            return;
+#else
         if (!IsUIDebugEnabled() && !o2Input.IsKeyDown(VK_F2))
             return;
+#endif
 
         static int colr = 0;
         static int lastFrame = 0;

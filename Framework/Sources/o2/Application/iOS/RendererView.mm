@@ -1,7 +1,5 @@
 #ifdef PLATFORM_IOS
 #import "RendererView.h"
-
-#import "ShaderTypes.h"
 #include "o2/Render/Render.h"
 #include "o2/Render/iOS/MetalWrappers.h"
 #include "o2/Application/Application.h"
@@ -28,6 +26,17 @@
 @end
 
 @implementation RenderView
+
+- (void)layoutSubviews
+{
+    [super layoutSubviews];
+
+    CGSize drawableSize = self.drawableSize;
+    if (drawableSize.width <= 0.0 || drawableSize.height <= 0.0)
+        return;
+
+    o2::ApplicationPlatformWrapper::OnWindowResized(o2::Vec2I((int)drawableSize.width, (int)drawableSize.height));
+}
 
 - (o2::Vec2F)getTouchPosition:(UITouch *)touch
 {

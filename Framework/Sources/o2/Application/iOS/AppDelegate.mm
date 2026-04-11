@@ -21,10 +21,13 @@
     
     o2::ApplicationPlatformWrapper::viewController = [[RenderViewController alloc] init];
     
-    auto view = [[RenderView alloc] init];
+    auto view = [[RenderView alloc] initWithFrame:window.bounds];
     o2::ApplicationPlatformWrapper::view = view;
     o2::ApplicationPlatformWrapper::viewController.view = view;
+    view.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+    view.contentScaleFactor = UIScreen.mainScreen.nativeScale;
     
+    view.colorPixelFormat = MTLPixelFormatRGBA8Unorm;
     view.device = MTLCreateSystemDefaultDevice();
     if(!view.device)
     {
@@ -32,15 +35,20 @@
         return NO;
     }
     
+    CGSize drawableSize = CGSizeMake(CGRectGetWidth(view.bounds) * view.contentScaleFactor,
+                                     CGRectGetHeight(view.bounds) * view.contentScaleFactor);
+    view.drawableSize = drawableSize;
+
     o2::ApplicationPlatformWrapper::renderer = [[RendererViewDelegate alloc] init];
-    [o2::ApplicationPlatformWrapper::renderer mtkView:view drawableSizeWillChange:view.drawableSize];
     view.delegate = o2::ApplicationPlatformWrapper::renderer;
-    
-    o2Application.InitializePlatform();
-    o2Application.Launch();
     
     [window setRootViewController:o2::ApplicationPlatformWrapper::viewController];
     [window makeKeyAndVisible];
+
+    [view layoutIfNeeded];
+    [o2::ApplicationPlatformWrapper::renderer mtkView:view drawableSizeWillChange:view.drawableSize];
+
+    o2::ApplicationPlatformWrapper::InitializeApplication();
     return YES;
 }
 

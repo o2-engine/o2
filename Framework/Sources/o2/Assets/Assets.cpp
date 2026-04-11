@@ -545,6 +545,10 @@ namespace o2
 #if IS_EDITOR
     void Assets::RebuildAssets(bool resetCache /*= false*/)
     {
+#if PLATFORM_IOS
+    (void)resetCache;
+    return;
+#else
 #if PLATFORM_WINDOWS
         String assetsBuilderPath = "AssetsBuilder.exe";
         String platform = "Windows";
@@ -574,6 +578,7 @@ namespace o2
         auto changedAssetsUIDs = ReloadAssetsTree();
 
         onAssetsRebuilt(changedAssetsUIDs);
+#endif
     }
 
     Vector<UID> Assets::ReloadAssetsTree()

@@ -11,6 +11,12 @@
 
 namespace o2
 {
+    template<typename _type, typename _enable>
+    struct CheckSerializeBasicOverridden;
+
+    template<typename _type, typename _enable>
+    struct CheckDeserializeBasicOverridden;
+
     // -----------------------------
     // Serializable object interface
     // -----------------------------
@@ -41,6 +47,16 @@ namespace o2
         // DataDocument converting operator
         explicit operator DataDocument() const { return DataDocument(); }
 
+        // Internal wrappers used by serialization processors to avoid friending every helper type
+        void SerializeBasicInternal(DataValue& node) const { SerializeBasic(node); }
+        void DeserializeBasicInternal(const DataValue& node) { DeserializeBasic(node); }
+        void SerializeDeltaBasicInternal(DataValue& node, const IObject& origin) const { SerializeDeltaBasic(node, origin); }
+        void DeserializeDeltaBasicInternal(const DataValue& node, const IObject& origin) { DeserializeDeltaBasic(node, origin); }
+        void OnSerializeInternal(DataValue& node) const { OnSerialize(node); }
+        void OnDeserializedInternal(const DataValue& node) { OnDeserialized(node); }
+        void OnSerializeDeltaInternal(DataValue& node, const IObject& origin) const { OnSerializeDelta(node, origin); }
+        void OnDeserializedDeltaInternal(const DataValue& node, const IObject& origin) { OnDeserializedDelta(node, origin); }
+
         IOBJECT(ISerializable);
 
     protected:
@@ -67,6 +83,21 @@ namespace o2
 
         // Completion deserialization delta callback
         virtual void OnDeserializedDelta(const DataValue& node, const IObject& origin) {}
+
+        friend class SerializeTypeProcessor;
+        friend class DeserializeTypeProcessor;
+
+        template<typename _origin_type>
+        friend class SerializeDeltaTypeProcessor;
+
+        template<typename _origin_type>
+        friend class DeserializeDeltaTypeProcessor;
+
+        template<typename _type, typename _enable>
+        friend struct CheckSerializeBasicOverridden;
+
+        template<typename _type, typename _enable>
+        friend struct CheckDeserializeBasicOverridden;
     };
 
     template<typename T>
@@ -108,8 +139,8 @@ namespace o2
         // Default serialization way
         static void Process(_type* object, DataValue& node)
         {
-            object->SerializeBasic(node);
-            object->OnSerialize(node);
+            object->SerializeBasicInternal(node);
+            object->OnSerializeInternal(node);
         }
     };
 
@@ -129,8 +160,8 @@ namespace o2
         // Default serialization way
         static void Process(_type* object, const DataValue& node)
         {
-            object->DeserializeBasic(node);
-            object->OnDeserialized(node);
+            object->DeserializeBasicInternal(node);
+            object->OnDeserializedInternal(node);
         }
     };
 
@@ -150,8 +181,8 @@ namespace o2
         // Default serialization way
         static void Process(_type* object, const _type* origin, const IObject& originObj, DataValue& node)
         {
-            object->SerializeDeltaBasic(node, originObj);
-            object->OnSerializeDelta(node, originObj);
+            object->SerializeDeltaBasicInternal(node, originObj);
+            object->OnSerializeDeltaInternal(node, originObj);
         }
     };
 
@@ -171,8 +202,8 @@ namespace o2
         // Default serialization way
         static void Process(_type* object, const _type* origin, const IObject& originObj, const DataValue& node)
         {
-            object->DeserializeDeltaBasic(node, originObj);
-            object->OnDeserializedDelta(node, originObj);
+            object->DeserializeDeltaBasicInternal(node, originObj);
+            object->OnDeserializedDeltaInternal(node, originObj);
         }
     };
 
@@ -646,6 +677,14 @@ CLASS_METHODS_META(o2::ISerializable)
     FUNCTION().PUBLIC().SIGNATURE(void, DeserializeDelta, const DataValue&, const IObject&);
     FUNCTION().PUBLIC().SIGNATURE(String, SerializeToString);
     FUNCTION().PUBLIC().SIGNATURE(void, DeserializeFromString, const String&);
+    FUNCTION().PUBLIC().SIGNATURE(void, SerializeBasicInternal, DataValue&);
+    FUNCTION().PUBLIC().SIGNATURE(void, DeserializeBasicInternal, const DataValue&);
+    FUNCTION().PUBLIC().SIGNATURE(void, SerializeDeltaBasicInternal, DataValue&, const IObject&);
+    FUNCTION().PUBLIC().SIGNATURE(void, DeserializeDeltaBasicInternal, const DataValue&, const IObject&);
+    FUNCTION().PUBLIC().SIGNATURE(void, OnSerializeInternal, DataValue&);
+    FUNCTION().PUBLIC().SIGNATURE(void, OnDeserializedInternal, const DataValue&);
+    FUNCTION().PUBLIC().SIGNATURE(void, OnSerializeDeltaInternal, DataValue&, const IObject&);
+    FUNCTION().PUBLIC().SIGNATURE(void, OnDeserializedDeltaInternal, const DataValue&, const IObject&);
     FUNCTION().PROTECTED().SIGNATURE(void, SerializeBasic, DataValue&);
     FUNCTION().PROTECTED().SIGNATURE(void, DeserializeBasic, const DataValue&);
     FUNCTION().PROTECTED().SIGNATURE(void, SerializeDeltaBasic, DataValue&, const IObject&);

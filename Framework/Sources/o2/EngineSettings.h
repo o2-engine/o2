@@ -49,7 +49,7 @@ o2::Platform GetEnginePlatform();
 // Returns current device type
 o2::DeviceType GetDeviceType();
 
-// Project config file path. Relative from executable
+// Project config file path
 const char* GetProjectSettingPath();
 
 // Enables stopping on log errors
@@ -80,25 +80,25 @@ const char* GetAssetsRootPath();
 // Basic atlas path (from assets path)
 const char* GetBasicAtlasPath();
 
-// Assets path. Relative from executable
+// Assets path. Runtime-readable path
 const char* GetAssetsPath();
 
-// Built assets path with built assets. Relative from executable
+// Built assets path with built assets. Runtime-readable path
 const char* GetBuiltAssetsPath();
 
-// Built assets assets tree path
+// Built assets assets tree path. Runtime-readable path
 const char* GetBuiltAssetsTreePath();
 
-// Editor's assets path. Relative from executable
+// Editor's assets path. Runtime-readable path
 const char* GetEditorAssetsPath();
 
-// Editor's built assets path with built assets. Relative from executable
+// Editor's built assets path with built assets. Runtime-readable path
 const char* GetEditorBuiltAssetsPath();
 
-// Editor's built assets assets tree path
+// Editor's built assets assets tree path. Runtime-readable path
 const char* GetEditorBuiltAssetsTreePath();
 
-// Built in assets path. Relative from executable
+// Built in assets path. Runtime-readable path
 const char* GetBuiltinAssetsPath();
 
 

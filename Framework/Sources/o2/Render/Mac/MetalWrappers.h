@@ -3,6 +3,8 @@
 #import <MetalKit/MetalKit.h>
 
 #include "o2/Utils/Types/CommonTypes.h"
+#include "o2/Utils/Types/Containers/Vector.h"
+#include "o2/Utils/Types/String.h"
 
 #include <string>
 #include <unordered_map>
@@ -10,6 +12,9 @@
 
 namespace o2
 {
+    class IShaderParam;
+    class Type;
+
     struct RenderDevice
     {
     public:
@@ -47,6 +52,15 @@ namespace o2
         MTLDataType dataType = MTLDataTypeNone;
     };
 
+    struct MetalParamWriter
+    {
+        using WriteFunction = void (*)(const IShaderParam&, Byte*);
+
+        int paramIndex = -1;
+        NSUInteger offset = 0;
+        WriteFunction write = nullptr;
+    };
+
     struct MTLMaterialImpl
     {
         id<MTLRenderPipelineState> pipelineState = nil;
@@ -57,6 +71,9 @@ namespace o2
 
         NSUInteger materialParamsSize = 0;
         std::unordered_map<std::string, MetalParamBinding> paramBindings;
+        Vector<String> cachedParamNames;
+        Vector<const Type*> cachedParamTypes;
+        std::vector<MetalParamWriter> paramWriters;
         std::vector<Byte> materialParamsData;
     };
 }

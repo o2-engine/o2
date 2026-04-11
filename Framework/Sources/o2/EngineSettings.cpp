@@ -1,5 +1,6 @@
 #include "o2/stdafx.h"
 #include "EngineSettings.h"
+#include "o2/Utils/FileSystem/FileSystem.h"
 
 o2::Platform GetEnginePlatform()
 {
@@ -110,7 +111,8 @@ const char* GetBuiltAssetsPath()
 #elif defined PLATFORM_LINUX
     return "../../BuiltAssets/Linux/Data/";
 #elif defined PLATFORM_IOS
-    return "Data/";
+    static o2::String path = o2::FileSystem::GetBundlePath("Data/");
+    return path.Data();
 #endif
 }
 
@@ -130,7 +132,8 @@ const char* GetBuiltAssetsTreePath()
 #elif defined PLATFORM_LINUX
     return "../../BuiltAssets/Linux/Data.json";
 #elif defined PLATFORM_IOS
-    return "Data.json";
+    static o2::String path = o2::FileSystem::GetBundlePath("Data.json");
+    return path.Data();
 #endif
 }
 
@@ -173,6 +176,9 @@ const char* GetBuiltinAssetsPath()
     return "../../BuiltAssets/Windows/FrameworkData/";
 #elif defined PLATFORM_MAC
     return "../../BuiltAssets/Mac/FrameworkData/";
+#elif defined PLATFORM_IOS
+    static o2::String path = o2::FileSystem::GetBundlePath("FrameworkData/");
+    return path.Data();
 #elif defined PLATFORM_LINUX
     return "../../BuiltAssets/Linux/FrameworkData/";
 #else

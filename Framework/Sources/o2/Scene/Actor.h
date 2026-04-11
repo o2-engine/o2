@@ -26,7 +26,7 @@ namespace o2
 
 #define OPTIONAL_OVERRIDE override
 #else
-    struct ActorBase: public ISerializable, public RefCounterable
+    struct ActorBase: virtual public ISerializable, public RefCounterable
     {
         ActorBase(RefCounter* refCounter):RefCounterable(refCounter) {}
     };

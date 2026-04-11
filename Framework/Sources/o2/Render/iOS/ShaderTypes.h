@@ -3,8 +3,7 @@
 
 struct Uniforms
 {
-    matrix_float4x4 projectionMatrix;
-    matrix_float4x4 modelViewMatrix;
+    matrix_float4x4 mvpMatrix;
 };
 
 struct MetalVertex2

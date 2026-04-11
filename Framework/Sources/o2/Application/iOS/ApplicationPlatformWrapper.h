@@ -15,6 +15,7 @@ namespace o2
         
         static Vec2I resolution;
 
+        static void InitializeApplication();
         static void OnWindowResized(const Vec2I& resolution);
     };
 }

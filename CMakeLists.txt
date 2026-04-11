@@ -1,7 +1,20 @@
+include("${CMAKE_CURRENT_SOURCE_DIR}/../cmake/PetStoryApplePlatform.cmake")
+
 if(APPLE)
     project(o2 LANGUAGES C CXX OBJC OBJCXX)
 else()
     project(o2 LANGUAGES C CXX)
+endif()
+
+petstory_detect_apple_platform(O2_APPLE_PLATFORM O2_TARGET_IOS)
+
+# Host tool paths
+# Host tools are macOS-side utilities used by codegen and asset pipelines. iOS builds
+# consume their outputs, but run the tools from a host build instead of as iOS targets.
+set(O2_USE_HOST_TOOLS ${O2_TARGET_IOS})
+
+if(NOT DEFINED O2_HOST_CODE_TOOL OR NOT DEFINED O2_HOST_ASSETS_BUILDER)
+    petstory_set_host_tool_paths("${CMAKE_CURRENT_SOURCE_DIR}/.." "${CMAKE_CURRENT_SOURCE_DIR}" O2_HOST_CODE_TOOL O2_HOST_ASSETS_BUILDER)
 endif()
 
 set(CMAKE_CXX_STANDARD 20)
@@ -36,7 +49,11 @@ set(O2_COMPILE_DEFINITIONS SCRIPTING_BACKEND_JERRYSCRIPT _CRT_SECURE_NO_WARNINGS
 if (WIN32)
     list(APPEND O2_COMPILE_DEFINITIONS PLATFORM_WINDOWS)
 elseif (APPLE)
-    list(APPEND O2_COMPILE_DEFINITIONS PLATFORM_MAC)
+    if (O2_TARGET_IOS)
+        list(APPEND O2_COMPILE_DEFINITIONS PLATFORM_IOS)
+    else()
+        list(APPEND O2_COMPILE_DEFINITIONS PLATFORM_MAC)
+    endif()
     list(APPEND O2_COMPILE_DEFINITIONS BOOST_STACKTRACE_GNU_SOURCE_NOT_REQUIRED)
 elseif (UNIX)
     list(APPEND O2_COMPILE_DEFINITIONS PLATFORM_LINUX)
@@ -72,8 +89,8 @@ if (O2_PLATFORM_INITIALIZATION_ENABLED)
 endif()
 
 if (APPLE)
-    set(O2_PLATFORM "Mac")
-    set(O2_PLATFORM "Mac" PARENT_SCOPE)
+    set(O2_PLATFORM "${O2_APPLE_PLATFORM}")
+    set(O2_PLATFORM "${O2_APPLE_PLATFORM}" PARENT_SCOPE)
 elseif (UNIX)
     set(O2_PLATFORM "Linux")
     set(O2_PLATFORM "Linux" PARENT_SCOPE)
@@ -125,8 +142,10 @@ endif()
 # dependencies
 add_subdirectory(Framework/3rdPartyLibs)
 
-# code tool
-add_subdirectory(CodeTool)
+# Code tool target
+if (NOT O2_USE_HOST_TOOLS)
+    add_subdirectory(CodeTool)
+endif()
 
 # o2 copy builtin framework assets
 add_custom_target(o2CopyBuiltinAssets
@@ -144,6 +163,22 @@ if (APPLE)
 endif()
 
 file(GLOB_RECURSE o2Framework_SOURCES ${o2Framework_SOURCES_DIRS})
+
+if (WIN32)
+    list(FILTER o2Framework_SOURCES EXCLUDE REGEX ".*/Application/(Linux|Mac|iOS|Android)/.*")
+    list(FILTER o2Framework_SOURCES EXCLUDE REGEX ".*/Render/(Linux|Mac|iOS|Android)/.*")
+elseif (APPLE)
+    if (O2_TARGET_IOS)
+        list(FILTER o2Framework_SOURCES EXCLUDE REGEX ".*/Application/(Windows|Linux|Mac|Android)/.*")
+        list(FILTER o2Framework_SOURCES EXCLUDE REGEX ".*/Render/(Windows|Linux|Mac|Android)/.*")
+    else()
+        list(FILTER o2Framework_SOURCES EXCLUDE REGEX ".*/Application/(Windows|Linux|iOS|Android)/.*")
+        list(FILTER o2Framework_SOURCES EXCLUDE REGEX ".*/Render/(Windows|Linux|iOS|Android)/.*")
+    endif()
+elseif (UNIX)
+    list(FILTER o2Framework_SOURCES EXCLUDE REGEX ".*/Application/(Windows|Mac|iOS|Android)/.*")
+    list(FILTER o2Framework_SOURCES EXCLUDE REGEX ".*/Render/(Windows|Mac|iOS|Android)/.*")
+endif()
 
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${o2Framework_SOURCES})
 
@@ -215,30 +250,45 @@ if (UNIX)
     else()
         find_library(CORE_GRAPHICS CoreGraphics)
         find_library(METAL Metal)
-        find_library(APP_KIT AppKit)
         find_library(METALKIT MetalKit)
         find_library(FOUNDATION Foundation)
         find_library(OBJC objc)
-        find_library(APPLICATION_SERVICES ApplicationServices)
 
-        target_link_libraries(o2Framework
-                PRIVATE
-                    ${CORE_GRAPHICS}
-                    ${METAL}
-                    ${APP_KIT}
-                    ${FOUNDATION}
-                    ${OBJC}
-                    ${METALKIT}
-                    ${APPLICATION_SERVICES}
-        )
+        if (O2_TARGET_IOS)
+            find_library(UI_KIT UIKit)
 
-        set(METAL_SHADERS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Framework/Sources/o2/Render/Mac")
-        add_subdirectory(${METAL_SHADERS_DIR})
+            target_link_libraries(o2Framework
+                    PRIVATE
+                        ${CORE_GRAPHICS}
+                        ${METAL}
+                        ${FOUNDATION}
+                        ${OBJC}
+                        ${METALKIT}
+                        ${UI_KIT}
+            )
+        else()
+            find_library(APP_KIT AppKit)
+            find_library(APPLICATION_SERVICES ApplicationServices)
 
-        target_include_directories(o2Framework
-                PRIVATE
-                ${METAL_SHADERS_DIR}
-        )
+            target_link_libraries(o2Framework
+                    PRIVATE
+                        ${CORE_GRAPHICS}
+                        ${METAL}
+                        ${APP_KIT}
+                        ${FOUNDATION}
+                        ${OBJC}
+                        ${METALKIT}
+                        ${APPLICATION_SERVICES}
+            )
+
+            set(METAL_SHADERS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Framework/Sources/o2/Render/Mac")
+            add_subdirectory(${METAL_SHADERS_DIR})
+
+            target_include_directories(o2Framework
+                    PRIVATE
+                    ${METAL_SHADERS_DIR}
+            )
+        endif()
     endif()
 endif()
 
@@ -256,10 +306,16 @@ endif()
 
 # Codegen
 add_custom_target(o2FrameworkCodegen
-                  COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/CodeTool/Bin/o2CodeTool -project o2Framework -sources "${CMAKE_CURRENT_SOURCE_DIR}/Framework/Sources/o2"
-                  COMMENT "Run CodeTool: ${CMAKE_CURRENT_SOURCE_DIR}/CodeTool/Bin/o2CodeTool -project o2Framework -sources \"${CMAKE_CURRENT_SOURCE_DIR}/Framework/Sources/o2\""
+                  COMMAND ${O2_HOST_CODE_TOOL} -project o2Framework -sources "${CMAKE_CURRENT_SOURCE_DIR}/Framework/Sources/o2"
+                  COMMENT "Run CodeTool: ${O2_HOST_CODE_TOOL} -project o2Framework -sources \"${CMAKE_CURRENT_SOURCE_DIR}/Framework/Sources/o2\""
 )
-add_dependencies(o2FrameworkCodegen o2CodeTool)
+
+# Framework codegen tool dependency
+if (NOT O2_USE_HOST_TOOLS)
+    add_dependencies(o2FrameworkCodegen o2CodeTool)
+elseif(DEFINED O2_HOST_TOOLS_TARGET)
+    add_dependencies(o2FrameworkCodegen ${O2_HOST_TOOLS_TARGET})
+endif()
 
 # dependencies
 add_dependencies(o2Framework Box2D jerry-core jerry-ext jerry-port-default FreeType)
@@ -268,12 +324,11 @@ if (O2_ENABLE_LINK_LIBPNG)
     add_dependencies(o2Framework libpng)
 endif()
 
-add_dependencies(o2Framework o2CodeTool)
 add_dependencies(o2Framework o2CopyBuiltinAssets)
 add_dependencies(o2Framework o2FrameworkCodegen)
 
 # o2 Editor Library
-if (O2_EDITOR)
+if (O2_EDITOR AND NOT O2_TARGET_IOS)
     add_library(o2Editor STATIC)
 
     set(o2Editor_SOURCES_DIRS "Editor/Sources/*.cpp" "Editor/Sources/*.h")
@@ -302,10 +357,14 @@ if (O2_EDITOR)
 
     # Codegen
     add_custom_target(o2EditorCodegen
-                      COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/CodeTool/Bin/o2CodeTool -project o2Editor -sources "${CMAKE_CURRENT_SOURCE_DIR}/Editor/Sources/o2Editor" -parent_projects "${CMAKE_CURRENT_SOURCE_DIR}/Framework/Sources/o2/CodeToolCache.xml"
-                      COMMENT "Run CodeTool: ${CMAKE_CURRENT_SOURCE_DIR}/CodeTool/Bin/o2CodeTool -project o2Editor -sources \"${CMAKE_CURRENT_SOURCE_DIR}/Editor/Sources/o2Editor\" -parent_projects \"${CMAKE_CURRENT_SOURCE_DIR}/Framework/Sources/o2/CodeToolCache.xml\""
+                      COMMAND ${O2_HOST_CODE_TOOL} -project o2Editor -sources "${CMAKE_CURRENT_SOURCE_DIR}/Editor/Sources/o2Editor" -parent_projects "${CMAKE_CURRENT_SOURCE_DIR}/Framework/Sources/o2/CodeToolCache.xml"
+                      COMMENT "Run CodeTool: ${O2_HOST_CODE_TOOL} -project o2Editor -sources \"${CMAKE_CURRENT_SOURCE_DIR}/Editor/Sources/o2Editor\" -parent_projects \"${CMAKE_CURRENT_SOURCE_DIR}/Framework/Sources/o2/CodeToolCache.xml\""
     )
-    add_dependencies(o2EditorCodegen o2CodeTool)
+
+    # Editor codegen tool dependency
+    if (NOT O2_USE_HOST_TOOLS)
+        add_dependencies(o2EditorCodegen o2CodeTool)
+    endif()
 
     add_dependencies(o2Editor o2Framework)
     add_dependencies(o2Editor o2EditorCodegen)
@@ -313,8 +372,10 @@ if (O2_EDITOR)
     set_target_properties(o2EditorCodegen PROPERTIES FOLDER o2/Codegen)
 endif()
 
-# assets build tool
-add_subdirectory(AssetsBuildTool)
+# Assets build tool target
+if (NOT O2_USE_HOST_TOOLS)
+    add_subdirectory(AssetsBuildTool)
+endif()
 
 # tests
 if(O2_TESTS)
@@ -323,8 +384,12 @@ endif()
 
 # group in IDE
 set_target_properties(o2Framework PROPERTIES FOLDER o2)
-set_target_properties(o2AssetsBuilder PROPERTIES FOLDER o2)
+if (TARGET o2AssetsBuilder)
+    set_target_properties(o2AssetsBuilder PROPERTIES FOLDER o2)
+endif()
 set_target_properties(o2CopyBuiltinAssets PROPERTIES FOLDER o2)
 set_target_properties(o2FrameworkCodegen PROPERTIES FOLDER o2/Codegen)
-set_target_properties(o2CodeTool PROPERTIES FOLDER o2/Codegen)
+if (TARGET o2CodeTool)
+    set_target_properties(o2CodeTool PROPERTIES FOLDER o2/Codegen)
+endif()
 

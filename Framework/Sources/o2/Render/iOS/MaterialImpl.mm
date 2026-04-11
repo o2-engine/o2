@@ -1,11 +1,11 @@
 #include "o2/stdafx.h"
 
-#ifdef PLATFORM_MAC
+#ifdef PLATFORM_IOS
 
 #import <Foundation/Foundation.h>
 
 #include "o2/Render/Material.h"
-#include "o2/Render/Mac/MetalWrappers.h"
+#include "o2/Render/iOS/MetalWrappers.h"
 #include "o2/Utils/Debug/Debug.h"
 
 #include <algorithm>
@@ -19,11 +19,6 @@ namespace o2
         std::string ToStdString(const String& value)
         {
             return std::string(value.Data(), value.Length());
-        }
-
-        String ToString(NSString* value)
-        {
-            return value ? String(value.UTF8String) : String();
         }
 
         void SetupBlendState(MTLRenderPipelineColorAttachmentDescriptor* attachment, BlendMode blendMode)
@@ -72,9 +67,7 @@ namespace o2
                 materialImpl->bindParamsToFragment |= !bindToVertex;
 
                 for (MTLStructMember* member in argument.bufferStructType.members)
-                {
                     materialImpl->paramBindings[std::string(member.name.UTF8String)] = { member.offset, member.dataType };
-                }
             }
         }
 
@@ -184,7 +177,7 @@ namespace o2
             {
                 NSString* description = [error localizedDescription];
                 if (description)
-                    result += "\n" + ToString(description);
+                    result += "\n" + String(description.UTF8String);
             }
 
             o2Debug.LogError(result);
@@ -326,4 +319,4 @@ namespace o2
     }
 }
 
-#endif // PLATFORM_MAC
+#endif // PLATFORM_IOS
