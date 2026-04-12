@@ -35,6 +35,7 @@ option(O2_MEMORY_ANALYZE "Enables memory analyzing (slows down)" OFF)
 option(O2_PLATFORM_INITIALIZATION_ENABLED "Enables platform initialization" ON)
 option(O2_ENABLE_LINK_ZLIB "Enables linking zlib library" ON)
 option(O2_ENABLE_LINK_LIBPNG "Enables linking libpng library" ON)
+option(O2_DISABLE_O2FRAMEWORK_PCH "Disables precompiled headers for o2Framework" OFF)
 
 if(MSVC AND NOT DEFINED O2_MSVC_MP_FLAG)
     set(O2_MSVC_MP_COUNT "" CACHE STRING "MSVC /MP process count; empty uses compiler default, 0 disables /MP")
@@ -188,7 +189,9 @@ set(o2Framework_INCLUDES
 
 target_sources(o2Framework PRIVATE ${o2Framework_SOURCES})
 target_include_directories(o2Framework PUBLIC ${o2Framework_INCLUDES})
-target_precompile_headers(o2Framework PUBLIC "Framework/Sources/o2/stdafx.h")
+if(NOT O2_DISABLE_O2FRAMEWORK_PCH)
+    target_precompile_headers(o2Framework PUBLIC "Framework/Sources/o2/stdafx.h")
+endif()
 target_compile_definitions(o2Framework PUBLIC ${O2_COMPILE_DEFINITIONS})
 
 target_link_libraries(o2Framework 
