@@ -4,7 +4,7 @@ source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${o2CodeTool_SOURCES})
 add_executable(o2CodeTool ${o2CodeTool_SOURCES} ${o2CodeTool_SOURCES})
 
 if(MSVC)
-    target_compile_options(o2CodeTool PUBLIC "/MP" "/Zc:__cplusplus")
+    target_compile_options(o2CodeTool PUBLIC ${O2_MSVC_MP_FLAG} "/Zc:__cplusplus")
 elseif (UNIX)
     target_compile_options(o2CodeTool PUBLIC ${DEMO_WARNING_OPTION} -Wno-pedantic)
 endif()

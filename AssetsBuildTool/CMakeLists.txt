@@ -30,7 +30,7 @@ endif()
 add_dependencies(o2AssetsBuilder o2Framework)
 
 if(MSVC)
-    target_compile_options(o2AssetsBuilder PUBLIC "/MP" "/Zc:__cplusplus")
+    target_compile_options(o2AssetsBuilder PUBLIC ${O2_MSVC_MP_FLAG} "/Zc:__cplusplus")
 elseif (UNIX)
     target_compile_options(o2AssetsBuilder PUBLIC ${DEMO_WARNING_OPTION} -Wno-pedantic)
 endif()

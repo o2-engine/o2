@@ -1,4 +1,5 @@
-![MSVS build status](https://github.com/zenkovich/PetStory/actions/workflows/cmake-multi-platform.yml/badge.svg)
+[![MSVS build status](https://github.com/zenkovich/PetStory/actions/workflows/windows-cmake.yml/badge.svg)](https://github.com/o2-engine/PetStory/actions/workflows/windows-cmake.yml)
+
 [![Linux](https://github.com/zenkovich/PetStory/actions/workflows/linux-cmake.yml/badge.svg?branch=master)](https://github.com/zenkovich/PetStory/actions/workflows/linux-cmake.yml)
 
 # o2

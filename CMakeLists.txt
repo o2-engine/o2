@@ -36,6 +36,18 @@ option(O2_PLATFORM_INITIALIZATION_ENABLED "Enables platform initialization" ON)
 option(O2_ENABLE_LINK_ZLIB "Enables linking zlib library" ON)
 option(O2_ENABLE_LINK_LIBPNG "Enables linking libpng library" ON)
 
+if(MSVC AND NOT DEFINED O2_MSVC_MP_FLAG)
+    set(O2_MSVC_MP_COUNT "" CACHE STRING "MSVC /MP process count; empty uses compiler default, 0 disables /MP")
+
+    if(O2_MSVC_MP_COUNT STREQUAL "0")
+        set(O2_MSVC_MP_FLAG "")
+    elseif(O2_MSVC_MP_COUNT STREQUAL "")
+        set(O2_MSVC_MP_FLAG "/MP")
+    else()
+        set(O2_MSVC_MP_FLAG "/MP${O2_MSVC_MP_COUNT}")
+    endif()
+endif()
+
 # Common definitions
 set(O2_COMPILE_DEFINITIONS SCRIPTING_BACKEND_JERRYSCRIPT _CRT_SECURE_NO_WARNINGS)
 
@@ -285,7 +297,7 @@ endif()
 if (UNIX)
     target_compile_options(o2Framework PRIVATE -Wno-pedantic)
 elseif(MSVC)
-    target_compile_options(o2Framework PUBLIC "/MP" "/Zc:__cplusplus" "/bigobj")
+    target_compile_options(o2Framework PUBLIC ${O2_MSVC_MP_FLAG} "/Zc:__cplusplus" "/bigobj")
     target_sources(o2Framework PRIVATE "Framework/Platforms/Windows/Framework.natvis")
 endif()
 
@@ -332,7 +344,7 @@ if (O2_EDITOR)
     target_link_libraries(o2Editor PUBLIC o2Framework)
 
     if(MSVC)
-        target_compile_options(o2Editor PRIVATE "/MP" "/Zc:__cplusplus" "/bigobj")
+        target_compile_options(o2Editor PRIVATE ${O2_MSVC_MP_FLAG} "/Zc:__cplusplus" "/bigobj")
     endif()
 
     # Codegen
