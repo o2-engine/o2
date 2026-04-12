@@ -116,7 +116,15 @@ namespace o2
 
         // Type dynamic casting function template
         template<typename _source_type, typename _target_type>
-        static void* CastFunc(void* obj) { return dynamic_cast<_target_type*>((_source_type*)obj); }
+        static void* CastFunc(void* obj)
+        {
+            if constexpr (std::is_convertible_v<_source_type*, _target_type*>)
+                return static_cast<_target_type*>(static_cast<_source_type*>(obj));
+            else if constexpr (std::is_base_of_v<_source_type, _target_type>)
+                return dynamic_cast<_target_type*>(static_cast<_source_type*>(obj));
+            else
+                return nullptr;
+        }
 
         // Fake type casting function
         static void* NoCastFunc(void* obj) { return obj; }

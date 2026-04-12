@@ -12,8 +12,10 @@ namespace o2
 
     void ParticlesEmitterShape::OnChanged()
     {
+#if IS_EDITOR
         if (mEmitter)
             mEmitter.Lock()->InvalidateBakedFrames();
+#endif
     }
 
     Vec2F CircleParticlesEmitterShape::GetEmittinPoint(const Basis& transform, bool fromShell)

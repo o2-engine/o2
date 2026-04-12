@@ -33,7 +33,7 @@ namespace o2
     void WidgetState::SetOwner(const Ref<Widget>& owner, bool errors)
     {
         mOwner = owner;
-        mPlayer->SetTarget(const_cast<Widget*>(owner.Get()), errors);
+        mPlayer->SetTarget(static_cast<IObject*>(static_cast<ActorBase*>(const_cast<Widget*>(owner.Get()))), errors);
         mPlayer->relTime = mState ? 1.0f : 0.0f;
     }
 

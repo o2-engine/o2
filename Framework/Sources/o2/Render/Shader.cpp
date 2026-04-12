@@ -63,7 +63,7 @@ namespace o2
 
     String Shader::ResolvePlatformSourcePath(const String& sourcePath)
     {
-#if defined PLATFORM_MAC
+#if defined PLATFORM_MAC || defined PLATFORM_IOS
         if (sourcePath.EndsWith(".metal"))
             return sourcePath;
 

@@ -480,11 +480,14 @@ namespace o2
             return nullptr;
 
         IObject* iobject = DynamicCastToIObject(object);
-        const Type* realType = &(iobject->GetType());
-        if (realType == this)
-            return Type::GetFieldPtr(object, path, fieldInfo);
+        if (iobject)
+        {
+            const Type* realType = &(iobject->GetType());
+            if (realType != this)
+                return realType->GetFieldPtr(dynamic_cast<const ObjectType*>(realType)->DynamicCastFromIObject(iobject), path, fieldInfo);
+        }
 
-        return realType->GetFieldPtr(dynamic_cast<const ObjectType*>(realType)->DynamicCastFromIObject(iobject), path, fieldInfo);
+        return Type::GetFieldPtr(object, path, fieldInfo);
     }
 
     StringPointerAccessorType::StringPointerAccessorType(const String& name, int size, ITypeSerializer* serializer) :

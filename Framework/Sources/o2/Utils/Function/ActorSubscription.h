@@ -83,7 +83,7 @@ namespace o2
             if (auto component = componentRef.Get())
                 callSource = component;
             else if (auto actor = actorRef.Get())
-                callSource = actor;
+                callSource = static_cast<const IObject*>(static_cast<const ActorBase*>(actor));
 
             auto& objType = dynamic_cast<const ObjectType&>(callSource->GetType());
              if constexpr (IS_SCRIPTING_SUPPORTED)

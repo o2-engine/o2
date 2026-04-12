@@ -21,24 +21,50 @@ namespace o2
     void ApplicationPlatformWrapper::OnWindowResized(const Vec2I& resolution)
     {
         ApplicationPlatformWrapper::resolution = resolution;
-        
-        if (Render::IsSingletonInitialzed())
-            o2Render.OnFrameResized();
+
+        if (Application::IsSingletonInitialzed())
+            o2Application.OnResized(resolution);
     }
 
-    void Application::Run(int argc, char * argv[])
+    void ApplicationPlatformWrapper::InitializePlatform()
     {
+        o2Application.Application::InitializePlatform();
+    }
+
+    void ApplicationPlatformWrapper::LaunchApplication()
+    {
+        o2Application.Launch();
+    }
+
+    void ApplicationPlatformWrapper::CallInitializePlatform()
+    {
+        if (Application::IsSingletonInitialzed())
+            o2Application.InitializePlatform();
+    }
+
+    void ApplicationPlatformWrapper::CallUpdate()
+    {
+        if (Application::IsSingletonInitialzed())
+            o2Application.Update();
+    }
+
+    void Application::Run(int argc, char** argv)
+    {
+        // Set working directory to the app bundle's resource path so relative asset paths work
+        NSString* resourcePath = [[NSBundle mainBundle] resourcePath];
+        chdir([resourcePath UTF8String]);
+
         InitalizeSystems();
         UIApplicationMain(argc, argv, nil, NSStringFromClass([AppDelegate class]));
     }
-    
+
     void Application::InitializePlatform()
-    {        
-        mRender = mnew Render();
-        
-        o2Debug.InitializeFont();
-        o2UI.TryLoadStyle();
-        
+    {
+        mGraphicsScale = [[ApplicationPlatformWrapper::view layer] contentsScale];
+
+        InitiazeRender();
+        InitilizeUIStyles();
+
         mReady = true;
     }
 
@@ -52,7 +78,7 @@ namespace o2
     {}
 
     void Application::Launch()
-    {        
+    {
         mLog->Out("Application launched!");
 
         OnStarted();
@@ -71,9 +97,7 @@ namespace o2
     }
 
     void Application::Maximize()
-    {
-//        [ApplicationPlatformWrapper::window setIsZoomed:true];
-    }
+    {}
 
     bool Application::IsMaximized() const
     {
@@ -105,8 +129,7 @@ namespace o2
     }
 
     void Application::SetWindowCaption(const String& caption)
-    {
-    }
+    {}
 
     String Application::GetWindowCaption() const
     {
@@ -114,8 +137,7 @@ namespace o2
     }
 
     void Application::SetContentSize(const Vec2I& size)
-    {
-    }
+    {}
 
     Vec2I Application::GetContentSize() const
     {
@@ -124,7 +146,8 @@ namespace o2
 
     Vec2I Application::GetScreenResolution() const
     {
-        return Vec2I(1000, 1000);
+        CGRect bounds = [[UIScreen mainScreen] nativeBounds];
+        return Vec2I((int)bounds.size.width, (int)bounds.size.height);
     }
 
     void Application::SetCursor(CursorType type)
@@ -135,7 +158,8 @@ namespace o2
 
     String Application::GetBinPath() const
     {
-        return "";
+        NSString* resourcePath = [[NSBundle mainBundle] resourcePath];
+        return String([resourcePath UTF8String]) + "/";
     }
 }
 

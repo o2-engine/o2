@@ -74,10 +74,10 @@ namespace o2
         if constexpr (IsRefType<_type>::value)
         {
             using inner = typename RefInnerType<_type>::type;
-            if constexpr (std::is_base_of<IObject, inner>::value)
+            if constexpr (std::is_base_of<IObject, inner>::value && std::is_convertible_v<inner*, IObject*>)
                 return dynamic_cast<IObject*>(data.Get());
         }
-        else if constexpr (std::is_base_of<IObject, _type>::value)
+        else if constexpr (std::is_base_of<IObject, _type>::value && std::is_convertible_v<_type*, IObject*>)
         {
             return dynamic_cast<IObject*>(const_cast<_type*>(&data));
         }
@@ -117,7 +117,7 @@ namespace o2
     template<typename _type>
     IObject* ScriptValueBase::PointerDataContainer<_type>::TryCastToIObject() const
     {
-        if constexpr (std::is_base_of<IObject, _type>::value)
+        if constexpr (std::is_base_of<IObject, _type>::value && std::is_convertible_v<_type*, IObject*>)
             return dynamic_cast<IObject*>(data);
 
         return nullptr;

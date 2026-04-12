@@ -1012,7 +1012,7 @@ namespace o2
     {
         for (auto& state : mStates)
         {
-            state->mPlayer->SetTarget(this, false);
+            state->mPlayer->SetTarget(static_cast<IObject*>(static_cast<ActorBase*>(this)), false);
             state->mPlayer->relTime = state->GetState() ? 1.0f : 0.0f;
         }
     }

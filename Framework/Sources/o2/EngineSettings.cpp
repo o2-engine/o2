@@ -175,6 +175,8 @@ const char* GetBuiltinAssetsPath()
     return "../../BuiltAssets/Mac/FrameworkData/";
 #elif defined PLATFORM_LINUX
     return "../../BuiltAssets/Linux/FrameworkData/";
+#elif defined PLATFORM_IOS
+    return "FrameworkData/";
 #else
     return "FrameworkAssets/";
 #endif

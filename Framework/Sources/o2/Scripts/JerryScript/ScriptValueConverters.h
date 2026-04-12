@@ -415,7 +415,10 @@ namespace o2
         {
             data.jvalue = jerry_create_undefined();
             if (value)
-                data = value->GetScriptValue();
+            {
+                data = ScriptValue::EmptyObject();
+                data.SetContainingObject(const_cast<_non_ptr_type*>(value));
+            }
         }
 
         static void Read(_ptr_type& value, const ScriptValue& data)

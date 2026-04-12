@@ -1,7 +1,6 @@
 #ifdef PLATFORM_IOS
 #import "RendererView.h"
 
-#import "ShaderTypes.h"
 #include "o2/Render/Render.h"
 #include "o2/Render/iOS/MetalWrappers.h"
 #include "o2/Application/Application.h"
@@ -13,12 +12,13 @@
 
 - (void)drawInMTKView:(nonnull MTKView *)view
 {
-    o2Application.Update();
+    o2::ApplicationPlatformWrapper::CallUpdate();
 }
 
 - (void)mtkView:(nonnull MTKView *)view drawableSizeWillChange:(CGSize)size
 {
-            o2::ApplicationPlatformWrapper::OnWindowResized(o2::Vec2I(size.width, size.height));
+    float scale = view.layer.contentsScale;
+    o2::ApplicationPlatformWrapper::OnWindowResized(o2::Vec2I(size.width/scale, size.height/scale));
 }
 
 @end
@@ -31,8 +31,8 @@
 
 - (o2::Vec2F)getTouchPosition:(UITouch *)touch
 {
-    o2::Vec2F res(([touch locationInView:self].x - self.bounds.size.width/2)*self.layer.contentsScale,
-                  -([touch locationInView:self].y - self.bounds.size.height/2)*self.layer.contentsScale);
+    o2::Vec2F res([touch locationInView:self].x - self.bounds.size.width/2,
+                  -([touch locationInView:self].y - self.bounds.size.height/2));
     
     return res;
 }

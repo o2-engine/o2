@@ -16,7 +16,7 @@ namespace o2
 
     Actor::Actor(RefCounter* refCounter, ActorTransform* transform, bool onScene /*= true*/, const String& name /*= "unnamed"*/, 
                  bool enabled /*= true*/, SceneUID id /*= Math::Random()*/, UID assetId /*= UID(0)*/) :
-        SceneEditableObject(refCounter), transform(transform), mName(name), mEnabled(enabled),
+        ActorBase(refCounter), transform(transform), mName(name), mEnabled(enabled),
         mResEnabled(enabled), mResEnabledInHierarchy(false), mId(id), mAssetId(assetId), mState(State::Initializing),
         mIsOnScene(onScene)
     {
@@ -1127,7 +1127,7 @@ namespace o2
         if (transformNode.IsEmpty() || transformNode.IsNull())
             node.RemoveMember("Transform");
 
-        SerializeDelta(node, *mPrototypeLink.Lock().Get());
+        SerializeDelta(node, static_cast<const IObject&>(static_cast<const ActorBase&>(*mPrototypeLink.Lock().Get())));
 
         // Children data
         if (!mChildren.IsEmpty())
@@ -1204,7 +1204,7 @@ namespace o2
         }
 
         if (mPrototypeLink)
-            DeserializeDelta(node, *mPrototypeLink.Lock().Get());
+            DeserializeDelta(node, static_cast<const IObject&>(static_cast<const ActorBase&>(*mPrototypeLink.Lock().Get())));
         else
             DeserializeBasic(node);
 

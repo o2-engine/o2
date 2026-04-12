@@ -36,8 +36,8 @@
     [o2::ApplicationPlatformWrapper::renderer mtkView:view drawableSizeWillChange:view.drawableSize];
     view.delegate = o2::ApplicationPlatformWrapper::renderer;
     
-    o2Application.InitializePlatform();
-    o2Application.Launch();
+    o2::ApplicationPlatformWrapper::CallInitializePlatform();
+    o2::ApplicationPlatformWrapper::LaunchApplication();
     
     [window setRootViewController:o2::ApplicationPlatformWrapper::viewController];
     [window makeKeyAndVisible];

@@ -20,6 +20,12 @@ if(APPLE)
     endif()
 endif()
 
+# Force off editor and tests for iOS
+if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
+    set(O2_EDITOR OFF CACHE BOOL "" FORCE)
+    set(O2_TESTS OFF CACHE BOOL "" FORCE)
+endif()
+
 # Options
 option(O2_SELFPROFILE "Enable profiling o2 benchmark." OFF)
 option(O2_EDITOR "Enables o2 editor." ON)
@@ -35,6 +41,9 @@ set(O2_COMPILE_DEFINITIONS SCRIPTING_BACKEND_JERRYSCRIPT _CRT_SECURE_NO_WARNINGS
 
 if (WIN32)
     list(APPEND O2_COMPILE_DEFINITIONS PLATFORM_WINDOWS)
+elseif (CMAKE_SYSTEM_NAME STREQUAL "iOS")
+    list(APPEND O2_COMPILE_DEFINITIONS PLATFORM_IOS)
+    list(APPEND O2_COMPILE_DEFINITIONS BOOST_STACKTRACE_GNU_SOURCE_NOT_REQUIRED)
 elseif (APPLE)
     list(APPEND O2_COMPILE_DEFINITIONS PLATFORM_MAC)
     list(APPEND O2_COMPILE_DEFINITIONS BOOST_STACKTRACE_GNU_SOURCE_NOT_REQUIRED)
@@ -71,7 +80,10 @@ if (O2_PLATFORM_INITIALIZATION_ENABLED)
     list(APPEND O2_COMPILE_DEFINITIONS O2_PLATFORM_INITIALIZATION_ENABLED)
 endif()
 
-if (APPLE)
+if (CMAKE_SYSTEM_NAME STREQUAL "iOS")
+    set(O2_PLATFORM "iOS")
+    set(O2_PLATFORM "iOS" PARENT_SCOPE)
+elseif (APPLE)
     set(O2_PLATFORM "Mac")
     set(O2_PLATFORM "Mac" PARENT_SCOPE)
 elseif (UNIX)
@@ -212,6 +224,29 @@ if (UNIX)
     elseif(NOT APPLE)
         find_package(OpenGL REQUIRED COMPONENTS GLX)
         target_link_libraries(o2Framework PUBLIC OpenGL::GL OpenGL::GLX)
+    elseif(CMAKE_SYSTEM_NAME STREQUAL "iOS")
+        find_library(METAL Metal)
+        find_library(METALKIT MetalKit)
+        find_library(FOUNDATION Foundation)
+        find_library(OBJC objc)
+        find_library(UIKIT UIKit)
+
+        target_link_libraries(o2Framework
+                PRIVATE
+                    ${METAL}
+                    ${FOUNDATION}
+                    ${OBJC}
+                    ${METALKIT}
+                    ${UIKIT}
+        )
+
+        set(METAL_SHADERS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Framework/Sources/o2/Render/iOS")
+        add_subdirectory(${METAL_SHADERS_DIR})
+
+        target_include_directories(o2Framework
+                PRIVATE
+                ${METAL_SHADERS_DIR}
+        )
     else()
         find_library(CORE_GRAPHICS CoreGraphics)
         find_library(METAL Metal)

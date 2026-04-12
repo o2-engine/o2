@@ -356,7 +356,9 @@ namespace o2
 
         mEmitTimeBuffer = 0.0f;
         mPrewarmTimeout = mPrewarmTime;
+#if IS_EDITOR
         mBakedFrames.Clear();
+#endif
     }
 
     void ParticlesEmitter::Stop()

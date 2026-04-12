@@ -67,6 +67,13 @@ namespace o2
 
         // Completion deserialization delta callback
         virtual void OnDeserializedDelta(const DataValue& node, const IObject& origin) {}
+
+        friend class SerializeTypeProcessor;
+        friend class DeserializeTypeProcessor;
+        template<typename> friend class SerializeDeltaTypeProcessor;
+        template<typename> friend class DeserializeDeltaTypeProcessor;
+        template<typename, typename> friend struct CheckSerializeDeltaBasicOverridden;
+        template<typename, typename> friend struct CheckDeserializeDeltaBasicOverridden;
     };
 
     template<typename T>
@@ -151,7 +158,8 @@ namespace o2
         static void Process(_type* object, const _type* origin, const IObject& originObj, DataValue& node)
         {
             object->SerializeDeltaBasic(node, originObj);
-            object->OnSerializeDelta(node, originObj);
+            if constexpr (std::is_convertible_v<_type*, ISerializable*>)
+                static_cast<ISerializable*>(object)->OnSerializeDelta(node, originObj);
         }
     };
 
@@ -172,7 +180,8 @@ namespace o2
         static void Process(_type* object, const _type* origin, const IObject& originObj, const DataValue& node)
         {
             object->DeserializeDeltaBasic(node, originObj);
-            object->OnDeserializedDelta(node, originObj);
+            if constexpr (std::is_convertible_v<_type*, ISerializable*>)
+                static_cast<ISerializable*>(object)->OnDeserializedDelta(node, originObj);
         }
     };
 

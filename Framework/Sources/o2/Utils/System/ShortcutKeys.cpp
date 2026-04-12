@@ -55,7 +55,7 @@ namespace o2
         { VK_RWIN, "RightWin" },
 #endif
         
-#if defined PLATFORM_MAC
+#if defined PLATFORM_MAC || defined PLATFORM_IOS
         { VK_COMMAND, "Cmd" },
         { VK_SELECT, "Select" },
         { VK_SNAPSHOT, "Snapshot" },
@@ -78,7 +78,7 @@ namespace o2
 
     KeyboardKey ShortcutKeys::NormalizeKey(KeyboardKey key) const
     {
-#ifdef PLATFORM_MAC
+#if defined PLATFORM_MAC || defined PLATFORM_IOS
         if (key >= 'A' && key <= 'Z') {
             return key + ('a' - 'A');
         }
@@ -135,7 +135,7 @@ namespace o2
                 modifiers.Add("Ctrl");
             }
             else if (key == VK_CTRL_CMD) {
-#if defined PLATFORM_MAC
+#if defined PLATFORM_MAC || defined PLATFORM_IOS
                 modifiers.Add("Cmd");
 #else
                 modifiers.Add("Ctrl");
@@ -144,7 +144,7 @@ namespace o2
             else if (key == VK_MENU) {
                 modifiers.Add("Alt");
             }
-#if defined PLATFORM_MAC
+#if defined PLATFORM_MAC || defined PLATFORM_IOS
             else if (key == VK_COMMAND) {
                 modifiers.Add("Cmd");
             }

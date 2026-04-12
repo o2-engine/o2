@@ -12,9 +12,14 @@ namespace o2
         static RenderView*           view;
         static RenderViewController* viewController;
         static RendererViewDelegate* renderer;
-        
+
         static Vec2I resolution;
 
         static void OnWindowResized(const Vec2I& resolution);
+        static void InitializePlatform();
+        static void LaunchApplication();
+
+        static void CallInitializePlatform();
+        static void CallUpdate();
     };
 }

@@ -7,7 +7,7 @@
 #elif defined PLATFORM_MAC
 #include "o2/Render/Mac/ShaderBase.h"
 #elif defined PLATFORM_IOS
-// #include "o2/Render/iOS/ShaderBase.h"
+#include "o2/Render/iOS/ShaderBase.h"
 #elif defined(PLATFORM_LINUX)
 // #include "o2/Render/Linux/ShaderBase.h"
 #endif

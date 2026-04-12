@@ -136,7 +136,7 @@ namespace o2
             return;
 
 		player->SetClip(mAnimation ? mAnimation->animation : nullptr);
-        player->SetTarget(actor.Get());
+        player->SetTarget(static_cast<IObject*>(static_cast<ActorBase*>(actor.Get())));
         player->mAnimationState = Ref(this);
     }
 

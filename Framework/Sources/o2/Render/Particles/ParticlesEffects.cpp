@@ -20,8 +20,10 @@ namespace o2
 
     void ParticlesEffect::OnChanged()
     {
+#if IS_EDITOR
         if (mEmitter)
             mEmitter.Lock() ->InvalidateBakedFrames();
+#endif
     }
 
     void ParticlesGravityEffect::Update(float dt, ParticlesEmitter* emitter)
