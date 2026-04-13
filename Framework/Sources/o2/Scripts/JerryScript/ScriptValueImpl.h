@@ -228,14 +228,16 @@ namespace o2
         auto container = ScriptValueBase::GetNativeContainer(this_val);
         _class_type* obj = static_cast<_class_type*>(container->GetData());
 
+        auto fn = std::mem_fn(_func_ptr);
+
         if constexpr (std::is_void_v<_res_type>)
         {
-            (obj->*_func_ptr)(ConvertJerryArg<typename _traits::template ArgType<_idx>>((jerry_value_t*)args_p, _idx, args_count)...);
+            fn(obj, ConvertJerryArg<typename _traits::template ArgType<_idx>>((jerry_value_t*)args_p, _idx, args_count)...);
             return jerry_create_undefined();
         }
         else
         {
-            ScriptValue res((obj->*_func_ptr)(ConvertJerryArg<typename _traits::template ArgType<_idx>>((jerry_value_t*)args_p, _idx, args_count)...));
+            ScriptValue res(fn(obj, ConvertJerryArg<typename _traits::template ArgType<_idx>>((jerry_value_t*)args_p, _idx, args_count)...));
             return jerry_acquire_value(res.jvalue);
         }
     }
