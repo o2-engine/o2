@@ -526,7 +526,7 @@ namespace o2
     }
 }
 
-ENUM_META(o2::Type::Usage)
+ENUM_META(o2::Type::Usage, o2__Type__Usage)
 {
     ENUM_ENTRY(Map);
     ENUM_ENTRY(Enumeration);

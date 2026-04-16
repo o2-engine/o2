@@ -2,7 +2,7 @@
 
 #if defined PLATFORM_WINDOWS
 #include <Windows.h>
-#elif defined PLATFORM_ANDROID || defined PLATFORM_MAC || defined PLATFORM_IOS || defined PLATFORM_LINUX
+#elif defined PLATFORM_ANDROID || defined PLATFORM_MAC || defined PLATFORM_IOS || defined PLATFORM_LINUX || defined PLATFORM_WASM
 #include <sys/time.h>
 #endif
 
@@ -36,7 +36,7 @@ namespace o2
         LONGLONG      mLastElapsedTime;
         LARGE_INTEGER mFrequency;
         LARGE_INTEGER mStartTime;
-#elif defined PLATFORM_ANDROID || defined PLATFORM_MAC|| defined PLATFORM_IOS || defined PLATFORM_LINUX
+#elif defined PLATFORM_ANDROID || defined PLATFORM_MAC|| defined PLATFORM_IOS || defined PLATFORM_LINUX || defined PLATFORM_WASM
         struct timeval mLastElapsedTime;
         struct timeval mStartTime;
 #endif

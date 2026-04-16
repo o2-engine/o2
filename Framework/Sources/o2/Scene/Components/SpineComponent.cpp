@@ -158,8 +158,11 @@ namespace o2
             if (spineComponent->mSpineRenderer)
             {
                 mTrack = spineComponent->mSpineRenderer->GetTrack(name);
-                mTrack->SetLoop(looped ? Loop::Repeat : Loop::None);
-                mTrack->SetWeight(mWeight);
+                if (mTrack)
+                {
+                    mTrack->SetLoop(looped ? Loop::Repeat : Loop::None);
+                    mTrack->SetWeight(mWeight);
+                }
             }
         }
     }

@@ -848,8 +848,8 @@ namespace o2
                     if (auto objType = dynamic_cast<const ObjectType*>(value.GetObjectContainerType()))
                     {
                         IObject* object = objType->DynamicCastToIObject(value.GetContainingObject());
-                        if (auto serializable = dynamic_cast<ISerializable*>(object))
-                            data = serializable;
+                        extern void ScriptValueImpl_WriteIObjectToDataValue(IObject* object, DataValue& data);
+                        ScriptValueImpl_WriteIObjectToDataValue(object, data);
                     }
                 }
                 else
@@ -891,8 +891,8 @@ namespace o2
             {
                 if (auto typeMember = data.FindMember("Type"))
                 {
-                    if (ISerializable* object = data)
-                        value = object->GetScriptValue();
+                    extern bool ScriptValueImpl_ReadIObjectFromDataValue(const DataValue& data, ScriptValue& value);
+                    ScriptValueImpl_ReadIObjectFromDataValue(data, value);
                 }
                 else
                 {

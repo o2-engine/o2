@@ -734,8 +734,8 @@ namespace o2
     public:
         static const Map<int, String>& GetEntries() { return type->GetEntries(); }
 
-    protected:
-        static EnumType* type;
+    public:
+        inline static EnumType* type = nullptr;
 
         template<typename _type_>
         friend const Type& o2::GetTypeOf();
@@ -744,7 +744,7 @@ namespace o2
     };
 
     template<typename _type>
-    void __SetupType(Type* type)
+    void SetupType(Type* type)
     {
         _type::type = type;
     }
@@ -752,22 +752,8 @@ namespace o2
 
 typedef void* (*GetValuePointerFuncPtr)(void*);
 
-#if IS_SCRIPTING_SUPPORTED
-#define DECLARE_SCRIPTING(CLASS, TEMPLATE_OPT)                                                                 \
-    TEMPLATE_OPT o2::ScriptValue CLASS::GetScriptPrototype()                                                   \
-    {                                                                                                          \
-        static o2::ScriptValue proto = o2::ScriptValue::EmptyObject();                                         \
-        return proto;                                                                                          \
-    }                                                                                                          \
-    TEMPLATE_OPT void CLASS::SetScriptValueContainer(o2::ScriptValue& value) const                             \
-    {                                                                                                          \
-        value.SetContainingObject(const_cast<CLASS*>(this));                                                   \
-    }                                                                                                          \
-    TEMPLATE_OPT void CLASS::ReflectIntoScriptValue(o2::ScriptValue& scriptValue) const                        \
-    {}                                                                                                           
-#else
+// Script methods are now inline in IOBJECT_SCRIPTING — nothing to emit out-of-line.
 #define DECLARE_SCRIPTING(CLASS, TEMPLATE_OPT)
-#endif
 
 #define DECLARE_CLASS(CLASS, REGISTRATOR_ID)                                                                   \
     extern void __RegisterClass__##REGISTRATOR_ID()                                                            \
@@ -775,12 +761,15 @@ typedef void* (*GetValuePointerFuncPtr)(void*);
         o2::ReflectionInitializationTypeProcessor processor;                                                   \
         CLASS::template ProcessType<o2::ReflectionInitializationTypeProcessor>(0, processor);                  \
     }                                                                                                          \
-    o2::Type* CLASS::type = o2::Reflection::InitializeType<CLASS>(#CLASS, false);                              \
-    DECLARE_SCRIPTING(CLASS, )
+    namespace { struct __ClassInit_##REGISTRATOR_ID {                                                          \
+        __ClassInit_##REGISTRATOR_ID() { o2::SetupType<CLASS>(o2::Reflection::InitializeType<CLASS>(#CLASS, false)); } \
+    } __classInit_##REGISTRATOR_ID; }
 
+#define O2_CAT2_(a, b) a##b
+#define O2_CAT_(a, b) O2_CAT2_(a, b)
 #define DECLARE_TEMPLATE_CLASS(CLASS)                                                                          \
-    template<> o2::Type* CLASS::type = o2::Reflection::InitializeType<CLASS>(#CLASS, true);                    \
-    DECLARE_SCRIPTING(CLASS, template<>)
+    static const int O2_CAT_(__O2_TMPL_INIT_, __COUNTER__) =                                                   \
+        (o2::SetupType<CLASS>(o2::Reflection::InitializeType<CLASS>(#CLASS, true)), 0);
 
 #define CLASS_BASES_META(CLASS)                                                                                \
     template<typename _type_processor> void CLASS::ProcessBaseTypes(CLASS* object, _type_processor& processor) \
@@ -808,6 +797,15 @@ typedef void* (*GetValuePointerFuncPtr)(void*);
 
 #define DECLARE_TEMPLATE_CLASS_MANUAL(CLASS) \
     DECLARE_TEMPLATE_CLASS(CLASS)
+
+#define DECLARE_TEMPLATE_CLASS_MANUAL_ID(CLASS, REGISTRATOR_ID)                                                \
+    extern void __RegisterTemplateClass__##REGISTRATOR_ID()                                                    \
+    {                                                                                                          \
+        o2::SetupType<CLASS>(o2::Reflection::InitializeType<CLASS>(#CLASS, true));                            \
+    }                                                                                                          \
+    namespace { struct __TemplateClassInit_##REGISTRATOR_ID {                                                  \
+        __TemplateClassInit_##REGISTRATOR_ID() { __RegisterTemplateClass__##REGISTRATOR_ID(); }                \
+    } __templateClassInit_##REGISTRATOR_ID; }
 
 #define CLASS_BASES_META_MANUAL(CLASS) \
     CLASS_BASES_META(CLASS)

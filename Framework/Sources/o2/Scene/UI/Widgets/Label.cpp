@@ -352,7 +352,7 @@ namespace o2
 DECLARE_TEMPLATE_CLASS(o2::LinkRef<o2::Label>);
 // --- META ---
 
-ENUM_META(o2::Label::HorOverflow)
+ENUM_META(o2::Label::HorOverflow, o2__Label__HorOverflow)
 {
     ENUM_ENTRY(Cut);
     ENUM_ENTRY(Dots);
@@ -362,7 +362,7 @@ ENUM_META(o2::Label::HorOverflow)
 }
 END_ENUM_META;
 
-ENUM_META(o2::Label::VerOverflow)
+ENUM_META(o2::Label::VerOverflow, o2__Label__VerOverflow)
 {
     ENUM_ENTRY(Cut);
     ENUM_ENTRY(Expand);

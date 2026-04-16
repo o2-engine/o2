@@ -571,7 +571,7 @@ DECLARE_TEMPLATE_CLASS(o2::LinkRef<Editor::DrawOrderTree>);
 DECLARE_TEMPLATE_CLASS(o2::LinkRef<Editor::DrawOrderTreeNode>);
 // --- META ---
 
-ENUM_META(Editor::DrawOrderTree::OrderTreeNode::Type)
+ENUM_META(Editor::DrawOrderTree::OrderTreeNode::Type, Editor__DrawOrderTree__OrderTreeNode__Type)
 {
     ENUM_ENTRY(Actor);
     ENUM_ENTRY(Camera);

@@ -90,6 +90,7 @@ namespace o2
         static Vector<RegisterConstructorFunc>& GetRegisterConstructorFuncs();
 
         friend class Reflection;
+        friend void AddReflectionScriptConstructorFunc(void(*func)(void*, ScriptPrototypeProcessor&));
     };
 }
 

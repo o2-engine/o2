@@ -1,3 +1,13 @@
+extern void __RegisterEnum__Editor__ColorPickerDlg__ParameterType();
+extern void __RegisterEnum__Editor__ColorGradientProperty__HandleType();
+extern void __RegisterEnum__Editor__AnimationStateGraphEditor__StateTransition__TransitionStatus();
+extern void __RegisterEnum__Editor__AnimationStateGraphEditor__StateWidget__TransitionState();
+extern void __RegisterEnum__Editor__LogWindow__LogMessage__Type();
+extern void __RegisterEnum__Editor__DrawOrderTree__OrderTreeNode__Type();
+extern void __RegisterTemplateClass__Editor__KeyFramesTrackControl_AnimationTrack_float__();
+extern void __RegisterTemplateClass__Editor__KeyFramesTrackControl_AnimationTrack_bool__();
+extern void __RegisterTemplateClass__Editor__KeyFramesTrackControl_AnimationTrack_Color4__();
+extern void __RegisterTemplateClass__Editor__KeyFramesTrackControl_AnimationTrack_Vec2F__();
 extern void __RegisterClass__Editor__CreateAction();
 extern void __RegisterClass__Editor__DeleteAction();
 extern void __RegisterClass__Editor__DeleteAction__ObjectInfo();
@@ -158,6 +168,16 @@ extern void __RegisterClass__Editor__WindowsLayout__WindowDockPlaceInfo();
 
 extern void InitializeTypeso2Editor()
 {
+    __RegisterEnum__Editor__ColorPickerDlg__ParameterType();
+    __RegisterEnum__Editor__ColorGradientProperty__HandleType();
+    __RegisterEnum__Editor__AnimationStateGraphEditor__StateTransition__TransitionStatus();
+    __RegisterEnum__Editor__AnimationStateGraphEditor__StateWidget__TransitionState();
+    __RegisterEnum__Editor__LogWindow__LogMessage__Type();
+    __RegisterEnum__Editor__DrawOrderTree__OrderTreeNode__Type();
+    __RegisterTemplateClass__Editor__KeyFramesTrackControl_AnimationTrack_float__();
+    __RegisterTemplateClass__Editor__KeyFramesTrackControl_AnimationTrack_bool__();
+    __RegisterTemplateClass__Editor__KeyFramesTrackControl_AnimationTrack_Color4__();
+    __RegisterTemplateClass__Editor__KeyFramesTrackControl_AnimationTrack_Vec2F__();
     __RegisterClass__Editor__CreateAction();
     __RegisterClass__Editor__DeleteAction();
     __RegisterClass__Editor__DeleteAction__ObjectInfo();

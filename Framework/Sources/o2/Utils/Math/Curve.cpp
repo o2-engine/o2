@@ -941,7 +941,7 @@ namespace o2
 }
 // --- META ---
 
-ENUM_META(o2::Curve::Key::Type)
+ENUM_META(o2::Curve::Key::Type, o2__Curve__Key__Type)
 {
     ENUM_ENTRY(Broken);
     ENUM_ENTRY(Discrete);

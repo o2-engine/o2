@@ -281,14 +281,14 @@ namespace o2
 }
 // --- META ---
 
-ENUM_META(o2::Texture::Usage)
+ENUM_META(o2::Texture::Usage, o2__Texture__Usage)
 {
     ENUM_ENTRY(Default);
     ENUM_ENTRY(RenderTarget);
 }
 END_ENUM_META;
 
-ENUM_META(o2::Texture::Filter)
+ENUM_META(o2::Texture::Filter, o2__Texture__Filter)
 {
     ENUM_ENTRY(Linear);
     ENUM_ENTRY(Nearest);

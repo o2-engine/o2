@@ -10,9 +10,9 @@ extern void InitializeTypesAssetsBuildTool();
 
 int main(int argc, char* argv[])
 {
-    InitializeTypesAssetsBuildTool();
-    InitializeTypesGameLib();
     INITIALIZE_O2;
+    InitializeTypesGameLib();
+    InitializeTypesAssetsBuildTool();
 
     const auto platformKey = "-platform";
     const auto sourceDirKey = "-source";

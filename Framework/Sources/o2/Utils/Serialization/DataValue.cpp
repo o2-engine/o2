@@ -814,13 +814,13 @@ namespace o2
 }
 // --- META ---
 
-ENUM_META(o2::DataValue::Flags)
+ENUM_META(o2::DataValue::Flags, o2__DataValue__Flags)
 {
     ENUM_ENTRY(Bool);
 }
 END_ENUM_META;
 
-ENUM_META(o2::DataDocument::Format)
+ENUM_META(o2::DataDocument::Format, o2__DataDocument__Format)
 {
     ENUM_ENTRY(Binary);
     ENUM_ENTRY(JSON);

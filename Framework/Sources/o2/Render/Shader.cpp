@@ -90,7 +90,7 @@ namespace o2
 }
 // --- META ---
 
-ENUM_META(o2::Shader::Type)
+ENUM_META(o2::Shader::Type, o2__Shader__Type)
 {
     ENUM_ENTRY(Fragment);
     ENUM_ENTRY(Vertex);

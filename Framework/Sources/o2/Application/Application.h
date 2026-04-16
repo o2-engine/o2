@@ -12,6 +12,8 @@
 #include "o2/Application/Mac/ApplicationBase.h"
 #elif defined PLATFORM_IOS
 #include "o2/Application/iOS/ApplicationBase.h"
+#elif defined PLATFORM_WASM
+#include "o2/Application/WebAssembly/ApplicationBase.h"
 #elif defined PLATFORM_LINUX
 #include "o2/Application/Linux/ApplicationBase.h"
 #endif
@@ -163,6 +165,16 @@ namespace o2
         // Launching application cycle
         virtual void Launch();
 
+#elif defined PLATFORM_WASM
+        // Initializes engine application
+        virtual void Initialize();
+
+        // Launching application cycle
+        virtual void Launch();
+
+        // Updates frame
+        void Update();
+
 #endif
     protected:
         bool  mCursorInfiniteModeEnabled = false; // Is cursor infinite mode enabled
@@ -286,6 +298,11 @@ CLASS_METHODS_META(o2::Application)
 #if  defined PLATFORM_LINUX
     FUNCTION().PUBLIC().SIGNATURE(void, Initialize);
     FUNCTION().PUBLIC().SIGNATURE(void, Launch);
+#endif
+#if  defined PLATFORM_WASM
+    FUNCTION().PUBLIC().SIGNATURE(void, Initialize);
+    FUNCTION().PUBLIC().SIGNATURE(void, Launch);
+    FUNCTION().PUBLIC().SIGNATURE(void, Update);
 #endif
     FUNCTION().PROTECTED().SIGNATURE(void, InitializePlatform);
     FUNCTION().PROTECTED().SIGNATURE(void, CheckCursorInfiniteMode);

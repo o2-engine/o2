@@ -100,6 +100,8 @@ protected:
     map<string, TimeStamp> mSourceFiles;
 
     vector<string>         mRegistatorsList;
+    vector<string>         mEnumRegistratorsList;
+    vector<string>         mTemplateClassManualRegistratorsList;
 
 protected:
     // Returns list of all files in path and in sub paths
@@ -140,6 +142,12 @@ protected:
 
     // Updates code reflection
     void UpdateCodeReflection();
+
+    // Scans all .cpp files for ENUM_META calls and collects REG_IDs
+    void CollectEnumRegistrators();
+
+    // Scans all .cpp files for DECLARE_TEMPLATE_CLASS_MANUAL_ID calls and collects REG_IDs
+    void CollectTemplateClassManualRegistrators();
 
     // Generates classes registrators list source file
     void UpdateRegistratorsSource();

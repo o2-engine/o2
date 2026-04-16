@@ -11,6 +11,8 @@
 #include "o2/Render/Mac/RenderBase.h"
 #elif defined PLATFORM_IOS
 #include "o2/Render/iOS/RenderBase.h"
+#elif defined PLATFORM_WASM
+#include "o2/Render/WebAssembly/RenderBase.h"
 #elif defined(PLATFORM_LINUX)
 #if defined(O2_RENDER_GLES2)
 #include "o2/Render/Linux GLES2/RenderBase.h"

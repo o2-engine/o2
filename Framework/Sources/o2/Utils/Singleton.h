@@ -36,17 +36,26 @@ namespace o2
         static void DestroySingleton(Ref<_class_type>& lastReference);
 
     public:
+#if defined(__EMSCRIPTEN__)
+        inline static _class_type* mInstance = nullptr; // Instance of singleton
+#else
         static _class_type* mInstance; // Instance of singleton
+#endif
     };
 
     // Returns list of all created singletons
     Vector<Ref<RefCounterable>>& GetSingletonsList();
 
     // Declaring singleton macros
+#if defined(__EMSCRIPTEN__)
+#define DECLARE_SINGLETON(CLASS) /* mInstance is inline-initialized in template */
+#define CREATE_SINGLETON(CLASS)  SingletonInitializer<CLASS> gSingleton##CLASS
+#else
 #define DECLARE_SINGLETON(CLASS) template<> CLASS* Singleton<CLASS>::mInstance = nullptr
 
     // Declaring and initializing singleton macros
 #define CREATE_SINGLETON(CLASS)  template<> CLASS* Singleton<CLASS>::mInstance = nullptr; SingletonInitializer<CLASS> gSingleton##CLASS
+#endif
 
     // -------------------------------------------------------------------------------------------
     // Singleton initializer helper. Declared as temporary global variable to initialize singleton

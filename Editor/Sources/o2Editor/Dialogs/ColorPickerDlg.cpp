@@ -458,7 +458,7 @@ namespace Editor
 }
 // --- META ---
 
-ENUM_META(Editor::ColorPickerDlg::ParameterType)
+ENUM_META(Editor::ColorPickerDlg::ParameterType, Editor__ColorPickerDlg__ParameterType)
 {
     ENUM_ENTRY(A);
     ENUM_ENTRY(B);

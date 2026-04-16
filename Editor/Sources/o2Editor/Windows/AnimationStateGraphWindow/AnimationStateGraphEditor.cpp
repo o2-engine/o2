@@ -1028,7 +1028,7 @@ namespace Editor
 DECLARE_TEMPLATE_CLASS(o2::LinkRef<Editor::AnimationStateGraphEditor>);
 // --- META ---
 
-ENUM_META(Editor::AnimationStateGraphEditor::StateTransition::TransitionStatus)
+ENUM_META(Editor::AnimationStateGraphEditor::StateTransition::TransitionStatus, Editor__AnimationStateGraphEditor__StateTransition__TransitionStatus)
 {
     ENUM_ENTRY(None);
     ENUM_ENTRY(Planned);
@@ -1036,7 +1036,7 @@ ENUM_META(Editor::AnimationStateGraphEditor::StateTransition::TransitionStatus)
 }
 END_ENUM_META;
 
-ENUM_META(Editor::AnimationStateGraphEditor::StateWidget::TransitionState)
+ENUM_META(Editor::AnimationStateGraphEditor::StateWidget::TransitionState, Editor__AnimationStateGraphEditor__StateWidget__TransitionState)
 {
     ENUM_ENTRY(Finished);
     ENUM_ENTRY(None);

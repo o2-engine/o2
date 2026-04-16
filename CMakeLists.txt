@@ -26,6 +26,12 @@ if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
     set(O2_TESTS OFF CACHE BOOL "" FORCE)
 endif()
 
+# Force off editor and tests for WebAssembly / Emscripten
+if(EMSCRIPTEN)
+    set(O2_EDITOR OFF CACHE BOOL "" FORCE)
+    set(O2_TESTS OFF CACHE BOOL "" FORCE)
+endif()
+
 # Options
 option(O2_SELFPROFILE "Enable profiling o2 benchmark." OFF)
 option(O2_EDITOR "Enables o2 editor." ON)
@@ -52,7 +58,10 @@ endif()
 # Common definitions
 set(O2_COMPILE_DEFINITIONS SCRIPTING_BACKEND_JERRYSCRIPT _CRT_SECURE_NO_WARNINGS)
 
-if (WIN32)
+if (EMSCRIPTEN)
+    list(APPEND O2_COMPILE_DEFINITIONS PLATFORM_WASM)
+    list(APPEND O2_COMPILE_DEFINITIONS BOOST_STACKTRACE_GNU_SOURCE_NOT_REQUIRED)
+elseif (WIN32)
     list(APPEND O2_COMPILE_DEFINITIONS PLATFORM_WINDOWS)
 elseif (CMAKE_SYSTEM_NAME STREQUAL "iOS")
     list(APPEND O2_COMPILE_DEFINITIONS PLATFORM_IOS)
@@ -93,7 +102,10 @@ if (O2_PLATFORM_INITIALIZATION_ENABLED)
     list(APPEND O2_COMPILE_DEFINITIONS O2_PLATFORM_INITIALIZATION_ENABLED)
 endif()
 
-if (CMAKE_SYSTEM_NAME STREQUAL "iOS")
+if (EMSCRIPTEN)
+    set(O2_PLATFORM "WebAssembly")
+    set(O2_PLATFORM "WebAssembly" PARENT_SCOPE)
+elseif (CMAKE_SYSTEM_NAME STREQUAL "iOS")
     set(O2_PLATFORM "iOS")
     set(O2_PLATFORM "iOS" PARENT_SCOPE)
 elseif (APPLE)
@@ -121,6 +133,11 @@ if (MSVC)
     endif()
 else()
     set(O2_C_FLAGS "-Wall -Werror")
+
+    if (EMSCRIPTEN)
+        # Newer Clang in Emscripten enables warnings that older 3rd-party code trips on.
+        set(O2_C_FLAGS "${O2_C_FLAGS} -Wno-error=misleading-indentation -Wno-error=enum-enum-conversion -Wno-error=unterminated-string-initialization")
+    endif()
     
     set(O2_CXX_FLAGS "-Wall -Wno-error=format -Wno-error=format-extra-args -Wno-error=conversion \
                          -Wno-error=incompatible-pointer-types -Wno-error=sign-conversion -Wno-error=pointer-sign \
@@ -138,6 +155,10 @@ else()
                          -Wno-inconsistent-missing-override -Wno-shorten-64-to-32 -Wno-switch -Wno-delete-incomplete \
                          -Wno-potentially-evaluated-expression -Wno-deprecated-this-capture -Wno-invalid-offsetof")
 
+    if (EMSCRIPTEN)
+        set(O2_CXX_FLAGS "${O2_CXX_FLAGS} -Wno-error=missing-template-arg-list-after-template-kw -Wno-error=deprecated-declarations -Wno-error=unused-command-line-argument")
+    endif()
+
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${O2_C_FLAGS}")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${O2_CXX_FLAGS}")
     set(CMAKE_OBJCXX_FLAGS "${CMAKE_OBJCXX_FLAGS} ${O2_OBJCXX_FLAGS}")
@@ -150,8 +171,10 @@ endif()
 # dependencies
 add_subdirectory(Framework/3rdPartyLibs)
 
-# code tool
-add_subdirectory(CodeTool)
+# code tool (native host-only — skip when cross-compiling to WebAssembly)
+if(NOT EMSCRIPTEN)
+    add_subdirectory(CodeTool)
+endif()
 
 # o2 copy builtin framework assets
 add_custom_target(o2CopyBuiltinAssets
@@ -226,7 +249,10 @@ if (O2_MEMORY_ANALYZE)
     endif()
 endif()
 
-if (UNIX)
+if (EMSCRIPTEN)
+    target_compile_options(o2Framework PUBLIC "-sUSE_WEBGL2=1" "-sMIN_WEBGL_VERSION=2" "-sMAX_WEBGL_VERSION=2" "-sFULL_ES3=1")
+    target_link_options(o2Framework PUBLIC "-sUSE_WEBGL2=1" "-sMIN_WEBGL_VERSION=2" "-sMAX_WEBGL_VERSION=2" "-sFULL_ES3=1")
+elseif (UNIX)
     if (NOT APPLE)
         find_package(X11 REQUIRED)
         target_link_libraries(o2Framework PUBLIC ${X11_LIBRARIES})
@@ -304,12 +330,14 @@ elseif(MSVC)
     target_sources(o2Framework PRIVATE "Framework/Platforms/Windows/Framework.natvis")
 endif()
 
-# Codegen
-add_custom_target(o2FrameworkCodegen
-                  COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/CodeTool/Bin/o2CodeTool -project o2Framework -sources "${CMAKE_CURRENT_SOURCE_DIR}/Framework/Sources/o2"
-                  COMMENT "Run CodeTool: ${CMAKE_CURRENT_SOURCE_DIR}/CodeTool/Bin/o2CodeTool -project o2Framework -sources \"${CMAKE_CURRENT_SOURCE_DIR}/Framework/Sources/o2\""
-)
-add_dependencies(o2FrameworkCodegen o2CodeTool)
+# Codegen (native host-only — skip under EMSCRIPTEN; assume codegen was run during native build)
+if(NOT EMSCRIPTEN)
+    add_custom_target(o2FrameworkCodegen
+                      COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/CodeTool/Bin/o2CodeTool -project o2Framework -sources "${CMAKE_CURRENT_SOURCE_DIR}/Framework/Sources/o2"
+                      COMMENT "Run CodeTool: ${CMAKE_CURRENT_SOURCE_DIR}/CodeTool/Bin/o2CodeTool -project o2Framework -sources \"${CMAKE_CURRENT_SOURCE_DIR}/Framework/Sources/o2\""
+    )
+    add_dependencies(o2FrameworkCodegen o2CodeTool)
+endif()
 
 # dependencies
 add_dependencies(o2Framework Box2D jerry-core jerry-ext jerry-port-default FreeType)
@@ -318,9 +346,11 @@ if (O2_ENABLE_LINK_LIBPNG)
     add_dependencies(o2Framework libpng)
 endif()
 
-add_dependencies(o2Framework o2CodeTool)
-add_dependencies(o2Framework o2CopyBuiltinAssets)
-add_dependencies(o2Framework o2FrameworkCodegen)
+if(NOT EMSCRIPTEN)
+    add_dependencies(o2Framework o2CodeTool)
+    add_dependencies(o2Framework o2CopyBuiltinAssets)
+    add_dependencies(o2Framework o2FrameworkCodegen)
+endif()
 
 # o2 Editor Library
 if (O2_EDITOR)
@@ -363,8 +393,10 @@ if (O2_EDITOR)
     set_target_properties(o2EditorCodegen PROPERTIES FOLDER o2/Codegen)
 endif()
 
-# assets build tool
-add_subdirectory(AssetsBuildTool)
+# assets build tool (native host-only — skip when cross-compiling to WebAssembly)
+if(NOT EMSCRIPTEN)
+    add_subdirectory(AssetsBuildTool)
+endif()
 
 # tests
 if(O2_TESTS)
@@ -373,8 +405,10 @@ endif()
 
 # group in IDE
 set_target_properties(o2Framework PROPERTIES FOLDER o2)
-set_target_properties(o2AssetsBuilder PROPERTIES FOLDER o2)
-set_target_properties(o2CopyBuiltinAssets PROPERTIES FOLDER o2)
-set_target_properties(o2FrameworkCodegen PROPERTIES FOLDER o2/Codegen)
-set_target_properties(o2CodeTool PROPERTIES FOLDER o2/Codegen)
+if(NOT EMSCRIPTEN)
+    set_target_properties(o2AssetsBuilder PROPERTIES FOLDER o2)
+    set_target_properties(o2CopyBuiltinAssets PROPERTIES FOLDER o2)
+    set_target_properties(o2FrameworkCodegen PROPERTIES FOLDER o2/Codegen)
+    set_target_properties(o2CodeTool PROPERTIES FOLDER o2/Codegen)
+endif()
 

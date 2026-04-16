@@ -168,8 +168,16 @@ namespace o2
 #include "o2/Utils/Types/Ref.h"
 
 #if IS_SCRIPTING_SUPPORTED
-#include "o2/Scripts/ScriptEngine.h"
 #include "o2/Utils/Reflection/BaseTypeProcessor.h"
+namespace o2
+{
+    struct ScriptPrototypeProcessor;
+    // Registers a ProcessType<ScriptPrototypeProcessor> static function with
+    // ScriptEngine without forcing Reflection.h to include ScriptEngine.h
+    // (that creates a circular include chain when PCH is disabled).
+    using ReflectionScriptConstructorFunc = void(*)(void*, ScriptPrototypeProcessor&);
+    void AddReflectionScriptConstructorFunc(ReflectionScriptConstructorFunc func);
+}
 #endif
 
 namespace o2 {
@@ -274,7 +282,7 @@ namespace o2
             Reflection::Instance().mInitializingFunctions.Add((TypeInitializingFunc)&_type::template ProcessType<ReflectionInitializationTypeProcessor>);
 
 #if IS_SCRIPTING_SUPPORTED
-        ScriptEngine::GetRegisterConstructorFuncs().Add((ScriptEngine::RegisterConstructorFunc)&_type::template ProcessType<ScriptPrototypeProcessor>);
+        AddReflectionScriptConstructorFunc((ReflectionScriptConstructorFunc)&_type::template ProcessType<ScriptPrototypeProcessor>);
 #endif
 
         mInstance->mTypes[res->GetName()] = res;

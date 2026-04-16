@@ -8,6 +8,7 @@
 #include "o2/Utils/Debug/Debug.h"
 #include "o2/Utils/Debug/Log/LogStream.h"
 #include "o2/Utils/FileSystem/FileSystem.h"
+#include "o2/Utils/Serialization/DataValue.h"
 #include "o2/EngineSettings.h"
 
 namespace o2
@@ -403,7 +404,13 @@ namespace o2
 
         editorAssetsTree->DeserializeFromString(o2FileSystem.ReadFile(::GetEditorBuiltAssetsTreePath()));
 
-        mMainAssetsTree->DeserializeFromString(o2FileSystem.ReadFile(::GetBuiltAssetsTreePath()));
+        {
+            String _mainData = o2FileSystem.ReadFile(::GetBuiltAssetsTreePath());
+            DataDocument _doc;
+            _doc.LoadFromData(_mainData);
+            mMainAssetsTree->Deserialize(_doc);
+        }
+
         mMainAssetsTree->assetsPath = ::GetAssetsPath();
         mMainAssetsTree->builtAssetsPath = ::GetBuiltAssetsPath();
 

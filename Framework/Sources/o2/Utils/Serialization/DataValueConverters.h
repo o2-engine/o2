@@ -551,7 +551,7 @@ namespace o2
                     auto type = Reflection::GetType(typeName);
                     if (!type)
                     {
-                        o2Debug.LogError("Failed to deserialize unknown type: " + typeName);
+                        printf("Failed to deserialize unknown type: %s\n", typeName.Data());
                         return;
                     }
 
@@ -596,7 +596,7 @@ namespace o2
                     auto type = Reflection::GetType( typeName );
                     if (!type)
                     {
-                        o2Debug.LogError( "Failed to deserialize unknown type: " + typeName );
+                        printf("Failed to deserialize unknown type: %s\n", typeName.Data());
                         return;
                     }
 

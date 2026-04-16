@@ -279,7 +279,7 @@ namespace o2
 DECLARE_TEMPLATE_CLASS(o2::LinkRef<o2::RigidBody>);
 // --- META ---
 
-ENUM_META(o2::RigidBody::Type)
+ENUM_META(o2::RigidBody::Type, o2__RigidBody__Type)
 {
     ENUM_ENTRY(Dynamic);
     ENUM_ENTRY(Kinematic);
