@@ -2,6 +2,7 @@
 
 #include "o2/Utils/Memory/MemoryManager.h"
 #include "o2/Utils/Types/Ref.h"
+#include <type_traits>
 
 #if IS_SCRIPTING_SUPPORTED
 #include "o2/Scripts/ScriptValueDef.h"
@@ -52,7 +53,7 @@ namespace o2
         friend const Type& GetTypeOf();
 
         template<typename _type>
-        friend void __SetupType(Type* type);
+        friend void SetupType(Type* type);
 
         friend class ReflectionInitializationTypeProcessor;
         friend class Reflection;
@@ -64,26 +65,27 @@ namespace o2
 // -------------------------------
  
 #if IS_SCRIPTING_SUPPORTED
-#define IOBJECT_SCRIPTING()                                                                 \
-    void SetScriptValueContainer(o2::ScriptValue& value) const override;                    \
-    void ReflectIntoScriptValue(o2::ScriptValue& scriptValue) const override;               \
-    static o2::ScriptValue GetScriptPrototype();                                            \
-    template<typename __type>                                                               \
+#define IOBJECT_SCRIPTING()                                                                                          \
+    void SetScriptValueContainer(o2::ScriptValue& value) const override                                              \
+    { value.SetContainingObject(const_cast<std::remove_cv_t<std::remove_pointer_t<decltype(this)>>*>(this)); }       \
+    void ReflectIntoScriptValue(o2::ScriptValue&) const override {}                                                  \
+    static o2::ScriptValue GetScriptPrototype()                                                                      \
+    { static o2::ScriptValue p = o2::ScriptValue::EmptyObject(); return p; }                                         \
+    template<typename __type>                                                                                        \
     friend struct o2::ScriptValueBase::DataContainer
-
 #else
 #define IOBJECT_SCRIPTING()
 #endif
 
 #define IOBJECT_MAIN(CLASS)                                                                                     \
 private:                                                                                                        \
-    static o2::Type* type;                                                                                      \
+    inline static o2::Type* type = nullptr;                                                                     \
                                                                                                                 \
     template<typename __type>                                                                                   \
     friend const o2::Type& o2::GetTypeOf();                                                                     \
                                                                                                                 \
     template<typename __type>                                                                                   \
-    friend void o2::__SetupType(o2::Type* type);                                                                \
+    friend void o2::SetupType(o2::Type* type);                                                                  \
                                                                                                                 \
     template<typename __type>                                                                                   \
     friend class o2::TObjectType;                                                                               \
@@ -108,7 +110,7 @@ public:                                                                         
         ProcessBaseTypes<_type_processor>(object, processor);                                                   \
         ProcessFields<_type_processor>(object, processor);                                                      \
         ProcessMethods<_type_processor>(object, processor);                                                     \
-    }                                                                                                           
+    }
 
 #define IOBJECT(CLASS)                                                                                          \
     IOBJECT_MAIN(CLASS)                                                                                         \

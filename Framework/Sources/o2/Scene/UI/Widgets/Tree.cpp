@@ -1939,7 +1939,7 @@ namespace o2
 DECLARE_TEMPLATE_CLASS(o2::LinkRef<o2::Tree>);
 // --- META ---
 
-ENUM_META(o2::Tree::RearrangeType)
+ENUM_META(o2::Tree::RearrangeType, o2__Tree__RearrangeType)
 {
     ENUM_ENTRY(Disabled);
     ENUM_ENTRY(Enabled);
@@ -1947,7 +1947,7 @@ ENUM_META(o2::Tree::RearrangeType)
 }
 END_ENUM_META;
 
-ENUM_META(o2::Tree::ExpandState)
+ENUM_META(o2::Tree::ExpandState, o2__Tree__ExpandState)
 {
     ENUM_ENTRY(Collaping);
     ENUM_ENTRY(Expanding);

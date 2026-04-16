@@ -4,7 +4,7 @@
 #include "o2/Utils/Reflection/Reflection.h"
 // --- META ---
 
-ENUM_META(o2::BaseCorner)
+ENUM_META(o2::BaseCorner, o2__BaseCorner)
 {
     ENUM_ENTRY(Bottom);
     ENUM_ENTRY(Center);
@@ -18,7 +18,7 @@ ENUM_META(o2::BaseCorner)
 }
 END_ENUM_META;
 
-ENUM_META(o2::CursorType)
+ENUM_META(o2::CursorType, o2__CursorType)
 {
     ENUM_ENTRY(AppStarting);
     ENUM_ENTRY(Arrow);
@@ -38,7 +38,7 @@ ENUM_META(o2::CursorType)
 }
 END_ENUM_META;
 
-ENUM_META(o2::Side)
+ENUM_META(o2::Side, o2__Side)
 {
     ENUM_ENTRY(Bottom);
     ENUM_ENTRY(Left);
@@ -48,7 +48,7 @@ ENUM_META(o2::Side)
 }
 END_ENUM_META;
 
-ENUM_META(o2::Corner)
+ENUM_META(o2::Corner, o2__Corner)
 {
     ENUM_ENTRY(LeftBottom);
     ENUM_ENTRY(LeftTop);
@@ -57,14 +57,14 @@ ENUM_META(o2::Corner)
 }
 END_ENUM_META;
 
-ENUM_META(o2::TwoDirection)
+ENUM_META(o2::TwoDirection, o2__TwoDirection)
 {
     ENUM_ENTRY(Horizontal);
     ENUM_ENTRY(Vertical);
 }
 END_ENUM_META;
 
-ENUM_META(o2::SpriteMode)
+ENUM_META(o2::SpriteMode, o2__SpriteMode)
 {
     ENUM_ENTRY(Default);
     ENUM_ENTRY(Fill360CCW);
@@ -79,14 +79,14 @@ ENUM_META(o2::SpriteMode)
 }
 END_ENUM_META;
 
-ENUM_META(o2::BlendMode)
+ENUM_META(o2::BlendMode, o2__BlendMode)
 {
     ENUM_ENTRY(Add);
     ENUM_ENTRY(Normal);
 }
 END_ENUM_META;
 
-ENUM_META(o2::VerAlign)
+ENUM_META(o2::VerAlign, o2__VerAlign)
 {
     ENUM_ENTRY(Both);
     ENUM_ENTRY(Bottom);
@@ -95,7 +95,7 @@ ENUM_META(o2::VerAlign)
 }
 END_ENUM_META;
 
-ENUM_META(o2::HorAlign)
+ENUM_META(o2::HorAlign, o2__HorAlign)
 {
     ENUM_ENTRY(Both);
     ENUM_ENTRY(Left);
@@ -104,7 +104,7 @@ ENUM_META(o2::HorAlign)
 }
 END_ENUM_META;
 
-ENUM_META(o2::ProtectSection)
+ENUM_META(o2::ProtectSection, o2__ProtectSection)
 {
     ENUM_ENTRY(Private);
     ENUM_ENTRY(Protected);
@@ -112,17 +112,18 @@ ENUM_META(o2::ProtectSection)
 }
 END_ENUM_META;
 
-ENUM_META(o2::Platform)
+ENUM_META(o2::Platform, o2__Platform)
 {
     ENUM_ENTRY(Android);
     ENUM_ENTRY(Linux);
     ENUM_ENTRY(Mac);
+    ENUM_ENTRY(WebAssembly);
     ENUM_ENTRY(Windows);
     ENUM_ENTRY(iOS);
 }
 END_ENUM_META;
 
-ENUM_META(o2::DeviceType)
+ENUM_META(o2::DeviceType, o2__DeviceType)
 {
     ENUM_ENTRY(PC);
     ENUM_ENTRY(Phone);
@@ -130,14 +131,14 @@ ENUM_META(o2::DeviceType)
 }
 END_ENUM_META;
 
-ENUM_META(o2::LineType)
+ENUM_META(o2::LineType, o2__LineType)
 {
     ENUM_ENTRY(Dash);
     ENUM_ENTRY(Solid);
 }
 END_ENUM_META;
 
-ENUM_META(o2::PrimitiveType)
+ENUM_META(o2::PrimitiveType, o2__PrimitiveType)
 {
     ENUM_ENTRY(Line);
     ENUM_ENTRY(Polygon);
@@ -145,21 +146,21 @@ ENUM_META(o2::PrimitiveType)
 }
 END_ENUM_META;
 
-ENUM_META(o2::PixelFormat)
+ENUM_META(o2::PixelFormat, o2__PixelFormat)
 {
     ENUM_ENTRY(R8G8B8);
     ENUM_ENTRY(R8G8B8A8);
 }
 END_ENUM_META;
 
-ENUM_META(o2::TextureFormat)
+ENUM_META(o2::TextureFormat, o2__TextureFormat)
 {
     ENUM_ENTRY(DXT5);
     ENUM_ENTRY(R8G8B8A8);
 }
 END_ENUM_META;
 
-ENUM_META(o2::Loop)
+ENUM_META(o2::Loop, o2__Loop)
 {
     ENUM_ENTRY(None);
     ENUM_ENTRY(PingPong);
@@ -167,7 +168,7 @@ ENUM_META(o2::Loop)
 }
 END_ENUM_META;
 
-ENUM_META(o2::Units)
+ENUM_META(o2::Units, o2__Units)
 {
     ENUM_ENTRY(Centimeters);
     ENUM_ENTRY(Inches);

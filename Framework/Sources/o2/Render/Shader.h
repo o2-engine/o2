@@ -8,6 +8,8 @@
 #include "o2/Render/Mac/ShaderBase.h"
 #elif defined PLATFORM_IOS
 #include "o2/Render/iOS/ShaderBase.h"
+#elif defined PLATFORM_WASM
+#include "o2/Render/WebAssembly/ShaderBase.h"
 #elif defined(PLATFORM_LINUX)
 // #include "o2/Render/Linux/ShaderBase.h"
 #endif

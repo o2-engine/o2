@@ -12,6 +12,18 @@
 #include "o2/Utils/Types/String.h"
 #include "o2/Utils/Types/UID.h"
 
+#if IS_SCRIPTING_SUPPORTED
+#include "o2/Scripts/ScriptEngine.h"
+
+namespace o2
+{
+    void AddReflectionScriptConstructorFunc(ReflectionScriptConstructorFunc func)
+    {
+        ScriptEngine::GetRegisterConstructorFuncs().Add((ScriptEngine::RegisterConstructorFunc)func);
+    }
+}
+#endif
+
 extern void InitializeTypeso2Framework();
 
 namespace o2

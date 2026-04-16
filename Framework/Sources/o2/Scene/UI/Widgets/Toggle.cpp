@@ -362,7 +362,7 @@ namespace o2
 DECLARE_TEMPLATE_CLASS(o2::LinkRef<o2::Toggle>);
 // --- META ---
 
-ENUM_META(o2::ToggleGroup::Type)
+ENUM_META(o2::ToggleGroup::Type, o2__ToggleGroup__Type)
 {
     ENUM_ENTRY(HorOneClick);
     ENUM_ENTRY(OnlySingleTrue);

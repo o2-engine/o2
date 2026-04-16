@@ -25,7 +25,7 @@ namespace o2
         template<typename _cast_type>
         Ref<_cast_type> CloneAsRef() const
         {
-            return AssetWithDefaultMeta<MaterialAsset>::template CloneAsRef<_cast_type>();
+            return this->AssetWithDefaultMeta<MaterialAsset>::template CloneAsRef<_cast_type>();
         }
 
     public:
@@ -87,7 +87,7 @@ namespace o2
     public:
 #if IS_SCRIPTING_SUPPORTED
         // Disambiguate GetScriptValue from diamond IObject inheritance
-        ScriptValue GetScriptValue() const override { return Asset::GetScriptValue(); }
+        ScriptValue GetScriptValue() const override { return this->Asset::GetScriptValue(); }
 #endif
 
         friend class Assets;

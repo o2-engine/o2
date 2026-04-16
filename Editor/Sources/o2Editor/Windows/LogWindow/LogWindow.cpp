@@ -304,7 +304,7 @@ namespace Editor
 }
 // --- META ---
 
-ENUM_META(Editor::LogWindow::LogMessage::Type)
+ENUM_META(Editor::LogWindow::LogMessage::Type, Editor__LogWindow__LogMessage__Type)
 {
     ENUM_ENTRY(Error);
     ENUM_ENTRY(Regular);

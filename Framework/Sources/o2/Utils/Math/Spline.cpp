@@ -711,7 +711,7 @@ namespace o2
 }
 // --- META ---
 
-ENUM_META(o2::Spline::Key::Type)
+ENUM_META(o2::Spline::Key::Type, o2__Spline__Key__Type)
 {
     ENUM_ENTRY(Broken);
     ENUM_ENTRY(Free);

@@ -4,7 +4,7 @@
 #include "o2/Utils/Reflection/Type.h"
 // --- META ---
 
-ENUM_META(o2::ActorCreateMode)
+ENUM_META(o2::ActorCreateMode, o2__ActorCreateMode)
 {
     ENUM_ENTRY(Default);
     ENUM_ENTRY(InScene);

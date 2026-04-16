@@ -2,6 +2,9 @@
 
 #include "o2/Assets/Asset.h"
 #include "o2/Utils/Serialization/DataValue.h"
+#if IS_SCRIPTING_SUPPORTED
+#include "o2/Scripts/ScriptEngine.h"
+#endif
 
 namespace o2
 {

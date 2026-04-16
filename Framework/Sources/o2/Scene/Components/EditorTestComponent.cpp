@@ -27,7 +27,7 @@ void o2::EditorTestComponent::OnStart()
 DECLARE_TEMPLATE_CLASS(o2::LinkRef<o2::EditorTestComponent>);
 // --- META ---
 
-ENUM_META(o2::EditorTestComponent::TestEnum)
+ENUM_META(o2::EditorTestComponent::TestEnum, o2__EditorTestComponent__TestEnum)
 {
     ENUM_ENTRY(A);
     ENUM_ENTRY(B);

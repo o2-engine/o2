@@ -290,7 +290,7 @@ namespace o2
 DECLARE_TEMPLATE_CLASS(o2::LinkRef<o2::VerticalProgress>);
 // --- META ---
 
-ENUM_META(o2::VerticalProgress::Orientation)
+ENUM_META(o2::VerticalProgress::Orientation, o2__VerticalProgress__Orientation)
 {
     ENUM_ENTRY(Down);
     ENUM_ENTRY(Up);

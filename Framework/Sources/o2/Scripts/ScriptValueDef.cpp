@@ -2,7 +2,7 @@
 #include "ScriptValueDef.h"
 // --- META ---
 
-ENUM_META(o2::ScriptValue::ValueType)
+ENUM_META(o2::ScriptValue::ValueType, o2__ScriptValue__ValueType)
 {
     ENUM_ENTRY(Array);
     ENUM_ENTRY(BigInt);

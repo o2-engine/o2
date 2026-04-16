@@ -13,6 +13,8 @@ o2::Platform GetEnginePlatform()
     return o2::Platform::iOS;
 #elif defined PLATFORM_LINUX
     return o2::Platform::Linux;
+#elif defined PLATFORM_WASM
+    return o2::Platform::WebAssembly;
 #endif
 }
 
@@ -37,6 +39,8 @@ const char* GetProjectSettingPath()
 {
 #if defined PLATFORM_MAC || defined PLATFORM_WINDOWS || defined PLATFORM_LINUX
     return "../../ProjectSettings.json";
+#elif defined PLATFORM_WASM
+    return "/ProjectSettings.json";
 #else
     return "ProjectSettings.json";
 #endif
@@ -75,6 +79,8 @@ const char* GetProjectRootPath()
 {
 #if defined PLATFORM_MAC || defined PLATFORM_WINDOWS || defined PLATFORM_LINUX
     return "../../";
+#elif defined PLATFORM_WASM
+    return "/";
 #else
     return "";
 #endif
@@ -111,6 +117,8 @@ const char* GetBuiltAssetsPath()
     return "../../BuiltAssets/Linux/Data/";
 #elif defined PLATFORM_IOS
     return "Data/";
+#elif defined PLATFORM_WASM
+    return "/Data/";
 #endif
 }
 
@@ -131,6 +139,8 @@ const char* GetBuiltAssetsTreePath()
     return "../../BuiltAssets/Linux/Data.json";
 #elif defined PLATFORM_IOS
     return "Data.json";
+#elif defined PLATFORM_WASM
+    return "/Data.json";
 #endif
 }
 
@@ -177,6 +187,8 @@ const char* GetBuiltinAssetsPath()
     return "../../BuiltAssets/Linux/FrameworkData/";
 #elif defined PLATFORM_IOS
     return "FrameworkData/";
+#elif defined PLATFORM_WASM
+    return "/FrameworkData/";
 #else
     return "FrameworkAssets/";
 #endif

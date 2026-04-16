@@ -509,7 +509,122 @@ void CodeToolApplication::UpdateCodeReflection()
     for (auto file : mParsedFiles)
         UpdateSourceReflection(file);
 
+    // collect enum registrator ids from all .cpp files, including hand-written
+    // ENUM_META in @CODETOOLIGNORE sources that don't pass through the metas pipeline
+    CollectEnumRegistrators();
+
+    // collect template-class registrator ids from orphan .cpp files (no DECLARE_CLASS
+    // in the same TU to anchor it against linker pruning)
+    CollectTemplateClassManualRegistrators();
+
     delete mParser;
+}
+
+void CodeToolApplication::CollectEnumRegistrators()
+{
+    mEnumRegistratorsList.clear();
+
+    for (auto& fileInfo : mSourceFiles)
+    {
+        const string& path = fileInfo.first;
+        if (!EndsWith(path, ".cpp"))
+            continue;
+
+        string data = ReadFile(path);
+
+        size_t pos = 0;
+        while ((pos = data.find("ENUM_META(", pos)) != string::npos)
+        {
+            size_t start = pos + strlen("ENUM_META(");
+            size_t end = data.find(')', start);
+            if (end == string::npos)
+                break;
+
+            string args = data.substr(start, end - start);
+            size_t comma = args.find(',');
+            if (comma == string::npos)
+            {
+                pos = end + 1;
+                continue;
+            }
+
+            string id = args.substr(comma + 1);
+            // trim whitespace
+            size_t first = id.find_first_not_of(" \t\n\r");
+            size_t last = id.find_last_not_of(" \t\n\r");
+            if (first == string::npos)
+            {
+                pos = end + 1;
+                continue;
+            }
+            id = id.substr(first, last - first + 1);
+
+            if (find(mEnumRegistratorsList.begin(), mEnumRegistratorsList.end(), id) == mEnumRegistratorsList.end())
+                mEnumRegistratorsList.push_back(id);
+
+            pos = end + 1;
+        }
+    }
+}
+
+void CodeToolApplication::CollectTemplateClassManualRegistrators()
+{
+    mTemplateClassManualRegistratorsList.clear();
+
+    const string needle = "DECLARE_TEMPLATE_CLASS_MANUAL_ID(";
+
+    for (auto& fileInfo : mSourceFiles)
+    {
+        const string& path = fileInfo.first;
+        if (!EndsWith(path, ".cpp"))
+            continue;
+
+        string data = ReadFile(path);
+
+        size_t pos = 0;
+        while ((pos = data.find(needle, pos)) != string::npos)
+        {
+            size_t start = pos + needle.length();
+
+            // scan forward tracking template-angle nesting to find the top-level comma
+            int angle = 0;
+            size_t commaPos = string::npos;
+            size_t endPos = string::npos;
+            for (size_t i = start; i < data.size(); ++i)
+            {
+                char c = data[i];
+                if (c == '<') ++angle;
+                else if (c == '>') --angle;
+                else if (c == ',' && angle == 0)
+                {
+                    commaPos = i;
+                }
+                else if (c == ')' && angle == 0)
+                {
+                    endPos = i;
+                    break;
+                }
+            }
+
+            if (commaPos == string::npos || endPos == string::npos)
+                break;
+
+            string id = data.substr(commaPos + 1, endPos - commaPos - 1);
+            size_t first = id.find_first_not_of(" \t\n\r");
+            size_t last = id.find_last_not_of(" \t\n\r");
+            if (first == string::npos)
+            {
+                pos = endPos + 1;
+                continue;
+            }
+            id = id.substr(first, last - first + 1);
+
+            if (find(mTemplateClassManualRegistratorsList.begin(), mTemplateClassManualRegistratorsList.end(), id) == mTemplateClassManualRegistratorsList.end())
+                mTemplateClassManualRegistratorsList.push_back(id);
+
+            pos = endPos + 1;
+        }
+    }
 }
 
 void CodeToolApplication::UpdateRegistratorsSource()
@@ -519,12 +634,24 @@ void CodeToolApplication::UpdateRegistratorsSource()
 
     string fileData;
 
+    for (auto& regi : mEnumRegistratorsList)
+        fileData += "extern void __RegisterEnum__" + regi + "();\n";
+
+    for (auto& regi : mTemplateClassManualRegistratorsList)
+        fileData += "extern void __RegisterTemplateClass__" + regi + "();\n";
+
     for (auto& regi : mRegistatorsList)
         fileData += "extern void __RegisterClass__" + regi + "();\n";
 
     fileData += "\n\n";
 
     fileData += "extern void InitializeTypes" + mProjectName + "()\n{\n";
+
+    for (auto& regi : mEnumRegistratorsList)
+        fileData += "    __RegisterEnum__" + regi + "();\n";
+
+    for (auto& regi : mTemplateClassManualRegistratorsList)
+        fileData += "    __RegisterTemplateClass__" + regi + "();\n";
 
     for (auto& regi : mRegistatorsList)
         fileData += "    __RegisterClass__" + regi + "();\n";
@@ -1030,7 +1157,17 @@ string CodeToolApplication::GetEnumMeta(SyntaxEnum* enm)
     string res;
     res.reserve(enm->GetEntries().size() * 15);
 
-    res += "\nENUM_META(" + enm->GetFullName() + ")\n{\n";
+    string enumFullName = enm->GetFullName();
+
+    string enumRegisterId = enumFullName;
+    for (int i = 0; i < enumRegisterId.length(); i++)
+    {
+        auto& c = enumRegisterId[i];
+        if (c == '<' || c == '>' || c == ':')
+            c = '_';
+    }
+
+    res += "\nENUM_META(" + enumFullName + ", " + enumRegisterId + ")\n{\n";
 
     for (auto e : enm->GetEntries())
     {

@@ -8,6 +8,8 @@
 #include "o2/Render/Mac/MaterialBase.h"
 #elif defined PLATFORM_IOS
 #include "o2/Render/iOS/MaterialBase.h"
+#elif defined PLATFORM_WASM
+#include "o2/Render/WebAssembly/MaterialBase.h"
 #elif defined(PLATFORM_LINUX)
 // #include "o2/Render/Linux/MaterialBase.h"
 #endif

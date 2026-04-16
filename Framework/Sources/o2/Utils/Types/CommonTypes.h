@@ -3,6 +3,7 @@
 #include "o2/Utils/Reflection/Enum.h"
 #include "o2/Application/VKCodes.h"
 #include <cstdint>
+#include <cstddef>
 
 namespace o2
 {
@@ -63,7 +64,7 @@ namespace o2
 
     enum class ProtectSection { Public, Private, Protected };
     
-    enum class Platform { Windows, Mac, Linux, iOS, Android };
+    enum class Platform { Windows, Mac, Linux, iOS, Android, WebAssembly };
     
     enum class DeviceType { PC, Tablet, Phone };
 

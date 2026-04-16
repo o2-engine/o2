@@ -735,3 +735,5 @@ namespace o2
 	}
 #endif
 }
+
+#include "o2/Utils/Types/WeakRef.h"

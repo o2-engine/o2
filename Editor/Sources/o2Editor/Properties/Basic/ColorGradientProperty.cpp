@@ -334,7 +334,7 @@ DECLARE_TEMPLATE_CLASS(o2::LinkRef<Editor::ColorGradientProperty>);
 DECLARE_TEMPLATE_CLASS(o2::LinkRef<Editor::TPropertyField<o2::Ref<o2::ColorGradient>>>);
 // --- META ---
 
-ENUM_META(Editor::ColorGradientProperty::HandleType)
+ENUM_META(Editor::ColorGradientProperty::HandleType, Editor__ColorGradientProperty__HandleType)
 {
     ENUM_ENTRY(Left);
     ENUM_ENTRY(Middle);

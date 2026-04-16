@@ -1464,7 +1464,7 @@ namespace o2
 }
 // --- META ---
 
-ENUM_META(o2::Actor::State)
+ENUM_META(o2::Actor::State, o2__Actor__State)
 {
     ENUM_ENTRY(Default);
     ENUM_ENTRY(Destroyed);

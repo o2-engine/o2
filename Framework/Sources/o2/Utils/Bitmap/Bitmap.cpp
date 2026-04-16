@@ -412,7 +412,7 @@ namespace o2
 }
 // --- META ---
 
-ENUM_META(o2::Bitmap::ImageType)
+ENUM_META(o2::Bitmap::ImageType, o2__Bitmap__ImageType)
 {
     ENUM_ENTRY(Auto);
     ENUM_ENTRY(Png);

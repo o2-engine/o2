@@ -1,8 +1,27 @@
 #include "o2/stdafx.h"
 #include "ScriptValue.h"
 
+#include "o2/Utils/Serialization/Serializable.h"
+
 namespace o2
 {
+    void ScriptValueImpl_WriteIObjectToDataValue(IObject* object, DataValue& data)
+    {
+        if (auto serializable = dynamic_cast<ISerializable*>(object))
+            data = serializable;
+    }
+
+    bool ScriptValueImpl_ReadIObjectFromDataValue(const DataValue& data, ScriptValue& value)
+    {
+        if (ISerializable* object = data)
+        {
+            value = object->GetScriptValue();
+            return true;
+        }
+        return false;
+    }
+
+
     String ScriptValue::Dump(const String& tab /*= ""*/) const
     {
         String res;

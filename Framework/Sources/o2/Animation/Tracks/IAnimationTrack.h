@@ -3,6 +3,7 @@
 #include "o2/Utils/Basic/ICloneable.h"
 #include "o2/Utils/Serialization/Serializable.h"
 #include "o2/Utils/Types/Ref.h"
+#include "o2/Utils/Types/WeakRef.h"
 
 namespace o2
 {
