@@ -2,29 +2,38 @@
 
 #ifdef PLATFORM_ANDROID
 
-#include "OpenGL.h"
-#include "Utils/Debug/Log/LogStream.h"
-#include "Utils/Debug/Debug.h"
+#include "o2/Render/Android/OpenGL.h"
+#include "o2/Utils/Debug/Log/LogStream.h"
 
 const char* GetGLErrorDesc(GLenum errorId)
 {
-    if (errorId == GL_NO_ERROR) return "GL_NO_ERROR";
-    if (errorId == GL_INVALID_ENUM) return "GL_INVALID_ENUM";
-    if (errorId == GL_INVALID_VALUE) return "GL_INVALID_VALUE";
-    if (errorId == GL_INVALID_OPERATION) return "GL_INVALID_OPERATION";
-    if (errorId == GL_INVALID_FRAMEBUFFER_OPERATION) return "GL_INVALID_FRAMEBUFFER_OPERATION";
-    if (errorId == GL_OUT_OF_MEMORY) return "GL_OUT_OF_MEMORY";
-
-    return "UNKNOWN";
+    switch (errorId)
+    {
+        case GL_NO_ERROR:                      return "GL_NO_ERROR";
+        case GL_INVALID_ENUM:                  return "GL_INVALID_ENUM";
+        case GL_INVALID_VALUE:                 return "GL_INVALID_VALUE";
+        case GL_INVALID_OPERATION:             return "GL_INVALID_OPERATION";
+        case GL_INVALID_FRAMEBUFFER_OPERATION: return "GL_INVALID_FRAMEBUFFER_OPERATION";
+        case GL_OUT_OF_MEMORY:                 return "GL_OUT_OF_MEMORY";
+        default:                               return "Unknown GL error";
+    }
 }
 
 void glCheckError(const char* filename /*= nullptr*/, unsigned int line /*= 0*/)
 {
-    GLenum errId = glGetError();
-    if (errId != GL_NO_ERROR)
+    GLenum err = glGetError();
+    if (err != GL_NO_ERROR)
     {
-        o2Debug.LogError("OpenGL ERROR " + (o2::String)errId + ": " + (o2::String)GetGLErrorDesc(errId) +
-                         " at file: " + (o2::String)(filename ? filename : "unknown") + " line: " + (o2::String)line);
+        o2::String msg = "GL error: ";
+        msg += GetGLErrorDesc(err);
+        if (filename)
+        {
+            msg += " at ";
+            msg += filename;
+            msg += ":";
+            msg += o2::String((int)line);
+        }
+        o2Debug.LogError(msg);
     }
 }
 

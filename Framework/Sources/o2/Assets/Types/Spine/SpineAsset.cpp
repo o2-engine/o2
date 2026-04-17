@@ -3,6 +3,7 @@
 
 #include "o2/Assets/Assets.h"
 #include "o2/Utils/Debug/Log/LogStream.h"
+#include "o2/Utils/FileSystem/File.h"
 #include "o2/Utils/FileSystem/FileSystem.h"
 
 #include "spine/SkeletonJson.h"
@@ -71,7 +72,19 @@ namespace o2
         }
 
         spine::SkeletonJson json(spineAtlas);
+#ifdef PLATFORM_ANDROID
+        // spine::SkeletonJson::readSkeletonDataFile uses fopen — can't reach APK assets.
+        InFile file(path);
+        if (!file.IsOpened())
+        {
+            o2Debug.LogError("Failed to open spine json file: %s", path.Data());
+            return;
+        }
+        String jsonText = file.ReadFullData();
+        mSkeletonData = json.readSkeletonData(jsonText.Data());
+#else
         mSkeletonData = json.readSkeletonDataFile(path.Data());
+#endif
 
         if (!mSkeletonData)
         {

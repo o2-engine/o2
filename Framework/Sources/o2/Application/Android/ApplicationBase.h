@@ -4,7 +4,9 @@
 
 #include <jni.h>
 #include <android/asset_manager.h>
-#include "Application/Android/VKCodes.h"
+
+#include "o2/Utils/Math/Vector2.h"
+#include "o2/Utils/Types/String.h"
 
 namespace o2
 {
@@ -16,17 +18,17 @@ namespace o2
     protected:
         Vec2I mResolution;
 
-        JavaVM* mJVM;
-        jobject mActivity;
-        AAssetManager* mAssetManager;
-        String mDataPath;
+        JavaVM*        mJVM = nullptr;
+        jobject        mActivity = nullptr;
+        AAssetManager* mAssetManager = nullptr;
+        String         mDataPath;
 
     public:
         // Returns android Java virtual machine
         JavaVM* GetJVM() const;
 
         // Returns android activity
-        const jobject* GetActivity() const;
+        jobject GetActivity() const;
 
         // Returns android asset manager
         AAssetManager* GetAssetManager() const;
@@ -36,4 +38,4 @@ namespace o2
     };
 }
 
-#endif // PLATFORM_WINDOWS
+#endif // PLATFORM_ANDROID

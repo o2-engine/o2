@@ -223,7 +223,7 @@
 #define VK_Y              XK_y
 #define VK_Z              XK_z
 
-#elif defined PLATFORM_MAC || defined PLATFORM_IOS || defined PLATFORM_WASM
+#elif defined PLATFORM_MAC || defined PLATFORM_IOS || defined PLATFORM_WASM || defined PLATFORM_ANDROID
 
 #define VK_F1             -122
 #define VK_F2             -120

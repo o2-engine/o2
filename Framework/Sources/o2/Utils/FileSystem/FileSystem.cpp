@@ -7,6 +7,10 @@
 
 #include <chrono>
 
+#ifdef PLATFORM_ANDROID
+#include "o2/Application/Android/AndroidPlatform.h"
+#endif
+
 #if defined(O2_FILESYSTEM_EXPERIMENTAL)
 #include <experimental/filesystem>
 namespace fs = std::experimental::filesystem;
@@ -237,6 +241,18 @@ namespace o2
 
     bool FileSystem::IsFileExist(const String& path) const
     {
+#ifdef PLATFORM_ANDROID
+        // Relative paths live in APK assets; only AAssetManager can see them.
+        if (!path.IsEmpty() && path[0] != '/')
+        {
+            if (AAssetManager* am = AndroidPlatform::GetAssetManager())
+            {
+                AAsset* a = AAssetManager_open(am, path.Data(), AASSET_MODE_UNKNOWN);
+                if (a) { AAsset_close(a); return true; }
+                return false;
+            }
+        }
+#endif
         return fs::exists(path.Data());
     }
 

@@ -3,7 +3,7 @@
 #if defined PLATFORM_WINDOWS
 #include "o2/Render/Windows/MaterialBase.h"
 #elif defined PLATFORM_ANDROID
-// #include "o2/Render/Android/MaterialBase.h"
+#include "o2/Render/Android/MaterialBase.h"
 #elif defined PLATFORM_MAC
 #include "o2/Render/Mac/MaterialBase.h"
 #elif defined PLATFORM_IOS

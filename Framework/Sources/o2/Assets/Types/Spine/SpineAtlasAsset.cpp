@@ -3,6 +3,8 @@
 
 #include "o2/Assets/Assets.h"
 #include "o2/Utils/Debug/Log/LogStream.h"
+#include "o2/Utils/FileSystem/File.h"
+#include "o2/Utils/FileSystem/FileSystem.h"
 #include "o2/Render/Spine/SpineManager.h"
 
 namespace o2
@@ -41,7 +43,27 @@ namespace o2
 
     void SpineAtlasAsset::LoadData(const String& path)
     {
+#ifdef PLATFORM_ANDROID
+        // spine::Atlas(path, ...) uses fopen — can't reach APK assets on Android.
+        // Read bytes via our FileSystem (AAssetManager-aware), then use the
+        // (data, length, dir) constructor.
+        InFile file(path);
+        if (!file.IsOpened())
+        {
+            o2Debug.LogError("Failed to open spine atlas file: %s", path.Data());
+            mAtlas = nullptr;
+            return;
+        }
+        UInt length = file.GetDataSize();
+        char* buffer = mnew char[length];
+        file.ReadData(buffer, length);
+        String dir = FileSystem::GetParentPath(path);
+        mAtlas = new spine::Atlas(buffer, (int)length, dir.Data(),
+                                  &SpineManager::Instance().textureLoader);
+        delete[] buffer;
+#else
         mAtlas = new spine::Atlas(path.Data(), &SpineManager::Instance().textureLoader);
+#endif
 
         if (mAtlas->getPages().size() == 0)
         {

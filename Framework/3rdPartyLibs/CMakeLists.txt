@@ -35,7 +35,7 @@ set(JERRY_MATH              OFF CACHE BOOL "" FORCE)
 set(UNITTESTS               OFF CACHE BOOL "" FORCE)
 set(DOCTESTS                OFF CACHE BOOL "" FORCE)
 
-if (WIN32 OR CMAKE_SYSTEM_NAME STREQUAL "iOS")
+if (WIN32 OR CMAKE_SYSTEM_NAME STREQUAL "iOS" OR ANDROID)
     set(BUILD_SHARED_LIBS         OFF CACHE BOOL "" FORCE)
 elseif (UNIX)
     set(BUILD_SHARED_LIBS         ON CACHE BOOL "" FORCE)
@@ -70,6 +70,24 @@ set(JERRY_STACK_LIMIT               "(0)"    CACHE BOOL "" FORCE)
 set(JERRY_GC_MARK_LIMIT             "(8)"    CACHE BOOL "" FORCE)
 
 add_subdirectory(jerryscript)
+
+# Android NDK clang is newer than o2's local clang and promotes some warnings
+# to errors by default inside jerryscript's own -Werror=all flag group.
+# Override per-target, after jerryscript's add_subdirectory() so these come LAST on the command line.
+if (ANDROID)
+    foreach(_jerry_target jerry-core jerry-ext jerry-port-default)
+        if (TARGET ${_jerry_target})
+            target_compile_options(${_jerry_target} PRIVATE
+                -Wno-error=enum-enum-conversion
+                -Wno-error=misleading-indentation
+                -Wno-error=sign-conversion
+                -Wno-error=conversion
+                -Wno-error=shorten-64-to-32
+                -Wno-error=format-nonliteral
+                -Wno-unknown-warning-option)
+        endif()
+    endforeach()
+endif()
 
 # tracy
 if (O2_TRACY)

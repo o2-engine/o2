@@ -1,56 +1,39 @@
 #include "o2/stdafx.h"
 
 #ifdef PLATFORM_ANDROID
-#include "Render/Texture.h"
-#include "Utils/Debug/Log/LogStream.h"
+
+#include "o2/Render/Render.h"
+#include "o2/Render/Texture.h"
+#include "o2/Utils/Debug/Log/LogStream.h"
 
 namespace o2
 {
-    Texture::~Texture()
+    static GLint MapTextureFormat(TextureFormat format)
     {
-        o2Render.OnTextureDestroyed(this);
-
-        for (auto& texRef : mRefs)
-            texRef->mTexture = nullptr;
-
-        if (!mReady)
-            return;
-
-        if (mUsage == Usage::RenderTarget)
-            glDeleteFramebuffers(1, &mFrameBuffer);
-
-        glDeleteTextures(1, &mHandle);
+        switch (format)
+        {
+            case TextureFormat::R8G8B8A8: return GL_RGBA;
+            default:                      return GL_RGBA; // GLES2 has no DXT5; fall back to RGBA
+        }
     }
 
-    void Texture::Create(const Vec2I& size, PixelFormat format /*= Format::Default*/, Usage usage /*= Usage::Default*/)
+    bool Texture::PlatformCreate()
     {
-        if (mReady)
-        {
-            if (mUsage == Usage::RenderTarget)
-                glDeleteFramebuffers(1, &mFrameBuffer);
-
-            glDeleteTextures(1, &mHandle);
-        }
-
-        mFormat = format;
-        mUsage = usage;
-        mSize = size;
+        auto prevTextureHandle = o2Render.mCurrentDrawTexture ? o2Render.mCurrentDrawTexture->mHandle : 0;
 
         glGenTextures(1, &mHandle);
         glBindTexture(GL_TEXTURE_2D, mHandle);
+        GL_CHECK_ERROR();
 
-        GLint texFormat = GL_RGB;
-        if (format == PixelFormat::R8G8B8A8)
-            texFormat = GL_RGBA;
-        else if (format == PixelFormat::R8G8B8)
-            texFormat = GL_RGB;
+        GLint texFormat = MapTextureFormat(mFormat);
+        glTexImage2D(GL_TEXTURE_2D, 0, texFormat, (GLsizei)mSize.x, (GLsizei)mSize.y, 0, texFormat, GL_UNSIGNED_BYTE, NULL);
+        GL_CHECK_ERROR();
 
-        glTexImage2D(GL_TEXTURE_2D, 0, texFormat, (GLsizei)size.x, (GLsizei)size.y, 0, texFormat, GL_UNSIGNED_BYTE, NULL);
-
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        GL_CHECK_ERROR();
 
         if (mUsage == Usage::RenderTarget)
         {
@@ -59,113 +42,100 @@ namespace o2
 
             glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, mHandle, 0);
 
-            GLenum DrawBuffers[2] = { GL_COLOR_ATTACHMENT0 };
-            glGenRenderbuffers(1, DrawBuffers);
-
             if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
             {
                 GLenum glError = glGetError();
-
-                o2Render.mLog->Error("Failed to create GL frame buffer object! GL Error %i %cs", glError,
+                o2Render.mLog->Error((String)"Failed to create GL frame buffer object! GL Error " + (int)glError + " " +
                                      GetGLErrorDesc(glError));
-
-                mReady = false;
-                return;
+                glBindTexture(GL_TEXTURE_2D, prevTextureHandle);
+                return false;
             }
 
-            mReady = true;
-
             glBindFramebuffer(GL_FRAMEBUFFER, 0);
+            GL_CHECK_ERROR();
         }
 
-        mReady = true;
+        glBindTexture(GL_TEXTURE_2D, prevTextureHandle);
+        return true;
     }
 
-    void Texture::Create(const Bitmap& bitmap)
+    void Texture::PlatformDestroy()
     {
-        if (mReady)
-        {
-            if (mUsage == Usage::RenderTarget)
-                glDeleteFramebuffers(1, &mFrameBuffer);
+        if (mUsage == Usage::RenderTarget && mFrameBuffer)
+            glDeleteFramebuffers(1, &mFrameBuffer);
 
+        if (mHandle)
             glDeleteTextures(1, &mHandle);
-        }
-
-        mFormat = bitmap.GetFormat();
-        mUsage = Usage::Default;
-        mSize = bitmap.GetSize();
-        mFileName = bitmap.GetFilename();
-
-        glGenTextures(1, &mHandle);
-        glBindTexture(GL_TEXTURE_2D, mHandle);
-
-        GLint texFormat = GL_RGB;
-        if (mFormat == PixelFormat::R8G8B8A8)
-            texFormat = GL_RGBA;
-        else if (mFormat == PixelFormat::R8G8B8)
-            texFormat = GL_RGB;
-
-        glTexImage2D(GL_TEXTURE_2D, 0, texFormat, bitmap.GetSize().x, bitmap.GetSize().y, 0, texFormat, GL_UNSIGNED_BYTE,
-                     bitmap.GetData());
-
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-
-        mReady = true;
     }
 
-    void Texture::SetData(const Bitmap& bitmap)
+    void Texture::PlatformUploadData(const Vec2I& size, Byte* data, TextureFormat format)
     {
+        auto prevTextureHandle = o2Render.mCurrentDrawTexture ? o2Render.mCurrentDrawTexture->mHandle : 0;
+
         glBindTexture(GL_TEXTURE_2D, mHandle);
 
-        GLint texFormat = GL_RGB;
-        if (mFormat == PixelFormat::R8G8B8A8)
-            texFormat = GL_RGBA;
-        else if (mFormat == PixelFormat::R8G8B8)
-            texFormat = GL_RGB;
-
-        glTexImage2D(GL_TEXTURE_2D, 0, texFormat, bitmap.GetSize().x, bitmap.GetSize().y, 0, texFormat, GL_UNSIGNED_BYTE,
-                     bitmap.GetData());
-
+        GLint texFormat = MapTextureFormat(format);
+        glTexImage2D(GL_TEXTURE_2D, 0, texFormat, (GLsizei)size.x, (GLsizei)size.y, 0, texFormat, GL_UNSIGNED_BYTE, data);
         GL_CHECK_ERROR();
+
+        glBindTexture(GL_TEXTURE_2D, prevTextureHandle);
     }
 
-    void Texture::SetSubData(const Vec2I& offset, const Bitmap& bitmap)
+    void Texture::PlatformUploadRegionData(const Vec2I& offset, const Vec2I& size, Byte* data, TextureFormat format)
     {
+        auto prevTextureHandle = o2Render.mCurrentDrawTexture ? o2Render.mCurrentDrawTexture->mHandle : 0;
         glBindTexture(GL_TEXTURE_2D, mHandle);
 
-        GLint texFormat = GL_RGB;
-        if (mFormat == PixelFormat::R8G8B8A8)
-            texFormat = GL_RGBA;
-        else if (mFormat == PixelFormat::R8G8B8)
-            texFormat = GL_RGB;
-
-        glTexSubImage2D(GL_TEXTURE_2D, 0, offset.x, offset.y, bitmap.GetSize().x, bitmap.GetSize().y, texFormat, GL_UNSIGNED_BYTE,
-                        bitmap.GetData());
-
+        GLint texFormat = MapTextureFormat(format);
+        glTexSubImage2D(GL_TEXTURE_2D, 0, offset.x, offset.y, size.x, size.y, texFormat, GL_UNSIGNED_BYTE, data);
         GL_CHECK_ERROR();
+
+        glBindTexture(GL_TEXTURE_2D, prevTextureHandle);
     }
 
     void Texture::Copy(const Texture& from, const RectI& rect)
     {
+        auto prevTextureHandle = o2Render.mCurrentDrawTexture ? o2Render.mCurrentDrawTexture->mHandle : 0;
         glBindTexture(GL_TEXTURE_2D, from.mHandle);
 
-        GLint texFormat = GL_RGB;
-        if (mFormat == PixelFormat::R8G8B8A8)
-            texFormat = GL_RGBA;
-        else if (mFormat == PixelFormat::R8G8B8)
-            texFormat = GL_RGB;
-
-        //glCopyTexImage2D(mHandle, 0, texFormat, rect.left, rect.top, rect.Width(), rect.Height(), 0);
+        GLint texFormat = MapTextureFormat(mFormat);
+        glCopyTexImage2D(GL_TEXTURE_2D, 0, texFormat, rect.left, rect.top, rect.Width(), rect.Height(), 0);
+        glBindTexture(GL_TEXTURE_2D, prevTextureHandle);
     }
 
-    Bitmap* Texture::GetData()
+    void Texture::PlatformGetData(Byte* data)
     {
-        Bitmap* bitmap = mnew Bitmap(mFormat, mSize);
-        return bitmap;
+        // GLES2 has no glGetTexImage. Readback via FBO + glReadPixels
+        GLuint tmpFbo = 0;
+        glGenFramebuffers(1, &tmpFbo);
+        glBindFramebuffer(GL_FRAMEBUFFER, tmpFbo);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, mHandle, 0);
+
+        if (glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE)
+            glReadPixels(0, 0, mSize.x, mSize.y, GL_RGBA, GL_UNSIGNED_BYTE, data);
+        else
+            o2Render.mLog->Error("Texture::PlatformGetData: framebuffer incomplete for readback");
+
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glDeleteFramebuffers(1, &tmpFbo);
+    }
+
+    void Texture::PlatformSetFilter()
+    {
+        GLint type = GL_LINEAR;
+        if (mFilter == Filter::Nearest)
+            type = GL_NEAREST;
+
+        auto prevTextureHandle = o2Render.mCurrentDrawTexture ? o2Render.mCurrentDrawTexture->mHandle : 0;
+        o2Render.DrawPrimitives();
+
+        glBindTexture(GL_TEXTURE_2D, mHandle);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, type);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, type);
+
+        glBindTexture(GL_TEXTURE_2D, prevTextureHandle);
+        GL_CHECK_ERROR();
     }
 }
 
-#endif //PLATFORM_ANDROID
+#endif // PLATFORM_ANDROID

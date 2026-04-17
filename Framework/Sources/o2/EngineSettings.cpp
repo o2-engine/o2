@@ -110,7 +110,7 @@ const char* GetBuiltAssetsPath()
 #if defined PLATFORM_WINDOWS
     return "../../BuiltAssets/Windows/Data/";
 #elif defined PLATFORM_ANDROID
-    return "AndroidAssets/BuiltAssets/";
+    return "Data/";
 #elif defined PLATFORM_MAC
     return "../../BuiltAssets/Mac/Data/";
 #elif defined PLATFORM_LINUX
@@ -132,7 +132,7 @@ const char* GetBuiltAssetsTreePath()
 #if defined PLATFORM_WINDOWS
     return "../../BuiltAssets/Windows/Data.json";
 #elif defined PLATFORM_ANDROID
-    return "AndroidAssets/AssetsTree.json";
+    return "Data.json";
 #elif defined PLATFORM_MAC
     return "../../BuiltAssets/Mac/Data.json";
 #elif defined PLATFORM_LINUX
@@ -189,6 +189,8 @@ const char* GetBuiltinAssetsPath()
     return "FrameworkData/";
 #elif defined PLATFORM_WASM
     return "/FrameworkData/";
+#elif defined PLATFORM_ANDROID
+    return "FrameworkData/";
 #else
     return "FrameworkAssets/";
 #endif

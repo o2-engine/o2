@@ -3,7 +3,7 @@
 #if defined PLATFORM_WINDOWS
 #include "o2/Render/Windows/ShaderBase.h"
 #elif defined PLATFORM_ANDROID
-// #include "o2/Render/Android/ShaderBase.h"
+#include "o2/Render/Android/ShaderBase.h"
 #elif defined PLATFORM_MAC
 #include "o2/Render/Mac/ShaderBase.h"
 #elif defined PLATFORM_IOS

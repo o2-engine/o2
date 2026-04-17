@@ -2,7 +2,7 @@
 
 #ifdef PLATFORM_ANDROID
 
-#include <GLES2/gl2.h>
+#include "o2/Render/Android/OpenGL.h"
 
 namespace o2
 {
@@ -12,8 +12,8 @@ namespace o2
         friend class VectorFont;
 
     protected:
-        GLuint mHandle;      // Texture handle
-        GLuint mFrameBuffer; // Frame buffer for rendering into texture
+        GLuint mHandle = 0;      // Texture handle
+        GLuint mFrameBuffer = 0; // Frame buffer for rendering into texture
     };
 }
 

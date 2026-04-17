@@ -2,21 +2,43 @@
 
 #ifdef PLATFORM_ANDROID
 
-#include "Application/Application.h"
-#include "Events/EventSystem.h"
-#include "Utils/Debug/Log/LogStream.h"
-#include "Utils/FileSystem/FileSystem.h"
+#include "o2/Application/Application.h"
+#include "o2/Application/Android/AndroidPlatform.h"
+#include "o2/Events/EventSystem.h"
+#include "o2/Utils/Debug/Log/LogStream.h"
+#include "o2/Utils/FileSystem/FileSystem.h"
 
 namespace o2
 {
+    namespace AndroidPlatform
+    {
+        static JavaVM*        gJVM = nullptr;
+        static jobject        gActivity = nullptr;
+        static AAssetManager* gAssetManager = nullptr;
+        static String         gDataPath;
+        static Vec2I          gResolution = Vec2I(1280, 720);
+
+        void SetJVM(JavaVM* jvm)                     { gJVM = jvm; }
+        void SetActivity(jobject activity)           { gActivity = activity; }
+        void SetAssetManager(AAssetManager* manager) { gAssetManager = manager; }
+        void SetDataPath(const String& dataPath)     { gDataPath = dataPath; }
+        void SetResolution(const Vec2I& resolution)  { gResolution = resolution; }
+
+        JavaVM*        GetJVM()          { return gJVM; }
+        jobject        GetActivity()     { return gActivity; }
+        AAssetManager* GetAssetManager() { return gAssetManager; }
+        String         GetDataPath()     { return gDataPath; }
+        Vec2I          GetResolution()   { return gResolution; }
+    }
+
     JavaVM* ApplicationBase::GetJVM() const
     {
         return mJVM;
     }
 
-    const jobject* ApplicationBase::GetActivity() const
+    jobject ApplicationBase::GetActivity() const
     {
-        return &mActivity;
+        return mActivity;
     }
 
     AAssetManager* ApplicationBase::GetAssetManager() const
@@ -29,8 +51,21 @@ namespace o2
         return mDataPath;
     }
 
+    void Application::Initialize()
+    {
+        BasicInitialize();
+    }
+
     void Application::InitializePlatform()
-    {}
+    {
+        // State that was injected from the Java side through AndroidPlatform::Set*
+        // before the call to Application::Initialize().
+        mJVM          = AndroidPlatform::GetJVM();
+        mActivity     = AndroidPlatform::GetActivity();
+        mAssetManager = AndroidPlatform::GetAssetManager();
+        mDataPath     = AndroidPlatform::GetDataPath();
+        mResolution   = AndroidPlatform::GetResolution();
+    }
 
     void Application::Shutdown()
     {}
@@ -48,19 +83,6 @@ namespace o2
         OnStarted();
         onStarted.Invoke();
         o2Events.OnApplicationStarted();
-    }
-
-    void Application::Initialize(JNIEnv* env, jobject activity, AAssetManager* assetManager, String dataPath,
-                             const Vec2I& resolution)
-    {
-        mResolution = resolution;
-
-        env->GetJavaVM(&mJVM);
-        mActivity = activity;
-        mAssetManager = assetManager;
-        mDataPath = dataPath;
-
-        BasicInitialize();
     }
 
     void Application::Update()
@@ -94,7 +116,7 @@ namespace o2
 
     Vec2I Application::GetWindowSize() const
     {
-        return Vec2I();
+        return mResolution;
     }
 
     void Application::SetWindowPosition(const Vec2I& position)
@@ -114,7 +136,9 @@ namespace o2
     }
 
     void Application::SetContentSize(const Vec2I& size)
-    {}
+    {
+        mResolution = size;
+    }
 
     Vec2I Application::GetContentSize() const
     {

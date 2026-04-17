@@ -3,6 +3,10 @@
 
 #include "o2/Utils/Reflection/Reflection.h"
 
+#ifdef PLATFORM_ANDROID
+#include "o2/Application/Android/AndroidPlatform.h"
+#endif
+
 namespace o2
 {
     InFile::InFile() :
@@ -35,6 +39,24 @@ namespace o2
     {
         Close();
 
+#ifdef PLATFORM_ANDROID
+        // APK assets live inside the zip — only AAssetManager can read them.
+        // Absolute paths (starting with '/') are regular FS (DataPath, cache).
+        if (!filename.IsEmpty() && filename[0] != '/')
+        {
+            if (AAssetManager* am = AndroidPlatform::GetAssetManager())
+            {
+                mAsset = AAssetManager_open(am, filename.Data(), AASSET_MODE_BUFFER);
+                if (mAsset)
+                {
+                    mOpened = true;
+                    mFilename = filename;
+                    return true;
+                }
+            }
+        }
+#endif
+
         mIfstream.open(filename, std::ios::binary);
 
         if (!mIfstream.is_open())
@@ -49,13 +71,34 @@ namespace o2
     bool InFile::Close()
     {
         if (mOpened)
-            mIfstream.close();
-
+        {
+#ifdef PLATFORM_ANDROID
+            if (mAsset)
+            {
+                AAsset_close(mAsset);
+                mAsset = nullptr;
+            }
+            else
+#endif
+            {
+                mIfstream.close();
+            }
+        }
+        mOpened = false;
         return true;
     }
 
     UInt InFile::ReadFullData(void* dataPtr)
     {
+#ifdef PLATFORM_ANDROID
+        if (mAsset)
+        {
+            AAsset_seek(mAsset, 0, SEEK_SET);
+            off_t length = AAsset_getLength(mAsset);
+            AAsset_read(mAsset, dataPtr, length);
+            return (UInt)length;
+        }
+#endif
         mIfstream.seekg(0, std::ios::beg);
         mIfstream.seekg(0, std::ios::end);
         UInt length = (UInt)mIfstream.tellg();
@@ -79,21 +122,47 @@ namespace o2
 
     void InFile::ReadData(void* dataPtr, UInt bytes)
     {
+#ifdef PLATFORM_ANDROID
+        if (mAsset)
+        {
+            AAsset_read(mAsset, dataPtr, bytes);
+            return;
+        }
+#endif
         auto& r = mIfstream.read((char*)dataPtr, bytes);
     }
 
     void InFile::SetCaretPos(UInt pos)
     {
+#ifdef PLATFORM_ANDROID
+        if (mAsset)
+        {
+            AAsset_seek(mAsset, (off_t)pos, SEEK_SET);
+            return;
+        }
+#endif
         mIfstream.seekg(pos, std::ios::beg);
     }
 
     UInt InFile::GetCaretPos()
     {
+#ifdef PLATFORM_ANDROID
+        if (mAsset)
+        {
+            off_t remaining = AAsset_getRemainingLength(mAsset);
+            off_t total     = AAsset_getLength(mAsset);
+            return (UInt)(total - remaining);
+        }
+#endif
         return (UInt)mIfstream.tellg();
     }
 
     UInt InFile::GetDataSize()
     {
+#ifdef PLATFORM_ANDROID
+        if (mAsset)
+            return (UInt)AAsset_getLength(mAsset);
+#endif
         mIfstream.seekg(0, std::ios::beg);
         mIfstream.seekg(0, std::ios::end);
         UInt res = (long unsigned int)mIfstream.tellg();

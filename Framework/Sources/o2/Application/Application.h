@@ -128,16 +128,15 @@ namespace o2
         virtual void Launch();
 
 #elif defined PLATFORM_ANDROID
-        // Launching application
-        virtual void Initialize(JNIEnv* env, jobject activity, AAssetManager* assetManager, String dataPath,
-                                const Vec2I& resolution);
+        // Initializes engine application
+        virtual void Initialize();
 
         // Launching application cycle
         virtual void Launch();
 
         // Updates frame
         void Update();
-        
+
 #elif defined PLATFORM_MAC
         // Initializes engine application
         virtual void Initialize();
@@ -281,7 +280,7 @@ CLASS_METHODS_META(o2::Application)
     FUNCTION().PUBLIC().SIGNATURE(void, Launch);
 #endif
 #if  defined PLATFORM_ANDROID
-    FUNCTION().PUBLIC().SIGNATURE(void, Initialize, JNIEnv*, jobject, AAssetManager*, String, const Vec2I&);
+    FUNCTION().PUBLIC().SIGNATURE(void, Initialize);
     FUNCTION().PUBLIC().SIGNATURE(void, Launch);
     FUNCTION().PUBLIC().SIGNATURE(void, Update);
 #endif
