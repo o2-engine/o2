@@ -193,8 +193,8 @@ endif()
 # dependencies
 add_subdirectory(Framework/3rdPartyLibs)
 
-# code tool (native host-only — skip when cross-compiling to WebAssembly / Android)
-if(NOT EMSCRIPTEN AND NOT ANDROID)
+# code tool (native host-only — skip when cross-compiling to iOS / WebAssembly / Android)
+if(NOT CMAKE_SYSTEM_NAME STREQUAL "iOS" AND NOT EMSCRIPTEN AND NOT ANDROID)
     add_subdirectory(CodeTool)
 endif()
 
@@ -364,8 +364,8 @@ elseif(MSVC)
     target_sources(o2Framework PRIVATE "Framework/Platforms/Windows/Framework.natvis")
 endif()
 
-# Codegen (native host-only — skip under EMSCRIPTEN / Android; assume codegen was run during native build)
-if(NOT EMSCRIPTEN AND NOT ANDROID)
+# Codegen (native host-only — skip under iOS / EMSCRIPTEN / Android; assume codegen was run during native build)
+if(NOT CMAKE_SYSTEM_NAME STREQUAL "iOS" AND NOT EMSCRIPTEN AND NOT ANDROID)
     add_custom_target(o2FrameworkCodegen
                       COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/CodeTool/Bin/o2CodeTool -project o2Framework -sources "${CMAKE_CURRENT_SOURCE_DIR}/Framework/Sources/o2"
                       COMMENT "Run CodeTool: ${CMAKE_CURRENT_SOURCE_DIR}/CodeTool/Bin/o2CodeTool -project o2Framework -sources \"${CMAKE_CURRENT_SOURCE_DIR}/Framework/Sources/o2\""
@@ -380,9 +380,10 @@ if (O2_ENABLE_LINK_LIBPNG)
     add_dependencies(o2Framework libpng)
 endif()
 
-if(NOT EMSCRIPTEN AND NOT ANDROID)
+add_dependencies(o2Framework o2CopyBuiltinAssets)
+
+if(NOT CMAKE_SYSTEM_NAME STREQUAL "iOS" AND NOT EMSCRIPTEN AND NOT ANDROID)
     add_dependencies(o2Framework o2CodeTool)
-    add_dependencies(o2Framework o2CopyBuiltinAssets)
     add_dependencies(o2Framework o2FrameworkCodegen)
 endif()
 
@@ -439,7 +440,7 @@ endif()
 
 # group in IDE
 set_target_properties(o2Framework PROPERTIES FOLDER o2)
-if(NOT EMSCRIPTEN AND NOT ANDROID)
+if(NOT CMAKE_SYSTEM_NAME STREQUAL "iOS" AND NOT EMSCRIPTEN AND NOT ANDROID)
     set_target_properties(o2AssetsBuilder PROPERTIES FOLDER o2)
     set_target_properties(o2CopyBuiltinAssets PROPERTIES FOLDER o2)
     set_target_properties(o2FrameworkCodegen PROPERTIES FOLDER o2/Codegen)
