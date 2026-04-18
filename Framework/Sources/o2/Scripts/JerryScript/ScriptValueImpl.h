@@ -228,16 +228,14 @@ namespace o2
         auto container = ScriptValueBase::GetNativeContainer(this_val);
         _class_type* obj = static_cast<_class_type*>(container->GetData());
 
-        auto fn = std::mem_fn(_func_ptr);
-
         if constexpr (std::is_void_v<_res_type>)
         {
-            fn(obj, ConvertJerryArg<typename _traits::template ArgType<_idx>>((jerry_value_t*)args_p, _idx, args_count)...);
+            (obj->*_func_ptr)(ConvertJerryArg<typename _traits::template ArgType<_idx>>((jerry_value_t*)args_p, _idx, args_count)...);
             return jerry_create_undefined();
         }
         else
         {
-            ScriptValue res(fn(obj, ConvertJerryArg<typename _traits::template ArgType<_idx>>((jerry_value_t*)args_p, _idx, args_count)...));
+            ScriptValue res((obj->*_func_ptr)(ConvertJerryArg<typename _traits::template ArgType<_idx>>((jerry_value_t*)args_p, _idx, args_count)...));
             return jerry_acquire_value(res.jvalue);
         }
     }
@@ -633,6 +631,8 @@ namespace o2
 
         struct FunctionProcessor : public BaseFunctionProcessor
         {
+            const char* customName = nullptr;
+
             FunctionProcessor(const BaseFunctionProcessor& processor) :BaseFunctionProcessor(processor) {}
 
             template<typename _object_type, typename ... _args>
@@ -742,7 +742,16 @@ namespace o2
     auto ScriptPrototypeProcessor::BaseFunctionProcessor::AddAttribute(_args ... args)
     {
         if constexpr (std::is_same<ScriptableAttribute, _attribute_type>::value)
+        {
             return ScriptPrototypeProcessor::FunctionProcessor(*this);
+        }
+        else if constexpr (std::is_same<ScriptableNameAttribute, _attribute_type>::value)
+        {
+            ScriptPrototypeProcessor::FunctionProcessor result(*this);
+            if constexpr (sizeof...(_args) > 0)
+                result.customName = std::get<0>(std::tuple<_args...>(args...));
+            return result;
+        }
         else
             return *this;
     }
@@ -810,7 +819,8 @@ namespace o2
     {
         ScriptValue funcVal;
         funcVal.Accept(jerry_create_external_function(&ClassMethodCallHandler<pointer>));
-        _object_type::GetScriptPrototype().SetProperty(name, funcVal);
+        const char* actualName = customName ? customName : name;
+        _object_type::GetScriptPrototype().SetProperty(actualName, funcVal);
     }
 
     template<typename _object_type, typename _res_type, typename ... _args>
