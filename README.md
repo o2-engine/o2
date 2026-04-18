@@ -1,6 +1,7 @@
-[![MSVS build status](https://github.com/zenkovich/PetStory/actions/workflows/windows-cmake.yml/badge.svg)](https://github.com/o2-engine/PetStory/actions/workflows/windows-cmake.yml)
-
+[![Windows](https://github.com/zenkovich/PetStory/actions/workflows/windows-cmake.yml/badge.svg)](https://github.com/o2-engine/PetStory/actions/workflows/windows-cmake.yml)
 [![Linux](https://github.com/zenkovich/PetStory/actions/workflows/linux-cmake.yml/badge.svg?branch=master)](https://github.com/zenkovich/PetStory/actions/workflows/linux-cmake.yml)
+[![macOS](https://github.com/zenkovich/PetStory/actions/workflows/mac-cmake.yml/badge.svg?branch=master)](https://github.com/zenkovich/PetStory/actions/workflows/mac-cmake.yml)
+[![iOS](https://github.com/zenkovich/PetStory/actions/workflows/ios-cmake.yml/badge.svg?branch=master)](https://github.com/zenkovich/PetStory/actions/workflows/ios-cmake.yml)
 
 # o2
 

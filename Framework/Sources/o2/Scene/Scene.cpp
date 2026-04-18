@@ -698,6 +698,11 @@ namespace o2
         doc.AddMember("Actors") = mRootActors;
     }
 
+    bool Scene::IsEditor() const
+    {
+        return mIsEditor;
+    }
+
 #if IS_EDITOR
     void Scene::LinkActorToPrototypesHierarchy(Ref<Actor> actor, AssetRef<ActorAsset> proto)
     {
@@ -715,7 +720,7 @@ namespace o2
     {
         return mIsPlaying;
     }
-    
+
     void Scene::SetEditorPlaying(bool playing)
     {
         mIsPlaying = playing;
@@ -724,11 +729,6 @@ namespace o2
     void Scene::SetIsEditor(bool isEditor)
     {
         mIsEditor = isEditor;
-    }
-
-    bool Scene::IsEditor() const
-    {
-        return mIsEditor;
     }
 
     Vector<Ref<SceneEditableObject>> Scene::GetRootEditableObjects()
