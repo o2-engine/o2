@@ -369,7 +369,7 @@ namespace o2
         {
         private:
             template<typename C>
-            static auto test(int) -> decltype(std::declval<C>().template RefConstruct(std::declval<Args>()...), std::true_type{});
+            static auto test(int) -> decltype(std::declval<C>().RefConstruct(std::declval<Args>()...), std::true_type{});
 
             template<typename>
             static auto test(...) -> std::false_type;
