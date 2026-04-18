@@ -700,7 +700,11 @@ namespace o2
 
     bool Scene::IsEditor() const
     {
+#if IS_EDITOR
         return mIsEditor;
+#else
+        return false;
+#endif
     }
 
 #if IS_EDITOR
