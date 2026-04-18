@@ -419,7 +419,7 @@ if (O2_EDITOR)
                       COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/CodeTool/Bin/o2CodeTool -project o2Editor -sources "${CMAKE_CURRENT_SOURCE_DIR}/Editor/Sources/o2Editor" -parent_projects "${CMAKE_CURRENT_SOURCE_DIR}/Framework/Sources/o2/CodeToolCache.xml"
                       COMMENT "Run CodeTool: ${CMAKE_CURRENT_SOURCE_DIR}/CodeTool/Bin/o2CodeTool -project o2Editor -sources \"${CMAKE_CURRENT_SOURCE_DIR}/Editor/Sources/o2Editor\" -parent_projects \"${CMAKE_CURRENT_SOURCE_DIR}/Framework/Sources/o2/CodeToolCache.xml\""
     )
-    add_dependencies(o2EditorCodegen o2CodeTool)
+    add_dependencies(o2EditorCodegen o2CodeTool o2FrameworkCodegen)
 
     add_dependencies(o2Editor o2Framework)
     add_dependencies(o2Editor o2EditorCodegen)
