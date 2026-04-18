@@ -179,15 +179,6 @@ namespace o2
         return mIsUpdatingScene;
     }
 
-    bool Scene::IsEditor() const
-    {
-#if IS_EDITOR
-        return true;
-#endif
-
-        return false;
-    }
-
     void Scene::OnActorCreated(const Ref<Actor>& actor)
     {
         if (!IsSingletonInitialzed())
@@ -728,6 +719,16 @@ namespace o2
     void Scene::SetEditorPlaying(bool playing)
     {
         mIsPlaying = playing;
+    }
+
+    void Scene::SetIsEditor(bool isEditor)
+    {
+        mIsEditor = isEditor;
+    }
+
+    bool Scene::IsEditor() const
+    {
+        return mIsEditor;
     }
 
     Vector<Ref<SceneEditableObject>> Scene::GetRootEditableObjects()

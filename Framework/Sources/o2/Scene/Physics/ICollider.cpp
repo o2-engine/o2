@@ -175,8 +175,20 @@ namespace o2
     void ICollider::OnTransformUpdated()
     {
 #if IS_EDITOR
-        if (!o2Scene.IsEditorPlaying())
-            OnShapeChanged();
+        // Runtime reshape on transform update exists only to support edit-time
+        // manipulation inside the editor (dragging a collider in the inspector).
+        // In a standalone runner built with O2_EDITOR=ON this path would fire
+        // every physics step, destroying and recreating the b2Fixture and
+        // wiping Box2D's contact cache — bodies then interpenetrate and stick.
+        // Scene::IsEditor() is only set true by the editor application itself,
+        // so a runner (PetStory on Mac) skips the block entirely.
+        if (!o2Scene.IsEditor())
+            return;
+
+        if (o2Scene.IsEditorPlaying())
+            return;
+
+        OnShapeChanged();
 #endif
     }
 

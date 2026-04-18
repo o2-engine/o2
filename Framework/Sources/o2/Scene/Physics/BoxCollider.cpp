@@ -87,7 +87,7 @@ namespace o2
     void BoxCollider::OnTransformUpdated()
     {
 #if IS_EDITOR
-        if (mFitByActor && !o2Scene.IsEditorPlaying())
+        if (o2Scene.IsEditor() && mFitByActor && !o2Scene.IsEditorPlaying())
             FitSize();
 #endif
 

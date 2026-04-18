@@ -136,6 +136,7 @@ namespace Editor
 
         Application::InitalizeSystems();
         mMainListenersLayer->SetEditorMode(true);
+        o2Scene.SetIsEditor(true);
     }
     
     void EditorApplication::Deinitialize()

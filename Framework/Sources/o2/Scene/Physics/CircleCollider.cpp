@@ -78,7 +78,7 @@ namespace o2
     void CircleCollider::OnTransformUpdated()
     {
 #if IS_EDITOR
-        if (mFitByActor && !o2Scene.IsEditorPlaying())
+        if (o2Scene.IsEditor() && mFitByActor && !o2Scene.IsEditorPlaying())
         {
             float prevRadius = mRadius;
             mRadius = mOwner.Lock()->transform->GetSize().x*0.5f;

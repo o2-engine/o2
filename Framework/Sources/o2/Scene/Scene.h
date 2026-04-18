@@ -286,6 +286,11 @@ namespace o2
         // Returns true if scene in editor in play mode
         bool IsEditorPlaying() const;
 
+        // Sets scene is in editor application (not in a standalone runner).
+        // This distinguishes an editor-host (where edit-time reshape logic is
+        // valid) from a runner that was merely compiled with O2_EDITOR=ON.
+        void SetIsEditor(bool isEditor);
+
         // Returns root editable objects
         Vector<Ref<SceneEditableObject>> GetRootEditableObjects();
 
@@ -359,6 +364,7 @@ namespace o2
 
         bool mIsDrawingScene = false;  // Sets true when started drawing scene, and false when not
         bool mIsPlaying = false;       // Is scene is in play mode
+        bool mIsEditor = false;        // True only when running inside the editor application
 
         friend class SceneEditableObject;
 #endif
@@ -449,6 +455,7 @@ CLASS_FIELDS_META(o2::Scene)
     FIELD().PROTECTED().NAME(mDrawnObjects);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mIsDrawingScene);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mIsPlaying);
+    FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mIsEditor);
 #endif
 }
 END_META;
@@ -520,6 +527,7 @@ CLASS_METHODS_META(o2::Scene)
     FUNCTION().PUBLIC().SIGNATURE_STATIC(void, LinkActorToPrototypesHierarchy, Ref<Actor>, AssetRef<ActorAsset>);
     FUNCTION().PUBLIC().SIGNATURE(void, SetEditorPlaying, bool);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsEditorPlaying);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetIsEditor, bool);
     FUNCTION().PUBLIC().SIGNATURE(Vector<Ref<SceneEditableObject>>, GetRootEditableObjects);
     FUNCTION().PUBLIC().SIGNATURE(void, AddEditableObjectToScene, const Ref<SceneEditableObject>&);
     FUNCTION().PUBLIC().SIGNATURE(void, RemoveEditableObjectFromScene, const Ref<SceneEditableObject>&);
