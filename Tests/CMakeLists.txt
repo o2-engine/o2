@@ -41,4 +41,6 @@ target_link_libraries(o2Tests PRIVATE
 add_dependencies(o2Tests o2Framework o2FrameworkCodegen)
 
 include(GoogleTest)
-gtest_discover_tests(o2Tests)
+gtest_discover_tests(o2Tests
+    WORKING_DIRECTORY $<TARGET_FILE_DIR:o2Tests>
+)
