@@ -5,6 +5,7 @@
 #include "o2/Render/TextureRef.h"
 #include "o2/Render/Linux/OpenGL.h"
 #include "o2/Utils/Math/Vector2.h"
+#include "o2/Utils/Math/Vertex.h"
 #include "o2/Utils/Types/CommonTypes.h"
 
 namespace o2
@@ -16,37 +17,22 @@ namespace o2
     protected:
         GLXContext mGLContext; // OpenGL context
 
-        GLuint mStdShader;               // Standard shader program
-        GLint  mStdShaderMvpUniform;     // Standard shader matrix input parameter
-        GLint  mStdShaderTextureSample;  // Standard shader texture sample input parameter
-        GLint  mStdShaderPosAttribute;   // Standard shader vertex position attribute
-        GLint  mStdShaderColorAttribute; // Standard shader vertex color attribute
-        GLint  mStdShaderUVAttribute;    // Standard shader texture coords attribute
+        GLuint mActiveProgram;              // Currently active shader program
+        GLint  mActiveMvpUniform;           // Currently active transform uniform location
+        GLint  mActiveTextureSample;        // Currently active texture sampler uniform location
+        GLint  mActivePosAttribute;         // Currently active position attribute location
+        GLint  mActiveColorAttribute;       // Currently active color attribute location
+        GLint  mActiveUVAttribute;          // Currently active texcoords attribute location
+        GLint  mActiveNormalAttribute = -1; // Currently active normal attribute location
+
+        float  mCurrentMvp[16];             // Cached MVP matrix for material rebinding
 
         const static int mBuffersPoolsSize = 3;       // Count of buffers in pools
-        GLuint mVertexBuffersPool[mBuffersPoolsSize]; // Batch vertices buffer
-        GLuint mIndexBuffersPool[mBuffersPoolsSize];  // Batch polygons indexes buffer
-        int    mCurrentBufferIdx = 0;                 // Current buffer index
-        int    mVertexBufferIdx = 0;                  // Current vertex index in vertex buffer
-        int    mIndexBufferIdx = 0;                   // Current index count in index buffer
-
-        UInt8*       mVertexData = nullptr;      // Vertex data buffer
-        VertexIndex* mVertexIndexData = nullptr; // Index data buffer
-        UInt         mVertexBufferSize;          // Maximum size of vertex buffer
-        UInt         mIndexBufferSize;           // Maximum size of index buffer
+        GLuint mVertexBuffersPool[mBuffersPoolsSize]; // GPU vertex buffer objects
+        GLuint mIndexBuffersPool[mBuffersPoolsSize];  // GPU index buffer objects
+        int    mCurrentBufferIdx = 0;                 // Current buffer pool index
 
     protected:
-        // Builds vertex and fragment shaders
-        GLuint LoadShader(GLenum shaderType, const char* source);
-
-        // Builds vertex and fragment shaders
-        GLuint BuildShaderProgram(const char* vertexSource, const char* fragmentSource);
-
-        // Initializes standard shader
-        void InitializeSandardShader();
-
-        // BInds next buffers from pool
-        void BindNextPoolBuffers();
     };
 };
 
