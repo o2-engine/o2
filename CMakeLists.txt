@@ -147,8 +147,10 @@ else()
     set(O2_C_FLAGS "-Wall -Werror")
 
     if (EMSCRIPTEN)
-        # Newer Clang in Emscripten enables warnings that older 3rd-party code trips on.
-        set(O2_C_FLAGS "${O2_C_FLAGS} -Wno-error=misleading-indentation -Wno-error=enum-enum-conversion -Wno-error=unterminated-string-initialization")
+        # Emscripten's Clang vintage varies between local dev and CI; tolerate unknown
+        # warning flags rather than erroring out, and silence diagnostics that older
+        # 3rd-party code in this repo trips on.
+        set(O2_C_FLAGS "${O2_C_FLAGS} -Wno-unknown-warning-option -Wno-error=misleading-indentation -Wno-error=enum-enum-conversion -Wno-error=unterminated-string-initialization")
     endif()
 
     if (ANDROID)
@@ -174,7 +176,7 @@ else()
                          -Wno-potentially-evaluated-expression -Wno-deprecated-this-capture -Wno-invalid-offsetof")
 
     if (EMSCRIPTEN)
-        set(O2_CXX_FLAGS "${O2_CXX_FLAGS} -Wno-error=missing-template-arg-list-after-template-kw -Wno-error=deprecated-declarations -Wno-error=unused-command-line-argument")
+        set(O2_CXX_FLAGS "${O2_CXX_FLAGS} -Wno-unknown-warning-option -Wno-error=missing-template-arg-list-after-template-kw -Wno-error=deprecated-declarations -Wno-error=unused-command-line-argument")
     endif()
 
     if (ANDROID)
