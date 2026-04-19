@@ -11,7 +11,7 @@
 #elif defined PLATFORM_WASM
 #include "o2/Render/WebAssembly/MaterialBase.h"
 #elif defined(PLATFORM_LINUX)
-// #include "o2/Render/Linux/MaterialBase.h"
+#include "o2/Render/Linux/MaterialBase.h"
 #endif
 
 #include "o2/Assets/Types/ImageAsset.h"

@@ -11,7 +11,7 @@
 #elif defined PLATFORM_WASM
 #include "o2/Render/WebAssembly/ShaderBase.h"
 #elif defined(PLATFORM_LINUX)
-// #include "o2/Render/Linux/ShaderBase.h"
+#include "o2/Render/Linux/ShaderBase.h"
 #endif
 
 #include "o2/Utils/Property.h"

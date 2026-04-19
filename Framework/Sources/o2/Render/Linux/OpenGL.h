@@ -65,6 +65,9 @@ extern PFNGLVERTEXATTRIBPOINTERPROC       glVertexAttribPointer;
 extern PFNGLENABLEVERTEXATTRIBARRAYPROC   glEnableVertexAttribArray;
 extern PFNGLUNIFORMMATRIX4FVPROC          glUniformMatrix4fv;
 extern PFNGLUNIFORM1IPROC                 glUniform1i;
+extern PFNGLUNIFORM1FPROC                 glUniform1f;
+extern PFNGLUNIFORM2FPROC                 glUniform2f;
+extern PFNGLUNIFORM4FPROC                 glUniform4f;
 extern PFNGLBLENDFUNCSEPARATEPROC         glBlendFuncSeparate;
 extern PFNGLBUFFERSUBDATAPROC             glBufferSubData;
 

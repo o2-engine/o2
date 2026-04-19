@@ -108,6 +108,9 @@ void GetGLExtensions(o2::LogStream* log /*= nullptr*/)
     glEnableVertexAttribArray = (PFNGLENABLEVERTEXATTRIBARRAYPROC)GetSafeWGLProcAddress("glEnableVertexAttribArray", log);
     glUniformMatrix4fv = (PFNGLUNIFORMMATRIX4FVPROC)GetSafeWGLProcAddress("glUniformMatrix4fv", log);
     glUniform1i = (PFNGLUNIFORM1IPROC)GetSafeWGLProcAddress("glUniform1i", log);
+    glUniform1f = (PFNGLUNIFORM1FPROC)GetSafeWGLProcAddress("glUniform1f", log);
+    glUniform2f = (PFNGLUNIFORM2FPROC)GetSafeWGLProcAddress("glUniform2f", log);
+    glUniform4f = (PFNGLUNIFORM4FPROC)GetSafeWGLProcAddress("glUniform4f", log);
     glBlendFuncSeparate = (PFNGLBLENDFUNCSEPARATEPROC)GetSafeWGLProcAddress("glBlendFuncSeparate", log);
     glBufferSubData = (PFNGLBUFFERSUBDATAPROC)GetSafeWGLProcAddress("glBufferSubData", log);
 }
@@ -141,6 +144,9 @@ PFNGLVERTEXATTRIBPOINTERPROC       glVertexAttribPointer = NULL;
 PFNGLENABLEVERTEXATTRIBARRAYPROC   glEnableVertexAttribArray = NULL;
 PFNGLUNIFORMMATRIX4FVPROC          glUniformMatrix4fv = NULL;
 PFNGLUNIFORM1IPROC                 glUniform1i = NULL;
+PFNGLUNIFORM1FPROC                 glUniform1f = NULL;
+PFNGLUNIFORM2FPROC                 glUniform2f = NULL;
+PFNGLUNIFORM4FPROC                 glUniform4f = NULL;
 PFNGLBLENDFUNCSEPARATEPROC         glBlendFuncSeparate = NULL;
 PFNGLBUFFERSUBDATAPROC             glBufferSubData = NULL;
 
