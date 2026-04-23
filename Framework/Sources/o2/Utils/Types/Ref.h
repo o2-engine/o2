@@ -644,11 +644,13 @@ namespace o2
             refCounter->strongReferences--;
             if (refCounter->strongReferences == 0)
             {
+                refCounter->strongReferences++;
                 refCounter->weakReferences++;
 
                 DestructObject(mPtr);
 
                 refCounter->weakReferences--;
+				refCounter->strongReferences--;
 
                 mPtr = nullptr;
 

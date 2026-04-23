@@ -37,6 +37,11 @@ namespace o2
 
     void LogStream::UnbindStream(const Ref<LogStream>& stream)
     {
+        if (!stream)
+			return;
+
+		stream->mParentStream = nullptr;
+
         mChildStreams.Remove(stream);
     }
 
@@ -47,6 +52,9 @@ namespace o2
 
     void LogStream::UnbindAllStreams()
     {
+        for (auto& stream : mChildStreams)
+			stream->mParentStream = nullptr;
+
         mChildStreams.Clear();
     }
 
