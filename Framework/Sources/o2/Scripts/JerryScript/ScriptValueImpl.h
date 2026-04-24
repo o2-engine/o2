@@ -210,46 +210,76 @@ namespace o2
         }
     };
 
-    // -------------------------------------------------------
-    // Direct class method handler - one unique C function per
-    // member pointer, no heap container on the function object
-    // -------------------------------------------------------
+    template<typename Callable, typename PMF>
+    struct ThunkMethodHandler;
 
-    template<auto _func_ptr, size_t ... _idx>
-    static jerry_value_t ClassMethodCallImpl(const jerry_value_t this_val,
-                                             const jerry_value_t args_p[],
-                                             const jerry_length_t args_count,
-                                             std::index_sequence<_idx...>)
+    template<typename Callable, typename _class, typename _res, typename... _args>
+    struct ThunkMethodHandler<Callable, _res(_class::*)(_args...)>
     {
-        using _traits = MemberFuncTraits<decltype(_func_ptr)>;
-        using _class_type = typename _traits::ClassType;
-        using _res_type = typename _traits::ResType;
-
-        auto container = ScriptValueBase::GetNativeContainer(this_val);
-        _class_type* obj = static_cast<_class_type*>(container->GetData());
-
-        if constexpr (std::is_void_v<_res_type>)
+        template<size_t... Is>
+        static jerry_value_t Invoke(_class* obj, const jerry_value_t* args, int count, std::index_sequence<Is...>)
         {
-            (obj->*_func_ptr)(ConvertJerryArg<typename _traits::template ArgType<_idx>>((jerry_value_t*)args_p, _idx, args_count)...);
-            return jerry_create_undefined();
+            Callable callable{};
+            if constexpr (std::is_void_v<_res>)
+            {
+                callable(obj, ConvertJerryArg<_args>((jerry_value_t*)args, Is, count)...);
+                return jerry_create_undefined();
+            }
+            else
+            {
+                ScriptValue res(callable(obj, ConvertJerryArg<_args>((jerry_value_t*)args, Is, count)...));
+                return jerry_acquire_value(res.jvalue);
+            }
         }
-        else
-        {
-            ScriptValue res((obj->*_func_ptr)(ConvertJerryArg<typename _traits::template ArgType<_idx>>((jerry_value_t*)args_p, _idx, args_count)...));
-            return jerry_acquire_value(res.jvalue);
-        }
-    }
 
-    template<auto _func_ptr>
-    static jerry_value_t ClassMethodCallHandler(const jerry_value_t function_obj,
-                                                const jerry_value_t this_val,
-                                                const jerry_value_t args_p[],
-                                                const jerry_length_t args_count)
+        static jerry_value_t Handle(const jerry_value_t function_obj,
+                                    const jerry_value_t this_val,
+                                    const jerry_value_t args_p[],
+                                    const jerry_length_t args_count)
+        {
+            auto container = ScriptValueBase::GetNativeContainer(this_val);
+            if (!container) return jerry_create_undefined();
+
+            _class* thisObj = dynamic_cast<_class*>(container->TryCastToIObject());
+            if (!thisObj) return jerry_create_undefined();
+
+            return Invoke(thisObj, args_p, (int)args_count, std::index_sequence_for<_args...>{});
+        }
+    };
+
+    template<typename Callable, typename _class, typename _res, typename... _args>
+    struct ThunkMethodHandler<Callable, _res(_class::*)(_args...) const>
     {
-        using _traits = MemberFuncTraits<decltype(_func_ptr)>;
-        return ClassMethodCallImpl<_func_ptr>(this_val, args_p, args_count,
-                                              std::make_index_sequence<_traits::Arity>{});
-    }
+        template<size_t... Is>
+        static jerry_value_t Invoke(_class* obj, const jerry_value_t* args, int count, std::index_sequence<Is...>)
+        {
+            Callable callable{};
+            if constexpr (std::is_void_v<_res>)
+            {
+                callable(obj, ConvertJerryArg<_args>((jerry_value_t*)args, Is, count)...);
+                return jerry_create_undefined();
+            }
+            else
+            {
+                ScriptValue res(callable(obj, ConvertJerryArg<_args>((jerry_value_t*)args, Is, count)...));
+                return jerry_acquire_value(res.jvalue);
+            }
+        }
+
+        static jerry_value_t Handle(const jerry_value_t function_obj,
+                                    const jerry_value_t this_val,
+                                    const jerry_value_t args_p[],
+                                    const jerry_length_t args_count)
+        {
+            auto container = ScriptValueBase::GetNativeContainer(this_val);
+            if (!container) return jerry_create_undefined();
+
+            _class* thisObj = dynamic_cast<_class*>(container->TryCastToIObject());
+            if (!thisObj) return jerry_create_undefined();
+
+            return Invoke(thisObj, args_p, (int)args_count, std::index_sequence_for<_args...>{});
+        }
+    };
 
     // -------------------------------------------------------
     // Prototype-based field getter/setter containers
@@ -638,8 +668,8 @@ namespace o2
             template<typename _object_type, typename ... _args>
             void Constructor(_object_type* object, Type* type);
 
-            template<auto pointer, typename _object_type>
-            void Signature(_object_type* object, Type* type, const char* name);
+            template<auto pointer, typename _object_type, typename _callable>
+            void Signature(_object_type* object, Type* type, const char* name, _callable callable);
 
             template<typename _object_type, typename _res_type, typename ... _args>
             void SignatureStatic(_object_type* object, Type* type, const char* name,
@@ -814,11 +844,12 @@ namespace o2
         }
     }
 
-    template<auto pointer, typename _object_type>
-    void ScriptPrototypeProcessor::FunctionProcessor::Signature(_object_type* object, Type* type, const char* name)
+    template<auto pointer, typename _object_type, typename _callable>
+    void ScriptPrototypeProcessor::FunctionProcessor::Signature(_object_type* object, Type* type, const char* name, _callable /*callable*/)
     {
+        using PMF = decltype(pointer);
         ScriptValue funcVal;
-        funcVal.Accept(jerry_create_external_function(&ClassMethodCallHandler<pointer>));
+        funcVal.Accept(jerry_create_external_function(&ThunkMethodHandler<_callable, PMF>::Handle));
         const char* actualName = customName ? customName : name;
         _object_type::GetScriptPrototype().SetProperty(actualName, funcVal);
     }
@@ -832,6 +863,14 @@ namespace o2
                 return (*pointer)(args ...);
             })));
     }
+
+    // Forward declarations for the IObject <-> DataValue bridge
+    // implemented in ScriptValue.cpp. Declared at namespace scope
+    // so that the block-scope uses inside Converter<ScriptValue>
+    // resolve to o2:: names instead of leaking to the global
+    // namespace under MSVC's lookup rules for block-scope extern.
+    void ScriptValueImpl_WriteIObjectToDataValue(IObject* object, DataValue& data);
+    bool ScriptValueImpl_ReadIObjectFromDataValue(const DataValue& data, ScriptValue& value);
 
     template<>
     struct DataValue::Converter<ScriptValue>
@@ -860,7 +899,6 @@ namespace o2
                     if (auto objType = dynamic_cast<const ObjectType*>(value.GetObjectContainerType()))
                     {
                         IObject* object = objType->DynamicCastToIObject(value.GetContainingObject());
-                        extern void ScriptValueImpl_WriteIObjectToDataValue(IObject* object, DataValue& data);
                         ScriptValueImpl_WriteIObjectToDataValue(object, data);
                     }
                 }
@@ -903,7 +941,6 @@ namespace o2
             {
                 if (auto typeMember = data.FindMember("Type"))
                 {
-                    extern bool ScriptValueImpl_ReadIObjectFromDataValue(const DataValue& data, ScriptValue& value);
                     ScriptValueImpl_ReadIObjectFromDataValue(data, value);
                 }
                 else

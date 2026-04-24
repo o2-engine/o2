@@ -755,13 +755,13 @@ typedef void* (*GetValuePointerFuncPtr)(void*);
 // Script methods are now inline in IOBJECT_SCRIPTING — nothing to emit out-of-line.
 #define DECLARE_SCRIPTING(CLASS, TEMPLATE_OPT)
 
-#define DECLARE_CLASS(CLASS, REGISTRATOR_ID)                                                                   \
-    extern void __RegisterClass__##REGISTRATOR_ID()                                                            \
-    {                                                                                                          \
-        o2::ReflectionInitializationTypeProcessor processor;                                                   \
-        CLASS::template ProcessType<o2::ReflectionInitializationTypeProcessor>(0, processor);                  \
-    }                                                                                                          \
-    namespace { struct __ClassInit_##REGISTRATOR_ID {                                                          \
+#define DECLARE_CLASS(CLASS, REGISTRATOR_ID)                                                                           \
+    extern void __RegisterClass__##REGISTRATOR_ID()                                                                    \
+    {                                                                                                                  \
+        o2::ReflectionInitializationTypeProcessor processor;                                                           \
+        CLASS::template ProcessType<o2::ReflectionInitializationTypeProcessor>(0, processor);                          \
+    }                                                                                                                  \
+    namespace { struct __ClassInit_##REGISTRATOR_ID {                                                                  \
         __ClassInit_##REGISTRATOR_ID() { o2::SetupType<CLASS>(o2::Reflection::InitializeType<CLASS>(#CLASS, false)); } \
     } __classInit_##REGISTRATOR_ID; }
 
@@ -801,7 +801,7 @@ typedef void* (*GetValuePointerFuncPtr)(void*);
 #define DECLARE_TEMPLATE_CLASS_MANUAL_ID(CLASS, REGISTRATOR_ID)                                                \
     extern void __RegisterTemplateClass__##REGISTRATOR_ID()                                                    \
     {                                                                                                          \
-        o2::SetupType<CLASS>(o2::Reflection::InitializeType<CLASS>(#CLASS, true));                            \
+        o2::SetupType<CLASS>(o2::Reflection::InitializeType<CLASS>(#CLASS, true));                             \
     }                                                                                                          \
     namespace { struct __TemplateClassInit_##REGISTRATOR_ID {                                                  \
         __TemplateClassInit_##REGISTRATOR_ID() { __RegisterTemplateClass__##REGISTRATOR_ID(); }                \
@@ -862,7 +862,8 @@ template<typename _class_type, typename _res_type, typename ... _args>
 constexpr auto ResolveMethodPtr(_res_type(_class_type::*ptr)(_args ...) const) { return ptr; }
 
 #define SIGNATURE(RETURN_TYPE, NAME, ...) \
-    template Signature<ResolveMethodPtr<thisclass, RETURN_TYPE, ##__VA_ARGS__>(&thisclass::NAME)>(object, type, #NAME)
+    template Signature<ResolveMethodPtr<thisclass, RETURN_TYPE, ##__VA_ARGS__>(&thisclass::NAME)>(                \
+        object, type, #NAME, [](thisclass* _obj, auto... _args) -> RETURN_TYPE { return _obj->NAME(_args...); })
 
 #define CONSTRUCTOR(...) \
     template Constructor<thisclass, ##__VA_ARGS__>(object, type)

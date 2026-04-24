@@ -56,6 +56,9 @@ namespace o2
             template<auto pointer, typename _object_type>
             void Signature(_object_type* object, Type* type, const char* name) {}
 
+            template<auto pointer, typename _object_type, typename _callable>
+            void Signature(_object_type* object, Type* type, const char* name, _callable /*callable*/) {}
+
             template<typename _object_type, typename _res_type, typename ... _args>
             void SignatureStatic(_object_type* object, Type* type, const char* name,
                                  _res_type(*pointer)(_args ...)) {}
