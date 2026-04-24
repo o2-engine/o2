@@ -116,7 +116,3 @@ const char* GetAndroidAssetsPath();
 // --------------------
 // Other configurations
 // --------------------
-
-#ifndef _HAS_ITERATOR_DEBUGGING
-#define _HAS_ITERATOR_DEBUGGING 0
-#endif
