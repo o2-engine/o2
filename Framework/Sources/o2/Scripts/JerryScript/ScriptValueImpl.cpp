@@ -1,7 +1,8 @@
+#include "o2/stdafx.h"
+
 #include "o2/Scripts/ScriptValueDef.h"
 #include "o2/Scripts/JerryScript/ScriptValueContainerAllocator.h"
 #include "o2/Utils/Debug/Debug.h"
-#include "o2/stdafx.h"
 
 #if defined(SCRIPTING_BACKEND_JERRYSCRIPT)
 #include "o2/Scripts/ScriptValue.h"

@@ -67,8 +67,13 @@ namespace o2
 
 		DeinitializePlatform();
 
+		auto fontsToDelete = mFonts;
 		mFonts.Clear();
+		fontsToDelete.Clear();
+
+		auto texturesToDelete = mTextures;
 		mTextures.Clear();
+		texturesToDelete.Clear();
 
 		DeinitializeFreeType();
 
