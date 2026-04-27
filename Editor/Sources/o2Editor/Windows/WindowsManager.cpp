@@ -35,9 +35,9 @@ namespace Editor
         InitializeDock();
         InitializeWindows();
 
-        SetWindowsLayout(o2EditorConfig.projectConfig.mLayout);
+        SetWindowsLayout(o2EditorConfig.projectConfig.layout);
 
-        mAvailableLayouts = o2EditorConfig.globalConfig.mAvailableLayouts;
+        mAvailableLayouts = o2EditorConfig.globalConfig.availableLayouts;
     }
 
     WindowsManager::~WindowsManager()
@@ -184,7 +184,7 @@ namespace Editor
 
     void WindowsManager::SetDefaultWindowsLayout()
     {
-        SetWindowsLayout(o2EditorConfig.globalConfig.mDefaultLayout);
+        SetWindowsLayout(o2EditorConfig.globalConfig.defaultLayout);
     }
 
     void WindowsManager::SaveCurrentWindowsLayout(const String& name)

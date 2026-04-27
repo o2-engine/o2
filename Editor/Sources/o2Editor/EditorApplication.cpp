@@ -165,7 +165,7 @@ namespace Editor
         mConfig = mmake<EditorConfig>();
         mConfig->LoadConfigs();
 
-        String lastLoadedScene = o2EditorConfig.projectConfig.mLastLoadedScene;
+        String lastLoadedScene = o2EditorConfig.projectConfig.lastLoadedScene;
 
         LoadUIStyle();
 
@@ -176,14 +176,14 @@ namespace Editor
 
         mSceneWindow = mWindowsManager->GetWindow<SceneWindow>();
 
-        if (mConfig->projectConfig.mMaximized)
+        if (mConfig->projectConfig.maximized)
             o2Application.Maximize();
         else
         {
-            Vec2I pos = mConfig->projectConfig.mWindowPosition;
-            o2Application.SetWindowSize(mConfig->projectConfig.mWindowSize);
+            Vec2I pos = mConfig->projectConfig.windowPosition;
+            o2Application.SetWindowSize(mConfig->projectConfig.windowSize);
             o2Application.SetWindowPosition(pos);
-            mConfig->projectConfig.mWindowPosition = pos;
+            mConfig->projectConfig.windowPosition = pos;
         }
 
         OnResizing();

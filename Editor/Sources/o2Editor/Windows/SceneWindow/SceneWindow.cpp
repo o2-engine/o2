@@ -88,7 +88,7 @@ namespace Editor
             sceneAsset->Load();
 
             if (EditorConfig::IsSingletonInitialzed())
-                o2EditorConfig.projectConfig.mLastLoadedScene = sceneAsset->GetPath();
+                o2EditorConfig.projectConfig.lastLoadedScene = sceneAsset->GetPath();
         }
     }
 

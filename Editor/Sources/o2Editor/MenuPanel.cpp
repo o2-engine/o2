@@ -360,7 +360,7 @@ namespace Editor
 
     void MenuPanel::OnSaveDefaultLayoutPressed()
     {
-        o2EditorConfig.globalConfig.mDefaultLayout = o2EditorWindows.GetWindowsLayout();
+        o2EditorConfig.globalConfig.defaultLayout = o2EditorWindows.GetWindowsLayout();
         o2Debug.Log("Default windows layout saved!");
     }
 
