@@ -2,6 +2,7 @@
 #include "SplineCollider.h"
 
 #include "Box2D/Collision/Shapes/b2ChainShape.h"
+#include "Box2D/Common/b2Settings.h"
 
 namespace o2
 {
@@ -123,24 +124,38 @@ namespace o2
         // mLeftApproxValues[i] of key K stores the bezier segment from key K-1 to key K
         // (precomputed at 20 points). Index 0 is the position at key K-1, last is at key K.
         // Skip index 0 on subsequent segments to avoid duplicate vertices at shared endpoints.
+        // Box2D's b2ChainShape rejects (asserts) consecutive vertices closer than
+        // b2_linearSlop in physics units, so drop near-duplicates with a small margin.
+        const float minDistSq = (b2_linearSlop * 2.0f) * (b2_linearSlop * 2.0f);
+
         Vector<b2Vec2> verts;
+        auto pushVert = [&](const Vec2F& localPoint) {
+            Vec2F p = localPoint * transform;
+            b2Vec2 v(p.x, p.y);
+            if (!verts.IsEmpty())
+            {
+                b2Vec2 d = v - verts.Last();
+                if (d.x * d.x + d.y * d.y < minDistSq)
+                    return;
+            }
+            verts.Add(v);
+        };
+
         for (int i = 1; i < keys.Count(); i++)
         {
             const ApproximationVec2F* approx = keys[i].GetApproximatedPointsLeft();
             int count = keys[i].GetApproximatedPointsCount();
             int start = (i == 1) ? 0 : 1;
             for (int j = start; j < count; j++)
-            {
-                Vec2F p = approx[j].value * transform;
-                verts.Add(b2Vec2(p.x, p.y));
-            }
+                pushVert(approx[j].value);
         }
 
+        // For loops, the wrap-around edge (last -> first) must also clear the slop.
+        // Drop the trailing vertex if it collapses onto the first one.
         if (mIsLoop && verts.Count() > 1)
         {
-            const b2Vec2& first = verts[0];
-            const b2Vec2& last = verts.Last();
-            if (Math::Equals(first.x, last.x) && Math::Equals(first.y, last.y))
+            b2Vec2 d = verts.Last() - verts[0];
+            if (d.x * d.x + d.y * d.y < minDistSq)
                 verts.PopBack();
         }
 

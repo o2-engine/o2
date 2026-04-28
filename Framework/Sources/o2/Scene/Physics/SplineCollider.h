@@ -59,17 +59,18 @@ namespace o2
         SERIALIZABLE(SplineCollider);
         CLONEABLE_REF(SplineCollider);
 
-    private:
+    protected:
         bool mIsLoop = false; // Loop / closed chain @SERIALIZABLE
 
         b2ChainShape* mShape = nullptr; // Physics shape (re-allocated on every shape change)
 
-    private:
+    protected:
         // Initializes spline with two default keys and wires onKeysChanged
         void InitSpline();
 
-        // Called by spline's onKeysChanged to rebuild physics fixture
-        void OnSplineChanged();
+        // Called by spline's onKeysChanged to rebuild physics fixture; override in
+        // derived classes to also rebuild secondary state (e.g. drawable mesh).
+        virtual void OnSplineChanged();
 
         // Returns shape with relative position and angle
         b2Shape* GetShape(const Basis& transform) override;
@@ -89,8 +90,8 @@ CLASS_FIELDS_META(o2::SplineCollider)
 {
     FIELD().PUBLIC().NAME(isLoop);
     FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(mmake<Spline>()).NAME(spline);
-    FIELD().PRIVATE().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(false).NAME(mIsLoop);
-    FIELD().PRIVATE().DEFAULT_VALUE(nullptr).NAME(mShape);
+    FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(false).NAME(mIsLoop);
+    FIELD().PROTECTED().DEFAULT_VALUE(nullptr).NAME(mShape);
 }
 END_META;
 CLASS_METHODS_META(o2::SplineCollider)
@@ -107,10 +108,10 @@ CLASS_METHODS_META(o2::SplineCollider)
 #if  IS_EDITOR
     FUNCTION().PUBLIC().SIGNATURE(void, OnAddedFromEditor);
 #endif
-    FUNCTION().PRIVATE().SIGNATURE(void, InitSpline);
-    FUNCTION().PRIVATE().SIGNATURE(void, OnSplineChanged);
-    FUNCTION().PRIVATE().SIGNATURE(b2Shape*, GetShape, const Basis&);
-    FUNCTION().PRIVATE().SIGNATURE(void, OnAddToScene);
+    FUNCTION().PROTECTED().SIGNATURE(void, InitSpline);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnSplineChanged);
+    FUNCTION().PROTECTED().SIGNATURE(b2Shape*, GetShape, const Basis&);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnAddToScene);
 }
 END_META;
 // --- END META ---
