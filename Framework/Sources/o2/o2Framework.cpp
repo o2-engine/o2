@@ -165,6 +165,7 @@ extern void __RegisterClass__o2__CircleCollider();
 extern void __RegisterClass__o2__ICollider();
 extern void __RegisterClass__o2__RigidBody();
 extern void __RegisterClass__o2__SplineCollider();
+extern void __RegisterClass__o2__SplineMeshCollider();
 extern void __RegisterClass__o2__Scene();
 extern void __RegisterClass__o2__SceneLayer();
 extern void __RegisterClass__o2__SceneLayersList();
@@ -393,6 +394,7 @@ extern void InitializeTypeso2Framework()
     __RegisterClass__o2__ICollider();
     __RegisterClass__o2__RigidBody();
     __RegisterClass__o2__SplineCollider();
+    __RegisterClass__o2__SplineMeshCollider();
     __RegisterClass__o2__Scene();
     __RegisterClass__o2__SceneLayer();
     __RegisterClass__o2__SceneLayersList();

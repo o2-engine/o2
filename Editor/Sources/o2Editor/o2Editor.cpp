@@ -61,6 +61,7 @@ extern void __RegisterClass__Editor__ParticlesEmitterComponentViewer();
 extern void __RegisterClass__Editor__SkinningMeshBoneComponentViewer();
 extern void __RegisterClass__Editor__SkinningMeshComponentViewer();
 extern void __RegisterClass__Editor__SplineColliderViewer();
+extern void __RegisterClass__Editor__SplineMeshColliderViewer();
 extern void __RegisterClass__Editor__DefaultObjectPropertiesViewer();
 extern void __RegisterClass__Editor__ParticlesSplineEffectViewer();
 extern void __RegisterClass__Editor__SpriteViewer();
@@ -232,6 +233,7 @@ extern void InitializeTypeso2Editor()
     __RegisterClass__Editor__SkinningMeshBoneComponentViewer();
     __RegisterClass__Editor__SkinningMeshComponentViewer();
     __RegisterClass__Editor__SplineColliderViewer();
+    __RegisterClass__Editor__SplineMeshColliderViewer();
     __RegisterClass__Editor__DefaultObjectPropertiesViewer();
     __RegisterClass__Editor__ParticlesSplineEffectViewer();
     __RegisterClass__Editor__SpriteViewer();
