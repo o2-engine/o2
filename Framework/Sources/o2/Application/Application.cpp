@@ -12,6 +12,22 @@ namespace o2
     Application::~Application()
     {}
 
+    void Application::SetCommandLineArgs(int argc, char** argv)
+    {
+        mArgc = argc;
+        mArgv = argv;
+    }
+
+    int Application::GetCommandLineArgc() const
+    {
+        return mArgc;
+    }
+
+    char** Application::GetCommandLineArgv() const
+    {
+        return mArgv;
+    }
+
     void Application::OnResized(const Vec2I& size)
     {
         mWindowedSize = size;

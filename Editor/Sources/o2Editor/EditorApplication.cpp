@@ -38,6 +38,10 @@
 #include "o2Editor/Windows/SceneWindow/SceneWindow.h"
 #include "o2Editor/Windows/TreeWindow/TreeWindow.h"
 #include "o2Editor/Utils/CommonTextures.h"
+#include "o2Editor/Tests/EditorTestArgs.h"
+#include "o2Editor/Tests/EditorTestRunner.h"
+
+#include <memory>
 
 namespace Editor
 {
@@ -361,6 +365,26 @@ namespace Editor
 
 
         o2Debug.LogStr("---Dump global---\n" + o2Scripts.GetGlobal().Dump() + "\n---------------");
+
+#if defined(PLATFORM_WINDOWS) || defined(PLATFORM_MAC) || defined(PLATFORM_LINUX)
+        // Spin up the integration test runner if --run-tests was passed.
+        // The runner schedules a per-frame tick and eventually exits the process
+        // with the appropriate code, so we don't need to keep a handle to it.
+        Editor::Tests::EditorTestArgs testArgs;
+        if (Editor::Tests::EditorTestArgs::ParseFromArgv(o2Application.GetCommandLineArgc(),
+                                                        o2Application.GetCommandLineArgv(),
+                                                        testArgs))
+        {
+            // Static so the runner outlives this scope and continues driving ticks
+            // until exit() is called inside it.
+            static std::unique_ptr<Editor::Tests::EditorTestRunner> sRunner;
+            sRunner = std::make_unique<Editor::Tests::EditorTestRunner>(testArgs);
+            if (sRunner->Initialize())
+                sRunner->Schedule();
+            else
+                sRunner.reset();
+        }
+#endif
     }
 
     void EditorApplication::OnClosing()

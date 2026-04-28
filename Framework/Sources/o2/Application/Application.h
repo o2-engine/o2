@@ -49,8 +49,19 @@ namespace o2
         // Default constructor
         Application(RefCounter* refCounter);
 
-        // Destructor 
+        // Destructor
         virtual ~Application();
+
+        // Stores raw argc/argv for later inspection by Application/EditorApplication subclasses
+        // (e.g. EditorApplication::OnStarted reads them to spin up the integration test runner).
+        // Call from main() before Initialize().
+        void SetCommandLineArgs(int argc, char** argv);
+
+        // Number of command-line arguments captured by SetCommandLineArgs (0 if not set).
+        int GetCommandLineArgc() const;
+
+        // Raw argv pointer (nullptr if not set).
+        char** GetCommandLineArgv() const;
 
         // Shutting down application
         virtual void Shutdown();
@@ -178,10 +189,13 @@ namespace o2
     protected:
         bool  mCursorInfiniteModeEnabled = false; // Is cursor infinite mode enabled
         Vec2F mCursorCorrectionDelta;             // Cursor corrections delta - result of infinite cursors offset
-        
+
         float mGraphicsScale = 1.0f; // Application graphics scale. Used in mac for retina displays
 
         Vec2I  mWindowedSize; // Size of window
+
+        int    mArgc = 0;       // Captured argc from main()
+        char** mArgv = nullptr; // Captured argv from main()
 
     protected:        
         // Platform-specific initializations
@@ -247,12 +261,17 @@ CLASS_FIELDS_META(o2::Application)
     FIELD().PROTECTED().NAME(mCursorCorrectionDelta);
     FIELD().PROTECTED().DEFAULT_VALUE(1.0f).NAME(mGraphicsScale);
     FIELD().PROTECTED().NAME(mWindowedSize);
+    FIELD().PROTECTED().DEFAULT_VALUE(0).NAME(mArgc);
+    FIELD().PROTECTED().DEFAULT_VALUE(nullptr).NAME(mArgv);
 }
 END_META;
 CLASS_METHODS_META(o2::Application)
 {
 
     FUNCTION().PUBLIC().CONSTRUCTOR(RefCounter*);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetCommandLineArgs, int, char**);
+    FUNCTION().PUBLIC().SIGNATURE(int, GetCommandLineArgc);
+    FUNCTION().PUBLIC().SIGNATURE(char**, GetCommandLineArgv);
     FUNCTION().PUBLIC().SIGNATURE(void, Shutdown);
     FUNCTION().PUBLIC().SIGNATURE(void, SetFullscreen, bool);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsFullScreen);
