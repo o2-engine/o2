@@ -78,6 +78,19 @@ namespace o2
         ~SceneCleanGuard();
     };
 
+    // Saves o2Time.GetLocalTime() in ctor and restores it in dtor. Use when a
+    // test calls SetLocalTime/ResetLocalTime so the global doesn't bleed into
+    // subsequent tests.
+    class TimeGuard
+    {
+    public:
+        TimeGuard();
+        ~TimeGuard();
+
+    private:
+        float mSavedLocalTime;
+    };
+
     void TickFrame(float dt = 0.0f);
     void TickFrames(int count, float dt = 0.0f);
 

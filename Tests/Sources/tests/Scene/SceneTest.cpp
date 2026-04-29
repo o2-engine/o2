@@ -214,3 +214,50 @@ TEST(Scene, ClearRemovesRootActors)
 
     EXPECT_LT(o2Scene.GetRootActors().Count(), countBefore);
 }
+
+// ===== FindActor / GetActorByID =====
+
+TEST(Scene, GetActorByIDReturnsActorWithMatchingId)
+{
+    SceneCleanGuard guard;
+    auto a = mmake<Actor>(ActorCreateMode::InScene);
+    a->SetName("findme_42");
+    TickFrame();
+
+    EXPECT_EQ(o2Scene.GetActorByID(a->GetID()), a);
+}
+
+TEST(Scene, GetActorByIDReturnsNullForUnknown)
+{
+    SceneCleanGuard guard;
+    EXPECT_FALSE(o2Scene.GetActorByID(987654321));
+}
+
+TEST(Scene, FindActorByRootName)
+{
+    SceneCleanGuard guard;
+    auto a = mmake<Actor>(ActorCreateMode::InScene);
+    a->SetName("rootname_findactor");
+    TickFrame();
+
+    EXPECT_EQ(o2Scene.FindActor("rootname_findactor"), a);
+}
+
+TEST(Scene, FindActorByPathDescendsIntoChildren)
+{
+    SceneCleanGuard guard;
+    auto root = mmake<Actor>(ActorCreateMode::InScene);
+    root->SetName("rootP");
+    auto child = mmake<Actor>(ActorCreateMode::InScene);
+    child->SetName("childQ");
+    root->AddChild(child);
+    TickFrame();
+
+    EXPECT_EQ(o2Scene.FindActor("rootP/childQ"), child);
+}
+
+TEST(Scene, FindActorMissingReturnsNull)
+{
+    SceneCleanGuard guard;
+    EXPECT_FALSE(o2Scene.FindActor("there_is_no_such_actor_42"));
+}

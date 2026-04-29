@@ -1,5 +1,6 @@
 #include "o2/stdafx.h"
 
+#include "o2/Utils/System/Time/Time.h"
 #include "tests/Scene/SceneTestHelpers.h"
 
 namespace o2
@@ -47,6 +48,10 @@ namespace o2
         o2Scene.Clear(true);
         o2Scene.UpdateDestroyingEntities();
     }
+
+    TimeGuard::TimeGuard(): mSavedLocalTime(o2Time.GetLocalTime()) {}
+
+    TimeGuard::~TimeGuard() { o2Time.SetLocalTime(mSavedLocalTime); }
 
     void TickFrame(float dt)
     {
