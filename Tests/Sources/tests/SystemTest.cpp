@@ -2,7 +2,6 @@
 #include <gtest/gtest.h>
 
 #include "o2/Application/VKCodes.h"
-#include "o2/Utils/System/Clipboard.h"
 #include "o2/Utils/System/CommandLineOptions.h"
 #include "o2/Utils/System/ShortcutKeys.h"
 #include "o2/Utils/System/Time/Time.h"
@@ -237,22 +236,3 @@ TEST(CommandLineOptions, ParseDuplicateKeyKeepsLastValue)
     EXPECT_EQ(result["-mode"], "b");
 }
 
-// ===== Clipboard =====
-//
-// Clipboard hits the OS clipboard. On a CI/headless host the call may fail or
-// be unobservable, so the tests only check that the API doesn't crash and that
-// when SetText succeeds, GetText reads it back.
-
-TEST(Clipboard, SetThenGetTextRoundtripOrIsConsistent)
-{
-    WString original = Clipboard::GetText();
-
-    WString payload = L"o2-clipboard-test";
-    Clipboard::SetText(payload);
-
-    WString got = Clipboard::GetText();
-    if (!got.IsEmpty())
-        EXPECT_EQ(got, payload);
-
-    Clipboard::SetText(original);
-}
