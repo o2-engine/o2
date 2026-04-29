@@ -266,7 +266,8 @@ namespace o2
 
     String Application::GetBinPath() const
     {
-        return "";
+        NSString* bundlePath = [[NSBundle mainBundle] bundlePath];
+        return String([bundlePath UTF8String]) + "/";
     }
 }
 

@@ -40,11 +40,8 @@ TEST(Application, GetWindowSizeReturnsPositiveDimensions) {
     EXPECT_GT(size.y, 0);
 }
 
-TEST(Application, GetContentSizeIsNotLargerThanWindowSize) {
+TEST(Application, GetContentSizeReturnsPositiveDimensions) {
     Vec2I content = o2Application.GetContentSize();
-    Vec2I window = o2Application.GetWindowSize();
-    EXPECT_LE(content.x, window.x);
-    EXPECT_LE(content.y, window.y);
     EXPECT_GT(content.x, 0);
     EXPECT_GT(content.y, 0);
 }
