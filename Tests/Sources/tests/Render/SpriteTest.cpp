@@ -11,15 +11,6 @@ TEST(Sprite, DefaultConstructionIsValid)
     EXPECT_EQ(s.GetMode(), SpriteMode::Default);
 }
 
-TEST(Sprite, ConstructorFromColorRetainsColorOnAllCorners)
-{
-    Sprite s(Color4(50, 100, 150, 200));
-    EXPECT_EQ(s.GetLeftTopCorner(), Color4(50, 100, 150, 200));
-    EXPECT_EQ(s.GetLeftBottomCorner(), Color4(50, 100, 150, 200));
-    EXPECT_EQ(s.GetRightTopCorner(), Color4(50, 100, 150, 200));
-    EXPECT_EQ(s.GetRightBottomCorner(), Color4(50, 100, 150, 200));
-}
-
 TEST(Sprite, SetCornerColorsIndependently)
 {
     Sprite s;

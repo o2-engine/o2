@@ -38,6 +38,10 @@ TEST(TagGroup, DefaultIsEmpty)
     EXPECT_FALSE(g.IsHaveTag("anything"));
 }
 
+// TagGroup stores WeakRef<Tag>, so callers must keep their own Ref alive for
+// the tag to remain valid through subsequent group queries. The tests below
+// keep the Ref<Tag> in local variables for that reason.
+
 TEST(TagGroup, AddTagByRefStores)
 {
     TagGroup g;
@@ -70,8 +74,10 @@ TEST(TagGroup, RemoveTagByRefRemoves)
 TEST(TagGroup, ClearRemovesAllTags)
 {
     TagGroup g;
-    g.AddTag(mmake<Tag>("a"));
-    g.AddTag(mmake<Tag>("b"));
+    auto a = mmake<Tag>("a");
+    auto b = mmake<Tag>("b");
+    g.AddTag(a);
+    g.AddTag(b);
     g.Clear();
     EXPECT_EQ(g.GetTags().Count(), 0);
 }
@@ -81,7 +87,8 @@ TEST(TagGroup, OnTagAddedCallbackFires)
     TagGroup g;
     int addedCount = 0;
     g.onTagAdded = [&](const Ref<Tag>&) { addedCount++; };
-    g.AddTag(mmake<Tag>("alpha"));
+    auto alpha = mmake<Tag>("alpha");
+    g.AddTag(alpha);
     EXPECT_EQ(addedCount, 1);
 }
 
@@ -99,8 +106,10 @@ TEST(TagGroup, OnTagRemovedCallbackFires)
 TEST(TagGroup, GetTagsNamesReturnsAllNames)
 {
     TagGroup g;
-    g.AddTag(mmake<Tag>("a"));
-    g.AddTag(mmake<Tag>("b"));
+    auto a = mmake<Tag>("a");
+    auto b = mmake<Tag>("b");
+    g.AddTag(a);
+    g.AddTag(b);
     auto names = g.GetTagsNames();
     EXPECT_EQ(names.Count(), 2);
     EXPECT_TRUE(names.Contains("a"));
