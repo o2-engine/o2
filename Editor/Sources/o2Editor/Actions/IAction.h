@@ -24,7 +24,14 @@ namespace Editor
         // Undoing action
         virtual void Undo() {}
 
+        // Merges incremental action into this and applies its Redo
+        void Append(const Ref<IAction>& other);
+
         SERIALIZABLE(IAction);
+
+    protected:
+        // Merges other into this if compatible, returns true on success
+        virtual bool TryMerge(const Ref<IAction>& other) { return false; }
     };
 }
 // --- META ---
@@ -45,6 +52,8 @@ CLASS_METHODS_META(Editor::IAction)
     FUNCTION().PUBLIC().SIGNATURE(String, GetName);
     FUNCTION().PUBLIC().SIGNATURE(void, Redo);
     FUNCTION().PUBLIC().SIGNATURE(void, Undo);
+    FUNCTION().PUBLIC().SIGNATURE(void, Append, const Ref<IAction>&);
+    FUNCTION().PROTECTED().SIGNATURE(bool, TryMerge, const Ref<IAction>&);
 }
 END_META;
 // --- END META ---
