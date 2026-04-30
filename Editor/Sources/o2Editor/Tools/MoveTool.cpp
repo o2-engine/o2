@@ -138,27 +138,16 @@ namespace Editor
             Vec2F roundedSnap(snapHor ? Math::Round(mSnapPosition.x / snapStep)*snapStep : mSnapPosition.x,
                               spanVer ? Math::Round(mSnapPosition.y / snapStep)*snapStep : mSnapPosition.y);
 
-            if ((roundedSnap - mLastSceneHandlesPos).Length() > FLT_EPSILON)
-            {
-                Vec2F roundDelta = roundedSnap - mLastSceneHandlesPos;
-                mLastSceneHandlesPos = roundedSnap;
-                MoveSelectedObjects(roundDelta);
-            }
-
-            mHorDragHandle->position = mLastSceneHandlesPos;
-            mVerDragHandle->position = mLastSceneHandlesPos;
-            mBothDragHandle->position = mLastSceneHandlesPos;
+            Vec2F roundDelta = roundedSnap - mLastSceneHandlesPos;
+            if (roundDelta.Length() > FLT_EPSILON)
+                AppendMoveStep(mTransformAction, roundDelta);
         }
         else
         {
-            Vec2F newHandlesPos = mLastSceneHandlesPos + delta;
-            mLastSceneHandlesPos = newHandlesPos;
-            mHorDragHandle->position = newHandlesPos;
-            mVerDragHandle->position = newHandlesPos;
-            mBothDragHandle->position = newHandlesPos;
-
-            MoveSelectedObjects(delta);
+            AppendMoveStep(mTransformAction, delta);
         }
+
+        UpdateHandlesPosition();
     }
 
     void MoveTool::UpdateHandlesPosition()
@@ -197,17 +186,16 @@ namespace Editor
 
         float delta = o2Input.IsKeyDown(VK_SHIFT) ? snapStep : 1.0f;
 
-        if (key == VK_LEFT)
-            MoveSelectedObjectsWithAction(Vec2F::Left()*delta);
+        bool isArrow = key == VK_LEFT || key == VK_RIGHT || key == VK_UP || key == VK_DOWN;
+        if (isArrow)
+        {
+            BeginKeyboardAction();
 
-        if (key == VK_RIGHT)
-            MoveSelectedObjectsWithAction(Vec2F::Right()*delta);
-
-        if (key == VK_UP)
-            MoveSelectedObjectsWithAction(Vec2F::Up()*delta);
-
-        if (key == VK_DOWN)
-            MoveSelectedObjectsWithAction(Vec2F::Down()*delta);
+            if (key == VK_LEFT)  AppendKeyboardStep(Vec2F::Left()*delta);
+            if (key == VK_RIGHT) AppendKeyboardStep(Vec2F::Right()*delta);
+            if (key == VK_UP)    AppendKeyboardStep(Vec2F::Up()*delta);
+            if (key == VK_DOWN)  AppendKeyboardStep(Vec2F::Down()*delta);
+        }
 
         if (key == VK_CONTROL)
         {
@@ -230,21 +218,18 @@ namespace Editor
         if (key.pressedTime < 0.3f)
             return;
 
-        if (key == VK_LEFT)
-            MoveSelectedObjectsWithAction(Vec2F::Left()*delta);
-
-        if (key == VK_RIGHT)
-            MoveSelectedObjectsWithAction(Vec2F::Right()*delta);
-
-        if (key == VK_UP)
-            MoveSelectedObjectsWithAction(Vec2F::Up()*delta);
-
-        if (key == VK_DOWN)
-            MoveSelectedObjectsWithAction(Vec2F::Down()*delta);
+        if (key == VK_LEFT)  AppendKeyboardStep(Vec2F::Left()*delta);
+        if (key == VK_RIGHT) AppendKeyboardStep(Vec2F::Right()*delta);
+        if (key == VK_UP)    AppendKeyboardStep(Vec2F::Up()*delta);
+        if (key == VK_DOWN)  AppendKeyboardStep(Vec2F::Down()*delta);
     }
 
     void MoveTool::OnKeyReleased(const Input::Key& key)
     {
+        bool isArrow = key == VK_LEFT || key == VK_RIGHT || key == VK_UP || key == VK_DOWN;
+        if (isArrow)
+            EndKeyboardAction();
+
         if (key == VK_CONTROL)
         {
             auto selectedObjects = o2EditorSceneScreen.GetSelectedObjects();
@@ -260,32 +245,44 @@ namespace Editor
         }
     }
 
-    void MoveTool::MoveSelectedObjects(const Vec2F& delta)
+    void MoveTool::AppendMoveStep(const Ref<TransformAction>& action, const Vec2F& delta)
     {
-        auto selectedObjects = o2EditorSceneScreen.GetTopSelectedObjects();
-        for (auto& object : selectedObjects)
-        {
-            Basis basis = object->GetTransform();
-            basis.origin += delta;
-            object->SetTransform(basis);
-            object->UpdateTransform();
-        }
+        if (!action)
+            return;
 
+        auto step = mmake<TransformAction>(o2EditorSceneScreen.GetTopSelectedObjects());
+        step->doneTransforms = step->beforeTransforms;
+        for (auto& t : step->doneTransforms)
+            t.transform.origin += delta;
+
+        action->Append(step);
+    }
+
+    void MoveTool::BeginKeyboardAction()
+    {
+        if (mPressedArrowsCount == 0)
+            mKeyboardAction = mmake<TransformAction>(o2EditorSceneScreen.GetTopSelectedObjects());
+
+        ++mPressedArrowsCount;
+    }
+
+    void MoveTool::AppendKeyboardStep(const Vec2F& delta)
+    {
+        AppendMoveStep(mKeyboardAction, delta);
         UpdateHandlesPosition();
     }
 
-    void MoveTool::MoveSelectedObjectsWithAction(const Vec2F& delta)
+    void MoveTool::EndKeyboardAction()
     {
-        mBeforeTransforms = o2EditorSceneScreen.GetTopSelectedObjects().Convert<Basis>(
-            [](auto& x) { return x->GetTransform(); });
+        if (mPressedArrowsCount > 0)
+            --mPressedArrowsCount;
 
-        mTransformAction = mmake<TransformAction>(o2EditorSceneScreen.GetTopSelectedObjects());
-
-        MoveSelectedObjects(delta);
-
-        mTransformAction->Completed();
-        o2EditorSceneWindow.DoneAction(mTransformAction);
-        mTransformAction = nullptr;
+        if (mPressedArrowsCount == 0 && mKeyboardAction)
+        {
+            mKeyboardAction->Completed();
+            o2EditorSceneWindow.DoneAction(mKeyboardAction);
+            mKeyboardAction = nullptr;
+        }
     }
 
     String MoveTool::GetPanelIcon() const

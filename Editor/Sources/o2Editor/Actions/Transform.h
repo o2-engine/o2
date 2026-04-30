@@ -50,6 +50,9 @@ namespace Editor
         // Sets transformations before transform
         void Undo() override;
 
+        // Merges another TransformAction over the same objects, copying its done state
+        bool TryMerge(const Ref<IAction>& other) override;
+
         SERIALIZABLE(TransformAction);
 
     private:
@@ -83,6 +86,7 @@ CLASS_METHODS_META(Editor::TransformAction)
     FUNCTION().PUBLIC().SIGNATURE(String, GetName);
     FUNCTION().PUBLIC().SIGNATURE(void, Redo);
     FUNCTION().PUBLIC().SIGNATURE(void, Undo);
+    FUNCTION().PUBLIC().SIGNATURE(bool, TryMerge, const Ref<IAction>&);
     FUNCTION().PRIVATE().SIGNATURE(void, GetTransforms, const Vector<SceneUID>&, Vector<Transform>&);
     FUNCTION().PRIVATE().SIGNATURE(void, SetTransforms, const Vector<SceneUID>&, Vector<Transform>&);
 }

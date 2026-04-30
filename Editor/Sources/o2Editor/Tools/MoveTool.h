@@ -39,8 +39,10 @@ namespace Editor
         Vec2F mSnapPosition;        // Snapping handles position
         float mHandlesAngle = 0.0f; // Handles angle, in radians
                          
-        Vector<Basis>       mBeforeTransforms; // Before transformation transforms
-        Ref<TransformAction> mTransformAction; // Current transform action. Creates when transform started
+        Vector<Basis>        mBeforeTransforms;       // Before transformation transforms
+        Ref<TransformAction> mTransformAction;        // Current drag transform action. Created on press, committed on release
+        Ref<TransformAction> mKeyboardAction;         // Current keyboard nudge action. Lives while any arrow key is held
+        int                  mPressedArrowsCount = 0; // Number of arrow keys currently held; transitions 0<->1 open/close mKeyboardAction
 
     protected:
         // Returns toggle in menu panel icon name
@@ -94,11 +96,18 @@ namespace Editor
         // Called when key was pressed
         void OnKeyReleased(const Input::Key& key) override;
 
-        // Moves selected objects on delta
-        void MoveSelectedObjects(const Vec2F& delta);
+        // Builds a delta step (before = current scene, done = before + delta) and Appends it to action;
+        // Append's TryMerge + Redo applies the move — scene is mutated only inside the action
+        void AppendMoveStep(const Ref<TransformAction>& action, const Vec2F& delta);
 
-        // Moves selected objects on delta
-        void MoveSelectedObjectsWithAction(const Vec2F& delta);
+        // Opens mKeyboardAction on the first held arrow
+        void BeginKeyboardAction();
+
+        // Routes a keyboard nudge through mKeyboardAction and refreshes handle positions
+        void AppendKeyboardStep(const Vec2F& delta);
+
+        // Closes and commits mKeyboardAction when the last arrow is released
+        void EndKeyboardAction();
     };
 }
 // --- META ---
@@ -119,6 +128,8 @@ CLASS_FIELDS_META(Editor::MoveTool)
     FIELD().PROTECTED().DEFAULT_VALUE(0.0f).NAME(mHandlesAngle);
     FIELD().PROTECTED().NAME(mBeforeTransforms);
     FIELD().PROTECTED().NAME(mTransformAction);
+    FIELD().PROTECTED().NAME(mKeyboardAction);
+    FIELD().PROTECTED().DEFAULT_VALUE(0).NAME(mPressedArrowsCount);
 }
 END_META;
 CLASS_METHODS_META(Editor::MoveTool)
@@ -142,8 +153,10 @@ CLASS_METHODS_META(Editor::MoveTool)
     FUNCTION().PROTECTED().SIGNATURE(void, OnKeyPressed, const Input::Key&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnKeyStayDown, const Input::Key&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnKeyReleased, const Input::Key&);
-    FUNCTION().PROTECTED().SIGNATURE(void, MoveSelectedObjects, const Vec2F&);
-    FUNCTION().PROTECTED().SIGNATURE(void, MoveSelectedObjectsWithAction, const Vec2F&);
+    FUNCTION().PROTECTED().SIGNATURE(void, AppendMoveStep, const Ref<TransformAction>&, const Vec2F&);
+    FUNCTION().PROTECTED().SIGNATURE(void, BeginKeyboardAction);
+    FUNCTION().PROTECTED().SIGNATURE(void, AppendKeyboardStep, const Vec2F&);
+    FUNCTION().PROTECTED().SIGNATURE(void, EndKeyboardAction);
 }
 END_META;
 // --- END META ---

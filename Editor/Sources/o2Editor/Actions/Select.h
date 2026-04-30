@@ -1,5 +1,6 @@
 #pragma once
 
+#include "o2/Utils/Function/Function.h"
 #include "o2/Utils/Types/Containers/Vector.h"
 #include "o2Editor/Actions/IAction.h"
 
@@ -21,12 +22,18 @@ namespace Editor
         Vector<SceneUID> selectedObjectsIds;     // Selected objects ids
         Vector<SceneUID> prevSelectedObjectsIds; // Selected objects ids before
 
+        Function<void(const Vector<SceneUID>&)> applySelection; // Runtime-only selection setter; null on deserialization
+
     public:
         // Default constructor
         SelectAction();
 
-        // CUnstructor with new and previous selected objects
+        // Constructor with new and previous selected objects, default scene-bound callback
         SelectAction(const Vector<Ref<SceneEditableObject>>& selectedObjects, const Vector<Ref<SceneEditableObject>>& prevSelectedObjects);
+
+        // Constructor with explicit selection callback (used by tests)
+        SelectAction(const Vector<Ref<SceneEditableObject>>& selectedObjects, const Vector<Ref<SceneEditableObject>>& prevSelectedObjects,
+                     const Function<void(const Vector<SceneUID>&)>& applySelection);
 
         // Returns name of action
         String GetName() const override;
@@ -51,6 +58,7 @@ CLASS_FIELDS_META(Editor::SelectAction)
 {
     FIELD().PUBLIC().NAME(selectedObjectsIds);
     FIELD().PUBLIC().NAME(prevSelectedObjectsIds);
+    FIELD().PUBLIC().NAME(applySelection);
 }
 END_META;
 CLASS_METHODS_META(Editor::SelectAction)
@@ -58,6 +66,7 @@ CLASS_METHODS_META(Editor::SelectAction)
 
     FUNCTION().PUBLIC().CONSTRUCTOR();
     FUNCTION().PUBLIC().CONSTRUCTOR(const Vector<Ref<SceneEditableObject>>&, const Vector<Ref<SceneEditableObject>>&);
+    FUNCTION().PUBLIC().CONSTRUCTOR(const Vector<Ref<SceneEditableObject>>&, const Vector<Ref<SceneEditableObject>>&, const Function<void(const Vector<SceneUID>&)>&);
     FUNCTION().PUBLIC().SIGNATURE(String, GetName);
     FUNCTION().PUBLIC().SIGNATURE(void, Redo);
     FUNCTION().PUBLIC().SIGNATURE(void, Undo);

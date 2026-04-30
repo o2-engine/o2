@@ -297,6 +297,20 @@ namespace Editor
         }
     }
 
+    void SceneEditScreen::SelectObjectsByIdsWithoutAction(const Vector<SceneUID>& ids)
+    {
+        mSelectedObjects.Clear();
+        for (auto id : ids)
+        {
+            if (auto obj = o2Scene.GetEditableObjectByID(id))
+                mSelectedObjects.Add(obj);
+        }
+
+        UpdateTopSelectedObjects();
+        OnObjectsSelectedFromThis();
+        mNeedRedraw = true;
+    }
+
     const Ref<HorizontalLayout>& SceneEditScreen::GetLeftTopWidgetsContainer()
     {
         return mLeftTopWidgetsContainer;

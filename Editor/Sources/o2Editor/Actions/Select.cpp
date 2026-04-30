@@ -9,8 +9,16 @@ namespace Editor
     SelectAction::SelectAction()
     {}
 
-    SelectAction::SelectAction(const Vector<Ref<SceneEditableObject>>& selectedObjects, 
-                               const Vector<Ref<SceneEditableObject>>& prevSelectedObjects)
+    SelectAction::SelectAction(const Vector<Ref<SceneEditableObject>>& selectedObjects,
+                               const Vector<Ref<SceneEditableObject>>& prevSelectedObjects):
+        SelectAction(selectedObjects, prevSelectedObjects,
+                     [](const Vector<SceneUID>& ids) { o2EditorSceneScreen.SelectObjectsByIdsWithoutAction(ids); })
+    {}
+
+    SelectAction::SelectAction(const Vector<Ref<SceneEditableObject>>& selectedObjects,
+                               const Vector<Ref<SceneEditableObject>>& prevSelectedObjects,
+                               const Function<void(const Vector<SceneUID>&)>& applySelection):
+        applySelection(applySelection)
     {
         selectedObjectsIds = selectedObjects.Convert<SceneUID>([](auto& x) { return x->GetID(); });
         prevSelectedObjectsIds = prevSelectedObjects.Convert<SceneUID>([](auto& x) { return x->GetID(); });
@@ -23,30 +31,14 @@ namespace Editor
 
     void SelectAction::Redo()
     {
-        auto& selScreen = o2EditorSceneScreen;
-
-        selScreen.mSelectedObjects = selectedObjectsIds.Convert<Ref<SceneEditableObject>>(
-            [&](SceneUID id) { return o2Scene.GetEditableObjectByID(id); });
-
-        selScreen.UpdateTopSelectedObjects();
-        selScreen.OnObjectsSelectedFromThis();
-        selScreen.mNeedRedraw = true;
+        if (!applySelection.IsEmpty())
+            applySelection(selectedObjectsIds);
     }
 
     void SelectAction::Undo()
     {
-        auto& selScreen = o2EditorSceneScreen;
-
-        selScreen.mSelectedObjects.Clear();
-        
-        prevSelectedObjectsIds.ForEach([&](SceneUID id) { 
-            if (auto obj = o2Scene.GetEditableObjectByID(id))
-                selScreen.mSelectedObjects.Add(obj);
-        });
-
-        selScreen.UpdateTopSelectedObjects();
-        selScreen.OnObjectsSelectedFromThis();
-        selScreen.mNeedRedraw = true;
+        if (!applySelection.IsEmpty())
+            applySelection(prevSelectedObjectsIds);
     }
 
 }

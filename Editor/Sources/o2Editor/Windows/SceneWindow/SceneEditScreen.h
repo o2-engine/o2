@@ -85,6 +85,9 @@ namespace Editor
         // Clears objects selection
         void ClearSelection();
 
+        // Sets selection from ids, skipping unresolved ones, without recording an action
+        void SelectObjectsByIdsWithoutAction(const Vector<SceneUID>& ids);
+
         // Returns left top widgets container, can be used for tools additional controls
         const Ref<HorizontalLayout>& GetLeftTopWidgetsContainer();
 
@@ -370,6 +373,7 @@ CLASS_METHODS_META(Editor::SceneEditScreen)
     FUNCTION().PUBLIC().SIGNATURE(void, SelectObject, const Ref<SceneEditableObject>&, bool);
     FUNCTION().PUBLIC().SIGNATURE(void, SelectAllObjects);
     FUNCTION().PUBLIC().SIGNATURE(void, ClearSelection);
+    FUNCTION().PUBLIC().SIGNATURE(void, SelectObjectsByIdsWithoutAction, const Vector<SceneUID>&);
     FUNCTION().PUBLIC().SIGNATURE(const Ref<HorizontalLayout>&, GetLeftTopWidgetsContainer);
     FUNCTION().PUBLIC().SIGNATURE(const Ref<HorizontalLayout>&, GetRightTopWidgetsContainer);
     FUNCTION().PUBLIC().SIGNATURE(const Ref<HorizontalLayout>&, GetLeftBottomWidgetsContainer);

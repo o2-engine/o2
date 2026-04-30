@@ -35,6 +35,16 @@ namespace Editor
         SetTransforms(objectsIds, beforeTransforms);
     }
 
+    bool TransformAction::TryMerge(const Ref<IAction>& other)
+    {
+        auto step = DynamicCast<TransformAction>(other);
+        if (!step || step->objectsIds != objectsIds)
+            return false;
+
+        doneTransforms = step->doneTransforms;
+        return true;
+    }
+
     void TransformAction::GetTransforms(const Vector<SceneUID>& objectIds, Vector<Transform>& transforms)
     {
         transforms = objectIds.Convert<Transform>([=](SceneUID id)
