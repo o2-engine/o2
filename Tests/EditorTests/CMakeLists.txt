@@ -1,0 +1,29 @@
+set(o2EditorTests_SOURCES_DIRS "Sources/tests/*.cpp")
+file(GLOB_RECURSE o2EditorTests_SOURCES ${o2EditorTests_SOURCES_DIRS})
+list(INSERT o2EditorTests_SOURCES 0 Sources/TestsMain.cpp)
+
+add_executable(o2EditorTests ${o2EditorTests_SOURCES})
+
+target_include_directories(o2EditorTests PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/Sources
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../Framework/Sources
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../Editor/Sources
+)
+
+target_link_libraries(o2EditorTests PRIVATE
+    GTest::gtest
+    o2Editor
+)
+
+add_dependencies(o2EditorTests o2Editor o2EditorCodegen o2FrameworkCodegen)
+
+if(MSVC)
+    target_compile_options(o2EditorTests PRIVATE ${O2_MSVC_MP_FLAG} "/Zc:__cplusplus" "/bigobj")
+endif()
+
+set_target_properties(o2EditorTests PROPERTIES FOLDER o2/Tests)
+
+include(GoogleTest)
+gtest_discover_tests(o2EditorTests
+    WORKING_DIRECTORY $<TARGET_FILE_DIR:o2EditorTests>
+)

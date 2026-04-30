@@ -44,3 +44,7 @@ include(GoogleTest)
 gtest_discover_tests(o2Tests
     WORKING_DIRECTORY $<TARGET_FILE_DIR:o2Tests>
 )
+
+if(O2_EDITOR)
+    add_subdirectory(EditorTests)
+endif()
