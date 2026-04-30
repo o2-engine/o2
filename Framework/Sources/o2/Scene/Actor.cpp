@@ -669,12 +669,21 @@ namespace o2
 
     void Actor::RemoveAllChildren()
     {
+        // When called from ~Actor (mState == Destroyed) we must not construct Ref(this):
+        // strong count is already 0, IncrementRef would resurrect the object and the
+        // temporary's destructor would re-enter ~Actor → double-free / SEGFAULT on exit.
+        // Components also don't need OnParentChanged when their parent is dying.
+        const bool destructing = (mState == State::Destroyed);
+
         for (auto& child : mChildren)
         {
             child->mParent = nullptr;
 
-            OnChildRemoved(child);
-            child->OnParentChanged(Ref(this));
+            if (!destructing)
+            {
+                OnChildRemoved(child);
+                child->OnParentChanged(Ref(this));
+            }
         }
 
         mChildren.Clear();

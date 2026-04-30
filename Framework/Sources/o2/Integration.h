@@ -56,6 +56,21 @@ namespace o2
         // Returns is integration ready to use
 		bool IsReady();
 
+		// Enables headless mode: skips window creation, render and UI styles initialization,
+		// and routes asserts to the log instead of popping modal dialogs / debugbreaking.
+		// Must be called before Initialize(). Intended for unit-test runners.
+		static void SetHeadless(bool headless);
+
+		// Returns true if integration was started in headless mode
+		static bool IsHeadless();
+
+		// Tears down all subsystems in a controlled order. Normally called automatically
+		// from Launch() at the end of the main loop. Test runners that skip Launch() must
+		// call it explicitly before the Application Ref<> drops, otherwise members destruct
+		// in declaration order and Scene can outlive Time/Input/TaskManager — which is the
+		// root cause of teardown SEGFAULTs in component destructors.
+		virtual void Deinitialize();
+
 		// Sets inside content size
         virtual void SetContentSize(const Vec2I& size) {}
 
@@ -87,6 +102,9 @@ namespace o2
 
     protected:
         bool mReady = false; // Are all systems ready
+
+        static bool sHeadless; // Headless mode: skip window + render + UI styles init,
+                               // and route asserts to the log
 
         Ref<Assets>        mAssets;        // Assets
         Ref<EventSystem>   mEventSystem;   // Events processing system
@@ -126,9 +144,6 @@ namespace o2
 
 		// Initializes UI styles
 		virtual void InitilizeUIStyles();
-
-		// Deinitializes integration
-		virtual void Deinitialize();
 
 		// Deinitializing systems
 		virtual void DeinitializeSystems();
@@ -252,6 +267,9 @@ CLASS_METHODS_META(o2::Integration)
     FUNCTION().PUBLIC().SIGNATURE(const Ref<LogStream>&, GetLog);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsEditor);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsReady);
+    FUNCTION().PUBLIC().SIGNATURE_STATIC(void, SetHeadless, bool);
+    FUNCTION().PUBLIC().SIGNATURE_STATIC(bool, IsHeadless);
+    FUNCTION().PUBLIC().SIGNATURE(void, Deinitialize);
     FUNCTION().PUBLIC().SIGNATURE(void, SetContentSize, const Vec2I&);
     FUNCTION().PUBLIC().SIGNATURE(Vec2I, GetContentSize);
     FUNCTION().PUBLIC().SIGNATURE(Vec2I, GetScreenResolution);
@@ -266,7 +284,6 @@ CLASS_METHODS_META(o2::Integration)
     FUNCTION().PROTECTED().SIGNATURE(void, InitalizeSystems);
     FUNCTION().PROTECTED().SIGNATURE(void, InitiazeRender);
     FUNCTION().PROTECTED().SIGNATURE(void, InitilizeUIStyles);
-    FUNCTION().PROTECTED().SIGNATURE(void, Deinitialize);
     FUNCTION().PROTECTED().SIGNATURE(void, DeinitializeSystems);
     FUNCTION().PROTECTED().SIGNATURE(void, OnResized, const Vec2I&);
     FUNCTION().PROTECTED().SIGNATURE(void, ProcessFrame);

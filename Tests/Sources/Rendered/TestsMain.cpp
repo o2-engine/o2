@@ -1,25 +1,21 @@
 #include "o2/stdafx.h"
 #include "o2/O2.h"
 #include "o2/Application/Application.h"
-#include "o2Editor/EditorConfig.h"
-#include "o2Editor/ToolsPanel.h"
-#include "o2Editor/Windows/WindowsManager.h"
 #include <gtest/gtest.h>
+
+extern void InitializeTypeso2TestsSupport();
+extern void InitializeTypeso2RenderTests();
 
 using namespace o2;
 
-DECLARE_SINGLETON(Editor::WindowsManager);
-DECLARE_SINGLETON(Editor::EditorConfig);
-DECLARE_SINGLETON(Editor::ToolsPanel);
-
-extern void InitializeTypeso2Editor();
-
+// Rendered-tier test runner. Full Application::Initialize — window, render device,
+// FreeType, UI styles. Use for Render/Sprite/Camera/Material tests and UI widget
+// tests that require the styles asset to be loaded.
 int main(int argc, char** argv)
 {
-    Application::SetHeadless(true);
-
+    InitializeTypeso2TestsSupport();
+    InitializeTypeso2RenderTests();
     INITIALIZE_O2;
-    InitializeTypeso2Editor();
 
     ::testing::InitGoogleTest(&argc, argv);
 

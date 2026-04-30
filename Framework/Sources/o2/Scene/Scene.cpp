@@ -342,6 +342,14 @@ namespace o2
 
     void Scene::AddActorToScene(const Ref<Actor>& actor)
     {
+        // Idempotent: AddToScene() can be called explicitly by user code (which calls
+        // Scene::OnAddActorToScene → here) and then again from UpdateAddedEntities
+        // when the actor's pending-creation queue is processed. Without this guard the
+        // actor lands in mRootActors / mAllActors twice, doubling its refcount and
+        // breaking teardown ordering.
+        if (mAllActors.Contains(actor))
+            return;
+
         if (!actor->mParent)
             mRootActors.Add(actor);
 

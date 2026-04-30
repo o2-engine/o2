@@ -24,6 +24,12 @@
 #include <chrono>
 #include <thread>
 
+#ifdef PLATFORM_WINDOWS
+#include <windows.h>
+#include <crtdbg.h>
+#include <stdlib.h>
+#endif
+
 #if IS_SCRIPTING_SUPPORTED
 #include "o2/Scripts/ScriptEngine.h"
 #endif
@@ -48,6 +54,8 @@ namespace o2
 
 	DECLARE_SINGLETON(Integration);
 
+    bool Integration::sHeadless = false;
+
 	Integration::Integration(RefCounter* refCounter):
         Singleton<Integration>(refCounter)
     {}
@@ -60,11 +68,41 @@ namespace o2
         PROFILE_SAMPLE_FUNC();
 
         InitalizeSystems();
-        InitializePlatform();
-        InitiazeRender();
-		InitilizeUIStyles();
+
+        if (!sHeadless)
+        {
+            InitializePlatform();
+            InitiazeRender();
+            InitilizeUIStyles();
+        }
 
         mReady = true;
+    }
+
+    void Integration::SetHeadless(bool headless)
+    {
+        sHeadless = headless;
+
+#ifdef PLATFORM_WINDOWS
+        if (headless)
+        {
+            // Suppress OS / CRT modal dialogs that would block headless test runs
+            // (GP-fault popup, Windows error reporting, abort dialog, CRT _ASSERT box).
+            SetErrorMode(SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX | SEM_NOOPENFILEERRORBOX);
+            _set_abort_behavior(0, _WRITE_ABORT_MSG | _CALL_REPORTFAULT);
+
+            for (int reportType : { _CRT_WARN, _CRT_ERROR, _CRT_ASSERT })
+            {
+                _CrtSetReportMode(reportType, _CRTDBG_MODE_FILE);
+                _CrtSetReportFile(reportType, _CRTDBG_FILE_STDERR);
+            }
+        }
+#endif
+    }
+
+    bool Integration::IsHeadless()
+    {
+        return sHeadless;
     }
      
 	void Integration::InitializePlatform()
@@ -177,11 +215,20 @@ namespace o2
         TaskManager::DestroySingleton(mTaskManager);
         UIManager::DestroySingleton(mUIManager);
         EventSystem::DestroySingleton(mEventSystem);
-		o2Debug.DeinitializeFont();
-		Assets::DestroySingleton(mAssets);
-        Render::DestroySingleton(mRender);
+
+        // In headless mode Render and the debug font were never constructed; skip them.
+        // Otherwise preserve the original order: debug font + Assets first, then Render
+        // (Render owns GL resources that some assets reference).
+        if (mRender)
+            o2Debug.DeinitializeFont();
+
+        Assets::DestroySingleton(mAssets);
+
+        if (mRender)
+            Render::DestroySingleton(mRender);
+
         Time::DestroySingleton(mTime);
-        
+
         mLog = nullptr;
     }
 
