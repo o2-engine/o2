@@ -149,3 +149,87 @@ TEST(TransformAction, TryMergeRejectsMismatchedObjectIds)
 
     EXPECT_FALSE(main->TryMerge(step));
 }
+
+TEST(TransformAction, RedoUpdatesWorldPivotImmediately)
+{
+    SceneCleanGuard guard;
+    auto a = MakeActor(Vec2F(0.0f, 0.0f));
+    a->transform->SetSize(Vec2F(100.0f, 100.0f));
+    TickScene();
+
+    Vec2F pivotBefore = a->GetPivot();
+
+    auto action = mmake<TransformAction>(AsEditable({a}));
+    action->doneTransforms = action->beforeTransforms;
+    action->doneTransforms[0].transform.origin += Vec2F(50.0f, 0.0f);
+    action->Redo();
+
+    Vec2F pivotAfter = a->GetPivot();
+    EXPECT_TRUE(NearV(pivotAfter, pivotBefore + Vec2F(50.0f, 0.0f)));
+}
+
+namespace
+{
+    bool ChangedListContains(const Ref<Actor>& a)
+    {
+        for (auto& o : o2Scene.GetChangedObjects())
+            if (o && o->GetID() == a->GetID())
+                return true;
+        return false;
+    }
+}
+
+TEST(TransformAction, RedoMarksObjectAsChanged)
+{
+    SceneCleanGuard guard;
+    auto a = MakeActor(Vec2F(0.0f, 0.0f));
+    o2Scene.CheckChangedObjects();
+    a->changedFrame = -1;
+
+    auto action = mmake<TransformAction>(AsEditable({a}));
+    action->doneTransforms = action->beforeTransforms;
+    action->doneTransforms[0].transform.origin += Vec2F(50.0f, 0.0f);
+    action->Redo();
+
+    EXPECT_TRUE(ChangedListContains(a));
+}
+
+TEST(TransformAction, UndoMarksObjectAsChanged)
+{
+    SceneCleanGuard guard;
+    auto a = MakeActor(Vec2F(0.0f, 0.0f));
+
+    auto action = mmake<TransformAction>(AsEditable({a}));
+    SetActorPos(a, Vec2F(50.0f, 0.0f));
+    action->Completed();
+    o2Scene.CheckChangedObjects();
+    a->changedFrame = -1;
+
+    action->Undo();
+
+    EXPECT_TRUE(ChangedListContains(a));
+}
+
+TEST(TransformAction, AppendStepChainKeepsWorldPivotConsistent)
+{
+    SceneCleanGuard guard;
+    auto a = MakeActor(Vec2F(0.0f, 0.0f));
+    a->transform->SetSize(Vec2F(100.0f, 100.0f));
+    TickScene();
+
+    auto editable = AsEditable({a});
+
+    Vec2F pivot = a->GetPivot();
+    auto main = mmake<TransformAction>(editable);
+
+    for (int i = 0; i < 5; i++)
+    {
+        auto step = mmake<TransformAction>(editable);
+        step->doneTransforms = step->beforeTransforms;
+        step->doneTransforms[0].transform.origin += Vec2F(10.0f, 0.0f);
+        main->Append(step);
+
+        pivot += Vec2F(10.0f, 0.0f);
+        EXPECT_TRUE(NearV(a->GetPivot(), pivot)) << "step " << i;
+    }
+}

@@ -7,6 +7,8 @@
 
 namespace Editor
 {
+    FORWARD_CLASS_REF(VertexWeightsAction);
+
     // -------------------------
     // Mesh weights editing tool
     // -------------------------
@@ -78,6 +80,8 @@ namespace Editor
 
         Mesh mWeightsDebugMesh; // Mesh for drawing debug colors of weights
 
+        Ref<VertexWeightsAction> mAction; // Current brush stroke action
+
     private:
         // Called when cursor pressed on this
         void OnCursorPressed(const Input::Cursor& cursor) override;
@@ -112,6 +116,7 @@ CLASS_FIELDS_META(Editor::MeshWeightsTool)
     FIELD().PRIVATE().DEFAULT_VALUE(50).NAME(mBrushReadius);
     FIELD().PRIVATE().DEFAULT_VALUE(1.0f).NAME(mBrushStrength);
     FIELD().PRIVATE().NAME(mWeightsDebugMesh);
+    FIELD().PRIVATE().NAME(mAction);
 }
 END_META;
 CLASS_METHODS_META(Editor::MeshWeightsTool)

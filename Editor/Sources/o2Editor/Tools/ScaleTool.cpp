@@ -212,25 +212,31 @@ namespace Editor
 
     void ScaleTool::ScaleSelectedObjects(const Vec2F& scale)
     {
+        AppendScaleStep(mTransformAction, scale);
+    }
+
+    void ScaleTool::AppendScaleStep(const Ref<TransformAction>& action, const Vec2F& scale)
+    {
+        if (!action)
+            return;
+
         Basis transform =
-            Basis::Translated(mSceneHandlesPos*-1.0f)*
-            Basis::Rotated(-mHandlesAngle)*
-            Basis::Scaled(scale)*
-            Basis::Rotated(mHandlesAngle)*
+            Basis::Translated(mSceneHandlesPos * -1.0f) *
+            Basis::Rotated(-mHandlesAngle) *
+            Basis::Scaled(scale) *
+            Basis::Rotated(mHandlesAngle) *
             Basis::Translated(mSceneHandlesPos);
 
-        for (auto& object : o2EditorSceneScreen.GetTopSelectedObjects())
-        {
-            object->SetTransform(object->GetTransform()*transform);
-            object->UpdateTransform();
-        }
+        auto step = mmake<TransformAction>(o2EditorSceneScreen.GetTopSelectedObjects());
+        step->doneTransforms = step->beforeTransforms;
+        for (auto& t : step->doneTransforms)
+            t.transform = t.transform * transform;
+
+        action->Append(step);
     }
 
     void ScaleTool::HandlePressed()
     {
-        mBeforeTransforms = o2EditorSceneScreen.GetTopSelectedObjects().Convert<Basis>(
-            [](auto& x) { return x->GetTransform(); });
-
         mTransformAction = mmake<TransformAction>(o2EditorSceneScreen.GetTopSelectedObjects());
 
         onTransformBegin();

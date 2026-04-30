@@ -88,7 +88,9 @@ namespace Editor
         };
 
     public:
-        Function<void()> onChanged; // Called when spline was changed
+        Function<void()> onChanged;    // Called when spline was changed
+        Function<void()> onBeginEdit;  // Called when a spline edit drag begins
+        Function<void()> onEndEdit;    // Called when a spline edit drag ends
 
     public:
         // Default constructor

@@ -1,8 +1,10 @@
 #include "o2Editor/stdafx.h"
 #include "SkeletonTool.h"
 
+#include "o2Editor/Actions/BoneTransform.h"
 #include "o2Editor/Windows/SceneWindow/SceneEditScreen.h"
 #include "o2Editor/Windows/SceneWindow/SceneDragHandle.h"
+#include "o2Editor/Windows/SceneWindow/SceneWindow.h"
 
 namespace Editor
 {
@@ -167,8 +169,40 @@ namespace Editor
         handle->GetHoverDrawable()->pivot = Vec2F(0, 0.5f);
         handle->GetPressedDrawable()->pivot = Vec2F(0, 0.5f);
 
-        handle->onPressed = [&]() { pressedTransform = boneComponent->GetActor()->transform->worldBasis; };
+        handle->onPressed = [&]() { OnHandlePressed(); };
         handle->onChangedPos = [&](const Vec2F& p) { OnHandleChangedPos(p); };
+        handle->onReleased = [&]() { OnHandleReleased(); };
+    }
+
+    void SkeletonTool::BoneHandle::OnHandlePressed()
+    {
+        auto actor = boneComponent->GetActor();
+        pressedTransform = actor->transform->worldBasis;
+        mAction = mmake<BoneTransformAction>(actor);
+    }
+
+    void SkeletonTool::BoneHandle::OnHandleReleased()
+    {
+        if (!mAction)
+            return;
+
+        mAction->Completed();
+        o2EditorSceneWindow.DoneAction(mAction);
+        mAction = nullptr;
+    }
+
+    void SkeletonTool::BoneHandle::AppendBoneStep(const Basis& worldBasis, const Vec2F& worldPosition)
+    {
+        if (!mAction)
+            return;
+
+        auto actor = boneComponent->GetActor();
+        auto step = mmake<BoneTransformAction>(actor);
+        step->doneWorldBasis = worldBasis;
+        step->doneWorldPosition = worldPosition;
+        step->doneCaptured = true;
+
+        mAction->Append(step);
     }
 
     SkeletonTool::BoneHandle::~BoneHandle()
@@ -194,18 +228,13 @@ namespace Editor
         Vec2F currentDir = currentPos - origin;
         float angle = pressedDir.Angle(currentDir);
 
-        //         o2Debug.DrawLine(origin, pressedPos, Color4::Red(), 0.2f);
-        //         o2Debug.DrawLine(origin, currentPos, Color4::Green(), 0.2f);
-
         auto compTransform = boneComponent->GetActor()->transform;
         auto worldPos = compTransform->GetWorldPosition();
         Basis transform = Basis::Translated(worldPos*-1.0f)
             *Basis::Rotated(angle)
             *Basis::Translated(worldPos);
 
-        compTransform->worldBasis = pressedTransform*transform;
-        compTransform->worldPosition = worldPos;
-        boneComponent->GetActor()->UpdateTransform();
+        AppendBoneStep(pressedTransform*transform, worldPos);
 
         UpdatePosition();
     }

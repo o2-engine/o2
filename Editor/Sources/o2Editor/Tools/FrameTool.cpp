@@ -274,17 +274,8 @@ namespace Editor
 
     void FrameTool::TransformObjects(const Basis& transform)
     {
-        for (auto& object : o2EditorSceneScreen.GetTopSelectedObjects())
-        {
-            if (object->GetTransform().GetScale() != Vec2F())
-                object->SetTransform(object->GetTransform()*transform);
-            //             else
-            //                 actor->transform->SetWorldNonSizedBasis(actor->transform->GetWorldNonSizedBasis()*transform);
-
-            object->UpdateTransform();
-        }
-
         mChangedFromThis = true;
+        AppendTransformStep(mTransformAction, transform);
 
         UpdateSelectionFrame();
         UpdateHandlesTransform();
@@ -292,15 +283,32 @@ namespace Editor
 
     void FrameTool::TransformObjectsWithAction(const Basis& transform)
     {
-        mBeforeTransforms = o2EditorSceneScreen.GetTopSelectedObjects().Convert<Basis>(
-            [](auto& x) { return x->GetTransform(); });
-
         auto action = mmake<TransformAction>(o2EditorSceneScreen.GetTopSelectedObjects());
 
-        TransformObjects(transform);
+        mChangedFromThis = true;
+        AppendTransformStep(action, transform);
 
         action->Completed();
         o2EditorSceneWindow.DoneAction(action);
+
+        UpdateSelectionFrame();
+        UpdateHandlesTransform();
+    }
+
+    void FrameTool::AppendTransformStep(const Ref<TransformAction>& action, const Basis& transform)
+    {
+        if (!action)
+            return;
+
+        auto step = mmake<TransformAction>(o2EditorSceneScreen.GetTopSelectedObjects());
+        step->doneTransforms = step->beforeTransforms;
+        for (auto& t : step->doneTransforms)
+        {
+            if (t.transform.GetScale() != Vec2F())
+                t.transform = t.transform * transform;
+        }
+
+        action->Append(step);
     }
 
     void FrameTool::TransformAnchorsObjects(const Basis& transform)
@@ -730,9 +738,6 @@ namespace Editor
 
     void FrameTool::HandlePressed()
     {
-        mBeforeTransforms = o2EditorSceneScreen.GetTopSelectedObjects().Convert<Basis>(
-            [](auto& x) { return x->GetTransform(); });
-
         mTransformAction = mmake<TransformAction>(o2EditorSceneScreen.GetTopSelectedObjects());
 
         mBeginDraggingFrame = mFrame;

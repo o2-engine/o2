@@ -9,6 +9,8 @@
 
 namespace Editor
 {
+    FORWARD_CLASS_REF(MeshPointsAction);
+
     // ---------------------------------------------------------
     // Mesh component topology tool. Adds extra points into mesh-
     // --------------------------------------------------------
@@ -110,6 +112,8 @@ namespace Editor
         Basis        mTransformFrameBasis;                 // Basis of transform frame in screen space
         Vec2F        mTransformBasisOffet = Vec2F(10, 10); // Border between side points and frame
 
+        Ref<MeshPointsAction> mPointsAction; // Current points-edit action
+
     private:
         // Initializes handles
         void InitializeHandles();
@@ -119,6 +123,15 @@ namespace Editor
 
         // Called when handle was moved
         void OnHandleMoved(int i, const Vec2F& pos);
+
+        // Begins a points-edit action capturing the current points snapshot
+        void BeginPointsAction();
+
+        // Commits the current points-edit action to the undo stack
+        void EndPointsAction();
+
+        // Builds an incremental step with newPoints and Appends it to mPointsAction
+        void AppendPointsStep(const Vector<Vec2F>& newPoints);
 
         // Converts world space point to local space
         Vec2F WorldToLocal(const Vec2F& point) const;
@@ -185,6 +198,7 @@ CLASS_FIELDS_META(Editor::MeshTopologyTool)
     FIELD().PRIVATE().DEFAULT_VALUE(false).NAME(mTransformFrameVisible);
     FIELD().PRIVATE().NAME(mTransformFrameBasis);
     FIELD().PRIVATE().DEFAULT_VALUE(Vec2F(10, 10)).NAME(mTransformBasisOffet);
+    FIELD().PRIVATE().NAME(mPointsAction);
 }
 END_META;
 CLASS_METHODS_META(Editor::MeshTopologyTool)
@@ -205,6 +219,9 @@ CLASS_METHODS_META(Editor::MeshTopologyTool)
     FUNCTION().PRIVATE().SIGNATURE(void, InitializeHandles);
     FUNCTION().PRIVATE().SIGNATURE(void, ClearHandles);
     FUNCTION().PRIVATE().SIGNATURE(void, OnHandleMoved, int, const Vec2F&);
+    FUNCTION().PRIVATE().SIGNATURE(void, BeginPointsAction);
+    FUNCTION().PRIVATE().SIGNATURE(void, EndPointsAction);
+    FUNCTION().PRIVATE().SIGNATURE(void, AppendPointsStep, const Vector<Vec2F>&);
     FUNCTION().PRIVATE().SIGNATURE(Vec2F, WorldToLocal, const Vec2F&);
     FUNCTION().PRIVATE().SIGNATURE(Vec2F, LocalToWorld, const Vec2F&);
     FUNCTION().PRIVATE().SIGNATURE(void, DrawSelection);

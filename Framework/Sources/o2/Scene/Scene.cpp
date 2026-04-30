@@ -334,26 +334,21 @@ namespace o2
         };
 
         String debugInfo;
-        for (auto& actor : mAllActors)
-            helper::Process(debugInfo, actor.Lock().Get());
+        for (auto& [ptr, weak] : mAllActors)
+            helper::Process(debugInfo, weak.Lock().Get());
 
         o2Debug.DrawText(((Vec2F)o2Render.GetResolution().InvertedX()) * 0.5f, debugInfo);
     }
 
     void Scene::AddActorToScene(const Ref<Actor>& actor)
     {
-        // Idempotent: AddToScene() can be called explicitly by user code (which calls
-        // Scene::OnAddActorToScene → here) and then again from UpdateAddedEntities
-        // when the actor's pending-creation queue is processed. Without this guard the
-        // actor lands in mRootActors / mAllActors twice, doubling its refcount and
-        // breaking teardown ordering.
-        if (mAllActors.Contains(actor))
+        if (mAllActors.ContainsKey(actor.Get()))
             return;
 
         if (!actor->mParent)
             mRootActors.Add(actor);
 
-        mAllActors.Add(actor);
+        mAllActors[actor.Get()] = actor;
         mActorsMap[actor->mId] = actor;
 
         actor->OnAddToScene();
@@ -370,7 +365,7 @@ namespace o2
         if (!actor->mParent)
             mRootActors.Remove(actor);
 
-        mAllActors.Remove(actor);
+        mAllActors.Remove(actor.Get());
         mActorsMap.Remove(actor->mId);
 
         mStartActors.Remove(actor);
@@ -537,12 +532,12 @@ namespace o2
         return mRootActors;
     }
 
-    const Vector<WeakRef<Actor>>& Scene::GetAllActors() const
+    const Map<Actor*, WeakRef<Actor>>& Scene::GetAllActors() const
     {
         return mAllActors;
     }
 
-    Vector<WeakRef<Actor>>& Scene::GetAllActors()
+    Map<Actor*, WeakRef<Actor>>& Scene::GetAllActors()
     {
         return mAllActors;
     }

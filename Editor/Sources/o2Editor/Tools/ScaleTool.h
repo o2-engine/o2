@@ -38,8 +38,7 @@ namespace Editor
         Vec2F mLastVerHandlePos;  // Last vertical handle position
         Vec2F mLastBothHandlePos; // Last both axis handle position
 
-        Vector<Basis>        mBeforeTransforms; // Array of objects' transformations before changing
-        Ref<TransformAction> mTransformAction;  // Current transform action. Creates when transform started
+        Ref<TransformAction> mTransformAction; // Current transform action. Creates when transform started
 
     protected:
         // Returns toggle in menu panel icon name
@@ -93,8 +92,11 @@ namespace Editor
         // Called when key was pressed
         void OnKeyReleased(const Input::Key& key) override;
 
-        // Moves selected objects on delta
+        // Scales selected objects
         void ScaleSelectedObjects(const Vec2F& scale);
+
+        // Builds a scale step and Appends it to action
+        void AppendScaleStep(const Ref<TransformAction>& action, const Vec2F& scale);
 
         // Called when some handle was pressed, stores before transformations
         void HandlePressed();
@@ -122,7 +124,6 @@ CLASS_FIELDS_META(Editor::ScaleTool)
     FIELD().PROTECTED().NAME(mLastHorHandlePos);
     FIELD().PROTECTED().NAME(mLastVerHandlePos);
     FIELD().PROTECTED().NAME(mLastBothHandlePos);
-    FIELD().PROTECTED().NAME(mBeforeTransforms);
     FIELD().PROTECTED().NAME(mTransformAction);
 }
 END_META;
@@ -148,6 +149,7 @@ CLASS_METHODS_META(Editor::ScaleTool)
     FUNCTION().PROTECTED().SIGNATURE(void, OnKeyStayDown, const Input::Key&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnKeyReleased, const Input::Key&);
     FUNCTION().PROTECTED().SIGNATURE(void, ScaleSelectedObjects, const Vec2F&);
+    FUNCTION().PROTECTED().SIGNATURE(void, AppendScaleStep, const Ref<TransformAction>&, const Vec2F&);
     FUNCTION().PROTECTED().SIGNATURE(void, HandlePressed);
     FUNCTION().PROTECTED().SIGNATURE(void, HandleReleased);
 }

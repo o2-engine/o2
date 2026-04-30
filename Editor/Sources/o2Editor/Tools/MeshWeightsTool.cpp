@@ -3,7 +3,9 @@
 
 #include "o2/Render/SkinningMesh.h"
 #include "o2/Scene/Components/SkinningMeshComponent.h"
+#include "o2Editor/Actions/VertexWeights.h"
 #include "o2Editor/Windows/SceneWindow/SceneEditScreen.h"
+#include "o2Editor/Windows/SceneWindow/SceneWindow.h"
 
 namespace Editor
 {
@@ -16,16 +18,33 @@ namespace Editor
     void MeshWeightsTool::OnCursorPressed(const Input::Cursor& cursor)
     {
         mPressed = true;
+
+        if (boneComponent && !mAction)
+            mAction = mmake<VertexWeightsAction>(boneComponent);
     }
 
     void MeshWeightsTool::OnCursorReleased(const Input::Cursor& cursor)
     {
         mPressed = false;
+
+        if (mAction)
+        {
+            mAction->Completed();
+            o2EditorSceneWindow.DoneAction(mAction);
+            mAction = nullptr;
+        }
     }
 
     void MeshWeightsTool::OnCursorPressBreak(const Input::Cursor& cursor)
     {
+        mPressed = false;
 
+        if (mAction)
+        {
+            mAction->Completed();
+            o2EditorSceneWindow.DoneAction(mAction);
+            mAction = nullptr;
+        }
     }
 
     void MeshWeightsTool::OnCursorStillDown(const Input::Cursor& cursor)
@@ -117,6 +136,8 @@ namespace Editor
     void MeshWeightsTool::SceneLayer::UpdateBrush(float dt)
     {
         auto toolRef = tool.Lock();
+        if (!toolRef)
+            return;
 
         auto meshComponent = toolRef->boneComponent->FindSkinningMesh();
         if (!meshComponent)
@@ -124,10 +145,11 @@ namespace Editor
 
         auto& mesh = meshComponent->GetMesh();
         auto* vertices = mesh.vertices;
-        auto& vertexWeights = toolRef->boneComponent->vertexWeights;
         int vertexCount = mesh.vertexCount;
 
         Vec2F localCursorPos = o2EditorSceneScreen.ScreenToLocalPoint(toolRef->mCursosPos);
+
+        Vector<Pair<int, float>> newWeights = toolRef->boneComponent->vertexWeights;
 
         for (int i = 0; i < vertexCount; i++)
         {
@@ -135,11 +157,11 @@ namespace Editor
             bool isInsideBrush = (Vec2F(v) - localCursorPos).Length() < toolRef->mBrushReadius;
             if (isInsideBrush)
             {
-                auto w = vertexWeights.Find([=](const Pair<int, float>& x) { return x.first == i; });
+                auto w = newWeights.Find([=](const Pair<int, float>& x) { return x.first == i; });
                 if (!w)
                 {
-                    vertexWeights.Add({ i, 0.0f });
-                    w = &vertexWeights.Last();
+                    newWeights.Add({ i, 0.0f });
+                    w = &newWeights.Last();
                 }
 
                 float brushSign = o2Input.IsKeyDown(VK_CONTROL) ? -1.0f : 1.0f;
@@ -148,7 +170,19 @@ namespace Editor
             }
         }
 
-        vertexWeights.RemoveAll([](const Pair<int, float>& x) { return x.second <= 0.0f; });
+        newWeights.RemoveAll([](const Pair<int, float>& x) { return x.second <= 0.0f; });
+
+        if (toolRef->mAction)
+        {
+            auto step = mmake<VertexWeightsAction>(toolRef->boneComponent);
+            step->doneWeights = newWeights;
+            step->doneCaptured = true;
+            toolRef->mAction->Append(step);
+        }
+        else
+        {
+            toolRef->boneComponent->vertexWeights = newWeights;
+        }
     }
 
     int MeshWeightsTool::SceneLayer::GetOrder() const

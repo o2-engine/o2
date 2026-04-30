@@ -7,6 +7,8 @@
 
 namespace Editor
 {
+    FORWARD_CLASS_REF(SplineKeysAction);
+
     // ------------------------------------------------
     // Spline editing on scene tool
     // Contains scene editor layer and spline editor
@@ -119,6 +121,8 @@ namespace Editor
 
         bool isEnabled = true; // Is tool enabled now
 
+        Ref<SplineKeysAction> mKeysAction; // Current spline edit action
+
     public:
         // Default constructor
         explicit SplineTool(RefCounter* refCounter);
@@ -157,6 +161,7 @@ CLASS_FIELDS_META(Editor::SplineTool)
     FIELD().PUBLIC().NAME(splineEditor);
     FIELD().PUBLIC().NAME(sceneLayer);
     FIELD().PUBLIC().DEFAULT_VALUE(true).NAME(isEnabled);
+    FIELD().PUBLIC().NAME(mKeysAction);
 }
 END_META;
 CLASS_METHODS_META(Editor::SplineTool)

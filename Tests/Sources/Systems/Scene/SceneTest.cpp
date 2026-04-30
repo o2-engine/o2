@@ -40,7 +40,7 @@ TEST(Scene, NewActorAppearsInAllActors)
     TickFrame();
 
     bool found = false;
-    for (auto& weak : o2Scene.GetAllActors())
+    for (auto& [ptr, weak] : o2Scene.GetAllActors())
         if (weak.Lock() == a) { found = true; break; }
 
     EXPECT_TRUE(found);
@@ -60,7 +60,7 @@ TEST(Scene, ChildActorIsInAllActorsButNotInRoots)
     EXPECT_FALSE(inRoots);
 
     bool inAll = false;
-    for (auto& weak : o2Scene.GetAllActors())
+    for (auto& [ptr, weak] : o2Scene.GetAllActors())
         if (weak.Lock() == child) { inAll = true; break; }
     EXPECT_TRUE(inAll);
 }

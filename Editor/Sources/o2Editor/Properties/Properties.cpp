@@ -127,7 +127,7 @@ namespace Editor
                 {
                     auto& targetType = target.first->GetType();
                     auto& targetObjType = dynamic_cast<const ObjectType&>(targetType);
-                    targetObjType.Invoke<void>(invokeOnChangeAttribute->methodName, targetObjType.DynamicCastFromIObject(target.first));
+                    //targetObjType.Invoke<void>(invokeOnChangeAttribute->methodName, targetObjType.DynamicCastFromIObject(target.first));
                 }
             };
         }

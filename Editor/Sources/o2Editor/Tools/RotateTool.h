@@ -58,8 +58,7 @@ namespace Editor
         bool  mRingPressed = false;           // Is rotate ring was pressed
         float mSnapAngleAccumulated = 0.0f; // Snapping angle accumulated
                          
-        Vector<Basis>        mBeforeTransforms; // Array of objects' transformations before changing
-        Ref<TransformAction> mTransformAction;  // Current transform action. Creates when transform started
+        Ref<TransformAction> mTransformAction; // Current transform action. Creates when transform started
 
     public:
         // Returns toggle in menu panel icon name
@@ -122,11 +121,14 @@ namespace Editor
         // Rotates objects on angle separated
         void RotateObjectsSeparated(float angleDelta);
 
-        // Rotates objects on angle
+        // Rotates objects on angle in a one-shot action
         void RotateObjectsWithAction(float angleDelta);
 
-        // Rotates objects on angle separated
+        // Rotates objects on angle separated in a one-shot action
         void RotateObjectsSeparatedWithAction(float angleDelta);
+
+        // Builds a rotation step and Appends it to action
+        void AppendRotateStep(const Ref<TransformAction>& action, float angleDelta, bool separated);
     };
 }
 // --- META ---
@@ -155,7 +157,6 @@ CLASS_FIELDS_META(Editor::RotateTool)
     FIELD().PROTECTED().NAME(mCurrentRotateAngle);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mRingPressed);
     FIELD().PROTECTED().DEFAULT_VALUE(0.0f).NAME(mSnapAngleAccumulated);
-    FIELD().PROTECTED().NAME(mBeforeTransforms);
     FIELD().PROTECTED().NAME(mTransformAction);
 }
 END_META;
@@ -185,6 +186,7 @@ CLASS_METHODS_META(Editor::RotateTool)
     FUNCTION().PUBLIC().SIGNATURE(void, RotateObjectsSeparated, float);
     FUNCTION().PUBLIC().SIGNATURE(void, RotateObjectsWithAction, float);
     FUNCTION().PUBLIC().SIGNATURE(void, RotateObjectsSeparatedWithAction, float);
+    FUNCTION().PUBLIC().SIGNATURE(void, AppendRotateStep, const Ref<TransformAction>&, float, bool);
 }
 END_META;
 // --- END META ---

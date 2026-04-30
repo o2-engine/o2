@@ -1,7 +1,9 @@
 #include "o2Editor/stdafx.h"
 #include "SplineTool.h"
 
+#include "o2Editor/Actions/SplineKeys.h"
 #include "o2Editor/Windows/SceneWindow/SceneEditScreen.h"
+#include "o2Editor/Windows/SceneWindow/SceneWindow.h"
 
 namespace Editor
 {
@@ -162,6 +164,26 @@ namespace Editor
         wrapper->tool = Ref(this);
         spline->onKeysChanged += [=]() { wrapper->onChangedOutside(); };
         splineEditor->SetSpline(wrapper);
+
+        WeakRef<SplineTool> weakThis = Ref(this);
+        WeakRef<Spline> weakSpline = spline;
+
+        splineEditor->onBeginEdit = [weakThis, weakSpline]() {
+            auto self = weakThis.Lock();
+            auto sp = weakSpline.Lock();
+            if (!self || !sp || self->mKeysAction)
+                return;
+            self->mKeysAction = mmake<SplineKeysAction>(sp);
+        };
+
+        splineEditor->onEndEdit = [weakThis]() {
+            auto self = weakThis.Lock();
+            if (!self || !self->mKeysAction)
+                return;
+            self->mKeysAction->Completed();
+            o2EditorSceneWindow.DoneAction(self->mKeysAction);
+            self->mKeysAction = nullptr;
+        };
     }
 
     String SplineTool::SplineTool::GetPanelIcon() const

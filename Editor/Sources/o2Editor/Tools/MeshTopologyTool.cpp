@@ -1,7 +1,9 @@
 #include "o2Editor/stdafx.h"
 #include "MeshTopologyTool.h"
 
+#include "o2Editor/Actions/MeshPoints.h"
 #include "o2Editor/Windows/SceneWindow/SceneEditScreen.h"
+#include "o2Editor/Windows/SceneWindow/SceneWindow.h"
 
 namespace Editor
 {
@@ -20,8 +22,8 @@ namespace Editor
         mTransformFrame.SetPivotEnabled(false);
         mTransformFrame.SetRotationEnabled(false);
         mTransformFrame.onTransformed = THIS_FUNC(OnTransformFrameTransformed);
-        //         mTransformFrame.onPressed = THIS_FUNC(OnTransformBegin);
-        //         mTransformFrame.onChangeCompleted = THIS_FUNC(OnTransformCompleted);
+        mTransformFrame.onPressed = [&]() { BeginPointsAction(); };
+        mTransformFrame.onChangeCompleted = [&]() { EndPointsAction(); };
         mTransformFrame.isInputTransparent = true;
     }
 
@@ -100,7 +102,9 @@ namespace Editor
 
             newHandle->SetPosition(mGetPoints()[i]);
             newHandle->SetSelectionGroup(Ref(this));
+            newHandle->onPressed = [&]() { BeginPointsAction(); };
             newHandle->onChangedPos = [=](const Vec2F& pos) { OnHandleMoved(i, pos); };
+            newHandle->onReleased = [&]() { EndPointsAction(); };
             newHandle->localToScreenTransformFunc = [&](const Vec2F& p) { return LocalToWorld(p); };
             newHandle->screenToLocalTransformFunc = [&](const Vec2F& p) { return WorldToLocal(p); };
         }
@@ -113,8 +117,41 @@ namespace Editor
 
     void MeshTopologyTool::OnHandleMoved(int i, const Vec2F& pos)
     {
-        mSetPoint(i, pos);
+        Vector<Vec2F> newPoints = mGetPoints();
+        if (i < 0 || i >= newPoints.Count())
+            return;
+        newPoints[i] = pos;
+
+        AppendPointsStep(newPoints);
         UpdateTransformFrame();
+    }
+
+    void MeshTopologyTool::BeginPointsAction()
+    {
+        if (mPointsAction)
+            return;
+
+        mPointsAction = mmake<MeshPointsAction>(mGetPoints(), mSetPoint);
+    }
+
+    void MeshTopologyTool::EndPointsAction()
+    {
+        if (!mPointsAction)
+            return;
+
+        mPointsAction->Completed(mGetPoints());
+        o2EditorSceneWindow.DoneAction(mPointsAction);
+        mPointsAction = nullptr;
+    }
+
+    void MeshTopologyTool::AppendPointsStep(const Vector<Vec2F>& newPoints)
+    {
+        if (!mPointsAction)
+            return;
+
+        auto step = mmake<MeshPointsAction>(mGetPoints(), mSetPoint);
+        step->Completed(newPoints);
+        mPointsAction->Append(step);
     }
 
     Vec2F MeshTopologyTool::WorldToLocal(const Vec2F& point) const

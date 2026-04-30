@@ -225,14 +225,11 @@ namespace Editor
             mCurrentRotateAngle = mPressAngle;
             mSnapAngleAccumulated = 0.0f;
 
-            mBeforeTransforms = o2EditorSceneScreen.GetTopSelectedObjects().Convert<Basis>(
-                [](auto& x) { return x->GetTransform(); });
-
             mTransformAction = mmake<TransformAction>(o2EditorSceneScreen.GetTopSelectedObjects());
 
             onTransformBegin();
         }
-        else 
+        else
             SelectionTool::OnCursorPressed(cursor);
     }
 
@@ -364,50 +361,47 @@ namespace Editor
 
     void RotateTool::RotateObjects(float angleDelta)
     {
-        Basis transform = Basis::Translated(mScenePivot*-1.0f)*Basis::Rotated(-angleDelta)*Basis::Translated(mScenePivot);
-        for (auto& object : o2EditorSceneScreen.GetTopSelectedObjects())
-        {
-            object->SetTransform(object->GetTransform()*transform);
-            object->UpdateTransform();
-        }
+        AppendRotateStep(mTransformAction, angleDelta, false);
     }
 
     void RotateTool::RotateObjectsSeparated(float angleDelta)
     {
-        Basis transform = Basis::Rotated(-angleDelta);
-        for (auto& object : o2EditorSceneScreen.GetTopSelectedObjects())
-        {
-            object->SetTransform(object->GetTransform()*transform);
-            object->UpdateTransform();
-        }
+        AppendRotateStep(mTransformAction, angleDelta, true);
     }
 
     void RotateTool::RotateObjectsWithAction(float angleDelta)
     {
-        mBeforeTransforms = o2EditorSceneScreen.GetTopSelectedObjects().Convert<Basis>(
-            [](auto& x) { return x->GetTransform(); });
-
-        mTransformAction = mmake<TransformAction>(o2EditorSceneScreen.GetTopSelectedObjects());
-
-        RotateObjects(angleDelta);
-
-        mTransformAction->Completed();
-        o2EditorSceneWindow.DoneAction(mTransformAction);
-        mTransformAction = nullptr;
+        auto action = mmake<TransformAction>(o2EditorSceneScreen.GetTopSelectedObjects());
+        AppendRotateStep(action, angleDelta, false);
+        action->Completed();
+        o2EditorSceneWindow.DoneAction(action);
     }
 
     void RotateTool::RotateObjectsSeparatedWithAction(float angleDelta)
     {
-        mBeforeTransforms = o2EditorSceneScreen.GetTopSelectedObjects().Convert<Basis>(
-            [](auto& x) { return x->GetTransform(); });
+        auto action = mmake<TransformAction>(o2EditorSceneScreen.GetTopSelectedObjects());
+        AppendRotateStep(action, angleDelta, true);
+        action->Completed();
+        o2EditorSceneWindow.DoneAction(action);
+    }
 
-        mTransformAction = mmake<TransformAction>(o2EditorSceneScreen.GetTopSelectedObjects());
+    void RotateTool::AppendRotateStep(const Ref<TransformAction>& action, float angleDelta, bool separated)
+    {
+        if (!action)
+            return;
 
-        RotateObjectsSeparated(angleDelta);
+        Basis rotation = separated
+            ? Basis::Rotated(-angleDelta)
+            : Basis::Translated(mScenePivot * -1.0f) *
+              Basis::Rotated(-angleDelta) *
+              Basis::Translated(mScenePivot);
 
-        mTransformAction->Completed();
-        o2EditorSceneWindow.DoneAction(mTransformAction);
-        mTransformAction = nullptr;
+        auto step = mmake<TransformAction>(o2EditorSceneScreen.GetTopSelectedObjects());
+        step->doneTransforms = step->beforeTransforms;
+        for (auto& t : step->doneTransforms)
+            t.transform = t.transform * rotation;
+
+        action->Append(step);
     }
 
 }

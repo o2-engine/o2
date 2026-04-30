@@ -92,11 +92,11 @@ namespace o2
         // Returns root actors
         Vector<Ref<Actor>>& GetRootActors();
 
-        // Returns all actors
-        const Vector<WeakRef<Actor>>& GetAllActors() const;
+        // Returns all scene-admitted actors as a {Actor*, WeakRef<Actor>} map
+        const Map<Actor*, WeakRef<Actor>>& GetAllActors() const;
 
-        // Returns all actors
-        Vector<WeakRef<Actor>>& GetAllActors();
+        // Returns all scene-admitted actors as a {Actor*, WeakRef<Actor>} map
+        Map<Actor*, WeakRef<Actor>>& GetAllActors();
 
         // Returns actor by id
         Ref<Actor> GetActorByID(SceneUID id) const;
@@ -179,8 +179,8 @@ namespace o2
 
         Vector<WeakRef<CameraActor>> mCameras; // List of cameras on scene
    
-        Vector<WeakRef<Actor>>        mAllActors; // All scene actors
-        Map<SceneUID, WeakRef<Actor>> mActorsMap; // Actors map by unique ID
+        Map<Actor*, WeakRef<Actor>>   mAllActors; // Scene-admitted actors keyed by Actor* for O(log n) Contains / Remove
+        Map<SceneUID, WeakRef<Actor>> mActorsMap; // Actors map by unique ID; eagerly populated by OnActorIdChanged for ref resolution before scene admit
 
         Vector<Ref<Actor>> mAddedActors; // List of added on previous frame actors. Will receive OnAddToScene at current frame
 
@@ -463,7 +463,9 @@ CLASS_METHODS_META(o2::Scene)
 {
 
     typedef const Map<String, WeakRef<SceneLayer>>& _tmp1;
-    typedef Map<AssetRef<ActorAsset>, Vector<WeakRef<Actor>>>& _tmp2;
+    typedef const Map<Actor*, WeakRef<Actor>>& _tmp2;
+    typedef Map<Actor*, WeakRef<Actor>>& _tmp3;
+    typedef Map<AssetRef<ActorAsset>, Vector<WeakRef<Actor>>>& _tmp4;
 
     FUNCTION().PUBLIC().CONSTRUCTOR(RefCounter*);
     FUNCTION().PUBLIC().SIGNATURE(const LogStream&, GetLogStream);
@@ -484,8 +486,8 @@ CLASS_METHODS_META(o2::Scene)
     FUNCTION().PUBLIC().SIGNATURE(const Vector<Ref<Tag>>&, GetTags);
     FUNCTION().PUBLIC().SIGNATURE(const Vector<Ref<Actor>>&, GetRootActors);
     FUNCTION().PUBLIC().SIGNATURE(Vector<Ref<Actor>>&, GetRootActors);
-    FUNCTION().PUBLIC().SIGNATURE(const Vector<WeakRef<Actor>>&, GetAllActors);
-    FUNCTION().PUBLIC().SIGNATURE(Vector<WeakRef<Actor>>&, GetAllActors);
+    FUNCTION().PUBLIC().SIGNATURE(_tmp2, GetAllActors);
+    FUNCTION().PUBLIC().SIGNATURE(_tmp3, GetAllActors);
     FUNCTION().PUBLIC().SIGNATURE(Ref<Actor>, GetActorByID, SceneUID);
     FUNCTION().PUBLIC().SIGNATURE(Ref<Actor>, GetAssetActorByID, const UID&);
     FUNCTION().PUBLIC().SIGNATURE(Ref<Actor>, FindActor, const String&);
@@ -538,7 +540,7 @@ CLASS_METHODS_META(o2::Scene)
     FUNCTION().PUBLIC().SIGNATURE(int, GetObjectHierarchyIdx, const Ref<SceneEditableObject>&);
     FUNCTION().PUBLIC().SIGNATURE(void, ReparentEditableObjects, const Vector<Ref<SceneEditableObject>>&, const Ref<SceneEditableObject>&, const Ref<SceneEditableObject>&);
     FUNCTION().PUBLIC().SIGNATURE(void, CheckChangedObjects);
-    FUNCTION().PUBLIC().SIGNATURE(_tmp2, GetPrototypesLinksCache);
+    FUNCTION().PUBLIC().SIGNATURE(_tmp4, GetPrototypesLinksCache);
     FUNCTION().PUBLIC().SIGNATURE(void, BeginDrawingScene);
     FUNCTION().PUBLIC().SIGNATURE(void, EndDrawingScene);
     FUNCTION().PUBLIC().SIGNATURE(void, OnObjectAddToScene, const Ref<SceneEditableObject>&);

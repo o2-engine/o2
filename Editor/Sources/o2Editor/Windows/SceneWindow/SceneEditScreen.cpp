@@ -270,9 +270,13 @@ namespace Editor
     {
         auto prevSelectedObjects = mSelectedObjects;
 
-        mSelectedObjects = o2Scene.GetAllActors().
-            FindAll([](auto& x) { return !x.Lock()->IsLockedInHierarchy(); }).
-            Convert<Ref<SceneEditableObject>>([](auto& x) { return DynamicCast<SceneEditableObject>(x.Lock()); });
+        mSelectedObjects.Clear();
+        for (auto& [ptr, weak] : o2Scene.GetAllActors())
+        {
+            auto a = weak.Lock();
+            if (a && !a->IsLockedInHierarchy())
+                mSelectedObjects.Add(DynamicCast<SceneEditableObject>(a));
+        }
 
         mNeedRedraw = true;
         OnObjectsSelectedFromThis();

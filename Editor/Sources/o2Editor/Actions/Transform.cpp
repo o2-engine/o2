@@ -71,6 +71,7 @@ namespace Editor
             {
                 object->SetTransform(transforms[i].transform);
                 object->SetLayout(transforms[i].layout);
+                object->UpdateTransform();
             }
         }
     }

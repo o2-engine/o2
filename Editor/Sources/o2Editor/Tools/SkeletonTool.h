@@ -9,6 +9,7 @@
 
 namespace Editor
 {
+    FORWARD_CLASS_REF(BoneTransformAction);
     // -------------------------------------------------
     // Skeleton tool. Used for editing bones of skeleton
     // -------------------------------------------------
@@ -51,6 +52,8 @@ namespace Editor
 
             Basis pressedTransform; // Stored bone transform when pressed
 
+            Ref<BoneTransformAction> mAction; // Current bone transform action
+
         public:
             // Default constructor, creates handle
             BoneHandle();
@@ -62,8 +65,17 @@ namespace Editor
             void UpdatePosition();
 
         private:
+            // Called when handle is pressed, opens transform action
+            void OnHandlePressed();
+
             // Called when handle is moved, changes bone transformation
             void OnHandleChangedPos(const Vec2F& pos);
+
+            // Called when handle is released, commits transform action
+            void OnHandleReleased();
+
+            // Builds a delta step and Appends it to action
+            void AppendBoneStep(const Basis& worldBasis, const Vec2F& worldPosition);
         };
 
         // ---------------------------------------------------------------------------------

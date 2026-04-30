@@ -90,8 +90,7 @@ namespace Editor
         bool mIsDragging = false;      // Is frame dragging
         bool mChangedFromThis = false; // Is objects changed from this, needs to break circular updating
 
-        Vector<Basis>        mBeforeTransforms; // Array of objects transformations before changing
-        Ref<TransformAction> mTransformAction;  // Current transform action. Creates when transform started
+        Ref<TransformAction> mTransformAction; // Current transform action. Creates when transform started
 
         Vector<SnapLine> mSnapLines; // Immediate drawing lines, used for drawing snapping
 
@@ -132,8 +131,11 @@ namespace Editor
         // Transforms top selected objects
         void TransformObjects(const Basis& transform);
 
-        // Transforms top selected objects
+        // Transforms top selected objects in a one-shot action
         void TransformObjectsWithAction(const Basis& transform);
+
+        // Builds a transform step and Appends it to action
+        void AppendTransformStep(const Ref<TransformAction>& action, const Basis& transform);
 
         // Transforms top selected objects anchors
         void TransformAnchorsObjects(const Basis& transform);
@@ -381,7 +383,6 @@ CLASS_FIELDS_META(Editor::FrameTool)
     FIELD().PROTECTED().NAME(mBeginDraggingOffset);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mIsDragging);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mChangedFromThis);
-    FIELD().PROTECTED().NAME(mBeforeTransforms);
     FIELD().PROTECTED().NAME(mTransformAction);
     FIELD().PROTECTED().NAME(mSnapLines);
 }
@@ -403,6 +404,7 @@ CLASS_METHODS_META(Editor::FrameTool)
     FUNCTION().PROTECTED().SIGNATURE(void, OnKeyReleased, const Input::Key&);
     FUNCTION().PROTECTED().SIGNATURE(void, TransformObjects, const Basis&);
     FUNCTION().PROTECTED().SIGNATURE(void, TransformObjectsWithAction, const Basis&);
+    FUNCTION().PROTECTED().SIGNATURE(void, AppendTransformStep, const Ref<TransformAction>&, const Basis&);
     FUNCTION().PROTECTED().SIGNATURE(void, TransformAnchorsObjects, const Basis&);
     FUNCTION().PROTECTED().SIGNATURE(void, UpdateSelectionFrame);
     FUNCTION().PROTECTED().SIGNATURE(void, OnCursorPressed, const Input::Cursor&);

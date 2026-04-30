@@ -258,9 +258,9 @@ namespace Editor
             handles->position = mHandlesSample.position->CloneAsRef<DragHandle>();
             handles->position->SetPosition(mSplineWrapper->GetPointPos(i));
             handles->position->SetSelectionGroup(Ref(this));
-            handles->position->onPressed = [=]() { OnMainHandlePressed(i, handles); };
+            handles->position->onPressed = [=]() { if (onBeginEdit) onBeginEdit(); OnMainHandlePressed(i, handles); };
             handles->position->onBeganDragging = [=]() { handles->positionDragged = true; };
-            handles->position->onReleased = [=]() { if (!handles->positionDragged) OnMainHandleReleasedNoDrag(i, handles); };
+            handles->position->onReleased = [=]() { if (!handles->positionDragged) OnMainHandleReleasedNoDrag(i, handles); if (onEndEdit) onEndEdit(); };
             handles->position->onChangedPos = [=](const Vec2F& pos) { OnMainHandleMoved(i, pos, handles); };
             handles->position->localToScreenTransformFunc = [&](const Vec2F& p) { return mSplineWrapper->LocalToWorld(p); };
             handles->position->screenToLocalTransformFunc = [&](const Vec2F& p) { return mSplineWrapper->WorldToLocal(p); };
@@ -269,9 +269,9 @@ namespace Editor
             handles->prevSupport->SetPosition(mSplineWrapper->GetPointPrevSupportPos(i));
             handles->prevSupport->SetSelectionGroup(mSupportHandlesGroup);
             handles->prevSupport->onChangedPos = [=](const Vec2F& pos) { OnPrevHandleMoved(i, pos, handles); };
-            handles->prevSupport->onPressed = [=]() { handles->prevSupportDragged = false; CheckDragFromZero(i, handles); };
+            handles->prevSupport->onPressed = [=]() { if (onBeginEdit) onBeginEdit(); handles->prevSupportDragged = false; CheckDragFromZero(i, handles); };
             handles->prevSupport->onBeganDragging = [=]() { handles->prevSupportDragged = true; };
-            handles->prevSupport->onReleased = [=]() { if (!handles->prevSupportDragged) OnPrevHandleReleasedNoDrag(i, handles); };
+            handles->prevSupport->onReleased = [=]() { if (!handles->prevSupportDragged) OnPrevHandleReleasedNoDrag(i, handles); if (onEndEdit) onEndEdit(); };
             handles->prevSupport->localToScreenTransformFunc = [&](const Vec2F& p) { return mSplineWrapper->LocalToWorld(p); };
             handles->prevSupport->screenToLocalTransformFunc = [&](const Vec2F& p) { return mSplineWrapper->WorldToLocal(p); };
 
@@ -279,9 +279,9 @@ namespace Editor
             handles->nextSupport->SetPosition(mSplineWrapper->GetPointNextSupportPos(i));
             handles->nextSupport->SetSelectionGroup(mSupportHandlesGroup);
             handles->nextSupport->onChangedPos = [=](const Vec2F& pos) { OnNextHandleMoved(i, pos, handles); };
-            handles->nextSupport->onPressed = [=]() { handles->nextSupportDragged = false; CheckDragFromZero(i, handles); };
+            handles->nextSupport->onPressed = [=]() { if (onBeginEdit) onBeginEdit(); handles->nextSupportDragged = false; CheckDragFromZero(i, handles); };
             handles->nextSupport->onBeganDragging = [=]() { handles->nextSupportDragged = true; };
-            handles->nextSupport->onReleased = [=]() { if (!handles->nextSupportDragged) OnNextHandleReleasedNoDrag(i, handles); };
+            handles->nextSupport->onReleased = [=]() { if (!handles->nextSupportDragged) OnNextHandleReleasedNoDrag(i, handles); if (onEndEdit) onEndEdit(); };
             handles->nextSupport->localToScreenTransformFunc = [&](const Vec2F& p) { return mSplineWrapper->LocalToWorld(p); };
             handles->nextSupport->screenToLocalTransformFunc = [&](const Vec2F& p) { return mSplineWrapper->WorldToLocal(p); };
 
@@ -728,10 +728,14 @@ namespace Editor
 
     void SplineEditor::OnTransformBegin()
     {
+        if (onBeginEdit)
+            onBeginEdit();
     }
 
     void SplineEditor::OnTransformCompleted()
     {
+        if (onEndEdit)
+            onEndEdit();
     }
 
     Vec2F SplineEditor::ISplineWrapper::WorldToLocal(const Vec2F& point) const
