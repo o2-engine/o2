@@ -23,6 +23,7 @@ namespace Editor
         {
             Basis  transform;
             Layout layout;
+            Vec2F  pivot;
 
             bool operator==(const Transform& other) const;
         };

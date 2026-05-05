@@ -94,8 +94,13 @@ namespace Editor
         // Called when pivot handle moved
         void OnPivotDragHandleMoved(const Vec2F& position);
 
-        // Returns is point inside rotate ring
-        bool IsPointInRotateRing(const Vec2F& point) const;
+        // Returns is point inside rotate ring (point and pivot in screen pixels)
+        bool IsPointInRotateRing(const Vec2F& screenPoint) const;
+
+        // Pure ring-pick math: true when screenPoint lies between innerRadius and outerRadius
+        // around screenPivot. Both args must be in the same coordinate space.
+        static bool IsScreenPointInRing(const Vec2F& screenPivot, const Vec2F& screenPoint,
+                                        float innerRadius, float outerRadius);
 
         // Called when cursor pressed on this
         void OnCursorPressed(const Input::Cursor& cursor) override;
@@ -176,6 +181,7 @@ CLASS_METHODS_META(Editor::RotateTool)
     FUNCTION().PUBLIC().SIGNATURE(void, CalcPivotByObjectsCenter);
     FUNCTION().PUBLIC().SIGNATURE(void, OnPivotDragHandleMoved, const Vec2F&);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsPointInRotateRing, const Vec2F&);
+    FUNCTION().PUBLIC().SIGNATURE_STATIC(bool, IsScreenPointInRing, const Vec2F&, const Vec2F&, float, float);
     FUNCTION().PUBLIC().SIGNATURE(void, OnCursorPressed, const Input::Cursor&);
     FUNCTION().PUBLIC().SIGNATURE(void, OnCursorReleased, const Input::Cursor&);
     FUNCTION().PUBLIC().SIGNATURE(void, OnCursorPressBreak, const Input::Cursor&);

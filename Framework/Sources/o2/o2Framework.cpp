@@ -1,6 +1,7 @@
 extern void __RegisterEnum__o2__Shader__Type();
 extern void __RegisterEnum__o2__Texture__Usage();
 extern void __RegisterEnum__o2__Texture__Filter();
+extern void __RegisterEnum__o2__Texture__Wrap();
 extern void __RegisterEnum__o2__Actor__State();
 extern void __RegisterEnum__o2__ActorCreateMode();
 extern void __RegisterEnum__o2__CameraActor__Type();
@@ -230,6 +231,7 @@ extern void InitializeTypeso2Framework()
     __RegisterEnum__o2__Shader__Type();
     __RegisterEnum__o2__Texture__Usage();
     __RegisterEnum__o2__Texture__Filter();
+    __RegisterEnum__o2__Texture__Wrap();
     __RegisterEnum__o2__Actor__State();
     __RegisterEnum__o2__ActorCreateMode();
     __RegisterEnum__o2__CameraActor__Type();

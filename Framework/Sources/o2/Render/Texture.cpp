@@ -136,6 +136,17 @@ namespace o2
         return mFilter;
     }
 
+    void Texture::SetWrap(Wrap wrap)
+    {
+        mWrap = wrap;
+        PlatformSetWrap();
+    }
+
+    Texture::Wrap Texture::GetWrap() const
+    {
+        return mWrap;
+    }
+
     void Texture::Create(const String& fileName)
     {
         String extension = o2FileSystem.GetFileExtension(fileName);
@@ -292,6 +303,13 @@ ENUM_META(o2::Texture::Filter, o2__Texture__Filter)
 {
     ENUM_ENTRY(Linear);
     ENUM_ENTRY(Nearest);
+}
+END_ENUM_META;
+
+ENUM_META(o2::Texture::Wrap, o2__Texture__Wrap)
+{
+    ENUM_ENTRY(ClampToEdge);
+    ENUM_ENTRY(Repeat);
 }
 END_ENUM_META;
 // --- END META ---

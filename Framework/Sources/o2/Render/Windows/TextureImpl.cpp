@@ -24,8 +24,9 @@ namespace o2
         glTexImage2D(GL_TEXTURE_2D, 0, texFormat, (GLsizei)mSize.x, (GLsizei)mSize.y, 0, texFormat, GL_UNSIGNED_BYTE, NULL);
         GL_CHECK_ERROR();
 
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        GLint wrap = mWrap == Wrap::Repeat ? GL_REPEAT : GL_CLAMP_TO_EDGE;
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, wrap);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, wrap);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         GL_CHECK_ERROR();
@@ -141,6 +142,22 @@ namespace o2
         glBindTexture(GL_TEXTURE_2D, mHandle);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, type);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, type);
+
+        glBindTexture(GL_TEXTURE_2D, prevTextureHandle);
+
+        GL_CHECK_ERROR();
+    }
+
+    void Texture::PlatformSetWrap()
+    {
+        GLint wrap = mWrap == Wrap::Repeat ? GL_REPEAT : GL_CLAMP_TO_EDGE;
+
+        auto prevTextureHandle = o2Render.mCurrentDrawTexture ? o2Render.mCurrentDrawTexture->mHandle : 0;
+        o2Render.DrawPrimitives();
+
+        glBindTexture(GL_TEXTURE_2D, mHandle);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, wrap);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, wrap);
 
         glBindTexture(GL_TEXTURE_2D, prevTextureHandle);
 

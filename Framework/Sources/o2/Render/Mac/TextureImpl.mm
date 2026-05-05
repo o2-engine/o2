@@ -70,6 +70,11 @@ namespace o2
     {
         // TODO
     }
+
+    void Texture::PlatformSetWrap()
+    {
+        // TODO
+    }
 }
 
 #endif //PLATFORM_MAC

@@ -208,19 +208,27 @@ namespace Editor
         mScenePivot = position;
     }
 
-    bool RotateTool::IsPointInRotateRing(const Vec2F& point) const
+    bool RotateTool::IsScreenPointInRing(const Vec2F& screenPivot, const Vec2F& screenPoint,
+                                         float innerRadius, float outerRadius)
     {
-        float pivotDist = (o2EditorSceneScreen.SceneToScreenPoint(mScenePivot) - point).Length();
+        float dist = (screenPivot - screenPoint).Length();
+        return dist > innerRadius && dist < outerRadius;
+    }
 
-        return pivotDist > mRotateRingInsideRadius && pivotDist < mRotateRingOutsideRadius;
+    bool RotateTool::IsPointInRotateRing(const Vec2F& screenPoint) const
+    {
+        return IsScreenPointInRing(o2EditorSceneScreen.SceneToScreenPoint(mScenePivot), screenPoint,
+                                   mRotateRingInsideRadius, mRotateRingOutsideRadius);
     }
 
     void RotateTool::OnCursorPressed(const Input::Cursor& cursor)
     {
-        if (IsPointInRotateRing(cursor.position))
+        // Same screen-space source as UpdateMeshes — cursor.position can be in a different space.
+        Vec2F screenCursor = o2Input.GetCursorPos();
+        if (IsPointInRotateRing(screenCursor))
         {
             mRingPressed = true;
-            Vec2F cursorInScene = o2EditorSceneScreen.ScreenToScenePoint(cursor.position);
+            Vec2F cursorInScene = o2EditorSceneScreen.ScreenToScenePoint(screenCursor);
             mPressAngle = Vec2F::Angle(cursorInScene - mScenePivot, Vec2F::Right());
             mCurrentRotateAngle = mPressAngle;
             mSnapAngleAccumulated = 0.0f;
@@ -272,10 +280,12 @@ namespace Editor
 
         if (mRingPressed)
         {
-            if (cursor.delta != Vec2F())
+            Vec2F screenCursor = o2Input.GetCursorPos();
+            Vec2F screenCursorDelta = o2Input.GetCursorDelta();
+            if (screenCursorDelta != Vec2F())
             {
-                Vec2F cursorInScene = o2EditorSceneScreen.ScreenToScenePoint(cursor.position);
-                Vec2F lastCursorInScene = o2EditorSceneScreen.ScreenToScenePoint(cursor.position - cursor.delta);
+                Vec2F cursorInScene = o2EditorSceneScreen.ScreenToScenePoint(screenCursor);
+                Vec2F lastCursorInScene = o2EditorSceneScreen.ScreenToScenePoint(screenCursor - screenCursorDelta);
                 float angleDelta = Vec2F::SignedAngle(cursorInScene - mScenePivot, lastCursorInScene - mScenePivot);
 
                 if (o2Input.IsKeyDown(VK_SHIFT))

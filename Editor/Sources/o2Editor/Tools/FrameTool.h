@@ -92,6 +92,9 @@ namespace Editor
 
         Ref<TransformAction> mTransformAction; // Current transform action. Creates when transform started
 
+        Ref<TransformAction> mKeyboardAction;     // Coalesces consecutive arrow-key presses into one undo entry
+        int                  mPressedArrowsCount = 0; // Number of arrow keys currently held down
+
         Vector<SnapLine> mSnapLines; // Immediate drawing lines, used for drawing snapping
 
     protected:
@@ -136,6 +139,21 @@ namespace Editor
 
         // Builds a transform step and Appends it to action
         void AppendTransformStep(const Ref<TransformAction>& action, const Basis& transform);
+
+        // Builds a pivot step and Appends it to action
+        void AppendPivotStep(const Ref<TransformAction>& action, const Vec2F& pivot);
+
+        // Builds an anchors step (SetLayout + SetTransform pair) and Appends it to action
+        void AppendAnchorsStep(const Ref<TransformAction>& action, const Basis& anchorsBasis);
+
+        // Opens (or refcounts into) the keyboard-arrow batch action
+        void BeginKeyboardAction();
+
+        // Appends a translation step to the open keyboard-arrow batch action
+        void AppendKeyboardStep(const Vec2F& delta);
+
+        // Decrements the keyboard-arrow batch refcount; commits the action when no arrow is held
+        void EndKeyboardAction();
 
         // Transforms top selected objects anchors
         void TransformAnchorsObjects(const Basis& transform);
@@ -384,6 +402,8 @@ CLASS_FIELDS_META(Editor::FrameTool)
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mIsDragging);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mChangedFromThis);
     FIELD().PROTECTED().NAME(mTransformAction);
+    FIELD().PROTECTED().NAME(mKeyboardAction);
+    FIELD().PROTECTED().DEFAULT_VALUE(0).NAME(mPressedArrowsCount);
     FIELD().PROTECTED().NAME(mSnapLines);
 }
 END_META;
@@ -405,6 +425,11 @@ CLASS_METHODS_META(Editor::FrameTool)
     FUNCTION().PROTECTED().SIGNATURE(void, TransformObjects, const Basis&);
     FUNCTION().PROTECTED().SIGNATURE(void, TransformObjectsWithAction, const Basis&);
     FUNCTION().PROTECTED().SIGNATURE(void, AppendTransformStep, const Ref<TransformAction>&, const Basis&);
+    FUNCTION().PROTECTED().SIGNATURE(void, AppendPivotStep, const Ref<TransformAction>&, const Vec2F&);
+    FUNCTION().PROTECTED().SIGNATURE(void, AppendAnchorsStep, const Ref<TransformAction>&, const Basis&);
+    FUNCTION().PROTECTED().SIGNATURE(void, BeginKeyboardAction);
+    FUNCTION().PROTECTED().SIGNATURE(void, AppendKeyboardStep, const Vec2F&);
+    FUNCTION().PROTECTED().SIGNATURE(void, EndKeyboardAction);
     FUNCTION().PROTECTED().SIGNATURE(void, TransformAnchorsObjects, const Basis&);
     FUNCTION().PROTECTED().SIGNATURE(void, UpdateSelectionFrame);
     FUNCTION().PROTECTED().SIGNATURE(void, OnCursorPressed, const Input::Cursor&);

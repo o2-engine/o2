@@ -95,6 +95,10 @@ namespace o2
 		bitmap.Fill(Color4(255, 255, 255, 255));
 		bitmap.FillRect(0, 32, 16, 0, Color4(255, 255, 255, 0));
 		mDashLineTexture = mmake<Texture>(bitmap);
+		// Default ClampToEdge wrap collapses the dash UV (which ramps from 0 to
+		// segLength/32 along the line) into a single solid block past U=1. Repeat
+		// makes the 32-px transparent/white pattern actually tile along the line.
+		mDashLineTexture->SetWrap(Texture::Wrap::Repeat);
 	}
 
 	void Render::InitializeLinesIndexBuffer()

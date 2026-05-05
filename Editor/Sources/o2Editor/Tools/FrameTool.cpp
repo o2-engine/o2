@@ -233,17 +233,16 @@ namespace Editor
         if (!o2EditorSceneWindow.IsFocused())
             return;
 
-        if (key == VK_LEFT)
-            TransformObjectsWithAction(Basis::Translated(Vec2F::Left()));
+        bool isArrow = key == VK_LEFT || key == VK_RIGHT || key == VK_UP || key == VK_DOWN;
+        if (isArrow)
+        {
+            BeginKeyboardAction();
 
-        if (key == VK_RIGHT)
-            TransformObjectsWithAction(Basis::Translated(Vec2F::Right()));
-
-        if (key == VK_UP)
-            TransformObjectsWithAction(Basis::Translated(Vec2F::Up()));
-
-        if (key == VK_DOWN)
-            TransformObjectsWithAction(Basis::Translated(Vec2F::Down()));
+            if (key == VK_LEFT)  AppendKeyboardStep(Vec2F::Left());
+            if (key == VK_RIGHT) AppendKeyboardStep(Vec2F::Right());
+            if (key == VK_UP)    AppendKeyboardStep(Vec2F::Up());
+            if (key == VK_DOWN)  AppendKeyboardStep(Vec2F::Down());
+        }
 
         SelectionTool::OnKeyPressed(key);
     }
@@ -256,21 +255,46 @@ namespace Editor
         if (key.pressedTime < 0.3f)
             return;
 
-        if (key == VK_LEFT)
-            TransformObjectsWithAction(Basis::Translated(Vec2F::Left()));
-
-        if (key == VK_RIGHT)
-            TransformObjectsWithAction(Basis::Translated(Vec2F::Right()));
-
-        if (key == VK_UP)
-            TransformObjectsWithAction(Basis::Translated(Vec2F::Up()));
-
-        if (key == VK_DOWN)
-            TransformObjectsWithAction(Basis::Translated(Vec2F::Down()));
+        if (key == VK_LEFT)  AppendKeyboardStep(Vec2F::Left());
+        if (key == VK_RIGHT) AppendKeyboardStep(Vec2F::Right());
+        if (key == VK_UP)    AppendKeyboardStep(Vec2F::Up());
+        if (key == VK_DOWN)  AppendKeyboardStep(Vec2F::Down());
     }
 
     void FrameTool::OnKeyReleased(const Input::Key& key)
-    {}
+    {
+        bool isArrow = key == VK_LEFT || key == VK_RIGHT || key == VK_UP || key == VK_DOWN;
+        if (isArrow)
+            EndKeyboardAction();
+    }
+
+    void FrameTool::BeginKeyboardAction()
+    {
+        if (mPressedArrowsCount == 0)
+            mKeyboardAction = mmake<TransformAction>(o2EditorSceneScreen.GetTopSelectedObjects());
+
+        ++mPressedArrowsCount;
+    }
+
+    void FrameTool::AppendKeyboardStep(const Vec2F& delta)
+    {
+        AppendTransformStep(mKeyboardAction, Basis::Translated(delta));
+        UpdateSelectionFrame();
+        UpdateHandlesTransform();
+    }
+
+    void FrameTool::EndKeyboardAction()
+    {
+        if (mPressedArrowsCount > 0)
+            --mPressedArrowsCount;
+
+        if (mPressedArrowsCount == 0 && mKeyboardAction)
+        {
+            mKeyboardAction->Completed();
+            o2EditorSceneWindow.DoneAction(mKeyboardAction);
+            mKeyboardAction = nullptr;
+        }
+    }
 
     void FrameTool::TransformObjects(const Basis& transform)
     {
@@ -311,43 +335,83 @@ namespace Editor
         action->Append(step);
     }
 
-    void FrameTool::TransformAnchorsObjects(const Basis& transform)
+    void FrameTool::AppendPivotStep(const Ref<TransformAction>& action, const Vec2F& worldPivot)
     {
-        RectF anchorsFrame(transform.origin, transform.origin + Vec2F(transform.xv.Length(), transform.yv.Length()));
+        if (!action)
+            return;
 
-        for (auto& object : o2EditorSceneScreen.GetTopSelectedObjects())
+        auto step = mmake<TransformAction>(o2EditorSceneScreen.GetTopSelectedObjects());
+        step->doneTransforms = step->beforeTransforms;
+        for (auto& t : step->doneTransforms)
         {
-            if (object->IsSupportsLayout())
-            {
-                auto parent = object->GetEditableParent();
-                auto parentWidget = DynamicCast<Widget>(parent);
+            float det = t.transform.xv.x*t.transform.yv.y - t.transform.yv.x*t.transform.xv.y;
+            if (Math::Abs(det) < FLT_EPSILON)
+                continue;
 
-                if (parent)
-                {
-                    RectF parentWorldRect;
-
-                    if (parentWidget)
-                        parentWorldRect = parentWidget->GetChildrenWorldRect();
-                    else
-                        parentWorldRect = parent->GetTransform().AABB();
-
-                    auto prevTransform = object->GetTransform();
-                    Layout layout = object->GetLayout();
-                    layout.anchorMin = (anchorsFrame.LeftBottom() - parentWorldRect.LeftBottom())/parentWorldRect.Size();
-                    layout.anchorMax = (anchorsFrame.RightTop() - parentWorldRect.LeftBottom())/parentWorldRect.Size();
-                    object->SetLayout(layout);
-                    object->UpdateTransform();
-
-                    object->SetTransform(prevTransform);
-                    object->UpdateTransform();
-                }
-            }
+            Vec2F p = worldPivot - t.transform.origin;
+            t.pivot.x = (p.x*t.transform.yv.y - p.y*t.transform.yv.x) / det;
+            t.pivot.y = (t.transform.xv.x*p.y - t.transform.xv.y*p.x) / det;
         }
 
+        action->Append(step);
+    }
+
+    void FrameTool::TransformAnchorsObjects(const Basis& transform)
+    {
         mChangedFromThis = true;
+        AppendAnchorsStep(mTransformAction, transform);
 
         UpdateSelectionFrame();
         UpdateHandlesTransform();
+    }
+
+    void FrameTool::AppendAnchorsStep(const Ref<TransformAction>& action, const Basis& anchorsBasis)
+    {
+        if (!action)
+            return;
+
+        auto selected = o2EditorSceneScreen.GetTopSelectedObjects();
+        auto step = mmake<TransformAction>(selected);
+        step->doneTransforms = step->beforeTransforms;
+
+        RectF anchorsFrame(anchorsBasis.origin,
+                           anchorsBasis.origin + Vec2F(anchorsBasis.xv.Length(),
+                                                       anchorsBasis.yv.Length()));
+
+        for (int i = 0; i < selected.Count(); i++)
+        {
+            auto& object = selected[i];
+            if (!object->IsSupportsLayout())
+                continue;
+
+            auto parent = object->GetEditableParent();
+            if (!parent)
+                continue;
+
+            auto parentWidget = DynamicCast<Widget>(parent);
+            RectF parentWorldRect = parentWidget
+                ? parentWidget->GetChildrenWorldRect()
+                : parent->GetTransform().AABB();
+
+            // Live-resolve: changing anchors cascades through widget offsets, and
+            // SetTransform(prev) compensates by re-deriving offsets to keep the
+            // visible basis pinned. We snapshot the resolved layout — the captured
+            // pair (transform, layout) is what TransformAction::SetTransforms replays
+            // on Redo, so live drag and Redo end at the same state.
+            auto prevTransform = object->GetTransform();
+            Layout layout = object->GetLayout();
+            layout.anchorMin = (anchorsFrame.LeftBottom() - parentWorldRect.LeftBottom()) / parentWorldRect.Size();
+            layout.anchorMax = (anchorsFrame.RightTop() - parentWorldRect.LeftBottom()) / parentWorldRect.Size();
+            object->SetLayout(layout);
+            object->UpdateTransform();
+            object->SetTransform(prevTransform);
+            object->UpdateTransform();
+
+            step->doneTransforms[i].layout = object->GetLayout();
+            step->doneTransforms[i].transform = object->GetTransform();
+        }
+
+        action->Append(step);
     }
 
     void FrameTool::UpdateSelectionFrame()
@@ -469,6 +533,9 @@ namespace Editor
         {
             mIsDragging = false;
             SetHandlesEnable(true);
+            // Body-frame drag may have appended steps; close out the action so the
+            // partial movement is on the undo stack instead of leaked into the world.
+            HandleReleased();
         }
         else
             SelectionTool::OnCursorPressBreak(cursor);
@@ -577,8 +644,11 @@ namespace Editor
     void FrameTool::OnPivotHandle(const Vec2F& position)
     {
         auto selectedObjects = o2EditorSceneScreen.GetSelectedObjects();
-        if (selectedObjects.Count() == 1)
-            selectedObjects[0]->SetPivot(position);
+        if (selectedObjects.Count() != 1)
+            return;
+
+        mChangedFromThis = true;
+        AppendPivotStep(mTransformAction, position);
     }
 
     void FrameTool::OnLeftTopRotateHandle(const Vec2F& position)

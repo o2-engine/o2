@@ -40,6 +40,9 @@ namespace o2
         // Texture filter
         enum class Filter { Linear, Nearest };
 
+        // Texture wrap mode (for U/V coordinates outside [0, 1])
+        enum class Wrap { ClampToEdge, Repeat };
+
         static const Map<TextureFormat, String> formatFileExtensions; // Texture format file extensions
 
     public:
@@ -122,6 +125,12 @@ namespace o2
         // Returns texture filter
         Filter GetFilter() const;
 
+        // Sets texture wrap mode (applies to both S and T axes)
+        void SetWrap(Wrap wrap);
+
+        // Returns texture wrap mode
+        Wrap GetWrap() const;
+
         // Returns true when texture ready to use
         bool IsReady() const;
 
@@ -145,9 +154,10 @@ namespace o2
     protected:
         Vec2I mSize; // Size of texture
 
-        Filter        mFilter = Filter::Linear; // Min/Mag filter
-        TextureFormat mFormat;                  // Texture format
-        Usage         mUsage;                   // Texture usage
+        Filter        mFilter = Filter::Linear;      // Min/Mag filter
+        Wrap          mWrap = Wrap::ClampToEdge;     // S/T wrap mode
+        TextureFormat mFormat;                       // Texture format
+        Usage         mUsage;                        // Texture usage
 
         String mFileName; // Source file name
 
@@ -182,6 +192,9 @@ namespace o2
         // Platform specific set filter
         void PlatformSetFilter();
 
+        // Platform specific set wrap mode
+        void PlatformSetWrap();
+
         // Loads texture from PNG file 
         void LoadPNG(const String& fileName);
 
@@ -199,4 +212,6 @@ namespace o2
 PRE_ENUM_META(o2::Texture::Usage);
 
 PRE_ENUM_META(o2::Texture::Filter);
+
+PRE_ENUM_META(o2::Texture::Wrap);
 // --- END META ---
