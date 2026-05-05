@@ -3,8 +3,7 @@
 
 #include "o2/Scene/Actor.h"
 #include "o2/Scene/Scene.h"
-#include "o2Editor/Windows/SceneWindow/SceneEditScreen.h"
-#include "o2Editor/Windows/TreeWindow/TreeWindow.h"
+#include "o2Editor/Actions/IActionsUIBridge.h"
 
 namespace Editor
 {
@@ -52,8 +51,8 @@ namespace Editor
                 object->SetIndexInSiblings(insertIdx++);
         }
 
-        o2EditorTree.HighlightObjectTreeNode(objects.Last());
-        o2EditorSceneScreen.SelectObjectsWithoutAction(objects, false);
+        ActionsUIBridge::Current().HighlightObjectTreeNode(objects.Last());
+        ActionsUIBridge::Current().SelectObjectsWithoutAction(objects, false);
     }
 
     void CreateAction::Undo()
@@ -65,7 +64,7 @@ namespace Editor
 //                 delete object;
         }
 
-        o2EditorSceneScreen.ClearSelectionWithoutAction();
+        ActionsUIBridge::Current().ClearSelectionWithoutAction(true);
     }
 
 }

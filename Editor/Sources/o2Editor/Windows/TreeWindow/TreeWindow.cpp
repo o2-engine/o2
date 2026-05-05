@@ -512,15 +512,42 @@ namespace Editor
         auto selectedObjects = o2EditorSceneScreen.GetTopSelectedObjects();
 
         Vector<Ref<SceneEditableObject>> newObjects;
+        Map<Ref<SceneEditableObject>, Vector<Ref<SceneEditableObject>>> byParent;
+        Vector<Ref<SceneEditableObject>> parentOrder;
 
         for (auto& object : selectedObjects)
         {
             auto copy = object->CloneAsRef<SceneEditableObject>();
-            copy->SetEditableParent(object->GetEditableParent());
+            copy->GenerateNewID();
+
+            auto parent = object->GetEditableParent();
+            copy->SetEditableParent(parent);
             newObjects.Add(copy);
+
+            if (!byParent.ContainsKey(parent))
+            {
+                byParent.Add(parent, {});
+                parentOrder.Add(parent);
+            }
+            byParent[parent].Add(copy);
         }
 
         mSceneTree->UpdateNodesView();
+
+        for (auto& parent : parentOrder)
+        {
+            auto& clones = byParent[parent];
+            auto siblings = parent ? parent->GetEditableChildren() : o2Scene.GetRootEditableObjects();
+
+            Ref<SceneEditableObject> prevObject;
+            int firstCloneIdx = siblings.IndexOf(clones.First());
+            if (firstCloneIdx > 0)
+                prevObject = siblings[firstCloneIdx - 1];
+
+            auto action = mmake<CreateAction>(clones, parent, prevObject);
+            o2EditorSceneWindow.DoneAction(action);
+        }
+
         mSceneTree->SetSelectedObjects(newObjects);
     }
 
@@ -553,29 +580,25 @@ namespace Editor
     void TreeWindow::OnContextLockPressed()
     {
         auto selectedObjects = mSceneTree->GetSelectedObjects();
+        if (selectedObjects.IsEmpty())
+            return;
 
-        bool value = selectedObjects.Count() > 0 ? !selectedObjects.Last()->IsLocked() : true;
+        bool value = !selectedObjects.Last()->IsLocked();
         auto action = mmake<LockAction>(selectedObjects, value);
+        action->Redo();
         o2EditorSceneWindow.DoneAction(action);
-
-        for (auto& object : selectedObjects)
-        {
-            object->SetLocked(value);
-        }
     }
 
     void TreeWindow::OnContextEnablePressed()
     {
         auto selectedObjects = mSceneTree->GetSelectedObjects();
+        if (selectedObjects.IsEmpty())
+            return;
 
-        bool value = selectedObjects.Count() > 0 ? !selectedObjects.Last()->IsEnabled() : true;
-        auto action = mmake<LockAction>(selectedObjects, value);
+        bool value = !selectedObjects.Last()->IsEnabled();
+        auto action = mmake<EnableAction>(selectedObjects, value);
+        action->Redo();
         o2EditorSceneWindow.DoneAction(action);
-
-        for (auto& object : selectedObjects)
-        {
-            object->SetEnabled(value);
-        }
     }
 
     void TreeWindow::OnViewLayersToggled(bool view)

@@ -2,9 +2,7 @@
 #include "Reparent.h"
 
 #include "o2/Scene/Actor.h"
-#include "o2Editor/Windows/SceneWindow/SceneEditScreen.h"
-#include "o2Editor/Windows/TreeWindow/SceneHierarchyTree.h"
-#include "o2Editor/Windows/TreeWindow/TreeWindow.h"
+#include "o2Editor/Actions/IActionsUIBridge.h"
 
 namespace Editor
 {
@@ -56,15 +54,25 @@ namespace Editor
         auto parent = o2Scene.GetEditableObjectByID(newParentId);
         auto prevObject = o2Scene.GetEditableObjectByID(newPrevObjectId);
 
+        // Detach first so insertIdx survives same-parent reorder
+        Vector<Ref<SceneEditableObject>> moved;
+        for (auto& info : objectsInfos)
+        {
+            auto object = o2Scene.GetEditableObjectByID(info.objectId);
+            if (!object)
+                continue;
+            object->SetEditableParent(nullptr);
+            moved.Add(object);
+        }
+
         if (parent)
         {
             int insertIdx = parent->GetEditableChildren().IndexOf(prevObject) + 1;
-
             for (auto& info : objectsInfos)
             {
                 auto object = o2Scene.GetEditableObjectByID(info.objectId);
-
-                object->SetEditableParent(nullptr);
+                if (!object)
+                    continue;
                 parent->AddEditableChild(object, insertIdx++);
                 object->SetTransform(info.transform);
             }
@@ -72,21 +80,20 @@ namespace Editor
         else
         {
             int insertIdx = 0;
-            
             if (auto prevActor = DynamicCast<Actor>(prevObject))
                 insertIdx = o2Scene.GetRootActors().IndexOf(prevActor) + 1;
 
             for (auto& info : objectsInfos)
             {
                 auto object = o2Scene.GetEditableObjectByID(info.objectId);
-
-                object->SetEditableParent(nullptr);
+                if (!object)
+                    continue;
                 object->SetIndexInSiblings(insertIdx++);
                 object->SetTransform(info.transform);
             }
         }
 
-        o2EditorTree.UpdateTreeView();
+        ActionsUIBridge::Current().UpdateTreeView();
     }
 
     void ReparentAction::Undo()
@@ -94,6 +101,8 @@ namespace Editor
         for (auto& info : objectsInfos)
         {
             auto object = o2Scene.GetEditableObjectByID(info.objectId);
+            if (!object)
+                continue;
             auto parent = o2Scene.GetEditableObjectByID(info.lastParentId);
             auto prevObject = o2Scene.GetEditableObjectByID(info.lastPrevObjectId);
 
@@ -113,7 +122,7 @@ namespace Editor
             }
         }
 
-        o2EditorTree.UpdateTreeView();
+        ActionsUIBridge::Current().UpdateTreeView();
     }
 }
 // --- META ---

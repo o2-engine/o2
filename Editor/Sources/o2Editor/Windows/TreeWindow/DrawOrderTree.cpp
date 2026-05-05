@@ -536,14 +536,22 @@ namespace Editor
 
     void DrawOrderTreeNode::OnLockClicked()
     {
-        if (mTarget->object)
-            mTarget->object->SetLocked(mLockToggle->GetValue());
+        if (!mTarget->object)
+            return;
+
+        auto action = mmake<LockAction>(Vector<Ref<SceneEditableObject>>{ mTarget->object }, mLockToggle->GetValue());
+        action->Redo();
+        o2EditorSceneWindow.DoneAction(action);
     }
 
     void DrawOrderTreeNode::OnEnableCkicked()
     {
-        if (mTarget->object)
-            mTarget->object->SetEnabled(mEnableToggle->GetValue());
+        if (!mTarget->object)
+            return;
+
+        auto action = mmake<EnableAction>(Vector<Ref<SceneEditableObject>>{ mTarget->object }, mEnableToggle->GetValue());
+        action->Redo();
+        o2EditorSceneWindow.DoneAction(action);
     }
 
     void DrawOrderTreeNode::OnObjectNameChanged(const WString& text)

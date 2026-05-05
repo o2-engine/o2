@@ -516,12 +516,22 @@ namespace Editor
 
     void SceneHierarchyTreeNode::OnLockClicked()
     {
-        mTargetObject->SetLocked(mLockToggle->GetValue());
+        if (!mTargetObject)
+            return;
+
+        auto action = mmake<LockAction>(Vector<Ref<SceneEditableObject>>{ mTargetObject }, mLockToggle->GetValue());
+        action->Redo();
+        o2EditorSceneWindow.DoneAction(action);
     }
 
     void SceneHierarchyTreeNode::OnEnableCkicked()
     {
-        mTargetObject->SetEnabled(mEnableToggle->GetValue());
+        if (!mTargetObject)
+            return;
+
+        auto action = mmake<EnableAction>(Vector<Ref<SceneEditableObject>>{ mTargetObject }, mEnableToggle->GetValue());
+        action->Redo();
+        o2EditorSceneWindow.DoneAction(action);
     }
 
     void SceneHierarchyTreeNode::OnObjectNameChanged(const WString& text)

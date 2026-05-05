@@ -299,6 +299,7 @@ namespace Editor
         friend class SceneWindow;
         friend class TreeWindow;
         friend class CreateAction;
+        friend class DefaultActionsUIBridge;
     };
 }
 

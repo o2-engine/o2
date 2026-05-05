@@ -3,9 +3,7 @@
 
 #include "o2/Scene/Actor.h"
 #include "o2/Scene/Scene.h"
-#include "o2Editor/Windows/SceneWindow/SceneEditScreen.h"
-#include "o2Editor/Windows/TreeWindow/SceneHierarchyTree.h"
-#include "o2Editor/Windows/TreeWindow/TreeWindow.h"
+#include "o2Editor/Actions/IActionsUIBridge.h"
 
 namespace Editor
 {
@@ -72,8 +70,8 @@ namespace Editor
 //                 delete object;
         }
 
-        o2EditorSceneScreen.ClearSelectionWithoutAction();
-        o2EditorTree.UpdateTreeView();
+        ActionsUIBridge::Current().ClearSelectionWithoutAction(true);
+        ActionsUIBridge::Current().UpdateTreeView();
     }
 
     void DeleteAction::Undo()
@@ -92,7 +90,7 @@ namespace Editor
                 info.objectData.Get(newObject);
                 parent->AddEditableChild(newObject, idx);
 
-                o2EditorSceneScreen.SelectObjectWithoutAction(newObject);
+                ActionsUIBridge::Current().SelectObjectWithoutAction(newObject, true);
                 lastRestored = newObject;
             }
             else
@@ -103,13 +101,13 @@ namespace Editor
                 info.objectData.Get(newObject);
                 newObject->SetIndexInSiblings(idx);
 
-                o2EditorSceneScreen.SelectObjectWithoutAction(newObject);
+                ActionsUIBridge::Current().SelectObjectWithoutAction(newObject, true);
                 lastRestored = newObject;
             }
         }
 
-        o2EditorTree.HighlightObjectTreeNode(lastRestored);
-        o2EditorTree.UpdateTreeView();
+        ActionsUIBridge::Current().HighlightObjectTreeNode(lastRestored);
+        ActionsUIBridge::Current().UpdateTreeView();
     }
 
     bool DeleteAction::ObjectInfo::operator==(const ObjectInfo& other) const
