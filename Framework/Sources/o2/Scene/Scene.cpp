@@ -859,6 +859,12 @@ namespace o2
             for (auto& obj : changedObjectsCopy)
                 obj->Update(0.0f);
 
+            // Reset per-frame guard set in OnObjectChanged so a later change in
+            // the same frame (e.g. Undo right after a drag) is not silently dropped.
+            for (auto& obj : mChangedObjects)
+                if (obj)
+                    obj->changedFrame = 0;
+
             mChangedObjects.Clear();
 
             UpdateAddedEntities();

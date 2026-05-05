@@ -442,7 +442,8 @@ namespace Editor
 
         ForcePopEditorScopeOnStack scope;
 
-        Application::PreUpdatePhysics();
+        if (mUpdateStep)
+            Application::PreUpdatePhysics();
     }
 
     void EditorApplication::UpdatePhysics(float dt)
