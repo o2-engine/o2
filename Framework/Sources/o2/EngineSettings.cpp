@@ -91,8 +91,20 @@ const char* GetAssetsRootPath()
     return "Assets/";
 }
 
+namespace
+{
+    // Holds a runtime override for the assets directory. Empty means "use the
+    // platform default". Static char buffer so GetAssetsPath() can keep returning
+    // const char* with stable lifetime.
+    char assetsPathOverride[512] = "";
+    bool assetsPathOverrideSet = false;
+}
+
 const char* GetAssetsPath()
 {
+    if (assetsPathOverrideSet)
+        return assetsPathOverride;
+
     static char path[256] = "";
     static bool initialized = false;
     if (!initialized)
@@ -103,6 +115,20 @@ const char* GetAssetsPath()
     }
 
     return path;
+}
+
+void SetAssetsPathOverride(const char* path)
+{
+    if (!path || path[0] == '\0')
+    {
+        assetsPathOverride[0] = '\0';
+        assetsPathOverrideSet = false;
+        return;
+    }
+
+    strncpy(assetsPathOverride, path, sizeof(assetsPathOverride) - 1);
+    assetsPathOverride[sizeof(assetsPathOverride) - 1] = '\0';
+    assetsPathOverrideSet = true;
 }
 
 const char* GetBuiltAssetsPath()

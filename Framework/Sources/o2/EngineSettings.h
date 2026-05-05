@@ -83,6 +83,11 @@ const char* GetBasicAtlasPath();
 // Assets path. Relative from executable
 const char* GetAssetsPath();
 
+// Overrides the assets path that GetAssetsPath() returns. Test runners use this to
+// point the engine at a sandbox directory instead of the project's real Assets/.
+// Pass an empty string to clear the override and fall back to the platform default.
+void SetAssetsPathOverride(const char* path);
+
 // Built assets path with built assets. Relative from executable
 const char* GetBuiltAssetsPath();
 
