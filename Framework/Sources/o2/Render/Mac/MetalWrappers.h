@@ -32,7 +32,8 @@ namespace o2
     
     struct MTLTextureImpl
     {
-        id<MTLTexture> texture;
+        id<MTLTexture>      texture;
+        id<MTLSamplerState> samplerState; // Wrap+filter state, rebuilt on PlatformSetWrap/Filter
     };
 
     struct MTLShaderImpl

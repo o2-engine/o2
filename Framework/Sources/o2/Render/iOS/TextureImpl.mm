@@ -9,6 +9,29 @@
 
 namespace o2
 {
+    namespace
+    {
+        // Builds an MTLSamplerState from o2 wrap+filter modes
+        id<MTLSamplerState> BuildSamplerState(Texture::Wrap wrap, Texture::Filter filter)
+        {
+            MTLSamplerAddressMode address = wrap == Texture::Wrap::Repeat
+                ? MTLSamplerAddressModeRepeat
+                : MTLSamplerAddressModeClampToEdge;
+
+            MTLSamplerMinMagFilter minMag = filter == Texture::Filter::Nearest
+                ? MTLSamplerMinMagFilterNearest
+                : MTLSamplerMinMagFilterLinear;
+
+            MTLSamplerDescriptor* desc = [[MTLSamplerDescriptor alloc] init];
+            desc.sAddressMode = address;
+            desc.tAddressMode = address;
+            desc.minFilter = minMag;
+            desc.magFilter = minMag;
+
+            return [RenderDevice::device newSamplerStateWithDescriptor:desc];
+        }
+    }
+
     TextureBase::TextureBase():
         mImpl(mnew MTLTextureImpl())
     {}
@@ -29,6 +52,7 @@ namespace o2
             textureDescriptor.usage = MTLTextureUsageRenderTarget|MTLTextureUsageShaderRead;
 
         mImpl->texture = [RenderDevice::device newTextureWithDescriptor:textureDescriptor];
+        mImpl->samplerState = BuildSamplerState(mWrap, mFilter);
 
         return mImpl->texture != nil;
     }
@@ -36,7 +60,10 @@ namespace o2
     void Texture::PlatformDestroy()
     {
         if (mImpl)
+        {
             mImpl->texture = nil;
+            mImpl->samplerState = nil;
+        }
     }
 
     void Texture::PlatformUploadData(const Vec2I& size, Byte* data, TextureFormat format)
@@ -67,12 +94,14 @@ namespace o2
 
     void Texture::PlatformSetFilter()
     {
-        // TODO
+        if (mImpl)
+            mImpl->samplerState = BuildSamplerState(mWrap, mFilter);
     }
 
     void Texture::PlatformSetWrap()
     {
-        // TODO
+        if (mImpl)
+            mImpl->samplerState = BuildSamplerState(mWrap, mFilter);
     }
 }
 

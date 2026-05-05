@@ -228,7 +228,10 @@ namespace o2
             TextureRef primaryTexture = mCurrentDrawTexture ? mCurrentDrawTexture : mWhiteTexture;
             if (primaryTexture && mCurrentMaterial->GetTextureUniform() >= 0)
             {
-                [renderEncoder setFragmentTexture:primaryTexture->mImpl->texture atIndex:(NSUInteger)mCurrentMaterial->GetTextureUniform()];
+                NSUInteger slot = (NSUInteger)mCurrentMaterial->GetTextureUniform();
+                [renderEncoder setFragmentTexture:primaryTexture->mImpl->texture atIndex:slot];
+                if (primaryTexture->mImpl->samplerState)
+                    [renderEncoder setFragmentSamplerState:primaryTexture->mImpl->samplerState atIndex:slot];
             }
 
             for (int i = 0; i < mCurrentMaterial->mSamplerLocations.Count() && i < mCurrentMaterial->mSamplers.Count(); i++)
@@ -241,7 +244,10 @@ namespace o2
                 if (!samplerTexture)
                     continue;
 
-                [renderEncoder setFragmentTexture:samplerTexture->mImpl->texture atIndex:(NSUInteger)samplerLocation.textureIndex];
+                NSUInteger slot = (NSUInteger)samplerLocation.textureIndex;
+                [renderEncoder setFragmentTexture:samplerTexture->mImpl->texture atIndex:slot];
+                if (samplerTexture->mImpl->samplerState)
+                    [renderEncoder setFragmentSamplerState:samplerTexture->mImpl->samplerState atIndex:slot];
             }
 
             mCurrentMaterial->ApplyParams();

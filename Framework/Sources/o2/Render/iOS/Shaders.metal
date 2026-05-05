@@ -28,9 +28,9 @@ vertexShader(uint vertexID [[vertex_id]],
 
 fragment float4
 fragmentShader(RasterizerData in [[stage_in]],
-               texture2d<half> colorTexture [[ texture(0) ]])
+               texture2d<half> colorTexture [[ texture(0) ]],
+               sampler textureSampler [[ sampler(0) ]])
 {
-    constexpr sampler textureSampler (mag_filter::linear, min_filter::linear);
     const half4 colorSample = colorTexture.sample(textureSampler, in.textureCoordinate);
     return float4(colorSample) * in.color;
 }
