@@ -456,10 +456,17 @@ namespace o2
             int lastIdx = parent->mChildren.IndexOf(Ref(this));
             parent->mChildren.Insert(Ref(this), index);
 
-            if (index <= lastIdx)
-                lastIdx++;
+            if (lastIdx < 0)
+            {
+                // Not previously in mChildren (pending-add state): nothing to remove
+            }
+            else
+            {
+                if (index <= lastIdx)
+                    lastIdx++;
 
-            parent->mChildren.RemoveAt(lastIdx);
+                parent->mChildren.RemoveAt(lastIdx);
+            }
 
             parent->OnChildrenChanged();
         }
@@ -470,10 +477,17 @@ namespace o2
                 int lastIdx = o2Scene.mRootActors.IndexOf(Ref(this));
                 o2Scene.mRootActors.Insert(Ref(this), index);
 
-                if (index <= lastIdx)
-                    lastIdx++;
+                if (lastIdx < 0)
+                {
+                    // Not previously in mRootActors (pending-add state): nothing to remove
+                }
+                else
+                {
+                    if (index <= lastIdx)
+                        lastIdx++;
 
-                o2Scene.mRootActors.RemoveAt(lastIdx);
+                    o2Scene.mRootActors.RemoveAt(lastIdx);
+                }
             }
         }
     }

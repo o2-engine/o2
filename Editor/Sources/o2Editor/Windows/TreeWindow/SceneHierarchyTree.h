@@ -16,9 +16,6 @@ using namespace o2;
 
 namespace Editor
 {
-    FORWARD_CLASS_REF(ActorProperty);
-    FORWARD_CLASS_REF(ComponentProperty);
-
     // -----------------
     // Scene tree widget
     // -----------------
@@ -96,9 +93,6 @@ namespace Editor
         Ref<ToggleGroup> mLockTogglesGroup;         // Lock objects toggles group
         bool         mAttachedToSceneEvents; // Is tree attached to scene events
 
-        Ref<ActorProperty>     mDragActorPropertyField;     // Actor property field under cursor when dragging actor
-        Ref<ComponentProperty> mDragComponentPropertyField; // Component property field under cursor when dragging actor
-
         Vector<SceneUID> mExpandedActorsCache; // Expanded actors cache, used to restore expanded state after scene reload
 
         bool mWatchEditor = false;
@@ -143,14 +137,8 @@ namespace Editor
         // Called when object was changed
         void OnObjectChanged(const Ref<SceneEditableObject>& object);
 
-        // Called when enable objects toggle group pressed
-        void EnableObjectsGroupPressed(bool value);
-
         // Called when enable objects toggle group released
         void EnableObjectsGroupReleased(bool value);
-
-        // Called when lock objects toggle group pressed
-        void LockObjectsGroupPressed(bool value);
 
         // Called when lock objects toggle group released
         void LockObjectsGroupReleased(bool value);
@@ -254,8 +242,6 @@ CLASS_FIELDS_META(Editor::SceneHierarchyTree)
     FIELD().PROTECTED().NAME(mEnableTogglesGroup);
     FIELD().PROTECTED().NAME(mLockTogglesGroup);
     FIELD().PROTECTED().NAME(mAttachedToSceneEvents);
-    FIELD().PROTECTED().NAME(mDragActorPropertyField);
-    FIELD().PROTECTED().NAME(mDragComponentPropertyField);
     FIELD().PROTECTED().NAME(mExpandedActorsCache);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mWatchEditor);
 }
@@ -294,9 +280,7 @@ CLASS_METHODS_META(Editor::SceneHierarchyTree)
     FUNCTION().PROTECTED().SIGNATURE(void, OnObjectDestroing, const Ref<SceneEditableObject>&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnObjectsChanged, const Vector<Ref<SceneEditableObject>>&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnObjectChanged, const Ref<SceneEditableObject>&);
-    FUNCTION().PROTECTED().SIGNATURE(void, EnableObjectsGroupPressed, bool);
     FUNCTION().PROTECTED().SIGNATURE(void, EnableObjectsGroupReleased, bool);
-    FUNCTION().PROTECTED().SIGNATURE(void, LockObjectsGroupPressed, bool);
     FUNCTION().PROTECTED().SIGNATURE(void, LockObjectsGroupReleased, bool);
     FUNCTION().PROTECTED().SIGNATURE(void, OnNodesSelectionChanged, Vector<void*>);
     FUNCTION().PROTECTED().SIGNATURE(void, OnDragEnter, const Ref<ISelectableDragableObjectsGroup>&);

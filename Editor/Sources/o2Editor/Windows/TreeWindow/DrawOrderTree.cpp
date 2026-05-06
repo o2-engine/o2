@@ -26,14 +26,12 @@
 #include "o2Editor/Actions/PropertyChange.h"
 #include "o2Editor/Actions/Reparent.h"
 #include "o2Editor/EditorApplication.h"
-#include "o2Editor/Properties/Basic/ActorProperty.h"
-#include "o2Editor/Properties/Basic/ComponentProperty.h"
 #include "o2Editor/UIRoot.h"
 
 namespace Editor
 {
     DrawOrderTree::DrawOrderTree(RefCounter* refCounter) :
-        Tree(refCounter), mAttachedToSceneEvents(false), mDragActorPropertyField(nullptr), mDragComponentPropertyField(nullptr)
+        Tree(refCounter), mAttachedToSceneEvents(false)
     {
         mNodeWidgetSample = mmake<DrawOrderTreeNode>();
         mNodeWidgetSample->layout->minHeight = 20;
@@ -43,7 +41,7 @@ namespace Editor
     }
 
     DrawOrderTree::DrawOrderTree(RefCounter* refCounter, const DrawOrderTree& other) :
-        Tree(refCounter, other), mAttachedToSceneEvents(false), mDragActorPropertyField(nullptr), mDragComponentPropertyField(nullptr)
+        Tree(refCounter, other), mAttachedToSceneEvents(false)
     {
         Initialize();
     }
@@ -282,17 +280,12 @@ namespace Editor
         auto editableObjects = objects.Convert<Ref<SceneEditableObject>>([](void* x) { return Ref((SceneEditableObject*)x); });
 
         auto action = mmake<ReparentAction>(editableObjects);
-
-        o2Scene.ReparentEditableObjects(editableObjects, newParentEditableObject, prevEditableObject);
-
-        action->ObjectsReparented(mParent.Lock(), prevEditableObject);
+        action->ObjectsReparented(newParentEditableObject, prevEditableObject);
+        action->Redo();
         o2EditorSceneWindow.DoneAction(action);
 
         Tree::OnDraggedObjects(objects, newParent, prevObject);
     }
-
-    void DrawOrderTree::EnableObjectsGroupPressed(bool value)
-    {}
 
     void DrawOrderTree::EnableObjectsGroupReleased(bool value)
     {
@@ -305,9 +298,6 @@ namespace Editor
         auto action = mmake<EnableAction>(objects, value);
         o2EditorSceneWindow.DoneAction(action);
     }
-
-    void DrawOrderTree::LockObjectsGroupPressed(bool value)
-    {}
 
     void DrawOrderTree::LockObjectsGroupReleased(bool value)
     {
@@ -558,18 +548,16 @@ namespace Editor
     {
         if (mTarget->object)
         {
-            String prevName = mTarget->object->GetName();
+            DataDocument prevData; prevData = mTarget->object->GetName();
+            DataDocument newData;  newData  = String(text);
 
-            mTarget->object->SetName(text);
+            auto action = mmake<PropertyChangeAction>(Vector<Ref<SceneEditableObject>>{ mTarget->object }, "name",
+                                                      Vector<DataDocument>{ prevData }, Vector<DataDocument>{ newData });
+            action->Redo();
+
             mEditState->SetState(false);
             (DynamicCast<DrawOrderTree>(mOwnerTree.Lock()))->OnObjectChanged(mTarget->object);
 
-
-            DataDocument prevData; prevData = prevName;
-            DataDocument newData; newData = mTarget->object->GetName();
-
-            auto action = mmake<PropertyChangeAction>(Vector<Ref<SceneEditableObject>>{ mTarget->object }, "name", 
-                                                      Vector<DataDocument>{ prevData }, Vector<DataDocument>{ newData });
             o2EditorSceneWindow.DoneAction(action);
         }
     }

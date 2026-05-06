@@ -10,7 +10,7 @@ namespace Editor
     CreateAction::CreateAction()
     {}
 
-    CreateAction::CreateAction(const Vector<Ref<SceneEditableObject>>& objects, 
+    CreateAction::CreateAction(const Vector<Ref<SceneEditableObject>>& objects,
                                const Ref<SceneEditableObject>& parent, const Ref<SceneEditableObject>& prevObject)
     {
         objectsIds = objects.Convert<SceneUID>([](auto& x) { return x->GetID(); });

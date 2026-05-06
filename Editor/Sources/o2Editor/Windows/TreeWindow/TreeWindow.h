@@ -118,9 +118,6 @@ namespace Editor
         // Called after that all windows was created
         void PostInitializeWindow() override;
 
-        // Called when search button pressed
-        void OnSearchPressed();
-
         // Called when list-tree toggle changed value
         void OnListTreeToggled(bool value);
 
@@ -144,9 +141,6 @@ namespace Editor
 
         // Called when pressed "Create sprite" in context menu
         void OnContextCreateSprite();
-
-        // Called when pressed "Create button" in context menu
-        void OnContextCreateButton();
 
         // Called when pressed "Copy" in context menu
         void OnContextCopyPressed();
@@ -246,7 +240,6 @@ CLASS_METHODS_META(Editor::TreeWindow)
     FUNCTION().PROTECTED().SIGNATURE(void, InitUIStyleCreateMenu);
     FUNCTION().PROTECTED().SIGNATURE(void, InitUILayersCreateMenu);
     FUNCTION().PROTECTED().SIGNATURE(void, PostInitializeWindow);
-    FUNCTION().PROTECTED().SIGNATURE(void, OnSearchPressed);
     FUNCTION().PROTECTED().SIGNATURE(void, OnListTreeToggled, bool);
     FUNCTION().PROTECTED().SIGNATURE(void, OnSearchEdited, const WString&);
     FUNCTION().PROTECTED().SIGNATURE(void, SearchObjectsRecursive, const Ref<SceneEditableObject>&, const String&);
@@ -254,7 +247,6 @@ CLASS_METHODS_META(Editor::TreeWindow)
     FUNCTION().PROTECTED().SIGNATURE(void, OnCreateObject, const Ref<SceneEditableObject>&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnContextCreateNewPressed);
     FUNCTION().PROTECTED().SIGNATURE(void, OnContextCreateSprite);
-    FUNCTION().PROTECTED().SIGNATURE(void, OnContextCreateButton);
     FUNCTION().PROTECTED().SIGNATURE(void, OnContextCopyPressed);
     FUNCTION().PROTECTED().SIGNATURE(void, OnContextCutPressed);
     FUNCTION().PROTECTED().SIGNATURE(void, OnContextPastePressed);

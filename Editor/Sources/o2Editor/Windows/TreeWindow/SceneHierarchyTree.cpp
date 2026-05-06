@@ -27,14 +27,12 @@
 #include "o2Editor/Windows/WindowsManager.h"
 #include "o2Editor/Windows/SceneWindow/SceneWindow.h"
 #include "o2Editor/Windows/TreeWindow/TreeWindow.h"
-#include "o2Editor/Properties/Basic/ActorProperty.h"
-#include "o2Editor/Properties/Basic/ComponentProperty.h"
 #include "o2Editor/UIRoot.h"
 
 namespace Editor
 {
     SceneHierarchyTree::SceneHierarchyTree(RefCounter* refCounter) :
-        Tree(refCounter), mAttachedToSceneEvents(false), mDragActorPropertyField(nullptr), mDragComponentPropertyField(nullptr)
+        Tree(refCounter), mAttachedToSceneEvents(false)
     {
         mNodeWidgetSample = mmake<SceneHierarchyTreeNode>();
         mNodeWidgetSample->layout->minHeight = 20;
@@ -44,7 +42,7 @@ namespace Editor
     }
 
     SceneHierarchyTree::SceneHierarchyTree(RefCounter* refCounter, const SceneHierarchyTree& other) :
-        Tree(refCounter, other), mAttachedToSceneEvents(false), mDragActorPropertyField(nullptr), mDragComponentPropertyField(nullptr)
+        Tree(refCounter, other), mAttachedToSceneEvents(false)
     {
         Initialize();
     }
@@ -260,17 +258,12 @@ namespace Editor
         auto editableObjects = objects.Convert<Ref<SceneEditableObject>>([](void* x) { return Ref((SceneEditableObject*)x); });
 
         auto action = mmake<ReparentAction>(editableObjects);
-
-        o2Scene.ReparentEditableObjects(editableObjects, newParentEditableObject, prevEditableObject);
-
-        action->ObjectsReparented(mParent.Lock(), prevEditableObject);
+        action->ObjectsReparented(newParentEditableObject, prevEditableObject);
+        action->Redo();
         o2EditorSceneWindow.DoneAction(action);
 
         Tree::OnDraggedObjects(objects, newParent, prevObject);
     }
-
-    void SceneHierarchyTree::EnableObjectsGroupPressed(bool value)
-    {}
 
     void SceneHierarchyTree::EnableObjectsGroupReleased(bool value)
     {
@@ -283,9 +276,6 @@ namespace Editor
         auto action = mmake<EnableAction>(objects, value);
         o2EditorSceneWindow.DoneAction(action);
     }
-
-    void SceneHierarchyTree::LockObjectsGroupPressed(bool value)
-    {}
 
     void SceneHierarchyTree::LockObjectsGroupReleased(bool value)
     {
@@ -536,18 +526,16 @@ namespace Editor
 
     void SceneHierarchyTreeNode::OnObjectNameChanged(const WString& text)
     {
-        String prevName = mTargetObject->GetName();
-
-        mTargetObject->SetName(text);
-        mEditState->SetState(false);
-        DynamicCast<SceneHierarchyTree>(mOwnerTree.Lock())->OnObjectChanged(mTargetObject);
-
-
-        DataDocument prevData; prevData = prevName;
-        DataDocument newData; newData = mTargetObject->GetName();
+        DataDocument prevData; prevData = mTargetObject->GetName();
+        DataDocument newData;  newData  = String(text);
 
         auto action = mmake<PropertyChangeAction>(Vector<Ref<SceneEditableObject>>{ mTargetObject }, "name",
                                                   Vector<DataDocument>{ prevData }, Vector<DataDocument>{ newData });
+        action->Redo();
+
+        mEditState->SetState(false);
+        DynamicCast<SceneHierarchyTree>(mOwnerTree.Lock())->OnObjectChanged(mTargetObject);
+
         o2EditorSceneWindow.DoneAction(action);
     }
 }

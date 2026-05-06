@@ -155,13 +155,15 @@ TEST(RenderedAssetsSandbox, OutFileInFileRoundTripInSandbox)
         out.WriteData(payload, sizeof(payload) - 1);
     }
 
-    InFile in(path);
-    ASSERT_TRUE(in.IsOpened());
-    EXPECT_EQ(in.GetDataSize(), 14u);
+    {
+        InFile in(path);
+        ASSERT_TRUE(in.IsOpened());
+        EXPECT_EQ(in.GetDataSize(), 14u);
 
-    char buf[32] = {};
-    in.ReadData(buf, 14);
-    EXPECT_STREQ(buf, "rendered-bytes");
+        char buf[32] = {};
+        in.ReadData(buf, 14);
+        EXPECT_STREQ(buf, "rendered-bytes");
+    }
 
     o2FileSystem.FileDelete(path);
 }

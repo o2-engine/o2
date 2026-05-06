@@ -59,8 +59,11 @@ namespace o2::RenderedTests
             // each other's seed/teardown.
             std::string leaf = "RenderTestAssets_" + std::to_string(o2_test_getpid());
             std::filesystem::path root = dir / leaf;
-            String s(root.string());
-            if (!s.IsEmpty() && s[s.Length() - 1] != '/' && s[s.Length() - 1] != '\\')
+            // generic_string() forces forward-slash separators. o2FileSystem helpers
+            // (ExtractPathStr, FolderCreate's recursive parent-walk) only split on '/',
+            // so a backslash-only path breaks the recursive create on Windows.
+            String s(root.generic_string());
+            if (!s.IsEmpty() && s[s.Length() - 1] != '/')
                 s += "/";
             return s;
         }
@@ -82,6 +85,20 @@ namespace o2::RenderedTests
 // files in that sandbox without touching the project's real Assets/.
 int main(int argc, char** argv)
 {
+    // Builtin-asset paths (GetBuiltinAssetsPath() = "../../BuiltAssets/Windows/FrameworkData/")
+    // are resolved relative to the cwd. ctest sets WORKING_DIRECTORY to the exe folder, but a
+    // direct invocation from any other cwd breaks shader/font/Math.js loading. Pin cwd here so
+    // both paths behave identically.
+    if (argc > 0 && argv[0])
+    {
+        std::filesystem::path exe(argv[0]);
+        if (exe.has_parent_path())
+        {
+            std::error_code ec;
+            std::filesystem::current_path(exe.parent_path(), ec);
+        }
+    }
+
     InitializeTypeso2TestsSupport();
     InitializeTypeso2RenderTests();
     INITIALIZE_O2;

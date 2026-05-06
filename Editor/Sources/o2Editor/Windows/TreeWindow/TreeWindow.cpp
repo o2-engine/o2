@@ -220,9 +220,10 @@ namespace Editor
 
         mTreeContextMenu->AddItem("---");
 
-        mTreeContextMenu->AddItem("Save prototype", [&]() { OnContextCopyPressed(); });
-        mTreeContextMenu->AddItem("Reset to prototype", [&]() { OnContextCopyPressed(); });
-        mTreeContextMenu->AddItem("Break link to prototype", [&]() { OnContextCopyPressed(); });
+        // TODO: prototype workflow not implemented
+        mTreeContextMenu->AddItem("Save prototype", [](){});
+        mTreeContextMenu->AddItem("Reset to prototype", [](){});
+        mTreeContextMenu->AddItem("Break link to prototype", [](){});
 
         mTreeContextMenu->AddItem("---");
 
@@ -317,9 +318,6 @@ namespace Editor
         mSceneTree->AttachToSceneEvents();
     }
 
-    void TreeWindow::OnSearchPressed()
-    {}
-
     void TreeWindow::OnListTreeToggled(bool value)
     {
         mSceneTree->SetEnabled(!value);
@@ -355,19 +353,6 @@ namespace Editor
 
     void TreeWindow::OnTreeRBPressed(const Ref<TreeNode>& node)
     {
-        bool canCreateUILayers = false;
-        if (node)
-        {
-            SceneEditableObject* object = (SceneEditableObject*)node->GetObject();
-            canCreateUILayers = dynamic_cast<WidgetLayer*>(object) != nullptr ||
-                dynamic_cast<Widget::LayersEditable*>(object) != nullptr ||
-                dynamic_cast<Widget*>(object) != nullptr;
-        }
-
-        //         mTreeContextMenu->FindItemWidget("Create UI/Empty layer")->SetEnabled(canCreateUILayers);
-        //         mTreeContextMenu->FindItemWidget("Create UI/Sprite layer")->SetEnabled(canCreateUILayers);
-        //         mTreeContextMenu->FindItemWidget("Create UI/Text layer")->SetEnabled(canCreateUILayers);
-
         mTreeContextMenu->Show();
     }
 
@@ -432,9 +417,6 @@ namespace Editor
         newActor->transform->size = Vec2F(10, 10);
         OnCreateObject(newActor);
     }
-
-    void TreeWindow::OnContextCreateButton()
-    {}
 
     void TreeWindow::OnContextCopyPressed()
     {
@@ -630,7 +612,6 @@ namespace Editor
 
         auto searchButton = o2UI.CreateWidget<Button>("search");
         *searchButton->layout = WidgetLayout::Based(BaseCorner::Left, Vec2F(20, 20), Vec2F(-1, 1));
-        searchButton->onClick += THIS_FUNC(OnSearchPressed);
         upPanel->AddChild(searchButton);
 
         mListTreeToggle = o2UI.CreateWidget<Toggle>("list-tree");

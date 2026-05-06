@@ -176,3 +176,78 @@ TEST(ReparentAction, GetNameIsStable)
     auto action = mmake<ReparentAction>();
     EXPECT_EQ(action->GetName(), String("Actors rearrange"));
 }
+
+TEST(ReparentAction, RedoMutatesSceneWithoutExternalReparent)
+{
+    SceneCleanGuard guard;
+    RecordingActionsUIBridge recorder;
+    ScopedActionsUIBridge host(recorder);
+
+    auto parentA = MakeActor();
+    auto parentB = MakeActor();
+    auto child = MakeActor();
+    child->SetEditableParent(parentA);
+    TickScene();
+
+    auto editableChild = AsEditable({ child }).First();
+    auto editableParentB = AsEditable({ parentB }).First();
+
+    auto action = mmake<ReparentAction>(Vector<Ref<SceneEditableObject>>{ editableChild });
+    action->ObjectsReparented(editableParentB, Ref<SceneEditableObject>());
+    action->Redo();
+
+    EXPECT_EQ(parentA->GetEditableChildren().Count(), 0);
+    ASSERT_EQ(parentB->GetEditableChildren().Count(), 1);
+    EXPECT_EQ(parentB->GetEditableChildren()[0]->GetID(), child->GetID());
+
+    action->Undo();
+    ASSERT_EQ(parentA->GetEditableChildren().Count(), 1);
+    EXPECT_EQ(parentA->GetEditableChildren()[0]->GetID(), child->GetID());
+    EXPECT_EQ(parentB->GetEditableChildren().Count(), 0);
+
+    action->Redo();
+    EXPECT_EQ(parentA->GetEditableChildren().Count(), 0);
+    ASSERT_EQ(parentB->GetEditableChildren().Count(), 1);
+    EXPECT_EQ(parentB->GetEditableChildren()[0]->GetID(), child->GetID());
+}
+
+TEST(ReparentAction, RedoReordersUnderSameParentWithoutExternalReparent)
+{
+    SceneCleanGuard guard;
+    RecordingActionsUIBridge recorder;
+    ScopedActionsUIBridge host(recorder);
+
+    auto parent = MakeActor();
+    auto first = MakeActor();
+    first->SetEditableParent(parent);
+    auto second = MakeActor();
+    second->SetEditableParent(parent);
+    auto third = MakeActor();
+    third->SetEditableParent(parent);
+    TickScene();
+
+    auto editableFirst = AsEditable({ first }).First();
+    auto editableThird = AsEditable({ third }).First();
+    auto editableParent = AsEditable({ parent }).First();
+
+    auto action = mmake<ReparentAction>(Vector<Ref<SceneEditableObject>>{ editableFirst });
+    action->ObjectsReparented(editableParent, editableThird);
+    action->Redo();
+    TickScene();
+
+    auto children = parent->GetEditableChildren();
+    ASSERT_EQ(children.Count(), 3);
+    EXPECT_EQ(children[2]->GetID(), first->GetID());
+
+    action->Undo();
+    TickScene();
+    children = parent->GetEditableChildren();
+    ASSERT_EQ(children.Count(), 3);
+    EXPECT_EQ(children[0]->GetID(), first->GetID());
+
+    action->Redo();
+    TickScene();
+    children = parent->GetEditableChildren();
+    ASSERT_EQ(children.Count(), 3);
+    EXPECT_EQ(children[2]->GetID(), first->GetID());
+}

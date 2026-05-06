@@ -26,3 +26,4 @@ Editor/Assets/Editor UI styles
 .cache
 build
 Tests/Sources/CodeToolCache.xml
+CodeToolCache.xml
