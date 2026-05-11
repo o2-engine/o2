@@ -2,6 +2,7 @@
 #include "LayersPopup.h"
 
 #include "o2/Scene/Scene.h"
+#include "o2/Scene/SceneLayer.h"
 #include "o2/Scene/UI/UIManager.h"
 #include "o2/Scene/UI/WidgetLayout.h"
 #include "o2/Scene/UI/Widgets/Button.h"
@@ -9,6 +10,12 @@
 #include "o2/Scene/UI/Widgets/HorizontalLayout.h"
 #include "o2/Scene/UI/Widgets/Toggle.h"
 #include "o2/Utils/Editor/EditorScope.h"
+#include "o2Editor/Actions/LayerCreate.h"
+#include "o2Editor/Actions/LayerDelete.h"
+#include "o2Editor/Actions/LayerRename.h"
+#include "o2Editor/Actions/LayerReorder.h"
+#include "o2Editor/Actions/LayerVisibility.h"
+#include "o2Editor/Windows/SceneWindow/SceneWindow.h"
 
 namespace Editor
 {
@@ -77,7 +84,11 @@ namespace Editor
             while (o2Scene.HasLayer(newLayerName))
                 newLayerName = "New layer " + (String)idx++;
 
-            auto newLayer = o2Scene.AddLayer(newLayerName);
+            auto action = mmake<LayerCreateAction>(newLayerName);
+            action->Redo();
+            o2EditorSceneWindow.DoneAction(action);
+
+            auto newLayer = o2Scene.GetLayer(newLayerName);
             UpdateLayersListAndFit();
 
             auto item = mChildWidgets.FindOrDefault([=](const Ref<Widget>& x) {
@@ -87,7 +98,8 @@ namespace Editor
                 return false;
             });
 
-            DynamicCast<LayerPopupItem>(item)->BeginEditName();
+            if (item)
+                DynamicCast<LayerPopupItem>(item)->BeginEditName();
         };
 
         mAddButtonLayout->AddChild(mAddButton);
@@ -221,8 +233,17 @@ namespace Editor
     void LayersPopup::EndDragging()
     {
         float itemPos = GetChildrenWorldRect().top - mDraggingItem->layout->worldTop + 10.0f;
-        int idx = (int)(itemPos/mDraggingItem->layout->minHeight);
-        o2Scene.SetLayerOrder(mDraggingItem->mLayer, idx);
+        int newIdx = (int)(itemPos/mDraggingItem->layout->minHeight);
+        int oldIdx = o2Scene.GetLayers().IndexOf(mDraggingItem->mLayer);
+        int lastIdx = o2Scene.GetLayers().Count() - 1;
+        newIdx = Math::Clamp(newIdx, 0, lastIdx);
+
+        if (oldIdx >= 0 && oldIdx != newIdx)
+        {
+            auto action = mmake<LayerReorderAction>(mDraggingItem->mLayer->GetName(), oldIdx, newIdx);
+            action->Redo();
+            o2EditorSceneWindow.DoneAction(action);
+        }
 
         mDraggingItem = nullptr;
         UpdateLayersList();
@@ -357,8 +378,21 @@ namespace Editor
         mEditBox->enabled = false;
         mNameCaption->enabled = true;
 
-        mNameCaption->text = str;
-        mLayer->SetName(str);
+        String newName = str;
+        String oldName = mLayer->GetName();
+
+        if (newName.IsEmpty() || newName == oldName ||
+            (o2Scene.HasLayer(newName) && o2Scene.GetLayer(newName) != mLayer))
+        {
+            mNameCaption->text = oldName;
+            return;
+        }
+
+        auto action = mmake<LayerRenameAction>(oldName, newName);
+        action->Redo();
+        o2EditorSceneWindow.DoneAction(action);
+
+        mNameCaption->text = newName;
         mPopup->UpdateLayersList();
 
         o2Scene.OnObjectChanged(nullptr);
@@ -366,12 +400,20 @@ namespace Editor
 
     void LayerPopupItem::OnVisibleChanged(bool visible)
     {
-        mLayer->visible = visible;
+        auto action = mmake<LayerVisibilityAction>(mLayer->GetName(), visible);
+        action->Redo();
+        o2EditorSceneWindow.DoneAction(action);
     }
 
     void LayerPopupItem::OnRemovePressed()
     {
-        o2Scene.RemoveLayer(mLayer);
+        if (mLayer == o2Scene.GetDefaultLayer())
+            return;
+
+        auto action = mmake<LayerDeleteAction>(mLayer);
+        action->Redo();
+        o2EditorSceneWindow.DoneAction(action);
+
         mPopup->UpdateLayersListAndFit();
     }
 }
