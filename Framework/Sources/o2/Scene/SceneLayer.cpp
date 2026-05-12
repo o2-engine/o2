@@ -26,6 +26,23 @@ namespace o2
         return mName;
     }
 
+    void SceneLayer::SetVisible(bool visible)
+    {
+        if (mVisible == visible)
+            return;
+
+        mVisible = visible;
+
+#if IS_EDITOR
+        o2Scene.onLayersListChanged();
+#endif
+    }
+
+    bool SceneLayer::IsVisible() const
+    {
+        return mVisible;
+    }
+
     const Vector<Ref<ISceneDrawable>>& SceneLayer::GetDrawables() const
     {
         return mDrawables;

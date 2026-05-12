@@ -16,7 +16,7 @@ TEST(LayerDeleteAction, CtorCapturesNameVisibilityIndex)
 
     o2Scene.AddLayer("A");
     auto target = o2Scene.AddLayer("B");
-    target->visible = false;
+    target->SetVisible(false);
     o2Scene.AddLayer("C");
 
     int expectedIdx = o2Scene.GetLayers().IndexOf(target);
@@ -33,7 +33,7 @@ TEST(LayerDeleteAction, RedoRemoves_UndoRestoresWithVisibility)
     SceneCleanGuard guard;
 
     auto layer = o2Scene.AddLayer("Foo");
-    layer->visible = false;
+    layer->SetVisible(false);
 
     auto action = mmake<LayerDeleteAction>(layer);
 
@@ -42,7 +42,7 @@ TEST(LayerDeleteAction, RedoRemoves_UndoRestoresWithVisibility)
 
     action->Undo();
     ASSERT_TRUE(o2Scene.HasLayer("Foo"));
-    EXPECT_FALSE(o2Scene.GetLayer("Foo")->visible);
+    EXPECT_FALSE(o2Scene.GetLayer("Foo")->IsVisible());
 }
 
 TEST(LayerDeleteAction, UndoRestoresIndexAmongSiblings)

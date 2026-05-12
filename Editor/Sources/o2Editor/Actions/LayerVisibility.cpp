@@ -22,14 +22,14 @@ namespace Editor
     {
         if (!o2Scene.HasLayer(layerName))
             return;
-        o2Scene.GetLayer(layerName)->visible = visible;
+        o2Scene.GetLayer(layerName)->SetVisible(visible);
     }
 
     void LayerVisibilityAction::Undo()
     {
         if (!o2Scene.HasLayer(layerName))
             return;
-        o2Scene.GetLayer(layerName)->visible = !visible;
+        o2Scene.GetLayer(layerName)->SetVisible(!visible);
     }
 }
 // --- META ---

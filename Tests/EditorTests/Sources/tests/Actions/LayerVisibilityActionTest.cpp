@@ -21,30 +21,30 @@ TEST(LayerVisibilityAction, RedoHides_UndoShows)
 {
     SceneCleanGuard guard;
     auto layer = o2Scene.AddLayer("Foo");
-    layer->visible = true;
+    layer->SetVisible(true);
 
     auto action = mmake<LayerVisibilityAction>("Foo", false);
 
     action->Redo();
-    EXPECT_FALSE(layer->visible);
+    EXPECT_FALSE(layer->IsVisible());
 
     action->Undo();
-    EXPECT_TRUE(layer->visible);
+    EXPECT_TRUE(layer->IsVisible());
 }
 
 TEST(LayerVisibilityAction, RedoShows_UndoHides)
 {
     SceneCleanGuard guard;
     auto layer = o2Scene.AddLayer("Foo");
-    layer->visible = false;
+    layer->SetVisible(false);
 
     auto action = mmake<LayerVisibilityAction>("Foo", true);
 
     action->Redo();
-    EXPECT_TRUE(layer->visible);
+    EXPECT_TRUE(layer->IsVisible());
 
     action->Undo();
-    EXPECT_FALSE(layer->visible);
+    EXPECT_FALSE(layer->IsVisible());
 }
 
 TEST(LayerVisibilityAction, ToleratesMissingLayer)

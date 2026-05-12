@@ -205,7 +205,7 @@ namespace Editor
 
             for (auto& layer : o2Scene.GetLayers())
             {
-                if (!layer->visible)
+                if (!layer->IsVisible())
                     continue;
 
                 for (auto& drawable : layer->GetDrawables()) 

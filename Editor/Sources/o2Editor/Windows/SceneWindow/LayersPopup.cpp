@@ -23,6 +23,12 @@ namespace Editor
         PopupWidget(refCounter)
     {
         InitializeControls();
+
+        WeakRef<LayersPopup> weakThis(this);
+        o2Scene.onLayersListChanged += [weakThis]() {
+            if (auto self = weakThis.Lock())
+                self->UpdateLayersListAndFit();
+        };
     }
 
     LayersPopup::~LayersPopup()
@@ -312,12 +318,12 @@ namespace Editor
 
     void LayerPopupItem::SetLayer(const Ref<SceneLayer>& layer)
     {
-        if (mLayer == layer)
-            return;
-
         mLayer = layer;
 
-        mVisibleToggle->value = layer->visible;
+        if (!mLayer)
+            return;
+
+        mVisibleToggle->value = layer->IsVisible();
         mNameCaption->text = layer->GetName();
     }
 

@@ -15,7 +15,7 @@ namespace Editor
             return;
 
         layerName    = layer->GetName();
-        savedVisible = layer->visible;
+        savedVisible = layer->IsVisible();
         savedIdx     = o2Scene.GetLayers().IndexOf(layer);
     }
 
@@ -36,7 +36,7 @@ namespace Editor
         if (!layer)
             return;
 
-        layer->visible = savedVisible;
+        layer->SetVisible(savedVisible);
         if (savedIdx >= 0)
             o2Scene.SetLayerOrder(layer, savedIdx);
     }

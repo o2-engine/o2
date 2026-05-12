@@ -470,6 +470,10 @@ namespace o2
     {
         mLayers.Remove(layer);
         mLayers.Insert(layer, idx);
+
+#if IS_EDITOR
+        onLayersListChanged();
+#endif
     }
 
     Ref<Tag> Scene::GetTag(const String& name) const
