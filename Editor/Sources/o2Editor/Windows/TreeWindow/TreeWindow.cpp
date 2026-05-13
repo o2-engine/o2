@@ -473,16 +473,8 @@ namespace Editor
         o2EditorSceneScreen.ClearSelectionWithoutAction();
 
         auto action = mmake<DeleteAction>(selectedObjects);
+        action->Redo();
         o2EditorSceneWindow.DoneAction(action);
-
-        for (auto& object : selectedObjects)
-        {
-            if (object->IsSupportsDeleting())
-            {
-                if (auto actor = DynamicCast<Actor>(object))
-                    o2Scene.DestroyActor(actor);
-            }
-        }
 
         mSceneTree->UpdateNodesView();
     }

@@ -117,7 +117,7 @@ TEST(DeleteAction, UndoPreservesSiblingOrder)
     EXPECT_EQ(children[1]->GetID(), middleId);
 }
 
-TEST(DeleteAction, RedoNotifiesUIWithoutTouchingScene)
+TEST(DeleteAction, RedoActuallyRemovesObjectFromScene)
 {
     SceneCleanGuard guard;
     RecordingActionsUIBridge recorder;
@@ -125,14 +125,93 @@ TEST(DeleteAction, RedoNotifiesUIWithoutTouchingScene)
 
     auto a = MakeActor();
     TickScene();
+    SceneUID aId = a->GetID();
 
     auto action = mmake<DeleteAction>(AsEditable({ a }));
 
     action->Redo();
+    a = nullptr;
+    o2Scene.UpdateDestroyingEntities();
 
+    EXPECT_EQ(o2Scene.GetEditableObjectByID(aId), nullptr);
     ASSERT_EQ(recorder.clearSelectionCalls.Count(), 1);
-    EXPECT_EQ(recorder.clearSelectionCalls[0], 1);
     EXPECT_EQ(recorder.updateTreeViewCalls, 1);
+}
+
+TEST(DeleteAction, RedoUnlinksChildFromParent)
+{
+    SceneCleanGuard guard;
+    RecordingActionsUIBridge recorder;
+    ScopedActionsUIBridge host(recorder);
+
+    auto parent = MakeActor();
+    auto child = MakeActor();
+    child->SetEditableParent(parent);
+    TickScene();
+    SceneUID childId = child->GetID();
+
+    auto action = mmake<DeleteAction>(AsEditable({ child }));
+
+    action->Redo();
+    child = nullptr;
+    o2Scene.UpdateDestroyingEntities();
+
+    EXPECT_EQ(o2Scene.GetEditableObjectByID(childId), nullptr);
+    EXPECT_EQ(parent->GetEditableChildren().Count(), 0);
+}
+
+TEST(DeleteAction, RedoUndoRedoCycleEndsRemovedForChild)
+{
+    SceneCleanGuard guard;
+    RecordingActionsUIBridge recorder;
+    ScopedActionsUIBridge host(recorder);
+
+    auto parent = MakeActor();
+    auto child = MakeActor();
+    child->SetEditableParent(parent);
+    TickScene();
+    SceneUID childId = child->GetID();
+
+    auto action = mmake<DeleteAction>(AsEditable({ child }));
+
+    action->Redo();
+    child = nullptr;
+    o2Scene.UpdateDestroyingEntities();
+    ASSERT_EQ(o2Scene.GetEditableObjectByID(childId), nullptr);
+
+    action->Undo();
+    TickScene();
+    ASSERT_NE(o2Scene.GetEditableObjectByID(childId), nullptr);
+
+    action->Redo();
+    o2Scene.UpdateDestroyingEntities();
+    EXPECT_EQ(o2Scene.GetEditableObjectByID(childId), nullptr);
+}
+
+TEST(DeleteAction, RedoUndoRedoCycleEndsRemovedForRoot)
+{
+    SceneCleanGuard guard;
+    RecordingActionsUIBridge recorder;
+    ScopedActionsUIBridge host(recorder);
+
+    auto a = MakeActor();
+    TickScene();
+    SceneUID aId = a->GetID();
+
+    auto action = mmake<DeleteAction>(AsEditable({ a }));
+
+    action->Redo();
+    a = nullptr;
+    o2Scene.UpdateDestroyingEntities();
+    ASSERT_EQ(o2Scene.GetEditableObjectByID(aId), nullptr);
+
+    action->Undo();
+    TickScene();
+    ASSERT_NE(o2Scene.GetEditableObjectByID(aId), nullptr);
+
+    action->Redo();
+    o2Scene.UpdateDestroyingEntities();
+    EXPECT_EQ(o2Scene.GetEditableObjectByID(aId), nullptr);
 }
 
 TEST(DeleteAction, GetNameIsStable)

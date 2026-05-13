@@ -47,6 +47,8 @@ namespace Editor
 
             objectsData.Get(objects);
 
+            o2Scene.UpdateAddedEntities();
+
             for (auto& object : objects)
                 object->SetIndexInSiblings(insertIdx++);
         }
@@ -59,9 +61,8 @@ namespace Editor
     {
         for (auto& objectId : objectsIds)
         {
-            auto object = o2Scene.GetEditableObjectByID(objectId);
-//             if (object)
-//                 delete object;
+            if (auto object = o2Scene.GetEditableObjectByID(objectId))
+                object->Destroy();
         }
 
         ActionsUIBridge::Current().ClearSelectionWithoutAction(true);

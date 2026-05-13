@@ -12,8 +12,10 @@
 #include "o2/Scene/UI/Widgets/EditBox.h"
 #include "o2/Scene/UI/Widgets/Tree.h"
 #include "o2/Utils/FileSystem/FileSystem.h"
+#include "o2Editor/Actions/RenameAsset.h"
 #include "o2Editor/Windows/AssetsWindow/AssetsIconsScroll.h"
 #include "o2Editor/Windows/AssetsWindow/AssetsWindow.h"
+#include "o2Editor/Windows/SceneWindow/SceneWindow.h"
 #include "o2/Utils/Editor/EditorScope.h"
 
 namespace Editor
@@ -159,11 +161,15 @@ namespace Editor
         editBox->ResetScroll();
 
         editBox->onChangeCompleted = [=](const WString& text) {
-            String newPathAsset = o2FileSystem.GetParentPath(assetTreeNode->path) + "/" + text;
-            o2Assets.RenameAsset(assetTreeNode->meta->ID(), text);
+            String originalName = o2FileSystem.GetPathWithoutDirectories(assetTreeNode->path);
+            String newName = text;
+            String newPathAsset = o2FileSystem.GetParentPath(assetTreeNode->path) + "/" + newName;
+
+            auto action = mmake<RenameAssetAction>(assetTreeNode->meta->ID(), originalName, newName);
+            action->Redo();
+            o2EditorSceneWindow.DoneAction(action);
 
             node->SetState("edit", false);
-            //node->UpdateView(false);
 
             o2EditorAssets.OpenFolder(newPathAsset.Trimed(" /\\"));
         };

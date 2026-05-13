@@ -16,6 +16,10 @@
 #include "o2/Utils/FileSystem/FileSystem.h"
 #include "o2/Utils/StringUtils.h"
 #include "o2Editor/Actions/Create.h"
+#include "o2Editor/Actions/CreateAsset.h"
+#include "o2Editor/Actions/CreateAssetFromScene.h"
+#include "o2Editor/Actions/MoveAsset.h"
+#include "o2Editor/Actions/RenameAsset.h"
 #include "o2Editor/EditorApplication.h"
 #include "o2Editor/Properties/Properties.h"
 #include "o2Editor/Windows/AssetsWindow/AssetIcon.h"
@@ -582,11 +586,24 @@ namespace Editor
         if (iconUnderCursor && iconUnderCursor->GetAssetInfo()->meta->GetAssetType() == &TypeOf(FolderAsset))
         {
             String destPath = iconUnderCursor->GetAssetInfo()->path;
-            auto assetsInfos = mSelectedAssets.Convert<UID>([](const Ref<AssetInfo>& x) { return x->meta->ID(); });
+
+            Vector<MoveAssetAction::Entry> entries;
+            for (auto& sel : mSelectedAssets)
+            {
+                MoveAssetAction::Entry e;
+                e.uid = sel->meta->ID();
+                e.filename = o2FileSystem.GetPathWithoutDirectories(sel->path);
+                e.originalParent = o2FileSystem.GetParentPath(sel->path);
+                entries.Add(e);
+            }
             DeselectAllAssets();
 
-            o2Assets.MoveAssets(assetsInfos, destPath);
-            o2Assets.RebuildAssets();
+            if (!entries.IsEmpty())
+            {
+                auto action = mmake<MoveAssetAction>(entries, destPath);
+                action->Redo();
+                o2EditorSceneWindow.DoneAction(action);
+            }
         }
     }
 
@@ -598,23 +615,25 @@ namespace Editor
         if (iconUnderCursor && iconUnderCursor->GetAssetInfo()->meta->GetAssetType() == &TypeOf(FolderAsset))
             destPath = iconUnderCursor->GetAssetInfo()->path;
 
-        Vector<String> newAssets;
+        Vector<SceneUID> actorIds;
         for (auto& object : sceneTree->GetSelectedObjects())
         {
             if (auto actor = DynamicCast<Actor>(object))
-            {
-                AssetRef<ActorAsset> newAsset = actor->MakePrototype();
-                String path = destPath.IsEmpty() ? newAsset->GetActor()->name + String(".proto") : destPath + "/" +
-                    newAsset->GetActor()->name + String(".proto");
-
-                String uniquePath = o2Assets.MakeUniqueAssetName(path);
-                newAsset->Save(uniquePath);
-
-                newAssets.Add(uniquePath);
-            }
+                actorIds.Add(actor->GetID());
         }
 
-        o2Assets.RebuildAssets();
+        if (actorIds.IsEmpty())
+            return;
+
+        auto action = mmake<CreateAssetFromSceneAction>(actorIds, destPath);
+        action->Redo();
+        o2EditorSceneWindow.DoneAction(action);
+
+        Vector<String> newAssets;
+        for (auto& e : action->entries)
+            if (!e.createdPath.IsEmpty())
+                newAssets.Add(e.createdPath);
+
         o2EditorAssets.OpenFolder(destPath);
         o2EditorAssets.SelectAssets(newAssets);
     }
@@ -809,8 +828,11 @@ namespace Editor
                                {
                                    String extension = o2FileSystem.GetFileExtension(iconAssetInfo.path);
                                    String newName = extension.IsEmpty() ? name : name + "." + extension;
-                                   o2Assets.RenameAsset(iconAssetInfo.meta->ID(), newName);
-                                   o2Assets.RebuildAssets();
+                                   String originalName = o2FileSystem.GetPathWithoutDirectories(iconAssetInfo.path);
+
+                                   auto action = mmake<RenameAssetAction>(iconAssetInfo.meta->ID(), originalName, newName);
+                                   action->Redo();
+                                   o2EditorSceneWindow.DoneAction(action);
 
                                    String parentPath = o2FileSystem.GetParentPath(iconAssetInfo.path);
                                    String newPath = parentPath.IsEmpty() ? newName : parentPath + "/" + newName;
@@ -942,15 +964,17 @@ namespace Editor
             return;
 
         StartAssetRenaming(icon, newAssetName,
-                           [&, extension](const String& name)
+                           [&, extension, assetType](const String& name)
                            {
-                               String path = (!mCurrentPath.IsEmpty() ? mCurrentPath + "/" + name : name);
-                               if (!extension.IsEmpty())
-                                   path += "." + extension;
+                               String fileName = extension.IsEmpty() ? name : name + "." + extension;
+                               String path = (!mCurrentPath.IsEmpty() ? mCurrentPath + "/" + fileName : fileName);
 
-                               mNewAsset->Save(path);
+                               mNewAsset = nullptr;
 
-                               o2Assets.RebuildAssets();
+                               auto action = mmake<CreateAssetAction>(*assetType, mCurrentPath, fileName);
+                               action->Redo();
+                               o2EditorSceneWindow.DoneAction(action);
+
                                o2EditorAssets.SelectAsset(path);
                            });
     }

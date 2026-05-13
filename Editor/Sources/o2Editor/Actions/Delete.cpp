@@ -65,9 +65,8 @@ namespace Editor
     {
         for (auto& info : objectsInfos)
         {
-            auto object = o2Scene.GetEditableObjectByID((SceneUID)info.objectData["Value"]["Id"]);
-//             if (object)
-//                 delete object;
+            if (auto object = o2Scene.GetEditableObjectByID((SceneUID)info.objectData["Value"]["Id"]))
+                object->Destroy();
         }
 
         ActionsUIBridge::Current().ClearSelectionWithoutAction(true);
@@ -99,6 +98,8 @@ namespace Editor
 
                 Ref<SceneEditableObject> newObject;
                 info.objectData.Get(newObject);
+
+                o2Scene.UpdateAddedEntities();
                 newObject->SetIndexInSiblings(idx);
 
                 ActionsUIBridge::Current().SelectObjectWithoutAction(newObject, true);

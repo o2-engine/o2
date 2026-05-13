@@ -20,9 +20,13 @@
 #include "o2/Utils/Function/Function.h"
 #include "o2/Utils/FileSystem/FileSystem.h"
 #include "o2/Utils/System/Clipboard.h"
+#include "o2Editor/Actions/CopyAssets.h"
+#include "o2Editor/Actions/DeleteAsset.h"
+#include "o2Editor/Actions/MoveAsset.h"
 #include "o2Editor/Windows/AssetsWindow/AssetIcon.h"
 #include "o2Editor/Windows/AssetsWindow/AssetsIconsScroll.h"
 #include "o2Editor/Windows/AssetsWindow/FoldersTree.h"
+#include "o2Editor/Windows/SceneWindow/SceneWindow.h"
 #include "o2Editor/EditorConfig.h"
 
 DECLARE_SINGLETON(Editor::AssetsWindow);
@@ -345,53 +349,54 @@ namespace Editor
 
     void AssetsWindow::PasteAssets(const String& targetPath)
     {
-        Vector<WString> paths = Clipboard::GetCopyFiles();
-        for (auto& path : paths)
+        Vector<WString> clipboardPaths = Clipboard::GetCopyFiles();
+        if (clipboardPaths.IsEmpty())
+            return;
+
+        Vector<MoveAssetAction::Entry> moveEntries;
+        Vector<String>                 copySourceRel;
+
+        for (auto& clipboardPath : clipboardPaths)
         {
-            String fileName = o2FileSystem.GetPathWithoutDirectories(path);
-            String extension = o2FileSystem.GetFileExtension(fileName);
-            String fileNameWithoutExt = o2FileSystem.GetFileNameWithoutExtension(fileName);
+            String fullPath = (String)clipboardPath;
+            const Pair<UID, String>* cutIt = mCuttingAssets.Find([&](auto& x) { return x.second == fullPath; });
 
-            bool isFolder = extension.IsEmpty();
-
-            String copyFileName = o2Application.GetBinPath() + "/" + o2Assets.GetAssetsPath() + targetPath + "/" + fileName;
-            bool endsAsCopy = fileNameWithoutExt.EndsWith("copy");
-            int i = 0;
-            while (o2FileSystem.IsFileExist(copyFileName))
+            if (cutIt)
             {
-                copyFileName = o2Application.GetBinPath() + "/" + o2Assets.GetAssetsPath() + targetPath + "/" +
-                    fileNameWithoutExt;
+                String currentRel = o2Assets.GetAssetPath(cutIt->first);
+                if (currentRel.IsEmpty())
+                    continue;
 
-                if (!endsAsCopy)
-                    copyFileName += " copy";
-
-                if (i > 0)
-                    copyFileName += (String)(i + 1) + "." + extension;
-
-                if (!isFolder)
-                    copyFileName += "." + extension;
-
-                i++;
-            }
-
-            if (mCuttingAssets.Contains([&](auto x) { return x.second == (String)path; }))
-            {
-                o2FileSystem.FileMove(path, copyFileName);
-                o2FileSystem.FileMove(path + ".meta", copyFileName + ".meta");
+                MoveAssetAction::Entry e;
+                e.uid = cutIt->first;
+                e.filename = o2FileSystem.GetPathWithoutDirectories(currentRel);
+                e.originalParent = o2FileSystem.GetParentPath(currentRel);
+                moveEntries.Add(e);
             }
             else
             {
-                if (!isFolder)
-                    o2FileSystem.FileCopy(path, copyFileName);
-                else
-                    CopyAssetFolder(path, copyFileName);
+                String prefix = o2Application.GetBinPath() + "/" + o2Assets.GetAssetsPath();
+                if (fullPath.Length() > prefix.Length() && fullPath.SubStr(0, prefix.Length()) == prefix)
+                    copySourceRel.Add(fullPath.SubStr(prefix.Length()));
             }
+        }
+
+        if (!moveEntries.IsEmpty())
+        {
+            auto action = mmake<MoveAssetAction>(moveEntries, targetPath);
+            action->Redo();
+            o2EditorSceneWindow.DoneAction(action);
+        }
+
+        if (!copySourceRel.IsEmpty())
+        {
+            auto action = mmake<CopyAssetsAction>(copySourceRel, targetPath);
+            action->Redo();
+            o2EditorSceneWindow.DoneAction(action);
         }
 
         mCuttingAssets.Clear();
         mAssetsGridScroll->UpdateCuttingAssets();
-
-        o2Assets.RebuildAssets();
     }
 
     void AssetsWindow::DeleteAssets(const Vector<String>& assetsPaths)
@@ -399,10 +404,12 @@ namespace Editor
         mCuttingAssets.Clear();
         mAssetsGridScroll->UpdateCuttingAssets();
 
-        for (auto& path : assetsPaths)
-            o2Assets.RemoveAsset(path);
+        if (assetsPaths.IsEmpty())
+            return;
 
-        o2Assets.RebuildAssets();
+        auto action = mmake<DeleteAssetAction>(assetsPaths);
+        action->Redo();
+        o2EditorSceneWindow.DoneAction(action);
     }
 
     Ref<Sprite> AssetsWindow::GetAssetIconSprite(const AssetRef<Asset>& asset)

@@ -25,6 +25,7 @@
 #include "o2/Utils/System/Time/Timer.h"
 #include "o2/Utils/Tasks/TaskManager.h"
 #include "o2Editor/Windows/AnimationWindow/AnimationWindow.h"
+#include "o2Editor/Actions/AssetsTrash.h"
 #include "o2Editor/Actions/IAction.h"
 #include "o2Editor/Actions/PropertyChange.h"
 #include "o2Editor/MenuPanel.h"
@@ -161,6 +162,8 @@ namespace Editor
         mBackSign = mmake<Sprite>("ui/UI4_o2_sign.png");
 
         CommonTextures::Initialize();
+
+        AssetsTrash::ClearAllOnStartup();
 
         mConfig = mmake<EditorConfig>();
         mConfig->LoadConfigs();
