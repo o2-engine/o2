@@ -254,9 +254,11 @@ namespace Editor
 
         SetViewingPath(assetFolder);
 
-        auto assetInfo = Ref(const_cast<AssetInfo*>(&o2Assets.GetAssetInfo(id)));
-        if (!assetInfo->IsValid())
+        const AssetInfo& info = o2Assets.GetAssetInfo(id);
+        if (!info.IsValid())
             return;
+
+        auto assetInfo = Ref(const_cast<AssetInfo*>(&info));
 
         if (!mSelectedAssets.Contains(assetInfo))
         {

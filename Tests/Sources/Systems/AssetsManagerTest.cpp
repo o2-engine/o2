@@ -207,3 +207,73 @@ TEST(Assets, MakeUniqueAssetNameReturnsSameForFreePath) {
     String unusedPath = "totally_unused_path_for_test.json";
     EXPECT_EQ(o2Assets.MakeUniqueAssetName(unusedPath), unusedPath);
 }
+
+#if IS_EDITOR
+
+// RefreshCachedAssetsInfo must copy the tree's current children list into the cached
+// asset's mInfo. Without it, mInfo.mChildren stays empty after the first refresh.
+TEST(Assets, RefreshCachedAssetsInfoPopulatesFolderChildrenFromTree) {
+    auto folder = mmake<FolderAsset>(); // cached automatically via PostRefConstruct
+    auto folderMeta = folder->GetMeta();
+
+    auto tree = mmake<AssetsTree>();
+    tree->assetsPath = "Local/";
+
+    auto folderInfo = mmake<AssetInfo>(folderMeta);
+    folderInfo->path = "refreshtest_folder_a";
+
+    auto childInfo = MakeInfoFor("refreshtest_folder_a/child.bin", MakeBinaryMeta());
+
+    tree->AddAsset(folderInfo);
+    tree->AddAsset(childInfo);
+
+    ASSERT_EQ(folder->GetInfo().GetChildren().Count(), 0);
+
+    o2Assets.RefreshCachedAssetsInfo(tree);
+
+    ASSERT_EQ(folder->GetInfo().GetChildren().Count(), 1);
+    EXPECT_EQ(folder->GetInfo().GetChildren()[0]->path, "refreshtest_folder_a/child.bin");
+}
+
+// The actual bug: cached folder asset is loaded with N children, then a file is removed
+// and the tree is reloaded. RefreshCachedAssetsInfo must drop the stale child from the
+// cached mInfo. Without the refresh, mInfo.mChildren keeps the deleted entry.
+TEST(Assets, RefreshCachedAssetsInfoDropsStaleChildrenAfterFileRemoval) {
+    auto folder = mmake<FolderAsset>();
+    auto folderMeta = folder->GetMeta();
+
+    // First "load": folder has one child.
+    {
+        auto tree = mmake<AssetsTree>();
+        tree->assetsPath = "Local/";
+
+        auto folderInfo = mmake<AssetInfo>(folderMeta);
+        folderInfo->path = "refreshtest_folder_b";
+
+        auto childInfo = MakeInfoFor("refreshtest_folder_b/will_be_deleted.bin", MakeBinaryMeta());
+
+        tree->AddAsset(folderInfo);
+        tree->AddAsset(childInfo);
+
+        o2Assets.RefreshCachedAssetsInfo(tree);
+    }
+
+    ASSERT_EQ(folder->GetInfo().GetChildren().Count(), 1);
+
+    // Second "load": the child file is gone. Tree has the folder with no children.
+    {
+        auto newTree = mmake<AssetsTree>();
+        newTree->assetsPath = "Local/";
+
+        auto folderInfo = mmake<AssetInfo>(folderMeta);
+        folderInfo->path = "refreshtest_folder_b";
+
+        newTree->AddAsset(folderInfo);
+
+        o2Assets.RefreshCachedAssetsInfo(newTree);
+    }
+
+    EXPECT_EQ(folder->GetInfo().GetChildren().Count(), 0);
+}
+
+#endif

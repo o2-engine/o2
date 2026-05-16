@@ -13,6 +13,9 @@
 
 namespace o2
 {
+    // Flip to true to dump the loaded built-assets tree hierarchy on every ReloadAssetsTree() call.
+    static constexpr bool kDebugLogAssetsTreeHierarchy = true;
+
     DECLARE_SINGLETON(Assets);
 
     Assets::Assets(RefCounter* refCounter):
@@ -556,20 +559,21 @@ namespace o2
         String assetsBuilderPath = "AssetsBuilder.exe";
         String platform = "Windows";
 #elif PLATFORM_LINUX
-        String assetsBuilderPath = "AssetsBuilder";
+        String assetsBuilderPath = "./AssetsBuilder";
         String platform = "Linux";
 #elif PLATFORM_MAC
-        String assetsBuilderPath = "AssetsBuilder";
+        String assetsBuilderPath = "./AssetsBuilder";
         String platform = "Mac";
 #endif
 
-        //-platform ${O2_PLATFORM} -source "${CMAKE_CURRENT_SOURCE_DIR}/Assets/" -target "${CMAKE_CURRENT_SOURCE_DIR}/BuiltAssets/${O2_PLATFORM}/Data/" -target-tree "${CMAKE_CURRENT_SOURCE_DIR}/BuiltAssets/${O2_PLATFORM}/Data.json" -compressor-config "${CMAKE_CURRENT_SOURCE_DIR}/o2/CompressToolsConfig.json"
+        auto quote = [](const String& s) { return String("\"") + s + "\""; };
+
         String command = assetsBuilderPath +
             " -platform " + platform +
-            " -source " + GetAssetsPath() +
-            " -target " + GetBuiltAssetsPath() +
-            " -target-tree " + GetBuiltAssetsTreePath() +
-            " -compressor-config " + GetEditorAssetsPath() + "../../CompressToolsConfig.json";
+            " -source " + quote(GetAssetsPath()) +
+            " -target " + quote(GetBuiltAssetsPath()) +
+            " -target-tree " + quote(GetBuiltAssetsTreePath()) +
+            " -compressor-config " + quote(String(GetEditorAssetsPath()) + "../../CompressToolsConfig.json");
 
         if (resetCache)
             command += " -forcible true";
@@ -577,10 +581,44 @@ namespace o2
         o2Debug.Log("Rebuild assets command: " + command);
 
         int res = system(command.Data());
+        if (res != 0)
+            o2Debug.LogError("AssetsBuilder failed with exit code " + (String)res);
+        else
+            o2Debug.Log("AssetsBuilder finished successfully");
 
         auto changedAssetsUIDs = ReloadAssetsTree();
 
         onAssetsRebuilt(changedAssetsUIDs);
+    }
+
+    void Assets::RefreshCachedAssetsInfo(const Ref<AssetsTree>& tree)
+    {
+        if (!tree)
+            return;
+
+        auto cachedSnapshot = mCachedAssets;
+        for (auto& cached : cachedSnapshot)
+        {
+            if (!cached)
+                continue;
+
+            WeakRef<AssetInfo> currentWeak;
+            if (!tree->allAssetsByUID.TryGetValue(cached->GetUID(), currentWeak))
+                continue; // asset was removed on disk; caller is notified via changedAssetsUIDs
+
+            auto currentInfo = currentWeak.Lock();
+            if (!currentInfo)
+                continue;
+
+            String oldPath = cached->mInfo.path;
+            cached->mInfo = *currentInfo;
+
+            if (oldPath != cached->mInfo.path)
+            {
+                mCachedAssetsByPath.Remove(oldPath);
+                mCachedAssetsByPath[cached->mInfo.path] = cached;
+            }
+        }
     }
 
     Vector<UID> Assets::ReloadAssetsTree()
@@ -663,6 +701,35 @@ namespace o2
                 infoRef->mChildren.Clear();
                 infoRef->parent = nullptr;
             }
+        }
+
+        RefreshCachedAssetsInfo(mMainAssetsTree);
+
+        if constexpr (kDebugLogAssetsTreeHierarchy)
+        {
+            o2Debug.Log("Assets tree hierarchy (" + (String)mMainAssetsTree->rootAssets.Count() + " root nodes, " +
+                        (String)mMainAssetsTree->allAssetsByUID.Count() + " total):");
+
+            Function<void(const Ref<AssetInfo>&, int)> dumpNode =
+                [&dumpNode](const Ref<AssetInfo>& node, int depth)
+            {
+                if (!node)
+                    return;
+
+                String indent;
+                for (int i = 0; i < depth; i++)
+                    indent += "  ";
+
+                String typeName = node->meta ? node->meta->GetAssetType()->GetName() : String("<no meta>");
+                String uid = node->meta ? (String)node->meta->ID() : String("<no id>");
+                o2Debug.Log(indent + "- " + node->path + "  [" + typeName + ", " + uid + "]");
+
+                for (auto& child : node->mChildren)
+                    dumpNode(child, depth + 1);
+            };
+
+            for (auto& root : mMainAssetsTree->rootAssets)
+                dumpNode(root, 0);
         }
 
         return changedAssetsUIDs;
