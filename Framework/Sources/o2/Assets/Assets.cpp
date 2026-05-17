@@ -13,8 +13,8 @@
 
 namespace o2
 {
-    // Flip to true to dump the loaded built-assets tree hierarchy on every ReloadAssetsTree() call.
-    static constexpr bool kDebugLogAssetsTreeHierarchy = true;
+    // Set true to dump loaded assets tree hierarchy on every reload.
+    static constexpr bool kDebugLogAssetsTreeHierarchy = false;
 
     DECLARE_SINGLETON(Assets);
 
@@ -578,13 +578,9 @@ namespace o2
         if (resetCache)
             command += " -forcible true";
 
-        o2Debug.Log("Rebuild assets command: " + command);
-
         int res = system(command.Data());
         if (res != 0)
             o2Debug.LogError("AssetsBuilder failed with exit code " + (String)res);
-        else
-            o2Debug.Log("AssetsBuilder finished successfully");
 
         auto changedAssetsUIDs = ReloadAssetsTree();
 
@@ -604,7 +600,7 @@ namespace o2
 
             WeakRef<AssetInfo> currentWeak;
             if (!tree->allAssetsByUID.TryGetValue(cached->GetUID(), currentWeak))
-                continue; // asset was removed on disk; caller is notified via changedAssetsUIDs
+                continue;
 
             auto currentInfo = currentWeak.Lock();
             if (!currentInfo)

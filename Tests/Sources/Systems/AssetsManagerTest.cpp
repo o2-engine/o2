@@ -210,10 +210,9 @@ TEST(Assets, MakeUniqueAssetNameReturnsSameForFreePath) {
 
 #if IS_EDITOR
 
-// RefreshCachedAssetsInfo must copy the tree's current children list into the cached
-// asset's mInfo. Without it, mInfo.mChildren stays empty after the first refresh.
+// Refresh copies tree's children into cached folder's mInfo
 TEST(Assets, RefreshCachedAssetsInfoPopulatesFolderChildrenFromTree) {
-    auto folder = mmake<FolderAsset>(); // cached automatically via PostRefConstruct
+    auto folder = mmake<FolderAsset>();
     auto folderMeta = folder->GetMeta();
 
     auto tree = mmake<AssetsTree>();
@@ -235,14 +234,12 @@ TEST(Assets, RefreshCachedAssetsInfoPopulatesFolderChildrenFromTree) {
     EXPECT_EQ(folder->GetInfo().GetChildren()[0]->path, "refreshtest_folder_a/child.bin");
 }
 
-// The actual bug: cached folder asset is loaded with N children, then a file is removed
-// and the tree is reloaded. RefreshCachedAssetsInfo must drop the stale child from the
-// cached mInfo. Without the refresh, mInfo.mChildren keeps the deleted entry.
+// Refresh drops stale children when tree no longer has them (the bug case)
 TEST(Assets, RefreshCachedAssetsInfoDropsStaleChildrenAfterFileRemoval) {
     auto folder = mmake<FolderAsset>();
     auto folderMeta = folder->GetMeta();
 
-    // First "load": folder has one child.
+    // First load: folder has one child
     {
         auto tree = mmake<AssetsTree>();
         tree->assetsPath = "Local/";
@@ -260,7 +257,7 @@ TEST(Assets, RefreshCachedAssetsInfoDropsStaleChildrenAfterFileRemoval) {
 
     ASSERT_EQ(folder->GetInfo().GetChildren().Count(), 1);
 
-    // Second "load": the child file is gone. Tree has the folder with no children.
+    // Second load: child removed from tree
     {
         auto newTree = mmake<AssetsTree>();
         newTree->assetsPath = "Local/";

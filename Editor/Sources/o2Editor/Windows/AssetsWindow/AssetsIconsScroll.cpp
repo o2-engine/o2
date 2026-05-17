@@ -398,6 +398,8 @@ namespace Editor
         auto asset = *(Ref<AssetInfo>*)item;
         auto assetIcon = DynamicCast<AssetIcon>(widget);
 
+        assetIcon->Show();
+
         auto iconLayer = assetIcon->layer["icon"];
         auto iconSprite = DynamicCast<Sprite>(iconLayer->GetDrawable());
 
@@ -463,6 +465,8 @@ namespace Editor
 
     void AssetsIconsScrollArea::OnCursorPressed(const Input::Cursor& cursor)
     {
+        Focus();
+
         if (auto icon = GetIconUnderPoint(cursor.position))
         {
             if (icon->IsSelected())

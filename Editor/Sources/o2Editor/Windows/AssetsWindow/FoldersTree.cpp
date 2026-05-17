@@ -12,6 +12,7 @@
 #include "o2/Scene/UI/Widgets/EditBox.h"
 #include "o2/Scene/UI/Widgets/Tree.h"
 #include "o2/Utils/FileSystem/FileSystem.h"
+#include "o2Editor/Actions/MoveAsset.h"
 #include "o2Editor/Actions/RenameAsset.h"
 #include "o2Editor/Windows/AssetsWindow/AssetsIconsScroll.h"
 #include "o2Editor/Windows/AssetsWindow/AssetsWindow.h"
@@ -38,6 +39,7 @@ namespace Editor
         mFoldersTree->onNodeDoubleClicked = THIS_FUNC(OnFoldersTreeNodeDblClick);
         mFoldersTree->onObjectsSelectionChanged = THIS_FUNC(OnFoldersTreeSelect);
         mFoldersTree->onNodeRightButtonClicked = THIS_FUNC(OnFoldersTreeRightClick);
+        mFoldersTree->onDroppedFromOther = THIS_FUNC(OnFoldersTreeDropped);
         mFoldersTree->UpdateNodesView();
 
         AddChild(mFoldersTree);
@@ -198,6 +200,45 @@ namespace Editor
     {
         o2UI.FocusWidget(Ref(this));
         mContextMenu->Show();
+    }
+
+    void AssetsFoldersTree::OnFoldersTreeDropped(const Ref<ISelectableDragableObjectsGroup>& group)
+    {
+        auto assetsScroll = DynamicCast<AssetsIconsScrollArea>(group);
+        if (!assetsScroll)
+            return;
+
+        String destPath;
+        if (auto node = mFoldersTree->GetTreeNodeUnderPoint(o2Input.GetCursorPos()))
+        {
+            if (auto folderInfo = (AssetInfo*)node->GetObject())
+                destPath = folderInfo->path;
+        }
+
+        const auto& selected = assetsScroll->GetSelectedAssets();
+        if (selected.IsEmpty())
+            return;
+
+        Vector<MoveAssetAction::Entry> entries;
+        for (auto& sel : selected)
+        {
+            if (!destPath.IsEmpty() && (destPath == sel->path || destPath.StartsWith(sel->path + "/")))
+                continue;
+
+            MoveAssetAction::Entry e;
+            e.uid = sel->meta->ID();
+            e.filename = o2FileSystem.GetPathWithoutDirectories(sel->path);
+            e.originalParent = o2FileSystem.GetParentPath(sel->path);
+            entries.Add(e);
+        }
+        assetsScroll->DeselectAllAssets();
+
+        if (entries.IsEmpty())
+            return;
+
+        auto action = mmake<MoveAssetAction>(entries, destPath);
+        action->Redo();
+        o2EditorSceneWindow.DoneAction(action);
     }
 
     void AssetsFoldersTree::OnContextCopyPressed()

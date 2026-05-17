@@ -74,6 +74,9 @@ namespace Editor
         // Called when folders tree clicked by right button
         void OnFoldersTreeRightClick(const Ref<TreeNode>& node);
 
+        // Asset icons dropped on folders tree — moves them into the folder under cursor
+        void OnFoldersTreeDropped(const Ref<ISelectableDragableObjectsGroup>& group);
+
         // Called when context copy pressed
         void OnContextCopyPressed();
 
@@ -157,6 +160,7 @@ CLASS_METHODS_META(Editor::AssetsFoldersTree)
     FUNCTION().PROTECTED().SIGNATURE(void, OnFoldersTreeNodeDblClick, const Ref<TreeNode>&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnFoldersTreeSelect, Vector<void*>);
     FUNCTION().PROTECTED().SIGNATURE(void, OnFoldersTreeRightClick, const Ref<TreeNode>&);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnFoldersTreeDropped, const Ref<ISelectableDragableObjectsGroup>&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnContextCopyPressed);
     FUNCTION().PROTECTED().SIGNATURE(void, OnContextCutPressed);
     FUNCTION().PROTECTED().SIGNATURE(void, OnContextPastePressed);

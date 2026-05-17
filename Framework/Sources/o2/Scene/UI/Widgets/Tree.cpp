@@ -1695,7 +1695,10 @@ namespace o2
     void Tree::OnDropped(const Ref<ISelectableDragableObjectsGroup>& group)
     {
         if (DynamicCast<Tree>(group) == nullptr)
+        {
+            OnDroppedFromOther(group);
             return;
+        }
 
         auto underCursorItem = GetTreeNodeUnderPoint(o2Input.GetCursorPos());
 
@@ -1765,10 +1768,14 @@ namespace o2
                 objects.Add(sel);
         }
 
-        o2Debug.Log("Drop parent:" + GetObjectDebug(targetParent) + ", prev:" + GetObjectDebug(targetPrevObject));
         OnDraggedObjects(objects, targetParent, targetPrevObject);
 
         UpdateNodesStructure();
+    }
+
+    void Tree::OnDroppedFromOther(const Ref<ISelectableDragableObjectsGroup>& group)
+    {
+        onDroppedFromOther(group);
     }
 
     void Tree::OnDeserialized(const DataValue& node)

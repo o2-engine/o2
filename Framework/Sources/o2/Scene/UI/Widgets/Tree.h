@@ -39,6 +39,8 @@ namespace o2
 
         Function<void(Vector<void*>, void*, void*)> onDraggedObjects; // Objects dragged event
 
+        Function<void(const Ref<ISelectableDragableObjectsGroup>&)> onDroppedFromOther; // Non-Tree drop event
+
         Function<void(void*)> onNodeExpanded;  // Node expanded event
         Function<void(void*)> onNodeCollapsed; // Node collapsed event
 
@@ -501,6 +503,9 @@ namespace o2
         // Called when some selectable listeners was dropped to this
         void OnDropped(const Ref<ISelectableDragableObjectsGroup>& group) override;
 
+        // Non-Tree group dropped on this tree; default fires onDroppedFromOther
+        virtual void OnDroppedFromOther(const Ref<ISelectableDragableObjectsGroup>& group);
+
         // Completion deserialization callback
         void OnDeserialized(const DataValue& node) override;
 
@@ -625,6 +630,7 @@ CLASS_FIELDS_META(o2::Tree)
     FIELD().PUBLIC().NAME(onNodeRightButtonClicked);
     FIELD().PUBLIC().NAME(onObjectsSelectionChanged);
     FIELD().PUBLIC().NAME(onDraggedObjects);
+    FIELD().PUBLIC().NAME(onDroppedFromOther);
     FIELD().PUBLIC().NAME(onNodeExpanded);
     FIELD().PUBLIC().NAME(onNodeCollapsed);
     FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(RearrangeType::Enabled).NAME(mRearrangeType);
@@ -791,6 +797,7 @@ CLASS_METHODS_META(o2::Tree)
     FUNCTION().PROTECTED().SIGNATURE(void, OnDraggedAbove, const Ref<ISelectableDragableObjectsGroup>&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnDragExit, const Ref<ISelectableDragableObjectsGroup>&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnDropped, const Ref<ISelectableDragableObjectsGroup>&);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnDroppedFromOther, const Ref<ISelectableDragableObjectsGroup>&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnDeserialized, const DataValue&);
 }
 END_META;

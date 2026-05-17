@@ -148,9 +148,7 @@ namespace o2
         // Rebuilds assets
         void RebuildAssets(bool resetCache = false);
 
-        // Refreshes each cached asset's AssetInfo from the given tree by UID. Used after the
-        // built-assets tree is reloaded — cached assets (especially folders) otherwise keep
-        // stale children that no longer exist on disk.
+        // Refreshes cached assets' mInfo from tree by UID; called after tree reload
         void RefreshCachedAssetsInfo(const Ref<AssetsTree>& tree);
 #endif
 
