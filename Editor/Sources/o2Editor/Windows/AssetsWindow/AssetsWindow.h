@@ -149,6 +149,10 @@ namespace Editor
         // Called when search edit box text was changed
         void OnSearchEdited(const WString& search);
 
+        // Walks the assets tree and collects infos whose filename contains searchLower
+        void SearchAssetsRecursive(const Ref<AssetInfo>& info, const String& searchLower,
+                                   Vector<Ref<AssetInfo>>& matches);
+
         // Called when menu filter button was pressed
         void OnMenuFilterPressed();
 
@@ -224,6 +228,7 @@ CLASS_METHODS_META(Editor::AssetsWindow)
     FUNCTION().PROTECTED().SIGNATURE(void, InitializeDownPanel);
     FUNCTION().PROTECTED().SIGNATURE(void, InitializeUpPanel);
     FUNCTION().PROTECTED().SIGNATURE(void, OnSearchEdited, const WString&);
+    FUNCTION().PROTECTED().SIGNATURE(void, SearchAssetsRecursive, const Ref<AssetInfo>&, const String&, Vector<Ref<AssetInfo>>&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnMenuFilterPressed);
     FUNCTION().PROTECTED().SIGNATURE(void, OnShowTreePressed);
     FUNCTION().PROTECTED().SIGNATURE(void, OnAssetsRebuilt, const Vector<UID>&);

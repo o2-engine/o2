@@ -89,9 +89,6 @@ namespace Editor
         // Called when context delete pressed
         void OnContextDeletePressed();
 
-        // Called when context open pressed
-        void OnContextOpenPressed();
-
         // Called when context show in explorer pressed
         void OnContextShowInExplorerPressed();
 
@@ -165,7 +162,6 @@ CLASS_METHODS_META(Editor::AssetsFoldersTree)
     FUNCTION().PROTECTED().SIGNATURE(void, OnContextCutPressed);
     FUNCTION().PROTECTED().SIGNATURE(void, OnContextPastePressed);
     FUNCTION().PROTECTED().SIGNATURE(void, OnContextDeletePressed);
-    FUNCTION().PROTECTED().SIGNATURE(void, OnContextOpenPressed);
     FUNCTION().PROTECTED().SIGNATURE(void, OnContextShowInExplorerPressed);
     FUNCTION().PROTECTED().SIGNATURE(void, OnContextCreateFolderPressed);
     FUNCTION().PROTECTED().SIGNATURE(void, OnKeyReleased, const Input::Key&);

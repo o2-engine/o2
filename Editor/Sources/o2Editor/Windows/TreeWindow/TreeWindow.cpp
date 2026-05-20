@@ -335,16 +335,19 @@ namespace Editor
         {
             mSearchObjects.Clear();
 
+            String lowered = ((String)searchStr).ToLowerCase();
             for (auto& actor : o2Scene.GetRootActors())
-                SearchObjectsRecursive(actor, (String)searchStr);
-        }
+                SearchObjectsRecursive(actor, lowered);
 
-        mSceneTree->UpdateNodesView();
+            mSceneTree->SetSearchFilter(mSearchObjects);
+        }
+        else
+            mSceneTree->ClearSearchFilter();
     }
 
     void TreeWindow::SearchObjectsRecursive(const Ref<SceneEditableObject>& object, const String& searchStr)
     {
-        if (object->GetName().CountOf(searchStr) > 0)
+        if (object->GetName().ToLowerCase().Contains(searchStr))
             mSearchObjects.Add(object);
 
         for (auto& child : object->GetEditableChildren())

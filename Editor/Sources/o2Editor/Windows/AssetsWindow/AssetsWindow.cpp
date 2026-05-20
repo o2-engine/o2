@@ -236,9 +236,15 @@ namespace Editor
 
     void AssetsWindow::OpenAsset(const String& path)
     {
-        String fullPath = o2FileSystem.GetParentPath(o2Application.GetBinPath() + "/" + o2Assets.GetAssetsPath() + path);
 #if defined PLATFORM_WINDOWS
+        String fullPath = o2FileSystem.GetParentPath(o2Application.GetBinPath() + "/" + o2Assets.GetAssetsPath() + path);
         ShellExecute(NULL, "explore", fullPath, NULL, NULL, SW_SHOWNORMAL);
+#elif defined PLATFORM_MAC
+        String fullPath = o2FileSystem.GetParentPath(o2Assets.GetAssetsPath() + path);
+        system(("open \"" + fullPath + "\"").Data());
+#elif defined PLATFORM_LINUX
+        String fullPath = o2FileSystem.GetParentPath(o2Assets.GetAssetsPath() + path);
+        system(("xdg-open \"" + fullPath + "\"").Data());
 #endif
     }
 
@@ -436,7 +442,31 @@ namespace Editor
     }
 
     void AssetsWindow::OnSearchEdited(const WString& search)
-    {}
+    {
+        if (search.IsEmpty())
+        {
+            mAssetsGridScroll->UpdateAssetsByCurrentPath();
+            return;
+        }
+
+        String lowered = ((String)search).ToLowerCase();
+        Vector<Ref<AssetInfo>> matches;
+        for (auto& root : o2Assets.GetAssetsTree().rootAssets)
+            SearchAssetsRecursive(root, lowered, matches);
+
+        mAssetsGridScroll->ShowSearchResults(matches);
+    }
+
+    void AssetsWindow::SearchAssetsRecursive(const Ref<AssetInfo>& info, const String& searchLower,
+                                             Vector<Ref<AssetInfo>>& matches)
+    {
+        String name = o2FileSystem.GetPathWithoutDirectories(info->path).ToLowerCase();
+        if (name.Contains(searchLower))
+            matches.Add(info);
+
+        for (auto& child : info->GetChildren())
+            SearchAssetsRecursive(child, searchLower, matches);
+    }
 
     void AssetsWindow::OnMenuFilterPressed()
     {}

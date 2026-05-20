@@ -188,6 +188,17 @@ namespace Editor
         OnItemsUpdated(true);
     }
 
+    void AssetsIconsScrollArea::ShowSearchResults(const Vector<Ref<AssetInfo>>& matches)
+    {
+        PushEditorScopeOnStack scope;
+
+        DeselectAllAssets();
+        mAssetInfos = matches;
+        SortAssetInfos();
+        OnItemsUpdated(true);
+        ResetScroll();
+    }
+
     void AssetsIconsScrollArea::SortAssetInfos()
     {
         Map<Ref<AssetInfo>, Pair<String, int>> sortingCache;
@@ -759,7 +770,6 @@ namespace Editor
     {
         mContextMenu = o2UI.CreateWidget<ContextMenu>();
 
-        mContextMenu->AddItem("Open", [&]() { OnContextOpenPressed(); });
         mContextMenu->AddItem("Show in folder", [&]() { OnContextShowInExplorerPressed(); });
         mContextMenu->AddItem("---");
         mContextMenu->AddItem("New folder", [&]() { CreateAsset(&TypeOf(FolderAsset)); });
@@ -924,12 +934,6 @@ namespace Editor
 
         o2EditorAssets.DeleteAssets(
             mSelectedAssets.Convert<String>([](const Ref<AssetInfo>& x) { return x->path; }));
-    }
-
-    void AssetsIconsScrollArea::OnContextOpenPressed()
-    {
-        if (mSelectedAssets.Count() > 0)
-            o2EditorAssets.OpenAndEditAsset(mSelectedAssets.Last()->meta->ID());
     }
 
     void AssetsIconsScrollArea::OnContextShowInExplorerPressed()

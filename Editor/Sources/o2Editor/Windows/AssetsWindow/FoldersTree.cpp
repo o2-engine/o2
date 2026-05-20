@@ -101,7 +101,6 @@ namespace Editor
     {
         mContextMenu = o2UI.CreateWidget<ContextMenu>();
 
-        mContextMenu->AddItem("Open", [&]() { OnContextOpenPressed(); });
         mContextMenu->AddItem("Show in folder", [&]() { OnContextShowInExplorerPressed(); });
         mContextMenu->AddItem("---");
         mContextMenu->AddItem("New folder", [&]() { OnContextCreateFolderPressed(); }, AssetRef<ImageAsset>(), ShortcutKeys({VK_N, VK_CTRL_CMD}));
@@ -267,11 +266,6 @@ namespace Editor
             o2EditorAssets.OpenFolder("");
             o2EditorAssets.DeleteAssets({ deletingPath });
         }
-    }
-
-    void AssetsFoldersTree::OnContextOpenPressed()
-    {
-        o2EditorAssets.OpenAsset(mCurrentPath);
     }
 
     void AssetsFoldersTree::OnContextShowInExplorerPressed()

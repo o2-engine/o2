@@ -82,6 +82,12 @@ namespace Editor
         // Returns is watching editor UI state
         bool IsEditorWatching() const;
 
+        // Switches tree to flat search-results view
+        void SetSearchFilter(const Vector<Ref<SceneEditableObject>>& filter);
+
+        // Returns to normal hierarchy view
+        void ClearSearchFilter();
+
         // Returns create menu category in editor
         static String GetCreateMenuCategory();
 
@@ -96,6 +102,9 @@ namespace Editor
         Vector<SceneUID> mExpandedActorsCache; // Expanded actors cache, used to restore expanded state after scene reload
 
         bool mWatchEditor = false;
+
+        bool                                  mInSearch = false;
+        Vector<WeakRef<SceneEditableObject>>  mSearchFilter;
 
     protected:
         // Initializes widget logic
@@ -244,6 +253,8 @@ CLASS_FIELDS_META(Editor::SceneHierarchyTree)
     FIELD().PROTECTED().NAME(mAttachedToSceneEvents);
     FIELD().PROTECTED().NAME(mExpandedActorsCache);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mWatchEditor);
+    FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mInSearch);
+    FIELD().PROTECTED().NAME(mSearchFilter);
 }
 END_META;
 CLASS_METHODS_META(Editor::SceneHierarchyTree)
@@ -266,6 +277,8 @@ CLASS_METHODS_META(Editor::SceneHierarchyTree)
     FUNCTION().PUBLIC().SIGNATURE(void, RestoreExpandedFromCache);
     FUNCTION().PUBLIC().SIGNATURE(void, SetEditorWatching, bool);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsEditorWatching);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetSearchFilter, const Vector<Ref<SceneEditableObject>>&);
+    FUNCTION().PUBLIC().SIGNATURE(void, ClearSearchFilter);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetCreateMenuCategory);
     FUNCTION().PROTECTED().SIGNATURE(void, Initialize);
     FUNCTION().PROTECTED().SIGNATURE(void, UpdateVisibleNodes);

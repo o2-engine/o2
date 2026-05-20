@@ -153,6 +153,20 @@ namespace Editor
         return mWatchEditor;
     }
 
+    void SceneHierarchyTree::SetSearchFilter(const Vector<Ref<SceneEditableObject>>& filter)
+    {
+        mInSearch = true;
+        mSearchFilter = filter.Convert<WeakRef<SceneEditableObject>>([](const Ref<SceneEditableObject>& x) { return WeakRef(x); });
+        UpdateNodesView();
+    }
+
+    void SceneHierarchyTree::ClearSearchFilter()
+    {
+        mInSearch = false;
+        mSearchFilter.Clear();
+        UpdateNodesView();
+    }
+
     String SceneHierarchyTree::GetCreateMenuCategory()
     {
         return "UI/Editor";
@@ -219,6 +233,20 @@ namespace Editor
 
     Vector<void*> SceneHierarchyTree::GetObjectChilds(void* object)
     {
+        if (mInSearch)
+        {
+            if (object)
+                return {};
+
+            Vector<void*> result;
+            for (auto& weak : mSearchFilter)
+            {
+                if (auto obj = weak.Lock())
+                    result.Add(obj.Get());
+            }
+            return result;
+        }
+
         if (object)
         {
             SceneEditableObject* parent = (SceneEditableObject*)object;

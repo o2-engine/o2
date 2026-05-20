@@ -65,6 +65,9 @@ namespace Editor
         // Updates assets path contents
         void UpdateAssetsByCurrentPath();
 
+        // Shows the given assets as a flat list (search results)
+        void ShowSearchResults(const Vector<Ref<AssetInfo>>& matches);
+
         // Creates asset and starts renaming
         void CreateAsset(const Type* assetType);
 
@@ -254,9 +257,6 @@ namespace Editor
         // Called when context delete pressed
         void OnContextDeletePressed();
 
-        // Called when context open pressed
-        void OnContextOpenPressed();
-
         // Called when context show in explorer pressed
         void OnContextShowInExplorerPressed();
 
@@ -405,6 +405,7 @@ CLASS_METHODS_META(Editor::AssetsIconsScrollArea)
     FUNCTION().PUBLIC().SIGNATURE(void, SetViewingPath, const String&);
     FUNCTION().PUBLIC().SIGNATURE(const String&, GetViewingPath);
     FUNCTION().PUBLIC().SIGNATURE(void, UpdateAssetsByCurrentPath);
+    FUNCTION().PUBLIC().SIGNATURE(void, ShowSearchResults, const Vector<Ref<AssetInfo>>&);
     FUNCTION().PUBLIC().SIGNATURE(void, CreateAsset, const Type*);
     FUNCTION().PUBLIC().SIGNATURE(void, HighlightAsset, const UID&);
     FUNCTION().PUBLIC().SIGNATURE(void, SelectAsset, const UID&, bool);
@@ -454,7 +455,6 @@ CLASS_METHODS_META(Editor::AssetsIconsScrollArea)
     FUNCTION().PROTECTED().SIGNATURE(void, OnContextCutPressed);
     FUNCTION().PROTECTED().SIGNATURE(void, OnContextPastePressed);
     FUNCTION().PROTECTED().SIGNATURE(void, OnContextDeletePressed);
-    FUNCTION().PROTECTED().SIGNATURE(void, OnContextOpenPressed);
     FUNCTION().PROTECTED().SIGNATURE(void, OnContextShowInExplorerPressed);
     FUNCTION().PROTECTED().SIGNATURE(void, InstantiateDraggingAssets);
     FUNCTION().PROTECTED().SIGNATURE(void, ClearInstantiatedDraggingAssets);
