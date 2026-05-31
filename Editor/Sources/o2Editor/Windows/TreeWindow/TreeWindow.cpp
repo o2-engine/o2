@@ -31,6 +31,7 @@
 #include "o2Editor/Windows/SceneWindow/SceneEditScreen.h"
 #include "o2Editor/Windows/TreeWindow/DrawOrderTree.h"
 #include "o2Editor/Windows/TreeWindow/SceneHierarchyTree.h"
+#include "o2Editor/Windows/TreeWindow/SceneSearchFilter.h"
 #include "o2Editor/Windows/WindowsManager.h"
 #include "o2Editor/Windows/SceneWindow/SceneWindow.h"
 
@@ -333,25 +334,15 @@ namespace Editor
 
         if (mInSearch)
         {
-            mSearchObjects.Clear();
+            auto roots = o2Scene.GetRootActors().Convert<Ref<SceneEditableObject>>(
+                [](const Ref<Actor>& x) { return DynamicCast<SceneEditableObject>(x); });
 
-            String lowered = ((String)searchStr).ToLowerCase();
-            for (auto& actor : o2Scene.GetRootActors())
-                SearchObjectsRecursive(actor, lowered);
+            mSearchObjects = SceneSearchFilter::Search(roots, (String)searchStr);
 
             mSceneTree->SetSearchFilter(mSearchObjects);
         }
         else
             mSceneTree->ClearSearchFilter();
-    }
-
-    void TreeWindow::SearchObjectsRecursive(const Ref<SceneEditableObject>& object, const String& searchStr)
-    {
-        if (object->GetName().ToLowerCase().Contains(searchStr))
-            mSearchObjects.Add(object);
-
-        for (auto& child : object->GetEditableChildren())
-            SearchObjectsRecursive(child, searchStr);
     }
 
     void TreeWindow::OnTreeRBPressed(const Ref<TreeNode>& node)

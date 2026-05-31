@@ -124,9 +124,6 @@ namespace Editor
         // Called when search field was changed
         void OnSearchEdited(const WString& searchStr);
 
-        // Searches actors
-        void SearchObjectsRecursive(const Ref<SceneEditableObject>& object, const String& searchStr);
-
         // Called when tree node clicked by right button (For tree widget)
         void OnTreeRBPressed(const Ref<TreeNode>& node);
 
@@ -242,7 +239,6 @@ CLASS_METHODS_META(Editor::TreeWindow)
     FUNCTION().PROTECTED().SIGNATURE(void, PostInitializeWindow);
     FUNCTION().PROTECTED().SIGNATURE(void, OnListTreeToggled, bool);
     FUNCTION().PROTECTED().SIGNATURE(void, OnSearchEdited, const WString&);
-    FUNCTION().PROTECTED().SIGNATURE(void, SearchObjectsRecursive, const Ref<SceneEditableObject>&, const String&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnTreeRBPressed, const Ref<TreeNode>&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnCreateObject, const Ref<SceneEditableObject>&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnContextCreateNewPressed);
