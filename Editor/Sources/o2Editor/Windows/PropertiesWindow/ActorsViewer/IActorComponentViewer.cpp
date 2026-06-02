@@ -15,9 +15,12 @@
 #include "o2/Utils/StringUtils.h"
 #include "o2/Utils/System/Clipboard.h"
 #include "o2/Utils/System/ShortcutKeys.h"
+#include "o2Editor/Actions/AddComponent.h"
+#include "o2Editor/Actions/RemoveComponent.h"
 #include "o2Editor/Properties/Properties.h"
 #include "o2Editor/UI/SpoilerWithHead.h"
 #include "o2Editor/Windows/PropertiesWindow/PropertiesWindow.h"
+#include "o2Editor/Windows/SceneWindow/SceneWindow.h"
 
 namespace Editor
 {
@@ -114,8 +117,9 @@ namespace Editor
 
     void IActorComponentViewer::RemoveTargetComponents()
     {
-        for (auto& comp : mTargetComponents)
-            comp->GetActor()->RemoveComponent(comp);
+        auto action = mmake<RemoveComponentAction>(mTargetComponents);
+        action->Redo();
+        o2EditorSceneWindow.DoneAction(action);
 
         mTargetComponents.Clear();
     }
@@ -139,7 +143,6 @@ namespace Editor
 
         mOptionsMenu->Hide(true);
 
-        auto actor = mTargetComponents[0]->GetActor();
         CopyComponent();
         RemoveTargetComponents();
     }
@@ -159,16 +162,18 @@ namespace Editor
 
         ForcePopEditorScopeOnStack scope;
 
-        Vector<IObject*> targets;
+        Vector<Ref<Actor>> actors;
+        Vector<IObject*>   targets;
         for (auto& comp : mTargetComponents)
         {
             auto actor = comp->GetActor();
-            DataDocument componentData = data;
-            Ref<Component> component = componentData;
-            actor->AddComponent(component);
-            component->OnAddedFromEditor();
+            actors.Add(actor);
             targets.Add((IObject*)actor.Get());
         }
+
+        auto action = mmake<AddComponentAction>(actors, data);
+        action->Redo();
+        o2EditorSceneWindow.DoneAction(action);
 
         o2EditorPropertiesWindow.SetTargets(targets);
     }

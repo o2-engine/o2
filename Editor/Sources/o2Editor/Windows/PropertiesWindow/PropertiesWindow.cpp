@@ -18,7 +18,7 @@ namespace Editor
         IEditorWindow(refCounter), Singleton<PropertiesWindow>(refCounter), mCurrentViewer(nullptr)
     {
         InitializeWindow();
-        InitializeViewers();
+        mViewersSelector.Initialize();
     }
 
     PropertiesWindow::~PropertiesWindow()
@@ -57,17 +57,6 @@ namespace Editor
 
         context->AddItem(ContextMenu::Item::Separator());
         context->AddItem(mmake<ContextMenu::Item>("Private visible", false, THIS_FUNC(OnPrivateFieldsVisibleChanged)));
-    }
-
-    void PropertiesWindow::InitializeViewers()
-    {
-        auto viewersTypes = TypeOf(IPropertiesViewer).GetDerivedTypes();
-        viewersTypes.Remove(&TypeOf(DefaultPropertiesViewer));
-
-        for (auto& type : viewersTypes)
-            mViewers.Add(DynamicCast<IPropertiesViewer>(type->CreateSampleRef()));
-
-        mDefaultViewer = mmake<DefaultPropertiesViewer>();
     }
 
     void PropertiesWindow::OnPrivateFieldsVisibleChanged(bool visible)
@@ -111,15 +100,7 @@ namespace Editor
         if (mTargetsChanged)
             mOnTargetsChangedDelegate();
 
-        Ref<IPropertiesViewer> objectViewer;
-        if (!targets.IsEmpty())
-        {
-            auto type = &targets[0]->GetType();
-            objectViewer = mViewers.FindOrDefault([&](auto& x) { return type->IsBasedOn(*x->GetViewingObjectType()); });
-        }
-
-        if (!objectViewer)
-            objectViewer = mDefaultViewer;
+        Ref<IPropertiesViewer> objectViewer = mViewersSelector.Select(targets);
 
         if (objectViewer != mCurrentViewer)
         {

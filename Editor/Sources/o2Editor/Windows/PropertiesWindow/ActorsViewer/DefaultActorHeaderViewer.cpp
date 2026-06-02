@@ -12,7 +12,10 @@
 #include "o2/Scene/UI/Widgets/Image.h"
 #include "o2/Scene/UI/Widgets/Toggle.h"
 #include "o2/Utils/Editor/EditorScope.h"
+#include "o2Editor/Actions/BreakPrototype.h"
+#include "o2Editor/Actions/DepthInherit.h"
 #include "o2Editor/Actions/PropertyChange.h"
+#include "o2Editor/Actions/RevertToPrototype.h"
 #include "o2Editor/EditorApplication.h"
 #include "o2Editor/Windows/WindowsManager.h"
 #include "o2Editor/Windows/SceneWindow/SceneWindow.h"
@@ -243,8 +246,9 @@ namespace Editor
 
         Vector<Actor*> revertingActors = GetRootApplyActors();
 
-        for (auto& actor : revertingActors)
-            actor->RevertToPrototype();
+        auto action = mmake<RevertToPrototypeAction>(revertingActors.Convert<Ref<Actor>>([](Actor* x) { return Ref(x); }));
+        action->Redo();
+        o2EditorSceneWindow.DoneAction(action);
 
         mActors.Clear();
         if (areViewActorsAssets)
@@ -267,16 +271,20 @@ namespace Editor
     {
         Vector<Actor*> actors = GetRootApplyActors();
 
-        for (auto& actor : actors)
-            actor->BreakPrototypeLink();
+        auto action = mmake<BreakPrototypeAction>(actors.Convert<Ref<Actor>>([](Actor* x) { return Ref(x); }));
+        action->Redo();
+        o2EditorSceneWindow.DoneAction(action);
 
         *mDataView->state["prototype"] = false;
     }
 
     void DefaultActorHeaderViewer::OnSelectedInheritedLayer()
     {
-        for (auto& actor : mActors)
-            actor->SetDrawingDepthInheritFromParent(true);
+        auto actors = mActors.Convert<Ref<Actor>>([](Actor* x) { return Ref(x); });
+
+        auto action = mmake<DepthInheritAction>(actors, true);
+        action->Redo();
+        o2EditorSceneWindow.DoneAction(action);
     }
 
     Vector<Actor*> DefaultActorHeaderViewer::GetRootApplyActors()

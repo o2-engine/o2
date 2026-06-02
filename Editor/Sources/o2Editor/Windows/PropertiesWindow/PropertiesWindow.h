@@ -4,6 +4,7 @@
 #include "o2/Utils/Singleton.h"
 #include "o2Editor/Properties/IPropertyField.h"
 #include "o2Editor/Windows/IEditorWindow.h"
+#include "o2Editor/Windows/PropertiesWindow/PropertiesViewerSelector.h"
 
 using namespace o2;
 
@@ -71,9 +72,9 @@ namespace Editor
     protected:
         Vector<IObject*> mTargets; // Target objects
 
-        Ref<IPropertiesViewer>         mCurrentViewer; // Current properties viewer
-        Vector<Ref<IPropertiesViewer>> mViewers;       // All available object types viewers
-        Ref<DefaultPropertiesViewer>   mDefaultViewer; // Default properties viewer
+        Ref<IPropertiesViewer> mCurrentViewer; // Current properties viewer
+
+        PropertiesViewerSelector mViewersSelector; // Owns available viewers and picks one by target type @IGNORE
 
         Function<void()> mOnTargetsChangedDelegate; // Called when targets array changing
         bool             mTargetsChanged = false;   // True when targets was changed    
@@ -87,9 +88,6 @@ namespace Editor
 
         // Initializes window context menu
         void InitializeWindowContext();
-
-        // Initializes viewers
-        void InitializeViewers();
 
         // Called when private fields visibility changed
         void OnPrivateFieldsVisibleChanged(bool visible);
@@ -119,8 +117,6 @@ CLASS_FIELDS_META(Editor::PropertiesWindow)
     FIELD().PUBLIC().NAME(onPropertyChangeCompleted);
     FIELD().PROTECTED().NAME(mTargets);
     FIELD().PROTECTED().NAME(mCurrentViewer);
-    FIELD().PROTECTED().NAME(mViewers);
-    FIELD().PROTECTED().NAME(mDefaultViewer);
     FIELD().PROTECTED().NAME(mOnTargetsChangedDelegate);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mTargetsChanged);
     FIELD().PROTECTED().DEFAULT_VALUE(0.1f).NAME(mRefreshDelay);
@@ -141,7 +137,6 @@ CLASS_METHODS_META(Editor::PropertiesWindow)
     FUNCTION().PUBLIC().SIGNATURE_STATIC(Ref<RefCounterable>, CastToRefCounterable, const Ref<PropertiesWindow>&);
     FUNCTION().PROTECTED().SIGNATURE(void, InitializeWindow);
     FUNCTION().PROTECTED().SIGNATURE(void, InitializeWindowContext);
-    FUNCTION().PROTECTED().SIGNATURE(void, InitializeViewers);
     FUNCTION().PROTECTED().SIGNATURE(void, OnPrivateFieldsVisibleChanged, bool);
     FUNCTION().PROTECTED().SIGNATURE(void, OnPropertyChanged, const Vector<IObject*>&, const Ref<IPropertyField>&, bool);
     FUNCTION().PROTECTED().SIGNATURE(void, OnPropertyChangeCompleted, const Vector<IObject*>&, const String&, const Vector<DataDocument>&, const Vector<DataDocument>&);

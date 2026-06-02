@@ -1,12 +1,16 @@
 #include "o2Editor/stdafx.h"
 #include "AddComponentPanel.h"
 
+#include "o2/Scene/Actor.h"
+#include "o2/Scene/Component.h"
 #include "o2/Scene/UI/UIManager.h"
 #include "o2/Scene/UI/WidgetLayout.h"
 #include "o2/Scene/UI/Widgets/Button.h"
 #include "o2/Scene/UI/Widgets/EditBox.h"
 #include "o2/Utils/Editor/EditorScope.h"
+#include "o2Editor/Actions/AddComponent.h"
 #include "o2Editor/Windows/PropertiesWindow/ActorsViewer/ActorViewer.h"
+#include "o2Editor/Windows/SceneWindow/SceneWindow.h"
 
 namespace Editor
 {
@@ -92,12 +96,14 @@ namespace Editor
     {
         auto viewer = mViewer.Lock();
 
-        for (auto& actor : viewer->mTargetActors)
-        {
-            auto comp = DynamicCast<Component>(objType->CreateSampleRef());
-            actor->AddComponent(comp);
-            comp->OnAddedFromEditor();
-        }
+        DataDocument componentData;
+        componentData = DynamicCast<Component>(objType->CreateSampleRef());
+
+        auto actors = viewer->mTargetActors.Convert<Ref<Actor>>([](Actor* x) { return Ref(x); });
+
+        auto action = mmake<AddComponentAction>(actors, componentData);
+        action->Redo();
+        o2EditorSceneWindow.DoneAction(action);
 
         viewer->SetTargets(viewer->mTargetActors.Convert<IObject*>([](auto x) { return dynamic_cast<IObject*>(x); }));
         viewer->OnPropertiesEnabled();
