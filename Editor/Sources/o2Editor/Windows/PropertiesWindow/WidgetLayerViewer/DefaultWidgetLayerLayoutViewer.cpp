@@ -36,7 +36,7 @@ namespace Editor
 
         mPositionProperty = o2UI.CreateWidget<Vec2FProperty>("colored");
         *mPositionProperty->layout = WidgetLayout::HorStretch(VerAlign::Top, 20, 0, 20, 0);
-        mPositionProperty->SetValuePath("transform/position");
+        mPositionProperty->SetValuePath("layout/position");
         mPositionProperty->onChanged = THIS_FUNC(OnPropertyChanged);
         mPositionProperty->onChangeCompleted = THIS_FUNC(OnPropertyChangeCompleted);
         positionPropertyContainer->AddChild(mPositionProperty);
@@ -53,7 +53,7 @@ namespace Editor
 
         mSizeProperty = o2UI.CreateWidget<Vec2FProperty>("colored");
         *mSizeProperty->layout = WidgetLayout::HorStretch(VerAlign::Top, 20, 0, 20, 0);
-        mSizeProperty->SetValuePath("transform/size");
+        mSizeProperty->SetValuePath("layout/size");
         mSizeProperty->onChanged = THIS_FUNC(OnPropertyChanged);
         mSizeProperty->onChangeCompleted = THIS_FUNC(OnPropertyChangeCompleted);
         sizePropertyContainer->AddChild(mSizeProperty);
@@ -189,19 +189,14 @@ namespace Editor
     {
         IWidgetLayerLayoutViewer::OnPropertyChanged(field, byUser);
 
-        for (auto& layer : mLayers) {
-            layer->GetOwnerWidget().Lock()->UpdateTransform();
-            layer->GetOwnerWidget().Lock()->OnChanged();
-        }
+        for (auto& layer : mLayers)
+            layer->OnChanged();
     }
 
     void DefaultWidgetLayerLayoutViewer::OnPropertyChangeCompleted(const String& path, const Vector<DataDocument>& before,
-                                                           const Vector<DataDocument>& after)
+                                                                   const Vector<DataDocument>& after)
     {
         IWidgetLayerLayoutViewer::OnPropertyChangeCompleted(path, before, after);
-
-        auto action = mmake<PropertyChangeAction>(o2EditorSceneScreen.GetSelectedObjects(), path, before, after);
-        o2EditorSceneWindow.DoneAction(action);
     }
 
 }

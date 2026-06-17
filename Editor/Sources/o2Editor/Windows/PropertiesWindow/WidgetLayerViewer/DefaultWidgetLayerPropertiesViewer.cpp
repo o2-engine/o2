@@ -3,7 +3,10 @@
 
 #include "o2/Scene/UI/UIManager.h"
 #include "o2/Scene/UI/Widgets/Button.h"
-#include "o2Editor/Actions/Transform.h"
+#include "o2/Scene/UI/WidgetLayer.h"
+#include "o2/Scene/UI/WidgetLayerLayout.h"
+#include "o2/Utils/Math/Layout.h"
+#include "o2Editor/Actions/WidgetLayerLayout.h"
 #include "o2/Utils/Editor/EditorScope.h"
 #include "o2Editor/Properties/IObjectPropertiesViewer.h"
 #include "o2Editor/Properties/Properties.h"
@@ -71,18 +74,33 @@ namespace Editor
 
     void DefaultWidgetLayerPropertiesViewer::FitLayerByDrawable()
     {
-        auto action = mmake<TransformAction>(mLayers.Convert<Ref<SceneEditableObject>>([](WidgetLayer* layer) { return Ref(dynamic_cast<SceneEditableObject*>(layer)); }));
+        Vector<Ref<SceneEditableObject>> objects;
+        Vector<Layout> doneLayouts;
 
         for (auto& layer : mLayers)
         {
+            Vec2F target;
             if (auto sprite = DynamicCast<Sprite>(layer->GetDrawable()))
-                layer->layout.size = sprite->GetImageAsset()->GetSize();
+                target = sprite->GetImageAsset()->GetSize();
+            else if (auto text = DynamicCast<Text>(layer->GetDrawable()))
+                target = text->GetRealSize();
+            else
+                continue;
 
-            if (auto text = DynamicCast<Text>(layer->GetDrawable()))
-                layer->layout.size = text->GetRealSize();
+            Layout done = layer->GetLayout();
+            Vec2F delta = target - layer->layout.size;
+            done.offsetMin -= delta*0.5f;
+            done.offsetMax += delta*0.5f;
+
+            objects.Add(Ref(dynamic_cast<SceneEditableObject*>(layer)));
+            doneLayouts.Add(done);
         }
 
-        action->Completed();
+        if (objects.IsEmpty())
+            return;
+
+        auto action = mmake<WidgetLayerLayoutAction>(objects, doneLayouts);
+        action->Redo();
         o2EditorSceneWindow.DoneAction(action);
     }
 
@@ -95,8 +113,6 @@ namespace Editor
                                        const Vector<DataDocument>& after)
     {
         IWidgetLayerPropertiesViewer::OnPropertyChangeCompleted(path, before, after);
-
-        o2EditorSceneWindow.DoneActorPropertyChangeAction(path, before, after);
     }
 
 }

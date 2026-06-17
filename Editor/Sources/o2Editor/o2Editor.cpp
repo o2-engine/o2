@@ -46,6 +46,7 @@ extern void __RegisterClass__Editor__SelectAction();
 extern void __RegisterClass__Editor__SplineKeysAction();
 extern void __RegisterClass__Editor__TransformAction();
 extern void __RegisterClass__Editor__VertexWeightsAction();
+extern void __RegisterClass__Editor__WidgetLayerLayoutAction();
 extern void __RegisterClass__Editor__EditorApplication();
 extern void __RegisterClass__Editor__EditorConfig();
 extern void __RegisterClass__Editor__EditorConfig__GlobalConfig();
@@ -246,6 +247,7 @@ extern void InitializeTypeso2Editor()
     __RegisterClass__Editor__SplineKeysAction();
     __RegisterClass__Editor__TransformAction();
     __RegisterClass__Editor__VertexWeightsAction();
+    __RegisterClass__Editor__WidgetLayerLayoutAction();
     __RegisterClass__Editor__EditorApplication();
     __RegisterClass__Editor__EditorConfig();
     __RegisterClass__Editor__EditorConfig__GlobalConfig();

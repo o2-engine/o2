@@ -762,7 +762,10 @@ namespace o2
     void WidgetLayer::OnChanged()
     {
         if (mOwnerWidget)
+        {
+            OnLayoutChanged(); 
             mOwnerWidget.Lock()->OnChanged();
+        }
     }
 
 #endif // IS_EDITOR

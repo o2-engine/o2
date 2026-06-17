@@ -1109,11 +1109,11 @@ namespace o2
     template<typename _value_type, typename _property_type>
     void* TPropertyType<_value_type, _property_type>::GetFieldPtr(void* object, const String& path, const FieldInfo*& fieldInfo) const
     {
-        if constexpr (std::is_pointer<_value_type>::value)
+        if constexpr (std::is_pointer<_value_type>::value || IsRef<_value_type>::value)
         {
             _property_type* prop = (_property_type*)object;
-            _value_type valuePtr = prop->Get();
-            return mValueType->GetFieldPtr(&valuePtr, path, fieldInfo);
+            _value_type value = prop->Get();
+            return mValueType->GetFieldPtr(&value, path, fieldInfo);
         }
 
         return nullptr;
@@ -1126,6 +1126,11 @@ namespace o2
         {
             _property_type* prop = (_property_type*)propertyPtr;
             return prop->Get();
+        }
+        else if constexpr (IsRef<_value_type>::value)
+        {
+            _property_type* prop = (_property_type*)propertyPtr;
+            return prop->Get().Get();
         }
 
         return nullptr;

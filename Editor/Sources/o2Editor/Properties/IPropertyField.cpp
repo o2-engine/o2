@@ -269,11 +269,16 @@ namespace Editor
 
     void IPropertyField::BeginUserChanging()
     {
+        if (mUserChanging)
+            return;
+
+        mUserChanging = true;
         StoreValues(mBeforeChangeValues);
     }
 
     void IPropertyField::EndUserChanging()
     {
+        mUserChanging = false;
         CheckValueChangeCompleted();
     }
 }

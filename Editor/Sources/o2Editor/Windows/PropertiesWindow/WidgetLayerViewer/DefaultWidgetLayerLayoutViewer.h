@@ -49,7 +49,7 @@ namespace Editor
         void OnPropertyChanged(const Ref<IPropertyField>& field, bool byUser) override;
 
         // Called when some property change completed
-        void OnPropertyChangeCompleted(const String& path, const Vector<DataDocument>& before, 
+        void OnPropertyChangeCompleted(const String& path, const Vector<DataDocument>& before,
                                        const Vector<DataDocument>& after) override;
     };
 }

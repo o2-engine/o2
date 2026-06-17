@@ -171,6 +171,7 @@ namespace Editor
 
         String               mValuesPath;         // Reflection path of target values
         Vector<DataDocument> mBeforeChangeValues; // Serialized value data before changes started
+        bool                 mUserChanging = false; // Is inside a user-changing session (between Begin/EndUserChanging)
 
     protected:
         // Called when type specialized during setting value proxy
@@ -618,6 +619,7 @@ CLASS_FIELDS_META(Editor::IPropertyField)
     FIELD().PROTECTED().NAME(mCaption);
     FIELD().PROTECTED().NAME(mValuesPath);
     FIELD().PROTECTED().NAME(mBeforeChangeValues);
+    FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mUserChanging);
 }
 END_META;
 CLASS_METHODS_META(Editor::IPropertyField)
