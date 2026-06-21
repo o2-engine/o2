@@ -70,15 +70,14 @@ namespace Editor
         IActorComponentViewer::OnPropertyChanged(field, byUser);
     }
 
-    void DefaultActorComponentViewer::OnPropertyChangeCompleted(const String& path, const Vector<DataDocument>& before, 
+    void DefaultActorComponentViewer::OnPropertyChangeCompleted(const String& path, const Vector<DataDocument>& before,
                                                                 const Vector<DataDocument>& after)
     {
-        IActorComponentViewer::OnPropertyChangeCompleted(path, before, after);
-
         for (auto& component : mTargetComponents)
             component->GetActor()->OnChanged();
 
-        o2EditorSceneWindow.DoneActorPropertyChangeAction(path, before, after);
+        // forward up to PropertiesWindow, which creates the undo action; a direct call here duplicated it
+        IActorComponentViewer::OnPropertyChangeCompleted(path, before, after);
     }
 
 }

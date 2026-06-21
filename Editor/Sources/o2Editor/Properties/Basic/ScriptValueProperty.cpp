@@ -352,10 +352,26 @@ namespace Editor
         Refresh();
     }
 
+    Vector<DataDocument> ScriptValueProperty::SerializeValues() const
+    {
+        Vector<DataDocument> data;
+        for (auto& p : mValuesProxies)
+        {
+            data.Add(DataDocument());
+            ScriptValue value;
+            p.first->GetValuePtr(&value);
+            data.Last() = value;
+        }
+
+        return data;
+    }
+
     void ScriptValueProperty::Resize(int newCount)
     {
         if (mIsRefreshing)
             return;
+
+        auto before = SerializeValues();
 
         for (auto& p : mValuesProxies)
         {
@@ -371,15 +387,26 @@ namespace Editor
             else
             {
                 for (int i = 0; i < newCount - length; i++)
-                    OnAddPressed();
+                {
+                    if (first.GetLength() > 0)
+                        first.AddElement(first.GetElement(first.GetLength() - 1).Copy());
+                    else
+                        first.AddElement(ScriptValue(0));
+                }
             }
         }
 
         Refresh();
+
+        auto after = SerializeValues();
+        if (before != after)
+            onChangeCompleted(mValuesPath, before, after);
     }
 
     void ScriptValueProperty::Remove(int idx)
     {
+        auto before = SerializeValues();
+
         for (auto& p : mValuesProxies)
         {
             ScriptValue first;
@@ -388,10 +415,16 @@ namespace Editor
         }
 
         Refresh();
+
+        auto after = SerializeValues();
+        if (before != after)
+            onChangeCompleted(mValuesPath, before, after);
     }
 
     void ScriptValueProperty::OnAddPressed()
     {
+        auto before = SerializeValues();
+
         for (auto& p : mValuesProxies)
         {
             ScriptValue first;
@@ -403,6 +436,10 @@ namespace Editor
         }
 
         Refresh();
+
+        auto after = SerializeValues();
+        if (before != after)
+            onChangeCompleted(mValuesPath, before, after);
     }
 
     const Type* ScriptValueProperty::GetValueType() const

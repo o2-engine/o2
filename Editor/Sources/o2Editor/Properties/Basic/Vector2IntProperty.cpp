@@ -26,12 +26,14 @@ namespace Editor
     {
         mXProperty = GetChildByType<IntegerProperty>("container/layout/properties/x");
         mXProperty->SetValuePath("x");
+        mXProperty->SetValueChangeAppliedByAction(false);
         mXProperty->onBeforeChange = THIS_FUNC(OnPropertyBeforeChange);
         mXProperty->onChanged = THIS_FUNC(OnPropertyChanged);
         mXProperty->onChangeCompleted = THIS_FUNC(OnPropertyChangeCompleted);
 
         mYProperty = GetChildByType<IntegerProperty>("container/layout/properties/y");
         mYProperty->SetValuePath("y");
+        mYProperty->SetValueChangeAppliedByAction(false);
         mYProperty->onBeforeChange = THIS_FUNC(OnPropertyBeforeChange);
         mYProperty->onChanged = THIS_FUNC(OnPropertyChanged);
         mYProperty->onChangeCompleted = THIS_FUNC(OnPropertyChangeCompleted);

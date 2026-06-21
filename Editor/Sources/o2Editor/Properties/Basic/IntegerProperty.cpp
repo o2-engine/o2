@@ -26,6 +26,8 @@ namespace Editor
 
     void IntegerProperty::InitializeControls()
     {
+        SetValueChangeAppliedByAction(true);
+
         mEditBox = FindChildByType<EditBox>();
         if (mEditBox)
         {

@@ -63,6 +63,8 @@ namespace Editor
 
     void FloatProperty::InitializeControls()
     {
+        SetValueChangeAppliedByAction(true);
+
         mEditBox = FindChildByType<EditBox>();
         if (mEditBox)
         {

@@ -25,6 +25,8 @@ namespace Editor
 
     void SceneLayersListProperty::InitializeControls()
     {
+        SetValueChangeAppliedByAction(true);
+
         mPropertyButton = GetChildByType<Button>("container/layout/box");
         if (mPropertyButton)
         {

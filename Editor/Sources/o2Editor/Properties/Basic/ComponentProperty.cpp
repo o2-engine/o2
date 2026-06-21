@@ -36,6 +36,8 @@ namespace Editor
 
     void ComponentProperty::InitializeControls()
     {
+        SetValueChangeAppliedByAction(true);
+
         mCommonValue = nullptr;
         mComponentType = &TypeOf(Component);
 

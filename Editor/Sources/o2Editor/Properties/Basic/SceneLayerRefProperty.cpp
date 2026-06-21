@@ -121,10 +121,11 @@ namespace Editor
 
         mSelectedInheritedValue = false;
 
-        if (!mCommonValue)
-            mCommonValue = o2Scene.GetDefaultLayer();
+        auto layer = o2Scene.GetLayer(name);
+        if (!layer)
+            layer = o2Scene.GetDefaultLayer();
 
-        //SetValueByUserAndComplete(Ref<SceneLayer>(name));
+        SetValueByUserAndComplete(layer);
     }
 
     bool SceneLayerRefProperty::IsAlwaysRefresh() const

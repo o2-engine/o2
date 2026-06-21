@@ -24,6 +24,8 @@ namespace Editor
 
     void EnumProperty::InitializeControls()
     {
+        SetValueChangeAppliedByAction(true);
+
         mDropDown = FindChildByType<DropDown>();
         if (mDropDown)
         {

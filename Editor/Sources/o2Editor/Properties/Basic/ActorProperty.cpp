@@ -35,6 +35,8 @@ namespace Editor
 
     void ActorProperty::InitializeControls()
     {
+        SetValueChangeAppliedByAction(true);
+
         mCommonValue = nullptr;
 
         mBox = GetChildWidget("container/layout/box");

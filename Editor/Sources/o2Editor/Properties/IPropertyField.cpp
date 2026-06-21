@@ -191,6 +191,16 @@ namespace Editor
         return mPropertyEnabled;
     }
 
+    void IPropertyField::SetValueChangeAppliedByAction(bool applied)
+    {
+        mApplyChangeWithAction = applied;
+    }
+
+    bool IPropertyField::IsValueChangeAppliedByAction() const
+    {
+        return mApplyChangeWithAction;
+    }
+
     void IPropertyField::SetFieldInfo(const FieldInfo* fieldInfo)
     {
         mFieldInfo = fieldInfo;

@@ -80,6 +80,8 @@ namespace Editor
     {
         auto action = mmake<PropertyChangeAction>(o2EditorSceneScreen.GetSelectedObjects(), path, prevValue, newValue);
 
+        action->Redo();
+
         DoneAction(action);
     }
 

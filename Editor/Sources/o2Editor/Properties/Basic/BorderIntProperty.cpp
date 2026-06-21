@@ -26,24 +26,28 @@ namespace Editor
     {
         mLeftProperty = GetChildByType<IntegerProperty>("container/layout/properties/left");
         mLeftProperty->SetValuePath("left");
+        mLeftProperty->SetValueChangeAppliedByAction(false);
         mLeftProperty->onBeforeChange = THIS_FUNC(OnPropertyBeforeChange);
         mLeftProperty->onChanged = THIS_FUNC(OnPropertyChanged);
         mLeftProperty->onChangeCompleted = THIS_FUNC(OnPropertyChangeCompleted);
 
         mBottomProperty = GetChildByType<IntegerProperty>("container/layout/properties/bottom");
         mBottomProperty->SetValuePath("bottom");
+        mBottomProperty->SetValueChangeAppliedByAction(false);
         mBottomProperty->onBeforeChange = THIS_FUNC(OnPropertyBeforeChange);
         mBottomProperty->onChanged = THIS_FUNC(OnPropertyChanged);
         mBottomProperty->onChangeCompleted = THIS_FUNC(OnPropertyChangeCompleted);
 
         mRightProperty = GetChildByType<IntegerProperty>("container/layout/properties/right");
         mRightProperty->SetValuePath("right");
+        mRightProperty->SetValueChangeAppliedByAction(false);
         mRightProperty->onBeforeChange = THIS_FUNC(OnPropertyBeforeChange);
         mRightProperty->onChanged = THIS_FUNC(OnPropertyChanged);
         mRightProperty->onChangeCompleted = THIS_FUNC(OnPropertyChangeCompleted);
 
         mTopProperty = GetChildByType<IntegerProperty>("container/layout/properties/top");
         mTopProperty->SetValuePath("top");
+        mTopProperty->SetValueChangeAppliedByAction(false);
         mTopProperty->onBeforeChange = THIS_FUNC(OnPropertyBeforeChange);
         mTopProperty->onChanged = THIS_FUNC(OnPropertyChanged);
         mTopProperty->onChangeCompleted = THIS_FUNC(OnPropertyChangeCompleted);

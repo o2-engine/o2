@@ -26,6 +26,8 @@ namespace Editor
 
     void TagsProperty::InitializeControls()
     {
+        SetValueChangeAppliedByAction(true);
+
         mEditBox = FindChildByType<EditBox>();
         if (mEditBox)
         {
@@ -47,7 +49,27 @@ namespace Editor
     }
 
     void TagsProperty::UpdateValueView()
-    {}
+    {
+        if (!mEditBox)
+            return;
+
+        mPushingTag = true;
+
+        if (mValuesDifferent)
+        {
+            mEditBox->text = "--";
+        }
+        else
+        {
+            WString res;
+            for (auto& tag : mCommonValue.GetTagsNames())
+                res += tag + " ";
+
+            mEditBox->text = res;
+        }
+
+        mPushingTag = false;
+    }
 
     void TagsProperty::UpdateContextData(const WString& filter)
     {
@@ -71,13 +93,10 @@ namespace Editor
         mCommonValue = value;
         mValuesDifferent = false;
 
-        WString res;
-        for (auto& tag : mCommonValue.GetTagsNames())
-            res += tag + " ";
+        for (auto& ptr : mValuesProxies)
+            SetProxy(ptr.first, value);
 
-        mPushingTag = true;
-        mEditBox->text = res;
-        mPushingTag = false;
+        UpdateValueView();
 
         OnValueChanged(byUser);
     }

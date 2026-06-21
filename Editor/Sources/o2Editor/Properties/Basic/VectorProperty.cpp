@@ -206,6 +206,7 @@ namespace Editor
                     propertyDef->SetCaption(GetElementCaption(i, itemTargetValues));
                     propertyDef->SetValueAndPrototypeProxy(itemTargetValues);
                     propertyDef->SetValuePath((String)i);
+                    propertyDef->SetValueChangeAppliedByAction(false);
                     propertyDef->GetRemoveButton()->onClick = [=]() { Remove(i); };
 
                     propertyDef->onChangeCompleted =
@@ -564,31 +565,22 @@ namespace Editor
         newCount = Math::Max(0, newCount);
 
         Vector<DataDocument> prevValues, newValues;
-        auto elementFieldInfo = mVectorType->GetElementFieldInfo();
 
         for (auto& obj : mTargetObjects)
         {
             prevValues.Add(DataDocument());
-            prevValues.Last()["Size"].Set(mVectorType->GetObjectVectorSize(obj.first.data));
-            DataValue& elementsData = prevValues.Last()["Elements"];
-
-            int lastCount = mVectorType->GetObjectVectorSize(obj.first.data);
-            for (int i = newCount; i < lastCount; i++)
-            {
-                elementFieldInfo->Serialize(mVectorType->GetObjectVectorElementPtr(obj.first.data, i),
-                                            elementsData.AddMember("Element" + (String)i));
-            }
-
-            newValues.Add(DataDocument());
-            newValues.Last()["Size"].Set(newCount);
+            mVectorType->Serialize(obj.first.data, prevValues.Last());
 
             mVectorType->SetObjectVectorSize(obj.first.data, newCount);
+
+            newValues.Add(DataDocument());
+            mVectorType->Serialize(obj.first.data, newValues.Last());
         }
 
         Refresh();
 
         if (prevValues != newValues)
-            onChangeCompleted(mValuesPath + "/count", prevValues, newValues);
+            onChangeCompleted(mValuesPath, prevValues, newValues);
 
         onChanged(Ref(this), true);
         o2EditorSceneScreen.OnSceneChanged();

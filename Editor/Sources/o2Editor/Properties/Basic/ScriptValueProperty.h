@@ -122,6 +122,9 @@ namespace Editor
         // Called when expanding spoiler, refreshing properties
         void OnExpand();
 
+        // Serializes current values of all target proxies (used as before/after for undo actions)
+        Vector<DataDocument> SerializeValues() const;
+
         // Sets new count of elements in vector
         void Resize(int newCount);
 
@@ -233,6 +236,7 @@ CLASS_METHODS_META(Editor::ScriptValueProperty)
     FUNCTION().PROTECTED().SIGNATURE(void, AddProperty, const String&, const Type*, int);
     FUNCTION().PROTECTED().SIGNATURE(void, OnCountChanged, const Ref<IPropertyField>&, bool);
     FUNCTION().PROTECTED().SIGNATURE(void, OnExpand);
+    FUNCTION().PROTECTED().SIGNATURE(Vector<DataDocument>, SerializeValues);
     FUNCTION().PROTECTED().SIGNATURE(void, Resize, int);
     FUNCTION().PROTECTED().SIGNATURE(void, Remove, int);
     FUNCTION().PROTECTED().SIGNATURE(void, OnAddPressed);

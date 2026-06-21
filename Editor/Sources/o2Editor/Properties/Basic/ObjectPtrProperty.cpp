@@ -286,6 +286,8 @@ namespace Editor
 
     void ObjectPtrProperty::RemoveObject()
     {
+        StoreValues(mBeforeChangeValues);
+
         for (auto& targetObj : mValuesProxies)
         {
             IObject* object = GetProxy(targetObj.first);
@@ -295,6 +297,8 @@ namespace Editor
                 SetProxy(targetObj.first, nullptr);
             }
         }
+
+        CheckValueChangeCompleted();
 
         Refresh();
 

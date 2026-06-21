@@ -46,6 +46,8 @@ namespace Editor
 
     void StringProperty::InitializeControls()
     {
+        SetValueChangeAppliedByAction(true);
+
         mEditBox = FindChildByType<EditBox>();
         mEditBoxDropDown = FindChildByType<EditBoxDropDown>();
         

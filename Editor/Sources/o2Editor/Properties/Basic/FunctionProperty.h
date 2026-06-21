@@ -119,6 +119,9 @@ namespace Editor
         // Creates new widget for subscription
         Ref<FunctionInstance> CreateWidget();
 
+        // Serializes current values of all target proxies (used as before/after for undo actions)
+        Vector<DataDocument> SerializeValues() const;
+
         // Called when add button has pressed
         void OnAddPressed();
 
@@ -172,6 +175,7 @@ CLASS_METHODS_META(Editor::FunctionProperty)
     FUNCTION().PROTECTED().SIGNATURE(void, InitializeControls);
     FUNCTION().PROTECTED().SIGNATURE(void, RefreshInstances);
     FUNCTION().PROTECTED().SIGNATURE(Ref<FunctionInstance>, CreateWidget);
+    FUNCTION().PROTECTED().SIGNATURE(Vector<DataDocument>, SerializeValues);
     FUNCTION().PROTECTED().SIGNATURE(void, OnAddPressed);
     FUNCTION().PROTECTED().SIGNATURE(void, OnRemovePressed, const Ref<FunctionInstance>&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnExpand);

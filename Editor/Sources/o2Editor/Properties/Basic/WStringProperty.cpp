@@ -24,6 +24,8 @@ namespace Editor
 
     void WStringProperty::InitializeControls()
     {
+        SetValueChangeAppliedByAction(true);
+
         mEditBox = FindChildByType<EditBox>();
         if (mEditBox)
         {

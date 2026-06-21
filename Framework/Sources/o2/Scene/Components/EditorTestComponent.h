@@ -63,7 +63,7 @@ namespace o2
         };
 
     public:
-        Ref<IRectDrawable> mDrawable;                 // @SERIALIZABLE
+        Ref<IRectDrawable> mDrawable;                           // @SERIALIZABLE
         AssetRef<ImageAsset> mImageAsset;                       // @SERIALIZABLE
         LinkRef<Component> mComponent;                          // @SERIALIZABLE
         LinkRef<RigidBody> mRigidBody;                          // @SERIALIZABLE
@@ -72,16 +72,16 @@ namespace o2
 
         PROPERTIES(EditorTestComponent);
         PROPERTY(Ref<Sprite>, spritePropPtr, SetSpritePtr, GetSpritePtr);
-        PROPERTY(Sprite, spriteProp, SetSprite, GetSprite);
+        PROPERTY(Sprite, spriteProp, SetSprite, GetSprite); // @DONT_DELETE
         PROPERTY(Vector<Vec2I>, arr, SetArray, GetArray);
                                                                
     public:                                                    
         Vector<Vec2I> mVecs;                                   // @SERIALIZABLE @INVOKE_ON_CHANGE(Test)
-        int mInteger = 0;                                          // @SERIALIZABLE @INVOKE_ON_CHANGE(Test)
-        float mFloat = 0.0f;                                          // @SERIALIZABLE
+        int mInteger = 0;                                      // @SERIALIZABLE @INVOKE_ON_CHANGE(Test)
+        float mFloat = 0.0f;                                   // @SERIALIZABLE
         String mString;                                        // @SERIALIZABLE
         WString mWString;                                      // @SERIALIZABLE
-        bool mBool = false;                                            // @SERIALIZABLE
+        bool mBool = false;                                    // @SERIALIZABLE
         AssetRef<ActorAsset> mActorAsset;                      // @SERIALIZABLE
         AssetRef<DataAsset> mDataAsset;                        // @SERIALIZABLE
         AssetRef<AnimationAsset> mAnimationAsset;              // @SERIALIZABLE
@@ -100,7 +100,7 @@ namespace o2
         Ref<Curve> mCurve = mmake<Curve>(Curve::EaseInOut());  // @SERIALIZABLE
         Ref<ColorGradient> mGradient;                          // @SERIALIZABLE
         TestInside mTestInside;                                // @SERIALIZABLE
-        TestEnum mTestEnum = TestEnum::A;                                    // @SERIALIZABLE
+        TestEnum mTestEnum = TestEnum::A;                      // @SERIALIZABLE
         Ref<TestInside> mTestInsideRef;                        // @SERIALIZABLE
 
         Vector<int> mIntVector;                         // @SERIALIZABLE
@@ -112,14 +112,14 @@ namespace o2
         Vector<Vector<TestInside*>> mVectorOfVector; // @SERIALIZABLE
 
         Map<String, String> mDictionary;    // @SERIALIZABLE
-        float mFloat2 = 0.0f;                      // @SERIALIZABLE @RANGE(0, 10)
-        float mFloat3 = 0.0f;                      // @SERIALIZABLE
-        float mFloat4 = 0.0f;                      // @SERIALIZABLE
-        float mFloat5 = 0.0f;                      // @SERIALIZABLE
-        float mFloat6 = 0.0f;                      // @SERIALIZABLE
-        float mFloat7 = 0.0f;                      // @SERIALIZABLE
-        float mFloat8 = 0.0f;                      // @SERIALIZABLE
-        float mFloat9 = 0.0f;                      // @SERIALIZABLE
+        float mFloat2 = 0.0f;               // @SERIALIZABLE @RANGE(0, 10)
+        float mFloat3 = 0.0f;               // @SERIALIZABLE
+        float mFloat4 = 0.0f;               // @SERIALIZABLE
+        float mFloat5 = 0.0f;               // @SERIALIZABLE
+        float mFloat6 = 0.0f;               // @SERIALIZABLE
+        float mFloat7 = 0.0f;               // @SERIALIZABLE
+        float mFloat8 = 0.0f;               // @SERIALIZABLE
+        float mFloat9 = 0.0f;               // @SERIALIZABLE
 
     public:
         static String GetCategory();
@@ -161,7 +161,7 @@ CLASS_FIELDS_META(o2::EditorTestComponent)
     FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().NAME(mImageComponent);
     FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().NAME(mParticlesComponent);
     FIELD().PUBLIC().NAME(spritePropPtr);
-    FIELD().PUBLIC().NAME(spriteProp);
+    FIELD().PUBLIC().DONT_DELETE_ATTRIBUTE().NAME(spriteProp);
     FIELD().PUBLIC().NAME(arr);
     FIELD().PUBLIC().INVOKE_ON_CHANGE_ATTRIBUTE(Test).SERIALIZABLE_ATTRIBUTE().NAME(mVecs);
     FIELD().PUBLIC().INVOKE_ON_CHANGE_ATTRIBUTE(Test).SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(0).NAME(mInteger);

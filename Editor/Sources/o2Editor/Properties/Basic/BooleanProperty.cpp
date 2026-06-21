@@ -27,6 +27,8 @@ namespace Editor
 
     void BooleanProperty::InitializeControls()
     {
+        SetValueChangeAppliedByAction(true);
+
         mToggle = FindChildByType<Toggle>();
         if (mToggle)
         {

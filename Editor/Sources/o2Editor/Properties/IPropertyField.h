@@ -109,6 +109,12 @@ namespace Editor
         // Returns is property enabled
         bool IsPropertyEnabled() const;
 
+        // Sets is value change applied through the action system (otherwise the value is written directly into the proxy)
+        void SetValueChangeAppliedByAction(bool applied);
+
+        // Returns is value change applied through the action system
+        bool IsValueChangeAppliedByAction() const;
+
         // Specializes field info
         virtual void SetFieldInfo(const FieldInfo* fieldInfo);
 
@@ -172,6 +178,7 @@ namespace Editor
         String               mValuesPath;         // Reflection path of target values
         Vector<DataDocument> mBeforeChangeValues; // Serialized value data before changes started
         bool                 mUserChanging = false; // Is inside a user-changing session (between Begin/EndUserChanging)
+        bool                 mApplyChangeWithAction = false; // Apply user value change through the action system instead of writing the proxy directly
 
     protected:
         // Called when type specialized during setting value proxy
@@ -271,6 +278,9 @@ namespace Editor
 
         // Stores values to data
         void StoreValues(Vector<DataDocument>& data) const override;
+
+        // Stores the given value to data, once per target proxy (aligned with StoreValues)
+        void StoreValuesOfValue(Vector<DataDocument>& data, const _type& value) const;
 
         // Returns value from proxy
         virtual _type GetProxy(const Ref<IAbstractValueProxy>& proxy) const;
@@ -485,8 +495,28 @@ namespace Editor
     void TPropertyField<_type>::SetValueByUserAndComplete(const _type& value)
     {
         StoreValues(mBeforeChangeValues);
-        SetValue(value, true);
-        CheckValueChangeCompleted();
+
+        if (mApplyChangeWithAction && !onChangeCompleted.IsEmpty())
+        {
+            onBeforeChange(Ref(this), true);
+
+            mCommonValue = value;
+            mValuesDifferent = false;
+
+            UpdateValueView();
+            OnValueChanged(true);
+
+            Vector<DataDocument> after;
+            StoreValuesOfValue(after, value);
+
+            if (mBeforeChangeValues != after || after.IsEmpty())
+                onChangeCompleted(mValuesPath, mBeforeChangeValues, after);
+        }
+        else
+        {
+            SetValue(value, true);
+            CheckValueChangeCompleted();
+        }
     }
 
     template<typename _type>
@@ -512,6 +542,17 @@ namespace Editor
         {
             data.Add(DataDocument());
             data.Last() = GetProxy(ptr.first);
+        }
+    }
+
+    template<typename _type>
+    void TPropertyField<_type>::StoreValuesOfValue(Vector<DataDocument>& data, const _type& value) const
+    {
+        data.Clear();
+        for (auto& ptr : mValuesProxies)
+        {
+            data.Add(DataDocument());
+            data.Last() = value;
         }
     }
 
@@ -620,6 +661,7 @@ CLASS_FIELDS_META(Editor::IPropertyField)
     FIELD().PROTECTED().NAME(mValuesPath);
     FIELD().PROTECTED().NAME(mBeforeChangeValues);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mUserChanging);
+    FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mApplyChangeWithAction);
 }
 END_META;
 CLASS_METHODS_META(Editor::IPropertyField)
@@ -647,6 +689,8 @@ CLASS_METHODS_META(Editor::IPropertyField)
     FUNCTION().PUBLIC().SIGNATURE(bool, IsRevertable);
     FUNCTION().PUBLIC().SIGNATURE(void, SetPropertyEnabled, bool);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsPropertyEnabled);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetValueChangeAppliedByAction, bool);
+    FUNCTION().PUBLIC().SIGNATURE(bool, IsValueChangeAppliedByAction);
     FUNCTION().PUBLIC().SIGNATURE(void, SetFieldInfo, const FieldInfo*);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetCreateMenuCategory);
     FUNCTION().PROTECTED().SIGNATURE(void, OnTypeSpecialized, const Type&);
@@ -693,6 +737,7 @@ CLASS_METHODS_META(Editor::TPropertyField<_type>)
     FUNCTION().PROTECTED().SIGNATURE(void, OnTypeSpecialized, const Type&);
     FUNCTION().PROTECTED().SIGNATURE(bool, IsValueRevertable);
     FUNCTION().PROTECTED().SIGNATURE(void, StoreValues, Vector<DataDocument>&);
+    FUNCTION().PROTECTED().SIGNATURE(void, StoreValuesOfValue, Vector<DataDocument>&, const _type&);
     FUNCTION().PROTECTED().SIGNATURE(_type, GetProxy, const Ref<IAbstractValueProxy>&);
     FUNCTION().PROTECTED().SIGNATURE(void, SetProxy, const Ref<IAbstractValueProxy>&, const _type&);
     FUNCTION().PROTECTED().SIGNATURE(void, SetValueByUserAndComplete, const _type&);

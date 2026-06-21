@@ -19,6 +19,7 @@ namespace o2
     {
         if (other.IsObject())
         {
+            SetObject(); // keep the type when empty, else an empty object copies as Null
             for (auto memberIt = other.BeginMember(); memberIt != other.EndMember(); ++memberIt)
             {
                 DataValue name(memberIt->name, *mDocument);
@@ -27,6 +28,7 @@ namespace o2
         }
         else if (other.IsArray())
         {
+            SetArray(); // keep the type when empty, else an empty array copies as Null
             for (auto element : other)
             {
                 DataValue newElement(element, *mDocument);
@@ -308,6 +310,7 @@ namespace o2
 
         if (other.IsObject())
         {
+            SetObject(); // keep the type when empty, else an empty object copies as Null
             for (auto memberIt = other.BeginMember(); memberIt != other.EndMember(); ++memberIt)
             {
                 DataValue name(memberIt->name, *mDocument);
@@ -316,6 +319,7 @@ namespace o2
         }
         else if (other.IsArray())
         {
+            SetArray(); // keep the type when empty, else an empty array copies as Null
             for (auto element : other)
             {
                 DataValue newElement(element, *mDocument);

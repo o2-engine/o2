@@ -246,8 +246,26 @@ namespace Editor
         }
     }
 
+    Vector<DataDocument> FunctionProperty::SerializeValues() const
+    {
+        Vector<DataDocument> data;
+        for (auto& valueProxy : mValuesProxies)
+        {
+            data.Add(DataDocument());
+            if (mFieldInfo)
+            {
+                if (auto pointerProxy = DynamicCast<IPointerValueProxy>(valueProxy.first))
+                    mFieldInfo->Serialize(pointerProxy->GetValueVoidPointer(), data.Last());
+            }
+        }
+
+        return data;
+    }
+
     void FunctionProperty::OnAddPressed()
     {
+        auto before = SerializeValues();
+
         for (auto& valueProxy : mValuesProxies)
         {
             if (auto funcProxy = DynamicCast<PointerValueProxy<AbstractFunction>>(valueProxy.first))
@@ -256,10 +274,16 @@ namespace Editor
 
         Expand();
         Refresh();
+
+        auto after = SerializeValues();
+        if (before != after)
+            onChangeCompleted(mValuesPath, before, after);
     }
 
     void FunctionProperty::OnRemovePressed(const Ref<FunctionInstance>& instance)
     {
+        auto before = SerializeValues();
+
         for (auto& valueProxy : mValuesProxies)
         {
             if (auto funcProxy = DynamicCast<PointerValueProxy<AbstractFunction>>(valueProxy.first))
@@ -270,6 +294,10 @@ namespace Editor
         }
 
         Refresh();
+
+        auto after = SerializeValues();
+        if (before != after)
+            onChangeCompleted(mValuesPath, before, after);
     }
 
     Ref<FunctionProperty::FunctionInstance> FunctionProperty::CreateWidget()

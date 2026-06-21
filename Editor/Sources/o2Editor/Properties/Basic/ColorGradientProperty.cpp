@@ -138,7 +138,8 @@ namespace Editor
 			handle->onChangedPos = [=](const Vec2F& pos) { OnHandleChangedPos(pos, uid); };
 			handle->onDblClicked = [=]() { OpenKeyColorPick(uid); };
 			handle->onRightButtonReleased = [=](const Input::Cursor& cursor) { OpenKeyContextMenu(uid, cursor); };
-			handle->onPressed = [=]() { mHandleContextMenu->SetItemsMaxPriority(); mSelectedHandleUID = uid; };
+			handle->onPressed = [=]() { mHandleContextMenu->SetItemsMaxPriority(); mSelectedHandleUID = uid; BeginUserChanging(); };
+			handle->onReleased = [=]() { EndUserChanging(); };
 
 			mBox->AddChild(handle);
 			mHandles.Add({ uid, handle });
@@ -182,6 +183,8 @@ namespace Editor
 
 		auto key = mCommonValue->GetKeys()[keyIdx];
 
+		StoreValues(mBeforeChangeValues);
+
 		auto onChanged = [=](const Color4& color, bool byUser)
 			{
 				auto key = mCommonValue->GetKeys()[keyIdx];
@@ -189,7 +192,7 @@ namespace Editor
 				mCommonValue->SetKey(key, keyIdx);
 			};
 
-		ColorPickerDlg::Show(key.color, onChanged);
+		ColorPickerDlg::Show(key.color, onChanged, [this]() { CheckValueChangeCompleted(); });
 	}
 
 	void ColorGradientProperty::AddNewKey(const Input::Cursor& cursor)
@@ -197,11 +200,15 @@ namespace Editor
 		if (!mCommonValue)
 			return;
 
+		StoreValues(mBeforeChangeValues);
+
 		float position = (cursor.position.x - mBox->layout->worldLeft) / mBox->layout->width * mCommonValue->Length();
 		auto color = mCommonValue->Evaluate(position);
 
 		mCommonValue->InsertKey(position, color);
 		InitializeHandles();
+
+		CheckValueChangeCompleted();
 	}
 
 	void ColorGradientProperty::OpenBoxContextMenu(const Input::Cursor& cursor)
@@ -229,8 +236,12 @@ namespace Editor
 		if (keyIdx == 0 || keyIdx == mCommonValue->GetKeys().Count() - 1)
 			return;
 
+		StoreValues(mBeforeChangeValues);
+
 		mCommonValue->RemoveKeyAt(keyIdx);
 		InitializeHandles();
+
+		CheckValueChangeCompleted();
 	}
 
 	void ColorGradientProperty::GradientPreviewDrawable::SetGradient(const Ref<ColorGradient>& gradient)
