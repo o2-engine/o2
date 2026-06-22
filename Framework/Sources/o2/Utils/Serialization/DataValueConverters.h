@@ -562,6 +562,8 @@ namespace o2
                         valueNode->Get(*value);
                 }
             }
+            else
+                value = nullptr;
         }
     };
 
@@ -579,7 +581,10 @@ namespace o2
             if (value)
             {
                 data.AddMember("Type").Set(value->GetType().GetName());
-                data.AddMember("Value").Set(*value);
+                if (auto serializable = dynamic_cast<const ISerializable*>(value))
+                    data.AddMember("Value").Set(*serializable);
+                else
+                    data.AddMember("Value").Set(*value);
             }
         }
 
@@ -609,7 +614,9 @@ namespace o2
                     else
                         value = static_cast<T>(sample);
 
-                    if (value)
+                    if (auto serializable = dynamic_cast<ISerializable*>(value))
+                        valueNode->Get(*serializable);
+                    else if (value)
                         valueNode->Get(*value);
                 }
             }

@@ -59,7 +59,7 @@ namespace Editor
 
         // EDIT
         mMenuPanel->AddItem("Edit/Undo", [&]() { OnUndoPressed(); }, AssetRef<ImageAsset>(), ShortcutKeys({VK_Z, VK_CTRL_CMD}));
-        mMenuPanel->AddItem("Edit/Redo", [&]() { OnRedoPressed(); }, AssetRef<ImageAsset>(), ShortcutKeys({VK_Z, VK_CTRL_CMD, VK_SHIFT}));
+        mMenuPanel->AddItem("Edit/Redo", [&]() { OnRedoPressed(); }, AssetRef<ImageAsset>(), ShortcutKeys({VK_Y, VK_CTRL_CMD}));
 
         mMenuPanel->AddItem("Edit/---");
 

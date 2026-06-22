@@ -71,7 +71,7 @@ namespace o2
         LinkRef<ParticlesEmitterComponent> mParticlesComponent; // @SERIALIZABLE
 
         PROPERTIES(EditorTestComponent);
-        PROPERTY(Ref<Sprite>, spritePropPtr, SetSpritePtr, GetSpritePtr);
+        PROPERTY(Ref<Sprite>, spritePropPtr, SetSpritePtr, GetSpritePtr); // @DONT_DELETE @NO_HEADER
         PROPERTY(Sprite, spriteProp, SetSprite, GetSprite); // @DONT_DELETE
         PROPERTY(Vector<Vec2I>, arr, SetArray, GetArray);
                                                                
@@ -160,7 +160,7 @@ CLASS_FIELDS_META(o2::EditorTestComponent)
     FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().NAME(mRigidBody);
     FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().NAME(mImageComponent);
     FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().NAME(mParticlesComponent);
-    FIELD().PUBLIC().NAME(spritePropPtr);
+    FIELD().PUBLIC().DONT_DELETE_ATTRIBUTE().NO_HEADER_ATTRIBUTE().NAME(spritePropPtr);
     FIELD().PUBLIC().DONT_DELETE_ATTRIBUTE().NAME(spriteProp);
     FIELD().PUBLIC().NAME(arr);
     FIELD().PUBLIC().INVOKE_ON_CHANGE_ATTRIBUTE(Test).SERIALIZABLE_ATTRIBUTE().NAME(mVecs);

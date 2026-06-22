@@ -43,6 +43,11 @@ namespace Editor
         {
             RemoveChild(mObjectViewer->GetSpoiler(), false);
             o2EditorProperties.FreeObjectViewer(mObjectViewer);
+
+            mCaption->SetEnabledForcible(true);
+            mCaption->AddChildWidget(mHeaderContainer);
+            mHeaderContainer->SetDrawingDepthInheritFromParent(true);
+            borderLeft = 11;
         }
 
         mObjectViewer = nullptr;
@@ -79,6 +84,7 @@ namespace Editor
         mCaption->AddChildWidget(mHeaderContainer);
 
         mCreateOrRemoveButton = o2UI.CreateButton("Create");
+        mCreateOrRemoveButton->name = "createOrRemove";
         mCreateOrRemoveButton->layout->maxWidth = 75;
         mCreateOrRemoveButton->layout->minHeight = 15;
         mCreateOrRemoveButton->layout->height = 15;
@@ -135,6 +141,7 @@ namespace Editor
                 o2EditorProperties.FreeObjectViewer(mObjectViewer);
                 mCaption->SetEnabledForcible(true);
                 mCaption->AddChildWidget(mHeaderContainer);
+                mHeaderContainer->SetDrawingDepthInheritFromParent(true);
                 borderLeft = 11;
             }
 
@@ -202,7 +209,7 @@ namespace Editor
         {
 			mNoHeader = fieldInfo->HasAttribute<NoHeaderAttribute>();
 			mExpanded = fieldInfo->HasAttribute<ExpandedByDefaultAttribute>() || mNoHeader;
-            mDontDeleteEnabled = fieldInfo->HasAttribute<DontDeleteAttribute>() && !mNoHeader;
+            mDontDeleteEnabled = fieldInfo->HasAttribute<DontDeleteAttribute>();
         }
     }
 
