@@ -1,0 +1,9 @@
+export const NODE_WIDTH = 260;
+export const NODE_HEADER_HEIGHT = 28;
+export const NODE_PORT_ROW = 22;
+export const NODE_PAD_TOP = 8;
+export const NODE_PAD_BOTTOM = 10;
+export const PORT_RADIUS = 6;
+export const GRID_STEP = 20;
+export const MIN_SCALE = 0.25;
+export const MAX_SCALE = 3;

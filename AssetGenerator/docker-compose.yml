@@ -1,0 +1,36 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: assetgen-backend
+    environment:
+      - PROJECT_ROOT=/workspace
+      - PORT=8765
+      - DATA_DIR=/app/backend/data
+      - NODE_ENV=development
+    volumes:
+      - ./backend/src:/app/backend/src
+      - ./shared:/app/shared
+      - ./data:/app/backend/data
+      - ${PROJECT_ROOT_HOST:-../..}:/workspace
+    ports:
+      - "${BACKEND_PORT:-8765}:8765"
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    container_name: assetgen-frontend
+    environment:
+      - VITE_API_URL=http://localhost:${BACKEND_PORT:-8765}
+    volumes:
+      - ./frontend/src:/app/frontend/src
+      - ./frontend/index.html:/app/frontend/index.html
+      - ./shared:/app/shared
+    ports:
+      - "${FRONTEND_PORT:-5173}:5173"
+    depends_on:
+      - backend
+    restart: unless-stopped
