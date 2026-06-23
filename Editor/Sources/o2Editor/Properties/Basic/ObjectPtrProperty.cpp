@@ -366,12 +366,23 @@ namespace Editor
             if (auto previousSerializable = dynamic_cast<ISerializable*>(GetProxy(targetObj.first)))
                 previousSerializable->Serialize(doc);
 
-            auto newObject = type->CreateSampleRef();
+            if (targetObj.first->GetType().GetUsage() == Type::Usage::Pointer)
+            {
+                // raw pointer element: the container owns it, a temporary Ref would free it and dangle
+                IObject* newObject = type->DynamicCastToIObject(type->CreateSample());
+                SetProxy(targetObj.first, newObject);
 
-            SetProxy(targetObj.first, dynamic_cast<IObject*>(newObject.Get()));
+                if (auto newSerializable = dynamic_cast<ISerializable*>(newObject))
+                    newSerializable->Deserialize(doc);
+            }
+            else
+            {
+                auto newObject = type->CreateSampleRef();
+                SetProxy(targetObj.first, dynamic_cast<IObject*>(newObject.Get()));
 
-            if (auto newSerializableRef = dynamic_cast<ISerializable*>(newObject.Get()))
-                newSerializableRef->Deserialize(doc);
+                if (auto newSerializableRef = dynamic_cast<ISerializable*>(newObject.Get()))
+                    newSerializableRef->Deserialize(doc);
+            }
         }
 
         CheckValueChangeCompleted();

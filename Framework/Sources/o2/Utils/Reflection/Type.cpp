@@ -287,6 +287,9 @@ namespace o2
             return object;
         }
 
+        if (pathPart.IsEmpty() || pathPart[0] < '0' || pathPart[0] > '9')
+            return nullptr;
+
         int count = GetObjectVectorSize(object);
         int idx = (int)pathPart;
 

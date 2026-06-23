@@ -104,7 +104,7 @@ namespace Editor
                 mBox->layer["caption"]->transparency = 1.0f;
 
 				if (mEditBtn)
-					mEditBtn->enabled = o2EditorWindows.GetAssetEditor(mAssetType) != nullptr;
+					mEditBtn->enabled = WindowsManager::IsSingletonInitialzed() && o2EditorWindows.GetAssetEditor(mAssetType) != nullptr;
 
                 if (mAvailableToHaveInstance)
                 {
@@ -256,6 +256,8 @@ namespace Editor
 
     void AssetProperty::OnCreateInstancePressed()
 	{
+		StoreValues(mBeforeChangeValues);
+
 		for (auto& proxy : mValuesProxies)
 		{
 			auto proxyType = dynamic_cast<const ObjectType*>(&proxy.first->GetType());
@@ -270,6 +272,7 @@ namespace Editor
 			proxyType->DestroySample(assetRef);
 		}
 
+		CheckValueChangeCompleted();
         Refresh(true);
     }
 

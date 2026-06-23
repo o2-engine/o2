@@ -204,8 +204,8 @@ namespace Editor
 
                     mSpoiler->AddChild(propertyDef);
                     propertyDef->SetCaption(GetElementCaption(i, itemTargetValues));
-                    propertyDef->SetValueAndPrototypeProxy(itemTargetValues);
                     propertyDef->SetValuePath((String)i);
+                    propertyDef->SetValueAndPrototypeProxy(itemTargetValues);
                     propertyDef->SetValueChangeAppliedByAction(false);
                     propertyDef->GetRemoveButton()->onClick = [=]() { Remove(i); };
 
