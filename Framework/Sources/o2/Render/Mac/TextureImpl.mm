@@ -91,7 +91,37 @@ namespace o2
     {}
 
     void Texture::PlatformGetData(Byte* data)
-    {}
+    {
+        if (!mImpl || !mImpl->texture)
+            return;
+
+        NSUInteger bytesPerRow = 4 * (NSUInteger)mSize.x;
+        NSUInteger length = bytesPerRow * (NSUInteger)mSize.y;
+
+        // Copy through a shared buffer on the render queue: the serial queue guarantees any
+        // previously committed rendering into this texture completes before the blit reads it.
+        id<MTLBuffer> readBuffer = [RenderDevice::device newBufferWithLength:length
+                                                                     options:MTLResourceStorageModeShared];
+        if (!readBuffer)
+            return;
+
+        id<MTLCommandBuffer> commandBuffer = [RenderDevice::commandQueue commandBuffer];
+        id<MTLBlitCommandEncoder> blit = [commandBuffer blitCommandEncoder];
+        [blit copyFromTexture:mImpl->texture
+                  sourceSlice:0
+                  sourceLevel:0
+                 sourceOrigin:MTLOriginMake(0, 0, 0)
+                   sourceSize:MTLSizeMake((NSUInteger)mSize.x, (NSUInteger)mSize.y, 1)
+                     toBuffer:readBuffer
+            destinationOffset:0
+       destinationBytesPerRow:bytesPerRow
+     destinationBytesPerImage:length];
+        [blit endEncoding];
+        [commandBuffer commit];
+        [commandBuffer waitUntilCompleted];
+
+        memcpy(data, [readBuffer contents], length);
+    }
 
     void Texture::PlatformSetFilter()
     {

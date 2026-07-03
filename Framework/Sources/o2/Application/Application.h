@@ -217,6 +217,7 @@ namespace o2
 		// Calling when application window moved. Ignoring on mobiles/tablets
         virtual void OnMoved() {}
 
+        friend class AppTestDriver;
         friend class WndProcFunc;
         friend struct ApplicationPlatformWrapper;
     };

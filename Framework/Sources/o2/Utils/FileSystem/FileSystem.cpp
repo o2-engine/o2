@@ -203,7 +203,8 @@ namespace o2
         if (extrPath == path)
             return false;
 
-        if (!FolderCreate(extrPath, true))
+        // A single-segment relative path has no parent to create
+        if (!extrPath.IsEmpty() && !FolderCreate(extrPath, true))
             return false;
 
         return fs::create_directory(path.Data());

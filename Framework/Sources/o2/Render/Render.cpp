@@ -156,6 +156,12 @@ namespace o2
 		SetupViewMatrix(mResolution);
 		UpdateCameraTransforms();
 
+		if (!mCaptureCallback.IsEmpty())
+		{
+			mCaptureTarget = TextureRef(mResolution, TextureFormat::R8G8B8A8, Texture::Usage::RenderTarget);
+			BindRenderTexture(mCaptureTarget);
+		}
+
 		preRender();
 
 		if (IsRenderDrawCallsDebugEnabled())
@@ -432,12 +438,36 @@ namespace o2
 		postRender();
 		postRender.Clear();
 
+		if (mCaptureTarget)
+			UnbindRenderTexture();
+
 		DrawPrimitives();
 
 		PlatformEnd();
 
+		if (mCaptureTarget)
+			DeliverFrameCapture();
+
 		CheckTexturesUnloading();
 		CheckFontsUnloading();
+	}
+
+	void Render::CaptureNextFrame(const Function<void(const Ref<Bitmap>&)>& onCaptured)
+	{
+		mCaptureCallback = onCaptured;
+	}
+
+	void Render::DeliverFrameCapture()
+	{
+		// The render-target y-flip in the camera transforms (see PlatformSetupCameraTransforms)
+		// lands world-up content in the first texture rows, so the bitmap comes out upright
+		Ref<Bitmap> bitmap = mCaptureTarget->GetData();
+
+		auto callback = mCaptureCallback;
+		mCaptureCallback.Clear();
+		mCaptureTarget = nullptr;
+
+		callback(bitmap);
 	}
 
 	void Render::BindMaterial(const Ref<Material>& material)
@@ -588,7 +618,9 @@ namespace o2
 			while (!mStackScissors.IsEmpty() && !mStackScissors.Last().renderTarget)
 				mStackScissors.PopBack();
 
-			mScissorInfos.Last().endDepth = mDrawingDepth;
+			// The stack may hold only render-target entries, which add no scissor infos
+			if (!mScissorInfos.IsEmpty())
+				mScissorInfos.Last().endDepth = mDrawingDepth;
 		}
 		else
 		{
@@ -597,7 +629,8 @@ namespace o2
 				PlatformDisableScissorTest();
 				mStackScissors.PopBack();
 
-				mScissorInfos.Last().endDepth = mDrawingDepth;
+				if (!mScissorInfos.IsEmpty())
+					mScissorInfos.Last().endDepth = mDrawingDepth;
 				mClippingEverything = false;
 			}
 			else

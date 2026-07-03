@@ -46,6 +46,7 @@ option(O2_TRACY "Enables Tracy profiling" OFF)
 option(O2_MEMORY_ANALYZE "Enables memory analyzing (slows down)" OFF)
 option(O2_PLATFORM_INITIALIZATION_ENABLED "Enables platform initialization" ON)
 option(O2_ENABLE_LINK_ZLIB "Enables linking zlib library" ON)
+option(O2_SCRIPTING "Enables JerryScript scripting engine (OFF does not compile yet: reflection core still depends on ScriptValue)" ON)
 option(O2_ENABLE_LINK_LIBPNG "Enables linking libpng library" ON)
 option(O2_DISABLE_O2FRAMEWORK_PCH "Disables precompiled headers for o2Framework" OFF)
 
@@ -62,7 +63,10 @@ if(MSVC AND NOT DEFINED O2_MSVC_MP_FLAG)
 endif()
 
 # Common definitions
-set(O2_COMPILE_DEFINITIONS SCRIPTING_BACKEND_JERRYSCRIPT _CRT_SECURE_NO_WARNINGS)
+set(O2_COMPILE_DEFINITIONS _CRT_SECURE_NO_WARNINGS)
+if (O2_SCRIPTING)
+    list(APPEND O2_COMPILE_DEFINITIONS SCRIPTING_BACKEND_JERRYSCRIPT)
+endif()
 
 if (EMSCRIPTEN)
     list(APPEND O2_COMPILE_DEFINITIONS PLATFORM_WASM)
@@ -246,11 +250,11 @@ target_link_libraries(o2Framework
         Box2D 
         FreeType 
         pugixml 
-        jerry-core 
-        jerry-ext 
-        jerry-port-default
         spine-cpp
 )
+if (O2_SCRIPTING)
+    target_link_libraries(o2Framework PUBLIC jerry-core jerry-ext jerry-port-default)
+endif()
 
 if (O2_ENABLE_LINK_LIBPNG)
     target_link_libraries(o2Framework PUBLIC libpng)
@@ -376,7 +380,10 @@ if(NOT CMAKE_SYSTEM_NAME STREQUAL "iOS" AND NOT EMSCRIPTEN AND NOT ANDROID)
 endif()
 
 # dependencies
-add_dependencies(o2Framework Box2D jerry-core jerry-ext jerry-port-default FreeType)
+add_dependencies(o2Framework Box2D FreeType)
+if (O2_SCRIPTING)
+    add_dependencies(o2Framework jerry-core jerry-ext jerry-port-default)
+endif()
 
 if (O2_ENABLE_LINK_LIBPNG)
     add_dependencies(o2Framework libpng)

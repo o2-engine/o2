@@ -35,6 +35,7 @@ namespace o2
 {
 	FORWARD_CLASS_REF(AtlasAsset);
 
+	class Bitmap;
 	class CursorAreaEventListenersLayer;
 	class Font;
 	class Material;
@@ -110,6 +111,10 @@ namespace o2
 
 		// Finishes custom rendering, restores state and cameras
 		void EndCustomRender();
+
+		// Requests capture of the next rendered frame: it is drawn into an offscreen target and
+		// delivered as an upright bitmap inside that frame's End(). One-shot, replaces prev request
+		void CaptureNextFrame(const Function<void(const Ref<Bitmap>&)>& onCaptured);
 
 		// Resets render's state
 		void ResetState();
@@ -363,6 +368,9 @@ namespace o2
 
 		TextureRef mCurrentRenderTarget; // Current render target. NULL if rendering in back buffer
 
+		Function<void(const Ref<Bitmap>&)> mCaptureCallback; // Pending frame capture callback (CaptureNextFrame)
+		TextureRef                         mCaptureTarget;   // Offscreen target of the frame being captured
+
 		float mDrawingDepth = 0.0f; // Current drawing depth, increments after each drawing drawables
 
 		FT_Library mFreeTypeLib; // FreeType library, for rendering fonts
@@ -469,6 +477,9 @@ namespace o2
 
 		// Updates render transformations for camera
 		void UpdateCameraTransforms();
+
+		// Reads the finished capture target into a bitmap and fires the capture callback
+		void DeliverFrameCapture();
 
 		// Platform specific setup camera transforms
 		void PlatformSetupCameraTransforms(float* modelMatrix, float* viewMatrix, float* projMatrix);
