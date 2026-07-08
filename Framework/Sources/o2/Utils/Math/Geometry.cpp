@@ -5,6 +5,141 @@
 
 namespace o2
 {
+    void Geometry::AxisPlaneBasis(int axis, Vec3F& u, Vec3F& v)
+    {
+        switch (axis)
+        {
+            case 0: u = Vec3F::YAxis(); v = Vec3F::ZAxis(); break;
+            case 1: u = Vec3F::ZAxis(); v = Vec3F::XAxis(); break;
+            default: u = Vec3F::XAxis(); v = Vec3F::YAxis(); break;
+        }
+    }
+
+    float Geometry::AxisPlaneAngle(const Vec3F& center, int axis, const Vec3F& point)
+    {
+        Vec3F u, v;
+        AxisPlaneBasis(axis, u, v);
+
+        Vec3F d = point - center;
+        return Math::Atan2F(d.Dot(v), d.Dot(u));
+    }
+
+    float Geometry::PointToPolylineDistance(const Vector<Vec2F>& points, const Vec2F& point)
+    {
+        float minDistance = FLT_MAX;
+        for (int i = 0; i < points.Count() - 1; i++)
+        {
+            Vec2F a = points[i], b = points[i + 1];
+            Vec2F ab = b - a;
+            float sqrLength = ab.SqrLength();
+            float t = sqrLength > FLT_EPSILON ? Math::Clamp01((point - a).Dot(ab)/sqrLength) : 0.0f;
+            minDistance = Math::Min(minDistance, (a + ab*t - point).Length());
+        }
+
+        return minDistance;
+    }
+
+    bool Geometry::RayIntersectsCylinder(const Vec3F& origin, const Vec3F& direction,
+                                         const Vec3F& start, const Vec3F& end, float radius, float& distance)
+    {
+        Vec3F axis = end - start;
+        float length = axis.Length();
+        if (length < FLT_EPSILON || radius < FLT_EPSILON)
+            return false;
+
+        Vec3F axisDir = axis/length;
+        Vec3F toOrigin = origin - start;
+
+        // Components perpendicular to the axis
+        float originAxial = toOrigin.Dot(axisDir);
+        float directionAxial = direction.Dot(axisDir);
+        Vec3F originPerp = toOrigin - axisDir*originAxial;
+        Vec3F directionPerp = direction - axisDir*directionAxial;
+
+        float bestDistance = FLT_MAX;
+
+        // Side surface: |originPerp + t*directionPerp|^2 = radius^2
+        float a = directionPerp.Dot(directionPerp);
+        if (a > FLT_EPSILON)
+        {
+            float b = originPerp.Dot(directionPerp);
+            float c = originPerp.Dot(originPerp) - radius*radius;
+            float discriminant = b*b - a*c;
+            if (discriminant >= 0.0f)
+            {
+                float sqrtDiscriminant = Math::Sqrt(discriminant);
+                for (float t : { (-b - sqrtDiscriminant)/a, (-b + sqrtDiscriminant)/a })
+                {
+                    if (t < 0.0f)
+                        continue;
+
+                    float axial = originAxial + directionAxial*t;
+                    if (axial >= 0.0f && axial <= length)
+                        bestDistance = Math::Min(bestDistance, t);
+                }
+            }
+        }
+
+        // Cap discs at the segment ends
+        if (Math::Abs(directionAxial) > FLT_EPSILON)
+        {
+            for (float capAxial : { 0.0f, length })
+            {
+                float t = (capAxial - originAxial)/directionAxial;
+                if (t < 0.0f)
+                    continue;
+
+                Vec3F hit = toOrigin + direction*t;
+                if ((hit - axisDir*capAxial).SqrLength() <= radius*radius)
+                    bestDistance = Math::Min(bestDistance, t);
+            }
+        }
+
+        if (bestDistance == FLT_MAX)
+            return false;
+
+        distance = bestDistance;
+        return true;
+    }
+
+    bool Geometry::RayIntersectsQuad(const Vec3F& origin, const Vec3F& direction,
+                                     const Vec3F& corner, const Vec3F& edgeU, const Vec3F& edgeV, float& distance)
+    {
+        Vec3F normal = edgeU.Cross(edgeV);
+        if (normal.SqrLength() < FLT_EPSILON)
+            return false;
+
+        float denominator = direction.Dot(normal);
+        if (Math::Abs(denominator) < 1e-8f)
+            return false;
+
+        float t = (corner - origin).Dot(normal)/denominator;
+        if (t < 0.0f)
+            return false;
+
+        // Decompose the in-plane hit offset by the edge vectors
+        Vec3F offset = origin + direction*t - corner;
+
+        float uu = edgeU.Dot(edgeU);
+        float vv = edgeV.Dot(edgeV);
+        float uv = edgeU.Dot(edgeV);
+        float ou = offset.Dot(edgeU);
+        float ov = offset.Dot(edgeV);
+
+        float det = uu*vv - uv*uv;
+        if (Math::Abs(det) < FLT_EPSILON)
+            return false;
+
+        float u = (ou*vv - ov*uv)/det;
+        float v = (ov*uu - ou*uv)/det;
+
+        if (u < 0.0f || u > 1.0f || v < 0.0f || v > 1.0f)
+            return false;
+
+        distance = t;
+        return true;
+    }
+
     void Geometry::CreatePolyLineMesh(const Vertex* points, int pointsCount,
                                       Vertex*& verticies, UInt& vertexCount, UInt& vertexSize,
                                       VertexIndex*& indexes, UInt& polyCount, UInt& polySize,

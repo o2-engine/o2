@@ -87,7 +87,7 @@ TEST(MoveToolHandleRefresh, UndoTransformActionFiresSceneChangedNotification)
            "OnSceneChanged would not fire and handles would stay stale.";
     EXPECT_TRUE(probe.lastChangedIds.Contains(a->GetID()))
         << "Undone actor missing from the change-list payload.";
-    EXPECT_TRUE(NearV(a->transform->GetPosition(), Vec2F(0.0f, 0.0f)))
+    EXPECT_TRUE(NearV(a->transform->GetPosition2D(), Vec2F(0.0f, 0.0f)))
         << "Sanity check: Undo should have rolled the actor back.";
 }
 
@@ -120,7 +120,7 @@ TEST(MoveToolHandleRefresh, RedoTransformActionFiresSceneChangedNotification)
         << "onObjectsChanged was silent after Redo — handles would stay stale.";
     EXPECT_TRUE(probe.lastChangedIds.Contains(a->GetID()))
         << "Redone actor missing from the change-list payload.";
-    EXPECT_TRUE(NearV(a->transform->GetPosition(), Vec2F(50.0f, 0.0f)))
+    EXPECT_TRUE(NearV(a->transform->GetPosition2D(), Vec2F(50.0f, 0.0f)))
         << "Sanity check: Redo should have re-applied the actor's done pose.";
 }
 
@@ -181,7 +181,7 @@ TEST(MoveToolHandleRefresh, UndoInSameFrameAsDragStillFiresSignal)
     list->UndoAction();                   // OnObjectChanged early-returns inside SetTransform
     o2Scene.CheckChangedObjects();        // empty list -> onObjectsChanged is silent
 
-    EXPECT_TRUE(NearV(a->transform->GetPosition(), Vec2F(0.0f, 0.0f)))
+    EXPECT_TRUE(NearV(a->transform->GetPosition2D(), Vec2F(0.0f, 0.0f)))
         << "Sanity: Undo did roll the actor back even though the signal was missed.";
 
     EXPECT_GT(probe.sceneChangedCalls, 0)

@@ -408,7 +408,7 @@ namespace Editor
         auto newActor = mmake<Actor>();
         newActor->AddComponent(mmake<ImageComponent>());
         newActor->name = "Sprite";
-        newActor->transform->size = Vec2F(10, 10);
+        newActor->transform->size2D = Vec2F(10, 10);
         OnCreateObject(newActor);
     }
 

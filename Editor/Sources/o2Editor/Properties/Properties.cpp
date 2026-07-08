@@ -57,7 +57,10 @@ namespace Editor
         for (auto& x : avaialbleTypes)
         {
             if (auto valueType = x->InvokeStatic<const Type*>("GetValueTypeStatic"))
-                mAvailablePropertiesFields[valueType] = x;
+            {
+                if (valueType != Type::Dummy::type)
+                    mAvailablePropertiesFields[valueType] = x;
+            }
         }
     }
 

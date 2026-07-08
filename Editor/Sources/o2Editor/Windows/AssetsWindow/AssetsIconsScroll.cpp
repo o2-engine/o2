@@ -140,7 +140,7 @@ namespace Editor
         {
             if (mHighlightIcon)
             {
-                mHighlightSprite->SetScale(Vec2F(1.0f, 1.0f));
+                mHighlightSprite->SetScale2D(Vec2F(1.0f, 1.0f));
                 mHighlightSprite->SetRect(mHighlightLayout.Calculate(mHighlightIcon->layout->worldRect));
             }
 

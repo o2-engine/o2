@@ -692,7 +692,7 @@ namespace o2
         sample->SetHoverDrawableLayout(Layout::BothStretch(-10, -16, -10, -16));
 
         Ref<Label> itemSample = o2UI.CreateLabel("empty");
-        itemSample->layout->size = Vec2F(20, 0);
+        itemSample->layout->size2D = Vec2F(20, 0);
         itemSample->horAlign = HorAlign::Left;
         itemSample->verAlign = VerAlign::Middle;
         sample->SetItemSample(itemSample);
@@ -742,14 +742,14 @@ namespace o2
         sample->SetClippingLayout(Layout::BothStretch(4, 2, 20, 2));
 
         Ref<Widget> itemSample = mmake<Widget>();
-        itemSample->layout->size = Vec2F(20, 20);
+        itemSample->layout->size2D = Vec2F(20, 20);
         sample->SetItemSample(itemSample);
 
         auto list = sample->GetListView();
         *list = *o2UI.GetWidgetStyle<CustomList>("standard");
         list->SetViewLayout(Layout::BothStretch(2, 2, 2, 2));
         list->layer["back"]->SetDrawable(mmake<Sprite>("ui/UI4_Box_regular.png"));
-        list->layout->pivot = Vec2F(0.5f, 1.0f);
+        list->layout->pivot2D = Vec2F(0.5f, 1.0f);
         list->layout->anchorMin = Vec2F(0, 0);
         list->layout->anchorMax = Vec2F(1, 0);
         list->layout->offsetMin = Vec2F(-1, -60);
@@ -791,7 +791,7 @@ namespace o2
         *list = *o2UI.GetWidgetStyle<CustomList>("standard");
         list->SetViewLayout(Layout::BothStretch(2, 2, 2, 2));
         list->layer["back"]->SetDrawable(mmake<Sprite>("ui/UI4_Box_regular.png"));
-        list->layout->pivot = Vec2F(0.5f, 1.0f);
+        list->layout->pivot2D = Vec2F(0.5f, 1.0f);
         list->layout->anchorMin = Vec2F(0, 0);
         list->layout->anchorMax = Vec2F(1, 0);
         list->layout->offsetMin = Vec2F(2, -60);
@@ -834,7 +834,7 @@ namespace o2
         *list = *o2UI.GetWidgetStyle<List>("standard");
         list->SetViewLayout(Layout::BothStretch(2, 2, 2, 2));
         list->layer["back"]->SetDrawable(mmake<Sprite>("ui/UI4_Box_regular.png"));
-        list->layout->pivot = Vec2F(0.5f, 0.0f);
+        list->layout->pivot2D = Vec2F(0.5f, 0.0f);
         list->layout->anchorMin = Vec2F(0, 0);
         list->layout->anchorMax = Vec2F(1, 0);
         list->layout->offsetMin = Vec2F(2, -160);
@@ -1151,7 +1151,7 @@ namespace o2
         list->RemoveLayer("back");
         list->AddLayer("back", mmake<Sprite>("ui/UI4_Context_menu.png"), Layout::BothStretch(-22, -19, -19, -19));
 
-        list->layout->pivot = Vec2F(0.5f, 1.0f);
+        list->layout->pivot2D = Vec2F(0.5f, 1.0f);
         list->layout->anchorMin = Vec2F(0, 0);
         list->layout->anchorMax = Vec2F(1, 0);
         list->layout->offsetMin = Vec2F(0, -60);

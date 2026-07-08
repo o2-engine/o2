@@ -21,6 +21,7 @@ namespace o2
 
         Color4 mClearColor; // Clear color for next pass
         bool mNeedClear = false;
+        bool mNeedDepthClear = true; // Clear depth attachment on next pass
         
         float mMVPMatrix[16]; // Render model view projection matrix
         

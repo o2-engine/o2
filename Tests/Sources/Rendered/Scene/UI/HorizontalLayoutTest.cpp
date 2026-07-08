@@ -97,7 +97,7 @@ TEST(HorizontalLayout, ChildrenLayoutLeftToRightHaveIncreasingX)
 {
     SceneCleanGuard guard;
     auto layout = mmake<HorizontalLayout>();
-    layout->layout->SetSize(Vec2F(300, 100));
+    layout->layout->SetSize2D(Vec2F(300, 100));
     layout->SetBaseCorner(BaseCorner::Left);
     layout->SetWidthExpand(false);
     layout->SetSpacing(5);
@@ -111,9 +111,9 @@ TEST(HorizontalLayout, ChildrenLayoutLeftToRightHaveIncreasingX)
 
     TickAndUpdateLayout(2);
 
-    auto posA = a->layout->GetPosition();
-    auto posB = b->layout->GetPosition();
-    auto posC = c->layout->GetPosition();
+    auto posA = a->layout->GetPosition2D();
+    auto posB = b->layout->GetPosition2D();
+    auto posC = c->layout->GetPosition2D();
     EXPECT_LE(posA.x, posB.x);
     EXPECT_LE(posB.x, posC.x);
 }
@@ -122,7 +122,7 @@ TEST(HorizontalLayout, ExpandedChildrenWidthIsProportionalToWeight)
 {
     SceneCleanGuard guard;
     auto layout = mmake<HorizontalLayout>();
-    layout->layout->SetSize(Vec2F(600, 100));
+    layout->layout->SetSize2D(Vec2F(600, 100));
     layout->SetSpacing(0);
     layout->SetBorder(BorderF(0, 0, 0, 0));
     layout->SetWidthExpand(true);

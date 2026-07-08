@@ -28,12 +28,18 @@ namespace o2
         static id<MTLBuffer> vertexBuffer;
         static id<MTLBuffer> indexBuffer;
         static int           currentBufferIndex;
+
+        static NSMutableArray* retiredBuffers[2]; // Overflowed frame buffers, kept alive until their slot is reused
+
+        static id<MTLDepthStencilState> depthStateDisabled; // Compare always, no write
+        static id<MTLDepthStencilState> depthStateEnabled;  // Compare less-equal, write
     };
-    
+
     struct MTLTextureImpl
     {
         id<MTLTexture>      texture;
         id<MTLSamplerState> samplerState; // Wrap+filter state, rebuilt on PlatformSetWrap/Filter
+        id<MTLTexture>      depthTexture; // Lazily created depth attachment for render targets
     };
 
     struct MTLShaderImpl
@@ -46,6 +52,7 @@ namespace o2
     {
         NSUInteger offset = 0;
         MTLDataType dataType = MTLDataTypeNone;
+        NSUInteger size = 0; // Total member size in bytes; for arrays: length*stride
     };
 
     struct MTLMaterialImpl

@@ -5,6 +5,7 @@
 namespace Editor
 {
     FORWARD_CLASS_REF(Vec2FProperty);
+    FORWARD_CLASS_REF(Vec3FProperty);
     FORWARD_CLASS_REF(FloatProperty);
 
     // -------------------------------------
@@ -30,12 +31,12 @@ namespace Editor
     protected:
         Vector<Actor*> mTargetActors;
 
-        Ref<Vec2FProperty> mPositionProperty;
-        Ref<Vec2FProperty> mPivotProperty;
-        Ref<Vec2FProperty> mScaleProperty;
-        Ref<Vec2FProperty> mSizeProperty;
-        Ref<FloatProperty> mRotationProperty;
-        Ref<FloatProperty> mShearProperty;
+        Ref<Vec3FProperty> mPositionProperty;
+        Ref<Vec3FProperty> mPivotProperty;
+        Ref<Vec3FProperty> mScaleProperty;
+        Ref<Vec3FProperty> mSizeProperty;
+        Ref<Vec3FProperty> mRotationProperty;
+        Ref<Vec3FProperty> mShearProperty;
 
         bool               mLayoutEnabled = false;
         Ref<Spoiler>       mLayoutSpoiler;

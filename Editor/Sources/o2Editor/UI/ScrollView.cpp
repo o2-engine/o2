@@ -118,7 +118,7 @@ namespace Editor
         if (!mReady)
             return;
 
-        Vec2I size = layout->size.Get();
+        Vec2I size = layout->size2D.Get();
         size.x = Math::Max(size.x, 32);
         size.y = Math::Max(size.y, 32);
 
@@ -127,7 +127,7 @@ namespace Editor
         mRenderTargetSprite->SetRect(layout->worldRect);
         mNeedRedraw = true;
 
-        mViewCamera.size = size;
+        mViewCamera.size2D = (Vec2F)size;
     }
 
     void ScrollView::UpdateTransparency()
@@ -166,8 +166,8 @@ namespace Editor
         if (!Math::Equals<float>(mViewCamera.GetScale().x, mViewCameraTargetScale.x) ||
             !Math::Equals<float>(mViewCamera.GetScale().y, mViewCameraTargetScale.y))
         {
-            mViewCamera.scale = Math::Lerpc<Vec2F>(mViewCamera.scale, mViewCameraTargetScale,
-                                                   dt*mViewCameraScaleElasticyCoef);
+            mViewCamera.scale2D = Math::Lerpc<Vec2F>(mViewCamera.GetScale2D(), mViewCameraTargetScale,
+                                                     dt*mViewCameraScaleElasticyCoef);
 
             transformed = true;
         }
@@ -178,10 +178,10 @@ namespace Editor
             mViewCameraTargetPos += mViewCameraVelocity*dt;
         }
 
-        if (mViewCamera.position != mViewCameraTargetPos)
+        if (mViewCamera.GetPosition2D() != mViewCameraTargetPos)
         {
-            mViewCamera.position = Math::Lerpc<Vec2F>(mViewCamera.position, mViewCameraTargetPos,
-                                                      dt*mViewCameraPosElasticyCoef);
+            mViewCamera.position2D = Math::Lerpc<Vec2F>(mViewCamera.GetPosition2D(), mViewCameraTargetPos,
+                                                        dt*mViewCameraPosElasticyCoef);
 
             transformed = true;
         }
@@ -239,8 +239,8 @@ namespace Editor
     void ScrollView::SetCamera(const Camera& camera)
     {
         mViewCamera = camera;
-        mViewCameraTargetPos = mViewCamera.position;
-        mViewCameraTargetScale = mViewCamera.scale;
+        mViewCameraTargetPos = mViewCamera.GetPosition2D();
+        mViewCameraTargetScale = mViewCamera.GetScale2D();
     }
 
     const Camera& ScrollView::GetCamera() const

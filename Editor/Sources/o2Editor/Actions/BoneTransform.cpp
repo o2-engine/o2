@@ -17,7 +17,7 @@ namespace Editor
 
         actorId = boneActor->GetID();
         beforeWorldBasis = boneActor->transform->worldBasis;
-        beforeWorldPosition = boneActor->transform->GetWorldPosition();
+        beforeWorldPosition = boneActor->transform->GetWorldPosition2D();
     }
 
     void BoneTransformAction::Completed()
@@ -28,7 +28,7 @@ namespace Editor
             return;
 
         doneWorldBasis = actor->transform->worldBasis;
-        doneWorldPosition = actor->transform->GetWorldPosition();
+        doneWorldPosition = actor->transform->GetWorldPosition2D();
         doneCaptured = true;
     }
 
@@ -45,7 +45,7 @@ namespace Editor
             return;
 
         actor->transform->worldBasis = doneWorldBasis;
-        actor->transform->worldPosition = doneWorldPosition;
+        actor->transform->worldPosition2D = doneWorldPosition;
         actor->UpdateTransform();
     }
 
@@ -57,7 +57,7 @@ namespace Editor
             return;
 
         actor->transform->worldBasis = beforeWorldBasis;
-        actor->transform->worldPosition = beforeWorldPosition;
+        actor->transform->worldPosition2D = beforeWorldPosition;
         actor->UpdateTransform();
     }
 

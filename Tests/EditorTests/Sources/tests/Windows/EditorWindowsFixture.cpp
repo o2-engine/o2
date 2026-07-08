@@ -40,7 +40,7 @@ namespace Editor::Tests
         PushEditorScopeOnStack scope;
         auto wnd = mmake<DockableWindow>();
         wnd->name = name;
-        wnd->layout->size = Vec2F(200, 200);
+        wnd->layout->size2D = Vec2F(200, 200);
         return wnd;
     }
 

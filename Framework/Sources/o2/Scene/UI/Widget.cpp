@@ -210,7 +210,7 @@ namespace o2
 
         if (mResEnabledInHierarchy)
         {
-            if (GetLayoutData().updateFrame == 0)
+            if (GetLayoutData().mUpdateFrame == 0)
             {
                 for (auto& child : mChildren)
                     child->transform->SetDirty(true);
@@ -245,28 +245,28 @@ namespace o2
         for (auto& child : mChildren)
             child->Update(dt);
 
-        RectF childrenWorldRect = GetLayoutData().childrenWorldRect;
-        GetLayoutData().childrenWorldRect = GetLayoutData().worldRectangle;
+        RectF childrenWorldRect = GetLayoutData().mChildrenWorldRect;
+        GetLayoutData().mChildrenWorldRect = GetLayoutData().mWorldBox.ToRect();
 
         for (auto& child : mInternalWidgets)
             child->Update(dt);
 
-        GetLayoutData().childrenWorldRect = childrenWorldRect;
+        GetLayoutData().mChildrenWorldRect = childrenWorldRect;
 
         for (auto& child : mChildren)
             child->UpdateChildren(dt);
 
-        GetLayoutData().childrenWorldRect = GetLayoutData().worldRectangle;
+        GetLayoutData().mChildrenWorldRect = GetLayoutData().mWorldBox.ToRect();
 
         for (auto& child : mInternalWidgets)
             child->UpdateChildren(dt);
 
-        GetLayoutData().childrenWorldRect = childrenWorldRect;
+        GetLayoutData().mChildrenWorldRect = childrenWorldRect;
     }
 
     void Widget::UpdateTransform()
     {
-        if (GetLayoutData().drivenByParent && mParentWidget)
+        if (GetLayoutData().mDrivenByParent && mParentWidget)
             mParentWidget.Lock()->UpdateTransform();
 
         UpdateSelfTransform();
@@ -277,8 +277,8 @@ namespace o2
     {
         Actor::UpdateChildrenTransforms();
 
-        RectF childrenWorldRect = GetLayoutData().childrenWorldRect;
-        GetLayoutData().childrenWorldRect = GetLayoutData().worldRectangle;
+        RectF childrenWorldRect = GetLayoutData().mChildrenWorldRect;
+        GetLayoutData().mChildrenWorldRect = GetLayoutData().mWorldBox.ToRect();
 
         for (auto& child : mInternalWidgets)
             child->UpdateSelfTransform();
@@ -286,7 +286,7 @@ namespace o2
         for (auto& child : mInternalWidgets)
             child->UpdateChildrenTransforms();
 
-        GetLayoutData().childrenWorldRect = childrenWorldRect;
+        GetLayoutData().mChildrenWorldRect = childrenWorldRect;
     }
 
 	void Widget::ForEachActor(const Function<bool(Actor&)>& func)
@@ -586,7 +586,7 @@ namespace o2
 
     const RectF& Widget::GetChildrenWorldRect() const
     {
-        return GetLayoutData().childrenWorldRect;
+        return GetLayoutData().mChildrenWorldRect;
     }
 
     const Vector<Ref<Widget>>& Widget::GetChildWidgets() const
@@ -942,27 +942,27 @@ namespace o2
 
     float Widget::GetMinWidthWithChildren() const
     {
-        return GetLayoutData().minSize.x;
+        return GetLayoutData().mMinSize.x;
     }
 
     float Widget::GetMinHeightWithChildren() const
     {
-        return GetLayoutData().minSize.y;
+        return GetLayoutData().mMinSize.y;
     }
 
     float Widget::GetWidthWeightWithChildren() const
     {
-        return GetLayoutData().weight.x;
+        return GetLayoutData().mWeight.x;
     }
 
     float Widget::GetHeightWeightWithChildren() const
     {
-        return GetLayoutData().weight.y;
+        return GetLayoutData().mWeight.y;
     }
 
     void Widget::UpdateBoundsWithChilds()
     {
-        if ((!mResEnabledInHierarchy || mIsClipped) && GetLayoutData().dirtyFrame != o2Time.GetCurrentFrame())
+        if ((!mResEnabledInHierarchy || mIsClipped) && GetLayoutData().mDirtyFrame != o2Time.GetCurrentFrame())
             return;
 
         mBoundsWithChilds = mBounds;
@@ -1027,10 +1027,10 @@ namespace o2
 
     void Widget::UpdateBounds()
     {
-        if ((!mResEnabledInHierarchy || mIsClipped) && GetLayoutData().dirtyFrame != o2Time.GetCurrentFrame())
+        if ((!mResEnabledInHierarchy || mIsClipped) && GetLayoutData().mDirtyFrame != o2Time.GetCurrentFrame())
             return;
 
-        mBounds = GetLayoutData().worldRectangle;
+        mBounds = GetLayoutData().mWorldBox.ToRect();
         mBoundsWithChilds = mBounds;
 
         for (auto& layer : mDrawingLayers)
@@ -1279,32 +1279,32 @@ namespace o2
         }
     }
 
-    WidgetLayoutData& Widget::GetLayoutData()
+    WidgetLayout& Widget::GetLayoutData()
     {
-        return *layout->mData;
+        return *layout;
     }
 
-    const WidgetLayoutData& Widget::GetLayoutData() const
+    const WidgetLayout& Widget::GetLayoutData() const
     {
-        return *layout->mData;
+        return *layout;
     }
 
     void Widget::SetChildrenWorldRect(const RectF& childrenWorldRect)
     {
-        layout->mData->childrenWorldRect = childrenWorldRect;
+        layout->mChildrenWorldRect = childrenWorldRect;
     }
 
     void Widget::ForceDraw(const RectF& area, float transparency)
     {
-        Vec2F oldLayoutOffsetMin = GetLayoutData().offsetMin;
-        Vec2F oldLayoutOffsetMax = GetLayoutData().offsetMax;
+        Vec2F oldLayoutOffsetMin = GetLayoutData().mOffsetMin;
+        Vec2F oldLayoutOffsetMax = GetLayoutData().mOffsetMax;
         float oldTransparency = mTransparency;
         auto oldParent = mParent;
         auto oldParentWidget = mParentWidget;
         bool oldResEnabledInHierarchy = mEnabled;
 
-        GetLayoutData().offsetMin = area.LeftBottom();
-        GetLayoutData().offsetMax = area.RightTop();
+        GetLayoutData().mOffsetMin = area.LeftBottom();
+        GetLayoutData().mOffsetMax = area.RightTop();
         mTransparency = transparency;
         mParent = nullptr;
         mParentWidget = nullptr;
@@ -1318,8 +1318,8 @@ namespace o2
 
         Draw();
 
-        GetLayoutData().offsetMin = oldLayoutOffsetMin;
-        GetLayoutData().offsetMax = oldLayoutOffsetMax;
+        GetLayoutData().mOffsetMin = oldLayoutOffsetMin;
+        GetLayoutData().mOffsetMax = oldLayoutOffsetMax;
         mTransparency = oldTransparency;
         mParent = oldParent;
         mParentWidget = oldParentWidget;
@@ -1330,7 +1330,7 @@ namespace o2
         UpdateSelfTransform();
         UpdateChildrenTransforms();
 
-        GetLayoutData().dirtyFrame = o2Time.GetCurrentFrame();
+        GetLayoutData().mDirtyFrame = o2Time.GetCurrentFrame();
 
         UpdateBounds();
         UpdateBoundsWithChilds();
@@ -1449,13 +1449,13 @@ namespace o2
         for (auto& child : mChildWidgets)
             child->MoveAndCheckClipping(delta, clipArea);
 
-        RectF childrenWorldRect = GetLayoutData().childrenWorldRect;
-        GetLayoutData().childrenWorldRect = GetLayoutData().worldRectangle;
+        RectF childrenWorldRect = GetLayoutData().mChildrenWorldRect;
+        GetLayoutData().mChildrenWorldRect = GetLayoutData().mWorldBox.ToRect();
 
         for (auto& child : mInternalWidgets)
             child->MoveAndCheckClipping(delta, clipArea);
 
-        GetLayoutData().childrenWorldRect = childrenWorldRect;
+        GetLayoutData().mChildrenWorldRect = childrenWorldRect;
     }
 
 #if IS_SCRIPTING_SUPPORTED

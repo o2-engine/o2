@@ -17,7 +17,6 @@ namespace o2
     class IRectDrawable;
     class WidgetLayer;
     class WidgetLayout;
-    class WidgetLayoutData;
 
     // ------------------------------------------------------
     // Basic UI Widget. Its a simple and basic element of UI, 
@@ -358,10 +357,10 @@ namespace o2
         void UpdateChildWidgetsList();
 
         // Returns layout data reference
-        WidgetLayoutData& GetLayoutData();
+        WidgetLayout& GetLayoutData();
 
         // Returns layout data reference
-        const WidgetLayoutData& GetLayoutData() const;
+        const WidgetLayout& GetLayoutData() const;
 
         // Sets children world rectangle. Here you can override children position
         virtual void SetChildrenWorldRect(const RectF& childrenWorldRect);
@@ -883,8 +882,8 @@ CLASS_METHODS_META(o2::Widget)
     FUNCTION().PROTECTED().SIGNATURE(void, DrawTopLayers);
     FUNCTION().PROTECTED().SIGNATURE(void, DrawInternalChildren);
     FUNCTION().PROTECTED().SIGNATURE(void, UpdateChildWidgetsList);
-    FUNCTION().PROTECTED().SIGNATURE(WidgetLayoutData&, GetLayoutData);
-    FUNCTION().PROTECTED().SIGNATURE(const WidgetLayoutData&, GetLayoutData);
+    FUNCTION().PROTECTED().SIGNATURE(WidgetLayout&, GetLayoutData);
+    FUNCTION().PROTECTED().SIGNATURE(const WidgetLayout&, GetLayoutData);
     FUNCTION().PROTECTED().SIGNATURE(void, SetChildrenWorldRect, const RectF&);
     FUNCTION().PROTECTED().SIGNATURE(void, MoveAndCheckClipping, const Vec2F&, const RectF&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnChildAdded, const Ref<Widget>&);

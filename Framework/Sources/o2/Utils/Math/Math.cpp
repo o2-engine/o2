@@ -132,6 +132,17 @@ namespace o2
             return atan2f(x, y);
         }
 
+        float WrapAngle(float rad)
+        {
+            while (rad > PI())
+                rad -= 2.0f*PI();
+
+            while (rad <= -PI())
+                rad += 2.0f*PI();
+
+            return rad;
+        }
+
         void OrthoProjMatrix(float* mat, float left, float right, float bottom, float top, float nearz, float farz)
         {
             float tx = -(right + left)/(right - left);
@@ -142,6 +153,18 @@ namespace o2
             mat[1] = 0.0f;                mat[5] = 2.0f/(top - bottom); mat[9] = 0.0f;                  mat[13] = ty;
             mat[2] = 0.0f;                mat[6] = 0.0f;                mat[10] = -2.0f/(farz - nearz); mat[14] = tz;
             mat[3] = 0.0f;                mat[7] = 0.0f;                mat[11] = 0.0f;                 mat[15] = 1.0f;
+        }
+
+        void PerspectiveProjMatrix(float* mat, float fovYRad, float aspect, float nearz, float farz)
+        {
+            float f = 1.0f/tanf(fovYRad*0.5f);
+            float tz = (farz + nearz)/(nearz - farz);
+            float tw = 2.0f*farz*nearz/(nearz - farz);
+
+            mat[0] = f/aspect; mat[4] = 0.0f; mat[8] = 0.0f;   mat[12] = 0.0f;
+            mat[1] = 0.0f;     mat[5] = f;    mat[9] = 0.0f;   mat[13] = 0.0f;
+            mat[2] = 0.0f;     mat[6] = 0.0f; mat[10] = tz;    mat[14] = tw;
+            mat[3] = 0.0f;     mat[7] = 0.0f; mat[11] = -1.0f; mat[15] = 0.0f;
         }
 
         Vec2F CalculateEllipseTangent(const Vec2F& begin, const Vec2F& middle, const Vec2F& end)

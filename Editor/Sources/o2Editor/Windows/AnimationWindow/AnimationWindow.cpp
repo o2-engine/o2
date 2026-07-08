@@ -486,12 +486,12 @@ namespace Editor
 
             if (auto actor = DynamicCast<Actor>(object))
             {
-                transform.position = actor->transform->GetPosition();
-                transform.size = actor->transform->GetSize();
-                transform.scale = actor->transform->GetScale();
-                transform.pivot = actor->transform->GetPivot();
+                transform.position = actor->transform->GetPosition2D();
+                transform.size = actor->transform->GetSize2D();
+                transform.scale = actor->transform->GetScale2D();
+                transform.pivot = actor->transform->GetPivot2D();
                 transform.angle = actor->transform->GetAngleDegrees();
-                transform.shear = actor->transform->GetShear();
+                transform.shear = actor->transform->GetShear2D();
             }
 
             if (auto widget = DynamicCast<Widget>(object))
@@ -596,7 +596,7 @@ namespace Editor
                     AddTrackKey(hierarchyPath + "transform/angleDegrees", time, afterTransform->angle);
 
                 if (!Math::Equals(beforeTransform.shear, afterTransform->shear, epsilon))
-                    AddTrackKey(hierarchyPath + "transform/shear", time, afterTransform->shear);
+                    AddTrackKey(hierarchyPath + "transform/shear2D", time, afterTransform->shear);
             }
         }
 

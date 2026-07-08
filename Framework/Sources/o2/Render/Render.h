@@ -254,6 +254,12 @@ namespace o2
 		// Returns true when specified point is clipped by current scissor test
 		bool IsClippedByScissor(const Vec2F& point) const;
 
+		// Enables or disables depth buffer test, flushes current batch
+		void SetDepthTestEnabled(bool enabled);
+
+		// Returns true when depth buffer test is enabled
+		bool IsDepthTestEnabled() const;
+
 		// Draws mesh
 		void DrawMesh(Mesh* mesh);
 
@@ -276,6 +282,12 @@ namespace o2
 						   VertexIndex* indexes, UInt indexesCount, const RectI& texSrcRect,
 						   const TextureRef& texture, bool allowVertexConversion);
 
+		// Draws geometry that exceeds batch buffers capacity by splitting it into re-indexed chunks
+		void DrawBufferChunked(PrimitiveType primitiveType, const UInt8* vertices, UInt verticesCount,
+							   const VertexType& vertexType, VertexIndex* indexes, UInt elementsCount,
+							   const Ref<Material>& material, const TextureRef& overrideTexture,
+							   const RectI& texSrcRect, bool allowVertexConversion, UInt vertexCapacity);
+
 		// Draws mesh wire
 		void DrawMeshWire(Mesh* mesh, const Color4& color = Color4::White());
 
@@ -292,6 +304,19 @@ namespace o2
 
 		// Binding render target
 		void BindRenderTexture(TextureRef renderTarget);
+
+		// Returns true when platform supports multiple render targets
+		bool IsMRTSupported() const;
+
+		// Binds multiple render targets (MRT). First target is primary, provides depth attachment.
+		// When MRT is not supported, binds only the first target and warns once
+		void BindRenderTargets(const Vector<TextureRef>& renderTargets);
+
+		// Binds render targets remembering the current one; restore with PopRenderTargets
+		void PushRenderTargets(const Vector<TextureRef>& renderTargets);
+
+		// Restores the render target saved by the paired PushRenderTargets
+		void PopRenderTargets();
 
 		// Unbinding render target
 		void UnbindRenderTexture();
@@ -316,6 +341,15 @@ namespace o2
 
 		// Returns default material
 		const Ref<Material>& GetDefaultMaterial() const;
+
+		// Sets material that overrides all materials in draw calls (render pass override). nullptr disables
+		void SetOverrideMaterial(const Ref<Material>& material);
+
+		// Returns current override material
+		const Ref<Material>& GetOverrideMaterial() const;
+
+		// Returns true when material's color attachment formats match the currently bound render targets
+		bool IsMaterialCompatibleWithCurrentTargets(const Ref<Material>& material) const;
 
 #if IS_EDITOR
 		// Reloads all shader and texture assets from disk on editor activation
@@ -354,6 +388,8 @@ namespace o2
 		Camera mCamera;     // Camera transformation
 		Camera mPrevCamera; // Previous camera transformation
 
+		bool mPrevTransformsToTarget = false; // Was a render target bound when camera transforms were computed
+
 		Vec2I  mResolution;        // Primary back buffer size
 		Vec2I  mCurrentResolution; // Current back buffer size
 		Vec2I  mPrevResolution;    // Previous back buffer size
@@ -368,8 +404,18 @@ namespace o2
 
 		TextureRef mCurrentRenderTarget; // Current render target. NULL if rendering in back buffer
 
+		Vector<TextureRef> mExtraRenderTargets; // Additional MRT color targets, bound after the primary one
+
+		Vector<TextureRef> mRenderTargetsStack; // Saved render targets for Push/PopRenderTargets pairs
+
+		Ref<Material> mOverrideMaterial; // Material that overrides all draw call materials when set
+
+		bool mMRTUnsupportedWarned = false; // One-time warning flag for MRT fallback
+
 		Function<void(const Ref<Bitmap>&)> mCaptureCallback; // Pending frame capture callback (CaptureNextFrame)
 		TextureRef                         mCaptureTarget;   // Offscreen target of the frame being captured
+
+		bool mDepthTestEnabled = false; // Is depth buffer test enabled, resets on Begin
 
 		float mDrawingDepth = 0.0f; // Current drawing depth, increments after each drawing drawables
 
@@ -484,6 +530,9 @@ namespace o2
 		// Platform specific setup camera transforms
 		void PlatformSetupCameraTransforms(float* modelMatrix, float* viewMatrix, float* projMatrix);
 
+		// Platform specific enable or disable depth buffer test
+		void PlatformSetDepthTest(bool enabled);
+
 		// Platform specific enable scissor test
 		void PlatformEnableScissorTest();
 
@@ -495,6 +544,12 @@ namespace o2
 
 		// Platform specific bind render target
 		void PlatformBindRenderTarget(const TextureRef& renderTarget);
+
+		// Platform specific multiple render targets support check
+		bool PlatformSupportsMRT() const;
+
+		// Restores platform scissor state and clipping flag from the scissors stack top
+		void RestoreScissorStateFromStack();
 
 		// Remaps UV coordinates from 0..1 range to texture source rect
 		static void RemapUV(float srcU, float srcV, const RectI& srcRect,

@@ -38,6 +38,7 @@ namespace Editor
         void RebuildEditorDropdown();
         void RebuildRedEditBoxStyle();
         void RebuildGreenEditBoxStyle();
+        void RebuildBlueEditBoxStyle();
 
         void RebuildPreviewMenuToggle();
         void RebuildRecordMenuToggle();
@@ -75,6 +76,7 @@ namespace Editor
         void RebuildFloatProperty();
         void RebuildRedFloatProperty();
         void RebuildGreenFloatProperty();
+        void RebuildBlueFloatProperty();
         void RebuildIntegerProperty();
         void RebuildActorProperty();
         void RebuildBoolProperty();
@@ -92,8 +94,10 @@ namespace Editor
         void RebuildWStringProperty();
         void RebuildTagProperty();
         void RebuildVector2FProperty();
+        void RebuildVector3FProperty();
         void RebuildVector2IProperty();
         void RebuildColoredVector2Property();
+        void RebuildColoredVector3Property();
         void RebuildAssetPropety();
         void RebuildSceneLayersListProperty();
 
@@ -213,6 +217,7 @@ CLASS_METHODS_META(Editor::EditorUIStyleBuilder)
     FUNCTION().PUBLIC().SIGNATURE(void, RebuildEditorDropdown);
     FUNCTION().PUBLIC().SIGNATURE(void, RebuildRedEditBoxStyle);
     FUNCTION().PUBLIC().SIGNATURE(void, RebuildGreenEditBoxStyle);
+    FUNCTION().PUBLIC().SIGNATURE(void, RebuildBlueEditBoxStyle);
     FUNCTION().PUBLIC().SIGNATURE(void, RebuildPreviewMenuToggle);
     FUNCTION().PUBLIC().SIGNATURE(void, RebuildRecordMenuToggle);
     FUNCTION().PUBLIC().SIGNATURE(void, RebuildRewindLeftMenuButton);
@@ -243,6 +248,7 @@ CLASS_METHODS_META(Editor::EditorUIStyleBuilder)
     FUNCTION().PUBLIC().SIGNATURE(void, RebuildFloatProperty);
     FUNCTION().PUBLIC().SIGNATURE(void, RebuildRedFloatProperty);
     FUNCTION().PUBLIC().SIGNATURE(void, RebuildGreenFloatProperty);
+    FUNCTION().PUBLIC().SIGNATURE(void, RebuildBlueFloatProperty);
     FUNCTION().PUBLIC().SIGNATURE(void, RebuildIntegerProperty);
     FUNCTION().PUBLIC().SIGNATURE(void, RebuildActorProperty);
     FUNCTION().PUBLIC().SIGNATURE(void, RebuildBoolProperty);
@@ -260,8 +266,10 @@ CLASS_METHODS_META(Editor::EditorUIStyleBuilder)
     FUNCTION().PUBLIC().SIGNATURE(void, RebuildWStringProperty);
     FUNCTION().PUBLIC().SIGNATURE(void, RebuildTagProperty);
     FUNCTION().PUBLIC().SIGNATURE(void, RebuildVector2FProperty);
+    FUNCTION().PUBLIC().SIGNATURE(void, RebuildVector3FProperty);
     FUNCTION().PUBLIC().SIGNATURE(void, RebuildVector2IProperty);
     FUNCTION().PUBLIC().SIGNATURE(void, RebuildColoredVector2Property);
+    FUNCTION().PUBLIC().SIGNATURE(void, RebuildColoredVector3Property);
     FUNCTION().PUBLIC().SIGNATURE(void, RebuildAssetPropety);
     FUNCTION().PUBLIC().SIGNATURE(void, RebuildSceneLayersListProperty);
     FUNCTION().PUBLIC().SIGNATURE(void, RebuildPropertiesWithCaptins);

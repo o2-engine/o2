@@ -205,15 +205,15 @@ namespace o2
     {
         ScrollArea::UpdateSelfTransform();
 
-        mHeadDragAreaRect        = mHeadDragAreaLayout.Calculate(GetLayoutData().worldRectangle);
-        mTopDragAreaRect         = mTopDragAreaLayout.Calculate(GetLayoutData().worldRectangle);
-        mBottomDragAreaRect      = mBottomDragAreaLayout.Calculate(GetLayoutData().worldRectangle);
-        mLeftDragAreaRect        = mLeftDragAreaLayout.Calculate(GetLayoutData().worldRectangle);
-        mRightDragAreaRect       = mRightDragAreaLayout.Calculate(GetLayoutData().worldRectangle);
-        mLeftTopDragAreaRect     = mLeftTopDragAreaLayout.Calculate(GetLayoutData().worldRectangle);
-        mRightTopDragAreaRect    = mRightTopDragAreaLayout.Calculate(GetLayoutData().worldRectangle);
-        mLeftBottomDragAreaRect  = mLeftBottomDragAreaLayout.Calculate(GetLayoutData().worldRectangle);
-        mRightBottomDragAreaRect = mRightBottomDragAreaLayout.Calculate(GetLayoutData().worldRectangle);
+        mHeadDragAreaRect        = mHeadDragAreaLayout.Calculate(GetLayoutData().mWorldBox.ToRect());
+        mTopDragAreaRect         = mTopDragAreaLayout.Calculate(GetLayoutData().mWorldBox.ToRect());
+        mBottomDragAreaRect      = mBottomDragAreaLayout.Calculate(GetLayoutData().mWorldBox.ToRect());
+        mLeftDragAreaRect        = mLeftDragAreaLayout.Calculate(GetLayoutData().mWorldBox.ToRect());
+        mRightDragAreaRect       = mRightDragAreaLayout.Calculate(GetLayoutData().mWorldBox.ToRect());
+        mLeftTopDragAreaRect     = mLeftTopDragAreaLayout.Calculate(GetLayoutData().mWorldBox.ToRect());
+        mRightTopDragAreaRect    = mRightTopDragAreaLayout.Calculate(GetLayoutData().mWorldBox.ToRect());
+        mLeftBottomDragAreaRect  = mLeftBottomDragAreaLayout.Calculate(GetLayoutData().mWorldBox.ToRect());
+        mRightBottomDragAreaRect = mRightBottomDragAreaLayout.Calculate(GetLayoutData().mWorldBox.ToRect());
     }
 
     CursorEventsArea& Window::GetBackCursorListener()
@@ -232,7 +232,7 @@ namespace o2
 
         mHeadDragHandle = mmake<CursorEventsArea>();
         mHeadDragHandle->isUnderPoint = [&](const Vec2F& point) { return mHeadDragAreaRect.IsInside(point); };
-        mHeadDragHandle->onMoved = [&](const Input::Cursor& cursor) { layout->position += cursor.delta; };
+        mHeadDragHandle->onMoved = [&](const Input::Cursor& cursor) { layout->position2D += cursor.delta; };
         mHeadDragHandle->onCursorPressed = [&](const Input::Cursor& cursor) { OnFocused(); };
 
         mTopDragHandle = mmake<CursorEventsArea>();

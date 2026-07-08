@@ -156,7 +156,7 @@ namespace Editor
         }
 
         mWindow->Hide(true);
-        mWindow->layout->size = Vec2F(200, 300);
+        mWindow->layout->size2D = Vec2F(200, 300);
 
         mWindow->GetBackCursorListener().onCursorReleased = [&](const Input::Cursor& c) { mWindow->Hide(); };
     }

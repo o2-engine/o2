@@ -1,6 +1,9 @@
 #include "o2Editor/stdafx.h"
 #include "MoveTool.h"
 
+#include "o2/Utils/Math/Geometry.h"
+
+#include "o2/Render/Mesh3DFill.h"
 #include "o2/Render/Sprite.h"
 #include "o2/Utils/Editor/SceneEditableObject.h"
 #include "o2Editor/Actions/Transform.h"
@@ -54,27 +57,129 @@ namespace Editor
         mBothDragHandle->GetRegularDrawable()->SetSizePivot(Vec2F(1, 1));
         mBothDragHandle->GetHoverDrawable()->SetSizePivot(Vec2F(1, 1));
         mBothDragHandle->GetPressedDrawable()->SetSizePivot(Vec2F(1, 1));
+
+        for (int axis = 0; axis < 3; axis++)
+        {
+            auto handle = mmake<SceneDragHandle3D>();
+            handle->SetGeometry(Mesh3DPrimitives::BuildArrowGeometry(1.0f, 0.01f, 0.18f, 0.045f, false));
+            handle->SetColor(SceneDragHandle3D::GetAxisColor(axis));
+            handle->SetScreenSizeFactor(0.25f);
+            handle->SetPickPadding(0.05f);
+
+            // Analytic picking: shaft cylinder and the cone head as a slightly wider cylinder segment
+            handle->AddPickCylinder(Vec3F(), Vec3F(0.0f, 0.82f, 0.0f), 0.01f);
+            handle->AddPickCylinder(Vec3F(0.0f, 0.82f, 0.0f), Vec3F(0.0f, 1.0f, 0.0f), 0.045f);
+            handle->enabled = false;
+
+            handle->onPressed = [this, axis]() { Axis3DHandlePressed(axis); };
+            handle->onChangedPos = [this, axis](const Vec2F&) { OnAxis3DHandleMoved(axis); };
+            handle->onReleased = THIS_FUNC(HandleReleased);
+
+            (axis == 0 ? mXDragHandle3D : axis == 1 ? mYDragHandle3D : mZDragHandle3D) = handle;
+        }
+
+        for (int normalAxis = 0; normalAxis < 3; normalAxis++)
+        {
+            auto handle = mmake<SceneDragHandle3D>();
+            handle->SetGeometry(Mesh3DPrimitives::BuildPlaneHandleGeometry(normalAxis, 0.06f, 0.28f,
+                                                                       Mesh3DPrimitives::BakedLightDirection()));
+
+            Color4 color = SceneDragHandle3D::GetAxisColor(normalAxis);
+            Color4 regular = color; regular.a = 100;
+            Color4 hover = color; hover.a = 180;
+            handle->SetColors(regular, hover, Color4(255, 220, 80, 160));
+            handle->SetScreenSizeFactor(0.25f);
+            handle->SetPickPadding(0.02f);
+
+            // Analytic picking: the actual quad, not its inflated bounds
+            Vec3F u, v;
+            Geometry::AxisPlaneBasis(normalAxis, u, v);
+            handle->AddPickQuad((u + v)*0.06f, u*0.28f, v*0.28f);
+            handle->enabled = false;
+
+            handle->onPressed = [this, normalAxis]() { PlaneHandle3DPressed(normalAxis); };
+            handle->onChangedPos = [this, normalAxis](const Vec2F&) { OnPlaneHandle3DMoved(normalAxis); };
+            handle->onReleased = THIS_FUNC(HandleReleased);
+
+            (normalAxis == 0 ? mYZPlaneHandle3D : normalAxis == 1 ? mXZPlaneHandle3D : mXYPlaneHandle3D) = handle;
+        }
     }
 
     MoveTool::~MoveTool()
     {}
 
+    const Ref<SceneDragHandle3D>& MoveTool::GetAxisHandle3D(int axis) const
+    {
+        return axis == 0 ? mXDragHandle3D : axis == 1 ? mYDragHandle3D : mZDragHandle3D;
+    }
+
+    const Ref<SceneDragHandle3D>& MoveTool::GetPlaneHandle3D(int normalAxis) const
+    {
+        return normalAxis == 0 ? mYZPlaneHandle3D : normalAxis == 1 ? mXZPlaneHandle3D : mXYPlaneHandle3D;
+    }
+
+    void MoveTool::DrawScene()
+    {
+        ITransformTool::DrawScene();
+
+        if (!SceneEditScreen::IsSingletonInitialzed() || !o2EditorSceneScreen.IsView3DMode())
+            return;
+
+        for (int axis = 0; axis < 3; axis++)
+        {
+            GetAxisHandle3D(axis)->DrawGeometry();
+            GetPlaneHandle3D(axis)->DrawGeometry();
+        }
+    }
+
     void MoveTool::Update(float dt)
-    {}
+    {
+        UpdateHandlesEnabledState();
+    }
+
+    void MoveTool::UpdateHandlesEnabledState()
+    {
+        bool is3DMode = SceneEditScreen::IsSingletonInitialzed() && o2EditorSceneScreen.IsView3DMode();
+
+        bool enable2D = mToolEnabled && !is3DMode;
+        bool enable3D = mToolEnabled && is3DMode && !o2EditorSceneScreen.GetSelectedObjects().IsEmpty();
+
+        if (mHorDragHandle->IsEnabled() != enable2D)
+        {
+            mHorDragHandle->enabled = enable2D;
+            mVerDragHandle->enabled = enable2D;
+            mBothDragHandle->enabled = enable2D;
+
+            if (enable2D)
+                UpdateHandlesPosition();
+        }
+
+        if (enable3D)
+        {
+            // Placement depends on the camera, refresh every frame
+            UpdateAxis3DHandles();
+        }
+        else
+        {
+            for (int axis = 0; axis < 3; axis++)
+            {
+                GetAxisHandle3D(axis)->enabled = false;
+                GetPlaneHandle3D(axis)->enabled = false;
+            }
+        }
+    }
 
     void MoveTool::OnEnabled()
     {
-        mHorDragHandle->enabled = true;
-        mVerDragHandle->enabled = true;
-        mBothDragHandle->enabled = true;
+        mToolEnabled = true;
+        UpdateHandlesEnabledState();
         UpdateHandlesPosition();
     }
 
     void MoveTool::OnDisabled()
     {
-        mHorDragHandle->enabled = false;
-        mVerDragHandle->enabled = false;
-        mBothDragHandle->enabled = false;
+        mToolEnabled = false;
+        UpdateHandlesEnabledState();
     }
 
     void MoveTool::OnSceneChanged(const Vector<Ref<SceneEditableObject>>& changedObjects)
@@ -109,6 +214,69 @@ namespace Editor
     {
         bool snap = o2Input.IsKeyDown(VK_SHIFT);
         HandlesMoved(position - mLastSceneHandlesPos, snap, snap);
+    }
+
+    void MoveTool::Axis3DHandlePressed(int axis)
+    {
+        HandlePressed();
+
+        mDragAxis3D = axis;
+        mDragAnchor3D = ITransformTool::GetSelectionCenter3D(o2EditorSceneScreen.GetSelectedObjects());
+
+        // World direction of the frame axis is captured at press and stays fixed for the drag
+        mDragAxisDir3D = ITransformTool::GetSelectionFrameRotation3D(o2EditorSceneScreen.GetSelectedObjects())*
+            Vec3F::Axis(axis);
+
+        o2EditorSceneScreen.ScreenToWorldAxisParam(o2Input.GetCursorPos(), mDragAnchor3D,
+                                                   mDragAxisDir3D, mLastAxisParam3D);
+    }
+
+    void MoveTool::OnAxis3DHandleMoved(int axis)
+    {
+        float param;
+        if (!o2EditorSceneScreen.ScreenToWorldAxisParam(o2Input.GetCursorPos(), mDragAnchor3D, mDragAxisDir3D, param))
+            return;
+
+        float delta = param - mLastAxisParam3D;
+        mLastAxisParam3D = param;
+
+        if (Math::Abs(delta) > FLT_EPSILON)
+            AppendMoveStep3D(mTransformAction, mDragAxisDir3D*delta);
+
+        UpdateHandlesPosition();
+    }
+
+    void MoveTool::PlaneHandle3DPressed(int normalAxis)
+    {
+        HandlePressed();
+
+        mDragAnchor3D = ITransformTool::GetSelectionCenter3D(o2EditorSceneScreen.GetSelectedObjects());
+        mDragPlaneNormal3D = ITransformTool::GetSelectionFrameRotation3D(o2EditorSceneScreen.GetSelectedObjects())*
+            Vec3F::Axis(normalAxis);
+
+        if (!o2EditorSceneScreen.ScreenToWorldPlanePoint(o2Input.GetCursorPos(), mDragAnchor3D,
+                                                         mDragPlaneNormal3D, mLastPlanePoint3D))
+        {
+            mLastPlanePoint3D = mDragAnchor3D;
+        }
+    }
+
+    void MoveTool::OnPlaneHandle3DMoved(int normalAxis)
+    {
+        Vec3F hit;
+        if (!o2EditorSceneScreen.ScreenToWorldPlanePoint(o2Input.GetCursorPos(), mDragAnchor3D,
+                                                         mDragPlaneNormal3D, hit))
+        {
+            return;
+        }
+
+        Vec3F delta = hit - mLastPlanePoint3D;
+        mLastPlanePoint3D = hit;
+
+        if (delta.Length() > FLT_EPSILON)
+            AppendMoveStep3D(mTransformAction, delta);
+
+        UpdateHandlesPosition();
     }
 
     void MoveTool::HandlePressed()
@@ -177,16 +345,44 @@ namespace Editor
             mHorDragHandle->angle = mHandlesAngle;
             mBothDragHandle->angle = mHandlesAngle;
         }
+
+        UpdateAxis3DHandles();
+    }
+
+    void MoveTool::UpdateAxis3DHandles()
+    {
+        if (!SceneEditScreen::IsSingletonInitialzed() || !o2EditorSceneScreen.IsView3DMode() ||
+            o2EditorSceneScreen.GetSelectedObjects().IsEmpty())
+        {
+            return;
+        }
+
+        Vec3F anchor = ITransformTool::GetSelectionCenter3D(o2EditorSceneScreen.GetSelectedObjects());
+        Quat frameRotation = ITransformTool::GetSelectionFrameRotation3D(o2EditorSceneScreen.GetSelectedObjects());
+
+        for (int axis = 0; axis < 3; axis++)
+        {
+            auto& handle = GetAxisHandle3D(axis);
+            handle->SetPose(anchor, frameRotation*Quat::FromToRotation(Vec3F::YAxis(), Vec3F::Axis(axis)));
+            handle->enabled = mToolEnabled;
+
+            auto& planeHandle = GetPlaneHandle3D(axis);
+            planeHandle->SetPose(anchor, frameRotation);
+            planeHandle->enabled = mToolEnabled;
+        }
     }
 
     void MoveTool::OnKeyPressed(const Input::Key& key)
     {
-        if (!o2EditorSceneWindow.IsFocused())
+        if (SceneWindow::IsSingletonInitialzed() && !o2EditorSceneWindow.IsFocused())
             return;
 
         float delta = o2Input.IsKeyDown(VK_SHIFT) ? snapStep : 1.0f;
 
-        bool isArrow = key == VK_LEFT || key == VK_RIGHT || key == VK_UP || key == VK_DOWN;
+        bool is3DMode = o2EditorSceneScreen.IsView3DMode();
+        bool isArrow = key == VK_LEFT || key == VK_RIGHT || key == VK_UP || key == VK_DOWN ||
+            (is3DMode && (key == VK_PRIOR || key == VK_NEXT));
+
         if (isArrow)
         {
             BeginKeyboardAction();
@@ -195,6 +391,8 @@ namespace Editor
             if (key == VK_RIGHT) AppendKeyboardStep(Vec2F::Right()*delta);
             if (key == VK_UP)    AppendKeyboardStep(Vec2F::Up()*delta);
             if (key == VK_DOWN)  AppendKeyboardStep(Vec2F::Down()*delta);
+            if (key == VK_PRIOR) AppendKeyboardZStep(delta);
+            if (key == VK_NEXT)  AppendKeyboardZStep(-delta);
         }
 
         if (key == VK_CONTROL)
@@ -210,7 +408,7 @@ namespace Editor
 
     void MoveTool::OnKeyStayDown(const Input::Key& key)
     {
-        if (!o2EditorSceneWindow.IsFocused())
+        if (SceneWindow::IsSingletonInitialzed() && !o2EditorSceneWindow.IsFocused())
             return;
 
         float delta = o2Input.IsKeyDown(VK_SHIFT) ? snapStep : 1.0f;
@@ -222,11 +420,19 @@ namespace Editor
         if (key == VK_RIGHT) AppendKeyboardStep(Vec2F::Right()*delta);
         if (key == VK_UP)    AppendKeyboardStep(Vec2F::Up()*delta);
         if (key == VK_DOWN)  AppendKeyboardStep(Vec2F::Down()*delta);
+
+        if (mKeyboardAction && o2EditorSceneScreen.IsView3DMode())
+        {
+            if (key == VK_PRIOR) AppendKeyboardZStep(delta);
+            if (key == VK_NEXT)  AppendKeyboardZStep(-delta);
+        }
     }
 
     void MoveTool::OnKeyReleased(const Input::Key& key)
     {
-        bool isArrow = key == VK_LEFT || key == VK_RIGHT || key == VK_UP || key == VK_DOWN;
+        bool isArrow = key == VK_LEFT || key == VK_RIGHT || key == VK_UP || key == VK_DOWN ||
+            ((key == VK_PRIOR || key == VK_NEXT) && mKeyboardAction);
+
         if (isArrow)
             EndKeyboardAction();
 
@@ -256,6 +462,30 @@ namespace Editor
             t.transform.origin += delta;
 
         action->Append(step);
+    }
+
+    void MoveTool::AppendMoveStep3D(const Ref<TransformAction>& action, const Vec3F& delta)
+    {
+        if (!action)
+            return;
+
+        auto step = mmake<TransformAction>(o2EditorSceneScreen.GetTopSelectedObjects());
+        step->doneTransforms = step->beforeTransforms;
+        for (auto& t : step->doneTransforms)
+        {
+            t.transform.origin += delta.XY();
+
+            if (t.has3D)
+                t.positionZ += delta.z;
+        }
+
+        action->Append(step);
+    }
+
+    void MoveTool::AppendKeyboardZStep(float deltaZ)
+    {
+        AppendMoveStep3D(mKeyboardAction, Vec3F(0.0f, 0.0f, deltaZ));
+        UpdateHandlesPosition();
     }
 
     void MoveTool::BeginKeyboardAction()

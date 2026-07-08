@@ -10,7 +10,7 @@ namespace o2
     ParticlesEmitter::ParticlesEmitter() :
         IRectDrawable(), mShape(mmake<CircleParticlesEmitterShape>())
     {
-        mLastTransform = mTransform;
+        mLastTransform = mTransform.ToBasis();
         UpdateDuration();
     }
 
@@ -31,7 +31,7 @@ namespace o2
         for (auto& effect : other.mEffects)
             AddEffect(effect->CloneAsRef<ParticlesEffect>());
 
-		mLastTransform = mTransform;
+		mLastTransform = mTransform.ToBasis();
 		UpdateDuration();
     }
 
@@ -89,7 +89,7 @@ namespace o2
         mInitialMoveDirection = other.mInitialMoveDirection;
         mInitialMoveDirectionRange = other.mInitialMoveDirectionRange;
 
-        mLastTransform = mTransform;
+        mLastTransform = mTransform.ToBasis();
 
         OnChanged();
 
@@ -258,7 +258,7 @@ namespace o2
                 // Initialize particle
                 particle->index = particleIndex;
 
-                particle->position = mShape->GetEmittinPoint(mTransform, mEmitParticlesFromShell);
+                particle->position = mShape->GetEmittinPoint(mTransform.ToBasis(), mEmitParticlesFromShell);
                 particle->angle = initialAngle + Math::Random(-halfAngleRange, halfAngleRange);
 
                 float randomSize = mInitialSize + Math::Random(-halfSizeRange, halfSizeRange);
@@ -343,11 +343,11 @@ namespace o2
         if (!mIsParticlesRelative)
             return;
 
-        Basis change = mLastTransform.Inverted()*mTransform;
+        Basis change = mLastTransform.Inverted()*mTransform.ToBasis();
         for (auto& particle : mParticles)
             particle.position = change.Transform(particle.position);
 
-        mLastTransform = mTransform;
+        mLastTransform = mTransform.ToBasis();
     }
 
     void ParticlesEmitter::Play()

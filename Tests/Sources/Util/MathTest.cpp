@@ -134,3 +134,10 @@ TEST(Math, RandomInRange) {
         EXPECT_LE(v, 20);
     }
 }
+
+TEST(Math, WrapAngleStaysInPiRange) {
+    EXPECT_NEAR(Math::WrapAngle(0.5f), 0.5f, 1e-6f);
+    EXPECT_NEAR(Math::WrapAngle(Math::PI() + 0.5f), -Math::PI() + 0.5f, 1e-5f);
+    EXPECT_NEAR(Math::WrapAngle(-Math::PI() - 0.5f), Math::PI() - 0.5f, 1e-5f);
+    EXPECT_NEAR(Math::WrapAngle(4.0f*Math::PI() + 0.1f), 0.1f, 1e-4f);
+}

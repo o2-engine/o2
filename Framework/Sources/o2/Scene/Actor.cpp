@@ -220,13 +220,19 @@ namespace o2
 	void Actor::DrawComponents()
 	{
 		for (auto& component : mComponents)
-			component->OnDraw();
+		{
+			if (ScenePassFilters::IsPassing(component->GetSceneDrawableCategory()))
+				component->OnDraw();
+		}
 	}
 
     void Actor::PostDrawComponents()
     {
         for (auto& component : mComponents)
-            component->OnPostDraw();
+        {
+            if (ScenePassFilters::IsPassing(component->GetSceneDrawableCategory()))
+                component->OnPostDraw();
+        }
     }
 
     void Actor::Destroy()
@@ -511,7 +517,7 @@ namespace o2
 
         // Change parent
         mParent = actor;
-        transform->mData->parentInvTransformActualFrame = 0;
+        transform->mParentInvertedTransformActualFrame = 0;
 
         // Restore in new parent children list or root actors
         if (mParent)
@@ -1033,6 +1039,14 @@ namespace o2
             DeserializeWithProto(node);
         else
             DeserializeRaw(node);
+
+        // The layer field deserializes into a detached inline copy: rebind to the scene
+        // layer with the same name, so identity checks and drawables registration work
+        if (mSceneLayer && Scene::IsSingletonInitialzed())
+        {
+            mSceneLayer = o2Scene.AddLayer(mSceneLayer->GetName());
+            ISceneDrawable::OnDrawableLayerChanged();
+        }
 
         OnDeserialized(node);
     }

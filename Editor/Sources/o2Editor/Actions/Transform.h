@@ -25,6 +25,14 @@ namespace Editor
             Layout layout;
             Vec2F  pivot;
 
+            bool  has3D = false;   // 3D extension captured when the object is an Actor
+            float positionZ = 0.0f;
+            Vec2F eulerAnglesXY;   // Euler x and y in radians; z (the 2D angle) lives in the basis
+            float eulerZ = 0.0f;   // Explicit euler z: the basis projection loses it at degenerate orientations
+            Vec2F scaleXY = Vec2F(1.0f, 1.0f); // Actor 3D scale x/y; the basis carries size*scale products
+            float scaleZ = 1.0f;
+            float sizeZ = 0.0f;
+
             bool operator==(const Transform& other) const;
         };
 

@@ -287,10 +287,10 @@ namespace Editor
 
 			Vertex* verts = mMesh.GetVertices<Vertex>();
 			VertexIndex* idx = mMesh.GetIndexes();
-			verts[0].Set(mTransform * Vec2F(0, 0), color32, 0.0f, 0.0f);
-			verts[1].Set(mTransform * Vec2F(1, 0), color32, 0.0f, 0.0f);
-			verts[2].Set(mTransform * Vec2F(1, 1), color32, 0.0f, 0.0f);
-			verts[3].Set(mTransform * Vec2F(0, 1), color32, 0.0f, 0.0f);
+			verts[0].Set(mTransform.ToBasis() * Vec2F(0, 0), color32, 0.0f, 0.0f);
+			verts[1].Set(mTransform.ToBasis() * Vec2F(1, 0), color32, 0.0f, 0.0f);
+			verts[2].Set(mTransform.ToBasis() * Vec2F(1, 1), color32, 0.0f, 0.0f);
+			verts[3].Set(mTransform.ToBasis() * Vec2F(0, 1), color32, 0.0f, 0.0f);
 
 			idx[0] = 0; idx[1] = 1; idx[2] = 2;
 			idx[3] = 2; idx[4] = 3; idx[5] = 0;
@@ -319,10 +319,10 @@ namespace Editor
 			auto prevColor32 = prevColor.ABGR();
 			auto color32 = key.color.ABGR();
 
-			verts[vertexIndex + 0].Set(mTransform * Vec2F(prevXPos, 0), prevColor32, 0.0f, 0.0f);
-			verts[vertexIndex + 1].Set(mTransform * Vec2F(xPos, 0), color32, 0.0f, 0.0f);
-			verts[vertexIndex + 2].Set(mTransform * Vec2F(xPos, 1), color32, 0.0f, 0.0f);
-			verts[vertexIndex + 3].Set(mTransform * Vec2F(prevXPos, 1), prevColor32, 0.0f, 0.0f);
+			verts[vertexIndex + 0].Set(mTransform.ToBasis() * Vec2F(prevXPos, 0), prevColor32, 0.0f, 0.0f);
+			verts[vertexIndex + 1].Set(mTransform.ToBasis() * Vec2F(xPos, 0), color32, 0.0f, 0.0f);
+			verts[vertexIndex + 2].Set(mTransform.ToBasis() * Vec2F(xPos, 1), color32, 0.0f, 0.0f);
+			verts[vertexIndex + 3].Set(mTransform.ToBasis() * Vec2F(prevXPos, 1), prevColor32, 0.0f, 0.0f);
 
 			int polyIndex = i * 2 * 3;
 			idx[polyIndex + 0] = vertexIndex + 0;

@@ -30,7 +30,7 @@ TEST(ScenePreviewDragNoUndo, InstantiateMoveDestroyDoesNotPushAction)
 
     for (int i = 0; i < 8; ++i)
     {
-        preview->transform->SetPosition(Vec2F((float)i, (float)i));
+        preview->transform->SetPosition2D(Vec2F((float)i, (float)i));
         TickScene();
     }
     EXPECT_EQ(list.GetUndoActionsCount(), 0);

@@ -12,7 +12,7 @@ namespace o2
     {}
 
     IRectDrawable::IRectDrawable(const IRectDrawable& other) :
-        Transform(other.mSize, other.mPosition, other.mAngle, other.mScale, other.mPivot),
+        Transform(other),
         mColor(other.mColor), mEnabled(other.mEnabled), mMaterialAsset(other.mMaterialAsset)
     {
     }

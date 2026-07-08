@@ -1,10 +1,15 @@
 #include "o2Editor/stdafx.h"
 #include "SceneEditScreen.h"
 
+#include "o2/Events/ShortcutKeysListener.h"
 #include "o2/Physics/PhysicsWorld.h"
+#include "o2/Render/Pipeline/RenderPipeline.h"
+#include "o2/Render/Material.h"
+#include "o2/Render/Mesh.h"
 #include "o2/Render/Render.h"
 #include "o2/Render/Sprite.h"
 #include "o2/Scene/Actor.h"
+#include "o2/Scene/CameraActor.h"
 #include "o2/Scene/Component.h"
 #include "o2/Scene/Scene.h"
 #include "o2/Scene/SceneLayerRef.h"
@@ -82,7 +87,14 @@ namespace Editor
     {
         Widget::Update(dt);
 
-        UpdateCamera(dt);
+        if (m3DMode)
+        {
+            UpdateScreenSpaceCamera();
+            UpdateFlyNavigation(dt);
+        }
+        else
+            UpdateCamera(dt);
+
         o2Scene.CheckChangedObjects();
 
         for (auto& layer : mEditorLayers)
@@ -102,22 +114,230 @@ namespace Editor
 
     Vec2F SceneEditScreen::ScreenToScenePoint(const Vec2F& point)
     {
+        if (m3DMode)
+        {
+            Vec2F result;
+            if (mView3D.ScreenToPlanePoint(ScreenToViewportPoint(point), GetViewportSize(), result))
+                return result;
+
+            return mView3D.target.XY();
+        }
+
         return ScreenToLocalPoint(point);
     }
 
     Vec2F SceneEditScreen::SceneToScreenPoint(const Vec2F& point)
     {
+        if (m3DMode)
+            return ViewportToScreenPoint(mView3D.PlanePointToScreen(point, GetViewportSize()));
+
         return LocalToScreenPoint(point);
     }
 
     Vec2F SceneEditScreen::ScreenToSceneVector(const Vec2F& point)
     {
-        return point * mViewCamera.GetScale();
+        if (m3DMode)
+        {
+            Vec2F center = layout->GetWorldRect().Center();
+            return ScreenToScenePoint(center + point) - ScreenToScenePoint(center);
+        }
+
+        return point * mViewCamera.GetScale2D();
     }
 
     Vec2F SceneEditScreen::SceneToScreenVector(const Vec2F& point)
     {
-        return point / mViewCamera.GetScale();
+        if (m3DMode)
+        {
+            Vec2F base = mView3D.target.XY();
+            return SceneToScreenPoint(base + point) - SceneToScreenPoint(base);
+        }
+
+        return point / mViewCamera.GetScale2D();
+    }
+
+    void SceneEditScreen::SetView3DMode(bool enabled)
+    {
+        if (m3DMode == enabled)
+            return;
+
+        float halfFovTan = Math::Sin(mView3D.fov*0.5f)/Math::Cos(mView3D.fov*0.5f);
+        float viewportHeight = GetViewportSize().y;
+
+        if (enabled)
+        {
+            mView3D.target = Vec3F(mViewCamera.GetPosition2D(), 0.0f);
+            mView3D.distance = Math::Clamp(viewportHeight*mViewCamera.GetScale().y/(2.0f*halfFovTan),
+                                           SceneView3DState::minDistance, SceneView3DState::maxDistance);
+
+            m3DMode = true;
+            UpdateScreenSpaceCamera();
+        }
+        else
+        {
+            m3DMode = false;
+            SetFlyNavigation3D(false);
+            mAltOrbit3D = false;
+
+            float scale = 2.0f*mView3D.distance*halfFovTan/viewportHeight;
+            mViewCamera.SetPosition2D(mView3D.target.XY());
+            mViewCamera.SetScale2D(Vec2F(scale, scale));
+            mViewCameraTargetPos = mViewCamera.GetPosition2D();
+            mViewCameraTargetScale = mViewCamera.GetScale2D();
+
+            UpdateLocalScreenTransforms();
+            OnCameraTransformChanged();
+        }
+
+        mNeedRedraw = true;
+
+        onView3DModeChanged(m3DMode);
+    }
+
+    bool SceneEditScreen::IsView3DMode() const
+    {
+        return m3DMode;
+    }
+
+    SceneView3DState& SceneEditScreen::GetView3DState()
+    {
+        return mView3D;
+    }
+
+    bool SceneEditScreen::ScreenToZAxisPoint(const Vec2F& screenPoint, const Vec2F& planeAnchor, float& z)
+    {
+        if (!m3DMode)
+            return false;
+
+        return mView3D.ScreenToVerticalAxisZ(ScreenToViewportPoint(screenPoint), GetViewportSize(), planeAnchor, z);
+    }
+
+    bool SceneEditScreen::ScreenToWorldAxisParam(const Vec2F& screenPoint, const Vec3F& axisOrigin,
+                                                 const Vec3F& axisDir, float& param)
+    {
+        if (!m3DMode)
+            return false;
+
+        return mView3D.ScreenToAxisParam(ScreenToViewportPoint(screenPoint), GetViewportSize(), axisOrigin, axisDir, param);
+    }
+
+    bool SceneEditScreen::ScreenToWorldPlanePoint(const Vec2F& screenPoint, const Vec3F& planeOrigin,
+                                                  const Vec3F& planeNormal, Vec3F& result)
+    {
+        if (!m3DMode)
+            return false;
+
+        return mView3D.ScreenToPlanePoint3D(ScreenToViewportPoint(screenPoint), GetViewportSize(),
+                                            planeOrigin, planeNormal, result);
+    }
+
+    Vec2F SceneEditScreen::World3DToScreenPoint(const Vec3F& worldPoint)
+    {
+        return ViewportToScreenPoint(mView3D.WorldToScreen(worldPoint, GetViewportSize()));
+    }
+
+    bool SceneEditScreen::ScreenToWorldRay(const Vec2F& screenPoint, Vec3F& origin, Vec3F& direction)
+    {
+        if (!m3DMode)
+            return false;
+
+        return mView3D.GetScreenRay(ScreenToViewportPoint(screenPoint), GetViewportSize(), origin, direction);
+    }
+
+    bool SceneEditScreen::IsFlyNavigation3D() const
+    {
+        return mFlyNavigation3D;
+    }
+
+    Vec2F SceneEditScreen::GetViewportSize() const
+    {
+        Vec2F size = layout->GetWorldRect().Size();
+        return Vec2F(Math::Max(size.x, 1.0f), Math::Max(size.y, 1.0f));
+    }
+
+    Vec2F SceneEditScreen::ScreenToViewportPoint(const Vec2F& point) const
+    {
+        RectF rect = layout->GetWorldRect();
+        return point - Vec2F(rect.left, rect.bottom);
+    }
+
+    Vec2F SceneEditScreen::ViewportToScreenPoint(const Vec2F& point) const
+    {
+        RectF rect = layout->GetWorldRect();
+        return point + Vec2F(rect.left, rect.bottom);
+    }
+
+    void SceneEditScreen::UpdateScreenSpaceCamera()
+    {
+        Camera camera = mViewCamera;
+        camera.SetPosition2D(layout->GetWorldRect().Center());
+        camera.SetScale2D(Vec2F(1.0f, 1.0f));
+        camera.SetAngle(0.0f);
+
+        mViewCameraTargetPos = camera.GetPosition2D();
+        mViewCameraTargetScale = camera.GetScale2D();
+
+        if (camera != mViewCamera)
+        {
+            mViewCamera = camera;
+            UpdateLocalScreenTransforms();
+            OnCameraTransformChanged();
+            mNeedRedraw = true;
+        }
+    }
+
+    void SceneEditScreen::SetFlyNavigation3D(bool active)
+    {
+        if (mFlyNavigation3D == active)
+            return;
+
+        mFlyNavigation3D = active;
+
+        // Fly navigation owns the keyboard: WASD/QE must not trigger tool shortcuts
+        if (ShortcutKeysListenersManager::IsSingletonInitialzed())
+            ShortcutKeysListenersManager::SetSuppressed(active);
+    }
+
+    void SceneEditScreen::UpdateFlyNavigation(float dt)
+    {
+        if (!mFlyNavigation3D)
+            return;
+
+        if (!o2Input.IsRightMouseDown())
+        {
+            SetFlyNavigation3D(false);
+            return;
+        }
+
+        // Mac backend reports letter keys as characters, lower case without shift
+        auto isKeyDown = [](char upper) { return o2Input.IsKeyDown(upper) || o2Input.IsKeyDown(upper - 'A' + 'a'); };
+
+        Vec3F direction;
+        if (isKeyDown('W')) direction.z += 1.0f;
+        if (isKeyDown('S')) direction.z -= 1.0f;
+        if (isKeyDown('D')) direction.x += 1.0f;
+        if (isKeyDown('A')) direction.x -= 1.0f;
+        if (isKeyDown('E')) direction.y += 1.0f;
+        if (isKeyDown('Q')) direction.y -= 1.0f;
+
+        if (direction.Length() < FLT_EPSILON)
+            return;
+
+        float speed = mView3D.distance*(o2Input.IsKeyDown(VK_SHIFT) ? 3.0f : 1.0f);
+        mView3D.Fly(direction.Normalized()*speed*dt);
+        mViewCameraMoved = true;
+        mNeedRedraw = true;
+    }
+
+    Input::Cursor SceneEditScreen::ToSceneCursor(const Input::Cursor& cursor)
+    {
+        if (!m3DMode)
+            return cursor;
+
+        Input::Cursor result = cursor;
+        result.position = ScreenToScenePoint(cursor.position);
+        result.delta = result.position - ScreenToScenePoint(cursor.position - cursor.delta);
+        return result;
     }
 
     void SceneEditScreen::InitializeTools()
@@ -138,7 +358,7 @@ namespace Editor
         controlsWidget->expandHeight = false;
         controlsWidget->expandWidth = false;
         controlsWidget->border = BorderF(5, 5, 5, 5);
-        controlsWidget->layout->pivot = Vec2F(1, 1);
+        controlsWidget->layout->pivot2D = Vec2F(1, 1);
         AddInternalWidget(controlsWidget);
 
         return controlsWidget;
@@ -153,19 +373,39 @@ namespace Editor
     {
         mSelectedFromThis = true;
 
-        o2EditorTree.SetSelectedObjects(mSelectedObjects);
+        if (TreeWindow::IsSingletonInitialzed())
+            o2EditorTree.SetSelectedObjects(mSelectedObjects);
 
         if (mEnabledTool)
             mEnabledTool->OnObjectsSelectionChanged(mSelectedObjects);
 
         onSelectionChanged(mSelectedObjects);
-        o2EditorPropertiesWindow.SetTargets(mSelectedObjects.Convert<IObject*>([](auto x) { return (IObject*)x.Get(); }));
+
+        if (PropertiesWindow::IsSingletonInitialzed())
+            o2EditorPropertiesWindow.SetTargets(mSelectedObjects.Convert<IObject*>([](auto x) { return (IObject*)x.Get(); }));
     }
 
     void SceneEditScreen::RedrawContent()
     {
-        DrawGrid();
-        DrawObjects();
+        // In 3D mode the whole scene pass is drawn with the perspective camera in plane coordinates,
+        // then the screen-space camera is restored for drag handles overlay
+        Camera screenCamera;
+        if (m3DMode)
+        {
+            screenCamera = o2Render.GetCamera();
+
+            Camera viewCamera = mView3D.BuildCamera();
+            o2Render.SetCamera(viewCamera);
+
+            Draw3DGrid();
+            DrawObjects3D(viewCamera);
+        }
+        else
+        {
+            DrawGrid();
+            DrawObjects();
+        }
+
         o2Debug.Draw(false);
         DrawSelection();
 
@@ -181,8 +421,64 @@ namespace Editor
             mEnabledTool->mNeedRedraw = false;
 		}
 
+        if (m3DMode)
+            o2Render.SetCamera(screenCamera);
+
 		for (auto& handle : mDragHandles)
 			handle->Draw();
+    }
+
+    void SceneEditScreen::Draw3DGrid()
+    {
+        Vec3F cameraPos = mView3D.GetCameraPosition();
+        float referenceSize = Math::Max(mView3D.distance, Math::Abs(cameraPos.z))*0.5f;
+
+        float minCellSize = 0.000001f;
+        float maxCellSize = 1000000.0f;
+        float cellSize = minCellSize;
+        while (cellSize < maxCellSize)
+        {
+            float next = cellSize*10.0f;
+            if (referenceSize > cellSize && referenceSize <= next)
+                break;
+
+            cellSize = next;
+        }
+
+        // Grid follows the camera ground point and reaches far enough to look infinite from any view
+        const int halfCells = 120;
+        float extent = cellSize*(float)halfCells;
+
+        Vec2F center = cameraPos.XY();
+        Vec2F gridOrigin(Math::Round(center.x/cellSize)*cellSize,
+                         Math::Round(center.y/cellSize)*cellSize);
+
+        float tenCellsSize = cellSize*10.0f;
+        Color4 cellColorSmoothed = Math::Lerp(mGridColor, mBackColor, 0.7f);
+
+        for (int i = -halfCells; i <= halfCells; i++)
+        {
+            float d = (float)i*cellSize;
+            float xv = gridOrigin.x + d;
+            float yv = gridOrigin.y + d;
+
+            float rdx = Math::Abs(xv/tenCellsSize - Math::Floor(xv/tenCellsSize));
+            float rdy = Math::Abs(yv/tenCellsSize - Math::Floor(yv/tenCellsSize));
+            bool xTen = rdx < 0.05f || rdx > 0.95f;
+            bool yTen = rdy < 0.05f || rdy > 0.95f;
+
+            if (verGridEnabled)
+            {
+                o2Render.DrawLine(Vec2F(gridOrigin.x - extent, yv), Vec2F(gridOrigin.x + extent, yv),
+                                  yTen ? mGridColor : cellColorSmoothed);
+            }
+
+            if (horGridEnabled)
+            {
+                o2Render.DrawLine(Vec2F(xv, gridOrigin.y - extent), Vec2F(xv, gridOrigin.y + extent),
+                                  xTen ? mGridColor : cellColorSmoothed);
+            }
+        }
     }
 
     void SceneEditScreen::DrawObjects()
@@ -208,7 +504,7 @@ namespace Editor
                 if (!layer->IsVisible())
                     continue;
 
-                for (auto& drawable : layer->GetDrawables()) 
+                for (auto& drawable : layer->GetDrawables())
                     drawable->Draw();
             }
 
@@ -218,8 +514,51 @@ namespace Editor
         }
     }
 
+    void SceneEditScreen::DrawObjects3D(const Camera& viewCamera)
+    {
+        if (o2EditorTree.GetSceneTree()->IsEditorWatching())
+        {
+            mNeedRedraw = true;
+            return;
+        }
+
+        o2Scene.BeginDrawingScene();
+
+        Ref<RenderPipeline> pipeline;
+        if (!o2Scene.GetCameras().IsEmpty())
+        {
+            if (auto sceneCamera = o2Scene.GetCameras()[0].Lock())
+                pipeline = sceneCamera->GetRenderPipeline();
+        }
+
+        if (!pipeline)
+            pipeline = CameraActor::GetDefaultRenderPipeline();
+
+        RenderPassContext context;
+        context.camera = viewCamera;
+        context.fillBackground = false;
+
+        for (auto& layer : o2Scene.GetLayers())
+        {
+            if (layer->IsVisible())
+                context.layers.Add(layer);
+        }
+
+        pipeline->Execute(context);
+
+        o2Scene.EndDrawingScene();
+
+        o2Physics.DrawDebug();
+    }
+
     void SceneEditScreen::DrawSelection()
     {
+        if (m3DMode)
+        {
+            DrawSelection3DOutline();
+            return;
+        }
+
         if (mSelectedObjects.Count() == 1)
         {
             DrawObjectSelection(mSelectedObjects[0], mSelectedObjectColor);
@@ -229,6 +568,88 @@ namespace Editor
             for (auto& object : mSelectedObjects)
                 DrawObjectSelection(object, mMultiSelectedObjectColor);
         }
+    }
+
+    void SceneEditScreen::DrawSelection3DOutline()
+    {
+        Vector<Ref<Component>> components;
+        for (auto& object : mSelectedObjects)
+        {
+            if (auto actor = DynamicCast<Actor>(object))
+            {
+                for (auto& component : actor->GetComponents())
+                {
+                    if (component->GetSceneDrawableCategory() == SceneDrawableCategory::Scene3D)
+                        components.Add(component);
+                }
+            }
+        }
+
+        if (components.IsEmpty())
+            return;
+
+        Vec2I targetSize = o2Render.GetCurrentResolution();
+        if (targetSize.x < 1 || targetSize.y < 1)
+            return;
+
+        if (!mSelectionMaskTarget || (Vec2I)mSelectionMaskTarget->GetSize() != targetSize)
+            mSelectionMaskTarget = TextureRef(targetSize, TextureFormat::R8G8B8A8, Texture::Usage::RenderTarget);
+
+        if (!mSelectionOutlineMaterial)
+        {
+            mSelectionOutlineMaterial = Material::CreateFromBuiltinShaders("SelectionOutline");
+            if (mSelectionOutlineMaterial)
+            {
+                mSelectionOutlineMaterial->AddParam(mmake<ShaderParamVec2>("u_texelSize", Vec2F()));
+                mSelectionOutlineMaterial->Build();
+            }
+        }
+
+        if (!mSelectionOutlineMaterial || !mSelectionOutlineMaterial->IsReady())
+            return;
+
+        if (!mSelectionOutlineQuad)
+            mSelectionOutlineQuad = mmake<Mesh>(TextureRef(), 4, 2);
+
+        // Silhouette mask: selected 3D content rendered into an offscreen target, alpha marks coverage
+        o2Render.PushRenderTargets({ mSelectionMaskTarget });
+        o2Render.Clear(Color4(0.0f, 0.0f, 0.0f, 0.0f));
+
+        for (auto& component : components)
+            component->Draw();
+
+        o2Render.PopRenderTargets();
+
+        DynamicCast<ShaderParamVec2>(mSelectionOutlineMaterial->GetShaderParam("u_texelSize"))
+            ->SetValue(Vec2F(1.0f/(float)targetSize.x, 1.0f/(float)targetSize.y));
+        mSelectionOutlineMaterial->InvalidateHash();
+
+        Camera sceneCamera = o2Render.GetCamera();
+        o2Render.SetCamera(Camera());
+
+        Vec2F halfSize = (Vec2F)o2Render.GetCurrentResolution()*0.5f;
+        ULong colorValue = mSelection3DOutlineColor.ABGR();
+
+        mSelectionOutlineQuad->SetMaterial(mSelectionOutlineMaterial);
+        mSelectionOutlineQuad->SetTexture(mSelectionMaskTarget);
+
+        // The mask target is rendered y-flipped like any render target, the quad samples it back upright
+        Vertex* vertices = mSelectionOutlineQuad->GetVertices<Vertex>();
+        vertices[0] = Vertex(-halfSize.x, halfSize.y, 0.0f, colorValue, 0.0f, 1.0f);
+        vertices[1] = Vertex(halfSize.x, halfSize.y, 0.0f, colorValue, 1.0f, 1.0f);
+        vertices[2] = Vertex(halfSize.x, -halfSize.y, 0.0f, colorValue, 1.0f, 0.0f);
+        vertices[3] = Vertex(-halfSize.x, -halfSize.y, 0.0f, colorValue, 0.0f, 0.0f);
+
+        VertexIndex* indexes = mSelectionOutlineQuad->GetIndexes();
+        indexes[0] = 0; indexes[1] = 1; indexes[2] = 2;
+        indexes[3] = 0; indexes[4] = 2; indexes[5] = 3;
+
+        mSelectionOutlineQuad->vertexCount = 4;
+        mSelectionOutlineQuad->polyCount = 2;
+
+        mSelectionOutlineQuad->Draw();
+
+        o2Render.SetCamera(sceneCamera);
     }
 
     void SceneEditScreen::DrawObjectSelection(const Ref<SceneEditableObject>& object, const Color4& color)
@@ -605,7 +1026,13 @@ namespace Editor
 
     void SceneEditScreen::OnScrolled(float scroll)
     {
-        ScrollView::OnScrolled(scroll);
+        if (m3DMode)
+        {
+            mView3D.Zoom(1.0f - scroll*mViewCameraScaleSence);
+            mNeedRedraw = true;
+        }
+        else
+            ScrollView::OnScrolled(scroll);
 
         if (mEnabledTool)
             mEnabledTool->OnScrolled(scroll);
@@ -613,18 +1040,29 @@ namespace Editor
 
     void SceneEditScreen::OnKeyPressed(const Input::Key& key)
     {
+        // Fly navigation owns the keyboard: WASD/QE must not reach mode toggles and tool handlers
+        if (mFlyNavigation3D)
+            return;
+
+        if (key == '3' && (!SceneWindow::IsSingletonInitialzed() || o2EditorSceneWindow.IsFocused()))
+            SetView3DMode(!m3DMode);
+
         if (mEnabledTool)
             mEnabledTool->OnKeyPressed(key);
     }
 
     void SceneEditScreen::OnKeyReleased(const Input::Key& key)
     {
+        // Releases pass through even while flying, so tools can close held-key actions
         if (mEnabledTool)
             mEnabledTool->OnKeyReleased(key);
     }
 
     void SceneEditScreen::OnKeyStayDown(const Input::Key& key)
     {
+        if (mFlyNavigation3D)
+            return;
+
         if (mEnabledTool)
             mEnabledTool->OnKeyStayDown(key);
     }
@@ -636,44 +1074,73 @@ namespace Editor
 
         o2EditorTree.OnSceneFocused();
 
+        if (m3DMode && o2Input.IsKeyDown(VK_MENU))
+        {
+            mAltOrbit3D = true;
+            return;
+        }
+
         if (mEnabledTool && !IsHandleWorking(cursor))
-            mEnabledTool->OnCursorPressed(cursor);
+            mEnabledTool->OnCursorPressed(ToSceneCursor(cursor));
     }
 
     void SceneEditScreen::OnCursorReleased(const Input::Cursor& cursor)
     {
+        if (mAltOrbit3D)
+        {
+            mAltOrbit3D = false;
+            return;
+        }
+
         if (mEnabledTool && !IsHandleWorking(cursor))
-            mEnabledTool->OnCursorReleased(cursor);
+            mEnabledTool->OnCursorReleased(ToSceneCursor(cursor));
     }
 
     void SceneEditScreen::OnCursorPressBreak(const Input::Cursor& cursor)
     {
+        if (mAltOrbit3D)
+        {
+            mAltOrbit3D = false;
+            return;
+        }
+
         if (mEnabledTool && !IsHandleWorking(cursor))
-            mEnabledTool->OnCursorPressBreak(cursor);
+            mEnabledTool->OnCursorPressBreak(ToSceneCursor(cursor));
     }
 
     void SceneEditScreen::OnCursorStillDown(const Input::Cursor& cursor)
     {
+        if (mAltOrbit3D)
+        {
+            if (cursor.delta.Length() > Math::Epsilon)
+            {
+                mView3D.Orbit(Vec2F(-cursor.delta.x, cursor.delta.y)*0.005f);
+                mViewCameraMoved = true;
+                mNeedRedraw = true;
+            }
+            return;
+        }
+
         if (mEnabledTool && !IsHandleWorking(cursor))
-            mEnabledTool->OnCursorStillDown(cursor);
+            mEnabledTool->OnCursorStillDown(ToSceneCursor(cursor));
     }
 
     void SceneEditScreen::OnCursorMoved(const Input::Cursor& cursor)
     {
         if (mEnabledTool && !IsHandleWorking(cursor))
-            mEnabledTool->OnCursorMoved(cursor);
+            mEnabledTool->OnCursorMoved(ToSceneCursor(cursor));
     }
 
     void SceneEditScreen::OnCursorEnter(const Input::Cursor& cursor)
     {
         if (mEnabledTool && !IsHandleWorking(cursor))
-            mEnabledTool->OnCursorEnter(cursor);
+            mEnabledTool->OnCursorEnter(ToSceneCursor(cursor));
     }
 
     void SceneEditScreen::OnCursorExit(const Input::Cursor& cursor)
     {
         if (mEnabledTool && !IsHandleWorking(cursor))
-            mEnabledTool->OnCursorExit(cursor);
+            mEnabledTool->OnCursorExit(ToSceneCursor(cursor));
     }
 
     void SceneEditScreen::OnCursorRightMousePressed(const Input::Cursor& cursor)
@@ -683,24 +1150,39 @@ namespace Editor
 
 		o2EditorTree.OnSceneFocused();
 
+        if (m3DMode)
+            SetFlyNavigation3D(true);
+
         if (mEnabledTool && !IsHandleWorking(cursor))
-            mEnabledTool->OnCursorRightMousePressed(cursor);
+            mEnabledTool->OnCursorRightMousePressed(ToSceneCursor(cursor));
 
         ScrollView::OnCursorRightMousePressed(cursor);
     }
 
     void SceneEditScreen::OnCursorRightMouseStayDown(const Input::Cursor& cursor)
     {
-        ScrollView::OnCursorRightMouseStayDown(cursor);
+        if (m3DMode)
+        {
+            if (cursor.delta.Length() > Math::Epsilon)
+            {
+                mView3D.Look(Vec2F(-cursor.delta.x, cursor.delta.y)*0.005f);
+                mViewCameraMoved = true;
+                mNeedRedraw = true;
+            }
+        }
+        else
+            ScrollView::OnCursorRightMouseStayDown(cursor);
 
         if (mEnabledTool)
-            mEnabledTool->OnCursorRightMouseStayDown(cursor);
+            mEnabledTool->OnCursorRightMouseStayDown(ToSceneCursor(cursor));
     }
 
     void SceneEditScreen::OnCursorRightMouseReleased(const Input::Cursor& cursor)
     {
+        SetFlyNavigation3D(false);
+
         if (mEnabledTool)
-            mEnabledTool->OnCursorRightMouseReleased(cursor);
+            mEnabledTool->OnCursorRightMouseReleased(ToSceneCursor(cursor));
 
         ScrollView::OnCursorRightMouseReleased(cursor);
     }
@@ -708,19 +1190,25 @@ namespace Editor
     void SceneEditScreen::OnCursorMiddleMousePressed(const Input::Cursor& cursor)
     {
         if (mEnabledTool)
-            mEnabledTool->OnCursorMiddleMousePressed(cursor);
+            mEnabledTool->OnCursorMiddleMousePressed(ToSceneCursor(cursor));
     }
 
     void SceneEditScreen::OnCursorMiddleMouseStayDown(const Input::Cursor& cursor)
     {
+        if (m3DMode && cursor.delta.Length() > Math::Epsilon)
+        {
+            mView3D.Pan(cursor.delta, GetViewportSize());
+            mNeedRedraw = true;
+        }
+
         if (mEnabledTool)
-            mEnabledTool->OnCursorMiddleMouseStayDown(cursor);
+            mEnabledTool->OnCursorMiddleMouseStayDown(ToSceneCursor(cursor));
     }
 
     void SceneEditScreen::OnCursorMiddleMouseReleased(const Input::Cursor& cursor)
     {
         if (mEnabledTool)
-            mEnabledTool->OnCursorMiddleMouseReleased(cursor);
+            mEnabledTool->OnCursorMiddleMouseReleased(ToSceneCursor(cursor));
     }
 }
 

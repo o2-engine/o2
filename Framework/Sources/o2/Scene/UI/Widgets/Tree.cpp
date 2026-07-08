@@ -371,7 +371,7 @@ namespace o2
 
             if (mHighlighNode && mHighlighNode.Lock()->widget)
             {
-                mHighlightSprite->SetScale(Vec2F(1.0f, 1.0f));
+                mHighlightSprite->SetScale2D(Vec2F(1.0f, 1.0f));
                 mHighlightSprite->SetRect(mHighlightLayout.Calculate(mHighlighNode.Lock()->widget->layout->worldRect));
             }
 
@@ -1365,8 +1365,8 @@ namespace o2
 
             if (node->widget)
             {
-                node->widget->GetLayoutData().offsetMin.y -= offs;
-                node->widget->GetLayoutData().offsetMax.y -= offs;
+                node->widget->GetLayoutData().mOffsetMin.y -= offs;
+                node->widget->GetLayoutData().mOffsetMax.y -= offs;
             }
         }
 

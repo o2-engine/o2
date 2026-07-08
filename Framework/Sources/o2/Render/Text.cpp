@@ -262,7 +262,7 @@ namespace o2
 
     RectF Text::GetRealRect()
     {
-        return RectF(mTransform.origin, mTransform.origin + mSymbolsSet.mRealSize);
+        return RectF(mTransform.origin.XY(), mTransform.origin.XY() + mSymbolsSet.mRealSize);
     }
 
     Vec2F Text::GetTextSize(const WString& text, const Ref<Font>& font, int height /*= 11*/, const Vec2F& areaSize /*= Vec2F()*/,
@@ -315,8 +315,8 @@ namespace o2
         int currentMeshIdx = 0;
         Ref<Mesh> currentMesh = mMeshes[0];
 
-        mSymbolsSet.Initialize(mFont, mText, mHeight, mTransform.origin, mSize, mHorAlign, mVerAlign, mWordWrap, mDotsEndings,
-                               mSymbolsDistCoef, mLinesDistanceCoef);
+        mSymbolsSet.Initialize(mFont, mText, mHeight, mTransform.origin.XY(), mSize.XY(), mHorAlign, mVerAlign, mWordWrap,
+                               mDotsEndings, mSymbolsDistCoef, mLinesDistanceCoef);
 
         Basis transf = CalculateTextBasis();
         mLastTransform = transf;
@@ -360,12 +360,16 @@ namespace o2
 
         currentMesh->SetTexture(mFont->mTexture);
 
-        Vec2F tangent = mTransform.xv.Normalized();
+        Vec2F tangent = mTransform.xv.XY().Normalized();
+        float z = mTransform.origin.z;
         for (auto& mesh : mMeshes)
         {
             Vertex* verts = mesh->GetVertices<Vertex>();
             for (UInt i = 0; i < mesh->vertexCount; i++)
+            {
                 verts[i].SetNormal(tangent);
+                verts[i].z = z;
+            }
         }
 
         mUpdatingMesh = false;
@@ -410,13 +414,13 @@ namespace o2
     Basis Text::CalculateTextBasis() const
     {
         Basis transf;
-        if (mSize == Vec2F())
+        if (mSize.XY() == Vec2F())
         {
-            transf = Basis::Build(mPosition, mScale, mAngle, mShear);
+            transf = Basis::Build(mPosition.XY(), mScale.XY(), mEulerAngles.z, mShear.x);
         }
         else
         {
-            transf = mTransform;
+            transf = mTransform.ToBasis();
             transf.xv /= mSize.x;
             transf.yv /= mSize.y;
         }
@@ -446,7 +450,7 @@ namespace o2
 
 	void Text::BasisChanged()
     {
-        if (mSymbolsSet.mAreaSize != mSize)
+        if (mSymbolsSet.mAreaSize != mSize.XY())
             CheckCharactersAndRebuildMesh();
         else
         {
@@ -458,11 +462,20 @@ namespace o2
 
             TransformMesh(mLastTransform.Inverted()*transform);
             mLastTransform = transform;
+
+            float z = mTransform.origin.z;
+            for (auto& mesh : mMeshes)
+            {
+                Vertex* verts = mesh->GetVertices<Vertex>();
+                for (UInt i = 0; i < mesh->vertexCount; i++)
+                    verts[i].z = z;
+            }
         }
     }
 
     void Text::OnDeserialized(const DataValue& node)
     {
+        Transform::OnDeserialized(node);
         SetFontAsset(AssetRef<FontAsset>(mFontAssetId));
     }
 

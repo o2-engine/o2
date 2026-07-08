@@ -333,7 +333,7 @@ namespace o2
         SetMode(image->GetMeta()->defaultMode);
 
         if (setSizeByImage)
-            SetSize(mTextureSrcRect.Size());
+            SetSize2D((Vec2F)mTextureSrcRect.Size());
         else
             UpdateMesh();
     }
@@ -379,7 +379,7 @@ namespace o2
         mMesh.mTextureSrcRect = mTextureSrcRect;
 
         if (setSizeByImage)
-            SetSize(mMesh.mTexture->GetSize());
+            SetSize2D((Vec2F)mMesh.mTexture->GetSize());
         else 
 			UpdateMesh();
     }
@@ -412,7 +412,7 @@ namespace o2
 
     void Sprite::NormalizeSize()
     {
-        SetSize(mTextureSrcRect.Size());
+        SetSize2D((Vec2F)mTextureSrcRect.Size());
     }
 
     void Sprite::NormalizeAspectByWidth()
@@ -456,11 +456,20 @@ namespace o2
     void Sprite::UpdateMesh()
     {
         (this->*mMeshBuildFunc)();
+
+        float z = mTransform.origin.z;
+        if (!Math::Equals(z, 0.0f))
+        {
+            Vertex* verts = mMesh.GetVertices<Vertex>();
+            for (UInt i = 0; i < mMesh.vertexCount; i++)
+                verts[i].z = z;
+        }
     }
 
     void Sprite::BuildDefaultMesh()
     {
-        Vec2F normal = mTransform.xv.Normalized();
+        const Basis transform = mTransform.ToBasis();
+        Vec2F normal = transform.xv.Normalized();
         ULong rcc[4];
         for (int i = 0; i < 4; i++)
             rcc[i] = (mResultColor*mCornersColors[i]).ABGR();
@@ -468,10 +477,10 @@ namespace o2
         static VertexIndex indexes[] ={ 0, 1, 2, 0, 2, 3 };
 
         Vertex* verts = mMesh.GetVertices<Vertex>();
-        verts[0].Set(mTransform.origin + mTransform.yv,                 rcc[0], 0.0f, 0.0f, normal);
-        verts[1].Set(mTransform.origin + mTransform.yv + mTransform.xv, rcc[1], 1.0f, 0.0f, normal);
-        verts[2].Set(mTransform.origin + mTransform.xv,                 rcc[2], 1.0f, 1.0f, normal);
-        verts[3].Set(mTransform.origin,                                 rcc[3], 0.0f, 1.0f, normal);
+        verts[0].Set(transform.origin + transform.yv,                 rcc[0], 0.0f, 0.0f, normal);
+        verts[1].Set(transform.origin + transform.yv + transform.xv, rcc[1], 1.0f, 0.0f, normal);
+        verts[2].Set(transform.origin + transform.xv,                 rcc[2], 1.0f, 1.0f, normal);
+        verts[3].Set(transform.origin,                                 rcc[3], 0.0f, 1.0f, normal);
 
         memcpy(mMesh.mIndexData, indexes, sizeof(VertexIndex)*6);
 
@@ -481,11 +490,12 @@ namespace o2
 
     void Sprite::BuildSlicedMesh()
     {
-        Vec2F normal = mTransform.xv.Normalized();
-        Vec2F lastTransformXv = mTransform.xv;
+        Basis transform = mTransform.ToBasis();
+        Vec2F normal = transform.xv.Normalized();
+        Vec2F lastTransformXv = transform.xv;
         float lastSizeX = mSize.x;
 
-        mTransform.xv *= mFill;
+        transform.xv *= mFill;
         mSize.x *= mFill;
 
         ULong rcc[4];
@@ -500,7 +510,7 @@ namespace o2
 
         Vec2F texSrcSize = mTextureSrcRect.Size();
         Vec2F invTexSrcSize = Vec2F::One()/texSrcSize;
-        Vec2F sz = mSize*mScale;
+        Vec2F sz = (mSize*mScale).XY();
 
         float u0 = 0.0f;
         float u1 = (float)mSlices.left*invTexSrcSize.x;
@@ -512,18 +522,18 @@ namespace o2
 		float v2 = (texSrcSize.y - (float)mSlices.bottom) * invTexSrcSize.y;
 		float v3 = 1.0f;
 
-        Vec2F xv = mTransform.xv/sz.x;
-        Vec2F yv = mTransform.yv/sz.y;
+        Vec2F xv = transform.xv/sz.x;
+        Vec2F yv = transform.yv/sz.y;
 
-        Vec2F o = mTransform.origin;
+        Vec2F o = transform.origin;
 
         Vec2F r1 = xv*(float)mSlices.left;
         Vec2F r2 = xv*(sz.x - (float)mSlices.right);
-        Vec2F r3 = mTransform.xv;
+        Vec2F r3 = transform.xv;
 
         Vec2F t1 = yv*(float)mSlices.bottom;
         Vec2F t2 = yv*(sz.y - (float)mSlices.top);
-        Vec2F t3 = mTransform.yv;
+        Vec2F t3 = transform.yv;
 
         if (mSlices.left + mSlices.right > sz.x)
         {
@@ -572,19 +582,20 @@ namespace o2
         mMesh.vertexCount = 16;
         mMesh.polyCount = 18;
 
-        mTransform.xv = lastTransformXv;
+        transform.xv = lastTransformXv;
         mSize.x = lastSizeX;
     }
 
     void Sprite::BuildTiledMesh()
     {
-        Vec2F normal = mTransform.xv.Normalized();
+        const Basis transform = mTransform.ToBasis();
+        Vec2F normal = transform.xv.Normalized();
         ULong rcc[4];
         for (int i = 0; i < 4; i++)
             rcc[i] = (mResultColor*mCornersColors[i]).ABGR();
 
         Vec2F tileSize = (Vec2F)(mTextureSrcRect.Size())*mTileScale;
-        Vec2F sz = mSize*mScale;
+        Vec2F sz = (mSize*mScale).XY();
         
         if (Math::Equals(tileSize.x, 0.0f) || Math::Equals(tileSize.y, 0.0f))
             return;
@@ -597,10 +608,10 @@ namespace o2
         if (mMesh.GetMaxVertexCount() < requiredVecticiesCount || mMesh.GetMaxPolyCount() < requiredPolygons)
             mMesh.Resize(requiredVecticiesCount, requiredPolygons);
 
-        Vec2F xv = mTransform.xv/sz.x;
-        Vec2F yv = mTransform.yv/sz.y;
+        Vec2F xv = transform.xv/sz.x;
+        Vec2F yv = transform.yv/sz.y;
 
-        Vec2F o = mTransform.origin;
+        Vec2F o = transform.origin;
 
         Vertex* verts = mMesh.GetVertices<Vertex>();
         int vi = 0, pi = 0;
@@ -650,7 +661,9 @@ namespace o2
 
     void Sprite::BuildFixedAspectMesh()
     {
-        Vec2F normal = mTransform.xv.Normalized();
+        const Basis transform = mTransform.ToBasis();
+        const Basis nonSizedTransform = mNonSizedTransform.ToBasis();
+        Vec2F normal = transform.xv.Normalized();
         ULong rcc[4];
         for (int i = 0; i < 4; i++)
             rcc[i] = (mResultColor*mCornersColors[i]).ABGR();
@@ -664,22 +677,22 @@ namespace o2
         {
             float fx = mSize.y/srcRectSize.y*srcRectSize.x;
             float off = (mSize.x - fx)*0.5f;
-            Vec2F offx = mNonSizedTransform.xv*off;
+            Vec2F offx = nonSizedTransform.xv*off;
 
-            verts[0].Set(mTransform.origin + mTransform.yv + offx,                 rcc[0], 0.0f, 0.0f, normal);
-            verts[1].Set(mTransform.origin + mTransform.yv + mTransform.xv - offx, rcc[1], 1.0f, 0.0f, normal);
-            verts[2].Set(mTransform.origin + mTransform.xv - offx,                 rcc[2], 1.0f, 1.0f, normal);
-            verts[3].Set(mTransform.origin + offx,                                 rcc[3], 0.0f, 1.0f, normal);
+            verts[0].Set(transform.origin + transform.yv + offx,                 rcc[0], 0.0f, 0.0f, normal);
+            verts[1].Set(transform.origin + transform.yv + transform.xv - offx, rcc[1], 1.0f, 0.0f, normal);
+            verts[2].Set(transform.origin + transform.xv - offx,                 rcc[2], 1.0f, 1.0f, normal);
+            verts[3].Set(transform.origin + offx,                                 rcc[3], 0.0f, 1.0f, normal);
         }
         else
         {
             float off = (mSize.y - fy)*0.5f;
-            Vec2F offy = mNonSizedTransform.yv*off;
+            Vec2F offy = nonSizedTransform.yv*off;
 
-            verts[0].Set(mTransform.origin + mTransform.yv - offy,                 rcc[0], 0.0f, 0.0f, normal);
-            verts[1].Set(mTransform.origin + mTransform.yv + mTransform.xv - offy, rcc[1], 1.0f, 0.0f, normal);
-            verts[2].Set(mTransform.origin + mTransform.xv + offy,                 rcc[2], 1.0f, 1.0f, normal);
-            verts[3].Set(mTransform.origin + offy,                                 rcc[3], 0.0f, 1.0f, normal);
+            verts[0].Set(transform.origin + transform.yv - offy,                 rcc[0], 0.0f, 0.0f, normal);
+            verts[1].Set(transform.origin + transform.yv + transform.xv - offy, rcc[1], 1.0f, 0.0f, normal);
+            verts[2].Set(transform.origin + transform.xv + offy,                 rcc[2], 1.0f, 1.0f, normal);
+            verts[3].Set(transform.origin + offy,                                 rcc[3], 0.0f, 1.0f, normal);
         }
 
         memcpy(mMesh.mIndexData, indexes, sizeof(VertexIndex)*6);
@@ -690,7 +703,8 @@ namespace o2
 
     void Sprite::BuildFillLeftToRightMesh()
     {
-        Vec2F normal = mTransform.xv.Normalized();
+        const Basis transform = mTransform.ToBasis();
+        Vec2F normal = transform.xv.Normalized();
         float coef = Math::Clamp01(mFill);
 
         ULong rcc[4];
@@ -702,10 +716,10 @@ namespace o2
         static VertexIndex indexes[] ={ 0, 1, 2, 0, 2, 3 };
 
         Vertex* verts = mMesh.GetVertices<Vertex>();
-        verts[0].Set(mTransform.origin + mTransform.yv,                      rcc[0], 0.0f, 0.0f, normal);
-        verts[1].Set(mTransform.origin + mTransform.yv + mTransform.xv*coef, rcc[1], coef, 0.0f, normal);
-        verts[2].Set(mTransform.origin + mTransform.xv*coef,                 rcc[2], coef, 1.0f, normal);
-        verts[3].Set(mTransform.origin,                                      rcc[3], 0.0f, 1.0f, normal);
+        verts[0].Set(transform.origin + transform.yv,                      rcc[0], 0.0f, 0.0f, normal);
+        verts[1].Set(transform.origin + transform.yv + transform.xv*coef, rcc[1], coef, 0.0f, normal);
+        verts[2].Set(transform.origin + transform.xv*coef,                 rcc[2], coef, 1.0f, normal);
+        verts[3].Set(transform.origin,                                      rcc[3], 0.0f, 1.0f, normal);
 
         memcpy(mMesh.mIndexData, indexes, sizeof(VertexIndex)*6);
 
@@ -715,7 +729,8 @@ namespace o2
 
     void Sprite::BuildFillRightToLeftMesh()
     {
-        Vec2F normal = mTransform.xv.Normalized();
+        const Basis transform = mTransform.ToBasis();
+        Vec2F normal = transform.xv.Normalized();
         float coef = Math::Clamp01(mFill);
         float invCoef = 1.0f - coef;
 
@@ -728,10 +743,10 @@ namespace o2
         static VertexIndex indexes[] ={ 0, 1, 2, 0, 2, 3 };
 
         Vertex* verts = mMesh.GetVertices<Vertex>();
-        verts[0].Set(mTransform.origin + mTransform.yv + mTransform.xv*invCoef, rcc[0], invCoef, 0.0f, normal);
-        verts[1].Set(mTransform.origin + mTransform.yv + mTransform.xv,         rcc[1], 1.0f, 0.0f, normal);
-        verts[2].Set(mTransform.origin + mTransform.xv,                         rcc[2], 1.0f, 1.0f, normal);
-        verts[3].Set(mTransform.origin + mTransform.xv*invCoef,                 rcc[3], invCoef, 1.0f, normal);
+        verts[0].Set(transform.origin + transform.yv + transform.xv*invCoef, rcc[0], invCoef, 0.0f, normal);
+        verts[1].Set(transform.origin + transform.yv + transform.xv,         rcc[1], 1.0f, 0.0f, normal);
+        verts[2].Set(transform.origin + transform.xv,                         rcc[2], 1.0f, 1.0f, normal);
+        verts[3].Set(transform.origin + transform.xv*invCoef,                 rcc[3], invCoef, 1.0f, normal);
 
         memcpy(mMesh.mIndexData, indexes, sizeof(VertexIndex)*6);
 
@@ -741,7 +756,8 @@ namespace o2
 
     void Sprite::BuildFillUpToDownMesh()
     {
-        Vec2F normal = mTransform.xv.Normalized();
+        const Basis transform = mTransform.ToBasis();
+        Vec2F normal = transform.xv.Normalized();
         float coef = Math::Clamp01(mFill);
         float invCoef = 1.0f - coef;
 
@@ -754,10 +770,10 @@ namespace o2
         static VertexIndex indexes[] ={ 0, 1, 2, 0, 2, 3 };
 
         Vertex* verts = mMesh.GetVertices<Vertex>();
-        verts[0].Set(mTransform.origin + mTransform.yv,                         rcc[0], 0.0f, 0.0f, normal);
-        verts[1].Set(mTransform.origin + mTransform.yv + mTransform.xv,         rcc[1], 1.0f, 0.0f, normal);
-        verts[2].Set(mTransform.origin + mTransform.xv + mTransform.yv*invCoef, rcc[2], 1.0f, coef, normal);
-        verts[3].Set(mTransform.origin + mTransform.yv*invCoef,                 rcc[3], 0.0f, coef, normal);
+        verts[0].Set(transform.origin + transform.yv,                         rcc[0], 0.0f, 0.0f, normal);
+        verts[1].Set(transform.origin + transform.yv + transform.xv,         rcc[1], 1.0f, 0.0f, normal);
+        verts[2].Set(transform.origin + transform.xv + transform.yv*invCoef, rcc[2], 1.0f, coef, normal);
+        verts[3].Set(transform.origin + transform.yv*invCoef,                 rcc[3], 0.0f, coef, normal);
 
         memcpy(mMesh.mIndexData, indexes, sizeof(VertexIndex)*6);
 
@@ -767,7 +783,8 @@ namespace o2
 
     void Sprite::BuildFillDownToUpMesh()
     {
-        Vec2F normal = mTransform.xv.Normalized();
+        const Basis transform = mTransform.ToBasis();
+        Vec2F normal = transform.xv.Normalized();
         float coef = Math::Clamp01(mFill);
 
         ULong rcc[4];
@@ -779,10 +796,10 @@ namespace o2
         static VertexIndex indexes[] ={ 0, 1, 2, 0, 2, 3 };
 
         Vertex* verts = mMesh.GetVertices<Vertex>();
-        verts[0].Set(mTransform.origin + mTransform.yv*coef,                 rcc[0], 0.0f, 1.0f - coef, normal);
-        verts[1].Set(mTransform.origin + mTransform.yv*coef + mTransform.xv, rcc[1], 1.0f, 1.0f - coef, normal);
-        verts[2].Set(mTransform.origin + mTransform.xv,                      rcc[2], 1.0f, 1.0f, normal);
-        verts[3].Set(mTransform.origin,                                      rcc[3], 0.0f, 1.0f, normal);
+        verts[0].Set(transform.origin + transform.yv*coef,                 rcc[0], 0.0f, 1.0f - coef, normal);
+        verts[1].Set(transform.origin + transform.yv*coef + transform.xv, rcc[1], 1.0f, 1.0f - coef, normal);
+        verts[2].Set(transform.origin + transform.xv,                      rcc[2], 1.0f, 1.0f, normal);
+        verts[3].Set(transform.origin,                                      rcc[3], 0.0f, 1.0f, normal);
 
         memcpy(mMesh.mIndexData, indexes, sizeof(VertexIndex)*6);
 
@@ -792,7 +809,8 @@ namespace o2
 
     void Sprite::BuildFill360CWMesh()
     {
-        Vec2F normal = mTransform.xv.Normalized();
+        const Basis transform = mTransform.ToBasis();
+        Vec2F normal = transform.xv.Normalized();
         float coef = Math::Clamp01(mFill);
         float angle = 360.0f*coef;
 
@@ -800,8 +818,8 @@ namespace o2
         for (int i = 0; i < 4; i++)
             cornerResColr[i] = (mResultColor*mCornersColors[i]).ABGR();
 
-        Vec2F zeroPos    = mTransform.origin + mTransform.xv*0.5f + mTransform.yv;
-        Vec2F centerPos  = mTransform.origin + mTransform.xv*0.5f + mTransform.yv*0.5f;
+        Vec2F zeroPos    = transform.origin + transform.xv*0.5f + transform.yv;
+        Vec2F centerPos  = transform.origin + transform.xv*0.5f + transform.yv*0.5f;
 
         ULong centerResColr = (mResultColor*((mCornersColors[0] + mCornersColors[1] + mCornersColors[2] + mCornersColors[3])*0.25f)).ABGR();
         ULong zeroResColor = (mResultColor*((mCornersColors[0] + mCornersColors[1])*0.5f)).ABGR();
@@ -812,7 +830,7 @@ namespace o2
         if (angle < 45.0f)
         {
             float dirCoef = 0.5f + dir.x/dir.y*0.5f;
-            Vec2F dirPoint = mTransform.origin + mTransform.xv*dirCoef + mTransform.yv;
+            Vec2F dirPoint = transform.origin + transform.xv*dirCoef + transform.yv;
             ULong dirColor = (mResultColor*Math::Lerp(mCornersColors[0], mCornersColors[1], dirCoef)).ABGR();
 
             verts[0].Set(zeroPos, zeroResColor, 0.5f, 0.0f, normal);
@@ -827,10 +845,10 @@ namespace o2
         else if (angle < 135.0f)
         {
             float dirCoef = 0.5f + dir.y/dir.x*0.5f;
-            Vec2F dirPoint = mTransform.origin + mTransform.xv + mTransform.yv*dirCoef;
+            Vec2F dirPoint = transform.origin + transform.xv + transform.yv*dirCoef;
             ULong dirColor = (mResultColor*Math::Lerp(mCornersColors[2], mCornersColors[1], dirCoef)).ABGR();
 
-            Vec2F cornerPos1 = mTransform.origin + mTransform.yv + mTransform.xv;
+            Vec2F cornerPos1 = transform.origin + transform.yv + transform.xv;
 
             verts[0].Set(zeroPos, zeroResColor, 0.5f, 0.0f, normal);
             verts[1].Set(cornerPos1, cornerResColr[1], 1.0f, 0.0f, normal);
@@ -845,11 +863,11 @@ namespace o2
         else if (angle < 225.0f)
         {
             float dirCoef = 0.5f - dir.x/dir.y*0.5f;
-            Vec2F dirPoint = mTransform.origin + mTransform.xv*dirCoef;
+            Vec2F dirPoint = transform.origin + transform.xv*dirCoef;
             ULong dirColor = (mResultColor*Math::Lerp(mCornersColors[3], mCornersColors[2], dirCoef)).ABGR();
 
-            Vec2F cornerPos1 = mTransform.origin + mTransform.yv + mTransform.xv;
-            Vec2F cornerPos2 = mTransform.origin + mTransform.xv;
+            Vec2F cornerPos1 = transform.origin + transform.yv + transform.xv;
+            Vec2F cornerPos2 = transform.origin + transform.xv;
 
             verts[0].Set(zeroPos, zeroResColor, 0.5f, 0.0f, normal);
             verts[1].Set(cornerPos1, cornerResColr[1], 1.0f, 0.0f, normal);
@@ -865,12 +883,12 @@ namespace o2
         else if (angle < 315.0f)
         {
             float dirCoef = 0.5f - dir.y/dir.x*0.5f;
-            Vec2F dirPoint = mTransform.origin + mTransform.yv*dirCoef;
+            Vec2F dirPoint = transform.origin + transform.yv*dirCoef;
             ULong dirColor = (mResultColor*Math::Lerp(mCornersColors[3], mCornersColors[0], dirCoef)).ABGR();
 
-            Vec2F cornerPos1 = mTransform.origin + mTransform.yv + mTransform.xv;
-            Vec2F cornerPos2 = mTransform.origin + mTransform.xv;
-            Vec2F cornerPos3 = mTransform.origin;
+            Vec2F cornerPos1 = transform.origin + transform.yv + transform.xv;
+            Vec2F cornerPos2 = transform.origin + transform.xv;
+            Vec2F cornerPos3 = transform.origin;
 
             verts[0].Set(zeroPos, zeroResColor, 0.5f, 0.0f, normal);
             verts[1].Set(cornerPos1, cornerResColr[1], 1.0f, 0.0f, normal);
@@ -887,13 +905,13 @@ namespace o2
         else
         {
             float dirCoef = 0.5f + dir.x/dir.y*0.5f;
-            Vec2F dirPoint = mTransform.origin + mTransform.xv*dirCoef + mTransform.yv;
+            Vec2F dirPoint = transform.origin + transform.xv*dirCoef + transform.yv;
             ULong dirColor = (mResultColor*Math::Lerp(mCornersColors[0], mCornersColors[1], dirCoef)).ABGR();
 
-            Vec2F cornerPos0 = mTransform.origin + mTransform.yv;
-            Vec2F cornerPos1 = mTransform.origin + mTransform.yv + mTransform.xv;
-            Vec2F cornerPos2 = mTransform.origin + mTransform.xv;
-            Vec2F cornerPos3 = mTransform.origin;
+            Vec2F cornerPos0 = transform.origin + transform.yv;
+            Vec2F cornerPos1 = transform.origin + transform.yv + transform.xv;
+            Vec2F cornerPos2 = transform.origin + transform.xv;
+            Vec2F cornerPos3 = transform.origin;
 
             verts[0].Set(zeroPos, zeroResColor, 0.5f, 0.0f, normal);
             verts[1].Set(cornerPos1, cornerResColr[0], 1.0f, 0.0f, normal);
@@ -912,7 +930,8 @@ namespace o2
 
     void Sprite::BuildFill360CCWMesh()
     {
-        Vec2F normal = mTransform.xv.Normalized();
+        const Basis transform = mTransform.ToBasis();
+        Vec2F normal = transform.xv.Normalized();
         float coef = Math::Clamp01(mFill);
         float angle = 360.0f*coef;
 
@@ -920,8 +939,8 @@ namespace o2
         for (int i = 0; i < 4; i++)
             cornerResColr[i] = (mResultColor*mCornersColors[i]).ABGR();
 
-        Vec2F zeroPos   = mTransform.origin + mTransform.xv*0.5f + mTransform.yv;
-        Vec2F centerPos = mTransform.origin + mTransform.xv*0.5f + mTransform.yv*0.5f;
+        Vec2F zeroPos   = transform.origin + transform.xv*0.5f + transform.yv;
+        Vec2F centerPos = transform.origin + transform.xv*0.5f + transform.yv*0.5f;
 
         ULong centerResColr = (mResultColor*((mCornersColors[0] + mCornersColors[1] + mCornersColors[2] + mCornersColors[3])*0.25f)).ABGR();
         ULong zeroResColor = (mResultColor*((mCornersColors[0] + mCornersColors[1])*0.5f)).ABGR();
@@ -932,7 +951,7 @@ namespace o2
         if (angle < 45.0f)
         {
             float dirCoef = 0.5f + dir.x/dir.y*0.5f;
-            Vec2F dirPoint = mTransform.origin + mTransform.xv*dirCoef + mTransform.yv;
+            Vec2F dirPoint = transform.origin + transform.xv*dirCoef + transform.yv;
             ULong dirColor = (mResultColor*Math::Lerp(mCornersColors[0], mCornersColors[1], dirCoef)).ABGR();
 
             verts[0].Set(zeroPos, zeroResColor, 0.5f, 0.0f, normal);
@@ -947,10 +966,10 @@ namespace o2
         else if (angle < 135.0f)
         {
             float dirCoef = 0.5f - dir.y/dir.x*0.5f;
-            Vec2F dirPoint = mTransform.origin + mTransform.yv*dirCoef;
+            Vec2F dirPoint = transform.origin + transform.yv*dirCoef;
             ULong dirColor = (mResultColor*Math::Lerp(mCornersColors[2], mCornersColors[1], dirCoef)).ABGR();
 
-            Vec2F cornerPos0 = mTransform.origin + mTransform.yv;
+            Vec2F cornerPos0 = transform.origin + transform.yv;
 
             verts[0].Set(zeroPos, zeroResColor, 0.5f, 0.0f, normal);
             verts[1].Set(cornerPos0, cornerResColr[0], 0.0f, 0.0f, normal);
@@ -965,11 +984,11 @@ namespace o2
         else if (angle < 225.0f)
         {
             float dirCoef = 0.5f - dir.x/dir.y*0.5f;
-            Vec2F dirPoint = mTransform.origin + mTransform.xv*dirCoef;
+            Vec2F dirPoint = transform.origin + transform.xv*dirCoef;
             ULong dirColor = (mResultColor*Math::Lerp(mCornersColors[3], mCornersColors[2], dirCoef)).ABGR();
 
-            Vec2F cornerPos0 = mTransform.origin + mTransform.yv;
-            Vec2F cornerPos3 = mTransform.origin;
+            Vec2F cornerPos0 = transform.origin + transform.yv;
+            Vec2F cornerPos3 = transform.origin;
 
             verts[0].Set(zeroPos, zeroResColor, 0.5f, 0.0f, normal);
             verts[1].Set(cornerPos0, cornerResColr[0], 0.0f, 0.0f, normal);
@@ -985,12 +1004,12 @@ namespace o2
         else if (angle < 315.0f)
         {
             float dirCoef = 0.5f + dir.y/dir.x*0.5f;
-            Vec2F dirPoint = mTransform.origin + mTransform.yv*dirCoef + mTransform.xv;
+            Vec2F dirPoint = transform.origin + transform.yv*dirCoef + transform.xv;
             ULong dirColor = (mResultColor*Math::Lerp(mCornersColors[3], mCornersColors[0], dirCoef)).ABGR();
 
-            Vec2F cornerPos0 = mTransform.origin + mTransform.yv;
-            Vec2F cornerPos3 = mTransform.origin;
-            Vec2F cornerPos2 = mTransform.origin + mTransform.xv;
+            Vec2F cornerPos0 = transform.origin + transform.yv;
+            Vec2F cornerPos3 = transform.origin;
+            Vec2F cornerPos2 = transform.origin + transform.xv;
 
             verts[0].Set(zeroPos, zeroResColor, 0.5f, 0.0f, normal);
             verts[1].Set(cornerPos0, cornerResColr[0], 0.0f, 0.0f, normal);
@@ -1007,13 +1026,13 @@ namespace o2
         else
         {
             float dirCoef = 0.5f + dir.x/dir.y*0.5f;
-            Vec2F dirPoint = mTransform.origin + mTransform.xv*dirCoef + mTransform.yv;
+            Vec2F dirPoint = transform.origin + transform.xv*dirCoef + transform.yv;
             ULong dirColor = (mResultColor*Math::Lerp(mCornersColors[0], mCornersColors[1], dirCoef)).ABGR();
 
-            Vec2F cornerPos0 = mTransform.origin + mTransform.yv;
-            Vec2F cornerPos3 = mTransform.origin;
-            Vec2F cornerPos2 = mTransform.origin + mTransform.xv;
-            Vec2F cornerPos1 = mTransform.origin + mTransform.yv + mTransform.xv;
+            Vec2F cornerPos0 = transform.origin + transform.yv;
+            Vec2F cornerPos3 = transform.origin;
+            Vec2F cornerPos2 = transform.origin + transform.xv;
+            Vec2F cornerPos1 = transform.origin + transform.yv + transform.xv;
 
             verts[0].Set(zeroPos, zeroResColor, 0.5f, 0.0f, normal);
             verts[1].Set(cornerPos0, cornerResColr[0], 0.0f, 0.0f, normal);
@@ -1032,6 +1051,8 @@ namespace o2
 
     void Sprite::OnSerialize(DataValue& node) const
     {
+        Transform::OnSerialize(node);
+
         if (!mImageAsset)
         {
             node["mTextureSrcRect"] = mTextureSrcRect;
@@ -1043,6 +1064,8 @@ namespace o2
 
     void Sprite::OnDeserialized(const DataValue& node)
     {
+        Transform::OnDeserialized(node);
+
         SpriteMode mode = mMode;
         mMode = (SpriteMode)((int)mode + 1);
         SetMode(mode);
@@ -1053,7 +1076,14 @@ namespace o2
 
     void Sprite::OnDeserializedDelta(const DataValue& node, const IObject& origin)
     {
-        OnDeserialized(node);
+        Transform::OnDeserializedDelta(node, origin);
+
+        SpriteMode mode = mMode;
+        mMode = (SpriteMode)((int)mode + 1);
+        SetMode(mode);
+
+        UpdateMaterial();
+        UpdateColor();
     }
 
     void Sprite::ReloadImage()

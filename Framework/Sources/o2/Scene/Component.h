@@ -1,6 +1,8 @@
 #pragma once
 
+#include "o2/Scene/SceneDrawableCategory.h"
 #include "o2/Utils/Editor/Attributes/EditorPropertyAttribute.h"
+#include "o2/Utils/Math/AABB.h"
 #include "o2/Utils/Serialization/Serializable.h"
 #include "o2/Utils/Basic/ICloneable.h"
 
@@ -67,6 +69,18 @@ namespace o2
         
         // Returns owner actor
         Ref<Actor> GetActor() const;
+
+        // Returns render category of the component's drawing content; 3D components override
+        virtual SceneDrawableCategory GetSceneDrawableCategory() const;
+
+        // Draws component content (calls OnDraw), used by render passes
+        void Draw();
+
+        // Returns world bounds of 3D drawing content; false when component has none
+        virtual bool Get3DDrawableBounds(AABB& bounds);
+
+        // Returns local space bounds of 3D drawing content; false when component has none
+        virtual bool Get3DDrawableLocalBounds(AABB& bounds);
         
         // Returns component with type
         template<typename _type>
@@ -246,6 +260,10 @@ CLASS_METHODS_META(o2::Component)
     FUNCTION().PUBLIC().SIGNATURE(const WeakRef<Component>&, GetPrototypeLink);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsLinkedToComponent, const Ref<Component>&);
     FUNCTION().PUBLIC().SIGNATURE(Ref<Actor>, GetActor);
+    FUNCTION().PUBLIC().SIGNATURE(SceneDrawableCategory, GetSceneDrawableCategory);
+    FUNCTION().PUBLIC().SIGNATURE(void, Draw);
+    FUNCTION().PUBLIC().SIGNATURE(bool, Get3DDrawableBounds, AABB&);
+    FUNCTION().PUBLIC().SIGNATURE(bool, Get3DDrawableLocalBounds, AABB&);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetName);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetCategory);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetIcon);

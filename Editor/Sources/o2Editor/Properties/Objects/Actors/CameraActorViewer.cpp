@@ -55,6 +55,10 @@ namespace Editor
 
         mUnitsProperty = o2EditorProperties.BuildFieldType<EnumProperty>(mUnitsPropertySpoiler, cameraActorType, "mUnits", "",
                                                                          mPropertiesContext, mOnPropertyChangeCompleted, mOnPropertyChanged);
+
+        // Render pipeline
+        o2EditorProperties.BuildField(mSpoiler, cameraActorType, "mPipeline", "",
+                                      mPropertiesContext, mOnPropertyChangeCompleted, mOnPropertyChanged);
     }
 
     void CameraActorViewer::OnTypeSelected()

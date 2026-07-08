@@ -12,7 +12,7 @@
 #include "o2/Scene/ActorRefResolver.h"
 #include "o2/Scene/CameraActor.h"
 #include "o2/Scene/Component.h"
-#include "o2/Scene/Component.h"
+#include "o2/Scene/Components/LightComponent.h"
 #include "o2/Scene/SceneLayer.h"
 #include "o2/Scene/Tags.h"
 #include "o2/Scene/UI/Widget.h"
@@ -47,6 +47,16 @@ namespace o2
     const Vector<WeakRef<CameraActor>>& Scene::GetCameras() const
     {
         return mCameras;
+    }
+
+    const Vector<WeakRef<LightComponent>>& Scene::GetLights() const
+    {
+        return mLights;
+    }
+
+    const Vector<WeakRef<Component>>& Scene::GetDrawable3DComponents() const
+    {
+        return mDrawable3DComponents;
     }
 
     void Scene::Update(float dt)
@@ -409,6 +419,26 @@ namespace o2
     void Scene::OnCameraRemovedScene(CameraActor* camera)
     {
         mCameras.Remove(Ref(camera));
+    }
+
+    void Scene::OnLightAddedOnScene(LightComponent* light)
+    {
+        mLights.Add(Ref(light));
+    }
+
+    void Scene::OnLightRemovedScene(LightComponent* light)
+    {
+        mLights.Remove(Ref(light));
+    }
+
+    void Scene::OnDrawable3DComponentAdded(Component* component)
+    {
+        mDrawable3DComponents.Add(Ref(component));
+    }
+
+    void Scene::OnDrawable3DComponentRemoved(Component* component)
+    {
+        mDrawable3DComponents.Remove(Ref(component));
     }
 
     bool Scene::HasLayer(const String& name) const
@@ -853,6 +883,11 @@ namespace o2
 
     void Scene::CheckChangedObjects()
     {
+        if (mIsCheckingChangedObjects)
+            return;
+
+        mIsCheckingChangedObjects = true;
+
         mChangedObjects.RemoveAll([](auto x) { return x == nullptr; });
 
         if (mChangedObjects.Count() > 0)
@@ -874,6 +909,8 @@ namespace o2
             UpdateAddedEntities();
             UpdateDestroyingEntities();
         }
+
+        mIsCheckingChangedObjects = false;
     }
 
     const Vector<Ref<SceneEditableObject>>& Scene::GetChangedObjects() const

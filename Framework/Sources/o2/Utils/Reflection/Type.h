@@ -1481,6 +1481,33 @@ namespace o2
     }
     END_META;
 
+    FUNDAMENTAL_META(Vec3F)
+    {
+        FIELD().PUBLIC().NAME(x);
+        FIELD().PUBLIC().NAME(y);
+        FIELD().PUBLIC().NAME(z);
+    }
+    END_META;
+
+    FUNDAMENTAL_META(Vec3I)
+    {
+        FIELD().PUBLIC().NAME(x);
+        FIELD().PUBLIC().NAME(y);
+        FIELD().PUBLIC().NAME(z);
+    }
+    END_META;
+
+    FUNDAMENTAL_META(Quat)
+    {
+        FIELD().PUBLIC().NAME(x);
+        FIELD().PUBLIC().NAME(y);
+        FIELD().PUBLIC().NAME(z);
+        FIELD().PUBLIC().NAME(w);
+    }
+    END_META;
+
+    FUNDAMENTAL_META(Mat4) END_META;
+
     FUNDAMENTAL_META(Color4)
     {
         FIELD().PUBLIC().NAME(r);
@@ -1505,7 +1532,9 @@ namespace o2
     FUNDAMENTAL_META(float) END_META;
     FUNDAMENTAL_META(double) END_META;
     FUNDAMENTAL_META(long double) END_META;
+    FUNDAMENTAL_META(AABB) END_META;
     FUNDAMENTAL_META(Basis) END_META;
+    FUNDAMENTAL_META(Basis3D) END_META;
     FUNDAMENTAL_META(Vertex) END_META;
     FUNDAMENTAL_META(String) END_META;
     FUNDAMENTAL_META(WString) END_META;

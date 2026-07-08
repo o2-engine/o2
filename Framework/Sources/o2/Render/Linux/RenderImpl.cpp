@@ -275,6 +275,24 @@ namespace o2
         }
     }
 
+    void Render::PlatformSetDepthTest(bool enabled)
+    {
+        if (enabled)
+        {
+            glEnable(GL_DEPTH_TEST);
+            glDepthFunc(GL_LEQUAL);
+        }
+        else
+            glDisable(GL_DEPTH_TEST);
+
+        GL_CHECK_ERROR();
+    }
+
+    bool Render::PlatformSupportsMRT() const
+    {
+        return false;
+    }
+
     void Render::PlatformEnableScissorTest()
     {
         glEnable(GL_SCISSOR_TEST);

@@ -1,7 +1,9 @@
 #include "o2/stdafx.h"
 #include "Material.h"
 
+#include "o2/EngineSettings.h"
 #include "o2/Utils/Debug/Debug.h"
+#include "o2/Utils/FileSystem/FileSystem.h"
 
 #include <functional>
 
@@ -120,8 +122,39 @@ namespace o2
 		return h;
 	}
 
+	ShaderParamFloatVector::ShaderParamFloatVector()
+	{}
+
+	ShaderParamFloatVector::ShaderParamFloatVector(const String& name, const Vector<float>& value)
+	{
+		mName = name;
+		mValue = value;
+	}
+
+	const Vector<float>& ShaderParamFloatVector::GetValue() const
+	{
+		return mValue;
+	}
+
+	void ShaderParamFloatVector::SetValue(const Vector<float>& value)
+	{
+		mValue = value;
+	}
+
+	size_t ShaderParamFloatVector::ComputeHash() const
+	{
+		size_t h = IShaderParam::ComputeHash();
+		for (float value : mValue)
+			h ^= std::hash<float>()(value) + 0x9e3779b9 + (h << 6) + (h >> 2);
+
+		return h;
+	}
+
 	TextureRef TextureSampler::GetTexture() const
 	{
+		if (textureOverride)
+			return textureOverride;
+
 		if (image)
 			return image->GetTextureSource().texture;
 
@@ -130,6 +163,9 @@ namespace o2
 
 	RectI TextureSampler::GetSrcRect() const
 	{
+		if (textureOverride)
+			return RectI();
+
 		if (image)
 			return image->GetTextureSource().sourceRect;
 
@@ -141,7 +177,8 @@ namespace o2
 	{
 		return samplerUniformName == other.samplerUniformName &&
 			texCoordsAttrName == other.texCoordsAttrName &&
-			image == other.image;
+			image == other.image &&
+			textureOverride == other.textureOverride;
 	}
 
 	Material::Material()
@@ -149,7 +186,9 @@ namespace o2
 
 	Material::Material(const Material& other):
 		mVertexShader(other.mVertexShader), mFragmentShader(other.mFragmentShader), mTexture(other.mTexture),
-		mBlendMode(other.mBlendMode), mSamplers(other.mSamplers), mHashDirty(true)
+		mBlendMode(other.mBlendMode), mColorAttachmentsCount(other.mColorAttachmentsCount),
+		mColorAttachmentFormats(other.mColorAttachmentFormats), mSamplers(other.mSamplers),
+		mHashDirty(true)
 	{
 		for (auto& param : other.mParams)
 			mParams.Add(param->CloneAsRef<IShaderParam>());
@@ -315,9 +354,92 @@ namespace o2
 		return mSamplers;
 	}
 
+	void Material::SetSamplerTextureOverride(const String& samplerUniformName, const TextureRef& texture)
+	{
+		for (auto& sampler : mSamplers)
+		{
+			if (sampler.samplerUniformName == samplerUniformName)
+			{
+				sampler.textureOverride = texture;
+				mHashDirty = true;
+				return;
+			}
+		}
+	}
+
 	int Material::GetTotalTextureChannelsCount() const
 	{
 		return 1 + mSamplers.Count();
+	}
+
+	void Material::SetColorAttachmentsCount(int count)
+	{
+		count = Math::Max(count, 1);
+		if (mColorAttachmentsCount == count)
+			return;
+
+		PlatformDestroy();
+		mReady = false;
+		mColorAttachmentsCount = count;
+		mHashDirty = true;
+	}
+
+	int Material::GetColorAttachmentsCount() const
+	{
+		return mColorAttachmentsCount;
+	}
+
+	void Material::SetColorAttachmentFormats(const Vector<TextureFormat>& formats)
+	{
+		if (mColorAttachmentFormats == formats)
+			return;
+
+		PlatformDestroy();
+		mReady = false;
+		mColorAttachmentFormats = formats;
+		mColorAttachmentsCount = Math::Max(mColorAttachmentsCount, formats.Count());
+		mHashDirty = true;
+	}
+
+	const Vector<TextureFormat>& Material::GetColorAttachmentFormats() const
+	{
+		return mColorAttachmentFormats;
+	}
+
+	Ref<Material> Material::CreateFromBuiltinShaders(const String& shadersName)
+	{
+		String basePath = String(GetBuiltinAssetsPath()) + "Shaders/" + shadersName;
+		String vertexPath = Shader::ResolvePlatformSourcePath(basePath + ".vsh");
+		String fragmentPath = Shader::ResolvePlatformSourcePath(basePath + ".fsh");
+
+		String vertexSource = o2FileSystem.ReadFile(vertexPath);
+		String fragmentSource = o2FileSystem.ReadFile(fragmentPath);
+
+		if (vertexSource.IsEmpty() || fragmentSource.IsEmpty())
+		{
+			o2Debug.LogError("Failed to load builtin shader files: " + vertexPath + ", " + fragmentPath);
+			return nullptr;
+		}
+
+		Ref<Shader> vertexShader = mmake<Shader>();
+		Ref<Shader> fragmentShader = mmake<Shader>();
+		vertexShader->SetFileName(vertexPath);
+		fragmentShader->SetFileName(fragmentPath);
+		vertexShader->Compile(vertexSource, Shader::Type::Vertex);
+		fragmentShader->Compile(fragmentSource, Shader::Type::Fragment);
+
+		if (!vertexShader->IsReady() || !fragmentShader->IsReady())
+		{
+			o2Debug.LogError("Failed to compile builtin shaders: " + shadersName);
+			return nullptr;
+		}
+
+		Ref<Material> material = mmake<Material>();
+		material->SetVertexShader(vertexShader);
+		material->SetFragmentShader(fragmentShader);
+		material->SetBlendMode(BlendMode::Normal);
+
+		return material;
 	}
 
 	bool Material::Build()
@@ -404,6 +526,10 @@ namespace o2
 			h ^= std::hash<size_t>()((size_t)mTexture.Get()) + 0x9e3779b9 + (h << 6) + (h >> 2);
 
 		h ^= std::hash<int>()(static_cast<int>(mBlendMode)) + 0x9e3779b9 + (h << 6) + (h >> 2);
+		h ^= std::hash<int>()(mColorAttachmentsCount) + 0x9e3779b9 + (h << 6) + (h >> 2);
+
+		for (auto format : mColorAttachmentFormats)
+			h ^= std::hash<int>()(static_cast<int>(format)) + 0x9e3779b9 + (h << 6) + (h >> 2);
 
 		for (const auto& sampler : mSamplers)
 		{
@@ -438,6 +564,8 @@ DECLARE_CLASS(o2::ShaderParamVec2, o2__ShaderParamVec2);
 DECLARE_CLASS(o2::ShaderParamColor, o2__ShaderParamColor);
 
 DECLARE_CLASS(o2::ShaderParamInt, o2__ShaderParamInt);
+
+DECLARE_CLASS(o2::ShaderParamFloatVector, o2__ShaderParamFloatVector);
 
 DECLARE_CLASS(o2::TextureSampler, o2__TextureSampler);
 

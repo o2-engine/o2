@@ -42,7 +42,7 @@ TEST(FrameToolKeyboardBatching, ArrowStreamProducesOneCoalescedUndoEntry)
         step->doneTransforms[0].transform.origin += Vec2F(1.0f, 0.0f);
         kbAction->Append(step);
     }
-    EXPECT_TRUE(NearV(a->transform->GetPosition(), Vec2F(5.0f, 0.0f)))
+    EXPECT_TRUE(NearV(a->transform->GetPosition2D(), Vec2F(5.0f, 0.0f)))
         << "Live mutation must apply step-by-step as Append(step) calls step->Redo().";
 
     // EndKeyboardAction: snapshot the final state and push to the undo list.
@@ -53,11 +53,11 @@ TEST(FrameToolKeyboardBatching, ArrowStreamProducesOneCoalescedUndoEntry)
         << "Held-arrow run must coalesce into ONE undo entry, not one per key press.";
 
     list->UndoAction();
-    EXPECT_TRUE(NearV(a->transform->GetPosition(), Vec2F(0.0f, 0.0f)))
+    EXPECT_TRUE(NearV(a->transform->GetPosition2D(), Vec2F(0.0f, 0.0f)))
         << "Undo must jump from the final 5-pixel pose back to the pre-batch pose in one shot.";
 
     list->RedoAction();
-    EXPECT_TRUE(NearV(a->transform->GetPosition(), Vec2F(5.0f, 0.0f)))
+    EXPECT_TRUE(NearV(a->transform->GetPosition2D(), Vec2F(5.0f, 0.0f)))
         << "Redo must replay the full coalesced span.";
 }
 
@@ -89,7 +89,7 @@ TEST(FrameToolKeyboardBatching, PressBreakDuringBodyDragStillCommitsToUndo)
         step->doneTransforms[0].transform.origin += Vec2F(7.0f, 0.0f);
         dragAction->Append(step);
     }
-    EXPECT_TRUE(NearV(a->transform->GetPosition(), Vec2F(21.0f, 0.0f)));
+    EXPECT_TRUE(NearV(a->transform->GetPosition2D(), Vec2F(21.0f, 0.0f)));
 
     // OnCursorPressBreak → HandleReleased: commit the in-flight drag.
     dragAction->Completed();
@@ -99,6 +99,6 @@ TEST(FrameToolKeyboardBatching, PressBreakDuringBodyDragStillCommitsToUndo)
         << "Press-break must commit the partial drag to the undo stack.";
 
     list->UndoAction();
-    EXPECT_TRUE(NearV(a->transform->GetPosition(), Vec2F(0.0f, 0.0f)))
+    EXPECT_TRUE(NearV(a->transform->GetPosition2D(), Vec2F(0.0f, 0.0f)))
         << "Undo of the press-broken drag must restore the pre-drag pose.";
 }

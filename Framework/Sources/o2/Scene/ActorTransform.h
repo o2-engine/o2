@@ -1,13 +1,16 @@
 #pragma once
 
 #include "o2/Utils/Editor/Attributes/PrototypeDeltaSearchAttribute.h"
+#include "o2/Utils/Math/AABB.h"
+#include "o2/Utils/Math/Basis3D.h"
+#include "o2/Utils/Math/Matrix4.h"
 #include "o2/Utils/Math/Transform.h"
 #include "o2/Utils/Math/Vector2.h"
+#include "o2/Utils/Math/Vector3.h"
 
 namespace o2
 {
     class Actor;
-    class ActorTransformData;
 
     // -------------------------------------------------------------------------------------------
     // Actor transform. Represents the position of actor relative to his parent (the local space),
@@ -24,22 +27,35 @@ namespace o2
         PROPERTIES(ActorTransform);
         GETTER(Ref<Actor>, actor, GetOwnerActor); // Owner actor getter 
 
-        PROPERTY(Vec2F, position, SetPosition, GetPosition);            // Position property
-        PROPERTY(float, positionX, SetPositionX, GetPositionX);         // Position property by X
-        PROPERTY(float, positionY, SetPositionY, GetPositionY);         // Position property by Y
-        PROPERTY(Vec2F, size, SetSize, GetSize);                        // Size property
-        PROPERTY(float, width, SetWidth, GetWidth);                     // Width property
-        PROPERTY(float, height, SetHeight, GetHeight);                  // Height property
-        PROPERTY(Vec2F, scale, SetScale, GetScale);                     // Scale property
-        PROPERTY(float, scaleX, SetScaleX, GetScaleX);                  // Scale property by X
-        PROPERTY(float, scaleY, SetScaleY, GetScaleY);                  // Scale property by Y
-        PROPERTY(Vec2F, pivot, SetPivot, GetPivot);                     // Pivot property, in local space
-        PROPERTY(Vec2F, szPivot, SetSizePivot, GetSizePivot);           // Pivot in size space property
-        PROPERTY(float, pivotX, SetPivotX, GetPivotX);                 // Pivot property by X
-        PROPERTY(float, pivotY, SetPivotY, GetPivotY);                 // Pivot property by Y
-        PROPERTY(float, angle, SetAngle, GetAngle);                     // Rotation angle in radians
+        PROPERTY(Vec3F, position, SetPosition, GetPosition);             // Position property
+        PROPERTY(Vec2F, position2D, SetPosition2D, GetPosition2D);       // 2D position property, works with xy
+        PROPERTY(float, positionX, SetPositionX, GetPositionX);          // Position property by X
+        PROPERTY(float, positionY, SetPositionY, GetPositionY);          // Position property by Y
+        PROPERTY(float, positionZ, SetPositionZ, GetPositionZ);          // Position property by Z
+        PROPERTY(Vec3F, size, SetSize, GetSize);                         // Size property
+        PROPERTY(Vec2F, size2D, SetSize2D, GetSize2D);                   // 2D size property, works with xy
+        PROPERTY(float, width, SetWidth, GetWidth);                      // Width property
+        PROPERTY(float, height, SetHeight, GetHeight);                   // Height property
+        PROPERTY(float, sizeZ, SetSizeZ, GetSizeZ);                      // Size property by Z
+        PROPERTY(Vec3F, scale, SetScale, GetScale);                      // Scale property
+        PROPERTY(Vec2F, scale2D, SetScale2D, GetScale2D);                // 2D scale property, works with xy
+        PROPERTY(float, scaleX, SetScaleX, GetScaleX);                   // Scale property by X
+        PROPERTY(float, scaleY, SetScaleY, GetScaleY);                   // Scale property by Y
+        PROPERTY(float, scaleZ, SetScaleZ, GetScaleZ);                   // Scale property by Z
+        PROPERTY(Vec3F, pivot, SetPivot, GetPivot);                      // Pivot property, in local space
+        PROPERTY(Vec2F, pivot2D, SetPivot2D, GetPivot2D);                // 2D pivot property, works with xy
+        PROPERTY(Vec2F, szPivot, SetSizePivot, GetSizePivot);            // Pivot in size space property
+        PROPERTY(float, pivotX, SetPivotX, GetPivotX);                   // Pivot property by X
+        PROPERTY(float, pivotY, SetPivotY, GetPivotY);                   // Pivot property by Y
+        PROPERTY(float, pivotZ, SetPivotZ, GetPivotZ);                   // Pivot property by Z
+        PROPERTY(float, angle, SetAngle, GetAngle);                      // Rotation angle in radians
         PROPERTY(float, angleDegrees, SetAngleDegrees, GetAngleDegrees); // Rotation angle in degrees
-        PROPERTY(float, shear, SetShear, GetShear);                     // Shear property
+        PROPERTY(Vec3F, shear, SetShear, GetShear);                      // Shear property: x - XY plane, y - XZ, z - YZ
+        PROPERTY(float, shear2D, SetShear2D, GetShear2D);                // 2D shear property, works with x
+
+        PROPERTY(Vec3F, eulerAngles, SetEulerAngles, GetEulerAngles); // Rotation euler angles in radians, z is the 2D angle
+        PROPERTY(Vec3F, eulerAnglesDegrees, SetEulerAnglesDegrees, GetEulerAnglesDegrees); // Rotation euler angles in degrees
+        PROPERTY(Quat, rotation, SetRotation, GetRotation);           // Rotation quaternion property
 
         PROPERTY(Basis, basis, SetBasis, GetBasis);                         // Transformation basis property
         PROPERTY(Basis, nonSizedBasis, SetNonSizedBasis, GetNonSizedBasis); // Non sizes transformation basis property
@@ -59,7 +75,8 @@ namespace o2
         PROPERTY(float, top, SetTop, GetTop);                         // Top border position property
         PROPERTY(float, bottom, SetBottom, GetBottom);                // Bottom border position property
 
-        PROPERTY(Vec2F, worldPosition, SetWorldPosition, GetWorldPosition);                // World position property
+        PROPERTY(Vec3F, worldPosition, SetWorldPosition, GetWorldPosition);                // World position property
+        PROPERTY(Vec2F, worldPosition2D, SetWorldPosition2D, GetWorldPosition2D);          // 2D world position property, works with xy
         PROPERTY(Vec2F, worldPivot, SetWorldPivot, GetWorldPivot);                         // Pivot property, in world space
         PROPERTY(float, worldAngle, SetWorldAngle, GetWorldAngle);                         // World rotation angle in radians
         PROPERTY(float, worldAngleDegree, SetWorldAngleDegree, GetWorldAngleDegree);       // World rotation angle in degree
@@ -113,10 +130,16 @@ namespace o2
         virtual void Update();
 
         // Sets position @SCRIPTABLE
-        virtual void SetPosition(const Vec2F& position);
+        void SetPosition(const Vec3F& position);
 
         // Returns position @SCRIPTABLE
-        Vec2F GetPosition() const;
+        Vec3F GetPosition() const;
+
+        // Sets 2D position, leaves z unchanged @SCRIPTABLE
+        virtual void SetPosition2D(const Vec2F& position);
+
+        // Returns 2D position @SCRIPTABLE
+        Vec2F GetPosition2D() const;
 
         // Sets position by X @SCRIPTABLE
         virtual void SetPositionX(float value);
@@ -131,10 +154,16 @@ namespace o2
         float GetPositionY() const;
 
         // Sets size @SCRIPTABLE
-        virtual void SetSize(const Vec2F& size);
+        void SetSize(const Vec3F& size);
 
         // Return size @SCRIPTABLE
-        virtual Vec2F GetSize() const;
+        Vec3F GetSize() const;
+
+        // Sets 2D size, leaves z unchanged @SCRIPTABLE
+        virtual void SetSize2D(const Vec2F& size);
+
+        // Return 2D size @SCRIPTABLE
+        virtual Vec2F GetSize2D() const;
 
         // Sets width @SCRIPTABLE
         virtual void SetWidth(float value);
@@ -148,11 +177,17 @@ namespace o2
         // Return height @SCRIPTABLE
         virtual float GetHeight() const;
 
-        // Sets pivot, in local space, where (0, 0) - left down corner, (1; 1) - right top @SCRIPTABLE
-        virtual void SetPivot(const Vec2F& pivot);
+        // Sets pivot @SCRIPTABLE
+        void SetPivot(const Vec3F& pivot);
 
-        // Return pivot, in local space, where (0, 0) - left down corner, (1; 1) - right top @SCRIPTABLE
-        Vec2F GetPivot() const;
+        // Returns pivot @SCRIPTABLE
+        Vec3F GetPivot() const;
+
+        // Sets 2D pivot, in local space, where (0, 0) - left down corner, (1; 1) - right top; leaves z unchanged @SCRIPTABLE
+        virtual void SetPivot2D(const Vec2F& pivot);
+
+        // Return 2D pivot, in local space, where (0, 0) - left down corner, (1; 1) - right top @SCRIPTABLE
+        Vec2F GetPivot2D() const;
 
         // Sets size pivot, in local space, where (0, 0) - left down corner, (size.x, size.y) - right top @SCRIPTABLE
         void SetSizePivot(const Vec2F& relPivot);
@@ -173,16 +208,22 @@ namespace o2
         float GetPivotY() const;
 
         // Sets scale @SCRIPTABLE
-        void SetScale(const Vec2F& scale);
+        void SetScale(const Vec3F& scale);
+
+        // Returns scale @SCRIPTABLE
+        Vec3F GetScale() const;
+
+        // Sets 2D scale, leaves z unchanged @SCRIPTABLE
+        void SetScale2D(const Vec2F& scale);
+
+        // Returns 2D scale @SCRIPTABLE
+        Vec2F GetScale2D() const;
 
         // Sets scale by X @SCRIPTABLE
         void SetScaleX(float scaleX);
 
         // Sets scale by Y @SCRIPTABLE
         void SetScaleY(float scaleY);
-
-        // Returns scale @SCRIPTABLE
-        Vec2F GetScale() const;
 
         // Returns scale by X @SCRIPTABLE
         float GetScaleX() const;
@@ -202,11 +243,95 @@ namespace o2
         // Returns rotation angle in degrees @SCRIPTABLE
         float GetAngleDegrees() const;
 
-        // Sets shear @SCRIPTABLE
-        void SetShear(float shear);
+        // Sets shear: x - XY plane, y - XZ, z - YZ @SCRIPTABLE
+        void SetShear(const Vec3F& shear);
 
         // Returns shear @SCRIPTABLE
-        float GetShear() const;
+        Vec3F GetShear() const;
+
+        // Sets 2D shear (XY plane), leaves other planes unchanged @SCRIPTABLE
+        void SetShear2D(float shear);
+
+        // Returns 2D shear (XY plane) @SCRIPTABLE
+        float GetShear2D() const;
+
+        // Sets position by Z @SCRIPTABLE
+        void SetPositionZ(float value);
+
+        // Returns position by Z @SCRIPTABLE
+        float GetPositionZ() const;
+
+        // Sets scale by Z @SCRIPTABLE
+        void SetScaleZ(float value);
+
+        // Returns scale by Z @SCRIPTABLE
+        float GetScaleZ() const;
+
+        // Sets size by Z @SCRIPTABLE
+        void SetSizeZ(float value);
+
+        // Returns size by Z @SCRIPTABLE
+        float GetSizeZ() const;
+
+        // Sets pivot by Z @SCRIPTABLE
+        void SetPivotZ(float value);
+
+        // Returns pivot by Z @SCRIPTABLE
+        float GetPivotZ() const;
+
+        // Sets rotation euler angles in radians, z is the 2D angle @SCRIPTABLE
+        void SetEulerAngles(const Vec3F& radians);
+
+        // Returns rotation euler angles in radians @SCRIPTABLE
+        Vec3F GetEulerAngles() const;
+
+        // Sets rotation euler angles in degrees @SCRIPTABLE
+        void SetEulerAnglesDegrees(const Vec3F& degrees);
+
+        // Returns rotation euler angles in degrees @SCRIPTABLE
+        Vec3F GetEulerAnglesDegrees() const;
+
+        // Sets rotation quaternion @SCRIPTABLE
+        void SetRotation(const Quat& rotation);
+
+        // Returns rotation quaternion @SCRIPTABLE
+        Quat GetRotation() const;
+
+        // Returns local 3D transform matrix; matches the non-sized 2D transform when not 3D @SCRIPTABLE
+        Mat4 GetLocalTransform3D() const;
+
+        // Returns world 3D transform matrix, composed through parents @SCRIPTABLE
+        Mat4 GetWorldTransform3D() const;
+
+        // Returns world position through the 3D transform @SCRIPTABLE
+        Vec3F GetWorldPosition() const;
+
+        // Sets world position through the 3D transform @SCRIPTABLE
+        void SetWorldPosition(const Vec3F& position);
+
+        // Returns true when any 3D field differs from default @SCRIPTABLE
+        bool Is3D() const;
+
+        // Returns local 3D basis with size @SCRIPTABLE
+        Basis3D GetBasis3D() const;
+
+        // Returns local 3D basis without size @SCRIPTABLE
+        Basis3D GetNonSizedBasis3D() const;
+
+        // Returns world 3D basis with size @SCRIPTABLE
+        Basis3D GetWorldBasis3D() const;
+
+        // Returns world 3D basis without size @SCRIPTABLE
+        Basis3D GetWorldNonSizedBasis3D() const;
+
+        // Returns rect as 3D box @SCRIPTABLE
+        o2::AABB GetRect3D() const;
+
+        // Returns world rect as 3D box @SCRIPTABLE
+        o2::AABB GetWorldRect3D() const;
+
+        // Returns world axis aligned bounds of the sized transform @SCRIPTABLE
+        o2::AABB GetWorldAABB() const;
 
         // Sets basis @SCRIPTABLE
         virtual void SetBasis(const Basis& basis);
@@ -325,11 +450,11 @@ namespace o2
         // Returns true when point inside this @SCRIPTABLE
         bool IsPointInside(const Vec2F& point) const;
 
-        // Sets world position @SCRIPTABLE
-        void SetWorldPosition(const Vec2F& position);
+        // Sets 2D world position, in parent 2D basis @SCRIPTABLE
+        void SetWorldPosition2D(const Vec2F& position);
 
-        // Returns world position @SCRIPTABLE
-        Vec2F GetWorldPosition() const;
+        // Returns 2D world position, in parent 2D basis @SCRIPTABLE
+        Vec2F GetWorldPosition2D() const;
 
         // Sets pivot by world coordinates @SCRIPTABLE
         void SetWorldPivot(const Vec2F& pivot);
@@ -454,11 +579,37 @@ namespace o2
         SERIALIZABLE(ActorTransform);
 
     protected:
-        ActorTransformData* mData; // Data container. Will be stored in optimized storage @DELTA_SEARCH
+        int mDirtyFrame = 1;  // Frame index, when layout was marked as dirty
+        int mUpdateFrame = 1; // Frame index, when layout was updated
+
+        Vec3F mPosition;               // Position, 2D API works with xy @DELTA_SEARCH_IF(IsSerializeEnabled)
+        Vec3F mSize;                   // Size, 2D content has zero z @DELTA_SEARCH_IF(IsSerializeEnabled)
+        Vec3F mScale = Vec3F(1, 1, 1); // Scale, (1, 1, 1) is default @DELTA_SEARCH_IF(IsSerializeEnabled)
+        Vec3F mPivot;                  // Pivot: (0, 0, 0) is left bottom near corner - (1, 1, 1) is right top far corner @DELTA_SEARCH_IF(IsSerializeEnabled)
+        Vec3F mEulerAngles;            // Rotation euler angles in radians, z is the 2D angle @DELTA_SEARCH_IF(IsSerializeEnabled)
+        Vec3F mShear;                  // Shear planes: x - XY, y - XZ, z - YZ; 2D API works with x @DELTA_SEARCH_IF(IsSerializeEnabled)
+
+        o2::AABB mLocalBox;          // Layout box in local space
+        o2::AABB mParentBox;         // Parent layout box
+        Vec3F    mParentBoxPosition; // Parent layout box pivot position
+        o2::AABB mWorldBox;          // Layout box in world space
+
+        Basis3D mTransform;         // Final transform basis
+        Basis3D mNonSizedTransform; // Final transform basis without size
+
+        Basis3D mWorldNonSizedTransform; // World transform without size
+        Basis3D mWorldTransform;         // Result world basis
+
+        Basis3D mParentInvertedTransform; // Parent world transform inverted
+        Basis3D mParentTransform;         // Parent world transform
+
+        int mParentInvertedTransformActualFrame; // last mParentInvertedTransform actual frame index
+
+        WeakRef<Actor> mOwner; // Owner actor
 
     protected:
-        // Actor transform constructor with specified data
-        ActorTransform(ActorTransformData* data);
+        // Returns is serialize enabled; used to turn off fields serialization
+        virtual bool IsSerializeEnabled() const;
 
         // Copies data parameters from other transform
         virtual void CopyFrom(const ActorTransform& other);
@@ -466,17 +617,17 @@ namespace o2
         // Sets owner and updates transform
         virtual void SetOwner(const Ref<Actor>& actor);
 
-        // Returns parent rectange, or zero when no parent
+        // Returns parent rectangle, or zero when no parent
         virtual RectF GetParentRectangle() const;
 
-        // Updates world rectangle and transform relative to parent or origin
-        void UpdateWorldRectangleAndTransform();
+        // Updates world box and transform relative to parent or origin
+        void UpdateWorldBoxAndTransform();
 
         // Updates local transformation
         void UpdateTransform();
 
-        // Updates local rectangle
-        void UpdateRectangle();
+        // Updates local layout box
+        void UpdateLocalBox();
 
         // Check parentInvertedTransform for actual
         void CheckParentInvTransform();
@@ -499,42 +650,6 @@ namespace o2
         friend class Actor;
         friend class WidgetLayout;
     };
-
-    class ActorTransformData : public ISerializable
-    {
-    public:
-        int dirtyFrame = 1;  // Frame index, when layout was marked as dirty
-        int updateFrame = 1; // Frame index, when layout was updated
-
-        Vec2F position;            // Position @SERIALIZABLE @SERIALIZE_IF(IsSerializeEnabled)
-        Vec2F size;                // Size @SERIALIZABLE @SERIALIZE_IF(IsSerializeEnabled)
-        Vec2F scale = Vec2F(1, 1); // Scale, (1, 1) is default @SERIALIZABLE @SERIALIZE_IF(IsSerializeEnabled)
-        Vec2F pivot;               // Pivot: (0, 0) is left bottom corner - (1, 1) is right top corner @SERIALIZABLE @SERIALIZE_IF(IsSerializeEnabled)
-        float angle = 0.0f;        // Rotation angle in radians @SERIALIZABLE @SERIALIZE_IF(IsSerializeEnabled)
-        float shear = 0.0f;        // Shear @SERIALIZABLE @SERIALIZE_IF(IsSerializeEnabled)
-
-        RectF rectangle;              // The rectangle in local space
-        RectF parentRectangle;        // The parent rectangle
-        Vec2F parentRectangePosition; // The parent rectangle pivot position
-        RectF worldRectangle;         // The rectangle in world space
-
-        Basis transform;         // Final transform basis
-        Basis nonSizedTransform; // Final transform basis without size
-
-        Basis worldNonSizedTransform; // World transform without size
-        Basis worldTransform;         // Result world basis
-
-        Basis parentInvertedTransform;       // Parent world transform inverted
-        Basis parentTransform;               // Parent world transform
-        int   parentInvTransformActualFrame; // last mParentInvertedTransform actual frame index
-
-        WeakRef<Actor> owner; // Owner actor 
-
-        SERIALIZABLE(ActorTransformData);
-
-        // Returns is serialize enabled; used to turn off fields serialization
-        virtual bool IsSerializeEnabled() const;
-    };
 }
 // --- META ---
 
@@ -547,21 +662,33 @@ CLASS_FIELDS_META(o2::ActorTransform)
 {
     FIELD().PUBLIC().NAME(actor);
     FIELD().PUBLIC().NAME(position);
+    FIELD().PUBLIC().NAME(position2D);
     FIELD().PUBLIC().NAME(positionX);
     FIELD().PUBLIC().NAME(positionY);
+    FIELD().PUBLIC().NAME(positionZ);
     FIELD().PUBLIC().NAME(size);
+    FIELD().PUBLIC().NAME(size2D);
     FIELD().PUBLIC().NAME(width);
     FIELD().PUBLIC().NAME(height);
+    FIELD().PUBLIC().NAME(sizeZ);
     FIELD().PUBLIC().NAME(scale);
+    FIELD().PUBLIC().NAME(scale2D);
     FIELD().PUBLIC().NAME(scaleX);
     FIELD().PUBLIC().NAME(scaleY);
+    FIELD().PUBLIC().NAME(scaleZ);
     FIELD().PUBLIC().NAME(pivot);
+    FIELD().PUBLIC().NAME(pivot2D);
     FIELD().PUBLIC().NAME(szPivot);
     FIELD().PUBLIC().NAME(pivotX);
     FIELD().PUBLIC().NAME(pivotY);
+    FIELD().PUBLIC().NAME(pivotZ);
     FIELD().PUBLIC().NAME(angle);
     FIELD().PUBLIC().NAME(angleDegrees);
     FIELD().PUBLIC().NAME(shear);
+    FIELD().PUBLIC().NAME(shear2D);
+    FIELD().PUBLIC().NAME(eulerAngles);
+    FIELD().PUBLIC().NAME(eulerAnglesDegrees);
+    FIELD().PUBLIC().NAME(rotation);
     FIELD().PUBLIC().NAME(basis);
     FIELD().PUBLIC().NAME(nonSizedBasis);
     FIELD().PUBLIC().NAME(AABB);
@@ -577,6 +704,7 @@ CLASS_FIELDS_META(o2::ActorTransform)
     FIELD().PUBLIC().NAME(top);
     FIELD().PUBLIC().NAME(bottom);
     FIELD().PUBLIC().NAME(worldPosition);
+    FIELD().PUBLIC().NAME(worldPosition2D);
     FIELD().PUBLIC().NAME(worldPivot);
     FIELD().PUBLIC().NAME(worldAngle);
     FIELD().PUBLIC().NAME(worldAngleDegree);
@@ -594,7 +722,26 @@ CLASS_FIELDS_META(o2::ActorTransform)
     FIELD().PUBLIC().NAME(worldBottom);
     FIELD().PUBLIC().NAME(worldRect);
     FIELD().PUBLIC().NAME(worldAABB);
-    FIELD().PROTECTED().DELTA_SEARCH_ATTRIBUTE().NAME(mData);
+    FIELD().PROTECTED().DEFAULT_VALUE(1).NAME(mDirtyFrame);
+    FIELD().PROTECTED().DEFAULT_VALUE(1).NAME(mUpdateFrame);
+    FIELD().PROTECTED().DELTA_SEARCH_IF_ATTRIBUTE(IsSerializeEnabled).NAME(mPosition);
+    FIELD().PROTECTED().DELTA_SEARCH_IF_ATTRIBUTE(IsSerializeEnabled).NAME(mSize);
+    FIELD().PROTECTED().DELTA_SEARCH_IF_ATTRIBUTE(IsSerializeEnabled).DEFAULT_VALUE(Vec3F(1, 1, 1)).NAME(mScale);
+    FIELD().PROTECTED().DELTA_SEARCH_IF_ATTRIBUTE(IsSerializeEnabled).NAME(mPivot);
+    FIELD().PROTECTED().DELTA_SEARCH_IF_ATTRIBUTE(IsSerializeEnabled).NAME(mEulerAngles);
+    FIELD().PROTECTED().DELTA_SEARCH_IF_ATTRIBUTE(IsSerializeEnabled).NAME(mShear);
+    FIELD().PROTECTED().NAME(mLocalBox);
+    FIELD().PROTECTED().NAME(mParentBox);
+    FIELD().PROTECTED().NAME(mParentBoxPosition);
+    FIELD().PROTECTED().NAME(mWorldBox);
+    FIELD().PROTECTED().NAME(mTransform);
+    FIELD().PROTECTED().NAME(mNonSizedTransform);
+    FIELD().PROTECTED().NAME(mWorldNonSizedTransform);
+    FIELD().PROTECTED().NAME(mWorldTransform);
+    FIELD().PROTECTED().NAME(mParentInvertedTransform);
+    FIELD().PROTECTED().NAME(mParentTransform);
+    FIELD().PROTECTED().NAME(mParentInvertedTransformActualFrame);
+    FIELD().PROTECTED().NAME(mOwner);
 }
 END_META;
 CLASS_METHODS_META(o2::ActorTransform)
@@ -606,38 +753,74 @@ CLASS_METHODS_META(o2::ActorTransform)
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetDirty, bool);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(bool, IsDirty);
     FUNCTION().PUBLIC().SIGNATURE(void, Update);
-    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetPosition, const Vec2F&);
-    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(Vec2F, GetPosition);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetPosition, const Vec3F&);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(Vec3F, GetPosition);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetPosition2D, const Vec2F&);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(Vec2F, GetPosition2D);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetPositionX, float);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(float, GetPositionX);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetPositionY, float);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(float, GetPositionY);
-    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetSize, const Vec2F&);
-    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(Vec2F, GetSize);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetSize, const Vec3F&);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(Vec3F, GetSize);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetSize2D, const Vec2F&);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(Vec2F, GetSize2D);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetWidth, float);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(float, GetWidth);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetHeight, float);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(float, GetHeight);
-    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetPivot, const Vec2F&);
-    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(Vec2F, GetPivot);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetPivot, const Vec3F&);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(Vec3F, GetPivot);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetPivot2D, const Vec2F&);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(Vec2F, GetPivot2D);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetSizePivot, const Vec2F&);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(Vec2F, GetSizePivot);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetPivotX, float);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(float, GetPivotX);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetPivotY, float);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(float, GetPivotY);
-    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetScale, const Vec2F&);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetScale, const Vec3F&);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(Vec3F, GetScale);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetScale2D, const Vec2F&);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(Vec2F, GetScale2D);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetScaleX, float);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetScaleY, float);
-    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(Vec2F, GetScale);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(float, GetScaleX);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(float, GetScaleY);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetAngle, float);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(float, GetAngle);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetAngleDegrees, float);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(float, GetAngleDegrees);
-    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetShear, float);
-    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(float, GetShear);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetShear, const Vec3F&);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(Vec3F, GetShear);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetShear2D, float);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(float, GetShear2D);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetPositionZ, float);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(float, GetPositionZ);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetScaleZ, float);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(float, GetScaleZ);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetSizeZ, float);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(float, GetSizeZ);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetPivotZ, float);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(float, GetPivotZ);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetEulerAngles, const Vec3F&);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(Vec3F, GetEulerAngles);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetEulerAnglesDegrees, const Vec3F&);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(Vec3F, GetEulerAnglesDegrees);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetRotation, const Quat&);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(Quat, GetRotation);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(Mat4, GetLocalTransform3D);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(Mat4, GetWorldTransform3D);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(Vec3F, GetWorldPosition);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetWorldPosition, const Vec3F&);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(bool, Is3D);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(Basis3D, GetBasis3D);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(Basis3D, GetNonSizedBasis3D);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(Basis3D, GetWorldBasis3D);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(Basis3D, GetWorldNonSizedBasis3D);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(o2::AABB, GetRect3D);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(o2::AABB, GetWorldRect3D);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(o2::AABB, GetWorldAABB);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetBasis, const Basis&);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(Basis, GetBasis);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetNonSizedBasis, const Basis&);
@@ -677,8 +860,8 @@ CLASS_METHODS_META(o2::ActorTransform)
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(Vec2F, World2LocalDir, const Vec2F&);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(Vec2F, Local2WorldDir, const Vec2F&);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(bool, IsPointInside, const Vec2F&);
-    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetWorldPosition, const Vec2F&);
-    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(Vec2F, GetWorldPosition);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetWorldPosition2D, const Vec2F&);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(Vec2F, GetWorldPosition2D);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetWorldPivot, const Vec2F&);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(Vec2F, GetWorldPivot);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetWorldAngle, float);
@@ -719,55 +902,19 @@ CLASS_METHODS_META(o2::ActorTransform)
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(float, GetWorldTop);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetWorldBottom, float);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(float, GetWorldBottom);
-    FUNCTION().PROTECTED().CONSTRUCTOR(ActorTransformData*);
+    FUNCTION().PROTECTED().SIGNATURE(bool, IsSerializeEnabled);
     FUNCTION().PROTECTED().SIGNATURE(void, CopyFrom, const ActorTransform&);
     FUNCTION().PROTECTED().SIGNATURE(void, SetOwner, const Ref<Actor>&);
     FUNCTION().PROTECTED().SIGNATURE(RectF, GetParentRectangle);
-    FUNCTION().PROTECTED().SIGNATURE(void, UpdateWorldRectangleAndTransform);
+    FUNCTION().PROTECTED().SIGNATURE(void, UpdateWorldBoxAndTransform);
     FUNCTION().PROTECTED().SIGNATURE(void, UpdateTransform);
-    FUNCTION().PROTECTED().SIGNATURE(void, UpdateRectangle);
+    FUNCTION().PROTECTED().SIGNATURE(void, UpdateLocalBox);
     FUNCTION().PROTECTED().SIGNATURE(void, CheckParentInvTransform);
     FUNCTION().PROTECTED().SIGNATURE(void, OnSerialize, DataValue&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnDeserialized, const DataValue&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnSerializeDelta, DataValue&, const IObject&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnDeserializedDelta, const DataValue&, const IObject&);
     FUNCTION().PROTECTED().SIGNATURE(Vec2F, GetParentPosition);
-}
-END_META;
-
-CLASS_BASES_META(o2::ActorTransformData)
-{
-    BASE_CLASS(o2::ISerializable);
-}
-END_META;
-CLASS_FIELDS_META(o2::ActorTransformData)
-{
-    FIELD().PUBLIC().DEFAULT_VALUE(1).NAME(dirtyFrame);
-    FIELD().PUBLIC().DEFAULT_VALUE(1).NAME(updateFrame);
-    FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().SERIALIZE_IF_ATTRIBUTE(IsSerializeEnabled).NAME(position);
-    FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().SERIALIZE_IF_ATTRIBUTE(IsSerializeEnabled).NAME(size);
-    FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().SERIALIZE_IF_ATTRIBUTE(IsSerializeEnabled).DEFAULT_VALUE(Vec2F(1, 1)).NAME(scale);
-    FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().SERIALIZE_IF_ATTRIBUTE(IsSerializeEnabled).NAME(pivot);
-    FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().SERIALIZE_IF_ATTRIBUTE(IsSerializeEnabled).DEFAULT_VALUE(0.0f).NAME(angle);
-    FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().SERIALIZE_IF_ATTRIBUTE(IsSerializeEnabled).DEFAULT_VALUE(0.0f).NAME(shear);
-    FIELD().PUBLIC().NAME(rectangle);
-    FIELD().PUBLIC().NAME(parentRectangle);
-    FIELD().PUBLIC().NAME(parentRectangePosition);
-    FIELD().PUBLIC().NAME(worldRectangle);
-    FIELD().PUBLIC().NAME(transform);
-    FIELD().PUBLIC().NAME(nonSizedTransform);
-    FIELD().PUBLIC().NAME(worldNonSizedTransform);
-    FIELD().PUBLIC().NAME(worldTransform);
-    FIELD().PUBLIC().NAME(parentInvertedTransform);
-    FIELD().PUBLIC().NAME(parentTransform);
-    FIELD().PUBLIC().NAME(parentInvTransformActualFrame);
-    FIELD().PUBLIC().NAME(owner);
-}
-END_META;
-CLASS_METHODS_META(o2::ActorTransformData)
-{
-
-    FUNCTION().PUBLIC().SIGNATURE(bool, IsSerializeEnabled);
 }
 END_META;
 // --- END META ---

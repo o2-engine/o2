@@ -5,7 +5,6 @@
 namespace o2
 {
     class Widget;
-    class WidgetLayoutData;
 
     // ----------------------------------------------------------------------------------------------------------------
     // Widget layout. Represents the Widget transformation layout. The position and size sets by anchors and offsets. 
@@ -74,11 +73,11 @@ namespace o2
         // Copies data parameters from other layout @SCRIPTABLE
         void CopyFrom(const ActorTransform& other) override;
 
-        // Sets position
-        void SetPosition(const Vec2F& position) override;
+        // Sets 2D position
+        void SetPosition2D(const Vec2F& position) override;
 
-        // Sets size
-        void SetSize(const Vec2F& size) override;
+        // Sets 2D size
+        void SetSize2D(const Vec2F& size) override;
 
         // Sets width
         void SetWidth(float value) override;
@@ -86,8 +85,8 @@ namespace o2
         // Sets height
         void SetHeight(float value) override;
 
-        // Return size
-        Vec2F GetSize() const override;
+        // Return 2D size
+        Vec2F GetSize2D() const override;
 
         // Return width
         float GetWidth() const override;
@@ -95,8 +94,8 @@ namespace o2
         // Return height
         float GetHeight() const override;
 
-        // Sets pivot, in local space, where (0, 0) - left down corner, (1; 1) - right top
-        void SetPivot(const Vec2F& pivot) override;
+        // Sets 2D pivot, in local space, where (0, 0) - left down corner, (1; 1) - right top
+        void SetPivot2D(const Vec2F& pivot) override;
 
         // Sets basis
         void SetBasis(const Basis& basis) override;
@@ -264,9 +263,28 @@ namespace o2
 
     protected:
         void(WidgetLayout::*mCheckMinMaxFunc)(); // Check minimum and maximum of layout delegate
-        WidgetLayoutData* mData;
+
+        Vec2F mAnchorMin = Vec2F(0, 0); // Left bottom anchor @DELTA_SEARCH
+        Vec2F mAnchorMax = Vec2F(0, 0); // Right top anchor @DELTA_SEARCH
+
+        Vec2F mOffsetMin = Vec2F(0, 0);   // Left bottom offset @DELTA_SEARCH
+        Vec2F mOffsetMax = Vec2F(10, 10); // Right top offset @DELTA_SEARCH
+
+        Vec2F mMinSize = Vec2F(0, 0);         // Minimal size @DELTA_SEARCH
+        Vec2F mMaxSize = Vec2F(10000, 10000); // Maximum size @DELTA_SEARCH
+
+        Vec2F mWeight = Vec2F(1, 1); // Layout weight @DELTA_SEARCH
+
+        RectF mChildrenWorldRect; // World rectangle for children arranging
+
+        bool mDrivenByParent = false; // Is layout controlling by parent
+
+        Widget* mOwnerWidget = nullptr; // owner widget pointer
 
     protected:
+        // Returns is serialize enabled; used to turn off fields serialization
+        bool IsSerializeEnabled() const override;
+
         // Sets owner and updates transform
         void SetOwner(const Ref<Actor>& actor) override;
 
@@ -285,40 +303,36 @@ namespace o2
         // Doesn't checks size, dummy function
         void DontCheckMinMax();
 
+        // Beginning serialization callback, writes layout fields
+        void OnSerialize(DataValue& node) const override;
+
+        // Called when object was deserialized, reads layout fields
+        void OnDeserialized(const DataValue& node) override;
+
+        // Beginning serialization delta callback
+        void OnSerializeDelta(DataValue& node, const IObject& origin) const override;
+
+        // Completion deserialization delta callback
+        void OnDeserializedDelta(const DataValue& node, const IObject& origin) override;
+
 #if IS_SCRIPTING_SUPPORTED
     public:
         // Sets layout data? for scripting @SCRIPTABLE
         void Set(const WidgetLayout& other);
 #endif
 
+        friend class ContextMenu;
+        friend class CustomDropDown;
+        friend class GridLayout;
+        friend class HorizontalLayout;
+        friend class Label;
+        friend class ScrollArea;
+        friend class Spoiler;
+        friend class Tree;
+        friend class VerticalLayout;
         friend class Widget;
         friend class WidgetLayer;
-    };
-
-    class WidgetLayoutData : public ActorTransformData
-    {
-    public:
-        Vec2F anchorMin = Vec2F(0, 0); // Left bottom anchor @SERIALIZABLE
-        Vec2F anchorMax = Vec2F(0, 0); // Right top anchor @SERIALIZABLE
-
-        Vec2F offsetMin = Vec2F(0, 0);   // Left bottom offset @SERIALIZABLE
-        Vec2F offsetMax = Vec2F(10, 10); // Right top offset @SERIALIZABLE
-
-        Vec2F minSize = Vec2F(0, 0);     // Minimal size @SERIALIZABLE
-        Vec2F maxSize = Vec2F(10000, 10000); // Maximum size @SERIALIZABLE
-
-        Vec2F weight = Vec2F(1, 1); // Layout weight @SERIALIZABLE
-
-        RectF childrenWorldRect; // World rectangle for children arranging
-
-        bool drivenByParent = false; // Is layout controlling by parent
-
-        Widget* owner = nullptr; // owner widget pointer 
-
-        SERIALIZABLE(WidgetLayoutData);
-
-        // Returns is serialize enabled; used to turn off fields serialization
-        bool IsSerializeEnabled() const override;
+        friend class Window;
     };
 
     // Calculates children widths or heights by weights and min/max sizes
@@ -354,7 +368,16 @@ CLASS_FIELDS_META(o2::WidgetLayout)
     FIELD().PUBLIC().NAME(weight);
     FIELD().PUBLIC().NAME(widthWeight);
     FIELD().PUBLIC().NAME(heightWeight);
-    FIELD().PROTECTED().NAME(mData);
+    FIELD().PROTECTED().DELTA_SEARCH_ATTRIBUTE().DEFAULT_VALUE(Vec2F(0, 0)).NAME(mAnchorMin);
+    FIELD().PROTECTED().DELTA_SEARCH_ATTRIBUTE().DEFAULT_VALUE(Vec2F(0, 0)).NAME(mAnchorMax);
+    FIELD().PROTECTED().DELTA_SEARCH_ATTRIBUTE().DEFAULT_VALUE(Vec2F(0, 0)).NAME(mOffsetMin);
+    FIELD().PROTECTED().DELTA_SEARCH_ATTRIBUTE().DEFAULT_VALUE(Vec2F(10, 10)).NAME(mOffsetMax);
+    FIELD().PROTECTED().DELTA_SEARCH_ATTRIBUTE().DEFAULT_VALUE(Vec2F(0, 0)).NAME(mMinSize);
+    FIELD().PROTECTED().DELTA_SEARCH_ATTRIBUTE().DEFAULT_VALUE(Vec2F(10000, 10000)).NAME(mMaxSize);
+    FIELD().PROTECTED().DELTA_SEARCH_ATTRIBUTE().DEFAULT_VALUE(Vec2F(1, 1)).NAME(mWeight);
+    FIELD().PROTECTED().NAME(mChildrenWorldRect);
+    FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mDrivenByParent);
+    FIELD().PROTECTED().DEFAULT_VALUE(nullptr).NAME(mOwnerWidget);
 }
 END_META;
 CLASS_METHODS_META(o2::WidgetLayout)
@@ -367,14 +390,14 @@ CLASS_METHODS_META(o2::WidgetLayout)
     FUNCTION().PUBLIC().SIGNATURE(void, Update);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetDirty, bool);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, CopyFrom, const ActorTransform&);
-    FUNCTION().PUBLIC().SIGNATURE(void, SetPosition, const Vec2F&);
-    FUNCTION().PUBLIC().SIGNATURE(void, SetSize, const Vec2F&);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetPosition2D, const Vec2F&);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetSize2D, const Vec2F&);
     FUNCTION().PUBLIC().SIGNATURE(void, SetWidth, float);
     FUNCTION().PUBLIC().SIGNATURE(void, SetHeight, float);
-    FUNCTION().PUBLIC().SIGNATURE(Vec2F, GetSize);
+    FUNCTION().PUBLIC().SIGNATURE(Vec2F, GetSize2D);
     FUNCTION().PUBLIC().SIGNATURE(float, GetWidth);
     FUNCTION().PUBLIC().SIGNATURE(float, GetHeight);
-    FUNCTION().PUBLIC().SIGNATURE(void, SetPivot, const Vec2F&);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetPivot2D, const Vec2F&);
     FUNCTION().PUBLIC().SIGNATURE(void, SetBasis, const Basis&);
     FUNCTION().PUBLIC().SIGNATURE(void, SetNonSizedBasis, const Basis&);
     FUNCTION().PUBLIC().SIGNATURE(RectF, GetRect);
@@ -429,41 +452,20 @@ CLASS_METHODS_META(o2::WidgetLayout)
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE_STATIC(WidgetLayout, Based, BaseCorner, const Vec2F&, const Vec2F&);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE_STATIC(WidgetLayout, HorStretch, VerAlign, float, float, float, float);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE_STATIC(WidgetLayout, VerStretch, HorAlign, float, float, float, float);
+    FUNCTION().PROTECTED().SIGNATURE(bool, IsSerializeEnabled);
     FUNCTION().PROTECTED().SIGNATURE(void, SetOwner, const Ref<Actor>&);
     FUNCTION().PROTECTED().SIGNATURE(RectF, GetParentRectangle);
     FUNCTION().PROTECTED().SIGNATURE(void, FloorRectangle);
     FUNCTION().PROTECTED().SIGNATURE(void, UpdateOffsetsByCurrentTransform);
     FUNCTION().PROTECTED().SIGNATURE(void, CheckMinMax);
     FUNCTION().PROTECTED().SIGNATURE(void, DontCheckMinMax);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnSerialize, DataValue&);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnDeserialized, const DataValue&);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnSerializeDelta, DataValue&, const IObject&);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnDeserializedDelta, const DataValue&, const IObject&);
 #if  IS_SCRIPTING_SUPPORTED
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, Set, const WidgetLayout&);
 #endif
-}
-END_META;
-
-CLASS_BASES_META(o2::WidgetLayoutData)
-{
-    BASE_CLASS(o2::ActorTransformData);
-}
-END_META;
-CLASS_FIELDS_META(o2::WidgetLayoutData)
-{
-    FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(Vec2F(0, 0)).NAME(anchorMin);
-    FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(Vec2F(0, 0)).NAME(anchorMax);
-    FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(Vec2F(0, 0)).NAME(offsetMin);
-    FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(Vec2F(10, 10)).NAME(offsetMax);
-    FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(Vec2F(0, 0)).NAME(minSize);
-    FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(Vec2F(10000, 10000)).NAME(maxSize);
-    FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(Vec2F(1, 1)).NAME(weight);
-    FIELD().PUBLIC().NAME(childrenWorldRect);
-    FIELD().PUBLIC().DEFAULT_VALUE(false).NAME(drivenByParent);
-    FIELD().PUBLIC().DEFAULT_VALUE(nullptr).NAME(owner);
-}
-END_META;
-CLASS_METHODS_META(o2::WidgetLayoutData)
-{
-
-    FUNCTION().PUBLIC().SIGNATURE(bool, IsSerializeEnabled);
 }
 END_META;
 // --- END META ---

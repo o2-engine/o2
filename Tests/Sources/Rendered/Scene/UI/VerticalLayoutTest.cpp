@@ -95,7 +95,7 @@ TEST(VerticalLayout, ChildrenLayoutTopToBottomHaveOrderedY)
 {
     SceneCleanGuard guard;
     auto layout = mmake<VerticalLayout>();
-    layout->layout->SetSize(Vec2F(100, 300));
+    layout->layout->SetSize2D(Vec2F(100, 300));
     layout->SetBaseCorner(BaseCorner::Top);
     layout->SetHeightExpand(false);
     layout->SetSpacing(5);
@@ -109,9 +109,9 @@ TEST(VerticalLayout, ChildrenLayoutTopToBottomHaveOrderedY)
 
     TickAndUpdateLayout(2);
 
-    auto posA = a->layout->GetPosition();
-    auto posB = b->layout->GetPosition();
-    auto posC = c->layout->GetPosition();
+    auto posA = a->layout->GetPosition2D();
+    auto posB = b->layout->GetPosition2D();
+    auto posC = c->layout->GetPosition2D();
     EXPECT_GE(posA.y, posB.y);
     EXPECT_GE(posB.y, posC.y);
 }

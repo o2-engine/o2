@@ -1,4 +1,5 @@
 #pragma once
+#include "o2/Render/Pipeline/RenderPipeline.h"
 #include "o2/Scene/Actor.h"
 #include "o2/Scene/SceneLayersList.h"
 #include "o2/Events/CursorAreaEventsListenersLayer.h"
@@ -11,7 +12,7 @@ namespace o2
     class CameraActor: public Actor
     {
     public:
-        enum class Type { Default, FreeSize, FixedSize, FittedSize, PhysicalCorrect };
+        enum class Type { Default, FreeSize, FixedSize, FittedSize, PhysicalCorrect, Perspective };
 
     public:
         SceneLayersList drawLayers; // List of drawing layers @SERIALIZABLE
@@ -55,6 +56,18 @@ namespace o2
         // Sets camera with physical correct units
         void SetPhysicalCorrect(Units units);
 
+        // Sets perspective camera with field of view in radians and clipping planes
+        void SetPerspective(float fov, float nearClip, float farClip);
+
+        // Returns perspective field of view in radians
+        float GetFov() const;
+
+        // Returns perspective near clipping plane
+        float GetNearClip() const;
+
+        // Returns perspective far clipping plane
+        float GetFarClip() const;
+
         // Returns camera type
         Type GetCameraType() const;
 
@@ -64,6 +77,15 @@ namespace o2
         // Returns current camera units
         Units GetUnits() const;
 
+        // Sets rendering pipeline. Null means the default forward pipeline
+        void SetRenderPipeline(const Ref<RenderPipeline>& pipeline);
+
+        // Returns rendering pipeline; null when the default forward pipeline is used
+        const Ref<RenderPipeline>& GetRenderPipeline() const;
+
+        // Returns the shared default forward pipeline, used when camera pipeline is null
+        static const Ref<RenderPipeline>& GetDefaultRenderPipeline();
+
         SERIALIZABLE(CameraActor);
         CLONEABLE_REF(CameraActor);
 
@@ -71,6 +93,12 @@ namespace o2
         Type  mType = Type::Default;       // Type of camera @SERIALIZABLE
         Vec2F mFixedOrFittedSize;          // Fitted or fixed types size @SERIALIZABLE
         Units mUnits = Units::Centimeters; // Physical camera units @SERIALIZABLE
+
+        Ref<RenderPipeline> mPipeline; // Rendering pipeline; null - default forward pipeline @SERIALIZABLE @EDITOR_PROPERTY
+
+        float mFov = Math::Deg2rad(60.0f); // Perspective field of view in radians @SERIALIZABLE
+        float mNearClip = 0.1f;            // Perspective near clipping plane @SERIALIZABLE
+        float mFarClip = 1000.0f;          // Perspective far clipping plane @SERIALIZABLE
 
     protected:
         // Called when actor has added to scene
@@ -98,6 +126,10 @@ CLASS_FIELDS_META(o2::CameraActor)
     FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(Type::Default).NAME(mType);
     FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().NAME(mFixedOrFittedSize);
     FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(Units::Centimeters).NAME(mUnits);
+    FIELD().PROTECTED().EDITOR_PROPERTY_ATTRIBUTE().SERIALIZABLE_ATTRIBUTE().NAME(mPipeline);
+    FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(Math::Deg2rad(60.0f)).NAME(mFov);
+    FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(0.1f).NAME(mNearClip);
+    FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(1000.0f).NAME(mFarClip);
 }
 END_META;
 CLASS_METHODS_META(o2::CameraActor)
@@ -112,9 +144,16 @@ CLASS_METHODS_META(o2::CameraActor)
     FUNCTION().PUBLIC().SIGNATURE(void, SetFixedSize, const Vec2F&);
     FUNCTION().PUBLIC().SIGNATURE(void, SetFittedSize, const Vec2F&);
     FUNCTION().PUBLIC().SIGNATURE(void, SetPhysicalCorrect, Units);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetPerspective, float, float, float);
+    FUNCTION().PUBLIC().SIGNATURE(float, GetFov);
+    FUNCTION().PUBLIC().SIGNATURE(float, GetNearClip);
+    FUNCTION().PUBLIC().SIGNATURE(float, GetFarClip);
     FUNCTION().PUBLIC().SIGNATURE(Type, GetCameraType);
     FUNCTION().PUBLIC().SIGNATURE(const Vec2F&, GetFittedOrFixedSize);
     FUNCTION().PUBLIC().SIGNATURE(Units, GetUnits);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetRenderPipeline, const Ref<RenderPipeline>&);
+    FUNCTION().PUBLIC().SIGNATURE(const Ref<RenderPipeline>&, GetRenderPipeline);
+    FUNCTION().PUBLIC().SIGNATURE_STATIC(const Ref<RenderPipeline>&, GetDefaultRenderPipeline);
     FUNCTION().PROTECTED().SIGNATURE(void, OnAddToScene);
     FUNCTION().PROTECTED().SIGNATURE(void, OnRemoveFromScene);
 }

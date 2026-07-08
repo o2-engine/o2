@@ -128,9 +128,23 @@ namespace o2
         listeners[shortcut].Add(listener);
     }
 
+    void ShortcutKeysListenersManager::SetSuppressed(bool suppressed)
+    {
+        if (mInstance)
+            mInstance->mSuppressed = suppressed;
+    }
+
+    bool ShortcutKeysListenersManager::IsSuppressed()
+    {
+        return mInstance && mInstance->mSuppressed;
+    }
+
     void ShortcutKeysListenersManager::OnKeyPressed(const Input::Key& key)
     {
         //o2Debug.Log("ShortcutKeysListenersManager::OnKeyPressed: " + String(key.keyCode));
+
+        if (mSuppressed)
+            return;
 
         for (auto& kv : mListeners)
         {

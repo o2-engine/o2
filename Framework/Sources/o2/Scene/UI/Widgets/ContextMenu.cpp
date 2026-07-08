@@ -450,7 +450,7 @@ namespace o2
         }
         else 
         {
-            mTargetSelectionRect = mSelectionLayout.Calculate(itemUnderCursor->GetLayoutData().worldRectangle);
+            mTargetSelectionRect = mSelectionLayout.Calculate(itemUnderCursor->GetLayoutData().mWorldBox.ToRect());
 
             auto hoverState = state["hover"];
             if (hoverState)

@@ -139,8 +139,8 @@ namespace Editor
 
     void FrameScrollView::OnHorScrollScrolled(float value)
     {
-        mViewCamera.SetPosition(Vec2F(value, mViewCamera.GetPosition().y));
-        mViewCameraTargetPos = mViewCamera.GetPosition();
+        mViewCamera.SetPosition2D(Vec2F(value, mViewCamera.GetPosition().y));
+        mViewCameraTargetPos = mViewCamera.GetPosition2D();
         mNeedRedraw = true;
     }
 
@@ -150,8 +150,8 @@ namespace Editor
         float max = mVerScrollbar->GetMaxValue();
 
         float invertedValue = min + (max - min - (value - min));
-        mViewCamera.SetPosition(Vec2F(mViewCamera.GetPosition().x, invertedValue));
-        mViewCameraTargetPos = mViewCamera.GetPosition();
+        mViewCamera.SetPosition2D(Vec2F(mViewCamera.GetPosition().x, invertedValue));
+        mViewCameraTargetPos = mViewCamera.GetPosition2D();
         mNeedRedraw = true;
     }
 

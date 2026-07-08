@@ -380,7 +380,7 @@ namespace Editor
 
     void EditorApplication::OnResizing()
     {
-        mBackground->SetSize(o2Render.GetResolution() + Vec2F(20, 20));
+        mBackground->SetSize2D((Vec2F)o2Render.GetResolution() + Vec2F(20, 20));
         mBackSign->position = (Vec2F)(o2Render.GetResolution()).InvertedX() * 0.5f + Vec2F(40.0f, -85.0f);
 
         mConfig->OnWindowChange();

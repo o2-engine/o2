@@ -125,7 +125,7 @@ namespace Editor
 
                 textureSprite.SetImageAsset(obj->GetImage());
                 textureSprite.SetBasis(Basis(obj->GetMappingFrame())
-                                       *Basis::Translated(obj->GetActor()->transform->GetWorldPosition())
+                                       *Basis::Translated(obj->GetActor()->transform->GetWorldPosition2D())
                                        *o2EditorSceneScreen.GetLocalToScreenTransform());
                 textureSprite.SetTransparency(0.5f);
                 textureSprite.Draw();

@@ -63,6 +63,7 @@ namespace o2
         {
             mImpl->texture = nil;
             mImpl->samplerState = nil;
+            mImpl->depthTexture = nil;
         }
     }
 

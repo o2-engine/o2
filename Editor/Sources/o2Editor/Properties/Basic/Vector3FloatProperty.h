@@ -1,0 +1,191 @@
+#pragma once
+
+#include "o2Editor/Properties/IPropertyField.h"
+#include "o2/Events/CursorEventsArea.h"
+#include "o2/Events/KeyboardEventsListener.h"
+
+using namespace o2;
+
+namespace Editor
+{
+    FORWARD_CLASS_REF(FloatProperty);
+
+    // -------------------------------
+    // Editor float 3d vector property
+    // -------------------------------
+    class Vec3FProperty: public IPropertyField
+    {
+    public:
+        // Default constructor
+        Vec3FProperty(RefCounter* refCounter);
+
+        // Copy constructor
+        Vec3FProperty(RefCounter* refCounter, const Vec3FProperty& other);
+
+        // Copy operator
+        Vec3FProperty& operator=(const Vec3FProperty& other);
+
+        // Sets fields
+        void SetValueAndPrototypeProxy(const TargetsVec& targets) override;
+
+        // Updates and checks value
+        void Refresh(bool forcible = false) override;
+
+        // Reverts value to prototype value
+        void Revert() override;
+
+        // Sets value
+        void SetValue(const Vec3F& value);
+
+        // Sets value X
+        void SetValueX(float value);
+
+        // Sets value Y
+        void SetValueY(float value);
+
+        // Sets value Z
+        void SetValueZ(float value);
+
+        // Sets value as unknown
+        void SetUnknownValue(const Vec3F& defaultValue = Vec3F());
+
+        // Sets value X as unknown
+        void SetXUnknownValue(float defaultValue = 0.0f);
+
+        // Sets value Y as unknown
+        void SetYUnknownValue(float defaultValue = 0.0f);
+
+        // Sets value Z as unknown
+        void SetZUnknownValue(float defaultValue = 0.0f);
+
+        // Returns value
+        Vec3F GetCommonValue() const;
+
+        // Returns is values different
+        bool IsValuesDifferent() const;
+
+        // Returns X property
+        const Ref<FloatProperty>& GetXProperty() const;
+
+        // Returns Y property
+        const Ref<FloatProperty>& GetYProperty() const;
+
+        // Returns Z property
+        const Ref<FloatProperty>& GetZProperty() const;
+
+        // Returns editing by this field type
+        const Type* GetValueType() const override;
+
+        // Returns editing by this field type by static function, can't be changed during runtime
+        static const Type* GetValueTypeStatic();
+
+        SERIALIZABLE(Vec3FProperty);
+        CLONEABLE_REF(Vec3FProperty);
+
+    protected:
+        Ref<FloatProperty> mXProperty; // X value property
+        Ref<FloatProperty> mYProperty; // Y value property
+        Ref<FloatProperty> mZProperty; // Z value property
+
+        bool mIsTargetProxiesProperties = false; // Is target proxies types is properties
+
+    protected:
+        // Searches controls widgets and layers and initializes them
+        void InitializeControls();
+
+        // Stores values to data
+        void StoreValues(Vector<DataDocument>& data) const override;
+
+        // Called when some property before change, sets value via proxy
+        void OnPropertyBeforeChange(const Ref<IPropertyField>& field, bool byUser);
+
+        // Called when some property changed, sets value via proxy
+        void OnPropertyChanged(const Ref<IPropertyField>& field, bool byUser);
+
+        // Called when some property change completed, sets value via proxy
+        void OnPropertyChangeCompleted(const String& path, const Vector<DataDocument>& before, const Vector<DataDocument>& after);
+
+    protected:
+        class XValueProxy : public IValueProxy<float>
+        {
+            Ref<IAbstractValueProxy> mProxy;
+
+        public:
+            XValueProxy();
+            XValueProxy(const Ref<IAbstractValueProxy>& proxy);
+
+            void SetValue(const float& value) override;
+            float GetValue() const override;
+        };
+
+        class YValueProxy : public IValueProxy<float>
+        {
+            Ref<IAbstractValueProxy> mProxy;
+
+        public:
+            YValueProxy();
+            YValueProxy(const Ref<IAbstractValueProxy>& proxy);
+
+            void SetValue(const float& value) override;
+            float GetValue() const override;
+        };
+
+        class ZValueProxy : public IValueProxy<float>
+        {
+            Ref<IAbstractValueProxy> mProxy;
+
+        public:
+            ZValueProxy();
+            ZValueProxy(const Ref<IAbstractValueProxy>& proxy);
+
+            void SetValue(const float& value) override;
+            float GetValue() const override;
+        };
+    };
+}
+// --- META ---
+
+CLASS_BASES_META(Editor::Vec3FProperty)
+{
+    BASE_CLASS(Editor::IPropertyField);
+}
+END_META;
+CLASS_FIELDS_META(Editor::Vec3FProperty)
+{
+    FIELD().PROTECTED().NAME(mXProperty);
+    FIELD().PROTECTED().NAME(mYProperty);
+    FIELD().PROTECTED().NAME(mZProperty);
+    FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mIsTargetProxiesProperties);
+}
+END_META;
+CLASS_METHODS_META(Editor::Vec3FProperty)
+{
+
+    FUNCTION().PUBLIC().CONSTRUCTOR(RefCounter*);
+    FUNCTION().PUBLIC().CONSTRUCTOR(RefCounter*, const Vec3FProperty&);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetValueAndPrototypeProxy, const TargetsVec&);
+    FUNCTION().PUBLIC().SIGNATURE(void, Refresh, bool);
+    FUNCTION().PUBLIC().SIGNATURE(void, Revert);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetValue, const Vec3F&);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetValueX, float);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetValueY, float);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetValueZ, float);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetUnknownValue, const Vec3F&);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetXUnknownValue, float);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetYUnknownValue, float);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetZUnknownValue, float);
+    FUNCTION().PUBLIC().SIGNATURE(Vec3F, GetCommonValue);
+    FUNCTION().PUBLIC().SIGNATURE(bool, IsValuesDifferent);
+    FUNCTION().PUBLIC().SIGNATURE(const Ref<FloatProperty>&, GetXProperty);
+    FUNCTION().PUBLIC().SIGNATURE(const Ref<FloatProperty>&, GetYProperty);
+    FUNCTION().PUBLIC().SIGNATURE(const Ref<FloatProperty>&, GetZProperty);
+    FUNCTION().PUBLIC().SIGNATURE(const Type*, GetValueType);
+    FUNCTION().PUBLIC().SIGNATURE_STATIC(const Type*, GetValueTypeStatic);
+    FUNCTION().PROTECTED().SIGNATURE(void, InitializeControls);
+    FUNCTION().PROTECTED().SIGNATURE(void, StoreValues, Vector<DataDocument>&);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnPropertyBeforeChange, const Ref<IPropertyField>&, bool);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnPropertyChanged, const Ref<IPropertyField>&, bool);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnPropertyChangeCompleted, const String&, const Vector<DataDocument>&, const Vector<DataDocument>&);
+}
+END_META;
+// --- END META ---

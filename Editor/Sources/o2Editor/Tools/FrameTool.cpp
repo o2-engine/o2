@@ -6,6 +6,7 @@
 #include "o2/Scene/Actor.h"
 #include "o2/Scene/Scene.h"
 #include "o2Editor/Actions/Transform.h"
+#include "o2/Render/Mesh3DFill.h"
 #include "o2Editor/EditorApplication.h"
 #include "o2Editor/Windows/WindowsManager.h"
 #include "o2Editor/Windows/SceneWindow/SceneWindow.h"
@@ -153,6 +154,22 @@ namespace Editor
         mRightHandle->isPointInside = THIS_FUNC(IsPointInRightHandle);
         mAnchorsCenter->isPointInside = THIS_FUNC(IsPointInAnchorsCenterHandle);
 
+        for (int corner = 0; corner < 8; corner++)
+        {
+            auto handle = mmake<SceneDragHandle3D>();
+            handle->SetGeometry(Mesh3DPrimitives::BuildCornerHandleGeometry(1.0f, 0.15f));
+            handle->SetColor(Color4(220, 220, 220, 255));
+            handle->SetScreenSizeFactor(0.03f);
+            handle->SetPickPadding(0.05f);
+            handle->enabled = false;
+
+            handle->onPressed = [this, corner]() { CornerHandle3DPressed(corner); };
+            handle->onChangedPos = [this, corner](const Vec2F&) { OnCornerHandle3DMoved(corner); };
+            handle->onReleased = THIS_FUNC(Handle3DReleased);
+
+            mCornerHandles3D.Add(handle);
+        }
+
         SetHandlesEnable(false);
     }
 
@@ -171,6 +188,21 @@ namespace Editor
 
     void FrameTool::DrawScene()
     {
+        // In 3D mode the flat 2D frame with its projected resize/rotate/pivot handles is meaningless:
+        // the tool shows the 3D bounds wireframe (DrawScreen) with volumetric corner bracket handles
+        if (SceneEditScreen::IsSingletonInitialzed() && o2EditorSceneScreen.IsView3DMode())
+        {
+            SelectionTool::DrawScene();
+            SetHandlesEnable(false);
+
+            Update3DHandles();
+
+            for (auto& handle : mCornerHandles3D)
+                handle->DrawGeometry();
+
+            return;
+        }
+
         SelectionTool::DrawScene();
 
         UpdateSelectionFrame();
@@ -198,6 +230,245 @@ namespace Editor
         DrawSnapLines();
     }
 
+    void FrameTool::DrawScreen()
+    {
+        SelectionTool::DrawScreen();
+
+        if (!SceneEditScreen::IsSingletonInitialzed() || !o2EditorSceneScreen.IsView3DMode())
+            return;
+
+        if (mFrame3DValid)
+        {
+            Vec2F corners[8];
+            for (int i = 0; i < 8; i++)
+                corners[i] = o2EditorSceneScreen.World3DToScreenPoint(GetFrameCorner3D(i));
+
+            static const int edges[12][2] = { { 0, 1 }, { 1, 3 }, { 3, 2 }, { 2, 0 },
+                                              { 4, 5 }, { 5, 7 }, { 7, 6 }, { 6, 4 },
+                                              { 0, 4 }, { 1, 5 }, { 2, 6 }, { 3, 7 } };
+
+            for (auto& edge : edges)
+                o2Render.DrawAALine(corners[edge[0]], corners[edge[1]], mFrameColor);
+        }
+    }
+
+    void FrameTool::Update(float dt)
+    {
+        Update3DHandles();
+    }
+
+    void FrameTool::Update3DHandles()
+    {
+        bool is3D = SceneEditScreen::IsSingletonInitialzed() && o2EditorSceneScreen.IsView3DMode();
+
+        bool enable = false;
+        if (is3D && mToolEnabled)
+        {
+            auto& selectedObjects = o2EditorSceneScreen.GetSelectedObjects();
+
+            // Single selection frames the object with an oriented local box, multi selection with world AABB
+            if (selectedObjects.Count() == 1)
+            {
+                mFrame3DRotation = ITransformTool::GetSelectionFrameRotation3D(selectedObjects);
+                enable = ITransformTool::GetObjectBoundsInFrame3D(selectedObjects[0], mFrame3DRotation, mFrame3D);
+            }
+            else
+            {
+                mFrame3DRotation = Quat::Identity();
+                enable = ITransformTool::GetSelectionBounds3D(selectedObjects, mFrame3D);
+            }
+        }
+
+        mFrame3DValid = enable;
+
+        for (int corner = 0; corner < 8; corner++)
+        {
+            auto& handle = mCornerHandles3D[corner];
+            if (enable)
+            {
+                // Bracket arms point inwards along the frame edges of their corner
+                bool xMax = (corner & 1) != 0;
+                bool yMax = (corner & 2) != 0;
+                int quarterTurns = xMax ? (yMax ? 2 : 1) : (yMax ? 3 : 0);
+
+                Quat rotation = Quat::FromAxisAngle(Vec3F::ZAxis(), Math::PI()*0.5f*(float)quarterTurns);
+                handle->SetPose(GetFrameCorner3D(corner), mFrame3DRotation*rotation);
+            }
+
+            handle->enabled = enable;
+        }
+    }
+
+    Vec3F FrameTool::GetFrameCorner3D(int corner) const
+    {
+        Vec3F localCorner((corner & 1) ? mFrame3D.max.x : mFrame3D.min.x,
+                          (corner & 2) ? mFrame3D.max.y : mFrame3D.min.y,
+                          (corner & 4) ? mFrame3D.max.z : mFrame3D.min.z);
+
+        return mFrame3DRotation*localCorner;
+    }
+
+    void FrameTool::CornerHandle3DPressed(int corner)
+    {
+        HandlePressed();
+
+        mDragCorner3D = corner;
+        mDragFrameRotation3D = mFrame3DRotation;
+
+        Vec3F cornerPosition = GetFrameCorner3D(corner);
+        mDragAnchor3D = GetFrameCorner3D(corner ^ 7);
+
+        // Drag in the plane of the two frame axes most facing the camera
+        mDragPlaneAxis3D = 2;
+        Vec3F rayOrigin, rayDirection;
+        if (o2EditorSceneScreen.ScreenToWorldRay(o2Input.GetCursorPos(), rayOrigin, rayDirection))
+        {
+            Vec3F frameRay = mDragFrameRotation3D.Inverted()*rayDirection;
+            const float* direction = &frameRay.x;
+            mDragPlaneAxis3D = 0;
+            for (int axis = 1; axis < 3; axis++)
+            {
+                if (Math::Abs(direction[axis]) > Math::Abs(direction[mDragPlaneAxis3D]))
+                    mDragPlaneAxis3D = axis;
+            }
+        }
+
+        mDragPlaneOrigin3D = cornerPosition;
+        mLastCornerPoint3D = mDragFrameRotation3D.Inverted()*(cornerPosition - mDragAnchor3D);
+    }
+
+    void FrameTool::OnCornerHandle3DMoved(int corner)
+    {
+        if (!mTransformAction)
+            return;
+
+        Vec3F planeNormal = mDragFrameRotation3D*Vec3F::Axis(mDragPlaneAxis3D);
+
+        Vec3F hit;
+        if (!o2EditorSceneScreen.ScreenToWorldPlanePoint(o2Input.GetCursorPos(), mDragPlaneOrigin3D,
+                                                         planeNormal, hit))
+        {
+            return;
+        }
+
+        // Scales are computed per frame axis, anchored at the opposite corner
+        Vec3F hitVector = mDragFrameRotation3D.Inverted()*(hit - mDragAnchor3D);
+
+        Vec3F scale(1.0f, 1.0f, 1.0f);
+        float* scaleComponents = &scale.x;
+        float* lastComponents = &mLastCornerPoint3D.x;
+        const float* hitComponents = &hitVector.x;
+
+        for (int axis = 0; axis < 3; axis++)
+        {
+            if (axis == mDragPlaneAxis3D)
+                continue;
+
+            float denominator = lastComponents[axis];
+            if (Math::Abs(denominator) < 0.0001f)
+                continue;
+
+            float axisScale = Math::Max(hitComponents[axis]/denominator, 0.01f);
+            scaleComponents[axis] = axisScale;
+            lastComponents[axis] = denominator*axisScale;
+        }
+
+        if (scale != Vec3F(1.0f, 1.0f, 1.0f))
+        {
+            mChangedFromThis = true;
+            AppendScaleAroundAnchorStep3D(mTransformAction, mDragAnchor3D, mDragFrameRotation3D, scale);
+        }
+    }
+
+    void FrameTool::Handle3DReleased()
+    {
+        mDragCorner3D = -1;
+
+        HandleReleased();
+    }
+
+    void FrameTool::AppendScaleAroundAnchorStep3D(const Ref<TransformAction>& action, const Vec3F& anchor,
+                                                  const Quat& frameRotation, const Vec3F& scale)
+    {
+        if (!action)
+            return;
+
+        bool worldFrame = frameRotation == Quat::Identity();
+
+        Basis planeTransform = Basis::Translated(anchor.XY()*-1.0f)*
+            Basis::Scaled(scale.XY())*
+            Basis::Translated(anchor.XY());
+
+        auto step = mmake<TransformAction>(o2EditorSceneScreen.GetTopSelectedObjects());
+        step->doneTransforms = step->beforeTransforms;
+        for (auto& t : step->doneTransforms)
+        {
+            // Mesh objects keep zero transform size, so their degenerate basis can't carry
+            // the resize: the corner drag scales the transform scale, orbiting the position
+            // around the anchor to keep the opposite corner in place
+            bool basisDegenerate = t.transform.xv.SqrLength() < FLT_EPSILON ||
+                t.transform.yv.SqrLength() < FLT_EPSILON;
+
+            if (t.has3D && basisDegenerate)
+            {
+                Vec2F worldPivot = t.transform.origin + t.transform.xv*t.pivot.x + t.transform.yv*t.pivot.y;
+                Vec3F position(worldPivot, t.positionZ);
+
+                Vec3F frameOffset = frameRotation.Inverted()*(position - anchor);
+                frameOffset.x *= scale.x;
+                frameOffset.y *= scale.y;
+                frameOffset.z *= scale.z;
+                Vec3F newPosition = anchor + frameRotation*frameOffset;
+
+                t.transform.origin = newPosition.XY() - t.transform.xv*t.pivot.x - t.transform.yv*t.pivot.y;
+                t.positionZ = newPosition.z;
+
+                t.scaleXY.x *= scale.x;
+                t.scaleXY.y *= scale.y;
+                t.scaleZ *= scale.z;
+
+                continue;
+            }
+
+            if (worldFrame)
+            {
+                if (t.transform.GetScale() != Vec2F())
+                    t.transform = t.transform*planeTransform;
+
+                if (t.has3D)
+                {
+                    t.positionZ = anchor.z + (t.positionZ - anchor.z)*scale.z;
+                    t.sizeZ *= scale.z;
+                }
+
+                continue;
+            }
+
+            // Oriented frame: the frame axes match the object local axes (single selection),
+            // so the basis edges scale in place and the position orbits towards the anchor
+            Vec2F worldPivot = t.transform.origin + t.transform.xv*t.pivot.x + t.transform.yv*t.pivot.y;
+            Vec3F position(worldPivot, t.positionZ);
+
+            Vec3F frameOffset = frameRotation.Inverted()*(position - anchor);
+            frameOffset.x *= scale.x;
+            frameOffset.y *= scale.y;
+            frameOffset.z *= scale.z;
+            Vec3F newPosition = anchor + frameRotation*frameOffset;
+
+            t.transform.xv *= scale.x;
+            t.transform.yv *= scale.y;
+            t.transform.origin = newPosition.XY() - t.transform.xv*t.pivot.x - t.transform.yv*t.pivot.y;
+
+            if (t.has3D)
+            {
+                t.positionZ = newPosition.z;
+                t.sizeZ *= scale.z;
+            }
+        }
+
+        action->Append(step);
+    }
+
     void FrameTool::DrawSnapLines()
     {
         for (auto& line : mSnapLines)
@@ -206,12 +477,16 @@ namespace Editor
 
     void FrameTool::OnEnabled()
     {
+        mToolEnabled = true;
         UpdateSelectionFrame();
+        Update3DHandles();
     }
 
     void FrameTool::OnDisabled()
     {
+        mToolEnabled = false;
         SetHandlesEnable(false);
+        Update3DHandles();
     }
 
     void FrameTool::OnSceneChanged(const Vector<Ref<SceneEditableObject>>& changedObjects)
@@ -230,7 +505,7 @@ namespace Editor
 
     void FrameTool::OnKeyPressed(const Input::Key& key)
     {
-        if (!o2EditorSceneWindow.IsFocused())
+        if (SceneWindow::IsSingletonInitialzed() && !o2EditorSceneWindow.IsFocused())
             return;
 
         bool isArrow = key == VK_LEFT || key == VK_RIGHT || key == VK_UP || key == VK_DOWN;
@@ -249,7 +524,7 @@ namespace Editor
 
     void FrameTool::OnKeyStayDown(const Input::Key& key)
     {
-        if (!o2EditorSceneWindow.IsFocused())
+        if (SceneWindow::IsSingletonInitialzed() && !o2EditorSceneWindow.IsFocused())
             return;
 
         if (key.pressedTime < 0.3f)
@@ -416,6 +691,12 @@ namespace Editor
 
     void FrameTool::UpdateSelectionFrame()
     {
+        if (SceneEditScreen::IsSingletonInitialzed() && o2EditorSceneScreen.IsView3DMode())
+        {
+            SetHandlesEnable(false);
+            return;
+        }
+
         auto selectedObjects = o2EditorSceneScreen.GetSelectedObjects();
 
         mAnchorsFrameEnabled = false;
@@ -493,6 +774,13 @@ namespace Editor
 
     void FrameTool::OnCursorPressed(const Input::Cursor& cursor)
     {
+        // Moving selection in 3D mode is MoveTool's job, keep only click and frame selection
+        if (o2EditorSceneScreen.IsView3DMode())
+        {
+            SelectionTool::OnCursorPressed(cursor);
+            return;
+        }
+
         if (o2EditorSceneScreen.GetSelectedObjects().Count() > 0)
         {
             if (mFrame.IsPointInside(cursor.position))

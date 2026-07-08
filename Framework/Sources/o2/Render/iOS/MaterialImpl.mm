@@ -113,6 +113,7 @@ namespace o2
         descriptor.vertexFunction = mVertexShader->mImpl->function;
         descriptor.fragmentFunction = mFragmentShader->mImpl->function;
         descriptor.colorAttachments[0].pixelFormat = RenderDevice::view.colorPixelFormat;
+        descriptor.depthAttachmentPixelFormat = RenderDevice::view.depthStencilPixelFormat;
         SetupBlendState(descriptor.colorAttachments[0], mBlendMode);
 
         NSError* error = nil;

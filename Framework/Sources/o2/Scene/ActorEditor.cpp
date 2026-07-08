@@ -602,40 +602,40 @@ namespace o2
         // transform
         if (withTransform)
         {
-            if (source->transform->mData->position != changed->transform->mData->position &&
-                dest->transform->mData->position == source->transform->mData->position)
+            if (source->transform->mPosition != changed->transform->mPosition &&
+                dest->transform->mPosition == source->transform->mPosition)
             {
-                dest->transform->mData->position = changed->transform->mData->position;
+                dest->transform->mPosition = changed->transform->mPosition;
             }
 
-            if (source->transform->mData->scale != changed->transform->mData->scale &&
-                dest->transform->mData->scale == source->transform->mData->scale)
+            if (source->transform->mScale != changed->transform->mScale &&
+                dest->transform->mScale == source->transform->mScale)
             {
-                dest->transform->mData->scale = changed->transform->mData->scale;
+                dest->transform->mScale = changed->transform->mScale;
             }
 
-            if (source->transform->mData->size != changed->transform->mData->size &&
-                dest->transform->mData->size == source->transform->mData->size)
+            if (source->transform->mSize != changed->transform->mSize &&
+                dest->transform->mSize == source->transform->mSize)
             {
-                dest->transform->mData->size = changed->transform->mData->size;
+                dest->transform->mSize = changed->transform->mSize;
             }
 
-            if (source->transform->mData->pivot != changed->transform->mData->pivot &&
-                dest->transform->mData->pivot == source->transform->mData->pivot)
+            if (source->transform->mPivot != changed->transform->mPivot &&
+                dest->transform->mPivot == source->transform->mPivot)
             {
-                dest->transform->mData->pivot = changed->transform->mData->pivot;
+                dest->transform->mPivot = changed->transform->mPivot;
             }
 
-            if (!Math::Equals(source->transform->mData->angle, changed->transform->mData->angle) &&
-                Math::Equals(dest->transform->mData->angle, source->transform->mData->angle))
+            if (!Math::Equals(source->transform->mEulerAngles, changed->transform->mEulerAngles) &&
+                Math::Equals(dest->transform->mEulerAngles, source->transform->mEulerAngles))
             {
-                dest->transform->mData->angle = changed->transform->mData->angle;
+                dest->transform->mEulerAngles = changed->transform->mEulerAngles;
             }
 
-            if (!Math::Equals(source->transform->mData->shear, changed->transform->mData->shear) &&
-                Math::Equals(dest->transform->mData->shear, source->transform->mData->shear))
+            if (!Math::Equals(source->transform->mShear, changed->transform->mShear) &&
+                Math::Equals(dest->transform->mShear, source->transform->mShear))
             {
-                dest->transform->mData->shear = changed->transform->mData->shear;
+                dest->transform->mShear = changed->transform->mShear;
             }
         }
     }

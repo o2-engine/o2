@@ -22,6 +22,7 @@
 #include "o2/Utils/Function/ActorSubscription.h"
 #include "o2/Utils/Function/Function.h"
 #include "o2/Utils/Math/Basis.h"
+#include "o2/Utils/Math/Basis3D.h"
 #include "o2/Utils/Math/Border.h"
 #include "o2/Utils/Math/Color.h"
 #include "o2/Utils/Math/Interpolation.h"

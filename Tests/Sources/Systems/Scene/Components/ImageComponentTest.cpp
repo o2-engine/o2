@@ -72,8 +72,8 @@ TEST(ImageComponent, OnTransformUpdatedFiresOnPositionChange)
     auto img = a->AddComponent<ImageComponent>();
     TickFrame();
 
-    a->transform->SetPosition(Vec2F(50, 50));
-    a->transform->SetSize(Vec2F(100, 100));
+    a->transform->SetPosition2D(Vec2F(50, 50));
+    a->transform->SetSize2D(Vec2F(100, 100));
     TickFrame();
 
     EXPECT_TRUE(img);

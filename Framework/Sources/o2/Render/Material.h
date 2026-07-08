@@ -194,6 +194,39 @@ namespace o2
         int mValue = 0; // Int uniform value @SERIALIZABLE
     };
 
+    // ------------------------------------------------------------------------
+    // Float vector shader parameter. Maps to an array member (e.g. float4[N])
+    // of the shader parameters structure, written as raw packed floats.
+    // ------------------------------------------------------------------------
+    class ShaderParamFloatVector : public IShaderParam
+    {
+    public:
+        PROPERTIES(ShaderParamFloatVector);
+        PROPERTY(Vector<float>, value, SetValue, GetValue); // Float values property
+
+    public:
+        // Default constructor
+        ShaderParamFloatVector();
+
+        // Constructor with uniform name and initial values
+        ShaderParamFloatVector(const String& name, const Vector<float>& value);
+
+        // Returns the float values
+        const Vector<float>& GetValue() const;
+
+        // Sets the float values
+        void SetValue(const Vector<float>& value);
+
+        // Computes hash from name and values
+        size_t ComputeHash() const override;
+
+        SERIALIZABLE(ShaderParamFloatVector);
+        CLONEABLE_REF(ShaderParamFloatVector);
+
+    protected:
+        Vector<float> mValue; // Float values @SERIALIZABLE
+    };
+
     // -----------------------------------------------------------------------
     // Texture sampler attribute for a material. Binds a texture (from an
     // ImageAsset) to a named sampler uniform in the shader, along with
@@ -205,11 +238,13 @@ namespace o2
         String               texCoordsAttrName;  // Shader attribute name (e.g. "a_texCoords2") @SERIALIZABLE
         AssetRef<ImageAsset> image;              // Source image asset (provides texture + src rect) @SERIALIZABLE
 
+        TextureRef textureOverride; // Runtime texture override, has priority over image; not serialized
+
     public:
-		// Returns the texture reference from the image asset, or null if no image
+		// Returns the texture override if set, otherwise texture from the image asset
         TextureRef GetTexture() const;
 
-		// Returns the source rectangle from the image asset, or an empty rect if no image
+		// Returns the source rectangle from the image asset; empty rect for texture override
         RectI GetSrcRect() const;
 
         bool operator==(const TextureSampler& other) const;
@@ -292,8 +327,27 @@ namespace o2
         // Returns all texture samplers
         const Vector<TextureSampler>& GetTextureSamplers() const;
 
+        // Sets runtime texture override for sampler by uniform name. Doesn't invalidate the program
+        void SetSamplerTextureOverride(const String& samplerUniformName, const TextureRef& texture);
+
         // Returns the total number of texture channels (1 primary + extra samplers)
         int GetTotalTextureChannelsCount() const;
+
+        // Sets number of color attachments the material renders to (MRT). Invalidates the program
+        void SetColorAttachmentsCount(int count);
+
+        // Returns number of color attachments the material renders to
+        int GetColorAttachmentsCount() const;
+
+        // Sets color attachment texture formats (MRT), also sets attachments count. Invalidates the program
+        void SetColorAttachmentFormats(const Vector<TextureFormat>& formats);
+
+        // Returns color attachment texture formats; empty - all attachments use the default format
+        const Vector<TextureFormat>& GetColorAttachmentFormats() const;
+
+        // Creates material from builtin shader source files (BuiltAssets/FrameworkData/Shaders/<name>.vsh/.fsh);
+        // returns null when files are missing or compilation fails. The material isn't built yet
+        static Ref<Material> CreateFromBuiltinShaders(const String& shadersName);
 
         // Links the vertex and fragment shaders into a GPU program. Returns true on success
         bool Build();
@@ -337,6 +391,10 @@ namespace o2
         TextureRef mTexture; // Optional primary material texture
 
         BlendMode mBlendMode = BlendMode::Normal; // Blend mode for rendering @SERIALIZABLE
+
+        int mColorAttachmentsCount = 1; // Number of color attachments material renders to (MRT) @SERIALIZABLE
+
+        Vector<TextureFormat> mColorAttachmentFormats; // Per-attachment texture formats; empty - default format @SERIALIZABLE
 
 		Vector<Ref<IShaderParam>> mParams;   // Shader parameter list @SERIALIZABLE @EDITOR_PROPERTY @EXPANDED_BY_DEFAULT
 		Vector<TextureSampler>    mSamplers; // Additional texture samplers @SERIALIZABLE @EDITOR_PROPERTY @EXPANDED_BY_DEFAULT
@@ -478,6 +536,28 @@ CLASS_METHODS_META(o2::ShaderParamInt)
 }
 END_META;
 
+CLASS_BASES_META(o2::ShaderParamFloatVector)
+{
+    BASE_CLASS(o2::IShaderParam);
+}
+END_META;
+CLASS_FIELDS_META(o2::ShaderParamFloatVector)
+{
+    FIELD().PUBLIC().NAME(value);
+    FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().NAME(mValue);
+}
+END_META;
+CLASS_METHODS_META(o2::ShaderParamFloatVector)
+{
+
+    FUNCTION().PUBLIC().CONSTRUCTOR();
+    FUNCTION().PUBLIC().CONSTRUCTOR(const String&, const Vector<float>&);
+    FUNCTION().PUBLIC().SIGNATURE(const Vector<float>&, GetValue);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetValue, const Vector<float>&);
+    FUNCTION().PUBLIC().SIGNATURE(size_t, ComputeHash);
+}
+END_META;
+
 CLASS_BASES_META(o2::TextureSampler)
 {
     BASE_CLASS(o2::ISerializable);
@@ -488,6 +568,7 @@ CLASS_FIELDS_META(o2::TextureSampler)
     FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().NAME(samplerUniformName);
     FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().NAME(texCoordsAttrName);
     FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().NAME(image);
+    FIELD().PUBLIC().NAME(textureOverride);
 }
 END_META;
 CLASS_METHODS_META(o2::TextureSampler)
@@ -515,6 +596,8 @@ CLASS_FIELDS_META(o2::Material)
     FIELD().PROTECTED().NAME(mFragmentShader);
     FIELD().PROTECTED().NAME(mTexture);
     FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(BlendMode::Normal).NAME(mBlendMode);
+    FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(1).NAME(mColorAttachmentsCount);
+    FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().NAME(mColorAttachmentFormats);
     FIELD().PROTECTED().EDITOR_PROPERTY_ATTRIBUTE().EXPANDED_BY_DEFAULT_ATTRIBUTE().SERIALIZABLE_ATTRIBUTE().NAME(mParams);
     FIELD().PROTECTED().EDITOR_PROPERTY_ATTRIBUTE().EXPANDED_BY_DEFAULT_ATTRIBUTE().SERIALIZABLE_ATTRIBUTE().NAME(mSamplers);
     FIELD().PROTECTED().DEFAULT_VALUE(0).NAME(mHash);
@@ -546,7 +629,13 @@ CLASS_METHODS_META(o2::Material)
     FUNCTION().PUBLIC().SIGNATURE(void, AddTextureSampler, const TextureSampler&);
     FUNCTION().PUBLIC().SIGNATURE(void, RemoveTextureSampler, const String&);
     FUNCTION().PUBLIC().SIGNATURE(const Vector<TextureSampler>&, GetTextureSamplers);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetSamplerTextureOverride, const String&, const TextureRef&);
     FUNCTION().PUBLIC().SIGNATURE(int, GetTotalTextureChannelsCount);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetColorAttachmentsCount, int);
+    FUNCTION().PUBLIC().SIGNATURE(int, GetColorAttachmentsCount);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetColorAttachmentFormats, const Vector<TextureFormat>&);
+    FUNCTION().PUBLIC().SIGNATURE(const Vector<TextureFormat>&, GetColorAttachmentFormats);
+    FUNCTION().PUBLIC().SIGNATURE_STATIC(Ref<Material>, CreateFromBuiltinShaders, const String&);
     FUNCTION().PUBLIC().SIGNATURE(bool, Build);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsReady);
     FUNCTION().PUBLIC().SIGNATURE(size_t, GetHash);

@@ -2,6 +2,8 @@
 
 #include "o2Editor/Tools/ITransformTool.h"
 #include "o2Editor/Windows/SceneWindow/SceneDragHandle.h"
+#include "o2Editor/Windows/SceneWindow/SceneDragHandle3D.h"
+#include "o2/Utils/Math/AABB.h"
 #include "o2/Utils/Math/Basis.h"
 
 using namespace o2;
@@ -78,9 +80,23 @@ namespace Editor
         Ref<SceneDragHandle> mAnchorsCenter;            // Anchors center, enables when all anchors in one point and drags all of them
                                                           
         Basis mFrame; // Frame basis
-                                                          
+
         Basis mAnchorsFrame;                // Anchors frame basis
         bool  mAnchorsFrameEnabled = false; // Is selected some UI widgets and anchors frame enabled
+
+        Vector<Ref<SceneDragHandle3D>> mCornerHandles3D; // 8 corner bracket handles of the 3D bounds frame
+
+        o2::AABB mFrame3D;                  // Selection bounds in frame space, 3D view mode
+        Quat     mFrame3DRotation;          // Frame orientation: object local axes for single selection, world otherwise
+        bool     mFrame3DValid = false;     // Is 3D frame computed for current selection
+        bool     mToolEnabled = false;      // Is tool currently selected
+
+        int   mDragCorner3D = -1;       // Dragged corner handle index, -1 when none
+        int   mDragPlaneAxis3D = 2;     // Frame axis of the corner drag plane normal
+        Quat  mDragFrameRotation3D;     // Frame orientation frozen at corner drag start
+        Vec3F mDragAnchor3D;            // Fixed opposite corner during 3D drag, world space
+        Vec3F mDragPlaneOrigin3D;       // Raycast plane origin during 3D corner drag, world space
+        Vec3F mLastCornerPoint3D;       // Last applied corner offset from anchor, frame space
 
         bool mPivotHandleEnabled = false; // Is selected object supports pivot 
 
@@ -106,6 +122,31 @@ namespace Editor
 
         // Draws tool
         void DrawScene() override;
+
+        // Draws screen space bounds visualization in 3D view mode
+        void DrawScreen() override;
+
+        // Updates tool: places and enables 3D frame handles
+        void Update(float dt) override;
+
+        // Recomputes 3D bounds frame and updates corner bracket handles
+        void Update3DHandles();
+
+        // Returns world position of the 3D frame corner: bit 0 - x max, bit 1 - y max, bit 2 - z max
+        Vec3F GetFrameCorner3D(int corner) const;
+
+        // Called when 3D corner handle was pressed, stores the anchor corner and the drag plane
+        void CornerHandle3DPressed(int corner);
+
+        // Called when 3D corner handle was moved, scales two view-facing axes anchored at the opposite corner
+        void OnCornerHandle3DMoved(int corner);
+
+        // Called when 3D handle was released, resets drag state and completes the action
+        void Handle3DReleased();
+
+        // Builds a frame axis aligned scale step around anchor: x/y through the basis, z through positionZ and sizeZ
+        void AppendScaleAroundAnchorStep3D(const Ref<TransformAction>& action, const Vec3F& anchor,
+                                           const Quat& frameRotation, const Vec3F& scale);
 
         // Draws snapping lines
         void DrawSnapLines();
@@ -396,6 +437,17 @@ CLASS_FIELDS_META(Editor::FrameTool)
     FIELD().PROTECTED().NAME(mFrame);
     FIELD().PROTECTED().NAME(mAnchorsFrame);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mAnchorsFrameEnabled);
+    FIELD().PROTECTED().NAME(mCornerHandles3D);
+    FIELD().PROTECTED().NAME(mFrame3D);
+    FIELD().PROTECTED().NAME(mFrame3DRotation);
+    FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mFrame3DValid);
+    FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mToolEnabled);
+    FIELD().PROTECTED().DEFAULT_VALUE(-1).NAME(mDragCorner3D);
+    FIELD().PROTECTED().DEFAULT_VALUE(2).NAME(mDragPlaneAxis3D);
+    FIELD().PROTECTED().NAME(mDragFrameRotation3D);
+    FIELD().PROTECTED().NAME(mDragAnchor3D);
+    FIELD().PROTECTED().NAME(mDragPlaneOrigin3D);
+    FIELD().PROTECTED().NAME(mLastCornerPoint3D);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mPivotHandleEnabled);
     FIELD().PROTECTED().NAME(mBeginDraggingFrame);
     FIELD().PROTECTED().NAME(mBeginDraggingOffset);
@@ -414,6 +466,14 @@ CLASS_METHODS_META(Editor::FrameTool)
     FUNCTION().PROTECTED().SIGNATURE(String, GetPanelIcon);
     FUNCTION().PROTECTED().SIGNATURE(ShortcutKeys, GetShortcut);
     FUNCTION().PROTECTED().SIGNATURE(void, DrawScene);
+    FUNCTION().PROTECTED().SIGNATURE(void, DrawScreen);
+    FUNCTION().PROTECTED().SIGNATURE(void, Update, float);
+    FUNCTION().PROTECTED().SIGNATURE(void, Update3DHandles);
+    FUNCTION().PROTECTED().SIGNATURE(Vec3F, GetFrameCorner3D, int);
+    FUNCTION().PROTECTED().SIGNATURE(void, CornerHandle3DPressed, int);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnCornerHandle3DMoved, int);
+    FUNCTION().PROTECTED().SIGNATURE(void, Handle3DReleased);
+    FUNCTION().PROTECTED().SIGNATURE(void, AppendScaleAroundAnchorStep3D, const Ref<TransformAction>&, const Vec3F&, const Quat&, const Vec3F&);
     FUNCTION().PROTECTED().SIGNATURE(void, DrawSnapLines);
     FUNCTION().PROTECTED().SIGNATURE(void, OnEnabled);
     FUNCTION().PROTECTED().SIGNATURE(void, OnDisabled);

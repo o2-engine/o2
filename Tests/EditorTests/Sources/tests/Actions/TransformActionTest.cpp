@@ -56,10 +56,10 @@ TEST(TransformAction, RedoUndoRestoreAndReplay)
     SetActorPos(a, Vec2F(999.0f, 999.0f));
 
     action->Redo();
-    EXPECT_TRUE(NearV(a->transform->GetPosition(), Vec2F(50.0f, 0.0f)));
+    EXPECT_TRUE(NearV(a->transform->GetPosition2D(), Vec2F(50.0f, 0.0f)));
 
     action->Undo();
-    EXPECT_TRUE(NearV(a->transform->GetPosition(), Vec2F(10.0f, 0.0f)));
+    EXPECT_TRUE(NearV(a->transform->GetPosition2D(), Vec2F(10.0f, 0.0f)));
 }
 
 TEST(TransformAction, AppendMergesDoneTransformsAndAppliesStep)
@@ -73,22 +73,22 @@ TEST(TransformAction, AppendMergesDoneTransformsAndAppliesStep)
     auto step1 = mmake<TransformAction>(AsEditable({a}));
     step1->Completed();
     main->Append(step1);
-    EXPECT_TRUE(NearV(a->transform->GetPosition(), Vec2F(10.0f, 0.0f)));
+    EXPECT_TRUE(NearV(a->transform->GetPosition2D(), Vec2F(10.0f, 0.0f)));
 
     SetActorPos(a, Vec2F(25.0f, 0.0f));
     auto step2 = mmake<TransformAction>(AsEditable({a}));
     step2->Completed();
     main->Append(step2);
-    EXPECT_TRUE(NearV(a->transform->GetPosition(), Vec2F(25.0f, 0.0f)));
+    EXPECT_TRUE(NearV(a->transform->GetPosition2D(), Vec2F(25.0f, 0.0f)));
 
     ASSERT_EQ(main->doneTransforms.Count(), 1);
 
     SetActorPos(a, Vec2F(999.0f, 999.0f));
     main->Undo();
-    EXPECT_TRUE(NearV(a->transform->GetPosition(), Vec2F(0.0f, 0.0f)));
+    EXPECT_TRUE(NearV(a->transform->GetPosition2D(), Vec2F(0.0f, 0.0f)));
 
     main->Redo();
-    EXPECT_TRUE(NearV(a->transform->GetPosition(), Vec2F(25.0f, 0.0f)));
+    EXPECT_TRUE(NearV(a->transform->GetPosition2D(), Vec2F(25.0f, 0.0f)));
 }
 
 TEST(TransformAction, AppendAcrossMultipleObjects)
@@ -109,12 +109,12 @@ TEST(TransformAction, AppendAcrossMultipleObjects)
     SetActorPos(b, Vec2F(-1.0f, -1.0f));
 
     main->Undo();
-    EXPECT_TRUE(NearV(a->transform->GetPosition(), Vec2F(0.0f, 0.0f)));
-    EXPECT_TRUE(NearV(b->transform->GetPosition(), Vec2F(100.0f, 0.0f)));
+    EXPECT_TRUE(NearV(a->transform->GetPosition2D(), Vec2F(0.0f, 0.0f)));
+    EXPECT_TRUE(NearV(b->transform->GetPosition2D(), Vec2F(100.0f, 0.0f)));
 
     main->Redo();
-    EXPECT_TRUE(NearV(a->transform->GetPosition(), Vec2F(5.0f, 0.0f)));
-    EXPECT_TRUE(NearV(b->transform->GetPosition(), Vec2F(105.0f, 0.0f)));
+    EXPECT_TRUE(NearV(a->transform->GetPosition2D(), Vec2F(5.0f, 0.0f)));
+    EXPECT_TRUE(NearV(b->transform->GetPosition2D(), Vec2F(105.0f, 0.0f)));
 }
 
 namespace
@@ -154,7 +154,7 @@ TEST(TransformAction, RedoUpdatesWorldPivotImmediately)
 {
     SceneCleanGuard guard;
     auto a = MakeActor(Vec2F(0.0f, 0.0f));
-    a->transform->SetSize(Vec2F(100.0f, 100.0f));
+    a->transform->SetSize2D(Vec2F(100.0f, 100.0f));
     TickScene();
 
     Vec2F pivotBefore = a->GetPivot();
@@ -214,7 +214,7 @@ TEST(TransformAction, AppendStepChainKeepsWorldPivotConsistent)
 {
     SceneCleanGuard guard;
     auto a = MakeActor(Vec2F(0.0f, 0.0f));
-    a->transform->SetSize(Vec2F(100.0f, 100.0f));
+    a->transform->SetSize2D(Vec2F(100.0f, 100.0f));
     TickScene();
 
     auto editable = AsEditable({a});

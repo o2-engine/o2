@@ -17,7 +17,7 @@ namespace Editor
         RefCounterable(refCounter)
     {
         mWindow = o2UI.CreateWidget<DockableWindow>();
-        mWindow->layout->size = Vec2F(200, 200);
+        mWindow->layout->size2D = Vec2F(200, 200);
         mWindow->onOpened += THIS_FUNC(OnOpened);
         mWindow->onClosed += THIS_FUNC(OnClosed);
 		mWindow->onFocused += THIS_FUNC(OnFocused);

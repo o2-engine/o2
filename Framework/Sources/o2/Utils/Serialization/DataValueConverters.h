@@ -502,6 +502,135 @@ namespace o2
         }
     };
 
+    template<>
+    struct DataValue::Converter<Vec3F>
+    {
+        static constexpr bool isSupported = true;
+
+        static void Write(const Vec3F& value, DataValue& data)
+        {
+            data.AddMember("x") = value.x;
+            data.AddMember("y") = value.y;
+            data.AddMember("z") = value.z;
+        }
+
+        static void Read(Vec3F& value, const DataValue& data)
+        {
+            value.x = data.GetMember("x");
+            value.y = data.GetMember("y");
+            value.z = data.GetMember("z");
+        }
+    };
+
+    template<>
+    struct DataValue::Converter<Vec3I>
+    {
+        static constexpr bool isSupported = true;
+
+        static void Write(const Vec3I& value, DataValue& data)
+        {
+            data.AddMember("x") = value.x;
+            data.AddMember("y") = value.y;
+            data.AddMember("z") = value.z;
+        }
+
+        static void Read(Vec3I& value, const DataValue& data)
+        {
+            value.x = data.GetMember("x");
+            value.y = data.GetMember("y");
+            value.z = data.GetMember("z");
+        }
+    };
+
+    template<>
+    struct DataValue::Converter<Quat>
+    {
+        static constexpr bool isSupported = true;
+
+        static void Write(const Quat& value, DataValue& data)
+        {
+            data.AddMember("x") = value.x;
+            data.AddMember("y") = value.y;
+            data.AddMember("z") = value.z;
+            data.AddMember("w") = value.w;
+        }
+
+        static void Read(Quat& value, const DataValue& data)
+        {
+            value.x = data.GetMember("x");
+            value.y = data.GetMember("y");
+            value.z = data.GetMember("z");
+            value.w = data.GetMember("w");
+        }
+    };
+
+    template<>
+    struct DataValue::Converter<Mat4>
+    {
+        static constexpr bool isSupported = true;
+
+        static void Write(const Mat4& value, DataValue& data)
+        {
+            data.mData.flagsData.flags = Flags::Array;
+            data.mData.arrayData.elements = nullptr;
+            data.mData.arrayData.count = 0;
+            data.mData.arrayData.capacity = 0;
+
+            for (int i = 0; i < 16; i++)
+                data.AddElement() = DataValue(value.m[i], *data.mDocument);
+        }
+
+        static void Read(Mat4& value, const DataValue& data)
+        {
+            if (data.IsArray())
+            {
+                int count = Math::Min(16, data.GetElementsCount());
+                for (int i = 0; i < count; i++)
+                    data.GetElement(i).Get(value.m[i]);
+            }
+        }
+    };
+
+    template<>
+    struct DataValue::Converter<AABB>
+    {
+        static constexpr bool isSupported = true;
+
+        static void Write(const AABB& value, DataValue& data)
+        {
+            data.AddMember("min").Set(value.min);
+            data.AddMember("max").Set(value.max);
+        }
+
+        static void Read(AABB& value, const DataValue& data)
+        {
+            data.GetMember("min").Get(value.min);
+            data.GetMember("max").Get(value.max);
+        }
+    };
+
+    template<>
+    struct DataValue::Converter<Basis3D>
+    {
+        static constexpr bool isSupported = true;
+
+        static void Write(const Basis3D& value, DataValue& data)
+        {
+            data.AddMember("xv").Set(value.xv);
+            data.AddMember("yv").Set(value.yv);
+            data.AddMember("zv").Set(value.zv);
+            data.AddMember("origin").Set(value.origin);
+        }
+
+        static void Read(Basis3D& value, const DataValue& data)
+        {
+            data.GetMember("xv").Get(value.xv);
+            data.GetMember("yv").Get(value.yv);
+            data.GetMember("zv").Get(value.zv);
+            data.GetMember("origin").Get(value.origin);
+        }
+    };
+
     template<typename TKey, typename TValue>
     struct DataValue::Converter<Pair<TKey, TValue>>
     {

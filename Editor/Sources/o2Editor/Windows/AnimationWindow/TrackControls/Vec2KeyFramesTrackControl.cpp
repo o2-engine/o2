@@ -89,7 +89,7 @@ namespace Editor
 
         mTool->SetSpline(mTrack.Lock()->spline, [&]() { 
             if (mTrackOwner && mTrackOwner.Lock()->GetParent())
-                return mTrackOwner.Lock()->GetParent().Lock()->transform->worldPosition.Get(); 
+                return mTrackOwner.Lock()->GetParent().Lock()->transform->worldPosition2D.Get(); 
 
             return Vec2F();
         });

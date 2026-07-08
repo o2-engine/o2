@@ -354,7 +354,7 @@ namespace Editor
         {
             Undock();
 
-            Vec2F size = layout->GetSize();
+            Vec2F size = layout->GetSize2D();
 
             if (auto headLayer = GetLayer(mTabLayerPath))
                 layout->worldLeftTop = o2Input.GetCursorPos() - headLayer->GetRect().Size().InvertedY()*0.5f;
@@ -390,7 +390,7 @@ namespace Editor
                 if (auto headLayer = GetLayer(mTabLayerPath))
                     anchor.y -= headLayer->GetRect().Height()*0.5f;
 
-                layout->worldPosition += o2Input.GetCursorPos() - anchor;
+                layout->worldPosition2D += o2Input.GetCursorPos() - anchor;
 
                 mDragOffset = Vec2F();
             }
@@ -398,7 +398,7 @@ namespace Editor
             return;
         }
 
-        layout->worldPosition += cursor.delta;
+        layout->worldPosition2D += cursor.delta;
 
         Ref<DockWindowPlace> targetDock;
         Side dockPosition = Side::None;
@@ -508,7 +508,7 @@ namespace Editor
     {
         PushEditorScopeOnStack scope;
 
-        mNonDockSize = layout->size;
+        mNonDockSize = layout->size2D;
 
         mTabPosition = targetDock->mChildren.Count();
 
@@ -527,7 +527,7 @@ namespace Editor
     {
         PushEditorScopeOnStack scope;
 
-        mNonDockSize = layout->size;
+        mNonDockSize = layout->size2D;
 
         auto windowDock = mmake<DockWindowPlace>();
         windowDock->name = "window dock";
@@ -584,7 +584,7 @@ namespace Editor
     {
         PushEditorScopeOnStack scope;
 
-        mNonDockSize = layout->size;
+        mNonDockSize = layout->size2D;
 
         auto windowDock = mmake<DockWindowPlace>();
         windowDock->name = "window dock";

@@ -35,6 +35,8 @@ namespace Editor
         Ref<Button>      mLayersButton; // Layers button
         Ref<LayersPopup> mLayersPopup;  // Layers popup
 
+        Ref<Button> mView3DButton; // 3D view mode toggle button
+
         Ref<PopupWidget> mGizomsView; // Gizoms view
 
     public:
@@ -95,6 +97,7 @@ CLASS_FIELDS_META(Editor::SceneWindow)
     FIELD().PROTECTED().NAME(mEditWidget);
     FIELD().PROTECTED().NAME(mLayersButton);
     FIELD().PROTECTED().NAME(mLayersPopup);
+    FIELD().PROTECTED().NAME(mView3DButton);
     FIELD().PROTECTED().NAME(mGizomsView);
 }
 END_META;

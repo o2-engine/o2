@@ -15,8 +15,8 @@ namespace
     Ref<Actor> MakeSizedActor(const Vec2F& pos, const Vec2F& size)
     {
         auto a = mmake<Actor>(ActorCreateMode::InScene);
-        a->transform->SetPosition(pos);
-        a->transform->SetSize(size);
+        a->transform->SetPosition2D(pos);
+        a->transform->SetSize2D(size);
         TickScene();
         return a;
     }

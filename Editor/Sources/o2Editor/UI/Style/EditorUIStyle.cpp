@@ -61,6 +61,7 @@
 #include "o2Editor/Properties/Basic/TagProperty.h"
 #include "o2Editor/Properties/Basic/Vector2FloatProperty.h"
 #include "o2Editor/Properties/Basic/Vector2IntProperty.h"
+#include "o2Editor/Properties/Basic/Vector3FloatProperty.h"
 #include "o2Editor/Properties/Basic/WStringProperty.h"
 #include "o2Editor/UI/SpoilerWithHead.h"
 #include "o2Editor/UI/Style/BasicUIStyle.h"
@@ -332,7 +333,7 @@ namespace Editor
         list->RemoveLayer("back");
         list->AddLayer("back", mmake<Sprite>("ui/UI4_Context_menu.png"), Layout::BothStretch(-21, -19, -19, -19));
 
-        list->layout->pivot = Vec2F(0.5f, 1.0f);
+        list->layout->pivot2D = Vec2F(0.5f, 1.0f);
         list->layout->anchorMin = Vec2F(0, 0);
         list->layout->anchorMax = Vec2F(1, 0);
         list->layout->offsetMin = Vec2F(0, -60);
@@ -398,7 +399,7 @@ namespace Editor
         list->RemoveLayer("back");
         list->AddLayer("back", mmake<Sprite>("ui/UI4_Context_menu.png"), Layout::BothStretch(-21, -19, -19, -19));
 
-        list->layout->pivot = Vec2F(0.5f, 1.0f);
+        list->layout->pivot2D = Vec2F(0.5f, 1.0f);
         list->layout->anchorMin = Vec2F(0, 0);
         list->layout->anchorMax = Vec2F(1, 0);
         list->layout->offsetMin = Vec2F(0, -60);
@@ -1483,7 +1484,7 @@ namespace Editor
         *list = *o2UI.GetWidgetStyle<CustomList>("standard");
         list->SetViewLayout(Layout::BothStretch(2, 2, 2, 2));
         list->layer["back"]->SetDrawable(mmake<Sprite>("ui/UI4_Box_regular.png"));
-        list->layout->pivot = Vec2F(0.5f, 1.0f);
+        list->layout->pivot2D = Vec2F(0.5f, 1.0f);
         list->layout->anchorMin = Vec2F(0, 0);
         list->layout->anchorMax = Vec2F(1, 0);
         list->layout->offsetMin = Vec2F(0, -60);
@@ -1916,7 +1917,7 @@ namespace Editor
         *list = *o2UI.GetWidgetStyle<CustomList>("standard");
         list->SetViewLayout(Layout::BothStretch(2, 2, 2, 2));
         list->layer["back"]->SetDrawable(mmake<Sprite>("ui/UI4_Box_regular.png"));
-        list->layout->pivot = Vec2F(0.5f, 1.0f);
+        list->layout->pivot2D = Vec2F(0.5f, 1.0f);
         list->layout->anchorMin = Vec2F(0, 0);
         list->layout->anchorMax = Vec2F(1, 0);
         list->layout->offsetMin = Vec2F(-1, -60);
@@ -2574,6 +2575,45 @@ namespace Editor
         caretDrawable->color = Color4::Black();
 
         o2UI.AddWidgetStyle(sample, "green singleline");
+    }
+
+    void EditorUIStyleBuilder::RebuildBlueEditBoxStyle()
+    {
+        Ref<EditBox> sample = mmake<EditBox>();
+        sample->SetClippingLayout(Layout::BothStretch(0, 0, 10, 0));
+        sample->SetViewLayout(Layout::BothStretch(3, 1, 8, -1));
+        sample->SetCaretBlinkingDelay(1.15f);
+        sample->SetMultiLine(false);
+        sample->SetSelectionColor(Color4(0, 156, 141, 120));
+        sample->layout->minSize = Vec2F(10, 10);
+
+        auto backLayer = sample->AddLayer("back", mmake<Sprite>("ui/UI4_blue_edit_box.png"), Layout::BothStretch(-4, -4, -4, -4));
+        auto hoverLayer = sample->AddLayer("hover", mmake<Sprite>("ui/UI4_Editbox_select.png"), Layout::BothStretch(-9, -9, -9, -9));
+        auto focusLayer = sample->AddLayer("focus", mmake<Sprite>("ui/UI4_Editbox_focus.png"), Layout::BothStretch(-9, -9, -9, -9));
+        sample->AddLayer("arrows", mmake<Sprite>("ui/UI4_ch_arrows.png"),
+                         Layout::Based(BaseCorner::Right, Vec2F(10, 20), Vec2F(0, 0)));
+
+        sample->AddState("visible", AnimationClip::EaseInOut("transparency", 0.0f, 1.0f, 0.2f))
+            ->offStateAnimationSpeed = 0.5f;
+
+        auto focusAnim = AnimationClip::EaseInOut("layer/focus/transparency", 0.0f, 1.0f, 0.05f);
+        *focusAnim->AddTrack<float>("layer/hover/transparency") = AnimationTrack<float>::EaseInOut(0.0f, 1.0f, 0.05f);
+        sample->AddState("focused", focusAnim)
+            ->offStateAnimationSpeed = 0.5f;
+
+        Ref<Text> textDrawable = sample->GetTextDrawable();
+        textDrawable->verAlign = VerAlign::Middle;
+        textDrawable->horAlign = HorAlign::Left;
+        textDrawable->color = Color4(96, 125, 139);
+        textDrawable->SetFontAsset(AssetRef<FontAsset>("stdFont.ttf"));
+
+        Ref<Sprite> caretDrawable = sample->GetCaretDrawable();
+        *caretDrawable = Sprite();
+        caretDrawable->size = Vec2F(1, textDrawable->GetFont()->GetHeightPx(textDrawable->GetFontHeight()) * 1.7f);
+        caretDrawable->pivot = Vec2F(0, 0.26f);
+        caretDrawable->color = Color4::Black();
+
+        o2UI.AddWidgetStyle(sample, "blue singleline");
     }
 
     void EditorUIStyleBuilder::RebuildPreviewMenuToggle()
@@ -4087,6 +4127,32 @@ namespace Editor
         o2UI.AddWidgetStyle(sample, "green");
     }
 
+    void EditorUIStyleBuilder::RebuildBlueFloatProperty()
+    {
+        auto sample = mmake<FloatProperty>();
+        sample->layout->minHeight = 20;
+        sample->expandHeight = true;
+        sample->expandWidth = true;
+        sample->fitByChildren = false;
+
+        auto layoutContainer = mmake<Widget>();
+        layoutContainer->name = "container";
+        *layoutContainer->layout = WidgetLayout::BothStretch();
+        sample->AddChild(layoutContainer);
+
+        auto layout = mmake<HorizontalLayout>();
+        layout->name = "layout";
+        *layout->layout = WidgetLayout::BothStretch();
+        layoutContainer->AddChild(layout);
+
+        auto editBox = o2UI.CreateEditBox("blue singleline");
+        editBox->name = "editBox";
+        *editBox->layout = WidgetLayout::BothStretch();
+        layout->AddChild(editBox);
+
+        o2UI.AddWidgetStyle(sample, "blue");
+    }
+
     void EditorUIStyleBuilder::RebuildIntegerProperty()
     {
         auto sample = mmake<IntegerProperty>();
@@ -5034,6 +5100,67 @@ namespace Editor
         o2UI.AddWidgetStyle(sample, "standard");
     }
 
+    void EditorUIStyleBuilder::RebuildVector3FProperty()
+    {
+        auto sample = mmake<Vec3FProperty>();
+        sample->layout->minHeight = 20;
+        sample->expandHeight = true;
+        sample->expandWidth = true;
+        sample->fitByChildren = false;
+
+        auto layoutContainer = mmake<Widget>();
+        layoutContainer->name = "container";
+        *layoutContainer->layout = WidgetLayout::BothStretch();
+        sample->AddChild(layoutContainer);
+
+        auto layout = mmake<HorizontalLayout>();
+        layout->name = "layout";
+        *layout->layout = WidgetLayout::BothStretch();
+        layoutContainer->AddChild(layout);
+
+        auto propertiesLayout = mmake<Widget>();
+        propertiesLayout->name = "properties";
+        *propertiesLayout->layout = WidgetLayout::BothStretch();
+        layout->AddChild(propertiesLayout);
+
+        const float third = 1.0f/3.0f;
+
+        auto xLabel = o2UI.CreateLabel("X");
+        xLabel->name = "x label";
+        xLabel->horOverflow = Label::HorOverflow::None;
+        *xLabel->layout = WidgetLayout::Based(BaseCorner::Left, Vec2F(20, 20), Vec2F());
+        propertiesLayout->AddChild(xLabel);
+
+        auto xProperty = o2UI.CreateWidget<FloatProperty>();
+        xProperty->name = "x";
+        *xProperty->layout = WidgetLayout(Vec2F(0, 0), Vec2F(third, 1.0f), Vec2F(20, 0), Vec2F(0, 0));
+        propertiesLayout->AddChild(xProperty);
+
+        auto yLabel = o2UI.CreateLabel("Y");
+        yLabel->name = "y label";
+        yLabel->horOverflow = Label::HorOverflow::None;
+        *yLabel->layout = WidgetLayout(Vec2F(third, 0), Vec2F(third, 0), Vec2F(0, 0), Vec2F(20, 20));
+        propertiesLayout->AddChild(yLabel);
+
+        auto yProperty = o2UI.CreateWidget<FloatProperty>();
+        yProperty->name = "y";
+        *yProperty->layout = WidgetLayout(Vec2F(third, 0), Vec2F(third*2.0f, 1.0f), Vec2F(20, 0), Vec2F(0, 0));
+        propertiesLayout->AddChild(yProperty);
+
+        auto zLabel = o2UI.CreateLabel("Z");
+        zLabel->name = "z label";
+        zLabel->horOverflow = Label::HorOverflow::None;
+        *zLabel->layout = WidgetLayout(Vec2F(third*2.0f, 0), Vec2F(third*2.0f, 0), Vec2F(0, 0), Vec2F(20, 20));
+        propertiesLayout->AddChild(zLabel);
+
+        auto zProperty = o2UI.CreateWidget<FloatProperty>();
+        zProperty->name = "z";
+        *zProperty->layout = WidgetLayout(Vec2F(third*2.0f, 0), Vec2F(1.0f, 1.0f), Vec2F(20, 0), Vec2F(0, 0));
+        propertiesLayout->AddChild(zProperty);
+
+        o2UI.AddWidgetStyle(sample, "standard");
+    }
+
     void EditorUIStyleBuilder::RebuildVector2IProperty()
     {
         auto sample = mmake<Vec2IProperty>();
@@ -5130,6 +5257,67 @@ namespace Editor
         o2UI.AddWidgetStyle(sample, "colored");
     }
 
+    void EditorUIStyleBuilder::RebuildColoredVector3Property()
+    {
+        auto sample = mmake<Vec3FProperty>();
+        sample->layout->minHeight = 20;
+        sample->expandHeight = true;
+        sample->expandWidth = true;
+        sample->fitByChildren = false;
+
+        auto layoutContainer = mmake<Widget>();
+        layoutContainer->name = "container";
+        *layoutContainer->layout = WidgetLayout::BothStretch();
+        sample->AddChild(layoutContainer);
+
+        auto layout = mmake<HorizontalLayout>();
+        layout->name = "layout";
+        *layout->layout = WidgetLayout::BothStretch();
+        layoutContainer->AddChild(layout);
+
+        auto propertiesLayout = mmake<Widget>();
+        propertiesLayout->name = "properties";
+        *propertiesLayout->layout = WidgetLayout::BothStretch();
+        layout->AddChild(propertiesLayout);
+
+        const float third = 1.0f/3.0f;
+
+        auto xLabel = o2UI.CreateLabel("X");
+        xLabel->name = "x label";
+        xLabel->horOverflow = Label::HorOverflow::None;
+        *xLabel->layout = WidgetLayout::Based(BaseCorner::Left, Vec2F(20, 20), Vec2F());
+        propertiesLayout->AddChild(xLabel);
+
+        auto xProperty = o2UI.CreateWidget<FloatProperty>("red");
+        xProperty->name = "x";
+        *xProperty->layout = WidgetLayout(Vec2F(0, 0), Vec2F(third, 1.0f), Vec2F(20, 0), Vec2F(0, 0));
+        propertiesLayout->AddChild(xProperty);
+
+        auto yLabel = o2UI.CreateLabel("Y");
+        yLabel->name = "y label";
+        yLabel->horOverflow = Label::HorOverflow::None;
+        *yLabel->layout = WidgetLayout(Vec2F(third, 0), Vec2F(third, 0), Vec2F(0, 0), Vec2F(20, 20));
+        propertiesLayout->AddChild(yLabel);
+
+        auto yProperty = o2UI.CreateWidget<FloatProperty>("green");
+        yProperty->name = "y";
+        *yProperty->layout = WidgetLayout(Vec2F(third, 0), Vec2F(third*2.0f, 1.0f), Vec2F(20, 0), Vec2F(0, 0));
+        propertiesLayout->AddChild(yProperty);
+
+        auto zLabel = o2UI.CreateLabel("Z");
+        zLabel->name = "z label";
+        zLabel->horOverflow = Label::HorOverflow::None;
+        *zLabel->layout = WidgetLayout(Vec2F(third*2.0f, 0), Vec2F(third*2.0f, 0), Vec2F(0, 0), Vec2F(20, 20));
+        propertiesLayout->AddChild(zLabel);
+
+        auto zProperty = o2UI.CreateWidget<FloatProperty>("blue");
+        zProperty->name = "z";
+        *zProperty->layout = WidgetLayout(Vec2F(third*2.0f, 0), Vec2F(1.0f, 1.0f), Vec2F(20, 0), Vec2F(0, 0));
+        propertiesLayout->AddChild(zProperty);
+
+        o2UI.AddWidgetStyle(sample, "colored");
+    }
+
     void EditorUIStyleBuilder::RebuildPropertiesWithCaptins()
     {
         BuildPropertyWithCaption<ActorProperty>("standard", "with caption");
@@ -5150,6 +5338,8 @@ namespace Editor
         BuildPropertyWithCaption<TagsProperty>("standard", "with caption");
         BuildPropertyWithCaption<Vec2FProperty>("standard", "with caption");
         BuildPropertyWithCaption<Vec2FProperty>("colored", "colored with caption");
+        BuildPropertyWithCaption<Vec3FProperty>("standard", "with caption");
+        BuildPropertyWithCaption<Vec3FProperty>("colored", "colored with caption");
         BuildPropertyWithCaption<Vec2IProperty>("standard", "with caption");
         BuildPropertyWithCaption<WStringProperty>("standard", "with caption");
         BuildPropertyWithCaption<SceneLayersListProperty>("standard", "with caption");

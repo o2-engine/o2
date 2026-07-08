@@ -196,7 +196,8 @@ namespace o2
 
         for (auto&& fieldInfo : objectType.GetFields())
         {
-            if (!fieldInfo.HasAttribute<SerializableAttribute>() && !fieldInfo.HasAttribute<PrototypeDeltaSearchAttribute>())
+            if (!fieldInfo.HasAttribute<SerializableAttribute>() && !fieldInfo.HasAttribute<PrototypeDeltaSearchAttribute>() &&
+                !fieldInfo.HasAttribute<ISerializeIfAttribute>())
                 continue;
 
             if (auto serializeIfAttr = fieldInfo.GetAttribute<ISerializeIfAttribute>())

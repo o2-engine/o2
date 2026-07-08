@@ -33,7 +33,7 @@ namespace Editor
             const float handleSize = 5;
             Vec2F drawableSize(bones.first.Lock()->length, handleSize);
 
-            boneHandle->handle->position = compTransform->worldPosition;
+            boneHandle->handle->position = compTransform->worldPosition2D;
 
             boneHandle->handle->GetRegularDrawable()->size = drawableSize;
             boneHandle->handle->GetHoverDrawable()->size = drawableSize;
@@ -212,7 +212,7 @@ namespace Editor
     {
         auto compTransform = boneComponent->GetActor()->transform;
         float angle = compTransform->GetWorldBasis().GetAngle();
-        handle->position = compTransform->worldPosition;
+        handle->position = compTransform->worldPosition2D;
 
         handle->GetRegularDrawable()->angle = angle;
         handle->GetHoverDrawable()->angle = angle;
@@ -229,7 +229,7 @@ namespace Editor
         float angle = pressedDir.Angle(currentDir);
 
         auto compTransform = boneComponent->GetActor()->transform;
-        auto worldPos = compTransform->GetWorldPosition();
+        auto worldPos = compTransform->GetWorldPosition2D();
         Basis transform = Basis::Translated(worldPos*-1.0f)
             *Basis::Rotated(angle)
             *Basis::Translated(worldPos);
