@@ -1,14 +1,18 @@
 #include "o2Editor/stdafx.h"
 #include "KeyFramesTrackControl.h"
 
+#include "o2/Animation/Tracks/AnimationVec3FTrack.h"
+
 DECLARE_TEMPLATE_CLASS_MANUAL_ID(Editor::KeyFramesTrackControl<AnimationTrack<float>>, Editor__KeyFramesTrackControl_AnimationTrack_float__);
 DECLARE_TEMPLATE_CLASS_MANUAL_ID(Editor::KeyFramesTrackControl<AnimationTrack<bool>>, Editor__KeyFramesTrackControl_AnimationTrack_bool__);
 DECLARE_TEMPLATE_CLASS_MANUAL_ID(Editor::KeyFramesTrackControl<AnimationTrack<Color4>>, Editor__KeyFramesTrackControl_AnimationTrack_Color4__);
 DECLARE_TEMPLATE_CLASS_MANUAL_ID(Editor::KeyFramesTrackControl<AnimationTrack<Vec2F>>, Editor__KeyFramesTrackControl_AnimationTrack_Vec2F__);
+DECLARE_TEMPLATE_CLASS_MANUAL_ID(Editor::KeyFramesTrackControl<AnimationTrack<Vec3F>>, Editor__KeyFramesTrackControl_AnimationTrack_Vec3F__);
 DECLARE_TEMPLATE_CLASS(o2::LinkRef<Editor::KeyFramesTrackControl<AnimationTrack<float>>>);
 DECLARE_TEMPLATE_CLASS(o2::LinkRef<Editor::KeyFramesTrackControl<AnimationTrack<bool>>>);
 DECLARE_TEMPLATE_CLASS(o2::LinkRef<Editor::KeyFramesTrackControl<AnimationTrack<Color4>>>);
 DECLARE_TEMPLATE_CLASS(o2::LinkRef<Editor::KeyFramesTrackControl<AnimationTrack<Vec2F>>>);
+DECLARE_TEMPLATE_CLASS(o2::LinkRef<Editor::KeyFramesTrackControl<AnimationTrack<Vec3F>>>);
 
 namespace Editor
 {

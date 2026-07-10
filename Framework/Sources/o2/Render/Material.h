@@ -345,6 +345,12 @@ namespace o2
         // Returns color attachment texture formats; empty - all attachments use the default format
         const Vector<TextureFormat>& GetColorAttachmentFormats() const;
 
+        // Marks the material shaders as expecting the skinned vertex layout (SkinnedVertex)
+        void SetVertexLayoutSkinned(bool skinned);
+
+        // Returns true when the material shaders expect the skinned vertex layout
+        bool IsVertexLayoutSkinned() const;
+
         // Creates material from builtin shader source files (BuiltAssets/FrameworkData/Shaders/<name>.vsh/.fsh);
         // returns null when files are missing or compilation fails. The material isn't built yet
         static Ref<Material> CreateFromBuiltinShaders(const String& shadersName);
@@ -395,6 +401,8 @@ namespace o2
         int mColorAttachmentsCount = 1; // Number of color attachments material renders to (MRT) @SERIALIZABLE
 
         Vector<TextureFormat> mColorAttachmentFormats; // Per-attachment texture formats; empty - default format @SERIALIZABLE
+
+        bool mVertexLayoutSkinned = false; // True when shaders expect the skinned vertex layout; runtime only
 
 		Vector<Ref<IShaderParam>> mParams;   // Shader parameter list @SERIALIZABLE @EDITOR_PROPERTY @EXPANDED_BY_DEFAULT
 		Vector<TextureSampler>    mSamplers; // Additional texture samplers @SERIALIZABLE @EDITOR_PROPERTY @EXPANDED_BY_DEFAULT
@@ -598,6 +606,7 @@ CLASS_FIELDS_META(o2::Material)
     FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(BlendMode::Normal).NAME(mBlendMode);
     FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(1).NAME(mColorAttachmentsCount);
     FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().NAME(mColorAttachmentFormats);
+    FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mVertexLayoutSkinned);
     FIELD().PROTECTED().EDITOR_PROPERTY_ATTRIBUTE().EXPANDED_BY_DEFAULT_ATTRIBUTE().SERIALIZABLE_ATTRIBUTE().NAME(mParams);
     FIELD().PROTECTED().EDITOR_PROPERTY_ATTRIBUTE().EXPANDED_BY_DEFAULT_ATTRIBUTE().SERIALIZABLE_ATTRIBUTE().NAME(mSamplers);
     FIELD().PROTECTED().DEFAULT_VALUE(0).NAME(mHash);
@@ -635,6 +644,8 @@ CLASS_METHODS_META(o2::Material)
     FUNCTION().PUBLIC().SIGNATURE(int, GetColorAttachmentsCount);
     FUNCTION().PUBLIC().SIGNATURE(void, SetColorAttachmentFormats, const Vector<TextureFormat>&);
     FUNCTION().PUBLIC().SIGNATURE(const Vector<TextureFormat>&, GetColorAttachmentFormats);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetVertexLayoutSkinned, bool);
+    FUNCTION().PUBLIC().SIGNATURE(bool, IsVertexLayoutSkinned);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(Ref<Material>, CreateFromBuiltinShaders, const String&);
     FUNCTION().PUBLIC().SIGNATURE(bool, Build);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsReady);

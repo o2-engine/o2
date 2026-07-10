@@ -187,8 +187,8 @@ namespace o2
 	Material::Material(const Material& other):
 		mVertexShader(other.mVertexShader), mFragmentShader(other.mFragmentShader), mTexture(other.mTexture),
 		mBlendMode(other.mBlendMode), mColorAttachmentsCount(other.mColorAttachmentsCount),
-		mColorAttachmentFormats(other.mColorAttachmentFormats), mSamplers(other.mSamplers),
-		mHashDirty(true)
+		mColorAttachmentFormats(other.mColorAttachmentFormats), mVertexLayoutSkinned(other.mVertexLayoutSkinned),
+		mSamplers(other.mSamplers), mHashDirty(true)
 	{
 		for (auto& param : other.mParams)
 			mParams.Add(param->CloneAsRef<IShaderParam>());
@@ -404,6 +404,16 @@ namespace o2
 	const Vector<TextureFormat>& Material::GetColorAttachmentFormats() const
 	{
 		return mColorAttachmentFormats;
+	}
+
+	void Material::SetVertexLayoutSkinned(bool skinned)
+	{
+		mVertexLayoutSkinned = skinned;
+	}
+
+	bool Material::IsVertexLayoutSkinned() const
+	{
+		return mVertexLayoutSkinned;
 	}
 
 	Ref<Material> Material::CreateFromBuiltinShaders(const String& shadersName)

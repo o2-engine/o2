@@ -8,8 +8,10 @@ namespace Editor
 {
     class ITrackControl;
 
-    class AnimationKeyDragHandle : public WidgetDragHandle
-    { 
+    // Plain drag handle, not a widget: thousands of key handles must not participate
+    // in the widget layout and update passes
+    class AnimationKeyDragHandle : public DragHandle
+    {
     public:
         String trackPath;
 
@@ -44,9 +46,6 @@ namespace Editor
         // Draws handle
         void Draw() override;
 
-        // Returns create menu category in editor
-        static String GetCreateMenuCategory();
-
         SERIALIZABLE(AnimationKeyDragHandle);
     };
 }
@@ -54,7 +53,7 @@ namespace Editor
 
 CLASS_BASES_META(Editor::AnimationKeyDragHandle)
 {
-    BASE_CLASS(o2::WidgetDragHandle);
+    BASE_CLASS(o2::DragHandle);
 }
 END_META;
 CLASS_FIELDS_META(Editor::AnimationKeyDragHandle)
@@ -74,7 +73,6 @@ CLASS_METHODS_META(Editor::AnimationKeyDragHandle)
     FUNCTION().PUBLIC().CONSTRUCTOR(RefCounter*, const AnimationKeyDragHandle&);
     FUNCTION().PUBLIC().CONSTRUCTOR(const AnimationKeyDragHandle&);
     FUNCTION().PUBLIC().SIGNATURE(void, Draw);
-    FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetCreateMenuCategory);
 }
 END_META;
 // --- END META ---

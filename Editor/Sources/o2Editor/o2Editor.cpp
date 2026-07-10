@@ -9,6 +9,7 @@ extern void __RegisterTemplateClass__Editor__KeyFramesTrackControl_AnimationTrac
 extern void __RegisterTemplateClass__Editor__KeyFramesTrackControl_AnimationTrack_bool__();
 extern void __RegisterTemplateClass__Editor__KeyFramesTrackControl_AnimationTrack_Color4__();
 extern void __RegisterTemplateClass__Editor__KeyFramesTrackControl_AnimationTrack_Vec2F__();
+extern void __RegisterTemplateClass__Editor__KeyFramesTrackControl_AnimationTrack_Vec3F__();
 extern void __RegisterClass__Editor__AddComponentAction();
 extern void __RegisterClass__Editor__AddComponentAction__ComponentInfo();
 extern void __RegisterClass__Editor__BoneTransformAction();
@@ -213,6 +214,7 @@ extern void InitializeTypeso2Editor()
     __RegisterTemplateClass__Editor__KeyFramesTrackControl_AnimationTrack_bool__();
     __RegisterTemplateClass__Editor__KeyFramesTrackControl_AnimationTrack_Color4__();
     __RegisterTemplateClass__Editor__KeyFramesTrackControl_AnimationTrack_Vec2F__();
+    __RegisterTemplateClass__Editor__KeyFramesTrackControl_AnimationTrack_Vec3F__();
     __RegisterClass__Editor__AddComponentAction();
     __RegisterClass__Editor__AddComponentAction__ComponentInfo();
     __RegisterClass__Editor__BoneTransformAction();

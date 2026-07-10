@@ -475,6 +475,7 @@ namespace o2
             }
 
             parent->OnChildrenChanged();
+            parent->InvalidateInheritedDrawablesSorting();
         }
         else
         {

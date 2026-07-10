@@ -74,6 +74,9 @@ namespace o2
 
         Vector<Ref<ISceneDrawable>> mChildrenInheritedDepth; // List of children who inherited depth
 
+        bool mInheritedDrawablesSortDirty = false;   // Children order changed, sorting is deferred to drawing
+        bool mInheritedDrawablesManualOrder = false; // Owner manages children order itself, deferred sorting is disabled
+
     protected:
         // Returns current scene layer
         virtual Ref<SceneLayer> GetSceneDrawableSceneLayer() const { return nullptr; }
@@ -86,6 +89,12 @@ namespace o2
 
         // Sorts depth-inheriting drawables
 		void SortInheritedDrawables();
+
+        // Marks depth-inheriting drawables order as changed; sorting is deferred to UpdateInheritedDrawablesSorting
+        void InvalidateInheritedDrawablesSorting();
+
+        // Sorts depth-inheriting drawables if their order was invalidated; called before iterating them
+        void UpdateInheritedDrawablesSorting();
 
 		// Draws children with inherited depth
 		virtual void DrawInheritedDepthChildren();
@@ -167,6 +176,8 @@ CLASS_FIELDS_META(o2::ISceneDrawable)
     FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(0.0f).NAME(mDrawingDepth);
     FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(true).NAME(mInheritDrawingDepthFromParent);
     FIELD().PROTECTED().NAME(mChildrenInheritedDepth);
+    FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mInheritedDrawablesSortDirty);
+    FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mInheritedDrawablesManualOrder);
 #if  IS_EDITOR
     FIELD().PUBLIC().EDITOR_IGNORE_ATTRIBUTE().DEFAULT_VALUE(0).NAME(drawCallIdx);
 #endif
@@ -188,6 +199,8 @@ CLASS_METHODS_META(o2::ISceneDrawable)
     FUNCTION().PROTECTED().SIGNATURE(Ref<ISceneDrawable>, GetParentDrawable);
     FUNCTION().PROTECTED().SIGNATURE(int, GetIndexInParentDrawable);
     FUNCTION().PROTECTED().SIGNATURE(void, SortInheritedDrawables);
+    FUNCTION().PROTECTED().SIGNATURE(void, InvalidateInheritedDrawablesSorting);
+    FUNCTION().PROTECTED().SIGNATURE(void, UpdateInheritedDrawablesSorting);
     FUNCTION().PROTECTED().SIGNATURE(void, DrawInheritedDepthChildren);
     FUNCTION().PROTECTED().SIGNATURE(void, OnDrawbleParentChanged);
     FUNCTION().PROTECTED().SIGNATURE(void, OnDrawableLayerChanged);

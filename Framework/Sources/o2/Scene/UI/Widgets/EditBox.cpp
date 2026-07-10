@@ -95,8 +95,7 @@ namespace o2
         if (mIsFocused)
             mCaretDrawable->Draw();
 
-        for (auto& child : mChildrenInheritedDepth)
-            child->Draw();
+        DrawInheritedDepthChildren();
 
         o2Render.DisableScissorTest();
 

@@ -1,6 +1,9 @@
 #include "o2Editor/stdafx.h"
 #include "MapKeyFramesTrackControl.h"
 
+#include <unordered_set>
+
+#include "o2/Animation/Tracks/AnimationVec3FTrack.h"
 #include "o2/Scene/ActorTransform.h"
 #include "o2/Scene/UI/WidgetLayout.h"
 #include "o2Editor/Windows/AnimationWindow/KeyHandlesSheet.h"
@@ -35,10 +38,37 @@ namespace Editor
 
         OnDrawn();
 
-        o2Render.EnableScissorTest(mTimeline.Lock()->layout->GetWorldRect());
+        auto timeline = mTimeline.Lock();
 
-        for (auto& child : mChildrenInheritedDepth)
-            child->Draw();
+        o2Render.EnableScissorTest(timeline->layout->GetWorldRect());
+
+        // Mapped keys of different tracks stack at the same times: only the first handle
+        // per pixel is drawn, selected and hovered ones are drawn on top
+        std::unordered_set<int> drawnPixels;
+        Vector<Ref<AnimationKeyDragHandle>> topHandles;
+
+        for (auto& kv : mHandlesGroups)
+        {
+            for (auto& keyHandle : kv.second->handles)
+            {
+                auto& handle = keyHandle->handle;
+                if (!handle->IsEnabled())
+                    continue;
+
+                if (handle->IsSelected() || handle->IsHovered())
+                {
+                    topHandles.Add(handle);
+                    continue;
+                }
+
+                int pixel = (int)timeline->LocalToWorld(handle->GetPosition().x);
+                if (drawnPixels.insert(pixel).second)
+                    handle->Draw();
+            }
+        }
+
+        for (auto& handle : topHandles)
+            handle->Draw();
 
         o2Render.DisableScissorTest();
 
@@ -51,6 +81,23 @@ namespace Editor
         mTracks.Clear();
 
         InitializeNodeHandles(valueNode);
+        CleanupCachedHandles();
+    }
+
+    void MapKeyFramesTrackControl::CleanupCachedHandles()
+    {
+        if (mHandlesCache.IsEmpty())
+            return;
+
+        Vector<Ref<DragHandle>> sheetHandles;
+        for (auto& handle : mHandlesCache)
+        {
+            handle->SetEnabled(false);
+            sheetHandles.Add(handle);
+        }
+
+        if (auto handlesSheet = mHandlesSheet.Lock())
+            handlesSheet->RemoveHandles(sheetHandles);
     }
 
     void MapKeyFramesTrackControl::Initialize(const Ref<AnimationTimeline>& timeline, const Ref<KeyHandlesSheet>& handlesSheet)
@@ -79,6 +126,8 @@ namespace Editor
                 newGroup = mmake<HandlesGroup<AnimationTrack<bool>>>();
             else if (auto animatedValue = DynamicCast<AnimationTrack<Vec2F>>(valueNode.track))
                 newGroup = mmake<HandlesGroup<AnimationTrack<Vec2F>>>();
+            else if (auto animatedValue = DynamicCast<AnimationTrack<Vec3F>>(valueNode.track))
+                newGroup = mmake<HandlesGroup<AnimationTrack<Vec3F>>>();
             else if (auto animatedValue = DynamicCast<AnimationTrack<Color4>>(valueNode.track))
                 newGroup = mmake<HandlesGroup<AnimationTrack<Color4>>>();
 
@@ -162,18 +211,12 @@ namespace Editor
             return Vec2F(position, layout->GetHeight()*0.5f);
         };
 
-        handle->localToWidgetOffsetTransformFunc = [&](const Vec2F& pos) {
-            float worldXPos = mTimeline.Lock()->LocalToWorld(pos.x);
-            float localXPos = worldXPos - layout->GetWorldLeft();
-
-            return Vec2F(localXPos, 0);
+        handle->localToScreenTransformFunc = [&](const Vec2F& pos) {
+            return Vec2F(mTimeline.Lock()->LocalToWorld(pos.x), layout->GetWorldBottom());
         };
 
-        handle->widgetOffsetToLocalTransformFunc = [&](const Vec2F& pos) {
-            float worldXPos = layout->GetWorldLeft() + pos.x;
-            float localXPos = mTimeline.Lock()->WorldToLocal(worldXPos);
-
-            return Vec2F(localXPos, 0);
+        handle->screenToLocalTransformFunc = [&](const Vec2F& pos) {
+            return Vec2F(mTimeline.Lock()->WorldToLocal(pos.x), 0.0f);
         };
 
         return handle;
@@ -217,12 +260,11 @@ namespace Editor
     {
         auto trackControlRef = trackControl.Lock();
 
+        // Handles stay enabled and grouped for fast reuse in CreateHandles;
+        // not reused ones are disabled in CleanupCachedHandles
         for (auto& keyHandle : handles)
         {
-            keyHandle->handle->SetParent(nullptr);
-            keyHandle->handle->SetEnabled(false);
             keyHandle->handle->SetSelected(false);
-            keyHandle->handle->SetSelectionGroup(nullptr);
             trackControlRef->mHandlesCache.Add(keyHandle->handle);
         }
 

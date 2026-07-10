@@ -1,6 +1,8 @@
 #include "o2Editor/stdafx.h"
 #include "KeyHandlesSheet.h"
 
+#include <unordered_set>
+
 #include "o2/Animation/Tracks/AnimationTrack.h"
 #include "o2/Animation/AnimationClip.h"
 #include "o2/Scene/UI/UIManager.h"
@@ -102,9 +104,11 @@ namespace Editor
 
         CursorAreaEventsListener::OnDrawn();
 
+        // Not drawn handles are either occluded pixel-stacked duplicates or invisible,
+        // input goes to the drawn ones
         for (auto& handle : mHandles)
         {
-            if (handle->IsEnabled())
+            if (handle->IsEnabled() && handle->IsDrawnThisFrame())
                 handle->CursorAreaEventsListener::OnDrawn();
         }
 
@@ -146,7 +150,8 @@ namespace Editor
     {
         mTrackControls.Clear();
         mTrackControlsMap.Clear();
-        mHandles.Clear();
+        mHandlesGroups.Clear();
+        ClearHandles();
     }
 
     void KeyHandlesSheet::AddHandle(const Ref<DragHandle>& handle)
@@ -169,6 +174,55 @@ namespace Editor
             mHandlesGroups[animHandle->track.Lock()].RemoveFirst([&](auto& x) { return x == animHandle; });
 
         SelectableDragHandlesGroup::RemoveHandle(handle);
+    }
+
+    void KeyHandlesSheet::AddHandles(const Vector<Ref<DragHandle>>& handles)
+    {
+        // Handles already bound to this sheet are registered in groups too
+        for (auto& handle : handles)
+        {
+            if (handle->GetSelectionGroup().Get() == static_cast<ISelectableDragHandlesGroup*>(this))
+                continue;
+
+            auto animHandle = DynamicCast<AnimationKeyDragHandle>(handle);
+            if (!animHandle)
+                continue;
+
+            auto track = animHandle->track.Lock();
+            if (!mHandlesGroups.ContainsKey(track))
+                mHandlesGroups.Add(track, {});
+
+            mHandlesGroups[track].Add(animHandle);
+        }
+
+        SelectableDragHandlesGroup::AddHandles(handles);
+    }
+
+    void KeyHandlesSheet::RemoveHandles(const Vector<Ref<DragHandle>>& handles)
+    {
+        Map<Ref<IAnimationTrack>, std::unordered_set<AnimationKeyDragHandle*>> removingByTrack;
+
+        for (auto& handle : handles)
+        {
+            if (handle->GetSelectionGroup().Get() != static_cast<ISelectableDragHandlesGroup*>(this))
+                continue;
+
+            if (auto animHandle = DynamicCast<AnimationKeyDragHandle>(handle))
+                removingByTrack[animHandle->track.Lock()].insert(animHandle.Get());
+        }
+
+        for (auto& kv : removingByTrack)
+        {
+            if (!mHandlesGroups.ContainsKey(kv.first))
+                continue;
+
+            auto& group = mHandlesGroups[kv.first];
+            group.erase(std::remove_if(group.begin(), group.end(),
+                                       [&](auto& x) { return kv.second.find(x.Get()) != kv.second.end(); }),
+                        group.end());
+        }
+
+        SelectableDragHandlesGroup::RemoveHandles(handles);
     }
 
     void KeyHandlesSheet::SetSelectedKeys(const Map<String, Vector<UInt64>>& keys)
@@ -280,7 +334,7 @@ namespace Editor
                 if (!mSelectedHandles.Contains(handle))
                     continue;
 
-                if (handle->isMapping && kv.second.Contains([=](auto x) { return !x->isMapping && x->id == handle->id; }))
+                if (handle->isMapping && kv.second.Contains([=](auto x) { return !x->isMapping && x->keyUid == handle->keyUid; }))
                     continue;
 
                 handle->SetDragPosition(handle->ScreenToLocal(cursorPos) + handle->GetDraggingOffset());

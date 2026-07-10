@@ -145,7 +145,8 @@ namespace Editor
         // Append's TryMerge + Redo applies the move — scene is mutated only inside the action
         void AppendMoveStep(const Ref<TransformAction>& action, const Vec2F& delta);
 
-        // Same as AppendMoveStep, but moves selection by a world 3D delta: xy through the basis, z through positionZ
+        // Same as AppendMoveStep, but moves selection by a world 3D delta; actors also get the full
+        // local position for restoring under 3D-rotated parents
         void AppendMoveStep3D(const Ref<TransformAction>& action, const Vec3F& delta);
 
         // Opens mKeyboardAction on the first held arrow

@@ -93,6 +93,8 @@ namespace Editor
 
         Vector<Ref<KeyHandle>> mHandles; // List of handles, each for keys
 
+        Vector<Ref<AnimationKeyDragHandle>> mHandlesCache; // Cached disabled drag handles for reuse
+
         String mTrackPath; // Path to Animation track in animation
 
         Ref<Widget> mTreeControls; // Container of controllers that are part of a tree
@@ -296,34 +298,45 @@ namespace Editor
         PushEditorScopeOnStack scope;
 
         Vector<UInt64> selectedHandles;
-        for (auto& keyHandle : mHandles) 
+        for (auto& keyHandle : mHandles)
         {
             if (keyHandle->handle->IsSelected())
                 selectedHandles.Add(keyHandle->keyUid);
         }
 
-        Vector<Ref<AnimationKeyDragHandle>> handlesCache = mHandles.Convert<Ref<AnimationKeyDragHandle>>(
-            [&](const Ref<KeyHandle>& x) 
-            {
-                x->handle->SetParent(nullptr);
-                x->handle->SetEnabled(false);
-                x->handle->SetSelectionGroup(nullptr);
-                x->handle->SetSelected(false);
-                x->handle->onChangedPos.Clear();
-                return x->handle;
-            });
+        // Handles stay enabled and grouped for fast reuse; not reused ones are
+        // disabled and unregistered from sheet below
+        for (auto& keyHandle : mHandles)
+        {
+            keyHandle->handle->SetSelected(false);
+            keyHandle->handle->onChangedPos.Clear();
+            mHandlesCache.Add(keyHandle->handle);
+        }
 
         mHandles.Clear();
 
         auto trackRef = mTrack.Lock();
         auto handlesSheet = mHandlesSheet.Lock();
 
+        // Handles bound to another track are unregistered while the old track is still
+        // set, so the sheet removes them from the correct track group before rebinding
+        Vector<Ref<DragHandle>> staleBoundHandles;
+        for (auto& handle : mHandlesCache)
+        {
+            if (handle->GetSelectionGroup() && handle->track.Lock().Get() != trackRef.Get())
+                staleBoundHandles.Add(handle);
+        }
+
+        if (!staleBoundHandles.IsEmpty())
+            handlesSheet->RemoveHandles(staleBoundHandles);
+
+        Vector<Ref<DragHandle>> sheetHandles;
         for (auto& key : Wrapper::GetKeys(*trackRef))
         {
             Ref<AnimationKeyDragHandle> handle;
 
-            if (!handlesCache.IsEmpty())
-                handle = handlesCache.PopBack();
+            if (!mHandlesCache.IsEmpty())
+                handle = mHandlesCache.PopBack();
             else
                 handle = CreateHandle();
 
@@ -334,15 +347,12 @@ namespace Editor
             handle->trackControl = Ref(this);
             handle->keyUid = key.uid;
             handle->isMapping = false;
-            handle->SetSelectionGroup(DynamicCast<ISelectableDragHandlesGroup>(handlesSheet));
-            handle->SetSelected(selectedHandles.Contains(key.uid));
-
-            AddChild(handle);
+            sheetHandles.Add(handle);
 
             auto keyhandle = mmake<KeyHandle>(key.uid, handle);
             mHandles.Add(keyhandle);
 
-            handle->onChangedPos = [=](const Vec2F& pos) 
+            handle->onChangedPos = [=](const Vec2F& pos)
             {
                 mDisableHandlesUpdate = true;
 
@@ -355,6 +365,26 @@ namespace Editor
 
                 mDisableHandlesUpdate = false;
             };
+        }
+
+        handlesSheet->AddHandles(sheetHandles);
+
+        if (!selectedHandles.IsEmpty())
+        {
+            for (auto& keyHandle : mHandles)
+                keyHandle->handle->SetSelected(selectedHandles.Contains(keyHandle->keyUid));
+        }
+
+        if (!mHandlesCache.IsEmpty())
+        {
+            Vector<Ref<DragHandle>> unusedHandles;
+            for (auto& handle : mHandlesCache)
+            {
+                handle->SetEnabled(false);
+                unusedHandles.Add(handle);
+            }
+
+            handlesSheet->RemoveHandles(unusedHandles);
         }
     }
 
@@ -424,20 +454,14 @@ namespace Editor
                 return Vec2F(position, layout->GetHeight() * 0.5f);
             };
 
-        handle->localToWidgetOffsetTransformFunc = [&](const Vec2F& pos)
+        handle->localToScreenTransformFunc = [&](const Vec2F& pos)
             {
-                float worldXPos = mTimeline.Lock()->LocalToWorld(pos.x);
-                float localXPos = worldXPos - layout->GetWorldLeft();
-
-                return Vec2F(localXPos, 0);
+                return Vec2F(mTimeline.Lock()->LocalToWorld(pos.x), layout->GetWorldBottom());
             };
 
-        handle->widgetOffsetToLocalTransformFunc = [&](const Vec2F& pos)
+        handle->screenToLocalTransformFunc = [&](const Vec2F& pos)
             {
-                float worldXPos = layout->GetWorldLeft() + pos.x;
-                float localXPos = mTimeline.Lock()->WorldToLocal(worldXPos);
-
-                return Vec2F(localXPos, 0);
+                return Vec2F(mTimeline.Lock()->WorldToLocal(pos.x), 0.0f);
             };
 
         return handle;
@@ -557,6 +581,7 @@ META_TEMPLATES(typename AnimationTrackType)
 CLASS_FIELDS_META(Editor::KeyFramesTrackControl<AnimationTrackType>)
 {
     FIELD().PROTECTED().NAME(mHandles);
+    FIELD().PROTECTED().NAME(mHandlesCache);
     FIELD().PROTECTED().NAME(mTrackPath);
     FIELD().PROTECTED().NAME(mTreeControls);
     FIELD().PROTECTED().NAME(mPropertyField);

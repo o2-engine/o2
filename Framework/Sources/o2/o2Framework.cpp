@@ -1,5 +1,6 @@
 extern void __RegisterEnum__o2__Camera__Projection();
 extern void __RegisterEnum__o2__Shader__Type();
+extern void __RegisterEnum__o2__SkinnedModelData__AnimationChannel__Path();
 extern void __RegisterEnum__o2__Texture__Usage();
 extern void __RegisterEnum__o2__Texture__Filter();
 extern void __RegisterEnum__o2__Texture__Wrap();
@@ -101,6 +102,7 @@ extern void __RegisterClass__o2__MaterialAsset();
 extern void __RegisterClass__o2__Mesh3DAsset();
 extern void __RegisterClass__o2__SceneAsset();
 extern void __RegisterClass__o2__ShaderAsset();
+extern void __RegisterClass__o2__SkinnedModelAsset();
 extern void __RegisterClass__o2__SpineAsset();
 extern void __RegisterClass__o2__SpineAtlasAsset();
 extern void __RegisterClass__o2__VectorFontAsset();
@@ -174,6 +176,7 @@ extern void __RegisterClass__o2__MeshPrimitiveComponent();
 extern void __RegisterClass__o2__ParticlesEmitterComponent();
 extern void __RegisterClass__o2__ScissorClippingComponent();
 extern void __RegisterClass__o2__ScriptableComponent();
+extern void __RegisterClass__o2__SkinnedMeshComponent();
 extern void __RegisterClass__o2__SkinningMeshBoneComponent();
 extern void __RegisterClass__o2__SkinningMeshComponent();
 extern void __RegisterClass__o2__SpineComponent();
@@ -249,6 +252,7 @@ extern void InitializeTypeso2Framework()
 {
     __RegisterEnum__o2__Camera__Projection();
     __RegisterEnum__o2__Shader__Type();
+    __RegisterEnum__o2__SkinnedModelData__AnimationChannel__Path();
     __RegisterEnum__o2__Texture__Usage();
     __RegisterEnum__o2__Texture__Filter();
     __RegisterEnum__o2__Texture__Wrap();
@@ -350,6 +354,7 @@ extern void InitializeTypeso2Framework()
     __RegisterClass__o2__Mesh3DAsset();
     __RegisterClass__o2__SceneAsset();
     __RegisterClass__o2__ShaderAsset();
+    __RegisterClass__o2__SkinnedModelAsset();
     __RegisterClass__o2__SpineAsset();
     __RegisterClass__o2__SpineAtlasAsset();
     __RegisterClass__o2__VectorFontAsset();
@@ -423,6 +428,7 @@ extern void InitializeTypeso2Framework()
     __RegisterClass__o2__ParticlesEmitterComponent();
     __RegisterClass__o2__ScissorClippingComponent();
     __RegisterClass__o2__ScriptableComponent();
+    __RegisterClass__o2__SkinnedMeshComponent();
     __RegisterClass__o2__SkinningMeshBoneComponent();
     __RegisterClass__o2__SkinningMeshComponent();
     __RegisterClass__o2__SpineComponent();

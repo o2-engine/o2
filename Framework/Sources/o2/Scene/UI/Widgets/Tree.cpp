@@ -175,6 +175,8 @@ namespace o2
     Tree::Tree(RefCounter* refCounter):
         ScrollArea(refCounter)
     {
+        mInheritedDrawablesManualOrder = true;
+
         mNodeWidgetSample = mmake<TreeNode>();
         mNodeWidgetSample->layout->minHeight = 20;
         mNodeWidgetSample->AddLayer("caption", nullptr);
@@ -189,6 +191,8 @@ namespace o2
     Tree::Tree(RefCounter* refCounter, const Tree& other):
         ScrollArea(refCounter, other)
     {
+        mInheritedDrawablesManualOrder = true;
+
         mRearrangeType = other.mRearrangeType;
         mMultiSelectAvailable = other.mMultiSelectAvailable;
         mNodeWidgetSample = other.mNodeWidgetSample->CloneAsRef<TreeNode>();

@@ -1196,7 +1196,9 @@ namespace o2
 
     void Widget::OnChildrenChanged()
     {
-        SortInheritedDrawables();
+        // No sort here: Register keeps insertion ordered, removal preserves order,
+        // reorder is handled in Actor::SetIndexInSiblings. Sorting on each add/remove
+        // is quadratic on mass children registration
     }
 
     void Widget::OnChildAdded(const Ref<Actor>& child)
@@ -1206,7 +1208,11 @@ namespace o2
         Ref<Widget> widget = DynamicCast<Widget>(child);
         if (widget)
         {
-            UpdateChildWidgetsList();
+            // Appending keeps the list consistent; full rebuild per add is quadratic
+            if (!mChildren.IsEmpty() && mChildren.Last() == child)
+                mChildWidgets.Add(widget);
+            else
+                UpdateChildWidgetsList();
 
             OnChildAdded(widget);
         }

@@ -33,6 +33,10 @@ namespace Editor
             float scaleZ = 1.0f;
             float sizeZ = 0.0f;
 
+            bool  parent3D = false; // Parent world transform mixes Z: the 2D basis decode is lossy, local TRS is restored directly
+            Vec3F localPosition;    // Full local position for the parent3D path
+            Vec2F sizeXY;           // Local size x/y for the parent3D path
+
             bool operator==(const Transform& other) const;
         };
 

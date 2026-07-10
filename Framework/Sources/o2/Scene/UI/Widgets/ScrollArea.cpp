@@ -129,10 +129,7 @@ namespace o2
         if (!mResEnabledInHierarchy || mIsClipped)
         {
             if (mIsClipped)
-            {
-                for (auto& child : mChildrenInheritedDepth)
-                    child->Draw();
-            }
+                DrawInheritedDepthChildren();
 
             return;
         }
@@ -144,8 +141,7 @@ namespace o2
 
         o2Render.EnableScissorTest(mAbsoluteClipArea);
 
-        for (auto& child : mChildrenInheritedDepth)
-            child->Draw();
+        DrawInheritedDepthChildren();
 
         o2Render.DisableScissorTest();
 

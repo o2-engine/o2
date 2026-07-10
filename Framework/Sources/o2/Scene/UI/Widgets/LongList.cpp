@@ -12,6 +12,8 @@ namespace o2
         ScrollArea(refCounter), mHoverLayout(Layout::BothStretch()),
         mSelectionLayout(Layout::BothStretch())
     {
+        mInheritedDrawablesManualOrder = true;
+
         mItemSample = mmake<Widget>();
         mSelectionDrawable = mmake<Sprite>();
         mHoverDrawable = mmake<Sprite>();
@@ -21,6 +23,8 @@ namespace o2
         ScrollArea(refCounter, other), mHoverLayout(other.mHoverLayout),
         mSelectionLayout(other.mSelectionLayout)
     {
+        mInheritedDrawablesManualOrder = true;
+
         mItemSample = other.mItemSample->CloneAsRef<Widget>();
         mSelectionDrawable = other.mSelectionDrawable->CloneAsRef<Sprite>();
         mHoverDrawable = other.mHoverDrawable->CloneAsRef<Sprite>();
@@ -92,8 +96,7 @@ namespace o2
 
         o2Render.EnableScissorTest(mAbsoluteClipArea);
 
-        for (auto& child : mChildrenInheritedDepth)
-            child->Draw();
+        DrawInheritedDepthChildren();
 
         mSelectionDrawable->Draw();
         mHoverDrawable->Draw();

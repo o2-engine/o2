@@ -90,7 +90,13 @@ namespace Editor
         if (!objects.IsEmpty() && !o2Input.IsKeyDown(VK_CONTROL))
         {
             if (auto actor = DynamicCast<Actor>(objects.Last()))
-                return actor->transform->GetRotation();
+            {
+                // World orientation: for nested actors the local rotation misses the parents
+                Vec3F position, scale;
+                Quat rotation;
+                actor->transform->GetWorldTransform3D().Decompose(position, rotation, scale);
+                return rotation;
+            }
         }
 
         return Quat::Identity();

@@ -117,8 +117,7 @@ namespace o2
             if (clipping)
                 o2Render.EnableScissorTest(mBounds);
 
-            for (auto& child : mChildrenInheritedDepth)
-                child->Draw();
+            DrawInheritedDepthChildren();
 
             if (clipping)
                 o2Render.DisableScissorTest();

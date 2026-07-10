@@ -91,8 +91,7 @@ namespace Editor
         {
             o2Render.EnableScissorTest(mAbsoluteClipArea);
 
-            for (auto& child : mChildrenInheritedDepth)
-                child->Draw();
+            DrawInheritedDepthChildren();
 
             o2Render.DisableScissorTest();
 

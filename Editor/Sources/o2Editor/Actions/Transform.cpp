@@ -67,6 +67,20 @@ namespace Editor
         {
             return basis.origin + basis.xv*rel.x + basis.yv*rel.y;
         }
+
+        // True when the parent world transform mixes the Z axis with XY: the 2D basis
+        // projection composition can't recover the local transform then
+        bool IsParentWorldTransform3D(const Ref<Actor>& actor)
+        {
+            auto parent = actor->GetParent().Lock();
+            if (!parent)
+                return false;
+
+            const Mat4 world = parent->transform->GetWorldTransform3D();
+            const float eps = 1e-4f;
+            return Math::Abs(world.At(2, 0)) > eps || Math::Abs(world.At(2, 1)) > eps ||
+                   Math::Abs(world.At(0, 2)) > eps || Math::Abs(world.At(1, 2)) > eps;
+        }
     }
 
     void TransformAction::GetTransforms(const Vector<SceneUID>& objectIds, Vector<Transform>& transforms)
@@ -91,6 +105,10 @@ namespace Editor
                     res.scaleXY = actor->transform->GetScale().XY();
                     res.scaleZ = actor->transform->GetScaleZ();
                     res.sizeZ = actor->transform->GetSizeZ();
+
+                    res.parent3D = IsParentWorldTransform3D(actor);
+                    res.localPosition = actor->transform->GetPosition();
+                    res.sizeXY = actor->transform->GetSize().XY();
                 }
 
                 return res;
@@ -107,6 +125,27 @@ namespace Editor
             auto object = o2Scene.GetEditableObjectByID(objectsIds[i]);
             if (object)
             {
+                if (transforms[i].has3D && transforms[i].parent3D)
+                {
+                    if (auto actor = DynamicCast<Actor>(object))
+                    {
+                        actor->transform->SetEulerAngles(Vec3F(transforms[i].eulerAnglesXY.x,
+                                                               transforms[i].eulerAnglesXY.y,
+                                                               transforms[i].eulerZ));
+                        actor->transform->SetScale(Vec3F(transforms[i].scaleXY.x, transforms[i].scaleXY.y,
+                                                         transforms[i].scaleZ));
+
+                        object->SetLayout(transforms[i].layout);
+
+                        actor->transform->SetPosition(transforms[i].localPosition);
+                        actor->transform->SetSize(Vec3F(transforms[i].sizeXY.x, transforms[i].sizeXY.y,
+                                                        transforms[i].sizeZ));
+
+                        object->UpdateTransform();
+                        continue;
+                    }
+                }
+
                 // Euler x/y go BEFORE SetTransform: the basis was captured under them and
                 // SetBasis decodes size from the projection using the current euler
                 if (transforms[i].has3D)
@@ -167,7 +206,10 @@ namespace Editor
             eulerAnglesXY == other.eulerAnglesXY && Math::Equals(eulerZ, other.eulerZ) &&
             scaleXY == other.scaleXY &&
             Math::Equals(scaleZ, other.scaleZ) &&
-            Math::Equals(sizeZ, other.sizeZ);
+            Math::Equals(sizeZ, other.sizeZ) &&
+            parent3D == other.parent3D &&
+            localPosition == other.localPosition &&
+            sizeXY == other.sizeXY;
     }
 
 }

@@ -5,6 +5,7 @@
 
 #include "o2/Render/Mesh3DFill.h"
 #include "o2/Render/Sprite.h"
+#include "o2/Scene/Actor.h"
 #include "o2/Utils/Editor/SceneEditableObject.h"
 #include "o2Editor/Actions/Transform.h"
 #include "o2Editor/EditorApplication.h"
@@ -453,15 +454,7 @@ namespace Editor
 
     void MoveTool::AppendMoveStep(const Ref<TransformAction>& action, const Vec2F& delta)
     {
-        if (!action)
-            return;
-
-        auto step = mmake<TransformAction>(o2EditorSceneScreen.GetTopSelectedObjects());
-        step->doneTransforms = step->beforeTransforms;
-        for (auto& t : step->doneTransforms)
-            t.transform.origin += delta;
-
-        action->Append(step);
+        AppendMoveStep3D(action, Vec3F(delta.x, delta.y, 0.0f));
     }
 
     void MoveTool::AppendMoveStep3D(const Ref<TransformAction>& action, const Vec3F& delta)
@@ -469,14 +462,32 @@ namespace Editor
         if (!action)
             return;
 
-        auto step = mmake<TransformAction>(o2EditorSceneScreen.GetTopSelectedObjects());
+        auto objects = o2EditorSceneScreen.GetTopSelectedObjects();
+        auto step = mmake<TransformAction>(objects);
         step->doneTransforms = step->beforeTransforms;
-        for (auto& t : step->doneTransforms)
+        for (int i = 0; i < step->doneTransforms.Count(); i++)
         {
+            auto& t = step->doneTransforms[i];
             t.transform.origin += delta.XY();
 
-            if (t.has3D)
-                t.positionZ += delta.z;
+            if (!t.has3D)
+                continue;
+
+            t.positionZ += delta.z;
+
+            if (auto actor = DynamicCast<Actor>(objects[i]))
+            {
+                // World delta converted through the full 3D parent transform: the 2D basis
+                // path can't recover the local position under a 3D-rotated parent
+                Vec3F worldPosition = actor->transform->GetWorldPosition() + delta;
+                Vec3F localPosition = worldPosition;
+                if (auto parent = actor->GetParent().Lock())
+                    localPosition = parent->transform->GetWorldTransform3D().Inverted().TransformPoint(worldPosition);
+
+                t.localPosition = localPosition;
+                if (t.parent3D)
+                    t.positionZ = localPosition.z;
+            }
         }
 
         action->Append(step);

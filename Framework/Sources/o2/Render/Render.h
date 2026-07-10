@@ -412,6 +412,8 @@ namespace o2
 
 		bool mMRTUnsupportedWarned = false; // One-time warning flag for MRT fallback
 
+		bool mSkinnedMaterialMismatchWarned = false; // One-time warning flag for skinned layout draws with non-skinned materials
+
 		Function<void(const Ref<Bitmap>&)> mCaptureCallback; // Pending frame capture callback (CaptureNextFrame)
 		TextureRef                         mCaptureTarget;   // Offscreen target of the frame being captured
 

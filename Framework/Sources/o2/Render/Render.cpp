@@ -216,6 +216,19 @@ namespace o2
 			return;
 		}
 
+		// Skinned vertex layout can be consumed only by skinned-aware shaders: when the resolved
+		// material (e.g. a pass override) doesn't support it, the draw is skipped
+		if (vertexType.HasParam(VertexParam::BoneIndices) && !drawMaterial->IsVertexLayoutSkinned())
+		{
+			if (!mSkinnedMaterialMismatchWarned)
+			{
+				mLog->Warning("Skinned geometry draw skipped: current material doesn't support the skinned vertex layout");
+				mSkinnedMaterialMismatchWarned = true;
+			}
+
+			return;
+		}
+
 		TextureRef texture = overrideTexture ? overrideTexture : drawMaterial->GetTexture();
 
 		// Determine batch vertex type: expand with extra texcoords if material needs them
@@ -798,7 +811,9 @@ namespace o2
 		RectI summaryScissorRect = rect;
 		if (!mStackScissors.IsEmpty())
 		{
-			mScissorInfos.Last().endDepth = mDrawingDepth;
+			// The stack may hold only render-target entries, which add no scissor infos
+			if (!mScissorInfos.IsEmpty())
+				mScissorInfos.Last().endDepth = mDrawingDepth;
 
 			if (!mStackScissors.Last().renderTarget)
 			{
