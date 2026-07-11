@@ -35,6 +35,6 @@ endif()
 
 set_target_properties(o2SystemTests PROPERTIES FOLDER o2/Tests)
 
-gtest_discover_tests(o2SystemTests
+o2_gtest_discover_tests(o2SystemTests
     WORKING_DIRECTORY $<TARGET_FILE_DIR:o2SystemTests>
 )

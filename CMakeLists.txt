@@ -40,6 +40,7 @@ endif()
 
 # Options
 option(O2_SELFPROFILE "Enable profiling o2 benchmark." OFF)
+option(O2_TESTS_BATCH "Register one ctest entry per gtest suite (one process per suite) instead of one per test case" ON)
 option(O2_EDITOR "Enables o2 editor." ON)
 option(O2_ASAN "Enables ASAN (address sanitizer)." OFF)
 option(O2_TRACY "Enables Tracy profiling" OFF)

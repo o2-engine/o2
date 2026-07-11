@@ -35,6 +35,6 @@ endif()
 
 set_target_properties(o2RenderTests PROPERTIES FOLDER o2/Tests)
 
-gtest_discover_tests(o2RenderTests
+o2_gtest_discover_tests(o2RenderTests
     WORKING_DIRECTORY $<TARGET_FILE_DIR:o2RenderTests>
 )
