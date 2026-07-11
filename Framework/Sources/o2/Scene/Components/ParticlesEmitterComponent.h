@@ -30,6 +30,15 @@ namespace o2
         // Returns true if point is under drawable
         bool IsUnderPoint(const Vec2F& point) override;
 
+        // Returns 3D render category when emitter is in 3D mode
+        SceneDrawableCategory GetSceneDrawableCategory() const override;
+
+        // Returns world bounds of alive particles in 3D mode
+        bool Get3DDrawableBounds(o2::AABB& bounds) override;
+
+        // Particles are transparent: drawn after opaque 3D content, skipped by G-buffer and shadow passes
+        bool Is3DDrawableTransparent() const override;
+
         // Returns name of component
         static String GetName();
 
@@ -85,6 +94,9 @@ CLASS_METHODS_META(o2::ParticlesEmitterComponent)
     FUNCTION().PUBLIC().CONSTRUCTOR(const ParticlesEmitterComponent&);
     FUNCTION().PUBLIC().SIGNATURE(void, OnUpdate, float);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsUnderPoint, const Vec2F&);
+    FUNCTION().PUBLIC().SIGNATURE(SceneDrawableCategory, GetSceneDrawableCategory);
+    FUNCTION().PUBLIC().SIGNATURE(bool, Get3DDrawableBounds, o2::AABB&);
+    FUNCTION().PUBLIC().SIGNATURE(bool, Is3DDrawableTransparent);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetName);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetCategory);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetIcon);

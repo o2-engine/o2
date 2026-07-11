@@ -18,9 +18,10 @@ TEST(RenderPipeline, ForwardPipelineDefaultComposition)
     auto pipeline = mmake<ForwardPipeline>();
     auto& passes = pipeline->GetPasses();
 
-    ASSERT_EQ(passes.Count(), 2);
+    ASSERT_EQ(passes.Count(), 3);
     EXPECT_NE(DynamicCast<Scene3DForwardPass>(passes[0]), nullptr);
-    EXPECT_NE(DynamicCast<Scene2DPass>(passes[1]), nullptr);
+    EXPECT_NE(DynamicCast<Scene3DTransparentPass>(passes[1]), nullptr);
+    EXPECT_NE(DynamicCast<Scene2DPass>(passes[2]), nullptr);
 }
 
 TEST(RenderPipeline, DeferredPipelineComposition)
@@ -28,11 +29,12 @@ TEST(RenderPipeline, DeferredPipelineComposition)
     auto pipeline = mmake<DeferredPipeline>();
     auto& passes = pipeline->GetPasses();
 
-    ASSERT_EQ(passes.Count(), 4);
+    ASSERT_EQ(passes.Count(), 5);
     EXPECT_NE(DynamicCast<ShadowMapPass>(passes[0]), nullptr);
     EXPECT_NE(DynamicCast<GBufferPass>(passes[1]), nullptr);
     EXPECT_NE(DynamicCast<DeferredLightingPass>(passes[2]), nullptr);
-    EXPECT_NE(DynamicCast<Scene2DPass>(passes[3]), nullptr);
+    EXPECT_NE(DynamicCast<Scene3DTransparentPass>(passes[3]), nullptr);
+    EXPECT_NE(DynamicCast<Scene2DPass>(passes[4]), nullptr);
 }
 
 TEST(RenderPipeline, CameraUsesDefaultForwardPipelineWhenNotSet)
@@ -174,11 +176,12 @@ TEST(RenderPipeline, CameraPipelineSerializationRoundTrip)
     ASSERT_NE(restoredPipeline, nullptr);
 
     auto& passes = restoredPipeline->GetPasses();
-    ASSERT_EQ(passes.Count(), 4);
+    ASSERT_EQ(passes.Count(), 5);
     EXPECT_NE(DynamicCast<ShadowMapPass>(passes[0]), nullptr);
     EXPECT_NE(DynamicCast<GBufferPass>(passes[1]), nullptr);
     EXPECT_NE(DynamicCast<DeferredLightingPass>(passes[2]), nullptr);
-    EXPECT_NE(DynamicCast<Scene2DPass>(passes[3]), nullptr);
+    EXPECT_NE(DynamicCast<Scene3DTransparentPass>(passes[3]), nullptr);
+    EXPECT_NE(DynamicCast<Scene2DPass>(passes[4]), nullptr);
 
     EXPECT_TRUE(passes[0]->IsEnabled());
     EXPECT_FALSE(passes[3]->IsEnabled());

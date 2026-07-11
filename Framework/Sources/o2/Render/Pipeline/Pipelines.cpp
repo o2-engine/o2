@@ -11,6 +11,7 @@ namespace o2
     ForwardPipeline::ForwardPipeline()
     {
         AddPass(mmake<Scene3DForwardPass>());
+        AddPass(mmake<Scene3DTransparentPass>());
         AddPass(mmake<Scene2DPass>());
     }
 
@@ -23,6 +24,12 @@ namespace o2
         AddPass(mmake<ShadowMapPass>());
         AddPass(mmake<GBufferPass>());
         AddPass(mmake<DeferredLightingPass>());
+
+        // The lighting composite target has no scene depth, transparent content draws on top
+        auto transparentPass = mmake<Scene3DTransparentPass>();
+        transparentPass->useDepthTest = false;
+        AddPass(transparentPass);
+
         AddPass(mmake<Scene2DPass>());
     }
 

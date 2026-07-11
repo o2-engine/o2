@@ -22,7 +22,7 @@ namespace o2
         o2Render.SetDepthTestEnabled(false);
     }
 
-    void Scene3DForwardPass::DrawScene3DContent(const RenderPassContext& context)
+    void Scene3DForwardPass::DrawScene3DContent(const RenderPassContext& context, bool transparent /*= false*/)
     {
         if (!Scene::IsSingletonInitialzed())
             return;
@@ -31,6 +31,9 @@ namespace o2
         {
             auto component = weakComponent.Lock();
             if (!component || !component->IsEnabledInHierarchy())
+                continue;
+
+            if (component->Is3DDrawableTransparent() != transparent)
                 continue;
 
             auto actor = component->GetActor();
@@ -50,6 +53,20 @@ namespace o2
         return layer && context.layers.Contains(layer);
     }
 
+    void Scene3DTransparentPass::Execute(RenderPassContext& context)
+    {
+        if (!Render::IsSingletonInitialzed())
+            return;
+
+        if (useDepthTest)
+            o2Render.SetDepthTestEnabled(true, false);
+
+        Scene3DForwardPass::DrawScene3DContent(context, true);
+
+        if (useDepthTest)
+            o2Render.SetDepthTestEnabled(false);
+    }
+
     void Scene2DPass::Execute(RenderPassContext& context)
     {
         ScenePassCategoryScope categoryScope(SceneDrawableCategory::Scene2D);
@@ -64,6 +81,8 @@ namespace o2
 // --- META ---
 
 DECLARE_CLASS(o2::Scene3DForwardPass, o2__Scene3DForwardPass);
+
+DECLARE_CLASS(o2::Scene3DTransparentPass, o2__Scene3DTransparentPass);
 
 DECLARE_CLASS(o2::Scene2DPass, o2__Scene2DPass);
 // --- END META ---

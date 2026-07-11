@@ -28,7 +28,7 @@ namespace o2
 
     void ParticlesGravityEffect::Update(float dt, ParticlesEmitter* emitter)
     {
-        Vec2F v = mGravity*dt;
+        Vec3F v = mGravity*dt;
         for (auto& p : GetParticlesDirect(emitter))
             p.velocity += v;
     }
@@ -302,7 +302,7 @@ namespace o2
             float x = XCurve->Evaluate(1.0f - p.timeLeft/p.lifetime, data.randomXCoef, true, data.cacheXKey, data.cacheXKeyApprox);
             float y = YCurve->Evaluate(1.0f - p.timeLeft/p.lifetime, data.randomYCoef, true, data.cacheYKey, data.cacheYKeyApprox);
 
-            p.velocity = data.initialVelocity + Vec2F(x, y);
+            p.velocity = data.initialVelocity + Vec3F(x, y, 0.0f);
         }
     }
 
@@ -359,8 +359,9 @@ namespace o2
             auto& data = mData[particleIndex];
             float t = timeCurve->Evaluate(1.0f - p.timeLeft/p.lifetime, data.timeRandomCoef, true, data.timeCacheKey, data.timeCacheKeyApprox);
 
-            p.position = data.initialPosition + spline->Evaluate(t*splineLength, data.splineRandomCoef, true, 
-                                                                 data.splineCacheKey, data.splineCacheKeyApprox);
+            Vec2F splineOffset = spline->Evaluate(t*splineLength, data.splineRandomCoef, true,
+                                                  data.splineCacheKey, data.splineCacheKeyApprox);
+            p.position = data.initialPosition + Vec3F(splineOffset.x, splineOffset.y, 0.0f);
         }
     }
 

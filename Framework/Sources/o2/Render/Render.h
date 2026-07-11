@@ -254,8 +254,9 @@ namespace o2
 		// Returns true when specified point is clipped by current scissor test
 		bool IsClippedByScissor(const Vec2F& point) const;
 
-		// Enables or disables depth buffer test, flushes current batch
-		void SetDepthTestEnabled(bool enabled);
+		// Enables or disables depth buffer test, flushes current batch.
+		// writeEnabled disables depth writes for transparent content drawn with depth test
+		void SetDepthTestEnabled(bool enabled, bool writeEnabled = true);
 
 		// Returns true when depth buffer test is enabled
 		bool IsDepthTestEnabled() const;
@@ -418,6 +419,7 @@ namespace o2
 		TextureRef                         mCaptureTarget;   // Offscreen target of the frame being captured
 
 		bool mDepthTestEnabled = false; // Is depth buffer test enabled, resets on Begin
+		bool mDepthWriteEnabled = true; // Is depth buffer write enabled when test is enabled
 
 		float mDrawingDepth = 0.0f; // Current drawing depth, increments after each drawing drawables
 
@@ -532,8 +534,8 @@ namespace o2
 		// Platform specific setup camera transforms
 		void PlatformSetupCameraTransforms(float* modelMatrix, float* viewMatrix, float* projMatrix);
 
-		// Platform specific enable or disable depth buffer test
-		void PlatformSetDepthTest(bool enabled);
+		// Platform specific enable or disable depth buffer test and write
+		void PlatformSetDepthTest(bool enabled, bool writeEnabled);
 
 		// Platform specific enable scissor test
 		void PlatformEnableScissorTest();

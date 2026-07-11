@@ -134,6 +134,11 @@ namespace o2
         return false;
     }
 
+    bool Component::Is3DDrawableTransparent() const
+    {
+        return false;
+    }
+
     String Component::GetName()
     {
         return String();

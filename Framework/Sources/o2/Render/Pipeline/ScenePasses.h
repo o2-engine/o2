@@ -15,14 +15,33 @@ namespace o2
         // Draws scene 3D components with depth test enabled
         void Execute(RenderPassContext& context) override;
 
-        // Draws all registered 3D category components visible for the context camera
-        static void DrawScene3DContent(const RenderPassContext& context);
+        // Draws registered 3D category components visible for the context camera,
+        // opaque by default; transparent selects transparent components instead
+        static void DrawScene3DContent(const RenderPassContext& context, bool transparent = false);
 
         // Returns true when actor's layer (default layer when not set) is in the context layers list
         static bool IsActorInContextLayers(const RenderPassContext& context, const Ref<Actor>& actor);
 
         SERIALIZABLE(Scene3DForwardPass);
         CLONEABLE_REF(Scene3DForwardPass);
+    };
+
+    // -------------------------------------------------------------------------------
+    // Transparent 3D scene pass: draws transparent 3D components (particles) after
+    // opaque content. Depth is read-only in forward; deferred runs it without depth
+    // because the composited target has no depth buffer content
+    // -------------------------------------------------------------------------------
+    class Scene3DTransparentPass: public RenderPass
+    {
+    public:
+        // When false, depth test is not used (deferred pipeline after lighting composite) @SERIALIZABLE
+        bool useDepthTest = true;
+
+        // Draws transparent scene 3D components
+        void Execute(RenderPassContext& context) override;
+
+        SERIALIZABLE(Scene3DTransparentPass);
+        CLONEABLE_REF(Scene3DTransparentPass);
     };
 
     // ------------------------------------------------------------------------------
@@ -53,8 +72,25 @@ CLASS_METHODS_META(o2::Scene3DForwardPass)
 {
 
     FUNCTION().PUBLIC().SIGNATURE(void, Execute, RenderPassContext&);
-    FUNCTION().PUBLIC().SIGNATURE_STATIC(void, DrawScene3DContent, const RenderPassContext&);
+    FUNCTION().PUBLIC().SIGNATURE_STATIC(void, DrawScene3DContent, const RenderPassContext&, bool);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(bool, IsActorInContextLayers, const RenderPassContext&, const Ref<Actor>&);
+}
+END_META;
+
+CLASS_BASES_META(o2::Scene3DTransparentPass)
+{
+    BASE_CLASS(o2::RenderPass);
+}
+END_META;
+CLASS_FIELDS_META(o2::Scene3DTransparentPass)
+{
+    FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(true).NAME(useDepthTest);
+}
+END_META;
+CLASS_METHODS_META(o2::Scene3DTransparentPass)
+{
+
+    FUNCTION().PUBLIC().SIGNATURE(void, Execute, RenderPassContext&);
 }
 END_META;
 

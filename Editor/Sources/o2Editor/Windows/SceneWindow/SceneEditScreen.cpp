@@ -387,6 +387,13 @@ namespace Editor
 
     void SceneEditScreen::RedrawContent()
     {
+        // The scene pass draws scene layers content, which may contain this widget itself
+        // (editor UI in tests, nested views), so the nested redraw is cut off
+        if (mIsRedrawingContent)
+            return;
+
+        mIsRedrawingContent = true;
+
         // In 3D mode the whole scene pass is drawn with the perspective camera in plane coordinates,
         // then the screen-space camera is restored for drag handles overlay
         Camera screenCamera;
@@ -426,6 +433,8 @@ namespace Editor
 
 		for (auto& handle : mDragHandles)
 			handle->Draw();
+
+        mIsRedrawingContent = false;
     }
 
     void SceneEditScreen::Draw3DGrid()
@@ -483,7 +492,7 @@ namespace Editor
 
     void SceneEditScreen::DrawObjects()
     {
-        if (o2EditorTree.GetSceneTree()->IsEditorWatching())
+        if (TreeWindow::IsSingletonInitialzed() && o2EditorTree.GetSceneTree()->IsEditorWatching())
         {
             static bool drawing = false;
             if (drawing)
@@ -494,34 +503,25 @@ namespace Editor
             drawing = false;
 
             mNeedRedraw = true;
+            return;
         }
-        else
-        {
-            o2Scene.BeginDrawingScene();
 
-            for (auto& layer : o2Scene.GetLayers())
-            {
-                if (!layer->IsVisible())
-                    continue;
-
-                for (auto& drawable : layer->GetDrawables())
-                    drawable->Draw();
-            }
-
-            o2Scene.EndDrawingScene();
-
-            o2Physics.DrawDebug();
-        }
+        DrawScenePipeline();
     }
 
     void SceneEditScreen::DrawObjects3D(const Camera& viewCamera)
     {
-        if (o2EditorTree.GetSceneTree()->IsEditorWatching())
+        if (TreeWindow::IsSingletonInitialzed() && o2EditorTree.GetSceneTree()->IsEditorWatching())
         {
             mNeedRedraw = true;
             return;
         }
 
+        DrawScenePipeline();
+    }
+
+    void SceneEditScreen::DrawScenePipeline()
+    {
         o2Scene.BeginDrawingScene();
 
         Ref<RenderPipeline> pipeline;
@@ -535,7 +535,7 @@ namespace Editor
             pipeline = CameraActor::GetDefaultRenderPipeline();
 
         RenderPassContext context;
-        context.camera = viewCamera;
+        context.camera = o2Render.GetCamera();
         context.fillBackground = false;
 
         for (auto& layer : o2Scene.GetLayers())

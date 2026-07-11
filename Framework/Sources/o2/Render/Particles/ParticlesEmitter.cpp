@@ -7,6 +7,26 @@
 
 namespace o2
 {
+    namespace
+    {
+        // Returns uniformly distributed random direction inside a cone around the axis
+        Vec3F RandomDirectionInCone(const Vec3F& axis, float halfAngle)
+        {
+            float cosHalfAngle = Math::Cos(halfAngle);
+            float z = Math::Random(cosHalfAngle, 1.0f);
+            float around = Math::Random(0.0f, Math::PI()*2.0f);
+            float planarRadius = Math::Sqrt(Math::Max(0.0f, 1.0f - z*z));
+            Vec3F local(planarRadius*Math::Cos(around), planarRadius*Math::Sin(around), z);
+
+            Vec3F axisNorm = axis.Normalized();
+            Vec3F ortho = Math::Abs(axisNorm.z) < 0.99f ? Vec3F(0, 0, 1) : Vec3F(1, 0, 0);
+            Vec3F right = ortho.Cross(axisNorm).Normalized();
+            Vec3F up = axisNorm.Cross(right);
+
+            return right*local.x + up*local.y + axisNorm*local.z;
+        }
+    }
+
     ParticlesEmitter::ParticlesEmitter() :
         IRectDrawable(), mShape(mmake<CircleParticlesEmitterShape>())
     {
@@ -22,11 +42,13 @@ namespace o2
         mShape(other.mShape->CloneAsRef<ParticlesEmitterShape>()),
         mParticlesNumLimit(other.mParticlesNumLimit), mEmitParticlesFromShell(other.mEmitParticlesFromShell),
         mEmittingCoefficient(other.mEmittingCoefficient), mIsParticlesRelative(other.mIsParticlesRelative),
+        mIs3D(other.mIs3D),
         mParticlesLifetime(other.mParticlesLifetime), mEmitParticlesPerSecond(other.mEmitParticlesPerSecond),
         mInitialAngle(other.mInitialAngle), mInitialAngleRange(other.mInitialAngleRange),
         mInitialSize(other.mInitialSize), mInitialSizeRange(other.mInitialSizeRange),
         mInitialSpeed(other.mInitialSpeed), mInitialSpeedRangle(other.mInitialSpeedRangle),
-        mInitialMoveDirection(other.mInitialMoveDirection), mInitialMoveDirectionRange(other.mInitialMoveDirectionRange)
+        mInitialMoveDirection(other.mInitialMoveDirection), mInitialMoveDirectionRange(other.mInitialMoveDirectionRange),
+        mInitialMoveDirection3D(other.mInitialMoveDirection3D)
     {
         for (auto& effect : other.mEffects)
             AddEffect(effect->CloneAsRef<ParticlesEffect>());
@@ -70,6 +92,7 @@ namespace o2
 
         mEmittingCoefficient = other.mEmittingCoefficient;
         mIsParticlesRelative = other.mIsParticlesRelative;
+        mIs3D = other.mIs3D;
 
 		UpdateDuration();
 
@@ -88,6 +111,7 @@ namespace o2
 
         mInitialMoveDirection = other.mInitialMoveDirection;
         mInitialMoveDirectionRange = other.mInitialMoveDirectionRange;
+        mInitialMoveDirection3D = other.mInitialMoveDirection3D;
 
         mLastTransform = mTransform.ToBasis();
 
@@ -258,15 +282,27 @@ namespace o2
                 // Initialize particle
                 particle->index = particleIndex;
 
-                particle->position = mShape->GetEmittinPoint(mTransform.ToBasis(), mEmitParticlesFromShell);
+                Basis3D emissionBasis;
+                if (mIs3D)
+                    emissionBasis = mEmission3DBasis;
+                else
+                    emissionBasis = Basis3D(mTransform.ToBasis());
+
+                particle->position = mShape->GetEmittinPoint(emissionBasis, mEmitParticlesFromShell);
                 particle->angle = initialAngle + Math::Random(-halfAngleRange, halfAngleRange);
 
                 float randomSize = mInitialSize + Math::Random(-halfSizeRange, halfSizeRange);
                 float randomWidthScale = mInitialWidthScale + Math::Random(-halfWidthScaleRange, halfWidthScaleRange);
                 particle->size = Vec2F(randomSize, randomSize*randomWidthScale);
 
-                particle->velocity = Vec2F::Rotated(initialMoveDirection + Math::Random(-halfDirRange, halfDirRange))*
-                    (mInitialSpeed + Math::Random(-halfSpeedRange, halfSpeedRange));
+                float randomSpeed = mInitialSpeed + Math::Random(-halfSpeedRange, halfSpeedRange);
+                if (mIs3D)
+                    particle->velocity = RandomDirectionInCone(mInitialMoveDirection3D, halfDirRange)*randomSpeed;
+                else
+                {
+                    Vec2F direction = Vec2F::Rotated(initialMoveDirection + Math::Random(-halfDirRange, halfDirRange));
+                    particle->velocity = Vec3F(direction.x, direction.y, 0.0f)*randomSpeed;
+                }
 
                 particle->angleSpeed = initialAngleSpeed + Math::Random(-halfAngleSpeedRange, halfAngleSpeedRange);
 
@@ -340,12 +376,15 @@ namespace o2
 
     void ParticlesEmitter::BasisChanged()
     {
-        if (!mIsParticlesRelative)
+        if (!mIsParticlesRelative || mIs3D)
             return;
 
         Basis change = mLastTransform.Inverted()*mTransform.ToBasis();
         for (auto& particle : mParticles)
-            particle.position = change.Transform(particle.position);
+        {
+            Vec2F position = change.Transform(Vec2F(particle.position.x, particle.position.y));
+            particle.position = Vec3F(position.x, position.y, particle.position.z);
+        }
 
         mLastTransform = mTransform.ToBasis();
     }
@@ -368,10 +407,7 @@ namespace o2
 
     void ParticlesEmitter::SetDuration(float duration)
     {
-        if (mLoop == Loop::None)
-            mParticlesLifetime = duration - mEmissionDuration;
-        else if (mLoop == Loop::Repeat)
-			mParticlesLifetime = duration;
+        mParticlesLifetime = duration - mEmissionDuration;
 
 		UpdateDuration();
 
@@ -495,6 +531,72 @@ namespace o2
     bool ParticlesEmitter::IsParticlesRelative() const
     {
         return mIsParticlesRelative;
+    }
+
+    void ParticlesEmitter::SetIs3D(bool is3D)
+    {
+        mIs3D = is3D;
+        OnChanged();
+    }
+
+    bool ParticlesEmitter::Is3D() const
+    {
+        return mIs3D;
+    }
+
+    void ParticlesEmitter::Set3DBasis(const Basis3D& basis)
+    {
+        if (basis == mLast3DBasis)
+            return;
+
+        if (mIs3D && mIsParticlesRelative)
+        {
+            // A degenerate basis has no inverse, so the relative change is undefined
+            // and particles keep their world positions
+            float det = mLast3DBasis.xv.Dot(mLast3DBasis.yv.Cross(mLast3DBasis.zv));
+            if (Math::Abs(det) > FLT_EPSILON)
+            {
+                Basis3D change = mLast3DBasis.Inverted()*basis;
+                for (auto& particle : mParticles)
+                    particle.position = change.Transform(particle.position);
+            }
+        }
+
+        mEmission3DBasis = basis;
+        mLast3DBasis = basis;
+    }
+
+    const Basis3D& ParticlesEmitter::Get3DBasis() const
+    {
+        return mEmission3DBasis;
+    }
+
+    bool ParticlesEmitter::GetParticlesBounds(o2::AABB& bounds) const
+    {
+        bool hasAlive = false;
+        Vec3F boundsMin(FLT_MAX, FLT_MAX, FLT_MAX);
+        Vec3F boundsMax(-FLT_MAX, -FLT_MAX, -FLT_MAX);
+
+        for (auto& particle : mParticles)
+        {
+            if (!particle.alive)
+                continue;
+
+            float halfSize = Math::Max(particle.size.x, particle.size.y)*0.5f;
+            boundsMin.x = Math::Min(boundsMin.x, particle.position.x - halfSize);
+            boundsMin.y = Math::Min(boundsMin.y, particle.position.y - halfSize);
+            boundsMin.z = Math::Min(boundsMin.z, particle.position.z - halfSize);
+            boundsMax.x = Math::Max(boundsMax.x, particle.position.x + halfSize);
+            boundsMax.y = Math::Max(boundsMax.y, particle.position.y + halfSize);
+            boundsMax.z = Math::Max(boundsMax.z, particle.position.z + halfSize);
+
+            hasAlive = true;
+        }
+
+        if (hasAlive)
+            bounds = o2::AABB(boundsMin, boundsMax);
+
+        return hasAlive;
     }
 
     void ParticlesEmitter::SetParticlesEmitFromShell(bool fromShell)
@@ -684,6 +786,17 @@ namespace o2
     float ParticlesEmitter::GetEmitParticlesMoveDirectionRange() const
     {
         return mInitialMoveDirectionRange;
+    }
+
+    void ParticlesEmitter::SetEmitParticlesMoveDirection3D(const Vec3F& direction)
+    {
+        mInitialMoveDirection3D = direction;
+        OnChanged();
+    }
+
+    const Vec3F& ParticlesEmitter::GetEmitParticlesMoveDirection3D() const
+    {
+        return mInitialMoveDirection3D;
     }
 
     Ref<RefCounterable> ParticlesEmitter::CastToRefCounterable(const Ref<ParticlesEmitter>& ref)

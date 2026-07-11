@@ -81,7 +81,11 @@ namespace o2
 
         // Returns local space bounds of 3D drawing content; false when component has none
         virtual bool Get3DDrawableLocalBounds(AABB& bounds);
-        
+
+        // Returns true when 3D drawing content is transparent: drawn after opaque content
+        // by the transparent pass, skipped by G-buffer and shadow passes
+        virtual bool Is3DDrawableTransparent() const;
+
         // Returns component with type
         template<typename _type>
         Ref<_type> GetComponent() const;
@@ -264,6 +268,7 @@ CLASS_METHODS_META(o2::Component)
     FUNCTION().PUBLIC().SIGNATURE(void, Draw);
     FUNCTION().PUBLIC().SIGNATURE(bool, Get3DDrawableBounds, AABB&);
     FUNCTION().PUBLIC().SIGNATURE(bool, Get3DDrawableLocalBounds, AABB&);
+    FUNCTION().PUBLIC().SIGNATURE(bool, Is3DDrawableTransparent);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetName);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetCategory);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetIcon);

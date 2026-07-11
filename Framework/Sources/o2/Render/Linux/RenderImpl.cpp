@@ -275,7 +275,7 @@ namespace o2
         }
     }
 
-    void Render::PlatformSetDepthTest(bool enabled)
+    void Render::PlatformSetDepthTest(bool enabled, bool writeEnabled)
     {
         if (enabled)
         {
@@ -284,6 +284,9 @@ namespace o2
         }
         else
             glDisable(GL_DEPTH_TEST);
+
+        // Depth mask also gates depth clears, keep it enabled while the test is off
+        glDepthMask(enabled && !writeEnabled ? GL_FALSE : GL_TRUE);
 
         GL_CHECK_ERROR();
     }

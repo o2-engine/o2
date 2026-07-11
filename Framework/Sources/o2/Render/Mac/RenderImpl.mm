@@ -33,6 +33,7 @@ namespace o2
 
     id<MTLDepthStencilState> RenderDevice::depthStateDisabled;
     id<MTLDepthStencilState> RenderDevice::depthStateEnabled;
+    id<MTLDepthStencilState> RenderDevice::depthStateEnabledNoWrite;
 
     namespace
     {
@@ -73,6 +74,9 @@ namespace o2
         depthDescriptor.depthCompareFunction = MTLCompareFunctionLessEqual;
         depthDescriptor.depthWriteEnabled = YES;
         depthStateEnabled = [device newDepthStencilStateWithDescriptor:depthDescriptor];
+
+        depthDescriptor.depthWriteEnabled = NO;
+        depthStateEnabledNoWrite = [device newDepthStencilStateWithDescriptor:depthDescriptor];
 
         NSUInteger vertexBufferLength = (NSUInteger)vertexBufferByteSize;
         NSUInteger indexBufferLength = (NSUInteger)indexBufferSize * sizeof(VertexIndex);
@@ -122,6 +126,7 @@ namespace o2
         RenderDevice::indexBuffers[1] = nil;
         RenderDevice::depthStateDisabled = nil;
         RenderDevice::depthStateEnabled = nil;
+        RenderDevice::depthStateEnabledNoWrite = nil;
         RenderDevice::commandQueue = nil;
         RenderDevice::device = nil;
         RenderDevice::view = nil;
@@ -305,8 +310,10 @@ namespace o2
             }
             
             [renderEncoder setRenderPipelineState:mCurrentMaterial->mImpl->pipelineState];
-            [renderEncoder setDepthStencilState:mDepthTestEnabled ? RenderDevice::depthStateEnabled
-                                                                  : RenderDevice::depthStateDisabled];
+            id<MTLDepthStencilState> depthState = RenderDevice::depthStateDisabled;
+            if (mDepthTestEnabled)
+                depthState = mDepthWriteEnabled ? RenderDevice::depthStateEnabled : RenderDevice::depthStateEnabledNoWrite;
+            [renderEncoder setDepthStencilState:depthState];
 
             [renderEncoder setVertexBuffer:RenderDevice::vertexBuffer offset:mVertexBufferOffset atIndex:0];
             
@@ -459,7 +466,7 @@ namespace o2
             mNeedDepthClear = true;
     }
 
-    void Render::PlatformSetDepthTest(bool enabled)
+    void Render::PlatformSetDepthTest(bool enabled, bool writeEnabled)
     {}
 
     bool Render::PlatformSupportsMRT() const

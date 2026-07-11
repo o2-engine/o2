@@ -126,7 +126,7 @@ TEST(CameraPipelinePropertyUI, PassesParametersAreBuiltAndEditable)
 
     Vector<Ref<ObjectPtrProperty>> passProperties;
     FindAllByType(Ref<Widget>(passesProperty), passProperties);
-    ASSERT_EQ(passProperties.Count(), 4) << "every deferred pipeline pass must get an object property";
+    ASSERT_EQ(passProperties.Count(), 5) << "every deferred pipeline pass must get an object property";
 
     for (auto& passProperty : passProperties)
     {

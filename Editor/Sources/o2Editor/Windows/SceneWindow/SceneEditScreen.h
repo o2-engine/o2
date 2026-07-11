@@ -217,6 +217,8 @@ namespace Editor
         Vector<Ref<SceneEditorLayer>> mEditorLayers;        // List of editable layers
         Map<String, bool>             mEditorLayersEnabled; // Map of enabled or disabled layers by user
 
+        bool mIsRedrawingContent = false; // Guards from recursive scene redraw when scene content draws this widget
+
         Ref<HorizontalLayout> mLeftTopWidgetsContainer;     // Additional controls widgets container at left top
         Ref<HorizontalLayout> mRightTopWidgetsContainer;    // Additional controls widgets container at right top
         Ref<HorizontalLayout> mLeftBottomWidgetsContainer;  // Additional controls widgets container at left bottom
@@ -321,6 +323,9 @@ namespace Editor
 
         // Draws scene objects through the scene camera render pipeline with the editor view camera (3D mode)
         void DrawObjects3D(const Camera& viewCamera);
+
+        // Executes the scene camera render pipeline (or the default one) with the current render camera
+        void DrawScenePipeline();
 
         // Draws selection on objects
         void DrawSelection();
@@ -429,6 +434,7 @@ CLASS_FIELDS_META(Editor::SceneEditScreen)
     FIELD().PROTECTED().NAME(mDragHandles);
     FIELD().PROTECTED().NAME(mEditorLayers);
     FIELD().PROTECTED().NAME(mEditorLayersEnabled);
+    FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mIsRedrawingContent);
     FIELD().PROTECTED().NAME(mLeftTopWidgetsContainer);
     FIELD().PROTECTED().NAME(mRightTopWidgetsContainer);
     FIELD().PROTECTED().NAME(mLeftBottomWidgetsContainer);
@@ -519,6 +525,7 @@ CLASS_METHODS_META(Editor::SceneEditScreen)
     FUNCTION().PROTECTED().SIGNATURE(Input::Cursor, ToSceneCursor, const Input::Cursor&);
     FUNCTION().PROTECTED().SIGNATURE(void, DrawObjects);
     FUNCTION().PROTECTED().SIGNATURE(void, DrawObjects3D, const Camera&);
+    FUNCTION().PROTECTED().SIGNATURE(void, DrawScenePipeline);
     FUNCTION().PROTECTED().SIGNATURE(void, DrawSelection);
     FUNCTION().PROTECTED().SIGNATURE(void, DrawSelection3DOutline);
     FUNCTION().PROTECTED().SIGNATURE(void, BindSceneTree);

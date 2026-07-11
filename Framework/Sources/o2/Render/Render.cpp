@@ -155,7 +155,8 @@ namespace o2
 		PlatformBegin();
 
 		mDepthTestEnabled = false;
-		PlatformSetDepthTest(false);
+		mDepthWriteEnabled = true;
+		PlatformSetDepthTest(false, true);
 
 		SetupViewMatrix(mResolution);
 		UpdateCameraTransforms();
@@ -723,6 +724,7 @@ namespace o2
 		mCurrentDrawTexture = nullptr;
 		mCurrentBatchVertexType = Vertex::Type();
 		mDepthTestEnabled = false;
+		mDepthWriteEnabled = true;
 
 		PlatformResetState();
 		SetupViewMatrix(mResolution);
@@ -1555,15 +1557,16 @@ namespace o2
 		return !GetScissorRect().IsInside(point);
 	}
 
-	void Render::SetDepthTestEnabled(bool enabled)
+	void Render::SetDepthTestEnabled(bool enabled, bool writeEnabled /*= true*/)
 	{
-		if (mDepthTestEnabled == enabled)
+		if (mDepthTestEnabled == enabled && mDepthWriteEnabled == writeEnabled)
 			return;
 
 		DrawPrimitives();
 
 		mDepthTestEnabled = enabled;
-		PlatformSetDepthTest(enabled);
+		mDepthWriteEnabled = writeEnabled;
+		PlatformSetDepthTest(enabled, writeEnabled);
 	}
 
 	bool Render::IsDepthTestEnabled() const
