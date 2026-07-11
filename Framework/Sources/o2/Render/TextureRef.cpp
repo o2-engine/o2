@@ -87,7 +87,7 @@ namespace o2
 
     bool TextureRef::operator!=(const Texture* other) const
     {
-        return mTexture == other;
+        return mTexture != other;
     }
 
     bool TextureRef::operator!=(const TextureRef& other) const

@@ -29,10 +29,54 @@ struct O2VertexIn
     packed_float3 normal;
 };
 
+struct O2SkinnedVertexIn
+{
+    float x;
+    float y;
+    float z;
+    uint color;
+    packed_float2 texCoord0;
+    packed_float3 normal;
+    packed_float4 boneIndices;
+    packed_float4 boneWeights;
+};
+
 struct O2Uniforms
 {
     float4x4 mvpMatrix;
 };
+
+#define O2_MAX_BONES 64
+
+// Bones palette: three transposed rows (float4x3) per bone, see SkinnedMeshComponent palette packing
+struct O2SkinnedParams
+{
+    float4 u_bones[O2_MAX_BONES*3];
+    float  u_shaded;
+};
+
+inline float3 o2_skinPoint(constant float4* bones, float4 indices, float4 weights, float3 p)
+{
+    float4 point4 = float4(p, 1.0);
+    float3 result = float3(0.0);
+    for (int i = 0; i < 4; i++)
+    {
+        int base = int(indices[i])*3;
+        result += float3(dot(bones[base], point4), dot(bones[base + 1], point4), dot(bones[base + 2], point4))*weights[i];
+    }
+    return result;
+}
+
+inline float3 o2_skinDirection(constant float4* bones, float4 indices, float4 weights, float3 d)
+{
+    float3 result = float3(0.0);
+    for (int i = 0; i < 4; i++)
+    {
+        int base = int(indices[i])*3;
+        result += float3(dot(bones[base].xyz, d), dot(bones[base + 1].xyz, d), dot(bones[base + 2].xyz, d))*weights[i];
+    }
+    return result;
+}
 
 struct O2RasterizerData
 {

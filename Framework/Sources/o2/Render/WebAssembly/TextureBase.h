@@ -12,8 +12,9 @@ namespace o2
         friend class VectorFont;
 
     protected:
-        GLuint mHandle = 0;      // WebGL texture handle
-        GLuint mFrameBuffer = 0; // Frame buffer for rendering into texture
+        GLuint mHandle = 0;            // WebGL texture handle
+        GLuint mFrameBuffer = 0;       // Frame buffer for rendering into texture
+        GLuint mDepthRenderBuffer = 0; // Depth attachment for render targets
     };
 }
 

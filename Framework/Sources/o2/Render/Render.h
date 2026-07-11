@@ -550,6 +550,9 @@ namespace o2
 		// Platform specific multiple render targets support check
 		bool PlatformSupportsMRT() const;
 
+		// Platform specific sync of extra MRT attachments to the bound render target (used by GL backends)
+		void PlatformSyncRenderTargetAttachments();
+
 		// Restores platform scissor state and clipping flag from the scissors stack top
 		void RestoreScissorStateFromStack();
 

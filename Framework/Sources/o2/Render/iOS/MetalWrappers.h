@@ -52,6 +52,7 @@ namespace o2
     {
         NSUInteger offset = 0;
         MTLDataType dataType = MTLDataTypeNone;
+        NSUInteger size = 0; // Total member size in bytes; for arrays: length*stride
     };
 
     struct MTLMaterialImpl

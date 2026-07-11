@@ -27,6 +27,9 @@ namespace o2
     namespace
     {
         EMSCRIPTEN_WEBGL_CONTEXT_HANDLE gWebGLContext = 0;
+
+        // WebGL2 requires EXT_color_buffer_float to render into RGBA16F targets (G-buffer, shadow map)
+        bool gFloatTargetsSupported = false;
     }
 
     void Render::InitializePlatform()
@@ -59,6 +62,10 @@ namespace o2
         }
 
         GL_CHECK_ERROR();
+
+        gFloatTargetsSupported = emscripten_webgl_enable_extension(gWebGLContext, "EXT_color_buffer_float") == EM_TRUE;
+        if (!gFloatTargetsSupported)
+            mLog->WarningStr("EXT_color_buffer_float is not supported, deferred render pipeline will fall back to forward");
 
         mVertexBufferSize = USHRT_MAX;
         mIndexBufferSize = USHRT_MAX;
@@ -138,8 +145,17 @@ namespace o2
         }
     }
 
-    static void BindBatchAttributes(const VertexType& vtype, GLint pos, GLint color, GLint uv, GLint normal)
+    static void BindBatchAttributes(const VertexType& vtype, GLint pos, GLint color, GLint uv, GLint normal,
+                                    GLint boneIndices, GLint boneWeights)
     {
+        // Disable everything first: stale arrays from a previous vertex layout may point past the buffer
+        static GLint maxAttributes = 0;
+        if (maxAttributes == 0)
+            glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &maxAttributes);
+
+        for (GLint i = 0; i < maxAttributes; i++)
+            glDisableVertexAttribArray((GLuint)i);
+
         size_t stride = vtype.GetStride();
         if (stride == 0) stride = sizeof(Vertex);
 
@@ -167,6 +183,18 @@ namespace o2
                                   (void*)vtype.GetParamOffset(VertexParam::Normal));
             glEnableVertexAttribArray((GLuint)normal);
         }
+        if (boneIndices >= 0 && vtype.HasParam(VertexParam::BoneIndices))
+        {
+            glVertexAttribPointer((GLuint)boneIndices, 4, GL_FLOAT, GL_FALSE, (GLsizei)stride,
+                                  (void*)vtype.GetParamOffset(VertexParam::BoneIndices));
+            glEnableVertexAttribArray((GLuint)boneIndices);
+        }
+        if (boneWeights >= 0 && vtype.HasParam(VertexParam::BoneWeights))
+        {
+            glVertexAttribPointer((GLuint)boneWeights, 4, GL_FLOAT, GL_FALSE, (GLsizei)stride,
+                                  (void*)vtype.GetParamOffset(VertexParam::BoneWeights));
+            glEnableVertexAttribArray((GLuint)boneWeights);
+        }
     }
 
     void Render::PlatformBindNextPoolBuffers()
@@ -179,10 +207,8 @@ namespace o2
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mIndexBuffersPool[mCurrentBufferIdx]);
         GL_CHECK_ERROR();
 
-        BindBatchAttributes(mCurrentBatchVertexType,
-                            mActivePosAttribute, mActiveColorAttribute,
-                            mActiveUVAttribute, mActiveNormalAttribute);
-        GL_CHECK_ERROR();
+        // Attribute pointers refer to the previous pool buffer, rebind lazily at the next draw
+        mBoundAttributesVertexType = VertexType();
 
         mVertexBufferIdx = 0;
         mIndexBufferIdx = 0;
@@ -196,6 +222,37 @@ namespace o2
     void Render::PlatformDrawPrimitives()
     {
         static const GLenum primitiveType[3]{ GL_TRIANGLES, GL_TRIANGLES, GL_LINES };
+
+        if (mRenderTargetAttachmentsDirty)
+            PlatformSyncRenderTargetAttachments();
+
+        if (mCurrentBatchVertexType != mBoundAttributesVertexType)
+        {
+            BindBatchAttributes(mCurrentBatchVertexType,
+                                mActivePosAttribute, mActiveColorAttribute,
+                                mActiveUVAttribute, mActiveNormalAttribute,
+                                mActiveBoneIndicesAttribute, mActiveBoneWeightsAttribute);
+
+            if (mCurrentMaterial)
+            {
+                const UInt texCoordParams[] = { VertexParam::TexCoord1, VertexParam::TexCoord2 };
+                size_t attrStride = mCurrentBatchVertexType.GetStride();
+                if (attrStride == 0) attrStride = sizeof(Vertex);
+                for (int i = 0; i < mCurrentMaterial->mSamplerLocations.Count(); i++)
+                {
+                    GLint attrLoc = mCurrentMaterial->mSamplerLocations[i].texCoordsAttribute;
+                    if (attrLoc >= 0 && i < 2 && mCurrentBatchVertexType.HasParam(texCoordParams[i]))
+                    {
+                        glVertexAttribPointer((GLuint)attrLoc, 2, GL_FLOAT, GL_FALSE, (GLsizei)attrStride,
+                                              (void*)mCurrentBatchVertexType.GetParamOffset(texCoordParams[i]));
+                        glEnableVertexAttribArray((GLuint)attrLoc);
+                    }
+                }
+            }
+
+            mBoundAttributesVertexType = mCurrentBatchVertexType;
+            GL_CHECK_ERROR();
+        }
 
         size_t stride = mCurrentBatchVertexType.GetStride();
 
@@ -242,11 +299,6 @@ namespace o2
 
         glUniform1i(mActiveTextureSample, 0);
         GL_CHECK_ERROR();
-
-        BindBatchAttributes(mCurrentBatchVertexType,
-                            mActivePosAttribute, mActiveColorAttribute,
-                            mActiveUVAttribute, mActiveNormalAttribute);
-        GL_CHECK_ERROR();
     }
 
     VertexType Render::PlatformResolveBatchVertexType(const VertexType& sourceVertexType, const Ref<Material>& material) const
@@ -257,6 +309,10 @@ namespace o2
     void Render::Clear(const Color4& color /*= Color4::Blur()*/)
     {
         PROFILE_SAMPLE_FUNC();
+
+        // Extra MRT targets must be attached before the clear covers them
+        if (mRenderTargetAttachmentsDirty)
+            PlatformSyncRenderTargetAttachments();
 
         glClearColor(color.RF(), color.GF(), color.BF(), color.AF());
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -303,7 +359,29 @@ namespace o2
 
     bool Render::PlatformSupportsMRT() const
     {
-        return false;
+        // WebGL2 always provides draw buffers, but the deferred pipeline also needs float color targets
+        return gFloatTargetsSupported;
+    }
+
+    void Render::PlatformSyncRenderTargetAttachments()
+    {
+        mRenderTargetAttachmentsDirty = false;
+
+        if (!mCurrentRenderTarget)
+            return;
+
+        static const int maxExtraAttachments = 3;
+        int extraCount = Math::Min(mExtraRenderTargets.Count(), maxExtraAttachments);
+        for (int i = 0; i < maxExtraAttachments; i++)
+        {
+            GLuint handle = i < extraCount ? mExtraRenderTargets[i]->mHandle : 0;
+            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1 + i, GL_TEXTURE_2D, handle, 0);
+        }
+
+        static const GLenum drawBuffers[4] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1,
+                                               GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3 };
+        glDrawBuffers(1 + extraCount, drawBuffers);
+        GL_CHECK_ERROR();
     }
 
     void Render::PlatformEnableScissorTest()
@@ -332,6 +410,9 @@ namespace o2
         else
             glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
+        // Extra targets are assigned after this call, sync attachments lazily at the next clear or draw
+        mRenderTargetAttachmentsDirty = renderTarget != nullptr;
+
         GL_CHECK_ERROR();
     }
 
@@ -359,29 +440,14 @@ namespace o2
             mActiveColorAttribute = material->mColorAttribute;
             mActiveUVAttribute = material->mTexCoordsAttribute;
             mActiveNormalAttribute = material->mNormalAttribute;
+            mActiveBoneIndicesAttribute = material->mBoneIndicesAttribute;
+            mActiveBoneWeightsAttribute = material->mBoneWeightsAttribute;
 
             glUseProgram(mActiveProgram);
             GL_CHECK_ERROR();
 
-            BindBatchAttributes(mCurrentBatchVertexType,
-                                mActivePosAttribute, mActiveColorAttribute,
-                                mActiveUVAttribute, mActiveNormalAttribute);
-
-            const UInt texCoordParams[] = { VertexParam::TexCoord1, VertexParam::TexCoord2 };
-            size_t stride = mCurrentBatchVertexType.GetStride();
-            if (stride == 0) stride = sizeof(Vertex);
-            for (int i = 0; i < material->mSamplerLocations.Count(); i++)
-            {
-                GLint attrLoc = material->mSamplerLocations[i].texCoordsAttribute;
-                if (attrLoc >= 0 && i < 2 && mCurrentBatchVertexType.HasParam(texCoordParams[i]))
-                {
-                    glVertexAttribPointer((GLuint)attrLoc, 2, GL_FLOAT, GL_FALSE, (GLsizei)stride,
-                                          (void*)mCurrentBatchVertexType.GetParamOffset(texCoordParams[i]));
-                    glEnableVertexAttribArray((GLuint)attrLoc);
-                }
-            }
-
-            GL_CHECK_ERROR();
+            // Attribute locations belong to the new program, rebind pointers at the next draw
+            mBoundAttributesVertexType = VertexType();
 
             glUniformMatrix4fv(mActiveMvpUniform, 1, GL_FALSE, mCurrentMvp);
             GL_CHECK_ERROR();

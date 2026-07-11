@@ -467,6 +467,9 @@ namespace o2
         return true;
     }
 
+    void Render::PlatformSyncRenderTargetAttachments()
+    {} // MRT attachments are set on the render pass descriptor at draw time
+
     Vec2I Render::GetPlatformMaxTextureSize()
     {
         return Vec2I(4096, 4096);
