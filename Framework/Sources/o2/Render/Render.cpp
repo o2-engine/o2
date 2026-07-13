@@ -567,23 +567,10 @@ namespace o2
 
 	void Render::DeliverFrameCapture()
 	{
-		// Render targets are drawn y-flipped (world-up content lands in the last texture rows),
-		// so the rows are mirrored here to deliver an upright bitmap
+		// The render-target y-flip in the camera transforms already matches the Bitmap bottom-up
+		// row convention: the PNG saver mirrors rows itself, so an extra flip here would double up
+		// and save screenshots upside down
 		Ref<Bitmap> bitmap = mCaptureTarget->GetData();
-
-		Vec2I size = bitmap->GetSize();
-		UInt bytesPerRow = (UInt)size.x*4;
-		UInt8* data = bitmap->GetData();
-		Vector<UInt8> rowBuffer;
-		rowBuffer.resize(bytesPerRow);
-		for (int y = 0; y < size.y/2; y++)
-		{
-			UInt8* rowA = data + y*bytesPerRow;
-			UInt8* rowB = data + (size.y - 1 - y)*bytesPerRow;
-			memcpy(rowBuffer.data(), rowA, bytesPerRow);
-			memcpy(rowA, rowB, bytesPerRow);
-			memcpy(rowB, rowBuffer.data(), bytesPerRow);
-		}
 
 		auto callback = mCaptureCallback;
 		mCaptureCallback.Clear();
