@@ -69,7 +69,7 @@ set(JERRY_GC_LIMIT                  "(0)"    CACHE BOOL "" FORCE)
 set(JERRY_STACK_LIMIT               "(0)"    CACHE BOOL "" FORCE)
 set(JERRY_GC_MARK_LIMIT             "(8)"    CACHE BOOL "" FORCE)
 
-if (O2_SCRIPTING)
+if (O2_SCRIPTING AND O2_SCRIPTING_BACKEND STREQUAL "jerryscript")
     add_subdirectory(jerryscript)
 endif()
 

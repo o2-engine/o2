@@ -9,6 +9,11 @@
 #include "o2/Utils/Serialization/Serializable.h"
 #include "o2/Scripts/JerryScript/ScriptValueImpl.h"
 #include "o2/Scripts/JerryScript/ScriptValueConverters.h"
+#elif defined(SCRIPTING_BACKEND_BROWSERJS)
+#include "o2/Utils/Editor/Attributes/ScriptableAttribute.h"
+#include "o2/Utils/Serialization/Serializable.h"
+#include "o2/Scripts/BrowserJS/ScriptValueImpl.h"
+#include "o2/Scripts/BrowserJS/ScriptValueConverters.h"
 #endif
 
 #endif // IS_SCRIPTING_SUPPORTED

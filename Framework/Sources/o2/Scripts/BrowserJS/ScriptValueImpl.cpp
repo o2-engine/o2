@@ -4,56 +4,57 @@
 #include "o2/Scripts/ScriptValueContainerAllocator.h"
 #include "o2/Utils/Debug/Debug.h"
 
-#if defined(SCRIPTING_BACKEND_JERRYSCRIPT)
+#if defined(SCRIPTING_BACKEND_BROWSERJS)
+#include "o2/Scripts/BrowserJS/BrowserJSCore.h"
 #include "o2/Scripts/ScriptValue.h"
 
 namespace o2
 {
     ScriptValueBase::~ScriptValueBase()
     {
-        jerry_release_value(jvalue);
+        o2js_release(mValue);
     }
 
-    void ScriptValueBase::AcquireValue(jerry_value_t v)
+    void ScriptValueBase::AcquireValue(o2js_value_t v)
     {
-        jerry_release_value(jvalue);
-        jvalue = jerry_acquire_value(v);
+        o2js_release(mValue);
+        mValue = o2js_acquire(v);
     }
 
     ScriptValue ScriptValue::EmptyObject()
     {
         ScriptValue res;
-        res.Accept(jerry_create_object());
+        res.Accept(o2js_object());
         return res;
     }
 
     ScriptValue ScriptValue::EmptyArray()
     {
         ScriptValue res;
-        res.Accept(jerry_create_array(0));
+        res.Accept(o2js_array(0));
         return res;
     }
 
-    void ScriptValueBase::Accept(jerry_value_t v)
+    void ScriptValueBase::Accept(o2js_value_t v)
     {
-        jerry_release_value(jvalue);
-        jvalue = v;
+        o2js_release(mValue);
+        mValue = v;
     }
 
     ScriptValue::ScriptValue()
     {
-        jvalue = jerry_create_undefined();
+        mValue = o2js_undefined();
     }
 
     ScriptValue::ScriptValue(const ScriptValue& other)
     {
-        jvalue = jerry_acquire_value(other.jvalue);
+        mValue = o2js_acquire(other.mValue);
     }
 
     ScriptValue::ScriptValue(ScriptValue&& other) noexcept
     {
-        jvalue = other.jvalue;
-        other.jvalue = jerry_create_undefined();
+        mValue = other.mValue;
+        other.mValue = o2js_undefined();
     }
 
     ScriptValue ScriptValue::operator[](const ScriptValue& name) const
@@ -64,7 +65,7 @@ namespace o2
     ScriptValue ScriptValue::operator[](int idx) const
     {
         ScriptValue res;
-        res.Accept(jerry_get_property_by_index(jvalue, idx));
+        res.Accept(o2js_get_property_by_index(mValue, idx));
         return res;
     }
 
@@ -75,15 +76,13 @@ namespace o2
 
     bool ScriptValue::operator==(const ScriptValue& other) const
     {
-        ScriptValue res;
-        res.Accept(jerry_binary_operation(JERRY_BIN_OP_EQUAL, jvalue, other.jvalue));
-        return res.ToBool();
+        return o2js_equals(mValue, other.mValue);
     }
 
     ScriptValue& ScriptValue::operator=(const ScriptValue& other)
     {
-        jerry_release_value(jvalue);
-        jvalue = jerry_acquire_value(other.jvalue);
+        o2js_release(mValue);
+        mValue = o2js_acquire(other.mValue);
         return *this;
     }
 
@@ -91,24 +90,24 @@ namespace o2
     {
         if (this != &other)
         {
-            jerry_release_value(jvalue);
-            jvalue = other.jvalue;
-            other.jvalue = jerry_create_undefined();
+            o2js_release(mValue);
+            mValue = other.mValue;
+            other.mValue = o2js_undefined();
         }
         return *this;
     }
 
     ScriptValue::ValueType ScriptValue::GetValueType() const
     {
-        if (jerry_value_is_array(jvalue))
+        if (o2js_is_array(mValue))
             return ValueType::Array;
 
-        return (ValueType)jerry_value_get_type(jvalue);
+        return (ValueType)o2js_get_value_type(mValue);
     }
 
     bool ScriptValue::IsConstructor() const
     {
-        return jerry_value_is_constructor(jvalue);
+        return o2js_is_constructor(mValue);
     }
 
     bool ScriptValue::IsUndefined() const
@@ -138,11 +137,11 @@ namespace o2
 
             res.SetPrototype(GetPrototype());
 
-            auto dataContainer = GetNativeContainer(jvalue);
+            auto dataContainer = GetNativeContainer(mValue);
             if (dataContainer)
             {
                 auto clonedDataContainer = dataContainer->Clone();
-                jerry_set_object_native_pointer(res.jvalue, clonedDataContainer, &GetDataDeleter().info);
+                o2js_set_native_pointer(res.mValue, clonedDataContainer, &FreeDataContainer);
             }
 
             return res;
@@ -153,10 +152,10 @@ namespace o2
 
     int ScriptValue::GetLength() const
     {
-        if (!jerry_value_is_array(jvalue))
+        if (!o2js_is_array(mValue))
             return 0;
 
-        return jerry_get_array_length(jvalue);
+        return o2js_get_array_length(mValue);
     }
 
     String ScriptValue::GetError() const
@@ -164,13 +163,12 @@ namespace o2
         if (GetValueType() != ValueType::Error)
             return String();
 
-        // release=false: this value still owns the error reference, destructor releases it once
-        auto errorJValue = jerry_get_value_from_error(jvalue, false);
+        auto thrownValue = o2js_get_error_value(mValue);
 
         ScriptValue errorValue;
-        errorValue.Accept(jerry_value_to_string(errorJValue));
+        errorValue.Accept(o2js_to_string(thrownValue));
 
-        jerry_release_value(errorJValue);
+        o2js_release(thrownValue);
 
         return errorValue.GetValue<String>();
     }
@@ -180,9 +178,7 @@ namespace o2
         if (!IsObject())
             return false;
 
-        void* dataPtr = nullptr;
-        jerry_get_object_native_pointer(jvalue, &dataPtr, &GetDataDeleter().info);
-        return dataPtr != nullptr;
+        return o2js_get_native_pointer(mValue, &FreeDataContainer) != nullptr;
     }
 
     const Type* ScriptValue::GetObjectContainerType() const
@@ -190,9 +186,7 @@ namespace o2
         if (!IsObject())
             return nullptr;
 
-        void* dataPtr = nullptr;
-        jerry_get_object_native_pointer(jvalue, &dataPtr, &GetDataDeleter().info);
-        auto dataContainer = (IDataContainer*)dataPtr;
+        auto dataContainer = (IDataContainer*)o2js_get_native_pointer(mValue, &FreeDataContainer);
         if (dataContainer)
             return dataContainer->GetType();
 
@@ -204,9 +198,7 @@ namespace o2
         if (!IsObject())
             return nullptr;
 
-        void* dataPtr = nullptr;
-        jerry_get_object_native_pointer(jvalue, &dataPtr, &GetDataDeleter().info);
-        auto dataContainer = (IDataContainer*)dataPtr;
+        auto dataContainer = (IDataContainer*)o2js_get_native_pointer(mValue, &FreeDataContainer);
         if (dataContainer)
             return dataContainer->GetData();
 
@@ -216,12 +208,12 @@ namespace o2
     ScriptValue ScriptValue::Construct(const Vector<ScriptValue>& args)
     {
         const int maxParameters = 16;
-        jerry_value_t valuesBuf[maxParameters];
+        o2js_value_t valuesBuf[maxParameters];
         for (int i = 0; i < args.Count() && i < maxParameters; i++)
-            valuesBuf[i] = args[i].jvalue;
+            valuesBuf[i] = args[i].mValue;
 
         ScriptValue res;
-        res.Accept(jerry_construct_object(jvalue, valuesBuf, args.Count()));
+        res.Accept(o2js_construct(mValue, valuesBuf, args.Count()));
         return res;
     }
 
@@ -249,86 +241,67 @@ namespace o2
     {
         if (GetValueType() != ValueType::Object)
         {
-            jerry_release_value(jvalue);
-            jvalue = jerry_create_object();
+            o2js_release(mValue);
+            mValue = o2js_object();
         }
 
         ScriptValue res;
-        res.Accept(jerry_get_property(jvalue, name.jvalue));
+        res.Accept(o2js_get_property(mValue, name.mValue));
         return res;
     }
 
     ScriptValue ScriptValue::GetInternalProperty(const ScriptValue& name) const
     {
         ScriptValue res;
-        res.Accept(jerry_get_internal_property(jvalue, name.jvalue));
+        res.Accept(o2js_get_internal_property(mValue, name.mValue));
         return res;
     }
 
     ScriptValue ScriptValue::GetOwnProperty(const ScriptValue& name) const
     {
         ScriptValue res;
-
-        jerry_property_descriptor_t descr;
-        jerry_init_property_descriptor_fields(&descr);
-
-        if (jerry_get_own_property_descriptor(jvalue, name.jvalue, &descr))
-            res.AcquireValue(descr.value);
-
-        jerry_free_property_descriptor_fields(&descr);
-
+        res.Accept(o2js_get_own_property(mValue, name.mValue));
         return res;
     }
 
     ScriptValue ScriptValue::GetPropertyNames() const
     {
         ScriptValue res;
-
-        jerry_property_filter_t filter = (jerry_property_filter_t)(JERRY_PROPERTY_FILTER_ALL 
-            | JERRY_PROPERTY_FILTER_EXLCUDE_SYMBOLS
-            | JERRY_PROPERTY_FILTER_EXLCUDE_NON_CONFIGURABLE
-            | JERRY_PROPERTY_FILTER_EXLCUDE_NON_ENUMERABLE
-            | JERRY_PROPERTY_FILTER_EXLCUDE_NON_WRITABLE
-            | JERRY_PROPERTY_FILTER_EXLCUDE_INTEGER_INDICES
-            | JERRY_PROPERTY_FILTER_INTEGER_INDICES_AS_NUMBER
-        );
-
-        res.Accept(jerry_object_get_property_names(jvalue, filter));
-
+        res.Accept(o2js_get_property_names(mValue));
         return res;
     }
 
     void ScriptValue::SetInternalProperty(const ScriptValue& name, const ScriptValue& value)
     {
-        jerry_set_internal_property(jvalue, name.jvalue, value.jvalue);
+        o2js_set_internal_property(mValue, name.mValue, value.mValue);
     }
 
     void ScriptValue::SetProperty(const ScriptValue& name, const ScriptValue& value)
     {
         if (GetValueType() != ValueType::Object)
         {
-            jerry_release_value(jvalue);
-            jvalue = jerry_create_object();
+            o2js_release(mValue);
+            mValue = o2js_object();
         }
 
-        jerry_set_property(jvalue, name.jvalue, value.jvalue);
+        o2js_set_property(mValue, name.mValue, value.mValue);
     }
 
     void ScriptValue::RemoveProperty(const ScriptValue& name)
     {
-        jerry_delete_property(jvalue, name.jvalue);
+        o2js_delete_property(mValue, name.mValue);
     }
 
     void ScriptValue::SetPrototype(const ScriptValue& proto)
     {
         ScriptValue res;
-        res.Accept(jerry_set_prototype(jvalue, proto.jvalue));
+        res.Accept(o2js_set_prototype(mValue, proto.mValue));
     }
 
     ScriptValue ScriptValue::GetPrototype() const
     {
         ScriptValue res;
-        res.Accept(jerry_get_prototype(jvalue));
+        res.Accept(o2js_get_prototype(mValue));
         return res;
     }
 
@@ -336,17 +309,17 @@ namespace o2
     {
         if (GetValueType() != ValueType::Array)
         {
-            jerry_release_value(jvalue);
-            jvalue = jerry_create_array(0);
+            o2js_release(mValue);
+            mValue = o2js_array(0);
         }
 
-        jerry_set_property_by_index(jvalue, idx, value.jvalue);
+        o2js_set_property_by_index(mValue, idx, value.mValue);
     }
 
     ScriptValue ScriptValue::GetElement(int idx) const
     {
         ScriptValue res;
-        res.Accept(jerry_get_property_by_index(jvalue, idx));
+        res.Accept(o2js_get_property_by_index(mValue, idx));
         return res;
     }
 
@@ -357,38 +330,38 @@ namespace o2
 
     void ScriptValue::RemoveElement(int idx)
     {
-        jerry_delete_property_by_index(jvalue, idx);
+        o2js_delete_property_by_index(mValue, idx);
     }
 
     bool ScriptValue::ToBool() const
     {
-        return jerry_value_to_boolean(jvalue);
+        return o2js_to_boolean(mValue);
     }
 
     float ScriptValue::ToNumber() const
     {
         if (GetValueType() != ValueType::Number)
         {
-            auto prev = jvalue;
-            jvalue = jerry_value_to_number(jvalue);
-            jerry_release_value(prev);
+            auto prev = mValue;
+            mValue = o2js_to_number(mValue);
+            o2js_release(prev);
         }
 
-        return (float)jerry_get_number_value(jvalue);
+        return (float)o2js_get_number(mValue);
     }
 
     String ScriptValue::ToString() const
     {
         if (GetValueType() != ValueType::String)
         {
-            auto prev = jvalue;
-            jvalue = jerry_value_to_string(jvalue);
-            jerry_release_value(prev);
+            auto prev = mValue;
+            mValue = o2js_to_string(mValue);
+            o2js_release(prev);
         }
 
         String res;
-        res.resize(jerry_get_string_length(jvalue));
-        jerry_string_to_char_buffer(jvalue, (jerry_char_t*)res.Data(), res.Capacity());
+        res.resize(o2js_get_string_length(mValue));
+        o2js_string_to_buffer(mValue, (char*)res.Data(), res.Capacity());
         return res;
     }
 
@@ -402,11 +375,11 @@ namespace o2
         if (IsFunction())
         {
             const int maxParameters = 16;
-            jerry_value_t valuesBuf[maxParameters];
+            o2js_value_t valuesBuf[maxParameters];
             for (int i = 0; i < args.Count() && i < maxParameters; i++)
-                valuesBuf[i] = args[i].jvalue;
+                valuesBuf[i] = args[i].mValue;
 
-            auto res = jerry_call_function(jvalue, thisValue.jvalue, valuesBuf, args.Count());
+            auto res = o2js_call_function(mValue, thisValue.mValue, valuesBuf, args.Count());
 
             ScriptValue resValue;
             resValue.Accept(res);
@@ -417,18 +390,7 @@ namespace o2
         return {};
     }
 
-    ScriptValueBase::DataContainerDeleter& ScriptValueBase::GetDataDeleter()
-    {
-        static DataContainerDeleter deleter;
-        return deleter;
-    }
-
-    ScriptValueBase::DataContainerDeleter::DataContainerDeleter()
-    {
-        info.free_cb = &Free;
-    }
-
-    void ScriptValueBase::DataContainerDeleter::Free(void* ptr)
+    void ScriptValueBase::FreeDataContainer(void* ptr)
     {
         auto* container = static_cast<IDataContainer*>(ptr);
         if (container)
@@ -445,58 +407,56 @@ namespace o2
         ScriptContainerAllocator::GetInstance().Free(ptr);
     }
 
-    ScriptValueBase::IDataContainer* ScriptValueBase::GetNativeContainer(jerry_value_t jval)
+    ScriptValueBase::IDataContainer* ScriptValueBase::GetNativeContainer(o2js_value_t jval)
     {
-        void* ptr = nullptr;
-        jerry_get_object_native_pointer(jval, &ptr, &GetDataDeleter().info);
-        return (IDataContainer*)ptr;
+        return (IDataContainer*)o2js_get_native_pointer(jval, &FreeDataContainer);
     }
 
-    jerry_value_t ScriptValueBase::CallFunction(const jerry_value_t function_obj,
-                                                const jerry_value_t this_val,
-                                                const jerry_value_t args_p[], const jerry_length_t args_count)
+    o2js_value_t ScriptValueBase::CallFunction(const o2js_value_t function_obj,
+                                                const o2js_value_t this_val,
+                                                const o2js_value_t args_p[], const int args_count)
     {
         auto container = static_cast<IFunctionContainer*>(GetNativeContainer(function_obj));
-        return container->Invoke(this_val, (jerry_value_t*)args_p, args_count);
+        return container->Invoke(this_val, (o2js_value_t*)args_p, args_count);
     }
 
-    jerry_value_t ScriptValueBase::DescriptorSetter(const jerry_value_t function_obj,
-                                                    const jerry_value_t this_val,
-                                                    const jerry_value_t args_p[],
-                                                    const jerry_length_t args_count)
+    o2js_value_t ScriptValueBase::DescriptorSetter(const o2js_value_t function_obj,
+                                                    const o2js_value_t this_val,
+                                                    const o2js_value_t args_p[],
+                                                    const int args_count)
     {
         auto container = static_cast<ISetterWrapperContainer*>(GetNativeContainer(function_obj));
         container->Set(args_p[0]);
 
-        return jerry_create_undefined();
+        return o2js_undefined();
     }
 
-    jerry_value_t ScriptValueBase::DescriptorGetter(const jerry_value_t function_obj,
-                                                    const jerry_value_t this_val,
-                                                    const jerry_value_t args_p[],
-                                                    const jerry_length_t args_count)
+    o2js_value_t ScriptValueBase::DescriptorGetter(const o2js_value_t function_obj,
+                                                    const o2js_value_t this_val,
+                                                    const o2js_value_t args_p[],
+                                                    const int args_count)
     {
         auto container = static_cast<IGetterWrapperContainer*>(GetNativeContainer(function_obj));
         return container->Get();
     }
 
-    jerry_value_t ScriptValueBase::PrototypeDescriptorGetter(const jerry_value_t function_obj,
-                                                             const jerry_value_t this_val,
-                                                             const jerry_value_t args_p[],
-                                                             const jerry_length_t args_count)
+    o2js_value_t ScriptValueBase::PrototypeDescriptorGetter(const o2js_value_t function_obj,
+                                                             const o2js_value_t this_val,
+                                                             const o2js_value_t args_p[],
+                                                             const int args_count)
     {
         auto container = static_cast<IPrototypeGetter*>(GetNativeContainer(function_obj));
         return container->GetFrom(this_val);
     }
 
-    jerry_value_t ScriptValueBase::PrototypeDescriptorSetter(const jerry_value_t function_obj,
-                                                             const jerry_value_t this_val,
-                                                             const jerry_value_t args_p[],
-                                                             const jerry_length_t args_count)
+    o2js_value_t ScriptValueBase::PrototypeDescriptorSetter(const o2js_value_t function_obj,
+                                                             const o2js_value_t this_val,
+                                                             const o2js_value_t args_p[],
+                                                             const int args_count)
     {
         auto container = static_cast<IPrototypeSetter*>(GetNativeContainer(function_obj));
         container->SetTo(this_val, args_p[0]);
-        return jerry_create_undefined();
+        return o2js_undefined();
     }
 
     ScriptValue*& ScriptValuePrototypes::GetVec2Prototype()

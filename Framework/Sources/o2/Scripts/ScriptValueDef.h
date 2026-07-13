@@ -6,6 +6,8 @@
 
 #if defined(SCRIPTING_BACKEND_JERRYSCRIPT)
 #include "o2/Scripts/JerryScript/ScriptValueBase.h"
+#elif defined(SCRIPTING_BACKEND_BROWSERJS)
+#include "o2/Scripts/BrowserJS/ScriptValueBase.h"
 #endif
 
 #include "o2/Utils/Types/StringDef.h"

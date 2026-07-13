@@ -31,7 +31,7 @@
 #endif
 
 // Is enabled scripting engine
-#if defined(SCRIPTING_BACKEND_JERRYSCRIPT)
+#if defined(SCRIPTING_BACKEND_JERRYSCRIPT) || defined(SCRIPTING_BACKEND_BROWSERJS)
 #define IS_SCRIPTING_SUPPORTED true
 #else
 #define IS_SCRIPTING_SUPPORTED false

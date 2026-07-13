@@ -1,5 +1,6 @@
-#if defined(SCRIPTING_BACKEND_JERRYSCRIPT)
-#include "jerryscript/jerry-core/include/jerryscript-core.h"
+#if defined(SCRIPTING_BACKEND_BROWSERJS)
+
+#include "o2/Scripts/BrowserJS/BrowserJSCore.h"
 
 #include "o2/Utils/Types/Ref.h"
 #include "o2/Utils/Debug/Log/LogStream.h"
@@ -16,7 +17,7 @@ namespace o2
         virtual ~ScriptParseResultBase();
 
     protected:
-        jerry_value_t mParsedCode = jerry_create_undefined();
+        o2js_value_t mParsedCode = o2js_undefined();
 
         friend class ScriptEngine;
     };
@@ -27,9 +28,9 @@ namespace o2
         Ref<LogStream> mLog; // Scripting log stream
 
     protected:
-        static void ErrorCallback(const jerry_value_t error_object, void* user_p);
-        static jerry_value_t PrintCallback(const jerry_value_t func_obj_val, const jerry_value_t this_p,
-                                           const jerry_value_t args_p[], const jerry_length_t args_cnt);
+        static void ErrorCallback(o2js_value_t error_value, void* user_p);
+        static o2js_value_t PrintCallback(o2js_value_t func_obj_val, o2js_value_t this_p,
+                                          const o2js_value_t args_p[], int args_cnt);
 
         // Initialized basic prototypes for math and other
         void InitializeBasicPrototypes();

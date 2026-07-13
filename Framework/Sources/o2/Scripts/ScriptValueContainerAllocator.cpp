@@ -1,5 +1,5 @@
 #include "o2/stdafx.h"
-#include "o2/Scripts/JerryScript/ScriptValueContainerAllocator.h"
+#include "o2/Scripts/ScriptValueContainerAllocator.h"
 
 #include <algorithm>
 #include <array>
