@@ -9,6 +9,7 @@
 #include "o2/Render/Render.h"
 #include "o2/Scene/Scene.h"
 #include "o2/Scene/UI/UIManager.h"
+#include "o2/Sound/SoundSystem.h"
 #include "o2/Utils/Debug/Debug.h"
 #include "o2/Utils/Debug/Log/ConsoleLogStream.h"
 #include "o2/Utils/Debug/Log/FileLogStream.h"
@@ -44,6 +45,7 @@ namespace o2
     FORWARD_REF_IMPL(ProjectConfig);
     FORWARD_REF_IMPL(Render);
     FORWARD_REF_IMPL(Scene);
+    FORWARD_REF_IMPL(SoundSystem);
     FORWARD_REF_IMPL(TaskManager);
     FORWARD_REF_IMPL(Time);
     FORWARD_REF_IMPL(UIManager);
@@ -187,6 +189,8 @@ namespace o2
 
         mPhysics = mmake<PhysicsWorld>();
 
+        mSounds = mmake<SoundSystem>();
+
 #if IS_SCRIPTING_SUPPORTED
         mScriptingEngine = mmake<ScriptEngine>();
 #endif
@@ -223,6 +227,8 @@ namespace o2
             o2Debug.DeinitializeFont();
 
         Assets::DestroySingleton(mAssets);
+
+        SoundSystem::DestroySingleton(mSounds);
 
         if (mRender)
             Render::DestroySingleton(mRender);
@@ -341,6 +347,8 @@ namespace o2
 	{
 		mInput->Update(dt);
 		mUIManager->Update();
+
+		mSounds->Update(dt);
 
 		mAssets->CheckAssetsUnload();
 	}

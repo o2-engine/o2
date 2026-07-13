@@ -115,6 +115,7 @@ add_subdirectory(zlib)
 add_subdirectory(FreeType)
 add_subdirectory(pugixml)
 add_subdirectory(boost)
+add_subdirectory(miniaudio)
 
 # spine
 set(SPINE_SANITIZE OFF)
@@ -132,6 +133,7 @@ if(MSVC)
     target_compile_options(FreeType PRIVATE ${O2_MSVC_MP_FLAG})
     target_compile_options(pugixml PRIVATE ${O2_MSVC_MP_FLAG})
     target_compile_options(spine-cpp PRIVATE ${O2_MSVC_MP_FLAG})
+    target_compile_options(miniaudio PRIVATE ${O2_MSVC_MP_FLAG})
 endif()
 
 set_target_properties(Box2D PROPERTIES FOLDER o2/3rdPartyLibs)
@@ -146,6 +148,7 @@ set_target_properties(zlib PROPERTIES FOLDER o2/3rdPartyLibs)
 set_target_properties(FreeType PROPERTIES FOLDER o2/3rdPartyLibs)
 set_target_properties(pugixml PROPERTIES FOLDER o2/3rdPartyLibs)
 set_target_properties(spine-cpp PROPERTIES FOLDER o2/3rdPartyLibs)
+set_target_properties(miniaudio PROPERTIES FOLDER o2/3rdPartyLibs)
 
 if(MSVC)
     set_target_properties(boost_stacktrace_windbg_cached PROPERTIES FOLDER o2/3rdPartyLibs)

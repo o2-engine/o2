@@ -246,12 +246,13 @@ if(NOT O2_DISABLE_O2FRAMEWORK_PCH)
 endif()
 target_compile_definitions(o2Framework PUBLIC ${O2_COMPILE_DEFINITIONS})
 
-target_link_libraries(o2Framework 
-    PUBLIC 
-        Box2D 
-        FreeType 
-        pugixml 
+target_link_libraries(o2Framework
+    PUBLIC
+        Box2D
+        FreeType
+        pugixml
         spine-cpp
+        miniaudio
 )
 if (O2_SCRIPTING)
     target_link_libraries(o2Framework PUBLIC jerry-core jerry-ext jerry-port-default)

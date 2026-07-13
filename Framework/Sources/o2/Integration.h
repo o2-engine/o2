@@ -23,6 +23,7 @@ namespace o2
     FORWARD_CLASS_REF(ProjectConfig);
     FORWARD_CLASS_REF(Render);
     FORWARD_CLASS_REF(Scene);
+    FORWARD_CLASS_REF(SoundSystem);
     FORWARD_CLASS_REF(TaskManager);
     FORWARD_CLASS_REF(Time);
     FORWARD_CLASS_REF(UIManager);
@@ -115,6 +116,7 @@ namespace o2
         Ref<ProjectConfig> mProjectConfig; // Project config
         Ref<Render>        mRender;        // Graphics render
         Ref<Scene>         mScene;         // Scene
+        Ref<SoundSystem>   mSounds;        // Sound system
         Ref<TaskManager>   mTaskManager;   // Tasks manager
         Ref<Time>          mTime;          // Time utilities
         Ref<UIManager>     mUIManager;     // UI manager>
@@ -249,6 +251,7 @@ CLASS_FIELDS_META(o2::Integration)
     FIELD().PROTECTED().NAME(mProjectConfig);
     FIELD().PROTECTED().NAME(mRender);
     FIELD().PROTECTED().NAME(mScene);
+    FIELD().PROTECTED().NAME(mSounds);
     FIELD().PROTECTED().NAME(mTaskManager);
     FIELD().PROTECTED().NAME(mTime);
     FIELD().PROTECTED().NAME(mUIManager);
