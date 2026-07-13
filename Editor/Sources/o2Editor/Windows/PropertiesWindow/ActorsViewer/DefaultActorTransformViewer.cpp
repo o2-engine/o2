@@ -17,6 +17,7 @@
 #include "o2/Utils/Editor/EditorScope.h"
 #include "o2Editor/Properties/Basic/FloatProperty.h"
 #include "o2Editor/Properties/Basic/Vector2FloatProperty.h"
+#include "o2Editor/Properties/Basic/Vector3FloatProperty.h"
 #include "o2Editor/UI/SpoilerWithHead.h"
 #include "o2Editor/Windows/SceneWindow/SceneEditScreen.h"
 
@@ -36,14 +37,18 @@ namespace Editor
         *positionIcon->layout = WidgetLayout::Based(BaseCorner::LeftTop, Vec2F(20, 20), Vec2F(0, 0));
         positionPropertyContainer->AddChild(positionIcon);
 
-        mPositionProperty = o2UI.CreateWidget<Vec2FProperty>("colored");
+        mPositionProperty = o2UI.CreateWidget<Vec3FProperty>("colored");
+        mPositionProperty->name = "position property";
         *mPositionProperty->layout = WidgetLayout::HorStretch(VerAlign::Top, 20, 0, 20, 0);
         mPositionProperty->GetXProperty()->SetValuePath("transform/positionX");
         mPositionProperty->GetYProperty()->SetValuePath("transform/positionY");
+        mPositionProperty->GetZProperty()->SetValuePath("transform/positionZ");
         mPositionProperty->GetXProperty()->onChanged = THIS_FUNC(OnPropertyChanged);
         mPositionProperty->GetYProperty()->onChanged = THIS_FUNC(OnPropertyChanged);
+        mPositionProperty->GetZProperty()->onChanged = THIS_FUNC(OnPropertyChanged);
         mPositionProperty->GetXProperty()->onChangeCompleted = THIS_FUNC(OnPropertyChangeCompleted);
         mPositionProperty->GetYProperty()->onChangeCompleted = THIS_FUNC(OnPropertyChangeCompleted);
+        mPositionProperty->GetZProperty()->onChangeCompleted = THIS_FUNC(OnPropertyChangeCompleted);
         positionPropertyContainer->AddChild(mPositionProperty);
 
         // Pivot
@@ -56,14 +61,18 @@ namespace Editor
         *pivotIcon->layout = WidgetLayout::Based(BaseCorner::LeftTop, Vec2F(20, 20), Vec2F(0, 0));
         pivotPropertyContainer->AddChild(pivotIcon);
 
-        mPivotProperty = o2UI.CreateWidget<Vec2FProperty>("colored");
+        mPivotProperty = o2UI.CreateWidget<Vec3FProperty>("colored");
+        mPivotProperty->name = "pivot property";
         *mPivotProperty->layout = WidgetLayout::HorStretch(VerAlign::Top, 20, 0, 20, 0);
         mPivotProperty->GetXProperty()->SetValuePath("transform/pivotX");
         mPivotProperty->GetYProperty()->SetValuePath("transform/pivotY");
+        mPivotProperty->GetZProperty()->SetValuePath("transform/pivotZ");
         mPivotProperty->GetXProperty()->onChanged = THIS_FUNC(OnPropertyChanged);
         mPivotProperty->GetYProperty()->onChanged = THIS_FUNC(OnPropertyChanged);
+        mPivotProperty->GetZProperty()->onChanged = THIS_FUNC(OnPropertyChanged);
         mPivotProperty->GetXProperty()->onChangeCompleted = THIS_FUNC(OnPropertyChangeCompleted);
         mPivotProperty->GetYProperty()->onChangeCompleted = THIS_FUNC(OnPropertyChangeCompleted);
+        mPivotProperty->GetZProperty()->onChangeCompleted = THIS_FUNC(OnPropertyChangeCompleted);
         pivotPropertyContainer->AddChild(mPivotProperty);
 
         // Size
@@ -76,14 +85,18 @@ namespace Editor
         *sizeIcon->layout = WidgetLayout::Based(BaseCorner::LeftTop, Vec2F(20, 20), Vec2F(-1, 0));
         sizePropertyContainer->AddChild(sizeIcon);
 
-        mSizeProperty = o2UI.CreateWidget<Vec2FProperty>("colored");
+        mSizeProperty = o2UI.CreateWidget<Vec3FProperty>("colored");
+        mSizeProperty->name = "size property";
         *mSizeProperty->layout = WidgetLayout::HorStretch(VerAlign::Top, 20, 0, 20, 0);
         mSizeProperty->GetXProperty()->SetValuePath("transform/width");
         mSizeProperty->GetYProperty()->SetValuePath("transform/height");
+        mSizeProperty->GetZProperty()->SetValuePath("transform/sizeZ");
         mSizeProperty->GetXProperty()->onChanged = THIS_FUNC(OnPropertyChanged);
         mSizeProperty->GetYProperty()->onChanged = THIS_FUNC(OnPropertyChanged);
+        mSizeProperty->GetZProperty()->onChanged = THIS_FUNC(OnPropertyChanged);
         mSizeProperty->GetXProperty()->onChangeCompleted = THIS_FUNC(OnPropertyChangeCompleted);
         mSizeProperty->GetYProperty()->onChangeCompleted = THIS_FUNC(OnPropertyChangeCompleted);
+        mSizeProperty->GetZProperty()->onChangeCompleted = THIS_FUNC(OnPropertyChangeCompleted);
         sizePropertyContainer->AddChild(mSizeProperty);
 
         // Scale
@@ -96,44 +109,55 @@ namespace Editor
         *scaleIcon->layout = WidgetLayout::Based(BaseCorner::LeftTop, Vec2F(20, 20), Vec2F(0, 0));
         scalePropertyContainer->AddChild(scaleIcon);
 
-        mScaleProperty = o2UI.CreateWidget<Vec2FProperty>("colored");
+        mScaleProperty = o2UI.CreateWidget<Vec3FProperty>("colored");
+        mScaleProperty->name = "scale property";
         *mScaleProperty->layout = WidgetLayout::HorStretch(VerAlign::Top, 20, 0, 20, 0);
         mScaleProperty->GetXProperty()->SetValuePath("transform/scaleX");
         mScaleProperty->GetYProperty()->SetValuePath("transform/scaleY");
+        mScaleProperty->GetZProperty()->SetValuePath("transform/scaleZ");
         mScaleProperty->GetXProperty()->onChanged = THIS_FUNC(OnPropertyChanged);
         mScaleProperty->GetYProperty()->onChanged = THIS_FUNC(OnPropertyChanged);
+        mScaleProperty->GetZProperty()->onChanged = THIS_FUNC(OnPropertyChanged);
         mScaleProperty->GetXProperty()->onChangeCompleted = THIS_FUNC(OnPropertyChangeCompleted);
         mScaleProperty->GetYProperty()->onChangeCompleted = THIS_FUNC(OnPropertyChangeCompleted);
+        mScaleProperty->GetZProperty()->onChangeCompleted = THIS_FUNC(OnPropertyChangeCompleted);
         scalePropertyContainer->AddChild(mScaleProperty);
 
         // Rotation
-        auto rotationAndShearPropertyContainer = mmake<Widget>();
-        rotationAndShearPropertyContainer->name = "rotation and depth";
-        rotationAndShearPropertyContainer->layout->minHeight = 20;
-        mSpoiler->AddChild(rotationAndShearPropertyContainer);
+        auto rotationPropertyContainer = mmake<Widget>();
+        rotationPropertyContainer->name = "rotation";
+        rotationPropertyContainer->layout->minHeight = 20;
+        mSpoiler->AddChild(rotationPropertyContainer);
 
         auto rotateIcon = o2UI.CreateImage("ui/UI4_rotate_icon.png");
-        *rotateIcon->layout = WidgetLayout(Vec2F(0, 0), Vec2F(0.0f, 1.0f), Vec2F(0, 0), Vec2F(20, 0));
-        rotationAndShearPropertyContainer->AddChild(rotateIcon);
+        *rotateIcon->layout = WidgetLayout::Based(BaseCorner::LeftTop, Vec2F(20, 20), Vec2F(0, 0));
+        rotationPropertyContainer->AddChild(rotateIcon);
 
-        mRotationProperty = o2UI.CreateWidget<FloatProperty>();
-        *mRotationProperty->layout = WidgetLayout(Vec2F(0, 0), Vec2F(0.5f, 1.0f), Vec2F(40, 0), Vec2F(10, 0));
-        mRotationProperty->SetValuePath("transform/angleDegree");
+        mRotationProperty = o2UI.CreateWidget<Vec3FProperty>("colored");
+        mRotationProperty->name = "rotation property";
+        *mRotationProperty->layout = WidgetLayout::HorStretch(VerAlign::Top, 20, 0, 20, 0);
+        mRotationProperty->SetValuePath("transform/eulerAnglesDegrees");
         mRotationProperty->onChanged = THIS_FUNC(OnPropertyChanged);
         mRotationProperty->onChangeCompleted = THIS_FUNC(OnPropertyChangeCompleted);
-        rotationAndShearPropertyContainer->AddChild(mRotationProperty);
+        rotationPropertyContainer->AddChild(mRotationProperty);
 
         // Shear
-        auto shearIcon = o2UI.CreateImage("ui/UI4_shear_icon.png");
-        *shearIcon->layout = WidgetLayout(Vec2F(0.5f, 0), Vec2F(0.5f, 1.0f), Vec2F(10, 0), Vec2F(30, 0));
-        rotationAndShearPropertyContainer->AddChild(shearIcon);
+        auto shearPropertyContainer = mmake<Widget>();
+        shearPropertyContainer->name = "shear";
+        shearPropertyContainer->layout->minHeight = 20;
+        mSpoiler->AddChild(shearPropertyContainer);
 
-        mShearProperty = o2UI.CreateWidget<FloatProperty>();
-        *mShearProperty->layout = WidgetLayout(Vec2F(0.5f, 0), Vec2F(1, 1.0f), Vec2F(30, 0), Vec2F());
-        mShearProperty->SetValuePath("drawDepth");
+        auto shearIcon = o2UI.CreateImage("ui/UI4_shear_icon.png");
+        *shearIcon->layout = WidgetLayout::Based(BaseCorner::LeftTop, Vec2F(20, 20), Vec2F(0, 0));
+        shearPropertyContainer->AddChild(shearIcon);
+
+        mShearProperty = o2UI.CreateWidget<Vec3FProperty>("colored");
+        mShearProperty->name = "shear property";
+        *mShearProperty->layout = WidgetLayout::HorStretch(VerAlign::Top, 20, 0, 20, 0);
+        mShearProperty->SetValuePath("transform/shear");
         mShearProperty->onChanged = THIS_FUNC(OnPropertyChanged);
         mShearProperty->onChangeCompleted = THIS_FUNC(OnPropertyChangeCompleted);
-        rotationAndShearPropertyContainer->AddChild(mShearProperty);
+        shearPropertyContainer->AddChild(mShearProperty);
 
         // Layout
         mLayoutSpoiler = o2UI.CreateWidget<Spoiler>("expand with caption");
@@ -287,15 +311,19 @@ namespace Editor
         mWeightProperty->GetYProperty()->onChangeCompleted = THIS_FUNC(OnPropertyChangeCompleted);
         weightPropertyContainer->AddChild(mWeightProperty);
 
-        mAllProperties = { 
+        mAllProperties = {
             mPositionProperty->GetXProperty(),
             mPositionProperty->GetYProperty(),
+            mPositionProperty->GetZProperty(),
             mPivotProperty->GetXProperty(),
             mPivotProperty->GetYProperty(),
+            mPivotProperty->GetZProperty(),
             mScaleProperty->GetXProperty(),
             mScaleProperty->GetYProperty(),
+            mScaleProperty->GetZProperty(),
             mSizeProperty->GetXProperty(),
             mSizeProperty->GetYProperty(),
+            mSizeProperty->GetZProperty(),
             mRotationProperty,
             mShearProperty,
             mAnchorRightTopProperty->GetXProperty(),
@@ -331,11 +359,17 @@ namespace Editor
         mPositionProperty->GetYProperty()->SelectValueAndPrototypeProperties<Actor, decltype(ActorTransform::positionY)>(
             actors, prototypes, [](Actor* x) { return &x->transform->positionY; });
 
+        mPositionProperty->GetZProperty()->SelectValueAndPrototypeProperties<Actor, decltype(ActorTransform::positionZ)>(
+            actors, prototypes, [](Actor* x) { return &x->transform->positionZ; });
+
         mPivotProperty->GetXProperty()->SelectValueAndPrototypeProperties<Actor, decltype(ActorTransform::pivotX)>(
             actors, prototypes, [](Actor* x) { return &x->transform->pivotX; });
 
         mPivotProperty->GetYProperty()->SelectValueAndPrototypeProperties<Actor, decltype(ActorTransform::pivotY)>(
             actors, prototypes, [](Actor* x) { return &x->transform->pivotY; });
+
+        mPivotProperty->GetZProperty()->SelectValueAndPrototypeProperties<Actor, decltype(ActorTransform::pivotZ)>(
+            actors, prototypes, [](Actor* x) { return &x->transform->pivotZ; });
 
         mScaleProperty->GetXProperty()->SelectValueAndPrototypeProperties<Actor, decltype(ActorTransform::scaleX)>(
             actors, prototypes, [](Actor* x) { return &x->transform->scaleX; });
@@ -343,14 +377,20 @@ namespace Editor
         mScaleProperty->GetYProperty()->SelectValueAndPrototypeProperties<Actor, decltype(ActorTransform::scaleY)>(
             actors, prototypes, [](Actor* x) { return &x->transform->scaleY; });
 
+        mScaleProperty->GetZProperty()->SelectValueAndPrototypeProperties<Actor, decltype(ActorTransform::scaleZ)>(
+            actors, prototypes, [](Actor* x) { return &x->transform->scaleZ; });
+
         mSizeProperty->GetXProperty()->SelectValueAndPrototypeProperties<Actor, decltype(ActorTransform::width)>(
             actors, prototypes, [](Actor* x) { return &x->transform->width; });
 
         mSizeProperty->GetYProperty()->SelectValueAndPrototypeProperties<Actor, decltype(ActorTransform::height)>(
             actors, prototypes, [](Actor* x) { return &x->transform->height; });
 
-        mRotationProperty->SelectValueAndPrototypeProperties<Actor, decltype(ActorTransform::angleDegrees)>(
-            actors, prototypes, [](Actor* x) { return &x->transform->angleDegrees; });
+        mSizeProperty->GetZProperty()->SelectValueAndPrototypeProperties<Actor, decltype(ActorTransform::sizeZ)>(
+            actors, prototypes, [](Actor* x) { return &x->transform->sizeZ; });
+
+        mRotationProperty->SelectValueAndPrototypeProperties<Actor, decltype(ActorTransform::eulerAnglesDegrees)>(
+            actors, prototypes, [](Actor* x) { return &x->transform->eulerAnglesDegrees; });
 
         mShearProperty->SelectValueAndPrototypeProperties<Actor, decltype(ActorTransform::shear)>(
             actors, prototypes, [](Actor* x) { return &x->transform->shear; });

@@ -69,6 +69,12 @@ namespace Editor
         // Removes selectable handle from group
         void RemoveHandle(DragHandle* handle) override;
 
+        // Adds handles to group and binds them to it
+        void AddHandles(const Vector<Ref<DragHandle>>& handles) override;
+
+        // Unbinds and removes handles from group; faster than removing one by one
+        void RemoveHandles(const Vector<Ref<DragHandle>>& handles) override;
+
         // Sets selected keys handles
         void SetSelectedKeys(const Map<String, Vector<UInt64>>& keys);
 
@@ -280,6 +286,8 @@ CLASS_METHODS_META(Editor::KeyHandlesSheet)
     FUNCTION().PUBLIC().SIGNATURE(void, UnregAllTrackControls);
     FUNCTION().PUBLIC().SIGNATURE(void, AddHandle, const Ref<DragHandle>&);
     FUNCTION().PUBLIC().SIGNATURE(void, RemoveHandle, DragHandle*);
+    FUNCTION().PUBLIC().SIGNATURE(void, AddHandles, const Vector<Ref<DragHandle>>&);
+    FUNCTION().PUBLIC().SIGNATURE(void, RemoveHandles, const Vector<Ref<DragHandle>>&);
     FUNCTION().PUBLIC().SIGNATURE(void, SetSelectedKeys, _tmp1);
     FUNCTION().PUBLIC().SIGNATURE(_tmp2, GetSelectedKeys);
     FUNCTION().PUBLIC().SIGNATURE(void, DeleteKeys, _tmp3, bool);

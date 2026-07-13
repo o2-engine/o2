@@ -215,4 +215,30 @@ namespace o2
 	Vertex3Tex::Vertex3Tex():
 		x(0), y(0), z(1), color(0), tu(0), tv(0), tu2(0), tv2(0), tu3(0), tv3(0), nx(1), ny(0), nz(0)
 	{}
+
+	SkinnedVertex::SkinnedVertex():
+		x(0), y(0), z(0), color(0), tu(0), tv(0), nx(0), ny(0), nz(1),
+		boneIndices{ 0, 0, 0, 0 }, boneWeights{ 0, 0, 0, 0 }
+	{}
+
+	size_t SkinnedVertex::ParamOffset(UInt param)
+	{
+		switch (param)
+		{
+			case VertexParam::Position:    return offsetof(SkinnedVertex, x);
+			case VertexParam::Color:       return offsetof(SkinnedVertex, color);
+			case VertexParam::TexCoord0:   return offsetof(SkinnedVertex, tu);
+			case VertexParam::Normal:      return offsetof(SkinnedVertex, nx);
+			case VertexParam::BoneIndices: return offsetof(SkinnedVertex, boneIndices);
+			case VertexParam::BoneWeights: return offsetof(SkinnedVertex, boneWeights);
+			default: return 0;
+		}
+	}
+
+	VertexType SkinnedVertex::Type()
+	{
+		return VertexType(VertexParam::Position | VertexParam::Color | VertexParam::TexCoord0 | VertexParam::Normal |
+						  VertexParam::BoneIndices | VertexParam::BoneWeights,
+						  sizeof(SkinnedVertex), &SkinnedVertex::ParamOffset);
+	}
 }

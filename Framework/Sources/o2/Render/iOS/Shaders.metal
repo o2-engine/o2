@@ -19,7 +19,6 @@ vertexShader(uint vertexID [[vertex_id]],
 
     MetalVertex2 v = vertices[vertexID];
     out.position = uniforms.mvpMatrix * float4(v.x, v.y, v.z, 1);
-    out.position.z = 0.5;
     out.color = v.color;
     out.textureCoordinate = vector_float2(v.tu, v.tv);
 

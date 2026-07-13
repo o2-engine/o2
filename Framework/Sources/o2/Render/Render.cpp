@@ -153,6 +153,11 @@ namespace o2
 		BindMaterial(mDefaultMaterial);
 
 		PlatformBegin();
+
+		mDepthTestEnabled = false;
+		mDepthWriteEnabled = true;
+		PlatformSetDepthTest(false, true);
+
 		SetupViewMatrix(mResolution);
 		UpdateCameraTransforms();
 
@@ -197,10 +202,31 @@ namespace o2
 		else
 			indexesCount = elementsCount * 3;
 
-		Ref<Material> drawMaterial = material ? material : mDefaultMaterial;
+		// The draw call material wins only when it targets the currently bound attachments:
+		// pass-specific content (custom G-buffer materials) beats the pass override, while
+		// incompatible materials fall back to the override or the default one
+		Ref<Material> drawMaterial;
+		if (material && IsMaterialCompatibleWithCurrentTargets(material))
+			drawMaterial = material;
+		else
+			drawMaterial = mOverrideMaterial ? mOverrideMaterial : mDefaultMaterial;
+
 		if (!drawMaterial)
 		{
 			mLog->Error("DrawBuffer skipped: no material is available for the current draw call");
+			return;
+		}
+
+		// Skinned vertex layout can be consumed only by skinned-aware shaders: when the resolved
+		// material (e.g. a pass override) doesn't support it, the draw is skipped
+		if (vertexType.HasParam(VertexParam::BoneIndices) && !drawMaterial->IsVertexLayoutSkinned())
+		{
+			if (!mSkinnedMaterialMismatchWarned)
+			{
+				mLog->Warning("Skinned geometry draw skipped: current material doesn't support the skinned vertex layout");
+				mSkinnedMaterialMismatchWarned = true;
+			}
+
 			return;
 		}
 
@@ -208,6 +234,15 @@ namespace o2
 
 		// Determine batch vertex type: expand with extra texcoords if material needs them
 		VertexType batchVertexType = PlatformResolveBatchVertexType(vertexType, drawMaterial);
+
+		// Geometry bigger than the batch buffers is split into re-indexed chunks
+		UInt vertexCapacity = (UInt)(mVertexBufferByteSize/batchVertexType.GetStride());
+		if (verticesCount >= vertexCapacity || indexesCount >= mIndexBufferSize)
+		{
+			DrawBufferChunked(primitiveType, vertices, verticesCount, vertexType, indexes, elementsCount,
+							  material, overrideTexture, texSrcRect, allowVertexConversion, vertexCapacity);
+			return;
+		}
 
 		if (CheckBatchBreak(texture, primitiveType, drawMaterial, batchVertexType, verticesCount, indexesCount))
 		{
@@ -220,6 +255,13 @@ namespace o2
 			BindMaterial(drawMaterial);
 		}
 
+		// Buffer overrun guard: oversized geometry must have been chunked above
+		if (mLastDrawVertex + verticesCount >= vertexCapacity || mLastDrawIdx + indexesCount >= mIndexBufferSize)
+		{
+			mLog->Error("DrawBuffer skipped: batch buffers overflow");
+			return;
+		}
+
 		UploadBuffers(vertices, verticesCount, vertexType, indexes, indexesCount, texSrcRect, texture, allowVertexConversion);
 
 		mLastDrawVertex += verticesCount;
@@ -227,6 +269,72 @@ namespace o2
 
 		if (primitiveType != PrimitiveType::Line)
 			mTrianglesCount += elementsCount;
+	}
+
+	void Render::DrawBufferChunked(PrimitiveType primitiveType, const UInt8* vertices, UInt verticesCount,
+								   const VertexType& vertexType, VertexIndex* indexes, UInt elementsCount,
+								   const Ref<Material>& material, const TextureRef& overrideTexture,
+								   const RectI& texSrcRect, bool allowVertexConversion, UInt vertexCapacity)
+	{
+		UInt indicesPerElement = primitiveType == PrimitiveType::Line ? 2 : 3;
+		size_t srcStride = vertexType.GetStride();
+
+		UInt maxChunkVertices = vertexCapacity - 1;
+		UInt maxChunkIndices = mIndexBufferSize - 1;
+
+		static std::vector<UInt8> chunkVertices;
+		static std::vector<VertexIndex> chunkIndexes;
+		static std::vector<int> vertexRemap;
+
+		chunkVertices.resize((size_t)maxChunkVertices*srcStride);
+		chunkIndexes.resize(maxChunkIndices);
+		vertexRemap.assign(verticesCount, -1);
+
+		UInt chunkVertexCount = 0, chunkIndexCount = 0;
+
+		auto flushChunk = [&]()
+		{
+			if (chunkIndexCount == 0)
+				return;
+
+			DrawBuffer(primitiveType, chunkVertices.data(), chunkVertexCount, vertexType,
+					   chunkIndexes.data(), chunkIndexCount/indicesPerElement, material, overrideTexture,
+					   texSrcRect, allowVertexConversion);
+
+			chunkVertexCount = 0;
+			chunkIndexCount = 0;
+			std::fill(vertexRemap.begin(), vertexRemap.end(), -1);
+		};
+
+		UInt totalIndexes = elementsCount*indicesPerElement;
+		for (UInt i = 0; i + indicesPerElement <= totalIndexes; i += indicesPerElement)
+		{
+			if (chunkIndexCount + indicesPerElement > maxChunkIndices ||
+				chunkVertexCount + indicesPerElement > maxChunkVertices)
+			{
+				flushChunk();
+			}
+
+			for (UInt j = 0; j < indicesPerElement; j++)
+			{
+				VertexIndex sourceIndex = indexes[i + j];
+				if (sourceIndex >= verticesCount)
+					continue;
+
+				int mapped = vertexRemap[sourceIndex];
+				if (mapped < 0)
+				{
+					mapped = (int)chunkVertexCount;
+					memcpy(&chunkVertices[(size_t)chunkVertexCount*srcStride], vertices + (size_t)sourceIndex*srcStride, srcStride);
+					vertexRemap[sourceIndex] = mapped;
+					chunkVertexCount++;
+				}
+
+				chunkIndexes[chunkIndexCount++] = (VertexIndex)mapped;
+			}
+		}
+
+		flushChunk();
 	}
 
 	bool Render::CheckBatchBreak(const TextureRef& texture, PrimitiveType primitiveType,
@@ -459,9 +567,23 @@ namespace o2
 
 	void Render::DeliverFrameCapture()
 	{
-		// The render-target y-flip in the camera transforms (see PlatformSetupCameraTransforms)
-		// lands world-up content in the first texture rows, so the bitmap comes out upright
+		// Render targets are drawn y-flipped (world-up content lands in the last texture rows),
+		// so the rows are mirrored here to deliver an upright bitmap
 		Ref<Bitmap> bitmap = mCaptureTarget->GetData();
+
+		Vec2I size = bitmap->GetSize();
+		UInt bytesPerRow = (UInt)size.x*4;
+		UInt8* data = bitmap->GetData();
+		Vector<UInt8> rowBuffer;
+		rowBuffer.resize(bytesPerRow);
+		for (int y = 0; y < size.y/2; y++)
+		{
+			UInt8* rowA = data + y*bytesPerRow;
+			UInt8* rowB = data + (size.y - 1 - y)*bytesPerRow;
+			memcpy(rowBuffer.data(), rowA, bytesPerRow);
+			memcpy(rowA, rowB, bytesPerRow);
+			memcpy(rowB, rowBuffer.data(), bytesPerRow);
+		}
 
 		auto callback = mCaptureCallback;
 		mCaptureCallback.Clear();
@@ -499,6 +621,97 @@ namespace o2
 		return mDefaultMaterial;
 	}
 
+	void Render::SetOverrideMaterial(const Ref<Material>& material)
+	{
+		if (mOverrideMaterial == material)
+			return;
+
+		DrawPrimitives();
+		mOverrideMaterial = material;
+	}
+
+	const Ref<Material>& Render::GetOverrideMaterial() const
+	{
+		return mOverrideMaterial;
+	}
+
+	bool Render::IsMaterialCompatibleWithCurrentTargets(const Ref<Material>& material) const
+	{
+		if (!material)
+			return false;
+
+		auto& formats = material->GetColorAttachmentFormats();
+		int materialAttachments = Math::Max(1, formats.Count());
+		int currentAttachments = 1 + (mCurrentRenderTarget ? mExtraRenderTargets.Count() : 0);
+		if (materialAttachments != currentAttachments)
+			return false;
+
+		for (int i = 0; i < materialAttachments; i++)
+		{
+			TextureFormat materialFormat = i < formats.Count() ? formats[i] : TextureFormat::R8G8B8A8;
+
+			TextureFormat targetFormat = TextureFormat::R8G8B8A8;
+			if (i == 0)
+			{
+				if (mCurrentRenderTarget)
+					targetFormat = mCurrentRenderTarget->GetFormat();
+			}
+			else
+				targetFormat = mExtraRenderTargets[i - 1]->GetFormat();
+
+			if (materialFormat != targetFormat)
+				return false;
+		}
+
+		return true;
+	}
+
+	bool Render::IsMRTSupported() const
+	{
+		return PlatformSupportsMRT();
+	}
+
+	void Render::BindRenderTargets(const Vector<TextureRef>& renderTargets)
+	{
+		if (renderTargets.IsEmpty())
+		{
+			UnbindRenderTexture();
+			return;
+		}
+
+		Vector<TextureRef> extraTargets;
+		if (renderTargets.Count() > 1)
+		{
+			if (!IsMRTSupported())
+			{
+				if (!mMRTUnsupportedWarned)
+				{
+					mLog->WarningStr("Multiple render targets are not supported on this platform, binding only the first target");
+					mMRTUnsupportedWarned = true;
+				}
+			}
+			else
+			{
+				for (int i = 1; i < renderTargets.Count(); i++)
+				{
+					const TextureRef& target = renderTargets[i];
+					if (!target || target->mUsage != Texture::Usage::RenderTarget || !target->IsReady())
+					{
+						mLog->Error("Can't bind extra render target: not a ready render target texture");
+						continue;
+					}
+
+					extraTargets.Add(target);
+				}
+			}
+		}
+
+		BindRenderTexture(renderTargets[0]);
+
+		if (mCurrentRenderTarget)
+			mExtraRenderTargets = extraTargets;
+	}
+
 	void Render::BeginCustomRender()
 	{
 		DrawPrimitives();
@@ -510,6 +723,8 @@ namespace o2
 
 		mCurrentDrawTexture = nullptr;
 		mCurrentBatchVertexType = Vertex::Type();
+		mDepthTestEnabled = false;
+		mDepthWriteEnabled = true;
 
 		PlatformResetState();
 		SetupViewMatrix(mResolution);
@@ -525,10 +740,34 @@ namespace o2
 	{
 		PROFILE_SAMPLE_FUNC();
 
-		if (mCurrentResolution == mPrevResolution && mCamera == mPrevCamera)
+		// The render target y-flip is baked into the transforms, so a target binding
+		// change must trigger recomputation even when camera and resolution are the same
+		bool renderingToTarget = mCurrentRenderTarget != nullptr;
+		if (mCurrentResolution == mPrevResolution && mCamera == mPrevCamera &&
+			renderingToTarget == mPrevTransformsToTarget)
+		{
 			return;
+		}
+
+		mPrevTransformsToTarget = renderingToTarget;
 
 		DrawPrimitives();
+
+		if (mCamera.projection != Camera::Projection::Orthographic)
+		{
+			Mat4 proj = mCamera.GetProjectionMatrix((Vec2F)mCurrentResolution);
+			Mat4 view = mCamera.GetViewMatrix3D();
+			Mat4 model;
+
+			mViewScale = Vec2F(1.0f, 1.0f);
+			mInvViewScale = Vec2F(1.0f, 1.0f);
+
+			PlatformSetupCameraTransforms(model.m, view.m, proj.m);
+
+			mPrevCamera = mCamera;
+			mPrevResolution = mCurrentResolution;
+			return;
+		}
 
 		Vec2F resf = (Vec2F)mCurrentResolution;
 		Vec2F halfRes(Math::Round(resf.x / 2.0f), Math::Round(resf.y / 2.0f));
@@ -574,7 +813,9 @@ namespace o2
 		RectI summaryScissorRect = rect;
 		if (!mStackScissors.IsEmpty())
 		{
-			mScissorInfos.Last().endDepth = mDrawingDepth;
+			// The stack may hold only render-target entries, which add no scissor infos
+			if (!mScissorInfos.IsEmpty())
+				mScissorInfos.Last().endDepth = mDrawingDepth;
 
 			if (!mStackScissors.Last().renderTarget)
 			{
@@ -683,13 +924,17 @@ namespace o2
 
 		if (!mStackScissors.IsEmpty())
 		{
-			mScissorInfos.Last().endDepth = mDrawingDepth;
+			// The stack may hold only render-target entries, which add no scissor infos
+			if (!mScissorInfos.IsEmpty())
+				mScissorInfos.Last().endDepth = mDrawingDepth;
+
 			PlatformDisableScissorTest();
 		}
 
 		mStackScissors.Add(ScissorStackEntry(RectI(), RectI(), true));
 
 		mCurrentRenderTarget = renderTarget;
+		mExtraRenderTargets.Clear();
 
 		PlatformBindRenderTarget(renderTarget);
 		SetupViewMatrix(renderTarget->GetSize());
@@ -704,21 +949,70 @@ namespace o2
 		PlatformBindRenderTarget(nullptr);
 
 		mCurrentRenderTarget = TextureRef();
+		mExtraRenderTargets.Clear();
 
 		SetupViewMatrix(mResolution);
 		SetCamera(Camera());
 
 		DisableScissorTest(true);
 		mStackScissors.PopBack();
-		if (!mStackScissors.IsEmpty())
+		RestoreScissorStateFromStack();
+	}
+
+	void Render::RestoreScissorStateFromStack()
+	{
+		if (mStackScissors.IsEmpty() || mStackScissors.Last().renderTarget)
 		{
-			auto clipRect = mStackScissors.Last().summaryScissorRect;
-
-			PlatformEnableScissorTest();
-			PlatformSetScissorRect(clipRect);
-
-			mClippingEverything = clipRect == RectI();
+			PlatformDisableScissorTest();
+			mClippingEverything = false;
+			return;
 		}
+
+		auto clipRect = mStackScissors.Last().summaryScissorRect;
+
+		PlatformEnableScissorTest();
+		PlatformSetScissorRect(clipRect);
+
+		mClippingEverything = clipRect == RectI();
+	}
+
+	void Render::PushRenderTargets(const Vector<TextureRef>& renderTargets)
+	{
+		mRenderTargetsStack.Add(mCurrentRenderTarget);
+		BindRenderTargets(renderTargets);
+	}
+
+	void Render::PopRenderTargets()
+	{
+		if (mRenderTargetsStack.IsEmpty())
+		{
+			mLog->WarningStr("Can't pop render targets - stack is empty");
+			return;
+		}
+
+		TextureRef previousTarget = mRenderTargetsStack.PopBack();
+		if (!previousTarget)
+		{
+			UnbindRenderTexture();
+			return;
+		}
+
+		DrawPrimitives();
+
+		// Remove unclosed scissors and the stack entry added by the paired push, keeping the stack balanced
+		while (!mStackScissors.IsEmpty() && !mStackScissors.Last().renderTarget)
+			mStackScissors.PopBack();
+
+		if (!mStackScissors.IsEmpty())
+			mStackScissors.PopBack();
+
+		mCurrentRenderTarget = previousTarget;
+		mExtraRenderTargets.Clear();
+
+		PlatformBindRenderTarget(previousTarget);
+		SetupViewMatrix(previousTarget->GetSize());
+
+		RestoreScissorStateFromStack();
 	}
 
 	void Render::OnFrameResized()
@@ -1261,6 +1555,23 @@ namespace o2
 	bool Render::IsClippedByScissor(const Vec2F& point) const
 	{
 		return !GetScissorRect().IsInside(point);
+	}
+
+	void Render::SetDepthTestEnabled(bool enabled, bool writeEnabled /*= true*/)
+	{
+		if (mDepthTestEnabled == enabled && mDepthWriteEnabled == writeEnabled)
+			return;
+
+		DrawPrimitives();
+
+		mDepthTestEnabled = enabled;
+		mDepthWriteEnabled = writeEnabled;
+		PlatformSetDepthTest(enabled, writeEnabled);
+	}
+
+	bool Render::IsDepthTestEnabled() const
+	{
+		return mDepthTestEnabled;
 	}
 
 	void Render::DrawMesh(Mesh* mesh)

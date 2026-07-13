@@ -76,8 +76,16 @@ namespace o2
         // Default constructor
         explicit ShortcutKeysListenersManager(RefCounter* refCounter);
 
+        // Enables or disables dispatching shortcuts to all listeners, e.g. while a modal navigation owns the keyboard
+        static void SetSuppressed(bool suppressed);
+
+        // Returns is shortcuts dispatching suppressed
+        static bool IsSuppressed();
+
     protected:
         Map<ShortcutKeys, Vector<WeakRef<ShortcutKeysListener>>> mListeners;
+
+        bool mSuppressed = false; // When true shortcuts are not dispatched to listeners
 
     protected:
         // Registers listener 

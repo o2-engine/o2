@@ -341,7 +341,7 @@ TEST(ScriptValue, ConstructedObjectFieldsAndMethods) {
     EXPECT_FLOAT_EQ(o2Scripts.GetGlobal().GetProperty("cScore").GetValue<float>(), 10.0f);
 }
 
-// JS function invoked from C++; argument is another native object (ScriptValue / Jerry native pointer).
+// JS function invoked from C++; argument is another native object (ScriptValue / engine native pointer).
 // Using a scriptable method on the argument checks it is the real binding, not a plain object.
 TEST(ScriptValue, ScriptFunctionWithNativeObjectArgument) {
     auto other = mmake<TestScriptObject>();

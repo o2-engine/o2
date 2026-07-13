@@ -36,7 +36,7 @@ namespace o2
             auto rigidBody = (RigidBody*)body->GetUserData();
             auto transform = rigidBody->transform;
 
-            body->SetTransform(transform->GetWorldPosition()*invScale, transform->GetWorldAngle());
+            body->SetTransform(transform->GetWorldPosition2D()*invScale, transform->GetWorldAngle());
         }
     }
 
@@ -53,7 +53,7 @@ namespace o2
             auto rigidBody = (RigidBody*)body->GetUserData();
             auto transform = rigidBody->transform;
 
-            transform->SetWorldPosition(Vec2F(body->GetPosition())*scale);
+            transform->SetWorldPosition2D(Vec2F(body->GetPosition())*scale);
             transform->SetWorldAngle(body->GetAngle());
         }
 
@@ -82,7 +82,7 @@ namespace o2
             auto rigidBody = (RigidBody*)body->GetUserData();
             auto transform = rigidBody->transform;
 
-            body->SetTransform(transform->GetWorldPosition()*invScale, transform->GetWorldAngle());
+            body->SetTransform(transform->GetWorldPosition2D()*invScale, transform->GetWorldAngle());
 
             auto colliders = rigidBody->mColliders;
             for (auto& collider : colliders)

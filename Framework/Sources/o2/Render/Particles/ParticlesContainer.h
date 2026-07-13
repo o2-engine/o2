@@ -74,6 +74,10 @@ namespace o2
 
     private:
         Mesh mParticlesMesh; // Particles mesh
+
+    private:
+        // Rebuilds mesh from particles, billboard plane is spanned by right and up axes
+        void BuildMesh(const Vector<Particle>& particles, int maxParticles, const Vec3F& right, const Vec3F& up);
     };
 
     // ---------------------------------------------------------------------------------------
@@ -114,6 +118,10 @@ namespace o2
         Mesh mParticlesMesh; // Particles mesh
 
         Vector<ImageInfo> mImagesCache; // Cached images info
+
+    private:
+        // Rebuilds mesh from particles, billboard plane is spanned by right and up axes
+        void BuildMesh(const Vector<Particle>& particles, int maxParticles, const Vec3F& right, const Vec3F& up);
     };
 }
 // --- META ---

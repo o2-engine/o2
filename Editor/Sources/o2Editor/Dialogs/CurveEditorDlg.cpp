@@ -20,7 +20,7 @@ namespace Editor
         InitializeControls();
 
         mWindow->Hide(true);
-        mWindow->layout->size = Vec2F(600, 500);
+        mWindow->layout->size2D = Vec2F(600, 500);
 
         mWindow->GetBackCursorListener().onCursorReleased = [&](const Input::Cursor& c) { OnCursorPressedOutside(); };
         mWindow->onHide = MakeFunction(this, &CurveEditorDlg::OnHide);

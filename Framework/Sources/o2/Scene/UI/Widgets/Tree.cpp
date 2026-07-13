@@ -175,6 +175,8 @@ namespace o2
     Tree::Tree(RefCounter* refCounter):
         ScrollArea(refCounter)
     {
+        mInheritedDrawablesManualOrder = true;
+
         mNodeWidgetSample = mmake<TreeNode>();
         mNodeWidgetSample->layout->minHeight = 20;
         mNodeWidgetSample->AddLayer("caption", nullptr);
@@ -189,6 +191,8 @@ namespace o2
     Tree::Tree(RefCounter* refCounter, const Tree& other):
         ScrollArea(refCounter, other)
     {
+        mInheritedDrawablesManualOrder = true;
+
         mRearrangeType = other.mRearrangeType;
         mMultiSelectAvailable = other.mMultiSelectAvailable;
         mNodeWidgetSample = other.mNodeWidgetSample->CloneAsRef<TreeNode>();
@@ -371,7 +375,7 @@ namespace o2
 
             if (mHighlighNode && mHighlighNode.Lock()->widget)
             {
-                mHighlightSprite->SetScale(Vec2F(1.0f, 1.0f));
+                mHighlightSprite->SetScale2D(Vec2F(1.0f, 1.0f));
                 mHighlightSprite->SetRect(mHighlightLayout.Calculate(mHighlighNode.Lock()->widget->layout->worldRect));
             }
 
@@ -1365,8 +1369,8 @@ namespace o2
 
             if (node->widget)
             {
-                node->widget->GetLayoutData().offsetMin.y -= offs;
-                node->widget->GetLayoutData().offsetMax.y -= offs;
+                node->widget->GetLayoutData().mOffsetMin.y -= offs;
+                node->widget->GetLayoutData().mOffsetMax.y -= offs;
             }
         }
 

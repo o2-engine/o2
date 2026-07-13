@@ -39,8 +39,17 @@ namespace Editor
         // Converts point from local to screen space
         Vec2F LocalToScreen(const Vec2F& point) override;
 
+        // Sets world z used to project handle position in 3D view mode
+        void SetPositionZ(float z);
+
+        // Returns world z used to project handle position in 3D view mode
+        float GetPositionZ() const;
+
         SERIALIZABLE(SceneDragHandle);
         CLONEABLE_REF(SceneDragHandle);
+
+    protected:
+        float mPositionZ = 0.0f; // World z of handle position, used in 3D view mode only
 
     protected:
         friend class SceneEditScreen;
@@ -55,6 +64,7 @@ CLASS_BASES_META(Editor::SceneDragHandle)
 END_META;
 CLASS_FIELDS_META(Editor::SceneDragHandle)
 {
+    FIELD().PROTECTED().DEFAULT_VALUE(0.0f).NAME(mPositionZ);
 }
 END_META;
 CLASS_METHODS_META(Editor::SceneDragHandle)
@@ -67,6 +77,8 @@ CLASS_METHODS_META(Editor::SceneDragHandle)
     FUNCTION().PUBLIC().SIGNATURE(void, SetEnabled, bool);
     FUNCTION().PUBLIC().SIGNATURE(Vec2F, ScreenToLocal, const Vec2F&);
     FUNCTION().PUBLIC().SIGNATURE(Vec2F, LocalToScreen, const Vec2F&);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetPositionZ, float);
+    FUNCTION().PUBLIC().SIGNATURE(float, GetPositionZ);
 }
 END_META;
 // --- END META ---

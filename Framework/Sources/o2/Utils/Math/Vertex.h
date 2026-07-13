@@ -17,18 +17,22 @@ namespace o2
 		const UInt TexCoord1 = 1 << 3; // float tu2, tv2 (8 bytes)
 		const UInt TexCoord2 = 1 << 4; // float tu3, tv3 (8 bytes)
 		const UInt Normal = 1 << 5; // float nx, ny, nz (12 bytes)
+		const UInt BoneIndices = 1 << 6; // float i0, i1, i2, i3 (16 bytes)
+		const UInt BoneWeights = 1 << 7; // float w0, w1, w2, w3 (16 bytes)
 
 		inline size_t ParamSize(UInt flag)
 		{
 			switch (flag)
 			{
-				case Position:  return sizeof(float) * 3;
-				case Color:     return sizeof(UInt);
-				case TexCoord0: return sizeof(float) * 2;
-				case TexCoord1: return sizeof(float) * 2;
-				case TexCoord2: return sizeof(float) * 2;
-				case Normal:    return sizeof(float) * 3;
-				default:        return 0;
+				case Position:    return sizeof(float) * 3;
+				case Color:       return sizeof(UInt);
+				case TexCoord0:   return sizeof(float) * 2;
+				case TexCoord1:   return sizeof(float) * 2;
+				case TexCoord2:   return sizeof(float) * 2;
+				case Normal:      return sizeof(float) * 3;
+				case BoneIndices: return sizeof(float) * 4;
+				case BoneWeights: return sizeof(float) * 4;
+				default:          return 0;
 			}
 		}
 	}
@@ -144,6 +148,26 @@ namespace o2
 
 	public:
 		Vertex3Tex();
+
+		static size_t ParamOffset(UInt param);
+		static VertexType Type();
+	};
+
+	// ------------------------------------------------------------------------------
+	// Skinned mesh vertex: bind pose position and normal with four bone influences,
+	// transformed on GPU by the bones palette (see skinned builtin shaders)
+	// ------------------------------------------------------------------------------
+	struct SkinnedVertex
+	{
+		float x, y, z;
+		Color32Bit color;
+		float tu, tv;
+		float nx, ny, nz;
+		float boneIndices[4];
+		float boneWeights[4];
+
+	public:
+		SkinnedVertex();
 
 		static size_t ParamOffset(UInt param);
 		static VertexType Type();

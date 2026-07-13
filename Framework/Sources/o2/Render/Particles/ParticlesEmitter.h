@@ -10,6 +10,8 @@
 #include "o2/Utils/Editor/Attributes/GroupAttribute.h"
 #include "o2/Utils/Editor/Attributes/NameAttribute.h"
 #include "o2/Utils/Editor/Attributes/RangeAttribute.h"
+#include "o2/Utils/Math/AABB.h"
+#include "o2/Utils/Math/Basis3D.h"
 #include "o2/Utils/Math/ColorGradient.h"
 #include "o2/Utils/Math/Curve.h"
 
@@ -39,6 +41,8 @@ namespace o2
 
         PROPERTY(bool, particlesRelative, SetParticlesRelativity, IsParticlesRelative); // Is particles relative to emitter @GROUP("Emission")
 
+        PROPERTY(bool, is3D, SetIs3D, Is3D); // Is emitter working in 3D mode: emits in 3D space, draws camera facing billboards @GROUP("Emission")
+
         PROPERTY(float, emittingCoefficient, SetEmittingCoef, GetEmittingCoef); // Particles emitting coefficient property (0...1) @RANGE(0, 1) @GROUP("Emission")
 
         PROPERTY(float, prewarmTime, SetPrewarmTime, GetPrewarmTime); // Emitting particles prewarm time property @RANGE(0, 1) @GROUP("Emission")
@@ -60,6 +64,8 @@ namespace o2
        
         PROPERTY(float, moveDirection, SetEmitParticlesMoveDirection, GetEmitParticlesMoveDirection);                // Emitting particle moving direction in degrees @RANGE(0, 360) @GROUP("Initial parameters")
         PROPERTY(float, moveDirectionRange, SetEmitParticlesMoveDirectionRange, GetEmitParticlesMoveDirectionRange); // Emitting particle moving direction range in degrees property @RANGE(0, 360) @GROUP("Initial parameters")
+
+        PROPERTY(Vec3F, moveDirection3D, SetEmitParticlesMoveDirection3D, GetEmitParticlesMoveDirection3D); // Emitting particle moving direction in 3D mode; moveDirectionRange works as cone angle @GROUP("Initial parameters")
 
     public:
         // Default constructor
@@ -149,6 +155,21 @@ namespace o2
 
         // Is particles relative to emitter
         bool IsParticlesRelative() const;
+
+        // Sets 3D mode: particles are emitted in 3D space and drawn as camera facing billboards
+        void SetIs3D(bool is3D);
+
+        // Returns is emitter in 3D mode
+        bool Is3D() const;
+
+        // Sets world emission basis for 3D mode; the shape emits in its unit volume
+        void Set3DBasis(const Basis3D& basis);
+
+        // Returns world emission basis for 3D mode
+        const Basis3D& Get3DBasis() const;
+
+        // Returns world bounds of alive particles; false when there are none
+        bool GetParticlesBounds(o2::AABB& bounds) const;
 
         // Sets particles emit from shell
         void SetParticlesEmitFromShell(bool fromShell);
@@ -252,6 +273,12 @@ namespace o2
         // Returns emitting particles moving direction angle range in degrees
         float GetEmitParticlesMoveDirectionRange() const;
 
+        // Sets emitting particles moving direction for 3D mode
+        void SetEmitParticlesMoveDirection3D(const Vec3F& direction);
+
+        // Returns emitting particles moving direction for 3D mode
+        const Vec3F& GetEmitParticlesMoveDirection3D() const;
+
         // Dynamic cast to RefCounterable via IAnimation
         static Ref<RefCounterable> CastToRefCounterable(const Ref<ParticlesEmitter>& ref);
 
@@ -276,6 +303,8 @@ namespace o2
         float mEmittingCoefficient = 1.0f; // Emitting particles number coefficient (0...1) @SERIALIZABLE
         bool  mIsParticlesRelative = true; // Is particles relative to emitter or global @SERIALIZABLE
 
+        bool mIs3D = false; // Is emitter working in 3D mode @SERIALIZABLE
+
         float mEmissionDuration = 0.1f; // Emission duration in seconds @SERIALIZABLE
                                                                   
         float mParticlesLifetime = 0.5f;      // Particles lifetime in seconds @SERIALIZABLE
@@ -299,6 +328,8 @@ namespace o2
                                                         
         float mInitialMoveDirection = 0;          // Emitting particles direction in degrees @SERIALIZABLE
         float mInitialMoveDirectionRange = 45.0f; // Emitting particles direction range in degrees @SERIALIZABLE
+
+        Vec3F mInitialMoveDirection3D = Vec3F(0, 0, 1); // Emitting particles direction in 3D mode @SERIALIZABLE
               
         float mInitialAngleSpeed = 0;      // Emitting particles angle speed in degrees/sec
         float mInitialAngleSpeedRange = 0; // Emitting particles angle speed range in degrees/sec
@@ -308,6 +339,9 @@ namespace o2
         Vector<int>      mDeadParticles;         // Dead particles indexes
         int              mNumAliveParticles = 0; // Count of current alive particles
         Basis            mLastTransform;         // Last transformation
+
+        Basis3D mEmission3DBasis; // World emission basis for 3D mode, set by owning component
+        Basis3D mLast3DBasis;     // Last 3D emission basis, for relative particles transformation
 
     protected:
         // Called when blend mode was changed
@@ -421,6 +455,7 @@ CLASS_FIELDS_META(o2::ParticlesEmitter)
     FIELD().PUBLIC().GROUP_ATTRIBUTE("Emission").RANGE_ATTRIBUTE(0, 10).NAME(emissionDuration);
     FIELD().PUBLIC().GROUP_ATTRIBUTE("Emission").RANGE_ATTRIBUTE(0, 10).NAME(particlesLifetime);
     FIELD().PUBLIC().GROUP_ATTRIBUTE("Emission").NAME(particlesRelative);
+    FIELD().PUBLIC().GROUP_ATTRIBUTE("Emission").NAME(is3D);
     FIELD().PUBLIC().GROUP_ATTRIBUTE("Emission").RANGE_ATTRIBUTE(0, 1).NAME(emittingCoefficient);
     FIELD().PUBLIC().GROUP_ATTRIBUTE("Emission").RANGE_ATTRIBUTE(0, 1).NAME(prewarmTime);
     FIELD().PUBLIC().GROUP_ATTRIBUTE("Initial parameters").NAME_ATTRIBUTE("Angle").RANGE_ATTRIBUTE(0, 360).NAME(initialAngle);
@@ -435,6 +470,7 @@ CLASS_FIELDS_META(o2::ParticlesEmitter)
     FIELD().PUBLIC().GROUP_ATTRIBUTE("Initial parameters").NAME_ATTRIBUTE("Angle speed range").RANGE_ATTRIBUTE(0, 720).NAME(initialAngleSpeedRange);
     FIELD().PUBLIC().GROUP_ATTRIBUTE("Initial parameters").RANGE_ATTRIBUTE(0, 360).NAME(moveDirection);
     FIELD().PUBLIC().GROUP_ATTRIBUTE("Initial parameters").RANGE_ATTRIBUTE(0, 360).NAME(moveDirectionRange);
+    FIELD().PUBLIC().GROUP_ATTRIBUTE("Initial parameters").NAME(moveDirection3D);
     FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(mmake<SingleSpriteParticleSource>()).NAME(mParticlesSource);
     FIELD().PROTECTED().NAME(mParticlesContainer);
     FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(nullptr).NAME(mShape);
@@ -443,6 +479,7 @@ CLASS_FIELDS_META(o2::ParticlesEmitter)
     FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(100).NAME(mParticlesNumLimit);
     FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(1.0f).NAME(mEmittingCoefficient);
     FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(true).NAME(mIsParticlesRelative);
+    FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(false).NAME(mIs3D);
     FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(0.1f).NAME(mEmissionDuration);
     FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(0.5f).NAME(mParticlesLifetime);
     FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(0.0f).NAME(mParticlesLifetimeRange);
@@ -459,6 +496,7 @@ CLASS_FIELDS_META(o2::ParticlesEmitter)
     FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(5).NAME(mInitialSpeedRangle);
     FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(0).NAME(mInitialMoveDirection);
     FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(45.0f).NAME(mInitialMoveDirectionRange);
+    FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(Vec3F(0, 0, 1)).NAME(mInitialMoveDirection3D);
     FIELD().PROTECTED().DEFAULT_VALUE(0).NAME(mInitialAngleSpeed);
     FIELD().PROTECTED().DEFAULT_VALUE(0).NAME(mInitialAngleSpeedRange);
     FIELD().PROTECTED().DEFAULT_VALUE(0).NAME(mEmitTimeBuffer);
@@ -466,6 +504,8 @@ CLASS_FIELDS_META(o2::ParticlesEmitter)
     FIELD().PROTECTED().NAME(mDeadParticles);
     FIELD().PROTECTED().DEFAULT_VALUE(0).NAME(mNumAliveParticles);
     FIELD().PROTECTED().NAME(mLastTransform);
+    FIELD().PROTECTED().NAME(mEmission3DBasis);
+    FIELD().PROTECTED().NAME(mLast3DBasis);
 #if  IS_EDITOR
     FIELD().PROTECTED().NAME(mBakedFrames);
     FIELD().PROTECTED().DEFAULT_VALUE(0).NAME(mRandomSeed);
@@ -503,6 +543,11 @@ CLASS_METHODS_META(o2::ParticlesEmitter)
     FUNCTION().PUBLIC().SIGNATURE(const Vector<Particle>&, GetParticles);
     FUNCTION().PUBLIC().SIGNATURE(void, SetParticlesRelativity, bool);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsParticlesRelative);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetIs3D, bool);
+    FUNCTION().PUBLIC().SIGNATURE(bool, Is3D);
+    FUNCTION().PUBLIC().SIGNATURE(void, Set3DBasis, const Basis3D&);
+    FUNCTION().PUBLIC().SIGNATURE(const Basis3D&, Get3DBasis);
+    FUNCTION().PUBLIC().SIGNATURE(bool, GetParticlesBounds, o2::AABB&);
     FUNCTION().PUBLIC().SIGNATURE(void, SetParticlesEmitFromShell, bool);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsParticlesEmitFromShell);
     FUNCTION().PUBLIC().SIGNATURE(void, SetEmissionDuration, float);
@@ -537,6 +582,8 @@ CLASS_METHODS_META(o2::ParticlesEmitter)
     FUNCTION().PUBLIC().SIGNATURE(float, GetEmitParticlesMoveDirection);
     FUNCTION().PUBLIC().SIGNATURE(void, SetEmitParticlesMoveDirectionRange, float);
     FUNCTION().PUBLIC().SIGNATURE(float, GetEmitParticlesMoveDirectionRange);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetEmitParticlesMoveDirection3D, const Vec3F&);
+    FUNCTION().PUBLIC().SIGNATURE(const Vec3F&, GetEmitParticlesMoveDirection3D);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(Ref<RefCounterable>, CastToRefCounterable, const Ref<ParticlesEmitter>&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnMaterialChanged);
     FUNCTION().PROTECTED().SIGNATURE(void, OnSerialize, DataValue&);

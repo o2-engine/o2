@@ -66,7 +66,7 @@ namespace o2
         SERIALIZABLE(SceneLayersList);
 
     protected:
-        bool mAllLayers = true; // When this is true, the list always returns all existing layers
+        bool mAllLayers = true; // When this is true, the list always returns all existing layers @SERIALIZABLE
 
         mutable Vector<String> mLayers; // Scene layers names list @SERIALIZABLE
     };
@@ -80,7 +80,7 @@ CLASS_BASES_META(o2::SceneLayersList)
 END_META;
 CLASS_FIELDS_META(o2::SceneLayersList)
 {
-    FIELD().PROTECTED().DEFAULT_VALUE(true).NAME(mAllLayers);
+    FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(true).NAME(mAllLayers);
     FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().NAME(mLayers);
 }
 END_META;

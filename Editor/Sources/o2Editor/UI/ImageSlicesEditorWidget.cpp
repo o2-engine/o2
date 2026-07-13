@@ -66,11 +66,11 @@ namespace Editor
         mBorderLeftHandle = mmake<WidgetDragHandle>(mmake<Sprite>("ui/ver_slice_line.png"));
 
         mBorderLeftHandle->localToWidgetOffsetTransformFunc = [&](const Vec2F& point) {
-            return point / mPreviewImage->GetImage()->GetOriginalSize() * mPreviewImage->layout->GetSize();
+            return point / mPreviewImage->GetImage()->GetOriginalSize() * mPreviewImage->layout->GetSize2D();
         };
 
         mBorderLeftHandle->widgetOffsetToLocalTransformFunc = [&](const Vec2F& point) {
-            return point / mPreviewImage->layout->GetSize() * mPreviewImage->GetImage()->GetOriginalSize();
+            return point / mPreviewImage->layout->GetSize2D() * mPreviewImage->GetImage()->GetOriginalSize();
         };
 
         mBorderLeftHandle->checkPositionFunc = [&](const Vec2F& point) {
@@ -99,11 +99,11 @@ namespace Editor
         mBorderTopHandle = mmake<WidgetDragHandle>(mmake<Sprite>("ui/hor_slice_line.png"));
 
         mBorderTopHandle->localToWidgetOffsetTransformFunc = [&](const Vec2F& point) {
-            return point / mPreviewImage->GetImage()->GetOriginalSize() * mPreviewImage->layout->GetSize();
+            return point / mPreviewImage->GetImage()->GetOriginalSize() * mPreviewImage->layout->GetSize2D();
         };
 
         mBorderTopHandle->widgetOffsetToLocalTransformFunc = [&](const Vec2F& point) {
-            return point / mPreviewImage->layout->GetSize() * mPreviewImage->GetImage()->GetOriginalSize();
+            return point / mPreviewImage->layout->GetSize2D() * mPreviewImage->GetImage()->GetOriginalSize();
         };
 
         mBorderTopHandle->checkPositionFunc = [&](const Vec2F& point) {
@@ -134,7 +134,7 @@ namespace Editor
         if (layout->IsDirty())
             UpdateTransform();
 
-        Vec2F maxSize = layout->size;
+        Vec2F maxSize = layout->size2D;
         Vec2F imageSize = mPreviewImage->GetImage()->GetOriginalSize();
 
         float heightFitScale = maxSize.y/imageSize.y;

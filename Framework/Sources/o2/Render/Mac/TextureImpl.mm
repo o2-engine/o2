@@ -45,7 +45,12 @@ namespace o2
             mImpl = mnew MTLTextureImpl();
 
         MTLTextureDescriptor *textureDescriptor = [[MTLTextureDescriptor alloc] init];
-        textureDescriptor.pixelFormat = mUsage == Usage::RenderTarget ? RenderDevice::view.colorPixelFormat : MTLPixelFormatRGBA8Unorm;
+
+        if (mFormat == TextureFormat::R16G16B16A16F)
+            textureDescriptor.pixelFormat = MTLPixelFormatRGBA16Float;
+        else
+            textureDescriptor.pixelFormat = mUsage == Usage::RenderTarget ? RenderDevice::view.colorPixelFormat : MTLPixelFormatRGBA8Unorm;
+
         textureDescriptor.width = mSize.x;
         textureDescriptor.height = mSize.y;
 
@@ -64,6 +69,7 @@ namespace o2
         {
             mImpl->texture = nil;
             mImpl->samplerState = nil;
+            mImpl->depthTexture = nil;
         }
     }
 
@@ -95,7 +101,9 @@ namespace o2
         if (!mImpl || !mImpl->texture)
             return;
 
-        NSUInteger bytesPerRow = 4 * (NSUInteger)mSize.x;
+        bool halfFloat = mFormat == TextureFormat::R16G16B16A16F;
+        NSUInteger bytesPerPixel = halfFloat ? 8 : 4;
+        NSUInteger bytesPerRow = bytesPerPixel * (NSUInteger)mSize.x;
         NSUInteger length = bytesPerRow * (NSUInteger)mSize.y;
 
         // Copy through a shared buffer on the render queue: the serial queue guarantees any
@@ -120,7 +128,19 @@ namespace o2
         [commandBuffer commit];
         [commandBuffer waitUntilCompleted];
 
-        memcpy(data, [readBuffer contents], length);
+        if (halfFloat)
+        {
+            // Convert to 8-bit bitmap channels with clamping to [0, 1]
+            const __fp16* source = (const __fp16*)[readBuffer contents];
+            NSUInteger channelsCount = (NSUInteger)mSize.x * (NSUInteger)mSize.y * 4;
+            for (NSUInteger i = 0; i < channelsCount; i++)
+            {
+                float value = (float)source[i];
+                data[i] = (Byte)(Math::Clamp01(value)*255.0f);
+            }
+        }
+        else
+            memcpy(data, [readBuffer contents], length);
     }
 
     void Texture::PlatformSetFilter()

@@ -11,6 +11,7 @@ set_target_properties(gtest PROPERTIES FOLDER o2/3rdPartyLibs)
 set_target_properties(gtest_main PROPERTIES FOLDER o2/3rdPartyLibs)
 
 include(GoogleTest)
+include(O2TestSuites)
 
 # Shared helpers for systems and rendered tiers — TestComponent, TestScriptObject,
 # SceneTestHelpers, UITestHelpers. Compiled once into a static lib that both tiers link.

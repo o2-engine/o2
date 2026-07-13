@@ -178,7 +178,7 @@ namespace o2
     {
         UpdateTransform();
 
-        Vec2F size = fitByChildren ? GetContentSize() : layout->GetSize();
+        Vec2F size = fitByChildren ? GetContentSize() : layout->GetSize2D();
         FitPosition(position, size);
     }
 

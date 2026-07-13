@@ -4,6 +4,7 @@
 
 #include "PropertiesListDlg.h"
 #include "TrackControls/SubTrackControl.h"
+#include "o2/Animation/Tracks/AnimationVec3FTrack.h"
 #include "o2/Scene/UI/UIManager.h"
 #include "o2/Scene/UI/WidgetLayout.h"
 #include "o2/Scene/UI/Widgets/Button.h"
@@ -430,6 +431,7 @@ namespace Editor
             { &TypeOf(AnimationTrack<float>), &TypeOf(KeyFramesTrackControl<AnimationTrack<float>>) },
             { &TypeOf(AnimationTrack<bool>), &TypeOf(KeyFramesTrackControl<AnimationTrack<bool>>) },
             { &TypeOf(AnimationTrack<Vec2F>), &TypeOf(Vec2KeyFramesTrackControl) },
+            { &TypeOf(AnimationTrack<Vec3F>), &TypeOf(KeyFramesTrackControl<AnimationTrack<Vec3F>>) },
             { &TypeOf(AnimationTrack<Color4>), &TypeOf(KeyFramesTrackControl<AnimationTrack<Color4>>) }
         };
 

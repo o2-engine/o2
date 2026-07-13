@@ -54,12 +54,33 @@ namespace Editor
 
     Vec2F SceneDragHandle::ScreenToLocal(const Vec2F& point)
     {
+        // In 3D mode cursor events come in screen space, handle position stays in plane space
+        if (SceneEditScreen::IsSingletonInitialzed() && o2EditorSceneScreen.IsView3DMode())
+            return o2EditorSceneScreen.ScreenToScenePoint(point);
+
         return point;
     }
 
     Vec2F SceneDragHandle::LocalToScreen(const Vec2F& point)
     {
+        if (SceneEditScreen::IsSingletonInitialzed() && o2EditorSceneScreen.IsView3DMode())
+            return o2EditorSceneScreen.World3DToScreenPoint(Vec3F(point.x, point.y, mPositionZ));
+
         return point;
+    }
+
+    void SceneDragHandle::SetPositionZ(float z)
+    {
+        if (Math::Equals(mPositionZ, z))
+            return;
+
+        mPositionZ = z;
+        UpdateScreenPosition();
+    }
+
+    float SceneDragHandle::GetPositionZ() const
+    {
+        return mPositionZ;
     }
 
     void SceneDragHandle::Draw()
@@ -68,13 +89,13 @@ namespace Editor
         Vec2F drawablesScale(cameraScale.x, cameraScale.y);
 
         if (mRegularDrawable)
-            mRegularDrawable->scale = drawablesScale;
+            mRegularDrawable->scale2D = drawablesScale;
 
         if (mHoverDrawable)
-            mHoverDrawable->scale = drawablesScale;
+            mHoverDrawable->scale2D = drawablesScale;
 
         if (mPressedDrawable)
-            mPressedDrawable->scale = drawablesScale;  
+            mPressedDrawable->scale2D = drawablesScale;  
 
         DragHandle::Draw();
     }

@@ -275,22 +275,22 @@ namespace o2
                 float realSize = mTextDrawable->GetRealSize().x + mExpandBorder.x*2.0f;
                 float thisSize = layout->width;
                 float sizeDelta = realSize - thisSize;
-                GetLayoutData().minSize.x = realSize;
+                GetLayoutData().mMinSize.x = realSize;
 
                 switch (mTextDrawable->GetHorAlign())
                 {
                     case HorAlign::Left:
-                    GetLayoutData().offsetMax.x += sizeDelta;
+                    GetLayoutData().mOffsetMax.x += sizeDelta;
                     break;
 
                     case HorAlign::Middle:
                     case HorAlign::Both:
-                    GetLayoutData().offsetMax.x += sizeDelta*0.5f;
-                    GetLayoutData().offsetMin.x -= sizeDelta*0.5f;
+                    GetLayoutData().mOffsetMax.x += sizeDelta*0.5f;
+                    GetLayoutData().mOffsetMin.x -= sizeDelta*0.5f;
                     break;
 
                     case HorAlign::Right:
-                    GetLayoutData().offsetMin.x -= sizeDelta;
+                    GetLayoutData().mOffsetMin.x -= sizeDelta;
                     break;
                 }
             }
@@ -306,17 +306,17 @@ namespace o2
                 switch (mTextDrawable->GetVerAlign())
                 {
                     case VerAlign::Top:
-                    GetLayoutData().offsetMin.y -= sizeDelta;
+                    GetLayoutData().mOffsetMin.y -= sizeDelta;
                     break;
 
                     case VerAlign::Middle:
                     case VerAlign::Both:
-                    GetLayoutData().offsetMax.y += sizeDelta*0.5f;
-                    GetLayoutData().offsetMin.y -= sizeDelta*0.5f;
+                    GetLayoutData().mOffsetMax.y += sizeDelta*0.5f;
+                    GetLayoutData().mOffsetMin.y -= sizeDelta*0.5f;
                     break;
 
                     case VerAlign::Bottom:
-                    GetLayoutData().offsetMax.y += sizeDelta;
+                    GetLayoutData().mOffsetMax.y += sizeDelta;
                     break;
                 }
             }

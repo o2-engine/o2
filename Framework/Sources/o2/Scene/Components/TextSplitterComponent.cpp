@@ -268,8 +268,8 @@ namespace o2
 
                 if (symbolComponent->GetActor() != symbolActor)
                 {
-                    symbolComponent->GetActor()->transform->position = Vec2F();
-                    symbolComponent->GetActor()->transform->size = symbol.mFrame.Size();
+                    symbolComponent->GetActor()->transform->position2D = Vec2F();
+                    symbolComponent->GetActor()->transform->size2D = symbol.mFrame.Size();
                 }
             }
         }

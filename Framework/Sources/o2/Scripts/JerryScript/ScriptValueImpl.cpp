@@ -1,7 +1,7 @@
 #include "o2/stdafx.h"
 
 #include "o2/Scripts/ScriptValueDef.h"
-#include "o2/Scripts/JerryScript/ScriptValueContainerAllocator.h"
+#include "o2/Scripts/ScriptValueContainerAllocator.h"
 #include "o2/Utils/Debug/Debug.h"
 
 #if defined(SCRIPTING_BACKEND_JERRYSCRIPT)
@@ -164,7 +164,8 @@ namespace o2
         if (GetValueType() != ValueType::Error)
             return String();
 
-        auto errorJValue = jerry_get_value_from_error(jvalue, true);
+        // release=false: this value still owns the error reference, destructor releases it once
+        auto errorJValue = jerry_get_value_from_error(jvalue, false);
 
         ScriptValue errorValue;
         errorValue.Accept(jerry_value_to_string(errorJValue));
@@ -292,7 +293,7 @@ namespace o2
             | JERRY_PROPERTY_FILTER_INTEGER_INDICES_AS_NUMBER
         );
 
-        res.AcquireValue(jerry_object_get_property_names(jvalue, filter));
+        res.Accept(jerry_object_get_property_names(jvalue, filter));
 
         return res;
     }
@@ -398,14 +399,19 @@ namespace o2
 
     ScriptValue ScriptValue::InvokeRaw(const ScriptValue& thisValue, const Vector<ScriptValue>& args) const
     {
+        return InvokeRaw(thisValue, args.Count() > 0 ? &args[0] : nullptr, args.Count());
+    }
+
+    ScriptValue ScriptValue::InvokeRaw(const ScriptValue& thisValue, const ScriptValue* args, int argsCount) const
+    {
         if (IsFunction())
         {
             const int maxParameters = 16;
             jerry_value_t valuesBuf[maxParameters];
-            for (int i = 0; i < args.Count() && i < maxParameters; i++)
+            for (int i = 0; i < argsCount && i < maxParameters; i++)
                 valuesBuf[i] = args[i].jvalue;
 
-            auto res = jerry_call_function(jvalue, thisValue.jvalue, valuesBuf, args.Count());
+            auto res = jerry_call_function(jvalue, thisValue.jvalue, valuesBuf, argsCount);
 
             ScriptValue resValue;
             resValue.Accept(res);

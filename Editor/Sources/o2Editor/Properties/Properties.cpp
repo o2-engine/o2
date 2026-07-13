@@ -57,7 +57,10 @@ namespace Editor
         for (auto& x : avaialbleTypes)
         {
             if (auto valueType = x->InvokeStatic<const Type*>("GetValueTypeStatic"))
-                mAvailablePropertiesFields[valueType] = x;
+            {
+                if (valueType != Type::Dummy::type)
+                    mAvailablePropertiesFields[valueType] = x;
+            }
         }
     }
 
@@ -519,6 +522,11 @@ namespace Editor
 
         mObjectPropertiesViewersPool[type].Add(viewer);
         viewer->OnFree();
+
+        // Pooled viewer must not keep raw pointers to old targets: spoiler expand refreshes
+        // with mTargetObjects before new targets are set, dereferencing dead objects
+        viewer->mTargetObjects.Clear();
+
         viewer->GetSpoiler()->SetParent(nullptr);
     }
 

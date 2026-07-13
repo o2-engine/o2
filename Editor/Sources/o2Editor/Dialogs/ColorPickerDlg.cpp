@@ -28,8 +28,8 @@ namespace Editor
         InitializeControls();
 
         mWindow->Hide(true);
-        mWindow->layout->size = Vec2F(400, 600);
-        mWindow->layout->worldPosition = Vec2F();
+        mWindow->layout->size2D = Vec2F(400, 600);
+        mWindow->layout->worldPosition2D = Vec2F();
 
         mWindow->GetBackCursorListener().onCursorReleased = [&](const Input::Cursor& c) { OnCursorPressedOutside(); };
         mWindow->onHide = MakeFunction(this, &ColorPickerDlg::OnHide);

@@ -114,6 +114,31 @@ namespace o2
         return mOwner.Lock();
     }
 
+    SceneDrawableCategory Component::GetSceneDrawableCategory() const
+    {
+        return SceneDrawableCategory::Scene2D;
+    }
+
+    void Component::Draw()
+    {
+        OnDraw();
+    }
+
+    bool Component::Get3DDrawableBounds(AABB& bounds)
+    {
+        return false;
+    }
+
+    bool Component::Get3DDrawableLocalBounds(AABB& bounds)
+    {
+        return false;
+    }
+
+    bool Component::Is3DDrawableTransparent() const
+    {
+        return false;
+    }
+
     String Component::GetName()
     {
         return String();
@@ -182,12 +207,20 @@ namespace o2
     void Component::AddToScene()
     {
         o2Scene.OnComponentAdded(this);
+
+        if (GetSceneDrawableCategory() == SceneDrawableCategory::Scene3D)
+            o2Scene.OnDrawable3DComponentAdded(this);
+
         OnAddToScene();
     }
 
     void Component::RemoveFromScene()
     {
         o2Scene.OnComponentRemoved(this);
+
+        if (GetSceneDrawableCategory() == SceneDrawableCategory::Scene3D)
+            o2Scene.OnDrawable3DComponentRemoved(this);
+
         OnRemoveFromScene();
     }
 

@@ -50,14 +50,14 @@ namespace o2
     {
     public:
         PROPERTIES(ParticlesGravityEffect);
-        PROPERTY(Vec2F, gravity, SetGravity, GetGravity);
+        PROPERTY(Vec3F, gravity, SetGravity, GetGravity);
 
     public:
-        // Set gravity vector
-        void SetGravity(const Vec2F& gravity) { mGravity = gravity; OnChanged(); }
+        // Set gravity vector; z is used by 3D emitters
+        void SetGravity(const Vec3F& gravity) { mGravity = gravity; OnChanged(); }
 
         // Get gravity vector
-        const Vec2F& GetGravity() const { return mGravity; }
+        const Vec3F& GetGravity() const { return mGravity; }
 
         // Update particles velocity with gravity vector
         void Update(float dt, ParticlesEmitter* emitter) override;
@@ -66,7 +66,7 @@ namespace o2
         CLONEABLE_REF(ParticlesGravityEffect);
 
     protected:
-        Vec2F mGravity; // Vector of gravity @SERIALIZABLE
+        Vec3F mGravity; // Vector of gravity @SERIALIZABLE
     };
 
     // --------------------------------
@@ -318,7 +318,7 @@ namespace o2
     private:
         struct ParticleData
         {
-            Vec2F initialVelocity;
+            Vec3F initialVelocity;
 
             int cacheXKey = 0;
             int cacheXKeyApprox = 0;
@@ -368,7 +368,7 @@ namespace o2
     private:
         struct ParticleData
         {
-            Vec2F initialPosition;
+            Vec3F initialPosition;
 
             int timeCacheKey = 0;
             int timeCacheKeyApprox = 0;
@@ -433,8 +433,8 @@ END_META;
 CLASS_METHODS_META(o2::ParticlesGravityEffect)
 {
 
-    FUNCTION().PUBLIC().SIGNATURE(void, SetGravity, const Vec2F&);
-    FUNCTION().PUBLIC().SIGNATURE(const Vec2F&, GetGravity);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetGravity, const Vec3F&);
+    FUNCTION().PUBLIC().SIGNATURE(const Vec3F&, GetGravity);
     FUNCTION().PUBLIC().SIGNATURE(void, Update, float, ParticlesEmitter*);
 }
 END_META;

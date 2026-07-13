@@ -1,14 +1,47 @@
 #include "o2/stdafx.h"
 #include "ParticlesContainer.h"
 
+#include "o2/Render/Particles/ParticlesEmitter.h"
+#include "o2/Render/Render.h"
+
 namespace o2
 {
+    namespace
+    {
+        // Returns billboard axes: world XY in 2D mode, camera facing plane in 3D mode
+        void GetBillboardAxes(bool is3D, Vec3F& right, Vec3F& up)
+        {
+            if (is3D)
+            {
+                Quat rotation = o2Render.GetCamera().GetRotation();
+                right = rotation*Vec3F(1, 0, 0);
+                up = rotation*Vec3F(0, 1, 0);
+            }
+            else
+            {
+                right = Vec3F(1, 0, 0);
+                up = Vec3F(0, 1, 0);
+            }
+        }
+
+        void SetParticleVertex(Vertex& vertex, const Vec3F& position, ULong color, float u, float v)
+        {
+            vertex.x = position.x;
+            vertex.y = position.y;
+            vertex.z = position.z;
+            vertex.color = (Color32Bit)color;
+            vertex.tu = u;
+            vertex.tv = v;
+        }
+    }
+
     void SingleSpriteParticlesContainer::SetMaterial(const Ref<Material>& material)
     {
         mParticlesMesh.SetMaterial(material);
     }
 
-    void SingleSpriteParticlesContainer::Update(Vector<Particle>& particles, int maxParticles)
+    void SingleSpriteParticlesContainer::BuildMesh(const Vector<Particle>& particles, int maxParticles,
+                                                   const Vec3F& right, const Vec3F& up)
     {
         if (mParticlesMesh.GetMaxVertexCount() < (UInt)maxParticles * 4)
             mParticlesMesh.Resize(maxParticles * 4, maxParticles * 2);
@@ -47,16 +80,16 @@ namespace o2
 
             float sn = Math::Sin(particle.angle), cs = Math::Cos(particle.angle);
             Vec2F hs = imageSize * particle.size * 0.5f;
-            Vec2F xv(cs * hs.x, sn * hs.x);
-            Vec2F yv(-sn * hs.y, cs * hs.y);
-            Vec2F o(particle.position);
+            Vec3F xv = (right*cs + up*sn)*hs.x;
+            Vec3F yv = (right*-sn + up*cs)*hs.y;
+            Vec3F o = particle.position;
             ULong colr = particle.color.ABGR();
 
             Vertex* verts = mParticlesMesh.GetVertices<Vertex>();
-            verts[mParticlesMesh.vertexCount++].Set(o - xv + yv, colr, uvLeft, uvUp);
-            verts[mParticlesMesh.vertexCount++].Set(o + xv + yv, colr, uvRight, uvUp);
-            verts[mParticlesMesh.vertexCount++].Set(o + xv - yv, colr, uvRight, uvDown);
-            verts[mParticlesMesh.vertexCount++].Set(o - xv - yv, colr, uvLeft, uvDown);
+            SetParticleVertex(verts[mParticlesMesh.vertexCount++], o - xv + yv, colr, uvLeft, uvUp);
+            SetParticleVertex(verts[mParticlesMesh.vertexCount++], o + xv + yv, colr, uvRight, uvUp);
+            SetParticleVertex(verts[mParticlesMesh.vertexCount++], o + xv - yv, colr, uvRight, uvDown);
+            SetParticleVertex(verts[mParticlesMesh.vertexCount++], o - xv - yv, colr, uvLeft, uvDown);
 
             idx[polyIndex++] = mParticlesMesh.vertexCount - 4;
             idx[polyIndex++] = mParticlesMesh.vertexCount - 3;
@@ -69,8 +102,24 @@ namespace o2
         }
     }
 
+    void SingleSpriteParticlesContainer::Update(Vector<Particle>& particles, int maxParticles)
+    {
+        // 3D billboards depend on the drawing camera, the mesh is rebuilt at Draw
+        if (emitter && emitter->Is3D())
+            return;
+
+        BuildMesh(particles, maxParticles, Vec3F(1, 0, 0), Vec3F(0, 1, 0));
+    }
+
     void SingleSpriteParticlesContainer::Draw()
     {
+        if (emitter && emitter->Is3D())
+        {
+            Vec3F right, up;
+            GetBillboardAxes(true, right, up);
+            BuildMesh(emitter->GetParticles(), emitter->GetMaxParticles(), right, up);
+        }
+
         mParticlesMesh.Draw();
     }
 
@@ -86,7 +135,8 @@ namespace o2
         mParticlesMesh.SetMaterial(material);
     }
 
-    void MultiSpriteParticlesContainer::Update(Vector<Particle>& particles, int maxParticles)
+    void MultiSpriteParticlesContainer::BuildMesh(const Vector<Particle>& particles, int maxParticles,
+                                                  const Vec3F& right, const Vec3F& up)
     {
         if (mParticlesMesh.GetMaxVertexCount() < (UInt)maxParticles * 4)
             mParticlesMesh.Resize(maxParticles * 4, maxParticles * 2);
@@ -125,6 +175,9 @@ namespace o2
             mImagesCache.push_back(info);
         }
 
+        if (mImagesCache.IsEmpty())
+            return;
+
         float maxImageIdx = (float)(mImagesCache.Count() - 1);
 
         for (auto& particle : particles)
@@ -137,16 +190,16 @@ namespace o2
 
             float sn = Math::Sin(particle.angle), cs = Math::Cos(particle.angle);
             Vec2F hs = imageInfo.texSize * particle.size * 0.5f;
-            Vec2F xv(cs * hs.x, sn * hs.x);
-            Vec2F yv(-sn * hs.y, cs * hs.y);
-            Vec2F o(particle.position);
+            Vec3F xv = (right*cs + up*sn)*hs.x;
+            Vec3F yv = (right*-sn + up*cs)*hs.y;
+            Vec3F o = particle.position;
             ULong colr = particle.color.ABGR();
 
             Vertex* verts = mParticlesMesh.GetVertices<Vertex>();
-            verts[mParticlesMesh.vertexCount++].Set(o - xv + yv, colr, imageInfo.uv.left, imageInfo.uv.top);
-            verts[mParticlesMesh.vertexCount++].Set(o + xv + yv, colr, imageInfo.uv.right, imageInfo.uv.top);
-            verts[mParticlesMesh.vertexCount++].Set(o + xv - yv, colr, imageInfo.uv.right, imageInfo.uv.bottom);
-            verts[mParticlesMesh.vertexCount++].Set(o - xv - yv, colr, imageInfo.uv.left, imageInfo.uv.bottom);
+            SetParticleVertex(verts[mParticlesMesh.vertexCount++], o - xv + yv, colr, imageInfo.uv.left, imageInfo.uv.top);
+            SetParticleVertex(verts[mParticlesMesh.vertexCount++], o + xv + yv, colr, imageInfo.uv.right, imageInfo.uv.top);
+            SetParticleVertex(verts[mParticlesMesh.vertexCount++], o + xv - yv, colr, imageInfo.uv.right, imageInfo.uv.bottom);
+            SetParticleVertex(verts[mParticlesMesh.vertexCount++], o - xv - yv, colr, imageInfo.uv.left, imageInfo.uv.bottom);
 
             idx[polyIndex++] = mParticlesMesh.vertexCount - 4;
             idx[polyIndex++] = mParticlesMesh.vertexCount - 3;
@@ -159,8 +212,24 @@ namespace o2
         }
     }
 
+    void MultiSpriteParticlesContainer::Update(Vector<Particle>& particles, int maxParticles)
+    {
+        // 3D billboards depend on the drawing camera, the mesh is rebuilt at Draw
+        if (emitter && emitter->Is3D())
+            return;
+
+        BuildMesh(particles, maxParticles, Vec3F(1, 0, 0), Vec3F(0, 1, 0));
+    }
+
     void MultiSpriteParticlesContainer::Draw()
     {
+        if (emitter && emitter->Is3D())
+        {
+            Vec3F right, up;
+            GetBillboardAxes(true, right, up);
+            BuildMesh(emitter->GetParticles(), emitter->GetMaxParticles(), right, up);
+        }
+
         mParticlesMesh.Draw();
     }
 

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "o2/Utils/Math/Basis3D.h"
 #include "o2/Utils/Serialization/Serializable.h"
 #include "o2/Utils/Types/Ref.h"
 
@@ -16,8 +17,9 @@ namespace o2
         // Virtual destructor
         virtual ~ParticlesEmitterShape() {}
 
-        // Returns random emitting point in shape
-        virtual Vec2F GetEmittinPoint(const Basis& transform, bool fromShell);
+        // Returns random emitting point in shape. Local shape space is a unit square/cube
+        // with center at (0.5, 0.5, 0); z is used by volumetric shapes in 3D emitters
+        virtual Vec3F GetEmittinPoint(const Basis3D& transform, bool fromShell);
 
         SERIALIZABLE(ParticlesEmitterShape);
 
@@ -38,7 +40,7 @@ namespace o2
     {
     public:
         // Returns random emitting point in circle
-        Vec2F GetEmittinPoint(const Basis& transform, bool fromShell) override;
+        Vec3F GetEmittinPoint(const Basis3D& transform, bool fromShell) override;
 
         SERIALIZABLE(CircleParticlesEmitterShape);
         CLONEABLE_REF(CircleParticlesEmitterShape);
@@ -51,10 +53,23 @@ namespace o2
     {
     public:
         // Returns random emitting point in square
-        Vec2F GetEmittinPoint(const Basis& transform, bool fromShell) override;
+        Vec3F GetEmittinPoint(const Basis3D& transform, bool fromShell) override;
 
         SERIALIZABLE(SquareParticlesEmitterShape);
         CLONEABLE_REF(SquareParticlesEmitterShape);
+    };
+
+    // ------------------------------------------
+    // Sphere emitting shape, volumetric emitting
+    // ------------------------------------------
+    class SphereParticlesEmitterShape: public ParticlesEmitterShape
+    {
+    public:
+        // Returns random emitting point in sphere
+        Vec3F GetEmittinPoint(const Basis3D& transform, bool fromShell) override;
+
+        SERIALIZABLE(SphereParticlesEmitterShape);
+        CLONEABLE_REF(SphereParticlesEmitterShape);
     };
 }
 // --- META ---
@@ -74,7 +89,7 @@ END_META;
 CLASS_METHODS_META(o2::ParticlesEmitterShape)
 {
 
-    FUNCTION().PUBLIC().SIGNATURE(Vec2F, GetEmittinPoint, const Basis&, bool);
+    FUNCTION().PUBLIC().SIGNATURE(Vec3F, GetEmittinPoint, const Basis3D&, bool);
     FUNCTION().PROTECTED().SIGNATURE(void, OnChanged);
 }
 END_META;
@@ -91,7 +106,7 @@ END_META;
 CLASS_METHODS_META(o2::CircleParticlesEmitterShape)
 {
 
-    FUNCTION().PUBLIC().SIGNATURE(Vec2F, GetEmittinPoint, const Basis&, bool);
+    FUNCTION().PUBLIC().SIGNATURE(Vec3F, GetEmittinPoint, const Basis3D&, bool);
 }
 END_META;
 
@@ -107,7 +122,23 @@ END_META;
 CLASS_METHODS_META(o2::SquareParticlesEmitterShape)
 {
 
-    FUNCTION().PUBLIC().SIGNATURE(Vec2F, GetEmittinPoint, const Basis&, bool);
+    FUNCTION().PUBLIC().SIGNATURE(Vec3F, GetEmittinPoint, const Basis3D&, bool);
+}
+END_META;
+
+CLASS_BASES_META(o2::SphereParticlesEmitterShape)
+{
+    BASE_CLASS(o2::ParticlesEmitterShape);
+}
+END_META;
+CLASS_FIELDS_META(o2::SphereParticlesEmitterShape)
+{
+}
+END_META;
+CLASS_METHODS_META(o2::SphereParticlesEmitterShape)
+{
+
+    FUNCTION().PUBLIC().SIGNATURE(Vec3F, GetEmittinPoint, const Basis3D&, bool);
 }
 END_META;
 // --- END META ---

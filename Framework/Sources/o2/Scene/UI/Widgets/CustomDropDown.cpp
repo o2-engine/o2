@@ -298,7 +298,7 @@ namespace o2
     void CustomDropDown::UpdateSelfTransform()
 {
         layout->Update();
-        mAbsoluteClip = mClipLayout.Calculate(GetLayoutData().worldRectangle);
+        mAbsoluteClip = mClipLayout.Calculate(GetLayoutData().mWorldBox.ToRect());
     }
 
     String CustomDropDown::GetCreateMenuGroup()

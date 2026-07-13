@@ -73,7 +73,13 @@ namespace o2
 
                 for (MTLStructMember* member in argument.bufferStructType.members)
                 {
-                    materialImpl->paramBindings[std::string(member.name.UTF8String)] = { member.offset, member.dataType };
+                    NSUInteger memberSize = 0;
+                    if (member.dataType == MTLDataTypeArray && member.arrayType)
+                        memberSize = member.arrayType.arrayLength*member.arrayType.stride;
+                    else if (member.dataType == MTLDataTypeFloat4x4)
+                        memberSize = 64;
+
+                    materialImpl->paramBindings[std::string(member.name.UTF8String)] = { member.offset, member.dataType, memberSize };
                 }
             }
         }
@@ -112,8 +118,17 @@ namespace o2
         descriptor.label = @"o2Material";
         descriptor.vertexFunction = mVertexShader->mImpl->function;
         descriptor.fragmentFunction = mFragmentShader->mImpl->function;
-        descriptor.colorAttachments[0].pixelFormat = RenderDevice::view.colorPixelFormat;
-        SetupBlendState(descriptor.colorAttachments[0], mBlendMode);
+        descriptor.depthAttachmentPixelFormat = RenderDevice::view.depthStencilPixelFormat;
+
+        for (int i = 0; i < mColorAttachmentsCount; i++)
+        {
+            TextureFormat format = i < mColorAttachmentFormats.Count() ? mColorAttachmentFormats[i] : TextureFormat::R8G8B8A8;
+            descriptor.colorAttachments[i].pixelFormat = format == TextureFormat::R16G16B16A16F
+                ? MTLPixelFormatRGBA16Float
+                : RenderDevice::view.colorPixelFormat;
+
+            SetupBlendState(descriptor.colorAttachments[i], mBlendMode);
+        }
 
         NSError* error = nil;
         MTLAutoreleasedRenderPipelineReflection reflection = nil;
@@ -266,6 +281,16 @@ namespace o2
                 {
                     int value = intParam->GetValue();
                     memcpy(dst, &value, sizeof(value));
+                }
+            }
+            else if (auto* floatVectorParam = dynamic_cast<ShaderParamFloatVector*>(param.Get()))
+            {
+                if ((binding.dataType == MTLDataTypeArray || binding.dataType == MTLDataTypeFloat4x4) && binding.size > 0)
+                {
+                    const auto& values = floatVectorParam->GetValue();
+                    size_t bytes = std::min((size_t)binding.size, values.Count()*sizeof(float));
+                    if (bytes > 0)
+                        memcpy(dst, values.data(), bytes);
                 }
             }
         }

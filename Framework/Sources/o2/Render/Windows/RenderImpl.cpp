@@ -399,6 +399,27 @@ namespace o2
         }
     }
 
+    void Render::PlatformSetDepthTest(bool enabled, bool writeEnabled)
+    {
+        if (enabled)
+        {
+            glEnable(GL_DEPTH_TEST);
+            glDepthFunc(GL_LEQUAL);
+        }
+        else
+            glDisable(GL_DEPTH_TEST);
+
+        // Depth mask also gates depth clears, keep it enabled while the test is off
+        glDepthMask(enabled && !writeEnabled ? GL_FALSE : GL_TRUE);
+
+        GL_CHECK_ERROR();
+    }
+
+    bool Render::PlatformSupportsMRT() const
+    {
+        return false;
+    }
+
     void Render::PlatformEnableScissorTest()
     {
         glEnable(GL_SCISSOR_TEST);

@@ -9,6 +9,10 @@
 
 #if defined(SCRIPTING_BACKEND_JERRYSCRIPT)
 #include "o2/Scripts/JerryScript/ScriptEngineBase.h"
+#elif defined(SCRIPTING_BACKEND_BROWSERJS)
+#include "o2/Scripts/BrowserJS/ScriptEngineBase.h"
+#elif defined(SCRIPTING_BACKEND_QUICKJS)
+#include "o2/Scripts/QuickJS/ScriptEngineBase.h"
 #endif
 
 // Scripts engine access macros

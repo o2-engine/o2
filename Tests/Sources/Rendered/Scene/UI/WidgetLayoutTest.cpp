@@ -109,10 +109,10 @@ TEST(WidgetLayout, SetSizeRoundTrip)
 {
     SceneCleanGuard guard;
     auto w = mmake<Widget>(ActorCreateMode::InScene);
-    w->layout->SetSize(Vec2F(123, 45));
+    w->layout->SetSize2D(Vec2F(123, 45));
     TickFrame();
-    EXPECT_NEAR(w->layout->GetSize().x, 123, 0.01f);
-    EXPECT_NEAR(w->layout->GetSize().y, 45, 0.01f);
+    EXPECT_NEAR(w->layout->GetSize2D().x, 123, 0.01f);
+    EXPECT_NEAR(w->layout->GetSize2D().y, 45, 0.01f);
 }
 
 TEST(WidgetLayout, SetWidthHeightRoundTrip)
@@ -238,7 +238,7 @@ TEST(WidgetLayout, ChildSizeFollowsBothStretchInsideParent)
 {
     SceneCleanGuard guard;
     auto parent = mmake<Widget>(ActorCreateMode::InScene);
-    parent->layout->SetSize(Vec2F(200, 100));
+    parent->layout->SetSize2D(Vec2F(200, 100));
 
     auto child = mmake<Widget>(ActorCreateMode::InScene);
     parent->AddChildWidget(child);
@@ -253,13 +253,13 @@ TEST(WidgetLayout, AnchorMinHalfPlacesChildAtParentCenter)
 {
     SceneCleanGuard guard;
     auto parent = mmake<Widget>(ActorCreateMode::InScene);
-    parent->layout->SetSize(Vec2F(200, 100));
+    parent->layout->SetSize2D(Vec2F(200, 100));
 
     auto child = mmake<Widget>(ActorCreateMode::InScene);
     parent->AddChildWidget(child);
     child->layout->SetAnchorMin(Vec2F(0.5f, 0.5f));
     child->layout->SetAnchorMax(Vec2F(0.5f, 0.5f));
-    child->layout->SetSize(Vec2F(40, 20));
+    child->layout->SetSize2D(Vec2F(40, 20));
     TickAndUpdateLayout(2);
 
     EXPECT_NEAR(child->layout->GetWidth(), 40, 0.5f);
@@ -270,7 +270,7 @@ TEST(WidgetLayout, OffsetsTranslateChildPosition)
 {
     SceneCleanGuard guard;
     auto parent = mmake<Widget>(ActorCreateMode::InScene);
-    parent->layout->SetSize(Vec2F(200, 100));
+    parent->layout->SetSize2D(Vec2F(200, 100));
 
     auto child = mmake<Widget>(ActorCreateMode::InScene);
     parent->AddChildWidget(child);

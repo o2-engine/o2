@@ -151,7 +151,7 @@ TEST(ActorComponents, ComponentReceivesOnTransformUpdated)
     TickFrame();
 
     int base = comp->onTransformUpdatedCount;
-    a->transform->SetPosition(Vec2F(10, 0));
+    a->transform->SetPosition2D(Vec2F(10, 0));
     TickFrame();
 
     EXPECT_GT(comp->onTransformUpdatedCount, base);

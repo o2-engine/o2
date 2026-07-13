@@ -229,7 +229,7 @@ namespace o2
     void RigidBody::CreateBody()
     {
         b2BodyDef def;
-        def.position = transform->GetWorldPosition();
+        def.position = transform->GetWorldPosition2D();
         def.userData = this;
         def.active = mResEnabledInHierarchy;
 

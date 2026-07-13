@@ -58,6 +58,16 @@ namespace Editor
         mLayersButton->AddChild(mLayersPopup);
 
         mLayersButton->onClick = [&]() { mLayersPopup->Show(mLayersButton->layout->worldLeftBottom); };
+
+        mView3DButton = o2UI.CreateWidget<Button>("panel down");
+        mView3DButton->caption = "3D";
+        *mView3DButton->layout = WidgetLayout::VerStretch(HorAlign::Right, 0, 0, 50, 100);
+        mUpPanel->AddChild(mView3DButton);
+
+        mView3DButton->onClick = [&]() { mEditWidget->SetView3DMode(!mEditWidget->IsView3DMode()); };
+        mEditWidget->onView3DModeChanged = [&](bool enabled) {
+            mView3DButton->caption = enabled ? WString("2D") : WString("3D");
+        };
     }
 
     String SceneWindow::GetWindowTitle() const

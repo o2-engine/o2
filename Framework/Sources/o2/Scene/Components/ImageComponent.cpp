@@ -73,7 +73,7 @@ namespace o2
     void ImageComponent::FitActorByImage() const
     {
         if (mImageAsset)
-            mOwner.Lock()->transform->size = mImageAsset->GetSize();
+            mOwner.Lock()->transform->size2D = mImageAsset->GetSize();
     }
 
     bool ImageComponent::IsUnderPoint(const Vec2F& point)

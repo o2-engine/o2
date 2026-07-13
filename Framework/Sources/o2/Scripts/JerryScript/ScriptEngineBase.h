@@ -16,7 +16,7 @@ namespace o2
         virtual ~ScriptParseResultBase();
 
     protected:
-        jerry_value_t mParsedCode;
+        jerry_value_t mParsedCode = jerry_create_undefined();
 
         friend class ScriptEngine;
     };

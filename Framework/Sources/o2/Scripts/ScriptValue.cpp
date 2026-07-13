@@ -49,8 +49,11 @@ namespace o2
 
         case ValueType::Function:
         {
-#if SCRIPTING_BACKEND_JERRYSCRIPT
+#if defined(SCRIPTING_BACKEND_JERRYSCRIPT)
             auto container = GetNativeContainer(jvalue);
+            res += container ? "c-function" : "function";
+#elif defined(SCRIPTING_BACKEND_BROWSERJS) || defined(SCRIPTING_BACKEND_QUICKJS)
+            auto container = GetNativeContainer(mValue);
             res += container ? "c-function" : "function";
 #else
             res += "function";

@@ -23,8 +23,7 @@ endif()
 
 set_target_properties(o2EditorTests PROPERTIES FOLDER o2/Tests)
 
-include(GoogleTest)
-gtest_discover_tests(o2EditorTests
+o2_gtest_discover_tests(o2EditorTests
     WORKING_DIRECTORY $<TARGET_FILE_DIR:o2EditorTests>
 )
 
@@ -52,6 +51,6 @@ endif()
 
 set_target_properties(o2EditorUITests PROPERTIES FOLDER o2/Tests)
 
-gtest_discover_tests(o2EditorUITests
+o2_gtest_discover_tests(o2EditorUITests
     WORKING_DIRECTORY $<TARGET_FILE_DIR:o2EditorUITests>
 )

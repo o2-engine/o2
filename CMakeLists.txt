@@ -40,13 +40,15 @@ endif()
 
 # Options
 option(O2_SELFPROFILE "Enable profiling o2 benchmark." OFF)
+option(O2_TESTS_BATCH "Register one ctest entry per gtest suite (one process per suite) instead of one per test case" ON)
 option(O2_EDITOR "Enables o2 editor." ON)
 option(O2_ASAN "Enables ASAN (address sanitizer)." OFF)
 option(O2_TRACY "Enables Tracy profiling" OFF)
 option(O2_MEMORY_ANALYZE "Enables memory analyzing (slows down)" OFF)
 option(O2_PLATFORM_INITIALIZATION_ENABLED "Enables platform initialization" ON)
 option(O2_ENABLE_LINK_ZLIB "Enables linking zlib library" ON)
-option(O2_SCRIPTING "Enables JerryScript scripting engine (OFF does not compile yet: reflection core still depends on ScriptValue)" ON)
+option(O2_SCRIPTING "Enables scripting engine (OFF does not compile yet: reflection core still depends on ScriptValue)" ON)
+set(O2_SCRIPTING_BACKEND "" CACHE STRING "Scripting engine backend: quickjs / jerryscript / browserjs; empty picks the platform default (browserjs on WebAssembly, quickjs elsewhere)")
 option(O2_ENABLE_LINK_LIBPNG "Enables linking libpng library" ON)
 option(O2_DISABLE_O2FRAMEWORK_PCH "Disables precompiled headers for o2Framework" OFF)
 
@@ -65,7 +67,28 @@ endif()
 # Common definitions
 set(O2_COMPILE_DEFINITIONS _CRT_SECURE_NO_WARNINGS)
 if (O2_SCRIPTING)
-    list(APPEND O2_COMPILE_DEFINITIONS SCRIPTING_BACKEND_JERRYSCRIPT)
+    if (O2_SCRIPTING_BACKEND STREQUAL "")
+        if (EMSCRIPTEN)
+            set(O2_SCRIPTING_BACKEND "browserjs")
+        else()
+            set(O2_SCRIPTING_BACKEND "quickjs")
+        endif()
+    endif()
+
+    if (O2_SCRIPTING_BACKEND STREQUAL "browserjs")
+        if (NOT EMSCRIPTEN)
+            message(FATAL_ERROR "browserjs scripting backend requires an Emscripten build")
+        endif()
+        list(APPEND O2_COMPILE_DEFINITIONS SCRIPTING_BACKEND_BROWSERJS)
+    elseif (O2_SCRIPTING_BACKEND STREQUAL "quickjs")
+        list(APPEND O2_COMPILE_DEFINITIONS SCRIPTING_BACKEND_QUICKJS)
+    elseif (O2_SCRIPTING_BACKEND STREQUAL "jerryscript")
+        list(APPEND O2_COMPILE_DEFINITIONS SCRIPTING_BACKEND_JERRYSCRIPT)
+    else()
+        message(FATAL_ERROR "Unknown O2_SCRIPTING_BACKEND: ${O2_SCRIPTING_BACKEND}")
+    endif()
+
+    message(STATUS "o2 scripting backend: ${O2_SCRIPTING_BACKEND}")
 endif()
 
 if (EMSCRIPTEN)
@@ -245,15 +268,19 @@ if(NOT O2_DISABLE_O2FRAMEWORK_PCH)
 endif()
 target_compile_definitions(o2Framework PUBLIC ${O2_COMPILE_DEFINITIONS})
 
-target_link_libraries(o2Framework 
-    PUBLIC 
-        Box2D 
-        FreeType 
-        pugixml 
+target_link_libraries(o2Framework
+    PUBLIC
+        Box2D
+        FreeType
+        pugixml
         spine-cpp
+        miniaudio
 )
-if (O2_SCRIPTING)
+if (O2_SCRIPTING AND O2_SCRIPTING_BACKEND STREQUAL "jerryscript")
     target_link_libraries(o2Framework PUBLIC jerry-core jerry-ext jerry-port-default)
+endif()
+if (O2_SCRIPTING AND O2_SCRIPTING_BACKEND STREQUAL "quickjs")
+    target_link_libraries(o2Framework PUBLIC quickjs)
 endif()
 
 if (O2_ENABLE_LINK_LIBPNG)
@@ -381,8 +408,11 @@ endif()
 
 # dependencies
 add_dependencies(o2Framework Box2D FreeType)
-if (O2_SCRIPTING)
+if (O2_SCRIPTING AND O2_SCRIPTING_BACKEND STREQUAL "jerryscript")
     add_dependencies(o2Framework jerry-core jerry-ext jerry-port-default)
+endif()
+if (O2_SCRIPTING AND O2_SCRIPTING_BACKEND STREQUAL "quickjs")
+    add_dependencies(o2Framework quickjs)
 endif()
 
 if (O2_ENABLE_LINK_LIBPNG)

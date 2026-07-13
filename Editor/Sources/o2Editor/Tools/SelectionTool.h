@@ -32,7 +32,8 @@ namespace Editor
         Vector<Ref<SceneEditableObject>> mCurrentSelectingObjects; // Current selecting objects (when cursor pressed, but not released yet)
         Vector<Ref<SceneEditableObject>> mBeforeSelectingObjects;  // Before selection objects array
 
-        Vec2F mPressPoint;               // Press point before selecting
+        Vec2F mPressPoint;               // Press point before selecting, scene space
+        Vec2F mPressScreenPoint;         // Press point in screen space, used for 3D mode frame selection
         bool  mSelectingByFrame = false; // Is selecting objects now
 
     protected:
@@ -66,6 +67,15 @@ namespace Editor
         // Called when cursor released (only when cursor pressed this at previous time)
         void OnCursorReleased(const Input::Cursor& cursor) override;
 
+        // Applies click selection of the object with undo action
+        void ApplyClickSelection(const Ref<SceneEditableObject>& object);
+
+        // Picks the topmost object under the scene space cursor, cycling from the last selected
+        bool SelectByClick2D(const Input::Cursor& cursor);
+
+        // Picks the nearest object hit by the cursor view ray; repeated clicks cycle through hits
+        bool SelectByClick3D(const Input::Cursor& cursor);
+
         // Called when cursor pressing was broken (when scrolled scroll area or some other)
         void OnCursorPressBreak(const Input::Cursor& cursor) override;
 
@@ -93,6 +103,7 @@ CLASS_FIELDS_META(Editor::SelectionTool)
     FIELD().PROTECTED().NAME(mCurrentSelectingObjects);
     FIELD().PROTECTED().NAME(mBeforeSelectingObjects);
     FIELD().PROTECTED().NAME(mPressPoint);
+    FIELD().PROTECTED().NAME(mPressScreenPoint);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mSelectingByFrame);
 }
 END_META;
@@ -110,6 +121,9 @@ CLASS_METHODS_META(Editor::SelectionTool)
     FUNCTION().PROTECTED().SIGNATURE(void, OnObjectsSelectionChanged, const Vector<Ref<SceneEditableObject>>&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnCursorPressed, const Input::Cursor&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnCursorReleased, const Input::Cursor&);
+    FUNCTION().PROTECTED().SIGNATURE(void, ApplyClickSelection, const Ref<SceneEditableObject>&);
+    FUNCTION().PROTECTED().SIGNATURE(bool, SelectByClick2D, const Input::Cursor&);
+    FUNCTION().PROTECTED().SIGNATURE(bool, SelectByClick3D, const Input::Cursor&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnCursorPressBreak, const Input::Cursor&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnCursorStillDown, const Input::Cursor&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnCursorMoved, const Input::Cursor&);

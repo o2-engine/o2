@@ -93,8 +93,14 @@ namespace o2
         float ACos(float value);
         float Atan2F(float x, float y);
 
+        // Wraps angle in radians to (-pi, pi]
+        float WrapAngle(float rad);
+
         // Builds a orthographic projection matrix
         void OrthoProjMatrix(float* mat, float left, float right, float bottom, float top, float nearz, float farz);
+
+        // Builds a perspective projection matrix
+        void PerspectiveProjMatrix(float* mat, float fovYRad, float aspect, float nearz, float farz);
 
         // Calculates tangent vector on ellipse that located on axis begin-end at point middle
         Vec2F CalculateEllipseTangent(const Vec2F& begin, const Vec2F& middle, const Vec2F& end);

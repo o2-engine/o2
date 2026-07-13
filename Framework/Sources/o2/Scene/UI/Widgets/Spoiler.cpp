@@ -117,8 +117,7 @@ namespace o2
             if (clipping)
                 o2Render.EnableScissorTest(mBounds);
 
-            for (auto& child : mChildrenInheritedDepth)
-                child->Draw();
+            DrawInheritedDepthChildren();
 
             if (clipping)
                 o2Render.DisableScissorTest();
@@ -192,7 +191,7 @@ namespace o2
         }
 
         res = res*Math::Clamp01(mExpandCoef) + mHeadHeight;
-        res = Math::Max(res, GetLayoutData().minSize.y);
+        res = Math::Max(res, GetLayoutData().mMinSize.y);
 
         return res;
     }
@@ -203,8 +202,8 @@ namespace o2
             VerticalLayout::UpdateLayoutParametres();
         else
         {
-            GetLayoutData().weight.y = 1;
-            GetLayoutData().minSize.y = 0;
+            GetLayoutData().mWeight.y = 1;
+            GetLayoutData().mMinSize.y = 0;
         }
     }
 

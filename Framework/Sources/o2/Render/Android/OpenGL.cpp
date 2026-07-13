@@ -5,6 +5,28 @@
 #include "o2/Render/Android/OpenGL.h"
 #include "o2/Utils/Debug/Log/LogStream.h"
 
+#include <EGL/egl.h>
+#include <cstring>
+
+namespace o2::GLES3
+{
+    bool available = false;
+    PFNGLDRAWBUFFERS glDrawBuffers = nullptr;
+
+    void Initialize()
+    {
+        available = false;
+        glDrawBuffers = nullptr;
+
+        const char* version = (const char*)glGetString(GL_VERSION);
+        if (!version || strstr(version, "OpenGL ES 3.") == nullptr)
+            return;
+
+        glDrawBuffers = (PFNGLDRAWBUFFERS)eglGetProcAddress("glDrawBuffers");
+        available = glDrawBuffers != nullptr;
+    }
+}
+
 const char* GetGLErrorDesc(GLenum errorId)
 {
     switch (errorId)

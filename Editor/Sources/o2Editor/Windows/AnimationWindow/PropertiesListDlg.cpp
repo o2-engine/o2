@@ -63,7 +63,7 @@ namespace Editor
         mWindow->AddChild(mPropertiesTree);
 
         mWindow->Hide(true);
-        mWindow->layout->size = Vec2F(400, 600);
+        mWindow->layout->size2D = Vec2F(400, 600);
 
         mWindow->GetBackCursorListener().onCursorReleased = [=](const Input::Cursor& c) { mWindow->Hide(); };
     }
@@ -156,7 +156,7 @@ namespace Editor
 
     void AnimationPropertiesTree::ProcessTreeNode(void* object, const Type* type, const String& name, const Ref<NodeData>& node)
     {
-        static Vector<const Type*> availableTypes({ &TypeOf(float), &TypeOf(Color4), &TypeOf(Vec2F), &TypeOf(bool) });
+        static Vector<const Type*> availableTypes({ &TypeOf(float), &TypeOf(Color4), &TypeOf(Vec2F), &TypeOf(Vec3F), &TypeOf(bool) });
 
         if (type->GetUsage() == Type::Usage::Object && object)
         {
@@ -314,6 +314,7 @@ namespace Editor
         { 
             { (const Type*)&TypeOf(float), "ui/UI4_float_type.png" },
             { (const Type*)&TypeOf(Vec2F), "ui/UI4_vector_type.png" },
+            { (const Type*)&TypeOf(Vec3F), "ui/UI4_vector_type.png" },
             { (const Type*)&TypeOf(Color4), "ui/UI4_color_type.png" },
             { (const Type*)&TypeOf(bool), "ui/UI4_bool_type.png" }
         };

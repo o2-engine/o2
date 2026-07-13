@@ -19,15 +19,23 @@ class LayersListChangedProbe
 {
 public:
     int  count = 0;
-    int  baseline;
+    int  baseline = 0;
 
     LayersListChangedProbe()
     {
-        baseline = 0;
-        o2Scene.onLayersListChanged += [this]() { ++count; };
+        mHandler = [this]() { ++count; };
+        o2Scene.onLayersListChanged += mHandler;
+    }
+
+    ~LayersListChangedProbe()
+    {
+        o2Scene.onLayersListChanged -= mHandler;
     }
 
     int Delta() { int d = count - baseline; baseline = count; return d; }
+
+private:
+    Function<void()> mHandler;
 };
 
 TEST(LayerActionsNotification, CreateFiresOnRedoAndUndo)

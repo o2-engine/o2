@@ -145,6 +145,12 @@ namespace o2
         // Returns is handle enabled. Disabled handle don't drawn and interact
         bool IsEnabled() const;
 
+        // Returns is handle under cursor
+        bool IsHovered() const;
+
+        // Returns whether the handle was processed by Draw in the current frame
+        bool IsDrawnThisFrame() const;
+
         // Sets handle rotation angle in radians
         virtual void SetAngle(float rad);
 
@@ -398,6 +404,12 @@ namespace o2
         // Removes selectable handle from group
         virtual void RemoveHandle(DragHandle* handle) = 0;
 
+        // Adds handles to group and binds them to it
+        virtual void AddHandles(const Vector<Ref<DragHandle>>& handles);
+
+        // Unbinds and removes handles from group; faster than removing one by one
+        virtual void RemoveHandles(const Vector<Ref<DragHandle>>& handles);
+
         // Deselects all in group
         virtual void DeselectAll();
 
@@ -460,11 +472,20 @@ namespace o2
         // Removes selectable handle from group
         void RemoveHandle(DragHandle* handle) override;
 
+        // Adds handles to group and binds them to it
+        void AddHandles(const Vector<Ref<DragHandle>>& handles) override;
+
+        // Unbinds and removes handles from group; faster than removing one by one
+        void RemoveHandles(const Vector<Ref<DragHandle>>& handles) override;
+
         // Deselects all in group
         void DeselectAll() override;
 
         // Selects all in group
         void SelectAll() override;
+
+        // Unbinds all handles from group and clears handles list
+        void ClearHandles();
 
 		// Begins prepared to select handles
         void BeginPreSelect();
@@ -589,6 +610,8 @@ CLASS_METHODS_META(o2::DragHandle)
     FUNCTION().PUBLIC().SIGNATURE(const Ref<ISelectableDragHandlesGroup>&, GetSelectionGroup);
     FUNCTION().PUBLIC().SIGNATURE(void, SetEnabled, bool);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsEnabled);
+    FUNCTION().PUBLIC().SIGNATURE(bool, IsHovered);
+    FUNCTION().PUBLIC().SIGNATURE(bool, IsDrawnThisFrame);
     FUNCTION().PUBLIC().SIGNATURE(void, SetAngle, float);
     FUNCTION().PUBLIC().SIGNATURE(float, GetAngle);
     FUNCTION().PUBLIC().SIGNATURE(const Vec2F&, GetPressedCursorPos);

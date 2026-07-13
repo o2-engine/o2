@@ -4,6 +4,7 @@
 #include "o2/Render/Camera.h"
 #include "o2/Render/Render.h"
 #include "o2/Utils/Math/Math.h"
+#include "o2/Utils/Math/Matrix4.h"
 
 using namespace o2;
 
@@ -99,4 +100,74 @@ TEST(Camera, EqualityBasedOnTransform)
 
     Camera diffAngle(Vec2F(10, 20), Vec2F(800, 600), 1.5f);
     EXPECT_TRUE(a != diffAngle);
+}
+
+TEST(Camera, OrthoProjectionMatrixMatchesLegacyValues)
+{
+    Camera cam;
+    Mat4 proj = cam.GetProjectionMatrix(Vec2F(800, 600));
+
+    float expected[16];
+    Math::OrthoProjMatrix(expected, 0.0f, 800.0f, 600.0f, 0.0f, 0.0f, 10.0f);
+
+    for (int i = 0; i < 16; i++)
+        EXPECT_NEAR(proj.m[i], expected[i], 0.0001f) << "element " << i;
+}
+
+TEST(Camera, PerspectiveProjectionMatrixMatchesMath)
+{
+    Camera cam = Camera::Perspective(Math::Deg2rad(60.0f), 0.5f, 500.0f);
+    EXPECT_EQ(cam.projection, Camera::Projection::Perspective);
+
+    Mat4 proj = cam.GetProjectionMatrix(Vec2F(800, 600));
+
+    float expected[16];
+    Math::PerspectiveProjMatrix(expected, Math::Deg2rad(60.0f), 800.0f/600.0f, 0.5f, 500.0f);
+
+    for (int i = 0; i < 16; i++)
+        EXPECT_NEAR(proj.m[i], expected[i], 0.0001f) << "element " << i;
+}
+
+TEST(Camera, ViewMatrix3DIsInverseOfPositionRotationTransform)
+{
+    Camera cam = Camera::Perspective(Math::Deg2rad(60.0f), 0.1f, 1000.0f);
+    cam.position = Vec3F(10.0f, -5.0f, 30.0f);
+    cam.rotation = Quat::FromEuler(Vec3F(0.3f, 1.1f, -0.4f));
+
+    Mat4 view = cam.GetViewMatrix3D();
+    Mat4 trs = Mat4::TRS(cam.GetPosition(), cam.GetRotation(), Vec3F(1.0f, 1.0f, 1.0f));
+    Mat4 identity = view*trs;
+
+    for (int i = 0; i < 16; i++)
+        EXPECT_NEAR(identity.m[i], Mat4::Identity().m[i], 0.001f) << "element " << i;
+}
+
+TEST(Camera, EqualityDetectsProjectionFields)
+{
+    Camera a;
+    Camera b;
+    EXPECT_TRUE(a == b);
+
+    b.projection = Camera::Projection::Perspective;
+    EXPECT_TRUE(a != b);
+
+    b = a;
+    b.fov = Math::Deg2rad(90.0f);
+    EXPECT_TRUE(a != b);
+
+    b = a;
+    b.nearClip = 5.0f;
+    EXPECT_TRUE(a != b);
+
+    b = a;
+    b.farClip = 100.0f;
+    EXPECT_TRUE(a != b);
+
+    b = a;
+    b.position = Vec3F(1.0f, 2.0f, 3.0f);
+    EXPECT_TRUE(a != b);
+
+    b = a;
+    b.rotation = Quat::FromEuler(Vec3F(0.0f, 0.5f, 0.0f));
+    EXPECT_TRUE(a != b);
 }

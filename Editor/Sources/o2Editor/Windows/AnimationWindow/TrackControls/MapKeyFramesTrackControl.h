@@ -127,6 +127,7 @@ namespace Editor
 
     private:
         void CacheHandles();
+        void CleanupCachedHandles();
         void InitializeNodeHandles(const AnimationTree::TrackNode& valueNode);
 
         Ref<AnimationKeyDragHandle> CreateHandle();
@@ -162,7 +163,21 @@ namespace Editor
 
         auto trackControlRef = trackControl.Lock();
         auto trackRef = track.Lock();
+        auto handlesSheet = trackControlRef->mHandlesSheet.Lock();
 
+        // Handles bound to another track are unregistered while the old track is still
+        // set, so the sheet removes them from the correct track group before rebinding
+        Vector<Ref<DragHandle>> staleBoundHandles;
+        for (auto& handle : trackControlRef->mHandlesCache)
+        {
+            if (handle->GetSelectionGroup() && handle->track.Lock().Get() != trackRef.Get())
+                staleBoundHandles.Add(handle);
+        }
+
+        if (!staleBoundHandles.IsEmpty())
+            handlesSheet->RemoveHandles(staleBoundHandles);
+
+        Vector<Ref<DragHandle>> sheetHandles;
         for (auto& key : Wrapper::GetKeys(*trackRef))
         {
             Ref<AnimationKeyDragHandle> handle;
@@ -179,7 +194,7 @@ namespace Editor
             handle->trackControl = trackControlRef;
             handle->keyUid = key.uid;
             handle->isMapping = true;
-            handle->SetSelectionGroup(DynamicCast<ISelectableDragHandlesGroup>(trackControlRef->mHandlesSheet.Lock()));
+            sheetHandles.Add(handle);
 
             auto updatePosFunc = [=](KeyHandle& keyHandle)
                 {
@@ -199,9 +214,9 @@ namespace Editor
                         .ForEach([](auto& keyHandle) { keyHandle->handle->SetSelected(true); });
                 };
             handle->onReleased = [&]() { UpdateHandles(); };
-
-            trackControlRef->AddChild(handle);
         }
+
+        handlesSheet->AddHandles(sheetHandles);
     }
 
     template<typename TrackType>
@@ -221,6 +236,7 @@ namespace Editor
 
             CacheHandles();
             CreateHandles();
+            trackControl.Lock()->CleanupCachedHandles();
 
             for (auto& keyHandle : handles)
                 keyHandle->handle->SetSelected(selectedHandles.Contains(keyHandle->keyUid));
@@ -308,6 +324,7 @@ CLASS_METHODS_META(Editor::MapKeyFramesTrackControl)
     FUNCTION().PUBLIC().SIGNATURE(void, BeginKeysDrag);
     FUNCTION().PUBLIC().SIGNATURE(void, EndKeysDrag);
     FUNCTION().PRIVATE().SIGNATURE(void, CacheHandles);
+    FUNCTION().PRIVATE().SIGNATURE(void, CleanupCachedHandles);
     FUNCTION().PRIVATE().SIGNATURE(void, InitializeNodeHandles, const AnimationTree::TrackNode&);
     FUNCTION().PRIVATE().SIGNATURE(Ref<AnimationKeyDragHandle>, CreateHandle);
     FUNCTION().PRIVATE().SIGNATURE(Vector<Ref<KeyHandle>>, FindHandlesAtPosition, float);

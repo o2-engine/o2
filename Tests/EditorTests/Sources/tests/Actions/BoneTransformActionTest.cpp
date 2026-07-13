@@ -22,7 +22,7 @@ TEST(BoneTransformAction, CtorCapturesBeforeWorldState)
     auto a = MakeActor(Vec2F(10.0f, 20.0f));
 
     Basis expectedBasis = a->transform->worldBasis;
-    Vec2F expectedPos = a->transform->GetWorldPosition();
+    Vec2F expectedPos = a->transform->GetWorldPosition2D();
 
     auto action = mmake<BoneTransformAction>(a);
 
@@ -40,7 +40,7 @@ TEST(BoneTransformAction, CompletedCapturesDoneWorldState)
     auto action = mmake<BoneTransformAction>(a);
     SetActorPos(a, Vec2F(50.0f, 0.0f));
     Basis expectedBasis = a->transform->worldBasis;
-    Vec2F expectedPos = a->transform->GetWorldPosition();
+    Vec2F expectedPos = a->transform->GetWorldPosition2D();
     action->Completed();
 
     EXPECT_TRUE(action->doneCaptured);
@@ -60,10 +60,10 @@ TEST(BoneTransformAction, RedoUndoRestoreAndReplay)
     SetActorPos(a, Vec2F(999.0f, 999.0f));
 
     action->Redo();
-    EXPECT_TRUE(NearV(a->transform->GetWorldPosition(), Vec2F(50.0f, 0.0f)));
+    EXPECT_TRUE(NearV(a->transform->GetWorldPosition2D(), Vec2F(50.0f, 0.0f)));
 
     action->Undo();
-    EXPECT_TRUE(NearV(a->transform->GetWorldPosition(), Vec2F(10.0f, 0.0f)));
+    EXPECT_TRUE(NearV(a->transform->GetWorldPosition2D(), Vec2F(10.0f, 0.0f)));
 }
 
 TEST(BoneTransformAction, AppendCoalescesStepsAndAppliesLatest)
@@ -71,27 +71,27 @@ TEST(BoneTransformAction, AppendCoalescesStepsAndAppliesLatest)
     SceneCleanGuard guard;
     auto a = MakeActor(Vec2F(0.0f, 0.0f));
 
-    Vec2F initialPos = a->transform->GetWorldPosition();
+    Vec2F initialPos = a->transform->GetWorldPosition2D();
     auto main = mmake<BoneTransformAction>(a);
 
     SetActorPos(a, Vec2F(10.0f, 0.0f));
     auto step1 = mmake<BoneTransformAction>(a);
     step1->Completed();
     main->Append(step1);
-    EXPECT_TRUE(NearV(a->transform->GetWorldPosition(), Vec2F(10.0f, 0.0f)));
+    EXPECT_TRUE(NearV(a->transform->GetWorldPosition2D(), Vec2F(10.0f, 0.0f)));
 
     SetActorPos(a, Vec2F(25.0f, 0.0f));
     auto step2 = mmake<BoneTransformAction>(a);
     step2->Completed();
     main->Append(step2);
-    EXPECT_TRUE(NearV(a->transform->GetWorldPosition(), Vec2F(25.0f, 0.0f)));
+    EXPECT_TRUE(NearV(a->transform->GetWorldPosition2D(), Vec2F(25.0f, 0.0f)));
 
     SetActorPos(a, Vec2F(-1.0f, -1.0f));
     main->Undo();
-    EXPECT_TRUE(NearV(a->transform->GetWorldPosition(), initialPos));
+    EXPECT_TRUE(NearV(a->transform->GetWorldPosition2D(), initialPos));
 
     main->Redo();
-    EXPECT_TRUE(NearV(a->transform->GetWorldPosition(), Vec2F(25.0f, 0.0f)));
+    EXPECT_TRUE(NearV(a->transform->GetWorldPosition2D(), Vec2F(25.0f, 0.0f)));
 }
 
 TEST(BoneTransformAction, TryMergeRejectsForeignBone)

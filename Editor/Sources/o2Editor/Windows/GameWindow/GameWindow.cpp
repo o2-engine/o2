@@ -185,7 +185,7 @@ namespace Editor
 
     void GameWindow::GameView::UpdateRenderTargetSize()
     {
-        Vec2I size = fixedResolution ? resolution : (Vec2I)layout->size.Get();
+        Vec2I size = fixedResolution ? resolution : (Vec2I)layout->size2D.Get();
         size.x = Math::Max(size.x, 32);
         size.y = Math::Max(size.y, 32);
 

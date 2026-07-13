@@ -11,12 +11,16 @@ namespace o2
     GridLayoutScrollArea::GridLayoutScrollArea(RefCounter* refCounter):
         ScrollArea(refCounter)
     {
+        mInheritedDrawablesManualOrder = true;
+
         mItemSample = mmake<Widget>();
     }
 
     GridLayoutScrollArea::GridLayoutScrollArea(RefCounter* refCounter, const GridLayoutScrollArea& other):
         ScrollArea(refCounter, other), mItemsSpacing(other.mItemsSpacing)
     {
+        mInheritedDrawablesManualOrder = true;
+
         mItemSample = other.mItemSample->CloneAsRef<Widget>();
         mItemSample->UpdateTransform();
 

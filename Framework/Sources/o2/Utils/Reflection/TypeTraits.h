@@ -1,9 +1,14 @@
 #pragma once
 
+#include "o2/Utils/Math/AABB.h"
 #include "o2/Utils/Math/Basis.h"
+#include "o2/Utils/Math/Basis3D.h"
 #include "o2/Utils/Math/Color.h"
+#include "o2/Utils/Math/Matrix4.h"
+#include "o2/Utils/Math/Quaternion.h"
 #include "o2/Utils/Math/Rect.h"
 #include "o2/Utils/Math/Vector2.h"
+#include "o2/Utils/Math/Vector3.h"
 #include "o2/Utils/Math/Vertex.h"
 #include "o2/Utils/Types/Containers/Map.h"
 #include "o2/Utils/Types/Containers/Vector.h"
@@ -161,7 +166,9 @@ namespace o2
     template<typename T>
     struct IsFundamental: public std::conditional<
             std::is_fundamental<T>::value ||
+            std::is_same<T, AABB>::value ||
             std::is_same<T, Basis>::value ||
+            std::is_same<T, Basis3D>::value ||
             std::is_same<T, Color4>::value ||
             std::is_same<T, RectI>::value ||
             std::is_same<T, RectF>::value ||
@@ -169,6 +176,10 @@ namespace o2
             std::is_same<T, BorderF>::value ||
             std::is_same<T, Vec2I>::value ||
             std::is_same<T, Vec2F>::value ||
+            std::is_same<T, Vec3I>::value ||
+            std::is_same<T, Vec3F>::value ||
+            std::is_same<T, Quat>::value ||
+            std::is_same<T, Mat4>::value ||
             std::is_same<T, Vertex>::value ||
             std::is_same<T, String>::value ||
             std::is_same<T, WString>::value ||

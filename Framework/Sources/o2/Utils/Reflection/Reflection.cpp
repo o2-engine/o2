@@ -3,11 +3,16 @@
 
 #include "o2/Utils/Serialization/DataValue.h"
 #include "o2/Utils/Basic/IObject.h"
+#include "o2/Utils/Math/AABB.h"
 #include "o2/Utils/Math/Basis.h"
+#include "o2/Utils/Math/Basis3D.h"
 #include "o2/Utils/Math/Border.h"
 #include "o2/Utils/Math/Color.h"
+#include "o2/Utils/Math/Matrix4.h"
+#include "o2/Utils/Math/Quaternion.h"
 #include "o2/Utils/Math/Rect.h"
 #include "o2/Utils/Math/Vector2.h"
+#include "o2/Utils/Math/Vector3.h"
 #include "o2/Utils/Math/Vertex.h"
 #include "o2/Utils/Types/String.h"
 #include "o2/Utils/Types/UID.h"
@@ -54,7 +59,9 @@ namespace o2
     DECLARE_FUNDAMENTAL_TYPE(float);
     DECLARE_FUNDAMENTAL_TYPE(double);
     DECLARE_FUNDAMENTAL_TYPE(long double);
+    DECLARE_FUNDAMENTAL_TYPE(o2::AABB);
     DECLARE_FUNDAMENTAL_TYPE(o2::Basis);
+    DECLARE_FUNDAMENTAL_TYPE(o2::Basis3D);
     DECLARE_FUNDAMENTAL_TYPE(o2::Color4);
     DECLARE_FUNDAMENTAL_TYPE(o2::RectF);
     DECLARE_FUNDAMENTAL_TYPE(o2::RectI);
@@ -62,6 +69,10 @@ namespace o2
     DECLARE_FUNDAMENTAL_TYPE(o2::BorderI);
     DECLARE_FUNDAMENTAL_TYPE(o2::Vec2F);
     DECLARE_FUNDAMENTAL_TYPE(o2::Vec2I);
+    DECLARE_FUNDAMENTAL_TYPE(o2::Vec3F);
+    DECLARE_FUNDAMENTAL_TYPE(o2::Vec3I);
+    DECLARE_FUNDAMENTAL_TYPE(o2::Quat);
+    DECLARE_FUNDAMENTAL_TYPE(o2::Mat4);
     DECLARE_FUNDAMENTAL_TYPE(o2::Vertex);
     DECLARE_FUNDAMENTAL_TYPE(o2::String);
     DECLARE_FUNDAMENTAL_TYPE(o2::WString);

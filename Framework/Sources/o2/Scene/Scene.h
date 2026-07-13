@@ -18,6 +18,7 @@ namespace o2
     class Actor;
     class CameraActor;
     class Component;
+    class LightComponent;
     class Tag;
 
     FORWARD_CLASS_REF(SceneLayer);
@@ -114,6 +115,12 @@ namespace o2
         // Returns cameras on scene
         const Vector<WeakRef<CameraActor>>& GetCameras() const;
 
+        // Returns lights on scene
+        const Vector<WeakRef<LightComponent>>& GetLights() const;
+
+        // Returns 3D category drawable components on scene
+        const Vector<WeakRef<Component>>& GetDrawable3DComponents() const;
+
         // Returns component with type in scene
         template<typename _type>
         Ref<_type> FindActorComponent();
@@ -178,6 +185,10 @@ namespace o2
         Vector<Ref<Actor>> mRootActors; // Scene root actors     
 
         Vector<WeakRef<CameraActor>> mCameras; // List of cameras on scene
+
+        Vector<WeakRef<LightComponent>> mLights; // List of lights on scene
+
+        Vector<WeakRef<Component>> mDrawable3DComponents; // List of 3D category drawable components on scene
    
         Map<Actor*, WeakRef<Actor>>   mAllActors; // Scene-admitted actors keyed by Actor* for O(log n) Contains / Remove
         Map<SceneUID, WeakRef<Actor>> mActorsMap; // Actors map by unique ID; eagerly populated by OnActorIdChanged for ref resolution before scene admit
@@ -254,11 +265,23 @@ namespace o2
         // Called when camera was removed from scene
         void OnCameraRemovedScene(CameraActor* camera);
 
+        // Called when light was added to scene
+        void OnLightAddedOnScene(LightComponent* light);
+
+        // Called when light was removed from scene
+        void OnLightRemovedScene(LightComponent* light);
+
+        // Called when 3D category drawable component was added to scene
+        void OnDrawable3DComponentAdded(Component* component);
+
+        // Called when 3D category drawable component was removed from scene
+        void OnDrawable3DComponentRemoved(Component* component);
+
         friend class Actor;
         friend class Application;
         friend class CameraActor;
         friend class Component;
-        friend class Component;
+        friend class LightComponent;
         friend class SceneLayer;
         friend class Widget;
         friend class WidgetLayer;
@@ -357,6 +380,8 @@ namespace o2
 
         Vector<Ref<SceneEditableObject>> mChangedObjects;    // Changed actors array
 
+        bool mIsCheckingChangedObjects = false; // Reentrancy guard: a changed widget's Update can call CheckChangedObjects again
+
         Vector<WeakRef<SceneEditableObject>>                mEditableObjects;      // All scene editable objects
         mutable Map<SceneUID, WeakRef<SceneEditableObject>> mEditableObjectsByUID; // All scene editable objects by UID
 
@@ -426,6 +451,8 @@ CLASS_FIELDS_META(o2::Scene)
     FIELD().PROTECTED().NAME(mLog);
     FIELD().PROTECTED().NAME(mRootActors);
     FIELD().PROTECTED().NAME(mCameras);
+    FIELD().PROTECTED().NAME(mLights);
+    FIELD().PROTECTED().NAME(mDrawable3DComponents);
     FIELD().PROTECTED().NAME(mAllActors);
     FIELD().PROTECTED().NAME(mActorsMap);
     FIELD().PROTECTED().NAME(mAddedActors);
@@ -450,6 +477,7 @@ CLASS_FIELDS_META(o2::Scene)
     FIELD().PUBLIC().NAME(onLayersListChanged);
     FIELD().PROTECTED().NAME(mPrototypeLinksCache);
     FIELD().PROTECTED().NAME(mChangedObjects);
+    FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mIsCheckingChangedObjects);
     FIELD().PROTECTED().NAME(mEditableObjects);
     FIELD().PROTECTED().NAME(mEditableObjectsByUID);
     FIELD().PROTECTED().NAME(mDrawnObjects);
@@ -492,6 +520,8 @@ CLASS_METHODS_META(o2::Scene)
     FUNCTION().PUBLIC().SIGNATURE(Ref<Actor>, GetAssetActorByID, const UID&);
     FUNCTION().PUBLIC().SIGNATURE(Ref<Actor>, FindActor, const String&);
     FUNCTION().PUBLIC().SIGNATURE(const Vector<WeakRef<CameraActor>>&, GetCameras);
+    FUNCTION().PUBLIC().SIGNATURE(const Vector<WeakRef<LightComponent>>&, GetLights);
+    FUNCTION().PUBLIC().SIGNATURE(const Vector<WeakRef<Component>>&, GetDrawable3DComponents);
     FUNCTION().PUBLIC().SIGNATURE(void, Clear, bool);
     FUNCTION().PUBLIC().SIGNATURE(void, ClearCache);
     FUNCTION().PUBLIC().SIGNATURE(void, Load, const String&, bool);
@@ -525,6 +555,10 @@ CLASS_METHODS_META(o2::Scene)
     FUNCTION().PROTECTED().SIGNATURE(void, OnLayerRenamed, SceneLayer*, const String&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnCameraAddedOnScene, CameraActor*);
     FUNCTION().PROTECTED().SIGNATURE(void, OnCameraRemovedScene, CameraActor*);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnLightAddedOnScene, LightComponent*);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnLightRemovedScene, LightComponent*);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnDrawable3DComponentAdded, Component*);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnDrawable3DComponentRemoved, Component*);
 #if  IS_EDITOR          
     FUNCTION().PUBLIC().SIGNATURE_STATIC(void, LinkActorToPrototypesHierarchy, Ref<Actor>, AssetRef<ActorAsset>);
     FUNCTION().PUBLIC().SIGNATURE(void, SetEditorPlaying, bool);

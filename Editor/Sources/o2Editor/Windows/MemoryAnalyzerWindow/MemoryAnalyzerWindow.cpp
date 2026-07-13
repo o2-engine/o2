@@ -51,7 +51,7 @@ namespace Editor
         InitializeSeparatorHandle();
 
         mWindow->Hide(true);
-        mWindow->layout->size = Vec2F(1500, 900);
+        mWindow->layout->size2D = Vec2F(1500, 900);
     }
 
     void MemoryAnalyzerWindow::InitializeTree()

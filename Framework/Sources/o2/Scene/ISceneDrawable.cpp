@@ -1,6 +1,8 @@
 #include "o2/stdafx.h"
 #include "ISceneDrawable.h"
 
+#include <algorithm>
+
 #include "o2/Scene/Actor.h"
 #include "o2/Scene/Scene.h"
 #include "o2/Scene/SceneLayer.h"
@@ -81,11 +83,38 @@ namespace o2
 
     void ISceneDrawable::SortInheritedDrawables()
     {
-        mChildrenInheritedDepth.SortBy<int>([](const Ref<ISceneDrawable>& x) { return x->GetIndexInParentDrawable(); });
+        // Indices are cached before sorting: GetIndexInParentDrawable is linear by siblings count.
+        // Stable sort keeps registration order for equal indices (non-actor drawables return 0)
+        auto decorated = mChildrenInheritedDepth.Convert<Pair<int, Ref<ISceneDrawable>>>(
+            [](const Ref<ISceneDrawable>& x) { return Pair<int, Ref<ISceneDrawable>>(x->GetIndexInParentDrawable(), x); });
+
+        std::stable_sort(decorated.begin(), decorated.end(),
+                         [](const auto& a, const auto& b) { return a.first < b.first; });
+
+        mChildrenInheritedDepth = decorated.Convert<Ref<ISceneDrawable>>(
+            [](const Pair<int, Ref<ISceneDrawable>>& x) { return x.second; });
+    }
+
+    void ISceneDrawable::InvalidateInheritedDrawablesSorting()
+    {
+        mInheritedDrawablesSortDirty = true;
+    }
+
+    void ISceneDrawable::UpdateInheritedDrawablesSorting()
+    {
+        if (!mInheritedDrawablesSortDirty)
+            return;
+
+        mInheritedDrawablesSortDirty = false;
+
+        if (!mInheritedDrawablesManualOrder)
+            SortInheritedDrawables();
     }
 
 	void ISceneDrawable::DrawInheritedDepthChildren()
 	{
+        UpdateInheritedDrawablesSorting();
+
 		for (auto& child : mChildrenInheritedDepth)
 			child->Draw();
 	}
@@ -145,7 +174,7 @@ namespace o2
                 {
                     auto parentRegistry = mParentRegistry.Lock();
                     parentRegistry->mChildrenInheritedDepth.Add(Ref(this));
-                    parentRegistry->SortInheritedDrawables();
+                    parentRegistry->InvalidateInheritedDrawablesSorting();
 
                     mRegistered = true;
                 }
@@ -185,6 +214,10 @@ namespace o2
         if (mParentRegistry)
         {
             auto parentRegistry = mParentRegistry.Lock();
+
+            // Pending deferred sorting is applied first, otherwise it would reorder this later
+            parentRegistry->UpdateInheritedDrawablesSorting();
+
             parentRegistry->mChildrenInheritedDepth.Remove(Ref(this));
             parentRegistry->mChildrenInheritedDepth.Add(Ref(this));
         }
@@ -194,6 +227,7 @@ namespace o2
 
     const Vector<Ref<ISceneDrawable>>& ISceneDrawable::GetChildrenInheritedDepth() const
     {
+        const_cast<ISceneDrawable*>(this)->UpdateInheritedDrawablesSorting();
         return mChildrenInheritedDepth;
     }
 

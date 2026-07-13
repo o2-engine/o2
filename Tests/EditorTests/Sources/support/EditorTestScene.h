@@ -37,14 +37,14 @@ namespace Editor::Tests
     inline o2::Ref<o2::Actor> MakeActor(const o2::Vec2F& pos)
     {
         auto a = MakeActor();
-        a->transform->SetPosition(pos);
+        a->transform->SetPosition2D(pos);
         TickScene();
         return a;
     }
 
     inline void SetActorPos(const o2::Ref<o2::Actor>& a, const o2::Vec2F& pos)
     {
-        a->transform->SetPosition(pos);
+        a->transform->SetPosition2D(pos);
         TickScene();
     }
 

@@ -3,6 +3,7 @@
 
 #include "o2/Scene/Scene.h"
 #include "o2/Scene/ISceneDrawable.h"
+#include "o2/Render/Pipeline/Pipelines.h"
 #include "o2/Render/Render.h"
 #include "Component.h"
 
@@ -13,8 +14,12 @@ namespace o2
     {}
 
     CameraActor::CameraActor(RefCounter* refCounter, const CameraActor& other) :
-        Actor(refCounter, other), mType(other.mType), mFixedOrFittedSize(other.mFixedOrFittedSize), mUnits(other.mUnits)
-    {}
+        Actor(refCounter, other), mType(other.mType), mFixedOrFittedSize(other.mFixedOrFittedSize), mUnits(other.mUnits),
+        mFov(other.mFov), mNearClip(other.mNearClip), mFarClip(other.mFarClip)
+    {
+        if (other.mPipeline)
+            mPipeline = other.mPipeline->CloneAsRef<RenderPipeline>();
+    }
 
     CameraActor::~CameraActor()
     {
@@ -28,6 +33,10 @@ namespace o2
         mType = other.mType;
         mFixedOrFittedSize = other.mFixedOrFittedSize;
         mUnits = other.mUnits;
+        mFov = other.mFov;
+        mNearClip = other.mNearClip;
+        mFarClip = other.mFarClip;
+        mPipeline = other.mPipeline ? other.mPipeline->CloneAsRef<RenderPipeline>() : nullptr;
 
         return *this;
     }
@@ -107,13 +116,17 @@ namespace o2
         }
 
         {
-            PROFILE_SAMPLE("CameraActor::SetupAndDraw - Draw layers");
+            PROFILE_SAMPLE("CameraActor::SetupAndDraw - Execute render pipeline");
 
-            for (auto& layer : drawLayers.GetLayers())
-            {
-                for (auto& comp : layer->mDrawables)
-                    comp->Draw();
-            }
+            RenderPassContext context;
+            context.cameraActor = this;
+            context.camera = o2Render.GetCamera();
+            context.layers = drawLayers.GetLayers();
+            context.fillBackground = fillBackground;
+            context.fillColor = fillColor;
+
+            Ref<RenderPipeline> pipeline = mPipeline ? mPipeline : GetDefaultRenderPipeline();
+            pipeline->Execute(context);
         }
 
         o2Render.SetCamera(prevCamera);
@@ -123,18 +136,31 @@ namespace o2
 
     Camera CameraActor::GetRenderCamera() const
     {
+        if (mType == Type::Perspective)
+        {
+            Camera camera = Camera::Perspective(mFov, mNearClip, mFarClip);
+
+            Vec3F position, scale;
+            Quat rotation;
+            transform->GetWorldTransform3D().Decompose(position, rotation, scale);
+            camera.position = position;
+            camera.rotation = rotation;
+
+            return camera;
+        }
+
         Camera camera;
         switch (mType)
         {
             case Type::Default: camera = Camera::Default(); break;
-            case Type::FreeSize: camera = Camera::FixedSize(transform->GetSize()); break;
+            case Type::FreeSize: camera = Camera::FixedSize(transform->GetSize2D()); break;
             case Type::FixedSize: camera = Camera::FixedSize(mFixedOrFittedSize); break;
             case Type::FittedSize: camera = Camera::FittedSize(mFixedOrFittedSize); break;
             case Type::PhysicalCorrect: camera = Camera::PhysicalCorrect(mUnits); break;
             default: camera = Camera::Default(); break;
         }
 
-        transform->size = camera.GetSize();
+        transform->size2D = camera.GetSize2D();
         transform->Update();
         camera.basis = transform->worldBasis;
 
@@ -166,6 +192,29 @@ namespace o2
         mUnits = units;
     }
 
+    void CameraActor::SetPerspective(float fov, float nearClip, float farClip)
+    {
+        mType = Type::Perspective;
+        mFov = fov;
+        mNearClip = nearClip;
+        mFarClip = farClip;
+    }
+
+    float CameraActor::GetFov() const
+    {
+        return mFov;
+    }
+
+    float CameraActor::GetNearClip() const
+    {
+        return mNearClip;
+    }
+
+    float CameraActor::GetFarClip() const
+    {
+        return mFarClip;
+    }
+
     CameraActor::Type CameraActor::GetCameraType() const
     {
         return mType;
@@ -179,6 +228,25 @@ namespace o2
     Units CameraActor::GetUnits() const
     {
         return mUnits;
+    }
+
+    void CameraActor::SetRenderPipeline(const Ref<RenderPipeline>& pipeline)
+    {
+        mPipeline = pipeline;
+    }
+
+    const Ref<RenderPipeline>& CameraActor::GetRenderPipeline() const
+    {
+        return mPipeline;
+    }
+
+    const Ref<RenderPipeline>& CameraActor::GetDefaultRenderPipeline()
+    {
+        static Ref<RenderPipeline> defaultPipeline;
+        if (!defaultPipeline)
+            defaultPipeline = mmake<ForwardPipeline>();
+
+        return defaultPipeline;
     }
 
     void CameraActor::OnAddToScene()
@@ -206,6 +274,7 @@ ENUM_META(o2::CameraActor::Type, o2__CameraActor__Type)
     ENUM_ENTRY(FittedSize);
     ENUM_ENTRY(FixedSize);
     ENUM_ENTRY(FreeSize);
+    ENUM_ENTRY(Perspective);
     ENUM_ENTRY(PhysicalCorrect);
 }
 END_ENUM_META;

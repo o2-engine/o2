@@ -48,12 +48,12 @@ TEST(ActorDifferences, ChangedTransformFieldIsDetected)
 {
     SceneCleanGuard guard;
     auto a = mmake<Actor>(ActorCreateMode::InScene);
-    a->transform->SetPosition(Vec2F(0, 0));
+    a->transform->SetPosition2D(Vec2F(0, 0));
 
     auto asset = a->MakePrototype();
     auto proto = asset->GetActor();
 
-    a->transform->SetPosition(Vec2F(100, 50));
+    a->transform->SetPosition2D(Vec2F(100, 50));
 
     auto diff = ActorDifferences::GetDifference(a, proto);
 
@@ -210,33 +210,33 @@ TEST(ActorDifferences, ApplyChangedTransformPropagatesToPrototype)
 {
     SceneCleanGuard guard;
     auto a = mmake<Actor>(ActorCreateMode::InScene);
-    a->transform->SetPosition(Vec2F(0, 0));
+    a->transform->SetPosition2D(Vec2F(0, 0));
 
     auto asset = a->MakePrototype();
     auto proto = asset->GetActor();
 
-    a->transform->SetPosition(Vec2F(123, 456));
-    EXPECT_FALSE(Math::Equals(proto->transform->GetPosition().x, 123.0f));
+    a->transform->SetPosition2D(Vec2F(123, 456));
+    EXPECT_FALSE(Math::Equals(proto->transform->GetPosition2D().x, 123.0f));
 
     auto diff = ActorDifferences::GetDifference(a, proto);
     ASSERT_GT(diff.changedActorFields.Count(), 0);
 
     ApplyDiffsManually(diff, a, proto);
 
-    EXPECT_FLOAT_EQ(proto->transform->GetPosition().x, 123.0f);
-    EXPECT_FLOAT_EQ(proto->transform->GetPosition().y, 456.0f);
+    EXPECT_FLOAT_EQ(proto->transform->GetPosition2D().x, 123.0f);
+    EXPECT_FLOAT_EQ(proto->transform->GetPosition2D().y, 456.0f);
 }
 
 TEST(ActorDifferences, ApplyChangedTransformLeavesEmptyDiff)
 {
     SceneCleanGuard guard;
     auto a = mmake<Actor>(ActorCreateMode::InScene);
-    a->transform->SetPosition(Vec2F(0, 0));
+    a->transform->SetPosition2D(Vec2F(0, 0));
 
     auto asset = a->MakePrototype();
     auto proto = asset->GetActor();
 
-    a->transform->SetPosition(Vec2F(50, 75));
+    a->transform->SetPosition2D(Vec2F(50, 75));
 
     auto diff = ActorDifferences::GetDifference(a, proto);
     ApplyDiffsManually(diff, a, proto);

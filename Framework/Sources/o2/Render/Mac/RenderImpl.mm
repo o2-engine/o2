@@ -29,6 +29,12 @@ namespace o2
     id<MTLBuffer> RenderDevice::indexBuffer;
     int           RenderDevice::currentBufferIndex;
 
+    NSMutableArray* RenderDevice::retiredBuffers[2];
+
+    id<MTLDepthStencilState> RenderDevice::depthStateDisabled;
+    id<MTLDepthStencilState> RenderDevice::depthStateEnabled;
+    id<MTLDepthStencilState> RenderDevice::depthStateEnabledNoWrite;
+
     namespace
     {
         NSUInteger AlignBufferOffset(NSUInteger value)
@@ -58,6 +64,20 @@ namespace o2
         commandQueue = [device newCommandQueue];
         currentBufferIndex = 0;
 
+        view.depthStencilPixelFormat = MTLPixelFormatDepth32Float;
+
+        MTLDepthStencilDescriptor* depthDescriptor = [[MTLDepthStencilDescriptor alloc] init];
+        depthDescriptor.depthCompareFunction = MTLCompareFunctionAlways;
+        depthDescriptor.depthWriteEnabled = NO;
+        depthStateDisabled = [device newDepthStencilStateWithDescriptor:depthDescriptor];
+
+        depthDescriptor.depthCompareFunction = MTLCompareFunctionLessEqual;
+        depthDescriptor.depthWriteEnabled = YES;
+        depthStateEnabled = [device newDepthStencilStateWithDescriptor:depthDescriptor];
+
+        depthDescriptor.depthWriteEnabled = NO;
+        depthStateEnabledNoWrite = [device newDepthStencilStateWithDescriptor:depthDescriptor];
+
         NSUInteger vertexBufferLength = (NSUInteger)vertexBufferByteSize;
         NSUInteger indexBufferLength = (NSUInteger)indexBufferSize * sizeof(VertexIndex);
 
@@ -68,6 +88,8 @@ namespace o2
 
             indexBuffers[i] = [device newBufferWithLength:indexBufferLength
                                                   options:MTLResourceStorageModeShared];
+
+            retiredBuffers[i] = [[NSMutableArray alloc] init];
         }
 
         vertexBuffer = vertexBuffers[0];
@@ -102,6 +124,9 @@ namespace o2
         RenderDevice::vertexBuffers[1] = nil;
         RenderDevice::indexBuffers[0] = nil;
         RenderDevice::indexBuffers[1] = nil;
+        RenderDevice::depthStateDisabled = nil;
+        RenderDevice::depthStateEnabled = nil;
+        RenderDevice::depthStateEnabledNoWrite = nil;
         RenderDevice::commandQueue = nil;
         RenderDevice::device = nil;
         RenderDevice::view = nil;
@@ -154,10 +179,13 @@ namespace o2
         RenderDevice::currentBufferIndex = (RenderDevice::currentBufferIndex + 1) % 2;
         RenderDevice::vertexBuffer = RenderDevice::vertexBuffers[RenderDevice::currentBufferIndex];
         RenderDevice::indexBuffer = RenderDevice::indexBuffers[RenderDevice::currentBufferIndex];
+        [RenderDevice::retiredBuffers[RenderDevice::currentBufferIndex] removeAllObjects];
         
         RenderDevice::commandBuffer = [RenderDevice::commandQueue commandBuffer];
         RenderDevice::commandBuffer.label = @"Default";
-        
+
+        mNeedDepthClear = true;
+
         mVertexBufferOffset = 0;
         mIndexBufferOffset = 0;
         mVertexBufferIdx = 0;
@@ -172,24 +200,86 @@ namespace o2
         MTLRenderPassDescriptor *renderPassDescriptor = RenderDevice::view.currentRenderPassDescriptor;
         if (renderPassDescriptor != nil)
         {
+            MTLLoadAction colorLoadAction;
+            MTLClearColor clearColor = MTLClearColorMake(mClearColor.RF(), mClearColor.GF(), mClearColor.BF(), mClearColor.AF());
             if (mNeedClear)
             {
-                [renderPassDescriptor.colorAttachments[0] setClearColor:
-                 MTLClearColorMake(mClearColor.RF(), mClearColor.GF(), mClearColor.BF(), mClearColor.AF())];
-                [renderPassDescriptor.colorAttachments[0] setLoadAction:MTLLoadActionClear];
-                
+                colorLoadAction = MTLLoadActionClear;
+                [renderPassDescriptor.colorAttachments[0] setClearColor:clearColor];
                 mNeedClear = false;
             }
             else
-                [renderPassDescriptor.colorAttachments[0] setLoadAction:MTLLoadActionLoad];
+                colorLoadAction = MTLLoadActionLoad;
 
+            [renderPassDescriptor.colorAttachments[0] setLoadAction:colorLoadAction];
             [renderPassDescriptor.colorAttachments[0] setStoreAction:MTLStoreActionStore];
-            
+
+            // Extra MRT color attachments follow the primary attachment's clear/load behavior
+            static const int maxExtraAttachments = 3;
+            for (int i = 0; i < maxExtraAttachments; i++)
+            {
+                auto attachment = renderPassDescriptor.colorAttachments[i + 1];
+                if (mCurrentRenderTarget && i < mExtraRenderTargets.Count())
+                {
+                    attachment.texture = mExtraRenderTargets[i]->mImpl->texture;
+                    attachment.clearColor = clearColor;
+                    attachment.loadAction = colorLoadAction;
+                    attachment.storeAction = MTLStoreActionStore;
+                }
+                else
+                    attachment.texture = nil;
+            }
+
+            id<MTLTexture> depthTexture = RenderDevice::view.depthStencilTexture;
             if (mCurrentRenderTarget)
+            {
                 renderPassDescriptor.colorAttachments[0].texture = mCurrentRenderTarget->mImpl->texture;
 
-            NSUInteger vertexDataSize = (NSUInteger)mLastDrawVertex * sizeof(Vertex3Tex);
+                auto targetImpl = mCurrentRenderTarget->mImpl;
+                id<MTLTexture> colorTexture = targetImpl->texture;
+                if (!targetImpl->depthTexture ||
+                    targetImpl->depthTexture.width != colorTexture.width ||
+                    targetImpl->depthTexture.height != colorTexture.height)
+                {
+                    MTLTextureDescriptor* depthDescriptor =
+                        [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatDepth32Float
+                                                                           width:colorTexture.width
+                                                                          height:colorTexture.height
+                                                                       mipmapped:NO];
+                    depthDescriptor.usage = MTLTextureUsageRenderTarget;
+                    depthDescriptor.storageMode = MTLStorageModePrivate;
+                    targetImpl->depthTexture = [RenderDevice::device newTextureWithDescriptor:depthDescriptor];
+                }
+
+                depthTexture = targetImpl->depthTexture;
+            }
+
+            renderPassDescriptor.depthAttachment.texture = depthTexture;
+            renderPassDescriptor.depthAttachment.clearDepth = 1.0;
+            renderPassDescriptor.depthAttachment.loadAction = mNeedDepthClear ? MTLLoadActionClear : MTLLoadActionLoad;
+            renderPassDescriptor.depthAttachment.storeAction = MTLStoreActionStore;
+            mNeedDepthClear = false;
+
+            NSUInteger vertexDataSize = (NSUInteger)mLastDrawVertex * mCurrentBatchVertexType.GetStride();
             NSUInteger indexDataSize = (NSUInteger)mLastDrawIdx * sizeof(VertexIndex);
+
+            // Frame geometry overflows the buffers: retire them until the frame ends and continue in fresh ones
+            if (mVertexBufferOffset + vertexDataSize > [RenderDevice::vertexBuffer length] ||
+                mIndexBufferOffset + indexDataSize > [RenderDevice::indexBuffer length])
+            {
+                NSMutableArray* retired = RenderDevice::retiredBuffers[RenderDevice::currentBufferIndex];
+                [retired addObject:RenderDevice::vertexBuffer];
+                [retired addObject:RenderDevice::indexBuffer];
+
+                RenderDevice::vertexBuffer = [RenderDevice::device newBufferWithLength:[RenderDevice::vertexBuffers[0] length]
+                                                                               options:MTLResourceStorageModeShared];
+                RenderDevice::indexBuffer = [RenderDevice::device newBufferWithLength:[RenderDevice::indexBuffers[0] length]
+                                                                              options:MTLResourceStorageModeShared];
+
+                mVertexBufferOffset = 0;
+                mIndexBufferOffset = 0;
+            }
+
             memcpy((Byte*)[RenderDevice::vertexBuffer contents] + mVertexBufferOffset, mVertexData, vertexDataSize);
             memcpy((Byte*)[RenderDevice::indexBuffer contents] + mIndexBufferOffset, mVertexIndexData, indexDataSize);
 
@@ -220,7 +310,11 @@ namespace o2
             }
             
             [renderEncoder setRenderPipelineState:mCurrentMaterial->mImpl->pipelineState];
-            
+            id<MTLDepthStencilState> depthState = RenderDevice::depthStateDisabled;
+            if (mDepthTestEnabled)
+                depthState = mDepthWriteEnabled ? RenderDevice::depthStateEnabled : RenderDevice::depthStateEnabledNoWrite;
+            [renderEncoder setDepthStencilState:depthState];
+
             [renderEncoder setVertexBuffer:RenderDevice::vertexBuffer offset:mVertexBufferOffset atIndex:0];
             
             TextureRef primaryTexture = mCurrentDrawTexture ? mCurrentDrawTexture : mWhiteTexture;
@@ -275,7 +369,7 @@ namespace o2
             [renderEncoder endEncoding];
         }
 
-        mVertexBufferOffset = AlignBufferOffset(mVertexBufferOffset + (NSUInteger)mLastDrawVertex * sizeof(Vertex3Tex));
+        mVertexBufferOffset = AlignBufferOffset(mVertexBufferOffset + (NSUInteger)mLastDrawVertex * mCurrentBatchVertexType.GetStride());
         mIndexBufferOffset = AlignBufferOffset(mIndexBufferOffset + (NSUInteger)mLastDrawIdx * sizeof(VertexIndex));
     }
 
@@ -299,6 +393,10 @@ namespace o2
 
     VertexType Render::PlatformResolveBatchVertexType(const VertexType& sourceVertexType, const Ref<Material>& material) const
     {
+        // Skinned vertices are drawn as-is by the skinned shaders, everything else batches as Vertex3Tex
+        if (sourceVertexType.HasParam(VertexParam::BoneIndices))
+            return sourceVertexType;
+
         return Vertex3Tex::Type();
     }
 
@@ -306,13 +404,21 @@ namespace o2
     {
         mClearColor = color;
         mNeedClear = true;
+        mNeedDepthClear = true;
     }
 
     void Render::PlatformFlipVerticesUV()
     {
-        Vertex3Tex* dstVertexBuffer = reinterpret_cast<Vertex3Tex*>(mVertexData);
+        if (!mCurrentBatchVertexType.HasParam(VertexParam::TexCoord0))
+            return;
+
+        size_t stride = mCurrentBatchVertexType.GetStride();
+        size_t uvOffset = mCurrentBatchVertexType.GetParamOffset(VertexParam::TexCoord0);
         for (UInt i = 0; i < mLastDrawVertex; i++)
-            dstVertexBuffer[i].tv = 1.0f - dstVertexBuffer[i].tv;
+        {
+            float* tv = reinterpret_cast<float*>(mVertexData + i*stride + uvOffset) + 1;
+            *tv = 1.0f - *tv;
+        }
     }
 
     void Render::PlatformSetupCameraTransforms(float* modelMatrix, float* viewMatrix, float* projMatrix)
@@ -355,7 +461,21 @@ namespace o2
     }
 
     void Render::PlatformBindRenderTarget(const TextureRef& renderTarget)
+    {
+        if (renderTarget)
+            mNeedDepthClear = true;
+    }
+
+    void Render::PlatformSetDepthTest(bool enabled, bool writeEnabled)
     {}
+
+    bool Render::PlatformSupportsMRT() const
+    {
+        return true;
+    }
+
+    void Render::PlatformSyncRenderTargetAttachments()
+    {} // MRT attachments are set on the render pass descriptor at draw time
 
     Vec2I Render::GetPlatformMaxTextureSize()
     {

@@ -74,7 +74,7 @@ namespace o2
 
     enum class PixelFormat { R8G8B8A8, R8G8B8 };
 
-    enum class TextureFormat { R8G8B8A8, DXT5 };
+    enum class TextureFormat { R8G8B8A8, DXT5, R16G16B16A16F };
 
     enum class Loop { None, Repeat, PingPong };
 

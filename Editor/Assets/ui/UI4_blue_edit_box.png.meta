@@ -1,0 +1,14 @@
+{
+    "Type": "o2::ImageAsset::Meta",
+    "Value": {
+        "mId": "83700a0795a44e2493d90f025008d592",
+        "atlasId": "6bd459187f2675966f8c67e46e525c59",
+        "sliceBorder": {
+            "left": 8,
+            "bottom": 8,
+            "right": 9,
+            "top": 8
+        },
+        "defaultMode": "Sliced"
+    }
+}

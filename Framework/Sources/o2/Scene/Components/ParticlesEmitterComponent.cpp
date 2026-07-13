@@ -58,9 +58,29 @@ namespace o2
         return DynamicCast<Component>(ref);
     }
 
+    SceneDrawableCategory ParticlesEmitterComponent::GetSceneDrawableCategory() const
+    {
+        return Is3D() ? SceneDrawableCategory::Scene3D : SceneDrawableCategory::Scene2D;
+    }
+
+    bool ParticlesEmitterComponent::Get3DDrawableBounds(o2::AABB& bounds)
+    {
+        if (!Is3D())
+            return false;
+
+        return GetParticlesBounds(bounds);
+    }
+
+    bool ParticlesEmitterComponent::Is3DDrawableTransparent() const
+    {
+        return true;
+    }
+
     void ParticlesEmitterComponent::OnTransformUpdated()
     {
-        basis = mOwner.Lock()->transform->GetWorldBasis();
+        auto transform = mOwner.Lock()->transform;
+        basis = transform->GetWorldBasis();
+        Set3DBasis(transform->GetWorldBasis3D());
     }
 
     void ParticlesEmitterComponent::OnSerialize(DataValue& node) const

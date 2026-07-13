@@ -55,7 +55,7 @@ TEST(SceneLoad, RoundTripPreservesActorPositions)
     for (auto& [ptr, weak] : o2Scene.GetAllActors())
     {
         if (auto live = weak.Lock())
-            restoredPositions.Add(live->transform->GetPosition());
+            restoredPositions.Add(live->transform->GetPosition2D());
     }
 
     bool foundA = false, foundB = false;

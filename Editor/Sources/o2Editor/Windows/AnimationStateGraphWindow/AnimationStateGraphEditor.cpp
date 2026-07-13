@@ -249,7 +249,7 @@ namespace Editor
             mNeedAdjustView = false;
 			mViewCameraTargetScale = Vec2F(1, 1);
             mViewCamera.center = mAvailableArea.Center();
-            mViewCameraTargetPos = mViewCamera.position;
+            mViewCameraTargetPos = mViewCamera.GetPosition2D();
         }
 
 		UpdateComponent(dt);

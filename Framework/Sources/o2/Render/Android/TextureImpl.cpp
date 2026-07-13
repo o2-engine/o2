@@ -8,12 +8,25 @@
 
 namespace o2
 {
-    static GLint MapTextureFormat(TextureFormat format)
+    struct GLTextureFormat
+    {
+        GLint  internalFormat;
+        GLenum format;
+        GLenum type;
+    };
+
+    static GLTextureFormat MapTextureFormat(TextureFormat format)
     {
         switch (format)
         {
-            case TextureFormat::R8G8B8A8: return GL_RGBA;
-            default:                      return GL_RGBA; // GLES2 has no DXT5; fall back to RGBA
+            case TextureFormat::R16G16B16A16F:
+                // Half float targets are only used by the deferred pipeline, which requires an ES 3 context
+                if (GLES3::available)
+                    return { GL_RGBA16F, GL_RGBA, GL_HALF_FLOAT };
+                return { GL_RGBA, GL_RGBA, GL_UNSIGNED_BYTE };
+
+            case TextureFormat::R8G8B8A8: return { GL_RGBA, GL_RGBA, GL_UNSIGNED_BYTE };
+            default:                      return { GL_RGBA, GL_RGBA, GL_UNSIGNED_BYTE }; // GLES has no DXT5; fall back to RGBA
         }
     }
 
@@ -25,8 +38,9 @@ namespace o2
         glBindTexture(GL_TEXTURE_2D, mHandle);
         GL_CHECK_ERROR();
 
-        GLint texFormat = MapTextureFormat(mFormat);
-        glTexImage2D(GL_TEXTURE_2D, 0, texFormat, (GLsizei)mSize.x, (GLsizei)mSize.y, 0, texFormat, GL_UNSIGNED_BYTE, NULL);
+        GLTextureFormat texFormat = MapTextureFormat(mFormat);
+        glTexImage2D(GL_TEXTURE_2D, 0, texFormat.internalFormat, (GLsizei)mSize.x, (GLsizei)mSize.y, 0,
+                     texFormat.format, texFormat.type, NULL);
         GL_CHECK_ERROR();
 
         GLint wrap = mWrap == Wrap::Repeat ? GL_REPEAT : GL_CLAMP_TO_EDGE;
@@ -43,11 +57,19 @@ namespace o2
 
             glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, mHandle, 0);
 
+            glGenRenderbuffers(1, &mDepthRenderBuffer);
+            glBindRenderbuffer(GL_RENDERBUFFER, mDepthRenderBuffer);
+            glRenderbufferStorage(GL_RENDERBUFFER, GLES3::available ? GL_DEPTH_COMPONENT24 : GL_DEPTH_COMPONENT16,
+                                  (GLsizei)mSize.x, (GLsizei)mSize.y);
+            glBindRenderbuffer(GL_RENDERBUFFER, 0);
+            glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, mDepthRenderBuffer);
+
             if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
             {
                 GLenum glError = glGetError();
                 o2Render.mLog->Error((String)"Failed to create GL frame buffer object! GL Error " + (int)glError + " " +
                                      GetGLErrorDesc(glError));
+                glBindFramebuffer(GL_FRAMEBUFFER, 0);
                 glBindTexture(GL_TEXTURE_2D, prevTextureHandle);
                 return false;
             }
@@ -65,6 +87,9 @@ namespace o2
         if (mUsage == Usage::RenderTarget && mFrameBuffer)
             glDeleteFramebuffers(1, &mFrameBuffer);
 
+        if (mDepthRenderBuffer)
+            glDeleteRenderbuffers(1, &mDepthRenderBuffer);
+
         if (mHandle)
             glDeleteTextures(1, &mHandle);
     }
@@ -75,8 +100,9 @@ namespace o2
 
         glBindTexture(GL_TEXTURE_2D, mHandle);
 
-        GLint texFormat = MapTextureFormat(format);
-        glTexImage2D(GL_TEXTURE_2D, 0, texFormat, (GLsizei)size.x, (GLsizei)size.y, 0, texFormat, GL_UNSIGNED_BYTE, data);
+        GLTextureFormat texFormat = MapTextureFormat(format);
+        glTexImage2D(GL_TEXTURE_2D, 0, texFormat.internalFormat, (GLsizei)size.x, (GLsizei)size.y, 0,
+                     texFormat.format, texFormat.type, data);
         GL_CHECK_ERROR();
 
         glBindTexture(GL_TEXTURE_2D, prevTextureHandle);
@@ -87,8 +113,8 @@ namespace o2
         auto prevTextureHandle = o2Render.mCurrentDrawTexture ? o2Render.mCurrentDrawTexture->mHandle : 0;
         glBindTexture(GL_TEXTURE_2D, mHandle);
 
-        GLint texFormat = MapTextureFormat(format);
-        glTexSubImage2D(GL_TEXTURE_2D, 0, offset.x, offset.y, size.x, size.y, texFormat, GL_UNSIGNED_BYTE, data);
+        GLTextureFormat texFormat = MapTextureFormat(format);
+        glTexSubImage2D(GL_TEXTURE_2D, 0, offset.x, offset.y, size.x, size.y, texFormat.format, texFormat.type, data);
         GL_CHECK_ERROR();
 
         glBindTexture(GL_TEXTURE_2D, prevTextureHandle);
@@ -99,8 +125,8 @@ namespace o2
         auto prevTextureHandle = o2Render.mCurrentDrawTexture ? o2Render.mCurrentDrawTexture->mHandle : 0;
         glBindTexture(GL_TEXTURE_2D, from.mHandle);
 
-        GLint texFormat = MapTextureFormat(mFormat);
-        glCopyTexImage2D(GL_TEXTURE_2D, 0, texFormat, rect.left, rect.top, rect.Width(), rect.Height(), 0);
+        GLTextureFormat texFormat = MapTextureFormat(mFormat);
+        glCopyTexImage2D(GL_TEXTURE_2D, 0, texFormat.internalFormat, rect.left, rect.top, rect.Width(), rect.Height(), 0);
         glBindTexture(GL_TEXTURE_2D, prevTextureHandle);
     }
 
@@ -113,7 +139,21 @@ namespace o2
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, mHandle, 0);
 
         if (glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE)
-            glReadPixels(0, 0, mSize.x, mSize.y, GL_RGBA, GL_UNSIGNED_BYTE, data);
+        {
+            if (mFormat == TextureFormat::R16G16B16A16F && GLES3::available)
+            {
+                // Float target: read as floats, convert to 8-bit bitmap channels with clamping to [0, 1]
+                size_t channelsCount = (size_t)mSize.x*(size_t)mSize.y*4;
+                Vector<float> floatData;
+                floatData.resize((int)channelsCount);
+                glReadPixels(0, 0, mSize.x, mSize.y, GL_RGBA, GL_FLOAT, floatData.data());
+
+                for (size_t i = 0; i < channelsCount; i++)
+                    data[i] = (Byte)(Math::Clamp01(floatData[(int)i])*255.0f);
+            }
+            else
+                glReadPixels(0, 0, mSize.x, mSize.y, GL_RGBA, GL_UNSIGNED_BYTE, data);
+        }
         else
             o2Render.mLog->Error("Texture::PlatformGetData: framebuffer incomplete for readback");
 

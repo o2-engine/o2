@@ -1,6 +1,8 @@
 #include "o2/stdafx.h"
 #include "DragHandle.h"
 
+#include <unordered_set>
+
 #include "o2/Application/Application.h"
 #include "o2/Events/EventSystem.h"
 #include "o2/Render/IRectDrawable.h"
@@ -440,6 +442,16 @@ namespace o2
         return mEnabled;
     }
 
+    bool DragHandle::IsHovered() const
+    {
+        return mIsHovered;
+    }
+
+    bool DragHandle::IsDrawnThisFrame() const
+    {
+        return mLastScreenPosUpdateFrame == o2Time.GetCurrentFrame();
+    }
+
     void DragHandle::SetAngle(float rad)
     {
         mAngle = rad;
@@ -807,6 +819,21 @@ namespace o2
         RefCounterable(refCounter)
     {}
 
+    void ISelectableDragHandlesGroup::AddHandles(const Vector<Ref<DragHandle>>& handles)
+    {
+        for (auto& handle : handles)
+            handle->SetSelectionGroup(Ref(this));
+    }
+
+    void ISelectableDragHandlesGroup::RemoveHandles(const Vector<Ref<DragHandle>>& handles)
+    {
+        for (auto& handle : handles)
+        {
+            if (handle->mSelectGroup.Get() == this)
+                handle->SetSelectionGroup(nullptr);
+        }
+    }
+
     void ISelectableDragHandlesGroup::DeselectAll()
     {
         auto handles = GetAllHandles();
@@ -891,6 +918,68 @@ namespace o2
             mSelectedHandles.RemoveAt(idx);
             OnSelectionChanged();
         }
+    }
+
+    void SelectableDragHandlesGroup::AddHandles(const Vector<Ref<DragHandle>>& handles)
+    {
+        // Relies on invariant: handle is in mHandles if and only if its group is this
+        auto thisRef = Ref(this);
+        for (auto& handle : handles)
+        {
+            if (handle->mSelectGroup == thisRef)
+                continue;
+
+            if (handle->mSelectGroup)
+                handle->mSelectGroup->RemoveHandle(handle.Get());
+
+            handle->mSelectGroup = thisRef;
+            mHandles.Add(handle);
+        }
+    }
+
+    void SelectableDragHandlesGroup::RemoveHandles(const Vector<Ref<DragHandle>>& handles)
+    {
+        std::unordered_set<DragHandle*> removing;
+        removing.reserve(handles.Count());
+
+        for (auto& handle : handles)
+        {
+            if (handle->mSelectGroup.Get() == this)
+                handle->mSelectGroup = nullptr;
+
+            removing.insert(handle.Get());
+        }
+
+        auto isRemoving = [&](const Ref<DragHandle>& x) { return removing.find(x.Get()) != removing.end(); };
+        mHandles.erase(std::remove_if(mHandles.begin(), mHandles.end(), isRemoving), mHandles.end());
+
+        int selectedBefore = mSelectedHandles.Count();
+        for (auto& handle : mSelectedHandles)
+        {
+            if (isRemoving(handle))
+            {
+                handle->mIsSelected = false;
+                handle->OnDeselected();
+            }
+        }
+
+        mSelectedHandles.erase(std::remove_if(mSelectedHandles.begin(), mSelectedHandles.end(), isRemoving),
+                               mSelectedHandles.end());
+
+        if (mSelectedHandles.Count() != selectedBefore)
+            OnSelectionChanged();
+    }
+
+    void SelectableDragHandlesGroup::ClearHandles()
+    {
+        for (auto& handle : mHandles)
+        {
+            handle->mIsSelected = false;
+            handle->mSelectGroup = nullptr;
+        }
+
+        mHandles.Clear();
+        mSelectedHandles.Clear();
     }
 
     void SelectableDragHandlesGroup::DeselectAll()

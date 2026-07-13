@@ -43,8 +43,9 @@ namespace Editor
 
         DrawTrack();
 
-        for (auto& child : mChildrenInheritedDepth)
-            child->Draw();
+        mCenterHandle->handle->Draw();
+        mLeftBorderHandle->handle->Draw();
+        mRightBorderHandle->handle->Draw();
 
         o2Render.DisableScissorTest();
 
@@ -102,20 +103,14 @@ namespace Editor
 
     void SubTrackControl::InitializeHandles()
     {
-        auto localToWidgetOffsetTransformFunc = [&](const Vec2F& pos)
+        auto localToScreenTransformFunc = [&](const Vec2F& pos)
         {
-            float worldXPos = mTimeline.Lock()->LocalToWorld(pos.x);
-            float localXPos = worldXPos - layout->GetWorldLeft();
-
-            return Vec2F(localXPos, 0);
+            return Vec2F(mTimeline.Lock()->LocalToWorld(pos.x), layout->GetWorldBottom());
         };
 
-        auto widgetOffsetToLocalTransformFunc = [&](const Vec2F& pos)
+        auto screenToLocalTransformFunc = [&](const Vec2F& pos)
         {
-            float worldXPos = layout->GetWorldLeft() + pos.x;
-            float localXPos = mTimeline.Lock()->WorldToLocal(worldXPos);
-
-            return Vec2F(localXPos, 0);
+            return Vec2F(mTimeline.Lock()->WorldToLocal(pos.x), 0.0f);
         };
 
         float handleSize = 10.0f;
@@ -147,10 +142,8 @@ namespace Editor
                 return handleRect.IsInside(pos);
             };
 
-            handle->localToWidgetOffsetTransformFunc = localToWidgetOffsetTransformFunc;
-            handle->widgetOffsetToLocalTransformFunc = widgetOffsetToLocalTransformFunc;
-
-            AddChild(handle);
+            handle->localToScreenTransformFunc = localToScreenTransformFunc;
+            handle->screenToLocalTransformFunc = screenToLocalTransformFunc;
 
             mCenterHandle = mmake<KeyHandle>(2, handle);
         }
@@ -183,10 +176,8 @@ namespace Editor
                 return borderHandlesRect.IsInside(localPos);
             };
 
-            handle->localToWidgetOffsetTransformFunc = localToWidgetOffsetTransformFunc;
-            handle->widgetOffsetToLocalTransformFunc = widgetOffsetToLocalTransformFunc;
-
-            AddChild(handle);
+            handle->localToScreenTransformFunc = localToScreenTransformFunc;
+            handle->screenToLocalTransformFunc = screenToLocalTransformFunc;
 
             mLeftBorderHandle = mmake<KeyHandle>(0, handle);
         }
@@ -222,10 +213,8 @@ namespace Editor
                 return borderHandlesRect.IsInside(localPos);
             };
 
-            handle->localToWidgetOffsetTransformFunc = localToWidgetOffsetTransformFunc;
-            handle->widgetOffsetToLocalTransformFunc = widgetOffsetToLocalTransformFunc;
-
-            AddChild(handle);
+            handle->localToScreenTransformFunc = localToScreenTransformFunc;
+            handle->screenToLocalTransformFunc = screenToLocalTransformFunc;
 
             mRightBorderHandle = mmake<KeyHandle>(1, handle);
         }
@@ -249,8 +238,6 @@ namespace Editor
             handle->isMapping = false;
             handle->SetSelectionGroup(DynamicCast<ISelectableDragHandlesGroup>(handlesSheet));
             //handle->SetSelected(selectedHandles.Contains(key.uid));
-
-            AddChild(handle);
 
             handle->onChangedPos = [this, track](const Vec2F& pos)
             {

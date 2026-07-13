@@ -7,45 +7,38 @@
 namespace o2
 {
     WidgetLayout::WidgetLayout() :
-        ActorTransform(mnew WidgetLayoutData())
+        ActorTransform(Vec2F(), Vec2F(), 0.0f, Vec2F(1.0f, 1.0f), Vec2F())
     {
-        mData = static_cast<WidgetLayoutData*>(ActorTransform::mData);
         mCheckMinMaxFunc = &WidgetLayout::DontCheckMinMax;
     }
 
     WidgetLayout::WidgetLayout(const WidgetLayout& other) :
-        ActorTransform(mnew WidgetLayoutData())
+        ActorTransform(Vec2F(), Vec2F(), 0.0f, Vec2F(1.0f, 1.0f), Vec2F())
     {
-        mData = static_cast<WidgetLayoutData*>(ActorTransform::mData);
-
         CopyFrom(other);
         mCheckMinMaxFunc = other.mCheckMinMaxFunc;
     }
 
     WidgetLayout::WidgetLayout(const Vec2F& anchorMin, const Vec2F& anchorMax,
                                const Vec2F& offsetMin, const Vec2F& offsetMax) :
-        ActorTransform(mnew WidgetLayoutData())
+        ActorTransform(Vec2F(), Vec2F(), 0.0f, Vec2F(1.0f, 1.0f), Vec2F())
     {
-        mData = static_cast<WidgetLayoutData*>(ActorTransform::mData);
-
-        mData->anchorMin = anchorMin;
-        mData->anchorMax = anchorMax;
-        mData->offsetMin = offsetMin;
-        mData->offsetMax = offsetMax;
+        mAnchorMin = anchorMin;
+        mAnchorMax = anchorMax;
+        mOffsetMin = offsetMin;
+        mOffsetMax = offsetMax;
 
         mCheckMinMaxFunc = &WidgetLayout::DontCheckMinMax;
     }
 
     WidgetLayout::WidgetLayout(float anchorLeft, float anchorTop, float anchorRight, float anchorBottom,
                                float offsetLeft, float offsetTop, float offsetRight, float offsetBottom) :
-        ActorTransform(mnew WidgetLayoutData())
+        ActorTransform(Vec2F(), Vec2F(), 0.0f, Vec2F(1.0f, 1.0f), Vec2F())
     {
-        mData = static_cast<WidgetLayoutData*>(ActorTransform::mData);
-
-        mData->anchorMin.Set(anchorLeft, anchorBottom);
-        mData->anchorMax.Set(anchorRight, anchorTop);
-        mData->offsetMin.Set(offsetLeft, offsetBottom);
-        mData->offsetMax.Set(offsetRight, offsetTop);
+        mAnchorMin.Set(anchorLeft, anchorBottom);
+        mAnchorMax.Set(anchorRight, anchorTop);
+        mOffsetMin.Set(offsetLeft, offsetBottom);
+        mOffsetMax.Set(offsetRight, offsetTop);
 
         mCheckMinMaxFunc = &WidgetLayout::DontCheckMinMax;
     }
@@ -60,30 +53,30 @@ namespace o2
 
     bool WidgetLayout::operator==(const WidgetLayout& other) const
     {
-        return mData->anchorMin == other.mData->anchorMin &&
-            mData->anchorMax == other.mData->anchorMax &&
-            mData->offsetMin == other.mData->offsetMin &&
-            mData->offsetMax == other.mData->offsetMax;
+        return mAnchorMin == other.mAnchorMin &&
+            mAnchorMax == other.mAnchorMax &&
+            mOffsetMin == other.mOffsetMin &&
+            mOffsetMax == other.mOffsetMax;
     }
 
-    void WidgetLayout::SetPosition(const Vec2F& position)
+    void WidgetLayout::SetPosition2D(const Vec2F& position)
     {
-        Vec2F delta = position - GetPosition();
-        mData->offsetMin += delta;
-        mData->offsetMax += delta;
+        Vec2F delta = position - GetPosition2D();
+        mOffsetMin += delta;
+        mOffsetMax += delta;
 
         SetDirty();
     }
 
-    void WidgetLayout::SetSize(const Vec2F& size)
+    void WidgetLayout::SetSize2D(const Vec2F& size)
     {
         RectF parentRect = GetParentRectangle();
-        RectF rectangle(mData->offsetMin + mData->anchorMin*parentRect.Size(),
-                        mData->offsetMax + mData->anchorMax*parentRect.Size());
+        RectF rectangle(mOffsetMin + mAnchorMin*parentRect.Size(),
+                        mOffsetMax + mAnchorMax*parentRect.Size());
 
         Vec2F szDelta = size - rectangle.Size();
-        mData->offsetMax += szDelta*(Vec2F::One() - mData->pivot);
-        mData->offsetMin -= szDelta*mData->pivot;
+        mOffsetMax += szDelta*(Vec2F::One() - mPivot.XY());
+        mOffsetMin -= szDelta*mPivot.XY();
 
         SetDirty();
     }
@@ -91,12 +84,12 @@ namespace o2
     void WidgetLayout::SetWidth(float value)
     {
         RectF parentRect = GetParentRectangle();
-        RectF rectangle(mData->offsetMin + mData->anchorMin*parentRect.Size(),
-                        mData->offsetMax + mData->anchorMax*parentRect.Size());
+        RectF rectangle(mOffsetMin + mAnchorMin*parentRect.Size(),
+                        mOffsetMax + mAnchorMax*parentRect.Size());
 
         float szDelta = value - rectangle.Width();
-        mData->offsetMax.x += szDelta*(1.0f - mData->pivot.x);
-        mData->offsetMin.x -= szDelta*mData->pivot.x;
+        mOffsetMax.x += szDelta*(1.0f - mPivot.x);
+        mOffsetMin.x -= szDelta*mPivot.x;
 
         SetDirty();
     }
@@ -104,50 +97,50 @@ namespace o2
     void WidgetLayout::SetHeight(float value)
     {
         RectF parentRect = GetParentRectangle();
-        RectF rectangle(mData->offsetMin + mData->anchorMin*parentRect.Size(),
-                        mData->offsetMax + mData->anchorMax*parentRect.Size());
+        RectF rectangle(mOffsetMin + mAnchorMin*parentRect.Size(),
+                        mOffsetMax + mAnchorMax*parentRect.Size());
 
         float szDelta = value - rectangle.Height();
-        mData->offsetMax.y += szDelta*mData->pivot.y;
-        mData->offsetMin.y -= szDelta*(1.0f - mData->pivot.y);
+        mOffsetMax.y += szDelta*mPivot.y;
+        mOffsetMin.y -= szDelta*(1.0f - mPivot.y);
 
         SetDirty();
     }
 
-    Vec2F WidgetLayout::GetSize() const
+    Vec2F WidgetLayout::GetSize2D() const
     {
         return Vec2F(GetWidth(), GetHeight());
     }
 
     float WidgetLayout::GetWidth() const
     {
-        return Math::Clamp(mData->size.x, mData->minSize.x, mData->maxSize.x);
+        return Math::Clamp(mSize.x, mMinSize.x, mMaxSize.x);
     }
 
     float WidgetLayout::GetHeight() const
     {
-        return Math::Clamp(mData->size.y, mData->minSize.y, mData->maxSize.y);
+        return Math::Clamp(mSize.y, mMinSize.y, mMaxSize.y);
     }
 
     void WidgetLayout::SetRect(const RectF& rect)
     {
         RectF parentRect = GetParentRectangle();
-        RectF parentAnchoredRect(parentRect.Size()*mData->anchorMin,
-                                 parentRect.Size()*mData->anchorMax);
+        RectF parentAnchoredRect(parentRect.Size()*mAnchorMin,
+                                 parentRect.Size()*mAnchorMax);
 
         RectF localRect = rect;
-        if (auto parent = mData->owner->mParent.Lock())
-            localRect += parentRect.Size()*parent->transform->mData->pivot;
+        if (auto parent = mOwnerWidget->mParent.Lock())
+            localRect += parentRect.Size()*parent->transform->mPivot.XY();
 
-        mData->offsetMin = localRect.LeftBottom() - parentAnchoredRect.LeftBottom();
-        mData->offsetMax = localRect.RightTop() - parentAnchoredRect.RightTop();
+        mOffsetMin = localRect.LeftBottom() - parentAnchoredRect.LeftBottom();
+        mOffsetMax = localRect.RightTop() - parentAnchoredRect.RightTop();
 
         SetDirty();
     }
 
     RectF WidgetLayout::GetChildrenWorldRect() const
     {
-        return mData->childrenWorldRect;
+        return mChildrenWorldRect;
     }
 
     void WidgetLayout::SetAxisAlignedRect(const RectF& rect)
@@ -156,9 +149,10 @@ namespace o2
         UpdateOffsetsByCurrentTransform();
     }
 
-    void WidgetLayout::SetPivot(const Vec2F& pivot)
+    void WidgetLayout::SetPivot2D(const Vec2F& pivot)
     {
-        mData->pivot = pivot;
+        mPivot.x = pivot.x;
+        mPivot.y = pivot.y;
         SetDirty();
     }
 
@@ -178,214 +172,214 @@ namespace o2
     {
         RectF parentRect = GetParentRectangle();
 
-        RectF rectangle(mData->offsetMin + mData->anchorMin*parentRect.Size(),
-                        mData->offsetMax + mData->anchorMax*parentRect.Size());
+        RectF rectangle(mOffsetMin + mAnchorMin*parentRect.Size(),
+                        mOffsetMax + mAnchorMax*parentRect.Size());
 
         return rectangle;
     }
 
     void WidgetLayout::SetAnchorMin(const Vec2F& min)
     {
-        mData->anchorMin = min;
+        mAnchorMin = min;
         SetDirty();
     }
 
     Vec2F WidgetLayout::GetAnchorMin() const
     {
-        return mData->anchorMin;
+        return mAnchorMin;
     }
 
     void WidgetLayout::SetAnchorMax(const Vec2F& max)
     {
-        mData->anchorMax = max;
+        mAnchorMax = max;
         SetDirty();
     }
 
     Vec2F WidgetLayout::GetAnchorMax() const
     {
-        return mData->anchorMax;
+        return mAnchorMax;
     }
 
     void WidgetLayout::SetAnchorLeft(float value)
     {
-        mData->anchorMin.x = value;
+        mAnchorMin.x = value;
         SetDirty();
     }
 
     float WidgetLayout::GetAnchorLeft() const
     {
-        return mData->anchorMin.x;
+        return mAnchorMin.x;
     }
 
     void WidgetLayout::SetAnchorRight(float value)
     {
-        mData->anchorMax.x = value;
+        mAnchorMax.x = value;
         SetDirty();
     }
 
     float WidgetLayout::GetAnchorRight() const
     {
-        return mData->anchorMax.x;
+        return mAnchorMax.x;
     }
 
     void WidgetLayout::SetAnchorBottom(float value)
     {
-        mData->anchorMin.y = value;
+        mAnchorMin.y = value;
         SetDirty();
     }
 
     float WidgetLayout::GetAnchorBottom() const
     {
-        return mData->anchorMin.y;
+        return mAnchorMin.y;
     }
 
     void WidgetLayout::SetAnchorTop(float value)
     {
-        mData->anchorMax.y = value;
+        mAnchorMax.y = value;
         SetDirty();
     }
 
     float WidgetLayout::GetAnchorTop() const
     {
-        return mData->anchorMax.y;
+        return mAnchorMax.y;
     }
 
     void WidgetLayout::SetOffsetMin(const Vec2F& min)
     {
-        mData->offsetMin = min;
+        mOffsetMin = min;
         SetDirty();
     }
 
     Vec2F WidgetLayout::GetOffsetMin() const
     {
-        return mData->offsetMin;
+        return mOffsetMin;
     }
 
     void WidgetLayout::SetOffsetMax(const Vec2F& max)
     {
-        mData->offsetMax = max;
+        mOffsetMax = max;
         SetDirty();
     }
 
     Vec2F WidgetLayout::GetOffsetMax() const
     {
-        return mData->offsetMax;
+        return mOffsetMax;
     }
 
     void WidgetLayout::SetOffsetLeft(float value)
     {
-        mData->offsetMin.x = value;
+        mOffsetMin.x = value;
         SetDirty();
     }
 
     float WidgetLayout::GetOffsetLeft() const
     {
-        return mData->offsetMin.x;
+        return mOffsetMin.x;
     }
 
     void WidgetLayout::SetoffsetRight(float value)
     {
-        mData->offsetMax.x = value;
+        mOffsetMax.x = value;
         SetDirty();
     }
 
     float WidgetLayout::GetoffsetRight() const
     {
-        return mData->offsetMax.x;
+        return mOffsetMax.x;
     }
 
     void WidgetLayout::SetOffsetBottom(float value)
     {
-        mData->offsetMin.y = value;
+        mOffsetMin.y = value;
         SetDirty();
     }
 
     float WidgetLayout::GetOffsetBottom() const
     {
-        return mData->offsetMin.y;
+        return mOffsetMin.y;
     }
 
     void WidgetLayout::SetOffsetTop(float value)
     {
-        mData->offsetMax.y = value;
+        mOffsetMax.y = value;
         SetDirty();
     }
 
     float WidgetLayout::GetOffsetTop() const
     {
-        return mData->offsetMax.y;
+        return mOffsetMax.y;
     }
 
     void WidgetLayout::SetMinimalSize(const Vec2F& minSize)
     {
-        mData->minSize = minSize;
+        mMinSize = minSize;
         mCheckMinMaxFunc = &WidgetLayout::CheckMinMax;
         SetDirty();
     }
 
     Vec2F WidgetLayout::GetMinimalSize() const
     {
-        return mData->minSize;
+        return mMinSize;
     }
 
     void WidgetLayout::SetMinimalWidth(float value)
     {
-        mData->minSize.x = value;
+        mMinSize.x = value;
         mCheckMinMaxFunc = &WidgetLayout::CheckMinMax;
         SetDirty();
     }
 
     float WidgetLayout::GetMinWidth() const
     {
-        return mData->minSize.x;
+        return mMinSize.x;
     }
 
     void WidgetLayout::SetMinimalHeight(float value)
     {
-        mData->minSize.y = value;
+        mMinSize.y = value;
         mCheckMinMaxFunc = &WidgetLayout::CheckMinMax;
         SetDirty();
     }
 
     float WidgetLayout::GetMinHeight() const
     {
-        return mData->minSize.y;
+        return mMinSize.y;
     }
 
     void WidgetLayout::SetMaximalSize(const Vec2F& maxSize)
     {
-        mData->maxSize = maxSize;
+        mMaxSize = maxSize;
         mCheckMinMaxFunc = &WidgetLayout::CheckMinMax;
         SetDirty();
     }
 
     Vec2F WidgetLayout::GetMaximalSize() const
     {
-        return mData->maxSize;
+        return mMaxSize;
     }
 
     void WidgetLayout::SetMaximalWidth(float value)
     {
-        mData->maxSize.x = value;
+        mMaxSize.x = value;
         mCheckMinMaxFunc = &WidgetLayout::CheckMinMax;
         SetDirty();
     }
 
     float WidgetLayout::GetMaxWidth() const
     {
-        return mData->maxSize.x;
+        return mMaxSize.x;
     }
 
     void WidgetLayout::SetMaximalHeight(float value)
     {
-        mData->maxSize.y = value;
+        mMaxSize.y = value;
         mCheckMinMaxFunc = &WidgetLayout::CheckMinMax;
         SetDirty();
     }
 
     float WidgetLayout::GetMaxHeight() const
     {
-        return mData->maxSize.y;
+        return mMaxSize.y;
     }
 
     void WidgetLayout::DisableSizeChecks()
@@ -401,44 +395,44 @@ namespace o2
 
     void WidgetLayout::SetWeight(const Vec2F& weight)
     {
-        mData->weight = weight;
+        mWeight = weight;
         SetDirty();
     }
 
     Vec2F WidgetLayout::GetWeight() const
     {
-        return mData->weight;
+        return mWeight;
     }
 
     void WidgetLayout::SetWidthWeight(float widthWeigth)
     {
-        mData->weight.x = widthWeigth;
+        mWeight.x = widthWeigth;
         SetDirty();
     }
 
     float WidgetLayout::GetWidthWeight()
     {
-        return mData->weight.x;
+        return mWeight.x;
     }
 
     void WidgetLayout::SetHeightWeight(float heigthWeigth)
     {
-        mData->weight.y = heigthWeigth;
+        mWeight.y = heigthWeigth;
         SetDirty();
     }
 
     float WidgetLayout::GetHeightWeight()
     {
-        return mData->weight.y;
+        return mWeight.y;
     }
 
     WidgetLayout WidgetLayout::BothStretch(float borderLeft, float borderBottom, float borderRight, float borderTop)
     {
         WidgetLayout res;
-        res.mData->anchorMin = Vec2F(0, 0);
-        res.mData->anchorMax = Vec2F(1, 1);
-        res.mData->offsetMin = Vec2F(borderLeft, borderBottom);
-        res.mData->offsetMax = Vec2F(-borderRight, -borderTop);
+        res.mAnchorMin = Vec2F(0, 0);
+        res.mAnchorMax = Vec2F(1, 1);
+        res.mOffsetMin = Vec2F(borderLeft, borderBottom);
+        res.mOffsetMax = Vec2F(-borderRight, -borderTop);
         return res;
     }
 
@@ -448,65 +442,65 @@ namespace o2
         switch (corner)
         {
         case BaseCorner::Left:
-        res.mData->anchorMin = Vec2F(0.0f, 0.5f);
-        res.mData->anchorMax = Vec2F(0.0f, 0.5f);
-        res.mData->offsetMin = Vec2F(0.0f, -size.y*0.5f) + offset;
-        res.mData->offsetMax = Vec2F(size.x, size.y*0.5f) + offset;
+        res.mAnchorMin = Vec2F(0.0f, 0.5f);
+        res.mAnchorMax = Vec2F(0.0f, 0.5f);
+        res.mOffsetMin = Vec2F(0.0f, -size.y*0.5f) + offset;
+        res.mOffsetMax = Vec2F(size.x, size.y*0.5f) + offset;
         break;
 
         case BaseCorner::Right:
-        res.mData->anchorMin = Vec2F(1.0f, 0.5f);
-        res.mData->anchorMax = Vec2F(1.0f, 0.5f);
-        res.mData->offsetMin = Vec2F(-size.x, -size.y*0.5f) + offset;
-        res.mData->offsetMax = Vec2F(0.0f, size.y*0.5f) + offset;
+        res.mAnchorMin = Vec2F(1.0f, 0.5f);
+        res.mAnchorMax = Vec2F(1.0f, 0.5f);
+        res.mOffsetMin = Vec2F(-size.x, -size.y*0.5f) + offset;
+        res.mOffsetMax = Vec2F(0.0f, size.y*0.5f) + offset;
         break;
         case BaseCorner::Top:
-        res.mData->anchorMin = Vec2F(0.5f, 1.0f);
-        res.mData->anchorMax = Vec2F(0.5f, 1.0f);
-        res.mData->offsetMin = Vec2F(-size.x*0.5f, -size.y) + offset;
-        res.mData->offsetMax = Vec2F(size.x*0.5f, 0.0f) + offset;
+        res.mAnchorMin = Vec2F(0.5f, 1.0f);
+        res.mAnchorMax = Vec2F(0.5f, 1.0f);
+        res.mOffsetMin = Vec2F(-size.x*0.5f, -size.y) + offset;
+        res.mOffsetMax = Vec2F(size.x*0.5f, 0.0f) + offset;
         break;
 
         case BaseCorner::Bottom:
-        res.mData->anchorMin = Vec2F(0.5f, 0.0f);
-        res.mData->anchorMax = Vec2F(0.5f, 0.0f);
-        res.mData->offsetMin = Vec2F(-size.x*0.5f, 0.0f) + offset;
-        res.mData->offsetMax = Vec2F(size.x*0.5f, size.y) + offset;
+        res.mAnchorMin = Vec2F(0.5f, 0.0f);
+        res.mAnchorMax = Vec2F(0.5f, 0.0f);
+        res.mOffsetMin = Vec2F(-size.x*0.5f, 0.0f) + offset;
+        res.mOffsetMax = Vec2F(size.x*0.5f, size.y) + offset;
         break;
 
         case BaseCorner::Center:
-        res.mData->anchorMin = Vec2F(0.5f, 0.5f);
-        res.mData->anchorMax = Vec2F(0.5f, 0.5f);
-        res.mData->offsetMin = Vec2F(-size.x*0.5f, -size.y*0.5f) + offset;
-        res.mData->offsetMax = Vec2F(size.x*0.5f, size.y*0.5f) + offset;
+        res.mAnchorMin = Vec2F(0.5f, 0.5f);
+        res.mAnchorMax = Vec2F(0.5f, 0.5f);
+        res.mOffsetMin = Vec2F(-size.x*0.5f, -size.y*0.5f) + offset;
+        res.mOffsetMax = Vec2F(size.x*0.5f, size.y*0.5f) + offset;
         break;
 
         case BaseCorner::LeftBottom:
-        res.mData->anchorMin = Vec2F(0.0f, 0.0f);
-        res.mData->anchorMax = Vec2F(0.0f, 0.0f);
-        res.mData->offsetMin = Vec2F(0.0f, 0.0f) + offset;
-        res.mData->offsetMax = Vec2F(size.x, size.y) + offset;
+        res.mAnchorMin = Vec2F(0.0f, 0.0f);
+        res.mAnchorMax = Vec2F(0.0f, 0.0f);
+        res.mOffsetMin = Vec2F(0.0f, 0.0f) + offset;
+        res.mOffsetMax = Vec2F(size.x, size.y) + offset;
         break;
 
         case BaseCorner::LeftTop:
-        res.mData->anchorMin = Vec2F(0.0f, 1.0f);
-        res.mData->anchorMax = Vec2F(0.0f, 1.0f);
-        res.mData->offsetMin = Vec2F(0.0f, -size.y) + offset;
-        res.mData->offsetMax = Vec2F(size.x, 0.0f) + offset;
+        res.mAnchorMin = Vec2F(0.0f, 1.0f);
+        res.mAnchorMax = Vec2F(0.0f, 1.0f);
+        res.mOffsetMin = Vec2F(0.0f, -size.y) + offset;
+        res.mOffsetMax = Vec2F(size.x, 0.0f) + offset;
         break;
 
         case BaseCorner::RightBottom:
-        res.mData->anchorMin = Vec2F(1.0f, 0.0f);
-        res.mData->anchorMax = Vec2F(1.0f, 0.0f);
-        res.mData->offsetMin = Vec2F(-size.x, 0.0f) + offset;
-        res.mData->offsetMax = Vec2F(0.0f, size.y) + offset;
+        res.mAnchorMin = Vec2F(1.0f, 0.0f);
+        res.mAnchorMax = Vec2F(1.0f, 0.0f);
+        res.mOffsetMin = Vec2F(-size.x, 0.0f) + offset;
+        res.mOffsetMax = Vec2F(0.0f, size.y) + offset;
         break;
 
         case BaseCorner::RightTop:
-        res.mData->anchorMin = Vec2F(1.0f, 1.0f);
-        res.mData->anchorMax = Vec2F(1.0f, 1.0f);
-        res.mData->offsetMin = Vec2F(-size.x, -size.y) + offset;
-        res.mData->offsetMax = Vec2F(0.0f, 0.0f) + offset;
+        res.mAnchorMin = Vec2F(1.0f, 1.0f);
+        res.mAnchorMax = Vec2F(1.0f, 1.0f);
+        res.mOffsetMin = Vec2F(-size.x, -size.y) + offset;
+        res.mOffsetMax = Vec2F(0.0f, 0.0f) + offset;
         break;
         }
 
@@ -516,32 +510,32 @@ namespace o2
     WidgetLayout WidgetLayout::VerStretch(HorAlign align, float top, float bottom, float width, float offsX)
     {
         WidgetLayout res;
-        res.mData->anchorMin.y = 0.0f;
-        res.mData->anchorMax.y = 1.0f;
-        res.mData->offsetMin.y = bottom;
-        res.mData->offsetMax.y = -top;
+        res.mAnchorMin.y = 0.0f;
+        res.mAnchorMax.y = 1.0f;
+        res.mOffsetMin.y = bottom;
+        res.mOffsetMax.y = -top;
 
         switch (align)
         {
         case HorAlign::Left:
-        res.mData->anchorMin.x = 0.0f;
-        res.mData->anchorMax.x = 0.0f;
-        res.mData->offsetMin.x = offsX;
-        res.mData->offsetMax.x = offsX + width;
+        res.mAnchorMin.x = 0.0f;
+        res.mAnchorMax.x = 0.0f;
+        res.mOffsetMin.x = offsX;
+        res.mOffsetMax.x = offsX + width;
         break;
 
         case HorAlign::Middle:
-        res.mData->anchorMin.x = 0.5f;
-        res.mData->anchorMax.x = 0.5f;
-        res.mData->offsetMin.x = offsX - width*0.5f;
-        res.mData->offsetMax.x = offsX + width*0.5f;
+        res.mAnchorMin.x = 0.5f;
+        res.mAnchorMax.x = 0.5f;
+        res.mOffsetMin.x = offsX - width*0.5f;
+        res.mOffsetMax.x = offsX + width*0.5f;
         break;
 
         case HorAlign::Right:
-        res.mData->anchorMin.x = 1.0f;
-        res.mData->anchorMax.x = 1.0f;
-        res.mData->offsetMin.x = -offsX - width;
-        res.mData->offsetMax.x = -offsX;
+        res.mAnchorMin.x = 1.0f;
+        res.mAnchorMax.x = 1.0f;
+        res.mOffsetMin.x = -offsX - width;
+        res.mOffsetMax.x = -offsX;
         break;
 
         default:
@@ -554,32 +548,32 @@ namespace o2
     WidgetLayout WidgetLayout::HorStretch(VerAlign align, float left, float right, float height, float offsY)
     {
         WidgetLayout res;
-        res.mData->anchorMin.x = 0.0f;
-        res.mData->anchorMax.x = 1.0f;
-        res.mData->offsetMin.x = left;
-        res.mData->offsetMax.x = -right;
+        res.mAnchorMin.x = 0.0f;
+        res.mAnchorMax.x = 1.0f;
+        res.mOffsetMin.x = left;
+        res.mOffsetMax.x = -right;
 
         switch (align)
         {
         case VerAlign::Top:
-        res.mData->anchorMin.y = 1.0f;
-        res.mData->anchorMax.y = 1.0f;
-        res.mData->offsetMin.y = -offsY - height;
-        res.mData->offsetMax.y = -offsY;
+        res.mAnchorMin.y = 1.0f;
+        res.mAnchorMax.y = 1.0f;
+        res.mOffsetMin.y = -offsY - height;
+        res.mOffsetMax.y = -offsY;
         break;
 
         case VerAlign::Middle:
-        res.mData->anchorMin.y = 0.5f;
-        res.mData->anchorMax.y = 0.5f;
-        res.mData->offsetMin.y = offsY - height*0.5f;
-        res.mData->offsetMax.y = offsY + height*0.5f;
+        res.mAnchorMin.y = 0.5f;
+        res.mAnchorMax.y = 0.5f;
+        res.mOffsetMin.y = offsY - height*0.5f;
+        res.mOffsetMax.y = offsY + height*0.5f;
         break;
 
         case VerAlign::Bottom:
-        res.mData->anchorMin.y = 0.0f;
-        res.mData->anchorMax.y = 0.0f;
-        res.mData->offsetMin.y = offsY;
-        res.mData->offsetMax.y = offsY + height;
+        res.mAnchorMin.y = 0.0f;
+        res.mAnchorMax.y = 0.0f;
+        res.mOffsetMin.y = offsY;
+        res.mOffsetMax.y = offsY + height;
         break;
 
         case VerAlign::Both:
@@ -592,15 +586,15 @@ namespace o2
     void WidgetLayout::SetOwner(const Ref<Actor>& actor)
     {
         ActorTransform::SetOwner(actor);
-        mData->owner = (Widget*)actor.Get();
+        mOwnerWidget = (Widget*)actor.Get();
         SetDirty();
     }
 
     void WidgetLayout::SetDirty(bool fromParent /*= false*/)
     {
-        if (!fromParent && mData->drivenByParent && mData->owner)
+        if (!fromParent && mDrivenByParent && mOwnerWidget)
         {
-            if (auto parent = mData->owner->mParent.Lock())
+            if (auto parent = mOwnerWidget->mParent.Lock())
                 parent->transform->SetDirty(fromParent);
         }
 
@@ -609,10 +603,10 @@ namespace o2
 
     RectF WidgetLayout::GetParentRectangle() const
     {
-        if (auto parentWidget = mData->owner->mParentWidget.Lock())
-            return parentWidget->GetLayoutData().childrenWorldRect;
-        else if (auto parent = mData->owner->mParent.Lock())
-            return parent->transform->mData->worldRectangle;
+        if (auto parentWidget = mOwnerWidget->mParentWidget.Lock())
+            return parentWidget->GetLayoutData().mChildrenWorldRect;
+        else if (auto parent = mOwnerWidget->mParent.Lock())
+            return parent->transform->mWorldBox.ToRect();
 
         return RectF();
     }
@@ -622,60 +616,64 @@ namespace o2
         RectF parentWorldRect;
         Vec2F parentWorldPosition;
 
-        if (auto parentWidget = mData->owner->mParentWidget.Lock())
+        if (auto parentWidget = mOwnerWidget->mParentWidget.Lock())
         {
-            parentWorldRect = parentWidget->GetLayoutData().childrenWorldRect;
+            parentWorldRect = parentWidget->GetLayoutData().mChildrenWorldRect;
 
-            RectF notWidgetWorldRect = parentWidget->transform->mData->worldRectangle;
+            RectF notWidgetWorldRect = parentWidget->transform->mWorldBox.ToRect();
             parentWorldPosition = notWidgetWorldRect.LeftBottom() +
-                parentWidget->transform->mData->pivot*notWidgetWorldRect.Size();
+                parentWidget->transform->mPivot.XY()*notWidgetWorldRect.Size();
         }
-        else if (auto parent = mData->owner->mParent.Lock())
+        else if (auto parent = mOwnerWidget->mParent.Lock())
         {
-            parentWorldRect = parent->transform->mData->worldRectangle;
+            parentWorldRect = parent->transform->mWorldBox.ToRect();
 
             parentWorldPosition = parentWorldRect.LeftBottom() +
-                parent->transform->mData->pivot*parentWorldRect.Size();
+                parent->transform->mPivot.XY()*parentWorldRect.Size();
         }
 
-        RectF worldRectangle(parentWorldRect.LeftBottom() + mData->offsetMin + mData->anchorMin*parentWorldRect.Size(),
-                             parentWorldRect.LeftBottom() + mData->offsetMax + mData->anchorMax*parentWorldRect.Size());
+        RectF worldRectangle(parentWorldRect.LeftBottom() + mOffsetMin + mAnchorMin*parentWorldRect.Size(),
+                             parentWorldRect.LeftBottom() + mOffsetMax + mAnchorMax*parentWorldRect.Size());
 
-        mData->size = worldRectangle.Size();
-        mData->position = worldRectangle.LeftBottom() - parentWorldPosition + mData->size*mData->pivot;
+        mSize.x = worldRectangle.Width();
+        mSize.y = worldRectangle.Height();
+
+        Vec2F position = worldRectangle.LeftBottom() - parentWorldPosition + mSize.XY()*mPivot.XY();
+        mPosition.x = position.x;
+        mPosition.y = position.y;
 
         (this->*mCheckMinMaxFunc)();
 
         FloorRectangle();
-        UpdateRectangle();
+        UpdateLocalBox();
         UpdateTransform();
-        UpdateWorldRectangleAndTransform();
+        UpdateWorldBoxAndTransform();
 
-        mData->updateFrame = mData->dirtyFrame;
+        mUpdateFrame = mDirtyFrame;
 
-        if (mData->owner)
+        if (mOwnerWidget)
         {
-            mData->owner->SetChildrenWorldRect(mData->worldRectangle);
-            mData->owner->OnTransformUpdated();
+            mOwnerWidget->SetChildrenWorldRect(mWorldBox.ToRect());
+            mOwnerWidget->OnTransformUpdated();
         }
     }
 
     void WidgetLayout::FloorRectangle()
     {
-        mData->size.x = Math::Round(mData->size.x);
-        mData->size.y = Math::Round(mData->size.y);
-        mData->position.x = Math::Round(mData->position.x);
-        mData->position.y = Math::Round(mData->position.y);
+        mSize.x = Math::Round(mSize.x);
+        mSize.y = Math::Round(mSize.y);
+        mPosition.x = Math::Round(mPosition.x);
+        mPosition.y = Math::Round(mPosition.y);
     }
 
     void WidgetLayout::UpdateOffsetsByCurrentTransform()
     {
         Vec2F offs;
 
-        if (auto parentWidget = mData->owner->mParentWidget.Lock())
+        if (auto parentWidget = mOwnerWidget->mParentWidget.Lock())
         {
-            offs = parentWidget->GetLayoutData().childrenWorldRect.LeftBottom() -
-                parentWidget->GetLayoutData().worldRectangle.LeftBottom();
+            offs = parentWidget->GetLayoutData().mChildrenWorldRect.LeftBottom() -
+                parentWidget->GetLayoutData().mWorldBox.ToRect().LeftBottom();
         }
 
         SetRect(ActorTransform::GetRect() - offs);
@@ -687,13 +685,13 @@ namespace o2
 
         if (otherLayout)
         {
-            mData->anchorMin = otherLayout->mData->anchorMin;
-            mData->anchorMax = otherLayout->mData->anchorMax;
-            mData->offsetMin = otherLayout->mData->offsetMin;
-            mData->offsetMax = otherLayout->mData->offsetMax;
-            mData->minSize = otherLayout->mData->minSize;
-            mData->maxSize = otherLayout->mData->maxSize;
-            mData->weight = otherLayout->mData->weight;
+            mAnchorMin = otherLayout->mAnchorMin;
+            mAnchorMax = otherLayout->mAnchorMax;
+            mOffsetMin = otherLayout->mOffsetMin;
+            mOffsetMax = otherLayout->mOffsetMax;
+            mMinSize = otherLayout->mMinSize;
+            mMaxSize = otherLayout->mMaxSize;
+            mWeight = otherLayout->mWeight;
 
             mCheckMinMaxFunc = otherLayout->mCheckMinMaxFunc;
         }
@@ -703,20 +701,104 @@ namespace o2
 
     void WidgetLayout::CheckMinMax()
     {
-        Vec2F resSize = mData->size;
-        Vec2F minSizeWithChildren(mData->owner->GetMinWidthWithChildren(), mData->owner->GetMinHeightWithChildren());
+        Vec2F resSize = mSize.XY();
+        Vec2F minSizeWithChildren(mOwnerWidget->GetMinWidthWithChildren(), mOwnerWidget->GetMinHeightWithChildren());
 
-        Vec2F clampSize(Math::Clamp(resSize.x, minSizeWithChildren.x, mData->maxSize.x),
-                        Math::Clamp(resSize.y, minSizeWithChildren.y, mData->maxSize.y));
+        Vec2F clampSize(Math::Clamp(resSize.x, minSizeWithChildren.x, mMaxSize.x),
+                        Math::Clamp(resSize.y, minSizeWithChildren.y, mMaxSize.y));
 
         Vec2F szDelta = clampSize - resSize;
 
         if (szDelta != Vec2F())
-            mData->size += szDelta;
+        {
+            mSize.x += szDelta.x;
+            mSize.y += szDelta.y;
+        }
     }
 
     void WidgetLayout::DontCheckMinMax()
     {}
+
+    bool WidgetLayout::IsSerializeEnabled() const
+    {
+        return false;
+    }
+
+    void WidgetLayout::OnSerialize(DataValue& node) const
+    {
+        ActorTransform::OnSerialize(node);
+
+        auto serialize = [&node](const char* name, const Vec2F& value, const Vec2F& defaultValue) {
+            if (value != defaultValue)
+                node.AddMember(name).Set(value);
+        };
+
+        serialize("anchorMin", mAnchorMin, Vec2F(0, 0));
+        serialize("anchorMax", mAnchorMax, Vec2F(0, 0));
+        serialize("offsetMin", mOffsetMin, Vec2F(0, 0));
+        serialize("offsetMax", mOffsetMax, Vec2F(10, 10));
+        serialize("minSize", mMinSize, Vec2F(0, 0));
+        serialize("maxSize", mMaxSize, Vec2F(10000, 10000));
+        serialize("weight", mWeight, Vec2F(1, 1));
+    }
+
+    void WidgetLayout::OnDeserialized(const DataValue& node)
+    {
+        auto deserialize = [&node](const char* name, Vec2F& value) {
+            if (auto member = node.FindMember(name))
+                member->Get(value);
+        };
+
+        deserialize("anchorMin", mAnchorMin);
+        deserialize("anchorMax", mAnchorMax);
+        deserialize("offsetMin", mOffsetMin);
+        deserialize("offsetMax", mOffsetMax);
+        deserialize("minSize", mMinSize);
+        deserialize("maxSize", mMaxSize);
+        deserialize("weight", mWeight);
+
+        ActorTransform::OnDeserialized(node);
+    }
+
+    void WidgetLayout::OnSerializeDelta(DataValue& node, const IObject& origin) const
+    {
+        ActorTransform::OnSerializeDelta(node, origin);
+
+        auto& other = dynamic_cast<const WidgetLayout&>(origin);
+        auto serialize = [&node](const char* name, const Vec2F& value, const Vec2F& originValue) {
+            if (!EqualsForDeltaSerialize(value, originValue))
+                node.AddMember(name).Set(value);
+        };
+
+        serialize("anchorMin", mAnchorMin, other.mAnchorMin);
+        serialize("anchorMax", mAnchorMax, other.mAnchorMax);
+        serialize("offsetMin", mOffsetMin, other.mOffsetMin);
+        serialize("offsetMax", mOffsetMax, other.mOffsetMax);
+        serialize("minSize", mMinSize, other.mMinSize);
+        serialize("maxSize", mMaxSize, other.mMaxSize);
+        serialize("weight", mWeight, other.mWeight);
+    }
+
+    void WidgetLayout::OnDeserializedDelta(const DataValue& node, const IObject& origin)
+    {
+        auto& other = dynamic_cast<const WidgetLayout&>(origin);
+        auto deserialize = [&node](const char* name, Vec2F& value, const Vec2F& originValue) {
+            if (auto member = node.FindMember(name); member && !member->IsNull())
+                member->Get(value);
+            else
+                value = originValue;
+        };
+
+        deserialize("anchorMin", mAnchorMin, other.mAnchorMin);
+        deserialize("anchorMax", mAnchorMax, other.mAnchorMax);
+        deserialize("offsetMin", mOffsetMin, other.mOffsetMin);
+        deserialize("offsetMax", mOffsetMax, other.mOffsetMax);
+        deserialize("minSize", mMinSize, other.mMinSize);
+        deserialize("maxSize", mMaxSize, other.mMaxSize);
+        deserialize("weight", mWeight, other.mWeight);
+
+        ActorTransform::OnDeserializedDelta(node, origin);
+    }
 
 #if IS_SCRIPTING_SUPPORTED
     void WidgetLayout::Set(const WidgetLayout& other)
@@ -802,15 +884,8 @@ namespace o2
     return widths;
 }
 
-    bool WidgetLayoutData::IsSerializeEnabled() const
-    {
-        return false;
-    }
-
 }
 // --- META ---
 
 DECLARE_CLASS(o2::WidgetLayout, o2__WidgetLayout);
-
-DECLARE_CLASS(o2::WidgetLayoutData, o2__WidgetLayoutData);
 // --- END META ---

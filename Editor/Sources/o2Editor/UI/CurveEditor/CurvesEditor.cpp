@@ -120,9 +120,9 @@ namespace Editor
         if (mReady && mResEnabledInHierarchy && !mIsClipped && mNeedAdjustView)
         {
             mNeedAdjustView = false;
-            mViewCameraTargetScale = mAvailableArea.Size()/mViewCamera.GetSize();
+            mViewCameraTargetScale = mAvailableArea.Size()/mViewCamera.GetSize2D();
             mViewCamera.center = mAvailableArea.Center();
-            mViewCameraTargetPos = mViewCamera.position;
+            mViewCameraTargetPos = mViewCamera.GetPosition2D();
         }
     }
 
@@ -521,27 +521,27 @@ namespace Editor
         if (o2Input.IsKeyDown(VK_F1))
         {
             o2Render.DrawCross(gridScreenOrigin, 5, Color4::Red());
-            mTextLeft->SetScale(Vec2F(1, 1));
+            mTextLeft->SetScale2D(Vec2F(1, 1));
             mTextLeft->SetText(String(gridCurveViewOrigin) + "\n" + String(curveViewCellSize));
             mTextLeft->SetPosition(gridScreenOrigin);
             mTextLeft->Draw();
 
-            mTextTop->SetScale(Vec2F(1, 1));
+            mTextTop->SetScale2D(Vec2F(1, 1));
             mTextTop->SetText(String(curveViewCameraRect.top));
             mTextTop->SetPosition(Vec2F(0, screenCameraRect.top));
             mTextTop->Draw();
 
-            mTextBottom->SetScale(Vec2F(1, 1));
+            mTextBottom->SetScale2D(Vec2F(1, 1));
             mTextBottom->SetText(String(curveViewCameraRect.bottom));
             mTextBottom->SetPosition(Vec2F(0, screenCameraRect.bottom));
             mTextBottom->Draw();
 
-            mTextLeft->SetScale(Vec2F(1, 1));
+            mTextLeft->SetScale2D(Vec2F(1, 1));
             mTextLeft->SetText(String(curveViewCameraRect.left));
             mTextLeft->SetPosition(Vec2F(screenCameraRect.left, 0));
             mTextLeft->Draw();
 
-            mTextRight->SetScale(Vec2F(1, 1));
+            mTextRight->SetScale2D(Vec2F(1, 1));
             mTextRight->SetText(String(curveViewCameraRect.right));
             mTextRight->SetPosition(Vec2F(screenCameraRect.right, 0));
             mTextRight->Draw();
@@ -721,8 +721,8 @@ namespace Editor
         Vec2F borders(10, 10);
 
         mTransformFrame->SetBasis(Basis(LocalToScreenPoint(mTransformFrameBasis.origin) - borders,
-                                 mTransformFrameBasis.xv/mViewCamera.GetScale() + Vec2F(borders.x*2.0f, 0),
-                                 mTransformFrameBasis.yv/mViewCamera.GetScale() + Vec2F(0, borders.y*2.0f)));
+                                 mTransformFrameBasis.xv/mViewCamera.GetScale2D() + Vec2F(borders.x*2.0f, 0),
+                                 mTransformFrameBasis.yv/mViewCamera.GetScale2D() + Vec2F(0, borders.y*2.0f)));
 
         mTransformFrame->Draw();
 
@@ -1668,8 +1668,8 @@ namespace Editor
     {
         Vec2F border(10, 10);
         Basis localBasis(ScreenToLocalPoint(basis.origin + border),
-            (basis.xv - Vec2F(border.x*2.0f, 0))*mViewCamera.GetScale(),
-                         (basis.yv - Vec2F(0, border.y*2.0f))*mViewCamera.GetScale());
+            (basis.xv - Vec2F(border.x*2.0f, 0))*mViewCamera.GetScale2D(),
+                         (basis.yv - Vec2F(0, border.y*2.0f))*mViewCamera.GetScale2D());
 
         Basis lastTransformBasis = mTransformFrameBasis;
         Basis delta = mTransformFrameBasis.Inverted()*localBasis;

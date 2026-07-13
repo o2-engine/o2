@@ -129,7 +129,7 @@ namespace Editor
             {
                 auto dockWnd = DynamicCast<DockableWindow>(window->mWindow);
 
-                dockWnd->mNonDockSize = dockWnd->layout->size;
+                dockWnd->mNonDockSize = dockWnd->layout->size2D;
                 dockWidget.AddChild(dockWnd);
                 *dockWnd->layout = WidgetLayout::BothStretch();
                 dockWnd->SetDocked(true);

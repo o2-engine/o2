@@ -69,8 +69,34 @@ set(JERRY_GC_LIMIT                  "(0)"    CACHE BOOL "" FORCE)
 set(JERRY_STACK_LIMIT               "(0)"    CACHE BOOL "" FORCE)
 set(JERRY_GC_MARK_LIMIT             "(8)"    CACHE BOOL "" FORCE)
 
-if (O2_SCRIPTING)
+if (O2_SCRIPTING AND O2_SCRIPTING_BACKEND STREQUAL "jerryscript")
     add_subdirectory(jerryscript)
+endif()
+
+# quickjs (quickjs-ng), vendored: core interpreter only, no libc/cli
+if (O2_SCRIPTING AND O2_SCRIPTING_BACKEND STREQUAL "quickjs")
+    add_library(quickjs STATIC
+        quickjs/quickjs.c
+        quickjs/libregexp.c
+        quickjs/libunicode.c
+        quickjs/dtoa.c
+    )
+    target_include_directories(quickjs PUBLIC quickjs)
+    target_compile_definitions(quickjs PRIVATE _GNU_SOURCE)
+    set_target_properties(quickjs PROPERTIES C_STANDARD 11 FOLDER o2/3rdPartyLibs)
+
+    if (WIN32)
+        target_compile_definitions(quickjs PRIVATE WIN32_LEAN_AND_MEAN _WIN32_WINNT=0x0601)
+    endif()
+
+    # Vendored third-party code: never fail the build on toolchain warnings
+    if (MSVC)
+        target_compile_options(quickjs PRIVATE /w)
+    else()
+        target_compile_options(quickjs PRIVATE -Wno-everything)
+    endif()
+
+    target_link_libraries(quickjs PUBLIC ${CMAKE_DL_LIBS})
 endif()
 
 # Android NDK clang is newer than o2's local clang and promotes some warnings
@@ -115,6 +141,7 @@ add_subdirectory(zlib)
 add_subdirectory(FreeType)
 add_subdirectory(pugixml)
 add_subdirectory(boost)
+add_subdirectory(miniaudio)
 
 # spine
 set(SPINE_SANITIZE OFF)
@@ -132,6 +159,7 @@ if(MSVC)
     target_compile_options(FreeType PRIVATE ${O2_MSVC_MP_FLAG})
     target_compile_options(pugixml PRIVATE ${O2_MSVC_MP_FLAG})
     target_compile_options(spine-cpp PRIVATE ${O2_MSVC_MP_FLAG})
+    target_compile_options(miniaudio PRIVATE ${O2_MSVC_MP_FLAG})
 endif()
 
 set_target_properties(Box2D PROPERTIES FOLDER o2/3rdPartyLibs)
@@ -146,6 +174,7 @@ set_target_properties(zlib PROPERTIES FOLDER o2/3rdPartyLibs)
 set_target_properties(FreeType PROPERTIES FOLDER o2/3rdPartyLibs)
 set_target_properties(pugixml PROPERTIES FOLDER o2/3rdPartyLibs)
 set_target_properties(spine-cpp PROPERTIES FOLDER o2/3rdPartyLibs)
+set_target_properties(miniaudio PROPERTIES FOLDER o2/3rdPartyLibs)
 
 if(MSVC)
     set_target_properties(boost_stacktrace_windbg_cached PROPERTIES FOLDER o2/3rdPartyLibs)

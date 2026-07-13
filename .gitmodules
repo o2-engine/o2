@@ -34,3 +34,6 @@
 [submodule "Framework/3rdPartyLibs/boost/throw_exception"]
 	path = Framework/3rdPartyLibs/boost/throw_exception
 	url = https://github.com/boostorg/throw_exception.git
+[submodule "Framework/3rdPartyLibs/quickjs"]
+	path = Framework/3rdPartyLibs/quickjs
+	url = https://github.com/quickjs-ng/quickjs.git

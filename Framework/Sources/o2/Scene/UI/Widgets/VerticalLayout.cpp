@@ -17,7 +17,7 @@ namespace o2
         mExpandHeight(other.mExpandHeight), mFitByChildren(other.mFitByChildren)
     {
         for (auto& child : mChildWidgets)
-            child->GetLayoutData().drivenByParent = true;
+            child->GetLayoutData().mDrivenByParent = true;
 
         RetargetStatesAnimations();
         SetLayoutDirty();
@@ -40,7 +40,7 @@ namespace o2
         Widget::operator=(other);
 
         for (auto& child : mChildWidgets)
-            child->GetLayoutData().drivenByParent = true;
+            child->GetLayoutData().mDrivenByParent = true;
 
         RetargetStatesAnimations();
         SetLayoutDirty();
@@ -187,7 +187,7 @@ namespace o2
                 res = Math::Max(res, child->GetMinWidthWithChildren() + mBorder.left + mBorder.right);
         }
 
-        res = Math::Max(res, GetLayoutData().minSize.x);
+        res = Math::Max(res, GetLayoutData().mMinSize.x);
 
         return res;
     }
@@ -204,7 +204,7 @@ namespace o2
                 res += child->GetMinHeightWithChildren();
         }
 
-        res = Math::Max(res, GetLayoutData().minSize.y);
+        res = Math::Max(res, GetLayoutData().mMinSize.y);
 
         return res;
     }
@@ -223,12 +223,12 @@ namespace o2
 
     void VerticalLayout::OnChildAdded(const Ref<Widget>& child)
     {
-        child->GetLayoutData().drivenByParent = true;
+        child->GetLayoutData().mDrivenByParent = true;
     }
 
     void VerticalLayout::OnChildRemoved(const Ref<Widget>& child)
     {
-        child->GetLayoutData().drivenByParent = false;
+        child->GetLayoutData().mDrivenByParent = false;
     }
 
     void VerticalLayout::RearrangeChilds()
@@ -258,15 +258,15 @@ namespace o2
 
     void VerticalLayout::UpdateLayoutParametres()
     {
-        GetLayoutData().weight.y = 0;
+        GetLayoutData().mWeight.y = 0;
         for (auto& child : mChildWidgets)
         {
             if (child->mResEnabledInHierarchy)
-                GetLayoutData().weight.y += child->GetHeightWeightWithChildren();
+                GetLayoutData().mWeight.y += child->GetHeightWeightWithChildren();
         }
 
-        if (GetLayoutData().weight.y < FLT_EPSILON)
-            GetLayoutData().weight.y = 1.0f;
+        if (GetLayoutData().mWeight.y < FLT_EPSILON)
+            GetLayoutData().mWeight.y = 1.0f;
 
         layout->EnableSizeChecks();
     }
@@ -285,10 +285,10 @@ namespace o2
             int i = 0;
             for (auto& child : widgets)
             {
-                child->GetLayoutData().offsetMin.y = position;
+                child->GetLayoutData().mOffsetMin.y = position;
                 position += heights[i++];
 
-                child->GetLayoutData().offsetMax.y = position;
+                child->GetLayoutData().mOffsetMax.y = position;
                 position += mSpacing;
 
                 AlignWidgetByWidth(child, 0.5f);
@@ -304,10 +304,10 @@ namespace o2
                 if (!child->mResEnabledInHierarchy)
                     continue;
 
-                child->GetLayoutData().offsetMin.y = position;
-                position += Math::Abs(Math::Max(child->GetLayoutData().minSize.y, child->GetMinHeightWithChildren()));
+                child->GetLayoutData().mOffsetMin.y = position;
+                position += Math::Abs(Math::Max(child->GetLayoutData().mMinSize.y, child->GetMinHeightWithChildren()));
 
-                child->GetLayoutData().offsetMax.y = position;
+                child->GetLayoutData().mOffsetMax.y = position;
                 position += mSpacing;
 
                 AlignWidgetByWidth(child, 0.5f);
@@ -330,10 +330,10 @@ namespace o2
                 if (!child->mResEnabledInHierarchy)
                     continue;
 
-                child->GetLayoutData().offsetMin.y = position;
+                child->GetLayoutData().mOffsetMin.y = position;
                 position += heights[i++];
 
-                child->GetLayoutData().offsetMax.y = position;
+                child->GetLayoutData().mOffsetMax.y = position;
                 position += mSpacing;
 
                 AlignWidgetByWidth(child, 0.0f);
@@ -347,10 +347,10 @@ namespace o2
                 if (!child->mResEnabledInHierarchy)
                     continue;
 
-                child->GetLayoutData().offsetMin.y = position;
-                position += Math::Abs(Math::Max(child->GetLayoutData().minSize.y, child->GetMinHeightWithChildren()));
+                child->GetLayoutData().mOffsetMin.y = position;
+                position += Math::Abs(Math::Max(child->GetLayoutData().mMinSize.y, child->GetMinHeightWithChildren()));
 
-                child->GetLayoutData().offsetMax.y = position;
+                child->GetLayoutData().mOffsetMax.y = position;
                 position += mSpacing;
 
                 AlignWidgetByWidth(child, 0.0f);
@@ -373,10 +373,10 @@ namespace o2
                 if (!child->mResEnabledInHierarchy)
                     continue;
 
-                child->GetLayoutData().offsetMax.y = -position;
+                child->GetLayoutData().mOffsetMax.y = -position;
                 position += heights[i++];
 
-                child->GetLayoutData().offsetMin.y = -position;
+                child->GetLayoutData().mOffsetMin.y = -position;
                 position += mSpacing;
 
                 AlignWidgetByWidth(child, 1.0f);
@@ -390,10 +390,10 @@ namespace o2
                 if (!child->mResEnabledInHierarchy)
                     continue;
 
-                child->GetLayoutData().offsetMax.y = -position;
-                position += Math::Abs(Math::Max(child->GetLayoutData().minSize.y, child->GetMinHeightWithChildren()));
+                child->GetLayoutData().mOffsetMax.y = -position;
+                position += Math::Abs(Math::Max(child->GetLayoutData().mMinSize.y, child->GetMinHeightWithChildren()));
 
-                child->GetLayoutData().offsetMin.y = -position;
+                child->GetLayoutData().mOffsetMin.y = -position;
                 position += mSpacing;
 
                 AlignWidgetByWidth(child, 1.0f);
@@ -405,34 +405,34 @@ namespace o2
     {
         if (mExpandWidth)
         {
-            child->GetLayoutData().anchorMin = Vec2F(0, heightAnchor);
-            child->GetLayoutData().anchorMax = Vec2F(1, heightAnchor);
-            child->GetLayoutData().offsetMin.x = mBorder.left;
-            child->GetLayoutData().offsetMax.x = -mBorder.right;
+            child->GetLayoutData().mAnchorMin = Vec2F(0, heightAnchor);
+            child->GetLayoutData().mAnchorMax = Vec2F(1, heightAnchor);
+            child->GetLayoutData().mOffsetMin.x = mBorder.left;
+            child->GetLayoutData().mOffsetMax.x = -mBorder.right;
         }
         else
         {
             float width = child->layout->GetWidth();
             if (mBaseCorner == BaseCorner::LeftBottom || mBaseCorner == BaseCorner::Left || mBaseCorner == BaseCorner::LeftTop)
             {
-                child->GetLayoutData().anchorMin = Vec2F(0, heightAnchor);
-                child->GetLayoutData().anchorMax = Vec2F(0, heightAnchor);
-                child->GetLayoutData().offsetMin.x = mBorder.left;
-                child->GetLayoutData().offsetMax.x = mBorder.left + width;
+                child->GetLayoutData().mAnchorMin = Vec2F(0, heightAnchor);
+                child->GetLayoutData().mAnchorMax = Vec2F(0, heightAnchor);
+                child->GetLayoutData().mOffsetMin.x = mBorder.left;
+                child->GetLayoutData().mOffsetMax.x = mBorder.left + width;
             }
             if (mBaseCorner == BaseCorner::Bottom || mBaseCorner == BaseCorner::Center || mBaseCorner == BaseCorner::Top)
             {
-                child->GetLayoutData().anchorMin = Vec2F(0.5f, heightAnchor);
-                child->GetLayoutData().anchorMax = Vec2F(0.5f, heightAnchor);
-                child->GetLayoutData().offsetMin.x = -width*0.5f;
-                child->GetLayoutData().offsetMax.x = width*0.5f;
+                child->GetLayoutData().mAnchorMin = Vec2F(0.5f, heightAnchor);
+                child->GetLayoutData().mAnchorMax = Vec2F(0.5f, heightAnchor);
+                child->GetLayoutData().mOffsetMin.x = -width*0.5f;
+                child->GetLayoutData().mOffsetMax.x = width*0.5f;
             }
             if (mBaseCorner == BaseCorner::RightBottom || mBaseCorner == BaseCorner::Right || mBaseCorner == BaseCorner::RightTop)
             {
-                child->GetLayoutData().anchorMin = Vec2F(1, heightAnchor);
-                child->GetLayoutData().anchorMax = Vec2F(1, heightAnchor);
-                child->GetLayoutData().offsetMin.x = -mBorder.right - width;
-                child->GetLayoutData().offsetMax.x = -mBorder.right;
+                child->GetLayoutData().mAnchorMin = Vec2F(1, heightAnchor);
+                child->GetLayoutData().mAnchorMax = Vec2F(1, heightAnchor);
+                child->GetLayoutData().mOffsetMin.x = -mBorder.right - width;
+                child->GetLayoutData().mOffsetMax.x = -mBorder.right;
             }
         }
     }
@@ -455,7 +455,7 @@ namespace o2
         Vec2F size(GetMinWidthWithChildren(), GetMinHeightWithChildren());
 
         Vec2F parentSize = mParentWidget ? mParentWidget.Lock()->GetChildrenWorldRect().Size() : Vec2F();
-        Vec2F szDelta = size - (GetLayoutData().offsetMax - GetLayoutData().offsetMin + (GetLayoutData().anchorMax - GetLayoutData().anchorMin)*parentSize);
+        Vec2F szDelta = size - (GetLayoutData().mOffsetMax - GetLayoutData().mOffsetMin + (GetLayoutData().mAnchorMax - GetLayoutData().mAnchorMin)*parentSize);
 
         if (mExpandWidth)
             szDelta.x = 0;
@@ -463,8 +463,8 @@ namespace o2
         if (mExpandHeight)
             szDelta.y = 0;
 
-        GetLayoutData().offsetMax += szDelta*(Vec2F::One() - relativePivot);
-        GetLayoutData().offsetMin -= szDelta*relativePivot;
+        GetLayoutData().mOffsetMax += szDelta*(Vec2F::One() - relativePivot);
+        GetLayoutData().mOffsetMin -= szDelta*relativePivot;
     }
 }
 

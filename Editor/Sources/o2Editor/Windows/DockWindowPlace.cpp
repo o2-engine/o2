@@ -165,6 +165,8 @@ namespace Editor
                 tabWindows.Add(DynamicCast<DockableWindow>(child));
         }
 
+        // Pending deferred sorting is applied first, the tab order set below must stay on top of it
+        UpdateInheritedDrawablesSorting();
         mChildrenInheritedDepth.SortBy<int>([](auto& child) { return DynamicCast<DockableWindow>(child)->mTabPosition; });
 
         for (auto& tabWindow : tabWindows)

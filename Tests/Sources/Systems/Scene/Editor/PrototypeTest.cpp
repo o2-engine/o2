@@ -39,14 +39,14 @@ TEST(Prototype, MakePrototypeCreatesActorClone)
     SceneCleanGuard guard;
     auto a = mmake<Actor>(ActorCreateMode::InScene);
     a->SetName("clone_check");
-    a->transform->SetPosition(Vec2F(15, 25));
+    a->transform->SetPosition2D(Vec2F(15, 25));
 
     auto asset = a->MakePrototype();
     auto protoActor = asset->GetActor();
 
     ASSERT_TRUE(protoActor);
     EXPECT_EQ(protoActor->GetName(), "clone_check");
-    EXPECT_TRUE(VecNearTest(protoActor->transform->GetPosition(), Vec2F(15, 25)));
+    EXPECT_TRUE(VecNearTest(protoActor->transform->GetPosition2D(), Vec2F(15, 25)));
 }
 
 TEST(Prototype, GetPrototypeDirectlyReturnsNullForChild)

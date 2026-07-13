@@ -14,10 +14,18 @@ TEST(ScriptEngine, ParseValidScriptIsOk) {
     EXPECT_TRUE((bool)res);
 }
 
-// Note: tests that exercise Parse/Eval failure paths are intentionally omitted.
-// jerryscript's ECMA error reference handling currently asserts (ICE) when
-// ScriptParseResult holding an error value is destructed, so error-path coverage
-// would crash the test runner.
+TEST(ScriptEngine, ParseErrorReportsDescription) {
+    ScriptParseResult res = o2Scripts.Parse("var engineTest_broken = ;");
+    EXPECT_FALSE(res.IsOk());
+    EXPECT_FALSE((bool)res);
+    EXPECT_FALSE(res.GetError().IsEmpty());
+}
+
+TEST(ScriptEngine, RuntimeErrorValueHasDescription) {
+    ScriptValue res = o2Scripts.Eval("(function() { throw new Error('engineTest boom'); })()");
+    EXPECT_EQ(res.GetValueType(), ScriptValue::ValueType::Error);
+    EXPECT_TRUE(res.GetError().Contains("boom"));
+}
 
 TEST(ScriptEngine, ParseAndRunSetsGlobal) {
     ScriptParseResult res = o2Scripts.Parse("var engineTest_runVal = 7 * 6;");

@@ -103,8 +103,7 @@ namespace Editor
 
         o2Render.EnableScissorTest(mAbsoluteClipArea);
 
-        for (auto& child : mChildrenInheritedDepth)
-            child->Draw();
+        DrawInheritedDepthChildren();
 
         if (mSelecting)
             mSelectionSprite->Draw();
@@ -140,7 +139,7 @@ namespace Editor
         {
             if (mHighlightIcon)
             {
-                mHighlightSprite->SetScale(Vec2F(1.0f, 1.0f));
+                mHighlightSprite->SetScale2D(Vec2F(1.0f, 1.0f));
                 mHighlightSprite->SetRect(mHighlightLayout.Calculate(mHighlightIcon->layout->worldRect));
             }
 

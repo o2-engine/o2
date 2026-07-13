@@ -95,8 +95,7 @@ namespace o2
         if (mIsFocused)
             mCaretDrawable->Draw();
 
-        for (auto& child : mChildrenInheritedDepth)
-            child->Draw();
+        DrawInheritedDepthChildren();
 
         o2Render.DisableScissorTest();
 
@@ -975,7 +974,7 @@ namespace o2
         UpdateScrollParams();
         UpdateSelectionAndCaret();
 
-        Vec2F caretPos = mCaretDrawable->GetPosition();
+        Vec2F caretPos = mCaretDrawable->GetPosition2D();
         RectF clipRect = mAbsoluteViewArea;
 
         float rightOffs = Math::Max(caretPos.x - clipRect.right + 5.0f, 0.0f);
