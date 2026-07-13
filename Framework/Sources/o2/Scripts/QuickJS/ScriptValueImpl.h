@@ -7,7 +7,7 @@
 #include <type_traits>
 #include <functional>
 
-#if defined(SCRIPTING_BACKEND_JERRYSCRIPT)
+#if defined(SCRIPTING_BACKEND_QUICKJS)
 
 namespace o2
 {
@@ -141,7 +141,7 @@ namespace o2
     // -------------------------------------------------------
 
     template<typename T>
-    static auto ConvertJerryArg(jerry_value_t* args, size_t index, int count)
+    static auto ConvertScriptArg(JSValueConst* args, size_t index, int count)
         -> typename RemoveConstAndRef<T>::type
     {
         using CleanT = typename RemoveConstAndRef<T>::type;
@@ -159,23 +159,23 @@ namespace o2
         ScriptFunctionContainer(const _invocable_type& function) : data(function) {}
         ScriptFunctionContainer(_invocable_type&& function) : data(std::move(function)) {}
 
-        jerry_value_t Invoke(jerry_value_t thisValue, jerry_value_t* args, int argsCount) override
+        JSValue Invoke(JSValueConst thisValue, JSValueConst* args, int argsCount) override
         {
             return InvokeImpl(args, argsCount, std::index_sequence_for<_args...>{});
         }
 
         template<size_t... Is>
-        jerry_value_t InvokeImpl(jerry_value_t* args, int argsCount, std::index_sequence<Is...>)
+        JSValue InvokeImpl(JSValueConst* args, int argsCount, std::index_sequence<Is...>)
         {
             if constexpr (std::is_void<_res_type>::value)
             {
-                data(ConvertJerryArg<_args>(args, Is, argsCount)...);
-                return jerry_create_undefined();
+                data(ConvertScriptArg<_args>(args, Is, argsCount)...);
+                return JS_UNDEFINED;
             }
             else
             {
-                ScriptValue res(data(ConvertJerryArg<_args>(args, Is, argsCount)...));
-                return jerry_acquire_value(res.jvalue);
+                ScriptValue res(data(ConvertScriptArg<_args>(args, Is, argsCount)...));
+                return JS_DupValue(QuickJs::Ctx(), res.mValue);
             }
         }
     };
@@ -187,7 +187,7 @@ namespace o2
 
         ScriptThisFunctionContainer(const _invocable_type& function) : data(function) {}
 
-        jerry_value_t Invoke(jerry_value_t thisValue, jerry_value_t* args, int argsCount) override
+        JSValue Invoke(JSValueConst thisValue, JSValueConst* args, int argsCount) override
         {
             ScriptValue thisObj;
             thisObj.AcquireValue(thisValue);
@@ -195,17 +195,17 @@ namespace o2
         }
 
         template<size_t... Is>
-        jerry_value_t InvokeImpl(ScriptValue& thisObj, jerry_value_t* args, int argsCount, std::index_sequence<Is...>)
+        JSValue InvokeImpl(ScriptValue& thisObj, JSValueConst* args, int argsCount, std::index_sequence<Is...>)
         {
             if constexpr (std::is_void<_res_type>::value)
             {
-                data(thisObj, ConvertJerryArg<_args>(args, Is, argsCount)...);
-                return jerry_create_undefined();
+                data(thisObj, ConvertScriptArg<_args>(args, Is, argsCount)...);
+                return JS_UNDEFINED;
             }
             else
             {
-                ScriptValue res(data(thisObj, ConvertJerryArg<_args>(args, Is, argsCount)...));
-                return jerry_acquire_value(res.jvalue);
+                ScriptValue res(data(thisObj, ConvertScriptArg<_args>(args, Is, argsCount)...));
+                return JS_DupValue(QuickJs::Ctx(), res.mValue);
             }
         }
     };
@@ -217,33 +217,31 @@ namespace o2
     struct ThunkMethodHandler<Callable, _res(_class::*)(_args...)>
     {
         template<size_t... Is>
-        static jerry_value_t Invoke(_class* obj, const jerry_value_t* args, int count, std::index_sequence<Is...>)
+        static JSValue Invoke(_class* obj, JSValueConst* args, int count, std::index_sequence<Is...>)
         {
             Callable callable{};
             if constexpr (std::is_void_v<_res>)
             {
-                callable(obj, ConvertJerryArg<_args>((jerry_value_t*)args, Is, count)...);
-                return jerry_create_undefined();
+                callable(obj, ConvertScriptArg<_args>(args, Is, count)...);
+                return JS_UNDEFINED;
             }
             else
             {
-                ScriptValue res(callable(obj, ConvertJerryArg<_args>((jerry_value_t*)args, Is, count)...));
-                return jerry_acquire_value(res.jvalue);
+                ScriptValue res(callable(obj, ConvertScriptArg<_args>(args, Is, count)...));
+                return JS_DupValue(QuickJs::Ctx(), res.mValue);
             }
         }
 
-        static jerry_value_t Handle(const jerry_value_t function_obj,
-                                    const jerry_value_t this_val,
-                                    const jerry_value_t args_p[],
-                                    const jerry_length_t args_count)
+        static JSValue Handle(JSValueConst function_obj, JSValueConst this_val,
+                              JSValueConst* args_p, int args_count)
         {
             auto container = ScriptValueBase::GetNativeContainer(this_val);
-            if (!container) return jerry_create_undefined();
+            if (!container) return JS_UNDEFINED;
 
             _class* thisObj = dynamic_cast<_class*>(container->TryCastToIObject());
-            if (!thisObj) return jerry_create_undefined();
+            if (!thisObj) return JS_UNDEFINED;
 
-            return Invoke(thisObj, args_p, (int)args_count, std::index_sequence_for<_args...>{});
+            return Invoke(thisObj, args_p, args_count, std::index_sequence_for<_args...>{});
         }
     };
 
@@ -251,33 +249,31 @@ namespace o2
     struct ThunkMethodHandler<Callable, _res(_class::*)(_args...) const>
     {
         template<size_t... Is>
-        static jerry_value_t Invoke(_class* obj, const jerry_value_t* args, int count, std::index_sequence<Is...>)
+        static JSValue Invoke(_class* obj, JSValueConst* args, int count, std::index_sequence<Is...>)
         {
             Callable callable{};
             if constexpr (std::is_void_v<_res>)
             {
-                callable(obj, ConvertJerryArg<_args>((jerry_value_t*)args, Is, count)...);
-                return jerry_create_undefined();
+                callable(obj, ConvertScriptArg<_args>(args, Is, count)...);
+                return JS_UNDEFINED;
             }
             else
             {
-                ScriptValue res(callable(obj, ConvertJerryArg<_args>((jerry_value_t*)args, Is, count)...));
-                return jerry_acquire_value(res.jvalue);
+                ScriptValue res(callable(obj, ConvertScriptArg<_args>(args, Is, count)...));
+                return JS_DupValue(QuickJs::Ctx(), res.mValue);
             }
         }
 
-        static jerry_value_t Handle(const jerry_value_t function_obj,
-                                    const jerry_value_t this_val,
-                                    const jerry_value_t args_p[],
-                                    const jerry_length_t args_count)
+        static JSValue Handle(JSValueConst function_obj, JSValueConst this_val,
+                              JSValueConst* args_p, int args_count)
         {
             auto container = ScriptValueBase::GetNativeContainer(this_val);
-            if (!container) return jerry_create_undefined();
+            if (!container) return JS_UNDEFINED;
 
             _class* thisObj = dynamic_cast<_class*>(container->TryCastToIObject());
-            if (!thisObj) return jerry_create_undefined();
+            if (!thisObj) return JS_UNDEFINED;
 
-            return Invoke(thisObj, args_p, (int)args_count, std::index_sequence_for<_args...>{});
+            return Invoke(thisObj, args_p, args_count, std::index_sequence_for<_args...>{});
         }
     };
 
@@ -290,13 +286,13 @@ namespace o2
     {
         void* (*pointerGetter)(void*) = nullptr;
 
-        jerry_value_t GetFrom(jerry_value_t this_val) override
+        JSValue GetFrom(JSValueConst this_val) override
         {
             auto container = ScriptValueBase::GetNativeContainer(this_val);
-            if (!container) return jerry_create_undefined();
+            if (!container) return JS_UNDEFINED;
 
             auto objectPtr = static_cast<_object_type*>(container->GetData());
-            if (!objectPtr) return jerry_create_undefined();
+            if (!objectPtr) return JS_UNDEFINED;
 
             auto fieldPtr = static_cast<_field_type*>(pointerGetter(objectPtr));
 
@@ -306,7 +302,7 @@ namespace o2
             else
                 tmp.SetValue<_field_type>(*fieldPtr);
 
-            return jerry_acquire_value(tmp.jvalue);
+            return JS_DupValue(QuickJs::Ctx(), tmp.mValue);
         }
     };
 
@@ -315,7 +311,7 @@ namespace o2
     {
         void* (*pointerGetter)(void*) = nullptr;
 
-        void SetTo(jerry_value_t this_val, jerry_value_t value) override
+        void SetTo(JSValueConst this_val, JSValueConst value) override
         {
             auto container = ScriptValueBase::GetNativeContainer(this_val);
             if (!container) return;
@@ -340,15 +336,15 @@ namespace o2
     // -------------------------------------------------------
 
     template<typename _type>
-    jerry_value_t ScriptValueBase::PointerGetterWrapperContainer<_type>::Get()
+    JSValue ScriptValueBase::PointerGetterWrapperContainer<_type>::Get()
     {
         ScriptValue tmp;
         tmp.SetValue<_type>(*dataPtr);
-        return jerry_acquire_value(tmp.jvalue);
+        return JS_DupValue(QuickJs::Ctx(), tmp.mValue);
     }
 
     template<typename _type>
-    void ScriptValueBase::PointerSetterWrapperContainer<_type>::Set(jerry_value_t value)
+    void ScriptValueBase::PointerSetterWrapperContainer<_type>::Set(JSValueConst value)
     {
         ScriptValue tmp;
         tmp.AcquireValue(value);
@@ -356,15 +352,15 @@ namespace o2
     }
 
     template<typename _property_type>
-    jerry_value_t ScriptValueBase::PropertyGetterWrapperContainer<_property_type>::Get()
+    JSValue ScriptValueBase::PropertyGetterWrapperContainer<_property_type>::Get()
     {
         ScriptValue tmp;
         tmp.SetValue<typename ExtractPropertyValueType<_property_type>::type>(propertyPtr->Get());
-        return jerry_acquire_value(tmp.jvalue);
+        return JS_DupValue(QuickJs::Ctx(), tmp.mValue);
     }
 
     template<typename _property_type>
-    void ScriptValueBase::PropertySetterWrapperContainer<_property_type>::Set(jerry_value_t value)
+    void ScriptValueBase::PropertySetterWrapperContainer<_property_type>::Set(JSValueConst value)
     {
         ScriptValue tmp;
         tmp.AcquireValue(value);
@@ -372,15 +368,15 @@ namespace o2
     }
 
     template<typename _type>
-    jerry_value_t ScriptValueBase::FunctionalGetterWrapperContainer<_type>::Get()
+    JSValue ScriptValueBase::FunctionalGetterWrapperContainer<_type>::Get()
     {
         ScriptValue tmp;
         tmp.SetValue<_type>(getter());
-        return jerry_acquire_value(tmp.jvalue);
+        return JS_DupValue(QuickJs::Ctx(), tmp.mValue);
     }
 
     template<typename _type>
-    void ScriptValueBase::FunctionalSetterWrapperContainer<_type>::Set(jerry_value_t value)
+    void ScriptValueBase::FunctionalSetterWrapperContainer<_type>::Set(JSValueConst value)
     {
         ScriptValue tmp;
         tmp.AcquireValue(value);
@@ -415,7 +411,8 @@ namespace o2
     template<typename _type>
     void ScriptValue::SetValue(const _type& value)
     {
-        jerry_release_value(jvalue);
+        JS_FreeValue(QuickJs::Ctx(), mValue);
+        mIsError = false;
         Converter<_type>::Write(value, *this);
     }
 
@@ -456,17 +453,17 @@ namespace o2
         if constexpr (HasRefCounterMethod<_type>::value)
         {
             auto dataContainer = CreateContainer<DataContainer<Ref<_type>>>(Ref<_type>(object));
-            jerry_set_object_native_pointer(jvalue, (IDataContainer*)dataContainer, &GetDataDeleter().info);
+            QuickJs::SetNativePointer(mValue, (IDataContainer*)dataContainer, &FreeDataContainer);
         }
         else if constexpr (std::is_base_of<IObject, _type>::value)
         {
             auto dataContainer = CreateContainer<PointerDataContainer<_type>>(object);
-            jerry_set_object_native_pointer(jvalue, (IDataContainer*)dataContainer, &GetDataDeleter().info);
+            QuickJs::SetNativePointer(mValue, (IDataContainer*)dataContainer, &FreeDataContainer);
         }
         else if constexpr (!std::is_abstract<_type>::value && std::is_copy_constructible<_type>::value)
         {
             auto dataContainer = CreateContainer<DataContainer<_type>>(*object);
-            jerry_set_object_native_pointer(jvalue, (IDataContainer*)dataContainer, &GetDataDeleter().info);
+            QuickJs::SetNativePointer(mValue, (IDataContainer*)dataContainer, &FreeDataContainer);
         }
 
         if constexpr (std::is_base_of<IObject, _type>::value)
@@ -478,7 +475,20 @@ namespace o2
     template<typename _type>
     void ScriptValue::SetProperty(const char* name, const _type& value)
     {
-        SetProperty(ScriptValue(name), ScriptValue(value));
+        JSContext* ctx = QuickJs::Ctx();
+        if (GetValueType() != ValueType::Object)
+        {
+            JS_FreeValue(ctx, mValue);
+            mValue = JS_NewObject(ctx);
+            mIsError = false;
+        }
+
+        ScriptValue converted(value);
+        JSAtom atom = JS_NewAtom(ctx, name);
+        if (JS_SetProperty(ctx, mValue, atom, JS_DupValue(ctx, converted.mValue)) < 0)
+            QuickJs::ClearThrown();
+
+        JS_FreeAtom(ctx, atom);
     }
 
     template<typename _type>
@@ -486,52 +496,51 @@ namespace o2
     {
         if (GetValueType() != ValueType::Object)
         {
-            jerry_release_value(jvalue);
-            jvalue = jerry_create_object();
+            JS_FreeValue(QuickJs::Ctx(), mValue);
+            mValue = JS_NewObject(QuickJs::Ctx());
+            mIsError = false;
         }
 
-        jerry_property_descriptor_t propertyDescriptor;
-        jerry_init_property_descriptor_fields(&propertyDescriptor);
-
-        propertyDescriptor.is_enumerable = true;
-        propertyDescriptor.is_enumerable_defined = true;
-
-        propertyDescriptor.is_get_defined = true;
-        propertyDescriptor.getter = jerry_create_external_function(DescriptorGetter);
+        ScriptValue getterFunc;
+        getterFunc.Accept(QuickJs::NewExternalFunction(&DescriptorGetter));
 
         if constexpr (IsProperty<_type>::value)
         {
             auto getterWrapperContainer = CreateContainer<PropertyGetterWrapperContainer<_type>>();
             getterWrapperContainer->propertyPtr = &value;
-            jerry_set_object_native_pointer(propertyDescriptor.getter, getterWrapperContainer, &GetDataDeleter().info);
+            QuickJs::SetNativePointer(getterFunc.mValue, getterWrapperContainer, &FreeDataContainer);
         }
         else
         {
             auto getterWrapperContainer = CreateContainer<PointerGetterWrapperContainer<_type>>();
             getterWrapperContainer->dataPtr = &value;
-            jerry_set_object_native_pointer(propertyDescriptor.getter, getterWrapperContainer, &GetDataDeleter().info);
+            QuickJs::SetNativePointer(getterFunc.mValue, getterWrapperContainer, &FreeDataContainer);
         }
 
-        propertyDescriptor.is_set_defined = true;
-        propertyDescriptor.setter = jerry_create_external_function(DescriptorSetter);
+        ScriptValue setterFunc;
+        setterFunc.Accept(QuickJs::NewExternalFunction(&DescriptorSetter));
 
         if constexpr (IsProperty<_type>::value)
         {
             auto setterWrapperContainer = CreateContainer<PropertySetterWrapperContainer<_type>>();
             setterWrapperContainer->propertyPtr = &value;
-            jerry_set_object_native_pointer(propertyDescriptor.setter, setterWrapperContainer, &GetDataDeleter().info);
+            QuickJs::SetNativePointer(setterFunc.mValue, setterWrapperContainer, &FreeDataContainer);
         }
         else
         {
             auto setterWrapperContainer = CreateContainer<PointerSetterWrapperContainer<_type>>();
             setterWrapperContainer->dataPtr = &value;
-            jerry_set_object_native_pointer(propertyDescriptor.setter, setterWrapperContainer, &GetDataDeleter().info);
+            QuickJs::SetNativePointer(setterFunc.mValue, setterWrapperContainer, &FreeDataContainer);
         }
 
-        jerry_value_t newPropertyValue = jerry_define_own_property(jvalue, name.jvalue, &propertyDescriptor);
-        jerry_release_value(newPropertyValue);
-
-        jerry_free_property_descriptor_fields(&propertyDescriptor);
+        JSContext* ctx = QuickJs::Ctx();
+        JSAtom atom = JS_ValueToAtom(ctx, name.mValue);
+        if (JS_DefinePropertyGetSet(ctx, mValue, atom, JS_DupValue(ctx, getterFunc.mValue),
+                                    JS_DupValue(ctx, setterFunc.mValue), JS_PROP_ENUMERABLE) < 0)
+        {
+            QuickJs::ClearThrown();
+        }
+        JS_FreeAtom(ctx, atom);
     }
 
     template<typename _type>
@@ -540,32 +549,31 @@ namespace o2
     {
         if (GetValueType() != ValueType::Object)
         {
-            jerry_release_value(jvalue);
-            jvalue = jerry_create_object();
+            JS_FreeValue(QuickJs::Ctx(), mValue);
+            mValue = JS_NewObject(QuickJs::Ctx());
+            mIsError = false;
         }
 
-        jerry_property_descriptor_t propertyDescriptor;
-        jerry_init_property_descriptor_fields(&propertyDescriptor);
-
-        propertyDescriptor.is_enumerable = true;
-        propertyDescriptor.is_enumerable_defined = true;
-
-        propertyDescriptor.is_get_defined = true;
-        propertyDescriptor.getter = jerry_create_external_function(DescriptorGetter);
+        ScriptValue getterFunc;
+        getterFunc.Accept(QuickJs::NewExternalFunction(&DescriptorGetter));
         auto getterWrapperContainer = CreateContainer<FunctionalGetterWrapperContainer<_type>>();
         getterWrapperContainer->getter = getter;
-        jerry_set_object_native_pointer(propertyDescriptor.getter, getterWrapperContainer, &GetDataDeleter().info);
+        QuickJs::SetNativePointer(getterFunc.mValue, getterWrapperContainer, &FreeDataContainer);
 
-        propertyDescriptor.is_set_defined = true;
-        propertyDescriptor.setter = jerry_create_external_function(DescriptorSetter);
+        ScriptValue setterFunc;
+        setterFunc.Accept(QuickJs::NewExternalFunction(&DescriptorSetter));
         auto setterWrapperContainer = CreateContainer<FunctionalSetterWrapperContainer<_type>>();
         setterWrapperContainer->setter = setter;
-        jerry_set_object_native_pointer(propertyDescriptor.setter, setterWrapperContainer, &GetDataDeleter().info);
+        QuickJs::SetNativePointer(setterFunc.mValue, setterWrapperContainer, &FreeDataContainer);
 
-        jerry_value_t newPropertyValue = jerry_define_own_property(jvalue, name.jvalue, &propertyDescriptor);
-        jerry_release_value(newPropertyValue);
-
-        jerry_free_property_descriptor_fields(&propertyDescriptor);
+        JSContext* ctx = QuickJs::Ctx();
+        JSAtom atom = JS_ValueToAtom(ctx, name.mValue);
+        if (JS_DefinePropertyGetSet(ctx, mValue, atom, JS_DupValue(ctx, getterFunc.mValue),
+                                    JS_DupValue(ctx, setterFunc.mValue), JS_PROP_ENUMERABLE) < 0)
+        {
+            QuickJs::ClearThrown();
+        }
+        JS_FreeAtom(ctx, atom);
     }
 
     template<typename _object_type, typename _field_type>
@@ -573,32 +581,31 @@ namespace o2
     {
         if (GetValueType() != ValueType::Object)
         {
-            jerry_release_value(jvalue);
-            jvalue = jerry_create_object();
+            JS_FreeValue(QuickJs::Ctx(), mValue);
+            mValue = JS_NewObject(QuickJs::Ctx());
+            mIsError = false;
         }
 
-        jerry_property_descriptor_t propertyDescriptor;
-        jerry_init_property_descriptor_fields(&propertyDescriptor);
-
-        propertyDescriptor.is_enumerable = true;
-        propertyDescriptor.is_enumerable_defined = true;
-
-        propertyDescriptor.is_get_defined = true;
-        propertyDescriptor.getter = jerry_create_external_function(PrototypeDescriptorGetter);
+        ScriptValue getterFunc;
+        getterFunc.Accept(QuickJs::NewExternalFunction(&PrototypeDescriptorGetter));
         auto getterContainer = CreateContainer<PrototypeFieldGetter<_object_type, _field_type>>();
         getterContainer->pointerGetter = pointerGetter;
-        jerry_set_object_native_pointer(propertyDescriptor.getter, getterContainer, &GetDataDeleter().info);
+        QuickJs::SetNativePointer(getterFunc.mValue, getterContainer, &FreeDataContainer);
 
-        propertyDescriptor.is_set_defined = true;
-        propertyDescriptor.setter = jerry_create_external_function(PrototypeDescriptorSetter);
+        ScriptValue setterFunc;
+        setterFunc.Accept(QuickJs::NewExternalFunction(&PrototypeDescriptorSetter));
         auto setterContainer = CreateContainer<PrototypeFieldSetter<_object_type, _field_type>>();
         setterContainer->pointerGetter = pointerGetter;
-        jerry_set_object_native_pointer(propertyDescriptor.setter, setterContainer, &GetDataDeleter().info);
+        QuickJs::SetNativePointer(setterFunc.mValue, setterContainer, &FreeDataContainer);
 
-        jerry_value_t newPropertyValue = jerry_define_own_property(jvalue, name.jvalue, &propertyDescriptor);
-        jerry_release_value(newPropertyValue);
-
-        jerry_free_property_descriptor_fields(&propertyDescriptor);
+        JSContext* ctx = QuickJs::Ctx();
+        JSAtom atom = JS_ValueToAtom(ctx, name.mValue);
+        if (JS_DefinePropertyGetSet(ctx, mValue, atom, JS_DupValue(ctx, getterFunc.mValue),
+                                    JS_DupValue(ctx, setterFunc.mValue), JS_PROP_ENUMERABLE) < 0)
+        {
+            QuickJs::ClearThrown();
+        }
+        JS_FreeAtom(ctx, atom);
     }
 
     template<typename _res_type, typename ... _args>
@@ -631,11 +638,11 @@ namespace o2
     template<typename _res_type, typename ... _args>
     void ScriptValue::SetFunction(const Function<_res_type(ScriptValue, _args ...)>& func)
     {
-        Accept(jerry_create_external_function(&CallFunction));
+        Accept(QuickJs::NewExternalFunction(&CallFunction));
 
         auto funcContainer = CreateContainer<ScriptThisFunctionContainer<Function<_res_type(ScriptValue, _args ...)>, _res_type, _args ...>>(func);
 
-        jerry_set_object_native_pointer(jvalue, (IDataContainer*)funcContainer, &GetDataDeleter().info);
+        QuickJs::SetNativePointer(mValue, (IDataContainer*)funcContainer, &FreeDataContainer);
     }
 
     // -------------------------------------------------------
@@ -856,7 +863,7 @@ namespace o2
     {
         using PMF = decltype(pointer);
         ScriptValue funcVal;
-        funcVal.Accept(jerry_create_external_function(&ThunkMethodHandler<_callable, PMF>::Handle));
+        funcVal.Accept(QuickJs::NewExternalFunction(&ThunkMethodHandler<_callable, PMF>::Handle));
         const char* actualName = customName ? customName : name;
         _object_type::GetScriptPrototype().SetProperty(actualName, funcVal);
     }
@@ -976,4 +983,4 @@ namespace o2
     };
 }
 
-#endif // SCRIPTING_BACKEND_JERRYSCRIPT
+#endif // SCRIPTING_BACKEND_QUICKJS

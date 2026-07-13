@@ -372,14 +372,19 @@ namespace o2
 
     ScriptValue ScriptValue::InvokeRaw(const ScriptValue& thisValue, const Vector<ScriptValue>& args) const
     {
+        return InvokeRaw(thisValue, args.Count() > 0 ? &args[0] : nullptr, args.Count());
+    }
+
+    ScriptValue ScriptValue::InvokeRaw(const ScriptValue& thisValue, const ScriptValue* args, int argsCount) const
+    {
         if (IsFunction())
         {
             const int maxParameters = 16;
             o2js_value_t valuesBuf[maxParameters];
-            for (int i = 0; i < args.Count() && i < maxParameters; i++)
+            for (int i = 0; i < argsCount && i < maxParameters; i++)
                 valuesBuf[i] = args[i].mValue;
 
-            auto res = o2js_call_function(mValue, thisValue.mValue, valuesBuf, args.Count());
+            auto res = o2js_call_function(mValue, thisValue.mValue, valuesBuf, argsCount);
 
             ScriptValue resValue;
             resValue.Accept(res);

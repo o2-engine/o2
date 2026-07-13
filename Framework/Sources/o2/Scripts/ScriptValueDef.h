@@ -8,6 +8,8 @@
 #include "o2/Scripts/JerryScript/ScriptValueBase.h"
 #elif defined(SCRIPTING_BACKEND_BROWSERJS)
 #include "o2/Scripts/BrowserJS/ScriptValueBase.h"
+#elif defined(SCRIPTING_BACKEND_QUICKJS)
+#include "o2/Scripts/QuickJS/ScriptValueBase.h"
 #endif
 
 #include "o2/Utils/Types/StringDef.h"
@@ -222,6 +224,9 @@ namespace o2 {
 
         // Invokes member function
         ScriptValue InvokeRaw(const ScriptValue &thisValue, const Vector<ScriptValue> &args) const;
+
+        // Invokes member function with arguments array, without heap allocations
+        ScriptValue InvokeRaw(const ScriptValue &thisValue, const ScriptValue* args, int argsCount) const;
 
         // Invokes function
         template<typename _res_type, typename ... _args>

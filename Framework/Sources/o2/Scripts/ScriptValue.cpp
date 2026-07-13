@@ -52,7 +52,7 @@ namespace o2
 #if defined(SCRIPTING_BACKEND_JERRYSCRIPT)
             auto container = GetNativeContainer(jvalue);
             res += container ? "c-function" : "function";
-#elif defined(SCRIPTING_BACKEND_BROWSERJS)
+#elif defined(SCRIPTING_BACKEND_BROWSERJS) || defined(SCRIPTING_BACKEND_QUICKJS)
             auto container = GetNativeContainer(mValue);
             res += container ? "c-function" : "function";
 #else

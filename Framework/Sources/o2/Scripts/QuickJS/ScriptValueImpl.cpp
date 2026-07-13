@@ -4,56 +4,72 @@
 #include "o2/Scripts/ScriptValueContainerAllocator.h"
 #include "o2/Utils/Debug/Debug.h"
 
-#if defined(SCRIPTING_BACKEND_JERRYSCRIPT)
+#if defined(SCRIPTING_BACKEND_QUICKJS)
+#include "o2/Scripts/QuickJS/QuickJSCore.h"
 #include "o2/Scripts/ScriptValue.h"
 
 namespace o2
 {
+    using namespace QuickJs;
+
     ScriptValueBase::~ScriptValueBase()
     {
-        jerry_release_value(jvalue);
+        JS_FreeValue(Ctx(), mValue);
     }
 
-    void ScriptValueBase::AcquireValue(jerry_value_t v)
+    void ScriptValueBase::AcquireValue(JSValueConst v)
     {
-        jerry_release_value(jvalue);
-        jvalue = jerry_acquire_value(v);
+        JSContext* ctx = Ctx();
+        JS_FreeValue(ctx, mValue);
+        mValue = JS_DupValue(ctx, v);
+        mIsError = false;
+    }
+
+    void ScriptValueBase::Accept(JSValue v)
+    {
+        JS_FreeValue(Ctx(), mValue);
+        mValue = v;
+        mIsError = false;
+    }
+
+    void ScriptValueBase::AcceptThrown()
+    {
+        JS_FreeValue(Ctx(), mValue);
+        mValue = TakeThrown();
+        mIsError = true;
     }
 
     ScriptValue ScriptValue::EmptyObject()
     {
         ScriptValue res;
-        res.Accept(jerry_create_object());
+        res.Accept(JS_NewObject(Ctx()));
         return res;
     }
 
     ScriptValue ScriptValue::EmptyArray()
     {
         ScriptValue res;
-        res.Accept(jerry_create_array(0));
+        res.Accept(JS_NewArray(Ctx()));
         return res;
-    }
-
-    void ScriptValueBase::Accept(jerry_value_t v)
-    {
-        jerry_release_value(jvalue);
-        jvalue = v;
     }
 
     ScriptValue::ScriptValue()
     {
-        jvalue = jerry_create_undefined();
+        mValue = JS_UNDEFINED;
     }
 
     ScriptValue::ScriptValue(const ScriptValue& other)
     {
-        jvalue = jerry_acquire_value(other.jvalue);
+        mValue = JS_DupValue(Ctx(), other.mValue);
+        mIsError = other.mIsError;
     }
 
     ScriptValue::ScriptValue(ScriptValue&& other) noexcept
     {
-        jvalue = other.jvalue;
-        other.jvalue = jerry_create_undefined();
+        mValue = other.mValue;
+        mIsError = other.mIsError;
+        other.mValue = JS_UNDEFINED;
+        other.mIsError = false;
     }
 
     ScriptValue ScriptValue::operator[](const ScriptValue& name) const
@@ -63,9 +79,7 @@ namespace o2
 
     ScriptValue ScriptValue::operator[](int idx) const
     {
-        ScriptValue res;
-        res.Accept(jerry_get_property_by_index(jvalue, idx));
-        return res;
+        return GetElement(idx);
     }
 
     bool ScriptValue::operator!=(const ScriptValue& other) const
@@ -75,15 +89,20 @@ namespace o2
 
     bool ScriptValue::operator==(const ScriptValue& other) const
     {
-        ScriptValue res;
-        res.Accept(jerry_binary_operation(JERRY_BIN_OP_EQUAL, jvalue, other.jvalue));
-        return res.ToBool();
+        int res = JS_IsEqual(Ctx(), mValue, other.mValue);
+        if (res < 0)
+        {
+            ClearThrown();
+            return false;
+        }
+
+        return res > 0;
     }
 
     ScriptValue& ScriptValue::operator=(const ScriptValue& other)
     {
-        jerry_release_value(jvalue);
-        jvalue = jerry_acquire_value(other.jvalue);
+        AcquireValue(other.mValue);
+        mIsError = other.mIsError;
         return *this;
     }
 
@@ -91,24 +110,39 @@ namespace o2
     {
         if (this != &other)
         {
-            jerry_release_value(jvalue);
-            jvalue = other.jvalue;
-            other.jvalue = jerry_create_undefined();
+            JS_FreeValue(Ctx(), mValue);
+            mValue = other.mValue;
+            mIsError = other.mIsError;
+            other.mValue = JS_UNDEFINED;
+            other.mIsError = false;
         }
         return *this;
     }
 
     ScriptValue::ValueType ScriptValue::GetValueType() const
     {
-        if (jerry_value_is_array(jvalue))
+        if (mIsError)
+            return ValueType::Error;
+
+        if (JS_IsArray(mValue))
             return ValueType::Array;
 
-        return (ValueType)jerry_value_get_type(jvalue);
+        if (JS_IsUndefined(mValue)) return ValueType::Undefined;
+        if (JS_IsNull(mValue)) return ValueType::Null;
+        if (JS_IsBool(mValue)) return ValueType::Bool;
+        if (JS_IsNumber(mValue)) return ValueType::Number;
+        if (JS_IsString(mValue)) return ValueType::String;
+        if (JS_IsSymbol(mValue)) return ValueType::Symbol;
+        if (JS_IsBigInt(mValue)) return ValueType::BigInt;
+        if (JS_IsFunction(Ctx(), mValue)) return ValueType::Function;
+        if (JS_IsObject(mValue)) return ValueType::Object;
+
+        return ValueType::None;
     }
 
     bool ScriptValue::IsConstructor() const
     {
-        return jerry_value_is_constructor(jvalue);
+        return JS_IsConstructor(Ctx(), mValue);
     }
 
     bool ScriptValue::IsUndefined() const
@@ -138,11 +172,11 @@ namespace o2
 
             res.SetPrototype(GetPrototype());
 
-            auto dataContainer = GetNativeContainer(jvalue);
+            auto dataContainer = GetNativeContainer(mValue);
             if (dataContainer)
             {
                 auto clonedDataContainer = dataContainer->Clone();
-                jerry_set_object_native_pointer(res.jvalue, clonedDataContainer, &GetDataDeleter().info);
+                SetNativePointer(res.mValue, clonedDataContainer, &FreeDataContainer);
             }
 
             return res;
@@ -153,10 +187,15 @@ namespace o2
 
     int ScriptValue::GetLength() const
     {
-        if (!jerry_value_is_array(jvalue))
+        if (!JS_IsArray(mValue))
             return 0;
 
-        return jerry_get_array_length(jvalue);
+        JSContext* ctx = Ctx();
+        JSValue lengthValue = JS_GetProperty(ctx, mValue, LengthAtom());
+        uint32_t length = 0;
+        JS_ToUint32(ctx, &length, lengthValue);
+        JS_FreeValue(ctx, lengthValue);
+        return (int)length;
     }
 
     String ScriptValue::GetError() const
@@ -164,25 +203,26 @@ namespace o2
         if (GetValueType() != ValueType::Error)
             return String();
 
-        // release=false: this value still owns the error reference, destructor releases it once
-        auto errorJValue = jerry_get_value_from_error(jvalue, false);
+        JSContext* ctx = Ctx();
+        JSValue str = JS_ToString(ctx, mValue);
+        if (JS_IsException(str))
+        {
+            ClearThrown();
+            return String();
+        }
 
-        ScriptValue errorValue;
-        errorValue.Accept(jerry_value_to_string(errorJValue));
+        const char* cstr = JS_ToCString(ctx, str);
+        String res(cstr ? cstr : "");
+        if (cstr)
+            JS_FreeCString(ctx, cstr);
 
-        jerry_release_value(errorJValue);
-
-        return errorValue.GetValue<String>();
+        JS_FreeValue(ctx, str);
+        return res;
     }
 
     bool ScriptValue::IsObjectContainer() const
     {
-        if (!IsObject())
-            return false;
-
-        void* dataPtr = nullptr;
-        jerry_get_object_native_pointer(jvalue, &dataPtr, &GetDataDeleter().info);
-        return dataPtr != nullptr;
+        return IsObject() && GetNativeContainer(mValue) != nullptr;
     }
 
     const Type* ScriptValue::GetObjectContainerType() const
@@ -190,10 +230,7 @@ namespace o2
         if (!IsObject())
             return nullptr;
 
-        void* dataPtr = nullptr;
-        jerry_get_object_native_pointer(jvalue, &dataPtr, &GetDataDeleter().info);
-        auto dataContainer = (IDataContainer*)dataPtr;
-        if (dataContainer)
+        if (auto dataContainer = GetNativeContainer(mValue))
             return dataContainer->GetType();
 
         return nullptr;
@@ -204,10 +241,7 @@ namespace o2
         if (!IsObject())
             return nullptr;
 
-        void* dataPtr = nullptr;
-        jerry_get_object_native_pointer(jvalue, &dataPtr, &GetDataDeleter().info);
-        auto dataContainer = (IDataContainer*)dataPtr;
-        if (dataContainer)
+        if (auto dataContainer = GetNativeContainer(mValue))
             return dataContainer->GetData();
 
         return nullptr;
@@ -216,12 +250,17 @@ namespace o2
     ScriptValue ScriptValue::Construct(const Vector<ScriptValue>& args)
     {
         const int maxParameters = 16;
-        jerry_value_t valuesBuf[maxParameters];
+        JSValue valuesBuf[maxParameters];
         for (int i = 0; i < args.Count() && i < maxParameters; i++)
-            valuesBuf[i] = args[i].jvalue;
+            valuesBuf[i] = args[i].mValue;
 
         ScriptValue res;
-        res.Accept(jerry_construct_object(jvalue, valuesBuf, args.Count()));
+        JSValue constructed = JS_CallConstructor(Ctx(), mValue, args.Count(), valuesBuf);
+        if (JS_IsException(constructed))
+            res.AcceptThrown();
+        else
+            res.Accept(constructed);
+
         return res;
     }
 
@@ -247,106 +286,244 @@ namespace o2
 
     ScriptValue ScriptValue::GetProperty(const ScriptValue& name) const
     {
+        JSContext* ctx = Ctx();
         if (GetValueType() != ValueType::Object)
         {
-            jerry_release_value(jvalue);
-            jvalue = jerry_create_object();
+            JS_FreeValue(ctx, mValue);
+            mValue = JS_NewObject(ctx);
+            mIsError = false;
         }
 
+        JSAtom atom = JS_ValueToAtom(ctx, name.mValue);
+        JSValue value = JS_GetProperty(ctx, mValue, atom);
+        JS_FreeAtom(ctx, atom);
+
         ScriptValue res;
-        res.Accept(jerry_get_property(jvalue, name.jvalue));
+        if (JS_IsException(value))
+            res.AcceptThrown();
+        else
+            res.Accept(value);
+
         return res;
     }
 
     ScriptValue ScriptValue::GetInternalProperty(const ScriptValue& name) const
     {
+        JSContext* ctx = Ctx();
         ScriptValue res;
-        res.Accept(jerry_get_internal_property(jvalue, name.jvalue));
+        if (!JS_IsObject(mValue))
+            return res;
+
+        JSPropertyDescriptor desc;
+        if (JS_GetOwnProperty(ctx, &desc, mValue, InternalAtom()) <= 0)
+            return res;
+
+        JSValue dict = desc.value;
+        JS_FreeValue(ctx, desc.getter);
+        JS_FreeValue(ctx, desc.setter);
+
+        if (const char* key = JS_ToCString(ctx, name.mValue))
+        {
+            res.Accept(JS_GetPropertyStr(ctx, dict, key));
+            JS_FreeCString(ctx, key);
+        }
+
+        JS_FreeValue(ctx, dict);
         return res;
     }
 
     ScriptValue ScriptValue::GetOwnProperty(const ScriptValue& name) const
     {
+        JSContext* ctx = Ctx();
         ScriptValue res;
+        if (!JS_IsObject(mValue))
+            return res;
 
-        jerry_property_descriptor_t descr;
-        jerry_init_property_descriptor_fields(&descr);
+        JSAtom atom = JS_ValueToAtom(ctx, name.mValue);
+        JSPropertyDescriptor desc;
+        int found = JS_GetOwnProperty(ctx, &desc, mValue, atom);
+        JS_FreeAtom(ctx, atom);
 
-        if (jerry_get_own_property_descriptor(jvalue, name.jvalue, &descr))
-            res.AcquireValue(descr.value);
+        if (found <= 0)
+        {
+            if (found < 0)
+                ClearThrown();
+            return res;
+        }
 
-        jerry_free_property_descriptor_fields(&descr);
+        if (desc.flags & JS_PROP_GETSET)
+        {
+            JS_FreeValue(ctx, desc.getter);
+            JS_FreeValue(ctx, desc.setter);
+            return res;
+        }
 
+        res.Accept(desc.value);
         return res;
     }
 
     ScriptValue ScriptValue::GetPropertyNames() const
     {
-        ScriptValue res;
+        JSContext* ctx = Ctx();
+        ScriptValue res = EmptyArray();
+        if (!JS_IsObject(mValue))
+            return res;
 
-        jerry_property_filter_t filter = (jerry_property_filter_t)(JERRY_PROPERTY_FILTER_ALL 
-            | JERRY_PROPERTY_FILTER_EXLCUDE_SYMBOLS
-            | JERRY_PROPERTY_FILTER_EXLCUDE_NON_CONFIGURABLE
-            | JERRY_PROPERTY_FILTER_EXLCUDE_NON_ENUMERABLE
-            | JERRY_PROPERTY_FILTER_EXLCUDE_NON_WRITABLE
-            | JERRY_PROPERTY_FILTER_EXLCUDE_INTEGER_INDICES
-            | JERRY_PROPERTY_FILTER_INTEGER_INDICES_AS_NUMBER
-        );
+        JSPropertyEnum* tab = nullptr;
+        uint32_t count = 0;
+        if (JS_GetOwnPropertyNames(ctx, &tab, &count, mValue, JS_GPN_STRING_MASK | JS_GPN_ENUM_ONLY) < 0)
+        {
+            ClearThrown();
+            return res;
+        }
 
-        res.Accept(jerry_object_get_property_names(jvalue, filter));
+        // Mirrors the jerry backend filter: own enumerable+configurable+writable data
+        // properties, string keys only, array indices excluded
+        uint32_t resultIdx = 0;
+        for (uint32_t i = 0; i < count; i++)
+        {
+            JSPropertyDescriptor desc;
+            if (JS_GetOwnProperty(ctx, &desc, mValue, tab[i].atom) <= 0)
+                continue;
 
+            bool plainDataProperty = (desc.flags & JS_PROP_ENUMERABLE) && (desc.flags & JS_PROP_CONFIGURABLE) &&
+                                     (desc.flags & JS_PROP_WRITABLE) && !(desc.flags & JS_PROP_GETSET);
+
+            JS_FreeValue(ctx, desc.value);
+            JS_FreeValue(ctx, desc.getter);
+            JS_FreeValue(ctx, desc.setter);
+
+            if (!plainDataProperty)
+                continue;
+
+            const char* key = JS_AtomToCString(ctx, tab[i].atom);
+            if (!key)
+                continue;
+
+            bool isIndex = key[0] != 0;
+            for (const char* c = key; *c; c++)
+            {
+                if (*c < '0' || *c > '9')
+                {
+                    isIndex = false;
+                    break;
+                }
+            }
+
+            if (!isIndex)
+                JS_SetPropertyUint32(ctx, res.mValue, resultIdx++, JS_NewString(ctx, key));
+
+            JS_FreeCString(ctx, key);
+        }
+
+        JS_FreePropertyEnum(ctx, tab, count);
         return res;
     }
 
     void ScriptValue::SetInternalProperty(const ScriptValue& name, const ScriptValue& value)
     {
-        jerry_set_internal_property(jvalue, name.jvalue, value.jvalue);
+        JSContext* ctx = Ctx();
+        if (!JS_IsObject(mValue))
+            return;
+
+        JSValue dict;
+        JSPropertyDescriptor desc;
+        if (JS_GetOwnProperty(ctx, &desc, mValue, InternalAtom()) > 0)
+        {
+            dict = desc.value;
+            JS_FreeValue(ctx, desc.getter);
+            JS_FreeValue(ctx, desc.setter);
+        }
+        else
+        {
+            dict = JS_NewObject(ctx);
+            JS_DefinePropertyValue(ctx, mValue, InternalAtom(), JS_DupValue(ctx, dict), 0);
+        }
+
+        if (const char* key = JS_ToCString(ctx, name.mValue))
+        {
+            JS_SetPropertyStr(ctx, dict, key, JS_DupValue(ctx, value.mValue));
+            JS_FreeCString(ctx, key);
+        }
+
+        JS_FreeValue(ctx, dict);
     }
 
     void ScriptValue::SetProperty(const ScriptValue& name, const ScriptValue& value)
     {
+        JSContext* ctx = Ctx();
         if (GetValueType() != ValueType::Object)
         {
-            jerry_release_value(jvalue);
-            jvalue = jerry_create_object();
+            JS_FreeValue(ctx, mValue);
+            mValue = JS_NewObject(ctx);
+            mIsError = false;
         }
 
-        jerry_set_property(jvalue, name.jvalue, value.jvalue);
+        JSAtom atom = JS_ValueToAtom(ctx, name.mValue);
+        if (JS_SetProperty(ctx, mValue, atom, JS_DupValue(ctx, value.mValue)) < 0)
+            ClearThrown();
+
+        JS_FreeAtom(ctx, atom);
     }
 
     void ScriptValue::RemoveProperty(const ScriptValue& name)
     {
-        jerry_delete_property(jvalue, name.jvalue);
+        JSContext* ctx = Ctx();
+        JSAtom atom = JS_ValueToAtom(ctx, name.mValue);
+        if (JS_DeleteProperty(ctx, mValue, atom, 0) < 0)
+            ClearThrown();
+
+        JS_FreeAtom(ctx, atom);
     }
 
     void ScriptValue::SetPrototype(const ScriptValue& proto)
     {
-        ScriptValue res;
-        res.Accept(jerry_set_prototype(jvalue, proto.jvalue));
+        JSValueConst protoValue = JS_IsUndefined(proto.mValue) ? JS_NULL : proto.mValue;
+        if (JS_SetPrototype(Ctx(), mValue, protoValue) < 0)
+            ClearThrown();
     }
 
     ScriptValue ScriptValue::GetPrototype() const
     {
         ScriptValue res;
-        res.Accept(jerry_get_prototype(jvalue));
+        if (!JS_IsObject(mValue))
+        {
+            res.Accept(JS_NULL);
+            return res;
+        }
+
+        JSValue proto = JS_GetPrototype(Ctx(), mValue);
+        if (JS_IsException(proto))
+            res.AcceptThrown();
+        else
+            res.Accept(proto);
+
         return res;
     }
 
     void ScriptValue::SetElement(const ScriptValue& value, int idx)
     {
+        JSContext* ctx = Ctx();
         if (GetValueType() != ValueType::Array)
         {
-            jerry_release_value(jvalue);
-            jvalue = jerry_create_array(0);
+            JS_FreeValue(ctx, mValue);
+            mValue = JS_NewArray(ctx);
+            mIsError = false;
         }
 
-        jerry_set_property_by_index(jvalue, idx, value.jvalue);
+        if (JS_SetPropertyUint32(ctx, mValue, (uint32_t)idx, JS_DupValue(ctx, value.mValue)) < 0)
+            ClearThrown();
     }
 
     ScriptValue ScriptValue::GetElement(int idx) const
     {
         ScriptValue res;
-        res.Accept(jerry_get_property_by_index(jvalue, idx));
+        JSValue value = JS_GetPropertyUint32(Ctx(), mValue, (uint32_t)idx);
+        if (JS_IsException(value))
+            res.AcceptThrown();
+        else
+            res.Accept(value);
+
         return res;
     }
 
@@ -357,38 +534,56 @@ namespace o2
 
     void ScriptValue::RemoveElement(int idx)
     {
-        jerry_delete_property_by_index(jvalue, idx);
+        JSContext* ctx = Ctx();
+        JSValue indexValue = JS_NewUint32(ctx, (uint32_t)idx);
+        JSAtom atom = JS_ValueToAtom(ctx, indexValue);
+        JS_FreeValue(ctx, indexValue);
+        if (JS_DeleteProperty(ctx, mValue, atom, 0) < 0)
+            ClearThrown();
+
+        JS_FreeAtom(ctx, atom);
     }
 
     bool ScriptValue::ToBool() const
     {
-        return jerry_value_to_boolean(jvalue);
+        return JS_ToBool(Ctx(), mValue) > 0;
     }
 
     float ScriptValue::ToNumber() const
     {
-        if (GetValueType() != ValueType::Number)
+        JSContext* ctx = Ctx();
+        double res = 0;
+        if (JS_ToFloat64(ctx, &res, mValue) < 0)
         {
-            auto prev = jvalue;
-            jvalue = jerry_value_to_number(jvalue);
-            jerry_release_value(prev);
+            ClearThrown();
+            return 0.0f;
         }
 
-        return (float)jerry_get_number_value(jvalue);
+        return (float)res;
     }
 
     String ScriptValue::ToString() const
     {
+        JSContext* ctx = Ctx();
         if (GetValueType() != ValueType::String)
         {
-            auto prev = jvalue;
-            jvalue = jerry_value_to_string(jvalue);
-            jerry_release_value(prev);
+            JSValue str = JS_ToString(ctx, mValue);
+            if (JS_IsException(str))
+            {
+                ClearThrown();
+                return String();
+            }
+
+            JS_FreeValue(ctx, mValue);
+            mValue = str;
+            mIsError = false;
         }
 
-        String res;
-        res.resize(jerry_get_string_length(jvalue));
-        jerry_string_to_char_buffer(jvalue, (jerry_char_t*)res.Data(), res.Capacity());
+        const char* cstr = JS_ToCString(ctx, mValue);
+        String res(cstr ? cstr : "");
+        if (cstr)
+            JS_FreeCString(ctx, cstr);
+
         return res;
     }
 
@@ -407,14 +602,16 @@ namespace o2
         if (IsFunction())
         {
             const int maxParameters = 16;
-            jerry_value_t valuesBuf[maxParameters];
+            JSValue valuesBuf[maxParameters];
             for (int i = 0; i < argsCount && i < maxParameters; i++)
-                valuesBuf[i] = args[i].jvalue;
-
-            auto res = jerry_call_function(jvalue, thisValue.jvalue, valuesBuf, argsCount);
+                valuesBuf[i] = args[i].mValue;
 
             ScriptValue resValue;
-            resValue.Accept(res);
+            JSValue res = JS_Call(Ctx(), mValue, thisValue.mValue, argsCount, valuesBuf);
+            if (JS_IsException(res))
+                resValue.AcceptThrown();
+            else
+                resValue.Accept(res);
 
             return resValue;
         }
@@ -422,18 +619,7 @@ namespace o2
         return {};
     }
 
-    ScriptValueBase::DataContainerDeleter& ScriptValueBase::GetDataDeleter()
-    {
-        static DataContainerDeleter deleter;
-        return deleter;
-    }
-
-    ScriptValueBase::DataContainerDeleter::DataContainerDeleter()
-    {
-        info.free_cb = &Free;
-    }
-
-    void ScriptValueBase::DataContainerDeleter::Free(void* ptr)
+    void ScriptValueBase::FreeDataContainer(void* ptr)
     {
         auto* container = static_cast<IDataContainer*>(ptr);
         if (container)
@@ -450,58 +636,59 @@ namespace o2
         ScriptContainerAllocator::GetInstance().Free(ptr);
     }
 
-    ScriptValueBase::IDataContainer* ScriptValueBase::GetNativeContainer(jerry_value_t jval)
+    ScriptValueBase::IDataContainer* ScriptValueBase::GetNativeContainer(JSValueConst val)
     {
-        void* ptr = nullptr;
-        jerry_get_object_native_pointer(jval, &ptr, &GetDataDeleter().info);
-        return (IDataContainer*)ptr;
+        return (IDataContainer*)GetNativePointer(val, &FreeDataContainer);
     }
 
-    jerry_value_t ScriptValueBase::CallFunction(const jerry_value_t function_obj,
-                                                const jerry_value_t this_val,
-                                                const jerry_value_t args_p[], const jerry_length_t args_count)
+    JSValue ScriptValueBase::CallFunction(JSValueConst function_obj, JSValueConst this_val,
+                                          JSValueConst* args_p, int args_count)
     {
         auto container = static_cast<IFunctionContainer*>(GetNativeContainer(function_obj));
-        return container->Invoke(this_val, (jerry_value_t*)args_p, args_count);
+        if (!container)
+            return JS_UNDEFINED;
+
+        return container->Invoke(this_val, args_p, args_count);
     }
 
-    jerry_value_t ScriptValueBase::DescriptorSetter(const jerry_value_t function_obj,
-                                                    const jerry_value_t this_val,
-                                                    const jerry_value_t args_p[],
-                                                    const jerry_length_t args_count)
+    JSValue ScriptValueBase::DescriptorSetter(JSValueConst function_obj, JSValueConst this_val,
+                                              JSValueConst* args_p, int args_count)
     {
         auto container = static_cast<ISetterWrapperContainer*>(GetNativeContainer(function_obj));
-        container->Set(args_p[0]);
+        if (container && args_count > 0)
+            container->Set(args_p[0]);
 
-        return jerry_create_undefined();
+        return JS_UNDEFINED;
     }
 
-    jerry_value_t ScriptValueBase::DescriptorGetter(const jerry_value_t function_obj,
-                                                    const jerry_value_t this_val,
-                                                    const jerry_value_t args_p[],
-                                                    const jerry_length_t args_count)
+    JSValue ScriptValueBase::DescriptorGetter(JSValueConst function_obj, JSValueConst this_val,
+                                              JSValueConst* args_p, int args_count)
     {
         auto container = static_cast<IGetterWrapperContainer*>(GetNativeContainer(function_obj));
+        if (!container)
+            return JS_UNDEFINED;
+
         return container->Get();
     }
 
-    jerry_value_t ScriptValueBase::PrototypeDescriptorGetter(const jerry_value_t function_obj,
-                                                             const jerry_value_t this_val,
-                                                             const jerry_value_t args_p[],
-                                                             const jerry_length_t args_count)
+    JSValue ScriptValueBase::PrototypeDescriptorGetter(JSValueConst function_obj, JSValueConst this_val,
+                                                       JSValueConst* args_p, int args_count)
     {
         auto container = static_cast<IPrototypeGetter*>(GetNativeContainer(function_obj));
+        if (!container)
+            return JS_UNDEFINED;
+
         return container->GetFrom(this_val);
     }
 
-    jerry_value_t ScriptValueBase::PrototypeDescriptorSetter(const jerry_value_t function_obj,
-                                                             const jerry_value_t this_val,
-                                                             const jerry_value_t args_p[],
-                                                             const jerry_length_t args_count)
+    JSValue ScriptValueBase::PrototypeDescriptorSetter(JSValueConst function_obj, JSValueConst this_val,
+                                                       JSValueConst* args_p, int args_count)
     {
         auto container = static_cast<IPrototypeSetter*>(GetNativeContainer(function_obj));
-        container->SetTo(this_val, args_p[0]);
-        return jerry_create_undefined();
+        if (container && args_count > 0)
+            container->SetTo(this_val, args_p[0]);
+
+        return JS_UNDEFINED;
     }
 
     ScriptValue*& ScriptValuePrototypes::GetVec2Prototype()

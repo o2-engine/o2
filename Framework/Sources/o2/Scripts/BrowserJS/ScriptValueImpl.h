@@ -583,15 +583,22 @@ namespace o2
     template<typename _res_type, typename ... _args>
     _res_type ScriptValue::Invoke(const ScriptValue& thisValue, _args ... args) const
     {
-        Vector<ScriptValue> argsValues;
-
         if constexpr (sizeof...(_args) > 0)
-            PackArgs(argsValues, args ...);
+        {
+            const ScriptValue argsValues[] = { ScriptValue(args) ... };
 
-        if constexpr (std::is_same<_res_type, void>::value)
-            InvokeRaw(thisValue, argsValues);
+            if constexpr (std::is_same<_res_type, void>::value)
+                InvokeRaw(thisValue, argsValues, (int)sizeof...(_args));
+            else
+                return InvokeRaw(thisValue, argsValues, (int)sizeof...(_args)).template GetValue<_res_type>();
+        }
         else
-            return InvokeRaw(thisValue, argsValues).GetValue<_res_type>();
+        {
+            if constexpr (std::is_same<_res_type, void>::value)
+                InvokeRaw(thisValue, nullptr, 0);
+            else
+                return InvokeRaw(thisValue, nullptr, 0).GetValue<_res_type>();
+        }
     }
 
     template<typename _res_type, typename ... _args>

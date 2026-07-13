@@ -73,6 +73,32 @@ if (O2_SCRIPTING AND O2_SCRIPTING_BACKEND STREQUAL "jerryscript")
     add_subdirectory(jerryscript)
 endif()
 
+# quickjs (quickjs-ng), vendored: core interpreter only, no libc/cli
+if (O2_SCRIPTING AND O2_SCRIPTING_BACKEND STREQUAL "quickjs")
+    add_library(quickjs STATIC
+        quickjs/quickjs.c
+        quickjs/libregexp.c
+        quickjs/libunicode.c
+        quickjs/dtoa.c
+    )
+    target_include_directories(quickjs PUBLIC quickjs)
+    target_compile_definitions(quickjs PRIVATE _GNU_SOURCE)
+    set_target_properties(quickjs PROPERTIES C_STANDARD 11 FOLDER o2/3rdPartyLibs)
+
+    if (WIN32)
+        target_compile_definitions(quickjs PRIVATE WIN32_LEAN_AND_MEAN _WIN32_WINNT=0x0601)
+    endif()
+
+    # Vendored third-party code: never fail the build on toolchain warnings
+    if (MSVC)
+        target_compile_options(quickjs PRIVATE /w)
+    else()
+        target_compile_options(quickjs PRIVATE -Wno-everything)
+    endif()
+
+    target_link_libraries(quickjs PUBLIC ${CMAKE_DL_LIBS})
+endif()
+
 # Android NDK clang is newer than o2's local clang and promotes some warnings
 # to errors by default inside jerryscript's own -Werror=all flag group.
 # Override per-target, after jerryscript's add_subdirectory() so these come LAST on the command line.
