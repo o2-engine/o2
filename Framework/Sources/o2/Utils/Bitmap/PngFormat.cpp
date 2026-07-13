@@ -115,6 +115,25 @@ namespace o2
         // get info about png
         png_get_IHDR(png_ptr, info_ptr, &twidth, &theight, &bit_depth, &color_type, NULL, NULL, NULL);
 
+        // Expand any source format (palette, gray, 16-bit, no-alpha) to the R8G8B8A8 rows read below
+        if (color_type == PNG_COLOR_TYPE_PALETTE)
+            png_set_palette_to_rgb(png_ptr);
+
+        if (color_type == PNG_COLOR_TYPE_GRAY && bit_depth < 8)
+            png_set_expand_gray_1_2_4_to_8(png_ptr);
+
+        if (color_type == PNG_COLOR_TYPE_GRAY || color_type == PNG_COLOR_TYPE_GRAY_ALPHA)
+            png_set_gray_to_rgb(png_ptr);
+
+        if (png_get_valid(png_ptr, info_ptr, PNG_INFO_tRNS))
+            png_set_tRNS_to_alpha(png_ptr);
+
+        if (bit_depth == 16)
+            png_set_strip_16(png_ptr);
+
+        if ((color_type & PNG_COLOR_MASK_ALPHA) == 0 && !png_get_valid(png_ptr, info_ptr, PNG_INFO_tRNS))
+            png_set_filler(png_ptr, 0xFF, PNG_FILLER_AFTER);
+
         // Update the png info struct.
         png_read_update_info(png_ptr, info_ptr);
 
