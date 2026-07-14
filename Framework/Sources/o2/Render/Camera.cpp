@@ -47,7 +47,7 @@ namespace o2
             return Mat4::Ortho(-size.x*0.5f, size.x*0.5f, -size.y*0.5f, size.y*0.5f, nearClip, farClip);
         }
 
-        return Mat4::Ortho(0.0f, viewportSize.x, viewportSize.y, 0.0f, 0.0f, 10.0f);
+        return Mat4::Ortho(0.0f, viewportSize.x, viewportSize.y, 0.0f, -ortho2DHalfDepth, ortho2DHalfDepth);
     }
 
     Camera Camera::Default()

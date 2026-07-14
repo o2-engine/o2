@@ -102,13 +102,13 @@ TEST(Camera, EqualityBasedOnTransform)
     EXPECT_TRUE(a != diffAngle);
 }
 
-TEST(Camera, OrthoProjectionMatrixMatchesLegacyValues)
+TEST(Camera, OrthoProjectionMatrixMatchesRenderValues)
 {
     Camera cam;
     Mat4 proj = cam.GetProjectionMatrix(Vec2F(800, 600));
 
     float expected[16];
-    Math::OrthoProjMatrix(expected, 0.0f, 800.0f, 600.0f, 0.0f, 0.0f, 10.0f);
+    Math::OrthoProjMatrix(expected, 0.0f, 800.0f, 600.0f, 0.0f, -Camera::ortho2DHalfDepth, Camera::ortho2DHalfDepth);
 
     for (int i = 0; i < 16; i++)
         EXPECT_NEAR(proj.m[i], expected[i], 0.0001f) << "element " << i;

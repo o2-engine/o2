@@ -19,6 +19,10 @@ namespace o2
         enum class Projection { Orthographic, Perspective, Orthographic3D };
 
     public:
+        // 2D orthographic depth half-range: world z stays depth-testable for 3D content drawn with a 2D camera
+        static constexpr float ortho2DHalfDepth = 100000.0f;
+
+    public:
         Projection projection = Projection::Orthographic; // Projection type @SERIALIZABLE
         float      fov = Math::Deg2rad(60.0f);            // Vertical field of view in radians, perspective only @SERIALIZABLE
         float      nearClip = 0.1f;                       // Near clipping plane, perspective only @SERIALIZABLE

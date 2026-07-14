@@ -760,7 +760,8 @@ namespace o2
 		Vec2F halfRes(Math::Round(resf.x / 2.0f), Math::Round(resf.y / 2.0f));
 
 		float projMatrix[16];
-		Math::OrthoProjMatrix(projMatrix, 0.0f, (float)mCurrentResolution.x, (float)mCurrentResolution.y, 0.0f, 0.0f, 10.0f);
+		Math::OrthoProjMatrix(projMatrix, 0.0f, (float)mCurrentResolution.x, (float)mCurrentResolution.y, 0.0f,
+							  -Camera::ortho2DHalfDepth, Camera::ortho2DHalfDepth);
 
 		float modelMatrix[16] =
 		{
@@ -775,11 +776,12 @@ namespace o2
 		mViewScale = Vec2F(camTransf.xv.Length(), camTransf.yv.Length());
 		mInvViewScale = Vec2F(1.0f / mViewScale.x, 1.0f / mViewScale.y);
 
+		// World z is kept so depth test can order 3D content drawn with the 2D camera
 		float viewMatrix[16] =
 		{
 			camTransf.xv.x,     camTransf.xv.y,     0, 0,
 			camTransf.yv.x,     camTransf.yv.y,     0, 0,
-			0,                  0,                  0, 0,
+			0,                  0,                  1, 0,
 			camTransf.origin.x, camTransf.origin.y, 0, 1
 		};
 
