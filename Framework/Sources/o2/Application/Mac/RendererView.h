@@ -2,6 +2,8 @@
 
 #import <MetalKit/MetalKit.h>
 
+#include "o2/Application/Mac/MacKeyboard.h"
+
 @interface RendererView : NSObject <MTKViewDelegate>
 
 -(nonnull instancetype)initWithMetalKitView:(nonnull MTKView *)view;
@@ -9,8 +11,7 @@
 @end
 
 @interface ViewController : MTKView {
-    NSMutableSet<NSNumber *> *pressedKeysWithCmd;
-    NSMutableSet<NSNumber *> *currentlyPressedKeys;
+    o2::MacKeyboardHandler keyboardHandler;
 }
 
 - (void)initializeMouseTracking;

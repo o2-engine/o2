@@ -16,6 +16,10 @@
 #include "o2/Utils/System/Clipboard.h"
 #include "o2/Utils/System/Time/Time.h"
 
+#ifdef PLATFORM_MAC
+#include "o2/Application/Mac/MacKeyboard.h"
+#endif
+
 namespace o2
 {
     EditBox::EditBox(RefCounter* refCounter):
@@ -1093,10 +1097,7 @@ namespace o2
         return unicode;
         
 #elif defined PLATFORM_MAC
-        if (code < 0)
-            return 0;
-        
-        return (UInt16)code;
+        return GetUnicodeFromMacKey(code);
 
 #elif defined PLATFORM_LINUX
         if (code < 0)

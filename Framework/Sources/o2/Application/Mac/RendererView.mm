@@ -31,34 +31,17 @@
 
 @end
 
+static o2::MacKeyboardHandler::Modifiers GetModifiers(NSEventModifierFlags flags)
+{
+    o2::MacKeyboardHandler::Modifiers modifiers;
+    modifiers.shift = (flags & NSEventModifierFlagShift) != 0;
+    modifiers.alt = (flags & NSEventModifierFlagOption) != 0;
+    modifiers.control = (flags & NSEventModifierFlagControl) != 0;
+    modifiers.command = (flags & NSEventModifierFlagCommand) != 0;
+    return modifiers;
+}
+
 @implementation ViewController
-
-- (instancetype)init {
-    self = [super init];
-    if (self) {
-        pressedKeysWithCmd = [[NSMutableSet alloc] init];
-        currentlyPressedKeys = [[NSMutableSet alloc] init];
-    }
-    return self;
-}
-
-- (instancetype)initWithFrame:(NSRect)frame {
-    self = [super initWithFrame:frame];
-    if (self) {
-        pressedKeysWithCmd = [[NSMutableSet alloc] init];
-        currentlyPressedKeys = [[NSMutableSet alloc] init];
-    }
-    return self;
-}
-
-- (instancetype)initWithCoder:(NSCoder *)coder {
-    self = [super initWithCoder:coder];
-    if (self) {
-        pressedKeysWithCmd = [[NSMutableSet alloc] init];
-        currentlyPressedKeys = [[NSMutableSet alloc] init];
-    }
-    return self;
-}
 
 - (BOOL)acceptsFirstResponder {
     return YES;
@@ -74,10 +57,21 @@
 
 - (void)viewDidMoveToWindow {
     [super viewDidMoveToWindow];
+    [[NSNotificationCenter defaultCenter] removeObserver:self name:NSWindowDidResignKeyNotification object:nil];
     if (self.window) {
         [self.window makeFirstResponder:self];
         o2Debug.Log("View became first responder: %s", [self.window firstResponder] == self ? "YES" : "NO");
+
+        [[NSNotificationCenter defaultCenter] addObserver:self
+                                                 selector:@selector(windowDidResignKey:)
+                                                     name:NSWindowDidResignKeyNotification
+                                                   object:self.window];
     }
+}
+
+- (void)dealloc {
+    [[NSNotificationCenter defaultCenter] removeObserver:self];
+    [super dealloc];
 }
 
 - (void)awakeFromNib {
@@ -123,99 +117,35 @@
     [self addCursorRect:[self bounds] cursor:[NSCursor currentCursor]];
 }
 
-- (int)getKeyCode:(NSEvent *)event
+- (void)applyKeyEvents:(const o2::Vector<o2::MacKeyboardHandler::KeyEvent>&)events
 {
-    const auto keyFlags = [event modifierFlags];
-    if (!(keyFlags & NSEventModifierFlagFunction))
+    for (auto& event : events)
     {
-        NSString *str = [event charactersIgnoringModifiers];
-        if (str && [str length] != 0)
-        {
-            const int charCode = [str characterAtIndex : 0];
-            if (charCode >= 0)
-            {
-                constexpr int keyBackspace = 0x7f;
-                constexpr int keyReturn = 0x0d;
-                constexpr int keyPadEnter = 0x03;
-                constexpr int keyEscape = 0x1b;
-                
-                if ((charCode != keyBackspace) && (charCode != keyReturn) && (charCode != keyPadEnter) && (charCode != keyEscape))
-                    return charCode;
-            }
-        }
+        if (event.pressed)
+            o2Input.OnKeyPressed(event.key);
+        else
+            o2Input.OnKeyReleased(event.key);
     }
-    
-    return -[event keyCode];
 }
 
 - (void)keyDown:(NSEvent *)event
 {
-    int keyCode = [self getKeyCode:event];
-    bool cmdPressed = (event.modifierFlags & NSEventModifierFlagCommand) != 0;
-    bool isRepeat = [event isARepeat];
-    
-    if (isRepeat || [currentlyPressedKeys containsObject:@(keyCode)]) {
-        return;
-    }
-    
-    [currentlyPressedKeys addObject:@(keyCode)];
-    o2Input.OnKeyPressed(keyCode);
-    
-    if (cmdPressed) {
-        [pressedKeysWithCmd addObject:@(keyCode)];
-    }
+    [self applyKeyEvents:keyboardHandler.OnKeyDown([event keyCode], GetModifiers(event.modifierFlags))];
 }
 
 - (void)keyUp:(NSEvent *)event
 {
-    int keyCode = [self getKeyCode:event];
-    
-    [currentlyPressedKeys removeObject:@(keyCode)];
-    o2Input.OnKeyReleased(keyCode);
-    
-    [pressedKeysWithCmd removeObject:@(keyCode)];
+    [self applyKeyEvents:keyboardHandler.OnKeyUp([event keyCode], GetModifiers(event.modifierFlags))];
 }
 
 - (void)flagsChanged:(NSEvent*)event
 {
-    bool shift = event.modifierFlags & NSEventModifierFlagShift;
-    bool alt = event.modifierFlags & NSEventModifierFlagOption;
-    bool ctrl = event.modifierFlags & NSEventModifierFlagControl;
-    bool command = event.modifierFlags & NSEventModifierFlagCommand;
-    
-    static bool prevShift = false;
-    static bool prevAlt = false;
-    static bool prevCtrl = false;
-    static bool prevCommand = false;
-    
-    if (shift != prevShift)
-        shift ? o2Input.OnKeyPressed(VK_SHIFT) : o2Input.OnKeyReleased(VK_SHIFT);
-    
-    if (alt != prevAlt)
-        alt ? o2Input.OnKeyPressed(VK_MENU) : o2Input.OnKeyReleased(VK_MENU);
-    
-    if (ctrl != prevCtrl)
-        ctrl ? o2Input.OnKeyPressed(VK_CONTROL) : o2Input.OnKeyReleased(VK_CONTROL);
-    
-    if (command != prevCommand) {
-        if (command) {
-            o2Input.OnKeyPressed(VK_COMMAND);
-        } else {
-            o2Input.OnKeyReleased(VK_COMMAND);
-            
-            for (NSNumber *keyCodeNumber in pressedKeysWithCmd) {
-                int keyCode = [keyCodeNumber intValue];
-                o2Input.OnKeyReleased(keyCode);
-                [currentlyPressedKeys removeObject:@(keyCode)];
-            }
-            [pressedKeysWithCmd removeAllObjects];
-        }
-    }
-    
-    prevShift = shift;
-    prevAlt = alt;
-    prevCtrl = ctrl;
-    prevCommand = command;
+    [self applyKeyEvents:keyboardHandler.OnModifiersChanged(GetModifiers(event.modifierFlags))];
+}
+
+- (void)windowDidResignKey:(NSNotification *)notification
+{
+    [self applyKeyEvents:keyboardHandler.OnFocusLost()];
 }
 
 - (o2::Vec2F)getMousePos:(NSEvent *)event
@@ -233,6 +163,7 @@
 
 - (void)mouseDown:(NSEvent *)event
 {
+    [self applyKeyEvents:keyboardHandler.OnModifiersChanged(GetModifiers(event.modifierFlags))];
     o2Input.OnCursorPressed([self getMousePos:event]);
 }
 
@@ -253,6 +184,7 @@
 
 - (void)rightMouseDown:(NSEvent *)event
 {
+    [self applyKeyEvents:keyboardHandler.OnModifiersChanged(GetModifiers(event.modifierFlags))];
     o2Input.OnAltCursorPressed([self getMousePos:event]);
 }
 

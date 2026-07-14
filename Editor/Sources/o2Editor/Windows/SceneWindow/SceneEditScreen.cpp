@@ -309,7 +309,7 @@ namespace Editor
             return;
         }
 
-        // Mac backend reports letter keys as characters, lower case without shift
+        // X11 backend reports letter keys as lower case keysyms
         auto isKeyDown = [](char upper) { return o2Input.IsKeyDown(upper) || o2Input.IsKeyDown(upper - 'A' + 'a'); };
 
         Vec3F direction;
