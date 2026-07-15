@@ -1,6 +1,7 @@
 #include "o2Editor/stdafx.h"
 #include "PropertiesWindow.h"
 
+#include "o2/Utils/Editor/SceneEditableObject.h"
 #include "o2/Scene/UI/WidgetLayout.h"
 #include "o2/Scene/UI/Widgets/ContextMenu.h"
 #include "o2Editor/Actions/ActionsList.h"
@@ -79,7 +80,36 @@ namespace Editor
     {
         onPropertyChangeCompleted(targets, path, before, after);
 
-        o2EditorSceneWindow.DoneActorPropertyChangeAction(path, before, after);
+        // Scene objects apply through the undoable actor action; other targets (asset metas
+        // etc.) are applied directly, since action-mode fields don't write their proxies and
+        // the actor action would silently drop the change
+        bool sceneTargets = !targets.IsEmpty() && dynamic_cast<SceneEditableObject*>(targets[0]) != nullptr;
+        if (sceneTargets)
+            o2EditorSceneWindow.DoneActorPropertyChangeAction(path, before, after);
+        else
+            ApplyPropertyToObjects(targets, path, after);
+    }
+
+    void PropertiesWindow::ApplyPropertyToObjects(const Vector<IObject*>& targets, const String& path,
+                                                  const Vector<DataDocument>& values)
+    {
+        for (int i = 0; i < targets.Count(); i++)
+        {
+            IObject* target = targets[i];
+            if (!target || values.IsEmpty())
+                continue;
+
+            auto objectType = dynamic_cast<const ObjectType*>(&target->GetType());
+            if (!objectType)
+                continue;
+
+            const FieldInfo* fieldInfo = nullptr;
+            void* realTypeObject = objectType->DynamicCastFromIObject(target);
+            void* fieldPtr = objectType->GetFieldPtr(realTypeObject, path, fieldInfo);
+
+            if (fieldInfo && fieldPtr)
+                fieldInfo->Deserialize(fieldPtr, values[Math::Min(i, values.Count() - 1)]);
+        }
     }
 
 	void PropertiesWindow::OnFocusedWindow()

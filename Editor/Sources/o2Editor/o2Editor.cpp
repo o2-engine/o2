@@ -85,6 +85,7 @@ extern void __RegisterClass__Editor__IObjectPropertiesViewer();
 extern void __RegisterClass__Editor__IPropertyField();
 extern void __RegisterClass__Editor__ObjectViewer();
 extern void __RegisterClass__Editor__CameraActorViewer();
+extern void __RegisterClass__Editor__AtlasAssetViewer();
 extern void __RegisterClass__Editor__ImageAssetViewer();
 extern void __RegisterClass__Editor__VectorFontAssetViewer();
 extern void __RegisterClass__Editor__AnimationStateViewer();
@@ -290,6 +291,7 @@ extern void InitializeTypeso2Editor()
     __RegisterClass__Editor__IPropertyField();
     __RegisterClass__Editor__ObjectViewer();
     __RegisterClass__Editor__CameraActorViewer();
+    __RegisterClass__Editor__AtlasAssetViewer();
     __RegisterClass__Editor__ImageAssetViewer();
     __RegisterClass__Editor__VectorFontAssetViewer();
     __RegisterClass__Editor__AnimationStateViewer();

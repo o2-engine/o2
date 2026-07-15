@@ -50,9 +50,42 @@ namespace Editor
         {
             mEntries = mEnumType->GetEntries();
 
-            for (auto& kv : mEntries)
-                mDropDown->AddItem(kv.second);
+            if (mDropDown)
+            {
+                for (auto& kv : mEntries)
+                    mDropDown->AddItem(kv.second);
+            }
         }
+    }
+
+    void EnumProperty::StoreValues(Vector<DataDocument>& data) const
+    {
+        data.Clear();
+        for (auto& ptr : mValuesProxies)
+        {
+            data.Add(DataDocument());
+            StoreEnumValue(data.Last(), GetProxy(ptr.first));
+        }
+    }
+
+    void EnumProperty::StoreValuesOfValue(Vector<DataDocument>& data, const int& value) const
+    {
+        data.Clear();
+        for (auto& ptr : mValuesProxies)
+        {
+            data.Add(DataDocument());
+            StoreEnumValue(data.Last(), value);
+        }
+    }
+
+    void EnumProperty::StoreEnumValue(DataDocument& data, int value) const
+    {
+        // The name matches the enum field serialization; unspecialized fields (no entries
+        // known) fall back to the raw int, which the enum converter also accepts
+        if (mEntries.ContainsKey(value))
+            data = mEntries.Get(value);
+        else
+            data = value;
     }
 
     const Type* EnumProperty::GetValueTypeStatic()

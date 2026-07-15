@@ -524,9 +524,9 @@ namespace o2
 	{
 		PROFILE_SAMPLE_FUNC();
 
-		static const Vector<TextureFormat> flipFormats = { TextureFormat::DXT5 };
-
-		if (mCurrentDrawTexture && flipFormats.Contains(mCurrentDrawTexture->GetFormat()))
+		// All block-compressed files (DDS, ASTC) store rows top-down, unlike the engine's
+		// bottom-up png textures, so their V coordinate is mirrored at draw time
+		if (mCurrentDrawTexture && Texture::IsFormatCompressed(mCurrentDrawTexture->GetFormat()))
 			PlatformFlipVerticesUV();
 	}
 

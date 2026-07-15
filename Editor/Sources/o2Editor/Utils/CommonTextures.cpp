@@ -4,6 +4,9 @@ namespace Editor
 {
     void CommonTextures::Initialize()
     {
+        if (checkedBackground)
+            return;
+
         Color4 color1(1.0f, 1.0f, 1.0f, 1.0f), color2(0.7f, 0.7f, 0.7f, 1.0f);
         Bitmap backLayerBitmap(PixelFormat::R8G8B8A8, Vec2I(20, 20));
         backLayerBitmap.Fill(color1);

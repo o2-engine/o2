@@ -44,6 +44,16 @@ namespace Editor
         bool          mUpdatingValue = false; // Is dropdown value updating and we don't we don't check selection
 
     protected:
+        // Stores enum names into the change documents: enum fields deserialize from names,
+        // storing the raw int (the base behavior) crashes the apply
+        void StoreValues(Vector<DataDocument>& data) const override;
+
+        // Stores the given value as an enum name, once per target proxy
+        void StoreValuesOfValue(Vector<DataDocument>& data, const int& value) const override;
+
+        // Writes the enum name (or the raw int when entries are unknown) into the document
+        void StoreEnumValue(DataDocument& data, int value) const;
+
         // Updates value view
         void UpdateValueView() override;
 
@@ -77,6 +87,9 @@ CLASS_METHODS_META(Editor::EnumProperty)
     FUNCTION().PUBLIC().SIGNATURE(const Type*, GetValueType);
     FUNCTION().PUBLIC().SIGNATURE(void, SpecializeType, const Type*);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(const Type*, GetValueTypeStatic);
+    FUNCTION().PROTECTED().SIGNATURE(void, StoreValues, Vector<DataDocument>&);
+    FUNCTION().PROTECTED().SIGNATURE(void, StoreValuesOfValue, Vector<DataDocument>&, const int&);
+    FUNCTION().PROTECTED().SIGNATURE(void, StoreEnumValue, DataDocument&, int);
     FUNCTION().PROTECTED().SIGNATURE(void, UpdateValueView);
     FUNCTION().PROTECTED().SIGNATURE(void, InitializeControls);
     FUNCTION().PROTECTED().SIGNATURE(void, OnSelectedItem, const WString&);

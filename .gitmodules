@@ -37,3 +37,12 @@
 [submodule "Framework/3rdPartyLibs/quickjs"]
 	path = Framework/3rdPartyLibs/quickjs
 	url = https://github.com/quickjs-ng/quickjs.git
+[submodule "AssetsBuildTool/3rdPartyLibs/astc-encoder"]
+	path = AssetsBuildTool/3rdPartyLibs/astc-encoder
+	url = https://github.com/ARM-software/astc-encoder.git
+[submodule "Framework/3rdPartyLibs/stb"]
+	path = Framework/3rdPartyLibs/stb
+	url = https://github.com/nothings/stb.git
+[submodule "Framework/3rdPartyLibs/bc7enc"]
+	path = Framework/3rdPartyLibs/bc7enc
+	url = https://github.com/richgel999/bc7enc_rdo.git

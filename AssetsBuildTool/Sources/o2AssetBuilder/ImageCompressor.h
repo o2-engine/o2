@@ -7,7 +7,7 @@ namespace o2
     {
     public:
         // Compresses image
-        static void CompressImage(const String& path, const String& outPath, TextureFormat format, int quality);
+        static void CompressImage(const String& path, const String& outPath, TextureCompression compression, int quality);
 
         // Loads config
         static void LoadConfig(const String& path);
@@ -24,7 +24,7 @@ namespace o2
             // The format is:
             // path/to/executable custom parameters {quality 0-100} {input} {output}
 
-            Map<Platform, Map<TextureFormat, String>> formatCommands; // Texture formats compression commands @SERIALIZABLE
+            Map<Platform, Map<TextureCompression, String>> formatCommands; // Compression tool commands per host platform @SERIALIZABLE
 
             SERIALIZABLE(Config);
         };

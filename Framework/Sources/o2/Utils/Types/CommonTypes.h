@@ -74,7 +74,12 @@ namespace o2
 
     enum class PixelFormat { R8G8B8A8, R8G8B8 };
 
-    enum class TextureFormat { R8G8B8A8, DXT5, R16G16B16A16F };
+    enum class TextureFormat { R8G8B8A8, DXT1, DXT5, BC7, ASTC4x4, R16G16B16A16F };
+
+    // Block compression selectable for built textures (atlas pages). Kept separate from
+    // TextureFormat so editor pickers only offer real compression choices: runtime-only
+    // pixel formats like R16G16B16A16F are not compressions
+    enum class TextureCompression { None, DXT1, DXT5, BC7, ASTC4x4 };
 
     enum class Loop { None, Repeat, PingPong };
 
@@ -113,6 +118,8 @@ PRE_ENUM_META(o2::PrimitiveType);
 PRE_ENUM_META(o2::PixelFormat);
 
 PRE_ENUM_META(o2::TextureFormat);
+
+PRE_ENUM_META(o2::TextureCompression);
 
 PRE_ENUM_META(o2::Loop);
 

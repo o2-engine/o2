@@ -27,16 +27,20 @@ namespace o2
 		x(pos.x), y(pos.y), z(1), color(vcolor), tu(vtu), tv(vtv), nx(1), ny(0), nz(0)
 	{}
 
+	// Set() initializes vertices sitting in raw uninitialized mesh buffers, so every field
+	// must be written here: a skipped z or normal keeps heap garbage (NaN kills the polygon)
+
 	void Vertex::Set(const Vec2F& pos, Color32Bit ccolor, float u, float v)
 	{
-		x = pos.x; y = pos.y;
+		x = pos.x; y = pos.y; z = 1;
 		color = ccolor;
 		tu = u; tv = v;
+		nx = 1; ny = 0; nz = 0;
 	}
 
 	void Vertex::Set(const Vec2F& pos, Color32Bit ccolor, float u, float v, const Vec2F& normal)
 	{
-		x = pos.x; y = pos.y;
+		x = pos.x; y = pos.y; z = 1;
 		color = ccolor;
 		tu = u; tv = v;
 		nx = normal.x; ny = normal.y; nz = 0;
@@ -44,9 +48,10 @@ namespace o2
 
 	void Vertex::Set(float px, float py, Color32Bit ccolor, float u, float v)
 	{
-		x = px; y = py;
+		x = px; y = py; z = 1;
 		color = ccolor;
 		tu = u; tv = v;
+		nx = 1; ny = 0; nz = 0;
 	}
 
 	void Vertex::Set(const Vec2F& pos, float cz, Color32Bit ccolor, float u, float v)
@@ -55,6 +60,7 @@ namespace o2
 		z = cz;
 		color = ccolor;
 		tu = u; tv = v;
+		nx = 1; ny = 0; nz = 0;
 	}
 
 	void Vertex::SetPosition(const Vec2F& pos)

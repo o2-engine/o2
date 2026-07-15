@@ -69,12 +69,13 @@ namespace
         double topSum = 0.0, bottomSum = 0.0;
         int halfPixels = (size.y/2)*size.x;
 
+        // Bitmap rows are stored bottom-up: low row indices are the bottom of the frame
         for (int y = 0; y < size.y/2; y++)
         {
             for (int x = 0; x < size.x; x++)
             {
-                topSum += data[(y*size.x + x)*4 + 1];
-                bottomSum += data[((y + size.y/2)*size.x + x)*4 + 1];
+                bottomSum += data[(y*size.x + x)*4 + 1];
+                topSum += data[((y + size.y/2)*size.x + x)*4 + 1];
             }
         }
 
@@ -503,7 +504,8 @@ TEST(RenderPipelineDraw, LightingDemoSceneDrawsLit)
     int centerBrightness = (int)data[centerOffset] + data[centerOffset + 1] + data[centerOffset + 2];
     EXPECT_GT(centerBrightness, 60) << "center must show the lit red box";
 
-    int cornerOffset = (5*size.x + 5)*4;
+    // rows are bottom-up: the dark clear sky is in the top rows of the data
+    int cornerOffset = ((size.y - 6)*size.x + 5)*4;
     int cornerBrightness = (int)data[cornerOffset] + data[cornerOffset + 1] + data[cornerOffset + 2];
     EXPECT_LT(cornerBrightness, 60) << "corner must keep the dark clear color";
 }

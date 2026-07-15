@@ -195,7 +195,8 @@ namespace o2
     String AtlasAsset::GetPageTextureFileName(const AssetInfo& atlasInfo, UInt pageIdx)
     {
         auto meta = DynamicCast<AtlasAsset::Meta>(atlasInfo.meta);
-        String extension = Texture::formatFileExtensions.Get(meta->GetResultPlatformMeta(::GetEnginePlatform()).format);
+        auto platformMeta = meta->GetResultPlatformMeta(::GetEnginePlatform());
+        String extension = Texture::formatFileExtensions.Get(Texture::FormatOfCompression(platformMeta.compression));
         return (atlasInfo.tree ? atlasInfo.tree.Lock()->builtAssetsPath : String()) + atlasInfo.path + (String)pageIdx + "." + extension;
     }
 
@@ -206,7 +207,8 @@ namespace o2
 
     bool AtlasAsset::PlatformMeta::operator==(const PlatformMeta& other) const
     {
-        return maxSize == other.maxSize && format == other.format;
+        return maxSize == other.maxSize && compression == other.compression &&
+               quality == other.quality && border == other.border;
     }
 }
 

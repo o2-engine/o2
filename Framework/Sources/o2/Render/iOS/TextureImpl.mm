@@ -47,6 +47,14 @@ namespace o2
 
         if (mFormat == TextureFormat::R16G16B16A16F)
             textureDescriptor.pixelFormat = MTLPixelFormatRGBA16Float;
+        else if (mFormat == TextureFormat::ASTC4x4)
+            textureDescriptor.pixelFormat = MTLPixelFormatASTC_4x4_LDR;
+        else if (IsFormatCompressed(mFormat))
+        {
+            // iOS GPUs have no BC support: use ASTC4x4 compression for the iOS platform
+            o2Render.mLog->Error("BC texture formats are not supported on iOS, use ASTC4x4");
+            return false;
+        }
         else
             textureDescriptor.pixelFormat = mUsage == Usage::RenderTarget ? RenderDevice::view.colorPixelFormat : MTLPixelFormatRGBA8Unorm;
 
@@ -74,7 +82,10 @@ namespace o2
 
     void Texture::PlatformUploadData(const Vec2I& size, Byte* data, TextureFormat format)
     {
-        NSUInteger bytesPerRow = 4 * mSize.x;
+        NSUInteger bytesPerRow = IsFormatCompressed(format)
+            ? ((NSUInteger)(size.x + 3) / 4) * FormatBlockSize(format)
+            : 4 * (NSUInteger)mSize.x;
+
         MTLRegion region = { { 0, 0, 0 }, { (UInt)size.x, (UInt)size.y, 1 } };
         [mImpl->texture replaceRegion:region
                           mipmapLevel:0

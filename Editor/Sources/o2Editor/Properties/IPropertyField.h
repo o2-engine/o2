@@ -280,7 +280,7 @@ namespace Editor
         void StoreValues(Vector<DataDocument>& data) const override;
 
         // Stores the given value to data, once per target proxy (aligned with StoreValues)
-        void StoreValuesOfValue(Vector<DataDocument>& data, const _type& value) const;
+        virtual void StoreValuesOfValue(Vector<DataDocument>& data, const _type& value) const;
 
         // Returns value from proxy
         virtual _type GetProxy(const Ref<IAbstractValueProxy>& proxy) const;

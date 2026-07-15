@@ -4,6 +4,7 @@
 #include "o2/Animation/AnimationClip.h"
 #include "o2/Application/VKCodes.h"
 #include "o2/Assets/Assets.h"
+#include "o2/Assets/Types/AtlasAsset.h"
 #include "o2/Assets/Types/FolderAsset.h"
 #include "o2/Render/Render.h"
 #include "o2/Render/Sprite.h"
@@ -13,6 +14,7 @@
 #include "o2/Scene/UI/WidgetLayer.h"
 #include "o2/Scene/UI/Widgets/EditBox.h"
 #include "o2/Utils/Editor/EditorScope.h"
+#include "o2Editor/Utils/CommonTextures.h"
 #include "o2/Utils/FileSystem/FileSystem.h"
 #include "o2/Utils/StringUtils.h"
 #include "o2Editor/Actions/Create.h"
@@ -413,32 +415,61 @@ namespace Editor
         auto iconLayer = assetIcon->layer["icon"];
         auto iconSprite = DynamicCast<Sprite>(iconLayer->GetDrawable());
 
+        // Texture previews lay on the checked background, like the image viewers do; the
+        // layer is created lazily and sits right below the icon layer
+        auto previewBackLayer = assetIcon->FindLayer("previewBack");
+        if (!previewBackLayer)
+        {
+            CommonTextures::Initialize(); // lazy, in case icons are built outside the editor app
+            auto backSprite = mmake<Sprite>(CommonTextures::checkedBackground);
+            backSprite->SetMode(SpriteMode::Tiled);
+            previewBackLayer = assetIcon->AddLayer("previewBack", backSprite, iconLayer->layout,
+                                                   iconLayer->GetDepth() - 0.1f);
+        }
+
+        auto setPreviewLayout = [&](float width, float height) {
+            float previewMaxSize = 30;
+            Vec2F size = width > height
+                ? Vec2F(previewMaxSize, previewMaxSize*height/Math::Max(width, 1.0f))
+                : Vec2F(previewMaxSize*width/Math::Max(height, 1.0f), previewMaxSize);
+
+            iconLayer->layout = Layout::Based(BaseCorner::Center, size, Vec2F(0, 10));
+            previewBackLayer->layout = iconLayer->layout;
+            previewBackLayer->SetEnabled(true);
+        };
+
+        bool isAtlasWithPages = false;
+        if (asset->meta->GetAssetType() == &TypeOf(AtlasAsset))
+        {
+            AssetRef<AtlasAsset> atlasAsset(asset->path);
+            auto& pages = atlasAsset->GetPages();
+            isAtlasWithPages = !pages.IsEmpty() && pages[0].GetTexture();
+
+            if (isAtlasWithPages)
+            {
+                Vec2I pageSize = pages[0].GetTexture()->GetSize();
+                setPreviewLayout((float)pageSize.x, (float)pageSize.y);
+
+                iconSprite->SetTexture(pages[0].GetTexture());
+                iconSprite->SetTextureSrcRect(RectI(Vec2I(), pageSize));
+                iconSprite->mode = SpriteMode::Default;
+            }
+        }
+
         if (asset->meta->GetAssetType() == &TypeOf(ImageAsset))
         {
             AssetRef<ImageAsset> previewSpriteAsset(asset->path);
-            float previewMaxSize = 30;
-
-            if (previewSpriteAsset->width > previewSpriteAsset->height)
-            {
-                float cf = previewSpriteAsset->height / previewSpriteAsset->width;
-                iconLayer->layout = Layout::Based(BaseCorner::Center, Vec2F(previewMaxSize, previewMaxSize * cf),
-                                                  Vec2F(0, 10));
-            }
-            else
-            {
-                float cf = previewSpriteAsset->width / previewSpriteAsset->height;
-                iconLayer->layout = Layout::Based(BaseCorner::Center, Vec2F(previewMaxSize * cf, previewMaxSize),
-                                                  Vec2F(0, 10));
-            }
+            setPreviewLayout(previewSpriteAsset->width, previewSpriteAsset->height);
 
             iconSprite->image = previewSpriteAsset;
             iconSprite->mode = SpriteMode::Default;
         }
-        else
+        else if (!isAtlasWithPages)
         {
             iconSprite->imageName = asset->meta->GetAssetType()->InvokeStatic<String>("GetEditorIcon");
             iconSprite->mode = SpriteMode::FixedAspect;
             iconLayer->layout = Layout::Based(BaseCorner::Center, Vec2F(40, 40), Vec2F(0, 10));
+            previewBackLayer->SetEnabled(false);
         }
 
         assetIcon->SetAssetInfo(asset);

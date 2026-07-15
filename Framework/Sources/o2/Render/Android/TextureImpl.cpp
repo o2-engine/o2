@@ -15,6 +15,19 @@ namespace o2
         GLenum type;
     };
 
+#ifndef GL_COMPRESSED_RGBA_S3TC_DXT1_EXT
+#define GL_COMPRESSED_RGBA_S3TC_DXT1_EXT 0x83F1
+#endif
+#ifndef GL_COMPRESSED_RGBA_S3TC_DXT5_EXT
+#define GL_COMPRESSED_RGBA_S3TC_DXT5_EXT 0x83F3
+#endif
+#ifndef GL_COMPRESSED_RGBA_BPTC_UNORM
+#define GL_COMPRESSED_RGBA_BPTC_UNORM 0x8E8C
+#endif
+#ifndef GL_COMPRESSED_RGBA_ASTC_4x4_KHR
+#define GL_COMPRESSED_RGBA_ASTC_4x4_KHR 0x93B0
+#endif
+
     static GLTextureFormat MapTextureFormat(TextureFormat format)
     {
         switch (format)
@@ -100,10 +113,25 @@ namespace o2
 
         glBindTexture(GL_TEXTURE_2D, mHandle);
 
-        GLTextureFormat texFormat = MapTextureFormat(format);
-        glTexImage2D(GL_TEXTURE_2D, 0, texFormat.internalFormat, (GLsizei)size.x, (GLsizei)size.y, 0,
-                     texFormat.format, texFormat.type, data);
-        GL_CHECK_ERROR();
+        if (format == TextureFormat::ASTC4x4)
+        {
+            int dataSize = ((size.x + 3)/4)*((size.y + 3)/4)*16;
+            glCompressedTexImage2D(GL_TEXTURE_2D, 0, GL_COMPRESSED_RGBA_ASTC_4x4_KHR,
+                                   (GLsizei)size.x, (GLsizei)size.y, 0, dataSize, data);
+            GL_CHECK_ERROR();
+        }
+        else if (Texture::IsFormatCompressed(format))
+        {
+            // GLES devices have no BC support: use ASTC4x4 compression for the Android platform
+            o2Render.mLog->Error("BC texture formats are not supported on Android, use ASTC4x4");
+        }
+        else
+        {
+            GLTextureFormat texFormat = MapTextureFormat(format);
+            glTexImage2D(GL_TEXTURE_2D, 0, texFormat.internalFormat, (GLsizei)size.x, (GLsizei)size.y, 0,
+                         texFormat.format, texFormat.type, data);
+            GL_CHECK_ERROR();
+        }
 
         glBindTexture(GL_TEXTURE_2D, prevTextureHandle);
     }

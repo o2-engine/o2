@@ -242,7 +242,7 @@ namespace o2
             String builtPath = mAssetsBuilder->GetBuiltAssetsPath() + atlasInfo->path + (String)i;
             resAtlasBitmaps[i]->Save(builtPath + ".png", Bitmap::ImageType::Png);
 
-            ImageCompressor::CompressImage(builtPath + ".png", builtPath, meta.format, 100);
+            ImageCompressor::CompressImage(builtPath + ".png", builtPath, meta.compression, meta.quality);
         }
 
         // Save atlas data

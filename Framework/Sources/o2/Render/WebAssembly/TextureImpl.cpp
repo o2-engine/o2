@@ -15,6 +15,19 @@ namespace o2
         GLenum type;
     };
 
+#ifndef GL_COMPRESSED_RGBA_S3TC_DXT1_EXT
+#define GL_COMPRESSED_RGBA_S3TC_DXT1_EXT 0x83F1
+#endif
+#ifndef GL_COMPRESSED_RGBA_S3TC_DXT5_EXT
+#define GL_COMPRESSED_RGBA_S3TC_DXT5_EXT 0x83F3
+#endif
+#ifndef GL_COMPRESSED_RGBA_BPTC_UNORM
+#define GL_COMPRESSED_RGBA_BPTC_UNORM 0x8E8C
+#endif
+#ifndef GL_COMPRESSED_RGBA_ASTC_4x4_KHR
+#define GL_COMPRESSED_RGBA_ASTC_4x4_KHR 0x93B0
+#endif
+
     static GLTextureFormat MapTextureFormat(TextureFormat format)
     {
         switch (format)
@@ -94,10 +107,27 @@ namespace o2
 
         glBindTexture(GL_TEXTURE_2D, mHandle);
 
-        GLTextureFormat texFormat = MapTextureFormat(format);
-        glTexImage2D(GL_TEXTURE_2D, 0, texFormat.internalFormat, (GLsizei)size.x, (GLsizei)size.y, 0,
-                     texFormat.format, texFormat.type, data);
-        GL_CHECK_ERROR();
+        if (Texture::IsFormatCompressed(format))
+        {
+            // Compressed formats come through WebGL extensions (S3TC on desktop, ASTC on mobile
+            // browsers); when the extension is missing the GL error below reports it
+            GLenum compressed = format == TextureFormat::DXT1 ? GL_COMPRESSED_RGBA_S3TC_DXT1_EXT
+                : format == TextureFormat::DXT5 ? GL_COMPRESSED_RGBA_S3TC_DXT5_EXT
+                : format == TextureFormat::BC7 ? GL_COMPRESSED_RGBA_BPTC_UNORM
+                : GL_COMPRESSED_RGBA_ASTC_4x4_KHR;
+
+            int dataSize = ((size.x + 3)/4)*((size.y + 3)/4)*Texture::FormatBlockSize(format);
+            glCompressedTexImage2D(GL_TEXTURE_2D, 0, compressed,
+                                   (GLsizei)size.x, (GLsizei)size.y, 0, dataSize, data);
+            GL_CHECK_ERROR();
+        }
+        else
+        {
+            GLTextureFormat texFormat = MapTextureFormat(format);
+            glTexImage2D(GL_TEXTURE_2D, 0, texFormat.internalFormat, (GLsizei)size.x, (GLsizei)size.y, 0,
+                         texFormat.format, texFormat.type, data);
+            GL_CHECK_ERROR();
+        }
 
         glBindTexture(GL_TEXTURE_2D, prevTextureHandle);
     }

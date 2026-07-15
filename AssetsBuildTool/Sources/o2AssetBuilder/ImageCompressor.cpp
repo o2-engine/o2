@@ -1,17 +1,48 @@
 #include "o2/stdafx.h"
 #include "ImageCompressor.h"
 
+#include "AstcCompressor.h"
+#include "o2/Render/Texture.h"
+#include "o2/Utils/Bitmap/Bitmap.h"
+#include "o2/Utils/Bitmap/DdsFormat.h"
 #include "o2/Utils/FileSystem/FileSystem.h"
 
 namespace o2
 {
-    void ImageCompressor::CompressImage(const String& path, const String& outPath, TextureFormat format, int quality)
+    void ImageCompressor::CompressImage(const String& path, const String& outPath, TextureCompression compression, int quality)
     {
-        o2Debug.Log("Compress image from " + path + " to " + outPath + " format " + o2Reflection.GetEnumName(format));
+        if (compression == TextureCompression::None)
+            return; // uncompressed pngs are used as is
 
-        String command = mConfig.formatCommands[::GetEnginePlatform()][format];
+        o2Debug.Log("Compress image from " + path + " to " + outPath + " compression " +
+                    o2Reflection.GetEnumName(compression) + " quality " + (String)quality);
+
+        String command = mConfig.formatCommands[::GetEnginePlatform()][compression];
         if (command.IsEmpty())
+        {
+            // No external tool configured for this host: use the built-in encoders, so
+            // compression works the same on every platform
+            Bitmap bitmap;
+            if (!bitmap.Load(path, Bitmap::ImageType::Png))
+            {
+                o2Debug.LogError("Failed to load image for compression: " + path);
+                return;
+            }
+
+            TextureFormat format = Texture::FormatOfCompression(compression);
+            String extension = Texture::formatFileExtensions.Get(format);
+
+            bool saved = compression == TextureCompression::ASTC4x4
+                ? SaveAstc4x4(bitmap, outPath + "." + extension, quality)
+                : SaveDds(bitmap, outPath + "." + extension, format, quality);
+
+            if (saved)
+                o2FileSystem.FileDelete(path);
+            else
+                o2Debug.LogError("Built-in compression failed for " + path);
+
             return;
+        }
 
         if (::GetEnginePlatform() == Platform::Windows)
             command = "\"" + command + "\"";
@@ -44,7 +75,7 @@ namespace o2
             { 
                 Platform::Windows, 
                 {
-                    { TextureFormat::DXT5, "\"../../deps/o2/AssetsBuildTool/Bin/nvcompress.exe\" -nomips -bc3 -alpha \"{input}\" \"{output}.dds\"" }
+                    { TextureCompression::DXT5, "\"../../deps/o2/AssetsBuildTool/Bin/nvcompress.exe\" -nomips -bc3 -alpha \"{input}\" \"{output}.dds\"" }
                 } 
             }
         };

@@ -42,6 +42,7 @@ extern void __RegisterEnum__o2__LineType();
 extern void __RegisterEnum__o2__PrimitiveType();
 extern void __RegisterEnum__o2__PixelFormat();
 extern void __RegisterEnum__o2__TextureFormat();
+extern void __RegisterEnum__o2__TextureCompression();
 extern void __RegisterEnum__o2__Loop();
 extern void __RegisterEnum__o2__Units();
 extern void __RegisterTemplateClass__o2__AnimationTrack_bool_();
@@ -301,6 +302,7 @@ extern void InitializeTypeso2Framework()
     __RegisterEnum__o2__PrimitiveType();
     __RegisterEnum__o2__PixelFormat();
     __RegisterEnum__o2__TextureFormat();
+    __RegisterEnum__o2__TextureCompression();
     __RegisterEnum__o2__Loop();
     __RegisterEnum__o2__Units();
     __RegisterTemplateClass__o2__AnimationTrack_bool_();

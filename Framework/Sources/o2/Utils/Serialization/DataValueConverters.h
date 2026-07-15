@@ -841,6 +841,19 @@ namespace o2
 
         static void Read(T& value, const DataValue& data)
         {
+            // Enums are serialized by name, but some sources (editor change documents from
+            // int-based fields) hold the raw number; reading a non-string as a string crashes
+            if (data.IsNumber())
+            {
+                int intValue = 0;
+                data.Get(intValue);
+                value = (T)intValue;
+                return;
+            }
+
+            if (!data.IsString())
+                return; // keep the current value instead of reading garbage
+
             String buf;
             data.Get(buf);
             value = Reflection::GetEnumValue<T>(buf);

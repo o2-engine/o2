@@ -45,6 +45,15 @@ namespace o2
 
         static const Map<TextureFormat, String> formatFileExtensions; // Texture format file extensions
 
+        // Returns true for block-compressed formats (DXT1/DXT5/BC7/ASTC4x4)
+        static bool IsFormatCompressed(TextureFormat format);
+
+        // Returns the byte size of one 4x4 block for compressed formats (8 for DXT1, 16 for others)
+        static int FormatBlockSize(TextureFormat format);
+
+        // Returns the runtime texture format a compression choice produces (None -> R8G8B8A8)
+        static TextureFormat FormatOfCompression(TextureCompression compression);
+
     public:
         PROPERTIES(Texture);
         GETTER(Vec2I, size, GetSize);             // Size of texture getter
@@ -198,8 +207,11 @@ namespace o2
         // Loads texture from PNG file 
         void LoadPNG(const String& fileName);
 
-        // Loads texture from DDS file
+        // Loads texture from DDS file (DXT1/DXT5 fourCC or the DX10 header with BC7)
         void LoadDDS(const String& fileName);
+
+        // Loads texture from a 4x4-block ASTC file
+        void LoadASTC(const String& fileName);
 
         friend class Render;
         friend class TextureRef;

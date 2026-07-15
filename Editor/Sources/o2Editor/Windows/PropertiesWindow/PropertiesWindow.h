@@ -99,6 +99,15 @@ namespace Editor
         void OnPropertyChangeCompleted(const Vector<IObject*>& targets, const String& path, const Vector<DataDocument>& before, 
                                        const Vector<DataDocument>& after);
 
+    public:
+        // Deserializes the values into the targets' fields by the property path. Action-mode
+        // property fields never write their proxies, so non-scene targets (asset metas etc.)
+        // are applied here directly instead of through the scene undo action
+        static void ApplyPropertyToObjects(const Vector<IObject*>& targets, const String& path,
+                                           const Vector<DataDocument>& values);
+
+    protected:
+
 		// Called when window was focused, calls focus delegate from scene tree
         void OnFocusedWindow();
     };
@@ -140,6 +149,7 @@ CLASS_METHODS_META(Editor::PropertiesWindow)
     FUNCTION().PROTECTED().SIGNATURE(void, OnPrivateFieldsVisibleChanged, bool);
     FUNCTION().PROTECTED().SIGNATURE(void, OnPropertyChanged, const Vector<IObject*>&, const Ref<IPropertyField>&, bool);
     FUNCTION().PROTECTED().SIGNATURE(void, OnPropertyChangeCompleted, const Vector<IObject*>&, const String&, const Vector<DataDocument>&, const Vector<DataDocument>&);
+    FUNCTION().PUBLIC().SIGNATURE_STATIC(void, ApplyPropertyToObjects, const Vector<IObject*>&, const String&, const Vector<DataDocument>&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnFocusedWindow);
 }
 END_META;

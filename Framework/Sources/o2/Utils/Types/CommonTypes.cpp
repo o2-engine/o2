@@ -155,9 +155,22 @@ END_ENUM_META;
 
 ENUM_META(o2::TextureFormat, o2__TextureFormat)
 {
+    ENUM_ENTRY(ASTC4x4);
+    ENUM_ENTRY(BC7);
+    ENUM_ENTRY(DXT1);
     ENUM_ENTRY(DXT5);
     ENUM_ENTRY(R16G16B16A16F);
     ENUM_ENTRY(R8G8B8A8);
+}
+END_ENUM_META;
+
+ENUM_META(o2::TextureCompression, o2__TextureCompression)
+{
+    ENUM_ENTRY(ASTC4x4);
+    ENUM_ENTRY(BC7);
+    ENUM_ENTRY(DXT1);
+    ENUM_ENTRY(DXT5);
+    ENUM_ENTRY(None);
 }
 END_ENUM_META;
 

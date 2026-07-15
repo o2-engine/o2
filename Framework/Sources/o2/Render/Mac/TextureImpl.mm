@@ -48,6 +48,14 @@ namespace o2
 
         if (mFormat == TextureFormat::R16G16B16A16F)
             textureDescriptor.pixelFormat = MTLPixelFormatRGBA16Float;
+        else if (mFormat == TextureFormat::DXT1)
+            textureDescriptor.pixelFormat = MTLPixelFormatBC1_RGBA;
+        else if (mFormat == TextureFormat::DXT5)
+            textureDescriptor.pixelFormat = MTLPixelFormatBC3_RGBA;
+        else if (mFormat == TextureFormat::BC7)
+            textureDescriptor.pixelFormat = MTLPixelFormatBC7_RGBAUnorm;
+        else if (mFormat == TextureFormat::ASTC4x4)
+            textureDescriptor.pixelFormat = MTLPixelFormatASTC_4x4_LDR;
         else
             textureDescriptor.pixelFormat = mUsage == Usage::RenderTarget ? RenderDevice::view.colorPixelFormat : MTLPixelFormatRGBA8Unorm;
 
@@ -75,7 +83,11 @@ namespace o2
 
     void Texture::PlatformUploadData(const Vec2I& size, Byte* data, TextureFormat format)
     {
-        NSUInteger bytesPerRow = 4 * mSize.x;
+        // Compressed formats store 4x4 blocks; the region is still specified in texels
+        NSUInteger bytesPerRow = IsFormatCompressed(format)
+            ? ((NSUInteger)(size.x + 3) / 4) * FormatBlockSize(format)
+            : 4 * (NSUInteger)mSize.x;
+
         MTLRegion region = { { 0, 0, 0 }, { (UInt)size.x, (UInt)size.y, 1 } };
         [mImpl->texture replaceRegion:region
                           mipmapLevel:0
@@ -100,6 +112,9 @@ namespace o2
     {
         if (!mImpl || !mImpl->texture)
             return;
+
+        if (IsFormatCompressed(mFormat))
+            return; // compressed texels can't be blitted back as plain RGBA rows
 
         bool halfFloat = mFormat == TextureFormat::R16G16B16A16F;
         NSUInteger bytesPerPixel = halfFloat ? 8 : 4;

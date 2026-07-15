@@ -25,6 +25,7 @@ target_link_libraries(o2RenderTests PRIVATE
     GTest::gtest
     o2TestsSupport
     o2Framework
+    o2AssetsBuilder # built-in texture encoders (ASTC) for the compressed-texture tests
 )
 
 add_dependencies(o2RenderTests o2Framework o2FrameworkCodegen o2TestsSupport)

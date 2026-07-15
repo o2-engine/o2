@@ -87,9 +87,12 @@ namespace o2
         // -----------------------------------
         struct PlatformMeta: public ISerializable, public RefCounterable, public ICloneableRef
         {
-            Vec2I         maxSize = Vec2I(2048, 2048); // Maximal atlas size @SERIALIZABLE
-            TextureFormat format = TextureFormat::R8G8B8A8;  // Atlas format @SERIALIZABLE
-            int           border = 0;                        // Images pack border @SERIALIZABLE
+            Vec2I maxSize = Vec2I(2048, 2048); // Maximal atlas size @SERIALIZABLE
+
+            TextureCompression compression = TextureCompression::None; // Pages block compression @SERIALIZABLE
+            int                quality = 100; // Compression quality/effort, 0..100 @SERIALIZABLE
+
+            int border = 0; // Images pack border @SERIALIZABLE
 
             bool operator==(const PlatformMeta& other) const;
 
@@ -231,7 +234,8 @@ END_META;
 CLASS_FIELDS_META(o2::AtlasAsset::PlatformMeta)
 {
     FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(Vec2I(2048, 2048)).NAME(maxSize);
-    FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(TextureFormat::R8G8B8A8).NAME(format);
+    FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(TextureCompression::None).NAME(compression);
+    FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(100).NAME(quality);
     FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(0).NAME(border);
 }
 END_META;

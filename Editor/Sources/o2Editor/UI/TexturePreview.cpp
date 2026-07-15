@@ -10,6 +10,8 @@ namespace Editor
     TexturePreview::TexturePreview(RefCounter* refCounter):
         Widget(refCounter)
     {
+        CommonTextures::Initialize(); // lazy: preview widgets are also built outside the editor app (tests)
+
         mTextureSprite = mmake<Sprite>();
         mBackgroundSprite = mmake<Sprite>(CommonTextures::checkedBackground);
         mBackgroundSprite->SetMode(SpriteMode::Tiled);

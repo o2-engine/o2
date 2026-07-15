@@ -6,10 +6,23 @@
 
 namespace o2
 {
+#ifndef GL_COMPRESSED_RGBA_S3TC_DXT1_EXT
+#define GL_COMPRESSED_RGBA_S3TC_DXT1_EXT 0x83F1
+#endif
+#ifndef GL_COMPRESSED_RGBA_BPTC_UNORM
+#define GL_COMPRESSED_RGBA_BPTC_UNORM 0x8E8C
+#endif
+#ifndef GL_COMPRESSED_RGBA_ASTC_4x4_KHR
+#define GL_COMPRESSED_RGBA_ASTC_4x4_KHR 0x93B0
+#endif
+
     Map<TextureFormat, GLint> formatMap =
     {
         { TextureFormat::R8G8B8A8, GL_RGBA },
-        { TextureFormat::DXT5, GL_COMPRESSED_RGBA_S3TC_DXT5_EXT }
+        { TextureFormat::DXT1, GL_COMPRESSED_RGBA_S3TC_DXT1_EXT },
+        { TextureFormat::DXT5, GL_COMPRESSED_RGBA_S3TC_DXT5_EXT },
+        { TextureFormat::BC7, GL_COMPRESSED_RGBA_BPTC_UNORM },
+        { TextureFormat::ASTC4x4, GL_COMPRESSED_RGBA_ASTC_4x4_KHR }
     };
 
     bool Texture::PlatformCreate()
@@ -78,13 +91,12 @@ namespace o2
 
         GLint texFormat = formatMap[format];
 
-        if (format == TextureFormat::DXT5)
+        if (Texture::IsFormatCompressed(format))
         {
-            int blockSize = 16;
-            int offset = 0;
+            int blockSize = Texture::FormatBlockSize(format);
             int dataSize = ((size.x + 3) / 4) * ((size.y + 3) / 4) * blockSize;
 
-            glCompressedTexImage2D(GL_TEXTURE_2D, 0, GL_COMPRESSED_RGBA_S3TC_DXT5_EXT, size.x, size.y, 0, dataSize, data);
+            glCompressedTexImage2D(GL_TEXTURE_2D, 0, texFormat, size.x, size.y, 0, dataSize, data);
         }
         else
         {
