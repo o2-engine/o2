@@ -20,8 +20,18 @@ function(o2_gtest_discover_tests TARGET)
         return()
     endif()
 
-    set(include_file "${CMAKE_CURRENT_BINARY_DIR}/${TARGET}_suites_include.cmake")
-    set(tests_file "${CMAKE_CURRENT_BINARY_DIR}/${TARGET}_suites_tests.cmake")
+    # Multi-config generators (Visual Studio, Xcode) evaluate file(GENERATE) once per config,
+    # and the content below embeds $<TARGET_FILE:...> which differs per config. Give each config
+    # its own output file so the same path isn't written with different content. TEST_INCLUDE_FILES
+    # resolves the $<CONFIG> genex at ctest time via -C.
+    get_property(_o2_multi_config GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
+    if(_o2_multi_config)
+        set(include_file "${CMAKE_CURRENT_BINARY_DIR}/${TARGET}_suites_include-$<CONFIG>.cmake")
+        set(tests_file "${CMAKE_CURRENT_BINARY_DIR}/${TARGET}_suites_tests-$<CONFIG>.cmake")
+    else()
+        set(include_file "${CMAKE_CURRENT_BINARY_DIR}/${TARGET}_suites_include.cmake")
+        set(tests_file "${CMAKE_CURRENT_BINARY_DIR}/${TARGET}_suites_tests.cmake")
+    endif()
 
     string(CONCAT content
         "set(_o2_target [=[${TARGET}]=])\n"
