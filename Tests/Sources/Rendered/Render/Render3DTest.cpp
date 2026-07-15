@@ -79,6 +79,47 @@ TEST(Render3D, DepthTestToggleSmoke)
     o2Render.End();
 }
 
+TEST(Render3D, Ortho2DCameraDepthTestRespectsWorldZ)
+{
+    Ref<Bitmap> captured;
+    o2Render.CaptureNextFrame([&](const Ref<Bitmap>& bitmap) { captured = bitmap; });
+
+    o2Render.Begin();
+    o2Render.Clear(Color4::Black());
+
+    o2Render.SetCamera(Camera());
+    o2Render.SetDepthTestEnabled(true);
+
+    // Higher-z green quad is drawn first, the screen-covering red quad at z = 0 is drawn after
+    Mesh nearQuad(TextureRef(), 4, 2);
+    FillQuad(nearQuad, 20.0f, 50.0f, Color4::Green());
+    nearQuad.Draw();
+
+    Mesh farQuad(TextureRef(), 4, 2);
+    FillQuad(farQuad, 2000.0f, 0.0f, Color4::Red());
+    farQuad.Draw();
+
+    o2Render.SetDepthTestEnabled(false);
+
+    o2Render.End();
+
+    ASSERT_TRUE(captured);
+
+    Vec2I size = captured->GetSize();
+    ASSERT_GT(size.x, 0);
+    ASSERT_GT(size.y, 0);
+
+    const UInt8* data = captured->GetData();
+    int centerOffset = ((size.y/2)*size.x + size.x/2)*4;
+
+    // Near quad must win at center: green channel is byte 1 in both RGBA and BGRA layouts
+    EXPECT_GT((int)data[centerOffset + 1], 200);
+
+    // Far quad must win outside the near quad (red, so green stays low)
+    int cornerOffset = ((size.y/8)*size.x + size.x/8)*4;
+    EXPECT_LT((int)data[cornerOffset + 1], 60);
+}
+
 TEST(Render3D, DepthTestNearGeometryWinsOverFarDrawnLater)
 {
     Ref<Bitmap> captured;

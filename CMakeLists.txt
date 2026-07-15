@@ -363,6 +363,7 @@ elseif (UNIX)
         find_library(FOUNDATION Foundation)
         find_library(OBJC objc)
         find_library(APPLICATION_SERVICES ApplicationServices)
+        find_library(CARBON Carbon)
 
         target_link_libraries(o2Framework
                 PRIVATE
@@ -373,6 +374,7 @@ elseif (UNIX)
                     ${OBJC}
                     ${METALKIT}
                     ${APPLICATION_SERVICES}
+                    ${CARBON}
         )
 
         set(METAL_SHADERS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Framework/Sources/o2/Render/Mac")
