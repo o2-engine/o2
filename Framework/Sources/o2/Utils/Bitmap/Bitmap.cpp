@@ -341,7 +341,6 @@ namespace o2
         int mapSize = Math::CeilToInt(radius);
         int fullmapSize = mapSize * 2 + 1;
         int alphaThreshold = threshold;
-        int radiusSquare = Math::Sqr(Math::FloorToInt(radius));
 
         int bpp[] = { 4, 3 };
         int curbpp = bpp[(int)mFormat];
@@ -380,29 +379,21 @@ namespace o2
                     }
                 }
 
+                if (count == 0)
+                    continue;
+
                 sqrDist /= (float)count;
 
-                if (sqrDist < radiusSquare - 2 && false)
+                float distance = Math::Sqrt((float)sqrDist);
+
+                if (distance < radius + 1.0f)
                 {
-                    Color4 newColor = pc.BlendByAlpha(color);
+                    Color4 stroke = color;
+                    stroke.a = (int)((float)stroke.a*Math::Clamp01(1.0f - (distance - radius)));
+
+                    Color4 newColor = pc.BlendByAlpha(stroke);
                     Color32Bit unewColor = newColor.ABGR();
                     memcpy(&mData[offs], &unewColor, curbpp);
-
-                }
-                else
-                {
-                    float distance = Math::Sqrt((float)sqrDist);
-
-                    if (distance < radius + 1.0f)
-                    {
-                        float alpha = 1.0f - (distance - radius);
-
-                        Color4 newColor = color;
-                        newColor.a = (int)((float)newColor.a*alpha);
-                        newColor = pc.BlendByAlpha(color);
-                        Color32Bit unewColor = newColor.ABGR();
-                        memcpy(&mData[offs], &unewColor, curbpp);
-                    }
                 }
             }
         }

@@ -246,3 +246,37 @@ TEST(Bitmap, CopyImageWithMismatchedFormatIsNoOp)
 
     EXPECT_TRUE(AllBytesEqual(dst, 0x00));
 }
+
+// Outline draws an anti-aliased stroke ring around opaque pixels: full stroke alpha inside the
+// radius, fading to zero over one pixel past it, glyph pixels composited on top of the stroke
+TEST(Bitmap, OutlineFadesStrokePastRadiusAndKeepsGlyphPixels)
+{
+    auto pixelAt = [](const Bitmap& bm, int x, int y) {
+        Color4 c;
+        c.SetABGR(*(const Color32Bit*)(bm.GetData() + (y * bm.GetSize().x + x) * 4));
+        return c;
+    };
+
+    Bitmap bm(PixelFormat::R8G8B8A8, Vec2I(15, 15));
+    bm.Fill(Color4(0, 0, 0, 0));
+
+    // single opaque pixel: every distance below is exact Euclidean, whatever the row order
+    Color32Bit white = Color4(255, 255, 255, 255).ABGR();
+    memcpy(bm.GetData() + (7 * 15 + 7) * 4, &white, 4);
+
+    const Color4 stroke(255, 0, 0, 200);
+    bm.Outline(2.0f, stroke, 100);
+
+    EXPECT_EQ(pixelAt(bm, 7, 7), Color4(255, 255, 255, 255)); // glyph pixel stays on top
+
+    Color4 insideRing = pixelAt(bm, 9, 7); // distance 2 = radius -> full stroke alpha
+    EXPECT_GT(insideRing.a, 190);
+    EXPECT_GT(insideRing.r, 150);
+    EXPECT_EQ(insideRing.g, 0);
+
+    Color4 fadeRing = pixelAt(bm, 9, 8); // distance ~2.24 -> stroke alpha faded by ~24%
+    EXPECT_GT(fadeRing.a, 100);
+    EXPECT_LT(fadeRing.a, 190);
+
+    EXPECT_EQ(pixelAt(bm, 12, 7).a, 0); // out of the stroke reach, untouched
+}
