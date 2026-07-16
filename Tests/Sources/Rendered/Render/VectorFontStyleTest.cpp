@@ -128,14 +128,14 @@ TEST(VectorFontStyle, DifferentHeightsOfSameStyleAreSeparate)
     font->CheckCharacters("E", 12, style);
     font->CheckCharacters("E", 24, style);
 
-    auto& small = font->GetCharacter('E', 12, style);
+    auto& smallGlyph = font->GetCharacter('E', 12, style);
     auto& big = font->GetCharacter('E', 24, style);
 
-    ASSERT_GT(small.mSize.x, 0.0f);
+    ASSERT_GT(smallGlyph.mSize.x, 0.0f);
     ASSERT_GT(big.mSize.x, 0.0f);
-    EXPECT_EQ(small.mStyleId, big.mStyleId);
-    EXPECT_NE(small.mTexSrc, big.mTexSrc);
-    EXPECT_GT(big.mSize.x, small.mSize.x);
+    EXPECT_EQ(smallGlyph.mStyleId, big.mStyleId);
+    EXPECT_NE(smallGlyph.mTexSrc, big.mTexSrc);
+    EXPECT_GT(big.mSize.x, smallGlyph.mSize.x);
 }
 
 TEST(TextFontStyle, TextUsesStyleForMeshAndRebuildsOnStyleChange)
