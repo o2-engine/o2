@@ -20,16 +20,21 @@ function(o2_gtest_discover_tests TARGET)
         return()
     endif()
 
-    # Multi-config generators (Visual Studio, Xcode) evaluate file(GENERATE) once per config,
-    # and the content below embeds $<TARGET_FILE:...> which differs per config. Give each config
-    # its own output file so the same path isn't written with different content. TEST_INCLUDE_FILES
-    # resolves the $<CONFIG> genex at ctest time via -C.
+    # The file registered in TEST_INCLUDE_FILES must be genex-free: that property is copied
+    # verbatim into CTestTestfile.cmake and is NOT generator-expanded. But the content below
+    # embeds $<TARGET_FILE:...>, and multi-config generators (Visual Studio, Xcode) evaluate
+    # file(GENERATE) once per config with differing content. So on multi-config we generate one
+    # content file per config and make the static include file a dispatcher that picks the right
+    # one at ctest time via ${CTEST_CONFIGURATION_TYPE} (set from ctest -C). Mirrors CMake's own
+    # GoogleTest.cmake.
+    set(include_file "${CMAKE_CURRENT_BINARY_DIR}/${TARGET}_suites_include.cmake")
+
     get_property(_o2_multi_config GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
     if(_o2_multi_config)
-        set(include_file "${CMAKE_CURRENT_BINARY_DIR}/${TARGET}_suites_include-$<CONFIG>.cmake")
+        set(content_file "${CMAKE_CURRENT_BINARY_DIR}/${TARGET}_suites_include-$<CONFIG>.cmake")
         set(tests_file "${CMAKE_CURRENT_BINARY_DIR}/${TARGET}_suites_tests-$<CONFIG>.cmake")
     else()
-        set(include_file "${CMAKE_CURRENT_BINARY_DIR}/${TARGET}_suites_include.cmake")
+        set(content_file "${include_file}")
         set(tests_file "${CMAKE_CURRENT_BINARY_DIR}/${TARGET}_suites_tests.cmake")
     endif()
 
@@ -38,10 +43,15 @@ function(o2_gtest_discover_tests TARGET)
         "set(_o2_exe [=[$<TARGET_FILE:${TARGET}>]=])\n"
         "set(_o2_workdir [=[${ARG_WORKING_DIRECTORY}]=])\n"
         "set(_o2_tests_file [=[${tests_file}]=])\n"
-        "set(_o2_include_file [=[${include_file}]=])\n"
+        "set(_o2_include_file [=[${content_file}]=])\n"
         "include([=[${CMAKE_CURRENT_FUNCTION_LIST_DIR}/O2TestSuitesDiscovery.cmake]=])\n"
     )
-    file(GENERATE OUTPUT "${include_file}" CONTENT "${content}")
+    file(GENERATE OUTPUT "${content_file}" CONTENT "${content}")
+
+    if(_o2_multi_config)
+        file(WRITE "${include_file}"
+            "include(\"${CMAKE_CURRENT_BINARY_DIR}/${TARGET}_suites_include-\${CTEST_CONFIGURATION_TYPE}.cmake\")\n")
+    endif()
 
     set_property(DIRECTORY APPEND PROPERTY TEST_INCLUDE_FILES "${include_file}")
 endfunction()
