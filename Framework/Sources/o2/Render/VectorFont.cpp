@@ -8,6 +8,7 @@
 #endif
 
 #include "o2/Application/Application.h"
+#include "o2/Render/FontStyle.h"
 #include "o2/Render/Render.h"
 #include "o2/Utils/Bitmap/Bitmap.h"
 #include "o2/Utils/Debug/Log/LogStream.h"
@@ -131,19 +132,22 @@ namespace o2
         return GetHeightPx(height)*2.0f;
     }
 
-    void VectorFont::CheckCharacters(const WString& needChararacters, int height)
+    void VectorFont::CheckCharacters(const WString& needChararacters, int height, const Ref<FontStyle>& style)
     {
+        int styleId = GetStyleId(style);
+        UInt64 charactersKey = GetStyleHeightKey(styleId, height);
+
         int len = needChararacters.Length();
         Vector<wchar_t> needToRenderChars;
         needToRenderChars.Reserve(len);
 
+        auto fndStyleHeight = mCharacters.find(charactersKey);
         for (int i = 0; i < len; i++)
         {
             bool isNew = true;
             wchar_t c = needChararacters[i];
-            auto fndHeight = mCharacters.find(height);
-            if (fndHeight != mCharacters.End())
-                isNew = fndHeight->second.find(c) == fndHeight->second.End();
+            if (fndStyleHeight != mCharacters.End())
+                isNew = fndStyleHeight->second.find(c) == fndStyleHeight->second.End();
 
             if (isNew)
                 isNew = !needToRenderChars.Contains(c);
@@ -155,38 +159,27 @@ namespace o2
         }
 
         if (needToRenderChars.Count() > 0)
-            UpdateCharacters(needToRenderChars, height);
+        {
+            static const Vector<Ref<Effect>> emptyEffects;
+            RenderNewCharacters(needToRenderChars, height, styleId, styleId != 0 ? style->GetEffects() : emptyEffects);
+        }
     }
 
-    Ref<VectorFont::Effect> VectorFont::AddEffect(const Ref<Effect>& effect)
+    int VectorFont::GetStyleId(const Ref<FontStyle>& style)
     {
-        mEffects.Add(effect);
-        Reset();
-        
-        return effect;
-    }
+        if (!style || style->GetEffects().IsEmpty())
+            return 0;
 
-    void VectorFont::RemoveEffect(const Ref<Effect>& effect)
-    {
-        mEffects.Remove(effect);
-        Reset();
-    }
+        UInt64 cacheKey = style->GetCacheKey();
 
-    void VectorFont::RemoveAllEffects()
-    {
-        mEffects.Clear();
-        Reset();
-    }
+        int id = 0;
+        if (mStyleIds.TryGetValue(cacheKey, id))
+            return id;
 
-    void VectorFont::SetEffects(const Vector<Ref<Effect>>& effects)
-    {
-        mEffects = effects;
-        Reset();
-    }
+        id = mNextStyleId++;
+        mStyleIds.Add(cacheKey, id);
 
-    const Vector<Ref<VectorFont::Effect>>& VectorFont::GetEffects() const
-    {
-        return mEffects;
+        return id;
     }
 
     void VectorFont::Reset()
@@ -195,13 +188,8 @@ namespace o2
         onCharactersRebuilt();
     }
 
-    void VectorFont::UpdateCharacters(Vector<wchar_t>& newCharacters, int height)
-    {
-        RenderNewCharacters(newCharacters, height);
-        //onCharactersRebuilt();
-    }
-
-    void VectorFont::RenderNewCharacters(Vector<wchar_t>& newCharacters, int height)
+    void VectorFont::RenderNewCharacters(Vector<wchar_t>& newCharacters, int height, int styleId,
+                                         const Vector<Ref<Effect>>& effects)
     {
         if (!mFreeTypeFace)
             return;
@@ -209,7 +197,7 @@ namespace o2
         FT_Set_Char_Size(mFreeTypeFace, 0, height * 64, mResolution, mResolution);
 
         Vec2I border;
-        for (auto& effect : mEffects)
+        for (auto& effect : effects)
         {
             Vec2I effectExt = effect->GetSizeExtend();
             border.x = Math::Max(border.x, effectExt.x);
@@ -245,12 +233,13 @@ namespace o2
                 }
             }
 
-            for (auto& effect : mEffects)
+            for (auto& effect : effects)
                 effect->Process(*newBitmap);
 
             newCharDef.bitmap = newBitmap;
             newCharDef.character.mId = ch;
             newCharDef.character.mHeight = height;
+            newCharDef.character.mStyleId = styleId;
             newCharDef.character.mSize = newBitmapSize;
             newCharDef.character.mAdvance = glyph->advance.x/64.0f;
             newCharDef.character.mOrigin.x = -glyph->metrics.horiBearingX/64.0f + border.x;

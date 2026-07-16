@@ -34,6 +34,7 @@ namespace Editor
         Ref<FloatProperty>   mAlphaProperty;
         Ref<AssetProperty>   mMaterialProperty;
         Ref<AssetProperty>   mFontProperty;
+        Ref<AssetProperty>   mFontStyleProperty;
         Ref<WStringProperty> mTextProperty;
         Ref<FloatProperty>   mHeightProperty;
         Ref<EnumProperty>    mHorAlignProperty;
@@ -61,6 +62,7 @@ CLASS_FIELDS_META(Editor::TextViewer)
     FIELD().PROTECTED().NAME(mAlphaProperty);
     FIELD().PROTECTED().NAME(mMaterialProperty);
     FIELD().PROTECTED().NAME(mFontProperty);
+    FIELD().PROTECTED().NAME(mFontStyleProperty);
     FIELD().PROTECTED().NAME(mTextProperty);
     FIELD().PROTECTED().NAME(mHeightProperty);
     FIELD().PROTECTED().NAME(mHorAlignProperty);

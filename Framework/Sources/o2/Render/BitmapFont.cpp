@@ -127,9 +127,9 @@ namespace o2
         return mLineHeight;
     }
 
-    const Font::Character& BitmapFont::GetCharacter(UInt16 id, int height)
+    const Font::Character& BitmapFont::GetCharacter(UInt16 id, int height, const Ref<FontStyle>& style)
     {
-        return Font::GetCharacter(id, 0);
+        return Font::GetCharacter(id, 0, nullptr);
     }
 
 }

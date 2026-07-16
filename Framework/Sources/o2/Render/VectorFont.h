@@ -65,27 +65,10 @@ namespace o2
         // Returns line height in pixels for font with size
         float GetLineHeightPx(int height) const;
 
-        // Checks characters for preloading
-        void CheckCharacters(const WString& needChararacters, int height);
+        using Font::CheckCharacters;
 
-        // Adds effect
-        Ref<Effect> AddEffect(const Ref<Effect>& effect);
-
-        // Adds effect
-        template<typename _eff_type, typename ... _args>
-        Ref<_eff_type> AddEffect(_args ... args);
-
-        // Removes effect
-        void RemoveEffect(const Ref<Effect>& effect);
-
-        // Removes all effects
-        void RemoveAllEffects();
-
-        // Sets effects list
-        void SetEffects(const Vector<Ref<Effect>>& effects);
-
-        // Returns effects list
-        const Vector<Ref<Effect>>& GetEffects() const;
+        // Checks characters for preloading, rendered with style
+        void CheckCharacters(const WString& needChararacters, int height, const Ref<FontStyle>& style) override;
 
         // Removes all cached characters
         void Reset();
@@ -129,10 +112,11 @@ namespace o2
         String  mFileName;     // Source file name
         FT_Face mFreeTypeFace; // Free Type font face
 
-        Vector<Ref<Effect>> mEffects; // Font effects
-
         Vector<Ref<PackLine>> mPackLines;           // Packed symbols lines
         int                   mLastPackLinePos = 0; // Last packed line bottom pos
+
+        Map<UInt64, int> mStyleIds;        // Font-local style ids by style content cache key
+        int              mNextStyleId = 1; // Next free style id, 0 is reserved for empty style
 
         mutable Map<int, float> mHeights; // Cached line heights
 
@@ -140,21 +124,16 @@ namespace o2
         // Initializes glyphs texture
         void InitializeTexture();
 
-        // Updates characters set
-        void UpdateCharacters(Vector<wchar_t>& newCharacters, int height);
+        // Returns font-local style id, registers new styles by content cache key
+        int GetStyleId(const Ref<FontStyle>& style) override;
 
-        // Renders new characters
-        void RenderNewCharacters(Vector<wchar_t>& newCharacters, int height);
+        // Renders new characters with style effects
+        void RenderNewCharacters(Vector<wchar_t>& newCharacters, int height, int styleId,
+                                 const Vector<Ref<Effect>>& effects);
 
-        // Packs character in line 
+        // Packs character in line
         void PackCharacter(CharDef& character, int height);
     };
-
-    template<typename _eff_type, typename ... _args>
-    Ref<_eff_type> VectorFont::AddEffect(_args ... args)
-    {
-        return DynamicCast<_eff_type>(AddEffect(mmake<_eff_type>(args ...)));
-    }
 }
 // --- META ---
 

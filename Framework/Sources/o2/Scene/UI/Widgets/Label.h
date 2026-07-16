@@ -20,7 +20,10 @@ namespace o2
 
         PROPERTY(Ref<Font>, font, SetFont, GetFont);                     // Font pointer property
         PROPERTY(AssetRef<FontAsset>, fontAsset, SetFontAsset, GetFontAsset); // Font asset reference property
-        
+
+        PROPERTY(Ref<FontStyle>, fontStyle, SetFontStyle, GetFontStyle);                          // Font style pointer property
+        PROPERTY(AssetRef<FontStyleAsset>, fontStyleAsset, SetFontStyleAsset, GetFontStyleAsset); // Font style asset reference property
+
         PROPERTY(int, height, SetHeight, GetHeight); // Text height property
         PROPERTY(Color4, color, SetColor, GetColor); // Text color property
 
@@ -54,11 +57,23 @@ namespace o2
         // Returns using font
         Ref<Font> GetFont() const;
 
-        // Sets bitmap font asset 
+        // Sets bitmap font asset
         void SetFontAsset(const AssetRef<FontAsset>& asset);
 
         // Returns asset by font asset id
         AssetRef<FontAsset> GetFontAsset() const;
+
+        // Sets font style
+        void SetFontStyle(const Ref<FontStyle>& style);
+
+        // Returns font style
+        Ref<FontStyle> GetFontStyle() const;
+
+        // Sets font style asset
+        void SetFontStyleAsset(const AssetRef<FontStyleAsset>& asset);
+
+        // Returns font style asset
+        AssetRef<FontStyleAsset> GetFontStyleAsset() const;
 
         // Sets text
         void SetText(const WString& text);
@@ -162,6 +177,8 @@ CLASS_FIELDS_META(o2::Label)
     FIELD().PUBLIC().NAME(text);
     FIELD().PUBLIC().NAME(font);
     FIELD().PUBLIC().NAME(fontAsset);
+    FIELD().PUBLIC().NAME(fontStyle);
+    FIELD().PUBLIC().NAME(fontStyleAsset);
     FIELD().PUBLIC().NAME(height);
     FIELD().PUBLIC().NAME(color);
     FIELD().PUBLIC().NAME(verAlign);
@@ -187,6 +204,10 @@ CLASS_METHODS_META(o2::Label)
     FUNCTION().PUBLIC().SIGNATURE(Ref<Font>, GetFont);
     FUNCTION().PUBLIC().SIGNATURE(void, SetFontAsset, const AssetRef<FontAsset>&);
     FUNCTION().PUBLIC().SIGNATURE(AssetRef<FontAsset>, GetFontAsset);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetFontStyle, const Ref<FontStyle>&);
+    FUNCTION().PUBLIC().SIGNATURE(Ref<FontStyle>, GetFontStyle);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetFontStyleAsset, const AssetRef<FontStyleAsset>&);
+    FUNCTION().PUBLIC().SIGNATURE(AssetRef<FontStyleAsset>, GetFontStyleAsset);
     FUNCTION().PUBLIC().SIGNATURE(void, SetText, const WString&);
     FUNCTION().PUBLIC().SIGNATURE(const WString&, GetText);
     FUNCTION().PUBLIC().SIGNATURE(void, SetColor, const Color4&);

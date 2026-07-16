@@ -28,6 +28,8 @@ namespace o2
     {
         mText = text.mText;
         mFont = text.mFont;
+        mFontStyle = text.mFontStyle;
+        mFontStyleAsset = text.mFontStyleAsset;
         mSymbolsDistCoef = text.mSymbolsDistCoef;
         mLinesDistanceCoef = text.mLinesDistanceCoef;
         mVerAlign = text.mVerAlign;
@@ -39,6 +41,9 @@ namespace o2
 
         if (mFont)
             mFont->onCharactersRebuilt += ObjFunctionPtr<Text, void>(this, &Text::CheckCharactersAndRebuildMesh);
+
+        if (mFontStyle)
+            mFontStyle->onChanged += ObjFunctionPtr<Text, void>(this, &Text::CheckCharactersAndRebuildMesh);
     }
 
     Text::Text(const AssetRef<BitmapFontAsset>& fontAsset):
@@ -69,6 +74,9 @@ namespace o2
     {
         if (mFont)
             mFont->onCharactersRebuilt -= ObjFunctionPtr<Text, void>(this, &Text::CheckCharactersAndRebuildMesh);
+
+        if (mFontStyle)
+            mFontStyle->onChanged -= ObjFunctionPtr<Text, void>(this, &Text::CheckCharactersAndRebuildMesh);
     }
 
     Text& Text::operator=(const Text& other)
@@ -78,9 +86,14 @@ namespace o2
         if (mFont)
             mFont->onCharactersRebuilt -= ObjFunctionPtr<Text, void>(this, &Text::CheckCharactersAndRebuildMesh);
 
+        if (mFontStyle)
+            mFontStyle->onChanged -= ObjFunctionPtr<Text, void>(this, &Text::CheckCharactersAndRebuildMesh);
+
         mText = other.mText;
         mFontAssetId = other.mFontAssetId;
         mFont = other.mFont;
+        mFontStyle = other.mFontStyle;
+        mFontStyleAsset = other.mFontStyleAsset;
         mSymbolsDistCoef = other.mSymbolsDistCoef;
         mLinesDistanceCoef = other.mLinesDistanceCoef;
         mVerAlign = other.mVerAlign;
@@ -91,6 +104,9 @@ namespace o2
 
         if (mFont)
             mFont->onCharactersRebuilt += ObjFunctionPtr<Text, void>(this, &Text::CheckCharactersAndRebuildMesh);
+
+        if (mFontStyle)
+            mFontStyle->onChanged += ObjFunctionPtr<Text, void>(this, &Text::CheckCharactersAndRebuildMesh);
 
         UpdateMesh();
 
@@ -157,6 +173,47 @@ namespace o2
             return AssetRef<BitmapFontAsset>(mFontAssetId);
 
         return AssetRef<VectorFontAsset>(mFontAssetId);
+    }
+
+    void Text::SetFontStyle(const Ref<FontStyle>& style)
+    {
+        if (mFontStyle == style)
+            return;
+
+        if (mFontStyle)
+            mFontStyle->onChanged -= ObjFunctionPtr<Text, void>(this, &Text::CheckCharactersAndRebuildMesh);
+
+        mFontStyle = style;
+        mFontStyleAsset = AssetRef<FontStyleAsset>(dynamic_cast<FontStyleAsset*>(style.Get()));
+
+        if (mFontStyle)
+            mFontStyle->onChanged += ObjFunctionPtr<Text, void>(this, &Text::CheckCharactersAndRebuildMesh);
+
+        CheckCharactersAndRebuildMesh();
+    }
+
+    const Ref<FontStyle>& Text::GetFontStyle() const
+    {
+        return mFontStyle;
+    }
+
+    void Text::SetFontStyleAsset(const AssetRef<FontStyleAsset>& asset)
+    {
+        if (mFontStyle)
+            mFontStyle->onChanged -= ObjFunctionPtr<Text, void>(this, &Text::CheckCharactersAndRebuildMesh);
+
+        mFontStyleAsset = asset;
+        mFontStyle = asset.GetRef();
+
+        if (mFontStyle)
+            mFontStyle->onChanged += ObjFunctionPtr<Text, void>(this, &Text::CheckCharactersAndRebuildMesh);
+
+        CheckCharactersAndRebuildMesh();
+    }
+
+    const AssetRef<FontStyleAsset>& Text::GetFontStyleAsset() const
+    {
+        return mFontStyleAsset;
     }
 
     void Text::SetHeight(int height)
@@ -268,11 +325,11 @@ namespace o2
     Vec2F Text::GetTextSize(const WString& text, const Ref<Font>& font, int height /*= 11*/, const Vec2F& areaSize /*= Vec2F()*/,
                             HorAlign horAlign /*= HorAlign::Left*/, VerAlign verAlign /*= VerAlign::Top*/,
                             bool wordWrap /*= true*/, bool dotsEngings /*= false*/, float charsDistCoef /*= 1.0f*/,
-                            float linesDistCoef /*= 1.0f*/)
+                            float linesDistCoef /*= 1.0f*/, const Ref<FontStyle>& style /*= nullptr*/)
     {
         SymbolsSet textSet;
-        textSet.Initialize(font, text, height, Vec2F(), areaSize, horAlign, verAlign, wordWrap, dotsEngings, charsDistCoef,
-                           linesDistCoef);
+        textSet.Initialize(font, style, text, height, Vec2F(), areaSize, horAlign, verAlign, wordWrap, dotsEngings,
+                           charsDistCoef, linesDistCoef);
 
         return textSet.mRealSize;
     }
@@ -315,8 +372,8 @@ namespace o2
         int currentMeshIdx = 0;
         Ref<Mesh> currentMesh = mMeshes[0];
 
-        mSymbolsSet.Initialize(mFont, mText, mHeight, mTransform.origin.XY(), mSize.XY(), mHorAlign, mVerAlign, mWordWrap,
-                               mDotsEndings, mSymbolsDistCoef, mLinesDistanceCoef);
+        mSymbolsSet.Initialize(mFont, mFontStyle, mText, mHeight, mTransform.origin.XY(), mSize.XY(), mHorAlign, mVerAlign,
+                               mWordWrap, mDotsEndings, mSymbolsDistCoef, mLinesDistanceCoef);
 
         Basis transf = CalculateTextBasis();
         mLastTransform = transf;
@@ -379,8 +436,8 @@ namespace o2
     {
         if (mFont)
         {
-            mFont->CheckCharacters(mText, height);
-            mFont->CheckCharacters(".", height);
+            mFont->CheckCharacters(mText, height, mFontStyle);
+            mFont->CheckCharacters(".", height, mFontStyle);
         }
 
         UpdateMesh();
@@ -477,6 +534,7 @@ namespace o2
     {
         Transform::OnDeserialized(node);
         SetFontAsset(AssetRef<FontAsset>(mFontAssetId));
+        SetFontStyleAsset(mFontStyleAsset);
     }
 
     void Text::TransformMesh(const Basis& bas)
@@ -497,11 +555,13 @@ namespace o2
         mSymbolsSet.Move(bas.origin);
     }
 
-    void Text::SymbolsSet::Initialize(const Ref<Font>& font, const WString& text, int height, const Vec2F& position, const Vec2F& areaSize,
+    void Text::SymbolsSet::Initialize(const Ref<Font>& font, const Ref<FontStyle>& style, const WString& text, int height,
+                                      const Vec2F& position, const Vec2F& areaSize,
                                       HorAlign horAlign, VerAlign verAlign, bool wordWrap, bool dotsEngings,
                                       float charsDistCoef, float linesDistCoef)
     {
         mFont = font;
+        mStyle = style;
         mText = text;
         mHeight = height;
         mPosition = Vec2F(Math::Round(position.x), Math::Round(position.y));
@@ -527,20 +587,20 @@ namespace o2
         Line* curLine = &mLines.Last();
         curLine->mSize.y = fontHeight;
 
-        float dotsSize = mFont->GetCharacter('.', mHeight).mAdvance*3.0f;
+        float dotsSize = mFont->GetCharacter('.', mHeight, mStyle).mAdvance*3.0f;
 
         Vec2F fullSize(0, fontHeight);
         bool checkAreaBounds = mWordWrap && mAreaSize.x > FLT_EPSILON;
         int wrapCharIdx = -1;
         for (int i = 0; i < textLen; i++)
         {
-            const Font::Character& ch = mFont->GetCharacter(mText[i], mHeight);
+            const Font::Character& ch = mFont->GetCharacter(mText[i], mHeight, mStyle);
             Vec2F chSize = ch.mSize;
             Vec2F chPos = Vec2F(curLine->mSize.x - ch.mOrigin.x, -ch.mOrigin.y);
 
             if (mDotsEndings && mText[i] != '\n' && curLine->mSize.x + ch.mAdvance*mSymbolsDistCoef > mAreaSize.x - dotsSize)
             {
-                const Font::Character& dotCh = mFont->GetCharacter('.', mHeight);
+                const Font::Character& dotCh = mFont->GetCharacter('.', mHeight, mStyle);
                 Vec2F dotChSize = dotCh.mSize;
 
                 for (int j = 0; j < 3; j++)

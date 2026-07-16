@@ -5,6 +5,7 @@
 #include "o2/Assets/Assets.h"
 #include "o2/Assets/Types/BitmapFontAsset.h"
 #include "o2/Assets/Types/VectorFontAsset.h"
+#include "o2/Render/FontStyle.h"
 #include "o2/Render/Render.h"
 #include "o2/Render/Text.h"
 #include "o2/Render/VectorFont.h"
@@ -32,13 +33,18 @@ namespace o2
     void Debug::InitializeFont()
     {
         mFont = mmake<VectorFont>(o2Assets.GetBuiltAssetsPath() + "debugFont.ttf");
-        mFont->AddEffect<FontStrokeEffect>(1.5f, Color4(0, 0, 0, 150), 100);
+
+        mFontStyle = mmake<FontStyle>();
+        mFontStyle->AddEffect<FontStrokeEffect>(1.5f, Color4(0, 0, 0, 150), 100);
+
         mText = mmake<Text>(mFont);
+        mText->SetFontStyle(mFontStyle);
     }
 
     void Debug::DeinitializeFont()
     {
         mText = nullptr;
+        mFontStyle = nullptr;
         mFont = nullptr;
     }
 
@@ -172,7 +178,7 @@ namespace o2
 
     void Debug::DrawText(const Vec2F& position, const String& text, const Color4& color, float delay)
     {
-        GetCurrentScopeDrawables().Add(mmake<DbgText>(position, text, mFont, color, delay));
+        GetCurrentScopeDrawables().Add(mmake<DbgText>(position, text, mFont, mFontStyle, color, delay));
     }
 
     void Debug::DrawText(const Vec2F& position, const String& text, const Color4& color)
@@ -182,7 +188,7 @@ namespace o2
 
     void Debug::DrawText(const Vec2F& position, const String& text, float delay)
     {
-        GetCurrentScopeDrawables().Add(mmake<DbgText>(position, text, mFont, Color4::White(), delay));
+        GetCurrentScopeDrawables().Add(mmake<DbgText>(position, text, mFont, mFontStyle, Color4::White(), delay));
     }
 
     void Debug::DrawArrow(const Vec2F& begin, const Vec2F& end, const Color4& color, float delay)
@@ -298,11 +304,12 @@ namespace o2
         position(position), text(text), textDrawable(textDrawable), IDbgDrawable(color, -1.0f)
     {}
 
-    Debug::DbgText::DbgText(const Vec2F& position, const String& text, const Ref<VectorFont>& font, const Color4& color,
-                            float delay /*= -1.0f*/):
+    Debug::DbgText::DbgText(const Vec2F& position, const String& text, const Ref<VectorFont>& font,
+                            const Ref<FontStyle>& style, const Color4& color, float delay /*= -1.0f*/):
         position(position), text(text), IDbgDrawable(color, delay)
     {
         textDrawable = mmake<Text>(font);
+        textDrawable->SetFontStyle(style);
     }
 
     Debug::DbgText::~DbgText()

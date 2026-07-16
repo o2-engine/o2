@@ -11,18 +11,25 @@ namespace o2
     {}
 
     TextSplitterComponent::TextSplitterComponent(const TextSplitterComponent& other):
-        Component(other), mText(other.mText), mFont(other.mFont), mHeight(other.mHeight), mSymbolsDistCoef(other.mSymbolsDistCoef),
+        Component(other), mText(other.mText), mFont(other.mFont), mFontStyle(other.mFontStyle), mHeight(other.mHeight),
+        mSymbolsDistCoef(other.mSymbolsDistCoef),
         mLinesDistCoef(other.mLinesDistCoef), mHorAlign(other.mHorAlign), mVerAlign(other.mVerAlign),
 		mWordWrap(other.mWordWrap), mDotsEndings(other.mDotsEndings), mColor(other.mColor)
     {
         if (mFont)
 			mFont->GetFont()->onCharactersRebuilt += THIS_FUNC(CheckCharactersAndRebuild);
+
+        if (mFontStyle)
+            mFontStyle->onChanged += THIS_FUNC(CheckCharactersAndRebuild);
     }
 
     TextSplitterComponent::~TextSplitterComponent()
     {
         if (mFont)
             mFont->GetFont()->onCharactersRebuilt -= THIS_FUNC(CheckCharactersAndRebuild);
+
+        if (mFontStyle)
+            mFontStyle->onChanged -= THIS_FUNC(CheckCharactersAndRebuild);
 
         ClearSymbols();
     }
@@ -59,6 +66,26 @@ namespace o2
     const AssetRef<FontAsset>& TextSplitterComponent::GetFont() const
     {
         return mFont;
+    }
+
+    void TextSplitterComponent::SetFontStyle(const AssetRef<FontStyleAsset>& style)
+    {
+        if (mFontStyle == style)
+            return;
+
+        if (mFontStyle)
+            mFontStyle->onChanged -= THIS_FUNC(CheckCharactersAndRebuild);
+
+        mFontStyle = style;
+        CheckCharactersAndRebuild();
+
+        if (mFontStyle)
+            mFontStyle->onChanged += THIS_FUNC(CheckCharactersAndRebuild);
+    }
+
+    const AssetRef<FontStyleAsset>& TextSplitterComponent::GetFontStyle() const
+    {
+        return mFontStyle;
     }
 
 	void TextSplitterComponent::SetSymbolPrototype(const LinkRef<Actor>& prototype)
@@ -246,8 +273,9 @@ namespace o2
 		mLastSize = transformRect.Size();
 
 		Text::SymbolsSet symbolSet;
-		symbolSet.Initialize(mFont->GetFont(), mText, mHeight, transformRect.LeftBottom(), transformRect.Size(),
-                             mHorAlign, mVerAlign, mWordWrap, mDotsEndings, mSymbolsDistCoef, mLinesDistCoef);
+		symbolSet.Initialize(mFont->GetFont(), mFontStyle.GetRef(), mText, mHeight, transformRect.LeftBottom(),
+                             transformRect.Size(), mHorAlign, mVerAlign, mWordWrap, mDotsEndings, mSymbolsDistCoef,
+                             mLinesDistCoef);
 
         // Create actors for each symbol
         for (auto& line : symbolSet.mLines)
@@ -290,8 +318,8 @@ namespace o2
 	{
         if (mFont && !mText.IsEmpty())
 		{
-			mFont->GetFont()->CheckCharacters(mText, mHeight);
-			mFont->GetFont()->CheckCharacters(".", mHeight);
+			mFont->GetFont()->CheckCharacters(mText, mHeight, mFontStyle.GetRef());
+			mFont->GetFont()->CheckCharacters(".", mHeight, mFontStyle.GetRef());
 		}
 
 		RebuildCharacters();
@@ -376,6 +404,9 @@ namespace o2
         if (mFont)
 			mFont->GetFont()->onCharactersRebuilt += THIS_FUNC(CheckCharactersAndRebuild);
 
+        if (mFontStyle)
+            mFontStyle->onChanged += THIS_FUNC(CheckCharactersAndRebuild);
+
 		Component::OnEnabled();
 	}
 
@@ -383,6 +414,9 @@ namespace o2
 	{
 		if (mFont)
 			mFont->GetFont()->onCharactersRebuilt -= THIS_FUNC(CheckCharactersAndRebuild);
+
+        if (mFontStyle)
+            mFontStyle->onChanged -= THIS_FUNC(CheckCharactersAndRebuild);
 	}
 
 	void TextSplitterComponent::OnUpdate(float dt)

@@ -115,6 +115,38 @@ namespace o2
         return AssetRef<FontAsset>();
     }
 
+    void Label::SetFontStyle(const Ref<FontStyle>& style)
+    {
+        if (mTextDrawable)
+            mTextDrawable->SetFontStyle(style);
+
+        SetLayoutDirty();
+    }
+
+    Ref<FontStyle> Label::GetFontStyle() const
+    {
+        if (mTextDrawable)
+            return mTextDrawable->GetFontStyle();
+
+        return Ref<FontStyle>();
+    }
+
+    void Label::SetFontStyleAsset(const AssetRef<FontStyleAsset>& asset)
+    {
+        if (mTextDrawable)
+            mTextDrawable->SetFontStyleAsset(asset);
+
+        SetLayoutDirty();
+    }
+
+    AssetRef<FontStyleAsset> Label::GetFontStyleAsset() const
+    {
+        if (mTextDrawable)
+            return mTextDrawable->GetFontStyleAsset();
+
+        return AssetRef<FontStyleAsset>();
+    }
+
     void Label::SetText(const WString& text)
     {
         if (mTextDrawable)

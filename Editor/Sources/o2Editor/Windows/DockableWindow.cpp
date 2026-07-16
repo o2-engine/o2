@@ -148,7 +148,8 @@ namespace Editor
             if (auto textDrawable = DynamicCast<Text>(textLayer->GetDrawable()))
             {
                 Text::SymbolsSet symbolsSet;
-                symbolsSet.Initialize(textDrawable->GetFont(), textDrawable->GetText(), textDrawable->GetFontHeight(),
+                symbolsSet.Initialize(textDrawable->GetFont(), textDrawable->GetFontStyle(), textDrawable->GetText(),
+                                      textDrawable->GetFontHeight(),
                                       Vec2F(), Vec2F(), HorAlign::Left, VerAlign::Bottom, false, false, 1.0f, 1.0f);
 
                 SetTabWidth(symbolsSet.mRealSize.x + textLayer->layout.offsetLeft - textLayer->layout.offsetRight + expand);
