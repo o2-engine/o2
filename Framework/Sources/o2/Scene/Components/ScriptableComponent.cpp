@@ -88,6 +88,10 @@ namespace o2
             mOnEnabledFunc = mInstance.GetProperty("OnEnabled");
             mOnDisabledFunc = mInstance.GetProperty("OnDisabled");
             mUpdateFunc = mInstance.GetProperty("Update");
+
+            // The owner may have been set before the script: the instance needs _actor either way
+            if (auto owner = GetActor())
+                mInstance.SetProperty("_actor", owner);
         }
         else
         {

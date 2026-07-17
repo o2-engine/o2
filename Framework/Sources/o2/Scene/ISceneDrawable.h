@@ -39,7 +39,7 @@ namespace o2
         // Draws content
         void Draw() override;
 
-        // Sets drawing depth. Objects with higher depth will be drawn later
+        // Sets drawing depth. Objects with higher depth will be drawn later @SCRIPTABLE
         virtual void SetDrawingDepth(float depth);
 
         // Returns drawing depth
@@ -189,7 +189,7 @@ CLASS_METHODS_META(o2::ISceneDrawable)
     FUNCTION().PUBLIC().CONSTRUCTOR();
     FUNCTION().PUBLIC().CONSTRUCTOR(const ISceneDrawable&);
     FUNCTION().PUBLIC().SIGNATURE(void, Draw);
-    FUNCTION().PUBLIC().SIGNATURE(void, SetDrawingDepth, float);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetDrawingDepth, float);
     FUNCTION().PUBLIC().SIGNATURE(float, GetDrawingDepth);
     FUNCTION().PUBLIC().SIGNATURE(void, SetDrawingDepthInheritFromParent, bool);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsDrawingDepthInheritedFromParent);

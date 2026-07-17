@@ -1,5 +1,7 @@
 #pragma once
 
+#include <typeinfo>
+
 #include "o2/Utils/Memory/MemoryManager.h"
 #include "o2/Utils/Types/Ref.h"
 #include <type_traits>
@@ -65,16 +67,18 @@ namespace o2
 // -------------------------------
  
 #if IS_SCRIPTING_SUPPORTED
-#define IOBJECT_SCRIPTING()                                                                                          \
+// The prototype lives in the central registry keyed by type: a local inline static would get
+// duplicated across static libraries when weak symbols don't coalesce, splitting the prototype
+#define IOBJECT_SCRIPTING(CLASS)                                                                                     \
     void SetScriptValueContainer(o2::ScriptValue& value) const override                                              \
     { value.SetContainingObject(const_cast<std::remove_cv_t<std::remove_pointer_t<decltype(this)>>*>(this)); }       \
     void ReflectIntoScriptValue(o2::ScriptValue&) const override {}                                                  \
     static o2::ScriptValue GetScriptPrototype()                                                                      \
-    { static o2::ScriptValue p = o2::ScriptValue::EmptyObject(); return p; }                                         \
+    { return o2::ScriptPrototypesRegistry::Get(typeid(CLASS).name()); }                                              \
     template<typename __type>                                                                                        \
     friend struct o2::ScriptValueBase::DataContainer
 #else
-#define IOBJECT_SCRIPTING()
+#define IOBJECT_SCRIPTING(CLASS)
 #endif
 
 #define IOBJECT_MAIN(CLASS)                                                                                     \
@@ -114,7 +118,7 @@ public:                                                                         
 
 #define IOBJECT(CLASS)                                                                                          \
     IOBJECT_MAIN(CLASS)                                                                                         \
-    IOBJECT_SCRIPTING();                                                                                        \
+    IOBJECT_SCRIPTING(CLASS);                                                                                   \
                                                                                                                 \
     template<typename _type_processor> static void ProcessBaseTypes(CLASS* object, _type_processor& processor); \
     template<typename _type_processor> static void ProcessFields(CLASS* object, _type_processor& processor);    \
@@ -143,8 +147,7 @@ namespace o2
 
     inline ScriptValue IObject::GetScriptPrototype()
     {
-        static ScriptValue proto = ScriptValue::EmptyObject();
-        return proto;
+        return ScriptPrototypesRegistry::Get(typeid(IObject).name());
     }
 
 }

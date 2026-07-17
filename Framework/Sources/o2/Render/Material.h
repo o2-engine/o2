@@ -78,13 +78,13 @@ namespace o2
         // Default constructor
         ShaderParamFloat();
 
-        // Constructor with uniform name and initial value
+        // Constructor with uniform name and initial value @SCRIPTABLE
         ShaderParamFloat(const String& name, float value);
 
         // Returns the float value
         float GetValue() const;
 
-        // Sets the float value
+        // Sets the float value @SCRIPTABLE
         void SetValue(float value);
 
         // Computes hash from name and float value
@@ -143,13 +143,13 @@ namespace o2
         // Default constructor
         ShaderParamColor();
 
-        // Constructor with uniform name and initial color value
+        // Constructor with uniform name and initial color value @SCRIPTABLE
         ShaderParamColor(const String& name, const Color4& value);
 
         // Returns the Color4 value
         const Color4& GetValue() const;
 
-        // Sets the Color4 value
+        // Sets the Color4 value @SCRIPTABLE
         void SetValue(const Color4& value);
 
         // Computes hash from name and color ABGR representation
@@ -267,7 +267,7 @@ namespace o2
         PROPERTY(BlendMode, blendMode, SetBlendMode, GetBlendMode); // Blend mode for rendering @SCRIPTABLE
 
     public:
-        // Default constructor
+        // Default constructor @SCRIPTABLE
         Material();
 
         // Copy-constructor, clones parameters and rebuilds the program
@@ -276,13 +276,13 @@ namespace o2
         // Destructor, releases GPU program
         ~Material();
 
-        // Sets the vertex shader. Invalidates the compiled program
+        // Sets the vertex shader. Invalidates the compiled program @SCRIPTABLE
         void SetVertexShader(const Ref<Shader>& shader);
 
         // Returns the vertex shader reference
         const Ref<Shader>& GetVertexShader() const;
 
-        // Sets the fragment shader. Invalidates the compiled program
+        // Sets the fragment shader. Invalidates the compiled program @SCRIPTABLE
         void SetFragmentShader(const Ref<Shader>& shader);
 
         // Returns the fragment shader reference
@@ -300,13 +300,13 @@ namespace o2
         // Returns blend mode
         BlendMode GetBlendMode() const;
 
-        // Returns a shader parameter by uniform name, or nullptr if not found
+        // Returns a shader parameter by uniform name, or nullptr if not found @SCRIPTABLE
         Ref<IShaderParam> GetShaderParam(const String& name) const;
 
         // Returns all shader parameters as a name-to-parameter map
         Map<String, Ref<IShaderParam>> GetAllShaderParamsMap() const;
 
-        // Adds a shader parameter, replacing any existing parameter with the same name
+        // Adds a shader parameter, replacing any existing parameter with the same name @SCRIPTABLE
         void AddParam(const Ref<IShaderParam>& param);
 
         // Removes a shader parameter by uniform name
@@ -355,7 +355,7 @@ namespace o2
         // returns null when files are missing or compilation fails. The material isn't built yet
         static Ref<Material> CreateFromBuiltinShaders(const String& shadersName);
 
-        // Links the vertex and fragment shaders into a GPU program. Returns true on success
+        // Links the vertex and fragment shaders into a GPU program. Returns true on success @SCRIPTABLE
         bool Build();
 
         // Returns true when the shader program is compiled and ready for rendering
@@ -364,7 +364,7 @@ namespace o2
         // Returns the cached material hash, recomputing if dirty
         size_t GetHash();
 
-        // Marks the hash as needing recomputation (call after changing params at runtime)
+        // Marks the hash as needing recomputation (call after changing params at runtime) @SCRIPTABLE
         void InvalidateHash();
 
         // Applies custom shader parameters as uniforms on the currently active program
@@ -471,9 +471,9 @@ CLASS_METHODS_META(o2::ShaderParamFloat)
 {
 
     FUNCTION().PUBLIC().CONSTRUCTOR();
-    FUNCTION().PUBLIC().CONSTRUCTOR(const String&, float);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().CONSTRUCTOR(const String&, float);
     FUNCTION().PUBLIC().SIGNATURE(float, GetValue);
-    FUNCTION().PUBLIC().SIGNATURE(void, SetValue, float);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetValue, float);
     FUNCTION().PUBLIC().SIGNATURE(size_t, ComputeHash);
 }
 END_META;
@@ -515,9 +515,9 @@ CLASS_METHODS_META(o2::ShaderParamColor)
 {
 
     FUNCTION().PUBLIC().CONSTRUCTOR();
-    FUNCTION().PUBLIC().CONSTRUCTOR(const String&, const Color4&);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().CONSTRUCTOR(const String&, const Color4&);
     FUNCTION().PUBLIC().SIGNATURE(const Color4&, GetValue);
-    FUNCTION().PUBLIC().SIGNATURE(void, SetValue, const Color4&);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetValue, const Color4&);
     FUNCTION().PUBLIC().SIGNATURE(size_t, ComputeHash);
 }
 END_META;
@@ -619,19 +619,19 @@ CLASS_METHODS_META(o2::Material)
 
     typedef Map<String, Ref<IShaderParam>> _tmp1;
 
-    FUNCTION().PUBLIC().CONSTRUCTOR();
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().CONSTRUCTOR();
     FUNCTION().PUBLIC().CONSTRUCTOR(const Material&);
-    FUNCTION().PUBLIC().SIGNATURE(void, SetVertexShader, const Ref<Shader>&);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetVertexShader, const Ref<Shader>&);
     FUNCTION().PUBLIC().SIGNATURE(const Ref<Shader>&, GetVertexShader);
-    FUNCTION().PUBLIC().SIGNATURE(void, SetFragmentShader, const Ref<Shader>&);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetFragmentShader, const Ref<Shader>&);
     FUNCTION().PUBLIC().SIGNATURE(const Ref<Shader>&, GetFragmentShader);
     FUNCTION().PUBLIC().SIGNATURE(void, SetTexture, const TextureRef&);
     FUNCTION().PUBLIC().SIGNATURE(const TextureRef&, GetTexture);
     FUNCTION().PUBLIC().SIGNATURE(void, SetBlendMode, BlendMode);
     FUNCTION().PUBLIC().SIGNATURE(BlendMode, GetBlendMode);
-    FUNCTION().PUBLIC().SIGNATURE(Ref<IShaderParam>, GetShaderParam, const String&);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(Ref<IShaderParam>, GetShaderParam, const String&);
     FUNCTION().PUBLIC().SIGNATURE(_tmp1, GetAllShaderParamsMap);
-    FUNCTION().PUBLIC().SIGNATURE(void, AddParam, const Ref<IShaderParam>&);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, AddParam, const Ref<IShaderParam>&);
     FUNCTION().PUBLIC().SIGNATURE(void, RemoveParam, const String&);
     FUNCTION().PUBLIC().SIGNATURE(const Vector<Ref<IShaderParam>>&, GetParams);
     FUNCTION().PUBLIC().SIGNATURE(void, SetParams, const Vector<Ref<IShaderParam>>&);
@@ -647,10 +647,10 @@ CLASS_METHODS_META(o2::Material)
     FUNCTION().PUBLIC().SIGNATURE(void, SetVertexLayoutSkinned, bool);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsVertexLayoutSkinned);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(Ref<Material>, CreateFromBuiltinShaders, const String&);
-    FUNCTION().PUBLIC().SIGNATURE(bool, Build);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(bool, Build);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsReady);
     FUNCTION().PUBLIC().SIGNATURE(size_t, GetHash);
-    FUNCTION().PUBLIC().SIGNATURE(void, InvalidateHash);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, InvalidateHash);
     FUNCTION().PUBLIC().SIGNATURE(void, ApplyParams);
     FUNCTION().PUBLIC().SIGNATURE(int, GetTransformUniform);
     FUNCTION().PUBLIC().SIGNATURE(int, GetTextureUniform);

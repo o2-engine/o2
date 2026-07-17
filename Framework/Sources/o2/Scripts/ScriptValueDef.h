@@ -347,6 +347,22 @@ namespace o2
         static ScriptValue*& BStorage();
         static ScriptValue*& AStorage();
     };
+
+    // -----------------------------------------------------------------------------------
+    // Central storage of per-type script prototypes and deferred registration steps.
+    // Non-inline accessors anchor the statics to a single translation unit: inline statics
+    // may not coalesce across the static libraries of a binary, splitting the state
+    // -----------------------------------------------------------------------------------
+    class ScriptPrototypesRegistry
+    {
+    public:
+        // Returns (creating on demand) the script prototype of a type by its typeid name
+        static ScriptValue& Get(const char* typeName);
+
+        // Deferred copies of secondary base classes members, invoked after all types registration
+        static Vector<Function<void()>>& GetPostRegisterFuncs();
+    };
+
 }
 
 #endif // IS_SCRIPTING_SUPPORTED

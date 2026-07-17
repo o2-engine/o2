@@ -86,10 +86,10 @@ namespace o2
         // Updates particles
         void Update(float dt);
 
-        // Starts playing
+        // Starts playing @SCRIPTABLE
         void Play();
 
-        // Stops playing
+        // Stops playing @SCRIPTABLE
         void Stop();
 
         // Sets duration of emitter (emission duration + particles lifetime)
@@ -101,7 +101,7 @@ namespace o2
         // Sets time of emitter
         void SetTime(float time) override;
 
-        // Sets particles source
+        // Sets particles source @SCRIPTABLE
         void SetParticlesSource(const Ref<ParticleSource>& source);
 
         // Returns particles source
@@ -113,13 +113,13 @@ namespace o2
         // Returns particles emitting coefficient
         float GetEmittingCoef() const;
 
-        // Sets emitting shape
+        // Sets emitting shape @SCRIPTABLE
         void SetShape(const Ref<ParticlesEmitterShape>& shape);
 
         // Return emitting shape
         const Ref<ParticlesEmitterShape>& GetShape() const;
 
-        // Adds effect
+        // Adds effect @SCRIPTABLE
         void AddEffect(const Ref<ParticlesEffect>& effect);
 
         // Adds effect
@@ -135,10 +135,10 @@ namespace o2
         // Removes all effects
         void RemoveAllEffects();
 
-        // Set particles limit number
+        // Set particles limit number @SCRIPTABLE
         void SetMaxParticles(int count);
 
-        // Returns particles limit number
+        // Returns particles limit number @SCRIPTABLE
         int GetMaxParticles() const;
 
         // Returns current particles count
@@ -177,25 +177,25 @@ namespace o2
         // Is particles emit from shell
         bool IsParticlesEmitFromShell() const;
 
-        // Sets emitting particles duration in seconds
+        // Sets emitting particles duration in seconds @SCRIPTABLE
         void SetEmissionDuration(float duration);
 
         // Returns emitting particles duration in seconds
         float GetEmissionDuration() const;
 
-        // Sets particles lifetime in seconds
+        // Sets particles lifetime in seconds @SCRIPTABLE
         void SetParticlesLifetime(float lifetime);
 
         // Returns particles lifetime in seconds
         float GetParticlesLifetime() const;
 
-        // Sets number of particles emitting per second
+        // Sets number of particles emitting per second @SCRIPTABLE
         void SetParticlesPerSecond(float numParticles);
 
-        // Returns number of particles emitting per second
+        // Returns number of particles emitting per second @SCRIPTABLE
         float GetParticlesPerSecond() const;
 
-        // Sets emitting particles prewarm time
+        // Sets emitting particles prewarm time @SCRIPTABLE
         void SetPrewarmTime(float time);
 
         // Returns emitting particles prewarm time
@@ -213,13 +213,13 @@ namespace o2
         // Returns emitting particles rotation angle range in degrees
         float GetInitialAngleRange() const;
 
-        // Sets emitting particles size
+        // Sets emitting particles size @SCRIPTABLE
         void SetInitialSize(float size);
 
         // Returns emitting particles size
         float GetInitialSize() const;
 
-        // Sets emitting particles size range
+        // Sets emitting particles size range @SCRIPTABLE
         void SetInitialSizeRange(float range);
 
         // Returns emitting particles size range
@@ -237,37 +237,37 @@ namespace o2
         // Returns emitting particles width scale range
         float GetInitialWidthScaleRange() const;
 
-        // Sets emitting particles angle speed in degrees/sec
+        // Sets emitting particles angle speed in degrees/sec @SCRIPTABLE
         void SetInitialAngleSpeed(float speed);
 
         // Returns emitting particles angle speed in degrees/sec
         float GetInitialAngleSpeed() const;
 
-        // Sets emitting particles angle speed range in degrees/sec
+        // Sets emitting particles angle speed range in degrees/sec @SCRIPTABLE
         void SetInitialAngleSpeedRange(float speedRange);
 
         // Returns emitting particles angle speed range in degrees/sec
         float GetInitialAngleSpeedRange() const;
 
-        // Sets emitting particles speed
+        // Sets emitting particles speed @SCRIPTABLE
         void SetInitialSpeed(float speed);
 
         // Returns emitting particles speed
         float GetInitialSpeed() const;
 
-        // Sets emitting particles speed range
+        // Sets emitting particles speed range @SCRIPTABLE
         void SetInitialSpeedRange(float speedRange);
 
         // Returns emitting particles speed range
         float GetInitialSpeedRange() const;
 
-        // Sets emitting particles moving direction angle in degrees
+        // Sets emitting particles moving direction angle in degrees @SCRIPTABLE
         void SetEmitParticlesMoveDirection(float direction);
 
         // Returns emitting particles moving direction angle in degrees
         float GetEmitParticlesMoveDirection() const;
 
-        // Sets emitting particles moving direction angle range in degrees
+        // Sets emitting particles moving direction angle range in degrees @SCRIPTABLE
         void SetEmitParticlesMoveDirectionRange(float directionRange);
 
         // Returns emitting particles moving direction angle range in degrees
@@ -521,23 +521,23 @@ CLASS_METHODS_META(o2::ParticlesEmitter)
     FUNCTION().PUBLIC().CONSTRUCTOR(const ParticlesEmitter&);
     FUNCTION().PUBLIC().SIGNATURE(void, Draw);
     FUNCTION().PUBLIC().SIGNATURE(void, Update, float);
-    FUNCTION().PUBLIC().SIGNATURE(void, Play);
-    FUNCTION().PUBLIC().SIGNATURE(void, Stop);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, Play);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, Stop);
     FUNCTION().PUBLIC().SIGNATURE(void, SetDuration, float);
     FUNCTION().PUBLIC().SIGNATURE(float, GetDuration);
     FUNCTION().PUBLIC().SIGNATURE(void, SetTime, float);
-    FUNCTION().PUBLIC().SIGNATURE(void, SetParticlesSource, const Ref<ParticleSource>&);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetParticlesSource, const Ref<ParticleSource>&);
     FUNCTION().PUBLIC().SIGNATURE(const Ref<ParticleSource>&, GetParticlesSource);
     FUNCTION().PUBLIC().SIGNATURE(void, SetEmittingCoef, float);
     FUNCTION().PUBLIC().SIGNATURE(float, GetEmittingCoef);
-    FUNCTION().PUBLIC().SIGNATURE(void, SetShape, const Ref<ParticlesEmitterShape>&);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetShape, const Ref<ParticlesEmitterShape>&);
     FUNCTION().PUBLIC().SIGNATURE(const Ref<ParticlesEmitterShape>&, GetShape);
-    FUNCTION().PUBLIC().SIGNATURE(void, AddEffect, const Ref<ParticlesEffect>&);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, AddEffect, const Ref<ParticlesEffect>&);
     FUNCTION().PUBLIC().SIGNATURE(const Vector<Ref<ParticlesEffect>>&, GetEffects);
     FUNCTION().PUBLIC().SIGNATURE(void, RemoveEffect, const Ref<ParticlesEffect>&);
     FUNCTION().PUBLIC().SIGNATURE(void, RemoveAllEffects);
-    FUNCTION().PUBLIC().SIGNATURE(void, SetMaxParticles, int);
-    FUNCTION().PUBLIC().SIGNATURE(int, GetMaxParticles);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetMaxParticles, int);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(int, GetMaxParticles);
     FUNCTION().PUBLIC().SIGNATURE(int, GetParticlesCount);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsAliveParticles);
     FUNCTION().PUBLIC().SIGNATURE(const Vector<Particle>&, GetParticles);
@@ -550,37 +550,37 @@ CLASS_METHODS_META(o2::ParticlesEmitter)
     FUNCTION().PUBLIC().SIGNATURE(bool, GetParticlesBounds, o2::AABB&);
     FUNCTION().PUBLIC().SIGNATURE(void, SetParticlesEmitFromShell, bool);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsParticlesEmitFromShell);
-    FUNCTION().PUBLIC().SIGNATURE(void, SetEmissionDuration, float);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetEmissionDuration, float);
     FUNCTION().PUBLIC().SIGNATURE(float, GetEmissionDuration);
-    FUNCTION().PUBLIC().SIGNATURE(void, SetParticlesLifetime, float);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetParticlesLifetime, float);
     FUNCTION().PUBLIC().SIGNATURE(float, GetParticlesLifetime);
-    FUNCTION().PUBLIC().SIGNATURE(void, SetParticlesPerSecond, float);
-    FUNCTION().PUBLIC().SIGNATURE(float, GetParticlesPerSecond);
-    FUNCTION().PUBLIC().SIGNATURE(void, SetPrewarmTime, float);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetParticlesPerSecond, float);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(float, GetParticlesPerSecond);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetPrewarmTime, float);
     FUNCTION().PUBLIC().SIGNATURE(float, GetPrewarmTime);
     FUNCTION().PUBLIC().SIGNATURE(void, SetInitialAngle, float);
     FUNCTION().PUBLIC().SIGNATURE(float, GetInitialAngle);
     FUNCTION().PUBLIC().SIGNATURE(void, SetInitialAngleRange, float);
     FUNCTION().PUBLIC().SIGNATURE(float, GetInitialAngleRange);
-    FUNCTION().PUBLIC().SIGNATURE(void, SetInitialSize, float);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetInitialSize, float);
     FUNCTION().PUBLIC().SIGNATURE(float, GetInitialSize);
-    FUNCTION().PUBLIC().SIGNATURE(void, SetInitialSizeRange, float);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetInitialSizeRange, float);
     FUNCTION().PUBLIC().SIGNATURE(float, GetInitialSizeRange);
     FUNCTION().PUBLIC().SIGNATURE(void, SetInitialWidthScale, float);
     FUNCTION().PUBLIC().SIGNATURE(float, GetInitialWidthScale);
     FUNCTION().PUBLIC().SIGNATURE(void, SetInitialWidthScaleRange, float);
     FUNCTION().PUBLIC().SIGNATURE(float, GetInitialWidthScaleRange);
-    FUNCTION().PUBLIC().SIGNATURE(void, SetInitialAngleSpeed, float);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetInitialAngleSpeed, float);
     FUNCTION().PUBLIC().SIGNATURE(float, GetInitialAngleSpeed);
-    FUNCTION().PUBLIC().SIGNATURE(void, SetInitialAngleSpeedRange, float);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetInitialAngleSpeedRange, float);
     FUNCTION().PUBLIC().SIGNATURE(float, GetInitialAngleSpeedRange);
-    FUNCTION().PUBLIC().SIGNATURE(void, SetInitialSpeed, float);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetInitialSpeed, float);
     FUNCTION().PUBLIC().SIGNATURE(float, GetInitialSpeed);
-    FUNCTION().PUBLIC().SIGNATURE(void, SetInitialSpeedRange, float);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetInitialSpeedRange, float);
     FUNCTION().PUBLIC().SIGNATURE(float, GetInitialSpeedRange);
-    FUNCTION().PUBLIC().SIGNATURE(void, SetEmitParticlesMoveDirection, float);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetEmitParticlesMoveDirection, float);
     FUNCTION().PUBLIC().SIGNATURE(float, GetEmitParticlesMoveDirection);
-    FUNCTION().PUBLIC().SIGNATURE(void, SetEmitParticlesMoveDirectionRange, float);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetEmitParticlesMoveDirectionRange, float);
     FUNCTION().PUBLIC().SIGNATURE(float, GetEmitParticlesMoveDirectionRange);
     FUNCTION().PUBLIC().SIGNATURE(void, SetEmitParticlesMoveDirection3D, const Vec3F&);
     FUNCTION().PUBLIC().SIGNATURE(const Vec3F&, GetEmitParticlesMoveDirection3D);

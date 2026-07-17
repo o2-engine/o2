@@ -3,6 +3,8 @@
 #if defined(SCRIPTING_BACKEND_BROWSERJS)
 #include "o2/Utils/Reflection/Type.h"
 #include "o2/Utils/Types/Ref.h"
+#include "o2/Utils/Function/SerializableFunction.h"
+#include "o2/Scripts/ScriptsCastUtils.h"
 
 namespace o2
 {
@@ -226,6 +228,25 @@ namespace o2
         }
     };
 
+
+    template<>
+    struct ScriptValue::Converter<WString>
+    {
+        static constexpr bool isSupported = true;
+
+        static void Write(const WString& value, ScriptValue& data)
+        {
+            Converter<String>::Write((String)value, data);
+        }
+
+        static void Read(WString& value, const ScriptValue& data)
+        {
+            String buffer;
+            Converter<String>::Read(buffer, data);
+            value = buffer;
+        }
+    };
+
     template<>
     struct ScriptValue::Converter<UID>
     {
@@ -426,8 +447,10 @@ namespace o2
             auto dataContainer = GetNativeContainer(data.mValue);
             if (dataContainer)
             {
-                auto object = dataContainer->TryCastToIObject();
-                value = dynamic_cast<_ptr_type>(object);
+                value = (_ptr_type)CastThroughReflection(dataContainer->GetType(), dataContainer->GetData(),
+                                                         TypeOf(_non_ptr_type));
+                if (!value)
+                    value = dynamic_cast<_ptr_type>(dataContainer->TryCastToIObject());
             }
             else
                 value = nullptr;
@@ -451,8 +474,9 @@ namespace o2
             auto dataContainer = GetNativeContainer(data.mValue);
             if (dataContainer)
             {
-                auto* object = dataContainer->TryCastToIObject();
-                T* typed = dynamic_cast<T*>(object);
+                T* typed = (T*)CastThroughReflection(dataContainer->GetType(), dataContainer->GetData(), TypeOf(T));
+                if (!typed)
+                    typed = dynamic_cast<T*>(dataContainer->TryCastToIObject());
                 value = typed ? Ref<T>(typed) : Ref<T>();
             }
             else
@@ -568,6 +592,52 @@ namespace o2
             {
                 return dataCopy.Invoke<_res_type, _args ...>(args ...);
             };
+        }
+    };
+
+    template<typename _res_type, typename ... _args>
+    struct ScriptValue::Converter<SerializableFunction<_res_type(_args ...)>>
+    {
+        static constexpr bool isSupported = true;
+
+        static void Write(const SerializableFunction<_res_type(_args ...)>& value, ScriptValue& data)
+        {
+            Converter<Function<_res_type(_args ...)>>::Write(value, data);
+        }
+
+        static void Read(SerializableFunction<_res_type(_args ...)>& value, const ScriptValue& data)
+        {
+            Function<_res_type(_args ...)>& base = value;
+            Converter<Function<_res_type(_args ...)>>::Read(base, data);
+        }
+    };
+
+    // Ref to a ref-counterable that isn't an IObject (e.g. Shader): the generic converter would
+    // misread the container payload, whose GetData() returns the raw inner pointer
+    template<typename T, typename = void>
+    struct HasGetScriptValueMethod : std::false_type {};
+
+    template<typename T>
+    struct HasGetScriptValueMethod<T, std::void_t<decltype(std::declval<T*>()->GetScriptValue())>> : std::true_type {};
+
+    template<typename T>
+    struct ScriptValue::Converter<Ref<T>, typename std::enable_if<std::is_base_of<RefCounterable, T>::value &&
+                                                                  !HasGetScriptValueMethod<T>::value>::type>
+    {
+        static constexpr bool isSupported = true;
+
+        static void Write(const Ref<T>& value, ScriptValue& data)
+        {
+            data.mValue = o2js_object();
+            auto dataContainer = ScriptValueBase::CreateContainer<ScriptValueBase::DataContainer<Ref<T>>>(value);
+            o2js_set_native_pointer(data.mValue, (ScriptValueBase::IDataContainer*)dataContainer,
+                     &ScriptValueBase::FreeDataContainer);
+        }
+
+        static void Read(Ref<T>& value, const ScriptValue& data)
+        {
+            auto container = ScriptValueBase::GetNativeContainer(data.mValue);
+            value = container ? Ref<T>((T*)container->GetData()) : Ref<T>();
         }
     };
 }

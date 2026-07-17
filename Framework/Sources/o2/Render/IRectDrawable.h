@@ -50,10 +50,10 @@ namespace o2
         // Drawing
         virtual void Draw() override {}
 
-        // Sets color
+        // Sets color @SCRIPTABLE
         virtual void SetColor(const Color4& color);
 
-        // Returns color
+        // Returns color @SCRIPTABLE
         virtual Color4 GetColor() const;
 
         // Sets color override, used to modify color from outside
@@ -62,16 +62,16 @@ namespace o2
         // Returns color override, used to modify color from outside
         virtual Color4 GetOverrideColor() const;
 
-        // Sets transparency. Changing color alpha
+        // Sets transparency. Changing color alpha @SCRIPTABLE
         virtual void SetTransparency(float transparency);
 
-        // Returns transparency(color alpha)
+        // Returns transparency(color alpha) @SCRIPTABLE
         virtual float GetTransparency() const;
 
-        // Sets enabled
+        // Sets enabled @SCRIPTABLE
         virtual void SetEnabled(bool enabled);
 
-        // Returns enabled
+        // Returns enabled @SCRIPTABLE
         virtual bool IsEnabled() const;
 
         // Returns true if point is under drawable
@@ -83,7 +83,7 @@ namespace o2
         // Returns material asset reference, or null if not set. GetMaterial() will return asset's material if asset is set.
         const AssetRef<MaterialAsset>& GetMaterialAsset() const;
 
-        // Sets material for rendering. Pass nullptr for default material. Clears material asset.
+        // Sets material for rendering. Pass nullptr for default material. Clears material asset. @SCRIPTABLE
         void SetMaterial(const Ref<Material>& material) override;
 
         // Returns current material (from material asset if set, else direct override; may be null)
@@ -181,18 +181,18 @@ CLASS_METHODS_META(o2::IRectDrawable)
     FUNCTION().PUBLIC().CONSTRUCTOR(const Vec2F&, const Vec2F&, float, const Vec2F&, const Color4&, const Vec2F&);
     FUNCTION().PUBLIC().CONSTRUCTOR(const IRectDrawable&);
     FUNCTION().PUBLIC().SIGNATURE(void, Draw);
-    FUNCTION().PUBLIC().SIGNATURE(void, SetColor, const Color4&);
-    FUNCTION().PUBLIC().SIGNATURE(Color4, GetColor);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetColor, const Color4&);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(Color4, GetColor);
     FUNCTION().PUBLIC().SIGNATURE(void, SetOverrideColor, const Color4&);
     FUNCTION().PUBLIC().SIGNATURE(Color4, GetOverrideColor);
-    FUNCTION().PUBLIC().SIGNATURE(void, SetTransparency, float);
-    FUNCTION().PUBLIC().SIGNATURE(float, GetTransparency);
-    FUNCTION().PUBLIC().SIGNATURE(void, SetEnabled, bool);
-    FUNCTION().PUBLIC().SIGNATURE(bool, IsEnabled);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetTransparency, float);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(float, GetTransparency);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetEnabled, bool);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(bool, IsEnabled);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsUnderPoint, const Vec2F&);
     FUNCTION().PUBLIC().SIGNATURE(void, SetMaterialAsset, const AssetRef<MaterialAsset>&);
     FUNCTION().PUBLIC().SIGNATURE(const AssetRef<MaterialAsset>&, GetMaterialAsset);
-    FUNCTION().PUBLIC().SIGNATURE(void, SetMaterial, const Ref<Material>&);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetMaterial, const Ref<Material>&);
     FUNCTION().PUBLIC().SIGNATURE(Ref<Material>, GetMaterial);
     FUNCTION().PUBLIC().SIGNATURE(Ref<IShaderParam>, GetShaderParam, const String&);
     FUNCTION().PUBLIC().SIGNATURE(_tmp1, GetAllShaderParamsMap);

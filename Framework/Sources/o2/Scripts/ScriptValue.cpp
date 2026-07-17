@@ -167,3 +167,24 @@ namespace o2
         return mnew ScriptValueArrayElement(*this);
     }
 }
+
+namespace o2
+{
+    ScriptValue& ScriptPrototypesRegistry::Get(const char* typeName)
+    {
+        static Map<String, ScriptValue> prototypes;
+
+        String key(typeName);
+        auto found = prototypes.find(key);
+        if (found != prototypes.end())
+            return found->second;
+
+        return prototypes[key] = ScriptValue::EmptyObject();
+    }
+
+    Vector<Function<void()>>& ScriptPrototypesRegistry::GetPostRegisterFuncs()
+    {
+        static Vector<Function<void()>> funcs;
+        return funcs;
+    }
+}

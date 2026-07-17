@@ -30,7 +30,7 @@ namespace o2
         // Assign operator
         ShaderAsset& operator=(const ShaderAsset& asset);
 
-        // Returns the underlying compiled shader render primitive
+        // Returns the underlying compiled shader render primitive @SCRIPTABLE
         virtual Ref<Shader> GetShader() const;
 
         // Returns editor sorting weight
@@ -64,7 +64,7 @@ CLASS_METHODS_META(o2::ShaderAsset)
     FUNCTION().PUBLIC().CONSTRUCTOR();
     FUNCTION().PUBLIC().CONSTRUCTOR(const Ref<AssetMeta>&);
     FUNCTION().PUBLIC().CONSTRUCTOR(const ShaderAsset&);
-    FUNCTION().PUBLIC().SIGNATURE(Ref<Shader>, GetShader);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(Ref<Shader>, GetShader);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(int, GetEditorSorting);
 }
 END_META;

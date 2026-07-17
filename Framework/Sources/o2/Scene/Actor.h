@@ -246,7 +246,7 @@ namespace o2
         template<typename _type>
         Ref<_type> AddComponent();
 
-        // Adds new component
+        // Adds new component @SCRIPTABLE
         Ref<Component> AddComponent(const Ref<Component>& component);
 
         // Removes component @SCRIPTABLE
@@ -927,7 +927,7 @@ CLASS_METHODS_META(o2::Actor)
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, RemoveAllChildren);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(Ref<Actor>, FindActorById, SceneUID);
     FUNCTION().PUBLIC().SIGNATURE(void, ForEachActor, const Function<bool(Actor&)>&);
-    FUNCTION().PUBLIC().SIGNATURE(Ref<Component>, AddComponent, const Ref<Component>&);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(Ref<Component>, AddComponent, const Ref<Component>&);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, RemoveComponent, const Ref<Component>&);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, RemoveAllComponents);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(Ref<Component>, GetComponent, const String&);

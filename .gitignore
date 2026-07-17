@@ -28,3 +28,4 @@ build
 Tests/Sources/CodeToolCache.xml
 CodeToolCache.xml
 Tools/ImageGen/api_key.txt
+Tools/ImageGen/__pycache__

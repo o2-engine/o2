@@ -22,14 +22,14 @@ namespace o2
         PROPERTY(Ref<Sprite>, icon, SetIcon, GetIcon);      // Icon image asset setter. Searches sprite layer with name "icon" and sets image
 
     public:
-        SerializableFunction<void()> onClick;       // Click event @SERIALIZABLE
+        SerializableFunction<void()> onClick;       // Click event @SERIALIZABLE @SCRIPTABLE
         Function<bool(const Vec2F&)> isPointInside; // Checking pointer function. When this empty using default widget pointer check @EDITOR_IGNORE
 
     public:
         ShortcutKeys shortcut; // Shortcut keys
 
     public:
-        // Default constructor
+        // Default constructor @SCRIPTABLE
         Button(RefCounter* refCounter);
 
         // Copy-constructor
@@ -123,7 +123,7 @@ CLASS_FIELDS_META(o2::Button)
 {
     FIELD().PUBLIC().NAME(caption);
     FIELD().PUBLIC().NAME(icon);
-    FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().NAME(onClick);
+    FIELD().PUBLIC().SCRIPTABLE_ATTRIBUTE().SERIALIZABLE_ATTRIBUTE().NAME(onClick);
     FIELD().PUBLIC().EDITOR_IGNORE_ATTRIBUTE().NAME(isPointInside);
     FIELD().PUBLIC().NAME(shortcut);
     FIELD().PROTECTED().NAME(mCaptionText);
@@ -133,7 +133,7 @@ END_META;
 CLASS_METHODS_META(o2::Button)
 {
 
-    FUNCTION().PUBLIC().CONSTRUCTOR(RefCounter*);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().CONSTRUCTOR(RefCounter*);
     FUNCTION().PUBLIC().CONSTRUCTOR(RefCounter*, const Button&);
     FUNCTION().PUBLIC().SIGNATURE(void, Draw);
     FUNCTION().PUBLIC().SIGNATURE(void, SetCaption, const WString&);

@@ -39,7 +39,7 @@ namespace o2
         PROPERTY(float, linesDistanceCoef, SetLinesDistanceCoef, GetLinesDistanceCoef);       // Lines distance coef, 1 is standard
 
     public:
-        // Default constructor
+        // Default constructor @SCRIPTABLE
         explicit Label(RefCounter* refCounter);
 
         // Copy-constructor
@@ -57,7 +57,7 @@ namespace o2
         // Returns using font
         Ref<Font> GetFont() const;
 
-        // Sets bitmap font asset
+        // Sets bitmap font asset @SCRIPTABLE
         void SetFontAsset(const AssetRef<FontAsset>& asset);
 
         // Returns asset by font asset id
@@ -75,25 +75,25 @@ namespace o2
         // Returns font style asset
         AssetRef<FontStyleAsset> GetFontStyleAsset() const;
 
-        // Sets text
+        // Sets text @SCRIPTABLE
         void SetText(const WString& text);
 
         // Returns text
         const WString& GetText() const;
 
-        // Sets text color
+        // Sets text color @SCRIPTABLE
         void SetColor(const Color4& color);
 
         // Returns color of text
         Color4 GetColor() const;
 
-        // Sets horizontal align
+        // Sets horizontal align @SCRIPTABLE
         void SetHorAlign(HorAlign align);
 
         // Returns horizontal align
         HorAlign GetHorAlign() const;
 
-        // Sets vertical align
+        // Sets vertical align @SCRIPTABLE
         void SetVerAlign(VerAlign align);
 
         // returns vertical align
@@ -129,7 +129,7 @@ namespace o2
         // Returns expanding overflow border
         Vec2F GetExpandBorder() const;
 
-        // Sets text height
+        // Sets text height @SCRIPTABLE
         void SetHeight(int height);
 
         // Returns text height
@@ -197,24 +197,24 @@ END_META;
 CLASS_METHODS_META(o2::Label)
 {
 
-    FUNCTION().PUBLIC().CONSTRUCTOR(RefCounter*);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().CONSTRUCTOR(RefCounter*);
     FUNCTION().PUBLIC().CONSTRUCTOR(RefCounter*, const Label&);
     FUNCTION().PUBLIC().SIGNATURE(void, Draw);
     FUNCTION().PUBLIC().SIGNATURE(void, SetFont, const Ref<Font>&);
     FUNCTION().PUBLIC().SIGNATURE(Ref<Font>, GetFont);
-    FUNCTION().PUBLIC().SIGNATURE(void, SetFontAsset, const AssetRef<FontAsset>&);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetFontAsset, const AssetRef<FontAsset>&);
     FUNCTION().PUBLIC().SIGNATURE(AssetRef<FontAsset>, GetFontAsset);
     FUNCTION().PUBLIC().SIGNATURE(void, SetFontStyle, const Ref<FontStyle>&);
     FUNCTION().PUBLIC().SIGNATURE(Ref<FontStyle>, GetFontStyle);
     FUNCTION().PUBLIC().SIGNATURE(void, SetFontStyleAsset, const AssetRef<FontStyleAsset>&);
     FUNCTION().PUBLIC().SIGNATURE(AssetRef<FontStyleAsset>, GetFontStyleAsset);
-    FUNCTION().PUBLIC().SIGNATURE(void, SetText, const WString&);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetText, const WString&);
     FUNCTION().PUBLIC().SIGNATURE(const WString&, GetText);
-    FUNCTION().PUBLIC().SIGNATURE(void, SetColor, const Color4&);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetColor, const Color4&);
     FUNCTION().PUBLIC().SIGNATURE(Color4, GetColor);
-    FUNCTION().PUBLIC().SIGNATURE(void, SetHorAlign, HorAlign);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetHorAlign, HorAlign);
     FUNCTION().PUBLIC().SIGNATURE(HorAlign, GetHorAlign);
-    FUNCTION().PUBLIC().SIGNATURE(void, SetVerAlign, VerAlign);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetVerAlign, VerAlign);
     FUNCTION().PUBLIC().SIGNATURE(VerAlign, GetVerAlign);
     FUNCTION().PUBLIC().SIGNATURE(void, SetHorOverflow, HorOverflow);
     FUNCTION().PUBLIC().SIGNATURE(HorOverflow, GetHorOverflow);
@@ -226,7 +226,7 @@ CLASS_METHODS_META(o2::Label)
     FUNCTION().PUBLIC().SIGNATURE(float, GetLinesDistanceCoef);
     FUNCTION().PUBLIC().SIGNATURE(void, SetExpandBorder, const Vec2F&);
     FUNCTION().PUBLIC().SIGNATURE(Vec2F, GetExpandBorder);
-    FUNCTION().PUBLIC().SIGNATURE(void, SetHeight, int);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetHeight, int);
     FUNCTION().PUBLIC().SIGNATURE(int, GetHeight);
     FUNCTION().PUBLIC().SIGNATURE(void, UpdateSelfTransform);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetCreateMenuGroup);

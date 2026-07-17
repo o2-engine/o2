@@ -93,7 +93,7 @@ namespace o2
         // Inserts key and returns index
         int InsertKey(const Key& key);
 
-        // Inserts key and returns index
+        // Inserts key and returns index @SCRIPTABLE
         int InsertKey(float position, const Color4& value);
 
         // Appends key at end with offset and returns index
@@ -237,7 +237,7 @@ CLASS_METHODS_META(o2::ColorGradient)
     FUNCTION().PUBLIC().SIGNATURE(void, InsertKeys, _tmp4, float);
     FUNCTION().PUBLIC().SIGNATURE(void, InsertKeys, const Vector<Key>&, float);
     FUNCTION().PUBLIC().SIGNATURE(int, InsertKey, const Key&);
-    FUNCTION().PUBLIC().SIGNATURE(int, InsertKey, float, const Color4&);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(int, InsertKey, float, const Color4&);
     FUNCTION().PUBLIC().SIGNATURE(int, AppendKey, float, const Color4&);
     FUNCTION().PUBLIC().SIGNATURE(int, PrependKey, float, const Color4&);
     FUNCTION().PUBLIC().SIGNATURE(bool, RemoveKey, float);

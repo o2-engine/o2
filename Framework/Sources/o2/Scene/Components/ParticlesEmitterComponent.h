@@ -12,7 +12,7 @@ namespace o2
     class ParticlesEmitterComponent: public Component, public ParticlesEmitter
     {
     public:
-        // Default constructor
+        // Default constructor @SCRIPTABLE
         ParticlesEmitterComponent();
 
         // Copy constructor
@@ -90,7 +90,7 @@ END_META;
 CLASS_METHODS_META(o2::ParticlesEmitterComponent)
 {
 
-    FUNCTION().PUBLIC().CONSTRUCTOR();
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().CONSTRUCTOR();
     FUNCTION().PUBLIC().CONSTRUCTOR(const ParticlesEmitterComponent&);
     FUNCTION().PUBLIC().SIGNATURE(void, OnUpdate, float);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsUnderPoint, const Vec2F&);

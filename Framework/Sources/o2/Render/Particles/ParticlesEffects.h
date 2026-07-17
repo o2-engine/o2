@@ -53,7 +53,10 @@ namespace o2
         PROPERTY(Vec3F, gravity, SetGravity, GetGravity);
 
     public:
-        // Set gravity vector; z is used by 3D emitters
+        // Default constructor @SCRIPTABLE
+        ParticlesGravityEffect() {}
+
+        // Set gravity vector; z is used by 3D emitters @SCRIPTABLE
         void SetGravity(const Vec3F& gravity) { mGravity = gravity; OnChanged(); }
 
         // Get gravity vector
@@ -75,9 +78,10 @@ namespace o2
     class ParticlesColorEffect : public ParticlesEffect
     {
     public:
-        Ref<ColorGradient> colorGradient; // Color gradient @SERIALIZABLE
+        Ref<ColorGradient> colorGradient; // Color gradient @SERIALIZABLE @SCRIPTABLE
 
     public:
+        // Default constructor @SCRIPTABLE
         ParticlesColorEffect();
 
         // Called when particle is emitted, used to initialize effect data
@@ -433,7 +437,8 @@ END_META;
 CLASS_METHODS_META(o2::ParticlesGravityEffect)
 {
 
-    FUNCTION().PUBLIC().SIGNATURE(void, SetGravity, const Vec3F&);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().CONSTRUCTOR();
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetGravity, const Vec3F&);
     FUNCTION().PUBLIC().SIGNATURE(const Vec3F&, GetGravity);
     FUNCTION().PUBLIC().SIGNATURE(void, Update, float, ParticlesEmitter*);
 }
@@ -446,14 +451,14 @@ CLASS_BASES_META(o2::ParticlesColorEffect)
 END_META;
 CLASS_FIELDS_META(o2::ParticlesColorEffect)
 {
-    FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().NAME(colorGradient);
+    FIELD().PUBLIC().SCRIPTABLE_ATTRIBUTE().SERIALIZABLE_ATTRIBUTE().NAME(colorGradient);
     FIELD().PRIVATE().NAME(mColorData);
 }
 END_META;
 CLASS_METHODS_META(o2::ParticlesColorEffect)
 {
 
-    FUNCTION().PUBLIC().CONSTRUCTOR();
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().CONSTRUCTOR();
     FUNCTION().PUBLIC().SIGNATURE(void, OnParticleEmitted, Particle&);
     FUNCTION().PUBLIC().SIGNATURE(void, Update, float, ParticlesEmitter*);
     FUNCTION().PRIVATE().SIGNATURE(void, CheckDataBufferSize, int);
