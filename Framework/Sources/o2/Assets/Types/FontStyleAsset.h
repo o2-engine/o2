@@ -37,6 +37,9 @@ namespace o2
         // Returns editor sorting weight
         static int GetEditorSorting() { return 91; }
 
+        // Returns editor icon
+        static String GetEditorIcon() { return "ui/UI4_big_font_style_icon.png"; }
+
         // Returns true because font styles can be created from the editor
         static bool IsAvailableToCreateFromEditor() { return true; }
 
@@ -83,6 +86,7 @@ CLASS_METHODS_META(o2::FontStyleAsset)
     FUNCTION().PUBLIC().CONSTRUCTOR(const FontStyleAsset&);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(Vector<String>, GetFileExtensions);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(int, GetEditorSorting);
+    FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetEditorIcon);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(bool, IsAvailableToCreateFromEditor);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(bool, IsReferenceCanOwnInstance);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(Ref<RefCounterable>, CastToRefCounterable, const Ref<FontStyleAsset>&);

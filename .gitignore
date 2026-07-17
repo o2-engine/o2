@@ -27,3 +27,4 @@ Editor/Assets/Editor UI styles
 build
 Tests/Sources/CodeToolCache.xml
 CodeToolCache.xml
+Tools/ImageGen/api_key.txt
