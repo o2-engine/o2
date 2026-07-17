@@ -16,6 +16,10 @@
 
 namespace o2
 {
+    // NO_AUTOHINT: FreeType 2.5.5's autofitter calls through mismatched function pointers,
+    // which traps on WebAssembly (strict call_indirect signature check)
+    static const FT_Int32 kGlyphLoadFlags = FT_LOAD_RENDER | FT_LOAD_NO_AUTOHINT;
+
     VectorFont::VectorFont() :
         Font(), mFreeTypeFace(nullptr)
     {
@@ -118,7 +122,7 @@ namespace o2
 
         FT_Set_Char_Size(mFreeTypeFace, 0, height*64, mResolution, mResolution);
 
-        FT_Load_Char(mFreeTypeFace, 'A', FT_LOAD_RENDER);
+        FT_Load_Char(mFreeTypeFace, 'A', kGlyphLoadFlags);
 
         result = mFreeTypeFace->glyph->metrics.horiBearingY/64.0f;
         mHeights.Add(height, result);
@@ -218,14 +222,14 @@ namespace o2
 
         border += Vec2I(2, 2);
 
-        FT_Load_Char(mFreeTypeFace, 'A', FT_LOAD_RENDER);
+        FT_Load_Char(mFreeTypeFace, 'A', kGlyphLoadFlags);
         int symbolsHeight = Math::CeilToInt((mFreeTypeFace->glyph->bitmap.rows + border.y*2)*1.25f);
 
         for (auto& ch : newCharacters)
         {
             CharDef newCharDef;
 
-            FT_Load_Char(mFreeTypeFace, ch, FT_LOAD_RENDER);
+            FT_Load_Char(mFreeTypeFace, ch, kGlyphLoadFlags);
             auto glyph = mFreeTypeFace->glyph;
 
             Vec2I glyphSize(glyph->bitmap.width, glyph->bitmap.rows);
