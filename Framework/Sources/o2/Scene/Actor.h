@@ -246,7 +246,7 @@ namespace o2
         template<typename _type>
         Ref<_type> AddComponent();
 
-        // Adds new component
+        // Adds new component @SCRIPTABLE
         Ref<Component> AddComponent(const Ref<Component>& component);
 
         // Removes component @SCRIPTABLE
@@ -356,8 +356,8 @@ namespace o2
         Vector<Ref<Component>> mComponents; // Components vector
 
         // Actor can be logically disabled, but actually stay enabled and be in transition to really disabled state
-        // mResEnabled and mResEnabledInHierarchy are disabled by default to get enabled after initialization
-        bool mEnabled = true;                // Is actor logically enabled. 
+        // mResEnabled and mResEnabledInHierarchy are disabled by default to get enabled after initialization @SERIALIZABLE
+        bool mEnabled = true;                // Is actor logically enabled @SERIALIZABLE
         bool mResEnabled = false;            // Is actor really enabled. 
         bool mResEnabledInHierarchy = false; // Is actor enabled in hierarchy
 
@@ -843,7 +843,7 @@ CLASS_FIELDS_META(o2::Actor)
     FIELD().PROTECTED().NAME(mParent);
     FIELD().PROTECTED().NAME(mChildren);
     FIELD().PROTECTED().NAME(mComponents);
-    FIELD().PROTECTED().DEFAULT_VALUE(true).NAME(mEnabled);
+    FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(true).NAME(mEnabled);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mResEnabled);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mResEnabledInHierarchy);
     FIELD().PROTECTED().DEFAULT_VALUE(State::Default).NAME(mState);
@@ -927,7 +927,7 @@ CLASS_METHODS_META(o2::Actor)
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, RemoveAllChildren);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(Ref<Actor>, FindActorById, SceneUID);
     FUNCTION().PUBLIC().SIGNATURE(void, ForEachActor, const Function<bool(Actor&)>&);
-    FUNCTION().PUBLIC().SIGNATURE(Ref<Component>, AddComponent, const Ref<Component>&);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(Ref<Component>, AddComponent, const Ref<Component>&);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, RemoveComponent, const Ref<Component>&);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, RemoveAllComponents);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(Ref<Component>, GetComponent, const String&);

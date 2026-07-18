@@ -39,6 +39,9 @@ namespace o2
     class CircleParticlesEmitterShape: public ParticlesEmitterShape
     {
     public:
+        // Default constructor @SCRIPTABLE
+        CircleParticlesEmitterShape() {}
+
         // Returns random emitting point in circle
         Vec3F GetEmittinPoint(const Basis3D& transform, bool fromShell) override;
 
@@ -52,6 +55,9 @@ namespace o2
     class SquareParticlesEmitterShape: public ParticlesEmitterShape
     {
     public:
+        // Default constructor @SCRIPTABLE
+        SquareParticlesEmitterShape() {}
+
         // Returns random emitting point in square
         Vec3F GetEmittinPoint(const Basis3D& transform, bool fromShell) override;
 
@@ -106,6 +112,7 @@ END_META;
 CLASS_METHODS_META(o2::CircleParticlesEmitterShape)
 {
 
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().CONSTRUCTOR();
     FUNCTION().PUBLIC().SIGNATURE(Vec3F, GetEmittinPoint, const Basis3D&, bool);
 }
 END_META;
@@ -122,6 +129,7 @@ END_META;
 CLASS_METHODS_META(o2::SquareParticlesEmitterShape)
 {
 
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().CONSTRUCTOR();
     FUNCTION().PUBLIC().SIGNATURE(Vec3F, GetEmittinPoint, const Basis3D&, bool);
 }
 END_META;

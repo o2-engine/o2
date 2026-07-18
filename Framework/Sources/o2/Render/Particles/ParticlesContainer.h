@@ -50,9 +50,12 @@ namespace o2
     class SingleSpriteParticleSource : public ParticleSource
     {
     public:
-        AssetRef<ImageAsset> image; // Particle sprite image @SERIALIZABLE
+        AssetRef<ImageAsset> image; // Particle sprite image @SERIALIZABLE @SCRIPTABLE
 
     public:
+        // Default constructor @SCRIPTABLE
+        SingleSpriteParticleSource() {}
+
         Ref<ParticlesContainer> CreateContainer() override;
 
         SERIALIZABLE(SingleSpriteParticleSource);
@@ -151,12 +154,13 @@ CLASS_BASES_META(o2::SingleSpriteParticleSource)
 END_META;
 CLASS_FIELDS_META(o2::SingleSpriteParticleSource)
 {
-    FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().NAME(image);
+    FIELD().PUBLIC().SCRIPTABLE_ATTRIBUTE().SERIALIZABLE_ATTRIBUTE().NAME(image);
 }
 END_META;
 CLASS_METHODS_META(o2::SingleSpriteParticleSource)
 {
 
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().CONSTRUCTOR();
     FUNCTION().PUBLIC().SIGNATURE(Ref<ParticlesContainer>, CreateContainer);
 }
 END_META;

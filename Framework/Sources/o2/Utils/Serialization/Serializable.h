@@ -624,7 +624,7 @@ namespace o2
 
 #define SERIALIZABLE(CLASS)                                                                                     \
     SERIALIZABLE_MAIN(CLASS)                                                                                    \
-    IOBJECT_SCRIPTING();                                                                                        \
+    IOBJECT_SCRIPTING(CLASS);                                                                                        \
                                                                                                                 \
     template<typename _type_processor> static void ProcessBaseTypes(CLASS* object, _type_processor& processor); \
     template<typename _type_processor> static void ProcessFields(CLASS* object, _type_processor& processor);    \

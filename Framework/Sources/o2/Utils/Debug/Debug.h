@@ -12,6 +12,7 @@ namespace o2
 {
     class LogStream;
     class VectorFont;
+    class FontStyle;
     class Text;
 
     // ---------------
@@ -213,7 +214,8 @@ namespace o2
         public:
             DbgText();
             DbgText(const Vec2F& position, const String& text, const Ref<Text>& textDrawable, const Color4& color);
-            DbgText(const Vec2F& position, const String& text, const Ref<VectorFont>& font, const Color4& color, float delay = -1.0f);
+            DbgText(const Vec2F& position, const String& text, const Ref<VectorFont>& font, const Ref<FontStyle>& style,
+                    const Color4& color, float delay = -1.0f);
             ~DbgText();
             void Draw();
         };
@@ -225,8 +227,9 @@ namespace o2
         Vector<Ref<IDbgDrawable>> mDbgDrawables;       // Debug drawables array
         Vector<Ref<IDbgDrawable>> mEditorDbgDrawables; // Debug drawables array for editor
 
-        Ref<VectorFont> mFont; // Font for debug captions
-        Ref<Text>       mText; // Text for one frame debug captions
+        Ref<VectorFont> mFont;      // Font for debug captions
+        Ref<FontStyle>  mFontStyle; // Font style for debug captions
+        Ref<Text>       mText;      // Text for one frame debug captions
 
     private:
         // Protect copying

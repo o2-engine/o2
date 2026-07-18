@@ -21,6 +21,15 @@ namespace o2
 
     namespace
     {
+        // MSVC won't route a C-style cast to a class type through DataValue's template
+        // conversion operator, so pull the string out via the explicit Get overload.
+        String AsString(const DataValue& value)
+        {
+            String result;
+            value.Get(result);
+            return result;
+        }
+
         template<typename T>
         int FindKeyFrame(const Vector<float>& times, float time, T& coef)
         {
@@ -382,7 +391,7 @@ namespace o2
                 AccessorView view;
                 view.count = (int)accessor.GetMember("count");
                 view.componentType = (int)accessor.GetMember("componentType");
-                view.components = ComponentsOfType((String)accessor.GetMember("type"));
+                view.components = ComponentsOfType(AsString(accessor.GetMember("type")));
 
                 int elementSize = view.components*ComponentSize(view.componentType);
                 view.stride = elementSize;
@@ -574,7 +583,7 @@ namespace o2
 
                     SkinnedModelData::Node node;
                     if (auto nameNode = nodeValue.FindMember("name"))
-                        node.name = (String)*nameNode;
+                        node.name = AsString(*nameNode);
 
                     ReadNodeTransform(nodeValue, node);
                     model.nodes.Add(node);
@@ -641,7 +650,7 @@ namespace o2
 
                     SkinnedModelData::AnimationClip clip;
                     if (auto nameNode = animationNode.FindMember("name"))
-                        clip.name = (String)*nameNode;
+                        clip.name = AsString(*nameNode);
 
                     const DataValue& samplersNode = animationNode.GetMember("samplers");
                     const DataValue& channelsNode = animationNode.GetMember("channels");
@@ -651,7 +660,7 @@ namespace o2
                         const DataValue& channelNode = channelsNode.GetElement(c);
                         const DataValue& target = channelNode.GetMember("target");
 
-                        String path = (String)target.GetMember("path");
+                        String path = AsString(target.GetMember("path"));
                         if (path == "weights")
                             continue; // Morph targets are not supported
 
@@ -664,7 +673,7 @@ namespace o2
 
                         String interpolation = "LINEAR";
                         if (auto interpolationNode = sampler.FindMember("interpolation"))
-                            interpolation = (String)*interpolationNode;
+                            interpolation = AsString(*interpolationNode);
 
                         if (interpolation == "CUBICSPLINE")
                         {

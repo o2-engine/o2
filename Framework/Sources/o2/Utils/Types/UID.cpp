@@ -106,7 +106,9 @@ namespace o2
             int ii1 = ii + 8;
             wchar_t t = str[ii1];
             str[ii1] = '\0';
-            long x = wcstol(str + ii, &pp, 16);
+            // wcstoull: chunks above 0x7fffffff overflow a 32-bit long, clamping to LONG_MAX
+            // on ILP32 platforms (WebAssembly, Windows) and corrupting the id
+            UInt32 x = (UInt32)wcstoull(str + ii, &pp, 16);
             memcpy(data + i, &x, 4);
             str[ii1] = t;
         }

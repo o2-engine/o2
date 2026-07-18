@@ -32,6 +32,9 @@ namespace o2
         // Returns editor sorting weight
         static int GetEditorSorting() { return 96; }
 
+        // Returns editor icon
+        static String GetEditorIcon() { return "ui/UI4_big_scene_icon.png"; }
+
         SERIALIZABLE(SceneAsset);
         CLONEABLE_REF(SceneAsset);
 
@@ -64,6 +67,7 @@ CLASS_METHODS_META(o2::SceneAsset)
     FUNCTION().PUBLIC().SIGNATURE(void, Load);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(Vector<String>, GetFileExtensions);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(int, GetEditorSorting);
+    FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetEditorIcon);
     FUNCTION().PROTECTED().SIGNATURE(void, LoadData, const String&);
     FUNCTION().PROTECTED().SIGNATURE(void, SaveData, const String&);
 }

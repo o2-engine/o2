@@ -22,6 +22,7 @@ namespace Editor
         mAlphaProperty = o2EditorProperties.BuildFieldType<FloatProperty>(mSpoiler, textType, "transparency", "", mPropertiesContext, mOnPropertyChangeCompleted, mOnPropertyChanged);
         mMaterialProperty = o2EditorProperties.BuildFieldType<AssetProperty>(mSpoiler, textType, "material", "", mPropertiesContext, mOnPropertyChangeCompleted, mOnPropertyChanged);
         mFontProperty = o2EditorProperties.BuildFieldType<AssetProperty>(mSpoiler, textType, "fontAsset", "", mPropertiesContext, mOnPropertyChangeCompleted, mOnPropertyChanged);
+        mFontStyleProperty = o2EditorProperties.BuildFieldType<AssetProperty>(mSpoiler, textType, "fontStyleAsset", "", mPropertiesContext, mOnPropertyChangeCompleted, mOnPropertyChanged);
         mTextProperty = o2EditorProperties.BuildFieldType<WStringProperty>(mSpoiler, textType, "text", "", mPropertiesContext, mOnPropertyChangeCompleted, mOnPropertyChanged);
         mHeightProperty = o2EditorProperties.BuildFieldType<FloatProperty>(mSpoiler, textType, "height", "", mPropertiesContext, mOnPropertyChangeCompleted, mOnPropertyChanged);
         mVerAlignProperty = o2EditorProperties.BuildFieldType<EnumProperty>(mSpoiler, textType, "verAlign", "", mPropertiesContext, mOnPropertyChangeCompleted, mOnPropertyChanged);

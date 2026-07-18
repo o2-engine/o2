@@ -17,6 +17,8 @@ namespace o2
 
 		PROPERTY(AssetRef<FontAsset>, font, SetFont, GetFont); // Font reference
 
+		PROPERTY(AssetRef<FontStyleAsset>, fontStyle, SetFontStyle, GetFontStyle); // Font style reference
+
 		PROPERTY(LinkRef<Actor>, symbolPrototype, SetSymbolPrototype, GetSymbolPrototype); // Symbol prototype actor
 
         PROPERTY(int, height, SetHeight, GetHeight); // Text height
@@ -57,6 +59,12 @@ namespace o2
 
         // Returns current font
         const AssetRef<FontAsset>& GetFont() const;
+
+        // Sets font style
+        void SetFontStyle(const AssetRef<FontStyleAsset>& style);
+
+        // Returns current font style
+        const AssetRef<FontStyleAsset>& GetFontStyle() const;
 
 		// Sets symbol prototype actor
         void SetSymbolPrototype(const LinkRef<Actor>& prototype);
@@ -145,6 +153,8 @@ namespace o2
     protected:
 		AssetRef<FontAsset> mFont; // Font asset @SERIALIZABLE
 
+		AssetRef<FontStyleAsset> mFontStyle; // Font style asset @SERIALIZABLE
+
 		LinkRef<Actor> mSymbolPrototype; // Prototype actor for symbol @SERIALIZABLE
 
 		WString mText; // Text to split @SERIALIZABLE
@@ -218,6 +228,7 @@ CLASS_FIELDS_META(o2::TextSplitterComponent)
 {
     FIELD().PUBLIC().NAME(text);
     FIELD().PUBLIC().NAME(font);
+    FIELD().PUBLIC().NAME(fontStyle);
     FIELD().PUBLIC().NAME(symbolPrototype);
     FIELD().PUBLIC().NAME(height);
     FIELD().PUBLIC().NAME(symbolsDistanceCoef);
@@ -231,6 +242,7 @@ CLASS_FIELDS_META(o2::TextSplitterComponent)
     FIELD().PUBLIC().NAME(color);
     FIELD().PUBLIC().RANGE_ATTRIBUTE(0, 1).NAME(transparency);
     FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().NAME(mFont);
+    FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().NAME(mFontStyle);
     FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().NAME(mSymbolPrototype);
     FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().NAME(mText);
     FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(11).NAME(mHeight);
@@ -258,6 +270,8 @@ CLASS_METHODS_META(o2::TextSplitterComponent)
     FUNCTION().PUBLIC().SIGNATURE(const WString&, GetText);
     FUNCTION().PUBLIC().SIGNATURE(void, SetFont, const AssetRef<FontAsset>&);
     FUNCTION().PUBLIC().SIGNATURE(const AssetRef<FontAsset>&, GetFont);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetFontStyle, const AssetRef<FontStyleAsset>&);
+    FUNCTION().PUBLIC().SIGNATURE(const AssetRef<FontStyleAsset>&, GetFontStyle);
     FUNCTION().PUBLIC().SIGNATURE(void, SetSymbolPrototype, const LinkRef<Actor>&);
     FUNCTION().PUBLIC().SIGNATURE(const LinkRef<Actor>&, GetSymbolPrototype);
     FUNCTION().PUBLIC().SIGNATURE(void, SetHeight, int);

@@ -3,6 +3,7 @@
 #include "o2/Utils/Reflection/Type.h"
 #include "o2/Utils/Reflection/TypeTraits.h"
 #include "o2/Utils/Reflection/BaseTypeProcessor.h"
+#include "o2/Scripts/ScriptsCastUtils.h"
 #include "o2/Utils/Debug/Debug.h"
 #include <type_traits>
 #include <functional>
@@ -238,7 +239,10 @@ namespace o2
             auto container = ScriptValueBase::GetNativeContainer(this_val);
             if (!container) return JS_UNDEFINED;
 
-            _class* thisObj = dynamic_cast<_class*>(container->TryCastToIObject());
+            _class* thisObj = (_class*)CastThroughReflection(container->GetType(), container->GetData(), TypeOf(_class));
+            if (!thisObj)
+                thisObj = dynamic_cast<_class*>(container->TryCastToIObject());
+
             if (!thisObj) return JS_UNDEFINED;
 
             return Invoke(thisObj, args_p, args_count, std::index_sequence_for<_args...>{});
@@ -270,7 +274,10 @@ namespace o2
             auto container = ScriptValueBase::GetNativeContainer(this_val);
             if (!container) return JS_UNDEFINED;
 
-            _class* thisObj = dynamic_cast<_class*>(container->TryCastToIObject());
+            _class* thisObj = (_class*)CastThroughReflection(container->GetType(), container->GetData(), TypeOf(_class));
+            if (!thisObj)
+                thisObj = dynamic_cast<_class*>(container->TryCastToIObject());
+
             if (!thisObj) return JS_UNDEFINED;
 
             return Invoke(thisObj, args_p, args_count, std::index_sequence_for<_args...>{});
@@ -436,10 +443,10 @@ namespace o2
     }
 
     template<typename T, typename = void>
-    struct HasRefCounterMethod : std::false_type {};
-
-    template<typename T>
-    struct HasRefCounterMethod<T, std::void_t<decltype(std::declval<const T&>().GetStrongReferencesCount())>> : std::true_type {};
+    struct HasRefCounterMethod : std::is_base_of<RefCounterable, T> {};
+    // Note: is_base_of stays true for classes inheriting RefCounterable through several bases
+    // (their REF_COUNTERABLE_IMPL disambiguates the counter), where a member-call SFINAE test
+    // silently failed on ambiguity and left script-constructed objects stored unowned
 
     template<typename _type>
     void ScriptValue::SetContainingObject(_type* object)
@@ -768,13 +775,34 @@ namespace o2
         template<typename _object_type, typename _base_type>
         void BaseType(_object_type* object, Type* type, const char* name)
         {
-            if (hasBaseClass)
-                return;
-
             if constexpr (std::is_base_of<ISerializable, _base_type>::value && !std::is_same<ISerializable, _base_type>::value)
             {
-                _object_type::GetScriptPrototype().SetPrototype(_base_type::GetScriptPrototype());
-                hasBaseClass = true;
+                if (!hasBaseClass)
+                {
+                    _object_type::GetScriptPrototype().SetPrototype(_base_type::GetScriptPrototype());
+                    hasBaseClass = true;
+                }
+                else
+                {
+                    // Secondary bases can't join the single JS prototype chain; once all types are
+                    // registered, copy their function members here. Method thunks resolve the native
+                    // object via dynamic_cast, so multiple-inheritance offsets stay correct
+                    ScriptPrototypesRegistry::GetPostRegisterFuncs().Add([]()
+                        {
+                            ScriptValue derivedProto = _object_type::GetScriptPrototype();
+                            _base_type::GetScriptPrototype().ForEachProperties(
+                                [&](const ScriptValue& name, const ScriptValue& value)
+                                {
+                                    if (value.GetValueType() == ScriptValue::ValueType::Function &&
+                                        derivedProto.GetProperty(name).GetValueType() == ScriptValue::ValueType::Undefined)
+                                    {
+                                        derivedProto.SetProperty(name, value);
+                                    }
+
+                                    return true;
+                                });
+                        });
+                }
             }
         }
 

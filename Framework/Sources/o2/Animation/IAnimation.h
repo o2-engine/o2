@@ -145,7 +145,7 @@ namespace o2
         // Returns animation speed. 1 is default
         virtual float GetSpeed() const;
 
-        // Sets animation loop type
+        // Sets animation loop type @SCRIPTABLE
         virtual void SetLoop(Loop loop = Loop::Repeat);
 
         // Returns animation loop type
@@ -271,7 +271,7 @@ CLASS_METHODS_META(o2::IAnimation)
     FUNCTION().PUBLIC().SIGNATURE(bool, IsReversed);
     FUNCTION().PUBLIC().SIGNATURE(void, SetSpeed, float);
     FUNCTION().PUBLIC().SIGNATURE(float, GetSpeed);
-    FUNCTION().PUBLIC().SIGNATURE(void, SetLoop, Loop);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetLoop, Loop);
     FUNCTION().PUBLIC().SIGNATURE(Loop, GetLoop);
     FUNCTION().PUBLIC().SIGNATURE(void, AddTimeEvent, float, const Function<void()>&);
     FUNCTION().PUBLIC().SIGNATURE(void, RemoveTimeEvent, float);

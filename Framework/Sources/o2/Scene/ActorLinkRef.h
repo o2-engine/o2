@@ -214,7 +214,7 @@ namespace o2
         typedef LinkRef<_actor_type> _thisType;
 
         SERIALIZABLE_MAIN(_thisType);
-        IOBJECT_SCRIPTING();
+        IOBJECT_SCRIPTING(LinkRef);
 
         template<typename _type_processor>
         static void ProcessBaseTypes(_thisType* object, _type_processor& processor)

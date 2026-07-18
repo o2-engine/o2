@@ -88,6 +88,10 @@ namespace o2
             mOnEnabledFunc = mInstance.GetProperty("OnEnabled");
             mOnDisabledFunc = mInstance.GetProperty("OnDisabled");
             mUpdateFunc = mInstance.GetProperty("Update");
+
+            // The owner may have been set before the script: the instance needs _actor either way
+            if (auto owner = GetActor())
+                mInstance.SetProperty("_actor", owner);
         }
         else
         {
@@ -109,7 +113,15 @@ namespace o2
         node["mScript"].Set(mScript);
 
         if (mInstance.IsObject())
-            node["mInstance"].Set(mInstance);
+        {
+            auto& instanceNode = node["mInstance"];
+            instanceNode.Set(mInstance);
+
+            // All-private instances serialize to a null node; keeping it would wipe the
+            // fresh instance with a null overlay on deserialization
+            if (!instanceNode.IsObject())
+                node.RemoveMember("mInstance");
+        }
     }
 
     void ScriptableComponent::OnDeserialized(const DataValue& node)
@@ -121,11 +133,9 @@ namespace o2
 
         if (mInstance.IsObject())
         {
-            if (auto objectNode = node.FindMember("mInstance"))
-            {
+            auto objectNode = node.FindMember("mInstance");
+            if (objectNode && objectNode->IsObject())
                 objectNode->Get(mInstance);
-                //o2Debug.LogStr(L"Instance: " + mInstance.Dump());
-            }
         }
     }
 

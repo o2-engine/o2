@@ -47,7 +47,7 @@ namespace o2
         Ref<IAnimationState> AddState(const String& name, const Ref<AnimationClip>& animation,
                                      const AnimationMask& mask, float weight);
 
-        // Adds new animation state and returns him
+        // Adds new animation state and returns him @SCRIPTABLE
         Ref<IAnimationState> AddState(const String& name);
 
         // Removes animation state
@@ -85,6 +85,9 @@ namespace o2
 
         // Searches animation state with name and plays him @SCRIPTABLE
         Ref<IAnimationState> Play(const String& name);
+
+        // Searches animation state with name, rewinds to begin and plays him @SCRIPTABLE
+        Ref<IAnimationState> RewindAndPlay(const String& name);
 
         // Creates new state, and blends animation with duration
         Ref<IAnimationState> BlendTo(const Ref<AnimationClip>& animation, const String& name, float duration = 1.0f);
@@ -394,7 +397,7 @@ CLASS_METHODS_META(o2::AnimationComponent)
     FUNCTION().PUBLIC().SIGNATURE(void, OnUpdate, float);
     FUNCTION().PUBLIC().SIGNATURE(Ref<IAnimationState>, AddState, const Ref<IAnimationState>&);
     FUNCTION().PUBLIC().SIGNATURE(Ref<IAnimationState>, AddState, const String&, const Ref<AnimationClip>&, const AnimationMask&, float);
-    FUNCTION().PUBLIC().SIGNATURE(Ref<IAnimationState>, AddState, const String&);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(Ref<IAnimationState>, AddState, const String&);
     FUNCTION().PUBLIC().SIGNATURE(void, RemoveState, const Ref<IAnimationState>&);
     FUNCTION().PUBLIC().SIGNATURE(void, RemoveState, const String&);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, RemoveAllStates);
@@ -407,6 +410,7 @@ CLASS_METHODS_META(o2::AnimationComponent)
     FUNCTION().PUBLIC().SIGNATURE(Ref<IAnimationState>, Play, const Ref<AnimationClip>&, const String&);
     FUNCTION().PUBLIC().SIGNATURE(Ref<IAnimationState>, Play, const Ref<AnimationClip>&);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(Ref<IAnimationState>, Play, const String&);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(Ref<IAnimationState>, RewindAndPlay, const String&);
     FUNCTION().PUBLIC().SIGNATURE(Ref<IAnimationState>, BlendTo, const Ref<AnimationClip>&, const String&, float);
     FUNCTION().PUBLIC().SIGNATURE(Ref<IAnimationState>, BlendTo, const Ref<AnimationClip>&, float);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(Ref<IAnimationState>, BlendTo, const String&, float);

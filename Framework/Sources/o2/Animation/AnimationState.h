@@ -25,7 +25,7 @@ namespace o2
 
     public:
         String name;            // State name @SERIALIZABLE
-        bool   autoPlay = true; // True, if state should be played automatically @SERIALIZABLE
+        bool   autoPlay = true; // True, if state should be played automatically @SERIALIZABLE @SCRIPTABLE
 
     public:
         // Default constructor
@@ -114,7 +114,7 @@ namespace o2
         // Returns looped state
         bool IsLooped() const override;
 
-        // Sets animation
+        // Sets animation @SCRIPTABLE
         void SetAnimation(const AssetRef<AnimationAsset>& animationAsset);
 
         // Returns animation
@@ -186,7 +186,7 @@ CLASS_FIELDS_META(o2::IAnimationState)
 {
     FIELD().PUBLIC().RANGE_ATTRIBUTE(0.0f, 1.0f).NAME(weight);
     FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().NAME(name);
-    FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(true).NAME(autoPlay);
+    FIELD().PUBLIC().SCRIPTABLE_ATTRIBUTE().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(true).NAME(autoPlay);
     FIELD().PROTECTED().NAME(mOwner);
 }
 END_META;
@@ -236,7 +236,7 @@ CLASS_METHODS_META(o2::AnimationState)
     FUNCTION().PUBLIC().SIGNATURE(float, GetWeight);
     FUNCTION().PUBLIC().SIGNATURE(void, SetLooped, bool);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsLooped);
-    FUNCTION().PUBLIC().SIGNATURE(void, SetAnimation, const AssetRef<AnimationAsset>&);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetAnimation, const AssetRef<AnimationAsset>&);
     FUNCTION().PUBLIC().SIGNATURE(const AssetRef<AnimationAsset>&, GetAnimation);
     FUNCTION().PUBLIC().SIGNATURE(RefCounter*, GetRefCounter);
     FUNCTION().PROTECTED().SIGNATURE(void, Register, const Ref<AnimationComponent>&);

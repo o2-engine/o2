@@ -34,6 +34,9 @@ namespace o2
         // Returns editor sorting weight
         static int GetEditorSorting() { return 93; }
 
+        // Returns editor icon
+        static String GetEditorIcon() { return "ui/UI4_big_font_file_icon.png"; }
+
         SERIALIZABLE(FontAsset);
         CLONEABLE_REF(FontAsset);
 
@@ -64,6 +67,7 @@ CLASS_METHODS_META(o2::FontAsset)
     FUNCTION().PUBLIC().CONSTRUCTOR(const FontAsset&);
     FUNCTION().PUBLIC().SIGNATURE(Ref<Font>, GetFont);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(int, GetEditorSorting);
+    FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetEditorIcon);
 }
 END_META;
 // --- END META ---

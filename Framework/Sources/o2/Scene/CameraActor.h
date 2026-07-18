@@ -18,12 +18,12 @@ namespace o2
         SceneLayersList drawLayers; // List of drawing layers @SERIALIZABLE
 
         bool   fillBackground = true;       // Is background filling with solid color @SERIALIZABLE
-        Color4 fillColor = Color4::White(); // Background fill color @SERIALIZABLE
+        Color4 fillColor = Color4::White(); // Background fill color @SERIALIZABLE @SCRIPTABLE
 
         Ref<CursorAreaEventListenersLayer> listenersLayer = mmake<CursorAreaEventListenersLayer>(); // Listeners layer
 
     public:
-        // Default constructor
+        // Default constructor @SCRIPTABLE
         CameraActor(RefCounter* refCounter);
 
         // Copy constructor
@@ -50,7 +50,7 @@ namespace o2
         // Sets camera with fixed size
         void SetFixedSize(const Vec2F& size);
 
-        // Sets camera with fixed aspect
+        // Sets camera with fixed aspect @SCRIPTABLE
         void SetFittedSize(const Vec2F& size);
 
         // Sets camera with physical correct units
@@ -121,7 +121,7 @@ CLASS_FIELDS_META(o2::CameraActor)
 {
     FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().NAME(drawLayers);
     FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(true).NAME(fillBackground);
-    FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(Color4::White()).NAME(fillColor);
+    FIELD().PUBLIC().SCRIPTABLE_ATTRIBUTE().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(Color4::White()).NAME(fillColor);
     FIELD().PUBLIC().DEFAULT_VALUE(mmake<CursorAreaEventListenersLayer>()).NAME(listenersLayer);
     FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(Type::Default).NAME(mType);
     FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().NAME(mFixedOrFittedSize);
@@ -135,14 +135,14 @@ END_META;
 CLASS_METHODS_META(o2::CameraActor)
 {
 
-    FUNCTION().PUBLIC().CONSTRUCTOR(RefCounter*);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().CONSTRUCTOR(RefCounter*);
     FUNCTION().PUBLIC().CONSTRUCTOR(RefCounter*, const CameraActor&);
     FUNCTION().PUBLIC().SIGNATURE(void, Setup);
     FUNCTION().PUBLIC().SIGNATURE(void, SetupAndDraw);
     FUNCTION().PUBLIC().SIGNATURE(Camera, GetRenderCamera);
     FUNCTION().PUBLIC().SIGNATURE(void, SetDefault);
     FUNCTION().PUBLIC().SIGNATURE(void, SetFixedSize, const Vec2F&);
-    FUNCTION().PUBLIC().SIGNATURE(void, SetFittedSize, const Vec2F&);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetFittedSize, const Vec2F&);
     FUNCTION().PUBLIC().SIGNATURE(void, SetPhysicalCorrect, Units);
     FUNCTION().PUBLIC().SIGNATURE(void, SetPerspective, float, float, float);
     FUNCTION().PUBLIC().SIGNATURE(float, GetFov);

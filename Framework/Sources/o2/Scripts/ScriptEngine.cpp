@@ -28,6 +28,11 @@ namespace o2
 
         GetRegisterConstructorFuncs().Clear();
 
+        for (auto& func : ScriptPrototypesRegistry::GetPostRegisterFuncs())
+            func();
+
+        ScriptPrototypesRegistry::GetPostRegisterFuncs().Clear();
+
         mLog->Out("Registered types in " + (String)t.GetDeltaTime() + " seconds");
     }
 

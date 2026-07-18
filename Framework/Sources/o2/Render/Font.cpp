@@ -1,6 +1,7 @@
 #include "o2/stdafx.h"
 #include "Font.h"
 
+#include "o2/Render/FontStyle.h"
 #include "o2/Render/Render.h"
 
 namespace o2
@@ -37,11 +38,16 @@ namespace o2
 
     const Font::Character& Font::GetCharacter(UInt16 id, int height)
     {
-        auto fndHeight = mCharacters.find(height);
-        if (fndHeight != mCharacters.End())
+        return GetCharacter(id, height, nullptr);
+    }
+
+    const Font::Character& Font::GetCharacter(UInt16 id, int height, const Ref<FontStyle>& style)
+    {
+        auto fndStyleHeight = mCharacters.find(GetStyleHeightKey(GetStyleId(style), height));
+        if (fndStyleHeight != mCharacters.End())
         {
-            auto fndChar = fndHeight->second.find(id);
-            if (fndChar != fndHeight->second.End())
+            auto fndChar = fndStyleHeight->second.find(id);
+            if (fndChar != fndStyleHeight->second.End())
                 return fndChar->second;
         }
 
@@ -50,7 +56,22 @@ namespace o2
     }
 
     void Font::CheckCharacters(const WString& needChararacters, int height)
+    {
+        CheckCharacters(needChararacters, height, nullptr);
+    }
+
+    void Font::CheckCharacters(const WString& needChararacters, int height, const Ref<FontStyle>& style)
     {}
+
+    int Font::GetStyleId(const Ref<FontStyle>& style)
+    {
+        return 0;
+    }
+
+    UInt64 Font::GetStyleHeightKey(int styleId, int height)
+    {
+        return ((UInt64)(UInt32)styleId << 32) | (UInt64)(UInt32)height;
+    }
 
     String Font::GetFileName() const
     {
@@ -69,11 +90,11 @@ namespace o2
 
     void Font::AddCharacter(const Character& character)
     {
-        mCharacters[character.mHeight][character.mId] = character;
+        mCharacters[GetStyleHeightKey(character.mStyleId, character.mHeight)][character.mId] = character;
     }
 
     bool Font::Character::operator==(const Character& other) const
     {
-        return mId == other.mId && mHeight == other.mHeight;
+        return mId == other.mId && mHeight == other.mHeight && mStyleId == other.mStyleId;
     }
 }

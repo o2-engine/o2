@@ -2,8 +2,10 @@
 
 #include "o2/Assets/Asset.h"
 #include "o2/Assets/Types/BitmapFontAsset.h"
+#include "o2/Assets/Types/FontStyleAsset.h"
 #include "o2/Assets/Types/VectorFontAsset.h"
 #include "o2/Render/Font.h"
+#include "o2/Render/FontStyle.h"
 #include "o2/Render/IRectDrawable.h"
 #include "o2/Utils/Types/String.h"
 
@@ -24,7 +26,10 @@ namespace o2
         PROPERTIES(Text);
         PROPERTY(Ref<Font>, font, SetFont, GetFont);                     // Font reference property @SCRIPTABLE
         PROPERTY(AssetRef<FontAsset>, fontAsset, SetFontAsset, GetFontAsset); // Font asset reference property @SCRIPTABLE
-        
+
+        PROPERTY(Ref<FontStyle>, fontStyle, SetFontStyle, GetFontStyle);                          // Font style reference property @SCRIPTABLE
+        PROPERTY(AssetRef<FontStyleAsset>, fontStyleAsset, SetFontStyleAsset, GetFontStyleAsset); // Font style asset reference property @SCRIPTABLE
+
         PROPERTY(WString, text, SetText, GetText); // Text property, wstring @SCRIPTABLE
         
         PROPERTY(int, height, SetHeight, GetFontHeight); // Text height @SCRIPTABLE
@@ -80,6 +85,18 @@ namespace o2
 
         // Returns asset by font asset id @SCRIPTABLE
         AssetRef<FontAsset> GetFontAsset() const;
+
+        // Sets font style @SCRIPTABLE
+        void SetFontStyle(const Ref<FontStyle>& style);
+
+        // Returns font style @SCRIPTABLE
+        const Ref<FontStyle>& GetFontStyle() const;
+
+        // Sets font style asset @SCRIPTABLE
+        void SetFontStyleAsset(const AssetRef<FontStyleAsset>& asset);
+
+        // Returns font style asset @SCRIPTABLE
+        const AssetRef<FontStyleAsset>& GetFontStyleAsset() const;
 
         // Sets font height
         void SetHeight(int height);
@@ -143,7 +160,7 @@ namespace o2
                                  const Vec2F& areaSize = Vec2F(),
                                  HorAlign horAlign = HorAlign::Left, VerAlign verAlign = VerAlign::Top,
                                  bool wordWrap = true, bool dotsEngings = false, float charsDistCoef = 1.0f,
-                                 float linesDistCoef = 1.0f);
+                                 float linesDistCoef = 1.0f, const Ref<FontStyle>& style = nullptr);
 
         SERIALIZABLE(Text);
         CLONEABLE_REF(Text);
@@ -199,7 +216,8 @@ namespace o2
             };
 
         public:
-            Ref<Font>  mFont;            // Font
+            Ref<Font>      mFont;        // Font
+            Ref<FontStyle> mStyle;       // Font style
             int        mHeight;          // Text height
             WString    mText;            // Text string
             Vec2F      mPosition;        // Position, in pixels
@@ -216,7 +234,8 @@ namespace o2
 
         public:
             // Calculating characters layout by parameters
-            void Initialize(const Ref<Font>& font, const WString& text, int height, const Vec2F& position, const Vec2F& areaSize,
+            void Initialize(const Ref<Font>& font, const Ref<FontStyle>& style, const WString& text, int height,
+                            const Vec2F& position, const Vec2F& areaSize,
                             HorAlign horAlign, VerAlign verAlign, bool wordWrap, bool dotsEngings, float charsDistCoef,
                             float linesDistCoef);
 
@@ -230,6 +249,10 @@ namespace o2
         WString   mText;              // Wide char string, containing rendering text @SERIALIZABLE
         UID       mFontAssetId;       // Font asset id @SERIALIZABLE
         Ref<Font> mFont;              // Using font
+
+        AssetRef<FontStyleAsset> mFontStyleAsset; // Font style asset @SERIALIZABLE
+        Ref<FontStyle>           mFontStyle;      // Using font style
+
         int       mHeight;            // Text height @SERIALIZABLE
         float     mSymbolsDistCoef;   // Characters distance coef, 1 is standard @SERIALIZABLE
         float     mLinesDistanceCoef; // Lines distance coef, 1 is standard @SERIALIZABLE
@@ -285,6 +308,8 @@ CLASS_FIELDS_META(o2::Text)
 {
     FIELD().PUBLIC().SCRIPTABLE_ATTRIBUTE().NAME(font);
     FIELD().PUBLIC().SCRIPTABLE_ATTRIBUTE().NAME(fontAsset);
+    FIELD().PUBLIC().SCRIPTABLE_ATTRIBUTE().NAME(fontStyle);
+    FIELD().PUBLIC().SCRIPTABLE_ATTRIBUTE().NAME(fontStyleAsset);
     FIELD().PUBLIC().SCRIPTABLE_ATTRIBUTE().NAME(text);
     FIELD().PUBLIC().SCRIPTABLE_ATTRIBUTE().NAME(height);
     FIELD().PUBLIC().SCRIPTABLE_ATTRIBUTE().NAME(verAlign);
@@ -297,6 +322,8 @@ CLASS_FIELDS_META(o2::Text)
     FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().NAME(mText);
     FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().NAME(mFontAssetId);
     FIELD().PROTECTED().NAME(mFont);
+    FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().NAME(mFontStyleAsset);
+    FIELD().PROTECTED().NAME(mFontStyle);
     FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().NAME(mHeight);
     FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().NAME(mSymbolsDistCoef);
     FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().NAME(mLinesDistanceCoef);
@@ -325,6 +352,10 @@ CLASS_METHODS_META(o2::Text)
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(const Ref<Font>&, GetFont);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetFontAsset, const AssetRef<FontAsset>&);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(AssetRef<FontAsset>, GetFontAsset);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetFontStyle, const Ref<FontStyle>&);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(const Ref<FontStyle>&, GetFontStyle);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetFontStyleAsset, const AssetRef<FontStyleAsset>&);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(const AssetRef<FontStyleAsset>&, GetFontStyleAsset);
     FUNCTION().PUBLIC().SIGNATURE(void, SetHeight, int);
     FUNCTION().PUBLIC().SIGNATURE(int, GetFontHeight);
     FUNCTION().PUBLIC().SIGNATURE(void, SetText, const WString&);
@@ -344,7 +375,7 @@ CLASS_METHODS_META(o2::Text)
     FUNCTION().PUBLIC().SIGNATURE(SymbolsSet&, GetSymbolsSet);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(Vec2F, GetRealSize);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(RectF, GetRealRect);
-    FUNCTION().PUBLIC().SIGNATURE_STATIC(Vec2F, GetTextSize, const WString&, const Ref<Font>&, int, const Vec2F&, HorAlign, VerAlign, bool, bool, float, float);
+    FUNCTION().PUBLIC().SIGNATURE_STATIC(Vec2F, GetTextSize, const WString&, const Ref<Font>&, int, const Vec2F&, HorAlign, VerAlign, bool, bool, float, float, const Ref<FontStyle>&);
     FUNCTION().PROTECTED().SIGNATURE(void, UpdateMesh);
     FUNCTION().PROTECTED().SIGNATURE(void, CheckCharactersAndRebuildMesh);
     FUNCTION().PROTECTED().SIGNATURE(void, TransformMesh, const Basis&);

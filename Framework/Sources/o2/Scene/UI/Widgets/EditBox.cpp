@@ -631,7 +631,7 @@ namespace o2
     {
         auto fontRef = mTextDrawable->GetFont();
         if (fontRef)
-            fontRef->CheckCharacters(" ", mTextDrawable->GetFontHeight());
+            fontRef->CheckCharacters(" ", mTextDrawable->GetFontHeight(), mTextDrawable->GetFontStyle());
 
         mAbsoluteViewArea = mViewAreaLayout.Calculate(layout->worldRect);
         RectF localViewArea(0.0f, 0.0f, mAbsoluteViewArea.Width(), mAbsoluteViewArea.Height());
@@ -784,7 +784,7 @@ namespace o2
 
         auto& symbolsSet = mTextDrawable->GetSymbolsSet();
         auto font = mTextDrawable->GetFont();
-        float spaceAdvance = font->GetCharacter(' ', mTextDrawable->GetFontHeight()).mAdvance;
+        float spaceAdvance = font->GetCharacter(' ', mTextDrawable->GetFontHeight(), mTextDrawable->GetFontStyle()).mAdvance;
 
         for (auto& line : symbolsSet.mLines)
         {

@@ -28,8 +28,10 @@ namespace o2
         // Returns line height in pixels for font with size
         float GetLineHeightPx(int height) const;
 
-        // Returns character constant reference by id
-        const Character& GetCharacter(UInt16 id, int height);
+        using Font::GetCharacter;
+
+        // Returns character constant reference by id. Bitmap font ignores height and style
+        const Character& GetCharacter(UInt16 id, int height, const Ref<FontStyle>& style) override;
 
     protected:
         String mFileName;   // Source file name

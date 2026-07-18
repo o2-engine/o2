@@ -8,6 +8,10 @@
 #include "o2/Scene/SceneLayer.h"
 #include "o2/Utils/Debug/Debug.h"
 
+#if IS_SCRIPTING_SUPPORTED
+#include "o2/Scripts/ScriptsCastUtils.h"
+#endif
+
 namespace o2
 {
     FORWARD_REF_IMPL(Component);
@@ -821,6 +825,10 @@ namespace o2
 #if IS_SCRIPTING_SUPPORTED
     Ref<Component> Actor::GetComponent(const ScriptValue& typeValue)
     {
+        // The scriptable overloads share one JS name, so the by-name lookup lands here too
+        if (typeValue.GetValueType() == ScriptValue::ValueType::String)
+            return GetComponent(typeValue.ToString());
+
         auto proto = typeValue.GetPrototype();
         auto protoYpe = proto.GetValueType();
         if (proto.IsObject())
@@ -831,7 +839,9 @@ namespace o2
                 const Type* type = typeProp.GetValue<const Type*>();
                 for (auto& component : mComponents)
                 {
-                    if (component->GetType().IsBasedOn(*type))
+                    // Match by reflection walk: inline Type statics may not coalesce across
+                    // static libraries, which breaks the id-based IsBasedOn here
+                    if (CastThroughReflection(&component->GetType(), component.Get(), *type))
                         return component;
                 }
             }
@@ -1040,6 +1050,10 @@ namespace o2
             DeserializeWithProto(node);
         else
             DeserializeRaw(node);
+
+        // mEnabled deserializes as a raw field bypassing SetEnabled; sync the resolved state
+        // so initialization doesn't enable subtrees of a disabled-in-file actor
+        mResEnabled = mEnabled;
 
         // The layer field deserializes into a detached inline copy: rebind to the scene
         // layer with the same name, so identity checks and drawables registration work

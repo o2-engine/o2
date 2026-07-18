@@ -62,7 +62,7 @@ namespace o2
 		// Must be called before Initialize(). Intended for unit-test runners.
 		static void SetHeadless(bool headless);
 
-		// Returns true if integration was started in headless mode
+		// Returns true if integration was started in headless mode @SCRIPTABLE
 		static bool IsHeadless();
 
 		// Tears down all subsystems in a controlled order. Normally called automatically
@@ -271,7 +271,7 @@ CLASS_METHODS_META(o2::Integration)
     FUNCTION().PUBLIC().SIGNATURE(bool, IsEditor);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsReady);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(void, SetHeadless, bool);
-    FUNCTION().PUBLIC().SIGNATURE_STATIC(bool, IsHeadless);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE_STATIC(bool, IsHeadless);
     FUNCTION().PUBLIC().SIGNATURE(void, Deinitialize);
     FUNCTION().PUBLIC().SIGNATURE(void, SetContentSize, const Vec2I&);
     FUNCTION().PUBLIC().SIGNATURE(Vec2I, GetContentSize);

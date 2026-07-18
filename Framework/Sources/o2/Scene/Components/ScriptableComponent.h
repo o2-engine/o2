@@ -15,7 +15,7 @@ namespace o2
         PROPERTY(AssetRef<JavaScriptAsset>, script, SetScript, GetScript); // Script asset link property
 
     public:
-        // Default constructor
+        // Default constructor @SCRIPTABLE
         ScriptableComponent();
 
         // Copy-constructor
@@ -30,13 +30,13 @@ namespace o2
         // Calls update
         void OnUpdate(float dt) override;
 
-        // Sets script
+        // Sets script @SCRIPTABLE
         void SetScript(const AssetRef<JavaScriptAsset>& script);
 
         // Returns script
         const AssetRef<JavaScriptAsset>& GetScript() const;
 
-        // Returns scripting instance
+        // Returns scripting instance @SCRIPTABLE
         ScriptValue GetInstance() const;
 
         // Returns scripting instance class
@@ -116,12 +116,12 @@ END_META;
 CLASS_METHODS_META(o2::ScriptableComponent)
 {
 
-    FUNCTION().PUBLIC().CONSTRUCTOR();
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().CONSTRUCTOR();
     FUNCTION().PUBLIC().CONSTRUCTOR(const ScriptableComponent&);
     FUNCTION().PUBLIC().SIGNATURE(void, OnUpdate, float);
-    FUNCTION().PUBLIC().SIGNATURE(void, SetScript, const AssetRef<JavaScriptAsset>&);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetScript, const AssetRef<JavaScriptAsset>&);
     FUNCTION().PUBLIC().SIGNATURE(const AssetRef<JavaScriptAsset>&, GetScript);
-    FUNCTION().PUBLIC().SIGNATURE(ScriptValue, GetInstance);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(ScriptValue, GetInstance);
     FUNCTION().PUBLIC().SIGNATURE(ScriptValue, GetClass);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetName);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetCategory);

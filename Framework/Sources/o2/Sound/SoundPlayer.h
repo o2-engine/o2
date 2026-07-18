@@ -46,19 +46,19 @@ namespace o2
         // Called by mmake after reference counter initialization; registers player in the sound system
         void PostRefConstruct();
 
-        // Sets sound asset
+        // Sets sound asset @SCRIPTABLE
         void SetSound(const AssetRef<SoundAsset>& sound);
 
         // Returns sound asset
         const AssetRef<SoundAsset>& GetSound() const;
 
-        // Sets volume, 1.0 is default
+        // Sets volume, 1.0 is default @SCRIPTABLE
         void SetVolume(float volume);
 
         // Returns volume
         float GetVolume() const;
 
-        // Sets pitch, 1.0 is default
+        // Sets pitch, 1.0 is default @SCRIPTABLE
         void SetPitch(float pitch);
 
         // Returns pitch
@@ -210,11 +210,11 @@ CLASS_METHODS_META(o2::SoundPlayer)
     FUNCTION().PUBLIC().CONSTRUCTOR(const SoundPlayer&);
     FUNCTION().PUBLIC().CONSTRUCTOR(RefCounter*, const SoundPlayer&);
     FUNCTION().PUBLIC().SIGNATURE(void, PostRefConstruct);
-    FUNCTION().PUBLIC().SIGNATURE(void, SetSound, const AssetRef<SoundAsset>&);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetSound, const AssetRef<SoundAsset>&);
     FUNCTION().PUBLIC().SIGNATURE(const AssetRef<SoundAsset>&, GetSound);
-    FUNCTION().PUBLIC().SIGNATURE(void, SetVolume, float);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetVolume, float);
     FUNCTION().PUBLIC().SIGNATURE(float, GetVolume);
-    FUNCTION().PUBLIC().SIGNATURE(void, SetPitch, float);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetPitch, float);
     FUNCTION().PUBLIC().SIGNATURE(float, GetPitch);
     FUNCTION().PUBLIC().SIGNATURE(void, SetSpatial, bool);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsSpatial);
