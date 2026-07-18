@@ -192,6 +192,7 @@ namespace o2
             case Platform::Mac: if (macOS) res = *macOS; break;
             case Platform::Windows: if (windows) res = *windows; break;
             case Platform::Linux: if (linuxOS) res = *linuxOS; break;
+            case Platform::WebAssembly: if (webAssembly) res = *webAssembly; break;
         }
 
         return res;
@@ -230,7 +231,8 @@ namespace o2
             !comparePlatformMeta(android, otherMeta->android) ||
             !comparePlatformMeta(macOS, otherMeta->macOS) ||
             !comparePlatformMeta(windows, otherMeta->windows) ||
-            !comparePlatformMeta(linuxOS, otherMeta->linuxOS))
+            !comparePlatformMeta(linuxOS, otherMeta->linuxOS) ||
+            !comparePlatformMeta(webAssembly, otherMeta->webAssembly))
         {
             return false;
         }

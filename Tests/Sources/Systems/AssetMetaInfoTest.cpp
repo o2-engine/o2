@@ -5,6 +5,7 @@
 #include "o2/Assets/AssetInfo.h"
 #include "o2/Assets/AssetsTree.h"
 #include "o2/Assets/Meta.h"
+#include "o2/Assets/Types/AtlasAsset.h"
 #include "o2/Assets/Types/BinaryAsset.h"
 #include "o2/Assets/Types/DataAsset.h"
 #include "o2/Utils/Types/Ref.h"
@@ -183,4 +184,62 @@ TEST(AssetInfo, SetTreeRecursesIntoChildren) {
 
     EXPECT_TRUE(tree->allAssetsByPath.ContainsKey("dir"));
     EXPECT_TRUE(tree->allAssetsByPath.ContainsKey("dir/file.bin"));
+}
+
+// ---------- AtlasAsset::Meta platform overrides ----------
+
+TEST(AtlasAssetMeta, WebAssemblyPlatformOverrideIsApplied)
+{
+    auto meta = mmake<AtlasAsset::Meta>();
+    meta->common.compression = TextureCompression::ASTC4x4;
+
+    // without an override every platform falls back to the common meta
+    EXPECT_EQ(meta->GetResultPlatformMeta(Platform::WebAssembly).compression, TextureCompression::ASTC4x4);
+
+    auto web = mmake<AtlasAsset::PlatformMeta>();
+    web->compression = TextureCompression::None;
+    meta->webAssembly = web;
+
+    EXPECT_EQ(meta->GetResultPlatformMeta(Platform::WebAssembly).compression, TextureCompression::None);
+    EXPECT_EQ(meta->GetResultPlatformMeta(Platform::Mac).compression, TextureCompression::ASTC4x4);
+}
+
+TEST(AtlasAssetMeta, WebAssemblyOverrideParticipatesInEquality)
+{
+    auto makeMeta = [](TextureCompression webCompression) {
+        auto meta = mmake<AtlasAsset::Meta>();
+        meta->webAssembly = mmake<AtlasAsset::PlatformMeta>();
+        meta->webAssembly->compression = webCompression;
+        return meta;
+    };
+
+    auto a = makeMeta(TextureCompression::None);
+    EXPECT_TRUE(a->IsEqual(makeMeta(TextureCompression::None).Get()));
+    EXPECT_FALSE(a->IsEqual(makeMeta(TextureCompression::ASTC4x4).Get()));
+    EXPECT_FALSE(a->IsEqual(mmake<AtlasAsset::Meta>().Get())); // override vs none differ
+}
+
+TEST(AtlasAssetMeta, WebAssemblyOverrideSurvivesSerialization)
+{
+    auto meta = mmake<AtlasAsset::Meta>();
+    meta->webAssembly = mmake<AtlasAsset::PlatformMeta>();
+    meta->webAssembly->compression = TextureCompression::None;
+
+    DataDocument doc;
+    meta->Serialize(doc);
+    printf("serialized meta: %s\n", ((String)doc.SaveAsString()).Data());
+
+    auto loaded = mmake<AtlasAsset::Meta>();
+    loaded->Deserialize(doc);
+    ASSERT_TRUE(loaded->webAssembly);
+    EXPECT_EQ(loaded->webAssembly->compression, TextureCompression::None);
+}
+
+TEST(AtlasAssetMeta, ImagesScaleParticipatesInEquality)
+{
+    AtlasAsset::PlatformMeta a, b;
+    EXPECT_TRUE(a == b);
+
+    b.imagesScale = 0.5f;
+    EXPECT_FALSE(a == b);
 }

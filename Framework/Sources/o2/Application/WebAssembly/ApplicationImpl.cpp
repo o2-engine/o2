@@ -13,6 +13,18 @@
 #include <emscripten/html5.h>
 #include <cstring>
 
+// While a pointer is captured the browser keeps sending its move/up events to the canvas even
+// outside the window — without it a mouseup beyond the window edge is never delivered at all
+// and the cursor stays stuck "pressed". The capture auto-releases on pointerup.
+EM_JS(void, o2_EnablePointerCapture, (), {
+    var canvas = document.getElementById('canvas');
+    if (!canvas || !canvas.setPointerCapture)
+        return;
+    canvas.addEventListener('pointerdown', function(e) {
+        try { canvas.setPointerCapture(e.pointerId); } catch (err) {}
+    });
+});
+
 namespace o2
 {
     namespace
@@ -99,7 +111,14 @@ namespace o2
         EM_BOOL OnMouseMove(int, const EmscriptenMouseEvent* e, void*)
         {
             if (Application::IsSingletonInitialzed())
+            {
                 o2Input.OnCursorMoved(GetCanvasCursorPos(e->targetX, e->targetY));
+
+                // A mouseup that happened outside the window may never arrive: a move with the
+                // button bit cleared while the cursor is still held down is that missed release
+                if ((e->buttons & 1) == 0 && o2Input.IsCursorDown())
+                    o2Input.OnCursorReleased();
+            }
             return EM_TRUE;
         }
 
@@ -175,6 +194,8 @@ namespace o2
         emscripten_set_touchmove_callback("#canvas", nullptr, EM_TRUE, OnTouchEvent);
         emscripten_set_touchcancel_callback("#canvas", nullptr, EM_TRUE, OnTouchEvent);
         emscripten_set_resize_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, nullptr, EM_TRUE, OnResize);
+
+        o2_EnablePointerCapture();
     }
 
     void Application::Shutdown()

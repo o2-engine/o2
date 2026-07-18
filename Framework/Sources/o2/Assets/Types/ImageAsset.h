@@ -125,6 +125,7 @@ namespace o2
             Ref<PlatformMeta> macOS = nullptr;   // MacOS specified meta @SERIALIZABLE
             Ref<PlatformMeta> windows = nullptr; // Windows specified meta @SERIALIZABLE
             Ref<PlatformMeta> linuxOS = nullptr; // Linux specified meta @SERIALIZABLE
+            Ref<PlatformMeta> webAssembly = nullptr; // WebAssembly specified meta @SERIALIZABLE
 
             BorderI    sliceBorder;          // Default slice border @SERIALIZABLE @EDITOR_IGNORE
             SpriteMode defaultMode;          // Default sprite mode @SERIALIZABLE @EDITOR_IGNORE
@@ -249,6 +250,7 @@ CLASS_FIELDS_META(o2::ImageAsset::Meta)
     FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(nullptr).NAME(macOS);
     FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(nullptr).NAME(windows);
     FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(nullptr).NAME(linuxOS);
+    FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(nullptr).NAME(webAssembly);
     FIELD().PUBLIC().EDITOR_IGNORE_ATTRIBUTE().SERIALIZABLE_ATTRIBUTE().NAME(sliceBorder);
     FIELD().PUBLIC().EDITOR_IGNORE_ATTRIBUTE().SERIALIZABLE_ATTRIBUTE().NAME(defaultMode);
 }
