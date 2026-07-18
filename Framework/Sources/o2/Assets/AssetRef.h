@@ -533,6 +533,21 @@ namespace o2
         else if (auto idNode = node.FindMember("id"))
         {
             mPtr = o2Assets.GetAssetRefByType<_asset_type>((UID)(*idNode));
+
+            // The id may belong to another assets tree revision; recover through the path
+            if (!mPtr)
+            {
+                if (auto pathNode = node.FindMember("path"))
+                {
+                    mPtr = o2Assets.GetAssetRefByType<_asset_type>((String)(*pathNode));
+
+                    if (mPtr)
+                    {
+                        o2Debug.LogWarning("Asset reference resolved by path fallback: " + (String)(*pathNode) +
+                                           ", stale id " + (String)(*idNode));
+                    }
+                }
+            }
         }
         else if (auto pathNode = node.FindMember("path"))
         {

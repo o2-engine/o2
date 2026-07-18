@@ -171,6 +171,20 @@ namespace o2
         return state;
     }
 
+    Ref<IAnimationState> AnimationComponent::RewindAndPlay(const String& name)
+    {
+        auto state = GetState(name);
+        if (!state)
+        {
+            o2Debug.LogWarning("Can't play animation: " + name);
+            return nullptr;
+        }
+
+        state->GetPlayer().RewindAndPlay();
+
+        return state;
+    }
+
     Ref<IAnimationState> AnimationComponent::BlendTo(const Ref<AnimationClip>& animation, const String& name, float duration /*= 1.0f*/)
     {
         auto state = AddState(name, animation, AnimationMask(), 1.0f);

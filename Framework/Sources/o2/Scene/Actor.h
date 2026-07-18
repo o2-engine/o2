@@ -356,8 +356,8 @@ namespace o2
         Vector<Ref<Component>> mComponents; // Components vector
 
         // Actor can be logically disabled, but actually stay enabled and be in transition to really disabled state
-        // mResEnabled and mResEnabledInHierarchy are disabled by default to get enabled after initialization
-        bool mEnabled = true;                // Is actor logically enabled. 
+        // mResEnabled and mResEnabledInHierarchy are disabled by default to get enabled after initialization @SERIALIZABLE
+        bool mEnabled = true;                // Is actor logically enabled @SERIALIZABLE
         bool mResEnabled = false;            // Is actor really enabled. 
         bool mResEnabledInHierarchy = false; // Is actor enabled in hierarchy
 
@@ -843,7 +843,7 @@ CLASS_FIELDS_META(o2::Actor)
     FIELD().PROTECTED().NAME(mParent);
     FIELD().PROTECTED().NAME(mChildren);
     FIELD().PROTECTED().NAME(mComponents);
-    FIELD().PROTECTED().DEFAULT_VALUE(true).NAME(mEnabled);
+    FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(true).NAME(mEnabled);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mResEnabled);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mResEnabledInHierarchy);
     FIELD().PROTECTED().DEFAULT_VALUE(State::Default).NAME(mState);

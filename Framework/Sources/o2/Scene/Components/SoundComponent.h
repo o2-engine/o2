@@ -11,7 +11,7 @@ namespace o2
     class SoundComponent: public Component, public SoundPlayer
     {
     public:
-        // Default constructor
+        // Default constructor @SCRIPTABLE
         SoundComponent();
 
         // Copy constructor
@@ -80,7 +80,7 @@ END_META;
 CLASS_METHODS_META(o2::SoundComponent)
 {
 
-    FUNCTION().PUBLIC().CONSTRUCTOR();
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().CONSTRUCTOR();
     FUNCTION().PUBLIC().CONSTRUCTOR(const SoundComponent&);
     FUNCTION().PUBLIC().SIGNATURE(void, OnUpdate, float);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetName);

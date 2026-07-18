@@ -179,7 +179,15 @@ namespace o2
     void AnimationSubTrack::Player::UpdateSubTrackDuration()
     {
         if (mTrack && mTarget)
-            mTrack->mSubTrackDuration = mTarget->GetDuration();
+        {
+            float targetDuration = mTarget->GetDuration();
+            if (!Math::Equals(mTrack->mSubTrackDuration, targetDuration))
+            {
+                // Notify the clip so its duration and bound players pick up the real target length
+                mTrack->mSubTrackDuration = targetDuration;
+                mTrack->onKeysChanged();
+            }
+        }
     }
 
 }
