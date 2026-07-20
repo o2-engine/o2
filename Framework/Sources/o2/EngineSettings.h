@@ -10,11 +10,11 @@
 #define ENABLE_MEMORY_MANAGE false
 #endif
 
-// Enables render debugging
-#if defined DEBUG
+// Enables render debugging; off in release — per-call glGetError is very expensive on WebGL
+#ifndef NDEBUG
 #define RENDER_DEBUG true
 #else
-#define RENDER_DEBUG true
+#define RENDER_DEBUG false
 #endif
 
 #if defined MEMORY_ANALYZE_ENABLE

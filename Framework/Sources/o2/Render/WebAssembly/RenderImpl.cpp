@@ -256,10 +256,15 @@ namespace o2
 
         size_t stride = mCurrentBatchVertexType.GetStride();
 
-        glBufferSubData(GL_ARRAY_BUFFER, mVertexBufferIdx * stride,
-                        mLastDrawVertex * stride, mVertexData);
-        glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, mIndexBufferIdx * sizeof(VertexIndex),
-                        mLastDrawIdx * sizeof(VertexIndex), mVertexIndexData);
+        // Orphaned per-batch stores: glBufferSubData into a buffer with pending draws forces
+        // a sync copy in ANGLE/Metal per call, collapsing FPS. Fresh stores avoid it; indexes
+        // come from the batcher pool-buffer-absolute, rebase them to this store
+        for (UInt i = 0; i < mLastDrawIdx; i++)
+            mVertexIndexData[i] -= mVertexBufferIdx;
+
+        glBufferData(GL_ARRAY_BUFFER, mLastDrawVertex * stride, mVertexData, GL_STREAM_DRAW);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, mLastDrawIdx * sizeof(VertexIndex),
+                     mVertexIndexData, GL_STREAM_DRAW);
         GL_CHECK_ERROR();
 
         glActiveTexture(GL_TEXTURE0);
@@ -268,7 +273,7 @@ namespace o2
         GL_CHECK_ERROR();
 
         glDrawElements(primitiveType[(int)mCurrentPrimitiveType], mLastDrawIdx,
-                       GL_UNSIGNED_INT, (void*)(mIndexBufferIdx * sizeof(VertexIndex)));
+                       GL_UNSIGNED_INT, (void*)0);
         GL_CHECK_ERROR();
 
         mVertexBufferIdx += mLastDrawVertex;
