@@ -183,6 +183,14 @@ namespace o2
                 continue;
             }
 
+            // Platforms may pack downscaled art (e.g. web builds trading texel density for size)
+            if (meta.imagesScale > 0.0f && !Math::Equals(meta.imagesScale, 1.0f))
+            {
+                Vec2I scaledSize(Math::Max(1, Math::RoundToInt((float)bitmap->GetSize().x*meta.imagesScale)),
+                                 Math::Max(1, Math::RoundToInt((float)bitmap->GetSize().y*meta.imagesScale)));
+                bitmap = bitmap->Resized(scaledSize);
+            }
+
             // Create packing rect
             auto packRect = packer.AddRect(bitmap->GetSize() + Vec2F(imagesBorder*2.0f, imagesBorder*2.0f));
 

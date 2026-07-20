@@ -246,3 +246,90 @@ TEST(Bitmap, CopyImageWithMismatchedFormatIsNoOp)
 
     EXPECT_TRUE(AllBytesEqual(dst, 0x00));
 }
+
+// Outline draws an anti-aliased stroke ring around opaque pixels: full stroke alpha inside the
+// radius, fading to zero over one pixel past it, glyph pixels composited on top of the stroke
+TEST(Bitmap, OutlineFadesStrokePastRadiusAndKeepsGlyphPixels)
+{
+    auto pixelAt = [](const Bitmap& bm, int x, int y) {
+        Color4 c;
+        c.SetABGR(*(const Color32Bit*)(bm.GetData() + (y * bm.GetSize().x + x) * 4));
+        return c;
+    };
+
+    Bitmap bm(PixelFormat::R8G8B8A8, Vec2I(15, 15));
+    bm.Fill(Color4(0, 0, 0, 0));
+
+    // single opaque pixel: every distance below is exact Euclidean, whatever the row order
+    Color32Bit white = Color4(255, 255, 255, 255).ABGR();
+    memcpy(bm.GetData() + (7 * 15 + 7) * 4, &white, 4);
+
+    const Color4 stroke(255, 0, 0, 200);
+    bm.Outline(2.0f, stroke, 100);
+
+    EXPECT_EQ(pixelAt(bm, 7, 7), Color4(255, 255, 255, 255)); // glyph pixel stays on top
+
+    Color4 insideRing = pixelAt(bm, 9, 7); // distance 2 = radius -> full stroke alpha
+    EXPECT_GT(insideRing.a, 190);
+    EXPECT_GT(insideRing.r, 150);
+    EXPECT_EQ(insideRing.g, 0);
+
+    Color4 fadeRing = pixelAt(bm, 9, 8); // distance ~2.24 -> stroke alpha faded by ~24%
+    EXPECT_GT(fadeRing.a, 100);
+    EXPECT_LT(fadeRing.a, 190);
+
+    EXPECT_EQ(pixelAt(bm, 12, 7).a, 0); // out of the stroke reach, untouched
+}
+
+TEST(Bitmap, ResizedDownscaleAveragesNeighbors)
+{
+    auto pixelAt = [](const Bitmap& bm, int x, int y) {
+        Color4 c;
+        c.SetABGR(*(const Color32Bit*)(bm.GetData() + (y * bm.GetSize().x + x) * 4));
+        return c;
+    };
+
+    // 2x2 checkerboard collapses into one mid-gray pixel, alpha stays opaque
+    Bitmap bm(PixelFormat::R8G8B8A8, Vec2I(2, 2));
+    Color32Bit white = Color4(255, 255, 255, 255).ABGR();
+    Color32Bit black = Color4(0, 0, 0, 255).ABGR();
+    memcpy(bm.GetData() + 0 * 4, &white, 4);
+    memcpy(bm.GetData() + 1 * 4, &black, 4);
+    memcpy(bm.GetData() + 2 * 4, &black, 4);
+    memcpy(bm.GetData() + 3 * 4, &white, 4);
+
+    auto half = bm.Resized(Vec2I(1, 1));
+    ASSERT_TRUE(half);
+    EXPECT_EQ(half->GetSize(), Vec2I(1, 1));
+
+    Color4 c = pixelAt(*half, 0, 0);
+    EXPECT_NEAR(c.r, 127, 2);
+    EXPECT_NEAR(c.g, 127, 2);
+    EXPECT_NEAR(c.b, 127, 2);
+    EXPECT_EQ(c.a, 255);
+}
+
+TEST(Bitmap, ResizedKeepsUniformColorAtAnySize)
+{
+    auto pixelAt = [](const Bitmap& bm, int x, int y) {
+        Color4 c;
+        c.SetABGR(*(const Color32Bit*)(bm.GetData() + (y * bm.GetSize().x + x) * 4));
+        return c;
+    };
+
+    // filled byte-wise (Fill writes ARGB while the reader below decodes ABGR)
+    Bitmap bm(PixelFormat::R8G8B8A8, Vec2I(8, 8));
+    Color32Bit pixel = Color4(10, 200, 60, 130).ABGR();
+    for (int i = 0; i < 8 * 8; i++)
+        memcpy(bm.GetData() + i * 4, &pixel, 4);
+
+    auto resized = bm.Resized(Vec2I(3, 5));
+    ASSERT_TRUE(resized);
+    EXPECT_EQ(resized->GetSize(), Vec2I(3, 5));
+
+    for (int y = 0; y < 5; y++)
+    {
+        for (int x = 0; x < 3; x++)
+            EXPECT_EQ(pixelAt(*resized, x, y), Color4(10, 200, 60, 130)) << x << "," << y;
+    }
+}

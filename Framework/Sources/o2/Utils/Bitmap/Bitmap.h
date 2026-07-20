@@ -96,6 +96,9 @@ namespace o2
         // Apply outline effect
         void Outline(float radius, const Color4& color, int threshold = 100);
 
+        // Returns a copy scaled to newSize with bilinear filtering
+        Ref<Bitmap> Resized(const Vec2I& newSize) const;
+
     protected:
         PixelFormat mFormat;   // Image format
         UInt8*      mData;     // Data array

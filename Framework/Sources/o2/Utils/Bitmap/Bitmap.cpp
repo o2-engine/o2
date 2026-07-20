@@ -341,7 +341,6 @@ namespace o2
         int mapSize = Math::CeilToInt(radius);
         int fullmapSize = mapSize * 2 + 1;
         int alphaThreshold = threshold;
-        int radiusSquare = Math::Sqr(Math::FloorToInt(radius));
 
         int bpp[] = { 4, 3 };
         int curbpp = bpp[(int)mFormat];
@@ -380,34 +379,64 @@ namespace o2
                     }
                 }
 
+                if (count == 0)
+                    continue;
+
                 sqrDist /= (float)count;
 
-                if (sqrDist < radiusSquare - 2 && false)
+                float distance = Math::Sqrt((float)sqrDist);
+
+                if (distance < radius + 1.0f)
                 {
-                    Color4 newColor = pc.BlendByAlpha(color);
+                    Color4 stroke = color;
+                    stroke.a = (int)((float)stroke.a*Math::Clamp01(1.0f - (distance - radius)));
+
+                    Color4 newColor = pc.BlendByAlpha(stroke);
                     Color32Bit unewColor = newColor.ABGR();
                     memcpy(&mData[offs], &unewColor, curbpp);
-
-                }
-                else
-                {
-                    float distance = Math::Sqrt((float)sqrDist);
-
-                    if (distance < radius + 1.0f)
-                    {
-                        float alpha = 1.0f - (distance - radius);
-
-                        Color4 newColor = color;
-                        newColor.a = (int)((float)newColor.a*alpha);
-                        newColor = pc.BlendByAlpha(color);
-                        Color32Bit unewColor = newColor.ABGR();
-                        memcpy(&mData[offs], &unewColor, curbpp);
-                    }
                 }
             }
         }
 
         delete[] srcData;
+    }
+
+    Ref<Bitmap> Bitmap::Resized(const Vec2I& newSize) const
+    {
+        int bpp[] = { 4, 3 };
+        int curbpp = bpp[(int)mFormat];
+
+        auto result = mmake<Bitmap>(mFormat, newSize);
+        UInt8* dst = result->GetData();
+
+        Vec2F scale((float)mSize.x/(float)newSize.x, (float)mSize.y/(float)newSize.y);
+        for (int y = 0; y < newSize.y; y++)
+        {
+            float srcY = ((float)y + 0.5f)*scale.y - 0.5f;
+            int y0 = Math::Clamp(Math::FloorToInt(srcY), 0, mSize.y - 1);
+            int y1 = Math::Min(y0 + 1, mSize.y - 1);
+            float fy = Math::Clamp01(srcY - (float)y0);
+
+            for (int x = 0; x < newSize.x; x++)
+            {
+                float srcX = ((float)x + 0.5f)*scale.x - 0.5f;
+                int x0 = Math::Clamp(Math::FloorToInt(srcX), 0, mSize.x - 1);
+                int x1 = Math::Min(x0 + 1, mSize.x - 1);
+                float fx = Math::Clamp01(srcX - (float)x0);
+
+                for (int c = 0; c < curbpp; c++)
+                {
+                    float v00 = mData[(y0*mSize.x + x0)*curbpp + c];
+                    float v10 = mData[(y0*mSize.x + x1)*curbpp + c];
+                    float v01 = mData[(y1*mSize.x + x0)*curbpp + c];
+                    float v11 = mData[(y1*mSize.x + x1)*curbpp + c];
+                    float v = Math::Lerp(Math::Lerp(v00, v10, fx), Math::Lerp(v01, v11, fx), fy);
+                    dst[(y*newSize.x + x)*curbpp + c] = (UInt8)Math::Clamp(v + 0.5f, 0.0f, 255.0f);
+                }
+            }
+        }
+
+        return result;
     }
 }
 // --- META ---

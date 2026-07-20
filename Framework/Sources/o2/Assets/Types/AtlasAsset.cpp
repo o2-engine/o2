@@ -18,6 +18,7 @@ namespace o2
             case Platform::Mac: if (macOS) res = *macOS; break;
             case Platform::Windows: if (windows) res = *windows; break;
             case Platform::Linux: if (linuxOS) res = *linuxOS; break;
+            case Platform::WebAssembly: if (webAssembly) res = *webAssembly; break;
         }
 
         return res;
@@ -50,7 +51,8 @@ namespace o2
             !comparePlatformMeta(android, otherMeta->android) ||
             !comparePlatformMeta(macOS, otherMeta->macOS) ||
             !comparePlatformMeta(windows, otherMeta->windows) ||
-            !comparePlatformMeta(linuxOS, otherMeta->linuxOS))
+            !comparePlatformMeta(linuxOS, otherMeta->linuxOS) ||
+            !comparePlatformMeta(webAssembly, otherMeta->webAssembly))
         {
             return false;
         }
@@ -208,7 +210,8 @@ namespace o2
     bool AtlasAsset::PlatformMeta::operator==(const PlatformMeta& other) const
     {
         return maxSize == other.maxSize && compression == other.compression &&
-               quality == other.quality && border == other.border;
+               quality == other.quality && border == other.border &&
+               Math::Equals(imagesScale, other.imagesScale);
     }
 }
 

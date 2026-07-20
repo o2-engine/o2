@@ -94,6 +94,8 @@ namespace o2
 
             int border = 0; // Images pack border @SERIALIZABLE
 
+            float imagesScale = 1.0f; // Source images scale applied when packing @SERIALIZABLE
+
             bool operator==(const PlatformMeta& other) const;
 
             SERIALIZABLE(PlatformMeta);
@@ -113,6 +115,7 @@ namespace o2
             Ref<PlatformMeta> macOS = nullptr;   // MacOS specified meta @SERIALIZABLE
             Ref<PlatformMeta> windows = nullptr; // Windows specified meta @SERIALIZABLE
             Ref<PlatformMeta> linuxOS = nullptr; // Linux specified meta @SERIALIZABLE
+            Ref<PlatformMeta> webAssembly = nullptr; // WebAssembly specified meta @SERIALIZABLE
 
         public:
             // Returns platform meta for specified platform
@@ -237,6 +240,7 @@ CLASS_FIELDS_META(o2::AtlasAsset::PlatformMeta)
     FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(TextureCompression::None).NAME(compression);
     FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(100).NAME(quality);
     FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(0).NAME(border);
+    FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(1.0f).NAME(imagesScale);
 }
 END_META;
 CLASS_METHODS_META(o2::AtlasAsset::PlatformMeta)
@@ -257,6 +261,7 @@ CLASS_FIELDS_META(o2::AtlasAsset::Meta)
     FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(nullptr).NAME(macOS);
     FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(nullptr).NAME(windows);
     FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(nullptr).NAME(linuxOS);
+    FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(nullptr).NAME(webAssembly);
 }
 END_META;
 CLASS_METHODS_META(o2::AtlasAsset::Meta)
