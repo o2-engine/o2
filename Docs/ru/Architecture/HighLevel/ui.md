@@ -37,9 +37,14 @@
 - `Image` - спрайт
 - `Label` - текст
 - `Toggle` - флаг, чекбокс
-- `Vertical/HorizontalScrillBar` - вертикальный/горизонтальный скролл-бар
-- `Vertical/HorizontalProgressBar` - прогресс-бары
-- `List/LongList` - списки
-- `DropDown` - выпадающий список
+- `Horizontal/VerticalScrollBar` - горизонтальный/вертикальный скролл-бар
+- `Horizontal/VerticalProgress` - прогресс-бары
+- `ScrollArea` - область со скроллом и отсечением содержимого
+- `List/LongList` - списки, `CustomList` - список с произвольными виджетами-элементами
+- `DropDown` - выпадающий список, `CustomDropDown` - с произвольными виджетами-элементами
 - `Tree` - дерево
 - `ContextMenu` - контекстное меню
+- `MenuPanel` - панель меню
+- `Window` - окно с заголовком и кнопкой закрытия
+- `Spoiler` - сворачиваемый контейнер
+- `PopupWidget` - всплывающий виджет поверх остального UI

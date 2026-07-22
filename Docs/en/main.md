@@ -33,6 +33,14 @@ It is important that the other engine uses the same render API as o2. In extreme
 
 ## Documentation
 
-- [Architecture](/Docs/en/Architecture/architecture.md)  
-- [Editor](/Docs/en/Editor/editor.md)  
-- [Video tutorial series on setting up a test slot-game scene](https://drive.google.com/drive/folders/1m-lgSaM2hYQxbKnIwymDfMCe3SzjKrP1?usp=sharing)  
+Structure: a general overview first ([architecture](/Docs/en/Architecture/architecture.md)), then detailed pages per subsystem.
+
+- [Architecture](/Docs/en/Architecture/architecture.md) — overview of all subsystems with links to details
+  - Utilities: [memory](/Docs/en/Architecture/Utils/memory.md), [reflection](/Docs/en/Architecture/Utils/reflection.md), [serialization](/Docs/en/Architecture/Utils/serialization.md), [properties](/Docs/en/Architecture/Utils/properties.md), [delegates](/Docs/en/Architecture/Utils/function.md), [math](/Docs/en/Architecture/Utils/math.md), [containers](/Docs/en/Architecture/Utils/containers.md), [strings](/Docs/en/Architecture/Utils/string.md), [file system](/Docs/en/Architecture/Utils/filesystem.md), [logging](/Docs/en/Architecture/Utils/logging.md), [debug](/Docs/en/Architecture/Utils/debug.md), [tasks](/Docs/en/Architecture/Utils/tasks.md), [time](/Docs/en/Architecture/Utils/time.md)
+  - Low level: [application](/Docs/en/Architecture/LowLevel/application.md), [assets](/Docs/en/Architecture/LowLevel/assets.md), [render](/Docs/en/Architecture/LowLevel/render.md), [animations](/Docs/en/Architecture/LowLevel/animations.md), [input](/Docs/en/Architecture/LowLevel/input.md), [physics](/Docs/en/Architecture/LowLevel/physics.md), [scripting](/Docs/en/Architecture/LowLevel/scripting.md), [sound](/Docs/en/Architecture/LowLevel/sound.md)
+  - High level: [scene and actors](/Docs/en/Architecture/HighLevel/scene.md), [components](/Docs/en/Architecture/HighLevel/components.md), [UI](/Docs/en/Architecture/HighLevel/ui.md)
+- [Editor](/Docs/en/Editor/editor.md) — editor manual
+  - Windows: [scene](/Docs/en/Editor/Scene/scene.md), [scene tree](/Docs/en/Editor/Tree/tree.md), [properties](/Docs/en/Editor/Properties/properties.md), [assets](/Docs/en/Editor/Assets/assets.md), [animation](/Docs/en/Editor/Animation/animation.md), [game](/Docs/en/Editor/Game/game.md), [log](/Docs/en/Editor/Log/log.md)
+- [Video tutorial series on setting up a test slot-game scene](https://drive.google.com/drive/folders/1m-lgSaM2hYQxbKnIwymDfMCe3SzjKrP1?usp=sharing)
+
+The documentation is maintained in two languages: [Russian version](/Docs/ru/main.md).

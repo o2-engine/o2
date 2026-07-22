@@ -19,16 +19,21 @@
 Подтипы ассетов наследуются от базового `o2::Asset`:
 - FolderAsset: папка с ассетами, которые можно получить
 - ActorAsset: прототип актора
-- AnimationAsset: анимация
+- SceneAsset: сцена
+- AnimationAsset: анимационный клип
+- AnimationStateGraphAsset: граф анимационных состояний
 - AtlasAsset: атлас
 - ImageAsset: картинка, ссылается на атлас
-- BinaryAsset: Бинарный файл
-- DataAsset: Сериализованные данные, конфиги
-- SceneAsset: Сцена
-- Vector/BitmapFont: Векторный/Растровый шрифт
+- BinaryAsset: бинарный файл
+- DataAsset: сериализованные данные, конфиги
+- VectorFontAsset/BitmapFontAsset: векторный/растровый шрифт (базовый FontAsset), FontStyleAsset: стиль шрифта
+- MaterialAsset, ShaderAsset (VertexShaderAsset/FragmentShaderAsset): материалы и шейдеры
+- Mesh3DAsset, SkinnedModelAsset: 3D-меши и скиннед-модели
+- SoundAsset: звук (wav, ogg, mp3, flac)
+- SpineAsset, SpineAtlasAsset: скелет и атлас Spine
 - JavaScriptAsset: JS скрипт 
 
 ### Ссылки на ассеты
-Базовая ссылка на ассет - это `o2::AssetRef`. От него наследуется шаблонный класс-ссылка `o2::Ref<>`. Он функционирует как типичный умный указатель.
+Ссылка на ассет - это шаблонный класс `o2::AssetRef<AssetType>`, наследник нешаблонной базы `o2::BaseAssetRef`. Функционирует как типичный умный указатель.
 
 Работу с ассетами корректнее вести через ссылки, во избежании дублирования загрузки ассетов

@@ -139,6 +139,19 @@ button.onClicked += []() { ... };
 ```
 </details>
 
+## Other Utilities
+
+The utility layer also includes:
+
+- [Math](/Docs/en/Architecture/Utils/math.md) — vectors (2D/3D), matrices, rectangles, quaternions, `o2::Transform`.
+- [Containers](/Docs/en/Architecture/Utils/containers.md) — `o2::Vector`, `o2::Map` and other STL wrappers with an extended API.
+- [Strings](/Docs/en/Architecture/Utils/string.md) — `o2::String`, type conversion, formatting.
+- [File system](/Docs/en/Architecture/Utils/filesystem.md) — the `o2FileSystem` singleton: files, folders, paths.
+- [Logging](/Docs/en/Architecture/Utils/logging.md) — the `o2::LogStream` channel hierarchy.
+- [Debug](/Docs/en/Architecture/Utils/debug.md) — `o2Debug`: logging and debug primitive drawing.
+- [Tasks](/Docs/en/Architecture/Utils/tasks.md) — `o2Tasks`: delayed and per-frame tasks.
+- [Time and timers](/Docs/en/Architecture/Utils/time.md) — `o2Time`, `Timer`, `TimeStamp`.
+
 ## Application Wrapper [(detailed documentation)](/Docs/en/Architecture/LowLevel/application.md)
 
 As mentioned above, this is the entry point and the main system of the engine. During initialization, it sets up the other subsystems. Then the game loop begins, processed in the `ProcessFrame()` function, where the scene, input, and all other subsystems are updated, and a frame is rendered. The application wrapper also handles system messages (activation, deactivation, etc.).
@@ -278,9 +291,9 @@ object.Draw();
 
 ## Scripting [(detailed documentation)](/Docs/en/Architecture/LowLevel/scripting.md)
 
-The engine uses **JerryScript** — a compact and performant JavaScript runtime, which also allows using TypeScript if you want static typing.
+The engine has several JavaScript backends: **QuickJS** (default), **JerryScript** and **BrowserJS** (the browser's JS engine in Emscripten builds); TypeScript can also be used if you want static typing.
 
-On top of JerryScript, the engine has a wrapper accessible via the `o2Scripts` singleton and a JavaScript-value wrapper `o2::ScriptValue`.  
+On top of the backend, the engine has a wrapper accessible via the `o2Scripts` singleton and a JavaScript-value wrapper `o2::ScriptValue`.  
 - `o2Scripts` can load and run scripts from files or strings and work with the global namespace via `o2::ScriptValue`.  
 - `o2::ScriptValue` represents any JS variable (number, string, boolean, function, array, or object) and provides a convenient interface for handling these types, classes, and prototypes.
 
@@ -312,9 +325,9 @@ The base scene primitive is `o2::RigidBody`. It contains the physical parameters
 
 All physics configuration and management happens through the scene and editor.
 
-## Sound (TBD)
+## Sound [(detailed documentation)](/Docs/en/Architecture/LowLevel/sound.md)
 
-Not yet implemented in the engine.
+Sound is managed by the `o2::SoundSystem` subsystem (`o2Sounds` singleton) built on miniaudio. Sounds are played through `o2::SoundPlayer` — an `o2::IAnimation` descendant, so they can be sequenced and scrubbed in the animation editor. On the scene, the `o2::SoundComponent` and `o2::SoundListenerComponent` components are used; the asset is `o2::SoundAsset` (wav, ogg, mp3, flac). Spatial audio is supported: the listener follows the camera or an active listener component.
 
 ## Scene and Actors [(detailed documentation)](/Docs/en/Architecture/HighLevel/scene.md)
 
@@ -330,7 +343,7 @@ The engine provides basic actor types like sprites, animations, cameras, particl
 
 ### Components
 
-Actors can contain a list of components that define their logic and rendering. To create a custom component, inherit from `o2::Component` and implement the required interface (`OnStart`, `OnEnabled/Disabled`, `OnDraw`, `OnUpdate`, etc.). This lets you compose logic: a single base actor can have multiple components.
+Actors can contain a list of components that define their logic and rendering. To create a custom component, inherit from `o2::Component` and implement the required interface (`OnStart`, `OnEnabled/Disabled`, `OnDraw`, `OnUpdate`, etc.). This lets you compose logic: a single base actor can have multiple components. [List of built-in components](/Docs/en/Architecture/HighLevel/components.md).
 
 ### Prototypes
 
