@@ -27,7 +27,9 @@ namespace o2
         GLint mTexCoordsAttribute = -1;
         GLint mNormalAttribute = -1;
 
-        mutable Vector<GLint> mParamUniformLocations;
+        mutable Vector<GLint>  mParamUniformLocations;
+        mutable Vector<GLenum> mParamUniformTypes; // Declared uniform types, for float vector dispatch
+        mutable Vector<GLint>  mParamUniformSizes; // Declared uniform array sizes, in elements
 
         Vector<SamplerLocation> mSamplerLocations;
     };

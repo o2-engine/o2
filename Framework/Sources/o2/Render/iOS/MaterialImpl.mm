@@ -78,6 +78,8 @@ namespace o2
                         memberSize = member.arrayType.arrayLength*member.arrayType.stride;
                     else if (member.dataType == MTLDataTypeFloat4x4)
                         memberSize = 64;
+                    else if (member.dataType == MTLDataTypeFloat4)
+                        memberSize = 16;
 
                     materialImpl->paramBindings[std::string(member.name.UTF8String)] = { member.offset, member.dataType, memberSize };
                 }
@@ -285,7 +287,8 @@ namespace o2
             }
             else if (auto* floatVectorParam = dynamic_cast<ShaderParamFloatVector*>(param.Get()))
             {
-                if ((binding.dataType == MTLDataTypeArray || binding.dataType == MTLDataTypeFloat4x4) && binding.size > 0)
+                if ((binding.dataType == MTLDataTypeArray || binding.dataType == MTLDataTypeFloat4x4 ||
+                     binding.dataType == MTLDataTypeFloat4) && binding.size > 0)
                 {
                     const auto& values = floatVectorParam->GetValue();
                     size_t bytes = std::min((size_t)binding.size, values.Count()*sizeof(float));

@@ -32,7 +32,9 @@ namespace o2
         GLint mNormalAttribute = -1;    // Location of a_normal attribute
 
         // Cached uniform locations for custom params (filled in PlatformBuild, used in PlatformApplyParams)
-        mutable Vector<GLint> mParamUniformLocations;
+        mutable Vector<GLint>  mParamUniformLocations;
+        mutable Vector<GLenum> mParamUniformTypes; // Declared uniform types, for float vector dispatch
+        mutable Vector<GLint>  mParamUniformSizes; // Declared uniform array sizes, in elements
 
         // Cached locations for additional texture samplers
         Vector<SamplerLocation> mSamplerLocations;
