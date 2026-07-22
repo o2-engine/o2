@@ -23,12 +23,10 @@ float GetTransparency() const;
 PROPERTIES(MyClass);
 PROPERTY(float, transparency, SetTransparency, GetTransparency);
 GETTER(int, index, GetIndex);
-ACCESSOR(Actor*, child, String, GetChild, GetAllChilds);
+ACCESSOR(Ref<Actor>, child, String, GetChild, GetAllChilds);
 ```
 
-Они определяют новый класс, который хранит ссылку на искомый класс, и перегружает необходимые математические методы, в которых использует указанные setter/getter.
-
-Это привносит накладные ресурсы в виде одного указателя на каждую property.
+Они определяют вложенный класс, который перегружает необходимые математические операторы, использующие указанные setter/getter. Указатель на владеющий объект вычисляется через `offsetof` от адреса самой property, поэтому property не хранит никаких данных и не добавляет накладных расходов на указатель.
 
 В примере выше указаны 3 типа:
 - `PROPERTY` - стандартный getter/setter

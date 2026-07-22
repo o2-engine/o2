@@ -14,10 +14,10 @@
 class Reel : public ISerializable
 {
 public:
-	ActorRef imagesContainer; // @SERIALIZABLE
+	LinkRef<Actor> imagesContainer; // @SERIALIZABLE
 
-	Vector<ImageAssetRef> images;        // @SERIALIZABLE
-	Vector<ImageAssetRef> blurredImages; // @SERIALIZABLE
+	Vector<AssetRef<ImageAsset>> images;        // @SERIALIZABLE
+	Vector<AssetRef<ImageAsset>> blurredImages; // @SERIALIZABLE
 
 	float imagesDistance = 100.0f; // @SERIALIZABLE
 

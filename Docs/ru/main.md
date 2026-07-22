@@ -32,6 +32,15 @@
 Важно чтобы в другом движке использовалось то же render api, что и в o2. В крайнем случае возможна реализация подистсемы рендера под конкретную имплементацию в другом движке. Ведь по сути от нее нужен вывод мешей треугольников с текстурой и шейдером. Как правило в других движках этот функционал вынесен в отдельное API.
 
 ## Документация
-- [Архитектура](/Docs/ru/Architecture/architecture.md)
-- [Редактор](/Docs/ru/Editor/editor.md)
+
+Структура: сначала общий обзор ([архитектура](/Docs/ru/Architecture/architecture.md)), далее детальные страницы по каждой подсистеме.
+
+- [Архитектура](/Docs/ru/Architecture/architecture.md) — обзор всех подсистем со ссылками на детали
+  - Утилиты: [память](/Docs/ru/Architecture/Utils/memory.md), [рефлексия](/Docs/ru/Architecture/Utils/reflection.md), [сериализация](/Docs/ru/Architecture/Utils/serialization.md), [проперти](/Docs/ru/Architecture/Utils/properties.md), [делегаты](/Docs/ru/Architecture/Utils/function.md), [математика](/Docs/ru/Architecture/Utils/math.md), [контейнеры](/Docs/ru/Architecture/Utils/containers.md), [строки](/Docs/ru/Architecture/Utils/string.md), [файловая система](/Docs/ru/Architecture/Utils/filesystem.md), [логирование](/Docs/ru/Architecture/Utils/logging.md), [отладка](/Docs/ru/Architecture/Utils/debug.md), [задачи](/Docs/ru/Architecture/Utils/tasks.md), [время](/Docs/ru/Architecture/Utils/time.md)
+  - Низкий уровень: [приложение](/Docs/ru/Architecture/LowLevel/application.md), [ассеты](/Docs/ru/Architecture/LowLevel/assets.md), [рендер](/Docs/ru/Architecture/LowLevel/render.md), [анимации](/Docs/ru/Architecture/LowLevel/animations.md), [ввод](/Docs/ru/Architecture/LowLevel/input.md), [физика](/Docs/ru/Architecture/LowLevel/physics.md), [скрипты](/Docs/ru/Architecture/LowLevel/scripting.md), [звук](/Docs/ru/Architecture/LowLevel/sound.md)
+  - Высокий уровень: [сцена и акторы](/Docs/ru/Architecture/HighLevel/scene.md), [компоненты](/Docs/ru/Architecture/HighLevel/components.md), [UI](/Docs/ru/Architecture/HighLevel/ui.md)
+- [Редактор](/Docs/ru/Editor/editor.md) — руководство по редактору
+  - Окна: [сцена](/Docs/ru/Editor/Scene/scene.md), [дерево сцены](/Docs/ru/Editor/Tree/tree.md), [параметры](/Docs/ru/Editor/Properties/properties.md), [ассеты](/Docs/ru/Editor/Assets/assets.md), [анимации](/Docs/ru/Editor/Animation/animation.md), [игра](/Docs/ru/Editor/Game/game.md), [лог](/Docs/ru/Editor/Log/log.md)
 - [Цикл видео-туториалов по настройке тестовой сцены слот-игры](https://drive.google.com/drive/folders/1m-lgSaM2hYQxbKnIwymDfMCe3SzjKrP1?usp=sharing)
+
+Документация ведётся на двух языках: [английская версия](/Docs/en/main.md).
