@@ -13,5 +13,5 @@ It defines mass, inertia, velocity and behavior. Behavior can be of 3 types:
 Used to define the shape of rigid bodies, descendants of `o2::ICollider`:
 - `o2::BoxCollider` - rectangle
 - `o2::CircleCollider` - circle
-- `o2::SplineCollider` - spline
+- `o2::SplineCollider` - spline; in loop mode the chain also samples the closing curve segment (last key -> first key)
 - `o2::SplineMeshCollider` - mesh along a spline

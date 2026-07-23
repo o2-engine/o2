@@ -41,18 +41,48 @@ namespace o2
 
     void ProjectConfig::Load()
     {
+        Load(GetProjectSettingPath());
+    }
+
+    void ProjectConfig::Load(const String& path)
+    {
+        mLoadedState.Clear();
+
         DataDocument data;
-        if (!data.LoadFromFile(GetProjectSettingPath()))
+        if (!data.LoadFromFile(path))
             return;
 
         Deserialize(data);
+
+        DataDocument current;
+        Serialize(current);
+        mLoadedState = current.SaveAsString();
     }
 
     void ProjectConfig::Save() const
     {
+        Save(GetProjectSettingPath());
+    }
+
+    void ProjectConfig::Save(const String& path) const
+    {
+        // A process that couldn't read the settings (wrong cwd, file busy) must
+        // not overwrite them with defaults on exit
+        if (mLoadedState.IsEmpty() && IsDefault())
+            return;
+
         DataDocument data;
         Serialize(data);
-        data.SaveToFile(GetProjectSettingPath());
+
+        if (data.SaveAsString() == mLoadedState)
+            return;
+
+        data.SaveToFile(path);
+    }
+
+    bool ProjectConfig::IsDefault() const
+    {
+        return physics == PhysicsConfig() && mProjectName.IsEmpty();
     }
 }
 // --- META ---

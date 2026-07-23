@@ -11,6 +11,11 @@ The active tool selected in the toolbar is also shown (2). It is interactive and
 
 The active tool may have special modes activated by holding Shift/Ctrl/Alt. Among them — snapping, axis alignment and others.
 
+### Spline editing
+Components with a spline (spline colliders and others) activate the spline tool when selected in the inspector. Points are added with a double click, removed with Delete. Dragging a point's bezier supports keeps them symmetric; with Alt held they move independently, and an Alt-click resets a support to zero.
+
+A selected point also shows a corner rounding handle on the corner bisector (as in Illustrator/Figma). Dragging it into the corner rounds it: the point slides along the bisector and the supports lay on the arc tangent. Dragging back to the base offset restores a sharp corner. The rounding is limited by halves of the adjacent edges.
+
 ### Layers
 The scene window allows configuring layers and their order. Click Layers at the top (1).
 

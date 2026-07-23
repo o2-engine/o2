@@ -173,6 +173,9 @@ namespace o2
     void ImageAsset::LoadBitmap()
     {
         String assetFullPath = GetFullPath();
+        if (!mBitmap)
+            mBitmap = mmake<Bitmap>();
+
         mBitmap->Load(assetFullPath);
     }
 

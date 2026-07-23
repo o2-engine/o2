@@ -46,17 +46,30 @@ namespace o2
         // Sets platform
         void SetPlatform(Platform platform);
 
-        // Save config to file
+        // Save config to the default project settings file
         void Save() const;
 
-        // Loads config file
+        // Saves config to file. Skips writing when nothing changed since load,
+        // or when the config failed to load and holds nothing but defaults -
+        // so a process that couldn't read the settings never clobbers them
+        void Save(const String& path) const;
+
+        // Loads config from the default project settings file
         void Load();
+
+        // Loads config from file; on failure keeps current values
+        void Load(const String& path);
+
+        // Returns true when every setting equals its default value
+        bool IsDefault() const;
 
         SERIALIZABLE(ProjectConfig);
 
     protected:
         String   mProjectName; // Current project name @SERIALIZABLE
         Platform mPlatform;    // Current project target platform
+
+        String mLoadedState; // Serialized snapshot from the successful load, empty when load failed
 
         friend class AssetBuildSystem;
         friend class Application;
@@ -77,6 +90,7 @@ CLASS_FIELDS_META(o2::ProjectConfig)
     FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().NAME(physics);
     FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().NAME(mProjectName);
     FIELD().PROTECTED().NAME(mPlatform);
+    FIELD().PROTECTED().NAME(mLoadedState);
 }
 END_META;
 CLASS_METHODS_META(o2::ProjectConfig)
@@ -88,7 +102,10 @@ CLASS_METHODS_META(o2::ProjectConfig)
     FUNCTION().PUBLIC().SIGNATURE(Platform, GetPlatform);
     FUNCTION().PUBLIC().SIGNATURE(void, SetPlatform, Platform);
     FUNCTION().PUBLIC().SIGNATURE(void, Save);
+    FUNCTION().PUBLIC().SIGNATURE(void, Save, const String&);
     FUNCTION().PUBLIC().SIGNATURE(void, Load);
+    FUNCTION().PUBLIC().SIGNATURE(void, Load, const String&);
+    FUNCTION().PUBLIC().SIGNATURE(bool, IsDefault);
 }
 END_META;
 // --- END META ---
