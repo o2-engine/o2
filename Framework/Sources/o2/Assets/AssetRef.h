@@ -539,19 +539,25 @@ namespace o2
             {
                 if (auto pathNode = node.FindMember("path"))
                 {
-                    mPtr = o2Assets.GetAssetRefByType<_asset_type>((String)(*pathNode));
+                    String path;
+                    pathNode->Get(path);
+                    mPtr = o2Assets.GetAssetRefByType<_asset_type>(path);
 
                     if (mPtr)
                     {
-                        o2Debug.LogWarning("Asset reference resolved by path fallback: " + (String)(*pathNode) +
-                                           ", stale id " + (String)(*idNode));
+                        String staleId;
+                        idNode->Get(staleId);
+                        o2Debug.LogWarning("Asset reference resolved by path fallback: " + path +
+                                           ", stale id " + staleId);
                     }
                 }
             }
         }
         else if (auto pathNode = node.FindMember("path"))
         {
-            mPtr = o2Assets.GetAssetRefByType<_asset_type>((String)pathNode);
+            String path;
+            pathNode->Get(path);
+            mPtr = o2Assets.GetAssetRefByType<_asset_type>(path);
         }
     }
 
