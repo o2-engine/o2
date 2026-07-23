@@ -906,7 +906,7 @@ namespace o2
         // Returns true, when delegates list isn't empty
         operator bool() const
         {
-            return IsEmpty();
+            return !IsEmpty();
         }
 
         // Returns true when functions is equal

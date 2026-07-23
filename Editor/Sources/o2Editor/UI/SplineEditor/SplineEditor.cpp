@@ -32,6 +32,11 @@ namespace Editor
                                                             mmake<Sprite>("ui/UI2_handle_side_pressed.png"),
                                                             mmake<Sprite>("ui/UI2_handle_side_select.png"));
 
+        mHandlesSample.rounding = mmake<DragHandle>(mmake<Sprite>("ui/UI2_handle_side_regular.png"),
+                                                    mmake<Sprite>("ui/UI2_handle_side_select.png"),
+                                                    mmake<Sprite>("ui/UI2_handle_side_pressed.png"),
+                                                    mmake<Sprite>("ui/UI2_handle_side_select.png"));
+
         mSplineColor = Color4(44, 62, 80, 255);
         mSplineSupportColor = Color4(190, 190, 190, 255);
 
@@ -128,6 +133,38 @@ namespace Editor
         {
             DrawSupportHandles();
             DrawMainHandles();
+        }
+
+        DrawRoundingHandles();
+    }
+
+    void SplineEditor::DrawRoundingHandles()
+    {
+        for (int i = 0; i < mSplineHandles.Count(); i++)
+        {
+            auto& handles = mSplineHandles[i];
+            if (!handles->rounding)
+                continue;
+
+            bool pressed = handles->rounding->IsPressed();
+            bool visible = pressed || handles->position->IsSelected() || o2Input.IsKeyDown(VK_MENU);
+            if (!visible)
+                continue;
+
+            CornerInfo info = pressed ? handles->roundingCorner : GetCornerInfo(i);
+            if (!info.valid)
+                continue;
+
+            if (!pressed)
+            {
+                handles->rounding->SetPosition(GetRoundingHandlePos(info));
+                handles->rounding->angle = -info.bisector.Angle(Vec2F(1, 0));
+            }
+
+            o2Render.DrawAALine(handles->position->GetScreenPosition(), handles->rounding->GetScreenPosition(),
+                                mSplineSupportColor, 1.0f, LineType::Dash);
+
+            handles->rounding->Draw();
         }
     }
 
@@ -298,6 +335,21 @@ namespace Editor
             handles->rightRangeHandle->checkPositionFunc = [=](const Vec2F& pos) { return CheckRangeHandlePos(i, handles, pos); };
             handles->rightRangeHandle->localToScreenTransformFunc = [&](const Vec2F& p) { return mSplineWrapper->LocalToWorld(p); };
             handles->rightRangeHandle->screenToLocalTransformFunc = [&](const Vec2F& p) { return mSplineWrapper->WorldToLocal(p); };
+
+            handles->rounding = mHandlesSample.rounding->CloneAsRef<DragHandle>();
+            handles->rounding->onPressed = [=]() {
+                if (onBeginEdit)
+                    onBeginEdit();
+
+                handles->roundingDragged = false;
+                handles->roundingCorner = GetCornerInfo(i);
+            };
+            handles->rounding->onBeganDragging = [=]() { handles->roundingDragged = true; };
+            handles->rounding->onReleased = [=]() { if (onEndEdit) onEndEdit(); };
+            handles->rounding->onChangedPos = [=](const Vec2F& pos) { OnRoundingHandleMoved(i, pos, handles); };
+            handles->rounding->checkPositionFunc = [=](const Vec2F& pos) { return CheckRoundingHandlePos(i, handles, pos); };
+            handles->rounding->localToScreenTransformFunc = [&](const Vec2F& p) { return mSplineWrapper->LocalToWorld(p); };
+            handles->rounding->screenToLocalTransformFunc = [&](const Vec2F& p) { return mSplineWrapper->WorldToLocal(p); };
 
             mSplineHandles.Add(handles);
         }
@@ -644,6 +696,168 @@ namespace Editor
     {
         Vec2F normal = GetRangeHandlesNormal(i, handles);
         return mSplineWrapper->GetPointPos(i) + normal*(normal.Dot(pos - mSplineWrapper->GetPointPos(i)));
+    }
+
+    bool SplineEditor::ReconstructCorner(const Vec2F& prevPos, const Vec2F& nextPos, const Vec2F& pos,
+                                         const Vec2F& prevSupport, const Vec2F& nextSupport,
+                                         Vec2F& corner, float& value)
+    {
+        const float eps = 0.0001f;
+
+        if ((prevSupport - pos).Length() < eps && (nextSupport - pos).Length() < eps)
+        {
+            corner = pos;
+            value = 0.0f;
+            return true;
+        }
+
+        // The corner is the intersection of the two edge lines: each goes through a
+        // neighbor point and this point's support laying on the edge tangent
+        Vec2F d1 = prevSupport - prevPos;
+        Vec2F d2 = nextSupport - nextPos;
+
+        float denom = d1.x*d2.y - d1.y*d2.x;
+        if (Math::Abs(denom) < eps)
+            return false;
+
+        Vec2F diff = nextPos - prevPos;
+        float t = (diff.x*d2.y - diff.y*d2.x)/denom;
+        corner = prevPos + d1*t;
+        value = (pos - corner).Length();
+        return true;
+    }
+
+    void SplineEditor::CalcRoundedCorner(const Vec2F& corner, const Vec2F& dirPrev, const Vec2F& dirNext,
+                                         float value, Vec2F& pos, Vec2F& prevSupport, Vec2F& nextSupport)
+    {
+        Vec2F bisector = dirPrev + dirNext;
+        if (bisector.Length() < 0.0001f)
+        {
+            pos = corner;
+            prevSupport = corner;
+            nextSupport = corner;
+            return;
+        }
+
+        bisector.Normalize();
+
+        float halfCos = Math::Clamp(bisector.Dot(dirPrev), 0.0001f, 1.0f);
+        float halfSin = Math::Sqrt(Math::Max(1.0f - halfCos*halfCos, 0.0f));
+
+        pos = corner + bisector*value;
+
+        // Supports lay on the arc tangent at the point: where the tangent line
+        // crosses the corner edges, which keeps the curve hugging the edges
+        float supportLength = value*halfSin/halfCos;
+        Vec2F tangent(-bisector.y, bisector.x);
+        if (tangent.Dot(dirPrev) < 0.0f)
+            tangent = tangent*-1.0f;
+
+        prevSupport = pos + tangent*supportLength;
+        nextSupport = pos - tangent*supportLength;
+    }
+
+    SplineEditor::CornerInfo SplineEditor::GetCornerInfo(int i) const
+    {
+        CornerInfo info;
+
+        if (!mSplineWrapper)
+            return info;
+
+        int count = mSplineWrapper->GetPointsCount();
+        if (count < 3)
+            return info;
+
+        if (!mSplineWrapper->IsClosed() && (i == 0 || i == count - 1))
+            return info;
+
+        int prevIdx = (i - 1 + count)%count;
+        int nextIdx = (i + 1)%count;
+
+        Vec2F prevPos = mSplineWrapper->GetPointPos(prevIdx);
+        Vec2F nextPos = mSplineWrapper->GetPointPos(nextIdx);
+        Vec2F pos = mSplineWrapper->GetPointPos(i);
+
+        Vec2F corner;
+        float value = 0.0f;
+        if (!ReconstructCorner(prevPos, nextPos, pos,
+                               mSplineWrapper->GetPointPrevSupportPos(i),
+                               mSplineWrapper->GetPointNextSupportPos(i),
+                               corner, value))
+        {
+            return info;
+        }
+
+        Vec2F toPrev = prevPos - corner;
+        Vec2F toNext = nextPos - corner;
+        float lenPrev = toPrev.Length();
+        float lenNext = toNext.Length();
+        if (lenPrev < 0.001f || lenNext < 0.001f)
+            return info;
+
+        info.dirPrev = toPrev/lenPrev;
+        info.dirNext = toNext/lenNext;
+
+        Vec2F bisector = info.dirPrev + info.dirNext;
+        if (bisector.Length() < 0.001f)
+            return info;
+
+        info.corner = corner;
+        info.bisector = bisector.Normalized();
+        info.value = value;
+
+        // Limit so that the arc tangency points stay within halves of adjacent edges
+        float halfCos = Math::Clamp(info.bisector.Dot(info.dirPrev), 0.0001f, 1.0f);
+        float halfSin = Math::Sqrt(Math::Max(1.0f - halfCos*halfCos, 0.0f));
+        info.maxValue = 0.5f*Math::Min(lenPrev, lenNext)*(1.0f - halfSin)/halfCos;
+
+        info.valid = true;
+        return info;
+    }
+
+    float SplineEditor::GetLocalFromScreenDistance(float screenDistance) const
+    {
+        return (mSplineWrapper->WorldToLocal(Vec2F(screenDistance, 0.0f)) - mSplineWrapper->WorldToLocal(Vec2F())).Length();
+    }
+
+    Vec2F SplineEditor::GetRoundingHandlePos(const CornerInfo& info) const
+    {
+        return info.corner + info.bisector*(info.value + GetLocalFromScreenDistance(20.0f));
+    }
+
+    void SplineEditor::OnRoundingHandleMoved(int i, const Vec2F& pos, const Ref<PointHandles>& handles)
+    {
+        const CornerInfo& info = handles->roundingCorner;
+        if (!info.valid)
+            return;
+
+        float baseOffset = GetLocalFromScreenDistance(20.0f);
+        float value = Math::Clamp((pos - info.corner).Dot(info.bisector) - baseOffset, 0.0f, info.maxValue);
+
+        Vec2F newPos, prevSupport, nextSupport;
+        CalcRoundedCorner(info.corner, info.dirPrev, info.dirNext, value, newPos, prevSupport, nextSupport);
+
+        mSplineWrapper->SetPointPos(i, newPos);
+        mSplineWrapper->SetPointPrevSupportPos(i, prevSupport);
+        mSplineWrapper->SetPointNextSupportPos(i, nextSupport);
+
+        handles->position->SetPosition(newPos);
+        handles->prevSupport->SetPosition(prevSupport);
+        handles->nextSupport->SetPosition(nextSupport);
+
+        mSplineWrapper->OnChanged();
+        onChanged();
+    }
+
+    Vec2F SplineEditor::CheckRoundingHandlePos(int i, const Ref<PointHandles>& handles, const Vec2F& pos)
+    {
+        CornerInfo info = handles->rounding && handles->rounding->IsPressed() ? handles->roundingCorner : GetCornerInfo(i);
+        if (!info.valid)
+            return pos;
+
+        float baseOffset = GetLocalFromScreenDistance(20.0f);
+        float t = Math::Clamp((pos - info.corner).Dot(info.bisector), baseOffset, baseOffset + info.maxValue);
+        return info.corner + info.bisector*t;
     }
 
     void SplineEditor::UpdateTransformFrame()

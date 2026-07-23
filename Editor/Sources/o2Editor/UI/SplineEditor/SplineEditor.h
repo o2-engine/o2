@@ -120,6 +120,34 @@ namespace Editor
         // Called when spline was updated and need to refresh handles
         void OnSplineChanged();
 
+        // ------------------------------------------------------------------------
+        // Virtual sharp corner of a spline point, reconstructed from its neighbors
+        // and supports. Used by corner rounding handles: rounding moves the point
+        // along the bisector into the corner and lays the supports on the tangent,
+        // so the curve approximates a circular arc inscribed into the corner.
+        // ------------------------------------------------------------------------
+        struct CornerInfo
+        {
+            bool  valid = false;   // False when corner is undefined (ends, collinear edges)
+            Vec2F corner;          // Virtual sharp corner position
+            Vec2F bisector;        // Unit vector from corner inside the angle
+            Vec2F dirPrev;         // Unit vector from corner towards previous point
+            Vec2F dirNext;         // Unit vector from corner towards next point
+            float value = 0.0f;    // Current rounding: distance from corner to point along bisector
+            float maxValue = 0.0f; // Rounding limit from adjacent edges lengths
+        };
+
+        // Reconstructs the virtual sharp corner from point position and absolute supports positions.
+        // With zero supports the corner is the point itself. Returns false when undefined.
+        static bool ReconstructCorner(const Vec2F& prevPos, const Vec2F& nextPos, const Vec2F& pos,
+                                      const Vec2F& prevSupport, const Vec2F& nextSupport,
+                                      Vec2F& corner, float& value);
+
+        // Computes rounded corner state for given rounding value: new point position and
+        // absolute supports positions laying on the tangent, symmetric around the bisector
+        static void CalcRoundedCorner(const Vec2F& corner, const Vec2F& dirPrev, const Vec2F& dirNext,
+                                      float value, Vec2F& pos, Vec2F& prevSupport, Vec2F& nextSupport);
+
     protected:
         // -----------------------
         // Handles of spline point
@@ -131,10 +159,14 @@ namespace Editor
             Ref<DragHandle> nextSupport;      // Next support handle
             Ref<DragHandle> leftRangeHandle;  // Left range handle
             Ref<DragHandle> rightRangeHandle; // Right range handle
+            Ref<DragHandle> rounding;         // Corner rounding handle, on the corner bisector
 
             bool positionDragged = false;    // Is position handle dragged
-            bool prevSupportDragged = false; // Is previous support handle dragged 
+            bool prevSupportDragged = false; // Is previous support handle dragged
             bool nextSupportDragged = false; // Is next support handle dragged
+            bool roundingDragged = false;    // Is rounding handle dragged
+
+            CornerInfo roundingCorner; // Corner geometry captured at rounding drag start
 
             bool startDragFromZero = false; // Is dragging started from zero position
 
@@ -194,6 +226,24 @@ namespace Editor
 
         // Checks and corrects range handle position
         Vec2F CheckRangeHandlePos(int i, const Ref<PointHandles>& handles, const Vec2F& pos);
+
+        // Reconstructs the corner geometry of point by index, with rounding limit
+        CornerInfo GetCornerInfo(int i) const;
+
+        // Returns local-space length of the given screen-space distance
+        float GetLocalFromScreenDistance(float screenDistance) const;
+
+        // Returns rounding handle position for the corner: on the bisector with base offset
+        Vec2F GetRoundingHandlePos(const CornerInfo& info) const;
+
+        // Called when rounding handle moved: recalculates point position and supports
+        void OnRoundingHandleMoved(int i, const Vec2F& pos, const Ref<PointHandles>& handles);
+
+        // Constrains rounding handle to the corner bisector ray
+        Vec2F CheckRoundingHandlePos(int i, const Ref<PointHandles>& handles, const Vec2F& pos);
+
+        // Draws rounding handles of selected points with bisector guide lines
+        void DrawRoundingHandles();
 
         // Draws handles
         void DrawHandles();

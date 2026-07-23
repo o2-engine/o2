@@ -15,6 +15,8 @@ namespace o2
 
         float debugDrawAlpha = 0.5f; // Debug draw transparency @SERIALIZABLE
 
+        bool operator==(const PhysicsConfig& other) const;
+
         SERIALIZABLE(PhysicsConfig);
     };
 }

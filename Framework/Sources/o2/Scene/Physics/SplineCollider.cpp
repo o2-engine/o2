@@ -150,6 +150,16 @@ namespace o2
                 pushVert(approx[j].value);
         }
 
+        // For closed splines keys[0] holds the closing bezier segment (last -> first);
+        // without it the loop chain would replace the closing curve with a straight chord.
+        if (mIsLoop)
+        {
+            const ApproximationVec2F* approx = keys[0].GetApproximatedPointsLeft();
+            int count = keys[0].GetApproximatedPointsCount();
+            for (int j = 1; j < count; j++)
+                pushVert(approx[j].value);
+        }
+
         // For loops, the wrap-around edge (last -> first) must also clear the slop.
         // Drop the trailing vertex if it collapses onto the first one.
         if (mIsLoop && verts.Count() > 1)
