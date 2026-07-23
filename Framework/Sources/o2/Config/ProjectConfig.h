@@ -46,6 +46,13 @@ namespace o2
         // Sets platform
         void SetPlatform(Platform platform);
 
+        // Enables saving the config on destruction; off by default so only the
+        // editor persists project settings (tests and the game never write them)
+        void SetSaveOnExit(bool save);
+
+        // Returns whether the config saves on destruction
+        bool IsSaveOnExit() const;
+
         // Save config to the default project settings file
         void Save() const;
 
@@ -71,6 +78,8 @@ namespace o2
 
         String mLoadedState; // Serialized snapshot from the successful load, empty when load failed
 
+        bool mSaveOnExit = false; // Save on destruction; enabled by the editor only
+
         friend class AssetBuildSystem;
         friend class Application;
     };
@@ -91,6 +100,7 @@ CLASS_FIELDS_META(o2::ProjectConfig)
     FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().NAME(mProjectName);
     FIELD().PROTECTED().NAME(mPlatform);
     FIELD().PROTECTED().NAME(mLoadedState);
+    FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mSaveOnExit);
 }
 END_META;
 CLASS_METHODS_META(o2::ProjectConfig)
@@ -101,6 +111,8 @@ CLASS_METHODS_META(o2::ProjectConfig)
     FUNCTION().PUBLIC().SIGNATURE(void, SetProjectName, const String&);
     FUNCTION().PUBLIC().SIGNATURE(Platform, GetPlatform);
     FUNCTION().PUBLIC().SIGNATURE(void, SetPlatform, Platform);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetSaveOnExit, bool);
+    FUNCTION().PUBLIC().SIGNATURE(bool, IsSaveOnExit);
     FUNCTION().PUBLIC().SIGNATURE(void, Save);
     FUNCTION().PUBLIC().SIGNATURE(void, Save, const String&);
     FUNCTION().PUBLIC().SIGNATURE(void, Load);

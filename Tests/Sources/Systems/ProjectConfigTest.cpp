@@ -108,6 +108,13 @@ TEST(ProjectConfig, SaveCreatesFileWhenChangedAfterFailedLoad)
 	EXPECT_FLOAT_EQ(o2Config.physics.scale, 77.0f);
 }
 
+// Only the editor turns save-on-exit on; tests and the game must never
+// write the real ProjectSettings.json on process exit
+TEST(ProjectConfig, SaveOnExitIsOffOutsideEditor)
+{
+	EXPECT_FALSE(o2Config.IsSaveOnExit());
+}
+
 TEST(ProjectConfig, FailedLoadKeepsCurrentValues)
 {
 	ConfigGuard guard;

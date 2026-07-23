@@ -6,6 +6,7 @@
 #include "o2/Animation/Tracks/AnimationVec2FTrack.h"
 #include "o2/Application/Input.h"
 #include "o2/Assets/Assets.h"
+#include "o2/Config/ProjectConfig.h"
 #include "o2/Events/EventSystem.h"
 #include "o2/Render/Render.h"
 #include "o2/Scene/Actor.h"
@@ -138,6 +139,7 @@ namespace Editor
         Application::InitalizeSystems();
         mMainListenersLayer->SetEditorMode(true);
         o2Scene.SetIsEditor(true);
+        o2Config.SetSaveOnExit(true); // only the editor persists project settings
     }
     
     void EditorApplication::Deinitialize()

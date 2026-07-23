@@ -16,7 +16,18 @@ namespace o2
 
     ProjectConfig::~ProjectConfig()
     {
-        Save();
+        if (mSaveOnExit)
+            Save();
+    }
+
+    void ProjectConfig::SetSaveOnExit(bool save)
+    {
+        mSaveOnExit = save;
+    }
+
+    bool ProjectConfig::IsSaveOnExit() const
+    {
+        return mSaveOnExit;
     }
 
     String ProjectConfig::GetProjectName() const
