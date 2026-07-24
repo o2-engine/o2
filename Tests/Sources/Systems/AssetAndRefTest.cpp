@@ -103,6 +103,46 @@ TEST(Asset, SaveCreatesAssetAndMetaFilesWithExpectedContent) {
     tree.assetsPath = origAssetsPath;
 }
 
+// Hand-written data may reference an asset by path alone, without the id
+TEST(AssetRef, DeserializeResolvesByPathWithoutId) {
+    namespace fs = std::filesystem;
+
+    auto& tree = const_cast<AssetsTree&>(o2Assets.GetAssetsTree());
+    String origAssetsPath = tree.assetsPath;
+
+    UID dirUid;
+    dirUid.Randomize();
+    auto tempDir = fs::temp_directory_path() / ("o2test_pathref_" + std::string((String)dirUid));
+    fs::create_directories(tempDir);
+
+    String tempPrefix(tempDir.string().c_str());
+    tempPrefix.ReplaceAll("\\", "/");
+    if (!tempPrefix.EndsWith("/"))
+        tempPrefix += "/";
+    tree.assetsPath = tempPrefix;
+
+    {
+        auto asset = mmake<DataAsset>();
+        asset->data.Set(String("hello"));
+        asset->SetPath("path_ref_test.json");
+        asset->Save();
+    }
+
+    DataDocument node;
+    node["path"] = String("path_ref_test.json");
+
+    AssetRef<DataAsset> ref;
+    ref.Deserialize(node);
+
+    EXPECT_TRUE(ref.IsValid());
+    if (ref)
+        EXPECT_EQ(ref->GetPath(), String("path_ref_test.json"));
+
+    std::error_code ec;
+    fs::remove_all(tempDir, ec);
+    tree.assetsPath = origAssetsPath;
+}
+
 // ===== AssetRef =====
 
 TEST(AssetRef, DefaultIsInvalid) {

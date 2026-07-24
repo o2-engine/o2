@@ -286,10 +286,12 @@ namespace o2
                     {
                         for (auto& charKV : heightKV.second)
                         {
+                            // Pixel rows keep their positions from the texture top, and the
+                            // v axis is inverted (v = 1 - row/height): v' = 0.5 + v*0.5
                             charKV.second.mTexSrc.left *= 0.5f;
                             charKV.second.mTexSrc.right *= 0.5f;
-                            charKV.second.mTexSrc.top *= 0.5f;
-                            charKV.second.mTexSrc.bottom *= 0.5f;
+                            charKV.second.mTexSrc.top = charKV.second.mTexSrc.top*0.5f + 0.5f;
+                            charKV.second.mTexSrc.bottom = charKV.second.mTexSrc.bottom*0.5f + 0.5f;
                         }
                     }
                 }

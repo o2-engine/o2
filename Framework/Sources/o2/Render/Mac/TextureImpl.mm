@@ -106,7 +106,30 @@ namespace o2
     }
 
     void Texture::Copy(const Texture& from, const RectI& rect)
-    {}
+    {
+        if (!mImpl || !mImpl->texture || !from.mImpl || !from.mImpl->texture)
+            return;
+
+        // The rect is in y-up coordinates while texture rows go top-down
+        NSUInteger sourceRow = (NSUInteger)Math::Max(0, from.GetSize().y - rect.top);
+
+        // Blit on the render queue: the serial queue guarantees any previously
+        // committed rendering into the source completes before the copy reads it
+        id<MTLCommandBuffer> commandBuffer = [RenderDevice::commandQueue commandBuffer];
+        id<MTLBlitCommandEncoder> blit = [commandBuffer blitCommandEncoder];
+        [blit copyFromTexture:from.mImpl->texture
+                  sourceSlice:0
+                  sourceLevel:0
+                 sourceOrigin:MTLOriginMake((NSUInteger)Math::Max(0, rect.left), sourceRow, 0)
+                   sourceSize:MTLSizeMake((NSUInteger)rect.Width(), (NSUInteger)rect.Height(), 1)
+                    toTexture:mImpl->texture
+             destinationSlice:0
+             destinationLevel:0
+            destinationOrigin:MTLOriginMake(0, 0, 0)];
+        [blit endEncoding];
+        [commandBuffer commit];
+        [commandBuffer waitUntilCompleted];
+    }
 
     void Texture::PlatformGetData(Byte* data)
     {

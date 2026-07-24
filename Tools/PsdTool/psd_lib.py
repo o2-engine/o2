@@ -83,12 +83,19 @@ def flat_layers(psd_path, include_hidden=False, groups=False):
     return psd, result
 
 
-def render(psd_path, out_path, scale=None):
-    """Composites the whole document into a PNG; returns the PIL image."""
+def render(psd_path, out_path, scale=None, prefer_preview=True):
+    """Renders the document into a PNG; returns the PIL image.
+
+    Photoshop files carry a flattened preview - using it is instant, cheap on
+    memory and pixel-exact to what the artist saw. Files without a preview
+    (or with prefer_preview=False) are composited from layers.
+    """
     psd = load_psd(psd_path)
-    # force=True composes from layers even when the file carries a (possibly
-    # stale or empty) merged preview
-    image = psd.composite(force=True)
+    image = None
+    if prefer_preview and psd.has_preview():
+        image = psd.topil()
+    if image is None:
+        image = psd.composite(force=True)
     if image is None:
         raise ValueError("PSD has no composable content")
     if scale and scale != 1.0:

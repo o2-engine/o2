@@ -12,7 +12,7 @@ Track types:
 - float - numeric, represented as a bezier curve
 - bool - boolean, showing true/false on certain parts of the timeline
 - color - color change over time
-- vector2 - defined by a movement spline in 2D space and an interpolation graph along this spline
+- vector2 - a combination of a movement spline in 2D space and a time curve: the value travels along the spline, and the time curve maps the track time to the normalized spline position from 0 (spline start) to 1 (spline end). Meant for movement trajectories; to animate a scale use two float tracks on the `scaleX`/`scaleY` properties instead of a vector2 track on `scale`
 - vector3 - 3D vector animation
 - sub-track (`o2::AnimationSubTrack`) - playback of a nested animation on a part of the timeline
 - any custom ones
