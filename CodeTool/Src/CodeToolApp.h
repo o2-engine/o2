@@ -1,6 +1,7 @@
 #pragma once
 
 #include <chrono>
+#include <set>
 #include "CppSyntaxParser.h"
 
 class Timer
@@ -30,6 +31,7 @@ public:
     SyntaxSection    globalNamespace; // Global syntax namespace
     SyntaxClassesVec attributes;      // Allattribute classes
     vector<string>   parentProjects;  // Parent projects code tool caches, that used in current project
+    set<string>      loadedCaches;    // Normalized paths of already loaded caches, guards diamond parents from double-loading
 
     // Updates global namespace
     void UpdateGlobalNamespace();

@@ -555,7 +555,9 @@ namespace o2
         }
         else if (auto pathNode = node.FindMember("path"))
         {
-            mPtr = o2Assets.GetAssetRefByType<_asset_type>((String)(*pathNode));
+            String path;
+            pathNode->Get(path);
+            mPtr = o2Assets.GetAssetRefByType<_asset_type>(path);
         }
     }
 

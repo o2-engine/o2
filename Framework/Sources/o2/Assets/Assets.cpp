@@ -689,6 +689,8 @@ namespace o2
         for (auto& info : oldAllAssets)
         {
             auto infoRef = info.Lock();
+            if (!infoRef)
+                continue;
 
             if (!mMainAssetsTree->allAssetsByUID.ContainsKey(infoRef->meta->ID()))
             {

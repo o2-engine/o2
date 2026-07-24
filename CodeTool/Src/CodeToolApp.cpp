@@ -228,7 +228,9 @@ void CodeToolApplication::LoadCache()
 {
     if (mNeedReset)
     {
-        for (auto& file : mCache.parentProjects)
+        // Copy: Load() appends nested parents to mCache.parentProjects, which would invalidate this loop
+        auto parents = mCache.parentProjects;
+        for (auto& file : parents)
             mCache.Load(file, false);
 
         return;
@@ -1551,6 +1553,13 @@ void CodeToolCache::Save(const string& file) const
 
 void CodeToolCache::Load(const string& file, bool original /*= true*/)
 {
+    string normalized = file;
+    for (auto& c : normalized)
+        if (c == '\\') c = '/';
+
+    if (!loadedCaches.insert(normalized).second)
+        return;
+
     pugi::xml_document doc;
     doc.load_file(file.c_str());
 
