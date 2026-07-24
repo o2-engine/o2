@@ -4,6 +4,9 @@
 #include <chrono>
 #include <utility>
 
+// WinAPI's winbase.h defines Yield() as an empty macro, breaking the Thread::Yield declaration
+#undef Yield
+
 // Whether the platform can create OS threads. It is 0 on Emscripten builds without pthread support
 // (single-threaded WebAssembly, no Web Workers): there the job / coroutine / render systems fall back
 // to cooperative execution on the main thread instead of spawning threads
