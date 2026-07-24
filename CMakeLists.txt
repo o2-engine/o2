@@ -275,6 +275,7 @@ target_link_libraries(o2Framework
         pugixml
         spine-cpp
         miniaudio
+        pl_mpeg
 )
 if (O2_SCRIPTING AND O2_SCRIPTING_BACKEND STREQUAL "jerryscript")
     target_link_libraries(o2Framework PUBLIC jerry-core jerry-ext jerry-port-default)
@@ -312,12 +313,14 @@ elseif (ANDROID)
     find_library(ANDROID_GLES2_LIB GLESv2)
     find_library(ANDROID_LOG_LIB log)
     find_library(ANDROID_LIB android)
+    find_library(ANDROID_MEDIANDK_LIB mediandk)
     target_link_libraries(o2Framework
             PRIVATE
                 ${ANDROID_EGL_LIB}
                 ${ANDROID_GLES2_LIB}
                 ${ANDROID_LOG_LIB}
                 ${ANDROID_LIB}
+                ${ANDROID_MEDIANDK_LIB}
     )
 elseif (UNIX)
     if (NOT APPLE)
@@ -338,6 +341,10 @@ elseif (UNIX)
         find_library(FOUNDATION Foundation)
         find_library(OBJC objc)
         find_library(UIKIT UIKit)
+        find_library(AV_FOUNDATION AVFoundation)
+        find_library(CORE_MEDIA CoreMedia)
+        find_library(CORE_VIDEO CoreVideo)
+        find_library(ACCELERATE Accelerate)
 
         target_link_libraries(o2Framework
                 PRIVATE
@@ -346,6 +353,10 @@ elseif (UNIX)
                     ${OBJC}
                     ${METALKIT}
                     ${UIKIT}
+                    ${AV_FOUNDATION}
+                    ${CORE_MEDIA}
+                    ${CORE_VIDEO}
+                    ${ACCELERATE}
         )
 
         set(METAL_SHADERS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Framework/Sources/o2/Render/iOS")
@@ -364,6 +375,10 @@ elseif (UNIX)
         find_library(OBJC objc)
         find_library(APPLICATION_SERVICES ApplicationServices)
         find_library(CARBON Carbon)
+        find_library(AV_FOUNDATION AVFoundation)
+        find_library(CORE_MEDIA CoreMedia)
+        find_library(CORE_VIDEO CoreVideo)
+        find_library(ACCELERATE Accelerate)
 
         target_link_libraries(o2Framework
                 PRIVATE
@@ -375,6 +390,10 @@ elseif (UNIX)
                     ${METALKIT}
                     ${APPLICATION_SERVICES}
                     ${CARBON}
+                    ${AV_FOUNDATION}
+                    ${CORE_MEDIA}
+                    ${CORE_VIDEO}
+                    ${ACCELERATE}
         )
 
         set(METAL_SHADERS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Framework/Sources/o2/Render/Mac")
@@ -389,7 +408,9 @@ endif()
 
 if(WIN32)
     target_link_libraries(o2Framework PRIVATE Shlwapi.lib)
-    target_link_libraries(o2Framework PRIVATE opengl32.lib)  
+    target_link_libraries(o2Framework PRIVATE opengl32.lib)
+    # Media Foundation for the hardware video decoder
+    target_link_libraries(o2Framework PRIVATE mfplat.lib mfreadwrite.lib mfuuid.lib ole32.lib)
 endif()
 
 if (UNIX)

@@ -10,6 +10,7 @@ namespace o2
     {
         friend class Render;
         friend class VectorFont;
+        friend class WasmVideoDecoder;
 
     protected:
         GLuint mHandle = 0;            // WebGL texture handle

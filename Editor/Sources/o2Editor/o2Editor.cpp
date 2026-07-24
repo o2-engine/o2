@@ -99,6 +99,7 @@ extern void __RegisterClass__Editor__DefaultObjectPropertiesViewer();
 extern void __RegisterClass__Editor__ParticlesSplineEffectViewer();
 extern void __RegisterClass__Editor__SpriteViewer();
 extern void __RegisterClass__Editor__TextViewer();
+extern void __RegisterClass__Editor__VideoViewer();
 extern void __RegisterClass__Editor__CustomFrameTool();
 extern void __RegisterClass__Editor__FrameTool();
 extern void __RegisterClass__Editor__IEditTool();
@@ -305,6 +306,7 @@ extern void InitializeTypeso2Editor()
     __RegisterClass__Editor__ParticlesSplineEffectViewer();
     __RegisterClass__Editor__SpriteViewer();
     __RegisterClass__Editor__TextViewer();
+    __RegisterClass__Editor__VideoViewer();
     __RegisterClass__Editor__CustomFrameTool();
     __RegisterClass__Editor__FrameTool();
     __RegisterClass__Editor__IEditTool();

@@ -51,6 +51,17 @@ The sprite has a drawing Mode:
 
 Transformations, color, transparency are set through the base class `IRectDrawable`.
 
+### Video, o2::Video
+Inherits from `o2::IRectDrawable` and `o2::IAnimation`. Plays a video asset `o2::VideoAsset` into a dynamic texture and draws it like a sprite. Playback is driven through the `IAnimation` interface (`Play`/`Stop`/`SetTime`/`loop`); the frame shown always follows the animation time, so a `Video` can be used as an animation sub-track — its `Evaluate` decodes and uploads the frame for the current time.
+
+Decoding goes through a `o2::VideoDecoder` backend selected by file extension: `mp4`/`mov`/`m4v` use the platform hardware decoder, everything else (`mpg`/`mpeg`) uses the pl_mpeg MPEG-1 software decoder. Hardware backends: AVFoundation/VideoToolbox on Mac and iOS, Media Foundation (`IMFSourceReader`) on Windows, `AMediaCodec` on Android, an HTMLVideoElement with direct `texImage2D` upload on WebAssembly (asynchronous setup, frames never touch the CPU). Linux has no hardware backend — use `mpg` there. Hardware decoding is the recommended path: it is an order of magnitude cheaper on the CPU and does not depend on build optimization flags.
+
+The encoded data source is selectable: by default the whole file is kept in memory, or with `streaming` enabled it is decoded straight from the asset file on disk, keeping only a small buffer resident (the hardware decoder always reads from the file).
+
+Optionally keys out a solid background color with a soft edge: enabled via `SetChromaKeyEnabled`, configured by the key color (`keyColor`), the `similarity` threshold, the soft edge width `smoothness` and spill suppression `spill`. Keying is done by the `ChromaKey` shader material (it overrides the drawable material via `SetMaterial`).
+
+The scene component is `o2::VideoComponent` (`Component` + `Video`), driving playback in `OnUpdate`; being an `IAnimation` it is picked up by the animation editor as a sub-track.
+
 ### Text, o2::Text
 Inherits from `o2::IRectDrawable`. It defines the font (vector or bitmap), text size, text formatting and the text itself.
 
