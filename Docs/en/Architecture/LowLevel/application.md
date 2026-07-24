@@ -17,6 +17,8 @@ For unit tests there is a headless mode: `Integration::SetHeadless(true)` before
 ## Update loop
 It happens in the `ProcessFrame` method, which is called cyclically from the platform-specific part.
 
+The lifecycle itself is a [coroutine](/Docs/en/Architecture/Utils/coroutines.md). `ProcessFrame` advances it one frame per call: on the first call `EnsureLifecycleStarted()` starts a lifecycle coroutine that runs `OnLifecycleLoad()` once (override it to load content), then loops `ProcessFrameBody()` — the frame update and draw — yielding via `co_await WaitNextFrame()` each frame. Every frame it also pumps queued main-thread [jobs](/Docs/en/Architecture/Utils/jobs.md) under a time budget set by `SetMainThreadJobsQuota(seconds)` (negative = unlimited).
+
 It measures the frame time for updating the internal subsystems. After that, FPS limiting happens if necessary.
 
 Then the engine subsystems are updated and rendering starts. After that, input processing runs.

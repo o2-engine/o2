@@ -23,6 +23,8 @@
 
 #include "o2/Render/Camera.h"
 #include "o2/Render/Material.h"
+#include "o2/Render/RenderCommandBuffer.h"
+#include "o2/Render/RenderThread.h"
 #include "o2/Render/TextureRef.h"
 #include "o2/Utils/Math/Vertex.h"
 #include "o2/Utils/Singleton.h"
@@ -105,6 +107,17 @@ namespace o2
 
 		// Finishing rendering
 		void End();
+
+		// Enables/disables multithreaded rendering: the main thread records draw commands and the
+		// render thread submits them to the GPU, synchronizing each frame. No effect on platforms that
+		// don't support it. Takes effect from the next frame
+		void SetMultithreadedRenderEnabled(bool enabled);
+
+		// Returns true if multithreaded rendering is enabled
+		bool IsMultithreadedRenderEnabled() const;
+
+		// Returns true if the current platform supports multithreaded rendering
+		static bool IsMultithreadedRenderSupported();
 
 		// Flushes current state and gets ready to draw manually
 		void BeginCustomRender();
@@ -423,6 +436,10 @@ namespace o2
 
 		float mDrawingDepth = 0.0f; // Current drawing depth, increments after each drawing drawables
 
+		bool                mMultithreadedRender = false; // Whether draws are recorded on the main thread and submitted on the render thread
+		RenderThread        mRenderThread;                // Dedicated GPU submission thread (used when multithreaded)
+		RenderCommandBuffer mCommandBuffer;               // Draw commands recorded for the current frame
+
 		FT_Library mFreeTypeLib; // FreeType library, for rendering fonts
 
 		Vector<Sprite*>         mSprites; // All sprites
@@ -512,6 +529,29 @@ namespace o2
 
 		// Platform specific draw primitives (draw call)
 		void PlatformDrawPrimitives();
+
+#if defined(PLATFORM_MAC)
+		// Records the current batch (geometry + full GPU-state snapshot) into the frame command buffer
+		void RecordDrawCommand();
+
+		// Runs on the render thread: replays the recorded command buffer, submitting the whole frame
+		void SubmitRecordedFrame();
+
+		// Platform: snapshots the platform-specific submit state (matrix, scissor, clear flags) into cmd
+		void PlatformSnapshotDrawState(RenderDrawCommand& command);
+
+		// Platform: acquires the frame's render target/drawable on the main thread for the render thread
+		void PlatformAcquireFrameTarget();
+
+		// Platform: begins a frame on the render thread (creates the GPU command buffer)
+		void PlatformBeginThreaded();
+
+		// Platform: replays one recorded draw command on the render thread
+		void PlatformReplayDrawCommand(const RenderDrawCommand& command);
+
+		// Platform: ends a frame on the render thread (present + commit + wait)
+		void PlatformEndThreaded();
+#endif
 
 		// Checks vertex buffer for texture coordinate flip by texture format
 		void CheckVertexBufferTexCoordFlipByTextureFormat();

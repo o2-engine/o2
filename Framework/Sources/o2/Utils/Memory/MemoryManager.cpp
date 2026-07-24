@@ -83,6 +83,8 @@ namespace o2
 
     void MemoryManager::OnMemoryAllocate(void* memory, size_t size, const char* source, int line)
     {
+        std::lock_guard<std::recursive_mutex> lock(mAllocsMutex);
+
         AllocInfo info;
         info.memory = memory;
         info.size = size;
@@ -94,6 +96,8 @@ namespace o2
 
     void MemoryManager::OnMemoryRelease(void* memory)
     {
+        std::lock_guard<std::recursive_mutex> lock(mAllocsMutex);
+
         auto fnd = mAllocs.find(memory);
         if (fnd != mAllocs.end())
         {
@@ -104,6 +108,8 @@ namespace o2
 
     void MemoryManager::DumpInfo()
     {
+        std::lock_guard<std::recursive_mutex> lock(mAllocsMutex);
+
         printf("========MemoryManager::DumpInfo==========\n");
 
         printf("Total managed allocations: %f MB\n", (float)mTotalBytes / 1024.0f / 1024.0f);
