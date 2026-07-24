@@ -73,6 +73,10 @@ namespace o2
         // Timer thread main loop
         void TimerLoop();
 
+        // Fires every timer whose deadline has passed. Used by the timer thread and, on platforms without
+        // threads, called from OnNewFrame once per frame
+        void FireDueTimers();
+
         // Returns current steady-clock time in seconds
         static double NowSeconds();
 

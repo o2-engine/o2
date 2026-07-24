@@ -22,6 +22,9 @@
 
 **Isolation contract:** a `JobThread::Any` body must not touch shared `o2::Ref` scene/asset state that the main thread concurrently mutates (`o2::Ref`'s count is non-atomic). Work that needs the scene or assets must run on `JobThread::Main`. See [threading](/Docs/en/Architecture/Utils/threading.md).
 
+## Single-threaded platforms
+On platforms that cannot create OS threads — a WebAssembly build without pthreads — the system runs in **cooperative mode**: `Initialize` starts **zero workers** (`GetWorkersCount() == 0`), `JobThread::Any` jobs join the main-thread queue, and they are drained on the main thread by `ExecuteMainThreadJobs` / `WaitForIdle`. Each per-frame pump processes only the jobs already queued when it starts, so a coroutine that re-schedules itself advances one step per frame instead of blocking the frame. The same job/coroutine API is used unchanged; only the execution is serial. `Initialize(0)` requests this mode explicitly on any platform. (The [coroutine scheduler](/Docs/en/Architecture/Utils/coroutines.md) likewise drives `WaitTime` from the frame instead of a timer thread there.)
+
 <details>
 <summary>Example</summary>
 

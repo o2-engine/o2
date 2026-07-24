@@ -294,3 +294,69 @@ TEST(JobSystem, ShutdownStopsSelfReschedulingWork)
 
     JobSystem::mInstance = savedInstance; // restore the shared singleton for the rest of the suite
 }
+
+// The cooperative single-threaded mode (0 workers) is what WebAssembly always uses. These tests exercise
+// that exact runtime path natively by requesting 0 workers on a private instance.
+TEST(JobSystem, CooperativeModeRunsParallelJobsOnMainThread)
+{
+    JobSystem* savedInstance = JobSystem::InstancePtr();
+
+    Ref<JobSystem> jobs = mmake<JobSystem>();
+    jobs->Initialize(0); // cooperative single-threaded mode
+    EXPECT_EQ(jobs->GetWorkersCount(), 0);
+
+    Atomic<int> ran(0);
+    auto a = jobs->Schedule([&] { ran.FetchAdd(1); }, JobPriority::Normal, JobThread::Any);
+    auto b = jobs->Schedule([&] { ran.FetchAdd(1); }, JobPriority::Normal, JobThread::Any);
+
+    // With no worker threads nothing runs until the main thread pumps the queue
+    EXPECT_EQ(ran.Load(), 0);
+
+    jobs->WaitForIdle(); // drains the parallel jobs cooperatively on this thread
+    EXPECT_EQ(ran.Load(), 2);
+    EXPECT_TRUE(a->IsDone());
+    EXPECT_TRUE(b->IsDone());
+
+    // Dependencies are honored in cooperative mode too
+    Vector<int> order;
+    auto first = jobs->CreateJob([&] { order.Add(1); });
+    auto second = jobs->CreateJob([&] { order.Add(2); });
+    second->DependsOn(first);
+    jobs->Submit(second);
+    jobs->Submit(first);
+    jobs->WaitForIdle();
+    ASSERT_EQ(order.Count(), 2);
+    EXPECT_EQ(order[0], 1);
+    EXPECT_EQ(order[1], 2);
+
+    JobSystem::DestroySingleton(jobs);
+    JobSystem::mInstance = savedInstance;
+}
+
+TEST(JobSystem, CooperativePassIsBudgetBounded)
+{
+    // A frame's pump must advance self-replenishing work one step per pass, not loop forever within a
+    // frame (otherwise a continuous coroutine would hang the WebAssembly frame). Each job here schedules
+    // a child; the children must be deferred to the next pass
+    JobSystem* savedInstance = JobSystem::InstancePtr();
+
+    Ref<JobSystem> jobs = mmake<JobSystem>();
+    jobs->Initialize(0);
+
+    Atomic<int> parents(0), children(0);
+    for (int i = 0; i < 3; i++)
+        jobs->Schedule([&] {
+            parents.FetchAdd(1);
+            jobs->Schedule([&] { children.FetchAdd(1); }, JobPriority::Normal, JobThread::Main);
+        }, JobPriority::Normal, JobThread::Main);
+
+    jobs->ExecuteMainThreadJobs(-1.0f); // one pass
+    EXPECT_EQ(parents.Load(), 3);       // the 3 jobs ready at pass start ran
+    EXPECT_EQ(children.Load(), 0);      // the children they scheduled are deferred to the next pass
+
+    jobs->ExecuteMainThreadJobs(-1.0f); // next pass
+    EXPECT_EQ(children.Load(), 3);
+
+    JobSystem::DestroySingleton(jobs);
+    JobSystem::mInstance = savedInstance;
+}

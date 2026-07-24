@@ -31,6 +31,15 @@ namespace o2
 
     void Job::Wait()
     {
+        // With no worker threads (single-threaded WebAssembly) blocking would deadlock — nothing else
+        // would run this job. Drain the queued jobs on the calling thread until this one has finished
+        if (mSystem && mSystem->GetWorkersCount() == 0)
+        {
+            while (mState.Load() != (int)JobState::Done)
+                mSystem->ExecuteMainThreadJobs(-1.0f);
+            return;
+        }
+
         int state;
         while ((state = mState.Load()) != (int)JobState::Done)
             mState.WaitWhileEquals(state);

@@ -13,6 +13,11 @@ namespace o2
         if (mStarted)
             return;
 
+        // No OS threads on this platform (single-threaded WebAssembly): stay unstarted so the caller keeps
+        // rendering synchronously. Multithreaded render is also gated off there by IsMultithreadedRenderSupported
+        if constexpr (!O2_HAS_THREADS)
+            return;
+
         mStopping.Store(false);
         mHasWork = false;
         mIdle = true;

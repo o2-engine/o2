@@ -24,7 +24,11 @@ namespace o2
 
         mStopping.Store(false);
         mInitialized = true;
+#if O2_HAS_THREADS
         mTimerThread = Thread([this] { TimerLoop(); });
+#endif
+        // Without threads (single-threaded WebAssembly) there is no timer thread; due timers are fired
+        // from OnNewFrame once per frame instead
     }
 
     void CoroutineScheduler::Shutdown()
@@ -33,8 +37,10 @@ namespace o2
             return;
 
         mStopping.Store(true);
+#if O2_HAS_THREADS
         mTimerCondition.NotifyAll();
         mTimerThread.Join();
+#endif
         mInitialized = false;
 
         {
@@ -64,9 +70,32 @@ namespace o2
         mNextFrameWaiters.Add(action);
     }
 
+    void CoroutineScheduler::FireDueTimers()
+    {
+        std::vector<Function<void()>> due;
+        {
+            ScopeLock<Mutex> lock(mTimerMutex);
+            double now = NowSeconds();
+            while (!mTimers.empty() && mTimers.front().deadline <= now)
+            {
+                std::pop_heap(mTimers.begin(), mTimers.end(), TimerIsLater);
+                due.push_back(std::move(mTimers.back().action));
+                mTimers.pop_back();
+            }
+        }
+
+        for (auto& action : due)
+            action();
+    }
+
     void CoroutineScheduler::OnNewFrame()
     {
         PROFILE_SAMPLE_FUNC();
+
+#if !O2_HAS_THREADS
+        // No timer thread on this platform: WaitTime deadlines are checked here, once per frame
+        FireDueTimers();
+#endif
 
         Vector<Function<void()>> toFire;
         {

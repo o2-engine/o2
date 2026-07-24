@@ -4,6 +4,15 @@
 #include <chrono>
 #include <utility>
 
+// Whether the platform can create OS threads. It is 0 on Emscripten builds without pthread support
+// (single-threaded WebAssembly, no Web Workers): there the job / coroutine / render systems fall back
+// to cooperative execution on the main thread instead of spawning threads
+#if defined(__EMSCRIPTEN__) && !defined(__EMSCRIPTEN_PTHREADS__)
+#   define O2_HAS_THREADS 0
+#else
+#   define O2_HAS_THREADS 1
+#endif
+
 namespace o2
 {
     // ----------------------------------------------------------------------------------

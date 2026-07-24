@@ -25,7 +25,9 @@ Coroutines start suspended: return `Coroutine<T>` (or `Coroutine<void>`) from a 
 ## o2::CoroutineScheduler (o2Coroutines)
 - **ScheduleAfter(seconds, action)** — run the action after a delay (backs `WaitTime`).
 - **ScheduleNextFrame(action)** — run the action on the next `OnNewFrame()` (backs `WaitNextFrame`).
-- **OnNewFrame()** — fires all next-frame wake-ups; called once per frame on the main thread by the application.
+- **OnNewFrame()** — fires all next-frame wake-ups; called once per frame on the main thread by the application. On platforms without threads (WebAssembly) it also fires any due `WaitTime` timers, since there is no background timer thread there — so `WaitTime` resolves at frame granularity.
+
+On single-threaded platforms coroutines still work unchanged, run cooperatively on the main thread through the [job system](/Docs/en/Architecture/Utils/jobs.md)'s zero-worker mode.
 
 Headline pattern: start on the main thread, launch N children on the workers with `Async`, `co_await WaitAll(children)` (a non-blocking wait — the main thread keeps running), then continue on the main thread with the results.
 

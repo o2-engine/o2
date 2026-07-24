@@ -26,16 +26,24 @@ namespace o2
         if (mWorkersCount > 0)
             return;
 
+#if !O2_HAS_THREADS
+        // No OS threads on this platform (single-threaded WebAssembly): force cooperative mode regardless
+        // of the requested count
+        workersCount = 0;
+#else
         if (workersCount < 0)
         {
             workersCount = (int)Thread::HardwareConcurrency() - 1;
             if (workersCount > kDefaultMaxWorkers)
                 workersCount = kDefaultMaxWorkers;
+            if (workersCount < 1)
+                workersCount = 1;
         }
+#endif
 
-        if (workersCount < 1)
-            workersCount = 1;
-
+        // workersCount == 0 is cooperative single-threaded mode: no worker threads are started and parallel
+        // jobs are drained on the main thread (EnqueueReadyLocked / ExecuteMainThreadJobs / WaitForIdle).
+        // Always used on WebAssembly; can be requested explicitly to exercise that path on other platforms
         mStopping.Store(false);
         mWorkersCount = workersCount;
         mWorkers.Reserve(workersCount);
@@ -122,8 +130,23 @@ namespace o2
 
         auto start = std::chrono::steady_clock::now();
 
+        // Cooperative single-threaded mode: bound the pass to the jobs already queued when it starts, so a
+        // job that re-schedules itself (a continuous coroutine loop) advances one step per frame instead
+        // of looping forever within one frame. -1 (with workers) means "drain until empty"
+        int budget = -1;
+        if (mWorkersCount == 0)
+        {
+            UniqueLock lock(mMutex);
+            budget = 0;
+            for (int p = 0; p < kPriorityCount; p++)
+                budget += (int)mMainReady[p].size();
+        }
+
         for (;;)
         {
+            if (budget == 0)
+                break;
+
             SharedRef<Job> job;
             {
                 UniqueLock lock(mMutex);
@@ -132,6 +155,9 @@ namespace o2
 
             if (!job)
                 break;
+
+            if (budget > 0)
+                budget--;
 
             job->mState.Store((int)JobState::Running);
             {
@@ -152,6 +178,15 @@ namespace o2
 
     void JobSystem::WaitForIdle()
     {
+        // With no worker threads there is nothing to block on: drain the queued jobs on the calling
+        // (main) thread until all parallel work has finished
+        if (mWorkersCount == 0)
+        {
+            while (mUnfinishedParallel.Load() != 0)
+                ExecuteMainThreadJobs(-1.0f);
+            return;
+        }
+
         int count;
         while ((count = mUnfinishedParallel.Load()) != 0)
             mUnfinishedParallel.WaitWhileEquals(count);
@@ -206,7 +241,9 @@ namespace o2
         job->mState.Store((int)JobState::Ready);
         int priority = (int)job->mPriority;
 
-        if (job->mThread == JobThread::Main)
+        // With no worker threads (single-threaded WebAssembly) parallel jobs have nowhere to run, so they
+        // join the main-thread queue and are drained cooperatively by ExecuteMainThreadJobs / WaitForIdle
+        if (job->mThread == JobThread::Main || mWorkersCount == 0)
         {
             mMainReady[priority].push_back(job);
         }
