@@ -34,6 +34,16 @@ namespace o2
         static id<MTLDepthStencilState> depthStateDisabled;       // Compare always, no write
         static id<MTLDepthStencilState> depthStateEnabled;        // Compare less-equal, write
         static id<MTLDepthStencilState> depthStateEnabledNoWrite; // Compare less-equal, no write
+
+        // Frame target acquired on the main thread and consumed by the render thread (multithreaded render)
+        static MTLRenderPassDescriptor* threadRenderPassDescriptor; // Back-buffer render pass descriptor
+        static id<CAMetalDrawable>      threadDrawable;             // Back-buffer drawable to present
+        static id<MTLTexture>           threadDepthTexture;         // Back-buffer depth texture
+        static float                    threadGraphicsScale;        // Graphics scale captured on the main thread
+
+        // Limits how many frames the CPU may queue ahead of the GPU, so the render thread never blocks
+        // on GPU completion (and thus on vsync) each frame — signaled from the command buffer's handler
+        static dispatch_semaphore_t     frameSemaphore;
     };
 
     struct MTLTextureImpl

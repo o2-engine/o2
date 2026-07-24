@@ -119,14 +119,18 @@ endif()
 
 # tracy
 if (O2_TRACY)
-    add_subdirectory(tracy)
-
+    # These must be set BEFORE add_subdirectory(tracy) so Tracy's own option() calls pick them up on the
+    # first configure — otherwise TracyClient is compiled without on-demand and the client buffers events
+    # from startup, growing memory even while no profiler is connected
     set(TRACY_ENABLE ON CACHE BOOL "Enable tracy" FORCE)
     set(TRACY_CALLSTACK ON CACHE BOOL "Enable tracy callstack" FORCE)
     set(TRACY_ON_DEMAND ON CACHE BOOL "Enable tracy on demand" FORCE)
+    set(TRACY_FIBERS ON CACHE BOOL "Enable tracy fibers (coroutines as fiber tracks)" FORCE)
 
-    add_compile_definitions(TRACY_ENABLE)
-    
+    add_subdirectory(tracy)
+
+    add_compile_definitions(TRACY_ENABLE TRACY_ON_DEMAND TRACY_FIBERS)
+
     set_target_properties(TracyClient PROPERTIES FOLDER o2/3rdPartyLibs)
 endif()
 

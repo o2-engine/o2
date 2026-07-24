@@ -21,6 +21,9 @@
 #include "o2/Utils/System/Time/Time.h"
 #include "o2/Utils/System/Time/Timer.h"
 #include "o2/Utils/Tasks/TaskManager.h"
+#include "o2/Utils/Jobs/JobSystem.h"
+#include "o2/Utils/Coroutines/CoroutineScheduler.h"
+#include "o2/Utils/Coroutines/Coroutines.h"
 
 #include <chrono>
 #include <thread>
@@ -47,6 +50,8 @@ namespace o2
     FORWARD_REF_IMPL(Scene);
     FORWARD_REF_IMPL(SoundSystem);
     FORWARD_REF_IMPL(TaskManager);
+    FORWARD_REF_IMPL(JobSystem);
+    FORWARD_REF_IMPL(CoroutineScheduler);
     FORWARD_REF_IMPL(Time);
     FORWARD_REF_IMPL(UIManager);
 
@@ -179,6 +184,12 @@ namespace o2
 
         mTaskManager = mmake<TaskManager>();
 
+        mJobSystem = mmake<JobSystem>();
+        mJobSystem->Initialize();
+
+        mCoroutineScheduler = mmake<CoroutineScheduler>();
+        mCoroutineScheduler->Initialize();
+
         mTimer.Reset();
 
         mEventSystem = mmake<EventSystem>();
@@ -202,6 +213,10 @@ namespace o2
 	{
 		mRender = mmake<Render>();
 
+		// Render on a parallel thread by default where the platform supports it: the main thread records
+		// draw commands and the render thread submits them, synchronizing each frame
+		mRender->SetMultithreadedRenderEnabled(true);
+
 		o2Debug.InitializeFont();
 	}
 
@@ -212,6 +227,17 @@ namespace o2
 
 	void Integration::DeinitializeSystems()
     {
+        // Stop and join worker threads first, before any other system is torn down, so no job can
+        // touch a singleton that is going away. The coroutine scheduler's timer thread goes first,
+        // as its timers reschedule work onto the job system
+        mCoroutineScheduler->Shutdown();
+        CoroutineScheduler::DestroySingleton(mCoroutineScheduler);
+
+        mJobSystem->Shutdown();
+        JobSystem::DestroySingleton(mJobSystem);
+
+        mLifecycleStarted = false;
+
         Scene::DestroySingleton(mScene);
         Input::DestroySingleton(mInput);
         ProjectConfig::DestroySingleton(mProjectConfig);
@@ -245,6 +271,16 @@ namespace o2
         if (!mReady)
             return;
 
+        // The whole application lifecycle (loading + per-frame updates) is a coroutine. Each platform
+        // frame advances it one step: wake the coroutine parked on WaitNextFrame, then run the queued
+        // main-thread jobs (the lifecycle resume runs first at Critical priority and does the frame body)
+        EnsureLifecycleStarted();
+        o2Coroutines.OnNewFrame();
+        o2Jobs.ExecuteMainThreadJobs(mMainThreadJobsQuota);
+    }
+
+    void Integration::ProcessFrameBody()
+    {
         float dt = 0, realDt = 0;
 		CalculateAndSyncFPS(dt, realDt);
 
@@ -259,6 +295,44 @@ namespace o2
 		PostUpdateFrame(dt);
 
         PROFILE_FRAME();
+    }
+
+    void Integration::EnsureLifecycleStarted()
+    {
+        if (mLifecycleStarted)
+            return;
+
+        mLifecycleStarted = true;
+        PROFILE_THREAD("o2 Main Thread");
+
+        // Captureless lambda coroutine: `self` is a parameter, copied into the coroutine frame, so it
+        // stays valid across suspensions (unlike a captured `this`, which would dangle once the
+        // temporary closure is destroyed). Started on the main thread at Critical priority so the frame
+        // body runs before any user main-thread jobs and always completes despite the quota
+        auto lifecycle = [](Integration* self) -> Coroutine<void> {
+            self->OnLifecycleLoad();
+
+            while (self->mReady)
+            {
+                self->ProcessFrameBody();
+                co_await WaitNextFrame();
+            }
+        }(this);
+
+        lifecycle.Start(JobThread::Main, JobPriority::Critical);
+    }
+
+    void Integration::OnLifecycleLoad()
+    {}
+
+    void Integration::SetMainThreadJobsQuota(float seconds)
+    {
+        mMainThreadJobsQuota = seconds;
+    }
+
+    float Integration::GetMainThreadJobsQuota() const
+    {
+        return mMainThreadJobsQuota;
     }
 
 	void Integration::CalculateAndSyncFPS(float& dt, float& realDt)

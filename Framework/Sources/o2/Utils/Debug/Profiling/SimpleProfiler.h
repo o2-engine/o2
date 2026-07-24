@@ -83,14 +83,29 @@ namespace o2
 #if defined(TRACY_ENABLE)
 #define TRACY_PROFILE_SAMPLE_FUNC() ZoneScoped
 #define TRACY_PROFILE_SAMPLE(id) ZoneScopedN(id)
+#define TRACY_PROFILE_SAMPLE_COLOR(id, color) ZoneScopedNC(id, color)
 #define TRACY_PROFILE_INFO(info) ZoneText(info, info.Length())
 #define TRACY_PROFILE_FRAME() FrameMark
+#define TRACY_PROFILE_FRAME_NAMED(name) FrameMarkNamed(name)
+#define TRACY_PROFILE_THREAD(name) tracy::SetThreadName(name)
+#if defined(TRACY_FIBERS) // Tracy only defines the fiber macros when built with fiber support
+#define TRACY_PROFILE_FIBER_ENTER(name) TracyFiberEnter(name)
+#define TRACY_PROFILE_FIBER_LEAVE() TracyFiberLeave
 #else
-#define TRACY_PROFILE_SAMPLE_FUNC() 
-#define TRACY_PROFILE_SAMPLE(id) 
+#define TRACY_PROFILE_FIBER_ENTER(name)
+#define TRACY_PROFILE_FIBER_LEAVE()
+#endif
+#else
+#define TRACY_PROFILE_SAMPLE_FUNC()
+#define TRACY_PROFILE_SAMPLE(id)
+#define TRACY_PROFILE_SAMPLE_COLOR(id, color)
 #define TRACY_PROFILE_INFO(info)
 #define TRACY_PROFILE_FRAME()
-#endif 
+#define TRACY_PROFILE_FRAME_NAMED(name)
+#define TRACY_PROFILE_THREAD(name)
+#define TRACY_PROFILE_FIBER_ENTER(name)
+#define TRACY_PROFILE_FIBER_LEAVE()
+#endif
 
 #if defined(O2_PROFILE_STATS)
 #define SIMPLE_PROFILE_SAMPLE_FUNC() o2::SimpleProfiler::ScopeSampler __scope_sampler(__PRETTY_FUNCTION__)
@@ -104,7 +119,24 @@ namespace o2
 
 #define PROFILE_SAMPLE_FUNC() TRACY_PROFILE_SAMPLE_FUNC(); SIMPLE_PROFILE_SAMPLE_FUNC()
 #define PROFILE_SAMPLE(id) TRACY_PROFILE_SAMPLE(id); SIMPLE_PROFILE_SAMPLE(id)
+
+// A named profiling zone with an explicit color (0xRRGGBB), shown as a distinct bar in the profiler
+#define PROFILE_SAMPLE_COLOR(id, color) TRACY_PROFILE_SAMPLE_COLOR(id, color)
+
 #define PROFILE_INFO(info) TRACY_PROFILE_INFO(info); SIMPLE_PROFILE_INFO(info)
 #define PROFILE_FRAME() TRACY_PROFILE_FRAME()
+
+// Marks a named frame boundary (e.g. a secondary thread's frame in Tracy)
+#define PROFILE_FRAME_NAMED(name) TRACY_PROFILE_FRAME_NAMED(name)
+
+// Names the current thread in the profiler (call once at thread start)
+#define PROFILE_THREAD(name) TRACY_PROFILE_THREAD(name)
+
+// Attributes the following zones to a named fiber (a logical thread that can migrate between OS threads,
+// e.g. a coroutine) until PROFILE_FIBER_LEAVE. The name must be a persistent, unique string
+#define PROFILE_FIBER_ENTER(name) TRACY_PROFILE_FIBER_ENTER(name)
+
+// Returns zone attribution from the current fiber back to the OS thread
+#define PROFILE_FIBER_LEAVE() TRACY_PROFILE_FIBER_LEAVE()
 
 }

@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <vector>
 #include <map>
+#include <mutex>
 
 #include "o2/EngineSettings.h"
 #include "o2/Utils/Types/CommonTypes.h"
@@ -86,6 +87,10 @@ namespace o2
 
         std::map<void*, AllocInfo> mAllocs;     // Allocations info
         size_t                     mTotalBytes; // Total managed allocated bytes
+
+        // Guards mAllocs/mTotalBytes: allocations may come from worker threads. Recursive because the
+        // overridden global operator delete re-enters OnMemoryRelease when the map frees a node.
+        std::recursive_mutex mAllocsMutex;
 
     protected:
         // Called when memory was allocated and registers allocation

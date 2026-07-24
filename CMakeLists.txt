@@ -43,7 +43,16 @@ option(O2_SELFPROFILE "Enable profiling o2 benchmark." OFF)
 option(O2_TESTS_BATCH "Register one ctest entry per gtest suite (one process per suite) instead of one per test case" ON)
 option(O2_EDITOR "Enables o2 editor." ON)
 option(O2_ASAN "Enables ASAN (address sanitizer)." OFF)
-option(O2_TRACY "Enables Tracy profiling" OFF)
+
+# Tracy profiling is on by default for development builds (runs in on-demand mode, so it costs almost
+# nothing until a profiler connects), and off by default for shipping builds, where its listener thread
+# and open port are unwanted. Override explicitly with -DO2_TRACY=ON/OFF
+if (CMAKE_BUILD_TYPE STREQUAL "Release" OR CMAKE_BUILD_TYPE STREQUAL "MinSizeRel")
+    set(O2_TRACY_DEFAULT OFF)
+else()
+    set(O2_TRACY_DEFAULT ON)
+endif()
+option(O2_TRACY "Enables Tracy profiling" ${O2_TRACY_DEFAULT})
 option(O2_MEMORY_ANALYZE "Enables memory analyzing (slows down)" OFF)
 option(O2_PLATFORM_INITIALIZATION_ENABLED "Enables platform initialization" ON)
 option(O2_ENABLE_LINK_ZLIB "Enables linking zlib library" ON)
@@ -127,7 +136,9 @@ if (O2_EDITOR)
 endif()
 
 if (O2_TRACY)
-    list(APPEND O2_COMPILE_DEFINITIONS TRACY_ENABLE)
+    # On-demand: the client collects nothing until a profiler connects, so it doesn't grow memory
+    # while running unconnected. Fibers: lets coroutines be shown as their own tracks (TracyFiberEnter)
+    list(APPEND O2_COMPILE_DEFINITIONS TRACY_ENABLE TRACY_ON_DEMAND TRACY_FIBERS)
 endif()
 
 if (O2_MEMORY_ANALYZE)
