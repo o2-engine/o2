@@ -3,16 +3,36 @@
 #include <mutex>
 #include <shared_mutex>
 
+#ifdef TRACY_ENABLE
+#include "tracy/Tracy.hpp"
+#endif
+
 namespace o2
 {
     // ------------------------------------------------------------
     // Basic mutual exclusion lock, wrapper over std::mutex. Used to
-    // protect shared data from being accessed by multiple threads
+    // protect shared data from being accessed by multiple threads.
+    //
+    // When Tracy profiling is enabled the underlying mutex is a
+    // tracy::Lockable, so lock/unlock/contention show up in the
+    // profiler's Locks view — no changes needed at the call sites
     // ------------------------------------------------------------
     class Mutex
     {
     public:
-        Mutex() = default;
+#ifdef TRACY_ENABLE
+        using NativeType = tracy::Lockable<std::mutex>;
+#else
+        using NativeType = std::mutex;
+#endif
+
+    public:
+        Mutex()
+#ifdef TRACY_ENABLE
+            : mMutex(SourceLocation())
+#endif
+        {}
+
         Mutex(const Mutex& other) = delete;
         Mutex& operator=(const Mutex& other) = delete;
 
@@ -25,17 +45,27 @@ namespace o2
         // Unlocks the mutex
         void Unlock() { mMutex.unlock(); }
 
-        // Returns the underlying std::mutex, for use with condition variables and unique locks
-        std::mutex& Base() { return mMutex; }
+        // Returns the underlying (possibly Tracy-instrumented) mutex, for use with condition variables
+        // and unique locks
+        NativeType& Base() { return mMutex; }
 
     protected:
-        std::mutex mMutex; // Wrapped standard mutex
+        NativeType mMutex;
+
+#ifdef TRACY_ENABLE
+        static const tracy::SourceLocationData* SourceLocation()
+        {
+            static constexpr tracy::SourceLocationData srcloc{ nullptr, "o2::Mutex", __FILE__, __LINE__, 0 };
+            return &srcloc;
+        }
+#endif
     };
 
     // ---------------------------------------------------------------------------
     // Recursive mutex, wrapper over std::recursive_mutex. Can be locked repeatedly
     // by the same thread without deadlocking; must be unlocked the same number of
-    // times it was locked
+    // times it was locked. Not Tracy-instrumented — Tracy's lock model assumes
+    // single ownership, which recursive locking would confuse
     // ---------------------------------------------------------------------------
     class RecursiveMutex
     {
@@ -62,12 +92,25 @@ namespace o2
 
     // -------------------------------------------------------------------------------
     // Shared mutex, wrapper over std::shared_mutex. Allows multiple concurrent readers
-    // (shared lock) or a single exclusive writer (exclusive lock)
+    // (shared lock) or a single exclusive writer (exclusive lock). Tracy-instrumented
+    // when profiling is enabled
     // -------------------------------------------------------------------------------
     class SharedMutex
     {
     public:
-        SharedMutex() = default;
+#ifdef TRACY_ENABLE
+        using NativeType = tracy::SharedLockable<std::shared_mutex>;
+#else
+        using NativeType = std::shared_mutex;
+#endif
+
+    public:
+        SharedMutex()
+#ifdef TRACY_ENABLE
+            : mMutex(SourceLocation())
+#endif
+        {}
+
         SharedMutex(const SharedMutex& other) = delete;
         SharedMutex& operator=(const SharedMutex& other) = delete;
 
@@ -89,10 +132,18 @@ namespace o2
         // Unlocks the shared lock
         void UnlockShared() { mMutex.unlock_shared(); }
 
-        // Returns the underlying std::shared_mutex
-        std::shared_mutex& Base() { return mMutex; }
+        // Returns the underlying (possibly Tracy-instrumented) shared mutex
+        NativeType& Base() { return mMutex; }
 
     protected:
-        std::shared_mutex mMutex; // Wrapped standard shared mutex
+        NativeType mMutex;
+
+#ifdef TRACY_ENABLE
+        static const tracy::SourceLocationData* SourceLocation()
+        {
+            static constexpr tracy::SourceLocationData srcloc{ nullptr, "o2::SharedMutex", __FILE__, __LINE__, 0 };
+            return &srcloc;
+        }
+#endif
     };
 }

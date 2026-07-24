@@ -7,8 +7,10 @@
 namespace o2
 {
     // -----------------------------------------------------------------------------------
-    // Condition variable, wrapper over std::condition_variable. Lets threads wait until
-    // they are notified by another thread, releasing the associated UniqueLock while waiting
+    // Condition variable, wrapper over std::condition_variable_any. Lets threads wait until
+    // they are notified by another thread, releasing the associated UniqueLock while waiting.
+    // condition_variable_any is used (instead of condition_variable) so it works with the
+    // Tracy-instrumented mutex the UniqueLock wraps when profiling is enabled
     // -----------------------------------------------------------------------------------
     class ConditionVariable
     {
@@ -38,6 +40,6 @@ namespace o2
         void NotifyAll() { mConditionVariable.notify_all(); }
 
     protected:
-        std::condition_variable mConditionVariable; // Wrapped standard condition variable
+        std::condition_variable_any mConditionVariable; // Wrapped standard condition variable
     };
 }

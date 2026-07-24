@@ -125,10 +125,11 @@ if (O2_TRACY)
     set(TRACY_ENABLE ON CACHE BOOL "Enable tracy" FORCE)
     set(TRACY_CALLSTACK ON CACHE BOOL "Enable tracy callstack" FORCE)
     set(TRACY_ON_DEMAND ON CACHE BOOL "Enable tracy on demand" FORCE)
+    set(TRACY_FIBERS ON CACHE BOOL "Enable tracy fibers (coroutines as fiber tracks)" FORCE)
 
     add_subdirectory(tracy)
 
-    add_compile_definitions(TRACY_ENABLE TRACY_ON_DEMAND)
+    add_compile_definitions(TRACY_ENABLE TRACY_ON_DEMAND TRACY_FIBERS)
 
     set_target_properties(TracyClient PROPERTIES FOLDER o2/3rdPartyLibs)
 endif()

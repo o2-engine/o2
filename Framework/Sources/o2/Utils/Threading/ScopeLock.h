@@ -84,9 +84,9 @@ namespace o2
         bool OwnsLock() const { return mLock.owns_lock(); }
 
         // Returns the underlying std::unique_lock, for use with a ConditionVariable
-        std::unique_lock<std::mutex>& Base() { return mLock; }
+        std::unique_lock<Mutex::NativeType>& Base() { return mLock; }
 
     protected:
-        std::unique_lock<std::mutex> mLock; // Wrapped standard unique lock
+        std::unique_lock<Mutex::NativeType> mLock; // Wrapped standard unique lock (over the Tracy-aware mutex)
     };
 }

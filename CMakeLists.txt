@@ -137,8 +137,8 @@ endif()
 
 if (O2_TRACY)
     # On-demand: the client collects nothing until a profiler connects, so it doesn't grow memory
-    # while running unconnected
-    list(APPEND O2_COMPILE_DEFINITIONS TRACY_ENABLE TRACY_ON_DEMAND)
+    # while running unconnected. Fibers: lets coroutines be shown as their own tracks (TracyFiberEnter)
+    list(APPEND O2_COMPILE_DEFINITIONS TRACY_ENABLE TRACY_ON_DEMAND TRACY_FIBERS)
 endif()
 
 if (O2_MEMORY_ANALYZE)

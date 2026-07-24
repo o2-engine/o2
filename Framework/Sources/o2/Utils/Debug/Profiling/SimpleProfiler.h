@@ -88,6 +88,13 @@ namespace o2
 #define TRACY_PROFILE_FRAME() FrameMark
 #define TRACY_PROFILE_FRAME_NAMED(name) FrameMarkNamed(name)
 #define TRACY_PROFILE_THREAD(name) tracy::SetThreadName(name)
+#if defined(TRACY_FIBERS) // Tracy only defines the fiber macros when built with fiber support
+#define TRACY_PROFILE_FIBER_ENTER(name) TracyFiberEnter(name)
+#define TRACY_PROFILE_FIBER_LEAVE() TracyFiberLeave
+#else
+#define TRACY_PROFILE_FIBER_ENTER(name)
+#define TRACY_PROFILE_FIBER_LEAVE()
+#endif
 #else
 #define TRACY_PROFILE_SAMPLE_FUNC()
 #define TRACY_PROFILE_SAMPLE(id)
@@ -96,6 +103,8 @@ namespace o2
 #define TRACY_PROFILE_FRAME()
 #define TRACY_PROFILE_FRAME_NAMED(name)
 #define TRACY_PROFILE_THREAD(name)
+#define TRACY_PROFILE_FIBER_ENTER(name)
+#define TRACY_PROFILE_FIBER_LEAVE()
 #endif
 
 #if defined(O2_PROFILE_STATS)
@@ -122,5 +131,12 @@ namespace o2
 
 // Names the current thread in the profiler (call once at thread start)
 #define PROFILE_THREAD(name) TRACY_PROFILE_THREAD(name)
+
+// Attributes the following zones to a named fiber (a logical thread that can migrate between OS threads,
+// e.g. a coroutine) until PROFILE_FIBER_LEAVE. The name must be a persistent, unique string
+#define PROFILE_FIBER_ENTER(name) TRACY_PROFILE_FIBER_ENTER(name)
+
+// Returns zone attribution from the current fiber back to the OS thread
+#define PROFILE_FIBER_LEAVE() TRACY_PROFILE_FIBER_LEAVE()
 
 }

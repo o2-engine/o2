@@ -179,7 +179,10 @@ namespace o2
                 UniqueLock lock(mMutex);
                 mWorkAvailable.Wait(lock, [this] { return mStopping.Load() || HasParallelReadyLocked(); });
 
-                if (mStopping.Load() && !HasParallelReadyLocked())
+                // On shutdown exit at once rather than draining the queue: a coroutine can re-schedule
+                // itself (e.g. a continuous fan-out loop), so draining might never finish. The pending
+                // jobs are dropped and their queues cleared by Shutdown()
+                if (mStopping.Load())
                     return;
 
                 job = PopHighestPriorityLocked(mParallelReady);

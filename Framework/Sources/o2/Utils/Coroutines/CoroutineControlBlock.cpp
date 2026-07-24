@@ -14,13 +14,25 @@ namespace o2
         o2Jobs.Schedule([controlBlock] {
             if (controlBlock->handle && !controlBlock->handle.done())
             {
-                PROFILE_SAMPLE("o2 Coroutine Resume");
-                controlBlock->handle.resume();
+                // A named coroutine runs as its own Tracy fiber, so its zones follow it across worker
+                // threads on a single track instead of scattering over whichever OS thread resumed it
+                const char* fiber = controlBlock->fiberName;
+                if (fiber)
+                    PROFILE_FIBER_ENTER(fiber);
+
+                {
+                    PROFILE_SAMPLE("o2 Coroutine Resume");
+                    controlBlock->handle.resume();
+                }
+
+                if (fiber)
+                    PROFILE_FIBER_LEAVE();
             }
         }, priority, thread);
     }
 
-    void StartCoroutine(const SharedRef<CoroutineControlBlock>& controlBlock, JobThread thread, JobPriority priority)
+    void StartCoroutine(const SharedRef<CoroutineControlBlock>& controlBlock, JobThread thread, JobPriority priority,
+                        const char* fiberName)
     {
         if (!controlBlock)
             return;
@@ -30,6 +42,7 @@ namespace o2
         {
             controlBlock->resumeThread.Store((int)thread);
             controlBlock->resumePriority.Store((int)priority);
+            controlBlock->fiberName = fiberName;
             ScheduleCoroutineResume(controlBlock);
         }
     }

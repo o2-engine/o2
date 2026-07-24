@@ -29,6 +29,7 @@ namespace o2
         Atomic<int>             done{ 0 };                  // 1 once the coroutine reached final suspend
         Atomic<int>             resumeThread{ (int)JobThread::Any };       // Thread affinity of resumptions
         Atomic<int>             resumePriority{ (int)JobPriority::Normal }; // Job priority of resumptions
+        const char*             fiberName = nullptr;        // If set, resumptions are shown as this Tracy fiber
 
     public:
         // Destructor, destroys the owned coroutine frame
@@ -105,7 +106,9 @@ namespace o2
     void ScheduleCoroutineResume(const SharedRef<CoroutineControlBlock>& controlBlock);
 
     // Starts a coroutine if it hasn't started yet: sets its thread affinity and resume priority and
-    // schedules the first resumption. Safe to call repeatedly; only the first call has effect
+    // schedules the first resumption. Safe to call repeatedly; only the first call has effect.
+    // fiberName, if not null, must be a persistent unique string and makes the coroutine's resumptions
+    // appear on their own Tracy fiber track (following it across threads)
     void StartCoroutine(const SharedRef<CoroutineControlBlock>& controlBlock, JobThread thread,
-                        JobPriority priority = JobPriority::Normal);
+                        JobPriority priority = JobPriority::Normal, const char* fiberName = nullptr);
 }

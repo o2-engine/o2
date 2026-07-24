@@ -109,17 +109,20 @@ namespace o2
         // Returns the shared control block
         SharedRef<CoroutineControlBlock> GetControlBlock() const { return mControlBlock; }
 
-        // Starts the coroutine on the given thread and resume priority. No effect if already started
-        Coroutine& Start(JobThread thread = JobThread::Any, JobPriority priority = JobPriority::Normal)
+        // Starts the coroutine on the given thread and resume priority. No effect if already started.
+        // fiberName (a persistent unique string) makes it show as its own Tracy fiber track
+        Coroutine& Start(JobThread thread = JobThread::Any, JobPriority priority = JobPriority::Normal,
+                         const char* fiberName = nullptr)
         {
-            StartCoroutine(mControlBlock, thread, priority);
+            StartCoroutine(mControlBlock, thread, priority, fiberName);
             return *this;
         }
 
         // Starts the coroutine if it wasn't started yet
-        void StartIfNeeded(JobThread thread = JobThread::Any, JobPriority priority = JobPriority::Normal) const
+        void StartIfNeeded(JobThread thread = JobThread::Any, JobPriority priority = JobPriority::Normal,
+                           const char* fiberName = nullptr) const
         {
-            StartCoroutine(mControlBlock, thread, priority);
+            StartCoroutine(mControlBlock, thread, priority, fiberName);
         }
 
         // Blocks the calling thread until the coroutine finishes. Don't call it on a main-thread

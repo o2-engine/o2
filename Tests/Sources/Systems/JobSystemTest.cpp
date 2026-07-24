@@ -246,3 +246,51 @@ TEST(JobSystem, ParallelJobsAllocateO2ObjectsSafely)
 
     EXPECT_EQ(sum.Load(), (long long)count * 32);
 }
+
+TEST(JobSystem, ShutdownStopsSelfReschedulingWork)
+{
+    // Reproduces the shutdown hang: a parallel job that reschedules itself keeps the ready queue
+    // non-empty, so Shutdown() (which used to drain the queue before exiting) would never finish.
+    // Uses a private JobSystem instance so the shared o2Jobs singleton is left untouched
+    JobSystem* savedInstance = JobSystem::InstancePtr();
+
+    Ref<JobSystem> jobs = mmake<JobSystem>();
+    jobs->Initialize(2);
+
+    Atomic<bool> keepScheduling(true);
+    struct SelfSched
+    {
+        JobSystem*    jobs;
+        Atomic<bool>* go;
+        void operator()() const
+        {
+            if (go->Load())
+                jobs->Schedule([s = *this] { s(); });
+        }
+    };
+    SelfSched seed{ jobs.Get(), &keepScheduling };
+    for (int i = 0; i < jobs->GetWorkersCount() * 2; i++)
+        jobs->Schedule([seed] { seed(); });
+
+    // Run Shutdown on another thread and bound the wait, so a regression fails this test instead of
+    // hanging the whole suite process
+    Atomic<bool> returned(false);
+    Thread shutdownThread([&] { jobs->Shutdown(); returned.Store(true); });
+
+    for (int i = 0; i < 500 && !returned.Load(); i++)
+        Thread::SleepForMilliseconds(10);
+
+    keepScheduling.Store(false);
+
+    EXPECT_TRUE(returned.Load()) << "JobSystem::Shutdown hung draining self-rescheduling work";
+
+    if (returned.Load())
+    {
+        shutdownThread.Join();
+        JobSystem::DestroySingleton(jobs);
+    }
+    else
+        shutdownThread.Detach();
+
+    JobSystem::mInstance = savedInstance; // restore the shared singleton for the rest of the suite
+}
