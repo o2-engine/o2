@@ -35,6 +35,15 @@ namespace o2
     id<MTLDepthStencilState> RenderDevice::depthStateEnabled;
     id<MTLDepthStencilState> RenderDevice::depthStateEnabledNoWrite;
 
+    MTLRenderPassDescriptor* RenderDevice::threadRenderPassDescriptor;
+    id<CAMetalDrawable>      RenderDevice::threadDrawable;
+    id<MTLTexture>           RenderDevice::threadDepthTexture;
+    float                    RenderDevice::threadGraphicsScale = 1.0f;
+    dispatch_semaphore_t     RenderDevice::frameSemaphore;
+
+    // Up to this many frames may be in flight on the GPU before the render thread waits
+    static const int kMaxFramesInFlight = 2;
+
     namespace
     {
         NSUInteger AlignBufferOffset(NSUInteger value)
@@ -55,6 +64,32 @@ namespace o2
         {
             return FileSystem::ReadFile(Shader::ResolvePlatformSourcePath(path));
         }
+
+#ifdef TRACY_ENABLE
+        // Plots the real display refresh period ("Vsync interval, ms") from the moment a frame is actually
+        // shown on screen (the drawable's presented time, not the CPU submit time)
+        void RegisterVsyncMarker(id<CAMetalDrawable> drawable)
+        {
+            if (!drawable)
+                return;
+
+            if (@available(macOS 10.15.4, *))
+            {
+                [drawable addPresentedHandler:^(id<MTLDrawable> presented) {
+                    // Plot of the real display refresh period (bottom of the timeline); the "Vsync" frame
+                    // set is intentionally not emitted — the render thread's "Wait vsync" bar shows it
+                    double presentedTime = presented.presentedTime;
+                    static double previousPresentedTime = 0.0;
+                    if (previousPresentedTime > 0.0 && presentedTime > previousPresentedTime)
+                        TracyPlot("Vsync interval, ms", (presentedTime - previousPresentedTime) * 1000.0);
+                    if (presentedTime > 0.0)
+                        previousPresentedTime = presentedTime;
+                }];
+            }
+        }
+#else
+        inline void RegisterVsyncMarker(id<CAMetalDrawable>) {}
+#endif
     }
 
     void RenderDevice::Initialize(UInt vertexBufferByteSize, UInt indexBufferSize)
@@ -63,6 +98,7 @@ namespace o2
         device = ApplicationPlatformWrapper::view.device;
         commandQueue = [device newCommandQueue];
         currentBufferIndex = 0;
+        frameSemaphore = dispatch_semaphore_create(kMaxFramesInFlight);
 
         view.depthStencilPixelFormat = MTLPixelFormatDepth32Float;
 
@@ -379,9 +415,278 @@ namespace o2
             return;
 
         if (!mCurrentRenderTarget && RenderDevice::view.currentDrawable)
+        {
             [RenderDevice::commandBuffer presentDrawable:RenderDevice::view.currentDrawable];
+            RegisterVsyncMarker(RenderDevice::view.currentDrawable);
+        }
 
         [RenderDevice::commandBuffer commit];
+    }
+
+    // ---------------- Multithreaded rendering (record on main, submit on the render thread) ----------------
+
+    void Render::PlatformSnapshotDrawState(RenderDrawCommand& command)
+    {
+        memcpy(command.mvpMatrix, mMVPMatrix, sizeof(command.mvpMatrix));
+        command.scissorEnabled = mScissorEnabled;
+        command.scissorRect = mScissorRect;
+        command.needClear = mNeedClear;
+        command.clearColor = mClearColor;
+        command.needDepthClear = mNeedDepthClear;
+
+        // The clear happens once per frame, on the first recorded batch
+        mNeedClear = false;
+        mNeedDepthClear = false;
+    }
+
+    void Render::PlatformAcquireFrameTarget()
+    {
+        // Acquired on the main thread (MTKView drawable/descriptor are main-thread affine), used by the
+        // render thread to encode and present the frame
+        RenderDevice::threadRenderPassDescriptor = RenderDevice::view.currentRenderPassDescriptor;
+        RenderDevice::threadDrawable = RenderDevice::view.currentDrawable;
+        RenderDevice::threadDepthTexture = RenderDevice::view.depthStencilTexture;
+        RenderDevice::threadGraphicsScale = o2Application.GetGraphicsScale();
+    }
+
+    void Render::PlatformBeginThreaded()
+    {
+        // Block only if the GPU is already kMaxFramesInFlight frames behind; otherwise proceed. Paired
+        // with the signal in the command buffer's completion handler in PlatformEndThreaded
+        dispatch_semaphore_wait(RenderDevice::frameSemaphore, DISPATCH_TIME_FOREVER);
+
+        RenderDevice::currentBufferIndex = (RenderDevice::currentBufferIndex + 1) % 2;
+        RenderDevice::vertexBuffer = RenderDevice::vertexBuffers[RenderDevice::currentBufferIndex];
+        RenderDevice::indexBuffer = RenderDevice::indexBuffers[RenderDevice::currentBufferIndex];
+        [RenderDevice::retiredBuffers[RenderDevice::currentBufferIndex] removeAllObjects];
+
+        RenderDevice::commandBuffer = [RenderDevice::commandQueue commandBuffer];
+        RenderDevice::commandBuffer.label = @"Threaded";
+
+        mVertexBufferOffset = 0;
+        mIndexBufferOffset = 0;
+        mVertexBufferIdx = 0;
+        mIndexBufferIdx = 0;
+    }
+
+    void Render::PlatformReplayDrawCommand(const RenderDrawCommand& command)
+    {
+        const Ref<Material>& material = command.material;
+        if (!material || !material->mImpl || !material->mImpl->pipelineState)
+            return;
+
+        MTLRenderPassDescriptor* renderPassDescriptor = RenderDevice::threadRenderPassDescriptor;
+        if (renderPassDescriptor != nil)
+        {
+            MTLLoadAction colorLoadAction;
+            MTLClearColor clearColor = MTLClearColorMake(command.clearColor.RF(), command.clearColor.GF(),
+                                                         command.clearColor.BF(), command.clearColor.AF());
+            if (command.needClear)
+            {
+                colorLoadAction = MTLLoadActionClear;
+                [renderPassDescriptor.colorAttachments[0] setClearColor:clearColor];
+            }
+            else
+                colorLoadAction = MTLLoadActionLoad;
+
+            // The single reused descriptor must be re-pointed at the right color texture every command,
+            // so a render-target batch doesn't leak into the following back-buffer batch
+            if (command.renderTarget)
+                renderPassDescriptor.colorAttachments[0].texture = command.renderTarget->mImpl->texture;
+            else
+                renderPassDescriptor.colorAttachments[0].texture = RenderDevice::threadDrawable.texture;
+
+            [renderPassDescriptor.colorAttachments[0] setLoadAction:colorLoadAction];
+            [renderPassDescriptor.colorAttachments[0] setStoreAction:MTLStoreActionStore];
+
+            static const int maxExtraAttachments = 3;
+            for (int i = 0; i < maxExtraAttachments; i++)
+            {
+                auto attachment = renderPassDescriptor.colorAttachments[i + 1];
+                if (command.renderTarget && i < command.extraRenderTargets.Count())
+                {
+                    attachment.texture = command.extraRenderTargets[i]->mImpl->texture;
+                    attachment.clearColor = clearColor;
+                    attachment.loadAction = colorLoadAction;
+                    attachment.storeAction = MTLStoreActionStore;
+                }
+                else
+                    attachment.texture = nil;
+            }
+
+            id<MTLTexture> depthTexture = RenderDevice::threadDepthTexture;
+            if (command.renderTarget)
+            {
+                auto targetImpl = command.renderTarget->mImpl;
+                id<MTLTexture> colorTexture = targetImpl->texture;
+                if (!targetImpl->depthTexture ||
+                    targetImpl->depthTexture.width != colorTexture.width ||
+                    targetImpl->depthTexture.height != colorTexture.height)
+                {
+                    MTLTextureDescriptor* depthDescriptor =
+                        [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatDepth32Float
+                                                                           width:colorTexture.width
+                                                                          height:colorTexture.height
+                                                                       mipmapped:NO];
+                    depthDescriptor.usage = MTLTextureUsageRenderTarget;
+                    depthDescriptor.storageMode = MTLStorageModePrivate;
+                    targetImpl->depthTexture = [RenderDevice::device newTextureWithDescriptor:depthDescriptor];
+                }
+
+                depthTexture = targetImpl->depthTexture;
+            }
+
+            renderPassDescriptor.depthAttachment.texture = depthTexture;
+            renderPassDescriptor.depthAttachment.clearDepth = 1.0;
+            renderPassDescriptor.depthAttachment.loadAction = command.needDepthClear ? MTLLoadActionClear : MTLLoadActionLoad;
+            renderPassDescriptor.depthAttachment.storeAction = MTLStoreActionStore;
+
+            NSUInteger vertexDataSize = (NSUInteger)command.vertexCount * command.vertexStride;
+            NSUInteger indexDataSize = (NSUInteger)command.indexCount * sizeof(VertexIndex);
+
+            if (mVertexBufferOffset + vertexDataSize > [RenderDevice::vertexBuffer length] ||
+                mIndexBufferOffset + indexDataSize > [RenderDevice::indexBuffer length])
+            {
+                NSMutableArray* retired = RenderDevice::retiredBuffers[RenderDevice::currentBufferIndex];
+                [retired addObject:RenderDevice::vertexBuffer];
+                [retired addObject:RenderDevice::indexBuffer];
+
+                RenderDevice::vertexBuffer = [RenderDevice::device newBufferWithLength:[RenderDevice::vertexBuffers[0] length]
+                                                                               options:MTLResourceStorageModeShared];
+                RenderDevice::indexBuffer = [RenderDevice::device newBufferWithLength:[RenderDevice::indexBuffers[0] length]
+                                                                              options:MTLResourceStorageModeShared];
+
+                mVertexBufferOffset = 0;
+                mIndexBufferOffset = 0;
+            }
+
+            memcpy((Byte*)[RenderDevice::vertexBuffer contents] + mVertexBufferOffset, command.vertexData.data(), vertexDataSize);
+            memcpy((Byte*)[RenderDevice::indexBuffer contents] + mIndexBufferOffset, command.indexData.data(), indexDataSize);
+
+            auto renderEncoder = [RenderDevice::commandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
+            renderEncoder.label = @"Threaded";
+
+            float scale = command.renderTarget ? 1.0f : RenderDevice::threadGraphicsScale;
+            [renderEncoder setViewport:(MTLViewport){0.0, 0.0, (double)(command.resolution.x * scale), (double)(command.resolution.y * scale), 0.0, 1.0 }];
+
+            if (command.scissorEnabled && command.renderTarget == nullptr)
+            {
+                Vec2I resolution = command.resolution * scale;
+                RectF scissorRectF = RectF(command.scissorRect.left * scale, command.scissorRect.top * scale,
+                                           command.scissorRect.right * scale, command.scissorRect.bottom * scale)
+                    .Move(resolution / 2);
+
+                RectI scissorRect = scissorRectF;
+                scissorRect.left = Math::Clamp(scissorRect.left, 0, resolution.x);
+                scissorRect.right = Math::Clamp(scissorRect.right, 0, resolution.x);
+                scissorRect.bottom = Math::Clamp(scissorRect.bottom, 0, resolution.y);
+                scissorRect.top = Math::Clamp(scissorRect.top, 0, resolution.y);
+
+                [renderEncoder setScissorRect:(MTLScissorRect){
+                    (ULong)scissorRect.left,
+                    (ULong)(resolution.y - scissorRect.bottom - scissorRect.Height()),
+                    (ULong)scissorRect.Width(),
+                    (ULong)scissorRect.Height()
+                }];
+            }
+
+            [renderEncoder setRenderPipelineState:material->mImpl->pipelineState];
+            id<MTLDepthStencilState> depthState = RenderDevice::depthStateDisabled;
+            if (command.depthTestEnabled)
+                depthState = command.depthWriteEnabled ? RenderDevice::depthStateEnabled : RenderDevice::depthStateEnabledNoWrite;
+            [renderEncoder setDepthStencilState:depthState];
+
+            [renderEncoder setVertexBuffer:RenderDevice::vertexBuffer offset:mVertexBufferOffset atIndex:0];
+
+            TextureRef primaryTexture = command.drawTexture ? command.drawTexture : mWhiteTexture;
+            if (primaryTexture && material->GetTextureUniform() >= 0)
+            {
+                NSUInteger slot = (NSUInteger)material->GetTextureUniform();
+                [renderEncoder setFragmentTexture:primaryTexture->mImpl->texture atIndex:slot];
+                if (primaryTexture->mImpl->samplerState)
+                    [renderEncoder setFragmentSamplerState:primaryTexture->mImpl->samplerState atIndex:slot];
+            }
+
+            for (int i = 0; i < material->mSamplerLocations.Count() && i < material->mSamplers.Count(); i++)
+            {
+                const auto& samplerLocation = material->mSamplerLocations[i];
+                if (samplerLocation.textureIndex < 0)
+                    continue;
+
+                TextureRef samplerTexture = material->mSamplers[i].GetTexture();
+                if (!samplerTexture)
+                    continue;
+
+                NSUInteger slot = (NSUInteger)samplerLocation.textureIndex;
+                [renderEncoder setFragmentTexture:samplerTexture->mImpl->texture atIndex:slot];
+                if (samplerTexture->mImpl->samplerState)
+                    [renderEncoder setFragmentSamplerState:samplerTexture->mImpl->samplerState atIndex:slot];
+            }
+
+            material->ApplyParams();
+
+            Uniforms uniforms;
+            MtxConvert(command.mvpMatrix, uniforms.mvpMatrix);
+            [renderEncoder setVertexBytes:&uniforms length:sizeof(Uniforms) atIndex:1];
+
+            if (material->mImpl->materialParamsIndex >= 0 && !material->mImpl->materialParamsData.empty())
+            {
+                const void* paramsData = material->mImpl->materialParamsData.data();
+                NSUInteger paramsSize = material->mImpl->materialParamsSize;
+                NSUInteger paramsIndex = (NSUInteger)material->mImpl->materialParamsIndex;
+
+                if (material->mImpl->bindParamsToVertex)
+                    [renderEncoder setVertexBytes:paramsData length:paramsSize atIndex:paramsIndex];
+
+                if (material->mImpl->bindParamsToFragment)
+                    [renderEncoder setFragmentBytes:paramsData length:paramsSize atIndex:paramsIndex];
+            }
+
+            static const MTLPrimitiveType primitiveType[3]{ MTLPrimitiveTypeTriangle, MTLPrimitiveTypeTriangle, MTLPrimitiveTypeLine };
+
+            [renderEncoder drawIndexedPrimitives:primitiveType[command.primitiveType] indexCount:command.indexCount
+                indexType:MTLIndexTypeUInt32 indexBuffer:RenderDevice::indexBuffer indexBufferOffset:mIndexBufferOffset];
+
+            [renderEncoder endEncoding];
+        }
+
+        mVertexBufferOffset = AlignBufferOffset(mVertexBufferOffset + (NSUInteger)command.vertexCount * command.vertexStride);
+        mIndexBufferOffset = AlignBufferOffset(mIndexBufferOffset + (NSUInteger)command.indexCount * sizeof(VertexIndex));
+    }
+
+    void Render::PlatformEndThreaded()
+    {
+        if (!RenderDevice::commandBuffer)
+        {
+            // Nothing was submitted this frame, keep the semaphore balanced with PlatformBeginThreaded
+            dispatch_semaphore_signal(RenderDevice::frameSemaphore);
+            return;
+        }
+
+        // Release one frame slot once the GPU finishes this frame. This lets the render thread commit
+        // without blocking on GPU/vsync, so the main thread (which rendezvouses with it) isn't stalled
+        // until the display refresh and the display link keeps running at full rate
+        __block dispatch_semaphore_t semaphore = RenderDevice::frameSemaphore;
+        [RenderDevice::commandBuffer addCompletedHandler:^(id<MTLCommandBuffer>) {
+            dispatch_semaphore_signal(semaphore);
+        }];
+
+        if (RenderDevice::threadDrawable)
+        {
+            [RenderDevice::commandBuffer presentDrawable:RenderDevice::threadDrawable];
+            RegisterVsyncMarker(RenderDevice::threadDrawable);
+        }
+
+        [RenderDevice::commandBuffer commit];
+
+        // Only wait for GPU completion when capturing a frame (screenshot read-back needs the rendered
+        // target). Normal frames stay non-blocking, bounded instead by the frames-in-flight semaphore
+        if (mCaptureTarget)
+            [RenderDevice::commandBuffer waitUntilCompleted];
+
+        RenderDevice::threadRenderPassDescriptor = nil;
+        RenderDevice::threadDrawable = nil;
+        RenderDevice::threadDepthTexture = nil;
     }
 
     void Render::PlatformResetState()

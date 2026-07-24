@@ -121,6 +121,8 @@ int main(int argc, char** argv)
 
         app = mmake<Application>();
         app->Initialize();
+        // Multithreaded rendering is enabled by default (Integration::InitiazeRender) on supported
+        // platforms, so the whole rendered suite — including pixel/screenshot checks — validates it
     }
 
     int result = RUN_ALL_TESTS();

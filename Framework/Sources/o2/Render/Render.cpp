@@ -136,6 +136,18 @@ namespace o2
 		if (!mReady)
 			return;
 
+#if defined(PLATFORM_MAC)
+		if (mMultithreadedRender)
+		{
+			if (!mRenderThread.IsRunning())
+				mRenderThread.Start();
+
+			// Rendezvous: wait for the render thread to finish the previous frame before reusing the buffers
+			mRenderThread.WaitFrameDone();
+			mCommandBuffer.Reset();
+		}
+#endif
+
 		mCurrentDrawTexture = nullptr;
 		mLastDrawVertex = 0;
 		mLastDrawIdx = 0;
@@ -152,7 +164,12 @@ namespace o2
 
 		BindMaterial(mDefaultMaterial);
 
-		PlatformBegin();
+#if defined(PLATFORM_MAC)
+		if (mMultithreadedRender)
+			mNeedDepthClear = true; // PlatformBegin (which sets this) runs on the render thread now
+		else
+#endif
+			PlatformBegin();
 
 		mDepthTestEnabled = false;
 		mDepthWriteEnabled = true;
@@ -509,7 +526,12 @@ namespace o2
 
 		CheckVertexBufferTexCoordFlipByTextureFormat();
 
-		PlatformDrawPrimitives();
+#if defined(PLATFORM_MAC)
+		if (mMultithreadedRender)
+			RecordDrawCommand();
+		else
+#endif
+			PlatformDrawPrimitives();
 
 		mFrameTrianglesCount += mTrianglesCount;
 		mLastDrawVertex = mTrianglesCount = mLastDrawIdx = 0;
@@ -551,14 +573,95 @@ namespace o2
 
 		DrawPrimitives();
 
-		PlatformEnd();
+#if defined(PLATFORM_MAC)
+		if (mMultithreadedRender)
+		{
+			// The main thread hands the recorded frame to the render thread and waits for it to submit
+			// and present — the two threads rendezvous here every frame
+			PlatformAcquireFrameTarget();
+			mRenderThread.DispatchFrame([this] { SubmitRecordedFrame(); });
+			mRenderThread.WaitFrameDone();
 
-		if (mCaptureTarget)
-			DeliverFrameCapture();
+			if (mCaptureTarget)
+				DeliverFrameCapture();
+		}
+		else
+#endif
+		{
+			PlatformEnd();
+
+			if (mCaptureTarget)
+				DeliverFrameCapture();
+		}
 
 		CheckTexturesUnloading();
 		CheckFontsUnloading();
 	}
+
+	bool Render::IsMultithreadedRenderSupported()
+	{
+#if defined(PLATFORM_MAC)
+		return true;
+#else
+		return false;
+#endif
+	}
+
+	void Render::SetMultithreadedRenderEnabled(bool enabled)
+	{
+		mMultithreadedRender = enabled && IsMultithreadedRenderSupported();
+	}
+
+	bool Render::IsMultithreadedRenderEnabled() const
+	{
+		return mMultithreadedRender;
+	}
+
+#if defined(PLATFORM_MAC)
+	void Render::RecordDrawCommand()
+	{
+		RenderDrawCommand& command = mCommandBuffer.Emplace();
+
+		UInt stride = mCurrentBatchVertexType.GetStride();
+		UInt vertexBytes = mLastDrawVertex * stride;
+
+		command.vertexData.resize(vertexBytes);
+		if (vertexBytes > 0)
+			memcpy(command.vertexData.data(), mVertexData, vertexBytes);
+
+		command.indexData.resize(mLastDrawIdx);
+		if (mLastDrawIdx > 0)
+			memcpy(command.indexData.data(), mVertexIndexData, mLastDrawIdx * sizeof(VertexIndex));
+
+		command.vertexCount = mLastDrawVertex;
+		command.indexCount = mLastDrawIdx;
+		command.trianglesCount = mTrianglesCount;
+		command.vertexStride = (int)stride;
+		command.primitiveType = (int)mCurrentPrimitiveType;
+		command.drawTexture = mCurrentDrawTexture;
+		command.material = mCurrentMaterial;
+		command.depthTestEnabled = mDepthTestEnabled;
+		command.depthWriteEnabled = mDepthWriteEnabled;
+		command.renderTarget = mCurrentRenderTarget;
+		command.extraRenderTargets = mExtraRenderTargets;
+		command.resolution = mCurrentResolution;
+
+		// Platform-specific submit state (mvp matrix, scissor rect, clear flags)
+		PlatformSnapshotDrawState(command);
+	}
+
+	void Render::SubmitRecordedFrame()
+	{
+		PROFILE_SAMPLE("o2 Render Replay");
+
+		PlatformBeginThreaded();
+
+		for (const auto& command : mCommandBuffer.GetCommands())
+			PlatformReplayDrawCommand(command);
+
+		PlatformEndThreaded();
+	}
+#endif
 
 	void Render::CaptureNextFrame(const Function<void(const Ref<Bitmap>&)>& onCaptured)
 	{

@@ -32,6 +32,16 @@ A scene frame is assembled by the `o2::RenderPipeline` pipeline from `o2::Render
 
 Besides 2D primitives, the renderer supports 3D meshes (`o2::Mesh3DFill`), skinned meshes (`o2::SkinningMesh`) and Spine skeletons (`o2::Spine`).
 
+### Multithreaded rendering
+Rendering can run across two threads. The main thread records a frame's draw batches into an `o2::RenderCommandBuffer` (each `o2::RenderDrawCommand` copies its geometry and snapshots the GPU state it needs), and the `o2::RenderThread` submits them to the GPU (encode / draw calls / present). The two threads rendezvous every frame: the main thread dispatches a frame and waits for the previous one to finish before starting the next, so neither runs more than a frame ahead.
+
+Toggle it through the render subsystem:
+- **o2Render.SetMultithreadedRenderEnabled(enabled)** — takes effect from the next frame.
+- **o2Render.IsMultithreadedRenderEnabled()** — current state.
+- **o2Render.IsMultithreadedRenderSupported()** — static, whether the platform supports it.
+
+It is enabled by default where `IsMultithreadedRenderSupported()` is true (currently macOS / Metal); other platforms use the single-threaded path, where the main thread submits draws directly. Because a command carries a full state snapshot, the render thread never reads the live, concurrently mutated `Render` members, and the command buffer is reset on the main thread so texture/material references are never ref-counted from the render thread. This mirrors the isolation rules of the [job system](/Docs/en/Architecture/Utils/jobs.md).
+
 ### IDrawable
 This is the base interface of a drawable entity; during drawing it remembers the current scissor rectangle
 
