@@ -111,6 +111,9 @@ void GetGLExtensions(o2::LogStream* log /*= nullptr*/)
     glUniform1f = (PFNGLUNIFORM1FPROC)GetSafeWGLProcAddress("glUniform1f", log);
     glUniform2f = (PFNGLUNIFORM2FPROC)GetSafeWGLProcAddress("glUniform2f", log);
     glUniform4f = (PFNGLUNIFORM4FPROC)GetSafeWGLProcAddress("glUniform4f", log);
+    glUniform1fv = (PFNGLUNIFORM1FVPROC)GetSafeWGLProcAddress("glUniform1fv", log);
+    glUniform4fv = (PFNGLUNIFORM4FVPROC)GetSafeWGLProcAddress("glUniform4fv", log);
+    glGetActiveUniform = (PFNGLGETACTIVEUNIFORMPROC)GetSafeWGLProcAddress("glGetActiveUniform", log);
     glBlendFuncSeparate = (PFNGLBLENDFUNCSEPARATEPROC)GetSafeWGLProcAddress("glBlendFuncSeparate", log);
     glBufferSubData = (PFNGLBUFFERSUBDATAPROC)GetSafeWGLProcAddress("glBufferSubData", log);
 }
@@ -147,6 +150,9 @@ PFNGLUNIFORM1IPROC                 glUniform1i = NULL;
 PFNGLUNIFORM1FPROC                 glUniform1f = NULL;
 PFNGLUNIFORM2FPROC                 glUniform2f = NULL;
 PFNGLUNIFORM4FPROC                 glUniform4f = NULL;
+PFNGLUNIFORM1FVPROC                glUniform1fv = NULL;
+PFNGLUNIFORM4FVPROC                glUniform4fv = NULL;
+PFNGLGETACTIVEUNIFORMPROC          glGetActiveUniform = NULL;
 PFNGLBLENDFUNCSEPARATEPROC         glBlendFuncSeparate = NULL;
 PFNGLBUFFERSUBDATAPROC             glBufferSubData = NULL;
 
