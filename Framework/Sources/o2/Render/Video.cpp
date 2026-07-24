@@ -207,7 +207,7 @@ namespace o2
 
     void Video::Evaluate()
     {
-        if (!mDecoder)
+        if (!mDecoder && !mDecoderFailed)
             CreateDecoder();
 
         if (!mDecoder)
@@ -314,7 +314,10 @@ namespace o2
 
         mDecoder = CreateVideoDecoder(mVideoAsset, mStreaming);
         if (!mDecoder)
+        {
+            mDecoderFailed = true;
             return;
+        }
 
         mVideoSize = mDecoder->GetSize();
         mFrameTime = -1.0f;
@@ -328,6 +331,7 @@ namespace o2
     void Video::ReleaseDecoder()
     {
         mDecoder = nullptr;
+        mDecoderFailed = false;
         mFrameTime = -1.0f;
     }
 

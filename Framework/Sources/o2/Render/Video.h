@@ -153,7 +153,8 @@ namespace o2
 
         Ref<Material> mChromaMaterial; // Chroma-key material (runtime)
 
-        Ref<VideoDecoder> mDecoder; // Decoder backend over asset data or file
+        Ref<VideoDecoder> mDecoder;        // Decoder backend over asset data or file
+        bool              mDecoderFailed = false; // True when decoder creation failed, to not retry every frame
 
         float mFrameTime = -1.0f; // Time of the last decoded frame in seconds
 
@@ -229,6 +230,7 @@ CLASS_FIELDS_META(o2::Video)
     FIELD().PROTECTED().NAME(mFrameBitmap);
     FIELD().PROTECTED().NAME(mChromaMaterial);
     FIELD().PROTECTED().NAME(mDecoder);
+    FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mDecoderFailed);
     FIELD().PROTECTED().DEFAULT_VALUE(-1.0f).NAME(mFrameTime);
 }
 END_META;
