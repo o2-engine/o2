@@ -2,12 +2,15 @@
 
 #ifdef PLATFORM_ANDROID
 
+#include <android/asset_manager.h>
 #include <media/NdkMediaCodec.h>
 #include <media/NdkMediaExtractor.h>
 #include <media/NdkMediaFormat.h>
+#include <unistd.h>
 
 #include <cstring>
 
+#include "o2/Application/Android/AndroidPlatform.h"
 #include "o2/Render/VideoDecoder.h"
 #include "o2/Utils/Bitmap/Bitmap.h"
 #include "o2/Utils/Debug/Debug.h"
@@ -83,7 +86,31 @@ namespace o2
             return false;
 
         mExtractor = AMediaExtractor_new();
-        if (AMediaExtractor_setDataSource(mExtractor, path.Data()) != AMEDIA_OK)
+
+        // APK assets live inside the zip: open through the asset manager and hand the
+        // extractor a file descriptor with the asset's offset/length. Media extensions
+        // are stored uncompressed by the APK packer, so the descriptor is seekable
+        media_status_t status = AMEDIA_ERROR_BASE;
+        if (AAssetManager* assetManager = AndroidPlatform::GetAssetManager())
+        {
+            if (AAsset* asset = AAssetManager_open(assetManager, path.Data(), AASSET_MODE_RANDOM))
+            {
+                off_t offset = 0, length = 0;
+                int fd = AAsset_openFileDescriptor(asset, &offset, &length);
+                if (fd >= 0)
+                {
+                    status = AMediaExtractor_setDataSourceFd(mExtractor, fd, offset, length);
+                    close(fd); // the extractor dups the descriptor
+                }
+
+                AAsset_close(asset);
+            }
+        }
+
+        if (status != AMEDIA_OK)
+            status = AMediaExtractor_setDataSource(mExtractor, path.Data()); // plain file fallback
+
+        if (status != AMEDIA_OK)
             return false;
 
         size_t trackCount = AMediaExtractor_getTrackCount(mExtractor);
