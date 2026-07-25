@@ -114,6 +114,15 @@ namespace Editor
         // After update physics
         void PostUpdatePhysics() override;
 
+        // Before update 3D physics
+        void PreUpdatePhysics3D() override;
+
+        // Updates 3D physics
+        void UpdatePhysics3D(float dt) override;
+
+        // After update 3D physics
+        void PostUpdatePhysics3D() override;
+
         // Updates scene
         void UpdateScene(float dt) override;
 
@@ -219,6 +228,9 @@ CLASS_METHODS_META(Editor::EditorApplication)
     FUNCTION().PROTECTED().SIGNATURE(void, PreUpdatePhysics);
     FUNCTION().PROTECTED().SIGNATURE(void, UpdatePhysics, float);
     FUNCTION().PROTECTED().SIGNATURE(void, PostUpdatePhysics);
+    FUNCTION().PROTECTED().SIGNATURE(void, PreUpdatePhysics3D);
+    FUNCTION().PROTECTED().SIGNATURE(void, UpdatePhysics3D, float);
+    FUNCTION().PROTECTED().SIGNATURE(void, PostUpdatePhysics3D);
     FUNCTION().PROTECTED().SIGNATURE(void, UpdateScene, float);
     FUNCTION().PROTECTED().SIGNATURE(void, FixedUpdateScene, float);
     FUNCTION().PROTECTED().SIGNATURE(void, UpdateTaskManager, float);

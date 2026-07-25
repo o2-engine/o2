@@ -6,6 +6,7 @@
 #include "o2/Config/ProjectConfig.h"
 #include "o2/Events/EventSystem.h"
 #include "o2/Physics/PhysicsWorld.h"
+#include "o2/Physics/PhysicsWorld3D.h"
 #include "o2/Render/Render.h"
 #include "o2/Scene/Scene.h"
 #include "o2/Scene/UI/UIManager.h"
@@ -45,6 +46,7 @@ namespace o2
     FORWARD_REF_IMPL(FileSystem);
     FORWARD_REF_IMPL(Input);
     FORWARD_REF_IMPL(PhysicsWorld);
+    FORWARD_REF_IMPL(PhysicsWorld3D);
     FORWARD_REF_IMPL(ProjectConfig);
     FORWARD_REF_IMPL(Render);
     FORWARD_REF_IMPL(Scene);
@@ -159,6 +161,24 @@ namespace o2
         mPhysics->PostUpdate();
     }
 
+    void Integration::PreUpdatePhysics3D()
+    {
+        PROFILE_SAMPLE_FUNC();
+        mPhysics3D->PreUpdate();
+    }
+
+    void Integration::UpdatePhysics3D(float dt)
+    {
+        PROFILE_SAMPLE_FUNC();
+        mPhysics3D->Update(dt);
+    }
+
+    void Integration::PostUpdatePhysics3D()
+    {
+        PROFILE_SAMPLE_FUNC();
+        mPhysics3D->PostUpdate();
+    }
+
     void Integration::UpdateTaskManager(float dt)
     {
         mTaskManager->Update(dt);
@@ -199,6 +219,8 @@ namespace o2
         mScene = mmake<Scene>();
 
         mPhysics = mmake<PhysicsWorld>();
+
+        mPhysics3D = mmake<PhysicsWorld3D>();
 
         mSounds = mmake<SoundSystem>();
 
@@ -242,6 +264,7 @@ namespace o2
         Input::DestroySingleton(mInput);
         ProjectConfig::DestroySingleton(mProjectConfig);
         PhysicsWorld::DestroySingleton(mPhysics);
+        PhysicsWorld3D::DestroySingleton(mPhysics3D);
         TaskManager::DestroySingleton(mTaskManager);
         UIManager::DestroySingleton(mUIManager);
         EventSystem::DestroySingleton(mEventSystem);
@@ -376,6 +399,10 @@ namespace o2
 			PreUpdatePhysics();
 			UpdatePhysics(fixedDT);
 			PostUpdatePhysics();
+
+			PreUpdatePhysics3D();
+			UpdatePhysics3D(fixedDT);
+			PostUpdatePhysics3D();
 
 			mAccumulatedDT -= fixedDT;
 		}

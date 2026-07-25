@@ -70,6 +70,16 @@ namespace o2
         return mIsUpdatingPhysicsNow;
     }
 
+    b2Joint* PhysicsWorld::CreateJoint(const b2JointDef& def)
+    {
+        return mWorld.CreateJoint(&def);
+    }
+
+    void PhysicsWorld::DestroyJoint(b2Joint* joint)
+    {
+        mWorld.DestroyJoint(joint);
+    }
+
     void PhysicsWorld::CheckPhysicsScale()
     {
         if (Math::Equals(mPrevPhysicsScale, o2Config.physics.scale))

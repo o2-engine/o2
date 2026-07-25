@@ -20,6 +20,7 @@ namespace o2
     class SceneEditableObject;
     class Component;
     class Tree;
+    class RenderPipeline;
 }
 
 // Editor scene screen accessor macros
@@ -227,6 +228,14 @@ namespace Editor
         bool             m3DMode = false; // Is 3D view mode enabled
         SceneView3DState mView3D;         // Orbit camera state for 3D view mode
 
+        // The Game window and this edit view both draw the scene each frame. They must NOT share one
+        // render pipeline instance: the deferred passes hold mutable materials / G-buffer targets and
+        // the multithreaded renderer replays draw commands at frame end reading those live, so two
+        // executions of one instance clobber each other and the edit view's 3D goes black. So the edit
+        // view runs its own clone of the scene camera's pipeline.
+        Ref<RenderPipeline> mEditPipeline;                 // Edit-view-owned clone of the scene camera's pipeline
+        RenderPipeline*     mEditPipelineSource = nullptr; // Source pipeline the clone was made from (identity only, never dereferenced)
+
         bool mFlyNavigation3D = false; // Is fly navigation active: right mouse held in 3D mode, WASD/QE moves camera
         bool mAltOrbit3D = false;      // Is alt+left mouse orbit navigation active in 3D mode
 
@@ -332,6 +341,12 @@ namespace Editor
 
         // Draws silhouette outline of selected 3D objects through an offscreen mask (3D mode)
         void DrawSelection3DOutline();
+
+        // Draws wireframe gizmos of 2D physics colliders on selected actors (scene space, z=0)
+        void DrawSelectedColliders2D();
+
+        // Draws wireframe gizmos of 3D physics colliders on selected actors (screen space, 3D mode only)
+        void DrawSelectedColliders3D();
 
         // Binds to scene tree selection window
         void BindSceneTree();
@@ -441,6 +456,8 @@ CLASS_FIELDS_META(Editor::SceneEditScreen)
     FIELD().PROTECTED().NAME(mRightBottomWidgetsContainer);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(m3DMode);
     FIELD().PROTECTED().NAME(mView3D);
+    FIELD().PROTECTED().NAME(mEditPipeline);
+    FIELD().PROTECTED().DEFAULT_VALUE(nullptr).NAME(mEditPipelineSource);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mFlyNavigation3D);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mAltOrbit3D);
 }
@@ -528,6 +545,8 @@ CLASS_METHODS_META(Editor::SceneEditScreen)
     FUNCTION().PROTECTED().SIGNATURE(void, DrawScenePipeline);
     FUNCTION().PROTECTED().SIGNATURE(void, DrawSelection);
     FUNCTION().PROTECTED().SIGNATURE(void, DrawSelection3DOutline);
+    FUNCTION().PROTECTED().SIGNATURE(void, DrawSelectedColliders2D);
+    FUNCTION().PROTECTED().SIGNATURE(void, DrawSelectedColliders3D);
     FUNCTION().PROTECTED().SIGNATURE(void, BindSceneTree);
     FUNCTION().PROTECTED().SIGNATURE(void, OnTreeSelectionChanged, Vector<Ref<SceneEditableObject>>);
     FUNCTION().PROTECTED().SIGNATURE(void, UpdateTopSelectedObjects);

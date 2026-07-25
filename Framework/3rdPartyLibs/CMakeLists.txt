@@ -139,6 +139,36 @@ set(BOX2D_BUILD_STATIC TRUE)
 set(BOX2D_VERSION 1)
 add_subdirectory(Box2D)
 
+# box3d (git submodule) — build the core lib inline (like quickjs), NOT via upstream's own CMake,
+# which pulls in samples/tests and forces a static MSVC runtime that clashes with o2's.
+# SIMD is auto-selected in src/core.h (SSE2 on x86_64, NEON on aarch64); no flags needed.
+file(GLOB BOX3D_SOURCES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/box3d/src/*.c")
+add_library(box3d STATIC ${BOX3D_SOURCES})
+target_include_directories(box3d
+    PUBLIC  "${CMAKE_CURRENT_SOURCE_DIR}/box3d/include"
+    PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/box3d/src")
+set_target_properties(box3d PROPERTIES
+    C_STANDARD 17
+    C_STANDARD_REQUIRED YES
+    C_EXTENSIONS YES)
+
+# libm for sqrtf etc. on non-Apple Unix; threads for box3d's timer/scheduler primitives.
+if (UNIX AND NOT APPLE AND NOT EMSCRIPTEN)
+    target_link_libraries(box3d PUBLIC m)
+endif()
+if (NOT WIN32 AND NOT EMSCRIPTEN)
+    set(THREADS_PREFER_PTHREAD_FLAG ON)
+    find_package(Threads REQUIRED)
+    target_link_libraries(box3d PUBLIC Threads::Threads)
+endif()
+
+# Vendored third-party code: never fail the build on toolchain warnings.
+if (MSVC)
+    target_compile_options(box3d PRIVATE /w)
+else()
+    target_compile_options(box3d PRIVATE -w)
+endif()
+
 # other libraries
 add_subdirectory(libpng)
 add_subdirectory(zlib)
@@ -154,6 +184,7 @@ add_subdirectory(Spine)
 
 if(MSVC)
     target_compile_options(Box2D PRIVATE ${O2_MSVC_MP_FLAG})
+    target_compile_options(box3d PRIVATE ${O2_MSVC_MP_FLAG})
     if (TARGET jerry-core)
         target_compile_options(jerry-core PRIVATE ${O2_MSVC_MP_FLAG})
         target_compile_options(jerry-ext PRIVATE ${O2_MSVC_MP_FLAG})
@@ -169,6 +200,7 @@ if(MSVC)
 endif()
 
 set_target_properties(Box2D PROPERTIES FOLDER o2/3rdPartyLibs)
+set_target_properties(box3d PROPERTIES FOLDER o2/3rdPartyLibs)
 if (TARGET jerry-core)
     set_target_properties(jerry-core PROPERTIES FOLDER o2/3rdPartyLibs)
     set_target_properties(jerry-ext PROPERTIES FOLDER o2/3rdPartyLibs)

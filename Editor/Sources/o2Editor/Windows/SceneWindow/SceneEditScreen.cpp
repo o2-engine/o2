@@ -3,6 +3,15 @@
 
 #include "o2/Events/ShortcutKeysListener.h"
 #include "o2/Physics/PhysicsWorld.h"
+#include "o2/Scene/Physics/BoxCollider.h"
+#include "o2/Scene/Physics/CircleCollider.h"
+#include "o2/Scene/Physics/IJoint.h"
+#include "o2/Scene/Physics/RigidBody.h"
+#include "o2/Scene/Physics3D/BoxCollider3D.h"
+#include "o2/Scene/Physics3D/CapsuleCollider3D.h"
+#include "o2/Scene/Physics3D/IJoint3D.h"
+#include "o2/Scene/Physics3D/RigidBody3D.h"
+#include "o2/Scene/Physics3D/SphereCollider3D.h"
 #include "o2/Render/Pipeline/RenderPipeline.h"
 #include "o2/Render/Material.h"
 #include "o2/Render/Mesh.h"
@@ -74,6 +83,8 @@ namespace Editor
  			if (layer->IsEnabled() && IsLayerEnabled(layer->GetName()))
  				layer->DrawOverScene();
  		}
+
+        DrawSelectedColliders3D();
     }
 
     void SceneEditScreen::NeedRedraw()
@@ -415,6 +426,7 @@ namespace Editor
 
         o2Debug.Draw(false);
         DrawSelection();
+        DrawSelectedColliders2D();
 
         for (auto& layer : mEditorLayers)
         {
@@ -524,15 +536,26 @@ namespace Editor
     {
         o2Scene.BeginDrawingScene();
 
-        Ref<RenderPipeline> pipeline;
+        Ref<RenderPipeline> sourcePipeline;
         if (!o2Scene.GetCameras().IsEmpty())
         {
             if (auto sceneCamera = o2Scene.GetCameras()[0].Lock())
-                pipeline = sceneCamera->GetRenderPipeline();
+                sourcePipeline = sceneCamera->GetRenderPipeline();
         }
 
-        if (!pipeline)
-            pipeline = CameraActor::GetDefaultRenderPipeline();
+        if (!sourcePipeline)
+            sourcePipeline = CameraActor::GetDefaultRenderPipeline();
+
+        // Run our own clone so the edit view's deferred pass state doesn't collide with the Game
+        // window, which executes the scene camera's pipeline instance in the same frame. Re-clone
+        // only when the source pipeline changes (scene reload, camera/pipeline edit).
+        if (mEditPipelineSource != sourcePipeline.Get())
+        {
+            mEditPipeline = sourcePipeline->CloneAsRef<RenderPipeline>();
+            mEditPipelineSource = sourcePipeline.Get();
+        }
+
+        Ref<RenderPipeline> pipeline = mEditPipeline ? mEditPipeline : sourcePipeline;
 
         RenderPassContext context;
         context.camera = o2Render.GetCamera();
@@ -650,6 +673,143 @@ namespace Editor
         mSelectionOutlineQuad->Draw();
 
         o2Render.SetCamera(sceneCamera);
+    }
+
+    void SceneEditScreen::DrawSelectedColliders2D()
+    {
+        const Color4 color(60, 220, 120, 255);
+
+        for (auto& object : mSelectedObjects)
+        {
+            auto actor = DynamicCast<Actor>(object);
+            if (!actor)
+                continue;
+
+            for (auto& component : actor->GetComponents())
+            {
+                Basis basis = actor->transform->GetWorldNonSizedBasis();
+
+                if (auto box = DynamicCast<BoxCollider>(component))
+                {
+                    Vec2F half = box->GetSize()*0.5f;
+                    Vector<Vec2F> points = {
+                        Vec2F(-half.x, -half.y)*basis, Vec2F(half.x, -half.y)*basis,
+                        Vec2F(half.x, half.y)*basis,   Vec2F(-half.x, half.y)*basis,
+                        Vec2F(-half.x, -half.y)*basis
+                    };
+                    o2Render.DrawAALine(points, color);
+                }
+                else if (auto circle = DynamicCast<CircleCollider>(component))
+                {
+                    float radius = circle->GetRadius()*basis.xv.Length();
+                    o2Render.DrawAACircle(actor->transform->GetWorldPosition2D(), radius, color, 32);
+                }
+                else if (auto joint = DynamicCast<IJoint>(component))
+                {
+                    const Color4 jointColor(240, 200, 60, 255);
+                    Vec2F anchor = actor->transform->GetWorldPosition2D();
+                    if (Ref<RigidBody> a = joint->GetBodyA())
+                        o2Render.DrawAALine(anchor, a->transform->GetWorldPosition2D(), jointColor);
+                    if (Ref<RigidBody> b = joint->GetBodyB())
+                        o2Render.DrawAALine(anchor, b->transform->GetWorldPosition2D(), jointColor);
+                    o2Render.DrawAACircle(anchor, 8.0f, jointColor, 16);
+                }
+            }
+        }
+    }
+
+    void SceneEditScreen::DrawSelectedColliders3D()
+    {
+        if (!m3DMode)
+            return;
+
+        const Color4 color(60, 220, 120, 255);
+
+        auto worldLine = [&](const Vec3F& a, const Vec3F& b)
+        {
+            o2Render.DrawAALine(World3DToScreenPoint(a), World3DToScreenPoint(b), color);
+        };
+
+        auto worldRing = [&](const Vec3F& center, const Vec3F& u, const Vec3F& v, float radius, int segs)
+        {
+            Vec3F prev = center + u*radius;
+            for (int i = 1; i <= segs; i++)
+            {
+                float a = (float)i/(float)segs*2.0f*Math::PI();
+                Vec3F p = center + (u*Math::Cos(a) + v*Math::Sin(a))*radius;
+                worldLine(prev, p);
+                prev = p;
+            }
+        };
+
+        for (auto& object : mSelectedObjects)
+        {
+            auto actor = DynamicCast<Actor>(object);
+            if (!actor)
+                continue;
+
+            Vec3F pos = actor->transform->GetWorldPosition();
+            Quat  rot = actor->transform->GetWorldRotation();
+            Vec3F ax = rot*Vec3F(1, 0, 0), ay = rot*Vec3F(0, 1, 0), az = rot*Vec3F(0, 0, 1);
+
+            for (auto& component : actor->GetComponents())
+            {
+                if (auto box = DynamicCast<BoxCollider3D>(component))
+                {
+                    Vec3F h = box->GetSize()*0.5f;
+                    Vec3F c[8];
+                    int k = 0;
+                    for (int sx = -1; sx <= 1; sx += 2)
+                        for (int sy = -1; sy <= 1; sy += 2)
+                            for (int sz = -1; sz <= 1; sz += 2)
+                                c[k++] = pos + ax*(h.x*sx) + ay*(h.y*sy) + az*(h.z*sz);
+
+                    static const int edges[12][2] = {
+                        {0,1},{2,3},{4,5},{6,7}, {0,2},{1,3},{4,6},{5,7}, {0,4},{1,5},{2,6},{3,7}
+                    };
+                    for (auto& e : edges)
+                        worldLine(c[e[0]], c[e[1]]);
+                }
+                else if (auto sphere = DynamicCast<SphereCollider3D>(component))
+                {
+                    float r = sphere->GetRadius();
+                    worldRing(pos, ax, ay, r, 32);
+                    worldRing(pos, ax, az, r, 32);
+                    worldRing(pos, ay, az, r, 32);
+                }
+                else if (auto capsule = DynamicCast<CapsuleCollider3D>(component))
+                {
+                    float r = capsule->GetRadius();
+                    float half = capsule->GetHeight()*0.5f;
+                    Vec3F c1 = pos - ay*half, c2 = pos + ay*half; // capsule is Y-aligned
+
+                    worldRing(c1, ax, az, r, 24);
+                    worldRing(c2, ax, az, r, 24);
+                    worldLine(c1 + ax*r, c2 + ax*r);
+                    worldLine(c1 - ax*r, c2 - ax*r);
+                    worldLine(c1 + az*r, c2 + az*r);
+                    worldLine(c1 - az*r, c2 - az*r);
+                    worldRing(c2, ax, ay, r, 24); // top hemisphere
+                    worldRing(c2, az, ay, r, 24);
+                    worldRing(c1, ax, ay, r, 24); // bottom hemisphere
+                    worldRing(c1, az, ay, r, 24);
+                }
+                else if (auto joint = DynamicCast<IJoint3D>(component))
+                {
+                    const Color4 jointColor(240, 200, 60, 255);
+                    if (Ref<RigidBody3D> a = joint->GetBodyA())
+                    {
+                        o2Render.DrawAALine(World3DToScreenPoint(pos),
+                                            World3DToScreenPoint(a->transform->GetWorldPosition()), jointColor);
+                    }
+                    if (Ref<RigidBody3D> b = joint->GetBodyB())
+                    {
+                        o2Render.DrawAALine(World3DToScreenPoint(pos),
+                                            World3DToScreenPoint(b->transform->GetWorldPosition()), jointColor);
+                    }
+                }
+            }
+        }
     }
 
     void SceneEditScreen::DrawObjectSelection(const Ref<SceneEditableObject>& object, const Color4& color)
