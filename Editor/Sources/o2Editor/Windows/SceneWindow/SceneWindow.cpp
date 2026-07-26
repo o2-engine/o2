@@ -68,6 +68,19 @@ namespace Editor
         mEditWidget->onView3DModeChanged = [&](bool enabled) {
             mView3DButton->caption = enabled ? WString("2D") : WString("3D");
         };
+
+        // like the 3D button, the caption shows the mode the click switches to: a custom scene
+        // camera pipeline (offscreen passes, screen shaders) can distort the edit view, the
+        // stable camera falls back to the default forward 3D/2D pipeline
+        mCameraModeButton = o2UI.CreateWidget<Button>("panel down");
+        mCameraModeButton->caption = "Stable cam";
+        *mCameraModeButton->layout = WidgetLayout::VerStretch(HorAlign::Right, 0, 0, 90, 150);
+        mUpPanel->AddChild(mCameraModeButton);
+
+        mCameraModeButton->onClick = [&]() { mEditWidget->SetStableCameraMode(!mEditWidget->IsStableCameraMode()); };
+        mEditWidget->onStableCameraModeChanged = [&](bool stable) {
+            mCameraModeButton->caption = stable ? WString("Scene cam") : WString("Stable cam");
+        };
     }
 
     String SceneWindow::GetWindowTitle() const

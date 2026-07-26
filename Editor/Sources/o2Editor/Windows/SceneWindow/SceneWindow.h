@@ -37,6 +37,8 @@ namespace Editor
 
         Ref<Button> mView3DButton; // 3D view mode toggle button
 
+        Ref<Button> mCameraModeButton; // Stable/scene camera pipeline toggle button
+
         Ref<PopupWidget> mGizomsView; // Gizoms view
 
     public:
@@ -98,6 +100,7 @@ CLASS_FIELDS_META(Editor::SceneWindow)
     FIELD().PROTECTED().NAME(mLayersButton);
     FIELD().PROTECTED().NAME(mLayersPopup);
     FIELD().PROTECTED().NAME(mView3DButton);
+    FIELD().PROTECTED().NAME(mCameraModeButton);
     FIELD().PROTECTED().NAME(mGizomsView);
 }
 END_META;

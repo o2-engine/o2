@@ -190,7 +190,8 @@ TEST(ParticlesEditorPreview, Selected3DEmitterParticlesSpreadInPreview)
 }
 
 // The 2D scene view draws through the scene camera render pipeline, like the 3D mode:
-// executing the deferred pipeline creates its G-buffer targets
+// executing the deferred pipeline creates its G-buffer targets. The edit view runs its
+// own clone of the pipeline, so the scene camera instance itself must stay untouched
 TEST(ParticlesEditorPreview, TwoDModeDrawsSceneThroughPipeline)
 {
     SceneCleanGuard guard;
@@ -212,5 +213,13 @@ TEST(ParticlesEditorPreview, TwoDModeDrawsSceneThroughPipeline)
     screen.NeedRedraw();
     screen.Draw();
 
-    EXPECT_TRUE(gBufferPass->GetAlbedoTarget()) << "2D scene view must render through the scene camera pipeline";
+    auto editPipeline = DynamicCast<DeferredPipeline>(screen.GetEditRenderPipeline());
+    ASSERT_TRUE(editPipeline) << "the edit view must clone the scene camera pipeline";
+    auto editGBufferPass = editPipeline->GetPass<GBufferPass>();
+    ASSERT_NE(editGBufferPass, nullptr);
+    EXPECT_TRUE(editGBufferPass->GetAlbedoTarget()) << "2D scene view must render through the scene camera pipeline";
+
+    // the scene camera pipeline instance is not executed by the edit view: sharing it with
+    // the Game window would clobber the deferred pass state mid-frame
+    EXPECT_FALSE(gBufferPass->GetAlbedoTarget());
 }

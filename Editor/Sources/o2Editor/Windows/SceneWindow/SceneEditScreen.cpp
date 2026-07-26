@@ -532,19 +532,45 @@ namespace Editor
         DrawScenePipeline();
     }
 
+    void SceneEditScreen::SetStableCameraMode(bool stable)
+    {
+        if (mStableCameraMode == stable)
+            return;
+
+        mStableCameraMode = stable;
+        NeedRedraw();
+        onStableCameraModeChanged(stable);
+    }
+
+    bool SceneEditScreen::IsStableCameraMode() const
+    {
+        return mStableCameraMode;
+    }
+
+    const Ref<RenderPipeline>& SceneEditScreen::GetEditRenderPipeline() const
+    {
+        return mEditPipeline;
+    }
+
+    Ref<RenderPipeline> SceneEditScreen::ResolveScenePipeline() const
+    {
+        if (!mStableCameraMode && !o2Scene.GetCameras().IsEmpty())
+        {
+            if (auto sceneCamera = o2Scene.GetCameras()[0].Lock())
+            {
+                if (auto pipeline = sceneCamera->GetRenderPipeline())
+                    return pipeline;
+            }
+        }
+
+        return CameraActor::GetDefaultRenderPipeline();
+    }
+
     void SceneEditScreen::DrawScenePipeline()
     {
         o2Scene.BeginDrawingScene();
 
-        Ref<RenderPipeline> sourcePipeline;
-        if (!o2Scene.GetCameras().IsEmpty())
-        {
-            if (auto sceneCamera = o2Scene.GetCameras()[0].Lock())
-                sourcePipeline = sceneCamera->GetRenderPipeline();
-        }
-
-        if (!sourcePipeline)
-            sourcePipeline = CameraActor::GetDefaultRenderPipeline();
+        Ref<RenderPipeline> sourcePipeline = ResolveScenePipeline();
 
         // Run our own clone so the edit view's deferred pass state doesn't collide with the Game
         // window, which executes the scene camera's pipeline instance in the same frame. Re-clone
