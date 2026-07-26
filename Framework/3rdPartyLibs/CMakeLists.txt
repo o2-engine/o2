@@ -151,6 +151,10 @@ set_target_properties(box3d PROPERTIES
     C_STANDARD 17
     C_STANDARD_REQUIRED YES
     C_EXTENSIONS YES)
+if (EMSCRIPTEN)
+    # emscripten's <emmintrin.h> compat requires -msse2 on top of -msimd128; scalar path is safer
+    target_compile_definitions(box3d PRIVATE BOX3D_DISABLE_SIMD)
+endif()
 
 # libm for sqrtf etc. on non-Apple Unix; threads for box3d's timer/scheduler primitives.
 if (UNIX AND NOT APPLE AND NOT EMSCRIPTEN)

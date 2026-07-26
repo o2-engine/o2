@@ -156,10 +156,16 @@ namespace o2
             if (x + position.x >= mSize.x)
                 break;
 
+            if (x + position.x < 0)
+                continue;
+
             for (int y = 0; y < imgSrcRect.top - imgSrcRect.bottom; y++)
             {
                 if (y + position.y >= mSize.y)
                     break;
+
+                if (y + position.y < 0)
+                    continue;
 
                 UInt srcIdx = (img.mSize.y - (y + imgSrcRect.bottom) - 1)*img.mSize.x + x + imgSrcRect.left;
                 UInt dstIdx = (mSize.y - 1 - (y + position.y))*mSize.x + x + position.x;
@@ -188,10 +194,16 @@ namespace o2
             if (x + position.x >= mSize.x)
                 break;
 
+            if (x + position.x < 0)
+                continue;
+
             for (int y = 0; y < imgSrcRect.top - imgSrcRect.bottom; y++)
             {
                 if (y + position.y >= mSize.y)
                     break;
+
+                if (y + position.y < 0)
+                    continue;
 
                 UInt srcIdx = (img.mSize.y - (y + imgSrcRect.bottom) - 1)*img.mSize.x + x + imgSrcRect.left;
                 UInt dstIdx = (mSize.y - 1 - (y + position.y))*mSize.x + x + position.x;
