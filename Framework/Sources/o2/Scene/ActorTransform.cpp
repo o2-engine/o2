@@ -468,6 +468,24 @@ namespace o2
             SetPosition(position);
     }
 
+    Quat ActorTransform::GetWorldRotation() const
+    {
+        auto owner = mOwner.Lock();
+        if (owner && owner->mParent)
+            return owner->mParent.Lock()->transform->GetWorldRotation()*GetRotation();
+
+        return GetRotation();
+    }
+
+    void ActorTransform::SetWorldRotation(const Quat& rotation)
+    {
+        auto owner = mOwner.Lock();
+        if (owner && owner->mParent)
+            SetRotation(owner->mParent.Lock()->transform->GetWorldRotation().Inverted()*rotation);
+        else
+            SetRotation(rotation);
+    }
+
     bool ActorTransform::Is3D() const
     {
         return !Math::Equals(mPosition.z, 0.0f) ||

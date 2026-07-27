@@ -20,6 +20,7 @@ namespace o2
     class SceneEditableObject;
     class Component;
     class Tree;
+    class RenderPipeline;
 }
 
 // Editor scene screen accessor macros
@@ -41,6 +42,8 @@ namespace Editor
         Function<void(const Vector<Ref<SceneEditableObject>>&)> onSelectionChanged; // Actors selection change event
 
         Function<void(bool)> onView3DModeChanged; // 3D view mode toggle event
+
+        Function<void(bool)> onStableCameraModeChanged; // Stable camera mode toggle event
 
         // Default constructor
         SceneEditScreen(RefCounter* refCounter);
@@ -80,6 +83,22 @@ namespace Editor
 
         // Returns is 3D view mode enabled
         bool IsView3DMode() const;
+
+        // Enables or disables the stable camera mode: the edit view ignores the scene camera
+        // render pipeline and draws through the default forward 3D/2D pipeline, so custom
+        // pipelines (offscreen passes, screen shaders) can't distort the editing view
+        void SetStableCameraMode(bool stable);
+
+        // Returns is the stable camera mode enabled
+        bool IsStableCameraMode() const;
+
+        // Returns the pipeline the edit view renders with: the first scene camera one, or the
+        // default forward pipeline in stable camera mode or when the scene has no cameras
+        Ref<RenderPipeline> ResolveScenePipeline() const;
+
+        // Returns the edit-view-owned clone of the resolved pipeline, the one actually
+        // executed; null until the first draw
+        const Ref<RenderPipeline>& GetEditRenderPipeline() const;
 
         // Returns 3D view state
         SceneView3DState& GetView3DState();
@@ -227,6 +246,16 @@ namespace Editor
         bool             m3DMode = false; // Is 3D view mode enabled
         SceneView3DState mView3D;         // Orbit camera state for 3D view mode
 
+        // The Game window and this edit view both draw the scene each frame. They must NOT share one
+        // render pipeline instance: the deferred passes hold mutable materials / G-buffer targets and
+        // the multithreaded renderer replays draw commands at frame end reading those live, so two
+        // executions of one instance clobber each other and the edit view's 3D goes black. So the edit
+        // view runs its own clone of the scene camera's pipeline.
+        Ref<RenderPipeline> mEditPipeline;                 // Edit-view-owned clone of the scene camera's pipeline
+        RenderPipeline*     mEditPipelineSource = nullptr; // Source pipeline the clone was made from (identity only, never dereferenced)
+
+        bool mStableCameraMode = false; // Ignore the scene camera pipeline, draw with the default one
+
         bool mFlyNavigation3D = false; // Is fly navigation active: right mouse held in 3D mode, WASD/QE moves camera
         bool mAltOrbit3D = false;      // Is alt+left mouse orbit navigation active in 3D mode
 
@@ -333,6 +362,12 @@ namespace Editor
         // Draws silhouette outline of selected 3D objects through an offscreen mask (3D mode)
         void DrawSelection3DOutline();
 
+        // Draws wireframe gizmos of 2D physics colliders on selected actors (scene space, z=0)
+        void DrawSelectedColliders2D();
+
+        // Draws wireframe gizmos of 3D physics colliders on selected actors (screen space, 3D mode only)
+        void DrawSelectedColliders3D();
+
         // Binds to scene tree selection window
         void BindSceneTree();
 
@@ -419,6 +454,7 @@ CLASS_FIELDS_META(Editor::SceneEditScreen)
 {
     FIELD().PUBLIC().NAME(onSelectionChanged);
     FIELD().PUBLIC().NAME(onView3DModeChanged);
+    FIELD().PUBLIC().NAME(onStableCameraModeChanged);
     FIELD().PROTECTED().DEFAULT_VALUE(Color4(220, 220, 220, 255)).NAME(mSelectedObjectColor);
     FIELD().PROTECTED().DEFAULT_VALUE(Color4(220, 220, 220, 100)).NAME(mMultiSelectedObjectColor);
     FIELD().PROTECTED().DEFAULT_VALUE(Color4(10, 165, 150, 255)).NAME(mSelection3DOutlineColor);
@@ -441,6 +477,9 @@ CLASS_FIELDS_META(Editor::SceneEditScreen)
     FIELD().PROTECTED().NAME(mRightBottomWidgetsContainer);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(m3DMode);
     FIELD().PROTECTED().NAME(mView3D);
+    FIELD().PROTECTED().NAME(mEditPipeline);
+    FIELD().PROTECTED().DEFAULT_VALUE(nullptr).NAME(mEditPipelineSource);
+    FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mStableCameraMode);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mFlyNavigation3D);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mAltOrbit3D);
 }
@@ -460,6 +499,10 @@ CLASS_METHODS_META(Editor::SceneEditScreen)
     FUNCTION().PUBLIC().SIGNATURE(Vec2F, SceneToScreenVector, const Vec2F&);
     FUNCTION().PUBLIC().SIGNATURE(void, SetView3DMode, bool);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsView3DMode);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetStableCameraMode, bool);
+    FUNCTION().PUBLIC().SIGNATURE(bool, IsStableCameraMode);
+    FUNCTION().PUBLIC().SIGNATURE(Ref<RenderPipeline>, ResolveScenePipeline);
+    FUNCTION().PUBLIC().SIGNATURE(const Ref<RenderPipeline>&, GetEditRenderPipeline);
     FUNCTION().PUBLIC().SIGNATURE(SceneView3DState&, GetView3DState);
     FUNCTION().PUBLIC().SIGNATURE(bool, ScreenToZAxisPoint, const Vec2F&, const Vec2F&, float&);
     FUNCTION().PUBLIC().SIGNATURE(bool, ScreenToWorldAxisParam, const Vec2F&, const Vec3F&, const Vec3F&, float&);
@@ -528,6 +571,8 @@ CLASS_METHODS_META(Editor::SceneEditScreen)
     FUNCTION().PROTECTED().SIGNATURE(void, DrawScenePipeline);
     FUNCTION().PROTECTED().SIGNATURE(void, DrawSelection);
     FUNCTION().PROTECTED().SIGNATURE(void, DrawSelection3DOutline);
+    FUNCTION().PROTECTED().SIGNATURE(void, DrawSelectedColliders2D);
+    FUNCTION().PROTECTED().SIGNATURE(void, DrawSelectedColliders3D);
     FUNCTION().PROTECTED().SIGNATURE(void, BindSceneTree);
     FUNCTION().PROTECTED().SIGNATURE(void, OnTreeSelectionChanged, Vector<Ref<SceneEditableObject>>);
     FUNCTION().PROTECTED().SIGNATURE(void, UpdateTopSelectedObjects);

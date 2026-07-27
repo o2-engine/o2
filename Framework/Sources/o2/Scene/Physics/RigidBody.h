@@ -108,6 +108,9 @@ namespace o2
         // Returns is body fixed rotation
         bool IsFixedRotation() const;
 
+        // Returns the Box2D body (null until created on scene)
+        b2Body* GetBody() const;
+
         SERIALIZABLE(RigidBody);
         CLONEABLE_REF(RigidBody);
 
@@ -221,6 +224,7 @@ CLASS_METHODS_META(o2::RigidBody)
     FUNCTION().PUBLIC().SIGNATURE(bool, IsSleeping);
     FUNCTION().PUBLIC().SIGNATURE(void, SetIsFixedRotation, bool);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsFixedRotation);
+    FUNCTION().PUBLIC().SIGNATURE(b2Body*, GetBody);
     FUNCTION().PROTECTED().SIGNATURE(void, OnEnabled);
     FUNCTION().PROTECTED().SIGNATURE(void, OnDisabled);
     FUNCTION().PROTECTED().SIGNATURE(void, OnAddToScene);

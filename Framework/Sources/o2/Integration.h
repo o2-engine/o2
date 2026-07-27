@@ -20,6 +20,7 @@ namespace o2
     FORWARD_CLASS_REF(Input);
     FORWARD_CLASS_REF(LogStream);
     FORWARD_CLASS_REF(PhysicsWorld);
+    FORWARD_CLASS_REF(PhysicsWorld3D);
     FORWARD_CLASS_REF(ProjectConfig);
     FORWARD_CLASS_REF(Render);
     FORWARD_CLASS_REF(Scene);
@@ -121,7 +122,8 @@ namespace o2
         Ref<FileSystem>    mFileSystem;    // File system
         Ref<Input>         mInput;         // Whole application user input message
         Ref<LogStream>     mLog;           // Log stream with id "app", using only for integration messages
-        Ref<PhysicsWorld>  mPhysics;       // Physics
+        Ref<PhysicsWorld>   mPhysics;       // Physics
+        Ref<PhysicsWorld3D> mPhysics3D;     // 3D physics
         Ref<ProjectConfig> mProjectConfig; // Project config
         Ref<Render>        mRender;        // Graphics render
         Ref<Scene>         mScene;         // Scene
@@ -219,6 +221,15 @@ namespace o2
 		// After update physics
 		virtual void PostUpdatePhysics();
 
+		// Before update 3D physics
+		virtual void PreUpdatePhysics3D();
+
+		// Updates 3D physics
+		virtual void UpdatePhysics3D(float dt);
+
+		// After update 3D physics
+		virtual void PostUpdatePhysics3D();
+
 		// Updates task manager
 		virtual void UpdateTaskManager(float dt);
 
@@ -272,6 +283,7 @@ CLASS_FIELDS_META(o2::Integration)
     FIELD().PROTECTED().NAME(mInput);
     FIELD().PROTECTED().NAME(mLog);
     FIELD().PROTECTED().NAME(mPhysics);
+    FIELD().PROTECTED().NAME(mPhysics3D);
     FIELD().PROTECTED().NAME(mProjectConfig);
     FIELD().PROTECTED().NAME(mRender);
     FIELD().PROTECTED().NAME(mScene);

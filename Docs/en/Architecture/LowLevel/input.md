@@ -6,6 +6,11 @@
 - cursor (touch) presses: press, release
 - cursor position, cursor delta per frame
 
+### Key codes
+Keys are `o2::KeyboardKey` values from `o2/Application/VKCodes.h`, and they are **platform dependent**: Windows and Linux use the Windows virtual key codes, while Mac, iOS, WebAssembly and Android share the macOS table, where letters and digits are their ASCII codes and everything else is a negated macOS hardware key code (`VK_LEFT` is `-123` there). Always compare against the `VK_*` macros, never against a literal.
+
+Every platform backend converts its native events into these values: Mac through `MacHardwareKeyToKeyboardKey`, the browser through `DomKeyCodeToKeyboardKey`, which maps the layout independent DOM `KeyboardEvent.code` ("KeyW", "ArrowLeft") and leaves keys it doesn't know to the page.
+
 ### Key handling, o2::KeyboardEventsListener
 This class is used as a key press handler interface. You can inherit from it and override the needed functions. Key press/release messages arrive to all interface descendants automatically
 

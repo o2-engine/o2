@@ -471,6 +471,36 @@ namespace Editor
             Application::PostUpdatePhysics();
     }
 
+    void EditorApplication::PreUpdatePhysics3D()
+    {
+        PROFILE_SAMPLE_FUNC();
+
+        ForcePopEditorScopeOnStack scope;
+
+        if (mUpdateStep)
+            Application::PreUpdatePhysics3D();
+    }
+
+    void EditorApplication::UpdatePhysics3D(float dt)
+    {
+        PROFILE_SAMPLE_FUNC();
+
+        ForcePopEditorScopeOnStack scope;
+
+        if (mUpdateStep)
+            Application::UpdatePhysics3D(dt);
+    }
+
+    void EditorApplication::PostUpdatePhysics3D()
+    {
+        PROFILE_SAMPLE_FUNC();
+
+        ForcePopEditorScopeOnStack scope;
+
+        if (mUpdateStep)
+            Application::PostUpdatePhysics3D();
+    }
+
     void EditorApplication::UpdateScene(float dt)
     {
         PROFILE_SAMPLE_FUNC();

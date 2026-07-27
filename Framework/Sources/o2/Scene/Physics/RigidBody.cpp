@@ -2,6 +2,7 @@
 #include "RigidBody.h"
 
 #include "Box2D/Dynamics/b2Body.h"
+#include "o2/Config/ProjectConfig.h"
 #include "o2/Physics/PhysicsWorld.h"
 #include "o2/Scene/Physics/ICollider.h"
 
@@ -198,6 +199,11 @@ namespace o2
         return mIsFixedRotation;
     }
 
+    b2Body* RigidBody::GetBody() const
+    {
+        return mBody;
+    }
+
     void RigidBody::OnEnabled()
     {
         Actor::OnEnabled();
@@ -229,7 +235,7 @@ namespace o2
     void RigidBody::CreateBody()
     {
         b2BodyDef def;
-        def.position = transform->GetWorldPosition2D();
+        def.position = transform->GetWorldPosition2D()/o2Config.physics.scale; // physics units, so joints read a correct pose at creation
         def.userData = this;
         def.active = mResEnabledInHierarchy;
 

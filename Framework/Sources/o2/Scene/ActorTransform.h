@@ -309,6 +309,12 @@ namespace o2
         // Sets world position through the 3D transform @SCRIPTABLE
         void SetWorldPosition(const Vec3F& position);
 
+        // Returns world rotation quaternion through the 3D transform @SCRIPTABLE
+        Quat GetWorldRotation() const;
+
+        // Sets world rotation quaternion through the 3D transform @SCRIPTABLE
+        void SetWorldRotation(const Quat& rotation);
+
         // Returns true when any 3D field differs from default @SCRIPTABLE
         bool Is3D() const;
 
@@ -813,6 +819,8 @@ CLASS_METHODS_META(o2::ActorTransform)
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(Mat4, GetWorldTransform3D);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(Vec3F, GetWorldPosition);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetWorldPosition, const Vec3F&);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(Quat, GetWorldRotation);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetWorldRotation, const Quat&);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(bool, Is3D);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(Basis3D, GetBasis3D);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(Basis3D, GetNonSizedBasis3D);

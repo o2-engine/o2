@@ -20,3 +20,6 @@ A selected point also shows a corner rounding handle on the corner bisector (as 
 The scene window allows configuring layers and their order. Click Layers at the top (1).
 
 In the dropdown menu they can be reordered via drag'n'drop, created, deleted, renamed by double-click, and enabled/disabled with the checkbox.
+
+### Camera mode
+By default the edit view renders the scene through the render pipeline of the first scene camera, so the picture matches the game. A custom pipeline (offscreen passes, screen shaders) can distort the editing view; the camera mode button at the top switches to a stable camera that draws through the default forward 3D/2D pipeline. The caption shows the mode the click switches to: `Stable cam` / `Scene cam`.

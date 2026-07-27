@@ -234,6 +234,36 @@ TEST(Bitmap, ColoriseWithWhiteIsIdentity)
         EXPECT_EQ(bm.GetData()[i], before[i]) << "byte " << i;
 }
 
+// FontShadowEffect blends the glyph shadow with a negative offset: shifted pixels must be
+// clipped at the bitmap edges, not written past the buffer (used to corrupt the heap)
+TEST(Bitmap, BlendImageClipsNegativeOffset)
+{
+    for (int size = 4; size <= 32; size += 7)
+    {
+        Bitmap dst(PixelFormat::R8G8B8A8, Vec2I(size, size));
+        dst.Fill(Color4(0, 0, 0, 0));
+
+        Bitmap src(PixelFormat::R8G8B8A8, Vec2I(size, size));
+        src.Fill(Color4::White());
+
+        dst.BlendImage(src, Vec2I(-2, -2));
+        dst.BlendImage(src, Vec2I(1, -2));
+        dst.BlendImage(src, Vec2I(-1, 1));
+    }
+
+    Bitmap dst(PixelFormat::R8G8B8A8, Vec2I(8, 8));
+    dst.Fill(Color4(0, 0, 0, 0));
+    Bitmap src(PixelFormat::R8G8B8A8, Vec2I(8, 8));
+    src.Fill(Color4::White());
+
+    dst.BlendImage(src, Vec2I(0, -2));
+
+    int opaque = 0;
+    for (int i = 0; i < 8 * 8; i++)
+        opaque += dst.GetData()[i * 4 + 3] == 0xFF ? 1 : 0;
+    EXPECT_EQ(opaque, 8 * 6); // two clipped rows stay transparent
+}
+
 TEST(Bitmap, CopyImageWithMismatchedFormatIsNoOp)
 {
     Bitmap dst(PixelFormat::R8G8B8A8, Vec2I(4, 4));

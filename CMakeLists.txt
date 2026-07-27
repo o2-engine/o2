@@ -282,6 +282,7 @@ target_compile_definitions(o2Framework PUBLIC ${O2_COMPILE_DEFINITIONS})
 target_link_libraries(o2Framework
     PUBLIC
         Box2D
+        box3d
         FreeType
         pugixml
         spine-cpp
@@ -441,7 +442,7 @@ if(NOT CMAKE_SYSTEM_NAME STREQUAL "iOS" AND NOT EMSCRIPTEN AND NOT ANDROID)
 endif()
 
 # dependencies
-add_dependencies(o2Framework Box2D FreeType)
+add_dependencies(o2Framework Box2D box3d FreeType)
 if (O2_SCRIPTING AND O2_SCRIPTING_BACKEND STREQUAL "jerryscript")
     add_dependencies(o2Framework jerry-core jerry-ext jerry-port-default)
 endif()
