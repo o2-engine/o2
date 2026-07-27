@@ -232,6 +232,9 @@ namespace o2
             return;
 
         float target = mInDurationTime;
+        if (!(target == target) || target < 0.0f) // guard NaN/negative from an unresolved duration
+            target = 0.0f;
+
         float time = 0.0f;
         bool decoded = false;
 

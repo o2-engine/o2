@@ -204,6 +204,9 @@ namespace o2
 
     bool WasmVideoDecoder::SeekFrame(float time, float& outTime)
     {
+        if (!(time == time) || time < 0.0f) // HTMLMediaElement.currentTime throws on non-finite
+            time = 0.0f;
+
         o2video_seek(mId, (double)time);
         mLastTime = time;
         outTime = time;

@@ -102,6 +102,13 @@ namespace o2
                 Evaluate();
             }
         }
+        else if (mDuration <= 0.0f)
+        {
+            // No duration yet (e.g. a looping animation whose source is still loading):
+            // wrapping would divide by zero and yield NaN, so just hold at the start
+            mInDurationTime = 0.0f;
+            Evaluate();
+        }
         else if (mLoop == Loop::Repeat)
         {
             float x;
