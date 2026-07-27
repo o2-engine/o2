@@ -249,6 +249,8 @@ namespace o2
 
         if (mFrameTime < 0.0f || backward || farAhead)
         {
+            PROFILE_SAMPLE("Video seek");
+
             if (mDecoder->SeekFrame(Math::Max(target, 0.0f), time))
             {
                 decoded = true;
@@ -257,6 +259,8 @@ namespace o2
         }
         else
         {
+            PROFILE_SAMPLE("Video decode");
+
             int guard = 0;
             while (mFrameTime + frameDuration <= target + 0.0001f && guard++ < 4096)
             {

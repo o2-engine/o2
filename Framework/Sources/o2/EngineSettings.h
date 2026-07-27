@@ -1,9 +1,13 @@
 #pragma once
 #include "o2/Utils/Types/CommonTypes.h"
 
+// Development build marker; NDEBUG comes from the -DNDEBUG of release configurations
+#ifndef NDEBUG
 #define DEBUG true
+#endif
 
-// Enables memory managing
+// Enables memory managing: every allocation is registered in MemoryManager under a mutex, so it
+// stays out of shipping builds
 #if defined DEBUG
 #define ENABLE_MEMORY_MANAGE true
 #else

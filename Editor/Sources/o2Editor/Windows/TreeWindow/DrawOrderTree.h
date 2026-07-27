@@ -10,6 +10,7 @@ namespace o2
     class EditBox;
     class Toggle;
     class ToggleGroup;
+    class WidgetLayer;
 }
 
 using namespace o2;
@@ -195,11 +196,13 @@ namespace Editor
         Ref<WidgetState> mLockToggleLockedState;   // Lock toggle locked state
         Ref<WidgetState> mLockToggleHalfHideState; // Lock toggle half hide state
 
-        Ref<Toggle> mEnableToggle; // Enable toggle
+        Ref<Toggle>      mEnableToggle;              // Enable toggle
+        Ref<WidgetState> mEnableToggleHalfHideState; // Enable toggle half hide state
 
         Ref<Button>      mLinkBtn;              // View link button
         Ref<WidgetState> mLinkBtnHalfHideState; // View link button half hide state
 
+        Ref<WidgetLayer> mNameLayer;     // Object name layer
         Ref<Text>        mNameDrawable;  // Object name drawable
         Ref<Text>        mOrderDrawable; // Object order value drawable
         Ref<Sprite>      mBackSprite;    // Object back drawable
@@ -213,6 +216,9 @@ namespace Editor
 
         // initializes controls and widgets
         void InitializeControls();
+
+        // Applies target object's enabled in hierarchy state to node view
+        void UpdateEnabledView();
 
         // Called when lock toggle was clicked and changes target object's lock state
         void OnLockClicked();
@@ -296,8 +302,10 @@ CLASS_FIELDS_META(Editor::DrawOrderTreeNode)
     FIELD().PROTECTED().NAME(mLockToggleLockedState);
     FIELD().PROTECTED().NAME(mLockToggleHalfHideState);
     FIELD().PROTECTED().NAME(mEnableToggle);
+    FIELD().PROTECTED().NAME(mEnableToggleHalfHideState);
     FIELD().PROTECTED().NAME(mLinkBtn);
     FIELD().PROTECTED().NAME(mLinkBtnHalfHideState);
+    FIELD().PROTECTED().NAME(mNameLayer);
     FIELD().PROTECTED().NAME(mNameDrawable);
     FIELD().PROTECTED().NAME(mOrderDrawable);
     FIELD().PROTECTED().NAME(mBackSprite);
@@ -316,6 +324,7 @@ CLASS_METHODS_META(Editor::DrawOrderTreeNode)
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetCreateMenuCategory);
     FUNCTION().PROTECTED().SIGNATURE(void, OnDeserialized, const DataValue&);
     FUNCTION().PROTECTED().SIGNATURE(void, InitializeControls);
+    FUNCTION().PROTECTED().SIGNATURE(void, UpdateEnabledView);
     FUNCTION().PROTECTED().SIGNATURE(void, OnLockClicked);
     FUNCTION().PROTECTED().SIGNATURE(void, OnEnableCkicked);
     FUNCTION().PROTECTED().SIGNATURE(void, OnObjectNameChanged, const WString&);

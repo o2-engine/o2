@@ -252,6 +252,7 @@ namespace o2
     void Actor::Draw()
     {
         PROFILE_SAMPLE_FUNC();
+        PROFILE_INFO(mName);
 
         OnDraw();
 		DrawComponents();
@@ -262,6 +263,7 @@ namespace o2
     void Actor::Update(float dt)
     {
         PROFILE_SAMPLE_FUNC();
+        PROFILE_INFO(mName);
 
         if (transform->IsDirty())
         {
@@ -280,6 +282,7 @@ namespace o2
     void Actor::FixedUpdate(float dt)
     {
         PROFILE_SAMPLE_FUNC();
+        PROFILE_INFO(mName);
 
         OnFixedUpdate(dt);
 

@@ -8,6 +8,7 @@ namespace o2
 {
     class TextureBase
     {
+        friend class AndroidVideoDecoder;
         friend class Render;
         friend class VectorFont;
 
