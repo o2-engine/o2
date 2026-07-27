@@ -1,8 +1,8 @@
-# ImageGen — Gemini image tools for game assets
+# ImageGen — Gemini image and video tools for game assets
 
 CLI tools and an MCP server around Google Gemini image generation (Nano Banana 2,
-`gemini-3.1-flash-image`) for producing sprites and assets for the engine. Requires `python3`
-with `Pillow` and `numpy`.
+`gemini-3.1-flash-image`) and Veo video generation (`veo-3.1-*`) for producing sprites, assets
+and animation clips for the engine. Requires `python3` with `Pillow` and `numpy`.
 
 API key: put it into `api_key.txt` next to the scripts (gitignored), or export `GEMINI_API_KEY`.
 
@@ -10,8 +10,8 @@ API key: put it into `api_key.txt` next to the scripts (gitignored), or export `
 
 `mcp_server.py` — stdio MCP server (no extra dependencies), registered in the repo root
 `.mcp.json` as `imagegen`. Tools: `generate_image`, `edit_image`, `generate_transparent_image`,
-`extract_region` — same functionality as the CLIs below; results include the saved path and a
-downscaled preview.
+`generate_video`, `extract_region` — same functionality as the CLIs below; results include the
+saved path and a downscaled preview (for video — first/middle/last frames, needs `ffmpeg`).
 
 ## CLI
 
@@ -21,7 +21,23 @@ downscaled preview.
   sprite: renders the subject on white, re-renders on black, recovers per-pixel alpha from the pair.
 - `extract_region.py atlas.png --rect x,y,w,h --out part.png [--transparent]` — crop a region;
   with `--transparent` the region's subject is isolated and gets an alpha channel.
+- `generate_video.py "prompt" --out clip.mp4 [--image ref.png] [--aspect 16:9|9:16]
+  [--resolution 720p|1080p] [--duration 4|6|8] [--green] [--loop] [--raw] [--negative "..."]` —
+  text/image-to-video via Veo (default `veo-3.1-fast-generate-preview`, quality
+  `veo-3.1-generate-preview`). `--image` becomes the first frame — pass a character sprite to
+  animate it. `--green` is the chroma-key mode for in-game animations: transparent references
+  are composited onto flat green (#00B140), the canvas is padded to the aspect with the same
+  green, and the prompt demands the background stay uniform green — the result plays through
+  `VideoComponent` with the engine's ChromaKey shader (key #00B140; measure the decoded key
+  color, AVFoundation BT.709 vs pl_mpeg BT.601 shift it slightly). `--loop` asks for a
+  seamless loop (best effort, not guaranteed frame-exact). Generation is a long-running
+  operation, typically 1–5 minutes.
 
 All tools accept `--model` to override the model and `-v` to print the system/user prompts.
 The system prompts (no watermarks/text, sprite-friendly framing, pure white/black backgrounds
-for alpha recovery) are baked into `gemini_image.py`.
+for alpha recovery, fixed-camera game-animation preamble for video) are baked into
+`gemini_image.py` / `gemini_video.py`.
+
+Veo output is MP4 (H.264 720p/1080p, 24 fps, with an audio track — the engine plays video
+silent). MP4 plays via hardware decoders on Mac/iOS/Windows/Android/WASM; for the pl_mpeg
+path (Linux, `.mpg`) convert: `ffmpeg -i clip.mp4 -c:v mpeg1video -q:v 4 -an clip.mpg`.

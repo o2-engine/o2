@@ -9,13 +9,17 @@ import base64
 import io
 import json
 import os
+import shutil
+import subprocess
 import sys
+import tempfile
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from PIL import Image
 
 import gemini_image as gi
+import gemini_video as gv
 
 ASPECT_SCHEMA = {"type": "string", "enum": gi.ASPECT_RATIOS,
                  "description": "Aspect ratio (default 1:1)"}
@@ -72,6 +76,40 @@ TOOLS = [
                 "ref_paths": REFS_SCHEMA,
                 "keep_steps": {"type": "boolean",
                                "description": "Also save intermediate white/black renders"},
+            },
+            "required": ["prompt", "out_path"],
+        },
+    },
+    {
+        "name": "generate_video",
+        "description": "Generate a short game animation video (MP4, no alpha) from a text prompt "
+                       "via Veo. Optional reference image becomes the first frame - pass a "
+                       "character sprite to animate it (idle, walk, jump...). With "
+                       "green_screen=true the background is a flat chroma-key green (#00B140) and "
+                       "transparent references are composited onto green, ready for the engine's "
+                       "ChromaKey shader. Takes 1-5 minutes.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "prompt": {"type": "string", "description": "Motion/animation description"},
+                "out_path": {"type": "string", "description": "Output MP4 path (absolute preferred)"},
+                "image_path": {"type": "string",
+                               "description": "Reference image used as the first frame"},
+                "aspect": {"type": "string", "enum": gv.VIDEO_ASPECTS,
+                           "description": "Aspect ratio (default 16:9)"},
+                "resolution": {"type": "string", "enum": gv.VIDEO_RESOLUTIONS,
+                               "description": "Resolution (default 720p)"},
+                "duration_sec": {"type": "integer", "enum": gv.VIDEO_DURATIONS,
+                                 "description": "Clip length in seconds (default 8)"},
+                "green_screen": {"type": "boolean",
+                                 "description": "Uniform green-screen background for chroma keying"},
+                "loop": {"type": "boolean", "description": "Ask for a seamless loop"},
+                "raw_prompt": {"type": "boolean",
+                               "description": "Send the prompt as-is, without the game-animation preamble"},
+                "negative_prompt": {"type": "string", "description": "What to avoid"},
+                "model": {"type": "string",
+                          "description": f"Veo model id (default {gv.DEFAULT_MODEL}, "
+                                         f"quality {gv.QUALITY_MODEL})"},
             },
             "required": ["prompt", "out_path"],
         },
@@ -149,10 +187,61 @@ def tool_extract_region(args):
     return image_result(crop, args["out_path"])
 
 
+def video_preview_parts(video_path, times=(0.0, 0.5, 1.0), max_side=256):
+    """First/middle/last frame previews via ffmpeg; empty list if ffmpeg is missing."""
+    ffprobe, ffmpeg = shutil.which("ffprobe"), shutil.which("ffmpeg")
+    if not ffmpeg:
+        return []
+    duration = 0.0
+    if ffprobe:
+        probe = subprocess.run([ffprobe, "-v", "quiet", "-show_entries", "format=duration",
+                                "-of", "csv=p=0", video_path], capture_output=True, text=True)
+        try:
+            duration = float(probe.stdout.strip())
+        except ValueError:
+            pass
+    parts = []
+    for t in times:
+        seek = max(0.0, duration * t - (0.05 if t == 1.0 else 0.0))
+        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
+            frame_path = tmp.name
+        try:
+            run = subprocess.run([ffmpeg, "-v", "quiet", "-y", "-ss", f"{seek:.3f}",
+                                  "-i", video_path, "-frames:v", "1", frame_path],
+                                 capture_output=True)
+            if run.returncode == 0 and os.path.getsize(frame_path):
+                parts.append(preview_part(Image.open(frame_path), max_side=max_side))
+        finally:
+            os.unlink(frame_path)
+        if not duration:
+            break
+    return parts
+
+
+def tool_generate_video(args):
+    image = None
+    if args.get("image_path"):
+        bg = gv.GREEN_SCREEN if args.get("green_screen") else None
+        image = gv.prepare_reference(Image.open(args["image_path"]),
+                                     aspect=args.get("aspect", "16:9"), bg_color=bg)
+    prompt = gv.build_prompt(args["prompt"], raw=args.get("raw_prompt"),
+                             green=args.get("green_screen"), loop=args.get("loop"))
+    text = gv.generate_video(prompt, args["out_path"], image=image,
+                             model=args.get("model", gv.DEFAULT_MODEL),
+                             aspect=args.get("aspect", "16:9"),
+                             resolution=args.get("resolution"),
+                             duration=args.get("duration_sec"),
+                             negative_prompt=args.get("negative_prompt"))
+    content = [{"type": "text", "text": text}]
+    content += video_preview_parts(args["out_path"])
+    return {"content": content}
+
+
 HANDLERS = {
     "generate_image": tool_generate_image,
     "edit_image": tool_edit_image,
     "generate_transparent_image": tool_generate_transparent_image,
+    "generate_video": tool_generate_video,
     "extract_region": tool_extract_region,
 }
 
