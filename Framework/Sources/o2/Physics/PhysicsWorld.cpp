@@ -14,9 +14,9 @@ namespace o2
     PhysicsWorld::PhysicsWorld(RefCounter* refCounter):
         Singleton<PhysicsWorld>(refCounter), mWorld(Vec2F())
     {
-        auto debugDraw = mnew PhysicsDebugDraw();
-        mWorld.SetDebugDraw(debugDraw);
-        debugDraw->SetFlags(b2Draw::e_shapeBit | b2Draw::e_aabbBit | b2Draw::e_pairBit | b2Draw::e_centerOfMassBit | b2Draw::e_jointBit);
+        //auto debugDraw = mnew PhysicsDebugDraw();
+        //mWorld.SetDebugDraw(debugDraw);
+        //debugDraw->SetFlags(b2Draw::e_shapeBit | b2Draw::e_aabbBit | b2Draw::e_pairBit | b2Draw::e_centerOfMassBit | b2Draw::e_jointBit);
 
         mPrevPhysicsScale = o2Config.physics.scale;
     }

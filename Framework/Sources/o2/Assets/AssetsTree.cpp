@@ -122,7 +122,9 @@ namespace o2
 
         if (asset->meta->GetAssetType() == &TypeOf(FolderAsset))
         {
-            auto& childs = asset->mChildren;
+            // Removing a child detaches it from this same vector, so iterate a copy:
+            // skipped children would stay in the maps as dangling weak refs
+            auto childs = asset->mChildren;
             for (auto& ch : childs)
                 RemoveAsset(ch);
         }

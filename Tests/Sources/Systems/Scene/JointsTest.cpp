@@ -22,17 +22,21 @@ namespace
     {
         SceneCleanGuard sceneGuard;
         ActorCreateMode prevMode;
+        PhysicsConfig   prevPhysics;
         Physics3DConfig prevPhysics3D;
 
-        JointsGuard(): prevMode(Actor::GetDefaultCreationMode()), prevPhysics3D(o2Config.physics3D)
+        JointsGuard(): prevMode(Actor::GetDefaultCreationMode()), prevPhysics(o2Config.physics),
+            prevPhysics3D(o2Config.physics3D)
         {
             Actor::SetDefaultCreationMode(ActorCreateMode::InScene);
+            o2Config.physics.scale = 10.0f; // project settings scale would shrink shapes below Box2D vertex welding
             o2Config.physics3D.gravity = Vec3F(0, -9.81f, 0);
             o2Config.physics3D.scale = 1.0f;
         }
 
         ~JointsGuard()
         {
+            o2Config.physics = prevPhysics;
             o2Config.physics3D = prevPhysics3D;
             Actor::SetDefaultCreationMode(prevMode);
         }
