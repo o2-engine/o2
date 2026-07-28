@@ -91,6 +91,11 @@ namespace o2
 
         // Called when removed from scene; destroys the joint
         void OnRemoveFromScene() override;
+
+#if IS_EDITOR
+        // Draws links from the joint anchor to both connected bodies
+        void OnDrawGizmos() override;
+#endif
     };
 }
 // --- META ---
@@ -133,6 +138,9 @@ CLASS_METHODS_META(o2::IJoint)
     FUNCTION().PROTECTED().SIGNATURE(void, OnStart);
     FUNCTION().PROTECTED().SIGNATURE(void, OnUpdate, float);
     FUNCTION().PROTECTED().SIGNATURE(void, OnRemoveFromScene);
+#if  IS_EDITOR
+    FUNCTION().PROTECTED().SIGNATURE(void, OnDrawGizmos);
+#endif
 }
 END_META;
 // --- END META ---

@@ -7,9 +7,11 @@
 #include "o2/Render/Material.h"
 #include "o2/Render/Mesh.h"
 #include "o2/Render/TextureRef.h"
+#include "o2/Scene/SceneDrawableCategory.h"
 #include "o2/Utils/Editor/DragAndDrop.h"
 #include "o2/Utils/Singleton.h"
 #include "o2Editor/UI/ScrollView.h"
+#include "o2Editor/Windows/SceneWindow/SceneGizmos.h"
 #include "o2Editor/Windows/SceneWindow/SceneView3DState.h"
 
 using namespace o2;
@@ -102,6 +104,19 @@ namespace Editor
 
         // Returns 3D view state
         SceneView3DState& GetView3DState();
+
+        // Returns scene objects gizmos drawer
+        SceneGizmos& GetGizmos();
+
+        // Collects drawing components of the category from the actor and its children, skipping disabled
+        static void CollectDrawableComponents(const Ref<Actor>& actor, SceneDrawableCategory category,
+                                              Vector<Ref<Component>>& components);
+
+        // Sets is selection of scene objects drawing
+        void SetSelectionVisible(bool visible);
+
+        // Returns is selection of scene objects drawing
+        bool IsSelectionVisible() const;
 
         // Returns z of the closest point on the vertical axis through plane anchor to the view ray, 3D mode only
         bool ScreenToZAxisPoint(const Vec2F& screenPoint, const Vec2F& planeAnchor, float& z);
@@ -217,9 +232,9 @@ namespace Editor
         Color4 mSelectedObjectColor = Color4(220, 220, 220, 255);      // Selected object color
         Color4 mMultiSelectedObjectColor = Color4(220, 220, 220, 100); // Selected object color
 
-        Color4 mSelection3DOutlineColor = Color4(10, 165, 150, 255); // Silhouette outline color of selected 3D objects
+        Color4 mSelectionOutlineColor = Color4(10, 165, 150, 255); // Silhouette outline color of selected objects
 
-        TextureRef    mSelectionMaskTarget;     // Offscreen silhouette mask of selected 3D objects
+        TextureRef    mSelectionMaskTarget;      // Offscreen silhouette mask of selected objects
         Ref<Material> mSelectionOutlineMaterial; // Outline composite material (Shaders/SelectionOutline)
         Ref<Mesh>     mSelectionOutlineQuad;     // Fullscreen quad for the outline composite
         float  mObjectMinimalSelectionSize = 10.0f;                    // Minimal object size on pixels
@@ -245,6 +260,10 @@ namespace Editor
 
         bool             m3DMode = false; // Is 3D view mode enabled
         SceneView3DState mView3D;         // Orbit camera state for 3D view mode
+
+        SceneGizmos mGizmos; // Scene objects gizmos drawer with visibility settings
+
+        bool mSelectionVisible = true; // Is selection of scene objects drawing
 
         // The Game window and this edit view both draw the scene each frame. They must NOT share one
         // render pipeline instance: the deferred passes hold mutable materials / G-buffer targets and
@@ -359,14 +378,14 @@ namespace Editor
         // Draws selection on objects
         void DrawSelection();
 
-        // Draws silhouette outline of selected 3D objects through an offscreen mask (3D mode)
-        void DrawSelection3DOutline();
+        // Draws silhouette outline of selected objects drawable content through an offscreen mask
+        void DrawSelectionOutline(SceneDrawableCategory category);
 
-        // Draws wireframe gizmos of 2D physics colliders on selected actors (scene space, z=0)
-        void DrawSelectedColliders2D();
+        // Draws scene objects gizmos in scene space (2D mode)
+        void DrawGizmos2D();
 
-        // Draws wireframe gizmos of 3D physics colliders on selected actors (screen space, 3D mode only)
-        void DrawSelectedColliders3D();
+        // Draws scene objects gizmos in screen space with perspective projection (3D mode)
+        void DrawGizmos3D();
 
         // Binds to scene tree selection window
         void BindSceneTree();
@@ -457,7 +476,7 @@ CLASS_FIELDS_META(Editor::SceneEditScreen)
     FIELD().PUBLIC().NAME(onStableCameraModeChanged);
     FIELD().PROTECTED().DEFAULT_VALUE(Color4(220, 220, 220, 255)).NAME(mSelectedObjectColor);
     FIELD().PROTECTED().DEFAULT_VALUE(Color4(220, 220, 220, 100)).NAME(mMultiSelectedObjectColor);
-    FIELD().PROTECTED().DEFAULT_VALUE(Color4(10, 165, 150, 255)).NAME(mSelection3DOutlineColor);
+    FIELD().PROTECTED().DEFAULT_VALUE(Color4(10, 165, 150, 255)).NAME(mSelectionOutlineColor);
     FIELD().PROTECTED().NAME(mSelectionMaskTarget);
     FIELD().PROTECTED().NAME(mSelectionOutlineMaterial);
     FIELD().PROTECTED().NAME(mSelectionOutlineQuad);
@@ -477,6 +496,8 @@ CLASS_FIELDS_META(Editor::SceneEditScreen)
     FIELD().PROTECTED().NAME(mRightBottomWidgetsContainer);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(m3DMode);
     FIELD().PROTECTED().NAME(mView3D);
+    FIELD().PROTECTED().NAME(mGizmos);
+    FIELD().PROTECTED().DEFAULT_VALUE(true).NAME(mSelectionVisible);
     FIELD().PROTECTED().NAME(mEditPipeline);
     FIELD().PROTECTED().DEFAULT_VALUE(nullptr).NAME(mEditPipelineSource);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mStableCameraMode);
@@ -504,6 +525,10 @@ CLASS_METHODS_META(Editor::SceneEditScreen)
     FUNCTION().PUBLIC().SIGNATURE(Ref<RenderPipeline>, ResolveScenePipeline);
     FUNCTION().PUBLIC().SIGNATURE(const Ref<RenderPipeline>&, GetEditRenderPipeline);
     FUNCTION().PUBLIC().SIGNATURE(SceneView3DState&, GetView3DState);
+    FUNCTION().PUBLIC().SIGNATURE(SceneGizmos&, GetGizmos);
+    FUNCTION().PUBLIC().SIGNATURE_STATIC(void, CollectDrawableComponents, const Ref<Actor>&, SceneDrawableCategory, Vector<Ref<Component>>&);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetSelectionVisible, bool);
+    FUNCTION().PUBLIC().SIGNATURE(bool, IsSelectionVisible);
     FUNCTION().PUBLIC().SIGNATURE(bool, ScreenToZAxisPoint, const Vec2F&, const Vec2F&, float&);
     FUNCTION().PUBLIC().SIGNATURE(bool, ScreenToWorldAxisParam, const Vec2F&, const Vec3F&, const Vec3F&, float&);
     FUNCTION().PUBLIC().SIGNATURE(bool, ScreenToWorldPlanePoint, const Vec2F&, const Vec3F&, const Vec3F&, Vec3F&);
@@ -570,9 +595,9 @@ CLASS_METHODS_META(Editor::SceneEditScreen)
     FUNCTION().PROTECTED().SIGNATURE(void, DrawObjects3D, const Camera&);
     FUNCTION().PROTECTED().SIGNATURE(void, DrawScenePipeline);
     FUNCTION().PROTECTED().SIGNATURE(void, DrawSelection);
-    FUNCTION().PROTECTED().SIGNATURE(void, DrawSelection3DOutline);
-    FUNCTION().PROTECTED().SIGNATURE(void, DrawSelectedColliders2D);
-    FUNCTION().PROTECTED().SIGNATURE(void, DrawSelectedColliders3D);
+    FUNCTION().PROTECTED().SIGNATURE(void, DrawSelectionOutline, SceneDrawableCategory);
+    FUNCTION().PROTECTED().SIGNATURE(void, DrawGizmos2D);
+    FUNCTION().PROTECTED().SIGNATURE(void, DrawGizmos3D);
     FUNCTION().PROTECTED().SIGNATURE(void, BindSceneTree);
     FUNCTION().PROTECTED().SIGNATURE(void, OnTreeSelectionChanged, Vector<Ref<SceneEditableObject>>);
     FUNCTION().PROTECTED().SIGNATURE(void, UpdateTopSelectedObjects);

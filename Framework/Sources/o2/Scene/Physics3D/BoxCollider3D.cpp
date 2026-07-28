@@ -1,6 +1,7 @@
 #include "o2/stdafx.h"
 #include "BoxCollider3D.h"
 
+#include "o2/Render/Gizmos.h"
 namespace o2
 {
     BoxCollider3D::BoxCollider3D()
@@ -54,6 +55,22 @@ namespace o2
         b3BoxHull hull = b3MakeTransformedBoxHull(half.x, half.y, half.z, relative);
         return b3CreateHullShape(body, &def, &hull.base);
     }
+
+#if IS_EDITOR
+    void BoxCollider3D::OnDrawGizmos()
+    {
+        auto owner = mOwner.Lock();
+        if (!owner)
+            return;
+
+        Vec3F pos = owner->transform->GetWorldPosition();
+        Quat rot = owner->transform->GetWorldRotation();
+        Vec3F half = mSize*0.5f;
+
+        o2Gizmos.SetColor(Gizmos::colliderColor);
+        o2Gizmos.DrawBox(pos, rot*Vec3F(half.x, 0, 0), rot*Vec3F(0, half.y, 0), rot*Vec3F(0, 0, half.z));
+    }
+#endif
 }
 
 DECLARE_TEMPLATE_CLASS(o2::LinkRef<o2::BoxCollider3D>);

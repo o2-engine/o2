@@ -188,6 +188,7 @@ extern void __RegisterClass__Editor__IWidgetLayerHeaderViewer();
 extern void __RegisterClass__Editor__IWidgetLayerLayoutViewer();
 extern void __RegisterClass__Editor__IWidgetLayerPropertiesViewer();
 extern void __RegisterClass__Editor__WidgetLayerViewer();
+extern void __RegisterClass__Editor__GizmosPopup();
 extern void __RegisterClass__Editor__LayersPopup();
 extern void __RegisterClass__Editor__LayerPopupItem();
 extern void __RegisterClass__Editor__SceneDragHandle();
@@ -395,6 +396,7 @@ extern void InitializeTypeso2Editor()
     __RegisterClass__Editor__IWidgetLayerLayoutViewer();
     __RegisterClass__Editor__IWidgetLayerPropertiesViewer();
     __RegisterClass__Editor__WidgetLayerViewer();
+    __RegisterClass__Editor__GizmosPopup();
     __RegisterClass__Editor__LayersPopup();
     __RegisterClass__Editor__LayerPopupItem();
     __RegisterClass__Editor__SceneDragHandle();

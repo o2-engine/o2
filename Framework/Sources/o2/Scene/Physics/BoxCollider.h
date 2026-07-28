@@ -71,6 +71,11 @@ namespace o2
 
         // Called when actor was included to scene; fits size if required
         void OnAddToScene() override;
+
+#if IS_EDITOR
+        // Draws collider box wireframe
+        void OnDrawGizmos() override;
+#endif
     };
 }
 // --- META ---
@@ -108,6 +113,9 @@ CLASS_METHODS_META(o2::BoxCollider)
     FUNCTION().PRIVATE().SIGNATURE(void, OnTransformUpdated);
     FUNCTION().PRIVATE().SIGNATURE(void, FitSize);
     FUNCTION().PRIVATE().SIGNATURE(void, OnAddToScene);
+#if  IS_EDITOR
+    FUNCTION().PRIVATE().SIGNATURE(void, OnDrawGizmos);
+#endif
 }
 END_META;
 // --- END META ---

@@ -56,8 +56,9 @@ Static, Kinematic). Задаёт линейную/угловую скорост�
 `IJoint3D`).
 
 ### Гизмо в редакторе
-Сцена редактора рисует каркасные гизмо коллайдеров выделенных акторов (2D box/circle в координатах
-сцены, 3D box/sphere/capsule проекцией в 3D-виде) и линии связи джоинтов (bodyA → якорь → bodyB) —
-в `SceneEditScreen::DrawSelectedColliders2D/3D`.
+Коллайдеры и джоинты рисуют себя сами через общую систему гизмо (`OnDrawGizmos`, см.
+[сцену](/Docs/ru/Architecture/HighLevel/scene.md)): каркас box/circle для 2D, box/sphere/capsule для
+3D и линии связи джоинта (bodyA → якорь → bodyB) для `IJoint`/`IJoint3D`. Рисуются для всех объектов
+сцены, а не только выделенных; включение/выключение — в панели Gizmos окна сцены.
 
 Пока недоступно: mesh / height-field коллайдеры, рантайм-отладочная отрисовка физики.

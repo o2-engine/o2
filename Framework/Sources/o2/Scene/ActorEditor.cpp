@@ -183,6 +183,11 @@ namespace o2
         mCopyVisitor = mmake<InstantiatePrototypeCloneVisitor>();
     }
 
+    void Actor::DrawGizmos()
+    {
+        OnDrawGizmos();
+    }
+
     bool Actor::IsLinkedToActor(const Ref<Actor>& actor) const
     {
         if (mPrototypeLink)

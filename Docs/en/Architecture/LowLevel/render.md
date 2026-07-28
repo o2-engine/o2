@@ -49,6 +49,14 @@ Toggle it through the render subsystem:
 
 It is enabled by default where `IsMultithreadedRenderSupported()` is true (currently macOS / Metal); other platforms use the single-threaded path, where the main thread submits draws directly. Because a command carries a full state snapshot, the render thread never reads the live, concurrently mutated `Render` members, and the command buffer is reset on the main thread so texture/material references are never ref-counted from the render thread. This mirrors the isolation rules of the [job system](/Docs/en/Architecture/Utils/jobs.md).
 
+### Gizmos, o2::Gizmos
+The `o2Gizmos` singleton draws editor helper wireframe primitives with lines: `DrawLine`,
+`DrawPolyLine`, `DrawCircle`, `DrawRect`, `DrawBox`, `DrawSphere`, `DrawCapsule`, `DrawPoint`. Points
+are given in world `Vec3F` coordinates, and the projection into the drawing space is set from outside
+by `SetProjection` — in 2D it drops z, in 3D view it projects with the perspective camera. The
+`GetDrawnPrimitives` counter tells whether an object has drawn anything. Used by the scene gizmos
+system, see [scene](/Docs/en/Architecture/HighLevel/scene.md).
+
 ### IDrawable
 This is the base interface of a drawable entity; during drawing it remembers the current scissor rectangle
 

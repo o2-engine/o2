@@ -2,6 +2,7 @@
 #include "SphereCollider3D.h"
 
 #include "o2/Physics/Box3DConvert.h"
+#include "o2/Render/Gizmos.h"
 
 namespace o2
 {
@@ -53,6 +54,18 @@ namespace o2
 
         return b3CreateSphereShape(body, &def, &sphere);
     }
+
+#if IS_EDITOR
+    void SphereCollider3D::OnDrawGizmos()
+    {
+        auto owner = mOwner.Lock();
+        if (!owner)
+            return;
+
+        o2Gizmos.SetColor(Gizmos::colliderColor);
+        o2Gizmos.DrawSphere(owner->transform->GetWorldPosition(), mRadius);
+    }
+#endif
 }
 
 DECLARE_TEMPLATE_CLASS(o2::LinkRef<o2::SphereCollider3D>);

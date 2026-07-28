@@ -117,6 +117,9 @@ namespace o2
 #if IS_EDITOR
         // Called when component added from editor
         virtual void OnAddedFromEditor() {}
+
+        // Draws component gizmos in editor scene view
+        void DrawGizmos();
 #endif
         
         SERIALIZABLE(Component);
@@ -210,7 +213,12 @@ namespace o2
         
         // Called when component going to be removed from actor
         virtual void OnComponentRemoving(const Ref<Component>& component) {}
-        
+
+#if IS_EDITOR
+        // Called when component draws its gizmos in editor scene view. Drawing only, no controls
+        virtual void OnDrawGizmos() {}
+#endif
+
         friend class Actor;
         friend class ActorRefResolver;
         friend class BaseComponentLinkRef;
@@ -275,6 +283,7 @@ CLASS_METHODS_META(o2::Component)
     FUNCTION().PUBLIC().SIGNATURE_STATIC(bool, IsAvailableFromCreateMenu);
 #if  IS_EDITOR
     FUNCTION().PUBLIC().SIGNATURE(void, OnAddedFromEditor);
+    FUNCTION().PUBLIC().SIGNATURE(void, DrawGizmos);
 #endif
     FUNCTION().PROTECTED().SIGNATURE(void, OnSerialize, DataValue&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnDeserialized, const DataValue&);
@@ -302,6 +311,9 @@ CLASS_METHODS_META(o2::Component)
     FUNCTION().PROTECTED().SIGNATURE(void, OnChildRemoved, const Ref<Actor>&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnComponentAdded, const Ref<Component>&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnComponentRemoving, const Ref<Component>&);
+#if  IS_EDITOR
+    FUNCTION().PROTECTED().SIGNATURE(void, OnDrawGizmos);
+#endif
 }
 END_META;
 // --- END META ---

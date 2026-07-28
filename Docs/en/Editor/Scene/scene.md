@@ -21,5 +21,18 @@ The scene window allows configuring layers and their order. Click Layers at the 
 
 In the dropdown menu they can be reordered via drag'n'drop, created, deleted, renamed by double-click, and enabled/disabled with the checkbox.
 
+### Gizmos and selection
+The Gizmos button on the top opens the view display panel. The Gizmos switch turns off gizmos
+entirely, below it is the list of actor and component types which draw gizmos: each one is switched
+separately. The list contains the types which override `OnDrawGizmos` and are present on the current
+scene (colliders, joints, cameras) — they appear right away, before anything was drawn. Gizmos are
+drawn for all scene objects and work in both 2D and 3D view mode.
+
+The last row, under a separator, is the Selection switch — it turns off drawing of the objects
+selection: the transform frames and the silhouette outline of the selected content. The outline is
+drawn in both modes: in 3D over the 3D components content, in 2D over the 2D graphics. The silhouette
+covers the whole enabled hierarchy of the selected actor — its drawing components and the components
+of all its children; disabled objects and components are skipped, widget layers are not included.
+
 ### Camera mode
 By default the edit view renders the scene through the render pipeline of the first scene camera, so the picture matches the game. A custom pipeline (offscreen passes, screen shaders) can distort the editing view; the camera mode button at the top switches to a stable camera that draws through the default forward 3D/2D pipeline. The caption shows the mode the click switches to: `Stable cam` / `Scene cam`.

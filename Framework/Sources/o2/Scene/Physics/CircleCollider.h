@@ -66,6 +66,11 @@ namespace o2
 
         // Called when transformation was changed; fits size by actor size when required
         void OnTransformUpdated() override;
+
+#if IS_EDITOR
+        // Draws collider circle wireframe
+        void OnDrawGizmos() override;
+#endif
     };
 }
 // --- META ---
@@ -101,6 +106,9 @@ CLASS_METHODS_META(o2::CircleCollider)
 #endif
     FUNCTION().PRIVATE().SIGNATURE(b2Shape*, GetShape, const Basis&);
     FUNCTION().PRIVATE().SIGNATURE(void, OnTransformUpdated);
+#if  IS_EDITOR
+    FUNCTION().PRIVATE().SIGNATURE(void, OnDrawGizmos);
+#endif
 }
 END_META;
 // --- END META ---

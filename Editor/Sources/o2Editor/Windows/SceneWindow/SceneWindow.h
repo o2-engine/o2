@@ -11,6 +11,7 @@ namespace o2
 
 namespace Editor
 {
+    FORWARD_CLASS_REF(GizmosPopup);
     FORWARD_CLASS_REF(LayersPopup);
     FORWARD_CLASS_REF(SceneEditScreen);
 
@@ -39,7 +40,8 @@ namespace Editor
 
         Ref<Button> mCameraModeButton; // Stable/scene camera pipeline toggle button
 
-        Ref<PopupWidget> mGizomsView; // Gizoms view
+        Ref<Button>      mGizmosButton; // Gizmos view button
+        Ref<GizmosPopup> mGizmosPopup;  // Gizmos view settings popup
 
     public:
         // Default constructor with ref counter
@@ -101,7 +103,8 @@ CLASS_FIELDS_META(Editor::SceneWindow)
     FIELD().PROTECTED().NAME(mLayersPopup);
     FIELD().PROTECTED().NAME(mView3DButton);
     FIELD().PROTECTED().NAME(mCameraModeButton);
-    FIELD().PROTECTED().NAME(mGizomsView);
+    FIELD().PROTECTED().NAME(mGizmosButton);
+    FIELD().PROTECTED().NAME(mGizmosPopup);
 }
 END_META;
 CLASS_METHODS_META(Editor::SceneWindow)

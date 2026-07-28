@@ -106,6 +106,11 @@ namespace o2
 
         // Called when actor has removed from scene
         void OnRemoveFromScene() override;
+
+#if IS_EDITOR
+        // Draws view frustum for perspective camera, view rectangle for others
+        void OnDrawGizmos() override;
+#endif
     };
 }
 // --- META ---
@@ -156,6 +161,9 @@ CLASS_METHODS_META(o2::CameraActor)
     FUNCTION().PUBLIC().SIGNATURE_STATIC(const Ref<RenderPipeline>&, GetDefaultRenderPipeline);
     FUNCTION().PROTECTED().SIGNATURE(void, OnAddToScene);
     FUNCTION().PROTECTED().SIGNATURE(void, OnRemoveFromScene);
+#if  IS_EDITOR
+    FUNCTION().PROTECTED().SIGNATURE(void, OnDrawGizmos);
+#endif
 }
 END_META;
 // --- END META ---

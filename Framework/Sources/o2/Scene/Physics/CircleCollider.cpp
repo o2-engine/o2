@@ -2,6 +2,7 @@
 #include "CircleCollider.h"
 
 #include "o2/Physics/PhysicsWorld.h"
+#include "o2/Render/Gizmos.h"
 #include "o2/Scene/Scene.h"
 
 namespace o2
@@ -92,6 +93,18 @@ namespace o2
     void CircleCollider::OnAddedFromEditor()
     {
         mRadius = mOwner.Lock()->transform->GetSize().x*0.5f;
+    }
+
+    void CircleCollider::OnDrawGizmos()
+    {
+        auto owner = mOwner.Lock();
+        if (!owner)
+            return;
+
+        Basis basis = owner->transform->GetWorldNonSizedBasis();
+
+        o2Gizmos.SetColor(Gizmos::colliderColor);
+        o2Gizmos.DrawCircle(owner->transform->GetWorldPosition(), mRadius*basis.xv.Length());
     }
 #endif
 }

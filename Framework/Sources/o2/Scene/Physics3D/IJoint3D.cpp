@@ -4,6 +4,7 @@
 #include "o2/Config/ProjectConfig.h"
 #include "o2/Physics/Box3DConvert.h"
 #include "o2/Physics/PhysicsWorld3D.h"
+#include "o2/Render/Gizmos.h"
 #include "o2/Scene/Actor.h"
 
 namespace o2
@@ -113,6 +114,27 @@ namespace o2
         RemoveJoint();
         Component::OnRemoveFromScene();
     }
+
+#if IS_EDITOR
+    void IJoint3D::OnDrawGizmos()
+    {
+        auto owner = mOwner.Lock();
+        if (!owner)
+            return;
+
+        Vec3F anchor = owner->transform->GetWorldPosition();
+
+        o2Gizmos.SetColor(Gizmos::jointColor);
+
+        if (Ref<RigidBody3D> bodyA = mBodyA)
+            o2Gizmos.DrawLine(anchor, bodyA->transform->GetWorldPosition());
+
+        if (Ref<RigidBody3D> bodyB = mBodyB)
+            o2Gizmos.DrawLine(anchor, bodyB->transform->GetWorldPosition());
+
+        o2Gizmos.DrawSphere(anchor, 0.1f, 12);
+    }
+#endif
 }
 
 DECLARE_TEMPLATE_CLASS(o2::LinkRef<o2::IJoint3D>);

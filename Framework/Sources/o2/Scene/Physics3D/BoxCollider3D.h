@@ -46,6 +46,11 @@ namespace o2
     private:
         // Returns box hull shape placed by the relative transform
         b3ShapeId CreateShape(b3BodyId body, const b3ShapeDef& def, const b3Transform& relative, float invScale) override;
+
+#if IS_EDITOR
+        // Draws collider box wireframe
+        void OnDrawGizmos() override;
+#endif
     };
 }
 // --- META ---
@@ -72,6 +77,9 @@ CLASS_METHODS_META(o2::BoxCollider3D)
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetCategory);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(bool, IsAvailableFromCreateMenu);
     FUNCTION().PRIVATE().SIGNATURE(b3ShapeId, CreateShape, b3BodyId, const b3ShapeDef&, const b3Transform&, float);
+#if  IS_EDITOR
+    FUNCTION().PRIVATE().SIGNATURE(void, OnDrawGizmos);
+#endif
 }
 END_META;
 // --- END META ---

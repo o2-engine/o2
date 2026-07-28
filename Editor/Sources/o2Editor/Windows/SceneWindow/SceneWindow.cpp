@@ -5,6 +5,7 @@
 #include "o2/Scene/UI/WidgetLayout.h"
 #include "o2/Scene/UI/Widgets/Button.h"
 #include "o2/Scene/UI/Widgets/CustomDropDown.h"
+#include "o2Editor/Windows/SceneWindow/GizmosPopup.h"
 #include "o2Editor/Windows/SceneWindow/LayersPopup.h"
 #include "o2Editor/Windows/SceneWindow/SceneEditScreen.h"
 #include "o2/Scene/Scene.h"
@@ -58,6 +59,16 @@ namespace Editor
         mLayersButton->AddChild(mLayersPopup);
 
         mLayersButton->onClick = [&]() { mLayersPopup->Show(mLayersButton->layout->worldLeftBottom); };
+
+        mGizmosButton = o2UI.CreateWidget<Button>("panel down");
+        mGizmosButton->caption = "Gizmos";
+        *mGizmosButton->layout = WidgetLayout::VerStretch(HorAlign::Right, 0, 0, 70, 240);
+        mUpPanel->AddChild(mGizmosButton);
+
+        mGizmosPopup = mmake<GizmosPopup>();
+        mGizmosButton->AddChild(mGizmosPopup);
+
+        mGizmosButton->onClick = [&]() { mGizmosPopup->Show(mGizmosButton->layout->worldLeftBottom); };
 
         mView3DButton = o2UI.CreateWidget<Button>("panel down");
         mView3DButton->caption = "3D";

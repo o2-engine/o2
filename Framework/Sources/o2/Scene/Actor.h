@@ -539,6 +539,9 @@ namespace o2
         // Makes prototype asset from this actor and links this to new asset
         AssetRef<ActorAsset> MakePrototype();
 
+        // Draws actor gizmos in editor scene view
+        void DrawGizmos();
+
         // Returns is this linked to specified actor with depth links search
         bool IsLinkedToActor(const Ref<Actor>& actor) const;
 
@@ -635,6 +638,9 @@ namespace o2
 
         // Collects component field, except Component class fields
         void GetComponentFields(const Ref<Component>& component, Vector<const FieldInfo*>& fields);
+
+        // Called when actor draws its gizmos in editor scene view. Drawing only, no controls
+        virtual void OnDrawGizmos() {}
 
         // Collects differences between this and prototype
         virtual void GetDifferences(ActorDifferences& differences) const OPTIONAL_OVERRIDE;
@@ -994,6 +1000,7 @@ CLASS_METHODS_META(o2::Actor)
     FUNCTION().PUBLIC().SIGNATURE(void, ApplyChangesToPrototype);
     FUNCTION().PUBLIC().SIGNATURE(void, RevertToPrototype);
     FUNCTION().PUBLIC().SIGNATURE(AssetRef<ActorAsset>, MakePrototype);
+    FUNCTION().PUBLIC().SIGNATURE(void, DrawGizmos);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsLinkedToActor, const Ref<Actor>&);
     FUNCTION().PUBLIC().SIGNATURE(Ref<Actor>, FindLinkedActor, const Ref<Actor>&);
     FUNCTION().PUBLIC().SIGNATURE(Ref<SceneEditableObject>, GetEditableOwner);
@@ -1021,6 +1028,7 @@ CLASS_METHODS_META(o2::Actor)
     FUNCTION().PROTECTED().SIGNATURE(void, CollectFixingFields, Component*, Vector<Component**>&, Vector<Actor**>&);
     FUNCTION().PROTECTED().SIGNATURE(void, FixComponentFieldsPointers, const Vector<Actor**>&, const Vector<Component**>&, _tmp5, _tmp6);
     FUNCTION().PROTECTED().SIGNATURE(void, GetComponentFields, const Ref<Component>&, Vector<const FieldInfo*>&);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnDrawGizmos);
     FUNCTION().PROTECTED().SIGNATURE(void, GetDifferences, ActorDifferences&);
     FUNCTION().PROTECTED().SIGNATURE(void, BeginMakePrototype);
     FUNCTION().PROTECTED().SIGNATURE(void, BeginInstantiatePrototype);

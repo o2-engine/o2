@@ -2,6 +2,7 @@
 #include "BoxCollider.h"
 
 #include "o2/Physics/PhysicsWorld.h"
+#include "o2/Render/Gizmos.h"
 #include "o2/Scene/Scene.h"
 
 namespace o2
@@ -116,6 +117,22 @@ namespace o2
     {
         mSize = mOwner.Lock()->transform->GetSize2D();
         OnShapeChanged();
+    }
+
+    void BoxCollider::OnDrawGizmos()
+    {
+        auto owner = mOwner.Lock();
+        if (!owner)
+            return;
+
+        Basis basis = owner->transform->GetWorldNonSizedBasis();
+        float z = owner->transform->GetWorldPosition().z;
+        Vec2F half = mSize*0.5f;
+
+        o2Gizmos.SetColor(Gizmos::colliderColor);
+        o2Gizmos.DrawPolyLine({ Vec3F(Vec2F(-half.x, -half.y)*basis, z), Vec3F(Vec2F(half.x, -half.y)*basis, z),
+                                Vec3F(Vec2F(half.x, half.y)*basis, z), Vec3F(Vec2F(-half.x, half.y)*basis, z) },
+                              true);
     }
 #endif
 }

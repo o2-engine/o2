@@ -56,8 +56,10 @@ The joint frame on each body is derived from this actor's world transform. Avail
 `IJoint3D` pattern).
 
 ### Editor gizmos
-The editor scene view draws wireframe gizmos of the selected actors' colliders (2D box/circle in
-scene space, 3D box/sphere/capsule projected in 3D view) and joint connection lines (bodyA → anchor →
-bodyB), in `SceneEditScreen::DrawSelectedColliders2D/3D`.
+Colliders and joints draw themselves through the common gizmos system (`OnDrawGizmos`, see
+[scene](/Docs/en/Architecture/HighLevel/scene.md)): box/circle wireframe for 2D, box/sphere/capsule
+for 3D and joint connection lines (bodyA → anchor → bodyB) for `IJoint`/`IJoint3D`. They are drawn
+for all scene objects, not only the selected ones; switching them on and off is done in the Gizmos
+panel of the scene window.
 
 Not yet available: mesh / height-field colliders, runtime physics debug draw.

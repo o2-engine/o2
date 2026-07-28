@@ -2,6 +2,7 @@
 #include "CapsuleCollider3D.h"
 
 #include "o2/Physics/Box3DConvert.h"
+#include "o2/Render/Gizmos.h"
 
 namespace o2
 {
@@ -72,6 +73,20 @@ namespace o2
 
         return b3CreateCapsuleShape(body, &def, &capsule);
     }
+
+#if IS_EDITOR
+    void CapsuleCollider3D::OnDrawGizmos()
+    {
+        auto owner = mOwner.Lock();
+        if (!owner)
+            return;
+
+        Quat rot = owner->transform->GetWorldRotation();
+
+        o2Gizmos.SetColor(Gizmos::colliderColor);
+        o2Gizmos.DrawCapsule(owner->transform->GetWorldPosition(), rot*Vec3F(0, 1, 0), mRadius, mHeight);
+    }
+#endif
 }
 
 DECLARE_TEMPLATE_CLASS(o2::LinkRef<o2::CapsuleCollider3D>);
