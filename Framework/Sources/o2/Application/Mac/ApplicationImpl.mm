@@ -38,9 +38,18 @@ namespace o2
     
     void Application::InitializePlatform()
     {
+        const bool background = IsBackgroundWindow();
+
         [O2Application sharedApplication];
-        [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
-        [NSApp activateIgnoringOtherApps:YES];        
+
+        // Accessory keeps the app out of the Dock and the task switcher, so bringing its window up
+        // doesn't pull the focus away from whatever the user is doing
+        [NSApp setActivationPolicy:background ? NSApplicationActivationPolicyAccessory
+                                              : NSApplicationActivationPolicyRegular];
+
+        if (!background)
+            [NSApp activateIgnoringOtherApps:YES];
+
         [NSApp setDelegate:[[AppDelegate alloc] init]];
         
         ApplicationPlatformWrapper::window = [[NSWindow alloc] initWithContentRect:NSMakeRect(0, 0, 960, 640)
@@ -48,7 +57,13 @@ namespace o2
                                                                            backing:NSBackingStoreBuffered defer:NO];
         
         [ApplicationPlatformWrapper::window setTitle: [[NSProcessInfo processInfo] processName]];
-        [ApplicationPlatformWrapper::window makeKeyAndOrderFront:nil];
+
+        // Ordering front without making the window key: it keeps drawing, but the keyboard stays
+        // where it was
+        if (background)
+            [ApplicationPlatformWrapper::window orderFrontRegardless];
+        else
+            [ApplicationPlatformWrapper::window makeKeyAndOrderFront:nil];
         
         ApplicationPlatformWrapper::view = [[ViewController alloc] init];
         ApplicationPlatformWrapper::view.colorPixelFormat = MTLPixelFormatRGBA8Unorm;
@@ -143,7 +158,11 @@ namespace o2
     void Application::SetWindowPosition(const Vec2I& position)
     {
         [ApplicationPlatformWrapper::window setFrameOrigin:NSMakePoint(position.x, position.y)];
-        [ApplicationPlatformWrapper::window makeKeyAndOrderFront:nil];
+
+        if (IsBackgroundWindow())
+            [ApplicationPlatformWrapper::window orderFrontRegardless];
+        else
+            [ApplicationPlatformWrapper::window makeKeyAndOrderFront:nil];
     }
 
     Vec2I Application::GetWindowPosition() const

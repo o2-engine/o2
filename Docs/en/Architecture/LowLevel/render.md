@@ -32,6 +32,13 @@ A scene frame is assembled by the `o2::RenderPipeline` pipeline from `o2::Render
 
 Besides 2D primitives, the renderer supports 3D meshes (`o2::Mesh3DFill`), skinned meshes (`o2::SkinningMesh`) and Spine skeletons (`o2::Spine`).
 
+### Frame counters
+`o2Render.GetDrawCallsCount()` and `GetDrawnPrimitives()` report what the whole frame cost.
+`GetSceneDrawCallsCount()` and `GetSceneDrawnPrimitives()` report only the part drawn outside of an
+[editor scope](/Docs/en/Editor/editor.md) — in the editor that is the scene rendered into the Game
+window, without the editor UI on top; outside the editor the two pairs are equal. The
+[profiler panel](/Docs/en/Architecture/Utils/profiling.md) shows the scene ones.
+
 ### Multithreaded rendering
 Rendering can run across two threads. The main thread records a frame's draw batches into an `o2::RenderCommandBuffer` (each `o2::RenderDrawCommand` copies its geometry and snapshots the GPU state it needs), and the `o2::RenderThread` submits them to the GPU (encode / draw calls / present). The two threads rendezvous every frame: the main thread dispatches a frame and waits for the previous one to finish before starting the next, so neither runs more than a frame ahead.
 

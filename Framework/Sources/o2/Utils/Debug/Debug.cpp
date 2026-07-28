@@ -48,6 +48,16 @@ namespace o2
         mFont = nullptr;
     }
 
+    const Ref<VectorFont>& Debug::GetFont() const
+    {
+        return mFont;
+    }
+
+    const Ref<FontStyle>& Debug::GetFontStyle() const
+    {
+        return mFontStyle;
+    }
+
     void Debug::Update(bool isEditor, float dt)
     {
         //PROFILE_SAMPLE_FUNC();

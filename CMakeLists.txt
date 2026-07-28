@@ -39,7 +39,7 @@ if(ANDROID)
 endif()
 
 # Options
-option(O2_SELFPROFILE "Enable profiling o2 benchmark." OFF)
+option(O2_PROFILER "Enables the built-in NanoProfiler and the on-screen profiler widget (F12 / long tap in the top left corner)" ON)
 option(O2_TESTS_BATCH "Register one ctest entry per gtest suite (one process per suite) instead of one per test case" ON)
 option(O2_EDITOR "Enables o2 editor." ON)
 option(O2_ASAN "Enables ASAN (address sanitizer)." OFF)
@@ -127,8 +127,8 @@ if (O2_RENDER_API STREQUAL "gles2")
     list(APPEND O2_COMPILE_DEFINITIONS O2_DISABLE_PLATFORM)
 endif()
 
-if (O2_SELFPROFILE)
-    list(APPEND O2_COMPILE_DEFINITIONS O2_PROFILE_STATS)
+if (O2_PROFILER)
+    list(APPEND O2_COMPILE_DEFINITIONS O2_PROFILER_ENABLED)
 endif()
 
 if (O2_EDITOR)

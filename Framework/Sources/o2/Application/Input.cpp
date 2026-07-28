@@ -3,7 +3,7 @@
 
 #include "o2/Application/VKCodes.h"
 #include "o2/Config/ProjectConfig.h"
-#include "o2/Utils/Debug/Profiling/SimpleProfiler.h"
+#include "o2/Utils/Debug/Profiling/NanoProfiler.h"
 #include "o2/Utils/System/Time/Time.h"
 
 namespace o2

@@ -154,6 +154,7 @@ button.onClicked += []() { ... };
 - [Многопоточность](/Docs/ru/Architecture/Utils/threading.md) — `o2::Thread`, мьютексы, атомики, `o2::SharedRef` и другие CamelCase-обёртки многопоточности.
 - [Джобы](/Docs/ru/Architecture/Utils/jobs.md) — `o2Jobs`: пул рабочих потоков с приоритетами и зависимостями.
 - [Корутины](/Docs/ru/Architecture/Utils/coroutines.md) — `o2::Coroutine<T>`: `co_await` асинхронного кода поверх системы джоб.
+- [Профилирование](/Docs/ru/Architecture/Utils/profiling.md) — `o2::NanoProfiler` и экранная панель профайлера, вызывается по F12.
 
 ## Обертка приложения [(подробная документация)](/Docs/ru/Architecture/LowLevel/application.md)
 

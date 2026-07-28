@@ -154,6 +154,7 @@ The utility layer also includes:
 - [Threading](/Docs/en/Architecture/Utils/threading.md) — `o2::Thread`, mutexes, atomics, `o2::SharedRef` and other CamelCase threading wrappers.
 - [Jobs](/Docs/en/Architecture/Utils/jobs.md) — `o2Jobs`: a worker-thread pool with priorities and dependencies.
 - [Coroutines](/Docs/en/Architecture/Utils/coroutines.md) — `o2::Coroutine<T>`: `co_await` async code over the job system.
+- [Profiling](/Docs/en/Architecture/Utils/profiling.md) — `o2::NanoProfiler` and the on-screen profiler panel, shown by F12.
 
 ## Application Wrapper [(detailed documentation)](/Docs/en/Architecture/LowLevel/application.md)
 

@@ -15,7 +15,8 @@
 #include "o2/Utils/Debug/Log/ConsoleLogStream.h"
 #include "o2/Utils/Debug/Log/FileLogStream.h"
 #include "o2/Utils/Debug/Log/LogStream.h"
-#include "o2/Utils/Debug/Profiling/SimpleProfiler.h"
+#include "o2/Utils/Debug/Profiling/NanoProfiler.h"
+#include "o2/Utils/Debug/Profiling/ProfilerOverlay.h"
 #include "o2/Utils/Debug/StackTrace.h"
 #include "o2/Utils/Editor/EditorScope.h"
 #include "o2/Utils/FileSystem/FileSystem.h"
@@ -57,6 +58,10 @@ namespace o2
     FORWARD_REF_IMPL(Time);
     FORWARD_REF_IMPL(UIManager);
 
+#if defined(O2_PROFILER_ENABLED)
+    FORWARD_REF_IMPL(ProfilerOverlay);
+#endif
+
 #if IS_SCRIPTING_SUPPORTED
     FORWARD_REF_IMPL(ScriptEngine);
 #endif
@@ -64,6 +69,7 @@ namespace o2
 	DECLARE_SINGLETON(Integration);
 
     bool Integration::sHeadless = false;
+    bool Integration::sBackgroundWindow = false;
 
 	Integration::Integration(RefCounter* refCounter):
         Singleton<Integration>(refCounter)
@@ -112,6 +118,16 @@ namespace o2
     bool Integration::IsHeadless()
     {
         return sHeadless;
+    }
+
+    void Integration::SetBackgroundWindow(bool background)
+    {
+        sBackgroundWindow = background;
+    }
+
+    bool Integration::IsBackgroundWindow()
+    {
+        return sBackgroundWindow;
     }
      
 	void Integration::InitializePlatform()
@@ -186,6 +202,8 @@ namespace o2
 
     void Integration::InitalizeSystems()
     {
+        PROFILE_BIND_THREAD();
+
         PROFILE_SAMPLE_FUNC();
 
         srand((UInt)time(NULL));
@@ -240,6 +258,10 @@ namespace o2
 		mRender->SetMultithreadedRenderEnabled(true);
 
 		o2Debug.InitializeFont();
+
+#if defined(O2_PROFILER_ENABLED)
+		mProfilerOverlay = mmake<ProfilerOverlay>();
+#endif
 	}
 
 	void Integration::InitilizeUIStyles()
@@ -269,6 +291,10 @@ namespace o2
         UIManager::DestroySingleton(mUIManager);
         EventSystem::DestroySingleton(mEventSystem);
 
+#if defined(O2_PROFILER_ENABLED)
+        mProfilerOverlay = nullptr;
+#endif
+
         // In headless mode Render and the debug font were never constructed; skip them.
         // Otherwise preserve the original order: debug font + Assets first, then Render
         // (Render owns GL resources that some assets reference).
@@ -284,11 +310,17 @@ namespace o2
 
         Time::DestroySingleton(mTime);
 
+        PROFILE_UNBIND_THREAD();
+
         mLog = nullptr;
     }
 
     void Integration::ProcessFrame()
     {
+        // Closes the previous profiler frame. Placed before any scope of this one is opened, so the
+        // published frame holds only balanced scopes
+        PROFILE_NEW_FRAME();
+
         PROFILE_SAMPLE_FUNC();
 
         if (!mReady)
@@ -381,6 +413,7 @@ namespace o2
 
 		mTime->Update(realDt);
 		UpdateDebug(dt);
+		UpdateProfiler(dt);
 		UpdateTaskManager(dt);
 		UpdateEventSystem();
 	}
@@ -431,6 +464,7 @@ namespace o2
 		OnDraw();
 		DrawUIManager();
 		DrawDebug();
+		DrawProfiler();
 	}
 
 	void Integration::PostDrawFrame()
@@ -486,6 +520,22 @@ namespace o2
     void Integration::UpdateDebug(float dt)
     {
         o2Debug.Update(false, dt);
+    }
+
+    void Integration::UpdateProfiler(float dt)
+    {
+#if defined(O2_PROFILER_ENABLED)
+        if (mProfilerOverlay)
+            mProfilerOverlay->Update(dt);
+#endif
+    }
+
+    void Integration::DrawProfiler()
+    {
+#if defined(O2_PROFILER_ENABLED)
+        if (mProfilerOverlay)
+            mProfilerOverlay->Draw();
+#endif
     }
 
     bool Integration::IsReady()

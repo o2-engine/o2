@@ -26,3 +26,10 @@ Then the engine subsystems are updated and rendering starts. After that, input p
 Physics and the fixed scene update are processed with a fixed step (`fixedFPS`): the accumulated frame time is split into iterations with a constant dt.
 
 To inject code into the update or drawing loop, the `OnUpdate()`, `OnFixedUpdate()` and `OnDraw()` functions can be overridden
+
+## Background window
+`Integration::SetBackgroundWindow(true)`, called before `Initialize()`, brings the window up without
+making it key and keeps the application out of the Dock / task switcher (accessory activation policy
+on macOS, `SW_SHOWNOACTIVATE` on Windows). The window keeps rendering, so screenshots and cursor
+injection still work; the keyboard focus stays where the user left it. The rendered test runners use
+it — a suite that grabs the focus on every launch makes the machine unusable while it runs.

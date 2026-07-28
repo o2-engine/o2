@@ -19,7 +19,7 @@
 #include "o2/Scene/UI/Widget.h"
 #include "o2/Utils/Basic/IObject.h"
 #include "o2/Utils/Debug/Debug.h"
-#include "o2/Utils/Debug/Profiling/SimpleProfiler.h"
+#include "o2/Utils/Debug/Profiling/NanoProfiler.h"
 #include "o2/Utils/Function/ActorSubscription.h"
 #include "o2/Utils/Function/Function.h"
 #include "o2/Utils/Math/Basis.h"

@@ -3,6 +3,7 @@
 
 #include "o2/Scene/CameraActor.h"
 #include "o2/Scene/UI/Widgets/Button.h"
+#include "o2/Utils/Debug/Profiling/ProfilerOverlay.h"
 #include "o2/Utils/Editor/EditorScope.h"
 #include "o2Editor/EditorApplication.h"
 #include "o2Editor/Properties/Basic/Vector2IntProperty.h"
@@ -42,10 +43,19 @@ namespace Editor
         upPanel->name = "up panel";
         upPanel->baseCorner = BaseCorner::Right;
         upPanel->expandWidth = false;
-        upPanel->spacing = 5;
+        upPanel->spacing = 0; // The buttons' backs are meant to sit flush, a gap breaks the strip
         *upPanel->layout = WidgetLayout::HorStretch(VerAlign::Top, 0, 0, 20, 0);
         upPanel->AddLayer("back", mmake<Sprite>("ui/UI4_small_panel_back.png"), Layout::BothStretch(-5, -4, -4, -5));
         mWindow->AddChild(upPanel);
+
+        // The panel arranges its children from the right, so the first one added sits rightmost
+        mProfilerButton = o2UI.CreateWidget<Button>("panel down");
+        mProfilerButton->name = "profiler button";
+        mProfilerButton->layout->minWidth = 110;
+        mProfilerButton->onClick = THIS_FUNC(OnProfilerPressed);
+        upPanel->AddChild(mProfilerButton);
+
+        UpdateProfilerButtonCaption();
 
         mResolutionsButton = o2UI.CreateWidget<Button>("panel down");
         mResolutionsButton->caption = "Resolution";
@@ -58,6 +68,36 @@ namespace Editor
         upPanel->AddChild(resolutionLabel);
 
         OnCurrentWindowSize(true);
+    }
+
+    void GameWindow::Update(float dt)
+    {
+        IEditorWindow::Update(dt);
+
+        // The panel has its own hotkey, so the caption follows the panel and not the other way round
+        UpdateProfilerButtonCaption();
+    }
+
+    void GameWindow::OnProfilerPressed()
+    {
+#if defined(O2_PROFILER_ENABLED)
+        if (auto profiler = ProfilerOverlay::InstancePtr())
+            profiler->SetVisible(!profiler->IsVisible());
+#endif
+    }
+
+    void GameWindow::UpdateProfilerButtonCaption()
+    {
+        if (!mProfilerButton)
+            return;
+
+#if defined(O2_PROFILER_ENABLED)
+        auto profiler = ProfilerOverlay::InstancePtr();
+        mProfilerButton->caption = profiler && profiler->IsVisible() ? "Profiler: on" : "Profiler: off";
+#else
+        mProfilerButton->caption = "Profiler: off";
+        mProfilerButton->SetEnabled(false);
+#endif
     }
 
     void GameWindow::InitializeDevicesMenu()
@@ -181,6 +221,13 @@ namespace Editor
             camera.Lock()->listenersLayer->OnDrawn(mRenderTargetSprite->GetBasis());
 
         EditorScope::Enter(editorDepth);
+
+#if defined(O2_PROFILER_ENABLED)
+        // The panel measures the game, so in the editor it belongs to the window the game is drawn in.
+        // Drawn inside the editor scope, so its own draw calls stay out of the scene counters
+        if (auto profiler = ProfilerOverlay::InstancePtr())
+            profiler->DrawIn(layout->GetWorldRect());
+#endif
     }
 
     void GameWindow::GameView::UpdateRenderTargetSize()

@@ -16,6 +16,7 @@
 #include "o2/Render/Texture.h"
 #include "o2/Utils/Debug/Debug.h"
 #include "o2/Utils/Debug/Log/LogStream.h"
+#include "o2/Utils/Editor/EditorScope.h"
 #include "o2/Utils/FileSystem/FileSystem.h"
 #include "o2/Utils/Math/Geometry.h"
 #include "o2/Utils/Math/Interpolation.h"
@@ -154,6 +155,8 @@ namespace o2
 		mTrianglesCount = 0;
 		mFrameTrianglesCount = 0;
 		mDrawCallsCount = 0;
+		mSceneDrawCallsCount = 0;
+		mSceneTrianglesCount = 0;
 		mCurrentPrimitiveType = PrimitiveType::Polygon;
 		mCurrentBatchVertexType = Vertex::Type();
 		mDrawingDepth = 0.0f;
@@ -534,6 +537,15 @@ namespace o2
 			PlatformDrawPrimitives();
 
 		mFrameTrianglesCount += mTrianglesCount;
+
+		// Split off what the scene costs: in the editor everything but the Game window rendering happens
+		// inside an editor scope, and mixing the two makes the numbers unreadable
+		if (!EditorScope::IsInScope())
+		{
+			mSceneTrianglesCount += mTrianglesCount;
+			mSceneDrawCallsCount++;
+		}
+
 		mLastDrawVertex = mTrianglesCount = mLastDrawIdx = 0;
 
 		mDrawCallsCount++;
@@ -1135,6 +1147,16 @@ namespace o2
 	int Render::GetDrawnPrimitives() const
 	{
 		return mFrameTrianglesCount;
+	}
+
+	int Render::GetSceneDrawCallsCount() const
+	{
+		return mSceneDrawCallsCount;
+	}
+
+	int Render::GetSceneDrawnPrimitives() const
+	{
+		return mSceneTrianglesCount;
 	}
 
 	void Render::SetCamera(const Camera& camera)

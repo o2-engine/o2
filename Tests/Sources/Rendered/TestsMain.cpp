@@ -1,6 +1,7 @@
 #include "o2/stdafx.h"
 #include "o2/O2.h"
 #include "o2/Application/Application.h"
+#include "o2/Sound/SoundSystem.h"
 #include "o2/EngineSettings.h"
 #include "o2/Utils/FileSystem/FileSystem.h"
 #include <gtest/gtest.h>
@@ -106,6 +107,11 @@ int main(int argc, char** argv)
     ::testing::InitGoogleTest(&argc, argv);
 
     bool listOnly = ::testing::GTEST_FLAG(list_tests);
+
+    // The suites bring up a real window: keep it out of the focus and the audio out of the speakers,
+    // otherwise a test run makes the machine unusable
+    Integration::SetBackgroundWindow(true);
+    SoundSystem::SetSilent(true);
 
     Ref<Application> app;
     if (!listOnly)

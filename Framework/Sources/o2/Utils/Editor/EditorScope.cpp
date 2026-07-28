@@ -31,16 +31,6 @@ namespace o2
         }
     }
 
-    int EditorScope::GetDepth()
-    {
-        return mDepth;
-    }
-
-    bool EditorScope::IsInScope()
-    {
-        return mDepth > 0;
-    }
-
     int EditorScope::mDepth = 0;
 
     PushEditorScopeOnStack::PushEditorScopeOnStack(int count /*= 1*/):

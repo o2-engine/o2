@@ -31,6 +31,10 @@ namespace o2
     FORWARD_CLASS_REF(Time);
     FORWARD_CLASS_REF(UIManager);
 
+#if defined(O2_PROFILER_ENABLED)
+    FORWARD_CLASS_REF(ProfilerOverlay);
+#endif
+
 #if IS_SCRIPTING_SUPPORTED
     FORWARD_CLASS_REF(ScriptEngine);
 #endif
@@ -75,6 +79,14 @@ namespace o2
 		// Returns true if integration was started in headless mode @SCRIPTABLE
 		static bool IsHeadless();
 
+		// Brings the application window up without taking the keyboard focus, and keeps the app out of
+		// the task switcher. Must be called before Initialize(). Intended for test runners: a window
+		// that grabs focus every launch makes the machine unusable while the suites run
+		static void SetBackgroundWindow(bool background);
+
+		// Returns true if the window is brought up without taking the focus
+		static bool IsBackgroundWindow();
+
 		// Tears down all subsystems in a controlled order. Normally called automatically
 		// from Launch() at the end of the main loop. Test runners that skip Launch() must
 		// call it explicitly before the Application Ref<> drops, otherwise members destruct
@@ -117,6 +129,8 @@ namespace o2
         static bool sHeadless; // Headless mode: skip window + render + UI styles init,
                                // and route asserts to the log
 
+        static bool sBackgroundWindow; // Show the window without taking the focus
+
         Ref<Assets>        mAssets;        // Assets
         Ref<EventSystem>   mEventSystem;   // Events processing system
         Ref<FileSystem>    mFileSystem;    // File system
@@ -133,6 +147,10 @@ namespace o2
         Ref<CoroutineScheduler> mCoroutineScheduler; // Coroutine timer/next-frame scheduler
         Ref<Time>          mTime;          // Time utilities
         Ref<UIManager>     mUIManager;     // UI manager>
+
+#if defined(O2_PROFILER_ENABLED)
+        Ref<ProfilerOverlay> mProfilerOverlay; // On-screen profiler widget, shown by F12 or a long tap
+#endif
 
 #if IS_SCRIPTING_SUPPORTED
         Ref<ScriptEngine>  mScriptingEngine; // Scripting engine
@@ -251,6 +269,12 @@ namespace o2
 		// Updates debug
 		virtual void UpdateDebug(float dt);
 
+		// Handles the profiler widget input and updates it
+		void UpdateProfiler(float dt);
+
+		// Draws the profiler widget above everything else
+		void DrawProfiler();
+
 		// Calling on updating
 		virtual void OnUpdate(float dt) {}
 
@@ -293,6 +317,9 @@ CLASS_FIELDS_META(o2::Integration)
     FIELD().PROTECTED().NAME(mCoroutineScheduler);
     FIELD().PROTECTED().NAME(mTime);
     FIELD().PROTECTED().NAME(mUIManager);
+#if  defined(O2_PROFILER_ENABLED)
+    FIELD().PROTECTED().NAME(mProfilerOverlay);
+#endif
 #if  IS_SCRIPTING_SUPPORTED
     FIELD().PROTECTED().NAME(mScriptingEngine);
 #endif
@@ -313,6 +340,8 @@ CLASS_METHODS_META(o2::Integration)
     FUNCTION().PUBLIC().SIGNATURE(float, GetMainThreadJobsQuota);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(void, SetHeadless, bool);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE_STATIC(bool, IsHeadless);
+    FUNCTION().PUBLIC().SIGNATURE_STATIC(void, SetBackgroundWindow, bool);
+    FUNCTION().PUBLIC().SIGNATURE_STATIC(bool, IsBackgroundWindow);
     FUNCTION().PUBLIC().SIGNATURE(void, Deinitialize);
     FUNCTION().PUBLIC().SIGNATURE(void, SetContentSize, const Vec2I&);
     FUNCTION().PUBLIC().SIGNATURE(Vec2I, GetContentSize);

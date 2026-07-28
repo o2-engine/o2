@@ -150,6 +150,13 @@ namespace o2
 		// Returns current drawn primitives
 		int GetDrawnPrimitives() const;
 
+		// Returns the draw calls of this frame that were made outside of an editor scope. In the editor
+		// that is the scene drawn into the Game window; outside of it, it equals GetDrawCallsCount()
+		int GetSceneDrawCallsCount() const;
+
+		// Returns the primitives of this frame that were drawn outside of an editor scope
+		int GetSceneDrawnPrimitives() const;
+
 		// Binding camera. NULL - standard camera
 		void SetCamera(const Camera& camera);
 
@@ -380,6 +387,9 @@ namespace o2
 		UInt       mTrianglesCount = 0;           // Triangles count for next DIP
 		UInt       mFrameTrianglesCount = 0;      // Total triangles at current frame
 		UInt       mDrawCallsCount = 0;           // DrawIndexedPrimitives calls count
+
+		UInt       mSceneDrawCallsCount = 0;      // Draw calls made outside of an editor scope
+		UInt       mSceneTrianglesCount = 0;      // Triangles drawn outside of an editor scope
 
 		UInt8*       mVertexData = nullptr;       // CPU-side vertex batch buffer
 		UInt         mVertexBufferSize = 0;       // Max vertex count in batch buffer
