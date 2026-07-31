@@ -246,7 +246,16 @@ namespace o2
         if (GetContentSize() == before)
             return;
 
-        onContentSizeChanged();
+        onLayoutChanged();
+    }
+
+    void ProfilerWidget::SetContentOffset(const Vec2F& offset)
+    {
+        if (mOffset == offset)
+            return;
+
+        mOffset = offset;
+        onLayoutChanged();
     }
 
     void ProfilerWidget::SetBaselineEnabled(bool enabled)
@@ -282,7 +291,7 @@ namespace o2
         mOverallStatus = GetOverallStatus();
     }
 
-    void ProfilerWidget::UpdateInteraction()
+    void ProfilerWidget::UpdateLayoutRects()
     {
         const RectF rect = layout->GetWorldRect();
 
@@ -297,28 +306,36 @@ namespace o2
 
         mColumnWidth = Math::Max(mTimelineRect.Width()/historyFrames, kTimelineMinColumnWidth);
 
+        mHeaderRect = RectF(rect.left, rect.top - kHeaderHeight, rect.right, rect.top);
+
         // Part of the caption bar: the whole bar height, flush with the panel edge
         mBaselineRect = RectF(rect.right - kBaselineButtonWidth, rect.top - kHeaderHeight, rect.right, rect.top);
 
         // The panel hangs on its top left corner, so it grows to the right and down from this grip
         mResizeGripRect = RectF(rect.right - kResizeGripSize, rect.bottom, rect.right,
                                 rect.bottom + kResizeGripSize);
+    }
+
+    void ProfilerWidget::UpdateInteraction()
+    {
+        UpdateLayoutRects();
 
         const Vec2F cursor = o2Input.GetCursorPos();
 
         UpdateResizing(cursor);
+        UpdateDragging(cursor);
 
-        mBaselineHovered = !mResizing && mBaselineRect.IsInside(cursor);
+        mBaselineHovered = !mResizing && !mDragging && mBaselineRect.IsInside(cursor);
         mGripHovered = mResizing || mResizeGripRect.IsInside(cursor);
 
         mDetailedFrame = -1;
-        if (mHistoryCount > 0 && !mResizing && mTimelineRect.IsInside(cursor))
+        if (mHistoryCount > 0 && !mResizing && !mDragging && mTimelineRect.IsInside(cursor))
         {
             const int index = (int)((cursor.x - mTimelineRect.left)/mColumnWidth);
             mDetailedFrame = Math::Clamp(index, historyFrames - mHistoryCount, historyFrames - 1);
         }
 
-        if (o2Input.IsCursorPressed() && mBaselineHovered)
+        if (o2Input.IsCursorPressed() && !mDragging && mBaselineHovered)
             SetBaselineEnabled(!mBaselineEnabled);
     }
 
@@ -346,6 +363,33 @@ namespace o2
         // down and to the right grows it
         SetContentSize(mResizeStartSize + Vec2F(cursor.x - mResizeStartCursor.x,
                                                 mResizeStartCursor.y - cursor.y));
+    }
+
+    void ProfilerWidget::UpdateDragging(const Vec2F& cursor)
+    {
+        if (!mDragging)
+        {
+            // The baseline button lives in the caption bar too, and it is not a handle
+            if (mResizing || !o2Input.IsCursorPressed() || !mHeaderRect.IsInside(cursor) ||
+                mBaselineRect.IsInside(cursor))
+            {
+                return;
+            }
+
+            mDragging = true;
+            mDragStartOffset = mOffset;
+            mDragStartCursor = cursor;
+
+            return;
+        }
+
+        if (!o2Input.IsCursorDown())
+        {
+            mDragging = false;
+            return;
+        }
+
+        SetContentOffset(mDragStartOffset + cursor - mDragStartCursor);
     }
 
     void ProfilerWidget::UpdateCounters(float dt)
@@ -621,6 +665,9 @@ namespace o2
         mMesh->vertexCount = 0;
         mMesh->polyCount = 0;
         mUsedCaptions = 0;
+
+        // A drag moves the panel after the update, so the parts are placed against where it is now
+        UpdateLayoutRects();
 
         PushRect(layout->GetWorldRect(), kPanelColor);
 

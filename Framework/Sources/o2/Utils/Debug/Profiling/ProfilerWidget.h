@@ -121,7 +121,7 @@ namespace o2
         static constexpr float maxSizeFactor = 4.0f; // How far past its design size the panel can be dragged
 
     public:
-        Function<void()> onContentSizeChanged; // Called when a resize changed the size the panel needs
+        Function<void()> onLayoutChanged;      // Called when a drag or a resize changed the place the panel needs
         Function<void()> onCountersUpdate;     // Called once before the counters are sampled, so a whole
                                                // group of them can be collected in a single pass
 
@@ -165,6 +165,12 @@ namespace o2
         // Returns true when the cursor is over the resize grip, which is then highlighted
         bool IsResizeGripHovered() const { return mGripHovered; }
 
+        // Returns the world rect of the frame timeline, as of the last update or drawing
+        const RectF& GetTimelineRect() const { return mTimelineRect; }
+
+        // Returns the world rect of the baseline button, as of the last update or drawing
+        const RectF& GetBaselineButtonRect() const { return mBaselineRect; }
+
         // Captures the current values as the baseline, or drops it
         void SetBaselineEnabled(bool enabled);
 
@@ -182,6 +188,13 @@ namespace o2
         // Resizes the panel, clamping it between the minimal and the maximal size. Only the timeline
         // stretches: the caption rows keep their height, so the panel stays readable at any size
         void SetContentSize(const Vec2F& size);
+
+        // Returns where the panel is dragged to, relative to the top left corner of its host
+        const Vec2F& GetContentOffset() const { return mOffset; }
+
+        // Moves the panel relative to the top left corner of its host. Whoever lays the panout out
+        // clamps it into the host, so it can't be dragged out of reach
+        void SetContentOffset(const Vec2F& offset);
 
         // Returns the status of the value against the thresholds
         static PerfStatus GetValueStatus(double value, const PerfMetricSettings& settings);
@@ -247,7 +260,8 @@ namespace o2
 
         bool mBaselineEnabled = false; // Show values as a difference from the baseline
 
-        Vec2F mSize; // Size dragged by the corner grip, zero until the panel was resized
+        Vec2F mSize;   // Size dragged by the corner grip, zero until the panel was resized
+        Vec2F mOffset; // Where the panel was dragged to by its caption bar
 
         Ref<Mesh> mMesh; // Panel geometry: background and all the bars
 
@@ -255,6 +269,7 @@ namespace o2
         int             mUsedCaptions = 0; // Captions taken from the pool this frame
 
         RectF mTimelineRect;   // World rect of the timeline graph, used for cursor hit testing
+        RectF mHeaderRect;     // World rect of the caption bar, the panel is dragged by it
         RectF mBaselineRect;   // World rect of the baseline button
         RectF mResizeGripRect; // World rect of the resize grip in the bottom right corner
 
@@ -267,6 +282,10 @@ namespace o2
         Vec2F mResizeStartSize;    // Panel size the current drag started with
         Vec2F mResizeStartCursor;  // Cursor position the current drag started at
 
+        bool  mDragging = false;  // Is the panel being dragged by its caption bar
+        Vec2F mDragStartOffset;   // Panel offset the current drag started with
+        Vec2F mDragStartCursor;   // Cursor position the current drag started at
+
     protected:
         // Reduces the completed profiler frame to the shown scopes and pushes it into the timeline
         void CaptureTimelineFrame();
@@ -277,11 +296,19 @@ namespace o2
         // Samples the counters when their interval has passed
         void UpdateCounters(float dt);
 
+        // Recomputes the rects the panel's parts occupy from its current world rect. Called both before
+        // the hit testing and before the drawing: a drag moves the panel after the update, and drawing
+        // the parts where they were would leave them a frame behind
+        void UpdateLayoutRects();
+
         // Tracks the cursor over the timeline, the baseline button and the zoom grip
         void UpdateInteraction();
 
         // Starts, follows and ends a resize grip drag
         void UpdateResizing(const Vec2F& cursor);
+
+        // Starts, follows and ends a caption bar drag
+        void UpdateDragging(const Vec2F& cursor);
 
         // Returns the height of everything but the timeline: the toolbar, the metric rows and the counters
         float GetFixedRowsHeight() const;

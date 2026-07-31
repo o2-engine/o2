@@ -52,6 +52,8 @@ namespace
 
         void TearDown() override
         {
+            ReleaseCursorNow();
+
             widget = nullptr;
             root = nullptr;
 
@@ -59,6 +61,36 @@ namespace
             NanoProfiler::NextFrame();
 
             AppTestDriver::PumpFrames(1);
+        }
+
+        // Drives the cursor straight into the input and the widget, without the application frame in
+        // between: the panel's press handling only sees a press on the frame it happens
+        void PressCursorOn(const Vec2F& position)
+        {
+            o2Input.OnCursorMoved(position);
+            o2Input.OnCursorPressed(position);
+            o2Input.PreUpdate();
+
+            widget->Update(0.016f);
+            o2Input.Update(0.016f);
+        }
+
+        void DragCursorTo(const Vec2F& position)
+        {
+            o2Input.OnCursorMoved(position);
+            o2Input.PreUpdate();
+
+            widget->Update(0.016f);
+            o2Input.Update(0.016f);
+        }
+
+        void ReleaseCursorNow()
+        {
+            o2Input.OnCursorReleased();
+            o2Input.PreUpdate();
+
+            widget->Update(0.016f);
+            o2Input.Update(0.016f);
         }
 
         // Records one profiler frame of the given scopes and lets the widget capture it
@@ -409,7 +441,7 @@ TEST_F(ProfilerWidgetFixture, ContentSizeFollowsTheRequestedSizeAndIsClamped)
     EXPECT_FLOAT_EQ(min.y, design.y) << "the design height is already the minimal one";
 
     int contentSizeChanges = 0;
-    widget->onContentSizeChanged = [&]() { contentSizeChanges++; };
+    widget->onLayoutChanged = [&]() { contentSizeChanges++; };
 
     // both axes are taken as they come
     widget->SetContentSize(design + Vec2F(200.0f, 120.0f));
@@ -426,7 +458,7 @@ TEST_F(ProfilerWidgetFixture, ContentSizeFollowsTheRequestedSizeAndIsClamped)
     widget->SetContentSize(design*100.0f);
     EXPECT_EQ(widget->GetContentSize(), design*ProfilerWidget::maxSizeFactor);
 
-    widget->onContentSizeChanged = Function<void()>();
+    widget->onLayoutChanged = Function<void()>();
 }
 
 // Resizing stretches the timeline only: the caption rows keep their height, so a taller panel means
@@ -463,6 +495,65 @@ TEST_F(ProfilerWidgetFixture, ResizingStretchesTheTimelineAndKeepsTracking)
     o2Render.Begin();
     root->Draw();
     o2Render.End();
+}
+
+// The panel is dragged around by its caption bar, so it can be moved off whatever it covers
+TEST_F(ProfilerWidgetFixture, CaptionBarDragsThePanel)
+{
+    const RectF before = widget->layout->GetWorldRect();
+    EXPECT_EQ(widget->GetContentOffset(), Vec2F());
+
+    int layoutChanges = 0;
+    widget->onLayoutChanged = [&]()
+    {
+        layoutChanges++;
+        *widget->layout = WidgetLayout::Based(BaseCorner::LeftTop, widget->GetContentSize(),
+                                              widget->GetContentOffset());
+        root->UpdateTransform();
+    };
+
+    // grab the caption bar away from the baseline button and pull the panel down and to the right
+    const Vec2F grab(before.left + 40.0f, before.top - 8.0f);
+    PressCursorOn(grab);
+
+    const Vec2F delta(120.0f, -70.0f);
+    DragCursorTo(grab + delta);
+
+    EXPECT_GT(layoutChanges, 0);
+    EXPECT_EQ(widget->GetContentOffset(), delta);
+
+    const RectF dragged = widget->layout->GetWorldRect();
+    EXPECT_NEAR(dragged.left, before.left + delta.x, 1.0f);
+    EXPECT_NEAR(dragged.top, before.top + delta.y, 1.0f);
+    EXPECT_NEAR(dragged.Width(), before.Width(), 1.0f);
+
+    ReleaseCursorNow();
+
+    // released: moving the cursor doesn't drag it any more
+    DragCursorTo(grab);
+    EXPECT_EQ(widget->GetContentOffset(), delta);
+
+    widget->onLayoutChanged = Function<void()>();
+    widget->SetContentOffset(Vec2F());
+}
+
+// The baseline button sits in the caption bar, and pressing it must not start a drag
+TEST_F(ProfilerWidgetFixture, PressingTheBaselineButtonDoesNotDragThePanel)
+{
+    const RectF panel = widget->layout->GetWorldRect();
+    const Vec2F onButton(panel.right - 25.0f, panel.top - 10.0f);
+
+    DragCursorTo(onButton);
+    ASSERT_TRUE(widget->IsBaselineHovered());
+
+    PressCursorOn(onButton);
+    EXPECT_TRUE(widget->IsBaselineEnabled());
+
+    DragCursorTo(onButton + Vec2F(60.0f, -40.0f));
+    EXPECT_EQ(widget->GetContentOffset(), Vec2F());
+
+    ReleaseCursorNow();
+    widget->SetBaselineEnabled(false);
 }
 
 // The panel is a debug overlay, but a debug overlay that costs a millisecond would change the frame it

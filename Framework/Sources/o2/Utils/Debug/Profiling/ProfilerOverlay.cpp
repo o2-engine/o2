@@ -65,7 +65,7 @@ namespace o2
         mRoot->name = "profiler overlay root";
 
         mWidget = mmake<ProfilerWidget>();
-        mWidget->onContentSizeChanged = [&]() { OnApplicationSized(); };
+        mWidget->onLayoutChanged = [&]() { OnApplicationSized(); };
         mWidget->onCountersUpdate = [&]() { CountSceneContent(); };
         mRoot->AddChild(mWidget);
 
@@ -230,9 +230,14 @@ namespace o2
         const Vec2F size(Math::Max(Math::Min(wanted.x, area.Width()), minSize.x),
                          Math::Max(Math::Min(wanted.y, area.Height()), minSize.y));
 
-        // Hung on the top left corner of its host, flush with it
+        // Hung on the top left corner of its host, moved from there by whatever the caption bar was
+        // dragged by, and never dragged out of the host
+        const Vec2F dragged = mWidget->GetContentOffset();
+        const Vec2F offset(Math::Clamp(dragged.x, 0.0f, Math::Max(area.Width() - size.x, 0.0f)),
+                           Math::Clamp(dragged.y, Math::Min(size.y - area.Height(), 0.0f), 0.0f));
+
         *mRoot->layout = WidgetLayout::Based(BaseCorner::Center, area.Size(), area.Center());
-        *mWidget->layout = WidgetLayout::Based(BaseCorner::LeftTop, size);
+        *mWidget->layout = WidgetLayout::Based(BaseCorner::LeftTop, size, offset);
 
         mRoot->UpdateTransform();
     }

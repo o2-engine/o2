@@ -77,8 +77,9 @@ The panel shows:
 - a `Base` button that switches the values to a difference from a captured baseline. Both it and the
   resize grip light up under the cursor.
 
-The panel hangs on the top left corner of its host, flush with it. **Dragging the grip in the bottom
-right corner resizes it**: the corner follows the cursor in both axes, the top left corner stays put.
+The panel hangs on the top left corner of its host, flush with it. **Dragging its caption bar moves it**
+— the offset is clamped into the host, so it can't be dragged out of reach — and **dragging the grip in
+the bottom right corner resizes it**: the corner follows the cursor in both axes, the top left corner stays put.
 Only the timeline stretches — a wider panel means wider frame columns, a taller one a taller graph,
 while the caption rows keep their height and the captions their font size. The size is clamped between
 `GetMinContentSize()` (a pixel per frame, the caption lines) and `GetDesignSize()*maxSizeFactor`;
