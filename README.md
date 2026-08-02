@@ -1,9 +1,9 @@
-[![Windows](https://github.com/o2-engine/PetStory/actions/workflows/windows-cmake.yml/badge.svg)](https://github.com/o2-engine/PetStory/actions/workflows/windows-cmake.yml)
-[![Linux](https://github.com/o2-engine/PetStory/actions/workflows/linux-cmake.yml/badge.svg?branch=master)](https://github.com/o2-engine/PetStory/actions/workflows/linux-cmake.yml)
-[![macOS](https://github.com/o2-engine/PetStory/actions/workflows/mac-cmake.yml/badge.svg?branch=master)](https://github.com/o2-engine/PetStory/actions/workflows/mac-cmake.yml)
-[![iOS](https://github.com/o2-engine/PetStory/actions/workflows/ios-cmake.yml/badge.svg?branch=master)](https://github.com/o2-engine/PetStory/actions/workflows/ios-cmake.yml)
-[![WebAssembly](https://github.com/o2-engine/PetStory/actions/workflows/wasm-cmake.yml/badge.svg?branch=master)](https://github.com/o2-engine/PetStory/actions/workflows/wasm-cmake.yml)
-[![Android](https://github.com/o2-engine/PetStory/actions/workflows/android-cmake.yml/badge.svg?branch=master)](https://github.com/o2-engine/PetStory/actions/workflows/android-cmake.yml)
+[![Windows](https://github.com/o2-engine/o2-Template/actions/workflows/windows-cmake.yml/badge.svg?branch=main)](https://github.com/o2-engine/o2-Template/actions/workflows/windows-cmake.yml)
+[![Linux](https://github.com/o2-engine/o2-Template/actions/workflows/linux-cmake.yml/badge.svg?branch=main)](https://github.com/o2-engine/o2-Template/actions/workflows/linux-cmake.yml)
+[![macOS](https://github.com/o2-engine/o2-Template/actions/workflows/mac-cmake.yml/badge.svg?branch=main)](https://github.com/o2-engine/o2-Template/actions/workflows/mac-cmake.yml)
+[![iOS](https://github.com/o2-engine/o2-Template/actions/workflows/ios-cmake.yml/badge.svg?branch=main)](https://github.com/o2-engine/o2-Template/actions/workflows/ios-cmake.yml)
+[![WebAssembly](https://github.com/o2-engine/o2-Template/actions/workflows/wasm-cmake.yml/badge.svg?branch=main)](https://github.com/o2-engine/o2-Template/actions/workflows/wasm-cmake.yml)
+[![Android](https://github.com/o2-engine/o2-Template/actions/workflows/android-cmake.yml/badge.svg?branch=main)](https://github.com/o2-engine/o2-Template/actions/workflows/android-cmake.yml)
 
 # o2
 
