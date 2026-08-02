@@ -605,7 +605,7 @@ namespace o2
     }
 
     void ProfilerWidget::PlaceCaption(const Vec2F& position, const WString& text, const Color4& color, float width,
-                                      bool rightAlign /*= false*/, bool small /*= false*/)
+                                      bool rightAlign /*= false*/, bool smallFont /*= false*/)
     {
         if (mUsedCaptions >= mCaptions.Count())
         {
@@ -621,7 +621,7 @@ namespace o2
 
         Caption& caption = mCaptions[mUsedCaptions++];
 
-        const int height = small ? kSmallCaptionHeight : kCaptionHeight;
+        const int height = smallFont ? kSmallCaptionHeight : kCaptionHeight;
         if (caption.height != height)
         {
             caption.text->SetHeight(height);

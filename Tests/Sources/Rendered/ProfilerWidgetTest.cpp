@@ -41,13 +41,11 @@ namespace
             *root->layout = WidgetLayout::Based(BaseCorner::Center, (Vec2F)o2Application.GetContentSize());
             *widget->layout = WidgetLayout::Based(BaseCorner::LeftTop, widget->GetContentSize());
 
-            // park the cursor away from the panel: a test that left it hovering the timeline would
-            // otherwise freeze the next one
-            AppTestDriver::MoveCursor(Vec2F(), 1);
-
             // one application frame initializes the actors, so they become enabled in hierarchy
             AppTestDriver::PumpFrames(1);
             root->UpdateTransform();
+
+            ParkCursorOffThePanel();
         }
 
         void TearDown() override
@@ -61,6 +59,15 @@ namespace
             NanoProfiler::NextFrame();
 
             AppTestDriver::PumpFrames(1);
+        }
+
+        // Takes the cursor off every control of the panel: one left hovering the timeline freezes the
+        // frame collecting. Follows the current panel rect - a screen small enough for the panel to
+        // reach its center makes any fixed point unsafe
+        void ParkCursorOffThePanel()
+        {
+            const RectF panel = widget->layout->GetWorldRect();
+            AppTestDriver::MoveCursor(Vec2F(panel.right + 100.0f, panel.bottom - 100.0f), 1);
         }
 
         // Drives the cursor straight into the input and the widget, without the application frame in
@@ -234,7 +241,7 @@ TEST_F(ProfilerWidgetFixture, ControlsHighlightUnderTheCursor)
     EXPECT_FALSE(widget->IsBaselineHovered());
     EXPECT_TRUE(widget->IsResizeGripHovered());
 
-    AppTestDriver::MoveCursor(Vec2F(), 1);
+    ParkCursorOffThePanel();
     widget->Update(0.016f);
     EXPECT_FALSE(widget->IsBaselineHovered());
     EXPECT_FALSE(widget->IsResizeGripHovered());
@@ -474,6 +481,7 @@ TEST_F(ProfilerWidgetFixture, ResizingStretchesTheTimelineAndKeepsTracking)
     widget->SetContentSize(design + Vec2F(300.0f, 200.0f));
     *widget->layout = WidgetLayout::Based(BaseCorner::LeftTop, widget->GetContentSize());
     root->UpdateTransform();
+    ParkCursorOffThePanel(); // the grown panel may have reached wherever the cursor was parked
 
     for (int i = 0; i < 10; i++)
         RecordFrame({ "alpha", "beta" }, 5000);

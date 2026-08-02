@@ -334,8 +334,9 @@ namespace o2
         // Takes a caption from the pool and places it in a box of the given width; the captions are drawn
         // together after the panel geometry. Text that doesn't fit the box is cut with an ellipsis, so a
         // long scope name can't spill over the panel
+        // ('small' is off limits as a name: windows.h defines it as char)
         void PlaceCaption(const Vec2F& position, const WString& text, const Color4& color, float width,
-                          bool rightAlign = false, bool small = false);
+                          bool rightAlign = false, bool smallFont = false);
 
         // Draws the top bar: the baseline button
         void DrawToolbar(float& y);
