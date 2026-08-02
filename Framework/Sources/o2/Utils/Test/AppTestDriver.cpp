@@ -23,7 +23,11 @@ namespace o2
         while (time < seconds)
         {
             PumpFrames(1);
-            time += o2Time.GetDeltaTime();
+
+            // o2Time keeps the real delta, the update loop applies it clamped: on a slow machine the
+            // wall clock runs ahead of the simulation the test is waiting for
+            time += Math::Clamp(o2Time.GetDeltaTime(), Integration::minFrameDeltaTime,
+                                Integration::maxFrameDeltaTime);
         }
     }
 

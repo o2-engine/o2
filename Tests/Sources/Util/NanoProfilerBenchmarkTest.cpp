@@ -34,6 +34,14 @@ namespace
         return best;
     }
 
+    // An unoptimized build inlines nothing, so every measured path costs a real call; the per-scope
+    // budgets below only mean something for a shipping build
+#ifdef DEBUG
+    constexpr double kBudgetFactor = 4.0;
+#else
+    constexpr double kBudgetFactor = 1.0;
+#endif
+
     class NanoProfilerBenchmark: public ::testing::Test
     {
     protected:
@@ -61,7 +69,7 @@ TEST_F(NanoProfilerBenchmark, DisabledScopeIsAlmostFree)
     const double ns = MeasureNs(200000, []() { NanoProfiler::SampleScope scope("benchmark"); });
     o2Debug.Log("NanoProfiler: disabled scope %.1f ns", ns);
 
-    EXPECT_LT(ns, 25.0);
+    EXPECT_LT(ns, 25.0*kBudgetFactor);
 }
 
 // On a thread the profiler doesn't record, a scope is a single null check
@@ -73,7 +81,7 @@ TEST_F(NanoProfilerBenchmark, UnboundThreadScopeIsAlmostFree)
     const double ns = MeasureNs(200000, []() { NanoProfiler::SampleScope scope("benchmark"); });
     o2Debug.Log("NanoProfiler: unbound thread scope %.1f ns", ns);
 
-    EXPECT_LT(ns, 25.0);
+    EXPECT_LT(ns, 25.0*kBudgetFactor);
 }
 
 // Recording a scope is two clock reads plus a store, and must stay in the tens of nanoseconds so a
@@ -93,7 +101,7 @@ TEST_F(NanoProfilerBenchmark, RecordedScopeCostsTwoClockReads)
 
     o2Debug.Log("NanoProfiler: recorded scope %.1f ns", ns);
 
-    EXPECT_LT(ns, 200.0);
+    EXPECT_LT(ns, 200.0*kBudgetFactor);
 }
 
 // Reducing a full frame to per-name self times is allocation free and runs once per frame

@@ -404,7 +404,7 @@ namespace o2
 			realDt = maxFPSDeltaTime;
 		}
 
-		dt = Math::Clamp(realDt, 0.001f, 0.05f);
+		dt = Math::Clamp(realDt, minFrameDeltaTime, maxFrameDeltaTime);
 	}
 
 	void Integration::PreUpdateFrame(float dt, float realDt)

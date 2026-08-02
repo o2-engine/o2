@@ -4,6 +4,7 @@
 #include "o2/Utils/Debug/Profiling/NanoProfiler.h"
 #include "o2/Utils/Editor/EditorScope.h"
 
+#include <cstring>
 #include <thread>
 
 #if defined(O2_PROFILER_ENABLED)
@@ -31,12 +32,14 @@ namespace
         }
     };
 
+    // The profiler identifies a name by its pointer, but the literal written here isn't necessarily the
+    // one the scope was opened with: MSVC pools identical literals only in optimized builds
     const NanoProfiler::Sample* FindSample(const char* name)
     {
         const NanoProfiler::Sample* samples = NanoProfiler::GetFrameSamples();
         for (int i = 0; i < NanoProfiler::GetFrameSamplesCount(); i++)
         {
-            if (samples[i].name == name)
+            if (strcmp(samples[i].name, name) == 0)
                 return samples + i;
         }
 
@@ -47,7 +50,7 @@ namespace
     {
         for (int i = 0; i < count; i++)
         {
-            if (samples[i].name == name)
+            if (strcmp(samples[i].name, name) == 0)
                 return samples[i].time;
         }
 

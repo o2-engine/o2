@@ -48,6 +48,11 @@ namespace o2
         int maxFPS = 600;  // Maximum frames per second
         int fixedFPS = 60; // Fixed frames per second
 
+        // The real frame delta is clamped into this range before it drives the update: a stalled frame
+        // must not teleport the simulation, and a zero one must not stop it
+        static constexpr float minFrameDeltaTime = 0.001f;
+        static constexpr float maxFrameDeltaTime = 0.05f;
+
     public:
         // Default constructor
         Integration(RefCounter* refCounter);
