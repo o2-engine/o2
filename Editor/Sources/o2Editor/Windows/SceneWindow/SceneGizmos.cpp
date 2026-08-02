@@ -54,14 +54,15 @@ namespace Editor
         }
     }
 
-    void SceneGizmos::Draw(const Function<Vec2F(const Vec3F&)>& projection)
+    void SceneGizmos::Draw(const Function<Vec2F(const Vec3F&)>& projection, const Vec3F& clipPlaneOrigin /*= Vec3F()*/,
+                           const Vec3F& clipPlaneNormal /*= Vec3F()*/)
     {
         UpdateGizmosTypes();
 
         if (!mEnabled)
             return;
 
-        o2Gizmos.SetProjection(projection);
+        o2Gizmos.SetProjection(projection, clipPlaneOrigin, clipPlaneNormal);
 
         for (auto& [actorPtr, actorRef] : o2Scene.GetAllActors())
         {

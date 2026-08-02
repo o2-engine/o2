@@ -144,6 +144,12 @@ namespace Editor
         return target + GetRotation()*Vec3F(0.0f, 0.0f, distance);
     }
 
+    void SceneView3DState::GetNearClipPlane(Vec3F& origin, Vec3F& normal) const
+    {
+        normal = GetRotation()*Vec3F(0.0f, 0.0f, -1.0f);
+        origin = GetCameraPosition() + normal*nearClip;
+    }
+
     void SceneView3DState::Orbit(const Vec2F& deltaAnglesRad)
     {
         yaw += deltaAnglesRad.x;

@@ -69,6 +69,10 @@ namespace Editor
         // Returns camera position on the orbit sphere
         Vec3F GetCameraPosition() const;
 
+        // Returns near clip plane: point on the plane and normal along the view direction. Geometry
+        // behind it can't be projected - perspective divide mirrors it in front of the camera
+        void GetNearClipPlane(Vec3F& origin, Vec3F& normal) const;
+
         // Rotates view: x adds to yaw, y adds to pitch (clamped)
         void Orbit(const Vec2F& deltaAnglesRad);
 

@@ -17,6 +17,7 @@
 #include "o2Editor/Windows/SceneWindow/GizmosPopup.h"
 #include "o2Editor/Windows/SceneWindow/SceneEditScreen.h"
 #include "o2Editor/Windows/SceneWindow/SceneGizmos.h"
+#include "o2Editor/Windows/SceneWindow/SceneView3DState.h"
 #include "support/EditorTestScene.h"
 
 using namespace o2;
@@ -311,6 +312,53 @@ TEST(SceneGizmos, ColliderGizmoIsDrawnOnScreen)
     EXPECT_NEAR((float)(max.y - min.y), 100.0f, 4.0f);
     EXPECT_NEAR((float)(max.x + min.x)*0.5f, (float)size.x*0.5f, 4.0f);
     EXPECT_NEAR((float)(max.y + min.y)*0.5f, (float)size.y*0.5f, 4.0f);
+}
+
+TEST(SceneGizmos, GeometryBehindCameraIsClippedInPerspectiveView)
+{
+    SceneCleanGuard guard;
+    CreateModeGuard createModeGuard;
+
+    auto actor = mmake<Actor>();
+    actor->transform->SetPosition2D(Vec2F(0, -100));
+    actor->transform->SetSize2D(Vec2F(200, 200));
+    actor->AddComponent<BoxCollider>();
+    TickScene();
+
+    // Camera looks along the plane from inside the collider outline, so its far side is behind the camera
+    SceneView3DState state;
+    state.target = Vec3F();
+    state.pitch = Math::Deg2rad(85.0f);
+    state.distance = 100.0f;
+
+    const Vec2F viewport(800.0f, 600.0f);
+
+    Vec3F clipPlaneOrigin, clipPlaneNormal;
+    state.GetNearClipPlane(clipPlaneOrigin, clipPlaneNormal);
+
+    auto behindCamera = [&](const Vec3F& point) { return (point - clipPlaneOrigin).Dot(clipPlaneNormal) < 0.0f; };
+
+    SceneGizmos gizmos;
+
+    Vector<Vec3F> unclipped;
+    gizmos.Draw([&](const Vec3F& point)
+                {
+                    unclipped.Add(point);
+                    return state.WorldToScreen(point, viewport);
+                });
+
+    ASSERT_TRUE(unclipped.Contains(behindCamera)); // without clipping such points project mirrored
+
+    Vector<Vec3F> clipped;
+    gizmos.Draw([&](const Vec3F& point)
+                {
+                    clipped.Add(point);
+                    return state.WorldToScreen(point, viewport);
+                },
+                clipPlaneOrigin, clipPlaneNormal);
+
+    EXPECT_FALSE(clipped.IsEmpty());
+    EXPECT_FALSE(clipped.Contains(behindCamera));
 }
 
 TEST(SceneGizmos, PopupCommonSwitchesControlGizmosAndSelection)

@@ -20,11 +20,25 @@ namespace o2
     void Gizmos::SetProjection(const Function<Vec2F(const Vec3F&)>& projection)
     {
         mProjection = projection;
+        mClipEnabled = false;
+    }
+
+    void Gizmos::SetProjection(const Function<Vec2F(const Vec3F&)>& projection, const Vec3F& clipPlaneOrigin,
+                               const Vec3F& clipPlaneNormal)
+    {
+        SetProjection(projection);
+
+        if (clipPlaneNormal.SqrLength() < FLT_EPSILON)
+            return;
+
+        mClipEnabled = true;
+        mClipPlaneOrigin = clipPlaneOrigin;
+        mClipPlaneNormal = clipPlaneNormal.Normalized();
     }
 
     void Gizmos::ResetProjection()
     {
-        mProjection = [](const Vec3F& point) { return Vec2F(point.x, point.y); };
+        SetProjection([](const Vec3F& point) { return Vec2F(point.x, point.y); });
     }
 
     void Gizmos::SetColor(const Color4& color)
@@ -129,6 +143,9 @@ namespace o2
 
     void Gizmos::DrawPoint(const Vec3F& point, float size /*= 5.0f*/)
     {
+        if (GetClipDistance(point) < 0.0f)
+            return;
+
         Vec2F screenPoint = mProjection(point);
 
         o2Render.DrawAALine(screenPoint - Vec2F(size, size), screenPoint + Vec2F(size, size), mColor);
@@ -147,10 +164,24 @@ namespace o2
         mDrawnPrimitives = 0;
     }
 
+    float Gizmos::GetClipDistance(const Vec3F& point) const
+    {
+        if (!mClipEnabled)
+            return 1.0f;
+
+        return (point - mClipPlaneOrigin).Dot(mClipPlaneNormal);
+    }
+
     void Gizmos::DrawProjectedLine(const Vector<Vec3F>& points, bool closed)
     {
         if (points.Count() < 2)
             return;
+
+        if (mClipEnabled)
+        {
+            DrawClippedLine(points, closed);
+            return;
+        }
 
         Vector<Vec2F> projected;
         projected.Reserve(points.Count() + 1);
@@ -164,5 +195,61 @@ namespace o2
         o2Render.DrawAALine(projected, mColor);
 
         mDrawnPrimitives++;
+    }
+
+    void Gizmos::DrawClippedLine(const Vector<Vec3F>& points, bool closed)
+    {
+        Vector<Vec2F> projected;
+
+        auto flush = [&]()
+        {
+            if (projected.Count() > 1)
+            {
+                o2Render.DrawAALine(projected, mColor);
+                mDrawnPrimitives++;
+            }
+
+            projected.Clear();
+        };
+
+        int segments = closed ? points.Count() : points.Count() - 1;
+        for (int i = 0; i < segments; i++)
+        {
+            const Vec3F& begin = points[i];
+            const Vec3F& end = points[(i + 1)%points.Count()];
+
+            float beginDistance = GetClipDistance(begin);
+            float endDistance = GetClipDistance(end);
+
+            if (beginDistance < 0.0f && endDistance < 0.0f)
+            {
+                flush();
+                continue;
+            }
+
+            if (projected.IsEmpty() && beginDistance >= 0.0f)
+                projected.Add(mProjection(begin));
+
+            if (beginDistance >= 0.0f && endDistance >= 0.0f)
+            {
+                projected.Add(mProjection(end));
+                continue;
+            }
+
+            Vec3F crossing = Vec3F::Lerp(begin, end, beginDistance/(beginDistance - endDistance));
+
+            if (beginDistance >= 0.0f)
+            {
+                projected.Add(mProjection(crossing));
+                flush();
+            }
+            else
+            {
+                projected.Add(mProjection(crossing));
+                projected.Add(mProjection(end));
+            }
+        }
+
+        flush();
     }
 }

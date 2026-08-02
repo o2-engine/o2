@@ -21,14 +21,15 @@ namespace
     {
         Vector<Vec3F> points;
 
-        GizmosCapture()
+        GizmosCapture(const Vec3F& clipPlaneOrigin = Vec3F(), const Vec3F& clipPlaneNormal = Vec3F())
         {
             o2Gizmos.ResetDrawnPrimitives();
             o2Gizmos.SetProjection([this](const Vec3F& point)
                                    {
                                        points.Add(point);
                                        return Vec2F(point.x, point.y);
-                                   });
+                                   },
+                                   clipPlaneOrigin, clipPlaneNormal);
         }
 
         ~GizmosCapture() { o2Gizmos.ResetProjection(); }
@@ -124,6 +125,69 @@ TEST(Gizmos, PerspectiveCameraDrawsFrustum)
 
     EXPECT_EQ(nearPlanePoints, 8);
     EXPECT_EQ(farPlanePoints, 8);
+}
+
+TEST(Gizmos, ClipPlaneCutsLineCrossingIt)
+{
+    GizmosCapture capture(Vec3F(), Vec3F(0, 0, 1));
+
+    o2Gizmos.DrawLine(Vec3F(0, 0, 10), Vec3F(20, 0, -10));
+
+    ASSERT_EQ(capture.points.Count(), 2);
+    EXPECT_TRUE(capture.HasPoint(Vec3F(0, 0, 10)));
+    EXPECT_TRUE(capture.HasPoint(Vec3F(10, 0, 0)));
+    EXPECT_EQ(o2Gizmos.GetDrawnPrimitives(), 1);
+}
+
+TEST(Gizmos, ClipPlaneSkipsGeometryFullyBehindIt)
+{
+    GizmosCapture capture(Vec3F(), Vec3F(0, 0, 1));
+
+    o2Gizmos.DrawLine(Vec3F(0, 0, -10), Vec3F(20, 0, -5));
+    o2Gizmos.DrawPoint(Vec3F(5, 5, -1));
+
+    EXPECT_TRUE(capture.points.IsEmpty());
+    EXPECT_EQ(o2Gizmos.GetDrawnPrimitives(), 0);
+}
+
+TEST(Gizmos, ClipPlaneSplitsPolyLineIntoVisibleRuns)
+{
+    GizmosCapture capture(Vec3F(), Vec3F(0, 0, 1));
+
+    o2Gizmos.DrawPolyLine({ Vec3F(0, 0, 10), Vec3F(0, 0, -10), Vec3F(5, 0, -10), Vec3F(5, 0, 10) });
+
+    ASSERT_EQ(capture.points.Count(), 4);
+    EXPECT_TRUE(capture.HasPoint(Vec3F(0, 0, 0)));
+    EXPECT_TRUE(capture.HasPoint(Vec3F(5, 0, 0)));
+    EXPECT_EQ(o2Gizmos.GetDrawnPrimitives(), 2);
+}
+
+TEST(Gizmos, ClipPlaneCutsClosedShape)
+{
+    GizmosCapture capture(Vec3F(), Vec3F(0, 0, 1));
+
+    o2Gizmos.DrawRect(Vec3F(), Vec3F(10, 0, 0), Vec3F(0, 0, 10));
+
+    ASSERT_EQ(capture.points.Count(), 4);
+    EXPECT_TRUE(capture.HasPoint(Vec3F(10, 0, 0)));
+    EXPECT_TRUE(capture.HasPoint(Vec3F(-10, 0, 0)));
+
+    for (auto& point : capture.points)
+        EXPECT_GE(point.z, -0.01f);
+
+    EXPECT_EQ(o2Gizmos.GetDrawnPrimitives(), 1);
+}
+
+TEST(Gizmos, WithoutClipPlaneAllPointsAreProjected)
+{
+    GizmosCapture capture;
+
+    o2Gizmos.DrawLine(Vec3F(0, 0, 10), Vec3F(20, 0, -10));
+    o2Gizmos.DrawPoint(Vec3F(5, 5, -1));
+
+    EXPECT_EQ(capture.points.Count(), 3);
+    EXPECT_TRUE(capture.HasPoint(Vec3F(20, 0, -10)));
+    EXPECT_EQ(o2Gizmos.GetDrawnPrimitives(), 3); // one line and two point strokes
 }
 
 TEST(Gizmos, ComponentWithoutGizmosDrawsNothing)

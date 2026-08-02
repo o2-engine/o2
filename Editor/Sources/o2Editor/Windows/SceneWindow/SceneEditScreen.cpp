@@ -738,7 +738,11 @@ namespace Editor
         if (!m3DMode)
             return;
 
-        mGizmos.Draw([&](const Vec3F& worldPoint) { return World3DToScreenPoint(worldPoint); });
+        Vec3F clipPlaneOrigin, clipPlaneNormal;
+        mView3D.GetNearClipPlane(clipPlaneOrigin, clipPlaneNormal);
+
+        mGizmos.Draw([&](const Vec3F& worldPoint) { return World3DToScreenPoint(worldPoint); },
+                     clipPlaneOrigin, clipPlaneNormal);
     }
 
 

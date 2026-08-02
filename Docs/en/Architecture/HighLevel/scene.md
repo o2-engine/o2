@@ -42,7 +42,8 @@ In the editor build only (`IS_EDITOR`) actors and components can draw helper gra
 window: override `OnDrawGizmos` and draw through the `o2::Gizmos` singleton
 (`o2Gizmos.DrawLine/DrawCircle/DrawBox/DrawSphere/DrawCapsule/DrawRect`) in world coordinates — the
 projection into the drawing space is set by the scene window, so the same calls work in both 2D and
-3D view. Drawing only, no controls. Entry point is `DrawGizmos()`; the editor walks the scene itself
+3D view; in 3D view the window also passes the camera near plane, and geometry behind it is cut off
+instead of being mirrored in front of the camera. Drawing only, no controls. Entry point is `DrawGizmos()`; the editor walks the scene itself
 and lists only the types which override the method and are present on the scene. Gizmos are implemented for colliders (2D and 3D),
 joints (`IJoint`, `IJoint3D`) and `o2::CameraActor` (perspective frustum or view rectangle). The
 control panel is described in [editor scene](/Docs/en/Editor/Scene/scene.md).

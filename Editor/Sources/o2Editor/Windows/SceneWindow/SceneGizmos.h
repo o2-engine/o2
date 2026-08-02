@@ -44,8 +44,10 @@ namespace Editor
         // Collects types of scene objects which draw gizmos
         void UpdateGizmosTypes();
 
-        // Draws gizmos of scene objects; projection maps world point into current drawing space
-        void Draw(const Function<Vec2F(const Vec3F&)>& projection);
+        // Draws gizmos of scene objects; projection maps world point into current drawing space,
+        // clip plane cuts geometry the projection can't map, zero normal means no clipping
+        void Draw(const Function<Vec2F(const Vec3F&)>& projection, const Vec3F& clipPlaneOrigin = Vec3F(),
+                  const Vec3F& clipPlaneNormal = Vec3F());
 
         // Returns is type overriding gizmos drawing
         bool IsGizmosDrawer(const Type& type);

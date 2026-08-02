@@ -28,7 +28,13 @@ namespace o2
         // Sets projection from world point to drawing space point
         void SetProjection(const Function<Vec2F(const Vec3F&)>& projection);
 
-        // Resets projection to plane projection, which drops z coordinate
+        // Sets projection and world space clip plane, which cuts geometry the projection can't map:
+        // perspective projection mirrors points behind the camera in front of it, so its near plane
+        // must cut them off. Zero normal means no clipping
+        void SetProjection(const Function<Vec2F(const Vec3F&)>& projection, const Vec3F& clipPlaneOrigin,
+                           const Vec3F& clipPlaneNormal);
+
+        // Resets projection to plane projection, which drops z coordinate, and disables clipping
         void ResetProjection();
 
         // Sets color for next drawings
@@ -75,10 +81,21 @@ namespace o2
 
         Color4 mColor = colliderColor; // Current drawing color
 
+        bool  mClipEnabled = false; // Is geometry clipped by the clip plane
+        Vec3F mClipPlaneOrigin;     // Point on the clip plane
+        Vec3F mClipPlaneNormal;     // Normalized clip plane normal, points to the visible side
+
         int mDrawnPrimitives = 0; // Count of primitives, drawn since last counter reset
 
     private:
+        // Returns signed distance from point to the clip plane, positive on the visible side;
+        // always positive when clipping is disabled
+        float GetClipDistance(const Vec3F& point) const;
+
         // Projects world points and draws them as poly line
         void DrawProjectedLine(const Vector<Vec3F>& points, bool closed);
+
+        // Splits world points by the clip plane and draws visible parts as separate poly lines
+        void DrawClippedLine(const Vector<Vec3F>& points, bool closed);
     };
 }

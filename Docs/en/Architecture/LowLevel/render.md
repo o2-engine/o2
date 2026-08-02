@@ -57,6 +57,12 @@ by `SetProjection` — in 2D it drops z, in 3D view it projects with the perspec
 `GetDrawnPrimitives` counter tells whether an object has drawn anything. Used by the scene gizmos
 system, see [scene](/Docs/en/Architecture/HighLevel/scene.md).
 
+`SetProjection` optionally takes a world space clip plane (origin and normal, the normal pointing to
+the visible side; a zero normal means no clipping). Lines are split by the plane before projection:
+the parts behind it are dropped and the crossing points are drawn exactly on the plane, so one
+primitive may turn into several poly lines. The 3D scene view passes the camera near plane here —
+without it, perspective divide by a negative w mirrors geometry behind the camera in front of it.
+
 ### IDrawable
 This is the base interface of a drawable entity; during drawing it remembers the current scissor rectangle
 
