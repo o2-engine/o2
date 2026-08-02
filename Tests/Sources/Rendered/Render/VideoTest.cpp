@@ -17,6 +17,27 @@ using namespace o2;
 // sprite and check pixels. The clip is a solid green frame with a centered red square.
 namespace
 {
+    // Drops a clip at the asset's built path and takes it away when the test leaves. Declare it
+    // before the Video: Windows can't delete a file the decoder still holds open, so the decoder
+    // has to die first, and reverse destruction order guarantees that.
+    struct BuiltVideoFile
+    {
+        String path;
+
+        BuiltVideoFile(const AssetRef<VideoAsset>& asset, const void* bytes, size_t size):
+            path(asset->GetBuiltFullPath())
+        {
+            std::ofstream file(path.Data(), std::ios::binary);
+            file.write((const char*)bytes, (std::streamsize)size);
+        }
+
+        ~BuiltVideoFile()
+        {
+            std::error_code ec;
+            std::filesystem::remove(path.Data(), ec);
+        }
+    };
+
     // Draws the video as a 256x256 quad over a blue background and returns the captured frame.
     // Sampling: blue clear shows where the video is transparent (keyed out).
     Ref<Bitmap> DrawVideoCaptured(Video& video)
@@ -137,11 +158,8 @@ TEST(VideoPerf, HardwareDecodePipelineCost)
 
     auto asset = mmake<VideoAsset>();
     asset->SetPath("o2_video_perf.mp4");
-    String builtPath = asset->GetBuiltFullPath();
-    {
-        std::ofstream file(builtPath.Data(), std::ios::binary);
-        file.write(bytes.data(), (std::streamsize)bytes.size());
-    }
+
+    BuiltVideoFile clip(asset, bytes.data(), bytes.size());
 
     // Stage timings straight through the decoder
     {
@@ -221,8 +239,6 @@ TEST(VideoPerf, HardwareDecodePipelineCost)
         printf("[VideoPerf] frame loop: update %.2f ms, draw %.2f ms, frameEnd %.2f ms (baseline frameEnd %.2f ms)\n",
                updateMs/N, drawMs/N, endMs/N, endBaseMs/N);
     }
-
-    std::filesystem::remove(builtPath.Data());
 }
 
 // Hardware decode path: H.264 mp4 through AVAssetReader/VideoToolbox, frame follows time
@@ -231,11 +247,7 @@ TEST(VideoHardwareDecode, DecodesMp4AndFollowsTime)
     auto asset = mmake<VideoAsset>();
     asset->SetPath("o2_video_hw_test.mp4");
 
-    String builtPath = asset->GetBuiltFullPath();
-    {
-        std::ofstream file(builtPath.Data(), std::ios::binary);
-        file.write((const char*)Tests::kMovingVideoMp4, sizeof(Tests::kMovingVideoMp4));
-    }
+    BuiltVideoFile clip(asset, Tests::kMovingVideoMp4, sizeof(Tests::kMovingVideoMp4));
 
     Video video;
     video.SetVideoAsset(asset);
@@ -264,8 +276,6 @@ TEST(VideoHardwareDecode, DecodesMp4AndFollowsTime)
     ASSERT_TRUE(f1);
     EXPECT_TRUE(redAt(f1, cx - 8, cy));
     EXPECT_FALSE(redAt(f1, cx - 80, cy));
-
-    std::filesystem::remove(builtPath.Data());
 }
 #endif
 
@@ -278,11 +288,7 @@ TEST(VideoStreaming, DecodesFromDiskFile)
     asset->SetPath("o2_video_stream_test.mpg");
     ASSERT_EQ(asset->GetDataSize(), 0u);
 
-    String builtPath = asset->GetBuiltFullPath();
-    {
-        std::ofstream file(builtPath.Data(), std::ios::binary);
-        file.write((const char*)Tests::kMovingVideoMpg, sizeof(Tests::kMovingVideoMpg));
-    }
+    BuiltVideoFile clip(asset, Tests::kMovingVideoMpg, sizeof(Tests::kMovingVideoMpg));
 
     Video video;
     video.SetStreaming(true);
@@ -296,6 +302,4 @@ TEST(VideoStreaming, DecodesFromDiskFile)
     int cx = captured->GetSize().x/2, cy = captured->GetSize().y/2;
     const UInt8* left = captured->GetData() + (cy*captured->GetSize().x + (cx - 80))*4;
     EXPECT_GT(left[0], 150); EXPECT_LT(left[1], 120); // frame 0 red square on the left
-
-    std::filesystem::remove(builtPath.Data());
 }
