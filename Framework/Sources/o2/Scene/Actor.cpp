@@ -320,10 +320,7 @@ namespace o2
 
     void Actor::UpdateSelfTransform()
     {
-        transform->Update();
-        
-        for (auto& comp : mComponents)
-            comp->OnTransformUpdated();
+        transform->Update(); // notifies the components through OnTransformUpdated
     }
 
     void Actor::UpdateChildrenTransforms()

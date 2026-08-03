@@ -146,3 +146,55 @@ TEST(Physics3D, BoxesStackWithoutInterpenetration)
     EXPECT_NEAR(uy, 2.0f, 0.3f);
     EXPECT_GT(uy - ly, 0.85f); // boxes are 1 unit tall, so centers stay ~1 apart
 }
+
+TEST(Physics3D, RestingBodyGoesToSleep)
+{
+    Physics3DGuard guard;
+
+    MakeBoxBody(RigidBody3D::Type::Static, Vec3F(0, 0, 0), Vec3F(20, 1, 20));
+    auto box = MakeBoxBody(RigidBody3D::Type::Dynamic, Vec3F(0, 4, 0), Vec3F(1, 1, 1));
+    TickFrame();
+
+    StepPhysics3D(300); // 5 s: land and settle
+
+    // The per-frame actor->body sync must recognize its own writeback as "not moved externally",
+    // otherwise it teleports and wakes every body every step, and the world never stops solving
+    EXPECT_TRUE(box->IsSleeping());
+}
+
+TEST(Physics3D, SleepingBodyWakesOnExternalMove)
+{
+    Physics3DGuard guard;
+
+    MakeBoxBody(RigidBody3D::Type::Static, Vec3F(0, 0, 0), Vec3F(20, 1, 20));
+    auto box = MakeBoxBody(RigidBody3D::Type::Dynamic, Vec3F(0, 4, 0), Vec3F(1, 1, 1));
+    TickFrame();
+
+    StepPhysics3D(300);
+    ASSERT_TRUE(box->IsSleeping());
+
+    box->transform->SetPosition(Vec3F(0, 6, 0));
+    StepPhysics3D(1);
+
+    EXPECT_FALSE(box->IsSleeping());
+
+    StepPhysics3D(60);
+    EXPECT_LT(box->transform->GetPosition().y, 6.0f); // followed the teleport, then fell again
+}
+
+TEST(Physics3D, SleepingBodyWakesOnSmallExternalRotation)
+{
+    Physics3DGuard guard;
+
+    MakeBoxBody(RigidBody3D::Type::Static, Vec3F(0, 0, 0), Vec3F(20, 1, 20));
+    auto box = MakeBoxBody(RigidBody3D::Type::Dynamic, Vec3F(0, 4, 0), Vec3F(1, 1, 1));
+    TickFrame();
+
+    StepPhysics3D(300);
+    ASSERT_TRUE(box->IsSleeping());
+
+    box->transform->SetEulerAngles(box->transform->GetEulerAngles() + Vec3F(0.05f, 0, 0));
+    StepPhysics3D(1);
+
+    EXPECT_FALSE(box->IsSleeping());
+}

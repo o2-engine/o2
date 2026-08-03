@@ -47,7 +47,13 @@ Toggle it through the render subsystem:
 - **o2Render.IsMultithreadedRenderEnabled()** — current state.
 - **o2Render.IsMultithreadedRenderSupported()** — static, whether the platform supports it.
 
-It is enabled by default where `IsMultithreadedRenderSupported()` is true (currently macOS / Metal); other platforms use the single-threaded path, where the main thread submits draws directly. Because a command carries a full state snapshot, the render thread never reads the live, concurrently mutated `Render` members, and the command buffer is reset on the main thread so texture/material references are never ref-counted from the render thread. This mirrors the isolation rules of the [job system](/Docs/en/Architecture/Utils/jobs.md).
+It is enabled by default where `IsMultithreadedRenderSupported()` is true; other platforms use the single-threaded path, where the main thread submits draws directly. The recording side (command buffer, render thread, per-frame rendezvous) is platform independent — each backend only answers `PlatformSupportsMultithreadedRender()` and implements the submit hooks (`PlatformAcquireFrameTarget`, `PlatformBeginThreaded`, `PlatformReplayDrawCommand`, `PlatformEndThreaded`).
+
+A backend can support it once **nothing of its drawing touches the GPU API while the frame is being recorded**: the frame has to be fully described by the recorded commands. That holds for the Metal backends (macOS, iOS), where state lives in the per-command snapshot; there the drawable and the render pass descriptor are acquired on the main thread (they are main-thread affine) and the render thread only uses the captured objects. The OpenGL backends (Windows, Linux, Android, WebAssembly) still issue state changes, clears and material binds straight to GL while recording, and a GL context belongs to one thread at a time, so they report no support and use the single-threaded path. Making them support it means recording that state into the commands too and handing the context over to the render thread for the submit window (on Android the drawing already runs on the GLSurfaceView GL thread, which owns the context and the swap; on WebAssembly the WebGL context can only leave the browser main thread through an OffscreenCanvas in a worker). Because a command carries a full state snapshot, the render thread never reads the live, concurrently mutated `Render` members, and the command buffer is reset on the main thread so texture/material references are never ref-counted from the render thread. This mirrors the isolation rules of the [job system](/Docs/en/Architecture/Utils/jobs.md).
+
+Reset drops the recorded commands but pools them: their geometry buffers stay allocated at the high-water mark, so a steady frame records into the same storage instead of re-allocating (and re-zeroing) the frame's vertex bytes. `o2::Mesh::Resize` follows the same rule — buffers grow but are never re-allocated to shrink, so a mesh refilled every frame at the same size never touches the allocator.
+
+Consecutive batches that render into the same attachments share one GPU render pass; a new one starts only when the render target, the extra MRT targets, the depth attachment or a clear request changes (a clear is a load action, so it can only happen at the start of a pass). Everything else a batch needs — pipeline state, viewport, scissor, depth state, textures, buffers — is per-batch state set inside the shared pass. A pass per draw call would make a tiled GPU reload and store the whole render target for every batch, which a UI-heavy frame of a few hundred batches feels immediately. Both Metal backends do this, on the render thread replay and on their single-threaded path alike. The open pass is closed when the frame ends, before the command buffer is committed.
 
 ### Gizmos, o2::Gizmos
 The `o2Gizmos` singleton draws editor helper wireframe primitives with lines: `DrawLine`,
@@ -56,6 +62,12 @@ are given in world `Vec3F` coordinates, and the projection into the drawing spac
 by `SetProjection` — in 2D it drops z, in 3D view it projects with the perspective camera. The
 `GetDrawnPrimitives` counter tells whether an object has drawn anything. Used by the scene gizmos
 system, see [scene](/Docs/en/Architecture/HighLevel/scene.md).
+
+Wireframes are built from as few poly lines as the shape allows (a box is two face rings plus four
+edges, not twelve separate segments) and the point buffers are reused between primitives: a scene of
+wireframed colliders issues thousands of these per frame, where per-line allocations and draw batches
+cost more than the drawing. Setting a projection that rebuilds the camera matrices per point costs
+the same way — project with a matrix built once for the whole pass.
 
 `SetProjection` optionally takes a world space clip plane (origin and normal, the normal pointing to
 the visible side; a zero normal means no clipping). Lines are split by the plane before projection:

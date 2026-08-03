@@ -11,14 +11,17 @@ using namespace o2;
 namespace o2
 {
     class Type;
+
+    FORWARD_CLASS_REF(Actor);
+    FORWARD_CLASS_REF(SceneEditableObject);
 }
 
 namespace Editor
 {
     // ---------------------------------------------------------------------------------------------
-    // Scene gizmos drawer. Walks scene actors and components and calls their gizmos drawing, keeping
-    // visibility settings: common switch and per type switches. Types list is collected from scene
-    // objects which override gizmos drawing, so it is filled before anything was actually drawn
+    // Scene gizmos drawer. Walks the selected objects with their children and calls their gizmos
+    // drawing, keeping visibility settings: common switch and per type switches. Types list is
+    // collected from all scene objects which override gizmos drawing, on demand
     // ---------------------------------------------------------------------------------------------
     class SceneGizmos
     {
@@ -44,10 +47,11 @@ namespace Editor
         // Collects types of scene objects which draw gizmos
         void UpdateGizmosTypes();
 
-        // Draws gizmos of scene objects; projection maps world point into current drawing space,
-        // clip plane cuts geometry the projection can't map, zero normal means no clipping
-        void Draw(const Function<Vec2F(const Vec3F&)>& projection, const Vec3F& clipPlaneOrigin = Vec3F(),
-                  const Vec3F& clipPlaneNormal = Vec3F());
+        // Draws gizmos of the given objects and their children; projection maps world point into
+        // current drawing space, clip plane cuts geometry the projection can't map, zero normal
+        // means no clipping
+        void Draw(const Vector<Ref<SceneEditableObject>>& objects, const Function<Vec2F(const Vec3F&)>& projection,
+                  const Vec3F& clipPlaneOrigin = Vec3F(), const Vec3F& clipPlaneNormal = Vec3F());
 
         // Returns is type overriding gizmos drawing
         bool IsGizmosDrawer(const Type& type);
@@ -61,8 +65,14 @@ namespace Editor
 
         Map<const Type*, bool> mGizmosDrawers; // Cache of types overriding gizmos drawing
 
+        Map<const Actor*, bool> mDrawnActors; // Actors drawn in the current pass, so overlapping
+                                             // selections (a parent and its child) don't draw twice
+
     private:
         // Adds type into gizmos types list, keeping it sorted by name
         void RegisterGizmosType(const Type* type);
+
+        // Draws gizmos of the actor and its components, then of its children
+        void DrawActorGizmos(const Ref<Actor>& actor);
     };
 }

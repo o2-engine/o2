@@ -137,7 +137,6 @@ namespace o2
 		if (!mReady)
 			return;
 
-#if defined(PLATFORM_MAC)
 		if (mMultithreadedRender)
 		{
 			if (!mRenderThread.IsRunning())
@@ -147,7 +146,6 @@ namespace o2
 			mRenderThread.WaitFrameDone();
 			mCommandBuffer.Reset();
 		}
-#endif
 
 		mCurrentDrawTexture = nullptr;
 		mLastDrawVertex = 0;
@@ -167,11 +165,9 @@ namespace o2
 
 		BindMaterial(mDefaultMaterial);
 
-#if defined(PLATFORM_MAC)
 		if (mMultithreadedRender)
-			mNeedDepthClear = true; // PlatformBegin (which sets this) runs on the render thread now
+			PlatformBeginRecording(); // PlatformBegin itself runs on the render thread now
 		else
-#endif
 			PlatformBegin();
 
 		mDepthTestEnabled = false;
@@ -426,6 +422,59 @@ namespace o2
 			static const Vector<TextureSampler> emptySamplers;
 			const auto& samplers = mCurrentMaterial ? mCurrentMaterial->GetTextureSamplers() : emptySamplers;
 
+			// Layout offsets and sampler rects are the same for every vertex of the batch, and resolving
+			// them per vertex (through the vertex type's offset function) costs more than the copying
+			bool copyPosition = mCurrentBatchVertexType.HasParam(VertexParam::Position) &&
+				srcVertexType.HasParam(VertexParam::Position);
+			size_t dstPositionOffset = copyPosition ? mCurrentBatchVertexType.GetParamOffset(VertexParam::Position) : 0;
+			size_t srcPositionOffset = copyPosition ? srcVertexType.GetParamOffset(VertexParam::Position) : 0;
+
+			bool copyColor = mCurrentBatchVertexType.HasParam(VertexParam::Color) &&
+				srcVertexType.HasParam(VertexParam::Color);
+			size_t dstColorOffset = copyColor ? mCurrentBatchVertexType.GetParamOffset(VertexParam::Color) : 0;
+			size_t srcColorOffset = copyColor ? srcVertexType.GetParamOffset(VertexParam::Color) : 0;
+
+			bool copyNormal = mCurrentBatchVertexType.HasParam(VertexParam::Normal) &&
+				srcVertexType.HasParam(VertexParam::Normal);
+			size_t dstNormalOffset = copyNormal ? mCurrentBatchVertexType.GetParamOffset(VertexParam::Normal) : 0;
+			size_t srcNormalOffset = copyNormal ? srcVertexType.GetParamOffset(VertexParam::Normal) : 0;
+
+			bool dstHasUV = mCurrentBatchVertexType.HasParam(VertexParam::TexCoord0);
+			size_t dstUVOffset = dstHasUV ? mCurrentBatchVertexType.GetParamOffset(VertexParam::TexCoord0) : 0;
+
+			struct SamplerUV
+			{
+				size_t dstOffset;
+				RectI  srcRect;
+				Vec2F  invTexSize;
+				bool   remap;
+			};
+
+			static const UInt texCoordParams[] = { VertexParam::TexCoord1, VertexParam::TexCoord2 };
+			SamplerUV samplerUVs[2];
+			int samplerUVsCount = 0;
+
+			for (int s = 0; s < samplers.Count() && s < 2; s++)
+			{
+				if (!mCurrentBatchVertexType.HasParam(texCoordParams[s]))
+					continue;
+
+				SamplerUV& samplerUV = samplerUVs[samplerUVsCount++];
+				samplerUV.dstOffset = mCurrentBatchVertexType.GetParamOffset(texCoordParams[s]);
+				samplerUV.srcRect = samplers[s].GetSrcRect();
+				samplerUV.invTexSize.Set(1.0f, 1.0f);
+				samplerUV.remap = samplerUV.srcRect != RectI();
+
+				if (samplerUV.remap)
+				{
+					if (TextureRef samplerTex = samplers[s].GetTexture())
+					{
+						Vec2F sz = samplerTex->GetSize();
+						samplerUV.invTexSize.Set(1.0f/sz.x, 1.0f/sz.y);
+					}
+				}
+			}
+
 			UInt8* dst = &mVertexData[mLastDrawVertex * dstStride];
 
 			for (UInt i = 0; i < verticesCount; i++)
@@ -433,17 +482,15 @@ namespace o2
 				const UInt8* srcVtx = vertices + i * srcStride;
 				UInt8* dstVtx = dst + i * dstStride;
 
-				if (mCurrentBatchVertexType.HasParam(VertexParam::Position) && srcVertexType.HasParam(VertexParam::Position))
+				if (copyPosition)
 				{
-					memcpy(dstVtx + mCurrentBatchVertexType.GetParamOffset(VertexParam::Position),
-						   srcVtx + srcVertexType.GetParamOffset(VertexParam::Position),
+					memcpy(dstVtx + dstPositionOffset, srcVtx + srcPositionOffset,
 						   VertexParam::ParamSize(VertexParam::Position));
 				}
 
-				if (mCurrentBatchVertexType.HasParam(VertexParam::Color) && srcVertexType.HasParam(VertexParam::Color))
+				if (copyColor)
 				{
-					memcpy(dstVtx + mCurrentBatchVertexType.GetParamOffset(VertexParam::Color),
-						   srcVtx + srcVertexType.GetParamOffset(VertexParam::Color),
+					memcpy(dstVtx + dstColorOffset, srcVtx + srcColorOffset,
 						   VertexParam::ParamSize(VertexParam::Color));
 				}
 
@@ -455,9 +502,9 @@ namespace o2
 				}
 
 				// TexCoord0: remap through primary texture srcRect
-				if (mCurrentBatchVertexType.HasParam(VertexParam::TexCoord0))
+				if (dstHasUV)
 				{
-					float* dstUV = (float*)(dstVtx + mCurrentBatchVertexType.GetParamOffset(VertexParam::TexCoord0));
+					float* dstUV = (float*)(dstVtx + dstUVOffset);
 					if (needsUVRemap)
 						RemapUV(srcU, srcV, texSrcRect, primaryInvTexSize, dstUV[0], dstUV[1]);
 					else
@@ -468,26 +515,13 @@ namespace o2
 				}
 
 				// TexCoord1, TexCoord2: remap through additional sampler srcRects
-				const UInt texCoordParams[] = { VertexParam::TexCoord1, VertexParam::TexCoord2 };
-				for (int s = 0; s < samplers.Count() && s < 2; s++)
+				for (int s = 0; s < samplerUVsCount; s++)
 				{
-					if (!mCurrentBatchVertexType.HasParam(texCoordParams[s]))
-						continue;
+					const SamplerUV& samplerUV = samplerUVs[s];
+					float* dstUV = (float*)(dstVtx + samplerUV.dstOffset);
 
-					float* dstUV = (float*)(dstVtx + mCurrentBatchVertexType.GetParamOffset(texCoordParams[s]));
-
-					RectI samplerSrcRect = samplers[s].GetSrcRect();
-					if (samplerSrcRect != RectI())
-					{
-						TextureRef samplerTex = samplers[s].GetTexture();
-						Vec2F samplerInvTexSize(1.0f, 1.0f);
-						if (samplerTex)
-						{
-							Vec2F sz = samplerTex->GetSize();
-							samplerInvTexSize.Set(1.0f / sz.x, 1.0f / sz.y);
-						}
-						RemapUV(srcU, srcV, samplerSrcRect, samplerInvTexSize, dstUV[0], dstUV[1]);
-					}
+					if (samplerUV.remap)
+						RemapUV(srcU, srcV, samplerUV.srcRect, samplerUV.invTexSize, dstUV[0], dstUV[1]);
 					else
 					{
 						dstUV[0] = srcU;
@@ -495,10 +529,9 @@ namespace o2
 					}
 				}
 
-				if (mCurrentBatchVertexType.HasParam(VertexParam::Normal) && srcVertexType.HasParam(VertexParam::Normal))
+				if (copyNormal)
 				{
-					memcpy(dstVtx + mCurrentBatchVertexType.GetParamOffset(VertexParam::Normal),
-						   srcVtx + srcVertexType.GetParamOffset(VertexParam::Normal),
+					memcpy(dstVtx + dstNormalOffset, srcVtx + srcNormalOffset,
 						   VertexParam::ParamSize(VertexParam::Normal));
 				}
 			}
@@ -529,11 +562,9 @@ namespace o2
 
 		CheckVertexBufferTexCoordFlipByTextureFormat();
 
-#if defined(PLATFORM_MAC)
 		if (mMultithreadedRender)
 			RecordDrawCommand();
 		else
-#endif
 			PlatformDrawPrimitives();
 
 		mFrameTrianglesCount += mTrianglesCount;
@@ -585,7 +616,6 @@ namespace o2
 
 		DrawPrimitives();
 
-#if defined(PLATFORM_MAC)
 		if (mMultithreadedRender)
 		{
 			// The main thread hands the recorded frame to the render thread and waits for it to submit
@@ -598,7 +628,6 @@ namespace o2
 				DeliverFrameCapture();
 		}
 		else
-#endif
 		{
 			PlatformEnd();
 
@@ -612,11 +641,7 @@ namespace o2
 
 	bool Render::IsMultithreadedRenderSupported()
 	{
-#if defined(PLATFORM_MAC)
-		return true;
-#else
-		return false;
-#endif
+		return PlatformSupportsMultithreadedRender();
 	}
 
 	void Render::SetMultithreadedRenderEnabled(bool enabled)
@@ -629,7 +654,6 @@ namespace o2
 		return mMultithreadedRender;
 	}
 
-#if defined(PLATFORM_MAC)
 	void Render::RecordDrawCommand()
 	{
 		RenderDrawCommand& command = mCommandBuffer.Emplace();
@@ -637,11 +661,17 @@ namespace o2
 		UInt stride = mCurrentBatchVertexType.GetStride();
 		UInt vertexBytes = mLastDrawVertex * stride;
 
-		command.vertexData.resize(vertexBytes);
+		// Grow-only: the used length is carried by vertexCount/indexCount, so the pooled storage is kept
+		// at its high-water mark instead of being re-sized (and re-zeroed) every frame
+		if (command.vertexData.Count() < (int)vertexBytes)
+			command.vertexData.Resize(vertexBytes);
+
 		if (vertexBytes > 0)
 			memcpy(command.vertexData.data(), mVertexData, vertexBytes);
 
-		command.indexData.resize(mLastDrawIdx);
+		if (command.indexData.Count() < (int)mLastDrawIdx)
+			command.indexData.Resize(mLastDrawIdx);
+
 		if (mLastDrawIdx > 0)
 			memcpy(command.indexData.data(), mVertexIndexData, mLastDrawIdx * sizeof(VertexIndex));
 
@@ -668,12 +698,11 @@ namespace o2
 
 		PlatformBeginThreaded();
 
-		for (const auto& command : mCommandBuffer.GetCommands())
-			PlatformReplayDrawCommand(command);
+		for (int i = 0; i < mCommandBuffer.Count(); i++)
+			PlatformReplayDrawCommand(mCommandBuffer.Get(i));
 
 		PlatformEndThreaded();
 	}
-#endif
 
 	void Render::CaptureNextFrame(const Function<void(const Ref<Bitmap>&)>& onCaptured)
 	{
@@ -1314,12 +1343,16 @@ namespace o2
 							bool scaleToScreenSpace /*= true*/)
 	{
 		ULong dcolor = color.ABGR();
-		Vertex* v = mnew Vertex[points.Count()];
-		for (int i = 0; i < points.Count(); i++)
-			v[i] = Vertex(points[i], dcolor, 0, 0);
 
-		DrawAAPolyLine(v, points.Count(), width, lineType, scaleToScreenSpace);
-		delete[] v;
+		// Reused buffer: gizmos draw thousands of short lines per frame, one allocation each would
+		// cost more than the drawing
+		if (mAALineVertices.Count() < points.Count())
+			mAALineVertices.Resize(points.Count());
+
+		for (int i = 0; i < points.Count(); i++)
+			mAALineVertices[i] = Vertex(points[i], dcolor, 0, 0);
+
+		DrawAAPolyLine(mAALineVertices.data(), points.Count(), width, lineType, scaleToScreenSpace);
 	}
 
 	void Render::DrawAAArrow(const Vec2F& a, const Vec2F& b, const Color4& color /*= Color4::White()*/,

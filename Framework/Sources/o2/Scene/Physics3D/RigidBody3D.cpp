@@ -8,16 +8,23 @@
 
 namespace o2
 {
+    // Tolerances are relative and stay well above float epsilon (1.2e-7): a tighter test can't hold for
+    // values that round-trip through the actor's transform, and would report every resting body as moved
+
     static bool ApproxEqual(const Vec3F& a, const Vec3F& b)
     {
-        Vec3F d = a - b;
-        return d.x*d.x + d.y*d.y + d.z*d.z < 1e-8f;
+        float toleranceSq = Math::Max(a.SqrLength(), b.SqrLength())*1e-12f;
+        return (a - b).SqrLength() <= Math::Max(toleranceSq, 1e-8f);
     }
 
     static bool ApproxEqual(const Quat& a, const Quat& b)
     {
         float dot = a.x*b.x + a.y*b.y + a.z*b.z + a.w*b.w;
-        return dot*dot > 1.0f - 1e-8f; // quaternion double-cover safe
+
+        // Compared against the quaternion lengths, since the actor stores rotation as euler angles and
+        // Quat::FromEuler returns a quaternion slightly off unit length
+        float lengthsSq = (a.x*a.x + a.y*a.y + a.z*a.z + a.w*a.w)*(b.x*b.x + b.y*b.y + b.z*b.z + b.w*b.w);
+        return dot*dot >= lengthsSq*(1.0f - 1e-6f); // quaternion double-cover safe
     }
 
     RigidBody3D::RigidBody3D(RefCounter* refCounter):

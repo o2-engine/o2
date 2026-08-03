@@ -50,37 +50,58 @@ namespace o2
         bool                needClear = false;      // Whether the color buffer must be cleared before this batch
         Color4              clearColor;             // Clear color
         bool                needDepthClear = false; // Whether the depth buffer must be cleared before this batch
+
+        // Drops the held asset references, keeping the geometry storage for the next frame
+        void ReleaseReferences()
+        {
+            drawTexture = TextureRef();
+            material = nullptr;
+            renderTarget = TextureRef();
+            extraRenderTargets.Clear();
+        }
     };
 
     // ------------------------------------------------------------------------------------------------
     // An ordered list of draw commands for one frame. The main thread appends commands while recording;
     // the render thread iterates them to submit the frame. Reset (which drops the held texture/material
     // references) always happens on the main thread, so those references are never ref-counted from the
-    // render thread
+    // render thread.
+    // Commands are pooled: reset keeps them and their geometry storage allocated, so a steady frame
+    // records into the same buffers instead of re-allocating a few hundred kilobytes every frame
     // ------------------------------------------------------------------------------------------------
     class RenderCommandBuffer
     {
     public:
-        // Appends a new empty command and returns a reference to fill in
+        // Appends a command and returns a reference to fill in; reuses a pooled one when available
         RenderDrawCommand& Emplace()
         {
-            mCommands.emplace_back();
-            return mCommands.back();
+            if (mCount == mCommands.Count())
+                mCommands.Add(RenderDrawCommand());
+
+            return mCommands[mCount++];
         }
 
-        // Returns the recorded commands
-        const Vector<RenderDrawCommand>& GetCommands() const { return mCommands; }
+        // Returns the recorded command by index
+        const RenderDrawCommand& Get(int idx) const { return mCommands[idx]; }
 
         // Returns number of recorded commands
-        int Count() const { return mCommands.Count(); }
+        int Count() const { return mCount; }
 
         // Returns true if nothing was recorded
-        bool IsEmpty() const { return mCommands.IsEmpty(); }
+        bool IsEmpty() const { return mCount == 0; }
 
-        // Clears the recorded commands (drops texture/material references — call only on the main thread)
-        void Reset() { mCommands.Clear(); }
+        // Drops the recorded commands, keeping their geometry storage pooled (releases the held
+        // texture/material references — call only on the main thread)
+        void Reset()
+        {
+            for (int i = 0; i < mCount; i++)
+                mCommands[i].ReleaseReferences();
+
+            mCount = 0;
+        }
 
     protected:
-        Vector<RenderDrawCommand> mCommands; // Recorded commands for the frame
+        Vector<RenderDrawCommand> mCommands; // Recorded and pooled commands
+        int                       mCount = 0; // Number of commands recorded for the current frame
     };
 }

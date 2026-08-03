@@ -10,6 +10,7 @@
 #include "o2/Scene/Physics/BoxCollider.h"
 #include "o2/Scene/Physics/DistanceJoint.h"
 #include "o2/Scene/SceneDrawableCategory.h"
+#include "o2/Utils/Editor/SceneEditableObject.h"
 #include "o2/Scene/UI/UIManager.h"
 #include "o2/Scene/UI/WidgetLayout.h"
 #include "o2/Scene/UI/Widgets/Toggle.h"
@@ -26,10 +27,18 @@ using namespace Editor::Tests;
 
 namespace
 {
-    Vector<Vec3F> DrawAndCapture(SceneGizmos& gizmos)
+    Vector<Ref<SceneEditableObject>> Selection(const Vector<Ref<Actor>>& actors)
+    {
+        return actors.Convert<Ref<SceneEditableObject>>([](const Ref<Actor>& x) {
+            return DynamicCast<SceneEditableObject>(x);
+        });
+    }
+
+    Vector<Vec3F> DrawAndCapture(SceneGizmos& gizmos, const Vector<Ref<Actor>>& selected)
     {
         Vector<Vec3F> points;
-        gizmos.Draw([&](const Vec3F& point)
+        gizmos.Draw(Selection(selected),
+                    [&](const Vec3F& point)
                     {
                         points.Add(point);
                         return Vec2F(point.x, point.y);
@@ -100,19 +109,79 @@ TEST(SceneGizmos, TypesAreCollectedFromSceneWithoutDrawing)
     EXPECT_EQ(typesChangedCalls, 2); // already known types are not reported again
 }
 
-TEST(SceneGizmos, TypesAreCollectedWhenDrawingDisabled)
+TEST(SceneGizmos, TypesAreCollectedFromUnselectedObjectsToo)
 {
     SceneCleanGuard guard;
     CreateModeGuard createModeGuard;
 
-    MakeBoxColliderActor();
+    auto actor = MakeBoxColliderActor();
 
     SceneGizmos gizmos;
-    gizmos.SetEnabled(false);
-    gizmos.SetTypeEnabled(&TypeOf(BoxCollider), false);
+    gizmos.UpdateGizmosTypes();
 
-    EXPECT_TRUE(DrawAndCapture(gizmos).IsEmpty());
+    // Only the selection draws, but the popup lists what the whole scene could draw
+    EXPECT_TRUE(DrawAndCapture(gizmos, {}).IsEmpty());
     EXPECT_TRUE(gizmos.GetGizmosTypes().Contains(&TypeOf(BoxCollider)));
+}
+
+TEST(SceneGizmos, OnlySelectedObjectsAreDrawn)
+{
+    SceneCleanGuard guard;
+    CreateModeGuard createModeGuard;
+
+    auto selected = MakeBoxColliderActor();
+    selected->transform->SetPosition2D(Vec2F(100, 0));
+
+    auto other = MakeBoxColliderActor();
+    other->transform->SetPosition2D(Vec2F(-100, 0));
+    TickScene();
+
+    SceneGizmos gizmos;
+
+    EXPECT_TRUE(DrawAndCapture(gizmos, {}).IsEmpty());
+
+    auto points = DrawAndCapture(gizmos, { selected });
+    ASSERT_FALSE(points.IsEmpty());
+
+    for (auto& point : points)
+        EXPECT_GT(point.x, 0.0f); // only the selected actor's outline, the other one sits at -100
+}
+
+TEST(SceneGizmos, SelectedObjectDrawsGizmosOfItsChildren)
+{
+    SceneCleanGuard guard;
+    CreateModeGuard createModeGuard;
+
+    auto parent = mmake<Actor>();
+    parent->transform->SetPosition2D(Vec2F(0, 0));
+
+    auto child = MakeBoxColliderActor();
+    child->SetParent(parent);
+    child->transform->SetPosition2D(Vec2F(50, 0));
+    TickScene();
+
+    SceneGizmos gizmos;
+
+    auto points = DrawAndCapture(gizmos, { parent });
+    EXPECT_EQ(points.Count(), 4); // the child collider outline, drawn through the selected parent
+}
+
+TEST(SceneGizmos, SelectedParentAndChildDrawGizmosOnce)
+{
+    SceneCleanGuard guard;
+    CreateModeGuard createModeGuard;
+
+    auto parent = MakeBoxColliderActor();
+    auto child = MakeBoxColliderActor();
+    child->SetParent(parent);
+    TickScene();
+
+    SceneGizmos gizmos;
+
+    auto both = DrawAndCapture(gizmos, { parent, child });
+    auto parentOnly = DrawAndCapture(gizmos, { parent });
+
+    EXPECT_EQ(both.Count(), parentOnly.Count()); // the child is covered by its parent's subtree
 }
 
 TEST(SceneGizmos, DisabledTypeIsNotDrawn)
@@ -120,16 +189,16 @@ TEST(SceneGizmos, DisabledTypeIsNotDrawn)
     SceneCleanGuard guard;
     CreateModeGuard createModeGuard;
 
-    MakeBoxColliderActor();
+    auto actor = MakeBoxColliderActor();
 
     SceneGizmos gizmos;
-    ASSERT_FALSE(DrawAndCapture(gizmos).IsEmpty());
+    ASSERT_FALSE(DrawAndCapture(gizmos, { actor }).IsEmpty());
 
     gizmos.SetTypeEnabled(&TypeOf(BoxCollider), false);
-    EXPECT_TRUE(DrawAndCapture(gizmos).IsEmpty());
+    EXPECT_TRUE(DrawAndCapture(gizmos, { actor }).IsEmpty());
 
     gizmos.SetTypeEnabled(&TypeOf(BoxCollider), true);
-    EXPECT_FALSE(DrawAndCapture(gizmos).IsEmpty());
+    EXPECT_FALSE(DrawAndCapture(gizmos, { actor }).IsEmpty());
 }
 
 TEST(SceneGizmos, DisabledGizmosDrawNothing)
@@ -137,12 +206,12 @@ TEST(SceneGizmos, DisabledGizmosDrawNothing)
     SceneCleanGuard guard;
     CreateModeGuard createModeGuard;
 
-    MakeBoxColliderActor();
+    auto actor = MakeBoxColliderActor();
 
     SceneGizmos gizmos;
     gizmos.SetEnabled(false);
 
-    EXPECT_TRUE(DrawAndCapture(gizmos).IsEmpty());
+    EXPECT_TRUE(DrawAndCapture(gizmos, { actor }).IsEmpty());
 }
 
 TEST(SceneGizmos, SelectionSwitchStaysLastBelowTypes)
@@ -278,7 +347,7 @@ TEST(SceneGizmos, ColliderGizmoIsDrawnOnScreen)
         o2Render.Begin();
         o2Render.SetCamera(Camera::Default());
         o2Render.Clear(Color4(0, 0, 0, 255));
-        gizmos.Draw([](const Vec3F& point) { return Vec2F(point.x, point.y); });
+        gizmos.Draw(Selection({ actor }), [](const Vec3F& point) { return Vec2F(point.x, point.y); });
         o2Render.End();
     }
 
@@ -341,7 +410,8 @@ TEST(SceneGizmos, GeometryBehindCameraIsClippedInPerspectiveView)
     SceneGizmos gizmos;
 
     Vector<Vec3F> unclipped;
-    gizmos.Draw([&](const Vec3F& point)
+    gizmos.Draw(Selection({ actor }),
+                [&](const Vec3F& point)
                 {
                     unclipped.Add(point);
                     return state.WorldToScreen(point, viewport);
@@ -350,7 +420,8 @@ TEST(SceneGizmos, GeometryBehindCameraIsClippedInPerspectiveView)
     ASSERT_TRUE(unclipped.Contains(behindCamera)); // without clipping such points project mirrored
 
     Vector<Vec3F> clipped;
-    gizmos.Draw([&](const Vec3F& point)
+    gizmos.Draw(Selection({ actor }),
+                [&](const Vec3F& point)
                 {
                     clipped.Add(point);
                     return state.WorldToScreen(point, viewport);

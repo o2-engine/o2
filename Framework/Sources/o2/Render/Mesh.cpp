@@ -70,19 +70,21 @@ namespace o2
 
 	void Mesh::Resize(UInt vertexCount, UInt polyCount)
 	{
-		size_t stride = mVertexType.GetStride();
-
-		if (mVertexData)
+		// Grow-only: meshes that are refilled every frame with the same geometry size must not hit the
+		// allocator. The buffers are capacity, the filled length is carried by vertexCount/polyCount
+		if (!mVertexData || vertexCount > mMaxVertexCount)
+		{
 			delete[] mVertexData;
+			mVertexData = mnew UInt8[vertexCount * mVertexType.GetStride()];
+			mMaxVertexCount = vertexCount;
+		}
 
-		if (mIndexData)
+		if (!mIndexData || polyCount > mMaxPolyCount)
+		{
 			delete[] mIndexData;
-
-		mVertexData = mnew UInt8[vertexCount * stride];
-		mIndexData = mnew VertexIndex[polyCount * 3];
-
-		mMaxVertexCount = vertexCount;
-		mMaxPolyCount = polyCount;
+			mIndexData = mnew VertexIndex[polyCount * 3];
+			mMaxPolyCount = polyCount;
+		}
 
 		this->vertexCount = 0;
 		this->polyCount = 0;

@@ -157,6 +157,21 @@ TEST(ActorComponents, ComponentReceivesOnTransformUpdated)
     EXPECT_GT(comp->onTransformUpdatedCount, base);
 }
 
+TEST(ActorComponents, TransformUpdateNotifiesComponentOncePerUpdate)
+{
+    SceneCleanGuard guard;
+    auto a = mmake<Actor>(ActorCreateMode::InScene);
+    auto comp = a->AddComponent<TestComponent>();
+    TickFrame();
+
+    int base = comp->onTransformUpdatedCount;
+    a->transform->SetPosition(Vec3F(10, 0, 5));
+    TickFrame();
+
+    // Components that rebuild geometry on this callback pay for every extra notification
+    EXPECT_EQ(comp->onTransformUpdatedCount, base + 1);
+}
+
 TEST(ActorComponents, ComponentReceivesOnParentChangedWhenActorMoves)
 {
     SceneCleanGuard guard;

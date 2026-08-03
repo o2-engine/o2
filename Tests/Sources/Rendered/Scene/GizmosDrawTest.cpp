@@ -205,3 +205,39 @@ TEST(Gizmos, ComponentWithoutGizmosDrawsNothing)
     EXPECT_EQ(capture.points.Count(), 0);
     EXPECT_EQ(o2Gizmos.GetDrawnPrimitives(), 0);
 }
+
+TEST(Gizmos, BoxDrawsAllTwelveEdgesAsSixPolyLines)
+{
+    GizmosCapture capture;
+
+    Vec3F center(10, 20, 30);
+    Vec3F halfX(5, 0, 0), halfY(0, 6, 0), halfZ(0, 0, 7);
+    o2Gizmos.DrawBox(center, halfX, halfY, halfZ);
+
+    // Two face rings and the four edges between them cover the same 8 corners as 12 separate segments
+    EXPECT_EQ(o2Gizmos.GetDrawnPrimitives(), 6);
+
+    for (int x = -1; x <= 1; x += 2)
+    {
+        for (int y = -1; y <= 1; y += 2)
+        {
+            for (int z = -1; z <= 1; z += 2)
+                EXPECT_TRUE(capture.HasPoint(center + halfX*(float)x + halfY*(float)y + halfZ*(float)z));
+        }
+    }
+}
+
+TEST(Gizmos, RepeatedDrawingKeepsProjectedPointsOfEachPrimitive)
+{
+    GizmosCapture capture;
+
+    // The projected points buffer is reused between primitives: it must be refilled, not appended to
+    o2Gizmos.DrawLine(Vec3F(0, 0, 0), Vec3F(1, 0, 0));
+    o2Gizmos.DrawLine(Vec3F(2, 0, 0), Vec3F(3, 0, 0));
+    o2Gizmos.DrawRect(Vec3F(10, 10, 0), Vec3F(1, 0, 0), Vec3F(0, 1, 0));
+
+    EXPECT_EQ(capture.points.Count(), 8);
+    EXPECT_EQ(o2Gizmos.GetDrawnPrimitives(), 3);
+    EXPECT_TRUE(capture.HasPoint(Vec3F(3, 0, 0)));
+    EXPECT_TRUE(capture.HasPoint(Vec3F(11, 11, 0)));
+}

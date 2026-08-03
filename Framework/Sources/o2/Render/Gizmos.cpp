@@ -53,7 +53,11 @@ namespace o2
 
     void Gizmos::DrawLine(const Vec3F& begin, const Vec3F& end)
     {
-        DrawProjectedLine({ begin, end }, false);
+        mLinePoints.Clear();
+        mLinePoints.Add(begin);
+        mLinePoints.Add(end);
+
+        DrawProjectedLine(mLinePoints, false);
     }
 
     void Gizmos::DrawPolyLine(const Vector<Vec3F>& points, bool closed /*= false*/)
@@ -64,16 +68,15 @@ namespace o2
     void Gizmos::DrawCircle(const Vec3F& center, const Vec3F& axisU, const Vec3F& axisV, float radius,
                             int segments /*= 32*/)
     {
-        Vector<Vec3F> points;
-        points.Reserve(segments);
+        mLinePoints.Clear();
 
         for (int i = 0; i < segments; i++)
         {
             float angle = (float)i/(float)segments*2.0f*Math::PI();
-            points.Add(center + (axisU*Math::Cos(angle) + axisV*Math::Sin(angle))*radius);
+            mLinePoints.Add(center + (axisU*Math::Cos(angle) + axisV*Math::Sin(angle))*radius);
         }
 
-        DrawProjectedLine(points, true);
+        DrawProjectedLine(mLinePoints, true);
     }
 
     void Gizmos::DrawCircle(const Vec3F& center, float radius, int segments /*= 32*/)
@@ -83,31 +86,30 @@ namespace o2
 
     void Gizmos::DrawRect(const Vec3F& center, const Vec3F& halfAxisX, const Vec3F& halfAxisY)
     {
-        DrawProjectedLine({ center - halfAxisX - halfAxisY, center + halfAxisX - halfAxisY,
-                            center + halfAxisX + halfAxisY, center - halfAxisX + halfAxisY }, true);
+        mLinePoints.Clear();
+        mLinePoints.Add(center - halfAxisX - halfAxisY);
+        mLinePoints.Add(center + halfAxisX - halfAxisY);
+        mLinePoints.Add(center + halfAxisX + halfAxisY);
+        mLinePoints.Add(center - halfAxisX + halfAxisY);
+
+        DrawProjectedLine(mLinePoints, true);
     }
 
     void Gizmos::DrawBox(const Vec3F& center, const Vec3F& halfAxisX, const Vec3F& halfAxisY, const Vec3F& halfAxisZ)
     {
-        Vec3F corners[8];
-        int i = 0;
+        // Two opposite faces as closed rings plus the four edges between them: 6 poly lines instead of
+        // 12 separate segments, each of which costs its own mesh build and draw batch
+        DrawRect(center - halfAxisZ, halfAxisX, halfAxisY);
+        DrawRect(center + halfAxisZ, halfAxisX, halfAxisY);
+
         for (int x = -1; x <= 1; x += 2)
         {
             for (int y = -1; y <= 1; y += 2)
             {
-                for (int z = -1; z <= 1; z += 2)
-                    corners[i++] = center + halfAxisX*(float)x + halfAxisY*(float)y + halfAxisZ*(float)z;
+                Vec3F corner = center + halfAxisX*(float)x + halfAxisY*(float)y;
+                DrawLine(corner - halfAxisZ, corner + halfAxisZ);
             }
         }
-
-        static const int edges[12][2] = {
-            { 0, 1 }, { 2, 3 }, { 4, 5 }, { 6, 7 },
-            { 0, 2 }, { 1, 3 }, { 4, 6 }, { 5, 7 },
-            { 0, 4 }, { 1, 5 }, { 2, 6 }, { 3, 7 }
-        };
-
-        for (auto& edge : edges)
-            DrawLine(corners[edge[0]], corners[edge[1]]);
     }
 
     void Gizmos::DrawSphere(const Vec3F& center, float radius, int segments /*= 32*/)
@@ -183,8 +185,9 @@ namespace o2
             return;
         }
 
-        Vector<Vec2F> projected;
-        projected.Reserve(points.Count() + 1);
+        // Reused buffer: a wireframe scene issues thousands of these per frame
+        Vector<Vec2F>& projected = mProjectedPoints;
+        projected.Clear();
 
         for (auto& point : points)
             projected.Add(mProjection(point));
@@ -199,7 +202,8 @@ namespace o2
 
     void Gizmos::DrawClippedLine(const Vector<Vec3F>& points, bool closed)
     {
-        Vector<Vec2F> projected;
+        Vector<Vec2F>& projected = mProjectedPoints;
+        projected.Clear();
 
         auto flush = [&]()
         {

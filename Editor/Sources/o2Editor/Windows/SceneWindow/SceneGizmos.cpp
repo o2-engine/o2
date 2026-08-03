@@ -54,33 +54,45 @@ namespace Editor
         }
     }
 
-    void SceneGizmos::Draw(const Function<Vec2F(const Vec3F&)>& projection, const Vec3F& clipPlaneOrigin /*= Vec3F()*/,
+    void SceneGizmos::Draw(const Vector<Ref<SceneEditableObject>>& objects,
+                           const Function<Vec2F(const Vec3F&)>& projection, const Vec3F& clipPlaneOrigin /*= Vec3F()*/,
                            const Vec3F& clipPlaneNormal /*= Vec3F()*/)
     {
-        UpdateGizmosTypes();
-
-        if (!mEnabled)
+        if (!mEnabled || objects.IsEmpty())
             return;
 
         o2Gizmos.SetProjection(projection, clipPlaneOrigin, clipPlaneNormal);
 
-        for (auto& [actorPtr, actorRef] : o2Scene.GetAllActors())
+        mDrawnActors.Clear();
+
+        for (auto& object : objects)
         {
-            auto actor = actorRef.Lock();
-            if (!actor || !actor->IsEnabledInHierarchy())
-                continue;
-
-            if (IsTypeEnabled(&actor->GetType()))
-                actor->DrawGizmos();
-
-            for (auto& component : actor->GetComponents())
-            {
-                if (component->IsEnabledInHierarchy() && IsTypeEnabled(&component->GetType()))
-                    component->DrawGizmos();
-            }
+            if (auto actor = DynamicCast<Actor>(object))
+                DrawActorGizmos(actor);
         }
 
         o2Gizmos.ResetProjection();
+    }
+
+    void SceneGizmos::DrawActorGizmos(const Ref<Actor>& actor)
+    {
+        if (!actor->IsEnabledInHierarchy() || mDrawnActors.ContainsKey(actor.Get()))
+            return;
+
+        mDrawnActors.Add(actor.Get(), true);
+
+        if (IsTypeEnabled(&actor->GetType()))
+            actor->DrawGizmos();
+
+        for (auto& component : actor->GetComponents())
+        {
+            if (component->IsEnabledInHierarchy() && IsTypeEnabled(&component->GetType()))
+                component->DrawGizmos();
+        }
+
+        // The selection covers the whole subtree of the selected object, same as its outline does
+        for (auto& child : actor->GetChildren())
+            DrawActorGizmos(child);
     }
 
     bool SceneGizmos::IsGizmosDrawer(const Type& type)

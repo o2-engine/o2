@@ -25,8 +25,9 @@ In the dropdown menu they can be reordered via drag'n'drop, created, deleted, re
 The Gizmos button on the top opens the view display panel. The Gizmos switch turns off gizmos
 entirely, below it is the list of actor and component types which draw gizmos: each one is switched
 separately. The list contains the types which override `OnDrawGizmos` and are present on the current
-scene (colliders, joints, cameras) — they appear right away, before anything was drawn. Gizmos are
-drawn for all scene objects and work in both 2D and 3D view mode.
+scene (colliders, joints, cameras) — it is collected from the whole scene, so a type can be switched
+off before anything of it is selected. Gizmos are drawn for the selected objects only, down their
+children — the same hierarchy the selection outline covers — and work in both 2D and 3D view mode.
 
 The last row, under a separator, is the Selection switch — it turns off drawing of the objects
 selection: the transform frames and the silhouette outline of the selected content. The outline is

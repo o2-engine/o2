@@ -117,22 +117,18 @@ namespace o2
     template<typename VertexStruct>
     void Mesh::Resize(UInt vertexCount, UInt polyCount)
     {
-        if (mVertexData)
+        VertexType type = VertexStruct::Type();
+        if (!(mVertexType == type))
+        {
+            // Buffer capacity is measured in vertices, so a stride change invalidates it
             delete[] mVertexData;
+            mVertexData = nullptr;
+            mMaxVertexCount = 0;
 
-        if (mIndexData)
-            delete[] mIndexData;
+            mVertexType = type;
+        }
 
-        mVertexType = VertexStruct::Type();
-
-        mVertexData = mnew UInt8[vertexCount * mVertexType.GetStride()];
-        mIndexData = mnew VertexIndex[polyCount * 3];
-
-        mMaxVertexCount = vertexCount;
-        mMaxPolyCount = polyCount;
-
-        this->vertexCount = 0;
-        this->polyCount = 0;
+        Resize(vertexCount, polyCount);
     }
 
     template<typename VertexStruct>

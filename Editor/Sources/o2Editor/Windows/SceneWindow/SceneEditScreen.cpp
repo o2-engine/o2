@@ -730,7 +730,7 @@ namespace Editor
         if (m3DMode)
             return;
 
-        mGizmos.Draw([](const Vec3F& worldPoint) { return Vec2F(worldPoint.x, worldPoint.y); });
+        mGizmos.Draw(mSelectedObjects, [](const Vec3F& worldPoint) { return Vec2F(worldPoint.x, worldPoint.y); });
     }
 
     void SceneEditScreen::DrawGizmos3D()
@@ -741,7 +741,15 @@ namespace Editor
         Vec3F clipPlaneOrigin, clipPlaneNormal;
         mView3D.GetNearClipPlane(clipPlaneOrigin, clipPlaneNormal);
 
-        mGizmos.Draw([&](const Vec3F& worldPoint) { return World3DToScreenPoint(worldPoint); },
+        // The view-projection is built once for the whole gizmos pass: a wireframe scene projects
+        // thousands of points, and rebuilding the camera matrices per point dominates the frame
+        Vec2F viewportSize = GetViewportSize();
+        Mat4 viewProjection = mView3D.GetViewProjection(viewportSize);
+
+        mGizmos.Draw(mSelectedObjects,
+                     [&](const Vec3F& worldPoint) {
+                         return ViewportToScreenPoint(mView3D.WorldToScreen(worldPoint, viewportSize, viewProjection));
+                     },
                      clipPlaneOrigin, clipPlaneNormal);
     }
 

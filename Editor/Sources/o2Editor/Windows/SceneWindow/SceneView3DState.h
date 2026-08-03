@@ -49,6 +49,13 @@ namespace Editor
         // Projects arbitrary world point to viewport coordinates
         Vec2F WorldToScreen(const Vec3F& worldPoint, const Vec2F& viewportSize) const;
 
+        // Projects world point with a precomputed view-projection; use it when projecting many points,
+        // building the matrix per point costs far more than the projection itself
+        Vec2F WorldToScreen(const Vec3F& worldPoint, const Vec2F& viewportSize, const Mat4& viewProjection) const;
+
+        // Returns projection*view matrix for viewport size
+        Mat4 GetViewProjection(const Vec2F& viewportSize) const;
+
         // Returns z of the closest point on the world Z line through (planeAnchor, 0) to the view ray;
         // false when the ray is parallel to the axis (looking straight down)
         bool ScreenToVerticalAxisZ(const Vec2F& viewportPoint, const Vec2F& viewportSize,
@@ -91,8 +98,5 @@ namespace Editor
     private:
         // Builds view ray for viewport point: origin on near plane, normalized direction
         bool GetViewRay(const Vec2F& viewportPoint, const Vec2F& viewportSize, Vec3F& origin, Vec3F& direction) const;
-
-        // Returns projection*view matrix for viewport size
-        Mat4 GetViewProjection(const Vec2F& viewportSize) const;
     };
 }

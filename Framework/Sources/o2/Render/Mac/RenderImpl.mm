@@ -41,6 +41,16 @@ namespace o2
     float                    RenderDevice::threadGraphicsScale = 1.0f;
     dispatch_semaphore_t     RenderDevice::frameSemaphore;
 
+    id<MTLRenderCommandEncoder> RenderDevice::renderEncoder;
+    id<MTLTexture>              RenderDevice::encoderColorTexture;
+    id<MTLTexture>              RenderDevice::encoderDepthTexture;
+    id<MTLTexture>              RenderDevice::encoderExtraTextures[3];
+
+    id<MTLRenderCommandEncoder> RenderDevice::threadEncoder;
+    id<MTLTexture>              RenderDevice::threadEncoderColorTexture;
+    id<MTLTexture>              RenderDevice::threadEncoderDepthTexture;
+    id<MTLTexture>              RenderDevice::threadEncoderExtraTextures[3];
+
     // Up to this many frames may be in flight on the GPU before the render thread waits
     static const int kMaxFramesInFlight = 2;
 
@@ -228,6 +238,21 @@ namespace o2
         mIndexBufferIdx = 0;
     }
     
+    void Render::PlatformEndPass()
+    {
+        if (!RenderDevice::renderEncoder)
+            return;
+
+        [RenderDevice::renderEncoder endEncoding];
+
+        RenderDevice::renderEncoder = nil;
+        RenderDevice::encoderColorTexture = nil;
+        RenderDevice::encoderDepthTexture = nil;
+
+        for (int i = 0; i < 3; i++)
+            RenderDevice::encoderExtraTextures[i] = nil;
+    }
+
     void Render::PlatformDrawPrimitives()
     {
         if (!mCurrentMaterial || !mCurrentMaterial->mImpl || !mCurrentMaterial->mImpl->pipelineState)
@@ -236,51 +261,32 @@ namespace o2
         MTLRenderPassDescriptor *renderPassDescriptor = RenderDevice::view.currentRenderPassDescriptor;
         if (renderPassDescriptor != nil)
         {
-            MTLLoadAction colorLoadAction;
             MTLClearColor clearColor = MTLClearColorMake(mClearColor.RF(), mClearColor.GF(), mClearColor.BF(), mClearColor.AF());
-            if (mNeedClear)
-            {
-                colorLoadAction = MTLLoadActionClear;
-                [renderPassDescriptor.colorAttachments[0] setClearColor:clearColor];
-                mNeedClear = false;
-            }
-            else
-                colorLoadAction = MTLLoadActionLoad;
 
-            [renderPassDescriptor.colorAttachments[0] setLoadAction:colorLoadAction];
-            [renderPassDescriptor.colorAttachments[0] setStoreAction:MTLStoreActionStore];
+            id<MTLTexture> colorTexture = mCurrentRenderTarget ? mCurrentRenderTarget->mImpl->texture :
+                                                                 renderPassDescriptor.colorAttachments[0].texture;
 
-            // Extra MRT color attachments follow the primary attachment's clear/load behavior
             static const int maxExtraAttachments = 3;
+            id<MTLTexture> extraTextures[maxExtraAttachments] = { nil, nil, nil };
             for (int i = 0; i < maxExtraAttachments; i++)
             {
-                auto attachment = renderPassDescriptor.colorAttachments[i + 1];
                 if (mCurrentRenderTarget && i < mExtraRenderTargets.Count())
-                {
-                    attachment.texture = mExtraRenderTargets[i]->mImpl->texture;
-                    attachment.clearColor = clearColor;
-                    attachment.loadAction = colorLoadAction;
-                    attachment.storeAction = MTLStoreActionStore;
-                }
-                else
-                    attachment.texture = nil;
+                    extraTextures[i] = mExtraRenderTargets[i]->mImpl->texture;
             }
 
             id<MTLTexture> depthTexture = RenderDevice::view.depthStencilTexture;
             if (mCurrentRenderTarget)
             {
-                renderPassDescriptor.colorAttachments[0].texture = mCurrentRenderTarget->mImpl->texture;
-
                 auto targetImpl = mCurrentRenderTarget->mImpl;
-                id<MTLTexture> colorTexture = targetImpl->texture;
+                id<MTLTexture> targetColorTexture = targetImpl->texture;
                 if (!targetImpl->depthTexture ||
-                    targetImpl->depthTexture.width != colorTexture.width ||
-                    targetImpl->depthTexture.height != colorTexture.height)
+                    targetImpl->depthTexture.width != targetColorTexture.width ||
+                    targetImpl->depthTexture.height != targetColorTexture.height)
                 {
                     MTLTextureDescriptor* depthDescriptor =
                         [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatDepth32Float
-                                                                           width:colorTexture.width
-                                                                          height:colorTexture.height
+                                                                           width:targetColorTexture.width
+                                                                          height:targetColorTexture.height
                                                                        mipmapped:NO];
                     depthDescriptor.usage = MTLTextureUsageRenderTarget;
                     depthDescriptor.storageMode = MTLStorageModePrivate;
@@ -290,11 +296,60 @@ namespace o2
                 depthTexture = targetImpl->depthTexture;
             }
 
-            renderPassDescriptor.depthAttachment.texture = depthTexture;
-            renderPassDescriptor.depthAttachment.clearDepth = 1.0;
-            renderPassDescriptor.depthAttachment.loadAction = mNeedDepthClear ? MTLLoadActionClear : MTLLoadActionLoad;
-            renderPassDescriptor.depthAttachment.storeAction = MTLStoreActionStore;
-            mNeedDepthClear = false;
+            // A clear is a load action, so it can only happen at the start of a pass; everything else
+            // this batch needs is encoder state, and can be set inside the pass already open
+            bool sameAttachments = RenderDevice::renderEncoder != nil &&
+                RenderDevice::encoderColorTexture == colorTexture &&
+                RenderDevice::encoderDepthTexture == depthTexture;
+
+            for (int i = 0; i < maxExtraAttachments && sameAttachments; i++)
+                sameAttachments = RenderDevice::encoderExtraTextures[i] == extraTextures[i];
+
+            if (!sameAttachments || mNeedClear || mNeedDepthClear)
+            {
+                PlatformEndPass();
+
+                MTLLoadAction colorLoadAction = mNeedClear ? MTLLoadActionClear : MTLLoadActionLoad;
+                if (mNeedClear)
+                    [renderPassDescriptor.colorAttachments[0] setClearColor:clearColor];
+
+                renderPassDescriptor.colorAttachments[0].texture = colorTexture;
+                [renderPassDescriptor.colorAttachments[0] setLoadAction:colorLoadAction];
+                [renderPassDescriptor.colorAttachments[0] setStoreAction:MTLStoreActionStore];
+
+                // Extra MRT color attachments follow the primary attachment's clear/load behavior
+                for (int i = 0; i < maxExtraAttachments; i++)
+                {
+                    auto attachment = renderPassDescriptor.colorAttachments[i + 1];
+                    attachment.texture = extraTextures[i];
+
+                    if (extraTextures[i])
+                    {
+                        attachment.clearColor = clearColor;
+                        attachment.loadAction = colorLoadAction;
+                        attachment.storeAction = MTLStoreActionStore;
+                    }
+                }
+
+                renderPassDescriptor.depthAttachment.texture = depthTexture;
+                renderPassDescriptor.depthAttachment.clearDepth = 1.0;
+                renderPassDescriptor.depthAttachment.loadAction = mNeedDepthClear ? MTLLoadActionClear :
+                                                                                    MTLLoadActionLoad;
+                renderPassDescriptor.depthAttachment.storeAction = MTLStoreActionStore;
+
+                RenderDevice::renderEncoder = [RenderDevice::commandBuffer
+                                               renderCommandEncoderWithDescriptor:renderPassDescriptor];
+                RenderDevice::renderEncoder.label = @"Default";
+
+                RenderDevice::encoderColorTexture = colorTexture;
+                RenderDevice::encoderDepthTexture = depthTexture;
+
+                for (int i = 0; i < maxExtraAttachments; i++)
+                    RenderDevice::encoderExtraTextures[i] = extraTextures[i];
+
+                mNeedClear = false;
+                mNeedDepthClear = false;
+            }
 
             NSUInteger vertexDataSize = (NSUInteger)mLastDrawVertex * mCurrentBatchVertexType.GetStride();
             NSUInteger indexDataSize = (NSUInteger)mLastDrawIdx * sizeof(VertexIndex);
@@ -319,9 +374,8 @@ namespace o2
             memcpy((Byte*)[RenderDevice::vertexBuffer contents] + mVertexBufferOffset, mVertexData, vertexDataSize);
             memcpy((Byte*)[RenderDevice::indexBuffer contents] + mIndexBufferOffset, mVertexIndexData, indexDataSize);
 
-            auto renderEncoder = [RenderDevice::commandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
-            renderEncoder.label = @"Default";
-            
+            id<MTLRenderCommandEncoder> renderEncoder = RenderDevice::renderEncoder;
+
             float scale = mCurrentRenderTarget ? 1.0f : o2Application.GetGraphicsScale();
             [renderEncoder setViewport:(MTLViewport){0.0, 0.0, (double)(mCurrentResolution.x * scale), (double)(mCurrentResolution.y * scale), 0.0, 1.0 }];
             
@@ -344,7 +398,15 @@ namespace o2
                     (ULong)scissorRect.Height()
                 }];
             }
-            
+            else
+            {
+                // Scissor is encoder state: an unclipped batch sharing the pass must drop the
+                // rectangle left by the clipped one before it
+                [renderEncoder setScissorRect:(MTLScissorRect){
+                    0, 0, (ULong)colorTexture.width, (ULong)colorTexture.height
+                }];
+            }
+
             [renderEncoder setRenderPipelineState:mCurrentMaterial->mImpl->pipelineState];
             id<MTLDepthStencilState> depthState = RenderDevice::depthStateDisabled;
             if (mDepthTestEnabled)
@@ -401,8 +463,6 @@ namespace o2
             
             [renderEncoder drawIndexedPrimitives:primitiveType[(int)mCurrentPrimitiveType] indexCount:mLastDrawIdx
                 indexType:MTLIndexTypeUInt32 indexBuffer:RenderDevice::indexBuffer indexBufferOffset:mIndexBufferOffset];
-            
-            [renderEncoder endEncoding];
         }
 
         mVertexBufferOffset = AlignBufferOffset(mVertexBufferOffset + (NSUInteger)mLastDrawVertex * mCurrentBatchVertexType.GetStride());
@@ -411,6 +471,8 @@ namespace o2
 
     void Render::PlatformEnd()
     {
+        PlatformEndPass();
+
         if (!RenderDevice::commandBuffer)
             return;
 
@@ -424,6 +486,18 @@ namespace o2
     }
 
     // ---------------- Multithreaded rendering (record on main, submit on the render thread) ----------------
+
+    bool Render::PlatformSupportsMultithreadedRender()
+    {
+        return true;
+    }
+
+    void Render::PlatformBeginRecording()
+    {
+        // The depth clear flag of the frame: PlatformBeginThreaded, which would set it, runs on the
+        // render thread only after the frame is recorded
+        mNeedDepthClear = true;
+    }
 
     void Render::PlatformSnapshotDrawState(RenderDrawCommand& command)
     {
@@ -469,6 +543,21 @@ namespace o2
         mIndexBufferIdx = 0;
     }
 
+    void Render::PlatformEndThreadedPass()
+    {
+        if (!RenderDevice::threadEncoder)
+            return;
+
+        [RenderDevice::threadEncoder endEncoding];
+
+        RenderDevice::threadEncoder = nil;
+        RenderDevice::threadEncoderColorTexture = nil;
+        RenderDevice::threadEncoderDepthTexture = nil;
+
+        for (int i = 0; i < 3; i++)
+            RenderDevice::threadEncoderExtraTextures[i] = nil;
+    }
+
     void Render::PlatformReplayDrawCommand(const RenderDrawCommand& command)
     {
         const Ref<Material>& material = command.material;
@@ -478,55 +567,33 @@ namespace o2
         MTLRenderPassDescriptor* renderPassDescriptor = RenderDevice::threadRenderPassDescriptor;
         if (renderPassDescriptor != nil)
         {
-            MTLLoadAction colorLoadAction;
             MTLClearColor clearColor = MTLClearColorMake(command.clearColor.RF(), command.clearColor.GF(),
                                                          command.clearColor.BF(), command.clearColor.AF());
-            if (command.needClear)
-            {
-                colorLoadAction = MTLLoadActionClear;
-                [renderPassDescriptor.colorAttachments[0] setClearColor:clearColor];
-            }
-            else
-                colorLoadAction = MTLLoadActionLoad;
 
-            // The single reused descriptor must be re-pointed at the right color texture every command,
-            // so a render-target batch doesn't leak into the following back-buffer batch
-            if (command.renderTarget)
-                renderPassDescriptor.colorAttachments[0].texture = command.renderTarget->mImpl->texture;
-            else
-                renderPassDescriptor.colorAttachments[0].texture = RenderDevice::threadDrawable.texture;
-
-            [renderPassDescriptor.colorAttachments[0] setLoadAction:colorLoadAction];
-            [renderPassDescriptor.colorAttachments[0] setStoreAction:MTLStoreActionStore];
+            id<MTLTexture> colorTexture = command.renderTarget ? command.renderTarget->mImpl->texture :
+                                                                 RenderDevice::threadDrawable.texture;
 
             static const int maxExtraAttachments = 3;
+            id<MTLTexture> extraTextures[maxExtraAttachments] = { nil, nil, nil };
             for (int i = 0; i < maxExtraAttachments; i++)
             {
-                auto attachment = renderPassDescriptor.colorAttachments[i + 1];
                 if (command.renderTarget && i < command.extraRenderTargets.Count())
-                {
-                    attachment.texture = command.extraRenderTargets[i]->mImpl->texture;
-                    attachment.clearColor = clearColor;
-                    attachment.loadAction = colorLoadAction;
-                    attachment.storeAction = MTLStoreActionStore;
-                }
-                else
-                    attachment.texture = nil;
+                    extraTextures[i] = command.extraRenderTargets[i]->mImpl->texture;
             }
 
             id<MTLTexture> depthTexture = RenderDevice::threadDepthTexture;
             if (command.renderTarget)
             {
                 auto targetImpl = command.renderTarget->mImpl;
-                id<MTLTexture> colorTexture = targetImpl->texture;
+                id<MTLTexture> targetColorTexture = targetImpl->texture;
                 if (!targetImpl->depthTexture ||
-                    targetImpl->depthTexture.width != colorTexture.width ||
-                    targetImpl->depthTexture.height != colorTexture.height)
+                    targetImpl->depthTexture.width != targetColorTexture.width ||
+                    targetImpl->depthTexture.height != targetColorTexture.height)
                 {
                     MTLTextureDescriptor* depthDescriptor =
                         [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatDepth32Float
-                                                                           width:colorTexture.width
-                                                                          height:colorTexture.height
+                                                                           width:targetColorTexture.width
+                                                                          height:targetColorTexture.height
                                                                        mipmapped:NO];
                     depthDescriptor.usage = MTLTextureUsageRenderTarget;
                     depthDescriptor.storageMode = MTLStorageModePrivate;
@@ -536,10 +603,58 @@ namespace o2
                 depthTexture = targetImpl->depthTexture;
             }
 
-            renderPassDescriptor.depthAttachment.texture = depthTexture;
-            renderPassDescriptor.depthAttachment.clearDepth = 1.0;
-            renderPassDescriptor.depthAttachment.loadAction = command.needDepthClear ? MTLLoadActionClear : MTLLoadActionLoad;
-            renderPassDescriptor.depthAttachment.storeAction = MTLStoreActionStore;
+            // A clear is a load action, so it can only happen at the start of a pass; everything else
+            // this command needs is encoder state, and can be set inside the pass already open
+            bool sameAttachments = RenderDevice::threadEncoder != nil &&
+                RenderDevice::threadEncoderColorTexture == colorTexture &&
+                RenderDevice::threadEncoderDepthTexture == depthTexture;
+
+            for (int i = 0; i < maxExtraAttachments && sameAttachments; i++)
+                sameAttachments = RenderDevice::threadEncoderExtraTextures[i] == extraTextures[i];
+
+            if (!sameAttachments || command.needClear || command.needDepthClear)
+            {
+                PlatformEndThreadedPass();
+
+                MTLLoadAction colorLoadAction = command.needClear ? MTLLoadActionClear : MTLLoadActionLoad;
+                if (command.needClear)
+                    [renderPassDescriptor.colorAttachments[0] setClearColor:clearColor];
+
+                // The single reused descriptor must be re-pointed at the right color texture every pass,
+                // so a render-target batch doesn't leak into the following back-buffer batch
+                renderPassDescriptor.colorAttachments[0].texture = colorTexture;
+                [renderPassDescriptor.colorAttachments[0] setLoadAction:colorLoadAction];
+                [renderPassDescriptor.colorAttachments[0] setStoreAction:MTLStoreActionStore];
+
+                for (int i = 0; i < maxExtraAttachments; i++)
+                {
+                    auto attachment = renderPassDescriptor.colorAttachments[i + 1];
+                    attachment.texture = extraTextures[i];
+
+                    if (extraTextures[i])
+                    {
+                        attachment.clearColor = clearColor;
+                        attachment.loadAction = colorLoadAction;
+                        attachment.storeAction = MTLStoreActionStore;
+                    }
+                }
+
+                renderPassDescriptor.depthAttachment.texture = depthTexture;
+                renderPassDescriptor.depthAttachment.clearDepth = 1.0;
+                renderPassDescriptor.depthAttachment.loadAction = command.needDepthClear ? MTLLoadActionClear :
+                                                                                          MTLLoadActionLoad;
+                renderPassDescriptor.depthAttachment.storeAction = MTLStoreActionStore;
+
+                RenderDevice::threadEncoder = [RenderDevice::commandBuffer
+                                               renderCommandEncoderWithDescriptor:renderPassDescriptor];
+                RenderDevice::threadEncoder.label = @"Threaded";
+
+                RenderDevice::threadEncoderColorTexture = colorTexture;
+                RenderDevice::threadEncoderDepthTexture = depthTexture;
+
+                for (int i = 0; i < maxExtraAttachments; i++)
+                    RenderDevice::threadEncoderExtraTextures[i] = extraTextures[i];
+            }
 
             NSUInteger vertexDataSize = (NSUInteger)command.vertexCount * command.vertexStride;
             NSUInteger indexDataSize = (NSUInteger)command.indexCount * sizeof(VertexIndex);
@@ -563,8 +678,7 @@ namespace o2
             memcpy((Byte*)[RenderDevice::vertexBuffer contents] + mVertexBufferOffset, command.vertexData.data(), vertexDataSize);
             memcpy((Byte*)[RenderDevice::indexBuffer contents] + mIndexBufferOffset, command.indexData.data(), indexDataSize);
 
-            auto renderEncoder = [RenderDevice::commandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
-            renderEncoder.label = @"Threaded";
+            id<MTLRenderCommandEncoder> renderEncoder = RenderDevice::threadEncoder;
 
             float scale = command.renderTarget ? 1.0f : RenderDevice::threadGraphicsScale;
             [renderEncoder setViewport:(MTLViewport){0.0, 0.0, (double)(command.resolution.x * scale), (double)(command.resolution.y * scale), 0.0, 1.0 }];
@@ -587,6 +701,14 @@ namespace o2
                     (ULong)(resolution.y - scissorRect.bottom - scissorRect.Height()),
                     (ULong)scissorRect.Width(),
                     (ULong)scissorRect.Height()
+                }];
+            }
+            else
+            {
+                // Scissor is encoder state: an unclipped command sharing the pass must drop the
+                // rectangle left by the clipped one before it
+                [renderEncoder setScissorRect:(MTLScissorRect){
+                    0, 0, (ULong)colorTexture.width, (ULong)colorTexture.height
                 }];
             }
 
@@ -646,8 +768,6 @@ namespace o2
 
             [renderEncoder drawIndexedPrimitives:primitiveType[command.primitiveType] indexCount:command.indexCount
                 indexType:MTLIndexTypeUInt32 indexBuffer:RenderDevice::indexBuffer indexBufferOffset:mIndexBufferOffset];
-
-            [renderEncoder endEncoding];
         }
 
         mVertexBufferOffset = AlignBufferOffset(mVertexBufferOffset + (NSUInteger)command.vertexCount * command.vertexStride);
@@ -656,6 +776,8 @@ namespace o2
 
     void Render::PlatformEndThreaded()
     {
+        PlatformEndThreadedPass();
+
         if (!RenderDevice::commandBuffer)
         {
             // Nothing was submitted this frame, keep the semaphore balanced with PlatformBeginThreaded

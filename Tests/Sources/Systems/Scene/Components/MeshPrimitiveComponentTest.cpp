@@ -155,3 +155,65 @@ TEST(MeshPrimitiveComponent, ShadedBakesDifferentColorsPerFace)
 
     EXPECT_TRUE(anyDifferent);
 }
+
+TEST(MeshPrimitiveComponent, MeshFollowsTransformWithoutBeingDrawn)
+{
+    SceneCleanGuard guard;
+    auto a = mmake<Actor>(ActorCreateMode::InScene);
+    auto m = a->AddComponent<MeshPrimitiveComponent>();
+    m->SetSize(Vec3F(100, 100, 100));
+    TickFrame();
+
+    a->transform->SetPosition(Vec3F(500, 0, 0));
+    TickFrame();
+
+    // Filling is deferred to the first use, so it must still be up to date for anyone asking
+    const Mesh& mesh = m->GetMesh();
+    ASSERT_EQ(mesh.vertexCount, 24u);
+
+    const Vertex* verts = mesh.GetVertices<Vertex>();
+    for (UInt i = 0; i < mesh.vertexCount; i++)
+        EXPECT_NEAR(verts[i].x, 500.0f, 50.0f + kEps);
+}
+
+TEST(MeshPrimitiveComponent, WorldBoundsFollowTransform)
+{
+    SceneCleanGuard guard;
+    auto a = mmake<Actor>(ActorCreateMode::InScene);
+    auto m = a->AddComponent<MeshPrimitiveComponent>();
+    m->SetSize(Vec3F(100, 100, 100));
+    a->transform->SetPosition(Vec3F(10, 20, 30));
+    TickFrame();
+
+    AABB bounds;
+    ASSERT_TRUE(m->Get3DDrawableBounds(bounds));
+    EXPECT_NEAR(bounds.GetCenter().x, 10.0f, kEps);
+    EXPECT_NEAR(bounds.GetCenter().y, 20.0f, kEps);
+    EXPECT_NEAR(bounds.GetCenter().z, 30.0f, kEps);
+    EXPECT_NEAR(bounds.GetSize().x, 100.0f, kEps);
+
+    a->transform->SetPosition(Vec3F(-40, 20, 30));
+    TickFrame();
+
+    ASSERT_TRUE(m->Get3DDrawableBounds(bounds));
+    EXPECT_NEAR(bounds.GetCenter().x, -40.0f, kEps);
+}
+
+TEST(MeshPrimitiveComponent, LocalBoundsFollowSize)
+{
+    SceneCleanGuard guard;
+    auto a = mmake<Actor>(ActorCreateMode::InScene);
+    auto m = a->AddComponent<MeshPrimitiveComponent>();
+    m->SetSize(Vec3F(20, 40, 60));
+    TickFrame();
+
+    AABB bounds;
+    ASSERT_TRUE(m->Get3DDrawableLocalBounds(bounds));
+    EXPECT_NEAR(bounds.GetSize().x, 20.0f, kEps);
+    EXPECT_NEAR(bounds.GetSize().y, 40.0f, kEps);
+    EXPECT_NEAR(bounds.GetSize().z, 60.0f, kEps);
+
+    m->SetSize(Vec3F(200, 40, 60));
+    ASSERT_TRUE(m->Get3DDrawableLocalBounds(bounds));
+    EXPECT_NEAR(bounds.GetSize().x, 200.0f, kEps);
+}

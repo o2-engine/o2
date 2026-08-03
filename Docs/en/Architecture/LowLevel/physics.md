@@ -42,6 +42,13 @@ back to the actor, and the actor pose is pushed into the body only when it was m
 dirty check). This avoids round-tripping the actor's euler-stored rotation back into the simulation.
 World rotation is read/written through `ActorTransform::GetWorldRotation` / `SetWorldRotation`.
 
+The dirty check compares the actor pose with the last synced one using relative tolerances (a
+quaternion is compared against its own length, since the euler round-trip returns it slightly off
+unit length). It has to: an external move teleports the body and wakes it, so a check that reports
+"moved" for a resting body would keep the whole world awake and solving every step. Bodies that
+come to rest fall asleep and cost almost nothing — `RigidBody3D::IsSleeping` /
+`SetIsSleeping(false)` read and override that.
+
 ### 3D shapes, colliders
 Descendants of `o2::ICollider3D` (density, friction, restitution, sensor):
 - `o2::BoxCollider3D` - box

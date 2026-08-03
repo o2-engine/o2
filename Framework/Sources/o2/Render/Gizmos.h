@@ -4,6 +4,7 @@
 #include "o2/Utils/Math/Color.h"
 #include "o2/Utils/Math/Vector3.h"
 #include "o2/Utils/Singleton.h"
+#include "o2/Utils/Types/Containers/Vector.h"
 
 // Gizmos drawer access macros
 #define o2Gizmos o2::Gizmos::Instance()
@@ -86,6 +87,9 @@ namespace o2
         Vec3F mClipPlaneNormal;     // Normalized clip plane normal, points to the visible side
 
         int mDrawnPrimitives = 0; // Count of primitives, drawn since last counter reset
+
+        Vector<Vec3F> mLinePoints;     // Reused world points buffer of the single line drawing
+        Vector<Vec2F> mProjectedPoints; // Reused projected points buffer of the poly line drawing
 
     private:
         // Returns signed distance from point to the clip plane, positive on the visible side;

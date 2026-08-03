@@ -486,6 +486,42 @@ namespace o2
 
         GL_CHECK_ERROR();
     }
+
+    // WebGL owns its context on the browser's main thread — rendering can only move off it through an
+    // OffscreenCanvas in a worker, which the whole application loop would have to follow
+
+    // This backend draws while the frame is recorded: state changes, clears and material binds go
+    // straight to the GPU API on the main thread, so a frame can't be replayed elsewhere yet. Moving
+    // submission to the render thread needs the whole frame recorded first (and the context handed
+    // over to that thread), after which these hooks replace the direct calls
+    bool Render::PlatformSupportsMultithreadedRender()
+    {
+        return false;
+    }
+
+    void Render::PlatformBeginRecording()
+    {}
+
+    void Render::PlatformSnapshotDrawState(RenderDrawCommand& command)
+    {}
+
+    void Render::PlatformAcquireFrameTarget()
+    {}
+
+    void Render::PlatformBeginThreaded()
+    {}
+
+    void Render::PlatformReplayDrawCommand(const RenderDrawCommand& command)
+    {}
+
+    void Render::PlatformEndThreadedPass()
+    {}
+
+    void Render::PlatformEndThreaded()
+    {}
+
+    void Render::PlatformEndPass()
+    {}
 }
 
 #endif // PLATFORM_WASM

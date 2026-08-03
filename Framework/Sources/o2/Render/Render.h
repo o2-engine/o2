@@ -391,6 +391,8 @@ namespace o2
 		UInt       mSceneDrawCallsCount = 0;      // Draw calls made outside of an editor scope
 		UInt       mSceneTrianglesCount = 0;      // Triangles drawn outside of an editor scope
 
+		Vector<Vertex> mAALineVertices;           // Reused conversion buffer for poly line drawing
+
 		UInt8*       mVertexData = nullptr;       // CPU-side vertex batch buffer
 		UInt         mVertexBufferSize = 0;       // Max vertex count in batch buffer
 		UInt         mVertexBufferByteSize = 0;   // Max byte size of vertex batch buffer
@@ -540,12 +542,19 @@ namespace o2
 		// Platform specific draw primitives (draw call)
 		void PlatformDrawPrimitives();
 
-#if defined(PLATFORM_MAC)
+		// Platform: whether this backend can submit a recorded frame from the render thread. A backend
+		// supports it once nothing of its drawing touches the GPU API while the frame is being recorded,
+		// so the whole frame can be replayed on another thread
+		static bool PlatformSupportsMultithreadedRender();
+
 		// Records the current batch (geometry + full GPU-state snapshot) into the frame command buffer
 		void RecordDrawCommand();
 
 		// Runs on the render thread: replays the recorded command buffer, submitting the whole frame
 		void SubmitRecordedFrame();
+
+		// Platform: prepares the main thread to record a frame whose PlatformBegin runs on the render thread
+		void PlatformBeginRecording();
 
 		// Platform: snapshots the platform-specific submit state (matrix, scissor, clear flags) into cmd
 		void PlatformSnapshotDrawState(RenderDrawCommand& command);
@@ -559,9 +568,14 @@ namespace o2
 		// Platform: replays one recorded draw command on the render thread
 		void PlatformReplayDrawCommand(const RenderDrawCommand& command);
 
+		// Platform: closes the render pass the replayed commands share, if one is open
+		void PlatformEndThreadedPass();
+
 		// Platform: ends a frame on the render thread (present + commit + wait)
 		void PlatformEndThreaded();
-#endif
+
+		// Platform: closes the render pass the drawn batches share, if one is open
+		void PlatformEndPass();
 
 		// Checks vertex buffer for texture coordinate flip by texture format
 		void CheckVertexBufferTexCoordFlipByTextureFormat();

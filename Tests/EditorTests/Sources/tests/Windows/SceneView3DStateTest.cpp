@@ -479,3 +479,21 @@ TEST(SceneView3DState, FlyRightAndUpMoveAlongCameraAxes)
 
     EXPECT_TRUE(Near3(state.GetCameraPosition(), cameraBefore + right*10.0f + up*20.0f));
 }
+
+TEST(SceneView3DState, WorldToScreenWithCachedMatrixMatchesPlainOne)
+{
+    SceneView3DState state;
+    state.target = Vec3F(30.0f, -15.0f, 5.0f);
+    state.yaw = 0.7f;
+    state.pitch = 0.4f;
+    state.distance = 420.0f;
+
+    Mat4 viewProjection = state.GetViewProjection(kViewport);
+
+    const Vec3F points[] = { Vec3F(), Vec3F(100.0f, 0.0f, 0.0f), Vec3F(-40.0f, 60.0f, 25.0f),
+                             Vec3F(30.0f, -15.0f, 5.0f) };
+
+    for (auto& point : points)
+        EXPECT_TRUE(Near2(state.WorldToScreen(point, kViewport, viewProjection),
+                          state.WorldToScreen(point, kViewport)));
+}
