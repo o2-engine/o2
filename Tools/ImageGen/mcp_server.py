@@ -65,7 +65,9 @@ TOOLS = [
         "name": "generate_transparent_image",
         "description": "Generate a sprite with a real alpha channel (RGBA PNG): renders the "
                        "subject on white, re-renders on black, recovers per-pixel alpha from the "
-                       "pair. Note: fails on subjects that are themselves nearly white.",
+                       "pair. If all four corners of the result come out opaque the background "
+                       "failed and the render is retried, up to 5 attempts. Note: fails on "
+                       "subjects that are themselves nearly white.",
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -117,8 +119,10 @@ TOOLS = [
     {
         "name": "extract_region",
         "description": "Cut a rectangular region out of an image into a separate sprite PNG. "
-                       "With transparent=true the region's main subject is isolated and gets an "
-                       "alpha channel (two extra model calls; output resolution may differ).",
+                       "With `part` set, the model keeps only the described element exactly as "
+                       "it appears in the crop and erases everything else (background and other "
+                       "objects) to pure white, preserving the original as much as possible. "
+                       "With transparent=true the result additionally gets an alpha channel.",
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -127,8 +131,14 @@ TOOLS = [
                          "minItems": 4, "maxItems": 4,
                          "description": "Region as [x, y, w, h] in pixels"},
                 "out_path": OUT_SCHEMA,
+                "part": {"type": "string",
+                         "description": "Description of the element to extract from the crop; "
+                                        "everything else is erased to pure white"},
+                "marks_path": {"type": "string",
+                               "description": "Optional copy of the image with hand-drawn marks "
+                                              "over extra areas to erase (used with `part`)"},
                 "transparent": {"type": "boolean",
-                                "description": "Isolate subject and build alpha channel"},
+                                "description": "Build an alpha channel for the result"},
             },
             "required": ["image_path", "rect", "out_path"],
         },
@@ -181,8 +191,18 @@ def tool_generate_transparent_image(args):
 
 
 def tool_extract_region(args):
-    crop = gi.crop_rect(Image.open(args["image_path"]), args["rect"])
-    if args.get("transparent"):
+    source = Image.open(args["image_path"])
+    crop = gi.crop_rect(source, args["rect"])
+    if args.get("part"):
+        marks = None
+        if args.get("marks_path"):
+            marks = Image.open(args["marks_path"])
+            if marks.size == source.size:
+                marks = gi.crop_rect(marks, args["rect"])
+        crop = gi.extract_part(crop, args["part"], marks=marks)
+        if args.get("transparent"):
+            crop = gi.white_to_rgba(crop)
+    elif args.get("transparent"):
         crop = gi.isolate_transparent(crop)
     return image_result(crop, args["out_path"])
 

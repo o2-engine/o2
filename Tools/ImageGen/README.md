@@ -19,8 +19,13 @@ saved path and a downscaled preview (for video — first/middle/last frames, nee
 - `edit_image.py input.png "instruction" --out img.png [--ref style.png]` — edit an image.
 - `generate_transparent.py "prompt" --out sprite.png [--ref style.png] [--keep-steps]` — RGBA
   sprite: renders the subject on white, re-renders on black, recovers per-pixel alpha from the pair.
-- `extract_region.py atlas.png --rect x,y,w,h --out part.png [--transparent]` — crop a region;
-  with `--transparent` the region's subject is isolated and gets an alpha channel.
+  If all four corners of the result come out opaque the background failed and the render is
+  retried, up to 5 attempts.
+- `extract_region.py atlas.png --rect x,y,w,h --out part.png [--part "description"]
+  [--marks marked.png] [--transparent]` — crop a region; with `--part` the model keeps only the
+  described element exactly as it appears and erases everything else in the crop to pure white
+  (`--marks` — a copy of the image with hand-drawn marks over extra areas to erase); with
+  `--transparent` the result gets an alpha channel.
 - `generate_video.py "prompt" --out clip.mp4 [--image ref.png] [--aspect 16:9|9:16]
   [--resolution 720p|1080p] [--duration 4|6|8] [--green] [--loop] [--raw] [--negative "..."]` —
   text/image-to-video via Veo (default `veo-3.1-fast-generate-preview`, quality

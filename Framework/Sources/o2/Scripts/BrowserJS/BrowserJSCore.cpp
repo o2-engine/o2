@@ -188,7 +188,8 @@ EM_JS(double, o2js_get_number, (o2js_value_t h), {
 EM_JS(uint32_t, o2js_get_string_length, (o2js_value_t h), {
     var s = globalThis.__o2js || (o2js_initialize(), globalThis.__o2js);
     var v = s.vals[h];
-    return typeof v === 'string' ? v.length : 0;
+    // length in UTF-8 bytes: o2js_string_to_buffer copies UTF-8, not UTF-16 units
+    return typeof v === 'string' ? s.enc.encode(v).length : 0;
 });
 
 EM_JS(uint32_t, o2js_string_to_buffer, (o2js_value_t h, char* buf, uint32_t size), {
