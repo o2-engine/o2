@@ -193,10 +193,10 @@ namespace o2
         // Returns all states @SCRIPTABLE
         const Vector<Ref<WidgetState>>& GetStates() const;
 
-        // Sets widget's transparency
+        // Sets widget's transparency @SCRIPTABLE
         void SetTransparency(float transparency);
 
-        // Returns widget's transparency
+        // Returns widget's transparency @SCRIPTABLE
         float GetTransparency() const;
 
         // Returns widget's result transparency (depends on parent's result transparency) @SCRIPTABLE
@@ -842,8 +842,8 @@ CLASS_METHODS_META(o2::Widget)
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(bool, GetState, const String&);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(Ref<WidgetState>, GetStateObject, const String&);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(const Vector<Ref<WidgetState>>&, GetStates);
-    FUNCTION().PUBLIC().SIGNATURE(void, SetTransparency, float);
-    FUNCTION().PUBLIC().SIGNATURE(float, GetTransparency);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetTransparency, float);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(float, GetTransparency);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(float, GetResTransparency);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetEnabledForcible, bool);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, Show, bool);

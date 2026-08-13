@@ -41,10 +41,10 @@ namespace o2
         // Draws widget
         void Draw() override;
 
-        // Sets caption of button. Searches text layer with name "caption". If can't find this layer, creates them
+        // Sets caption of button. Searches text layer with name "caption". If can't find this layer, creates them @SCRIPTABLE
         void SetCaption(const WString& text);
 
-        // Returns caption text from text layer "caption". Returns no data if layer isn't exist
+        // Returns caption text from text layer "caption". Returns no data if layer isn't exist @SCRIPTABLE
         WString GetCaption() const;
 
         // Sets icon sprite. Searches sprite layer "icon". Creates a new icon if isn't exist
@@ -136,8 +136,8 @@ CLASS_METHODS_META(o2::Button)
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().CONSTRUCTOR(RefCounter*);
     FUNCTION().PUBLIC().CONSTRUCTOR(RefCounter*, const Button&);
     FUNCTION().PUBLIC().SIGNATURE(void, Draw);
-    FUNCTION().PUBLIC().SIGNATURE(void, SetCaption, const WString&);
-    FUNCTION().PUBLIC().SIGNATURE(WString, GetCaption);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetCaption, const WString&);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(WString, GetCaption);
     FUNCTION().PUBLIC().SIGNATURE(void, SetIcon, const Ref<Sprite>&);
     FUNCTION().PUBLIC().SIGNATURE(Ref<Sprite>, GetIcon);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsFocusable);
