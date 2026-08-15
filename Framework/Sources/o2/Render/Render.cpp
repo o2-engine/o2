@@ -678,6 +678,7 @@ namespace o2
 		command.vertexCount = mLastDrawVertex;
 		command.indexCount = mLastDrawIdx;
 		command.trianglesCount = mTrianglesCount;
+		command.clearOnly = false;
 		command.vertexStride = (int)stride;
 		command.primitiveType = (int)mCurrentPrimitiveType;
 		command.drawTexture = mCurrentDrawTexture;
@@ -1054,6 +1055,7 @@ namespace o2
 		}
 
 		DrawPrimitives();
+		PlatformFlushPendingClear();
 
 		if (!mStackScissors.IsEmpty())
 		{
@@ -1079,6 +1081,7 @@ namespace o2
 			return;
 
 		DrawPrimitives();
+		PlatformFlushPendingClear();
 		PlatformBindRenderTarget(nullptr);
 
 		mCurrentRenderTarget = TextureRef();
@@ -1131,6 +1134,7 @@ namespace o2
 		}
 
 		DrawPrimitives();
+		PlatformFlushPendingClear();
 
 		// Remove unclosed scissors and the stack entry added by the paired push, keeping the stack balanced
 		while (!mStackScissors.IsEmpty() && !mStackScissors.Last().renderTarget)

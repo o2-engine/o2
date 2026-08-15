@@ -2,7 +2,9 @@
 
 #include <gtest/gtest.h>
 
+#include "o2/Animation/AnimationClip.h"
 #include "o2/Animation/AnimationState.h"
+#include "o2/Animation/Tracks/AnimationVec2FTrack.h"
 #include "o2/Scene/Actor.h"
 #include "o2/Scene/Components/AnimationComponent.h"
 #include "Scene/SceneTestHelpers.h"
@@ -196,4 +198,34 @@ TEST(AnimationComponent, StopAllResetsBlend)
     comp->StopAll();
     comp->OnUpdate(0.5f);
     EXPECT_FLOAT_EQ(dst->GetWeight(), dstAfterStop);
+}
+
+TEST(AnimationComponent, MismatchedTrackTypeDoesNotCrash)
+{
+    SceneCleanGuard guard;
+    auto a = mmake<Actor>(ActorCreateMode::InScene);
+    auto comp = a->AddComponent<AnimationComponent>();
+
+    // Vec2F track bound to Vec3F field "transform/scale": must warn, not crash
+    auto clip = mmake<AnimationClip>();
+    clip->AddTrack<Vec2F>("transform/scale");
+
+    auto state = comp->AddState("mismatched", clip, AnimationMask(), 1.0f);
+    EXPECT_TRUE(state);
+}
+
+TEST(AnimationComponent, Vec2FTrackOnScale2DBinds)
+{
+    SceneCleanGuard guard;
+    auto a = mmake<Actor>(ActorCreateMode::InScene);
+    auto comp = a->AddComponent<AnimationComponent>();
+
+    auto clip = mmake<AnimationClip>();
+    auto scale = clip->AddTrack<Vec2F>("transform/scale2D");
+    scale->spline->AppendKey(Vec2F(1.0f, 1.0f));
+    scale->spline->AppendKey(Vec2F(0.5f, 0.5f));
+    *scale->timeCurve = Curve::EaseInOut(0.0f, 1.0f, 0.5f);
+
+    auto state = comp->AddState("fly", clip, AnimationMask(), 1.0f);
+    ASSERT_TRUE(state);
 }

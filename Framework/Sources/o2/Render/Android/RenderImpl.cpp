@@ -381,6 +381,9 @@ namespace o2
                   (int)rect.Width(), (int)rect.Height());
     }
 
+    void Render::PlatformFlushPendingClear()
+    {} // Clears are immediate on GL, nothing is pending
+
     void Render::PlatformBindRenderTarget(const TextureRef& renderTarget)
     {
         if (renderTarget)

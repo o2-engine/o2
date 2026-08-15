@@ -39,14 +39,20 @@ namespace Editor
                 if (objType == nullptr)
                     return Pair<Ref<IAbstractValueProxy>, Ref<IAbstractValueProxy>>(nullptr, nullptr);
 
+                // прокси строятся только по удачному касту: объект прототипа с несовпавшим
+                // типом (битый/чужой линк) даёт нулевой указатель, и прокси вокруг него
+                // ронял редактор при обновлении инспектора
                 void* firstObjectPtr = objType->DynamicCastFromIObject(x.first);
                 void* secondObjectPtr = nullptr;
                 if (x.second)
                     secondObjectPtr = objType->DynamicCastFromIObject(x.second);
 
-                Ref<IAbstractValueProxy> firstValuePtr = Ref(fieldInfo->GetType()->GetValueProxy(fieldInfo->GetValuePtrStrong(firstObjectPtr)));
+                Ref<IAbstractValueProxy> firstValuePtr = nullptr;
+                if (firstObjectPtr)
+                    firstValuePtr = Ref(fieldInfo->GetType()->GetValueProxy(fieldInfo->GetValuePtrStrong(firstObjectPtr)));
+
                 Ref<IAbstractValueProxy> secondValuePtr = nullptr;
-                if (x.second)
+                if (secondObjectPtr)
                     secondValuePtr = Ref(fieldInfo->GetType()->GetValueProxy(fieldInfo->GetValuePtrStrong(secondObjectPtr)));
 
                 return Pair<Ref<IAbstractValueProxy>, Ref<IAbstractValueProxy>>(firstValuePtr, secondValuePtr);

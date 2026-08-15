@@ -18,6 +18,7 @@
 #include "o2Editor/Dialogs/CurveEditorDlg.h"
 #include "o2Editor/Dialogs/System/OpenSaveDialog.h"
 #include "o2Editor/EditorApplication.h"
+#include "o2Editor/ToolsPanel.h"
 #include "o2Editor/EditorConfig.h"
 #include "o2Editor/Windows/LogWindow/LogWindow.h"
 #include "o2Editor/Properties/Basic/FloatProperty.h"
@@ -91,7 +92,26 @@ namespace Editor
         mMenuPanel->AddItem("View/---");
         mMenuPanel->AddItem("View/Reset layout", [&]() { OnResetLayoutPressed(); });
 
-        // BUILD
+        // RUN
+        mMenuPanel->AddItem("Run/Play - stop", [&]() {
+            o2EditorApplication.SetPlaying(!o2EditorApplication.IsPlaying());
+        }, AssetRef<ImageAsset>(), ShortcutKeys({VK_P}));
+
+        mMenuPanel->AddItem("Run/Frame step", [&]() {
+            o2EditorApplication.SetPlaying(true);
+            o2EditorApplication.isPaused = true;
+            o2EditorApplication.step = true;
+        }, AssetRef<ImageAsset>(), ShortcutKeys({VK_P, VK_CTRL_CMD}));
+
+        mMenuPanel->AddItem("Run/---");
+
+        mMenuPanel->AddItem("Run/Speed up", [&]() { o2EditorTools.IncreaseGameSpeed(); },
+                            AssetRef<ImageAsset>(), ShortcutKeys({VK_OEM_PLUS, VK_CTRL_CMD}));
+        mMenuPanel->AddItem("Run/Slow down", [&]() { o2EditorTools.DecreaseGameSpeed(); },
+                            AssetRef<ImageAsset>(), ShortcutKeys({VK_OEM_MINUS, VK_CTRL_CMD}));
+
+        mMenuPanel->AddItem("Run/---");
+
         mMenuPanel->AddItem("Run/Connect scripts debugger", [&]() { o2Scripts.ConnectDebugger(); }, AssetRef<ImageAsset>(), ShortcutKeys({VK_F5}));
         mMenuPanel->AddItem("Run/---");
         mMenuPanel->AddItem("Run/Build & Run", [&]() { OnBuildAndRunPressed(); }, AssetRef<ImageAsset>(), ShortcutKeys({VK_R, VK_CTRL_CMD}));

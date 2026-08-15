@@ -181,6 +181,7 @@ extern void __RegisterClass__o2__AnimationStateGraphComponent();
 extern void __RegisterClass__o2__EditorTestComponent();
 extern void __RegisterClass__o2__EditorTestComponent__TestInside();
 extern void __RegisterClass__o2__EditorTestComponent__TestDerivedInside();
+extern void __RegisterClass__o2__FlightTrajectoryComponent();
 extern void __RegisterClass__o2__ImageComponent();
 extern void __RegisterClass__o2__LightComponent();
 extern void __RegisterClass__o2__Mesh3DComponent();
@@ -467,6 +468,7 @@ extern void InitializeTypeso2Framework()
     __RegisterClass__o2__EditorTestComponent();
     __RegisterClass__o2__EditorTestComponent__TestInside();
     __RegisterClass__o2__EditorTestComponent__TestDerivedInside();
+    __RegisterClass__o2__FlightTrajectoryComponent();
     __RegisterClass__o2__ImageComponent();
     __RegisterClass__o2__LightComponent();
     __RegisterClass__o2__Mesh3DComponent();

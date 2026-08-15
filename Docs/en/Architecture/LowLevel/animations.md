@@ -6,6 +6,8 @@ The main animation class `o2::AnimationPlayer` inherits from it. It defines the 
 ### Animation clip, o2::AnimationClip
 An animation clip contains a list of tracks with keys. Each track binds to a specific parameter of the target via reflection. The parameter is bound through a path like a directory path, "myClass/someObject/myProperty", which describes how to find the needed property of the object via reflection.
 
+When the target is an actor, accessors are available in the path: `component/<type name>` — a component by type name (the full name including namespace: `component/o2::ParticlesEmitterComponent`; game types without a namespace go by their own name), `child/<name>` — a child actor. Example path to a child's component field: `child/Sparks/component/o2::ParticlesEmitterComponent`. A track with an unresolvable path or a mismatched value type is not bound and logs a warning.
+
 A track also has a set of keys representing the key states of the parameter at specific moments in time and the interpolation method between them.
 
 Track types:

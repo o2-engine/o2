@@ -613,6 +613,12 @@ namespace o2
 		// Platform specific bind render target
 		void PlatformBindRenderTarget(const TextureRef& renderTarget);
 
+		// Materializes a deferred clear on the current target before a render target switch. On
+		// backends with immediate clears (GL) this is a no-op; on Metal a clear is a pass load
+		// action, and with no geometry drawn after Clear() the pending flag would otherwise leak
+		// onto the next bound target and wipe its contents
+		void PlatformFlushPendingClear();
+
 		// Platform specific multiple render targets support check
 		bool PlatformSupportsMRT() const;
 

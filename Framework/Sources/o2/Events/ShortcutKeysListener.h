@@ -82,6 +82,10 @@ namespace o2
         // Returns is shortcuts dispatching suppressed
         static bool IsSuppressed();
 
+        // Returns whether the shortcut may fire while a text input is focused: bare printable
+        // keys are typing, only combos with Ctrl/Cmd/Alt/Win or function keys stay live
+        static bool IsAllowedDuringTextInput(const ShortcutKeys& shortcut);
+
     protected:
         Map<ShortcutKeys, Vector<WeakRef<ShortcutKeysListener>>> mListeners;
 

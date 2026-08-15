@@ -561,7 +561,7 @@ namespace o2
     void Render::PlatformReplayDrawCommand(const RenderDrawCommand& command)
     {
         const Ref<Material>& material = command.material;
-        if (!material || !material->mImpl || !material->mImpl->pipelineState)
+        if (!command.clearOnly && (!material || !material->mImpl || !material->mImpl->pipelineState))
             return;
 
         MTLRenderPassDescriptor* renderPassDescriptor = RenderDevice::threadRenderPassDescriptor;
@@ -655,6 +655,10 @@ namespace o2
                 for (int i = 0; i < maxExtraAttachments; i++)
                     RenderDevice::threadEncoderExtraTextures[i] = extraTextures[i];
             }
+
+            // A clear-only command just opens the pass with its clear load action
+            if (command.clearOnly)
+                return;
 
             NSUInteger vertexDataSize = (NSUInteger)command.vertexCount * command.vertexStride;
             NSUInteger indexDataSize = (NSUInteger)command.indexCount * sizeof(VertexIndex);
@@ -891,6 +895,111 @@ namespace o2
     {
         if (renderTarget)
             mNeedDepthClear = true;
+    }
+
+    void Render::PlatformFlushPendingClear()
+    {
+        // A clear is a pass load action here: with no geometry drawn after Clear() the pending flag
+        // would apply to whatever target is bound at the next batch, wiping the wrong texture
+        if (!mNeedClear)
+            return;
+
+        if (mMultithreadedRender)
+        {
+            RenderDrawCommand& command = mCommandBuffer.Emplace();
+            command.clearOnly = true;
+            command.vertexCount = 0;
+            command.indexCount = 0;
+            command.trianglesCount = 0;
+            command.drawTexture = nullptr;
+            command.material = nullptr;
+            command.renderTarget = mCurrentRenderTarget;
+            command.extraRenderTargets = mExtraRenderTargets;
+            command.resolution = mCurrentResolution;
+            PlatformSnapshotDrawState(command);
+            return;
+        }
+
+        if (!RenderDevice::commandBuffer)
+            return;
+
+        MTLRenderPassDescriptor* renderPassDescriptor = RenderDevice::view.currentRenderPassDescriptor;
+        if (renderPassDescriptor == nil)
+            return;
+
+        MTLClearColor clearColor = MTLClearColorMake(mClearColor.RF(), mClearColor.GF(), mClearColor.BF(), mClearColor.AF());
+
+        id<MTLTexture> colorTexture = mCurrentRenderTarget ? mCurrentRenderTarget->mImpl->texture :
+                                                             renderPassDescriptor.colorAttachments[0].texture;
+
+        static const int maxExtraAttachments = 3;
+        id<MTLTexture> extraTextures[maxExtraAttachments] = { nil, nil, nil };
+        for (int i = 0; i < maxExtraAttachments; i++)
+        {
+            if (mCurrentRenderTarget && i < mExtraRenderTargets.Count())
+                extraTextures[i] = mExtraRenderTargets[i]->mImpl->texture;
+        }
+
+        id<MTLTexture> depthTexture = RenderDevice::view.depthStencilTexture;
+        if (mCurrentRenderTarget)
+        {
+            auto targetImpl = mCurrentRenderTarget->mImpl;
+            id<MTLTexture> targetColorTexture = targetImpl->texture;
+            if (!targetImpl->depthTexture ||
+                targetImpl->depthTexture.width != targetColorTexture.width ||
+                targetImpl->depthTexture.height != targetColorTexture.height)
+            {
+                MTLTextureDescriptor* depthDescriptor =
+                    [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatDepth32Float
+                                                                       width:targetColorTexture.width
+                                                                      height:targetColorTexture.height
+                                                                   mipmapped:NO];
+                depthDescriptor.usage = MTLTextureUsageRenderTarget;
+                depthDescriptor.storageMode = MTLStorageModePrivate;
+                targetImpl->depthTexture = [RenderDevice::device newTextureWithDescriptor:depthDescriptor];
+            }
+
+            depthTexture = targetImpl->depthTexture;
+        }
+
+        PlatformEndPass();
+
+        [renderPassDescriptor.colorAttachments[0] setClearColor:clearColor];
+        renderPassDescriptor.colorAttachments[0].texture = colorTexture;
+        [renderPassDescriptor.colorAttachments[0] setLoadAction:MTLLoadActionClear];
+        [renderPassDescriptor.colorAttachments[0] setStoreAction:MTLStoreActionStore];
+
+        for (int i = 0; i < maxExtraAttachments; i++)
+        {
+            auto attachment = renderPassDescriptor.colorAttachments[i + 1];
+            attachment.texture = extraTextures[i];
+
+            if (extraTextures[i])
+            {
+                attachment.clearColor = clearColor;
+                attachment.loadAction = MTLLoadActionClear;
+                attachment.storeAction = MTLStoreActionStore;
+            }
+        }
+
+        renderPassDescriptor.depthAttachment.texture = depthTexture;
+        renderPassDescriptor.depthAttachment.clearDepth = 1.0;
+        renderPassDescriptor.depthAttachment.loadAction = mNeedDepthClear ? MTLLoadActionClear : MTLLoadActionLoad;
+        renderPassDescriptor.depthAttachment.storeAction = MTLStoreActionStore;
+
+        // The pass stays open: a following batch on the same attachments merges into it
+        RenderDevice::renderEncoder = [RenderDevice::commandBuffer
+                                       renderCommandEncoderWithDescriptor:renderPassDescriptor];
+        RenderDevice::renderEncoder.label = @"PendingClear";
+
+        RenderDevice::encoderColorTexture = colorTexture;
+        RenderDevice::encoderDepthTexture = depthTexture;
+
+        for (int i = 0; i < maxExtraAttachments; i++)
+            RenderDevice::encoderExtraTextures[i] = extraTextures[i];
+
+        mNeedClear = false;
+        mNeedDepthClear = false;
     }
 
     void Render::PlatformSetDepthTest(bool enabled, bool writeEnabled)

@@ -42,13 +42,13 @@ namespace o2
         // Updates widget and smooth value changing
         void Update(float dt) override;
 
-        // Sets value
+        // Sets value @SCRIPTABLE
         void SetValue(float value, bool byUser = false);
 
-        // Sets value forcible, without smoothing
+        // Sets value forcible, without smoothing @SCRIPTABLE
         void SetValueForcible(float value);
 
-        // Returns value
+        // Returns value @SCRIPTABLE
         float GetValue() const;
 
         // Sets minimal value
@@ -181,9 +181,9 @@ CLASS_METHODS_META(o2::HorizontalProgress)
     FUNCTION().PUBLIC().CONSTRUCTOR(RefCounter*);
     FUNCTION().PUBLIC().CONSTRUCTOR(RefCounter*, const HorizontalProgress&);
     FUNCTION().PUBLIC().SIGNATURE(void, Update, float);
-    FUNCTION().PUBLIC().SIGNATURE(void, SetValue, float, bool);
-    FUNCTION().PUBLIC().SIGNATURE(void, SetValueForcible, float);
-    FUNCTION().PUBLIC().SIGNATURE(float, GetValue);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetValue, float, bool);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetValueForcible, float);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(float, GetValue);
     FUNCTION().PUBLIC().SIGNATURE(void, SetMinValue, float);
     FUNCTION().PUBLIC().SIGNATURE(float, GetMinValue);
     FUNCTION().PUBLIC().SIGNATURE(void, SetMaxValue, float);

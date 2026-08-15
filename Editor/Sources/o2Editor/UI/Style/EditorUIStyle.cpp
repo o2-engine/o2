@@ -306,6 +306,54 @@ namespace Editor
         o2UI.AddWidgetStyle(sample, "step");
     }
 
+    void EditorUIStyleBuilder::RebuildPlusButtonStyle()
+    {
+        Ref<Button> sample = mmake<Button>();
+        sample->name = "plus button";
+        sample->AddLayer("icon", mmake<Sprite>("ui/UI4_plus_btn_regular.png"),
+                         Layout(Vec2F(0.5f, 0.5f), Vec2F(0.5f, 0.5f), Vec2F(-10, 10), Vec2F(10, -10)));
+
+        sample->AddLayer("hover", mmake<Sprite>("ui/UI4_plus_btn_select.png"),
+                         Layout(Vec2F(0.5f, 0.5f), Vec2F(0.5f, 0.5f), Vec2F(-10, 10), Vec2F(10, -10)));
+
+        sample->AddLayer("pressed", mmake<Sprite>("ui/UI4_plus_btn_pressed.png"),
+                         Layout(Vec2F(0.5f, 0.5f), Vec2F(0.5f, 0.5f), Vec2F(-10, 10), Vec2F(10, -10)));
+
+        sample->AddState("hover", AnimationClip::EaseInOut("layer/hover/transparency", 0.0f, 1.0f, 0.1f))
+            ->offStateAnimationSpeed = 0.25f;
+
+        sample->AddState("pressed", AnimationClip::EaseInOut("layer/pressed/transparency", 0.0f, 1.0f, 0.05f))
+            ->offStateAnimationSpeed = 0.5f;
+
+        sample->AddState("visible", AnimationClip::EaseInOut("transparency", 0.0f, 1.0f, 0.1f));
+
+        o2UI.AddWidgetStyle(sample, "plus");
+    }
+
+    void EditorUIStyleBuilder::RebuildMinusButtonStyle()
+    {
+        Ref<Button> sample = mmake<Button>();
+        sample->name = "minus button";
+        sample->AddLayer("icon", mmake<Sprite>("ui/UI4_minus_btn_regular.png"),
+                         Layout(Vec2F(0.5f, 0.5f), Vec2F(0.5f, 0.5f), Vec2F(-10, 10), Vec2F(10, -10)));
+
+        sample->AddLayer("hover", mmake<Sprite>("ui/UI4_minus_btn_select.png"),
+                         Layout(Vec2F(0.5f, 0.5f), Vec2F(0.5f, 0.5f), Vec2F(-10, 10), Vec2F(10, -10)));
+
+        sample->AddLayer("pressed", mmake<Sprite>("ui/UI4_minus_btn_pressed.png"),
+                         Layout(Vec2F(0.5f, 0.5f), Vec2F(0.5f, 0.5f), Vec2F(-10, 10), Vec2F(10, -10)));
+
+        sample->AddState("hover", AnimationClip::EaseInOut("layer/hover/transparency", 0.0f, 1.0f, 0.1f))
+            ->offStateAnimationSpeed = 0.25f;
+
+        sample->AddState("pressed", AnimationClip::EaseInOut("layer/pressed/transparency", 0.0f, 1.0f, 0.05f))
+            ->offStateAnimationSpeed = 0.5f;
+
+        sample->AddState("visible", AnimationClip::EaseInOut("transparency", 0.0f, 1.0f, 0.1f));
+
+        o2UI.AddWidgetStyle(sample, "minus");
+    }
+
     void EditorUIStyleBuilder::RebuildRoundDropDown()
     {
         Ref<DropDown> sample = mmake<DropDown>();

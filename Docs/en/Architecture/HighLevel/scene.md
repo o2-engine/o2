@@ -71,6 +71,8 @@ If something is changed in one prototype instance in the editor, the change can 
 
 Prototypes can be created from other prototypes, overriding some of their parameters. The final instance of a derived prototype then reflects changes of both the base and the derived prototype.
 
+A prototype template outlives the scene, while a layer object (`o2::SceneLayer`) dies with it — so cloning rebinds the actor to the current scene's layer by name (just like deserialization does). Prototype instances stay valid after the scene is recreated.
+
 ### References
 References are used to connect components, actors and assets to each other. They refer to entities by unique identifiers, automatically. This avoids looking up actors and their components by path in code. A path can break when the hierarchy changes, requiring code rewrites. With references, hierarchy changes do not break anything, everything keeps working.
 

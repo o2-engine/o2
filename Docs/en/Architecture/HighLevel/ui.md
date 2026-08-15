@@ -18,7 +18,7 @@ Layers can be disabled and have configurable transparency, which also affects ch
 An elementary animation state machine: a list of states is defined, and each state can be on or off. The transition between on and off happens through an animation defined by an animation clip.
 
 #### Transparency and visibility
-Transparency is set on the widget and propagates to its layers, as well as to all child widgets and so on.
+Transparency is set on the widget and propagates to its layers, as well as to all child widgets and so on. The composed layer transparency is written into the drawable color alpha, so authoring translucency belongs on the widget or layer transparency, not in the sprite color alpha (which any transparency update overwrites).
 
 Visibility is controlled via the actor's `SetEnabled()` interface and can be animated. If a special state named 'visible' is defined, it is used to toggle visibility.
 

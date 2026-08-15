@@ -13,7 +13,8 @@ namespace o2
 
     WidgetLayer::WidgetLayer(RefCounter* refCounter, const WidgetLayer& other) :
         WidgetLayerBase(refCounter), mDepth(other.mDepth), name(other.name), layout(other.layout),
-        mTransparency(other.mTransparency), interactableLayout(other.interactableLayout), mUID(Math::Random())
+        mTransparency(other.mTransparency), mEnabled(other.mEnabled),
+        interactableLayout(other.interactableLayout), mUID(Math::Random())
     {
         if (other.mCopyVisitor)
             other.mCopyVisitor->OnCopy(&other, this);
@@ -54,6 +55,7 @@ namespace o2
 
         mDepth = other.mDepth;
         name = other.name;
+        mEnabled = other.mEnabled;
 
         if (other.mDrawable)
         {
@@ -516,6 +518,9 @@ namespace o2
         else
             mResTransparency = mTransparency;
 
+        // Итоговая прозрачность живёт в альфе цвета drawable: авторская альфа спрайта
+        // перезаписывается любым апдейтом — полупрозрачность задаётся прозрачностью
+        // виджета или слоя, не цветом спрайта
         if (mDrawable)
             mDrawable->SetTransparency(mResTransparency);
 

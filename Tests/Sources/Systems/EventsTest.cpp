@@ -493,3 +493,16 @@ TEST(Layer, IsInputTransparentReflectsIsTransparentField) {
 }
 
 // CursorAreaEventsListener.OnDrawn* tests are in Rendered/EventsCursorAreaListenerTest.cpp.
+
+// Bare printable-key shortcuts are typing when a text input is focused; only combos
+// with Ctrl/Cmd/Alt/Win modifiers or function keys may fire
+TEST(ShortcutKeysListenersManager, TextInputAllowsOnlyModifiedOrFunctionShortcuts) {
+    EXPECT_FALSE(ShortcutKeysListenersManager::IsAllowedDuringTextInput(ShortcutKeys({VK_P})));
+    EXPECT_FALSE(ShortcutKeysListenersManager::IsAllowedDuringTextInput(ShortcutKeys({VK_DELETE})));
+    EXPECT_FALSE(ShortcutKeysListenersManager::IsAllowedDuringTextInput(ShortcutKeys({VK_P, VK_SHIFT})));
+
+    EXPECT_TRUE(ShortcutKeysListenersManager::IsAllowedDuringTextInput(ShortcutKeys({VK_P, VK_CTRL_CMD})));
+    EXPECT_TRUE(ShortcutKeysListenersManager::IsAllowedDuringTextInput(ShortcutKeys({VK_OEM_PLUS, VK_CTRL_CMD})));
+    EXPECT_TRUE(ShortcutKeysListenersManager::IsAllowedDuringTextInput(ShortcutKeys({VK_F10})));
+    EXPECT_TRUE(ShortcutKeysListenersManager::IsAllowedDuringTextInput(ShortcutKeys({VK_Z, VK_CONTROL})));
+}

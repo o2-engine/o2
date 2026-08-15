@@ -50,6 +50,8 @@ namespace o2
         bool                needClear = false;      // Whether the color buffer must be cleared before this batch
         Color4              clearColor;             // Clear color
         bool                needDepthClear = false; // Whether the depth buffer must be cleared before this batch
+        bool                clearOnly = false;      // Pass carries only the clear, no geometry (deferred clear
+                                                    // materialized before a render target switch)
 
         // Drops the held asset references, keeping the geometry storage for the next frame
         void ReleaseReferences()

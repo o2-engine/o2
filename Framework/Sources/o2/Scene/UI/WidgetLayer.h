@@ -168,7 +168,7 @@ namespace o2
 
         SceneUID mUID = 0; // Scene editor uid @SERIALIZABLE @IGNORE_DELTA_SEARCH
 
-        bool mEnabled = true; // Is layer enabled
+        bool mEnabled = true; // Is layer enabled @SERIALIZABLE
 
         float mTransparency = 1.0f;    // Layer transparency @SERIALIZABLE
         float mResTransparency = 1.0f; // Result drawable transparency, depends on parent transparency
@@ -378,7 +378,7 @@ CLASS_FIELDS_META(o2::WidgetLayer)
     FIELD().PROTECTED().NAME(mPrototypeLink);
     FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().NAME(mDrawable);
     FIELD().PROTECTED().IGNORE_DELTA_SEARCH_ATTRIBUTE().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(0).NAME(mUID);
-    FIELD().PROTECTED().DEFAULT_VALUE(true).NAME(mEnabled);
+    FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(true).NAME(mEnabled);
     FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(1.0f).NAME(mTransparency);
     FIELD().PROTECTED().DEFAULT_VALUE(1.0f).NAME(mResTransparency);
     FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(0.0f).NAME(mDepth);

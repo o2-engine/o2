@@ -55,6 +55,8 @@ Reset drops the recorded commands but pools them: their geometry buffers stay al
 
 Consecutive batches that render into the same attachments share one GPU render pass; a new one starts only when the render target, the extra MRT targets, the depth attachment or a clear request changes (a clear is a load action, so it can only happen at the start of a pass). Everything else a batch needs — pipeline state, viewport, scissor, depth state, textures, buffers — is per-batch state set inside the shared pass. A pass per draw call would make a tiled GPU reload and store the whole render target for every batch, which a UI-heavy frame of a few hundred batches feels immediately. Both Metal backends do this, on the render thread replay and on their single-threaded path alike. The open pass is closed when the frame ends, before the command buffer is committed.
 
+Because a clear is deferred until the next batch on Metal, a `Clear()` followed by no geometry would leak onto whatever target is bound next. A render target switch (`BindRenderTexture` / `UnbindRenderTexture` / `PopRenderTargets`) therefore materializes the pending clear on the still-current target first — as an immediately opened pass on the single-threaded path, or as a geometry-less clear-only command on the multithreaded one. GL backends clear immediately, so for them this is a no-op.
+
 ### Gizmos, o2::Gizmos
 The `o2Gizmos` singleton draws editor helper wireframe primitives with lines: `DrawLine`,
 `DrawPolyLine`, `DrawCircle`, `DrawRect`, `DrawBox`, `DrawSphere`, `DrawCapsule`, `DrawPoint`. Points

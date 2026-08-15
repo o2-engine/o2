@@ -113,3 +113,19 @@ TEST(AnimationComponentSubTrack, SceneRoundTripRebindsSubTracks)
     ASSERT_TRUE(loadedAnimation);
     EXPECT_TRUE(loadedAnimation->GetStatesNames().Contains(String("fx")));
 }
+
+// Wrong component path (e.g. name without namespace) must warn, not crash on null target
+TEST(AnimationComponentSubTrack, UnresolvedSubTrackPathDoesNotCrash)
+{
+    SceneCleanGuard guard;
+
+    auto actor = mmake<Actor>(ActorCreateMode::InScene);
+    actor->AddComponent<ParticlesEmitterComponent>();
+    auto animation = actor->AddComponent<AnimationComponent>();
+
+    auto clip = mmake<AnimationClip>();
+    clip->AddTrack("component/ParticlesEmitterComponent", TypeOf(ParticlesEmitterComponent));
+
+    auto state = animation->AddState("fx", clip, AnimationMask(), 1.0f);
+    EXPECT_TRUE(state);
+}
