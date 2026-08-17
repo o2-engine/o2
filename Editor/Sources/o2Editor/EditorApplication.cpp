@@ -303,7 +303,8 @@ namespace Editor
                 //             return mBackground->GetScriptValue();
                 //         })));
                 // 
-                //         o2Debug.LogStr("---Dump global---\n" + o2Scripts.GetGlobal().Dump() + "\n---------------");
+                //         // Dumping the whole script global walks the prototype chains, which are cyclic:
+        // in the browser build it recurses until the JS stack gives out
                 // 
                 //         o2Scripts.Eval("print(JSON.stringify(scriptValueFunc()))");
                 // 
@@ -375,7 +376,8 @@ namespace Editor
                 //          float res = o2Scripts.GetGlobal().GetProperty(ScriptValue("x")).ToNumber();
 
 
-        o2Debug.LogStr("---Dump global---\n" + o2Scripts.GetGlobal().Dump() + "\n---------------");
+        // Dumping the whole script global walks the prototype chains, which are cyclic:
+        // in the browser build it recurses until the JS stack gives out
     }
 
     void EditorApplication::OnClosing()
@@ -627,7 +629,8 @@ namespace Editor
 
         PushEditorScopeOnStack scope;
 
-        o2Render.Clear();
+        o2Render.ResetState();
+        //o2Render.Clear();
 
         mBackground->Draw();
         mBackSign->Draw();

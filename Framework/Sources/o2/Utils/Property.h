@@ -26,11 +26,11 @@ namespace o2
                                                                                                                                                          \
         NAME##_PROPERTY& operator=(const NAME##_PROPERTY& value) { GetThis()->SETTER(value.Get()); return *this; }                                       \
                                                                                                                                                          \
-        template<typename vt, typename X = typename std::enable_if<std::is_same<vt, valueType>::value && SupportsEqualOperator<valueType>::value>::type> \
-        bool operator==(const vt& value) const { return Math::Equals(GetThis()->GETTER(), value); }                                                      \
+        template<typename vt, typename X = typename std::enable_if<std::is_same<vt, valueType>::value && o2::SupportsEqualOperator<valueType>::value>::type> \
+        bool operator==(const vt& value) const { return o2::Math::Equals(GetThis()->GETTER(), value); }                                                      \
                                                                                                                                                          \
-        template<typename vt, typename X = typename std::enable_if<std::is_same<vt, valueType>::value && SupportsEqualOperator<valueType>::value>::type> \
-        bool operator!=(const vt& value) const { return !Math::Equals(GetThis()->GETTER(), value); }                                                     \
+        template<typename vt, typename X = typename std::enable_if<std::is_same<vt, valueType>::value && o2::SupportsEqualOperator<valueType>::value>::type> \
+        bool operator!=(const vt& value) const { return !o2::Math::Equals(GetThis()->GETTER(), value); }                                                     \
                                                                                                                                                          \
         template<typename T, typename X = typename std::enable_if<o2::SupportsPlus<valueType>::value && std::is_same<T, valueType>::value>::type>        \
         valueType operator+(const T& value) { return GetThis()->GETTER() + value; }                                                                      \
@@ -59,7 +59,7 @@ namespace o2
         valueType Get() const { return GetThis()->GETTER(); }                                                                                            \
         void Set(const valueType& value) { GetThis()->SETTER(const_cast<valueType&>(value)); }                                                           \
                                                                                                                                                          \
-        PropertyValueProxy<valueType, NAME##_PROPERTY> GetValueProxy() { return PropertyValueProxy<valueType, NAME##_PROPERTY>(this); }                  \
+        o2::PropertyValueProxy<valueType, NAME##_PROPERTY> GetValueProxy() { return o2::PropertyValueProxy<valueType, NAME##_PROPERTY>(this); }                  \
                                                                                                                                                          \
         bool IsProperty() const { return true; }                                                                                                         \
     };                                                                                                                                                   \

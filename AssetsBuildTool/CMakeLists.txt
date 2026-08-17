@@ -14,9 +14,21 @@ source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${o2AssetsBuilder_SOURCES})
 file(GLOB o2AssetsBuilder_ASTCENC_SOURCES "3rdPartyLibs/astc-encoder/Source/*.cpp")
 list(FILTER o2AssetsBuilder_ASTCENC_SOURCES EXCLUDE REGEX "astcenccli_")
 
-if(NOT EMSCRIPTEN AND CMAKE_SYSTEM_PROCESSOR MATCHES "arm64|aarch64|ARM64")
+# On Apple, CMAKE_OSX_ARCHITECTURES overrides the host processor (cross-building
+# x86_64 on arm64 Macs for the cocos2d-x prebuilt libs); fall back to the host otherwise
+set(ASTCENC_TARGET_ARCH "${CMAKE_SYSTEM_PROCESSOR}")
+if(APPLE AND CMAKE_OSX_ARCHITECTURES)
+    list(LENGTH CMAKE_OSX_ARCHITECTURES _astc_osx_arch_count)
+    if(_astc_osx_arch_count EQUAL 1)
+        set(ASTCENC_TARGET_ARCH "${CMAKE_OSX_ARCHITECTURES}")
+    else()
+        set(ASTCENC_TARGET_ARCH "universal") # mixed archs — use the portable no-SIMD path
+    endif()
+endif()
+
+if(NOT EMSCRIPTEN AND ASTCENC_TARGET_ARCH MATCHES "arm64|aarch64|ARM64")
     set(ASTCENC_SIMD_DEFINITIONS "ASTCENC_SSE=0;ASTCENC_AVX=0;ASTCENC_NEON=1;ASTCENC_SVE=0;ASTCENC_POPCNT=0;ASTCENC_F16C=0")
-elseif(NOT EMSCRIPTEN AND CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64")
+elseif(NOT EMSCRIPTEN AND ASTCENC_TARGET_ARCH MATCHES "x86_64|AMD64")
     set(ASTCENC_SIMD_DEFINITIONS "ASTCENC_SSE=41;ASTCENC_AVX=0;ASTCENC_NEON=0;ASTCENC_SVE=0;ASTCENC_POPCNT=1;ASTCENC_F16C=0")
     if(NOT MSVC) # MSVC allows SSE4.1 intrinsics without extra flags
         set_source_files_properties(${o2AssetsBuilder_ASTCENC_SOURCES} PROPERTIES COMPILE_OPTIONS "-msse4.1;-mpopcnt")
@@ -46,7 +58,7 @@ if(WIN32)
                        COMMENT "Run CodeTool:"
                             "-project AssetsBuildTool "
                             "-sources \"${CMAKE_CURRENT_SOURCE_DIR}/Sources\" "
-                            "-parent_projects \"${CMAKE_CURRENT_SOURCE_DIR}/../Framework/Sources/o2/CodeToolCache.xml\"")
+                            "-parent_projects \"${CMAKE_CURRENT_SOURCE_DIR}/../Framework/Sources/o2/CodeToolCache.xml\"\n")
 endif()
 
 add_dependencies(o2AssetsBuilder o2Framework)

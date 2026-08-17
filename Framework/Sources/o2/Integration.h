@@ -126,6 +126,13 @@ namespace o2
 		// Returns application's path
 		virtual String GetBinPath() const { return String(); }
 
+		// Returns is platform-specific initialization needed. External hosts (cocos2d
+		// integration) own the window and disable o2's platform initialization
+		virtual bool IsNeedPlatformInitialization() const { return true; }
+
+		// Draws external renderers (e.g. hosted cocos2d scene in the editor)
+		virtual void DrawExternal() {}
+
         IOBJECT(Integration);
 
     protected:
@@ -357,6 +364,8 @@ CLASS_METHODS_META(o2::Integration)
     FUNCTION().PUBLIC().SIGNATURE(bool, IsCursorInfiniteModeOn);
     FUNCTION().PUBLIC().SIGNATURE(float, GetGraphicsScale);
     FUNCTION().PUBLIC().SIGNATURE(String, GetBinPath);
+    FUNCTION().PUBLIC().SIGNATURE(bool, IsNeedPlatformInitialization);
+    FUNCTION().PUBLIC().SIGNATURE(void, DrawExternal);
 }
 END_META;
 // --- END META ---

@@ -34,3 +34,5 @@ The example above shows 3 kinds:
 - `ACCESSOR` - defines a variable with an overloaded `operator[]` of the specified type. Convenient for accessing elements by name, as in this example accessing an actor's children: `actor->child["name of child"]`;
 
 Properties are also utilized in animations. They are available for animating, including `ACCESSOR`, which lets code react to value changes through the setter.
+
+The macros are usable in classes outside `namespace o2` as well - everything they reference is fully qualified. This is how the cocos2d nodes of the integration declare properties over their own `set`/`get` pairs, which gives both a shorter API (`node->rotation = 45`) and editor rows going through the setters.

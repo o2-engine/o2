@@ -5,13 +5,13 @@
 
 using namespace o2;
 
-extern void InitializeTypesGameLib();
 extern void InitializeTypesAssetsBuildTool();
 
 int main(int argc, char* argv[])
 {
+    // No GameLib in the cocos2d-x integrated build. INITIALIZE_O2 must run first:
+    // project type registration relies on the reflection core being initialized
     INITIALIZE_O2;
-    InitializeTypesGameLib();
     InitializeTypesAssetsBuildTool();
 
     const auto platformKey = "-platform";

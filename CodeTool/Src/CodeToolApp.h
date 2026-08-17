@@ -94,6 +94,7 @@ protected:
     string                 mMSVCProjectPath;
     string                 mXCodeProjectPath;
     bool                   mNeedReset = true;
+	bool                   mExcludeMode = false;
     static bool            mVerbose;
                            
     CppSyntaxParser*       mParser;

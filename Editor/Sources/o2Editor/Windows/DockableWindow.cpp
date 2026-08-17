@@ -537,7 +537,8 @@ namespace Editor
         windowNeighborDock->name = "empty dock";
         *windowNeighborDock->layout = WidgetLayout::BothStretch();
 
-        for (auto& child : targetDock->GetChildWidgets())
+        auto childWidgets = targetDock->GetChildWidgets();
+        for (auto& child : childWidgets)
             windowNeighborDock->AddChild(child);
 
         targetDock->AddChild(windowNeighborDock);

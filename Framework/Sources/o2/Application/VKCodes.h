@@ -267,6 +267,11 @@
 #define VK_SELECT         -110
 #define VK_SNAPSHOT       -105
 
+#define VK_CAPITAL        -57
+#define VK_SCROLL         -107
+#define VK_PAUSE          -113
+#define VK_INSERT         -114
+
 #define VK_PRIOR          -116
 #define VK_NEXT           -121
 #define VK_END            -119

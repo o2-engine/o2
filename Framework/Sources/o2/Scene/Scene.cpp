@@ -265,7 +265,7 @@ namespace o2
             if constexpr (IS_EDITOR)
             {
                 o2Render.SetCamera(Camera());
-				o2Render.Clear();
+				//o2Render.Clear();
 
 				Text text("debugFont.ttf");
 				text.SetText("No camera");

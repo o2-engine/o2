@@ -52,6 +52,7 @@ void CodeToolApplication::SetArguments(char** args, int nargs)
     mXCodeProjectPath = argsMap["xcode_project"];
     mNeedReset = argsMap.find("reset") != argsMap.end() || argsMap.find("r") != argsMap.end() || true;
     mVerbose = argsMap.find("verbose") != argsMap.end() || argsMap.find("v") != argsMap.end();
+	mExcludeMode = argsMap.find("exclude_mode") != argsMap.end() || argsMap.find("e") != argsMap.end();
 
     mCache.parentProjects = Split(argsMap["parent_projects"], ' ');
 }
@@ -631,7 +632,7 @@ void CodeToolApplication::CollectTemplateClassManualRegistrators()
 
 void CodeToolApplication::UpdateRegistratorsSource()
 {
-    string registratorSourceFileName = mProjectName + ".cpp";
+    string registratorSourceFileName = mProjectName + "ReflectionRegister.cpp";
     string registratorSourcePath = mSourcesPath + "/" + registratorSourceFileName;
 
     string fileData;
@@ -686,7 +687,7 @@ void CodeToolApplication::ParseSource(const string& path, const TimeStamp& editD
 
     // parse source
     SyntaxFile* syntaxFile = new SyntaxFile();
-    mParser->ParseFile(*syntaxFile, path, editDate);
+    mParser->ParseFile(*syntaxFile, path, editDate, mExcludeMode);
     mParsedFiles.push_back(syntaxFile);
 
     mCache.originalFiles.push_back(syntaxFile);
@@ -767,6 +768,9 @@ void CodeToolApplication::UpdateSourceReflection(SyntaxFile* file)
 
     for (auto enm : metaEnums)
     {
+        if (enm->GetEntries().empty())
+			continue;
+
         AddBeginMeta(hasSourceMeta, cppSource);
         cppSource += GetEnumMeta(enm);
 
@@ -784,8 +788,18 @@ void CodeToolApplication::UpdateSourceReflection(SyntaxFile* file)
         bool hasIObject = std::find_if(cls->GetFunctions().begin(), cls->GetFunctions().end(),
                                        [](SyntaxFunction* x) { return x->GetName() == "IOBJECT" || x->GetName() == "SERIALIZABLE" || x->GetName() == "ASSET_TYPE"; }) != cls->GetFunctions().end();
 
-        if ((!mCache.IsClassBasedOn(cls, baseObjectClass) && !cls->IsMetaClass()) || !hasIObject || cls == baseObjectClass)
+        if (!hasIObject || cls == baseObjectClass)
             continue;
+
+        // IOBJECT declares a static type pointer and overrides GetType() with it. Skipping the class
+        // here would leave that pointer null, and GetType() would return a null reference at runtime -
+        // so the macro itself is enough to reflect the class, even when its base chain runs through a
+        // file the tool doesn't see, an excluded one for example
+        if (!mCache.IsClassBasedOn(cls, baseObjectClass) && !cls->IsMetaClass())
+        {
+            printf("Warning: class %s uses IOBJECT, but its base chain doesn't reach o2::IObject in the "
+                   "parsed sources. Reflecting it anyway\n", cls->GetFullName().c_str());
+        }
 
         if (!cls->IsTemplate())
         {
@@ -917,6 +931,25 @@ string CodeToolApplication::GetClassMeta(SyntaxClass* cls)
         if (variable->IsStatic() || variable->GetName().empty())
             continue;
 
+        // Skip parser artifacts that can't be real fields: constructors picked up as
+        // variables (name == class name) and type keywords picked up as names
+        // (e.g. "short" from a misparsed "unsigned short" declaration)
+        static const vector<string> reservedNames = { "bool", "char", "short", "int", "long", "float",
+            "double", "signed", "unsigned", "void", "auto", "const" };
+        if (variable->GetName() == cls->GetName() ||
+            find(reservedNames.begin(), reservedNames.end(), variable->GetName()) != reservedNames.end())
+            continue;
+
+        // Only valid identifiers can be fields: access-specifier labels and comment
+        // fragments sometimes reach here as names (e.g. from "CC_CONSTRUCTOR_ACCESS:")
+        bool validName = !variable->GetName().empty() &&
+            (isalpha((unsigned char)variable->GetName()[0]) || variable->GetName()[0] == '_');
+        for (char c : variable->GetName())
+            validName = validName && (isalnum((unsigned char)c) || c == '_');
+
+        if (!validName)
+            continue;
+
         // try search comment
         SyntaxComment* synComment = cls->FindCommentNearLine(variable->GetLine());
 
@@ -944,7 +977,11 @@ string CodeToolApplication::GetClassMeta(SyntaxClass* cls)
 
         res += GetAttributes(cls, variable->GetLine(), synComment);
 
-        if (!variable->GetDefaultValue().empty() && variable->GetDefaultValue().find("this") == string::npos)
+        // Brace-init defaults can't travel through the DEFAULT_VALUE macro (comma split)
+        bool braceInitDefault = !variable->GetDefaultValue().empty() && variable->GetDefaultValue()[0] == '{';
+
+        if (!variable->GetDefaultValue().empty() && variable->GetDefaultValue().find("this") == string::npos &&
+            !braceInitDefault)
             res += ".DEFAULT_VALUE(" + variable->GetDefaultValue() + ")";
 
         res += ".NAME(" + variable->GetName() + ");\n";
@@ -1324,7 +1361,8 @@ void CodeToolApplication::RemoveMetas(string& data, const char* keyword, const c
 bool CodeToolApplication::IsFunctionReflectable(SyntaxFunction* function, SyntaxSection* owner) const
 {
     static vector<string> ignoringNames = { "SERIALIZABLE", "PROPERTY", "GETTER", "SETTER", "IOBJECT", "ASSET_TYPE",
-        "ATTRIBUTE_COMMENT_DEFINITION", "ATTRIBUTE_SHORT_DEFINITION", "BASE_REF_IMPLEMETATION", "FRIEND_REF_MAKE", "CLONEABLE_REF", "REF_COUNTERABLE_IMPL" };
+        "ATTRIBUTE_COMMENT_DEFINITION", "ATTRIBUTE_SHORT_DEFINITION", "BASE_REF_IMPLEMETATION", "FRIEND_REF_MAKE", "CLONEABLE_REF", "REF_COUNTERABLE_IMPL",
+        "CC_DISALLOW_COPY_AND_ASSIGN", "CC_CONSTRUCTOR_ACCESS" };
 
     return !StartsWith(function->GetName(), string("~") + owner->GetName()) &&
         function->GetName().find('~') == string::npos &&

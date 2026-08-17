@@ -555,6 +555,10 @@ namespace o2
 #if IS_EDITOR
     void Assets::RebuildAssets(bool resetCache /*= false*/)
     {
+#if !PLATFORM_WINDOWS && !PLATFORM_LINUX && !PLATFORM_MAC
+        // The web editor has no local builder to run: its assets come pre-built with the page
+        o2Debug.LogWarning("Assets rebuilding is not available on this platform");
+#else
 #if PLATFORM_WINDOWS
         String assetsBuilderPath = "AssetsBuilder.exe";
         String platform = "Windows";
@@ -585,6 +589,7 @@ namespace o2
         auto changedAssetsUIDs = ReloadAssetsTree();
 
         onAssetsRebuilt(changedAssetsUIDs);
+#endif
     }
 
     void Assets::RefreshCachedAssetsInfo(const Ref<AssetsTree>& tree)

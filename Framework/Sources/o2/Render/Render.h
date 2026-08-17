@@ -590,7 +590,7 @@ namespace o2
 		void SetupViewMatrix(const Vec2I& viewSize);
 
 		// Updates render transformations for camera
-		void UpdateCameraTransforms();
+		void UpdateCameraTransforms(bool force = false);
 
 		// Reads the finished capture target into a bitmap and fires the capture callback
 		void DeliverFrameCapture();

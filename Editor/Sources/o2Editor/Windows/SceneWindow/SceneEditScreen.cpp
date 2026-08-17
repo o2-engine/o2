@@ -2,6 +2,7 @@
 #include "SceneEditScreen.h"
 
 #include "o2/Events/ShortcutKeysListener.h"
+#include "o2/Integration.h"
 #include "o2/Physics/PhysicsWorld.h"
 #include "o2/Render/Pipeline/RenderPipeline.h"
 #include "o2/Render/Material.h"
@@ -81,6 +82,29 @@ namespace Editor
     void SceneEditScreen::NeedRedraw()
     {
         mNeedRedraw = true;
+    }
+
+    // Free-function entry point for external integrations (hosted cocos scene in the
+    // editor animates every frame): callable without pulling editor headers
+    void RequestSceneViewRedraw()
+    {
+        if (SceneEditScreen::IsSingletonInitialzed())
+            o2EditorSceneScreen.NeedRedraw();
+    }
+
+    // Returns the cursor position in scene-world coordinates when the cursor is over
+    // the scene view; entry point for external integrations (cocos input forwarding)
+    bool TryGetSceneCursorWorldPoint(Vec2F& worldPoint)
+    {
+        if (!SceneEditScreen::IsSingletonInitialzed())
+            return false;
+
+        Vec2F cursorPos = o2Input.GetCursorPos();
+        if (!o2EditorSceneScreen.IsUnderPoint(cursorPos))
+            return false;
+
+        worldPoint = o2EditorSceneScreen.ScreenToScenePoint(cursorPos);
+        return true;
     }
 
 #undef DrawText

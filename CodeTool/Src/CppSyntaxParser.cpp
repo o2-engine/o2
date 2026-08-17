@@ -93,6 +93,7 @@ vector<string> Split(const string& s, char delim)
 CppSyntaxParser::CppSyntaxParser()
 {
     InitializeParsers();
+	InitializeReplaces();
 }
 
 CppSyntaxParser::~CppSyntaxParser()
@@ -112,6 +113,7 @@ void CppSyntaxParser::InitializeParsers()
     mParsers.push_back(new ExpressionParser("#define", &CppSyntaxParser::ParseDefine, true, true));
     mParsers.push_back(new ExpressionParser("#undef", &CppSyntaxParser::ParseDefine, true, true));
     mParsers.push_back(new ExpressionParser("#ifdef", &CppSyntaxParser::ParseIfdefMacros, true, true));
+    mParsers.push_back(new ExpressionParser("#ifndef", &CppSyntaxParser::ParseIfndefMacros, true, true));
     mParsers.push_back(new ExpressionParser("#if", &CppSyntaxParser::ParseIfMacros, true, true));
     mParsers.push_back(new ExpressionParser("#endif", &CppSyntaxParser::ParseEndIfMacros, true, true));
     mParsers.push_back(new ExpressionParser("#else", &CppSyntaxParser::ParseElseMacros, true, true));
@@ -133,11 +135,46 @@ void CppSyntaxParser::InitializeParsers()
     mParsers.push_back(new ExpressionParser("PROPERTIES", &CppSyntaxParser::ParseProperties, true, false));
     mParsers.push_back(new ExpressionParser("PROPERTY", &CppSyntaxParser::ParseProperty, true, false));
     mParsers.push_back(new ExpressionParser("GETTER", &CppSyntaxParser::ParseGetter, true, false));
-    mParsers.push_back(new ExpressionParser("SETTER", &CppSyntaxParser::ParseSetter, true, false));
-    mParsers.push_back(new ExpressionParser("ACCESSOR", &CppSyntaxParser::ParseAccessor, true, false));
+	mParsers.push_back(new ExpressionParser("SETTER", &CppSyntaxParser::ParseSetter, true, false));
+	mParsers.push_back(new ExpressionParser("ACCESSOR", &CppSyntaxParser::ParseAccessor, true, false));
+	mParsers.push_back(new ExpressionParser("NS_CC_BEGIN", &CppSyntaxParser::ParseCocosNamespace, true, true));
 }
 
-void CppSyntaxParser::ParseFile(SyntaxFile& file, const string& filePath, const TimeStamp& fileEditDate)
+void CppSyntaxParser::InitializeReplaces()
+{
+	// cocos export macros: they sit between "class" and the class name, so without
+	// erasing them the parser takes the macro for the class name
+	mReplaces.push_back({ "CC_GUI_DLL", "         " });
+	mReplaces.push_back({ "CC_STUDIO_DLL", "            " });
+	mReplaces.push_back({ "CC_EX_DLL", "        " });
+	mReplaces.push_back({ "CC_LUA_DLL", "         " });
+	mReplaces.push_back({ "CC_DLL", "     " });
+
+	// stands before "static"/"virtual" in a declaration, without erasing it the keyword
+	// after the macro is taken for the declaration name
+	mReplaces.push_back({ "CC_DEPRECATED_ATTRIBUTE", "                       " });
+	mReplaces.push_back({ "@}", "  " });
+	mReplaces.push_back({ "@{", "  " });
+	mReplaces.push_back({ "CC_CONSTRUCTOR_ACCESS", "public" });
+	mReplaces.push_back({ "CC_BACKEND_BEGIN", "namespace cocos2d{ namespace backend{" });
+	mReplaces.push_back({ "CC_BACKEND_END", "} }" });
+	mReplaces.push_back({ "\\\n", " " });
+}
+
+void CppSyntaxParser::ProcessReplaces(string& data)
+{
+    for (auto& replace : mReplaces)
+    {
+        auto caret = data.find(replace.first);
+        while (caret != string::npos)
+        {
+            data.replace(caret, replace.first.length(), replace.second);
+            caret = data.find(replace.first, caret + replace.second.length());
+        }
+	}
+}
+
+void CppSyntaxParser::ParseFile(SyntaxFile& file, const string& filePath, const TimeStamp& fileEditDate, bool excludeMode)
 {
     file.mPath = filePath;
     file.mLastEditedDate = fileEditDate;
@@ -154,7 +191,16 @@ void CppSyntaxParser::ParseFile(SyntaxFile& file, const string& filePath, const 
     if (file.mData.find("@CODETOOLIGNORE") != string::npos)
         return;
 
-    ParseSyntaxSection(*file.mGlobalNamespace, file.mData, file, SyntaxProtectionSection::Public);
+    if (excludeMode)
+    {
+        if (file.mData.find("@CODETOOL_NON_EXCLUDE") == string::npos)
+			return;
+    }
+
+	string data = file.mData;
+	ProcessReplaces(data);
+
+    ParseSyntaxSection(*file.mGlobalNamespace, data, file, SyntaxProtectionSection::Public);
 }
 
 void CppSyntaxParser::ParseSyntaxSection(SyntaxSection& section, const string& source, SyntaxFile& file,
@@ -195,9 +241,16 @@ void CppSyntaxParser::ParseSyntaxSection(SyntaxSection& section, const string& s
             if (!success)
                 continue;
 
+			printf("Found keyword %s in file %s caret is %i\n", keyWord, file.mPath.c_str(), caret);
+
+			int prevCaret = caret;
+
             ParserDelegate pd = parser->parser;
             (this->*pd)(section, caret, protectionSection);
             parsedByKeywork = true;
+
+            if (caret < prevCaret)
+				caret = prevCaret + 1;
 
             break;
         }
@@ -275,6 +328,20 @@ bool CppSyntaxParser::IsFunction(const string& data)
     if (firstWord == "explicit")
         firstWord = ReadWord(data, locCaret, " \n\r(){}[]");
 
+    // Skip the tail of multi-word fundamental types ("unsigned short", "long long int"),
+    // otherwise the second type word is mistaken for the declaration name
+    if (firstWord == "unsigned" || firstWord == "signed" || firstWord == "long" || firstWord == "short")
+    {
+        int savedCaret = locCaret;
+        string next = ReadWord(data, locCaret, " \n\r(){}[]");
+        while (next == "char" || next == "short" || next == "int" || next == "long" || next == "double")
+        {
+            savedCaret = locCaret;
+            next = ReadWord(data, locCaret, " \n\r(){}[]");
+        }
+        locCaret = savedCaret;
+    }
+
     if (GetNextSymbol(data, locCaret, " \n\r\t") == '(')
     {
         string braces = ReadBraces(data, locCaret);
@@ -297,6 +364,14 @@ bool CppSyntaxParser::IsFunction(const string& data)
             ReadWord(data, locCaret, " \n\r(){}[]");
 
         string thirdWord = ReadWord(data, locCaret, " \n\r(){}[]<>-");
+
+        // The declarator can stand apart from both the type and the name, as in "Sprite * getLetter()":
+        // then it is read as a separate word and the name is the next one
+        while (!thirdWord.empty() && (thirdWord[0] == '*' || thirdWord[0] == '&'))
+            thirdWord.erase(0, 1);
+
+        if (thirdWord.empty())
+            thirdWord = ReadWord(data, locCaret, " \n\r(){}[]<>-");
 
         if (thirdWord == "operator")
             thirdWord = ReadWord(data, locCaret, " \n\r(){}", "\n\r", true, true, false);
@@ -346,6 +421,29 @@ SyntaxVariable* CppSyntaxParser::ParseVariable(const string& data, SyntaxProtect
         typeDefinition += " " + typeWord;
     }
 
+    // Merge multi-word fundamental types ("unsigned short", "long long", "unsigned long long int"),
+    // otherwise the second word is taken for the variable name and the type loses its meaning
+    if (typeWord == "unsigned" || typeWord == "signed" || typeWord == "long" || typeWord == "short")
+    {
+        auto isFundamentalTypeWord = [](const string& word) {
+            string base = word;
+            while (!base.empty() && (base.back() == '&' || base.back() == '*'))
+                base.pop_back();
+            return base == "char" || base == "short" || base == "int" || base == "long" || base == "double";
+        };
+
+        int savedCaret = caret;
+        string next = ReadWord(data, caret, " \n\r(){}[]");
+        while (isFundamentalTypeWord(next))
+        {
+            typeWord += " " + next;
+            typeDefinition += " " + next;
+            savedCaret = caret;
+            next = ReadWord(data, caret, " \n\r(){}[]");
+        }
+        caret = savedCaret;
+    }
+
     if (!typeWord.empty() && typeWord[typeWord.length() - 1] == '&')
         res->mType.mIsReference = true;
 
@@ -378,9 +476,26 @@ SyntaxVariable* CppSyntaxParser::ParseVariable(const string& data, SyntaxProtect
     {
         string nextWord = ReadWord(data, caret, " (){}[]");
         if (nextWord == "const")
-            res->mName = ReadWord(data, caret, " (){}[]");
-        else
-            res->mName = nextWord;
+            nextWord = ReadWord(data, caret, " (){}[]");
+
+        // cocos2d-x style glues reference/pointer to the name ("const Vec2 &pos", "Node *node");
+        // move the qualifiers onto the type so generated signatures match the real overloads
+        while (!nextWord.empty() && (nextWord[0] == '&' || nextWord[0] == '*'))
+        {
+            if (nextWord[0] == '&')
+                res->mType.mIsReference = true;
+            else
+                res->mType.mIsPointer = true;
+
+            res->mType.mName += nextWord[0];
+            nextWord.erase(0, 1);
+        }
+
+        // qualifier stood completely apart ("const Vec2 & pos") — the name is the next word
+        if (nextWord.empty())
+            nextWord = ReadWord(data, caret, " (){}[]");
+
+        res->mName = nextWord;
 
         nextWord = ReadWord(data, caret, " (){}[]");
         if (nextWord == "=")
@@ -452,6 +567,22 @@ SyntaxFunction* CppSyntaxParser::ParseFunction(const string& data, SyntaxProtect
                 typeDefinition += " " + typeWord;
             }
 
+            // Merge multi-word fundamental return types ("unsigned short", "long long int"),
+            // otherwise the second type word is taken for the function name
+            if (typeWord == "unsigned" || typeWord == "signed" || typeWord == "long" || typeWord == "short")
+            {
+                int savedCaret = caret;
+                string next = ReadWord(data, caret, " \n\r(){}[]");
+                while (next == "char" || next == "short" || next == "int" || next == "long" || next == "double")
+                {
+                    typeWord += " " + next;
+                    typeDefinition += " " + next;
+                    savedCaret = caret;
+                    next = ReadWord(data, caret, " \n\r(){}[]");
+                }
+                caret = savedCaret;
+            }
+
             if (!typeWord.empty() && typeWord[typeWord.length() - 1] == '&')
                 res->mReturnType.mIsReference = true;
 
@@ -461,6 +592,23 @@ SyntaxFunction* CppSyntaxParser::ParseFunction(const string& data, SyntaxProtect
             res->mReturnType.mName = typeWord;
 
             res->mName = ReadWord(data, caret, " \n\r(){}[]");
+
+            // Pointer/reference glued to the name ("Type *getX", "Type &getY"):
+            // the qualifier belongs to the return type, same as for parameters
+            while (!res->mName.empty() && (res->mName[0] == '*' || res->mName[0] == '&'))
+            {
+                if (res->mName[0] == '*')
+                    res->mReturnType.mIsPointer = true;
+                else
+                    res->mReturnType.mIsReference = true;
+
+                res->mReturnType.mName += res->mName[0];
+                res->mName.erase(0, 1);
+            }
+
+            // The qualifier stood alone ("Type * getX"): the name is the next word
+            if (res->mName.empty())
+                res->mName = ReadWord(data, caret, " \n\r(){}[]");
 
             if (res->mName == "operator")
                 res->mName += " " + ReadWord(data, caret, " \n\r(){}");
@@ -570,7 +718,7 @@ void CppSyntaxParser::ParseMultilineComment(SyntaxSection& section, int& caret,
     int begin = caret;
     caret += (int)strlen("/*");
     int end = (int)section.mData.find("*/", caret);
-    caret = end;
+    caret = end + 2;
 
     SyntaxComment* comment = new SyntaxComment();
     string sub = section.mData.substr(begin + 2, end - 4 - begin);
@@ -615,7 +763,50 @@ void CppSyntaxParser::ParseIfdefMacros(SyntaxSection& section, int& caret,
     caret += (int)strlen("#ifdef");
 
     SyntaxDefineIf* newDefine = new SyntaxDefineIf();
-    newDefine->mDefintion = "defined " + ReadWord(section.mData, caret, "\n", "");
+    string macroName = ReadWord(section.mData, caret, "\n", "");
+    newDefine->mDefintion = "defined(" + Trim(macroName, " \t\r") + ")";
+
+    section.mDefines.push_back(newDefine);
+    mCurrentDefine = newDefine;
+}
+
+// Checks the include guard idiom: #ifndef NAME immediately followed by #define NAME.
+// Such a guard isn't a compilation condition, wrapping generated metas into it would
+// disable them - the macro is already defined by the time the metas are reached
+static bool IsIncludeGuard(const string& data, int caret, const string& macroName)
+{
+    size_t next = data.find_first_not_of(" \t\r\n", caret);
+    if (next == string::npos)
+        return false;
+
+    static const string defineWord = "#define";
+    if (data.compare(next, defineWord.length(), defineWord) != 0)
+        return false;
+
+    size_t nameBegin = data.find_first_not_of(" \t", next + defineWord.length());
+    if (nameBegin == string::npos)
+        return false;
+
+    size_t nameEnd = data.find_first_of(" \t\r\n", nameBegin);
+    if (nameEnd == string::npos)
+        nameEnd = data.length();
+
+    return data.substr(nameBegin, nameEnd - nameBegin) == macroName;
+}
+
+void CppSyntaxParser::ParseIfndefMacros(SyntaxSection& section, int& caret,
+                                        SyntaxProtectionSection& protectionSection)
+{
+    caret += (int)strlen("#ifndef");
+
+    string macroName = ReadWord(section.mData, caret, "\n", "");
+    Trim(macroName, " \t\r");
+
+    if (IsIncludeGuard(section.mData, caret, macroName))
+        return;
+
+    SyntaxDefineIf* newDefine = new SyntaxDefineIf();
+    newDefine->mDefintion = "!defined(" + macroName + ")";
 
     section.mDefines.push_back(newDefine);
     mCurrentDefine = newDefine;
@@ -892,7 +1083,18 @@ void CppSyntaxParser::ParseEnum(SyntaxSection& section, int& caret,
     string blockRaw = ReadBlock(section.mData, caret);
     string block = Trim(blockRaw, " {}\r\t\n");
     RemoveComments(block);
+
+	int typePos = (int)block.find(':');
+    if (typePos != string::npos)
+    {
+        string type = block.substr(typePos + 1);
+        block.erase(typePos);
+	}
+
     auto content = Split(block, ',');
+
+    if (name.empty())
+        return;
 
     SyntaxEnum* newEnum = new SyntaxEnum();
     newEnum->mBegin = begin;
@@ -920,9 +1122,19 @@ void CppSyntaxParser::ParseEnum(SyntaxSection& section, int& caret,
             string sub2 = x.substr(valuePos + 1);
             value = Trim(sub2, " \n\t\r");
         }
-        else name = x;
+        else 
+            name = x;
+
+        if (name.empty())
+			continue;
 
         newEnum->mEntries[name] = value;
+    }
+
+    if (newEnum->mEntries.empty())
+    {
+        delete newEnum;
+        return;
     }
 
     section.mEnums.push_back(newEnum);
@@ -1159,6 +1371,34 @@ void CppSyntaxParser::ParseAccessor(SyntaxSection& section, int& caret, SyntaxPr
         res->mDefine = mCurrentDefine;
 
     section.mVariables.push_back(res);
+}
+
+void CppSyntaxParser::ParseCocosNamespace(SyntaxSection& section, int& caret, SyntaxProtectionSection& protectionSection)
+{
+	int begin = caret;
+	caret += (int)strlen("NS_CC_BEGIN");
+
+	string namespaceName = "cocos2d";
+
+	int namespacePos = (int)section.mData.find("NS_CC_END", caret);
+	string blockRaw = section.mData.substr(caret, namespacePos - caret);
+	string block = Trim(blockRaw, " \r\t\n");
+
+	SyntaxNamespace* newNamespace = new SyntaxNamespace();
+	newNamespace->mBegin = begin;
+	newNamespace->mLength = caret - begin;
+	newNamespace->mLine = GetLineNumber(section.mData, caret);
+
+	newNamespace->mData = block;
+	newNamespace->mName = namespaceName;
+	newNamespace->mFullName = section.mFullName.empty() ? namespaceName : section.mFullName + "::" + namespaceName;
+	newNamespace->mFile = section.mFile;
+	newNamespace->mParentSection = &section;
+	section.mSections.push_back(newNamespace);
+
+	ParseSyntaxSection(*newNamespace, newNamespace->mData, *section.mFile, SyntaxProtectionSection::Public);
+
+	caret = namespacePos + (int)strlen("NS_CC_END");
 }
 
 string CppSyntaxParser::ReadWord(const string& data, int& caret,

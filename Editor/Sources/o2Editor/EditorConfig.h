@@ -131,7 +131,13 @@ namespace Editor
         SERIALIZABLE(EditorConfig);
 
     protected:
+#if defined PLATFORM_WASM
+        // The page mounts a persistent file system at /config: everything else in the virtual file
+        // system is packed into the build and is gone on reload
+        String mConfigPath = "/config/EditorConfig.json";
+#else
         String mConfigPath = "../../EditorConfig.json";
+#endif
         String mGlobalConfigPath = "../../Config.json";
 
         bool mConfigsLoaded = false; // True if configurations were loaded

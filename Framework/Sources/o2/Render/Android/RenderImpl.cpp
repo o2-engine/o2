@@ -259,6 +259,13 @@ namespace o2
 
     void Render::PlatformResetState()
     {
+        // ResetState runs after an external renderer drew with the same context: everything the
+        // render assumes about the GL state has to be dropped, or the caches keep it from rebinding
+        // the program, the material and the attribute pointers, and nothing is drawn afterwards
+        mBoundAttributesVertexType = VertexType();
+        mActiveProgram = 0;
+        mCurrentMaterial = nullptr;
+
         glEnable(GL_BLEND);
         glDisable(GL_DEPTH_TEST);
         glDisable(GL_CULL_FACE);

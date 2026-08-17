@@ -102,3 +102,8 @@ For a class to be reflected, it must inherit `o2::IObject` and place the `IOBJEC
 Classes reflected in the type system get a static field `o2::Type* type` storing the class type. A **non-static** method `const o2::Type& GetType() const` is also added, returning the real type of the object at runtime.
 
 There is also the `TypeOf(TYPE)` macro, returning the type for any C++ type. It can be a class as well as an elementary type: int, float, bool, etc.
+
+### Code generation and the preprocessor
+The generator writes metadata to the end of the `.h` and the `DECLARE_CLASS` registrator to the paired `.cpp`. Without that registrator the static field `type` stays null, and `GetType()` returns a null reference - so a class marked with `IOBJECT` is always reflected, even when its base chain runs through files the generator doesn't see (excluded ones, for example); such a case is reported as a warning.
+
+A class inside a conditional compilation block gets its metadata wrapped into the same condition. An include guard (`#ifndef NAME` immediately followed by `#define NAME`) isn't a condition: the metadata sits after its `#endif`, wrapping would disable it, so such guards are recognized and ignored.

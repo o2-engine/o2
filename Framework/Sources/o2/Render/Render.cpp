@@ -859,8 +859,13 @@ namespace o2
 		mDepthWriteEnabled = true;
 
 		PlatformResetState();
-		SetupViewMatrix(mResolution);
-		UpdateCameraTransforms();
+		// Deliberately NOT resetting the view matrix to the window resolution here:
+		// ResetState runs after external renderers (cocos) finish inside a render
+		// target pass, and the current resolution must stay the target's one —
+		// otherwise everything drawn after (editor handles) gets a window-sized
+		// projection. External renderers trash matrices behind our cache, so the
+		// camera transforms are recomputed unconditionally
+		UpdateCameraTransforms(true);
 	}
 
 	void Render::EndCustomRender()
@@ -868,14 +873,14 @@ namespace o2
 		ResetState();
 	}
 
-	void Render::UpdateCameraTransforms()
+	void Render::UpdateCameraTransforms(bool force /*= false*/)
 	{
 		PROFILE_SAMPLE_FUNC();
 
 		// The render target y-flip is baked into the transforms, so a target binding
 		// change must trigger recomputation even when camera and resolution are the same
 		bool renderingToTarget = mCurrentRenderTarget != nullptr;
-		if (mCurrentResolution == mPrevResolution && mCamera == mPrevCamera &&
+		if (!force && mCurrentResolution == mPrevResolution && mCamera == mPrevCamera &&
 			renderingToTarget == mPrevTransformsToTarget)
 		{
 			return;

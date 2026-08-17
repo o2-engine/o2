@@ -10,7 +10,7 @@
 #include "o2/Utils/Types/Ref.h"
 
 // User interfaces manager access macros
-#define o2UI UIManager::Instance()
+#define o2UI o2::UIManager::Instance()
 
 namespace o2
 {

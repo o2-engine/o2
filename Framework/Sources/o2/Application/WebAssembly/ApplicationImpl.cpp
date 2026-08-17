@@ -29,11 +29,44 @@ EM_JS(void, o2_EnablePointerCapture, (), {
         {
             try { canvas.setPointerCapture(e.pointerId); } catch (err) {}
         }
+
+        if (e.button === 2)
+            _o2_web_alt_cursor_down(e.offsetX, e.offsetY);
     });
+
+    var altUp = function(e) {
+        if (e.button === 2)
+            _o2_web_alt_cursor_up();
+    };
+
+    canvas.addEventListener('pointerup', altUp);
+    canvas.addEventListener('pointercancel', altUp);
+});
+
+// Keys typed into a page input belong to the page, not to the editor
+EM_JS(int, o2_IsHtmlInputFocused, (), {
+    var el = document.activeElement;
+    if (!el)
+        return 0;
+
+    var tag = el.tagName;
+    return (tag === 'INPUT' || tag === 'TEXTAREA' || el.isContentEditable) ? 1 : 0;
 });
 
 namespace o2
 {
+    // The character each virtual key produced last, taken from the DOM keydown: only the browser
+    // knows the layout, and the engine key codes carry no character
+    static UInt16 gVkUnicode[256] = {};
+
+    UInt16 GetWasmUnicodeForKey(KeyboardKey code)
+    {
+        if (code < 0 || code >= 256)
+            return 0;
+
+        return gVkUnicode[code];
+    }
+
     namespace
     {
         Vec2I gCanvasResolution = Vec2I(960, 640);
@@ -44,21 +77,62 @@ namespace o2
                          (float)(gCanvasResolution.y * 0.5 - y));
         }
 
+        void StoreKeyUnicode(KeyboardKey vk, const char* domKey)
+        {
+            if (vk < 0 || vk >= 256 || !domKey)
+                return;
+
+            unsigned char c0 = (unsigned char)domKey[0];
+            if (c0 != 0 && domKey[1] == 0)
+            {
+                gVkUnicode[vk] = (UInt16)c0;
+                return;
+            }
+
+            // A single two byte utf-8 sequence: cyrillic and the like
+            if ((c0 & 0xE0) == 0xC0 && domKey[1] != 0 && domKey[2] == 0)
+            {
+                gVkUnicode[vk] = (UInt16)(((c0 & 0x1F) << 6) | ((unsigned char)domKey[1] & 0x3F));
+                return;
+            }
+
+            if (std::strcmp(domKey, "Enter") == 0)
+            {
+                gVkUnicode[vk] = 13;
+                return;
+            }
+
+            if (std::strcmp(domKey, "Backspace") == 0)
+            {
+                gVkUnicode[vk] = 8;
+                return;
+            }
+
+            gVkUnicode[vk] = 0;
+        }
+
         // Unhandled keys are left to the browser (EM_FALSE): consuming them would kill the
         // page shortcuts, while the handled ones must be consumed so arrows and space don't
         // scroll the page under the canvas
         EM_BOOL OnKeyDown(int, const EmscriptenKeyboardEvent* e, void*)
         {
+            if (o2_IsHtmlInputFocused())
+                return EM_FALSE;
+
             KeyboardKey key = DomKeyCodeToKeyboardKey(e->code);
             if (key == 0 || !Application::IsSingletonInitialzed())
                 return EM_FALSE;
 
+            StoreKeyUnicode(key, e->key);
             o2Input.OnKeyPressed(key);
             return EM_TRUE;
         }
 
         EM_BOOL OnKeyUp(int, const EmscriptenKeyboardEvent* e, void*)
         {
+            if (o2_IsHtmlInputFocused())
+                return EM_FALSE;
+
             KeyboardKey key = DomKeyCodeToKeyboardKey(e->code);
             if (key == 0 || !Application::IsSingletonInitialzed())
                 return EM_FALSE;
@@ -83,8 +157,9 @@ namespace o2
         {
             if (!Application::IsSingletonInitialzed()) return EM_TRUE;
             Vec2F p = GetCanvasCursorPos(e->targetX, e->targetY);
+            // Button 2 is handled by the captured pointer events, dispatching it here too would
+            // deliver every right click twice
             if (e->button == 0) o2Input.OnCursorPressed(p);
-            else if (e->button == 2) o2Input.OnAltCursorPressed(p);
             return EM_TRUE;
         }
 
@@ -92,7 +167,6 @@ namespace o2
         {
             if (!Application::IsSingletonInitialzed()) return EM_TRUE;
             if (e->button == 0) o2Input.OnCursorReleased();
-            else if (e->button == 2) o2Input.OnAltCursorReleased();
             return EM_TRUE;
         }
 
@@ -112,7 +186,17 @@ namespace o2
 
         EM_BOOL OnWheel(int, const EmscriptenWheelEvent* e, void*)
         {
-            // Input API has OnCursorWheelDelta — optional; ignore for minimal MVP
+            if (Application::IsSingletonInitialzed())
+            {
+                // The DOM deltaY grows downwards; o2 follows the windows convention, where a click
+                // of the wheel is about 120 and up is positive
+                float delta = (float)-e->deltaY;
+                if (e->deltaMode == DOM_DELTA_LINE)
+                    delta *= 40.0f;
+
+                o2Input.OnMouseWheel(delta * 1.2f);
+            }
+
             return EM_TRUE;
         }
 
@@ -156,6 +240,20 @@ namespace o2
             if (Application::IsSingletonInitialzed())
                 o2Application.Update();
         }
+    }
+
+    // Called from the captured pointer handlers: those deliver the right button reliably, while a
+    // plain mouseup of button 2 is swallowed around the context menu event
+    extern "C" EMSCRIPTEN_KEEPALIVE void o2_web_alt_cursor_down(float x, float y)
+    {
+        if (Application::IsSingletonInitialzed())
+            o2Input.OnAltCursorPressed(GetCanvasCursorPos(x, y));
+    }
+
+    extern "C" EMSCRIPTEN_KEEPALIVE void o2_web_alt_cursor_up()
+    {
+        if (Application::IsSingletonInitialzed())
+            o2Input.OnAltCursorReleased();
     }
 
     void Application::Initialize()

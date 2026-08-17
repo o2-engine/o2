@@ -5397,6 +5397,13 @@ namespace Editor
     {
         PushEditorScopeOnStack scope;
 
+#if defined PLATFORM_WASM
+        // The web build ships the styles pre-built with its assets: there are no editor sources to
+        // compare dates against, and nowhere to save a rebuilt style to
+        o2UI.LoadStyle(stylesFolder);
+        return;
+#endif
+
         String thisSourcePath = "../../o2/Editor/Sources/o2Editor/UI/Style/EditorUIStyle.cpp";
         TimeStamp thisSourceEditedDate = o2FileSystem.GetFileInfo(thisSourcePath).editDate;
 

@@ -26,9 +26,11 @@ if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
     set(O2_TESTS OFF CACHE BOOL "" FORCE)
 endif()
 
-# Force off editor and tests for WebAssembly / Emscripten
+# Force off editor and tests for WebAssembly / Emscripten (editor allowed with O2_WASM_EDITOR)
 if(EMSCRIPTEN)
-    set(O2_EDITOR OFF CACHE BOOL "" FORCE)
+    if(NOT O2_WASM_EDITOR)
+        set(O2_EDITOR OFF CACHE BOOL "" FORCE)
+    endif()
     set(O2_TESTS OFF CACHE BOOL "" FORCE)
 endif()
 
@@ -275,7 +277,9 @@ set(o2Framework_INCLUDES
 target_sources(o2Framework PRIVATE ${o2Framework_SOURCES})
 target_include_directories(o2Framework PUBLIC ${o2Framework_INCLUDES})
 if(NOT O2_DISABLE_O2FRAMEWORK_PCH)
-    target_precompile_headers(o2Framework PUBLIC "Framework/Sources/o2/stdafx.h")
+    # PRIVATE: a PUBLIC pch leaks into consumers (cocos2d links o2Framework) and is
+    # then compiled for their C/ObjC sources too, where the C++-only stdafx fails
+    target_precompile_headers(o2Framework PRIVATE "Framework/Sources/o2/stdafx.h")
 endif()
 target_compile_definitions(o2Framework PUBLIC ${O2_COMPILE_DEFINITIONS})
 
@@ -296,8 +300,30 @@ if (O2_SCRIPTING AND O2_SCRIPTING_BACKEND STREQUAL "quickjs")
     target_link_libraries(o2Framework PUBLIC quickjs)
 endif()
 
-if (O2_ENABLE_LINK_LIBPNG)
-    target_link_libraries(o2Framework PUBLIC libpng)
+if (EMSCRIPTEN)
+    # The emscripten libpng port provides both the headers and the library; mixing it with the
+    # bundled 1.2 copy makes the decoder read pictures with the wrong struct layout
+elseif (O2_ENABLE_LINK_LIBPNG)
+    if(TARGET ext_png)
+        # Use cocos2d-x external libpng/zlib in integrated builds
+        target_link_libraries(o2Framework PUBLIC ext_png)
+        if(TARGET ext_zlib)
+            target_link_libraries(o2Framework PUBLIC ext_zlib)
+        endif()
+    elseif(TARGET libpng)
+        # Fallback for standalone o2 build
+        target_link_libraries(o2Framework PUBLIC libpng)
+    else()
+        message(FATAL_ERROR "O2_ENABLE_LINK_LIBPNG is ON but neither ext_png (cocos2d-x) nor bundled libpng target exists")
+    endif()
+endif()
+
+# Make sure png headers are available even if linking is disabled (code may still compile)
+if(EMSCRIPTEN)
+elseif(TARGET ext_png)
+    target_include_directories(o2Framework PRIVATE $<TARGET_PROPERTY:ext_png,INTERFACE_INCLUDE_DIRECTORIES>)
+elseif(TARGET libpng)
+    target_include_directories(o2Framework PRIVATE $<TARGET_PROPERTY:libpng,INTERFACE_INCLUDE_DIRECTORIES>)
 endif()
 
 if (O2_ENABLE_LINK_ZLIB)
@@ -450,7 +476,7 @@ if (O2_SCRIPTING AND O2_SCRIPTING_BACKEND STREQUAL "quickjs")
     add_dependencies(o2Framework quickjs)
 endif()
 
-if (O2_ENABLE_LINK_LIBPNG)
+if (O2_ENABLE_LINK_LIBPNG AND TARGET libpng)
     add_dependencies(o2Framework libpng)
 endif()
 
@@ -489,17 +515,19 @@ if (O2_EDITOR)
         target_compile_options(o2Editor PRIVATE ${O2_MSVC_MP_FLAG} "/Zc:__cplusplus" "/bigobj")
     endif()
 
-    # Codegen
+    # Codegen: host tools only, the wasm build compiles the metas the host already wrote
+    if(NOT CMAKE_SYSTEM_NAME STREQUAL "iOS" AND NOT EMSCRIPTEN AND NOT ANDROID)
     add_custom_target(o2EditorCodegen
                       COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/CodeTool/Bin/o2CodeTool -project o2Editor -sources "${CMAKE_CURRENT_SOURCE_DIR}/Editor/Sources/o2Editor" -parent_projects "${CMAKE_CURRENT_SOURCE_DIR}/Framework/Sources/o2/CodeToolCache.xml"
                       COMMENT "Run CodeTool: ${CMAKE_CURRENT_SOURCE_DIR}/CodeTool/Bin/o2CodeTool -project o2Editor -sources \"${CMAKE_CURRENT_SOURCE_DIR}/Editor/Sources/o2Editor\" -parent_projects \"${CMAKE_CURRENT_SOURCE_DIR}/Framework/Sources/o2/CodeToolCache.xml\""
     )
     add_dependencies(o2EditorCodegen o2CodeTool o2FrameworkCodegen)
+    add_dependencies(o2Editor o2EditorCodegen)
+    set_target_properties(o2EditorCodegen PROPERTIES FOLDER o2/Codegen)
+    endif()
 
     add_dependencies(o2Editor o2Framework)
-    add_dependencies(o2Editor o2EditorCodegen)
     set_target_properties(o2Editor PROPERTIES FOLDER o2)
-    set_target_properties(o2EditorCodegen PROPERTIES FOLDER o2/Codegen)
 endif()
 
 # assets build tool (native host-only — skip when cross-compiling to WebAssembly / Android)

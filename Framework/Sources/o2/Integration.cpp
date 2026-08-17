@@ -86,7 +86,9 @@ namespace o2
 
         if (!sHeadless)
         {
-            InitializePlatform();
+            if (IsNeedPlatformInitialization())
+                InitializePlatform();
+
             InitiazeRender();
             InitilizeUIStyles();
         }

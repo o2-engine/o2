@@ -2,6 +2,9 @@
 
 #include "o2/Render/Pipeline/RenderPass.h"
 #include "o2/Utils/Types/Containers/Vector.h"
+// Self-sufficiency for consumers without the o2 pch: the generated META below
+// uses EXPANDED_BY_DEFAULT_ATTRIBUTE()
+#include "o2/Utils/Editor/Attributes/ExpandedByDefaultAttribute.h"
 
 namespace o2
 {

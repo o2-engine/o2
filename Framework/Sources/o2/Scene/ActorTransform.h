@@ -12,6 +12,8 @@ namespace o2
 {
     class Actor;
 
+    FORWARD_CLASS_REF(Actor);
+
     // -------------------------------------------------------------------------------------------
     // Actor transform. Represents the position of actor relative to his parent (the local space),
     // and calculates the position relative to world (the world space).

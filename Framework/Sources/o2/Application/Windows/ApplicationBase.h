@@ -26,8 +26,6 @@ namespace o2
 
         HCURSOR mCurrentCursor;  // Current cursor type
 
-        bool mNeedPlatformInitialization = true; // True, if need to initialize platform: window and render
-
     public:
         // Returns window handle
         HWND GetWindowHandle() const { return mHWnd; }

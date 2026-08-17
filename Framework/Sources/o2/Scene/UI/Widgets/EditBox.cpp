@@ -20,6 +20,10 @@
 #include "o2/Application/Mac/MacKeyboard.h"
 #endif
 
+#ifdef PLATFORM_WASM
+namespace o2 { UInt16 GetWasmUnicodeForKey(KeyboardKey code); }
+#endif
+
 namespace o2
 {
     EditBox::EditBox(RefCounter* refCounter):
@@ -1104,6 +1108,9 @@ namespace o2
             return 0;
 
         return (UInt16)code;
+
+#elif defined PLATFORM_WASM
+        return GetWasmUnicodeForKey(code);
 #endif
         return 0;
     }

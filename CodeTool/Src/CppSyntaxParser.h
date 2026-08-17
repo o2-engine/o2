@@ -16,7 +16,7 @@ public:
     CppSyntaxParser();
     ~CppSyntaxParser();
 
-    void ParseFile(SyntaxFile& file, const string& filePath, const TimeStamp& fileEditDate);
+    void ParseFile(SyntaxFile& file, const string& filePath, const TimeStamp& fileEditDate, bool excludeMode);
 
 protected:
     typedef void(CppSyntaxParser::* ParserDelegate)(SyntaxSection&, int&, SyntaxProtectionSection&);
@@ -37,11 +37,15 @@ protected:
 protected:
     string      mSourcesPath;
     ParsersVec  mParsers;
+	vector<pair<string, string>> mReplaces;
 
     SyntaxDefineIf* mCurrentDefine = nullptr;
 
 protected:
     void InitializeParsers();
+	void InitializeReplaces();
+
+	void ProcessReplaces(string& data);
 
     void ParseSyntaxSection(SyntaxSection& section, const string& source, SyntaxFile& file,
                             SyntaxProtectionSection protectionSection);
@@ -87,6 +91,8 @@ protected:
     void ParseUndef(SyntaxSection& section, int& caret, SyntaxProtectionSection& protectionSection);
 
     void ParseIfdefMacros(SyntaxSection& section, int& caret, SyntaxProtectionSection& protectionSection);
+
+    void ParseIfndefMacros(SyntaxSection& section, int& caret, SyntaxProtectionSection& protectionSection);
 
     void ParseIfMacros(SyntaxSection& section, int& caret, SyntaxProtectionSection& protectionSection);
 
@@ -136,4 +142,6 @@ protected:
     void ParseSetter(SyntaxSection& section, int& caret, SyntaxProtectionSection& protectionSection);
 
     void ParseAccessor(SyntaxSection& section, int& caret, SyntaxProtectionSection& protectionSection);
+
+	void ParseCocosNamespace(SyntaxSection& section, int& caret, SyntaxProtectionSection& protectionSection);
 };
