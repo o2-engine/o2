@@ -23,6 +23,7 @@
 #include "o2Editor/Actions/MoveAsset.h"
 #include "o2Editor/Actions/RenameAsset.h"
 #include "o2Editor/EditorApplication.h"
+#include "o2Editor/Windows/TreeWindow/TreeWindow.h"
 #include "o2Editor/Properties/Properties.h"
 #include "o2Editor/Windows/AssetsWindow/AssetIcon.h"
 #include "o2Editor/Windows/AssetsWindow/AssetsWindow.h"
@@ -890,7 +891,7 @@ namespace Editor
             if (iconAssetInfo.meta->GetAssetType() == &TypeOf(FolderAsset))
                 o2EditorAssets.OpenFolder(iconAssetInfo.path);
             else
-                o2EditorAssets.OpenAndEditAsset(iconAssetInfo.meta->ID());
+                o2EditorAssets.OpenAssetInEditor(iconAssetInfo);
         }
     }
 
@@ -1031,6 +1032,35 @@ namespace Editor
     Ref<Actor> AssetsIconsScrollArea::InstantiateAsset(const AssetRef<ActorAsset>& asset)
     {
         return asset->GetActor()->CloneAsRef<Actor>();
+    }
+
+    void AssetsIconsScrollArea::InstantiateAssetIntoScene(const AssetInfo& assetInfo)
+    {
+        ForcePopEditorScopeOnStack scope;
+
+        auto actor = InstantiateAsset(assetInfo);
+        if (!actor)
+            return;
+
+        actor->name = o2FileSystem.GetFileNameWithoutExtension(
+            o2FileSystem.GetPathWithoutDirectories(assetInfo.path));
+
+        // The clone waits in the scene's added-entities queue; flush it so the
+        // object is really on scene before registering the undo action
+        o2Scene.UpdateAddedEntities();
+
+        auto object = DynamicCast<SceneEditableObject>(actor);
+        auto parent = object->GetEditableParent();
+        auto parentChilds = parent ? parent->GetEditableChildren() : o2Scene.GetRootEditableObjects();
+        int idx = parentChilds.IndexOf(object);
+        auto prevObject = idx > 0 ? parentChilds[idx - 1] : nullptr;
+
+        auto createAction = mmake<CreateAction>(Vector<Ref<SceneEditableObject>>{ object }, parent, prevObject);
+        o2EditorSceneWindow.DoneAction(createAction);
+
+        o2EditorTree.GetSceneTree()->UpdateNodesView(true);
+        o2EditorTree.SetSelectedObjects({ object });
+        o2EditorTree.HighlightObjectTreeNode(object);
     }
 
     void AssetsIconsScrollArea::OnAssetsPropertiesChanged()

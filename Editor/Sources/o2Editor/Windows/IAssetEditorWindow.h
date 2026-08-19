@@ -51,6 +51,10 @@ namespace Editor
         virtual void EditAsset(const Ref<AssetProperty>& assetProperty, const Ref<Component>& component,
                                const Ref<IAssetEditablePreview>& preview = nullptr);
 
+        // Opens the asset for editing: checks unsaved changes of the current
+        // one, then switches to the given asset and shows the window
+        virtual void OpenAsset(const AssetRef<Asset>& asset);
+
 		// Enables or disables component preview mode
 		void SetComponentPreview(bool enable);
 
@@ -236,6 +240,7 @@ CLASS_METHODS_META(Editor::IAssetEditorWindow)
     FUNCTION().PUBLIC().SIGNATURE(void, EditAsset, const AssetRef<Asset>&);
     FUNCTION().PUBLIC().SIGNATURE(void, EditAsset, const AssetRef<Asset>&, const Ref<Component>&, const Ref<IAssetEditablePreview>&);
     FUNCTION().PUBLIC().SIGNATURE(void, EditAsset, const Ref<AssetProperty>&, const Ref<Component>&, const Ref<IAssetEditablePreview>&);
+    FUNCTION().PUBLIC().SIGNATURE(void, OpenAsset, const AssetRef<Asset>&);
     FUNCTION().PUBLIC().SIGNATURE(void, SetComponentPreview, bool);
     FUNCTION().PUBLIC().SIGNATURE(void, CreateNewAsset);
     FUNCTION().PUBLIC().SIGNATURE(void, SaveEditingAsset);

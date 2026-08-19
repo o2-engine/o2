@@ -91,6 +91,14 @@ namespace Editor
 		mEditingAssetProperty = assetProperty;
 	}
 
+	void IAssetEditorWindow::OpenAsset(const AssetRef<Asset>& asset)
+	{
+		CheckDirtyAssetAndExecute([this, asset]() {
+			EditAsset(asset);
+			Show();
+		});
+	}
+
 	void IAssetEditorWindow::SetComponentPreview(bool enable)
 	{
 		if (!IsComponentPreviewAvailable())

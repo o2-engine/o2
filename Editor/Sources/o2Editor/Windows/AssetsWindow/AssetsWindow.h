@@ -69,6 +69,11 @@ namespace Editor
         void OpenAsset(const String& path);
 
         // Opens asset for editing 
+        // Opens asset inside the editor: scenes in the scene window, prototypes
+        // instantiate into the scene, assets with a registered editor window in
+        // it, anything else in the properties window
+        void OpenAssetInEditor(const AssetInfo& assetInfo);
+
         void OpenAndEditAsset(const UID& id);
 
         // Opens asset for editing 
@@ -209,6 +214,7 @@ CLASS_METHODS_META(Editor::AssetsWindow)
     FUNCTION().PUBLIC().SIGNATURE(const Vector<Ref<AssetInfo>>&, GetSelectedAssets);
     FUNCTION().PUBLIC().SIGNATURE(void, OpenAsset, const UID&);
     FUNCTION().PUBLIC().SIGNATURE(void, OpenAsset, const String&);
+    FUNCTION().PUBLIC().SIGNATURE(void, OpenAssetInEditor, const AssetInfo&);
     FUNCTION().PUBLIC().SIGNATURE(void, OpenAndEditAsset, const UID&);
     FUNCTION().PUBLIC().SIGNATURE(void, OpenAndEditAsset, const String&);
     FUNCTION().PUBLIC().SIGNATURE(String, GetOpenedFolderPath);

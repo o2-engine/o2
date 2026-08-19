@@ -83,6 +83,10 @@ namespace Editor
         // Returns context menu
         const Ref<ContextMenu>& GetContextMenu() const;
 
+        // Instantiates the actor asset into the scene with an undo action
+        // (the double-click "open" behaviour for prototypes)
+        void InstantiateAssetIntoScene(const AssetInfo& assetInfo);
+
         // Returns selected assets infos
         const Vector<Ref<AssetInfo>>& GetSelectedAssets() const;
 
@@ -411,6 +415,7 @@ CLASS_METHODS_META(Editor::AssetsIconsScrollArea)
     FUNCTION().PUBLIC().SIGNATURE(void, SelectAsset, const UID&, bool);
     FUNCTION().PUBLIC().SIGNATURE(void, DeselectAllAssets);
     FUNCTION().PUBLIC().SIGNATURE(const Ref<ContextMenu>&, GetContextMenu);
+    FUNCTION().PUBLIC().SIGNATURE(void, InstantiateAssetIntoScene, const AssetInfo&);
     FUNCTION().PUBLIC().SIGNATURE(const Vector<Ref<AssetInfo>>&, GetSelectedAssets);
     FUNCTION().PUBLIC().SIGNATURE(Ref<AssetIcon>, GetIconUnderPoint, const Vec2F&);
     FUNCTION().PUBLIC().SIGNATURE(const Ref<Sprite>&, GetHighlightDrawable);

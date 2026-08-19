@@ -15,6 +15,13 @@ Clicking an asset selects it, and the Properties window shows its settings. Ther
 
 Some asset types support drag'n'drop into the hierarchy or the scene: textures and prototypes. Just drag them to the desired place.
 
+Double-clicking an asset name starts renaming it. Double-clicking an asset icon opens the asset, depending on its type:
+- folder — opens the folder;
+- scene — opens the scene in the editor;
+- prototype — instantiates it into the current scene (with undo support);
+- JavaScript script — opens the source in the system editor (on the web version — in the built-in text editor of the assets page);
+- other assets — brings up the Properties window with the selection.
+
 ### Texture and atlas settings
 
 Selecting an atlas or a texture allows editing its parameters; the settings appear in the Properties window. As soon as the file is deselected, it is saved automatically. It can also be saved with the Save button in the Properties window header.

@@ -9,6 +9,7 @@
 #include "o2/Assets/Types/DataAsset.h"
 #include "o2/Assets/Types/FolderAsset.h"
 #include "o2/Assets/Types/ImageAsset.h"
+#include "o2/Assets/Types/JavaScriptAsset.h"
 #include "o2/Scene/UI/UIManager.h"
 #include "o2/Scene/UI/WidgetLayer.h"
 #include "o2/Scene/UI/WidgetLayout.h"
@@ -24,10 +25,16 @@
 #include "o2Editor/Actions/DeleteAsset.h"
 #include "o2Editor/Actions/MoveAsset.h"
 #include "o2Editor/Windows/AssetsWindow/AssetIcon.h"
+#include "o2Editor/Windows/PropertiesWindow/PropertiesWindow.h"
+#include "o2Editor/Windows/WindowsManager.h"
 #include "o2Editor/Windows/AssetsWindow/AssetsIconsScroll.h"
 #include "o2Editor/Windows/AssetsWindow/FoldersTree.h"
 #include "o2Editor/Windows/SceneWindow/SceneWindow.h"
 #include "o2Editor/EditorConfig.h"
+
+#if defined PLATFORM_WASM
+#include <emscripten.h>
+#endif
 
 DECLARE_SINGLETON(Editor::AssetsWindow);
 
@@ -248,6 +255,38 @@ namespace Editor
 #endif
     }
 
+    void AssetsWindow::OpenAssetInEditor(const AssetInfo& assetInfo)
+    {
+        auto assetType = assetInfo.meta->GetAssetType();
+
+        // Prototypes instantiate into the scene
+        if (assetType == &TypeOf(ActorAsset))
+        {
+            mAssetsGridScroll->InstantiateAssetIntoScene(assetInfo);
+            return;
+        }
+
+        // Script sources open in the system editor (or the page text editor
+        // under wasm)
+        if (assetType == &TypeOf(JavaScriptAsset))
+        {
+            OpenAndEditAsset(assetInfo.path);
+            return;
+        }
+
+        // Assets with a dedicated editor window (scenes, ...) open there
+        if (auto editor = o2EditorWindows.GetAssetEditor(assetType))
+        {
+            editor->OpenAsset(o2Assets.GetAssetRef(assetInfo.meta->ID()));
+            return;
+        }
+
+        // Everything else: the selection already targets the properties window -
+        // just bring it up
+        if (PropertiesWindow::IsSingletonInitialzed())
+            o2EditorPropertiesWindow.Show();
+    }
+
     void AssetsWindow::OpenAndEditAsset(const UID& id)
     {
         OpenAndEditAsset(o2Assets.GetAssetPath(id));
@@ -255,9 +294,20 @@ namespace Editor
 
     void AssetsWindow::OpenAndEditAsset(const String& path)
     {
-        String fullPath = o2Application.GetBinPath() + "/" + o2Assets.GetAssetsPath() + path;
 #if defined PLATFORM_WINDOWS
+        String fullPath = o2Application.GetBinPath() + "/" + o2Assets.GetAssetsPath() + path;
         ShellExecute(NULL, "edit", fullPath, NULL, NULL, SW_SHOWNORMAL);
+#elif defined PLATFORM_MAC
+        String fullPath = o2Assets.GetAssetsPath() + path;
+        system(("open \"" + fullPath + "\"").Data());
+#elif defined PLATFORM_LINUX
+        String fullPath = o2Assets.GetAssetsPath() + path;
+        system(("xdg-open \"" + fullPath + "\"").Data());
+#elif defined PLATFORM_WASM
+        EM_ASM({
+            if (window.__o2OpenAssetTextEditor)
+                window.__o2OpenAssetTextEditor(UTF8ToString($0));
+        }, path.Data());
 #endif
     }
 
