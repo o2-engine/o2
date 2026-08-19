@@ -26,9 +26,11 @@ if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
     set(O2_TESTS OFF CACHE BOOL "" FORCE)
 endif()
 
-# Force off editor and tests for WebAssembly / Emscripten
+# Force off editor and tests for WebAssembly / Emscripten (editor allowed with O2_WASM_EDITOR)
 if(EMSCRIPTEN)
-    set(O2_EDITOR OFF CACHE BOOL "" FORCE)
+    if(NOT O2_WASM_EDITOR)
+        set(O2_EDITOR OFF CACHE BOOL "" FORCE)
+    endif()
     set(O2_TESTS OFF CACHE BOOL "" FORCE)
 endif()
 
@@ -456,21 +458,24 @@ if (O2_EDITOR)
         target_compile_options(o2Editor PRIVATE ${O2_MSVC_MP_FLAG} "/Zc:__cplusplus" "/bigobj")
     endif()
 
-    # Codegen
-    add_custom_target(o2EditorCodegen
-                      COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/CodeTool/Bin/o2CodeTool -project o2Editor -sources "${CMAKE_CURRENT_SOURCE_DIR}/Editor/Sources/o2Editor" -parent_projects "${CMAKE_CURRENT_SOURCE_DIR}/Framework/Sources/o2/CodeToolCache.xml"
-                      COMMENT "Run CodeTool: ${CMAKE_CURRENT_SOURCE_DIR}/CodeTool/Bin/o2CodeTool -project o2Editor -sources \"${CMAKE_CURRENT_SOURCE_DIR}/Editor/Sources/o2Editor\" -parent_projects \"${CMAKE_CURRENT_SOURCE_DIR}/Framework/Sources/o2/CodeToolCache.xml\""
-    )
-    add_dependencies(o2EditorCodegen o2CodeTool o2FrameworkCodegen)
+    # Codegen (native host-only — cross-compile builds reuse committed generated sources)
+    if(NOT CMAKE_SYSTEM_NAME STREQUAL "iOS" AND NOT EMSCRIPTEN AND NOT ANDROID)
+        add_custom_target(o2EditorCodegen
+                          COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/CodeTool/Bin/o2CodeTool -project o2Editor -sources "${CMAKE_CURRENT_SOURCE_DIR}/Editor/Sources/o2Editor" -parent_projects "${CMAKE_CURRENT_SOURCE_DIR}/Framework/Sources/o2/CodeToolCache.xml"
+                          COMMENT "Run CodeTool: ${CMAKE_CURRENT_SOURCE_DIR}/CodeTool/Bin/o2CodeTool -project o2Editor -sources \"${CMAKE_CURRENT_SOURCE_DIR}/Editor/Sources/o2Editor\" -parent_projects \"${CMAKE_CURRENT_SOURCE_DIR}/Framework/Sources/o2/CodeToolCache.xml\""
+        )
+        add_dependencies(o2EditorCodegen o2CodeTool o2FrameworkCodegen)
+        add_dependencies(o2Editor o2EditorCodegen)
+        set_target_properties(o2EditorCodegen PROPERTIES FOLDER o2/Codegen)
+    endif()
 
     add_dependencies(o2Editor o2Framework)
-    add_dependencies(o2Editor o2EditorCodegen)
     set_target_properties(o2Editor PROPERTIES FOLDER o2)
-    set_target_properties(o2EditorCodegen PROPERTIES FOLDER o2/Codegen)
 endif()
 
-# assets build tool (native host-only — skip when cross-compiling to WebAssembly / Android)
-if(NOT EMSCRIPTEN AND NOT ANDROID)
+# assets build tool. Native hosts always; under Emscripten only for the web
+# editor, which runs the builder in-process over MEMFS (no host tools there).
+if((NOT EMSCRIPTEN OR O2_WASM_EDITOR) AND NOT ANDROID)
     add_subdirectory(AssetsBuildTool)
 endif()
 

@@ -36,7 +36,10 @@ namespace o2
         static void DestroySingleton(Ref<_class_type>& lastReference);
 
     public:
-#if defined(__EMSCRIPTEN__) || defined(__ANDROID__)
+// O2_INLINE_SINGLETONS: modern clang (16+) rejects the out-of-line
+// specialization DECLARE_SINGLETON emits ("explicit specialization after
+// instantiation"); the inline-static form sidesteps it on any platform
+#if defined(__EMSCRIPTEN__) || defined(__ANDROID__) || defined(O2_INLINE_SINGLETONS)
         inline static _class_type* mInstance = nullptr; // Instance of singleton
 #else
         static _class_type* mInstance; // Instance of singleton
@@ -47,7 +50,7 @@ namespace o2
     Vector<Ref<RefCounterable>>& GetSingletonsList();
 
     // Declaring singleton macros
-#if defined(__EMSCRIPTEN__) || defined(__ANDROID__)
+#if defined(__EMSCRIPTEN__) || defined(__ANDROID__) || defined(O2_INLINE_SINGLETONS)
 #define DECLARE_SINGLETON(CLASS) /* mInstance is inline-initialized in template */
 #define CREATE_SINGLETON(CLASS)  SingletonInitializer<CLASS> gSingleton##CLASS
 #else

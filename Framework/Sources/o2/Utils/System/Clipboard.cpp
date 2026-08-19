@@ -7,6 +7,22 @@
 #elif defined PLATFORM_MAC
 #include <Carbon/Carbon.h>
 #include <CoreFoundation/CoreFoundation.h>
+#elif defined PLATFORM_WASM
+#include <emscripten.h>
+#include <cstdlib>
+
+// Session-local clipboard in a page global (navigator.clipboard is async-only,
+// so it is written best-effort but never read back synchronously)
+EM_JS(void, o2_web_clipboard_set, (const char* utf8), {
+    var text = UTF8ToString(utf8);
+    window.o2ClipboardText = text;
+    if (navigator.clipboard && navigator.clipboard.writeText)
+        navigator.clipboard.writeText(text).catch(function() {});
+});
+
+EM_JS(char*, o2_web_clipboard_get, (), {
+    return stringToNewUTF8(window.o2ClipboardText || '');
+});
 #endif
 
 namespace o2
@@ -43,6 +59,10 @@ namespace o2
             }
             CFRelease(pasteboard);
         }
+#elif defined PLATFORM_WASM
+        String utf8Text;
+        ConvertString(utf8Text, text);
+        o2_web_clipboard_set(utf8Text.Data());
 #endif
     }
 
@@ -106,6 +126,14 @@ namespace o2
         return WString();
 #elif PLATFORM_LINUX
         return WString();
+#elif defined PLATFORM_WASM
+        char* raw = o2_web_clipboard_get();
+        String utf8Str(raw);
+        free(raw);
+
+        WString res;
+        ConvertString(res, utf8Str);
+        return res;
 #endif
     }
 

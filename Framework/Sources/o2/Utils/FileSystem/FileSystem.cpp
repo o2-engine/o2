@@ -11,6 +11,13 @@
 #include "o2/Application/Android/AndroidPlatform.h"
 #endif
 
+#ifdef PLATFORM_WASM
+#include "o2/Utils/FileSystem/WebAssembly/WebServerFS.h"
+#define O2_WEBFS_MIRROR(call) WebFS::call
+#else
+#define O2_WEBFS_MIRROR(call)
+#endif
+
 #if defined(O2_FILESYSTEM_EXPERIMENTAL)
 #include <experimental/filesystem>
 namespace fs = std::experimental::filesystem;
@@ -116,6 +123,8 @@ namespace o2
 
         fs::copy(source.Data(), dest.Data());
 
+        O2_WEBFS_MIRROR(NotifyFileCopied(source, dest));
+
         return fs::exists(dest.Data());
     }
 
@@ -125,6 +134,8 @@ namespace o2
             return false;
 
         fs::remove(file.Data());
+
+        O2_WEBFS_MIRROR(NotifyFileDeleted(file));
 
         return true;
     }
@@ -137,6 +148,8 @@ namespace o2
             FolderCreate(destFolder);
 
         fs::rename(source.Data(), dest.Data());
+
+        O2_WEBFS_MIRROR(NotifyMoved(source, dest));
 
         return fs::exists(dest.Data());
     }
@@ -188,6 +201,8 @@ namespace o2
 
         fs::last_write_time(path.Data(), fileTimePoint);
 
+        O2_WEBFS_MIRROR(NotifyEditDateSet(path, (long long)writeTime));
+
         return true;
     }
 
@@ -207,7 +222,12 @@ namespace o2
         if (!extrPath.IsEmpty() && !FolderCreate(extrPath, true))
             return false;
 
-        return fs::create_directory(path.Data());
+        bool created = fs::create_directory(path.Data());
+
+        if (created)
+            O2_WEBFS_MIRROR(NotifyFolderCreated(path));
+
+        return created;
     }
 
     bool FileSystem::FolderCopy(const String& from, const String& to) const
@@ -216,6 +236,8 @@ namespace o2
             return false;
 
         fs::copy(from.Data(), to.Data(), fs::copy_options::recursive);
+
+        O2_WEBFS_MIRROR(NotifyFolderCopied(from, to));
 
         return true;
     }
@@ -226,12 +248,18 @@ namespace o2
             return false;
 
         fs::remove_all(path.Data());
+
+        O2_WEBFS_MIRROR(NotifyFolderRemoved(path));
+
         return true;
     }
 
     bool FileSystem::Rename(const String& old, const String& newPath) const
     {
         fs::rename(old.Data(), newPath.Data());
+
+        O2_WEBFS_MIRROR(NotifyMoved(old, newPath));
+
         return true;
     }
 

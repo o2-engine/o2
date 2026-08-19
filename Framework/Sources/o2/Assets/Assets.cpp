@@ -555,6 +555,12 @@ namespace o2
 #if IS_EDITOR
     void Assets::RebuildAssets(bool resetCache /*= false*/)
     {
+#if PLATFORM_WASM
+        // The builder runs in-process over MEMFS (implemented next to the web
+        // editor entry point, so the framework doesn't depend on AssetsBuildTool)
+        extern void o2_WasmRebuildAssets(bool forcible);
+        o2_WasmRebuildAssets(resetCache);
+#else
 #if PLATFORM_WINDOWS
         String assetsBuilderPath = "AssetsBuilder.exe";
         String platform = "Windows";
@@ -581,6 +587,7 @@ namespace o2
         int res = system(command.Data());
         if (res != 0)
             o2Debug.LogError("AssetsBuilder failed with exit code " + (String)res);
+#endif
 
         auto changedAssetsUIDs = ReloadAssetsTree();
 

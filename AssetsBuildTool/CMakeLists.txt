@@ -5,6 +5,10 @@ add_compile_definitions(${O2_COMPILE_DEFINITIONS_EXPORT})
 file(GLOB_RECURSE o2AssetsBuilder_SOURCES
     "Sources/*.cpp" "Sources/*.h"
 )
+# The CLI entry point belongs to the AssetsBuilder executable only; a main()
+# inside the static library hijacks the entry point of anything else linking
+# it (the wasm editor runs the builder in-process)
+list(FILTER o2AssetsBuilder_SOURCES EXCLUDE REGEX "AssetsBuilderRunner")
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${o2AssetsBuilder_SOURCES})
 
 # ARM astcenc (Apache 2.0, git submodule pinned to 5.3.0): the ASTC encoder for built assets.

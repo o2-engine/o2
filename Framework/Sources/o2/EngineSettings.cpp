@@ -23,7 +23,16 @@ o2::DeviceType GetDeviceType()
     auto platform = GetEnginePlatform();
     if (platform == o2::Platform::Windows || platform == o2::Platform::Mac || platform == o2::Platform::Linux)
         return o2::DeviceType::PC;
-    
+
+#ifdef PLATFORM_WASM
+    // The web editor is mouse-driven: PC input model gives it the permanent
+    // hover cursor (Input ctor adds cursor 0 for PC only) that under-cursor
+    // tracking, wheel and right-click dispatch all depend on. The game build
+    // keeps the touch model for mobile browsers.
+    if constexpr (IS_EDITOR)
+        return o2::DeviceType::PC;
+#endif
+
     return o2::DeviceType::Phone;
 }
 
@@ -40,7 +49,13 @@ const char* GetProjectSettingPath()
 #if defined PLATFORM_MAC || defined PLATFORM_WINDOWS || defined PLATFORM_LINUX
     return "../../ProjectSettings.json";
 #elif defined PLATFORM_WASM
-    return "/ProjectSettings.json";
+    // The web editor runs from /project/Bin/WebAssembly over a server-synced
+    // project tree and uses desktop-style relative paths; the game build keeps
+    // the flat preloaded layout at the VFS root
+    if constexpr (IS_EDITOR)
+        return "../../ProjectSettings.json";
+    else
+        return "/ProjectSettings.json";
 #else
     return "ProjectSettings.json";
 #endif
@@ -80,7 +95,10 @@ const char* GetProjectRootPath()
 #if defined PLATFORM_MAC || defined PLATFORM_WINDOWS || defined PLATFORM_LINUX
     return "../../";
 #elif defined PLATFORM_WASM
-    return "/";
+    if constexpr (IS_EDITOR)
+        return "../../";
+    else
+        return "/";
 #else
     return "";
 #endif
@@ -144,7 +162,10 @@ const char* GetBuiltAssetsPath()
 #elif defined PLATFORM_IOS
     return "Data/";
 #elif defined PLATFORM_WASM
-    return "/Data/";
+    if constexpr (IS_EDITOR)
+        return "../../BuiltAssets/WebAssembly/Data/";
+    else
+        return "/Data/";
 #endif
 }
 
@@ -166,13 +187,16 @@ const char* GetBuiltAssetsTreePath()
 #elif defined PLATFORM_IOS
     return "Data.json";
 #elif defined PLATFORM_WASM
-    return "/Data.json";
+    if constexpr (IS_EDITOR)
+        return "../../BuiltAssets/WebAssembly/Data.json";
+    else
+        return "/Data.json";
 #endif
 }
 
 const char* GetEditorAssetsPath()
 {
-#if defined PLATFORM_WINDOWS || defined PLATFORM_MAC || defined PLATFORM_LINUX
+#if defined PLATFORM_WINDOWS || defined PLATFORM_MAC || defined PLATFORM_LINUX || defined PLATFORM_WASM
     return "../../o2/Editor/Assets/";
 #else
     return "";
@@ -187,6 +211,8 @@ const char* GetEditorBuiltAssetsPath()
     return "../../BuiltAssets/Mac/EditorData/";
 #elif defined PLATFORM_LINUX
     return "../../BuiltAssets/Linux/EditorData/";
+#elif defined PLATFORM_WASM
+    return "../../BuiltAssets/WebAssembly/EditorData/";
 #endif
     return "";
 }
@@ -199,6 +225,8 @@ const char* GetEditorBuiltAssetsTreePath()
     return "../../BuiltAssets/Mac/EditorData.json";
 #elif defined PLATFORM_LINUX
     return "../../BuiltAssets/Linux/EditorData.json";
+#elif defined PLATFORM_WASM
+    return "../../BuiltAssets/WebAssembly/EditorData.json";
 #endif
     return "";
 }
@@ -214,7 +242,10 @@ const char* GetBuiltinAssetsPath()
 #elif defined PLATFORM_IOS
     return "FrameworkData/";
 #elif defined PLATFORM_WASM
-    return "/FrameworkData/";
+    if constexpr (IS_EDITOR)
+        return "../../BuiltAssets/WebAssembly/FrameworkData/";
+    else
+        return "/FrameworkData/";
 #elif defined PLATFORM_ANDROID
     return "FrameworkData/";
 #else

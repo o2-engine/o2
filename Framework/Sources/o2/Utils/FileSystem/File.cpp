@@ -7,6 +7,10 @@
 #include "o2/Application/Android/AndroidPlatform.h"
 #endif
 
+#ifdef PLATFORM_WASM
+#include "o2/Utils/FileSystem/WebAssembly/WebServerFS.h"
+#endif
+
 namespace o2
 {
     InFile::InFile() :
@@ -214,7 +218,14 @@ namespace o2
     bool OutFile::Close()
     {
         if (mOpened)
+        {
             mOfstream.close();
+            mOpened = false;
+
+#ifdef PLATFORM_WASM
+            WebFS::NotifyFileWritten(mFilename);
+#endif
+        }
 
         return true;
     }

@@ -365,7 +365,11 @@ namespace Editor
                 //          float res = o2Scripts.GetGlobal().GetProperty(ScriptValue("x")).ToNumber();
 
 
+#ifndef SCRIPTING_BACKEND_BROWSERJS
+        // With the browserjs backend the global is the browser's cyclic `window`
+        // object — dumping it recurses without bound
         o2Debug.LogStr("---Dump global---\n" + o2Scripts.GetGlobal().Dump() + "\n---------------");
+#endif
     }
 
     void EditorApplication::OnClosing()
@@ -438,7 +442,14 @@ namespace Editor
         PROFILE_SAMPLE_FUNC();
 
         EditorUIStyleBuilder builder;
+#ifdef PLATFORM_WASM
+        // Always regenerate the style in memory: the saved-style fast path
+        // (load from built EditorData) produces broken widget clones in the
+        // web build, and saving would mirror ~350 files to the server per boot
+        builder.RebuildEditorUIManager("Editor UI styles", false, false);
+#else
         builder.RebuildEditorUIManager("Editor UI styles", true, true);
+#endif
     }
 
     void EditorApplication::PreUpdatePhysics()
