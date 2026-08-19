@@ -172,6 +172,37 @@ namespace Editor
         return "UI/Editor";
     }
 
+    int SceneHierarchyTree::GetPrototypeLevel(const Ref<SceneEditableObject>& object)
+    {
+        auto actor = DynamicCast<Actor>(object);
+        if (!actor || !actor->GetPrototype().IsValid())
+            return 0;
+
+        int level = 0;
+        for (auto current = actor; current; current = current->GetParent().Lock())
+        {
+            if (current->GetPrototypeDirectly().IsValid())
+                level++;
+        }
+
+        return level;
+    }
+
+    Color4 SceneHierarchyTree::GetPrototypeLevelColor(int level)
+    {
+        // bright and distinguishable over the tree background, cycled when prototypes nest deeper
+        static const Color4 colors[] = {
+            Color4(0, 130, 220),
+            Color4(225, 105, 0),
+            Color4(140, 60, 200),
+            Color4(0, 150, 70),
+            Color4(210, 30, 110)
+        };
+
+        const int count = sizeof(colors)/sizeof(colors[0]);
+        return colors[Math::Max(level - 1, 0)%count];
+    }
+
     void SceneHierarchyTree::RestoreExpandedFromCache()
     {
         UpdateNodesView(true);
@@ -446,6 +477,7 @@ namespace Editor
 
     void SceneHierarchyTreeNode::InitializeControls()
     {
+        mNameLayer = GetLayer("name");
         mNameDrawable = GetLayerDrawable<Text>("name");
         mLockToggle = GetChildByType<Toggle>("lockToggle");
         mEnableToggle = GetChildByType<Toggle>("enableToggle");
@@ -465,10 +497,20 @@ namespace Editor
         }
 
         if (mEnableToggle)
+        {
+            mEnableToggleHalfHideState = mEnableToggle->GetStateObject("halfHide");
             mEnableToggle->onClick = THIS_FUNC(OnEnableCkicked);
+        }
 
         if (mNameEditBox)
             mNameEditBox->onChangeCompleted = THIS_FUNC(OnObjectNameChanged);
+
+        // edit state animates name layer transparency and drops the disabled dimming when it ends
+        if (mEditState)
+            mEditState->onStateFullyFalse = [&]() { UpdateEnabledView(); };
+
+        if (mNameDrawable)
+            mDefaultNameColor = mNameDrawable->GetColor();
     }
 
     void SceneHierarchyTreeNode::SetSceneObject(const Ref<SceneEditableObject>& object)
@@ -481,18 +523,9 @@ namespace Editor
             mNameDrawable->SetText(mName);
         }
 
-        float alpha = object->IsEnabledInHierarchy() ? 1.0f : 0.5f;
-        if (!Math::Equals(alpha, mNameDrawable->GetTransparency()))
-        {
-            mNameDrawable->SetTransparency(alpha);
-            mEnableToggle->SetTransparency(alpha);
-            mLinkBtn->SetTransparency(alpha);
-        }
-
         if (auto actor = DynamicCast<Actor>(object))
         {
             mLinkBtn->SetEnabledForcible(actor->GetPrototype().IsValid());
-            mLinkBtnHalfHideState->SetState(!actor->GetPrototypeDirectly().IsValid());
 
             if (actor->GetPrototype())
             {
@@ -502,7 +535,7 @@ namespace Editor
                 };
             }
         }
-        else 
+        else
             mLinkBtn->SetEnabledForcible(false);
 
         if (object->IsSupportsDisabling())
@@ -515,6 +548,44 @@ namespace Editor
         mLockToggle->SetValue(object->IsLocked());
         mLockToggleLockedState->SetState(object->IsLockedInHierarchy());
         mLockToggleHalfHideState->SetState(object->IsLockedInHierarchy() && !object->IsLocked());
+
+        UpdatePrototypeView();
+        UpdateEnabledView();
+    }
+
+    void SceneHierarchyTreeNode::UpdatePrototypeView()
+    {
+        if (!mNameDrawable)
+            return;
+
+        int level = SceneHierarchyTree::GetPrototypeLevel(mTargetObject);
+
+        Color4 color = level > 0 ? SceneHierarchyTree::GetPrototypeLevelColor(level) : mDefaultNameColor;
+        color.a = mNameDrawable->GetColor().a; // alpha belongs to the enabled state view
+
+        mNameDrawable->SetColor(color);
+    }
+
+    void SceneHierarchyTreeNode::UpdateEnabledView()
+    {
+        if (!mTargetObject)
+            return;
+
+        bool enabled = mTargetObject->IsEnabledInHierarchy();
+
+        // layer transparency, not the drawable's one: drawable's is recalculated from layers on any
+        // widget transparency update
+        if (mNameLayer)
+            mNameLayer->SetTransparency(enabled ? 1.0f : 0.5f);
+
+        if (mEnableToggleHalfHideState)
+            mEnableToggleHalfHideState->SetStateForcible(!enabled);
+
+        if (mLinkBtnHalfHideState)
+        {
+            auto actor = DynamicCast<Actor>(mTargetObject);
+            mLinkBtnHalfHideState->SetStateForcible(!enabled || !actor || !actor->GetPrototypeDirectly().IsValid());
+        }
     }
 
     void SceneHierarchyTreeNode::EnableEditName()

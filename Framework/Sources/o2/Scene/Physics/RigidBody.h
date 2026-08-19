@@ -108,12 +108,14 @@ namespace o2
         // Returns is body fixed rotation
         bool IsFixedRotation() const;
 
+        // Returns the Box2D body (null until created on scene)
+        b2Body* GetBody() const;
+
         SERIALIZABLE(RigidBody);
         CLONEABLE_REF(RigidBody);
 
     protected:
-        b2Body*    mBody = nullptr; // Box 2d physics body
-        b2MassData mMassData;       // Body mass data
+        b2Body* mBody = nullptr; // Box 2d physics body
 
         Type mBodyType = Type::Dynamic; // Type of body @SERIALIZABLE
 
@@ -142,6 +144,9 @@ namespace o2
 
         // Creates box2d body, registers in physics world
         void CreateBody();
+
+        // Applies mass and inertia to the body, keeping the center of mass calculated from fixtures
+        void ApplyMassData();
 
         // Removes body
         void RemoveBody();
@@ -182,7 +187,6 @@ CLASS_FIELDS_META(o2::RigidBody)
     FIELD().PUBLIC().NAME(isSleeping);
     FIELD().PUBLIC().NAME(isFixedRotation);
     FIELD().PROTECTED().DEFAULT_VALUE(nullptr).NAME(mBody);
-    FIELD().PROTECTED().NAME(mMassData);
     FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(Type::Dynamic).NAME(mBodyType);
     FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(1.0f).NAME(mMass);
     FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(1.0f).NAME(mInertia);
@@ -221,11 +225,13 @@ CLASS_METHODS_META(o2::RigidBody)
     FUNCTION().PUBLIC().SIGNATURE(bool, IsSleeping);
     FUNCTION().PUBLIC().SIGNATURE(void, SetIsFixedRotation, bool);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsFixedRotation);
+    FUNCTION().PUBLIC().SIGNATURE(b2Body*, GetBody);
     FUNCTION().PROTECTED().SIGNATURE(void, OnEnabled);
     FUNCTION().PROTECTED().SIGNATURE(void, OnDisabled);
     FUNCTION().PROTECTED().SIGNATURE(void, OnAddToScene);
     FUNCTION().PROTECTED().SIGNATURE(void, OnRemoveFromScene);
     FUNCTION().PROTECTED().SIGNATURE(void, CreateBody);
+    FUNCTION().PROTECTED().SIGNATURE(void, ApplyMassData);
     FUNCTION().PROTECTED().SIGNATURE(void, RemoveBody);
     FUNCTION().PROTECTED().SIGNATURE(void, AddCollider, ICollider*);
     FUNCTION().PROTECTED().SIGNATURE(void, RemoveCollider, ICollider*);

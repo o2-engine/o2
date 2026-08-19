@@ -17,6 +17,8 @@ For unit tests there is a headless mode: `Integration::SetHeadless(true)` before
 ## Update loop
 It happens in the `ProcessFrame` method, which is called cyclically from the platform-specific part.
 
+The lifecycle itself is a [coroutine](/Docs/en/Architecture/Utils/coroutines.md). `ProcessFrame` advances it one frame per call: on the first call `EnsureLifecycleStarted()` starts a lifecycle coroutine that runs `OnLifecycleLoad()` once (override it to load content), then loops `ProcessFrameBody()` — the frame update and draw — yielding via `co_await WaitNextFrame()` each frame. Every frame it also pumps queued main-thread [jobs](/Docs/en/Architecture/Utils/jobs.md) under a time budget set by `SetMainThreadJobsQuota(seconds)` (negative = unlimited).
+
 It measures the frame time for updating the internal subsystems. After that, FPS limiting happens if necessary.
 
 Then the engine subsystems are updated and rendering starts. After that, input processing runs.
@@ -24,3 +26,10 @@ Then the engine subsystems are updated and rendering starts. After that, input p
 Physics and the fixed scene update are processed with a fixed step (`fixedFPS`): the accumulated frame time is split into iterations with a constant dt.
 
 To inject code into the update or drawing loop, the `OnUpdate()`, `OnFixedUpdate()` and `OnDraw()` functions can be overridden
+
+## Background window
+`Integration::SetBackgroundWindow(true)`, called before `Initialize()`, brings the window up without
+making it key and keeps the application out of the Dock / task switcher (accessory activation policy
+on macOS, `SW_SHOWNOACTIVATE` on Windows). The window keeps rendering, so screenshots and cursor
+injection still work; the keyboard focus stays where the user left it. The rendered test runners use
+it — a suite that grabs the focus on every launch makes the machine unusable while it runs.

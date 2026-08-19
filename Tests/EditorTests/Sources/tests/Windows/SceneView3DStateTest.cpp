@@ -417,6 +417,34 @@ TEST(SceneView3DState, ViewMathStaysValidAboveHorizon)
     EXPECT_TRUE(state.ScreenToAxisParam(kViewport*0.5f, kViewport, Vec3F(), Vec3F(1.0f, 0.0f, 0.0f), param));
 }
 
+TEST(SceneView3DState, NearClipPlaneSeparatesPointsWhichProjectMirrored)
+{
+    SceneView3DState state;
+    state.target = Vec3F();
+    state.yaw = 0.0f;
+    state.pitch = Math::Deg2rad(90.0f);
+    state.distance = 100.0f;
+
+    Vec3F origin, normal;
+    state.GetNearClipPlane(origin, normal);
+
+    Vec3F cameraPosition = state.GetCameraPosition();
+    EXPECT_TRUE(Near3(normal, (state.target - cameraPosition).Normalized()));
+    EXPECT_TRUE(Near3(origin, cameraPosition + normal*state.nearClip));
+
+    Vec3F right = state.GetRotation()*Vec3F(1.0f, 0.0f, 0.0f);
+    Vec3F inFront = cameraPosition + normal*50.0f + right*10.0f;
+    Vec3F behind = cameraPosition - normal*50.0f + right*10.0f;
+
+    EXPECT_GT((inFront - origin).Dot(normal), 0.0f);
+    EXPECT_LT((behind - origin).Dot(normal), 0.0f);
+
+    // Both points are on the same side of the view axis, but the one behind the camera projects
+    // mirrored onto the opposite half of the screen - that is what the near plane has to cut off
+    EXPECT_GT(state.WorldToScreen(inFront, kViewport).x, kViewport.x*0.5f);
+    EXPECT_LT(state.WorldToScreen(behind, kViewport).x, kViewport.x*0.5f);
+}
+
 TEST(SceneView3DState, FlyForwardMovesCameraTowardLookDirection)
 {
     SceneView3DState state;
@@ -450,4 +478,22 @@ TEST(SceneView3DState, FlyRightAndUpMoveAlongCameraAxes)
     state.Fly(Vec3F(10.0f, 20.0f, 0.0f));
 
     EXPECT_TRUE(Near3(state.GetCameraPosition(), cameraBefore + right*10.0f + up*20.0f));
+}
+
+TEST(SceneView3DState, WorldToScreenWithCachedMatrixMatchesPlainOne)
+{
+    SceneView3DState state;
+    state.target = Vec3F(30.0f, -15.0f, 5.0f);
+    state.yaw = 0.7f;
+    state.pitch = 0.4f;
+    state.distance = 420.0f;
+
+    Mat4 viewProjection = state.GetViewProjection(kViewport);
+
+    const Vec3F points[] = { Vec3F(), Vec3F(100.0f, 0.0f, 0.0f), Vec3F(-40.0f, 60.0f, 25.0f),
+                             Vec3F(30.0f, -15.0f, 5.0f) };
+
+    for (auto& point : points)
+        EXPECT_TRUE(Near2(state.WorldToScreen(point, kViewport, viewProjection),
+                          state.WorldToScreen(point, kViewport)));
 }

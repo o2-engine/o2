@@ -78,7 +78,7 @@ namespace o2
         // Sets text @SCRIPTABLE
         void SetText(const WString& text);
 
-        // Returns text
+        // Returns text @SCRIPTABLE
         const WString& GetText() const;
 
         // Sets text color @SCRIPTABLE
@@ -209,7 +209,7 @@ CLASS_METHODS_META(o2::Label)
     FUNCTION().PUBLIC().SIGNATURE(void, SetFontStyleAsset, const AssetRef<FontStyleAsset>&);
     FUNCTION().PUBLIC().SIGNATURE(AssetRef<FontStyleAsset>, GetFontStyleAsset);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetText, const WString&);
-    FUNCTION().PUBLIC().SIGNATURE(const WString&, GetText);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(const WString&, GetText);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetColor, const Color4&);
     FUNCTION().PUBLIC().SIGNATURE(Color4, GetColor);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetHorAlign, HorAlign);

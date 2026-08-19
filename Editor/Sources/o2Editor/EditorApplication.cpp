@@ -127,6 +127,16 @@ namespace Editor
         return mIsPlaying;
     }
 
+    void EditorApplication::SetGameTimeScale(float scale)
+    {
+        mGameTimeScale = scale;
+    }
+
+    float EditorApplication::GetGameTimeScale() const
+    {
+        return mGameTimeScale;
+    }
+
     Ref<RefCounterable> EditorApplication::CastToRefCounterable(const Ref<EditorApplication>& ref)
     {
         return DynamicCast<Application>(ref);
@@ -469,7 +479,7 @@ namespace Editor
         ForcePopEditorScopeOnStack scope;
 
         if (mUpdateStep)
-            Application::UpdatePhysics(dt);
+            Application::UpdatePhysics(dt*mGameTimeScale);
     }
 
     void EditorApplication::PostUpdatePhysics()
@@ -482,6 +492,36 @@ namespace Editor
             Application::PostUpdatePhysics();
     }
 
+    void EditorApplication::PreUpdatePhysics3D()
+    {
+        PROFILE_SAMPLE_FUNC();
+
+        ForcePopEditorScopeOnStack scope;
+
+        if (mUpdateStep)
+            Application::PreUpdatePhysics3D();
+    }
+
+    void EditorApplication::UpdatePhysics3D(float dt)
+    {
+        PROFILE_SAMPLE_FUNC();
+
+        ForcePopEditorScopeOnStack scope;
+
+        if (mUpdateStep)
+            Application::UpdatePhysics3D(dt*mGameTimeScale);
+    }
+
+    void EditorApplication::PostUpdatePhysics3D()
+    {
+        PROFILE_SAMPLE_FUNC();
+
+        ForcePopEditorScopeOnStack scope;
+
+        if (mUpdateStep)
+            Application::PostUpdatePhysics3D();
+    }
+
     void EditorApplication::UpdateScene(float dt)
     {
         PROFILE_SAMPLE_FUNC();
@@ -490,7 +530,7 @@ namespace Editor
 
         if (mUpdateStep)
         {
-            mScene->Update(dt);
+            mScene->Update(dt*mGameTimeScale);
             o2EditorSceneScreen.NeedRedraw();
         }
         else
@@ -510,7 +550,7 @@ namespace Editor
         ForcePopEditorScopeOnStack scope;
 
         if (mUpdateStep)
-            mScene->FixedUpdate(dt);
+            mScene->FixedUpdate(dt*mGameTimeScale);
     }
 
     void EditorApplication::UpdateTaskManager(float dt)

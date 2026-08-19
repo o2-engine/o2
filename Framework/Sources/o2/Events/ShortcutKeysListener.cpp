@@ -1,6 +1,9 @@
 #include "o2/stdafx.h"
 #include "ShortcutKeysListener.h"
 
+#include "o2/Scene/UI/UIManager.h"
+#include "o2/Scene/UI/Widgets/EditBox.h"
+
 namespace o2
 {
     DECLARE_SINGLETON(ShortcutKeysListenersManager);
@@ -139,6 +142,32 @@ namespace o2
         return mInstance && mInstance->mSuppressed;
     }
 
+    bool ShortcutKeysListenersManager::IsAllowedDuringTextInput(const ShortcutKeys& shortcut)
+    {
+        // function keys listed explicitly - their codes are not contiguous on all platforms
+        static const int functionKeys[] = { VK_F1, VK_F2, VK_F3, VK_F4, VK_F5, VK_F6,
+                                            VK_F7, VK_F8, VK_F9, VK_F10, VK_F11, VK_F12 };
+
+        for (auto key : shortcut.keys)
+        {
+            if (key == VK_CTRL_CMD || key == VK_CONTROL || key == VK_MENU)
+                return true;
+
+#if defined PLATFORM_MAC || defined PLATFORM_IOS
+            if (key == VK_COMMAND)
+                return true;
+#endif
+
+            for (int functionKey : functionKeys)
+            {
+                if (key == functionKey)
+                    return true;
+            }
+        }
+
+        return false;
+    }
+
     void ShortcutKeysListenersManager::OnKeyPressed(const Input::Key& key)
     {
         //o2Debug.Log("ShortcutKeysListenersManager::OnKeyPressed: " + String(key.keyCode));
@@ -146,8 +175,14 @@ namespace o2
         if (mSuppressed)
             return;
 
+        bool textInputFocused = UIManager::IsSingletonInitialzed() &&
+                                DynamicCast<EditBox>(o2UI.GetFocusedWidget()) != nullptr;
+
         for (auto& kv : mListeners)
         {
+            if (textInputFocused && !IsAllowedDuringTextInput(kv.first))
+                continue;
+
             if (kv.first.IsPressed() && !kv.second.IsEmpty())
             {
                 for (int i = kv.second.Count() - 1; i >= 0; i--)

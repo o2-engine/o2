@@ -1,6 +1,7 @@
 #include "o2/stdafx.h"
 #include "o2/O2.h"
 #include "o2/Application/Application.h"
+#include "o2/Sound/SoundSystem.h"
 #include "o2/EngineSettings.h"
 #include "o2/Utils/FileSystem/FileSystem.h"
 #include <gtest/gtest.h>
@@ -107,6 +108,11 @@ int main(int argc, char** argv)
 
     bool listOnly = ::testing::GTEST_FLAG(list_tests);
 
+    // The suites bring up a real window: keep it out of the focus and the audio out of the speakers,
+    // otherwise a test run makes the machine unusable
+    Integration::SetBackgroundWindow(true);
+    SoundSystem::SetSilent(true);
+
     Ref<Application> app;
     if (!listOnly)
     {
@@ -121,6 +127,8 @@ int main(int argc, char** argv)
 
         app = mmake<Application>();
         app->Initialize();
+        // Multithreaded rendering is enabled by default (Integration::InitiazeRender) on supported
+        // platforms, so the whole rendered suite — including pixel/screenshot checks — validates it
     }
 
     int result = RUN_ALL_TESTS();

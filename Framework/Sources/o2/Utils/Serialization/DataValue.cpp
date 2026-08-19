@@ -764,7 +764,7 @@ namespace o2
 
         file.WriteData(data.Data(), data.Length());
 
-        return false;
+        return true;
     }
 
     String DataDocument::SaveAsString(Format format /*= Format::JSON*/) const

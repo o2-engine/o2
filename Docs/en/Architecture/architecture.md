@@ -151,10 +151,14 @@ The utility layer also includes:
 - [Debug](/Docs/en/Architecture/Utils/debug.md) — `o2Debug`: logging and debug primitive drawing.
 - [Tasks](/Docs/en/Architecture/Utils/tasks.md) — `o2Tasks`: delayed and per-frame tasks.
 - [Time and timers](/Docs/en/Architecture/Utils/time.md) — `o2Time`, `Timer`, `TimeStamp`.
+- [Threading](/Docs/en/Architecture/Utils/threading.md) — `o2::Thread`, mutexes, atomics, `o2::SharedRef` and other CamelCase threading wrappers.
+- [Jobs](/Docs/en/Architecture/Utils/jobs.md) — `o2Jobs`: a worker-thread pool with priorities and dependencies.
+- [Coroutines](/Docs/en/Architecture/Utils/coroutines.md) — `o2::Coroutine<T>`: `co_await` async code over the job system.
+- [Profiling](/Docs/en/Architecture/Utils/profiling.md) — `o2::NanoProfiler` and the on-screen profiler panel, shown by F12.
 
 ## Application Wrapper [(detailed documentation)](/Docs/en/Architecture/LowLevel/application.md)
 
-As mentioned above, this is the entry point and the main system of the engine. During initialization, it sets up the other subsystems. Then the game loop begins, processed in the `ProcessFrame()` function, where the scene, input, and all other subsystems are updated, and a frame is rendered. The application wrapper also handles system messages (activation, deactivation, etc.).
+As mentioned above, this is the entry point and the main system of the engine. During initialization, it sets up the other subsystems. Then the game loop begins, processed in the `ProcessFrame()` function, where the scene, input, and all other subsystems are updated, and a frame is rendered. The lifecycle itself runs as a coroutine: `ProcessFrame()` advances it one frame at a time, running a one-time load stage and then the per-frame update and draw. The application wrapper also handles system messages (activation, deactivation, etc.).
 
 A user can hook into any of these points by overriding special functions in their custom application class.
 
@@ -206,6 +210,8 @@ Above the mesh rendering, there are abstractions: sprites, text, skinned meshes,
 - **Sprites** support display modes: normal, 9-slice, tiled, progress filled. They have color, transparency, and are loaded from textures.
 - **Text** works with both bitmap and vector fonts (via FreeType). CPU-based effects (shadow, outline, gradient, etc.) are available, along with formatting and alignment settings.
 - **Particle systems** are single emitters with a set of effects. Rendering can be a regular sprite or a frame-by-frame animation. Emission parameters are adjustable, and in the editor, the effect can be rewound backward.
+
+Rendering can run in parallel: the main thread records draw commands and a dedicated render thread submits them to the GPU, synchronizing each frame. It is enabled where the platform supports it (currently macOS / Metal); elsewhere the main thread submits directly.
 
 Rendering also includes camera support (`o2::Camera`), which sets the viewport in the engine’s logical rendering coordinates.
 

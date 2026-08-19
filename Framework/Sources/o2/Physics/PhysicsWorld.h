@@ -34,6 +34,12 @@ namespace o2
         // Returns True when PreUpdate has just called, until PostUpdate finished
         bool IsUpdatingPhysicsNow() const;
 
+        // Creates a joint in the Box2D world
+        b2Joint* CreateJoint(const b2JointDef& def);
+
+        // Destroys a joint
+        void DestroyJoint(b2Joint* joint);
+
     private:
         b2World mWorld;
 

@@ -5,6 +5,7 @@
 #include "o2/Scene/UI/WidgetLayout.h"
 #include "o2/Scene/UI/Widgets/Button.h"
 #include "o2/Scene/UI/Widgets/CustomDropDown.h"
+#include "o2Editor/Windows/SceneWindow/GizmosPopup.h"
 #include "o2Editor/Windows/SceneWindow/LayersPopup.h"
 #include "o2Editor/Windows/SceneWindow/SceneEditScreen.h"
 #include "o2/Scene/Scene.h"
@@ -59,6 +60,16 @@ namespace Editor
 
         mLayersButton->onClick = [&]() { mLayersPopup->Show(mLayersButton->layout->worldLeftBottom); };
 
+        mGizmosButton = o2UI.CreateWidget<Button>("panel down");
+        mGizmosButton->caption = "Gizmos";
+        *mGizmosButton->layout = WidgetLayout::VerStretch(HorAlign::Right, 0, 0, 70, 240);
+        mUpPanel->AddChild(mGizmosButton);
+
+        mGizmosPopup = mmake<GizmosPopup>();
+        mGizmosButton->AddChild(mGizmosPopup);
+
+        mGizmosButton->onClick = [&]() { mGizmosPopup->Show(mGizmosButton->layout->worldLeftBottom); };
+
         mView3DButton = o2UI.CreateWidget<Button>("panel down");
         mView3DButton->caption = "3D";
         *mView3DButton->layout = WidgetLayout::VerStretch(HorAlign::Right, 0, 0, 50, 100);
@@ -67,6 +78,19 @@ namespace Editor
         mView3DButton->onClick = [&]() { mEditWidget->SetView3DMode(!mEditWidget->IsView3DMode()); };
         mEditWidget->onView3DModeChanged = [&](bool enabled) {
             mView3DButton->caption = enabled ? WString("2D") : WString("3D");
+        };
+
+        // like the 3D button, the caption shows the mode the click switches to: a custom scene
+        // camera pipeline (offscreen passes, screen shaders) can distort the edit view, the
+        // stable camera falls back to the default forward 3D/2D pipeline
+        mCameraModeButton = o2UI.CreateWidget<Button>("panel down");
+        mCameraModeButton->caption = "Stable cam";
+        *mCameraModeButton->layout = WidgetLayout::VerStretch(HorAlign::Right, 0, 0, 90, 150);
+        mUpPanel->AddChild(mCameraModeButton);
+
+        mCameraModeButton->onClick = [&]() { mEditWidget->SetStableCameraMode(!mEditWidget->IsStableCameraMode()); };
+        mEditWidget->onStableCameraModeChanged = [&](bool stable) {
+            mCameraModeButton->caption = stable ? WString("Scene cam") : WString("Stable cam");
         };
     }
 

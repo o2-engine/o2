@@ -46,3 +46,6 @@
 [submodule "Framework/3rdPartyLibs/bc7enc"]
 	path = Framework/3rdPartyLibs/bc7enc
 	url = https://github.com/richgel999/bc7enc_rdo.git
+[submodule "Framework/3rdPartyLibs/box3d"]
+	path = Framework/3rdPartyLibs/box3d
+	url = https://github.com/erincatto/box3d.git

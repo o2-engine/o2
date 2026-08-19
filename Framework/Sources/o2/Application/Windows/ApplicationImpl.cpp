@@ -123,7 +123,7 @@ namespace o2
 
     void Application::Launch()
     {
-        ShowWindow(mHWnd, SW_SHOW);
+        ShowWindow(mHWnd, IsBackgroundWindow() ? SW_SHOWNOACTIVATE : SW_SHOW);
 
         mLog->Out("Application launched!");
 

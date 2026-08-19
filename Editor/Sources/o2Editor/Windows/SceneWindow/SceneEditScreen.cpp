@@ -74,6 +74,8 @@ namespace Editor
  			if (layer->IsEnabled() && IsLayerEnabled(layer->GetName()))
  				layer->DrawOverScene();
  		}
+
+        DrawGizmos3D();
     }
 
     void SceneEditScreen::NeedRedraw()
@@ -202,6 +204,21 @@ namespace Editor
     SceneView3DState& SceneEditScreen::GetView3DState()
     {
         return mView3D;
+    }
+
+    SceneGizmos& SceneEditScreen::GetGizmos()
+    {
+        return mGizmos;
+    }
+
+    void SceneEditScreen::SetSelectionVisible(bool visible)
+    {
+        mSelectionVisible = visible;
+    }
+
+    bool SceneEditScreen::IsSelectionVisible() const
+    {
+        return mSelectionVisible;
     }
 
     bool SceneEditScreen::ScreenToZAxisPoint(const Vec2F& screenPoint, const Vec2F& planeAnchor, float& z)
@@ -415,6 +432,7 @@ namespace Editor
 
         o2Debug.Draw(false);
         DrawSelection();
+        DrawGizmos2D();
 
         for (auto& layer : mEditorLayers)
         {
@@ -520,19 +538,56 @@ namespace Editor
         DrawScenePipeline();
     }
 
+    void SceneEditScreen::SetStableCameraMode(bool stable)
+    {
+        if (mStableCameraMode == stable)
+            return;
+
+        mStableCameraMode = stable;
+        NeedRedraw();
+        onStableCameraModeChanged(stable);
+    }
+
+    bool SceneEditScreen::IsStableCameraMode() const
+    {
+        return mStableCameraMode;
+    }
+
+    const Ref<RenderPipeline>& SceneEditScreen::GetEditRenderPipeline() const
+    {
+        return mEditPipeline;
+    }
+
+    Ref<RenderPipeline> SceneEditScreen::ResolveScenePipeline() const
+    {
+        if (!mStableCameraMode && !o2Scene.GetCameras().IsEmpty())
+        {
+            if (auto sceneCamera = o2Scene.GetCameras()[0].Lock())
+            {
+                if (auto pipeline = sceneCamera->GetRenderPipeline())
+                    return pipeline;
+            }
+        }
+
+        return CameraActor::GetDefaultRenderPipeline();
+    }
+
     void SceneEditScreen::DrawScenePipeline()
     {
         o2Scene.BeginDrawingScene();
 
-        Ref<RenderPipeline> pipeline;
-        if (!o2Scene.GetCameras().IsEmpty())
+        Ref<RenderPipeline> sourcePipeline = ResolveScenePipeline();
+
+        // Run our own clone so the edit view's deferred pass state doesn't collide with the Game
+        // window, which executes the scene camera's pipeline instance in the same frame. Re-clone
+        // only when the source pipeline changes (scene reload, camera/pipeline edit).
+        if (mEditPipelineSource != sourcePipeline.Get())
         {
-            if (auto sceneCamera = o2Scene.GetCameras()[0].Lock())
-                pipeline = sceneCamera->GetRenderPipeline();
+            mEditPipeline = sourcePipeline->CloneAsRef<RenderPipeline>();
+            mEditPipelineSource = sourcePipeline.Get();
         }
 
-        if (!pipeline)
-            pipeline = CameraActor::GetDefaultRenderPipeline();
+        Ref<RenderPipeline> pipeline = mEditPipeline ? mEditPipeline : sourcePipeline;
 
         RenderPassContext context;
         context.camera = o2Render.GetCamera();
@@ -553,11 +608,16 @@ namespace Editor
 
     void SceneEditScreen::DrawSelection()
     {
+        if (!mSelectionVisible)
+            return;
+
         if (m3DMode)
         {
-            DrawSelection3DOutline();
+            DrawSelectionOutline(SceneDrawableCategory::Scene3D);
             return;
         }
+
+        DrawSelectionOutline(SceneDrawableCategory::Scene2D);
 
         if (mSelectedObjects.Count() == 1)
         {
@@ -570,19 +630,32 @@ namespace Editor
         }
     }
 
-    void SceneEditScreen::DrawSelection3DOutline()
+    void SceneEditScreen::CollectDrawableComponents(const Ref<Actor>& actor, SceneDrawableCategory category,
+                                                    Vector<Ref<Component>>& components)
+    {
+        if (!actor || !actor->IsEnabledInHierarchy())
+            return;
+
+        for (auto& component : actor->GetComponents())
+        {
+            if (component->GetSceneDrawableCategory() == category && component->IsEnabledInHierarchy() &&
+                !components.Contains(component))
+            {
+                components.Add(component);
+            }
+        }
+
+        for (auto& child : actor->GetChildren())
+            CollectDrawableComponents(child, category, components);
+    }
+
+    void SceneEditScreen::DrawSelectionOutline(SceneDrawableCategory category)
     {
         Vector<Ref<Component>> components;
         for (auto& object : mSelectedObjects)
         {
             if (auto actor = DynamicCast<Actor>(object))
-            {
-                for (auto& component : actor->GetComponents())
-                {
-                    if (component->GetSceneDrawableCategory() == SceneDrawableCategory::Scene3D)
-                        components.Add(component);
-                }
-            }
+                CollectDrawableComponents(actor, category, components);
         }
 
         if (components.IsEmpty())
@@ -611,7 +684,7 @@ namespace Editor
         if (!mSelectionOutlineQuad)
             mSelectionOutlineQuad = mmake<Mesh>(TextureRef(), 4, 2);
 
-        // Silhouette mask: selected 3D content rendered into an offscreen target, alpha marks coverage
+        // Silhouette mask: selected content rendered into an offscreen target, alpha marks coverage
         o2Render.PushRenderTargets({ mSelectionMaskTarget });
         o2Render.Clear(Color4(0.0f, 0.0f, 0.0f, 0.0f));
 
@@ -628,7 +701,7 @@ namespace Editor
         o2Render.SetCamera(Camera());
 
         Vec2F halfSize = (Vec2F)o2Render.GetCurrentResolution()*0.5f;
-        ULong colorValue = mSelection3DOutlineColor.ABGR();
+        ULong colorValue = mSelectionOutlineColor.ABGR();
 
         mSelectionOutlineQuad->SetMaterial(mSelectionOutlineMaterial);
         mSelectionOutlineQuad->SetTexture(mSelectionMaskTarget);
@@ -651,6 +724,35 @@ namespace Editor
 
         o2Render.SetCamera(sceneCamera);
     }
+
+    void SceneEditScreen::DrawGizmos2D()
+    {
+        if (m3DMode)
+            return;
+
+        mGizmos.Draw(mSelectedObjects, [](const Vec3F& worldPoint) { return Vec2F(worldPoint.x, worldPoint.y); });
+    }
+
+    void SceneEditScreen::DrawGizmos3D()
+    {
+        if (!m3DMode)
+            return;
+
+        Vec3F clipPlaneOrigin, clipPlaneNormal;
+        mView3D.GetNearClipPlane(clipPlaneOrigin, clipPlaneNormal);
+
+        // The view-projection is built once for the whole gizmos pass: a wireframe scene projects
+        // thousands of points, and rebuilding the camera matrices per point dominates the frame
+        Vec2F viewportSize = GetViewportSize();
+        Mat4 viewProjection = mView3D.GetViewProjection(viewportSize);
+
+        mGizmos.Draw(mSelectedObjects,
+                     [&](const Vec3F& worldPoint) {
+                         return ViewportToScreenPoint(mView3D.WorldToScreen(worldPoint, viewportSize, viewProjection));
+                     },
+                     clipPlaneOrigin, clipPlaneNormal);
+    }
+
 
     void SceneEditScreen::DrawObjectSelection(const Ref<SceneEditableObject>& object, const Color4& color)
     {

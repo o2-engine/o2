@@ -67,6 +67,12 @@ namespace Editor
         // Is scene playing
         bool IsPlaying() const;
 
+        // Sets game update time scale; affects playing scene only, editor updates at normal speed
+        void SetGameTimeScale(float scale);
+
+        // Returns game update time scale
+        float GetGameTimeScale() const;
+
         // Dynamic cast to RefCounterable via Application
         static Ref<RefCounterable> CastToRefCounterable(const Ref<EditorApplication>& ref);
 
@@ -92,6 +98,8 @@ namespace Editor
         bool mPlayingChanged = false; // True when need to update playing mode on update
         bool mUpdateStep = false;     // True when frame updating available on this frame
 
+        float mGameTimeScale = 1.0f; // Game update time scale; scales scene dt only, not editor
+
         int mDrawCalls = 0;       // Draw calls count, stored before beginning rendering
         int mDrawnPrimitives = 0; // DRaw promitives at frame
 
@@ -113,6 +121,15 @@ namespace Editor
 
         // After update physics
         void PostUpdatePhysics() override;
+
+        // Before update 3D physics
+        void PreUpdatePhysics3D() override;
+
+        // Updates 3D physics
+        void UpdatePhysics3D(float dt) override;
+
+        // After update 3D physics
+        void PostUpdatePhysics3D() override;
 
         // Updates scene
         void UpdateScene(float dt) override;
@@ -196,6 +213,7 @@ CLASS_FIELDS_META(Editor::EditorApplication)
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mIsPlaying);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mPlayingChanged);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mUpdateStep);
+    FIELD().PROTECTED().DEFAULT_VALUE(1.0f).NAME(mGameTimeScale);
     FIELD().PROTECTED().DEFAULT_VALUE(0).NAME(mDrawCalls);
     FIELD().PROTECTED().DEFAULT_VALUE(0).NAME(mDrawnPrimitives);
 }
@@ -212,6 +230,8 @@ CLASS_METHODS_META(Editor::EditorApplication)
     FUNCTION().PUBLIC().SIGNATURE(bool, IsSceneChanged);
     FUNCTION().PUBLIC().SIGNATURE(void, SetPlaying, bool);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsPlaying);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetGameTimeScale, float);
+    FUNCTION().PUBLIC().SIGNATURE(float, GetGameTimeScale);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(Ref<RefCounterable>, CastToRefCounterable, const Ref<EditorApplication>&);
     FUNCTION().PROTECTED().SIGNATURE(void, InitalizeSystems);
     FUNCTION().PROTECTED().SIGNATURE(void, Deinitialize);
@@ -219,6 +239,9 @@ CLASS_METHODS_META(Editor::EditorApplication)
     FUNCTION().PROTECTED().SIGNATURE(void, PreUpdatePhysics);
     FUNCTION().PROTECTED().SIGNATURE(void, UpdatePhysics, float);
     FUNCTION().PROTECTED().SIGNATURE(void, PostUpdatePhysics);
+    FUNCTION().PROTECTED().SIGNATURE(void, PreUpdatePhysics3D);
+    FUNCTION().PROTECTED().SIGNATURE(void, UpdatePhysics3D, float);
+    FUNCTION().PROTECTED().SIGNATURE(void, PostUpdatePhysics3D);
     FUNCTION().PROTECTED().SIGNATURE(void, UpdateScene, float);
     FUNCTION().PROTECTED().SIGNATURE(void, FixedUpdateScene, float);
     FUNCTION().PROTECTED().SIGNATURE(void, UpdateTaskManager, float);

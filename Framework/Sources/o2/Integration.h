@@ -20,13 +20,20 @@ namespace o2
     FORWARD_CLASS_REF(Input);
     FORWARD_CLASS_REF(LogStream);
     FORWARD_CLASS_REF(PhysicsWorld);
+    FORWARD_CLASS_REF(PhysicsWorld3D);
     FORWARD_CLASS_REF(ProjectConfig);
     FORWARD_CLASS_REF(Render);
     FORWARD_CLASS_REF(Scene);
     FORWARD_CLASS_REF(SoundSystem);
     FORWARD_CLASS_REF(TaskManager);
+    FORWARD_CLASS_REF(JobSystem);
+    FORWARD_CLASS_REF(CoroutineScheduler);
     FORWARD_CLASS_REF(Time);
     FORWARD_CLASS_REF(UIManager);
+
+#if defined(O2_PROFILER_ENABLED)
+    FORWARD_CLASS_REF(ProfilerOverlay);
+#endif
 
 #if IS_SCRIPTING_SUPPORTED
     FORWARD_CLASS_REF(ScriptEngine);
@@ -40,6 +47,11 @@ namespace o2
     public:
         int maxFPS = 600;  // Maximum frames per second
         int fixedFPS = 60; // Fixed frames per second
+
+        // The real frame delta is clamped into this range before it drives the update: a stalled frame
+        // must not teleport the simulation, and a zero one must not stop it
+        static constexpr float minFrameDeltaTime = 0.001f;
+        static constexpr float maxFrameDeltaTime = 0.05f;
 
     public:
         // Default constructor
@@ -57,6 +69,13 @@ namespace o2
         // Returns is integration ready to use
 		bool IsReady();
 
+		// Sets the per-frame time budget (seconds) for main-thread jobs. Negative means unlimited.
+		// Best-effort: a running job is never interrupted, so the budget can be overrun by one job
+		void SetMainThreadJobsQuota(float seconds);
+
+		// Returns the per-frame main-thread jobs time budget in seconds
+		float GetMainThreadJobsQuota() const;
+
 		// Enables headless mode: skips window creation, render and UI styles initialization,
 		// and routes asserts to the log instead of popping modal dialogs / debugbreaking.
 		// Must be called before Initialize(). Intended for unit-test runners.
@@ -64,6 +83,14 @@ namespace o2
 
 		// Returns true if integration was started in headless mode @SCRIPTABLE
 		static bool IsHeadless();
+
+		// Brings the application window up without taking the keyboard focus, and keeps the app out of
+		// the task switcher. Must be called before Initialize(). Intended for test runners: a window
+		// that grabs focus every launch makes the machine unusable while the suites run
+		static void SetBackgroundWindow(bool background);
+
+		// Returns true if the window is brought up without taking the focus
+		static bool IsBackgroundWindow();
 
 		// Tears down all subsystems in a controlled order. Normally called automatically
 		// from Launch() at the end of the main loop. Test runners that skip Launch() must
@@ -107,19 +134,28 @@ namespace o2
         static bool sHeadless; // Headless mode: skip window + render + UI styles init,
                                // and route asserts to the log
 
+        static bool sBackgroundWindow; // Show the window without taking the focus
+
         Ref<Assets>        mAssets;        // Assets
         Ref<EventSystem>   mEventSystem;   // Events processing system
         Ref<FileSystem>    mFileSystem;    // File system
         Ref<Input>         mInput;         // Whole application user input message
         Ref<LogStream>     mLog;           // Log stream with id "app", using only for integration messages
-        Ref<PhysicsWorld>  mPhysics;       // Physics
+        Ref<PhysicsWorld>   mPhysics;       // Physics
+        Ref<PhysicsWorld3D> mPhysics3D;     // 3D physics
         Ref<ProjectConfig> mProjectConfig; // Project config
         Ref<Render>        mRender;        // Graphics render
         Ref<Scene>         mScene;         // Scene
         Ref<SoundSystem>   mSounds;        // Sound system
         Ref<TaskManager>   mTaskManager;   // Tasks manager
+        Ref<JobSystem>     mJobSystem;     // Parallel job system with worker threads
+        Ref<CoroutineScheduler> mCoroutineScheduler; // Coroutine timer/next-frame scheduler
         Ref<Time>          mTime;          // Time utilities
         Ref<UIManager>     mUIManager;     // UI manager>
+
+#if defined(O2_PROFILER_ENABLED)
+        Ref<ProfilerOverlay> mProfilerOverlay; // On-screen profiler widget, shown by F12 or a long tap
+#endif
 
 #if IS_SCRIPTING_SUPPORTED
         Ref<ScriptEngine>  mScriptingEngine; // Scripting engine
@@ -128,7 +164,10 @@ namespace o2
         Timer mTimer; // Timer for detecting delta time for update
 
         float mAccumulatedDT = 0.0f; // Accumulated delta time for fixed FPS update
-        
+
+        bool  mLifecycleStarted = false;      // True once the lifecycle coroutine has been started
+        float mMainThreadJobsQuota = -1.0f;   // Per-frame time budget for main-thread jobs, seconds. < 0 = unlimited
+
         Ref<CursorAreaEventListenersLayer> mMainListenersLayer; // Main listeners layer, required for processing default scaled camera
 
 	protected:
@@ -153,8 +192,18 @@ namespace o2
 		// It is called when integration frame resized
 		virtual void OnResized(const Vec2I& size);
 
-		// Processing frame update, drawing and input messages
+		// Processing frame update, drawing and input messages. Drives the lifecycle coroutine one frame
 		virtual void ProcessFrame();
+
+		// Runs one frame's worth of update and drawing. Invoked by the lifecycle coroutine every frame
+		void ProcessFrameBody();
+
+		// Starts the application lifecycle coroutine on the first frame. The lifecycle runs OnLifecycleLoad
+		// once and then ProcessFrameBody every frame, yielding via co_await WaitNextFrame
+		void EnsureLifecycleStarted();
+
+		// Loading stage of the lifecycle, called once before the frame loop. Override to load content
+		virtual void OnLifecycleLoad();
 
 		// Calculates delta time and syncs to max FPS
 		virtual void CalculateAndSyncFPS(float& dt, float& realDt);
@@ -195,6 +244,15 @@ namespace o2
 		// After update physics
 		virtual void PostUpdatePhysics();
 
+		// Before update 3D physics
+		virtual void PreUpdatePhysics3D();
+
+		// Updates 3D physics
+		virtual void UpdatePhysics3D(float dt);
+
+		// After update 3D physics
+		virtual void PostUpdatePhysics3D();
+
 		// Updates task manager
 		virtual void UpdateTaskManager(float dt);
 
@@ -215,6 +273,12 @@ namespace o2
 
 		// Updates debug
 		virtual void UpdateDebug(float dt);
+
+		// Handles the profiler widget input and updates it
+		void UpdateProfiler(float dt);
+
+		// Draws the profiler widget above everything else
+		void DrawProfiler();
 
 		// Calling on updating
 		virtual void OnUpdate(float dt) {}
@@ -248,19 +312,26 @@ CLASS_FIELDS_META(o2::Integration)
     FIELD().PROTECTED().NAME(mInput);
     FIELD().PROTECTED().NAME(mLog);
     FIELD().PROTECTED().NAME(mPhysics);
+    FIELD().PROTECTED().NAME(mPhysics3D);
     FIELD().PROTECTED().NAME(mProjectConfig);
     FIELD().PROTECTED().NAME(mRender);
     FIELD().PROTECTED().NAME(mScene);
     FIELD().PROTECTED().NAME(mSounds);
     FIELD().PROTECTED().NAME(mTaskManager);
+    FIELD().PROTECTED().NAME(mJobSystem);
+    FIELD().PROTECTED().NAME(mCoroutineScheduler);
     FIELD().PROTECTED().NAME(mTime);
     FIELD().PROTECTED().NAME(mUIManager);
+#if  defined(O2_PROFILER_ENABLED)
+    FIELD().PROTECTED().NAME(mProfilerOverlay);
+#endif
 #if  IS_SCRIPTING_SUPPORTED
     FIELD().PROTECTED().NAME(mScriptingEngine);
 #endif
     FIELD().PROTECTED().NAME(mTimer);
     FIELD().PROTECTED().DEFAULT_VALUE(0.0f).NAME(mAccumulatedDT);
-    FIELD().PROTECTED().NAME(mMainListenersLayer);
+    FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mLifecycleStarted);
+    FIELD().PROTECTED().DEFAULT_VALUE(-1.0f).NAME(mMainThreadJobsQuota);
 }
 END_META;
 CLASS_METHODS_META(o2::Integration)
@@ -270,8 +341,12 @@ CLASS_METHODS_META(o2::Integration)
     FUNCTION().PUBLIC().SIGNATURE(const Ref<LogStream>&, GetLog);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsEditor);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsReady);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetMainThreadJobsQuota, float);
+    FUNCTION().PUBLIC().SIGNATURE(float, GetMainThreadJobsQuota);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(void, SetHeadless, bool);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE_STATIC(bool, IsHeadless);
+    FUNCTION().PUBLIC().SIGNATURE_STATIC(void, SetBackgroundWindow, bool);
+    FUNCTION().PUBLIC().SIGNATURE_STATIC(bool, IsBackgroundWindow);
     FUNCTION().PUBLIC().SIGNATURE(void, Deinitialize);
     FUNCTION().PUBLIC().SIGNATURE(void, SetContentSize, const Vec2I&);
     FUNCTION().PUBLIC().SIGNATURE(Vec2I, GetContentSize);
@@ -282,37 +357,6 @@ CLASS_METHODS_META(o2::Integration)
     FUNCTION().PUBLIC().SIGNATURE(bool, IsCursorInfiniteModeOn);
     FUNCTION().PUBLIC().SIGNATURE(float, GetGraphicsScale);
     FUNCTION().PUBLIC().SIGNATURE(String, GetBinPath);
-    FUNCTION().PROTECTED().SIGNATURE(void, BasicInitialize);
-    FUNCTION().PROTECTED().SIGNATURE(void, InitializePlatform);
-    FUNCTION().PROTECTED().SIGNATURE(void, InitalizeSystems);
-    FUNCTION().PROTECTED().SIGNATURE(void, InitiazeRender);
-    FUNCTION().PROTECTED().SIGNATURE(void, InitilizeUIStyles);
-    FUNCTION().PROTECTED().SIGNATURE(void, DeinitializeSystems);
-    FUNCTION().PROTECTED().SIGNATURE(void, OnResized, const Vec2I&);
-    FUNCTION().PROTECTED().SIGNATURE(void, ProcessFrame);
-    FUNCTION().PROTECTED().SIGNATURE(void, CalculateAndSyncFPS, float&, float&);
-    FUNCTION().PROTECTED().SIGNATURE(void, PreUpdateFrame, float, float);
-    FUNCTION().PROTECTED().SIGNATURE(void, UpdateFrameFixed, float);
-    FUNCTION().PROTECTED().SIGNATURE(void, MainUpdateFrame, float);
-    FUNCTION().PROTECTED().SIGNATURE(void, PreDrawFrame);
-    FUNCTION().PROTECTED().SIGNATURE(void, DrawFrame);
-    FUNCTION().PROTECTED().SIGNATURE(void, PostDrawFrame);
-    FUNCTION().PROTECTED().SIGNATURE(void, PostUpdateFrame, float);
-    FUNCTION().PROTECTED().SIGNATURE(void, UpdateScene, float);
-    FUNCTION().PROTECTED().SIGNATURE(void, FixedUpdateScene, float);
-    FUNCTION().PROTECTED().SIGNATURE(void, PreUpdatePhysics);
-    FUNCTION().PROTECTED().SIGNATURE(void, UpdatePhysics, float);
-    FUNCTION().PROTECTED().SIGNATURE(void, PostUpdatePhysics);
-    FUNCTION().PROTECTED().SIGNATURE(void, UpdateTaskManager, float);
-    FUNCTION().PROTECTED().SIGNATURE(void, DrawScene);
-    FUNCTION().PROTECTED().SIGNATURE(void, UpdateEventSystem);
-    FUNCTION().PROTECTED().SIGNATURE(void, PostUpdateEventSystem);
-    FUNCTION().PROTECTED().SIGNATURE(void, DrawUIManager);
-    FUNCTION().PROTECTED().SIGNATURE(void, DrawDebug);
-    FUNCTION().PROTECTED().SIGNATURE(void, UpdateDebug, float);
-    FUNCTION().PROTECTED().SIGNATURE(void, OnUpdate, float);
-    FUNCTION().PROTECTED().SIGNATURE(void, OnFixedUpdate, float);
-    FUNCTION().PROTECTED().SIGNATURE(void, OnDraw);
 }
 END_META;
 // --- END META ---

@@ -127,8 +127,12 @@ namespace o2
         AssetRef<MaterialAsset> mMaterialAsset; // Material asset; when set, the mesh is drawn with it @SERIALIZABLE @EDITOR_PROPERTY
         Ref<Material>           mMaterial;      // Direct material override, not serialized
 
-        bool mNeedRebuildMesh = true; // True, when local geometry is dirty and need to rebuild
-        bool mMeshRawAlbedo = false;  // True, when mesh was filled without baked shading (G-buffer mode)
+        AABB mLocalBounds;            // Bounds of mLocalData, cached on rebuild
+        bool mHasLocalBounds = false; // True, when the local geometry is not empty and mLocalBounds is valid
+
+        bool mNeedRebuildMesh = true;     // True, when local geometry is dirty and need to rebuild
+        bool mNeedApplyTransform = true;  // True, when the filled mesh no longer matches the owner's transform
+        bool mMeshRawAlbedo = false;      // True, when mesh was filled without baked shading (G-buffer mode)
 
     protected:
         // Draws mesh
@@ -137,7 +141,10 @@ namespace o2
         // Called when actor's transform was changed
         void OnTransformUpdated() override;
 
-        // Rebuilds local geometry and applies world transform
+        // Rebuilds and refills the mesh if geometry, transform or shading mode changed since the last fill
+        void EnsureMesh();
+
+        // Rebuilds local geometry from the primitive parameters
         void RebuildMesh();
 
         // Fills drawing mesh from local geometry with owner's world 3D transform
@@ -178,7 +185,10 @@ CLASS_FIELDS_META(o2::MeshPrimitiveComponent)
     FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().NAME(mTexture);
     FIELD().PROTECTED().EDITOR_PROPERTY_ATTRIBUTE().SERIALIZABLE_ATTRIBUTE().NAME(mMaterialAsset);
     FIELD().PROTECTED().NAME(mMaterial);
+    FIELD().PROTECTED().NAME(mLocalBounds);
+    FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mHasLocalBounds);
     FIELD().PROTECTED().DEFAULT_VALUE(true).NAME(mNeedRebuildMesh);
+    FIELD().PROTECTED().DEFAULT_VALUE(true).NAME(mNeedApplyTransform);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mMeshRawAlbedo);
 }
 END_META;
@@ -212,6 +222,7 @@ CLASS_METHODS_META(o2::MeshPrimitiveComponent)
     FUNCTION().PUBLIC().SIGNATURE(bool, Get3DDrawableLocalBounds, AABB&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnDraw);
     FUNCTION().PROTECTED().SIGNATURE(void, OnTransformUpdated);
+    FUNCTION().PROTECTED().SIGNATURE(void, EnsureMesh);
     FUNCTION().PROTECTED().SIGNATURE(void, RebuildMesh);
     FUNCTION().PROTECTED().SIGNATURE(void, ApplyTransform);
     FUNCTION().PROTECTED().SIGNATURE(void, OnDeserialized, const DataValue&);

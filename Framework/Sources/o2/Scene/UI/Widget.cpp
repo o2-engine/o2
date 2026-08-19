@@ -124,6 +124,10 @@ namespace o2
 
         UpdateLayersDrawingSequence();
         RetargetStatesAnimations();
+
+        // Слои при копировании переустанавливаются с прозрачностью 1: пересчёт
+        // возвращает скопированную прозрачность виджета в drawable'ы слоёв
+        UpdateTransparency();
     }
 
     Widget::~Widget()
@@ -199,6 +203,10 @@ namespace o2
         }
 
         UpdateLayersDrawingSequence();
+
+        // Слои при копировании переустанавливаются с прозрачностью 1: пересчёт
+        // возвращает скопированную прозрачность виджета в drawable'ы слоёв
+        UpdateTransparency();
 
         return *this;
     }

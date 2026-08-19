@@ -44,7 +44,12 @@ namespace o2
         ActorRefResolver::LockResolving();
 
         ISceneDrawable::operator=(other);
+
+        // The source may outlive its scene (asset templates); the layer object identity dies with
+        // the scene, so a clone rebinds to the current scene's layer with the same name
         mSceneLayer = other.mSceneLayer;
+        if (mSceneLayer && Scene::IsSingletonInitialzed())
+            mSceneLayer = o2Scene.AddLayer(mSceneLayer->GetName());
 
         if (other.mIsAsset)
         {
@@ -152,7 +157,12 @@ namespace o2
         mEnabled = other.mEnabled;
         mResEnabled = mEnabled;
         mResEnabledInHierarchy = mEnabled;
+
+        // Same rebind as in the copy constructor: layer identity must belong to the current scene
         mSceneLayer = other.mSceneLayer;
+        if (mSceneLayer && Scene::IsSingletonInitialzed())
+            mSceneLayer = o2Scene.AddLayer(mSceneLayer->GetName());
+
         transform->CopyFrom(*other.transform);
         mAssetId = other.mAssetId;
         mPrototypeLink = other.mPrototypeLink.Lock();
@@ -252,6 +262,7 @@ namespace o2
     void Actor::Draw()
     {
         PROFILE_SAMPLE_FUNC();
+        PROFILE_INFO(mName);
 
         OnDraw();
 		DrawComponents();
@@ -262,6 +273,7 @@ namespace o2
     void Actor::Update(float dt)
     {
         PROFILE_SAMPLE_FUNC();
+        PROFILE_INFO(mName);
 
         if (transform->IsDirty())
         {
@@ -280,6 +292,7 @@ namespace o2
     void Actor::FixedUpdate(float dt)
     {
         PROFILE_SAMPLE_FUNC();
+        PROFILE_INFO(mName);
 
         OnFixedUpdate(dt);
 
@@ -317,10 +330,7 @@ namespace o2
 
     void Actor::UpdateSelfTransform()
     {
-        transform->Update();
-        
-        for (auto& comp : mComponents)
-            comp->OnTransformUpdated();
+        transform->Update(); // notifies the components through OnTransformUpdated
     }
 
     void Actor::UpdateChildrenTransforms()

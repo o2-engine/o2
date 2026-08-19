@@ -13,6 +13,8 @@ namespace Editor
         void RebuildPlayStopButtonStyle();
         void RebuildPauseButtonStyle();
         void RebuildStepButtonStyle();
+        void RebuildPlusButtonStyle();
+        void RebuildMinusButtonStyle();
         void RebuildRoundDropDown();
         void RebuildMenuPanelDropDown();
         void RebuildSearchButton();
@@ -192,6 +194,8 @@ CLASS_METHODS_META(Editor::EditorUIStyleBuilder)
     FUNCTION().PUBLIC().SIGNATURE(void, RebuildPlayStopButtonStyle);
     FUNCTION().PUBLIC().SIGNATURE(void, RebuildPauseButtonStyle);
     FUNCTION().PUBLIC().SIGNATURE(void, RebuildStepButtonStyle);
+    FUNCTION().PUBLIC().SIGNATURE(void, RebuildPlusButtonStyle);
+    FUNCTION().PUBLIC().SIGNATURE(void, RebuildMinusButtonStyle);
     FUNCTION().PUBLIC().SIGNATURE(void, RebuildRoundDropDown);
     FUNCTION().PUBLIC().SIGNATURE(void, RebuildMenuPanelDropDown);
     FUNCTION().PUBLIC().SIGNATURE(void, RebuildSearchButton);

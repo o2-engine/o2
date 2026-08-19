@@ -111,6 +111,12 @@ namespace o2
         // Draws white debug text with disappearing delay
         void DrawText(const Vec2F& position, const String& text, float delay);
 
+        // Returns the font used for debug captions, null until the render is initialized
+        const Ref<VectorFont>& GetFont() const;
+
+        // Returns the font style used for debug captions, null until the render is initialized
+        const Ref<FontStyle>& GetFontStyle() const;
+
         // Updates drawables delay
         void Update(bool isEditor, float dt);
 

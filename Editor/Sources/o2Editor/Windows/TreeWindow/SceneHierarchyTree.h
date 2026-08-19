@@ -10,6 +10,7 @@ namespace o2
     class EditBox;
     class Toggle;
     class ToggleGroup;
+    class WidgetLayer;
 }
 
 using namespace o2;
@@ -90,6 +91,12 @@ namespace Editor
 
         // Returns create menu category in editor
         static String GetCreateMenuCategory();
+
+        // Returns nesting level of prototype instances the object belongs to, 0 when it is not a prototype
+        static int GetPrototypeLevel(const Ref<SceneEditableObject>& object);
+
+        // Returns name color for prototype nesting level
+        static Color4 GetPrototypeLevelColor(int level);
 
         SERIALIZABLE(SceneHierarchyTree);
         CLONEABLE_REF(SceneHierarchyTree);
@@ -210,14 +217,18 @@ namespace Editor
         Ref<WidgetState> mLockToggleLockedState;   // Lock toggle locked state
         Ref<WidgetState> mLockToggleHalfHideState; // Lock toggle half hide state
 
-        Ref<Toggle> mEnableToggle; // Enable toggle
+        Ref<Toggle>      mEnableToggle;              // Enable toggle
+        Ref<WidgetState> mEnableToggleHalfHideState; // Enable toggle half hide state
 
         Ref<Button>      mLinkBtn;              // View link button
         Ref<WidgetState> mLinkBtnHalfHideState; // View link button half hide state
 
+        Ref<WidgetLayer> mNameLayer;    // Object name layer
         Ref<Text>        mNameDrawable; // Object name drawable
         Ref<EditBox>     mNameEditBox;  // Object's name edit box
         Ref<WidgetState> mEditState;    // Object's name edit state
+
+        Color4 mDefaultNameColor; // Name color from style, used for non prototype objects
 
     protected:
         // Called on deserialization, initializes controls
@@ -225,6 +236,12 @@ namespace Editor
 
         // initializes controls and widgets
         void InitializeControls();
+
+        // Applies target object's enabled in hierarchy state to node view
+        void UpdateEnabledView();
+
+        // Applies target object's prototype nesting level to name color
+        void UpdatePrototypeView();
 
         // Called when lock toggle was clicked and changes target object's lock state
         void OnLockClicked();
@@ -280,6 +297,8 @@ CLASS_METHODS_META(Editor::SceneHierarchyTree)
     FUNCTION().PUBLIC().SIGNATURE(void, SetSearchFilter, const Vector<Ref<SceneEditableObject>>&);
     FUNCTION().PUBLIC().SIGNATURE(void, ClearSearchFilter);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetCreateMenuCategory);
+    FUNCTION().PUBLIC().SIGNATURE_STATIC(int, GetPrototypeLevel, const Ref<SceneEditableObject>&);
+    FUNCTION().PUBLIC().SIGNATURE_STATIC(Color4, GetPrototypeLevelColor, int);
     FUNCTION().PROTECTED().SIGNATURE(void, Initialize);
     FUNCTION().PROTECTED().SIGNATURE(void, UpdateVisibleNodes);
     FUNCTION().PROTECTED().SIGNATURE(Ref<TreeNode>, CreateTreeNodeWidget);
@@ -317,11 +336,14 @@ CLASS_FIELDS_META(Editor::SceneHierarchyTreeNode)
     FIELD().PROTECTED().NAME(mLockToggleLockedState);
     FIELD().PROTECTED().NAME(mLockToggleHalfHideState);
     FIELD().PROTECTED().NAME(mEnableToggle);
+    FIELD().PROTECTED().NAME(mEnableToggleHalfHideState);
     FIELD().PROTECTED().NAME(mLinkBtn);
     FIELD().PROTECTED().NAME(mLinkBtnHalfHideState);
+    FIELD().PROTECTED().NAME(mNameLayer);
     FIELD().PROTECTED().NAME(mNameDrawable);
     FIELD().PROTECTED().NAME(mNameEditBox);
     FIELD().PROTECTED().NAME(mEditState);
+    FIELD().PROTECTED().NAME(mDefaultNameColor);
 }
 END_META;
 CLASS_METHODS_META(Editor::SceneHierarchyTreeNode)
@@ -334,6 +356,8 @@ CLASS_METHODS_META(Editor::SceneHierarchyTreeNode)
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetCreateMenuCategory);
     FUNCTION().PROTECTED().SIGNATURE(void, OnDeserialized, const DataValue&);
     FUNCTION().PROTECTED().SIGNATURE(void, InitializeControls);
+    FUNCTION().PROTECTED().SIGNATURE(void, UpdateEnabledView);
+    FUNCTION().PROTECTED().SIGNATURE(void, UpdatePrototypeView);
     FUNCTION().PROTECTED().SIGNATURE(void, OnLockClicked);
     FUNCTION().PROTECTED().SIGNATURE(void, OnEnableCkicked);
     FUNCTION().PROTECTED().SIGNATURE(void, OnObjectNameChanged, const WString&);

@@ -2,6 +2,7 @@
 #include "RigidBody.h"
 
 #include "Box2D/Dynamics/b2Body.h"
+#include "o2/Config/ProjectConfig.h"
 #include "o2/Physics/PhysicsWorld.h"
 #include "o2/Scene/Physics/ICollider.h"
 
@@ -64,11 +65,7 @@ namespace o2
     void RigidBody::SetMass(float mass)
     {
         mMass = mass;
-        mMassData.mass = mMass;
-        mMassData.I = mInertia;
-
-        if (mBody)
-            mBody->SetMassData(&mMassData);
+        ApplyMassData();
     }
 
     float RigidBody::GetMass() const
@@ -79,11 +76,7 @@ namespace o2
     void RigidBody::SetInertia(float inertia)
     {
         mInertia = inertia;
-        mMassData.mass = mMass;
-        mMassData.I = mInertia;
-
-        if (mBody)
-            mBody->SetMassData(&mMassData);
+        ApplyMassData();
     }
 
     float RigidBody::GetInertia() const
@@ -198,6 +191,11 @@ namespace o2
         return mIsFixedRotation;
     }
 
+    b2Body* RigidBody::GetBody() const
+    {
+        return mBody;
+    }
+
     void RigidBody::OnEnabled()
     {
         Actor::OnEnabled();
@@ -229,21 +227,36 @@ namespace o2
     void RigidBody::CreateBody()
     {
         b2BodyDef def;
-        def.position = transform->GetWorldPosition2D();
+        def.position = transform->GetWorldPosition2D()/o2Config.physics.scale; // physics units, so joints read a correct pose at creation
         def.userData = this;
         def.active = mResEnabledInHierarchy;
 
-        mMassData.mass = mMass;
-        mMassData.I = mInertia;
-
         mBody = PhysicsWorld::Instance().mWorld.CreateBody(&def);
-        mBody->SetMassData(&mMassData);
-        mBody->SetType(mBodyType == Type::Dynamic ? b2_dynamicBody : (mBodyType == Type::Kinematic ? b2_kinematicBody : b2_staticBody));
+        mBody->SetType(GetBodyType(mBodyType));
         mBody->SetLinearDamping(mLinearDamping);
         mBody->SetAngularDamping(mAngularDamping);
         mBody->SetGravityScale(mGravityScale);
         mBody->SetBullet(mIsBullet);
         mBody->SetFixedRotation(mIsFixedRotation);
+
+        ApplyMassData(); // after the type and fixed rotation flags, both reset mass data
+    }
+
+    void RigidBody::ApplyMassData()
+    {
+        if (!mBody)
+            return;
+
+        b2MassData massData;
+        massData.center = mBody->GetLocalCenter();
+        massData.mass = Math::Max(mMass, 0.0f);
+
+        // Box2D expects inertia around the body origin and subtracts the center offset back,
+        // so mInertia is kept as inertia around the center of mass and stays positive
+        float bodyMass = massData.mass > 0.0f ? massData.mass : 1.0f;
+        massData.I = mInertia > 0.0f ? mInertia + bodyMass*b2Dot(massData.center, massData.center) : 0.0f;
+
+        mBody->SetMassData(&massData);
     }
 
     void RigidBody::RemoveBody()

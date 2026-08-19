@@ -41,11 +41,20 @@ if(ANDROID)
 endif()
 
 # Options
-option(O2_SELFPROFILE "Enable profiling o2 benchmark." OFF)
+option(O2_PROFILER "Enables the built-in NanoProfiler and the on-screen profiler widget (F12 / long tap in the top left corner)" ON)
 option(O2_TESTS_BATCH "Register one ctest entry per gtest suite (one process per suite) instead of one per test case" ON)
 option(O2_EDITOR "Enables o2 editor." ON)
 option(O2_ASAN "Enables ASAN (address sanitizer)." OFF)
-option(O2_TRACY "Enables Tracy profiling" OFF)
+
+# Tracy profiling is on by default for development builds (runs in on-demand mode, so it costs almost
+# nothing until a profiler connects), and off by default for shipping builds, where its listener thread
+# and open port are unwanted. Override explicitly with -DO2_TRACY=ON/OFF
+if (CMAKE_BUILD_TYPE STREQUAL "Release" OR CMAKE_BUILD_TYPE STREQUAL "MinSizeRel")
+    set(O2_TRACY_DEFAULT OFF)
+else()
+    set(O2_TRACY_DEFAULT ON)
+endif()
+option(O2_TRACY "Enables Tracy profiling" ${O2_TRACY_DEFAULT})
 option(O2_MEMORY_ANALYZE "Enables memory analyzing (slows down)" OFF)
 option(O2_PLATFORM_INITIALIZATION_ENABLED "Enables platform initialization" ON)
 option(O2_ENABLE_LINK_ZLIB "Enables linking zlib library" ON)
@@ -120,8 +129,8 @@ if (O2_RENDER_API STREQUAL "gles2")
     list(APPEND O2_COMPILE_DEFINITIONS O2_DISABLE_PLATFORM)
 endif()
 
-if (O2_SELFPROFILE)
-    list(APPEND O2_COMPILE_DEFINITIONS O2_PROFILE_STATS)
+if (O2_PROFILER)
+    list(APPEND O2_COMPILE_DEFINITIONS O2_PROFILER_ENABLED)
 endif()
 
 if (O2_EDITOR)
@@ -129,7 +138,9 @@ if (O2_EDITOR)
 endif()
 
 if (O2_TRACY)
-    list(APPEND O2_COMPILE_DEFINITIONS TRACY_ENABLE)
+    # On-demand: the client collects nothing until a profiler connects, so it doesn't grow memory
+    # while running unconnected. Fibers: lets coroutines be shown as their own tracks (TracyFiberEnter)
+    list(APPEND O2_COMPILE_DEFINITIONS TRACY_ENABLE TRACY_ON_DEMAND TRACY_FIBERS)
 endif()
 
 if (O2_MEMORY_ANALYZE)
@@ -273,10 +284,12 @@ target_compile_definitions(o2Framework PUBLIC ${O2_COMPILE_DEFINITIONS})
 target_link_libraries(o2Framework
     PUBLIC
         Box2D
+        box3d
         FreeType
         pugixml
         spine-cpp
         miniaudio
+        pl_mpeg
 )
 if (O2_SCRIPTING AND O2_SCRIPTING_BACKEND STREQUAL "jerryscript")
     target_link_libraries(o2Framework PUBLIC jerry-core jerry-ext jerry-port-default)
@@ -314,12 +327,14 @@ elseif (ANDROID)
     find_library(ANDROID_GLES2_LIB GLESv2)
     find_library(ANDROID_LOG_LIB log)
     find_library(ANDROID_LIB android)
+    find_library(ANDROID_MEDIANDK_LIB mediandk)
     target_link_libraries(o2Framework
             PRIVATE
                 ${ANDROID_EGL_LIB}
                 ${ANDROID_GLES2_LIB}
                 ${ANDROID_LOG_LIB}
                 ${ANDROID_LIB}
+                ${ANDROID_MEDIANDK_LIB}
     )
 elseif (UNIX)
     if (NOT APPLE)
@@ -340,6 +355,10 @@ elseif (UNIX)
         find_library(FOUNDATION Foundation)
         find_library(OBJC objc)
         find_library(UIKIT UIKit)
+        find_library(AV_FOUNDATION AVFoundation)
+        find_library(CORE_MEDIA CoreMedia)
+        find_library(CORE_VIDEO CoreVideo)
+        find_library(ACCELERATE Accelerate)
 
         target_link_libraries(o2Framework
                 PRIVATE
@@ -348,6 +367,10 @@ elseif (UNIX)
                     ${OBJC}
                     ${METALKIT}
                     ${UIKIT}
+                    ${AV_FOUNDATION}
+                    ${CORE_MEDIA}
+                    ${CORE_VIDEO}
+                    ${ACCELERATE}
         )
 
         set(METAL_SHADERS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Framework/Sources/o2/Render/iOS")
@@ -366,6 +389,10 @@ elseif (UNIX)
         find_library(OBJC objc)
         find_library(APPLICATION_SERVICES ApplicationServices)
         find_library(CARBON Carbon)
+        find_library(AV_FOUNDATION AVFoundation)
+        find_library(CORE_MEDIA CoreMedia)
+        find_library(CORE_VIDEO CoreVideo)
+        find_library(ACCELERATE Accelerate)
 
         target_link_libraries(o2Framework
                 PRIVATE
@@ -377,6 +404,10 @@ elseif (UNIX)
                     ${METALKIT}
                     ${APPLICATION_SERVICES}
                     ${CARBON}
+                    ${AV_FOUNDATION}
+                    ${CORE_MEDIA}
+                    ${CORE_VIDEO}
+                    ${ACCELERATE}
         )
 
         set(METAL_SHADERS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Framework/Sources/o2/Render/Mac")
@@ -391,7 +422,9 @@ endif()
 
 if(WIN32)
     target_link_libraries(o2Framework PRIVATE Shlwapi.lib)
-    target_link_libraries(o2Framework PRIVATE opengl32.lib)  
+    target_link_libraries(o2Framework PRIVATE opengl32.lib)
+    # Media Foundation for the hardware video decoder
+    target_link_libraries(o2Framework PRIVATE mfplat.lib mfreadwrite.lib mfuuid.lib ole32.lib)
 endif()
 
 if (UNIX)
@@ -411,7 +444,7 @@ if(NOT CMAKE_SYSTEM_NAME STREQUAL "iOS" AND NOT EMSCRIPTEN AND NOT ANDROID)
 endif()
 
 # dependencies
-add_dependencies(o2Framework Box2D FreeType)
+add_dependencies(o2Framework Box2D box3d FreeType)
 if (O2_SCRIPTING AND O2_SCRIPTING_BACKEND STREQUAL "jerryscript")
     add_dependencies(o2Framework jerry-core jerry-ext jerry-port-default)
 endif()

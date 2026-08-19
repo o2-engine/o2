@@ -30,3 +30,4 @@ CodeToolCache.xml
 Tools/ImageGen/api_key.txt
 Tools/ImageGen/__pycache__
 Tools/PsdTool/__pycache__
+*__pycache__

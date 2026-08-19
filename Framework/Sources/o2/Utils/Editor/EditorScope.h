@@ -16,10 +16,10 @@ namespace o2
         static void Exit(int count = 1);
 
         // Returns editor scope entered depth. When depth is greater than zero you working with editor's stuff - UI, event, etc
-        static int GetDepth();
+        static int GetDepth() { return mDepth; }
 
         // Returns is you are in editor scope
-        static bool IsInScope();
+        static bool IsInScope() { return mDepth > 0; }
 
     private:
         static int mDepth; // Scope entered depth

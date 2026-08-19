@@ -92,6 +92,11 @@ namespace o2
     void AnimationSubTrack::Player::SetTarget(IAnimation* value)
     {
         mTarget = value;
+
+        // target can be null when the track path doesn't resolve to an IAnimation
+        if (!mTarget)
+            return;
+
         mTarget->SetSubControlled(true);
 
         UpdateSubTrackDuration();

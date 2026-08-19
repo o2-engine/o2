@@ -16,6 +16,18 @@ namespace o2
 
     DECLARE_SINGLETON(SoundSystem);
 
+    bool SoundSystem::sSilent = false;
+
+    void SoundSystem::SetSilent(bool silent)
+    {
+        sSilent = silent;
+    }
+
+    bool SoundSystem::IsSilent()
+    {
+        return sSilent;
+    }
+
     SoundSystem::SoundSystem(RefCounter* refCounter):
         Singleton<SoundSystem>(refCounter)
     {
@@ -23,7 +35,7 @@ namespace o2
         o2Debug.GetLog()->BindStream(mLog);
 
         // Null backend keeps the whole sound API working without an audio device (tests, CI)
-        if (Integration::IsHeadless())
+        if (Integration::IsHeadless() || sSilent)
         {
             mContext = mnew ma_context();
             ma_backend backends[] = { ma_backend_null };

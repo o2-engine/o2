@@ -84,7 +84,13 @@ namespace Editor
 
     Vec2F SceneView3DState::WorldToScreen(const Vec3F& worldPoint, const Vec2F& viewportSize) const
     {
-        Vec3F ndc = GetViewProjection(viewportSize).TransformPoint(worldPoint);
+        return WorldToScreen(worldPoint, viewportSize, GetViewProjection(viewportSize));
+    }
+
+    Vec2F SceneView3DState::WorldToScreen(const Vec3F& worldPoint, const Vec2F& viewportSize,
+                                          const Mat4& viewProjection) const
+    {
+        Vec3F ndc = viewProjection.TransformPoint(worldPoint);
         return Vec2F((ndc.x + 1.0f)*0.5f*viewportSize.x,
                      (ndc.y + 1.0f)*0.5f*viewportSize.y);
     }
@@ -142,6 +148,12 @@ namespace Editor
     Vec3F SceneView3DState::GetCameraPosition() const
     {
         return target + GetRotation()*Vec3F(0.0f, 0.0f, distance);
+    }
+
+    void SceneView3DState::GetNearClipPlane(Vec3F& origin, Vec3F& normal) const
+    {
+        normal = GetRotation()*Vec3F(0.0f, 0.0f, -1.0f);
+        origin = GetCameraPosition() + normal*nearClip;
     }
 
     void SceneView3DState::Orbit(const Vec2F& deltaAnglesRad)

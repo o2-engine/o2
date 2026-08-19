@@ -23,6 +23,8 @@
 
 #include "o2/Render/Camera.h"
 #include "o2/Render/Material.h"
+#include "o2/Render/RenderCommandBuffer.h"
+#include "o2/Render/RenderThread.h"
 #include "o2/Render/TextureRef.h"
 #include "o2/Utils/Math/Vertex.h"
 #include "o2/Utils/Singleton.h"
@@ -106,6 +108,17 @@ namespace o2
 		// Finishing rendering
 		void End();
 
+		// Enables/disables multithreaded rendering: the main thread records draw commands and the
+		// render thread submits them to the GPU, synchronizing each frame. No effect on platforms that
+		// don't support it. Takes effect from the next frame
+		void SetMultithreadedRenderEnabled(bool enabled);
+
+		// Returns true if multithreaded rendering is enabled
+		bool IsMultithreadedRenderEnabled() const;
+
+		// Returns true if the current platform supports multithreaded rendering
+		static bool IsMultithreadedRenderSupported();
+
 		// Flushes current state and gets ready to draw manually
 		void BeginCustomRender();
 
@@ -136,6 +149,13 @@ namespace o2
 
 		// Returns current drawn primitives
 		int GetDrawnPrimitives() const;
+
+		// Returns the draw calls of this frame that were made outside of an editor scope. In the editor
+		// that is the scene drawn into the Game window; outside of it, it equals GetDrawCallsCount()
+		int GetSceneDrawCallsCount() const;
+
+		// Returns the primitives of this frame that were drawn outside of an editor scope
+		int GetSceneDrawnPrimitives() const;
 
 		// Binding camera. NULL - standard camera
 		void SetCamera(const Camera& camera);
@@ -368,6 +388,11 @@ namespace o2
 		UInt       mFrameTrianglesCount = 0;      // Total triangles at current frame
 		UInt       mDrawCallsCount = 0;           // DrawIndexedPrimitives calls count
 
+		UInt       mSceneDrawCallsCount = 0;      // Draw calls made outside of an editor scope
+		UInt       mSceneTrianglesCount = 0;      // Triangles drawn outside of an editor scope
+
+		Vector<Vertex> mAALineVertices;           // Reused conversion buffer for poly line drawing
+
 		UInt8*       mVertexData = nullptr;       // CPU-side vertex batch buffer
 		UInt         mVertexBufferSize = 0;       // Max vertex count in batch buffer
 		UInt         mVertexBufferByteSize = 0;   // Max byte size of vertex batch buffer
@@ -422,6 +447,10 @@ namespace o2
 		bool mDepthWriteEnabled = true; // Is depth buffer write enabled when test is enabled
 
 		float mDrawingDepth = 0.0f; // Current drawing depth, increments after each drawing drawables
+
+		bool                mMultithreadedRender = false; // Whether draws are recorded on the main thread and submitted on the render thread
+		RenderThread        mRenderThread;                // Dedicated GPU submission thread (used when multithreaded)
+		RenderCommandBuffer mCommandBuffer;               // Draw commands recorded for the current frame
 
 		FT_Library mFreeTypeLib; // FreeType library, for rendering fonts
 
@@ -513,6 +542,41 @@ namespace o2
 		// Platform specific draw primitives (draw call)
 		void PlatformDrawPrimitives();
 
+		// Platform: whether this backend can submit a recorded frame from the render thread. A backend
+		// supports it once nothing of its drawing touches the GPU API while the frame is being recorded,
+		// so the whole frame can be replayed on another thread
+		static bool PlatformSupportsMultithreadedRender();
+
+		// Records the current batch (geometry + full GPU-state snapshot) into the frame command buffer
+		void RecordDrawCommand();
+
+		// Runs on the render thread: replays the recorded command buffer, submitting the whole frame
+		void SubmitRecordedFrame();
+
+		// Platform: prepares the main thread to record a frame whose PlatformBegin runs on the render thread
+		void PlatformBeginRecording();
+
+		// Platform: snapshots the platform-specific submit state (matrix, scissor, clear flags) into cmd
+		void PlatformSnapshotDrawState(RenderDrawCommand& command);
+
+		// Platform: acquires the frame's render target/drawable on the main thread for the render thread
+		void PlatformAcquireFrameTarget();
+
+		// Platform: begins a frame on the render thread (creates the GPU command buffer)
+		void PlatformBeginThreaded();
+
+		// Platform: replays one recorded draw command on the render thread
+		void PlatformReplayDrawCommand(const RenderDrawCommand& command);
+
+		// Platform: closes the render pass the replayed commands share, if one is open
+		void PlatformEndThreadedPass();
+
+		// Platform: ends a frame on the render thread (present + commit + wait)
+		void PlatformEndThreaded();
+
+		// Platform: closes the render pass the drawn batches share, if one is open
+		void PlatformEndPass();
+
 		// Checks vertex buffer for texture coordinate flip by texture format
 		void CheckVertexBufferTexCoordFlipByTextureFormat();
 
@@ -548,6 +612,12 @@ namespace o2
 
 		// Platform specific bind render target
 		void PlatformBindRenderTarget(const TextureRef& renderTarget);
+
+		// Materializes a deferred clear on the current target before a render target switch. On
+		// backends with immediate clears (GL) this is a no-op; on Metal a clear is a pass load
+		// action, and with no geometry drawn after Clear() the pending flag would otherwise leak
+		// onto the next bound target and wipe its contents
+		void PlatformFlushPendingClear();
 
 		// Platform specific multiple render targets support check
 		bool PlatformSupportsMRT() const;

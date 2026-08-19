@@ -130,6 +130,44 @@ TEST(AssetsTree, RemoveFolderCascadesToChildren) {
     EXPECT_FALSE(tree->allAssetsByUID.ContainsKey(childUid));
 }
 
+// Removing a folder must take out every child: leftovers keep dangling weak refs
+// in the UID map, and the assets builder crashes on them later
+TEST(AssetsTree, RemoveFolderCascadesToEveryChild) {
+    auto tree = mmake<AssetsTree>();
+    tree->assetsPath = "Local/";
+
+    auto folder = MakeInfoFor("dir", MakeFolderMeta());
+    tree->AddAsset(folder);
+
+    Vector<UID> childUids;
+    for (int i = 0; i < 5; i++)
+    {
+        auto meta = MakeBinaryMeta();
+        childUids.Add(meta->ID());
+        tree->AddAsset(MakeInfoFor(String("dir/file") + (String)i + ".bin", meta));
+    }
+
+    auto subFolder = MakeInfoFor("dir/sub", MakeFolderMeta());
+    tree->AddAsset(subFolder);
+
+    auto subChildMeta = MakeBinaryMeta();
+    auto subChildUid = subChildMeta->ID();
+    tree->AddAsset(MakeInfoFor("dir/sub/deep.bin", subChildMeta));
+
+    tree->RemoveAsset(folder);
+
+    for (int i = 0; i < 5; i++)
+    {
+        EXPECT_FALSE(tree->allAssetsByPath.ContainsKey(String("dir/file") + (String)i + ".bin"));
+        EXPECT_FALSE(tree->allAssetsByUID.ContainsKey(childUids[i]));
+    }
+
+    EXPECT_FALSE(tree->allAssetsByPath.ContainsKey("dir/sub"));
+    EXPECT_FALSE(tree->allAssetsByPath.ContainsKey("dir/sub/deep.bin"));
+    EXPECT_FALSE(tree->allAssetsByUID.ContainsKey(subChildUid));
+    EXPECT_TRUE(tree->allAssets.IsEmpty());
+}
+
 TEST(AssetsTree, SortAssetsOrdersByPathLength) {
     auto tree = mmake<AssetsTree>();
     tree->assetsPath = "Local/";

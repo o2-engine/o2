@@ -32,6 +32,51 @@ A scene frame is assembled by the `o2::RenderPipeline` pipeline from `o2::Render
 
 Besides 2D primitives, the renderer supports 3D meshes (`o2::Mesh3DFill`), skinned meshes (`o2::SkinningMesh`) and Spine skeletons (`o2::Spine`).
 
+### Frame counters
+`o2Render.GetDrawCallsCount()` and `GetDrawnPrimitives()` report what the whole frame cost.
+`GetSceneDrawCallsCount()` and `GetSceneDrawnPrimitives()` report only the part drawn outside of an
+[editor scope](/Docs/en/Editor/editor.md) — in the editor that is the scene rendered into the Game
+window, without the editor UI on top; outside the editor the two pairs are equal. The
+[profiler panel](/Docs/en/Architecture/Utils/profiling.md) shows the scene ones.
+
+### Multithreaded rendering
+Rendering can run across two threads. The main thread records a frame's draw batches into an `o2::RenderCommandBuffer` (each `o2::RenderDrawCommand` copies its geometry and snapshots the GPU state it needs), and the `o2::RenderThread` submits them to the GPU (encode / draw calls / present). The two threads rendezvous every frame: the main thread dispatches a frame and waits for the previous one to finish before starting the next, so neither runs more than a frame ahead.
+
+Toggle it through the render subsystem:
+- **o2Render.SetMultithreadedRenderEnabled(enabled)** — takes effect from the next frame.
+- **o2Render.IsMultithreadedRenderEnabled()** — current state.
+- **o2Render.IsMultithreadedRenderSupported()** — static, whether the platform supports it.
+
+It is enabled by default where `IsMultithreadedRenderSupported()` is true; other platforms use the single-threaded path, where the main thread submits draws directly. The recording side (command buffer, render thread, per-frame rendezvous) is platform independent — each backend only answers `PlatformSupportsMultithreadedRender()` and implements the submit hooks (`PlatformAcquireFrameTarget`, `PlatformBeginThreaded`, `PlatformReplayDrawCommand`, `PlatformEndThreaded`).
+
+A backend can support it once **nothing of its drawing touches the GPU API while the frame is being recorded**: the frame has to be fully described by the recorded commands. That holds for the Metal backends (macOS, iOS), where state lives in the per-command snapshot; there the drawable and the render pass descriptor are acquired on the main thread (they are main-thread affine) and the render thread only uses the captured objects. The OpenGL backends (Windows, Linux, Android, WebAssembly) still issue state changes, clears and material binds straight to GL while recording, and a GL context belongs to one thread at a time, so they report no support and use the single-threaded path. Making them support it means recording that state into the commands too and handing the context over to the render thread for the submit window (on Android the drawing already runs on the GLSurfaceView GL thread, which owns the context and the swap; on WebAssembly the WebGL context can only leave the browser main thread through an OffscreenCanvas in a worker). Because a command carries a full state snapshot, the render thread never reads the live, concurrently mutated `Render` members, and the command buffer is reset on the main thread so texture/material references are never ref-counted from the render thread. This mirrors the isolation rules of the [job system](/Docs/en/Architecture/Utils/jobs.md).
+
+Reset drops the recorded commands but pools them: their geometry buffers stay allocated at the high-water mark, so a steady frame records into the same storage instead of re-allocating (and re-zeroing) the frame's vertex bytes. `o2::Mesh::Resize` follows the same rule — buffers grow but are never re-allocated to shrink, so a mesh refilled every frame at the same size never touches the allocator.
+
+Consecutive batches that render into the same attachments share one GPU render pass; a new one starts only when the render target, the extra MRT targets, the depth attachment or a clear request changes (a clear is a load action, so it can only happen at the start of a pass). Everything else a batch needs — pipeline state, viewport, scissor, depth state, textures, buffers — is per-batch state set inside the shared pass. A pass per draw call would make a tiled GPU reload and store the whole render target for every batch, which a UI-heavy frame of a few hundred batches feels immediately. Both Metal backends do this, on the render thread replay and on their single-threaded path alike. The open pass is closed when the frame ends, before the command buffer is committed.
+
+Because a clear is deferred until the next batch on Metal, a `Clear()` followed by no geometry would leak onto whatever target is bound next. A render target switch (`BindRenderTexture` / `UnbindRenderTexture` / `PopRenderTargets`) therefore materializes the pending clear on the still-current target first — as an immediately opened pass on the single-threaded path, or as a geometry-less clear-only command on the multithreaded one. GL backends clear immediately, so for them this is a no-op.
+
+### Gizmos, o2::Gizmos
+The `o2Gizmos` singleton draws editor helper wireframe primitives with lines: `DrawLine`,
+`DrawPolyLine`, `DrawCircle`, `DrawRect`, `DrawBox`, `DrawSphere`, `DrawCapsule`, `DrawPoint`. Points
+are given in world `Vec3F` coordinates, and the projection into the drawing space is set from outside
+by `SetProjection` — in 2D it drops z, in 3D view it projects with the perspective camera. The
+`GetDrawnPrimitives` counter tells whether an object has drawn anything. Used by the scene gizmos
+system, see [scene](/Docs/en/Architecture/HighLevel/scene.md).
+
+Wireframes are built from as few poly lines as the shape allows (a box is two face rings plus four
+edges, not twelve separate segments) and the point buffers are reused between primitives: a scene of
+wireframed colliders issues thousands of these per frame, where per-line allocations and draw batches
+cost more than the drawing. Setting a projection that rebuilds the camera matrices per point costs
+the same way — project with a matrix built once for the whole pass.
+
+`SetProjection` optionally takes a world space clip plane (origin and normal, the normal pointing to
+the visible side; a zero normal means no clipping). Lines are split by the plane before projection:
+the parts behind it are dropped and the crossing points are drawn exactly on the plane, so one
+primitive may turn into several poly lines. The 3D scene view passes the camera near plane here —
+without it, perspective divide by a negative w mirrors geometry behind the camera in front of it.
+
 ### IDrawable
 This is the base interface of a drawable entity; during drawing it remembers the current scissor rectangle
 
@@ -50,6 +95,17 @@ The sprite has a drawing Mode:
 - Fill360CW, Fill360CCW - filling the sprite clockwise/counterclockwise
 
 Transformations, color, transparency are set through the base class `IRectDrawable`.
+
+### Video, o2::Video
+Inherits from `o2::IRectDrawable` and `o2::IAnimation`. Plays a video asset `o2::VideoAsset` into a dynamic texture and draws it like a sprite. Playback is driven through the `IAnimation` interface (`Play`/`Stop`/`SetTime`/`loop`); the frame shown always follows the animation time, so a `Video` can be used as an animation sub-track — its `Evaluate` decodes and uploads the frame for the current time.
+
+Decoding goes through a `o2::VideoDecoder` backend selected by file extension: `mp4`/`mov`/`m4v` use the platform hardware decoder, everything else (`mpg`/`mpeg`) uses the pl_mpeg MPEG-1 software decoder. Hardware backends: AVFoundation/VideoToolbox on Mac and iOS, Media Foundation (`IMFSourceReader`) on Windows, `AMediaCodec` on Android, an HTMLVideoElement with direct `texImage2D` upload on WebAssembly (asynchronous setup, frames never touch the CPU). Linux has no hardware backend — use `mpg` there. Hardware decoding is the recommended path: it is an order of magnitude cheaper on the CPU and does not depend on build optimization flags.
+
+The encoded data source is selectable: by default the whole file is kept in memory, or with `streaming` enabled it is decoded straight from the asset file on disk, keeping only a small buffer resident (the hardware decoder always reads from the file).
+
+Optionally keys out a solid background color with a soft edge: enabled via `SetChromaKeyEnabled`, configured by the key color (`keyColor`), the `similarity` threshold, the soft edge width `smoothness` and spill suppression `spill`. Keying is done by the `ChromaKey` shader material (it overrides the drawable material via `SetMaterial`).
+
+The scene component is `o2::VideoComponent` (`Component` + `Video`), driving playback in `OnUpdate`; being an `IAnimation` it is picked up by the animation editor as a sub-track.
 
 ### Text, o2::Text
 Inherits from `o2::IRectDrawable`. It defines the font (vector or bitmap), text size, text formatting and the text itself.

@@ -303,6 +303,14 @@ namespace o2
         if constexpr (!std::is_same<_valueType, void>::value)
         {
             newAgent->target = DynamicCast<IValueProxy<_valueType>>(fieldInfo->GetType()->GetValueProxy(fieldPtr));
+
+            // field exists but has another value type - e.g. Vec2F track bound to Vec3F field
+            if (!newAgent->target)
+            {
+                o2Debug.LogWarning("Can't animate value " + path + ": field type doesn't match track type");
+                return;
+            }
+
             newAgent->defaultValue = newAgent->target->GetValue();
         }
     }

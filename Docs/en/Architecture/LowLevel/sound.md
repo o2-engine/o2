@@ -27,3 +27,9 @@ sound->SetSpatial(true);
 sound->Play();
 ```
 </details>
+
+## Silencing the engine
+`SoundSystem::SetSilent(true)`, called before `Application::Initialize()`, forces the null audio
+backend: the whole sound API keeps working, but no audio device is opened and nothing reaches the
+speakers. Headless mode does the same automatically; the non-headless test runners set it explicitly
+so a test run doesn't play the game's sounds.

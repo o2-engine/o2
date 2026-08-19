@@ -54,6 +54,11 @@ position, scale, colors, lighting and details - and replace everything around it
 completely flat, pure white background (#FFFFFF). No gradients, no shadows, no watermarks,
 no text."""
 
+SYSTEM_EXTRACT_PART = """\
+You are an image processing tool for extracting elements from 2D game images. You keep
+the requested element exactly as it appears and erase everything else to pure white.
+No watermarks, no text, no borders."""
+
 
 class GeminiError(Exception):
     pass
@@ -161,23 +166,81 @@ BLACK_BG_INSTRUCTION = ("Replace the white background of this image with pure bl
 ISOLATE_INSTRUCTION = ("Keep the main subject of this image unchanged and replace everything "
                        "around it with a pure white background (#FFFFFF).")
 
+TRANSPARENT_ATTEMPTS = 5
+CORNER_ALPHA_MAX = 16
 
-def render_transparent(prompt, refs=(), aspect=None, size=None, model=DEFAULT_MODEL, verbose=False):
-    """Full transparent-sprite pipeline. Returns (rgba, white_render, black_render)."""
-    white, _ = generate(SYSTEM_WHITE_BG, prompt, images=refs, aspect=aspect, size=size,
-                        model=model, verbose=verbose)
+
+def has_transparent_corner(rgba):
+    """At least one of the four corner pixels is (nearly) fully transparent."""
+    alpha = np.asarray(rgba)[..., 3]
+    corners = (alpha[0, 0], alpha[0, -1], alpha[-1, 0], alpha[-1, -1])
+    return min(int(a) for a in corners) <= CORNER_ALPHA_MAX
+
+
+def white_to_rgba(white, model=DEFAULT_MODEL, verbose=False):
+    """Re-renders a white-background image on black and recovers per-pixel alpha."""
     black, _ = generate(SYSTEM_BLACK_BG, BLACK_BG_INSTRUCTION, images=[white],
                         model=model, verbose=verbose)
-    return alpha_from_white_black(white, black), white, black
+    return alpha_from_white_black(white, black)
+
+
+def render_transparent(prompt, refs=(), aspect=None, size=None, model=DEFAULT_MODEL,
+                       verbose=False, attempts=TRANSPARENT_ATTEMPTS):
+    """Full transparent-sprite pipeline. Returns (rgba, white_render, black_render).
+
+    When all four corners of the recovered sprite come out opaque the background
+    failed - the whole render is retried, up to `attempts` times."""
+    for attempt in range(attempts):
+        white, _ = generate(SYSTEM_WHITE_BG, prompt, images=refs, aspect=aspect, size=size,
+                            model=model, verbose=verbose)
+        black, _ = generate(SYSTEM_BLACK_BG, BLACK_BG_INSTRUCTION, images=[white],
+                            model=model, verbose=verbose)
+        rgba = alpha_from_white_black(white, black)
+        if has_transparent_corner(rgba):
+            return rgba, white, black
+        if verbose:
+            print(f"all four corners opaque, retrying ({attempt + 1}/{attempts})",
+                  file=sys.stderr)
+    raise GeminiError(f"all four corners stayed opaque after {attempts} attempts - "
+                      "the model failed to produce a clean background")
 
 
 def isolate_transparent(image, model=DEFAULT_MODEL, verbose=False):
     """Isolates the main subject of an image and recovers its alpha. Returns an RGBA image."""
     white, _ = generate(SYSTEM_ISOLATE_WHITE, ISOLATE_INSTRUCTION, images=[image.convert("RGB")],
                         model=model, verbose=verbose)
-    black, _ = generate(SYSTEM_BLACK_BG, BLACK_BG_INSTRUCTION, images=[white],
+    return white_to_rgba(white, model=model, verbose=verbose)
+
+
+def extract_part_prompt(part):
+    return "\n".join([
+        f"This image is a cropped region of a 2D game that contains the element to extract: {part}.",
+        "Keep ONLY that element, exactly as it appears — same shape, position, size, colors, "
+        "shading, texture and art style. Do NOT move, resize, recolor, restyle, or redraw it.",
+        "Erase EVERYTHING else in the crop to flat, solid, pure white (#FFFFFF): the background "
+        "AND any other objects, pieces, icons, text or fragments that are not the requested element.",
+        "If a SECOND image with hand-drawn marks is provided, the marked areas are EXTRA things "
+        "to remove — erase them to white too, and never paint the drawn strokes into the result.",
+        "This is NOT background removal — remove the other objects as well. The result must be "
+        "almost entirely pure white with only the requested element visible. If the element is "
+        "partly hidden, plausibly complete it.",
+        "Output only the resulting image.",
+    ])
+
+
+def extract_part(crop, part, marks=None, model=DEFAULT_MODEL, verbose=False):
+    """Keeps only the described element of the crop, erasing the rest to pure white.
+
+    Returns the white-background image resized back to the crop's size, so the
+    element keeps the original region's geometry 1:1."""
+    images = [crop.convert("RGB")]
+    if marks is not None:
+        images.append(marks.convert("RGB"))
+    white, _ = generate(SYSTEM_EXTRACT_PART, extract_part_prompt(part), images=images,
                         model=model, verbose=verbose)
-    return alpha_from_white_black(white, black)
+    if white.size != crop.size:
+        white = white.resize(crop.size, Image.LANCZOS)
+    return white
 
 
 def crop_rect(image, rect):

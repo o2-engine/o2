@@ -390,6 +390,7 @@ namespace Editor
 
     void DrawOrderTreeNode::InitializeControls()
     {
+        mNameLayer = GetLayer("name");
         mNameDrawable = GetLayerDrawable<Text>("name");
         mOrderDrawable = GetLayerDrawable<Text>("batch");
         mIconSprite = GetLayerDrawable<Sprite>("icon");
@@ -412,10 +413,17 @@ namespace Editor
         }
 
         if (mEnableToggle)
+        {
+            mEnableToggleHalfHideState = mEnableToggle->GetStateObject("halfHide");
             mEnableToggle->onClick = THIS_FUNC(OnEnableCkicked);
+        }
 
         if (mNameEditBox)
             mNameEditBox->onChangeCompleted = THIS_FUNC(OnObjectNameChanged);
+
+        // edit state animates name layer transparency and drops the disabled dimming when it ends
+        if (mEditState)
+            mEditState->onStateFullyFalse = [&]() { UpdateEnabledView(); };
     }
 
     void DrawOrderTreeNode::Setup(const Ref<DrawOrderTree::OrderTreeNode>& object)
@@ -461,18 +469,10 @@ namespace Editor
         if (mTarget->object)
         {
             auto sceneObject = mTarget->object;
-            float alpha = sceneObject->IsEnabledInHierarchy() ? 1.0f : 0.5f;
-            if (!Math::Equals(alpha, mNameDrawable->GetTransparency()))
-            {
-                mNameDrawable->SetTransparency(alpha);
-                mEnableToggle->SetTransparency(alpha);
-                mLinkBtn->SetTransparency(alpha);
-            }
 
             if (auto actor = DynamicCast<Actor>(sceneObject))
             {
                 mLinkBtn->SetEnabled(actor->GetPrototype().IsValid());
-                mLinkBtnHalfHideState->SetState(!actor->GetPrototypeDirectly().IsValid());
 
                 if (actor->GetPrototype())
                 {
@@ -503,6 +503,31 @@ namespace Editor
             mEnableToggle->SetEnabled(false);
             mLockToggle->SetEnabled(false);
             mLinkBtn->SetEnabled(false);
+        }
+
+        UpdateEnabledView();
+    }
+
+    void DrawOrderTreeNode::UpdateEnabledView()
+    {
+        if (!mTarget)
+            return;
+
+        auto object = mTarget->object;
+        bool enabled = !object || object->IsEnabledInHierarchy();
+
+        // layer transparency, not the drawable's one: drawable's is recalculated from layers on any
+        // widget transparency update
+        if (mNameLayer)
+            mNameLayer->SetTransparency(enabled ? 1.0f : 0.5f);
+
+        if (mEnableToggleHalfHideState)
+            mEnableToggleHalfHideState->SetStateForcible(!enabled);
+
+        if (mLinkBtnHalfHideState)
+        {
+            auto actor = DynamicCast<Actor>(object);
+            mLinkBtnHalfHideState->SetStateForcible(!enabled || !actor || !actor->GetPrototypeDirectly().IsValid());
         }
     }
 

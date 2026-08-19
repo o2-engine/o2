@@ -37,9 +37,7 @@ namespace o2
 
     const Mesh& MeshPrimitiveComponent::GetMesh()
     {
-        if (mNeedRebuildMesh)
-            RebuildMesh();
-
+        EnsureMesh();
         return mMesh;
     }
 
@@ -156,21 +154,48 @@ namespace o2
 
     bool MeshPrimitiveComponent::Get3DDrawableBounds(AABB& bounds)
     {
-        return Mesh3DPrimitives::GetMeshBounds(GetMesh(), bounds);
+        AABB local;
+        if (!Get3DDrawableLocalBounds(local))
+            return false;
+
+        Mat4 worldTransform;
+        if (auto owner = mOwner.Lock())
+            worldTransform = owner->transform->GetWorldTransform3D();
+
+        // Bound of the transformed local box, so asking for bounds doesn't have to fill the whole mesh
+        Vec3F corners[8];
+        for (int i = 0; i < 8; i++)
+        {
+            corners[i] = worldTransform.TransformPoint(Vec3F((i & 1) ? local.max.x : local.min.x,
+                                                             (i & 2) ? local.max.y : local.min.y,
+                                                             (i & 4) ? local.max.z : local.min.z));
+        }
+
+        bounds = AABB::Bound(corners, 8);
+        return true;
     }
 
     bool MeshPrimitiveComponent::Get3DDrawableLocalBounds(AABB& bounds)
     {
-        GetMesh();
-        return mLocalData.GetBounds(bounds);
+        if (mNeedRebuildMesh)
+            RebuildMesh();
+
+        bounds = mLocalBounds;
+        return mHasLocalBounds;
     }
 
     void MeshPrimitiveComponent::OnDraw()
     {
-        if (mNeedRebuildMesh)
-            RebuildMesh();
-        else if (ScenePassFilters::IsRawAlbedoMode() != mMeshRawAlbedo)
-            ApplyTransform();
+        // The shading mode is picked up here and not in EnsureMesh, so that filling the mesh for
+        // something else (bounds queries) doesn't flip it and cost the drawing pass a second fill
+        bool rawAlbedo = ScenePassFilters::IsRawAlbedoMode();
+        if (rawAlbedo != mMeshRawAlbedo)
+        {
+            mMeshRawAlbedo = rawAlbedo;
+            mNeedApplyTransform = true;
+        }
+
+        EnsureMesh();
 
         mMesh.SetMaterial(GetMaterial());
         mMesh.Draw();
@@ -178,9 +203,17 @@ namespace o2
 
     void MeshPrimitiveComponent::OnTransformUpdated()
     {
+        // Filling the mesh is deferred to the first use: transforming every vertex here would be redone
+        // anyway by the first pass that draws with a different shading mode
+        mNeedApplyTransform = true;
+    }
+
+    void MeshPrimitiveComponent::EnsureMesh()
+    {
         if (mNeedRebuildMesh)
             RebuildMesh();
-        else
+
+        if (mNeedApplyTransform)
             ApplyTransform();
     }
 
@@ -206,8 +239,8 @@ namespace o2
         }
 
         mNeedRebuildMesh = false;
-
-        ApplyTransform();
+        mNeedApplyTransform = true;
+        mHasLocalBounds = mLocalData.GetBounds(mLocalBounds);
     }
 
     void MeshPrimitiveComponent::ApplyTransform()
@@ -216,7 +249,7 @@ namespace o2
         if (auto owner = mOwner.Lock())
             worldTransform = owner->transform->GetWorldTransform3D();
 
-        mMeshRawAlbedo = ScenePassFilters::IsRawAlbedoMode();
+        mNeedApplyTransform = false;
 
         TextureSource textureSource = mTexture ? mTexture->GetTextureSource() : TextureSource();
         Mesh3DPrimitives::FillMesh(mMesh, mLocalData, worldTransform, mColor, textureSource, mShaded && !mMeshRawAlbedo);

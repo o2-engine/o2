@@ -30,12 +30,26 @@ Actors have a life cycle:
 - `OnStart` - actor start, before the first update
 - `OnEnabled`/`OnDisabled` - enabling/disabling the actor
 - `Update` - update of the actor and its components
-- `OnTransformUpdated` - transform update
+- `OnTransformUpdated` - transform update. Fires once per transform update, for the actor and each of its components; heavy work (rebuilding geometry) belongs behind a dirty flag, evaluated when the result is actually needed
 
 ### Component, o2::Component
 All components derive from this common interface. A component implements some logic that can interact with other parts of the scene and with assets through references.
 
 Components, like actors, have the same events and life cycle: constructor, deserialization, start, update, etc.
+
+### Gizmos, OnDrawGizmos
+In the editor build only (`IS_EDITOR`) actors and components can draw helper graphics in the scene
+window: override `OnDrawGizmos` and draw through the `o2::Gizmos` singleton
+(`o2Gizmos.DrawLine/DrawCircle/DrawBox/DrawSphere/DrawCapsule/DrawRect`) in world coordinates — the
+projection into the drawing space is set by the scene window, so the same calls work in both 2D and
+3D view; in 3D view the window also passes the camera near plane, and geometry behind it is cut off
+instead of being mirrored in front of the camera. Drawing only, no controls. Entry point is `DrawGizmos()`.
+The editor draws gizmos of the **selected** objects only, walking each selection down its children, the
+same subtree its selection outline covers — with nothing selected the scene draws no gizmos at all. The
+types list of the control panel is collected from the whole scene, so a type can be switched off before
+anything of it is selected. Gizmos are implemented for colliders (2D and 3D),
+joints (`IJoint`, `IJoint3D`) and `o2::CameraActor` (perspective frustum or view rectangle). The
+control panel is described in [editor scene](/Docs/en/Editor/Scene/scene.md).
 
 ### Drawable objects, o2::ISceneDrawable
 This interface marks an object as able to draw on the scene; `o2::Actor` derives from it. It defines the layer and the drawing depth `drawDepth`. The higher the depth, the later the object is drawn within its layer.
@@ -56,6 +70,8 @@ To speed up scene building and make work more convenient, prototypes can be used
 If something is changed in one prototype instance in the editor, the change can be applied to the base prototype, and all other instances receive the same change. This works only in the editor.
 
 Prototypes can be created from other prototypes, overriding some of their parameters. The final instance of a derived prototype then reflects changes of both the base and the derived prototype.
+
+A prototype template outlives the scene, while a layer object (`o2::SceneLayer`) dies with it — so cloning rebinds the actor to the current scene's layer by name (just like deserialization does). Prototype instances stay valid after the scene is recreated.
 
 ### References
 References are used to connect components, actors and assets to each other. They refer to entities by unique identifiers, automatically. This avoids looking up actors and their components by path in code. A path can break when the hierarchy changes, requiring code rewrites. With references, hierarchy changes do not break anything, everything keeps working.

@@ -79,12 +79,16 @@ namespace Editor
         // Destructor
         ~GameWindow();
 
+        // Updates the profiler button caption, the panel can also be toggled by its hotkey
+        void Update(float dt) override;
+
         IOBJECT(GameWindow);
 
     protected:
         Ref<GameView> mGameView; // Game view widget
 
         Ref<Button> mResolutionsButton; // Resolutions popup button
+        Ref<Button> mProfilerButton;    // Shows and hides the profiler panel over this window
 
         Map<String, SimulationDevice> mDevicesList; // List of devices
 
@@ -97,6 +101,12 @@ namespace Editor
     protected:
         // Initializes window
         void InitializeWindow();
+
+        // Shows or hides the profiler panel
+        void OnProfilerPressed();
+
+        // Puts the current profiler panel state into the button caption
+        void UpdateProfilerButtonCaption();
 
         // Initializes devices menu
         void InitializeDevicesMenu();
@@ -128,6 +138,7 @@ CLASS_FIELDS_META(Editor::GameWindow)
 {
     FIELD().PROTECTED().NAME(mGameView);
     FIELD().PROTECTED().NAME(mResolutionsButton);
+    FIELD().PROTECTED().NAME(mProfilerButton);
     FIELD().PROTECTED().NAME(mDevicesList);
     FIELD().PROTECTED().NAME(mDevicesMenu);
     FIELD().PROTECTED().NAME(mCurrentWindowSizeItem);
@@ -140,7 +151,10 @@ CLASS_METHODS_META(Editor::GameWindow)
 
     FUNCTION().PUBLIC().CONSTRUCTOR();
     FUNCTION().PUBLIC().CONSTRUCTOR(const GameWindow&);
+    FUNCTION().PUBLIC().SIGNATURE(void, Update, float);
     FUNCTION().PROTECTED().SIGNATURE(void, InitializeWindow);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnProfilerPressed);
+    FUNCTION().PROTECTED().SIGNATURE(void, UpdateProfilerButtonCaption);
     FUNCTION().PROTECTED().SIGNATURE(void, InitializeDevicesMenu);
     FUNCTION().PROTECTED().SIGNATURE(void, SetResolution, const Vec2I&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnCurrentWindowSize, bool);

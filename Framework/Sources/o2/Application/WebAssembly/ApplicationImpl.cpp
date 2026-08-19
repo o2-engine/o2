@@ -4,6 +4,7 @@
 
 #include "o2/Application/Application.h"
 #include "o2/Application/Input.h"
+#include "o2/Application/WebAssembly/WasmKeyboard.h"
 #include "o2/Events/EventSystem.h"
 #include "o2/Render/WebAssembly/OpenGL.h"
 #include "o2/Utils/Debug/Log/LogStream.h"
@@ -16,16 +17,22 @@
 // While a pointer is captured the browser keeps sending its move/up events to the canvas even
 // outside the window — without it a mouseup beyond the window edge is never delivered at all
 // and the cursor stays stuck "pressed". The capture auto-releases on pointerup.
+// The same click focuses the canvas, so key events reach the page even when the game runs
+// inside an iframe.
 // The right button is driven by pointer events with pointer capture instead of
 // mouse events: macOS browsers swallow the button-2 mouseup around the
 // contextmenu sequence, so an RMB press delivered via mousedown often never got
 // its release. Captured pointerup is delivered reliably.
 EM_JS(void, o2_EnablePointerCapture, (), {
     var canvas = document.getElementById('canvas');
-    if (!canvas || !canvas.setPointerCapture)
+    if (!canvas)
         return;
     canvas.addEventListener('pointerdown', function(e) {
-        try { canvas.setPointerCapture(e.pointerId); } catch (err) {}
+        try { canvas.focus(); } catch (err) {}
+        if (canvas.setPointerCapture)
+        {
+            try { canvas.setPointerCapture(e.pointerId); } catch (err) {}
+        }
         if (e.button === 2)
             _o2_web_alt_cursor_down(e.offsetX, e.offsetY);
     });
@@ -66,13 +73,14 @@ namespace o2
     {
         Vec2I gCanvasResolution = Vec2I(960, 640);
 
+        // Single-character "key" values are the typed character; named keys map to the
+        // control codes the desktop backends produce. EditBox consumes this via
+        // GetWasmUnicodeForKey - the browser is the only place that knows the layout
         void StoreKeyUnicode(KeyboardKey vk, const char* domKey)
         {
             if (vk < 0 || vk >= 256 || !domKey)
                 return;
 
-            // Single-character "key" values are the typed character; named keys
-            // map to the control codes the desktop backends produce
             unsigned char c0 = (unsigned char)domKey[0];
             if (c0 != 0 && domKey[1] == 0)
             {
@@ -88,76 +96,10 @@ namespace o2
                 return;
             }
 
-            if (std::strcmp(domKey, "Enter") == 0)          { gVkUnicode[vk] = 13; return; }
-            if (std::strcmp(domKey, "Backspace") == 0)      { gVkUnicode[vk] = 8; return; }
+            if (std::strcmp(domKey, "Enter") == 0)     { gVkUnicode[vk] = 13; return; }
+            if (std::strcmp(domKey, "Backspace") == 0) { gVkUnicode[vk] = 8; return; }
 
             gVkUnicode[vk] = 0;
-        }
-
-        KeyboardKey MapDomKeyToVK(const char* code)
-        {
-            if (!code) return 0;
-
-            if (std::strncmp(code, "Key", 3) == 0 && code[3] != 0)
-                return (KeyboardKey)code[3];
-
-            if (std::strncmp(code, "Digit", 5) == 0 && code[5] != 0)
-                return (KeyboardKey)code[5];
-
-            if (std::strcmp(code, "ArrowLeft") == 0)  return 0x25;
-            if (std::strcmp(code, "ArrowUp") == 0)    return 0x26;
-            if (std::strcmp(code, "ArrowRight") == 0) return 0x27;
-            if (std::strcmp(code, "ArrowDown") == 0)  return 0x28;
-
-            if (std::strcmp(code, "Space") == 0)     return 0x20;
-            if (std::strcmp(code, "Enter") == 0)     return 0x0D;
-            if (std::strcmp(code, "Escape") == 0)    return 0x1B;
-            if (std::strcmp(code, "Backspace") == 0) return 0x08;
-            if (std::strcmp(code, "Tab") == 0)       return 0x09;
-            if (std::strcmp(code, "Delete") == 0)    return 0x2E;
-            if (std::strcmp(code, "Home") == 0)      return 0x24;
-            if (std::strcmp(code, "End") == 0)       return 0x23;
-            if (std::strcmp(code, "PageUp") == 0)    return 0x21;
-            if (std::strcmp(code, "PageDown") == 0)  return 0x22;
-            if (std::strcmp(code, "Insert") == 0)    return 0x2D;
-
-            if (std::strcmp(code, "ShiftLeft") == 0 || std::strcmp(code, "ShiftRight") == 0) return 0x10;
-            if (std::strcmp(code, "ControlLeft") == 0 || std::strcmp(code, "ControlRight") == 0) return 0x11;
-            if (std::strcmp(code, "AltLeft") == 0 || std::strcmp(code, "AltRight") == 0) return 0x12;
-            if (std::strcmp(code, "MetaLeft") == 0 || std::strcmp(code, "MetaRight") == 0) return 0x11; // Cmd as Ctrl
-
-            // Punctuation — Windows VK_OEM_* codes, matching the desktop backends
-            if (std::strcmp(code, "Semicolon") == 0)    return 0xBA;
-            if (std::strcmp(code, "Equal") == 0)        return 0xBB;
-            if (std::strcmp(code, "Comma") == 0)        return 0xBC;
-            if (std::strcmp(code, "Minus") == 0)        return 0xBD;
-            if (std::strcmp(code, "Period") == 0)       return 0xBE;
-            if (std::strcmp(code, "Slash") == 0)        return 0xBF;
-            if (std::strcmp(code, "Backquote") == 0)    return 0xC0;
-            if (std::strcmp(code, "BracketLeft") == 0)  return 0xDB;
-            if (std::strcmp(code, "Backslash") == 0)    return 0xDC;
-            if (std::strcmp(code, "BracketRight") == 0) return 0xDD;
-            if (std::strcmp(code, "Quote") == 0)        return 0xDE;
-
-            if (std::strncmp(code, "Numpad", 6) == 0)
-            {
-                const char* rest = code + 6;
-                if (rest[0] >= '0' && rest[0] <= '9' && rest[1] == 0) return (KeyboardKey)(0x60 + (rest[0] - '0'));
-                if (std::strcmp(rest, "Multiply") == 0) return 0x6A;
-                if (std::strcmp(rest, "Add") == 0)      return 0x6B;
-                if (std::strcmp(rest, "Subtract") == 0) return 0x6D;
-                if (std::strcmp(rest, "Decimal") == 0)  return 0x6E;
-                if (std::strcmp(rest, "Divide") == 0)   return 0x6F;
-                if (std::strcmp(rest, "Enter") == 0)    return 0x0D;
-            }
-
-            if (std::strncmp(code, "F", 1) == 0 && code[1] >= '0' && code[1] <= '9')
-            {
-                int n = atoi(code + 1);
-                if (n >= 1 && n <= 12) return (KeyboardKey)(0x6F + n); // F1 = 0x70
-            }
-
-            return 0;
         }
 
         Vec2F GetCanvasCursorPos(double x, double y)
@@ -166,17 +108,21 @@ namespace o2
                          (float)(gCanvasResolution.y * 0.5 - y));
         }
 
+        // Unhandled keys are left to the browser (EM_FALSE): consuming them would kill the
+        // page shortcuts, while the handled ones must be consumed so arrows and space don't
+        // scroll the page under the canvas
         EM_BOOL OnKeyDown(int, const EmscriptenKeyboardEvent* e, void*)
         {
+            // Typing into the page's HTML inputs must not reach the engine
             if (o2_IsHtmlInputFocused())
                 return EM_FALSE;
 
-            if (Application::IsSingletonInitialzed())
-            {
-                KeyboardKey vk = MapDomKeyToVK(e->code);
-                StoreKeyUnicode(vk, e->key);
-                o2Input.OnKeyPressed(vk);
-            }
+            KeyboardKey key = DomKeyCodeToKeyboardKey(e->code);
+            if (key == 0 || !Application::IsSingletonInitialzed())
+                return EM_FALSE;
+
+            StoreKeyUnicode(key, e->key);
+            o2Input.OnKeyPressed(key);
             return EM_TRUE;
         }
 
@@ -185,9 +131,24 @@ namespace o2
             if (o2_IsHtmlInputFocused())
                 return EM_FALSE;
 
-            if (Application::IsSingletonInitialzed())
-                o2Input.OnKeyReleased(MapDomKeyToVK(e->code));
+            KeyboardKey key = DomKeyCodeToKeyboardKey(e->code);
+            if (key == 0 || !Application::IsSingletonInitialzed())
+                return EM_FALSE;
+
+            o2Input.OnKeyReleased(key);
             return EM_TRUE;
+        }
+
+        // Leaving the tab never delivers the keyup, so everything held stays pressed forever
+        EM_BOOL OnFocusLost(int, const EmscriptenFocusEvent*, void*)
+        {
+            if (!Application::IsSingletonInitialzed())
+                return EM_FALSE;
+
+            for (auto& key : o2Input.GetDownKeys())
+                o2Input.OnKeyReleased(key.keyCode);
+
+            return EM_FALSE;
         }
 
         // Button 2 is handled by the pointer-event path (o2_EnablePointerCapture)
@@ -303,6 +264,7 @@ namespace o2
 
         emscripten_set_keydown_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, nullptr, EM_TRUE, OnKeyDown);
         emscripten_set_keyup_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, nullptr, EM_TRUE, OnKeyUp);
+        emscripten_set_blur_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, nullptr, EM_TRUE, OnFocusLost);
         emscripten_set_mousedown_callback("#canvas", nullptr, EM_TRUE, OnMouseDown);
         emscripten_set_mouseup_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, nullptr, EM_TRUE, OnMouseUp);
         emscripten_set_mousemove_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, nullptr, EM_TRUE, OnMouseMove);

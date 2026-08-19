@@ -33,6 +33,14 @@ namespace o2
         // Updates listener from current render camera and players scrub state
         void Update(float dt);
 
+        // Forces the null audio backend: the whole sound API keeps working, but no audio device is
+        // opened and nothing reaches the speakers. Must be set before the sound system is created,
+        // so before Application::Initialize. Non-headless test runners use it to stay quiet
+        static void SetSilent(bool silent);
+
+        // Returns true when the null audio backend is forced
+        static bool IsSilent();
+
         // Sets master volume
         void SetVolume(float volume);
 
@@ -78,6 +86,8 @@ namespace o2
         bool mReady = false; // True if audio engine initialized successfully
 
         float mVolume = 1.0f; // Master volume
+
+        static bool sSilent; // Force the null backend, see SetSilent
 
         Vector<WeakRef<SoundPlayer>>   mPlayers;   // All registered sound players
         Vector<WeakRef<SoundListener>> mListeners; // All registered listener objects

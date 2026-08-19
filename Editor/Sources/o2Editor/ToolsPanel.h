@@ -12,6 +12,7 @@ namespace o2
     class CustomDropDown;
     class DropDown;
     class HorizontalLayout;
+    class Label;
     class Widget;
 }
 
@@ -47,6 +48,12 @@ namespace Editor
         // Removes tool from panel
         void RemoveToolToggle(const Ref<Toggle>& toggle);
 
+        // Switches game update speed to the next of the predefined scales
+        void IncreaseGameSpeed();
+
+        // Switches game update speed to the previous of the predefined scales
+        void DecreaseGameSpeed();
+
         // Updates panel
         void Update(float dt);
 
@@ -60,6 +67,11 @@ namespace Editor
         Ref<Toggle> mPlayToggle;  // Play toggle
         Ref<Toggle> mPauseToggle; // Pause toggle
         Ref<Button> mStepButton;  // Step button
+
+        Ref<Button> mSpeedMinusButton; // Slow down game speed button
+        Ref<Button> mSpeedPlusButton;  // Speed up game speed button
+        Ref<Label>  mSpeedLabel;       // Current game speed scale label
+        int         mSpeedIndex = 4;   // Index in game speed scales list (1.0 by default)
 
         Ref<HorizontalLayout> mToolsPanel;        // Tools panel layout
         Ref<ToggleGroup>      mToolsTogglesGroup; // Group for toggles
@@ -90,6 +102,9 @@ namespace Editor
 
         // Called when step button has pressed
         void OnStepPressed();
+
+        // Sets game speed scale by index in scales list: clamps, applies to application, updates label
+        void SetGameSpeedIndex(int index);
 
         friend class EditorApplication;
         friend class EditorConfig;

@@ -150,3 +150,40 @@ TEST(Mesh, SetMaxPolyCountResetsPolyCountAndPreservesVertexMax)
     EXPECT_EQ(m.GetMaxVertexCount(), 4u);
     EXPECT_EQ(m.vertexCount, 4u);
 }
+
+TEST(Mesh, ResizeReusesBuffersWhenNotGrowing)
+{
+    Mesh m;
+    m.Resize(100, 50);
+
+    const UInt8* vertexData = m.GetVertexData();
+    const VertexIndex* indexData = m.GetIndexes();
+
+    // Meshes refilled every frame at the same size must not hit the allocator
+    m.Resize(24, 12);
+
+    EXPECT_EQ(m.GetVertexData(), vertexData);
+    EXPECT_EQ(m.GetIndexes(), indexData);
+    EXPECT_GE(m.GetMaxVertexCount(), 24u);
+    EXPECT_GE(m.GetMaxPolyCount(), 12u);
+    EXPECT_EQ(m.vertexCount, 0u);
+    EXPECT_EQ(m.polyCount, 0u);
+}
+
+TEST(Mesh, ResizeGrowsBuffersAndKeepsThemUsable)
+{
+    Mesh m;
+    m.Resize(4, 2);
+    m.Resize(64, 32);
+
+    EXPECT_EQ(m.GetMaxVertexCount(), 64u);
+    EXPECT_EQ(m.GetMaxPolyCount(), 32u);
+
+    Vertex* vertices = m.GetVertices<Vertex>();
+    ASSERT_NE(vertices, nullptr);
+    vertices[63].x = 5.0f;
+    EXPECT_FLOAT_EQ(m.GetVertices<Vertex>()[63].x, 5.0f);
+
+    m.GetIndexes()[95] = 3;
+    EXPECT_EQ(m.GetIndexes()[95], 3u);
+}

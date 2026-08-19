@@ -1,11 +1,12 @@
 #include "o2/stdafx.h"
 #include "CameraActor.h"
 
-#include "o2/Scene/Scene.h"
-#include "o2/Scene/ISceneDrawable.h"
+#include "Component.h"
+#include "o2/Render/Gizmos.h"
 #include "o2/Render/Pipeline/Pipelines.h"
 #include "o2/Render/Render.h"
-#include "Component.h"
+#include "o2/Scene/ISceneDrawable.h"
+#include "o2/Scene/Scene.h"
 
 namespace o2
 {
@@ -262,6 +263,57 @@ namespace o2
 
         Actor::OnRemoveFromScene();
     }
+
+#if IS_EDITOR
+    void CameraActor::OnDrawGizmos()
+    {
+        o2Gizmos.SetColor(Gizmos::cameraColor);
+
+        if (mType != Type::Perspective)
+        {
+            Basis basis = transform->GetWorldNonSizedBasis();
+            Vec2F half = transform->GetSize2D()*0.5f;
+            float z = transform->GetWorldPosition().z;
+
+            o2Gizmos.DrawPolyLine({ Vec3F(Vec2F(-half.x, -half.y)*basis, z), Vec3F(Vec2F(half.x, -half.y)*basis, z),
+                                    Vec3F(Vec2F(half.x, half.y)*basis, z), Vec3F(Vec2F(-half.x, half.y)*basis, z) },
+                                  true);
+            return;
+        }
+
+        Vec3F position = transform->GetWorldPosition();
+        Quat rotation = transform->GetWorldRotation();
+        Vec3F right = rotation*Vec3F(1, 0, 0);
+        Vec3F up = rotation*Vec3F(0, 1, 0);
+        Vec3F forward = rotation*Vec3F(0, 0, -1);
+
+        Vec2F resolution = (Vec2F)o2Render.GetResolution();
+        float aspect = resolution.y > FLT_EPSILON ? resolution.x/resolution.y : 1.0f;
+        float tangent = Math::Sin(mFov*0.5f)/Math::Cos(mFov*0.5f);
+
+        Vec3F nearCorners[4], farCorners[4];
+        auto planeCorners = [&](float distance, Vec3F* corners)
+        {
+            Vec3F center = position + forward*distance;
+            Vec3F halfUp = up*(tangent*distance);
+            Vec3F halfRight = right*(tangent*distance*aspect);
+
+            corners[0] = center - halfRight - halfUp;
+            corners[1] = center + halfRight - halfUp;
+            corners[2] = center + halfRight + halfUp;
+            corners[3] = center - halfRight + halfUp;
+        };
+
+        planeCorners(mNearClip, nearCorners);
+        planeCorners(mFarClip, farCorners);
+
+        o2Gizmos.DrawPolyLine({ nearCorners[0], nearCorners[1], nearCorners[2], nearCorners[3] }, true);
+        o2Gizmos.DrawPolyLine({ farCorners[0], farCorners[1], farCorners[2], farCorners[3] }, true);
+
+        for (int i = 0; i < 4; i++)
+            o2Gizmos.DrawLine(nearCorners[i], farCorners[i]);
+    }
+#endif
 
 }
 

@@ -16,6 +16,8 @@ Scene selection lock (4). It is sometimes useful to disable scene selection for 
 
 A chain link icon (8) may also be shown — it means the actor was created from a prototype. Clicking this icon highlights the prototype in the Assets window.
 
+Names of prototype objects are colored. All objects of one prototype instance share the color; a prototype nested into another prototype gets the next color, so the nesting is visible at a glance. Colors cycle as the nesting goes deeper.
+
 Actors can be moved via drag'n'drop. Press the mouse on the desired actor (or several) and start moving. Release the mouse over the target place.
 
 <img src="tree_context.png" width="20%">

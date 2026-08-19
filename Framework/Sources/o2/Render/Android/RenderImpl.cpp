@@ -227,10 +227,15 @@ namespace o2
 
         size_t stride = mCurrentBatchVertexType.GetStride();
 
-        glBufferSubData(GL_ARRAY_BUFFER, mVertexBufferIdx * stride,
-                        mLastDrawVertex * stride, mVertexData);
-        glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, mIndexBufferIdx * sizeof(VertexIndex),
-                        mLastDrawIdx * sizeof(VertexIndex), mVertexIndexData);
+        // Orphaned per-batch stores: glBufferSubData into a buffer with pending draws makes the
+        // Mali driver ghost the whole buffer (copies the full 2.4 MB per batch). Fresh stores
+        // avoid it; indexes come from the batcher pool-buffer-absolute, rebase them to this store
+        for (UInt i = 0; i < mLastDrawIdx; i++)
+            mVertexIndexData[i] -= mVertexBufferIdx;
+
+        glBufferData(GL_ARRAY_BUFFER, mLastDrawVertex * stride, mVertexData, GL_STREAM_DRAW);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, mLastDrawIdx * sizeof(VertexIndex),
+                     mVertexIndexData, GL_STREAM_DRAW);
         GL_CHECK_ERROR();
 
         glActiveTexture(GL_TEXTURE0);
@@ -239,7 +244,7 @@ namespace o2
         GL_CHECK_ERROR();
 
         glDrawElements(primitiveType[(int)mCurrentPrimitiveType], mLastDrawIdx,
-                       GL_UNSIGNED_INT, (void*)(mIndexBufferIdx * sizeof(VertexIndex)));
+                       GL_UNSIGNED_INT, (void*)0);
         GL_CHECK_ERROR();
 
         mVertexBufferIdx += mLastDrawVertex;
@@ -376,6 +381,9 @@ namespace o2
                   (int)rect.Width(), (int)rect.Height());
     }
 
+    void Render::PlatformFlushPendingClear()
+    {} // Clears are immediate on GL, nothing is pending
+
     void Render::PlatformBindRenderTarget(const TextureRef& renderTarget)
     {
         if (renderTarget)
@@ -452,6 +460,43 @@ namespace o2
 
         GL_CHECK_ERROR();
     }
+
+    // Android already draws on the GLSurfaceView GL thread (its onDrawFrame), not on the UI thread, and
+    // that view owns the EGL context and the swap. Submitting from one more thread would mean taking
+    // the context over from it
+
+    // This backend draws while the frame is recorded: state changes, clears and material binds go
+    // straight to the GPU API on the main thread, so a frame can't be replayed elsewhere yet. Moving
+    // submission to the render thread needs the whole frame recorded first (and the context handed
+    // over to that thread), after which these hooks replace the direct calls
+    bool Render::PlatformSupportsMultithreadedRender()
+    {
+        return false;
+    }
+
+    void Render::PlatformBeginRecording()
+    {}
+
+    void Render::PlatformSnapshotDrawState(RenderDrawCommand& command)
+    {}
+
+    void Render::PlatformAcquireFrameTarget()
+    {}
+
+    void Render::PlatformBeginThreaded()
+    {}
+
+    void Render::PlatformReplayDrawCommand(const RenderDrawCommand& command)
+    {}
+
+    void Render::PlatformEndThreadedPass()
+    {}
+
+    void Render::PlatformEndThreaded()
+    {}
+
+    void Render::PlatformEndPass()
+    {}
 }
 
 #endif // PLATFORM_ANDROID

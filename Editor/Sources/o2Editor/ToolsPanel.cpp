@@ -8,8 +8,10 @@
 #include "o2/Scene/UI/UIManager.h"
 #include "o2/Scene/UI/Widget.h"
 #include "o2/Scene/UI/Widgets/Button.h"
+#include "o2/Render/Text.h"
 #include "o2/Scene/UI/Widgets/DropDown.h"
 #include "o2/Scene/UI/Widgets/HorizontalLayout.h"
+#include "o2/Scene/UI/Widgets/Label.h"
 #include "o2/Scene/UI/Widgets/Toggle.h"
 #include "o2/Utils/Tasks/TaskManager.h"
 #include "o2Editor/Dialogs/EditNameDlg.h"
@@ -111,14 +113,34 @@ namespace Editor
 
         mStepButton = o2UI.CreateWidget<Button>("step");
         mStepButton->onClick = [this]() { OnStepPressed(); };
-        *mStepButton->layout = WidgetLayout::Based(BaseCorner::Right, Vec2F(20, 20), Vec2F(-5, 1));
+        *mStepButton->layout = WidgetLayout::Based(BaseCorner::Right, Vec2F(20, 20), Vec2F(-75, 1));
         mStepButton->shortcut = ShortcutKeys({VK_F10});
         mPlayPanel->AddChild(mStepButton);
+
+        // управление скоростью игры: [-] [1.0] [+], шкала в SetGameSpeedIndex
+        mSpeedMinusButton = o2UI.CreateWidget<Button>("minus");
+        mSpeedMinusButton->onClick = [this]() { DecreaseGameSpeed(); };
+        *mSpeedMinusButton->layout = WidgetLayout::Based(BaseCorner::Right, Vec2F(14, 20), Vec2F(-52, 1));
+        mPlayPanel->AddChild(mSpeedMinusButton);
+
+        mSpeedLabel = mmake<Label>();
+        auto speedText = mmake<Text>("stdFont.ttf");
+        speedText->horAlign = HorAlign::Middle;
+        speedText->verAlign = VerAlign::Middle;
+        mSpeedLabel->AddLayer("text", speedText, Layout::BothStretch());
+        mSpeedLabel->SetText("1.0");
+        *mSpeedLabel->layout = WidgetLayout::Based(BaseCorner::Right, Vec2F(30, 20), Vec2F(-23, 1));
+        mPlayPanel->AddChild(mSpeedLabel);
+
+        mSpeedPlusButton = o2UI.CreateWidget<Button>("plus");
+        mSpeedPlusButton->onClick = [this]() { IncreaseGameSpeed(); };
+        *mSpeedPlusButton->layout = WidgetLayout::Based(BaseCorner::Right, Vec2F(14, 20), Vec2F(-5, 1));
+        mPlayPanel->AddChild(mSpeedPlusButton);
 
         auto playPanelPlayStateAnim = mmake<AnimationClip>();
 
         *playPanelPlayStateAnim->AddTrack<float>("layout/offsetRight") =
-            AnimationTrack<float>::EaseInOut(59.0f, 73.0f, 0.3f);
+            AnimationTrack<float>::EaseInOut(129.0f, 143.0f, 0.3f);
 
         auto visiblePauseBtnAnim = playPanelPlayStateAnim->AddTrack<bool>("child/pause/enabled");
         visiblePauseBtnAnim->AddKey(0.0f, false);
@@ -216,6 +238,28 @@ namespace Editor
         o2EditorApplication.SetPlaying(true);
         o2EditorApplication.isPaused = true;
         o2EditorApplication.step = true;
+    }
+
+    void ToolsPanel::IncreaseGameSpeed()
+    {
+        SetGameSpeedIndex(mSpeedIndex + 1);
+    }
+
+    void ToolsPanel::DecreaseGameSpeed()
+    {
+        SetGameSpeedIndex(mSpeedIndex - 1);
+    }
+
+    void ToolsPanel::SetGameSpeedIndex(int index)
+    {
+        static const float scales[10] = { 0.1f, 0.25f, 0.5f, 0.75f, 1.0f, 1.5f, 2.0f, 3.0f, 5.0f, 10.0f };
+
+        mSpeedIndex = Math::Clamp(index, 0, 9);
+        float scale = scales[mSpeedIndex];
+
+        o2EditorApplication.SetGameTimeScale(scale);
+        mSpeedLabel->SetText(Math::Equals(scale, Math::Floor(scale)) ? String::Format("%.1f", scale)
+                                                                     : String::Format("%g", scale));
     }
 
 }

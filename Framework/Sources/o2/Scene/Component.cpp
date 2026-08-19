@@ -224,6 +224,13 @@ namespace o2
         OnRemoveFromScene();
     }
 
+#if IS_EDITOR
+    void Component::DrawGizmos()
+    {
+        OnDrawGizmos();
+    }
+#endif
+
     void Component::SetOwnerActor(const Ref<Actor>& actor)
     {
         if (mOwner == actor)

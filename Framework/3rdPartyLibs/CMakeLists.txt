@@ -119,14 +119,23 @@ endif()
 
 # tracy
 if (O2_TRACY)
-    add_subdirectory(tracy)
-
+    # These must be set BEFORE add_subdirectory(tracy) so Tracy's own option() calls pick them up on the
+    # first configure — otherwise TracyClient is compiled without on-demand and the client buffers events
+    # from startup, growing memory even while no profiler is connected
     set(TRACY_ENABLE ON CACHE BOOL "Enable tracy" FORCE)
-    set(TRACY_CALLSTACK ON CACHE BOOL "Enable tracy callstack" FORCE)
     set(TRACY_ON_DEMAND ON CACHE BOOL "Enable tracy on demand" FORCE)
 
-    add_compile_definitions(TRACY_ENABLE)
-    
+    # NOT TRACY_CALLSTACK: it is not "callstack support" (that is automatic), it forces every single
+    # ZoneScoped to capture a callstack. Each captured frame then has to be symbolized by the client
+    # through dladdr, which walks the whole symbol table of the debug .so - on android that pegs a
+    # core in the symbol worker and starves the game. Use ZoneScopedS(depth) where a stack is needed
+    set(TRACY_CALLSTACK OFF CACHE BOOL "Enable tracy callstack" FORCE)
+    set(TRACY_FIBERS ON CACHE BOOL "Enable tracy fibers (coroutines as fiber tracks)" FORCE)
+
+    add_subdirectory(tracy)
+
+    add_compile_definitions(TRACY_ENABLE TRACY_ON_DEMAND TRACY_FIBERS)
+
     set_target_properties(TracyClient PROPERTIES FOLDER o2/3rdPartyLibs)
 endif()
 
@@ -135,6 +144,40 @@ set(BOX2D_BUILD_STATIC TRUE)
 set(BOX2D_VERSION 1)
 add_subdirectory(Box2D)
 
+# box3d (git submodule) — build the core lib inline (like quickjs), NOT via upstream's own CMake,
+# which pulls in samples/tests and forces a static MSVC runtime that clashes with o2's.
+# SIMD is auto-selected in src/core.h (SSE2 on x86_64, NEON on aarch64); no flags needed.
+file(GLOB BOX3D_SOURCES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/box3d/src/*.c")
+add_library(box3d STATIC ${BOX3D_SOURCES})
+target_include_directories(box3d
+    PUBLIC  "${CMAKE_CURRENT_SOURCE_DIR}/box3d/include"
+    PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/box3d/src")
+set_target_properties(box3d PROPERTIES
+    C_STANDARD 17
+    C_STANDARD_REQUIRED YES
+    C_EXTENSIONS YES)
+if (EMSCRIPTEN)
+    # emscripten's <emmintrin.h> compat requires -msse2 on top of -msimd128; scalar path is safer
+    target_compile_definitions(box3d PRIVATE BOX3D_DISABLE_SIMD)
+endif()
+
+# libm for sqrtf etc. on non-Apple Unix; threads for box3d's timer/scheduler primitives.
+if (UNIX AND NOT APPLE AND NOT EMSCRIPTEN)
+    target_link_libraries(box3d PUBLIC m)
+endif()
+if (NOT WIN32 AND NOT EMSCRIPTEN)
+    set(THREADS_PREFER_PTHREAD_FLAG ON)
+    find_package(Threads REQUIRED)
+    target_link_libraries(box3d PUBLIC Threads::Threads)
+endif()
+
+# Vendored third-party code: never fail the build on toolchain warnings.
+if (MSVC)
+    target_compile_options(box3d PRIVATE /w)
+else()
+    target_compile_options(box3d PRIVATE -w)
+endif()
+
 # other libraries
 add_subdirectory(libpng)
 add_subdirectory(zlib)
@@ -142,6 +185,7 @@ add_subdirectory(FreeType)
 add_subdirectory(pugixml)
 add_subdirectory(boost)
 add_subdirectory(miniaudio)
+add_subdirectory(pl_mpeg)
 
 # spine
 set(SPINE_SANITIZE OFF)
@@ -149,6 +193,7 @@ add_subdirectory(Spine)
 
 if(MSVC)
     target_compile_options(Box2D PRIVATE ${O2_MSVC_MP_FLAG})
+    target_compile_options(box3d PRIVATE ${O2_MSVC_MP_FLAG})
     if (TARGET jerry-core)
         target_compile_options(jerry-core PRIVATE ${O2_MSVC_MP_FLAG})
         target_compile_options(jerry-ext PRIVATE ${O2_MSVC_MP_FLAG})
@@ -160,9 +205,11 @@ if(MSVC)
     target_compile_options(pugixml PRIVATE ${O2_MSVC_MP_FLAG})
     target_compile_options(spine-cpp PRIVATE ${O2_MSVC_MP_FLAG})
     target_compile_options(miniaudio PRIVATE ${O2_MSVC_MP_FLAG})
+    target_compile_options(pl_mpeg PRIVATE ${O2_MSVC_MP_FLAG})
 endif()
 
 set_target_properties(Box2D PROPERTIES FOLDER o2/3rdPartyLibs)
+set_target_properties(box3d PROPERTIES FOLDER o2/3rdPartyLibs)
 if (TARGET jerry-core)
     set_target_properties(jerry-core PROPERTIES FOLDER o2/3rdPartyLibs)
     set_target_properties(jerry-ext PROPERTIES FOLDER o2/3rdPartyLibs)
@@ -175,6 +222,7 @@ set_target_properties(FreeType PROPERTIES FOLDER o2/3rdPartyLibs)
 set_target_properties(pugixml PROPERTIES FOLDER o2/3rdPartyLibs)
 set_target_properties(spine-cpp PROPERTIES FOLDER o2/3rdPartyLibs)
 set_target_properties(miniaudio PROPERTIES FOLDER o2/3rdPartyLibs)
+set_target_properties(pl_mpeg PROPERTIES FOLDER o2/3rdPartyLibs)
 
 if(MSVC)
     set_target_properties(boost_stacktrace_windbg_cached PROPERTIES FOLDER o2/3rdPartyLibs)

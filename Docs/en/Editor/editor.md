@@ -12,7 +12,7 @@ Windows and elements of the default layout:
 
 ![editor](editor.png)
 
-- (1) scene launch panel. Pressing Play expands it, allowing to pause the game (F11) and step one frame (F10). The device dropdown from the screenshot is outdated and removed — the emulated resolution is selected in the Game window.
+- (1) scene launch panel. Pressing Play expands it, allowing to pause the game (F11) and step one frame (F10). On the right of the panel is the game speed control: "−"/"+" buttons with the current multiplier between them switch the scene update speed over the scale 0.1, 0.25, 0.5, 0.75, 1.0, 1.5, 2, 3, 5, 10 (only the game slows down or speeds up, the editor updates as usual). The same actions live in the Run menu: Play - stop (P), Frame step (Ctrl/Cmd+P), Speed up (Ctrl/Cmd+"+"), Slow down (Ctrl/Cmd+"−"). The device dropdown from the screenshot is outdated and removed — the emulated resolution is selected in the Game window.
 
 - (2) tools panel. Selects the active tool, which switches the editing mode in the scene
 

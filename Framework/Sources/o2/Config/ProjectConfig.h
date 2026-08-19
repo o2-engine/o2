@@ -1,6 +1,7 @@
 #pragma once
 
 #include "o2/Config/PhysicsConfig.h"
+#include "o2/Config/Physics3DConfig.h"
 #include "o2/Utils/Property.h"
 #include "o2/Utils/Serialization/Serializable.h"
 #include "o2/Utils/Singleton.h"
@@ -26,6 +27,8 @@ namespace o2
 
     public:
         PhysicsConfig physics; // Physics world config @SERIALIZABLE
+
+        Physics3DConfig physics3D; // 3D physics world config @SERIALIZABLE
 
     public:
         // Default constructor
@@ -97,6 +100,7 @@ CLASS_FIELDS_META(o2::ProjectConfig)
     FIELD().PUBLIC().NAME(projectName);
     FIELD().PUBLIC().NAME(currentPlatform);
     FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().NAME(physics);
+    FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().NAME(physics3D);
     FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().NAME(mProjectName);
     FIELD().PROTECTED().NAME(mPlatform);
     FIELD().PROTECTED().NAME(mLoadedState);

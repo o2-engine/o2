@@ -34,6 +34,30 @@ namespace o2
         static id<MTLDepthStencilState> depthStateDisabled;       // Compare always, no write
         static id<MTLDepthStencilState> depthStateEnabled;        // Compare less-equal, write
         static id<MTLDepthStencilState> depthStateEnabledNoWrite; // Compare less-equal, no write
+
+        // Open render pass of the frame on the single-threaded path; the threaded one keeps its own
+        static id<MTLRenderCommandEncoder> renderEncoder;
+        static id<MTLTexture>              encoderColorTexture; // Attachments the open pass was created for
+        static id<MTLTexture>              encoderDepthTexture;
+        static id<MTLTexture>              encoderExtraTextures[3];
+
+        // Frame target acquired on the main thread and consumed by the render thread (multithreaded render)
+        static MTLRenderPassDescriptor* threadRenderPassDescriptor; // Back-buffer render pass descriptor
+        static id<CAMetalDrawable>      threadDrawable;             // Back-buffer drawable to present
+        static id<MTLTexture>           threadDepthTexture;         // Back-buffer depth texture
+        static float                    threadGraphicsScale;        // Graphics scale captured on the main thread
+
+        // Open render pass of the replayed frame. Consecutive commands that render into the same
+        // attachments share it: a pass per draw call would make the GPU reload and store the whole
+        // render target for every batch
+        static id<MTLRenderCommandEncoder> threadEncoder;
+        static id<MTLTexture>              threadEncoderColorTexture; // Attachments the open pass was created for
+        static id<MTLTexture>              threadEncoderDepthTexture;
+        static id<MTLTexture>              threadEncoderExtraTextures[3];
+
+        // Limits how many frames the CPU may queue ahead of the GPU, so the render thread never blocks
+        // on GPU completion (and thus on vsync) each frame — signaled from the command buffer's handler
+        static dispatch_semaphore_t     frameSemaphore;
     };
 
     struct MTLTextureImpl
