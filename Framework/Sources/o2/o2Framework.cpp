@@ -138,6 +138,7 @@ extern void __RegisterClass__o2__SingleSpriteParticleSource();
 extern void __RegisterClass__o2__MultiSpriteParticleSource();
 extern void __RegisterClass__o2__ParticlesEffect();
 extern void __RegisterClass__o2__ParticlesGravityEffect();
+extern void __RegisterClass__o2__ParticlesDampingEffect();
 extern void __RegisterClass__o2__ParticlesColorEffect();
 extern void __RegisterClass__o2__ParticlesRandomColorEffect();
 extern void __RegisterClass__o2__ParticlesSizeEffect();
@@ -425,6 +426,7 @@ extern void InitializeTypeso2Framework()
     __RegisterClass__o2__MultiSpriteParticleSource();
     __RegisterClass__o2__ParticlesEffect();
     __RegisterClass__o2__ParticlesGravityEffect();
+    __RegisterClass__o2__ParticlesDampingEffect();
     __RegisterClass__o2__ParticlesColorEffect();
     __RegisterClass__o2__ParticlesRandomColorEffect();
     __RegisterClass__o2__ParticlesSizeEffect();

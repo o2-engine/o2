@@ -33,6 +33,13 @@ namespace o2
             p.velocity += v;
     }
 
+    void ParticlesDampingEffect::Update(float dt, ParticlesEmitter* emitter)
+    {
+        float factor = Math::Clamp01(1.0f - mDamping*dt);
+        for (auto& p : GetParticlesDirect(emitter))
+            p.velocity *= factor;
+    }
+
     ParticlesColorEffect::ParticlesColorEffect()
     {
         colorGradient = mmake<ColorGradient>();
@@ -382,6 +389,8 @@ namespace o2
 DECLARE_CLASS(o2::ParticlesEffect, o2__ParticlesEffect);
 
 DECLARE_CLASS(o2::ParticlesGravityEffect, o2__ParticlesGravityEffect);
+
+DECLARE_CLASS(o2::ParticlesDampingEffect, o2__ParticlesDampingEffect);
 
 DECLARE_CLASS(o2::ParticlesColorEffect, o2__ParticlesColorEffect);
 

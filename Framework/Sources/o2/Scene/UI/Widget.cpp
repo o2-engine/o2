@@ -4,6 +4,7 @@
 #include "o2/Application/Input.h"
 #include "o2/Render/Render.h"
 #include "o2/Scene/Component.h"
+#include "o2/Scene/Components/AnimationComponent.h"
 #include "o2/Scene/Scene.h"
 #include "o2/Scene/SceneLayer.h"
 #include "o2/Scene/UI/UIManager.h"
@@ -128,6 +129,14 @@ namespace o2
         // Слои при копировании переустанавливаются с прозрачностью 1: пересчёт
         // возвращает скопированную прозрачность виджета в drawable'ы слоёв
         UpdateTransparency();
+
+        // components are cloned by the base actor before widget layers exist - animation
+        // states bound to layer targets must rebind now that layers are in place
+        for (auto& comp : mComponents)
+        {
+            if (auto animComponent = DynamicCast<AnimationComponent>(comp))
+                animComponent->ReattachAnimationStates();
+        }
     }
 
     Widget::~Widget()
@@ -548,6 +557,14 @@ namespace o2
         RetargetStatesAnimations();
         SetEnabledForcible(mEnabled);
         UpdateLayersDrawingSequence();
+
+        // components deserialize before widget layers - rebind animation states
+        // so tracks targeting layers find them
+        for (auto& comp : mComponents)
+        {
+            if (auto animComponent = DynamicCast<AnimationComponent>(comp))
+                animComponent->ReattachAnimationStates();
+        }
     }
 
     void Widget::OnDeserializedDelta(const DataValue& node, const IObject& origin)

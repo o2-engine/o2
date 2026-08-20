@@ -34,3 +34,22 @@ TEST(UID, DistinctHighBitIdsStayDistinct)
     EXPECT_FALSE(first == second);
     EXPECT_TRUE(first != UID::empty);
 }
+
+// Asset ids must stay unique even when someone reseeds the global rand() with a
+// fixed seed (particle emitters do) - identical ids in different runs corrupted
+// prototype references
+TEST(UID, UniqueAcrossGlobalRandReseed)
+{
+    srand(42);
+    UID first;
+    srand(42);
+    UID second;
+
+    EXPECT_NE(first, second);
+}
+
+TEST(UID, RandomizeProducesDifferentIds)
+{
+    UID a, b;
+    EXPECT_NE(a, b);
+}
