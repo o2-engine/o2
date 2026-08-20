@@ -1,139 +1,140 @@
 #pragma once
 
+#include "Lexer.h"
 #include "SyntaxTree.h"
 
-bool EndsWith(const string& str, const string& ends);
-bool StartsWith(const string& str, const string& starts);
-string& Trim(string& str, const string& chars = " ");
-string& TrimEnd(string& str, const string& chars = " ");
-string& TrimStart(string& str, const string& chars = " ");
-void Split(const string& s, char delim, vector<string>& elems);
-vector<string> Split(const string& s, char delim);
-
+// Fast single-pass C++ parser: tokenizes the source, then does recursive descent over
+// the tokens. Deliberately not a full C++ parser — it recognizes only the constructs
+// the reflection generator needs: namespaces, classes and structs, enums, class members,
+// reflection macros (PROPERTY, ATTRIBUTES, ...) and #if/#ifdef conditions.
+//
+// Comments and ATTRIBUTES(...) macros are attached to members during parsing: a comment
+// on the member's last line or directly above it, an ATTRIBUTES macro from the line above.
 class CppSyntaxParser
 {
 public:
-    CppSyntaxParser();
-    ~CppSyntaxParser();
+    // Reads and parses file from disk into syntax tree
+    void ParseFile(SyntaxFile& file, const string& filePath);
 
-    void ParseFile(SyntaxFile& file, const string& filePath, const TimeStamp& fileEditDate);
+    // Parses source text into syntax tree
+    void ParseSource(SyntaxFile& file, const string& filePath, const string& source);
 
-protected:
-    typedef void(CppSyntaxParser::* ParserDelegate)(SyntaxSection&, int&, SyntaxProtectionSection&);
-
-    struct ExpressionParser
+private:
+    // Parsing state of one section body: protection section and pending attachments
+    struct SectionContext
     {
-        const char* keyWord = nullptr;
-        bool           isPossibleInClass = true;
-        bool           isPossibleInNamespace = true;
-        ParserDelegate parser;
+        SyntaxSection* section = nullptr;
 
-        ExpressionParser() {}
-        ExpressionParser(const char* keyWord, ParserDelegate parser, bool isPossibleInClass = true,
-                         bool isPossibleInNamespace = true);
+        SyntaxProtectionSection protection = SyntaxProtectionSection::Public;
+
+        ISyntaxExpression* lastMember = nullptr;        // Last registered member, target for trailing comments
+        SyntaxComment*     pendingComment = nullptr;    // Comment waiting for the next member
+        SyntaxAttributes*  pendingAttributes = nullptr; // ATTRIBUTES(...) waiting for the next member
     };
-    typedef vector<ExpressionParser*> ParsersVec;
 
-protected:
-    string      mSourcesPath;
-    ParsersVec  mParsers;
+    // Parsed type: text is the raw source slice, const is stripped into a flag
+    struct ParsedType
+    {
+        string text;
 
-    SyntaxDefineIf* mCurrentDefine = nullptr;
+        bool isConst = false;
+        bool isMutable = false;
+        bool valid = false;
+    };
 
-protected:
-    void InitializeParsers();
+private:
+    const string* mSource = nullptr; // Parsed source text, owned by the current SyntaxFile
+    vector<Token> mTokens;           // Token stream of the current source
+    int           mPos = 0;          // Current token index
 
-    void ParseSyntaxSection(SyntaxSection& section, const string& source, SyntaxFile& file,
-                            SyntaxProtectionSection protectionSection);
+    SyntaxFile*      mFile = nullptr;  // Currently parsed file
+    SyntaxNodeArena* mArena = nullptr; // Arena of the currently parsed file
 
-    int GetLineNumber(const string& data, int caret);
+    vector<SyntaxDefineIf*> mDefinesStack; // Stack of nested #if conditions; back() is the active one
 
-    string ReadWord(const string& data, int& caret,
-                    const char* breakSymbols = " \n\r(){}.,;+-*/=@!|&*:~\\",
-                    const char* skipSymbols = " \n\r",
-                    bool checkBraces = true, bool checkFgBraces = true, bool checkTrBraces = true);
+private:
+    const Token& Tok(int i) const { return mTokens[i]; }
+    bool AtEnd(int i) const { return i >= (int)mTokens.size(); }
+    bool AtEnd() const { return AtEnd(mPos); }
 
-    string ReadBlock(const string& data, int& caret);
+    // Returns raw source text from first token begin to last token end (exclusive index)
+    string Slice(int beginTokenIdx, int endTokenIdx) const;
 
-    string ReadBraces(const string& data, int& caret);
+    // Returns index of the next non-comment token starting from i
+    int NextSignificant(int i) const;
 
-    char GetNextSymbol(const string& data, int begin, const char* skipSymbols = " \n\r\t()[]{}");
+    // Advances mPos over comment tokens
+    void SkipComments();
 
-    vector<string> Split(const string& data, char splitSymbol);
+    // Returns index of the token after the matching closing angle bracket; i points at '<'
+    int SkipBalancedAngles(int i) const;
 
-    void RemoveComments(string& input);
+    // Returns index of the matching closing parenthesis; i points at '('
+    int FindMatchingParen(int i) const;
 
-    void TryParseBlock(SyntaxSection& section, const string& block, int blockBegin, int& caret,
-                       SyntaxProtectionSection& protectionSection);
+    // Returns the active #if condition or nullptr
+    SyntaxDefineIf* CurrentDefine() const;
 
-    bool IsFunction(const string& data);
+    // Parses tokens of one section body; stops at matching '}' (not consumed) or at end
+    void ParseSectionBody(SectionContext& ctx);
 
-    SyntaxVariable* ParseVariable(const string& data, SyntaxProtectionSection& protectionSection, int begin, int end);
+    void ParseNamespace(SectionContext& ctx);
 
-    SyntaxFunction* ParseFunction(const string& data, SyntaxProtectionSection& protectionSection, int begin, int end);
+    void ParseClassOrStruct(SectionContext& ctx, bool isClass, const string& templates);
 
-    void ParseNamespace(SyntaxSection& section, int& caret, SyntaxProtectionSection& protectionSection);
+    void ParseTemplate(SectionContext& ctx);
 
-    void ParseComment(SyntaxSection& section, int& caret, SyntaxProtectionSection& protectionSection);
+    void ParseEnum(SectionContext& ctx);
 
-    void ParseMultilineComment(SyntaxSection& section, int& caret, SyntaxProtectionSection& protectionSection);
+    void ParseTypedef(SectionContext& ctx);
 
-    void ParsePragma(SyntaxSection& section, int& caret, SyntaxProtectionSection& protectionSection);
+    void ParseUsing(SectionContext& ctx);
 
-    void ParseInclude(SyntaxSection& section, int& caret, SyntaxProtectionSection& protectionSection);
+    void ParseFriend();
 
-    void ParseDefine(SyntaxSection& section, int& caret, SyntaxProtectionSection& protectionSection);
+    void ParseLineComments(SectionContext& ctx);
 
-    void ParseUndef(SyntaxSection& section, int& caret, SyntaxProtectionSection& protectionSection);
+    void ParseBlockComment(SectionContext& ctx);
 
-    void ParseIfdefMacros(SyntaxSection& section, int& caret, SyntaxProtectionSection& protectionSection);
+    // Attaches a just-parsed comment: trailing to the last member or pending for the next one
+    void PlaceComment(SectionContext& ctx, SyntaxComment* comment, int startLine);
 
-    void ParseIfMacros(SyntaxSection& section, int& caret, SyntaxProtectionSection& protectionSection);
+    void HandleDirective(SectionContext& ctx);
 
-    void ParseEndIfMacros(SyntaxSection& section, int& caret, SyntaxProtectionSection& protectionSection);
+    void ParseAttributeDefinition(SectionContext& ctx, bool shortDefinition);
 
-    void ParseElifMacros(SyntaxSection& section, int& caret, SyntaxProtectionSection& protectionSection);
+    void ParseAttributesMacro(SectionContext& ctx);
 
-    void ParseElseMacros(SyntaxSection& section, int& caret, SyntaxProtectionSection& protectionSection);
+    // Parses PROPERTY/GETTER/SETTER/ACCESSOR macro into a variable named by the second argument
+    void ParsePropertyMacro(SectionContext& ctx);
 
-    void ParseMetaClass(SyntaxSection& section, int& caret, SyntaxProtectionSection& protectionSection);
+    // Reads macro arguments between parentheses, splitting by top-level commas;
+    // on return mPos points after the closing parenthesis. Returns false if no parentheses
+    bool ReadMacroArguments(vector<string>& args);
 
-    void ParseClass(SyntaxSection& section, int& caret, SyntaxProtectionSection& protectionSection);
+    // Skips tokens until top-level ';' inclusive; stops before an unmatched '}'
+    void SkipToSemicolon();
 
-    void ParseStruct(SyntaxSection& section, int& caret, SyntaxProtectionSection& protectionSection);
+    // Returns ';' token line after skipping, for expressions whose line is their end line
+    int SkipToSemicolonLine();
 
-    void ParseClassOrStruct(SyntaxSection& section, int& caret, SyntaxProtectionSection& protectionSection,
-                            bool isClass, bool isMeta, const string& templates);
+    // Parses one member declaration (variable or function), consuming its tokens.
+    // A non-function templated declaration is skipped
+    void ParseMemberDeclaration(SectionContext& ctx, const string& templates = "");
 
-    void ParseTemplate(SyntaxSection& section, int& caret, SyntaxProtectionSection& protectionSection);
+    // Parses declaration signature tokens [first, sigEnd) into a variable or function
+    void ParseMemberSignature(SectionContext& ctx, int first, int sigEnd, const string& templates,
+                              int declBegin, int endLine);
 
-    void ParseTypedef(SyntaxSection& section, int& caret, SyntaxProtectionSection& protectionSection);
+    // Parses a type at token index i, advancing it: [const|mutable]* core<...>::chain [*&]*
+    ParsedType ParseType(int& i, int endTok) const;
 
-    void ParseEnum(SyntaxSection& section, int& caret, SyntaxProtectionSection& protectionSection);
+    // Parses function parameters from '(' at parenIdx into the function
+    void ParseFunctionParameters(SyntaxFunction* function, int parenIdx, int sigEnd);
 
-    void ParseUsing(SyntaxSection& section, int& caret, SyntaxProtectionSection& protectionSection);
+    // Parses one function parameter from token range [first, last)
+    SyntaxVariable* ParseParameter(int first, int last);
 
-    void ParsePublicSection(SyntaxSection& section, int& caret, SyntaxProtectionSection& protectionSection);
-
-    void ParsePrivateSection(SyntaxSection& section, int& caret, SyntaxProtectionSection& protectionSection);
-
-    void ParseProtectedSection(SyntaxSection& section, int& caret, SyntaxProtectionSection& protectionSection);
-
-    void ParseFriend(SyntaxSection& section, int& caret, SyntaxProtectionSection& protectionSection);
-
-    void ParseAttributeCommentDef(SyntaxSection& section, int& caret, SyntaxProtectionSection& protectionSection);
-
-    void ParseAttributeShortDef(SyntaxSection& section, int& caret, SyntaxProtectionSection& protectionSection);
-
-    void ParseAttributes(SyntaxSection& section, int& caret, SyntaxProtectionSection& protectionSection);
-
-    void ParseProperties(SyntaxSection& section, int& caret, SyntaxProtectionSection& protectionSection);
-
-    void ParseProperty(SyntaxSection& section, int& caret, SyntaxProtectionSection& protectionSection);
-
-    void ParseGetter(SyntaxSection& section, int& caret, SyntaxProtectionSection& protectionSection);
-
-    void ParseSetter(SyntaxSection& section, int& caret, SyntaxProtectionSection& protectionSection);
-
-    void ParseAccessor(SyntaxSection& section, int& caret, SyntaxProtectionSection& protectionSection);
+    // Attaches pending comment and attributes to a newly registered member
+    void RegisterMember(SectionContext& ctx, ISyntaxExpression* member, int startLine);
 };

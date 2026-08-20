@@ -416,7 +416,7 @@ CLASS_METHODS_META(o2::WidgetLayer)
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, RemoveAllChildren);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(Vector<Ref<WidgetLayer>>&, GetChildren);
     FUNCTION().PUBLIC().SIGNATURE(const Vector<Ref<WidgetLayer>>&, GetChildren);
-    FUNCTION().PUBLIC().SIGNATURE(Ref<WidgetLayer>, AddChildLayer, const String&, const Ref<IRectDrawable>&, const Layout&, float);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(Ref<WidgetLayer>, AddChildLayer, const String&, const Ref<IRectDrawable>&, const Layout&, float);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(Ref<WidgetLayer>, GetChild, const String&);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(Ref<WidgetLayer>, FindChild, const String&);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(Vector<Ref<WidgetLayer>>, GetAllChilds);

@@ -332,6 +332,7 @@ CLASS_FIELDS_META(o2::Integration)
     FIELD().PROTECTED().DEFAULT_VALUE(0.0f).NAME(mAccumulatedDT);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mLifecycleStarted);
     FIELD().PROTECTED().DEFAULT_VALUE(-1.0f).NAME(mMainThreadJobsQuota);
+    FIELD().PROTECTED().NAME(mMainListenersLayer);
 }
 END_META;
 CLASS_METHODS_META(o2::Integration)
@@ -357,6 +358,45 @@ CLASS_METHODS_META(o2::Integration)
     FUNCTION().PUBLIC().SIGNATURE(bool, IsCursorInfiniteModeOn);
     FUNCTION().PUBLIC().SIGNATURE(float, GetGraphicsScale);
     FUNCTION().PUBLIC().SIGNATURE(String, GetBinPath);
+    FUNCTION().PROTECTED().SIGNATURE(void, BasicInitialize);
+    FUNCTION().PROTECTED().SIGNATURE(void, InitializePlatform);
+    FUNCTION().PROTECTED().SIGNATURE(void, InitalizeSystems);
+    FUNCTION().PROTECTED().SIGNATURE(void, InitiazeRender);
+    FUNCTION().PROTECTED().SIGNATURE(void, InitilizeUIStyles);
+    FUNCTION().PROTECTED().SIGNATURE(void, DeinitializeSystems);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnResized, const Vec2I&);
+    FUNCTION().PROTECTED().SIGNATURE(void, ProcessFrame);
+    FUNCTION().PROTECTED().SIGNATURE(void, ProcessFrameBody);
+    FUNCTION().PROTECTED().SIGNATURE(void, EnsureLifecycleStarted);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnLifecycleLoad);
+    FUNCTION().PROTECTED().SIGNATURE(void, CalculateAndSyncFPS, float&, float&);
+    FUNCTION().PROTECTED().SIGNATURE(void, PreUpdateFrame, float, float);
+    FUNCTION().PROTECTED().SIGNATURE(void, UpdateFrameFixed, float);
+    FUNCTION().PROTECTED().SIGNATURE(void, MainUpdateFrame, float);
+    FUNCTION().PROTECTED().SIGNATURE(void, PreDrawFrame);
+    FUNCTION().PROTECTED().SIGNATURE(void, DrawFrame);
+    FUNCTION().PROTECTED().SIGNATURE(void, PostDrawFrame);
+    FUNCTION().PROTECTED().SIGNATURE(void, PostUpdateFrame, float);
+    FUNCTION().PROTECTED().SIGNATURE(void, UpdateScene, float);
+    FUNCTION().PROTECTED().SIGNATURE(void, FixedUpdateScene, float);
+    FUNCTION().PROTECTED().SIGNATURE(void, PreUpdatePhysics);
+    FUNCTION().PROTECTED().SIGNATURE(void, UpdatePhysics, float);
+    FUNCTION().PROTECTED().SIGNATURE(void, PostUpdatePhysics);
+    FUNCTION().PROTECTED().SIGNATURE(void, PreUpdatePhysics3D);
+    FUNCTION().PROTECTED().SIGNATURE(void, UpdatePhysics3D, float);
+    FUNCTION().PROTECTED().SIGNATURE(void, PostUpdatePhysics3D);
+    FUNCTION().PROTECTED().SIGNATURE(void, UpdateTaskManager, float);
+    FUNCTION().PROTECTED().SIGNATURE(void, DrawScene);
+    FUNCTION().PROTECTED().SIGNATURE(void, UpdateEventSystem);
+    FUNCTION().PROTECTED().SIGNATURE(void, PostUpdateEventSystem);
+    FUNCTION().PROTECTED().SIGNATURE(void, DrawUIManager);
+    FUNCTION().PROTECTED().SIGNATURE(void, DrawDebug);
+    FUNCTION().PROTECTED().SIGNATURE(void, UpdateDebug, float);
+    FUNCTION().PROTECTED().SIGNATURE(void, UpdateProfiler, float);
+    FUNCTION().PROTECTED().SIGNATURE(void, DrawProfiler);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnUpdate, float);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnFixedUpdate, float);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnDraw);
 }
 END_META;
 // --- END META ---

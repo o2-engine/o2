@@ -2,13 +2,9 @@
 
 #include <algorithm>
 
-SyntaxFile::SyntaxFile():
-    mGlobalNamespace(new SyntaxNamespace())
-{}
-
-SyntaxFile::~SyntaxFile()
+SyntaxFile::SyntaxFile()
 {
-    delete mGlobalNamespace;
+    mGlobalNamespace = mArena.Make<SyntaxNamespace>();
 }
 
 const string& SyntaxFile::GetPath() const
@@ -21,21 +17,19 @@ const string& SyntaxFile::GetData() const
     return mData;
 }
 
-const TimeStamp& SyntaxFile::GetLastEditedDate() const
-{
-    return mLastEditedDate;
-}
-
 SyntaxNamespace* SyntaxFile::GetGlobalNamespace() const
 {
     return mGlobalNamespace;
 }
 
+SyntaxNodeArena& SyntaxFile::GetArena()
+{
+    return mArena;
+}
+
 void SyntaxFile::SaveTo(pugi::xml_node& node) const
 {
     node.append_attribute("path") = mPath.c_str();
-    auto date = node.append_child("date");
-    mLastEditedDate.SaveTo(date);
     auto globalNamespace = node.append_child("globalNamespace");
     mGlobalNamespace->SaveTo(globalNamespace);
 }
@@ -43,11 +37,9 @@ void SyntaxFile::SaveTo(pugi::xml_node& node) const
 void SyntaxFile::LoadFrom(const pugi::xml_node& node)
 {
     mPath = node.attribute("path").as_string();
-    mLastEditedDate.LoadFrom(node.child("date"));
 
-    delete mGlobalNamespace;
-    mGlobalNamespace = new SyntaxNamespace();
-    mGlobalNamespace->LoadFrom(node.child("globalNamespace"));
+    mGlobalNamespace = mArena.Make<SyntaxNamespace>();
+    mGlobalNamespace->LoadFrom(node.child("globalNamespace"), mArena);
 }
 
 int ISyntaxExpression::GetBegin() const
@@ -85,34 +77,14 @@ SyntaxDefineIf* ISyntaxExpression::GetDefine() const
     return mDefine;
 }
 
-SyntaxSection::SyntaxSection()
-{}
-
-SyntaxSection::~SyntaxSection()
+SyntaxComment* ISyntaxExpression::GetComment() const
 {
-//     for (auto x : mFunctions)
-//         delete x;
-// 
-//     for (auto x : mVariables)
-//         delete x;
-// 
-//     for (auto x : mEnums)
-//         delete x;
-// 
-//     for (auto x : mSections)
-//         delete x;
-// 
-//     for (auto x : mComments)
-//         delete x;
-// 
-//     for (auto x : mTypedefs)
-//         delete x;
-// 
-//     for (auto x : mUsingNamespaces)
-//         delete x;
-// 
-//     for (auto x : mDefines)
-//         delete x;
+    return mComment;
+}
+
+SyntaxAttributes* ISyntaxExpression::GetAttributesMacro() const
+{
+    return mAttributesMacro;
 }
 
 SyntaxSection* SyntaxSection::GetParentSection() const
@@ -160,56 +132,14 @@ const SyntaxUsingNamespacesVec& SyntaxSection::GetUsingNamespaces() const
     return mUsingNamespaces;
 }
 
-const SyntaxCommentsVec& SyntaxSection::GetComments() const
-{
-    return mComments;
-}
-
-SyntaxComment* SyntaxSection::FindCommentNearLine(int line) const
-{
-    SyntaxComment* synComment = nullptr;
-    for (auto comment : mComments)
-    {
-        // comment is on same line as variable
-        if (comment->GetLine() == line)
-        {
-            synComment = comment;
-            break;
-        }
-
-        // comment is on up line to variable
-        if (comment->GetLine() == line - 1)
-        {
-            // check other variable on this line
-            bool success = true;
-            for (auto v :mVariables)
-            {
-                if (v->GetLine() == comment->GetLine())
-                {
-                    success = false;
-                    break;
-                }
-            }
-
-            if (success)
-            {
-                synComment = comment;
-                break;
-            }
-        }
-    }
-
-    return synComment;
-}
-
 SyntaxSectionsVec SyntaxSection::GetAllSections() const
 {
     SyntaxSectionsVec res = mSections;
 
-    for (auto x : mSections)
+    for (auto section : mSections)
     {
-        for (auto y : x->GetAllSections())
-            res.push_back(y);
+        for (auto nested : section->GetAllSections())
+            res.push_back(nested);
     }
 
     return res;
@@ -218,17 +148,17 @@ SyntaxSectionsVec SyntaxSection::GetAllSections() const
 SyntaxClassesVec SyntaxSection::GetAllClasses() const
 {
     SyntaxClassesVec res;
-    
-    for (auto x : mSections)
+
+    for (auto section : mSections)
     {
-        if (x->IsClass())
-            res.push_back(dynamic_cast<SyntaxClass*>(x));
+        if (section->IsClass())
+            res.push_back(dynamic_cast<SyntaxClass*>(section));
     }
 
-    for (auto x : mSections)
+    for (auto section : mSections)
     {
-        for (auto y : x->GetAllClasses())
-            res.push_back(y);
+        for (auto nested : section->GetAllClasses())
+            res.push_back(nested);
     }
 
     return res;
@@ -238,10 +168,10 @@ SyntaxEnumsVec SyntaxSection::GetAllEnums() const
 {
     SyntaxEnumsVec res = mEnums;
 
-    for (auto x : mSections)
+    for (auto section : mSections)
     {
-        for (auto y : x->GetAllEnums())
-            res.push_back(y);
+        for (auto nested : section->GetAllEnums())
+            res.push_back(nested);
     }
 
     return res;
@@ -252,82 +182,80 @@ bool SyntaxSection::IsClass() const
     return false;
 }
 
-const SyntaxAttributesVec& SyntaxSection::GetAttributes() const
-{
-    return mAttributes;
-}
-
 void SyntaxSection::SaveTo(pugi::xml_node& node) const
 {
     node.append_attribute("name") = mName.c_str();
     node.append_attribute("fullname") = mFullName.c_str();
 
     pugi::xml_node sectionsNode = node.append_child("sections");
-    for (auto x : mSections) {
-        auto section = sectionsNode.append_child("section");
-        x->SaveTo(section);
+    for (auto section : mSections)
+    {
+        auto sectionNode = sectionsNode.append_child("section");
+        section->SaveTo(sectionNode);
     }
 
     pugi::xml_node typedefsNode = node.append_child("typedefs");
-    for (auto x : mTypedefs) {
-        auto td = typedefsNode.append_child("typedef");
-        x->SaveTo(td);
+    for (auto typedefItem : mTypedefs)
+    {
+        auto typedefNode = typedefsNode.append_child("typedef");
+        typedefItem->SaveTo(typedefNode);
     }
 
     pugi::xml_node usingsNode = node.append_child("usings");
-    for (auto x : mUsingNamespaces) {
-        auto td = usingsNode.append_child("typedef");
-        x->SaveTo(td);
+    for (auto usingItem : mUsingNamespaces)
+    {
+        auto usingNode = usingsNode.append_child("using");
+        usingItem->SaveTo(usingNode);
     }
 }
 
-void SyntaxSection::LoadFrom(const pugi::xml_node& node)
+void SyntaxSection::LoadFrom(const pugi::xml_node& node, SyntaxNodeArena& arena)
 {
     mName = node.attribute("name").as_string();
     mFullName = node.attribute("fullname").as_string();
 
-    pugi::xml_node sectionsNode = node.child("sections");
-    for (auto node:sectionsNode)
+    for (auto sectionNode : node.child("sections"))
     {
-        if (node.type() != pugi::node_element)
+        if (sectionNode.type() != pugi::node_element)
             continue;
 
         SyntaxSection* newSection;
-        if (node.attribute("isClass"))
-            newSection = new SyntaxClass();
+        if (sectionNode.attribute("isClass"))
+        {
+            SyntaxClass* newClass = arena.Make<SyntaxClass>();
+            newClass->LoadFrom(sectionNode, arena);
+            newSection = newClass;
+        }
         else
-            newSection = new SyntaxNamespace();
+        {
+            newSection = arena.Make<SyntaxNamespace>();
+            newSection->LoadFrom(sectionNode, arena);
+        }
 
-        newSection->LoadFrom(node);
         newSection->mParentSection = this;
         mSections.push_back(newSection);
     }
 
-    pugi::xml_node typedefsNode = node.child("typedefs");
-    for (auto node:typedefsNode)
+    for (auto typedefNode : node.child("typedefs"))
     {
-        if (node.type() != pugi::node_element)
+        if (typedefNode.type() != pugi::node_element)
             continue;
 
-        SyntaxTypedef* newTypedef = new SyntaxTypedef();
-        newTypedef->LoadFrom(node);
+        SyntaxTypedef* newTypedef = arena.Make<SyntaxTypedef>();
+        newTypedef->LoadFrom(typedefNode);
         mTypedefs.push_back(newTypedef);
     }
 
-    pugi::xml_node usingsNode = node.child("usings");
-    for (auto node:usingsNode)
+    for (auto usingNode : node.child("usings"))
     {
-        if (node.type() != pugi::node_element)
+        if (usingNode.type() != pugi::node_element)
             continue;
 
-        SyntaxUsingNamespace* newUsing = new SyntaxUsingNamespace();
-        newUsing->LoadFrom(node);
+        SyntaxUsingNamespace* newUsing = arena.Make<SyntaxUsingNamespace>();
+        newUsing->LoadFrom(usingNode);
         mUsingNamespaces.push_back(newUsing);
     }
 }
-
-SyntaxNamespace::SyntaxNamespace()
-{}
 
 const SyntaxFunctionsVec& SyntaxClass::GetFunctions() const
 {
@@ -398,7 +326,7 @@ bool SyntaxClass::IsClass() const
     return true;
 }
 
-const SyntaxClassInheritancsVec& SyntaxClass::GetBaseClasses() const
+const SyntaxClassInheritancesVec& SyntaxClass::GetBaseClasses() const
 {
     return mBaseClasses;
 }
@@ -410,16 +338,11 @@ bool SyntaxClass::IsTemplate() const
 
     if (mParentSection)
     {
-        SyntaxClass* cls = dynamic_cast<SyntaxClass*>(mParentSection);
-        return cls && cls->IsTemplate();
+        SyntaxClass* parentClass = dynamic_cast<SyntaxClass*>(mParentSection);
+        return parentClass && parentClass->IsTemplate();
     }
 
     return false;
-}
-
-bool SyntaxClass::IsMetaClass() const
-{
-    return mIsMeta;
 }
 
 const string& SyntaxClass::GetTemplateParameters() const
@@ -442,48 +365,38 @@ const string& SyntaxClass::GetAttributeShortDef() const
     return mAttributeShortDef;
 }
 
-const SyntaxAttributesVec& SyntaxClass::GetAttributes() const
-{
-    if (mSourceClass)
-        return mSourceClass->GetAttributes();
-
-    return SyntaxSection::GetAttributes();
-}
-
 void SyntaxClass::SaveTo(pugi::xml_node& node) const
 {
     SyntaxSection::SaveTo(node);
 
     node.append_attribute("isClass") = true;
-    node.append_attribute("isMeta") = mIsMeta;
     node.append_attribute("templates") = mTemplateParameters.c_str();
     node.append_attribute("protection") = (int)mClassSection;
     node.append_attribute("attributeCommentDef") = mAttributeCommentDef.c_str();
     node.append_attribute("attributeShortDef") = mAttributeShortDef.c_str();
 
     pugi::xml_node baseClassesNode = node.append_child("baseClasses");
-    for (auto& x : mBaseClasses) {
-        auto nc = baseClassesNode.append_child("class");
-        x.SaveTo(nc);
+    for (auto& baseClass : mBaseClasses)
+    {
+        auto baseClassNode = baseClassesNode.append_child("class");
+        baseClass.SaveTo(baseClassNode);
     }
 }
 
-void SyntaxClass::LoadFrom(const pugi::xml_node& node)
+void SyntaxClass::LoadFrom(const pugi::xml_node& node, SyntaxNodeArena& arena)
 {
-    SyntaxSection::LoadFrom(node);
+    SyntaxSection::LoadFrom(node, arena);
 
-    mIsMeta = node.attribute("isMeta").as_bool();
     mTemplateParameters = node.attribute("templates").as_string();
     mClassSection = (SyntaxProtectionSection)node.attribute("protection").as_int();
     mAttributeCommentDef = node.attribute("attributeCommentDef").as_string();
     mAttributeShortDef = node.attribute("attributeShortDef").as_string();
 
-    pugi::xml_node baseClassesNode = node.child("baseClasses");
-    for (auto node : baseClassesNode)
+    for (auto baseClassNode : node.child("baseClasses"))
     {
-        SyntaxClassInheritance x;
-        x.LoadFrom(node);
-        mBaseClasses.push_back(x);
+        SyntaxClassInheritance baseClass;
+        baseClass.LoadFrom(baseClassNode);
+        mBaseClasses.push_back(baseClass);
     }
 }
 
@@ -494,7 +407,7 @@ const string& SyntaxType::GetName() const
 
 bool SyntaxType::IsConstant() const
 {
-    return mIsContant;
+    return mIsConstant;
 }
 
 bool SyntaxType::IsReference() const
@@ -517,7 +430,7 @@ const string& SyntaxVariable::GetName() const
     return mName;
 }
 
-const std::string& SyntaxVariable::GetDefaultValue() const
+const string& SyntaxVariable::GetDefaultValue() const
 {
     return mDefaultValue;
 }
@@ -530,15 +443,6 @@ SyntaxProtectionSection SyntaxVariable::GetClassSection() const
 bool SyntaxVariable::IsStatic() const
 {
     return mIsStatic;
-}
-
-SyntaxFunction::SyntaxFunction()
-{}
-
-SyntaxFunction::~SyntaxFunction()
-{
-    for (auto x : mParameters)
-        delete x;
 }
 
 const SyntaxType& SyntaxFunction::GetReturnType() const
@@ -576,6 +480,11 @@ bool SyntaxFunction::IsStatic() const
     return mIsStatic;
 }
 
+bool SyntaxFunction::IsVirtual() const
+{
+    return mIsVirtual;
+}
+
 const string& SyntaxEnum::GetName() const
 {
     return mName;
@@ -610,7 +519,7 @@ const string& SyntaxClassInheritance::GetClassName() const
     return mClassName;
 }
 
-SyntaxClass* SyntaxClassInheritance::GetClass()
+SyntaxClass* SyntaxClassInheritance::GetClass() const
 {
     return mClass;
 }
@@ -672,11 +581,6 @@ SyntaxSection* SyntaxTypedef::GetWhat() const
     return mWhatSection;
 }
 
-SyntaxSection* SyntaxTypedef::GetNewDef() const
-{
-    return mWhatSection;
-}
-
 void SyntaxTypedef::SaveTo(pugi::xml_node& node) const
 {
     node.append_attribute("what") = mWhatName.c_str();
@@ -689,48 +593,12 @@ void SyntaxTypedef::LoadFrom(const pugi::xml_node& node)
     mNewDefName = node.attribute("newDef").as_string();
 }
 
-TimeStamp::TimeStamp(int seconds /*= 0*/, int minutes /*= 0*/, int hours /*= 0*/, int days /*= 0*/, int months /*= 0*/,
-                     int years /*= 0*/):
-    second(seconds), minute(minutes), hour(hours), day(days), month(months), year(years)
-{}
-
-void TimeStamp::SaveTo(pugi::xml_node& node) const
-{
-    node.append_attribute("year") = year;
-    node.append_attribute("month") = month;
-    node.append_attribute("day") = day;
-    node.append_attribute("hour") = hour;
-    node.append_attribute("minute") = minute;
-    node.append_attribute("second") = second;
-}
-
-void TimeStamp::LoadFrom(const pugi::xml_node& node)
-{
-    year = node.attribute("year").as_int();
-    month = node.attribute("month").as_int();
-    day = node.attribute("day").as_int();
-    hour = node.attribute("hour").as_int();
-    minute = node.attribute("minute").as_int();
-    second = node.attribute("second").as_int();
-}
-
-bool TimeStamp::operator!=(const TimeStamp& wt) const
-{
-    return !(*this == wt);
-}
-
-bool TimeStamp::operator==(const TimeStamp& wt) const
-{
-    return second == wt.second && minute == wt.minute && hour == wt.hour && day == wt.day && month == wt.month &&
-        year == wt.year;
-}
-
 const vector<string>& SyntaxAttributes::GetAttributesList() const
 {
     return mAttributesList;
 }
 
-const std::string& SyntaxDefineIf::GetDefinition() const
+const string& SyntaxDefineIf::GetDefinition() const
 {
-    return mDefintion;
+    return mDefinition;
 }
