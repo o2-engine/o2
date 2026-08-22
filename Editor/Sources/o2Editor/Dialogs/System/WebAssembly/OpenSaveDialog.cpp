@@ -28,8 +28,10 @@ EM_JS(char*, o2_web_asset_dialog, (const char* mode, const char* title, const ch
         return promptFallback();
 
     var id = Math.random().toString(36).slice(2) + Date.now().toString(36);
-    // The page may be served under a path prefix; the endpoint carries it
-    var base = window.o2fsEndpoint.replace(/\/api$/, '');
+    // The page may be served under a path prefix; the endpoint carries it.
+    // No regex literal here: this code is embedded as a C string, where the
+    // backslash of an escaped slash does not survive into the emitted JS.
+    var base = window.o2fsEndpoint.slice(0, -'/api'.length);
     var url = base + '/picker?id=' + id + '&mode=' + modeStr +
               '&title=' + encodeURIComponent(titleStr) +
               '&exts=' + encodeURIComponent(extsStr);
