@@ -56,7 +56,8 @@ namespace o2
         Ref<TcpSocket> mSocket;        // Underlying stream socket
         String         mReceiveBuffer; // Stream bytes not yet split into messages
 
-        Vector<Function<void(const String&)>> mMessageWaiters; // One-shot message completions
+        Vector<Function<void(const String&)>> mMessageWaiters;  // One-shot message completions
+        Vector<String>                        mPendingMessages; // Messages received while there was no waiter and no onMessage subscriber
 
     protected:
         // Wraps an already connected socket accepted by a server
@@ -94,6 +95,7 @@ CLASS_FIELDS_META(o2::TcpMessageChannel)
     FIELD().PROTECTED().NAME(mSocket);
     FIELD().PROTECTED().NAME(mReceiveBuffer);
     FIELD().PROTECTED().NAME(mMessageWaiters);
+    FIELD().PROTECTED().NAME(mPendingMessages);
 }
 END_META;
 CLASS_METHODS_META(o2::TcpMessageChannel)

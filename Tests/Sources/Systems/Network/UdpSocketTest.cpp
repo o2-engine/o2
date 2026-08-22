@@ -115,3 +115,21 @@ TEST(UdpSocket, TwoWayExchange)
     EXPECT_EQ(firstReceived, String("ping"));
     EXPECT_EQ(secondReceived, String("pong"));
 }
+
+// Regression: a datagram arriving before any awaiter exists must be buffered, not dropped
+TEST(UdpSocket, ReceiveAsyncAfterDatagramAlreadyArrived)
+{
+    auto receiver = mmake<UdpSocket>();
+    ASSERT_TRUE(receiver->Open()); // No onDataReceived subscriber and no awaiter yet
+
+    auto sender = mmake<UdpSocket>();
+    ASSERT_TRUE(sender->Open());
+    ASSERT_TRUE(sender->SendTo("127.0.0.1", receiver->GetLocalPort(), "early datagram"));
+
+    NetPumpFrames(10);
+
+    auto coroutine = receiver->ReceiveAsync();
+
+    ASSERT_TRUE(NetPumpUntil([&] { return coroutine.IsDone(); }));
+    EXPECT_EQ(coroutine.GetResult().data, String("early datagram"));
+}

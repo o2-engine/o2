@@ -37,4 +37,16 @@ namespace o2
         o2Jobs.ExecuteMainThreadJobs(-1.0f);
         return true;
     }
+
+    // Pumps a fixed number of iterations regardless of any condition
+    inline void NetPumpFrames(int count)
+    {
+        for (int i = 0; i < count; i++)
+        {
+            o2Network.Update(0.001f);
+            o2Jobs.ExecuteMainThreadJobs(-1.0f);
+            o2Coroutines.OnNewFrame();
+            Thread::SleepForMilliseconds(1);
+        }
+    }
 }

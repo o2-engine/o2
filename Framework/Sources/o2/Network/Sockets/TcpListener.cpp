@@ -59,21 +59,23 @@ namespace o2
 
     Coroutine<Ref<TcpSocket>> TcpListener::AcceptAsync()
     {
-        auto coroutine = [](Ref<TcpListener> self) -> Coroutine<Ref<TcpSocket>>
+        struct Result: public ThreadSafeRefCounterable { Ref<TcpSocket> socket; };
+
+        // The waiter is registered before the coroutine ever runs, so a connection accepted while
+        // the coroutine is still starting cannot be missed
+        Signal accepted;
+        auto result = MakeShared<Result>();
+        AddAcceptWaiter([accepted, result](const Ref<TcpSocket>& socket)
         {
-            struct Result: public ThreadSafeRefCounterable { Ref<TcpSocket> socket; };
+            result->socket = socket;
+            accepted.Synchronize();
+        });
 
-            Signal accepted;
-            auto result = MakeShared<Result>();
-            self->AddAcceptWaiter([accepted, result](const Ref<TcpSocket>& socket)
-            {
-                result->socket = socket;
-                accepted.Synchronize();
-            });
-
+        auto coroutine = [](Signal accepted, SharedRef<Result> result) -> Coroutine<Ref<TcpSocket>>
+        {
             co_await accepted;
             co_return result->socket;
-        }(Ref(this));
+        }(accepted, result);
 
         coroutine.Start(JobThread::Main);
         return coroutine;
@@ -81,7 +83,13 @@ namespace o2
 
     void TcpListener::AddAcceptWaiter(const Function<void(const Ref<TcpSocket>&)>& waiter)
     {
-        if (!mListening)
+        if (!mPendingAccepted.IsEmpty())
+        {
+            auto socket = mPendingAccepted[0];
+            mPendingAccepted.RemoveAt(0);
+            waiter(socket);
+        }
+        else if (!mListening)
             waiter(nullptr);
         else
             mAcceptWaiters.Add(waiter);
@@ -109,6 +117,7 @@ namespace o2
 
         auto waiters = mAcceptWaiters;
         mAcceptWaiters.Clear();
+        mPendingAccepted.Clear();
 
         if (NetworkSystem::IsSingletonInitialzed())
             o2Network.UnregisterTcpListener(this);
@@ -136,8 +145,10 @@ namespace o2
                 mAcceptWaiters.RemoveAt(0);
                 waiter(socket);
             }
-            else
+            else if (!onAccepted.IsEmpty())
                 onAccepted(socket);
+            else
+                mPendingAccepted.Add(socket);
         }
     }
 }

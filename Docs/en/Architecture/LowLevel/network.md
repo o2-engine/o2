@@ -29,7 +29,7 @@ Message level — length-prefixed framing (4-byte little-endian size), each call
 - **o2::TcpMessageChannel** — client for chats/lobbies: `Connect` / `ConnectAsync`, `Send(message)`, `ReceiveAsync`, events `onConnected`, `onMessage`, `onClosed`.
 - **o2::TcpMessageServer** — `Listen(port)`, clients get numeric ids: `SendTo(clientId, message)`, `Broadcast(message)`, `DisconnectClient(clientId)`, `GetClientIds()`, events `onClientConnected`, `onClientMessage(clientId, message)`, `onClientDisconnected`.
 
-Host name resolution in `TcpSocket::Connect` runs on a [job](/Docs/en/Architecture/Utils/jobs.md) worker; `UdpSocket` resolves synchronously with a per-socket cache. There is no cancellation: closing a socket completes its pending awaiters with empty results. On WebAssembly raw sockets compile against Emscripten's WebSocket emulation and need a WebSocket-capable endpoint at runtime; UDP is unavailable in browsers.
+Host name resolution in `TcpSocket::Connect` runs on a [job](/Docs/en/Architecture/Utils/jobs.md) worker; `UdpSocket` resolves synchronously with a per-socket cache. There is no cancellation: closing a socket completes its pending awaiters with empty results. Data, connections and messages arriving while there is neither a pending awaiter nor an event subscriber are buffered and handed to the first consumer, so nothing is lost between a send and a later `ReceiveAsync`/`AcceptAsync`. On WebAssembly raw sockets compile against Emscripten's WebSocket emulation and need a WebSocket-capable endpoint at runtime; UDP is unavailable in browsers.
 
 ## Scripting
 

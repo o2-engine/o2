@@ -105,21 +105,23 @@ namespace o2
 
     Coroutine<UdpDatagram> UdpSocket::ReceiveAsync()
     {
-        auto coroutine = [](Ref<UdpSocket> self) -> Coroutine<UdpDatagram>
+        struct Result: public ThreadSafeRefCounterable { UdpDatagram datagram; };
+
+        // The waiter is registered before the coroutine ever runs, so a datagram arriving while
+        // the coroutine is still starting cannot be missed
+        Signal received;
+        auto result = MakeShared<Result>();
+        AddReceiveWaiter([received, result](const UdpDatagram& datagram)
         {
-            struct Result: public ThreadSafeRefCounterable { UdpDatagram datagram; };
+            result->datagram = datagram;
+            received.Synchronize();
+        });
 
-            Signal received;
-            auto result = MakeShared<Result>();
-            self->AddReceiveWaiter([received, result](const UdpDatagram& datagram)
-            {
-                result->datagram = datagram;
-                received.Synchronize();
-            });
-
+        auto coroutine = [](Signal received, SharedRef<Result> result) -> Coroutine<UdpDatagram>
+        {
             co_await received;
             co_return result->datagram;
-        }(Ref(this));
+        }(received, result);
 
         coroutine.Start(JobThread::Main);
         return coroutine;
@@ -146,6 +148,7 @@ namespace o2
         mLocalPort = 0;
         mHasDefaultRemote = false;
         mResolvedAddresses.Clear();
+        mPendingDatagrams.Clear();
 
         auto waiters = mReceiveWaiters;
         mReceiveWaiters.Clear();
@@ -175,7 +178,13 @@ namespace o2
 
     void UdpSocket::AddReceiveWaiter(const Function<void(const UdpDatagram&)>& waiter)
     {
-        if (!mOpened)
+        if (!mPendingDatagrams.IsEmpty())
+        {
+            UdpDatagram datagram = mPendingDatagrams[0];
+            mPendingDatagrams.RemoveAt(0);
+            waiter(datagram);
+        }
+        else if (!mOpened)
             waiter(UdpDatagram());
         else
             mReceiveWaiters.Add(waiter);
@@ -205,8 +214,16 @@ namespace o2
                 mReceiveWaiters.RemoveAt(0);
                 waiter(datagram);
             }
-            else
+            else if (!onDataReceived.IsEmpty())
                 onDataReceived(datagram.data, datagram.address, datagram.port);
+            else
+            {
+                // UDP is lossy by contract: the buffer keeps the freshest datagrams
+                if (mPendingDatagrams.Count() >= 1024)
+                    mPendingDatagrams.RemoveAt(0);
+
+                mPendingDatagrams.Add(datagram);
+            }
         }
     }
 }

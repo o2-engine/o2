@@ -155,8 +155,14 @@ TEST(Http, JsonRequestAndResponse)
 
         DataDocument document;
         ASSERT_TRUE(jsonResponse->GetBodyJson(document));
-        EXPECT_EQ((String)document["name"], String("o2"));
-        EXPECT_EQ((int)document["value"], 42);
+
+        String name;
+        document["name"].Get(name);
+        int value = 0;
+        document["value"].Get(value);
+
+        EXPECT_EQ(name, String("o2"));
+        EXPECT_EQ(value, 42);
         EXPECT_EQ(document["items"].GetElementsCount(), 3);
     }
 }

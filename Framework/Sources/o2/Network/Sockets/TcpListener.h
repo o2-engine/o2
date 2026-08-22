@@ -48,7 +48,8 @@ namespace o2
         bool         mListening = false;            // True while listening
         int          mLocalPort = 0;                // Bound port
 
-        Vector<Function<void(const Ref<TcpSocket>&)>> mAcceptWaiters; // One-shot accept completions
+        Vector<Function<void(const Ref<TcpSocket>&)>> mAcceptWaiters;   // One-shot accept completions
+        Vector<Ref<TcpSocket>>                        mPendingAccepted; // Connections accepted while there was no waiter and no onAccepted subscriber
 
     protected:
         // Adds a one-shot accept completion; fires immediately with null when closed

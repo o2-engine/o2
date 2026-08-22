@@ -47,24 +47,28 @@ namespace o2
 
     Coroutine<bool> TcpMessageChannel::ConnectAsync(const String& host, int port)
     {
-        auto coroutine = [](Ref<TcpMessageChannel> self, String host, int port) -> Coroutine<bool>
+        struct Result: public ThreadSafeRefCounterable { bool success = false; };
+
+        // The waiter is registered before the coroutine ever runs, so a result arriving while the
+        // coroutine is still starting cannot be missed
+        Signal done;
+        auto result = MakeShared<Result>();
+        auto waiter = [done, result](bool success)
         {
-            if (!self->Connect(host, port))
-                co_return false;
+            result->success = success;
+            done.Synchronize();
+        };
 
-            struct Result: public ThreadSafeRefCounterable { bool success = false; };
+        if (!Connect(host, port))
+            waiter(false);
+        else
+            mSocket->AddConnectWaiter(waiter);
 
-            Signal done;
-            auto result = MakeShared<Result>();
-            self->mSocket->AddConnectWaiter([done, result](bool success)
-            {
-                result->success = success;
-                done.Synchronize();
-            });
-
+        auto coroutine = [](Signal done, SharedRef<Result> result) -> Coroutine<bool>
+        {
             co_await done;
             co_return result->success;
-        }(Ref(this), host, port);
+        }(done, result);
 
         coroutine.Start(JobThread::Main);
         return coroutine;
@@ -85,21 +89,21 @@ namespace o2
 
     Coroutine<String> TcpMessageChannel::ReceiveAsync()
     {
-        auto coroutine = [](Ref<TcpMessageChannel> self) -> Coroutine<String>
+        struct Result: public ThreadSafeRefCounterable { String message; };
+
+        Signal received;
+        auto result = MakeShared<Result>();
+        AddMessageWaiter([received, result](const String& message)
         {
-            struct Result: public ThreadSafeRefCounterable { String message; };
+            result->message = message;
+            received.Synchronize();
+        });
 
-            Signal received;
-            auto result = MakeShared<Result>();
-            self->AddMessageWaiter([received, result](const String& message)
-            {
-                result->message = message;
-                received.Synchronize();
-            });
-
+        auto coroutine = [](Signal received, SharedRef<Result> result) -> Coroutine<String>
+        {
             co_await received;
             co_return result->message;
-        }(Ref(this));
+        }(received, result);
 
         coroutine.Start(JobThread::Main);
         return coroutine;
@@ -113,6 +117,7 @@ namespace o2
         auto socket = mSocket;
         mSocket = nullptr;
         mReceiveBuffer.Clear();
+        mPendingMessages.Clear();
 
         socket->Close();
 
@@ -155,7 +160,13 @@ namespace o2
 
     void TcpMessageChannel::AddMessageWaiter(const Function<void(const String&)>& waiter)
     {
-        if (!mSocket || (!mSocket->IsConnected() && !mSocket->IsConnecting()))
+        if (!mPendingMessages.IsEmpty())
+        {
+            String message = mPendingMessages[0];
+            mPendingMessages.RemoveAt(0);
+            waiter(message);
+        }
+        else if (!mSocket || (!mSocket->IsConnected() && !mSocket->IsConnecting()))
             waiter(String());
         else
             mMessageWaiters.Add(waiter);
@@ -193,8 +204,10 @@ namespace o2
                 mMessageWaiters.RemoveAt(0);
                 waiter(message);
             }
-            else
+            else if (!onMessage.IsEmpty())
                 onMessage(message);
+            else
+                mPendingMessages.Add(message);
         }
     }
 

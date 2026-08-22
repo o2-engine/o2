@@ -224,3 +224,28 @@ TEST(TcpMessage, ClientDisconnectRemovesFromServer)
 
     server->Close();
 }
+
+// Regression: a message arriving before any awaiter exists must be buffered, not dropped
+TEST(TcpMessage, ReceiveAsyncAfterMessageAlreadyArrived)
+{
+    auto server = mmake<TcpMessageServer>();
+    ASSERT_TRUE(server->Listen(0));
+
+    int connectedId = 0;
+    server->onClientConnected = [&](int clientId) { connectedId = clientId; };
+
+    auto client = mmake<TcpMessageChannel>(); // No onMessage subscriber and no awaiter yet
+    ASSERT_TRUE(client->Connect("127.0.0.1", server->GetLocalPort()));
+    ASSERT_TRUE(NetPumpUntil([&] { return connectedId != 0; }));
+
+    server->SendTo(connectedId, "early message");
+    NetPumpFrames(10);
+
+    auto coroutine = client->ReceiveAsync();
+
+    ASSERT_TRUE(NetPumpUntil([&] { return coroutine.IsDone(); }));
+    EXPECT_EQ(coroutine.GetResult(), String("early message"));
+
+    client->Close();
+    server->Close();
+}

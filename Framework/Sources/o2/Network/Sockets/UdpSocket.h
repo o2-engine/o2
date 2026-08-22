@@ -16,6 +16,12 @@ namespace o2
         String data;    // Payload bytes
         String address; // Sender address
         int    port = 0; // Sender port
+
+        // Returns true when all parts are equal
+        bool operator==(const UdpDatagram& other) const
+        {
+            return data == other.data && address == other.address && port == other.port;
+        }
     };
 
     // -------------------------------------------------------------------------------------------
@@ -78,7 +84,8 @@ namespace o2
 
         Map<String, SocketAddress> mResolvedAddresses; // SendTo resolve cache, key is "address:port"
 
-        Vector<Function<void(const UdpDatagram&)>> mReceiveWaiters; // One-shot receive completions
+        Vector<Function<void(const UdpDatagram&)>> mReceiveWaiters;   // One-shot receive completions
+        Vector<UdpDatagram>                        mPendingDatagrams; // Datagrams received while there was no waiter and no onDataReceived subscriber
 
     protected:
         // Resolves the endpoint through the cache
@@ -110,6 +117,7 @@ CLASS_FIELDS_META(o2::UdpSocket)
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mHasDefaultRemote);
     FIELD().PROTECTED().NAME(mResolvedAddresses);
     FIELD().PROTECTED().NAME(mReceiveWaiters);
+    FIELD().PROTECTED().NAME(mPendingDatagrams);
 }
 END_META;
 CLASS_METHODS_META(o2::UdpSocket)

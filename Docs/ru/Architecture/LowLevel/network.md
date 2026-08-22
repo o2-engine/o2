@@ -29,7 +29,7 @@ Cookies (`o2Network.GetCookies()`, `o2::HttpCookieJar`) и кеш ответов
 - **o2::TcpMessageChannel** — клиент для чатов/лобби: `Connect` / `ConnectAsync`, `Send(message)`, `ReceiveAsync`, события `onConnected`, `onMessage`, `onClosed`.
 - **o2::TcpMessageServer** — `Listen(port)`, клиенты получают числовые id: `SendTo(clientId, message)`, `Broadcast(message)`, `DisconnectClient(clientId)`, `GetClientIds()`, события `onClientConnected`, `onClientMessage(clientId, message)`, `onClientDisconnected`.
 
-Резолв имени хоста в `TcpSocket::Connect` выполняется на воркере [джоб-системы](/Docs/ru/Architecture/Utils/jobs.md); `UdpSocket` резолвит синхронно с кешем на сокет. Отмены нет: закрытие сокета завершает его ожидающие корутины пустыми результатами. На WebAssembly сырые сокеты компилируются через эмуляцию WebSocket в Emscripten и в рантайме требуют WebSocket-совместимую точку подключения; UDP в браузерах недоступен.
+Резолв имени хоста в `TcpSocket::Connect` выполняется на воркере [джоб-системы](/Docs/ru/Architecture/Utils/jobs.md); `UdpSocket` резолвит синхронно с кешем на сокет. Отмены нет: закрытие сокета завершает его ожидающие корутины пустыми результатами. Данные, подключения и сообщения, пришедшие, когда нет ни ожидающей корутины, ни подписчика события, буферизуются и отдаются первому потребителю — между отправкой и более поздним `ReceiveAsync`/`AcceptAsync` ничего не теряется. На WebAssembly сырые сокеты компилируются через эмуляцию WebSocket в Emscripten и в рантайме требуют WebSocket-совместимую точку подключения; UDP в браузерах недоступен.
 
 ## Скриптинг
 

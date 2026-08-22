@@ -61,17 +61,22 @@ namespace o2
 
     Coroutine<bool> TcpSocket::ConnectAsync(const String& host, int port)
     {
-        auto coroutine = [](Ref<TcpSocket> self, String host, int port) -> Coroutine<bool>
-        {
-            if (!self->Connect(host, port))
-                co_return false;
+        // The waiter is registered before the coroutine ever runs, so a result arriving while the
+        // coroutine is still starting cannot be missed
+        Signal done;
+        auto result = MakeShared<AsyncResult<bool>>();
+        auto waiter = [done, result](bool success) { result->value = success; done.Synchronize(); };
 
-            Signal done;
-            auto result = MakeShared<AsyncResult<bool>>();
-            self->AddConnectWaiter([done, result](bool success) { result->value = success; done.Synchronize(); });
+        if (!Connect(host, port))
+            waiter(false);
+        else
+            AddConnectWaiter(waiter);
+
+        auto coroutine = [](Signal done, SharedRef<AsyncResult<bool>> result) -> Coroutine<bool>
+        {
             co_await done;
             co_return result->value;
-        }(Ref(this), host, port);
+        }(done, result);
 
         coroutine.Start(JobThread::Main);
         return coroutine;
@@ -101,14 +106,15 @@ namespace o2
 
     Coroutine<String> TcpSocket::ReceiveAsync()
     {
-        auto coroutine = [](Ref<TcpSocket> self) -> Coroutine<String>
+        Signal received;
+        auto result = MakeShared<AsyncResult<String>>();
+        AddReceiveWaiter([received, result](const String& data) { result->value = data; received.Synchronize(); });
+
+        auto coroutine = [](Signal received, SharedRef<AsyncResult<String>> result) -> Coroutine<String>
         {
-            Signal received;
-            auto result = MakeShared<AsyncResult<String>>();
-            self->AddReceiveWaiter([received, result](const String& data) { result->value = data; received.Synchronize(); });
             co_await received;
             co_return result->value;
-        }(Ref(this));
+        }(received, result);
 
         coroutine.Start(JobThread::Main);
         return coroutine;
@@ -159,7 +165,13 @@ namespace o2
 
     void TcpSocket::AddReceiveWaiter(const Function<void(const String&)>& waiter)
     {
-        if (mState == State::Idle || mState == State::Closed)
+        if (!mPendingReceivedData.IsEmpty())
+        {
+            String data = mPendingReceivedData;
+            mPendingReceivedData.Clear();
+            waiter(data);
+        }
+        else if (mState == State::Idle || mState == State::Closed)
             waiter(String());
         else
             mReceiveWaiters.Add(waiter);
@@ -247,8 +259,10 @@ namespace o2
                     mReceiveWaiters.RemoveAt(0);
                     waiter(data);
                 }
-                else
+                else if (!onDataReceived.IsEmpty())
                     onDataReceived(data);
+                else
+                    mPendingReceivedData.append(data.data(), data.size());
             }
         }
     }

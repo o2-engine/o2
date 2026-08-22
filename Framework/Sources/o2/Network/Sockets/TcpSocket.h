@@ -84,7 +84,8 @@ namespace o2
 
         float mConnectingTime = 0.0f; // Time spent in the connect attempt, for the timeout
 
-        String mSendBuffer; // Bytes not yet accepted by the socket
+        String mSendBuffer;         // Bytes not yet accepted by the socket
+        String mPendingReceivedData; // Bytes received while there was no waiter and no onDataReceived subscriber
 
         Vector<Function<void(bool)>>          mConnectWaiters; // One-shot connect completions
         Vector<Function<void(const String&)>> mReceiveWaiters; // One-shot receive completions

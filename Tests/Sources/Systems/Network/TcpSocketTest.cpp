@@ -223,3 +223,37 @@ TEST(TcpSocket, CloseCompletesPendingReceiveWithEmptyResult)
 
     listener->Close();
 }
+
+// Regression: the CI race where the connection and its data arrived before any awaiter existed.
+// Both must be buffered and served to awaiters created later
+TEST(TcpSocket, AcceptAsyncAfterConnectionAlreadyAccepted)
+{
+    auto listener = mmake<TcpListener>();
+    ASSERT_TRUE(listener->Listen(0)); // No onAccepted subscriber and no awaiter yet
+
+    auto client = mmake<TcpSocket>();
+    ASSERT_TRUE(client->Connect("127.0.0.1", listener->GetLocalPort()));
+    client->Send("early data");
+
+    // Let the listener accept the connection and receive the data with nobody consuming them
+    ASSERT_TRUE(NetPumpUntil([&] { return client->IsConnected(); }));
+    NetPumpFrames(10);
+
+    auto coroutine = [](Ref<TcpListener> listener) -> Coroutine<String>
+    {
+        Ref<TcpSocket> accepted = co_await listener->AcceptAsync();
+        if (!accepted)
+            co_return String("accept failed");
+
+        String data = co_await accepted->ReceiveAsync();
+        co_return data;
+    }(listener);
+
+    coroutine.Start(JobThread::Main);
+
+    ASSERT_TRUE(NetPumpUntil([&] { return coroutine.IsDone(); }));
+    EXPECT_EQ(coroutine.GetResult(), String("early data"));
+
+    client->Close();
+    listener->Close();
+}

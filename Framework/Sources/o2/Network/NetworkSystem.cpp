@@ -156,21 +156,22 @@ namespace o2
 
     Coroutine<Ref<HttpResponse>> NetworkSystem::RequestAsync(const Ref<HttpRequest>& request)
     {
-        auto coroutine = [](NetworkSystem* self, Ref<HttpRequest> request) -> Coroutine<Ref<HttpResponse>>
+        struct Result: public ThreadSafeRefCounterable { Ref<HttpResponse> response; };
+
+        // The request is dispatched right away; the coroutine only awaits its completion
+        Signal done;
+        auto result = MakeShared<Result>();
+        SendRequest(request, [done, result](const Ref<HttpResponse>& response)
         {
-            struct Result: public ThreadSafeRefCounterable { Ref<HttpResponse> response; };
+            result->response = response;
+            done.Synchronize();
+        });
 
-            Signal done;
-            auto result = MakeShared<Result>();
-            self->SendRequest(request, [done, result](const Ref<HttpResponse>& response)
-            {
-                result->response = response;
-                done.Synchronize();
-            });
-
+        auto coroutine = [](Signal done, SharedRef<Result> result) -> Coroutine<Ref<HttpResponse>>
+        {
             co_await done;
             co_return result->response;
-        }(this, request);
+        }(done, result);
 
         coroutine.Start(JobThread::Main);
         return coroutine;
