@@ -28,7 +28,9 @@ EM_JS(char*, o2_web_asset_dialog, (const char* mode, const char* title, const ch
         return promptFallback();
 
     var id = Math.random().toString(36).slice(2) + Date.now().toString(36);
-    var url = '/picker?id=' + id + '&mode=' + modeStr +
+    // The page may be served under a path prefix; the endpoint carries it
+    var base = window.o2fsEndpoint.replace(/\/api$/, '');
+    var url = base + '/picker?id=' + id + '&mode=' + modeStr +
               '&title=' + encodeURIComponent(titleStr) +
               '&exts=' + encodeURIComponent(extsStr);
 
