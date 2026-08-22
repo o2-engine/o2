@@ -18,6 +18,30 @@ namespace o2
         file->ReadData(outBytes, (UInt)byteCountToRead);
     }
 
+    // Memory cursor for reading a PNG from a byte buffer
+    struct PngMemoryReader
+    {
+        const UInt8* data;
+        UInt         size;
+        UInt         offset;
+    };
+
+    static void PngMemoryReadFn(png_structp png_ptr, png_bytep outBytes, png_size_t byteCountToRead)
+    {
+        void* io_ptr = png_get_io_ptr(png_ptr);
+        if (io_ptr == NULL) return;
+
+        PngMemoryReader* reader = (PngMemoryReader*)io_ptr;
+
+        UInt available = reader->size - reader->offset;
+        UInt toRead = (UInt)byteCountToRead < available ? (UInt)byteCountToRead : available;
+        memcpy(outBytes, reader->data + reader->offset, toRead);
+        reader->offset += toRead;
+
+        if (toRead < (UInt)byteCountToRead)
+            png_error(png_ptr, "Unexpected end of PNG data");
+    }
+
     void CustomPngWriteFn(png_structp png_ptr, png_bytep bytes, png_size_t byteCountToWrite)
     {
         void* io_ptr = png_get_io_ptr(png_ptr);
@@ -35,33 +59,43 @@ namespace o2
         InFile pngImageFile(fileName);
         if (!pngImageFile.IsOpened())
         {
-            if (errors) 
+            if (errors)
                 o2Debug.LogError("Can't load PNG file '" + fileName + "'");
 
             return false;
         }
 
-        //header for testing if it is a png
-        png_byte header[8];
+        UInt dataSize = pngImageFile.GetDataSize();
+        UInt8* fileData = new UInt8[dataSize];
+        pngImageFile.ReadData(fileData, dataSize);
 
-        //read the header
-        pngImageFile.ReadData(header, 8);
+        bool result = LoadPngImageFromMemory(fileData, dataSize, image, errors);
+        delete[] fileData;
 
+        if (!result && errors)
+            o2Debug.LogError("Can't load PNG file '" + fileName + "'");
+
+        return result;
+    }
+
+    bool LoadPngImageFromMemory(const UInt8* data, UInt size, Bitmap* image, bool errors /*= true*/)
+    {
         //test if png
-        int is_png = !png_sig_cmp(header, 0, 8);
-        if (!is_png)
+        if (size < 8 || png_sig_cmp((png_bytep)data, 0, 8))
         {
-            if (errors) 
-                o2Debug.LogError("Can't load PNG file '" + fileName + "': not PNG");
+            if (errors)
+                o2Debug.LogError("Can't load PNG from memory: not PNG");
             return false;
         }
+
+        PngMemoryReader reader = { data, size, 8 };
 
         //create png struct
         png_structp png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
         if (!png_ptr)
         {
-            if (errors) 
-                o2Debug.LogError("Can't load PNG file '" + fileName + "': TEXTURE_LOAD_ERROR");
+            if (errors)
+                o2Debug.LogError("Can't load PNG from memory: TEXTURE_LOAD_ERROR");
             return false;
         }
 
@@ -71,8 +105,8 @@ namespace o2
         {
             png_destroy_read_struct(&png_ptr, (png_infopp)NULL, (png_infopp)NULL);
 
-            if (errors) 
-                o2Debug.LogError("Can't load PNG file '" + fileName + "': TEXTURE_LOAD_ERROR");
+            if (errors)
+                o2Debug.LogError("Can't load PNG from memory: TEXTURE_LOAD_ERROR");
             return false;
         }
 
@@ -82,8 +116,8 @@ namespace o2
         {
             png_destroy_read_struct(&png_ptr, &info_ptr, (png_infopp)NULL);
 
-            if (errors) 
-                o2Debug.LogError("Can't load PNG file '" + fileName + "': TEXTURE_LOAD_ERROR");
+            if (errors)
+                o2Debug.LogError("Can't load PNG from memory: TEXTURE_LOAD_ERROR");
             return false;
         }
 
@@ -92,15 +126,13 @@ namespace o2
         {
             png_destroy_read_struct(&png_ptr, &info_ptr, &end_info);
 
-            if (errors) 
-                o2Debug.LogError("Can't load PNG file '" + fileName + "': TEXTURE_LOAD_ERROR");
+            if (errors)
+                o2Debug.LogError("Can't load PNG from memory: TEXTURE_LOAD_ERROR");
             return false;
         }
 
         //init png reading
-        png_set_read_fn(png_ptr, &pngImageFile, CustomPngReadFn);
-
-        //png_init_io(png_ptr, fp);
+        png_set_read_fn(png_ptr, &reader, PngMemoryReadFn);
 
         //let libpng know you already read the first 8 bytes
         png_set_sig_bytes(png_ptr, 8);
@@ -149,7 +181,7 @@ namespace o2
             png_destroy_read_struct(&png_ptr, &info_ptr, &end_info);
 
             if (errors) 
-                o2Debug.LogError("Can't load PNG file '" + fileName + "': TEXTURE_LOAD_ERROR");
+                o2Debug.LogError("Can't load PNG from memory: TEXTURE_LOAD_ERROR");
             return false;
         }
 
@@ -163,7 +195,7 @@ namespace o2
                 delete[] image_data;
 
             if (errors) 
-                o2Debug.LogError("Can't load PNG file '" + fileName + "': TEXTURE_LOAD_ERROR");
+                o2Debug.LogError("Can't load PNG from memory: TEXTURE_LOAD_ERROR");
             return false;
         }
 

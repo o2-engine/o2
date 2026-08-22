@@ -5,6 +5,7 @@
 #include "o2/Assets/Assets.h"
 #include "o2/Config/ProjectConfig.h"
 #include "o2/Events/EventSystem.h"
+#include "o2/Network/NetworkSystem.h"
 #include "o2/Physics/PhysicsWorld.h"
 #include "o2/Physics/PhysicsWorld3D.h"
 #include "o2/Render/Render.h"
@@ -46,6 +47,7 @@ namespace o2
     FORWARD_REF_IMPL(EventSystem);
     FORWARD_REF_IMPL(FileSystem);
     FORWARD_REF_IMPL(Input);
+    FORWARD_REF_IMPL(NetworkSystem);
     FORWARD_REF_IMPL(PhysicsWorld);
     FORWARD_REF_IMPL(PhysicsWorld3D);
     FORWARD_REF_IMPL(ProjectConfig);
@@ -200,6 +202,12 @@ namespace o2
         mTaskManager->Update(dt);
     }
 
+    void Integration::UpdateNetwork(float dt)
+    {
+        PROFILE_SAMPLE_FUNC();
+        mNetwork->Update(dt);
+    }
+
     void Integration::InitalizeSystems()
     {
         PROFILE_BIND_THREAD();
@@ -227,6 +235,8 @@ namespace o2
 
         mCoroutineScheduler = mmake<CoroutineScheduler>();
         mCoroutineScheduler->Initialize();
+
+        mNetwork = mmake<NetworkSystem>();
 
         mTimer.Reset();
 
@@ -279,6 +289,8 @@ namespace o2
 
         mJobSystem->Shutdown();
         JobSystem::DestroySingleton(mJobSystem);
+
+        NetworkSystem::DestroySingleton(mNetwork);
 
         mLifecycleStarted = false;
 
@@ -415,6 +427,7 @@ namespace o2
 		UpdateDebug(dt);
 		UpdateProfiler(dt);
 		UpdateTaskManager(dt);
+		UpdateNetwork(dt);
 		UpdateEventSystem();
 	}
 

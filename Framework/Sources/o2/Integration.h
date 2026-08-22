@@ -19,6 +19,7 @@ namespace o2
     FORWARD_CLASS_REF(FileSystem);
     FORWARD_CLASS_REF(Input);
     FORWARD_CLASS_REF(LogStream);
+    FORWARD_CLASS_REF(NetworkSystem);
     FORWARD_CLASS_REF(PhysicsWorld);
     FORWARD_CLASS_REF(PhysicsWorld3D);
     FORWARD_CLASS_REF(ProjectConfig);
@@ -141,6 +142,7 @@ namespace o2
         Ref<FileSystem>    mFileSystem;    // File system
         Ref<Input>         mInput;         // Whole application user input message
         Ref<LogStream>     mLog;           // Log stream with id "app", using only for integration messages
+        Ref<NetworkSystem> mNetwork;       // Network system
         Ref<PhysicsWorld>   mPhysics;       // Physics
         Ref<PhysicsWorld3D> mPhysics3D;     // 3D physics
         Ref<ProjectConfig> mProjectConfig; // Project config
@@ -256,6 +258,9 @@ namespace o2
 		// Updates task manager
 		virtual void UpdateTaskManager(float dt);
 
+		// Pumps the network system: sockets and HTTP requests
+		virtual void UpdateNetwork(float dt);
+
 		// Draws scene
 		virtual void DrawScene();
 
@@ -311,6 +316,7 @@ CLASS_FIELDS_META(o2::Integration)
     FIELD().PROTECTED().NAME(mFileSystem);
     FIELD().PROTECTED().NAME(mInput);
     FIELD().PROTECTED().NAME(mLog);
+    FIELD().PROTECTED().NAME(mNetwork);
     FIELD().PROTECTED().NAME(mPhysics);
     FIELD().PROTECTED().NAME(mPhysics3D);
     FIELD().PROTECTED().NAME(mProjectConfig);
@@ -386,6 +392,7 @@ CLASS_METHODS_META(o2::Integration)
     FUNCTION().PROTECTED().SIGNATURE(void, UpdatePhysics3D, float);
     FUNCTION().PROTECTED().SIGNATURE(void, PostUpdatePhysics3D);
     FUNCTION().PROTECTED().SIGNATURE(void, UpdateTaskManager, float);
+    FUNCTION().PROTECTED().SIGNATURE(void, UpdateNetwork, float);
     FUNCTION().PROTECTED().SIGNATURE(void, DrawScene);
     FUNCTION().PROTECTED().SIGNATURE(void, UpdateEventSystem);
     FUNCTION().PROTECTED().SIGNATURE(void, PostUpdateEventSystem);
