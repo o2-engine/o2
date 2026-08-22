@@ -59,7 +59,7 @@ namespace o2
         // Removes all animation states @SCRIPTABLE
         void RemoveAllStates();
 
-        // Returns state with specified name. Returns nullptr if can't find state with specified name
+        // Returns state with specified name. Returns nullptr if can't find state with specified name @SCRIPTABLE
         Ref<IAnimationState> GetState(const String& name);
 
 		// Returns first state from states array. Returns nullptr if no states in array
@@ -106,6 +106,10 @@ namespace o2
 
         // Stops all states @SCRIPTABLE
         void StopAll();
+
+        // Reattaches animation states to component; call after the owner structure
+        // changed (e.g. widget layers appeared after components were cloned)
+        virtual void ReattachAnimationStates();
 
         // Returns name of component
         static String GetName();
@@ -239,9 +243,6 @@ namespace o2
         // Called when track is removing from animation state, unregisters track player from mixer
         void OnStateAnimationTrackRemoved(const Ref<AnimationState>& state, const Ref<IAnimationTrack::IPlayer>& player);
 
-        // Reattaches animation states to component, used to start and update animations
-        virtual void ReattachAnimationStates();
-
         REF_COUNTERABLE_IMPL(Component);
 
         friend class AnimationClip;
@@ -294,9 +295,12 @@ namespace o2
         auto owner = mOwner.Lock();
         auto fieldPtr = owner.Get()->GetType().GetFieldPtr(owner.Get(), path, fieldInfo);
 
+        // a mixer that failed to bind must not stay in mValues - its null target would
+        // crash on the next update
         if (!fieldInfo)
         {
             o2Debug.LogWarning("Can't animate value " + path + ": can't find field");
+            mValues.Remove(newAgent);
             return;
         }
 
@@ -308,6 +312,7 @@ namespace o2
             if (!newAgent->target)
             {
                 o2Debug.LogWarning("Can't animate value " + path + ": field type doesn't match track type");
+                mValues.Remove(newAgent);
                 return;
             }
 
@@ -346,6 +351,9 @@ namespace o2
     template<typename _type>
     void AnimationComponent::TrackMixer<_type>::Update()
     {
+        if (!target)
+            return;
+
         auto firstValueState = tracks[0].first;
         auto firstValue = tracks[0].second;
 
@@ -409,7 +417,7 @@ CLASS_METHODS_META(o2::AnimationComponent)
     FUNCTION().PUBLIC().SIGNATURE(void, RemoveState, const Ref<IAnimationState>&);
     FUNCTION().PUBLIC().SIGNATURE(void, RemoveState, const String&);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, RemoveAllStates);
-    FUNCTION().PUBLIC().SIGNATURE(Ref<IAnimationState>, GetState, const String&);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(Ref<IAnimationState>, GetState, const String&);
     FUNCTION().PUBLIC().SIGNATURE(Ref<IAnimationState>, GetFirstState, bool);
     FUNCTION().PUBLIC().SIGNATURE(const Vector<Ref<IAnimationState>>&, GetStates);
     FUNCTION().PUBLIC().SIGNATURE(_tmp1, GetAllStates);
@@ -425,6 +433,7 @@ CLASS_METHODS_META(o2::AnimationComponent)
     FUNCTION().PUBLIC().SIGNATURE(Ref<IAnimationState>, BlendTo, const Ref<IAnimationState>&, float);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, Stop, const String&);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, StopAll);
+    FUNCTION().PUBLIC().SIGNATURE(void, ReattachAnimationStates);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetName);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetCategory);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetIcon);
@@ -434,7 +443,6 @@ CLASS_METHODS_META(o2::AnimationComponent)
     FUNCTION().PROTECTED().SIGNATURE(void, UnregTrack, const Ref<IAnimationTrack::IPlayer>&, const String&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnStateAnimationTrackAdded, const Ref<AnimationState>&, const Ref<IAnimationTrack::IPlayer>&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnStateAnimationTrackRemoved, const Ref<AnimationState>&, const Ref<IAnimationTrack::IPlayer>&);
-    FUNCTION().PROTECTED().SIGNATURE(void, ReattachAnimationStates);
 }
 END_META;
 // --- END META ---

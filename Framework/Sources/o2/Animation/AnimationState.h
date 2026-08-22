@@ -47,9 +47,11 @@ namespace o2
         virtual float GetDuration() const;
 
         // Sets state weight (0...1) of blending
+        // Sets state weight @SCRIPTABLE
         virtual void SetWeight(float weight);
 
         // Returns state weight (0...1) of blending
+        // Returns state weight @SCRIPTABLE
         virtual float GetWeight() const;
 
         // Sets looped state
@@ -199,8 +201,8 @@ CLASS_METHODS_META(o2::IAnimationState)
     FUNCTION().PUBLIC().SIGNATURE(void, Update, float);
     FUNCTION().PUBLIC().SIGNATURE(IAnimation&, GetPlayer);
     FUNCTION().PUBLIC().SIGNATURE(float, GetDuration);
-    FUNCTION().PUBLIC().SIGNATURE(void, SetWeight, float);
-    FUNCTION().PUBLIC().SIGNATURE(float, GetWeight);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetWeight, float);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(float, GetWeight);
     FUNCTION().PUBLIC().SIGNATURE(void, SetLooped, bool);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsLooped);
     FUNCTION().PROTECTED().SIGNATURE(void, Register, const Ref<AnimationComponent>&);

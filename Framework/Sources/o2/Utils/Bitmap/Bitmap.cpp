@@ -95,6 +95,20 @@ namespace o2
         return false;
     }
 
+    bool Bitmap::LoadFromMemory(const UInt8* data, UInt size, ImageType type /*= ImageType::Auto*/)
+    {
+        mFilename = "";
+
+        if (type == ImageType::Png)
+            return LoadPngImageFromMemory(data, size, this, true);
+
+        if (LoadPngImageFromMemory(data, size, this, false))
+            return true;
+
+        o2Debug.LogError("Can't load image from memory: unknown format");
+        return false;
+    }
+
     bool Bitmap::Save(const String& fileName, ImageType type) const
     {
         if (type == ImageType::Png || type == ImageType::Auto)

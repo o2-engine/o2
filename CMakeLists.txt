@@ -321,7 +321,8 @@ endif()
 
 if (EMSCRIPTEN)
     target_compile_options(o2Framework PUBLIC "-sUSE_WEBGL2=1" "-sMIN_WEBGL_VERSION=2" "-sMAX_WEBGL_VERSION=2" "-sFULL_ES3=1")
-    target_link_options(o2Framework PUBLIC "-sUSE_WEBGL2=1" "-sMIN_WEBGL_VERSION=2" "-sMAX_WEBGL_VERSION=2" "-sFULL_ES3=1")
+    # FETCH backs the network system's HTTP backend in the browser
+    target_link_options(o2Framework PUBLIC "-sUSE_WEBGL2=1" "-sMIN_WEBGL_VERSION=2" "-sMAX_WEBGL_VERSION=2" "-sFULL_ES3=1" "-sFETCH=1")
 elseif (ANDROID)
     find_library(ANDROID_EGL_LIB EGL)
     find_library(ANDROID_GLES2_LIB GLESv2)
@@ -425,6 +426,8 @@ if(WIN32)
     target_link_libraries(o2Framework PRIVATE opengl32.lib)
     # Media Foundation for the hardware video decoder
     target_link_libraries(o2Framework PRIVATE mfplat.lib mfreadwrite.lib mfuuid.lib ole32.lib)
+    # Sockets for the network system
+    target_link_libraries(o2Framework PRIVATE ws2_32.lib)
 endif()
 
 if (UNIX)

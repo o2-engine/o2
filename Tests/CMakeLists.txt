@@ -17,6 +17,9 @@ include(O2TestSuites)
 # SceneTestHelpers, UITestHelpers. Compiled once into a static lib that both tiers link.
 add_subdirectory(Sources/Support)
 
+# Standalone codeTool tests — parser and meta generator, no o2Framework dependency
+add_subdirectory(Sources/CodeTool)
+
 # Three test executables, in order of increasing init cost:
 #   o2UtilTests   — no Application, no asset tree load (~70 ms cold start)
 #   o2SystemTests — Application::Initialize headless (~135 ms cold start)

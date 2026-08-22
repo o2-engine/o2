@@ -1,1466 +1,1488 @@
 #include "CppSyntaxParser.h"
 
-#include <algorithm>
-#include <fstream>
-#include <functional>
-#include <locale>
-#include <sstream>
 #include <cstring>
 
-string& TrimStart(string& str, const string& chars /*= " "*/)
+#include "TextUtils.h"
+
+void CppSyntaxParser::ParseFile(SyntaxFile& file, const string& filePath)
 {
-    int l = (int)str.length();
-    int i = 0;
-    for (; i < l; i++)
-    {
-        if (chars.find(str[i]) == string::npos)
-            break;
-    }
-
-    str.erase(0, i);
-
-    return str;
+    ParseSource(file, filePath, ReadFile(filePath));
 }
 
-string& TrimEnd(string& str, const string& chars /*= " "*/)
-{
-    int l = (int)str.length();
-    int i = l - 1;
-    for (; i >= 0; i--)
-    {
-        if (chars.find(str[i]) == string::npos)
-            break;
-    }
-
-    str.erase(i + 1);
-
-    return str;
-}
-
-string& Trim(string& str, const string& chars /*= " "*/)
-{
-    return TrimStart(TrimEnd(str, chars), chars);
-}
-
-bool StartsWith(const string& str, const string& starts)
-{
-    int l1 = (int)str.length(), l2 = (int)starts.length();
-
-    if (l1 < l2)
-        return false;
-
-    for (int i = 0; i < l1 && i < l2; i++)
-    {
-        if (str[i] != starts[i])
-            return false;
-    }
-
-    return true;
-}
-
-bool EndsWith(const string& str, const string& ends)
-{
-    int l1 = (int)str.length(), l2 = (int)ends.length();
-
-    if (l1 < l2)
-        return false;
-
-    for (int i = 0; i < l1 && i < l2; i++)
-    {
-        if (str[l1 - i - 1] != ends[l2 - i - 1])
-            return false;
-    }
-
-    return true;
-}
-
-void Split(const string& s, char delim, vector<string>& elems)
-{
-    stringstream ss;
-    ss.str(s);
-    string item;
-    while (getline(ss, item, delim))
-        elems.push_back(item);
-}
-
-vector<string> Split(const string& s, char delim)
-{
-    vector<string> elems;
-    Split(s, delim, elems);
-    return elems;
-}
-
-CppSyntaxParser::CppSyntaxParser()
-{
-    InitializeParsers();
-}
-
-CppSyntaxParser::~CppSyntaxParser()
-{
-    for (auto x : mParsers)
-        delete x;
-}
-
-void CppSyntaxParser::InitializeParsers()
-{
-    mParsers.push_back(new ExpressionParser("namespace", &CppSyntaxParser::ParseNamespace, false, true));
-    mParsers.push_back(new ExpressionParser("namespace", &CppSyntaxParser::ParseNamespace, true, true));
-    mParsers.push_back(new ExpressionParser("//", &CppSyntaxParser::ParseComment, true, true));
-    mParsers.push_back(new ExpressionParser("/*", &CppSyntaxParser::ParseMultilineComment, true, true));
-    mParsers.push_back(new ExpressionParser("#pragma", &CppSyntaxParser::ParsePragma, false, true));
-    mParsers.push_back(new ExpressionParser("#include", &CppSyntaxParser::ParseInclude, false, true));
-    mParsers.push_back(new ExpressionParser("#define", &CppSyntaxParser::ParseDefine, true, true));
-    mParsers.push_back(new ExpressionParser("#undef", &CppSyntaxParser::ParseDefine, true, true));
-    mParsers.push_back(new ExpressionParser("#ifdef", &CppSyntaxParser::ParseIfdefMacros, true, true));
-    mParsers.push_back(new ExpressionParser("#if", &CppSyntaxParser::ParseIfMacros, true, true));
-    mParsers.push_back(new ExpressionParser("#endif", &CppSyntaxParser::ParseEndIfMacros, true, true));
-    mParsers.push_back(new ExpressionParser("#else", &CppSyntaxParser::ParseElseMacros, true, true));
-    mParsers.push_back(new ExpressionParser("#elif", &CppSyntaxParser::ParseElifMacros, true, true));
-    mParsers.push_back(new ExpressionParser("meta class", &CppSyntaxParser::ParseMetaClass, true, true));
-    mParsers.push_back(new ExpressionParser("class", &CppSyntaxParser::ParseClass, true, true));
-    mParsers.push_back(new ExpressionParser("struct", &CppSyntaxParser::ParseStruct, true, true));
-    mParsers.push_back(new ExpressionParser("template", &CppSyntaxParser::ParseTemplate, true, true));
-    mParsers.push_back(new ExpressionParser("typedef", &CppSyntaxParser::ParseTypedef, true, true));
-    mParsers.push_back(new ExpressionParser("enum", &CppSyntaxParser::ParseEnum, true, true));
-    mParsers.push_back(new ExpressionParser("using", &CppSyntaxParser::ParseUsing, true, true));
-    mParsers.push_back(new ExpressionParser("public:", &CppSyntaxParser::ParsePublicSection, true, false));
-    mParsers.push_back(new ExpressionParser("private:", &CppSyntaxParser::ParsePrivateSection, true, false));
-    mParsers.push_back(new ExpressionParser("protected:", &CppSyntaxParser::ParseProtectedSection, true, false));
-    mParsers.push_back(new ExpressionParser("friend", &CppSyntaxParser::ParseFriend, true, false));
-    mParsers.push_back(new ExpressionParser("ATTRIBUTE_COMMENT_DEFINITION", &CppSyntaxParser::ParseAttributeCommentDef, true, false));
-    mParsers.push_back(new ExpressionParser("ATTRIBUTE_SHORT_DEFINITION", &CppSyntaxParser::ParseAttributeShortDef, true, false));
-    mParsers.push_back(new ExpressionParser("ATTRIBUTES", &CppSyntaxParser::ParseAttributes, true, false));
-    mParsers.push_back(new ExpressionParser("PROPERTIES", &CppSyntaxParser::ParseProperties, true, false));
-    mParsers.push_back(new ExpressionParser("PROPERTY", &CppSyntaxParser::ParseProperty, true, false));
-    mParsers.push_back(new ExpressionParser("GETTER", &CppSyntaxParser::ParseGetter, true, false));
-    mParsers.push_back(new ExpressionParser("SETTER", &CppSyntaxParser::ParseSetter, true, false));
-    mParsers.push_back(new ExpressionParser("ACCESSOR", &CppSyntaxParser::ParseAccessor, true, false));
-}
-
-void CppSyntaxParser::ParseFile(SyntaxFile& file, const string& filePath, const TimeStamp& fileEditDate)
+void CppSyntaxParser::ParseSource(SyntaxFile& file, const string& filePath, const string& source)
 {
     file.mPath = filePath;
-    file.mLastEditedDate = fileEditDate;
+    file.mData = source;
 
-    ifstream fin;
-    fin.open(filePath.c_str());
-    if (!fin.is_open())
+    if (source.find("@CODETOOLIGNORE") != string::npos)
         return;
 
-    file.mData = string((std::istreambuf_iterator<char>(fin)), std::istreambuf_iterator<char>());
+    mSource = &file.mData;
+    mTokens = Tokenize(file.mData);
+    mPos = 0;
+    mFile = &file;
+    mArena = &file.GetArena();
+    mDefinesStack.clear();
 
-    fin.close();
+    SyntaxNamespace* global = file.mGlobalNamespace;
+    global->mData = file.mData;
+    global->mLength = (int)file.mData.length();
+    global->mFile = &file;
 
-    if (file.mData.find("@CODETOOLIGNORE") != string::npos)
-        return;
+    SectionContext ctx;
+    ctx.section = global;
+    ctx.protection = SyntaxProtectionSection::Public;
 
-    ParseSyntaxSection(*file.mGlobalNamespace, file.mData, file, SyntaxProtectionSection::Public);
+    ParseSectionBody(ctx);
 }
 
-void CppSyntaxParser::ParseSyntaxSection(SyntaxSection& section, const string& source, SyntaxFile& file,
-                                         SyntaxProtectionSection protectionSection)
+string CppSyntaxParser::Slice(int beginTokenIdx, int endTokenIdx) const
 {
-    section.mLength = (int)source.length();
-    section.mData = source;
-    section.mFile = &file;
+    if (beginTokenIdx >= endTokenIdx || AtEnd(beginTokenIdx))
+        return string();
 
-    string skipSymbols = " \r\n\t;";
+    int begin = Tok(beginTokenIdx).begin;
+    int end = Tok(min(endTokenIdx, (int)mTokens.size()) - 1).end;
+    return mSource->substr(begin, end - begin);
+}
 
-    int caret = 0;
-    while (caret < section.mLength)
+int CppSyntaxParser::NextSignificant(int i) const
+{
+    while (!AtEnd(i) && (Tok(i).type == TokenType::LineComment || Tok(i).type == TokenType::BlockComment))
+        i++;
+
+    return i;
+}
+
+void CppSyntaxParser::SkipComments()
+{
+    mPos = NextSignificant(mPos);
+}
+
+int CppSyntaxParser::SkipBalancedAngles(int i) const
+{
+    int depth = 0;
+    for (; !AtEnd(i); i++)
     {
-        if (skipSymbols.find(source[caret]) != string::npos)
+        if (Tok(i).IsPunct(*mSource, '<'))
+            depth++;
+        else if (Tok(i).IsPunct(*mSource, '>'))
         {
-            caret++;
+            depth--;
+            if (depth == 0)
+                return i + 1;
+        }
+    }
+
+    return i;
+}
+
+int CppSyntaxParser::FindMatchingParen(int i) const
+{
+    int depth = 0;
+    for (; !AtEnd(i); i++)
+    {
+        if (Tok(i).IsPunct(*mSource, '('))
+            depth++;
+        else if (Tok(i).IsPunct(*mSource, ')'))
+        {
+            depth--;
+            if (depth == 0)
+                return i;
+        }
+    }
+
+    return i;
+}
+
+SyntaxDefineIf* CppSyntaxParser::CurrentDefine() const
+{
+    return mDefinesStack.empty() ? nullptr : mDefinesStack.back();
+}
+
+void CppSyntaxParser::ParseSectionBody(SectionContext& ctx)
+{
+    while (!AtEnd())
+    {
+        const Token& token = Tok(mPos);
+
+        if (token.type == TokenType::LineComment)
+        {
+            ParseLineComments(ctx);
             continue;
         }
 
-        bool parsedByKeywork = false;
-        for (auto parser : mParsers)
+        if (token.type == TokenType::BlockComment)
         {
-            const char* keyWord = parser->keyWord;
+            ParseBlockComment(ctx);
+            continue;
+        }
 
-            int i = 0;
-            bool success = true;
-            while (keyWord[i] != '\0')
+        if (token.type == TokenType::Directive)
+        {
+            HandleDirective(ctx);
+            mPos++;
+            continue;
+        }
+
+        if (token.type == TokenType::Punct)
+        {
+            char c = (*mSource)[token.begin];
+
+            if (c == '}')
+                return;
+
+            if (c == ';')
             {
-                if (source[i + caret] != keyWord[i])
-                {
-                    success = false;
-                    break;
-                }
-                i++;
-            }
-
-            if (!success)
+                mPos++;
                 continue;
-
-            ParserDelegate pd = parser->parser;
-            (this->*pd)(section, caret, protectionSection);
-            parsedByKeywork = true;
-
-            break;
-        }
-
-        if (parsedByKeywork)
-            continue;
-
-        int blockbegin = caret;
-        string block = ReadBlock(section.mData, caret);
-        Trim(block, " \r\t\n");
-        if (block[0] == '{' && block[block.length() - 1] == '}')
-        {
-            block.erase(block.length() - 1, 1);
-            block.erase(0, 1);
-        }
-
-        if (!block.empty())
-            TryParseBlock(section, block, blockbegin, caret, protectionSection);
-        else
-            caret++;
-    }
-}
-
-int CppSyntaxParser::GetLineNumber(const string& data, int caret)
-{
-    int res = 0;
-    for (int i = 0; i < caret; i++)
-        if (data[i] == '\n')
-            res++;
-
-    return res;
-}
-
-void CppSyntaxParser::TryParseBlock(SyntaxSection& section, const string& block, int blockBegin, int& caret,
-                                    SyntaxProtectionSection& protectionSection)
-{
-    if (IsFunction(block))
-    {
-        auto func = ParseFunction(block, protectionSection, blockBegin, caret);
-        func->mFile = section.mFile;
-        func->mLine = GetLineNumber(section.mData, caret);
-        section.mFunctions.push_back(func);
-    }
-    else
-    {
-        auto var = ParseVariable(block, protectionSection, blockBegin, caret);
-        var->mFile = section.mFile;
-        var->mLine = GetLineNumber(section.mData, caret);
-        section.mVariables.push_back(var);
-    }
-}
-
-bool CppSyntaxParser::IsFunction(const string& data)
-{
-    int locCaret = 0;
-    bool isFunction = false;
-
-    string firstWord = ReadWord(data, locCaret, " \n\r(){}[]");
-
-    if (firstWord.empty())
-        return false;
-
-    if (firstWord == "virtual")
-        firstWord = ReadWord(data, locCaret, " \n\r(){}[]");
-
-    if (firstWord == "static")
-        firstWord = ReadWord(data, locCaret, " \n\r(){}[]");
-
-    if (firstWord == "typename")
-        firstWord = ReadWord(data, locCaret, " \n\r(){}[]");
-
-    if (firstWord == "inline")
-        firstWord = ReadWord(data, locCaret, " \n\r(){}[]");
-
-    if (firstWord == "explicit")
-        firstWord = ReadWord(data, locCaret, " \n\r(){}[]");
-
-    if (GetNextSymbol(data, locCaret, " \n\r\t") == '(')
-    {
-        string braces = ReadBraces(data, locCaret);
-        Trim(braces, " \n\t\r()");
-
-        int tmpCaret = 0;
-        string word = ReadWord(braces, tmpCaret);
-
-        isFunction = GetNextSymbol(braces, tmpCaret, " \n\r\t") != ':';
-
-        if (!isFunction && StartsWith(braces, "std"))
-            isFunction = true;
-    }
-    else
-    {
-        if (firstWord == "const")
-            ReadWord(data, locCaret, " \n\r(){}[]");
-
-        if (firstWord == "operator")
-            ReadWord(data, locCaret, " \n\r(){}[]");
-
-        string thirdWord = ReadWord(data, locCaret, " \n\r(){}[]<>-");
-
-        if (thirdWord == "operator")
-            thirdWord = ReadWord(data, locCaret, " \n\r(){}", "\n\r", true, true, false);
-
-        if (GetNextSymbol(data, locCaret, " \n\r\t") == '(')
-            isFunction = true;
-    }
-
-    return isFunction;
-}
-
-SyntaxVariable* CppSyntaxParser::ParseVariable(const string& data, SyntaxProtectionSection& protectionSection,
-                                               int begin, int end)
-{
-    SyntaxVariable* res = new SyntaxVariable();
-    res->mBegin = begin;
-    res->mLength = end - begin;
-    res->mData = data;
-
-    if (mCurrentDefine)
-        res->mDefine = mCurrentDefine;
-
-    int caret = 0;
-    string typeWord = ReadWord(data, caret, " \n\r(){}[]");
-    string typeDefinition = typeWord;
-
-    if (typeWord == "static")
-    {
-        typeWord = ReadWord(data, caret, " \n\r(){}[]");
-        typeDefinition += " " + typeWord;
-        res->mIsStatic = true;
-    }
-
-    if (typeWord == "const")
-    {
-        typeWord = ReadWord(data, caret, " \n\r(){}[]");
-        res->mType.mIsContant = true;
-
-        typeDefinition += " " + typeWord;
-    }
-
-    if (typeWord == "mutable")
-    {
-        typeWord = ReadWord(data, caret, " \n\r(){}[]");
-        res->mType.mIsMutable = true;
-
-        typeDefinition += " " + typeWord;
-    }
-
-    if (!typeWord.empty() && typeWord[typeWord.length() - 1] == '&')
-        res->mType.mIsReference = true;
-
-    if (!typeWord.empty() && typeWord[typeWord.length() - 1] == '*')
-        res->mType.mIsPointer = true;
-
-    res->mType.mName = typeWord;
-
-    res->mClassSection = protectionSection;
-
-    if (GetNextSymbol(data, caret, " \n\r\t") == '(')
-    {
-        string bracesRaw = ReadBraces(data, caret);
-        string braces = Trim(bracesRaw, " \r\t\t()");
-
-        string nextBracesRaw = ReadBraces(data, caret);
-        string nextBraces = Trim(nextBracesRaw, " \r\t\t()");
-
-        int tmpCaret = 0;
-        string bracesFirst = ReadWord(braces, tmpCaret);
-        if (braces[tmpCaret] == '*')
-        {
-            tmpCaret += 3;
-            res->mName = braces.substr(tmpCaret);
-
-            res->mType.mName += " (" + bracesFirst + "*)(" + nextBraces + ")";
-        }
-    }
-    else
-    {
-        string nextWord = ReadWord(data, caret, " (){}[]");
-        if (nextWord == "const")
-            res->mName = ReadWord(data, caret, " (){}[]");
-        else
-            res->mName = nextWord;
-
-        nextWord = ReadWord(data, caret, " (){}[]");
-        if (nextWord == "=")
-            res->mDefaultValue = ReadWord(data, caret, ";");
-    }
-
-    return res;
-}
-
-SyntaxFunction* CppSyntaxParser::ParseFunction(const string& data, SyntaxProtectionSection& protectionSection,
-                                               int begin, int end)
-{
-    SyntaxFunction* res = new SyntaxFunction();
-    res->mBegin = begin;
-    res->mLength = end - begin;
-    res->mData = data;
-
-    if (mCurrentDefine)
-        res->mDefine = mCurrentDefine;
-
-    res->mClassSection = protectionSection;
-
-    int caret = 0;
-    string typeWord = ReadWord(data, caret, " \n\r(){}[]");
-
-    if (typeWord == "virtual")
-    {
-        res->mIsVirtual = true;
-        typeWord = ReadWord(data, caret, " \n\r(){}[]");
-    }
-
-    if (typeWord == "static")
-    {
-        res->mIsStatic = true;
-        typeWord = ReadWord(data, caret, " \n\r(){}[]");
-    }
-
-    if (typeWord == "inline")
-        typeWord = ReadWord(data, caret, " \n\r(){}[]");
-
-    if (typeWord == "typename")
-        typeWord = ReadWord(data, caret, " \n\r(){}[]");
-
-    if (typeWord == "explicit")
-        typeWord = ReadWord(data, caret, " \n\r(){}[]");
-
-    if (typeWord == "operator")
-    {
-        string nextWord = ReadWord(data, caret, " \n\r(){}[]");
-        res->mName = typeWord + nextWord;
-        res->mReturnType.mName = "void";
-    }
-    else
-    {
-        if (GetNextSymbol(data, caret, " \n\r\t") == '(')
-        {
-            res->mName = typeWord;
-            res->mReturnType.mName = "void";
-        }
-        else
-        {
-            string typeDefinition = typeWord;
-
-            if (typeWord == "const")
-            {
-                typeWord = ReadWord(data, caret, " \n\r(){}[]");
-                res->mReturnType.mIsContant = true;
-
-                typeDefinition += " " + typeWord;
             }
 
-            if (!typeWord.empty() && typeWord[typeWord.length() - 1] == '&')
-                res->mReturnType.mIsReference = true;
-
-            if (!typeWord.empty() && typeWord[typeWord.length() - 1] == '*')
-                res->mReturnType.mIsPointer = true;
-
-            res->mReturnType.mName = typeWord;
-
-            res->mName = ReadWord(data, caret, " \n\r(){}[]");
-
-            if (res->mName == "operator")
-                res->mName += " " + ReadWord(data, caret, " \n\r(){}");
+            ParseMemberDeclaration(ctx);
+            continue;
         }
-    }
 
-    string braces = ReadBraces(data, caret);
-    string paramsStr = Trim(braces, " \n\r\t");
-    string afterParamWord = ReadWord(data, caret);
-
-    if (afterParamWord == "const")
-        res->mIsContstant = true;
-
-    if (!paramsStr.empty())
-    {
-        auto paramsArr = Split(paramsStr, ',');
-        for (auto& prm : paramsArr)
+        if (token.type == TokenType::Identifier)
         {
-            Trim(prm, " \r\n\t");
-            SyntaxProtectionSection tempProtectSection = SyntaxProtectionSection::Public;
-            res->mParameters.push_back(ParseVariable(prm, tempProtectSection, begin, end));
-        }
-    }
+            if (token.Is(*mSource, "namespace"))
+            {
+                ParseNamespace(ctx);
+                continue;
+            }
 
-    return res;
+            if (token.Is(*mSource, "class") || token.Is(*mSource, "struct"))
+            {
+                ParseClassOrStruct(ctx, token.Is(*mSource, "class"), "");
+                continue;
+            }
+
+            if (token.Is(*mSource, "template"))
+            {
+                ParseTemplate(ctx);
+                continue;
+            }
+
+            if (token.Is(*mSource, "enum"))
+            {
+                ParseEnum(ctx);
+                continue;
+            }
+
+            if (token.Is(*mSource, "typedef"))
+            {
+                ParseTypedef(ctx);
+                continue;
+            }
+
+            if (token.Is(*mSource, "using"))
+            {
+                ParseUsing(ctx);
+                continue;
+            }
+
+            if (token.Is(*mSource, "friend"))
+            {
+                ParseFriend();
+                continue;
+            }
+
+            if (token.Is(*mSource, "public") || token.Is(*mSource, "private") || token.Is(*mSource, "protected"))
+            {
+                int next = NextSignificant(mPos + 1);
+                if (!AtEnd(next) && Tok(next).IsPunct(*mSource, ':'))
+                {
+                    if (token.Is(*mSource, "public"))
+                        ctx.protection = SyntaxProtectionSection::Public;
+                    else if (token.Is(*mSource, "private"))
+                        ctx.protection = SyntaxProtectionSection::Private;
+                    else
+                        ctx.protection = SyntaxProtectionSection::Protected;
+
+                    mPos = next + 1;
+                    continue;
+                }
+            }
+
+            if (token.Is(*mSource, "ATTRIBUTE_COMMENT_DEFINITION"))
+            {
+                ParseAttributeDefinition(ctx, false);
+                continue;
+            }
+
+            if (token.Is(*mSource, "ATTRIBUTE_SHORT_DEFINITION"))
+            {
+                ParseAttributeDefinition(ctx, true);
+                continue;
+            }
+
+            if (token.Is(*mSource, "ATTRIBUTES"))
+            {
+                ParseAttributesMacro(ctx);
+                continue;
+            }
+
+            if (token.Is(*mSource, "PROPERTIES"))
+            {
+                mPos++;
+                SkipToSemicolon();
+                continue;
+            }
+
+            if (token.Is(*mSource, "PROPERTY") || token.Is(*mSource, "GETTER") ||
+                token.Is(*mSource, "SETTER") || token.Is(*mSource, "ACCESSOR"))
+            {
+                ParsePropertyMacro(ctx);
+                continue;
+            }
+
+            ParseMemberDeclaration(ctx);
+            continue;
+        }
+
+        // Number, string or char literal at declaration level - consume as part of a member
+        ParseMemberDeclaration(ctx);
+    }
 }
 
-void CppSyntaxParser::ParseNamespace(SyntaxSection& section, int& caret,
-                                     SyntaxProtectionSection& protectionSection)
+void CppSyntaxParser::ParseNamespace(SectionContext& ctx)
 {
-    int begin = caret;
-    caret += (int)strlen("namespace");
+    int begin = mPos;
+    mPos++;
+    SkipComments();
 
-    string namespaceName = ReadWord(section.mData, caret);
-    string blockRaw = ReadBlock(section.mData, caret);
-    string block = Trim(blockRaw, " \r\t\n");
+    // Name: identifier, optionally a C++17 nested A::B::C chain
+    int nameBegin = mPos;
+    int nameEnd = mPos;
+    while (!AtEnd(nameEnd) && Tok(nameEnd).type == TokenType::Identifier)
+    {
+        nameEnd++;
+        if (!AtEnd(nameEnd + 1) && Tok(nameEnd).IsPunct(*mSource, ':') && Tok(nameEnd + 1).IsPunct(*mSource, ':'))
+            nameEnd += 2;
+        else
+            break;
+    }
 
-    SyntaxNamespace* newNamespace = new SyntaxNamespace();
-    newNamespace->mBegin = begin;
-    newNamespace->mLength = caret - begin;
-    newNamespace->mLine = GetLineNumber(section.mData, caret);
+    string name = Slice(nameBegin, nameEnd);
+    mPos = nameEnd;
 
-    string blockSubstr = block.substr(1, block.length() - 1);
-    newNamespace->mData = Trim(blockSubstr, " \r\t\n");
-    newNamespace->mName = namespaceName;
-    newNamespace->mFullName = section.mFullName.empty() ? namespaceName : section.mFullName + "::" + namespaceName;
+    // Skip to the namespace body; bail out on `namespace X = ...;` aliases
+    while (!AtEnd() && !Tok(mPos).IsPunct(*mSource, '{'))
+    {
+        if (Tok(mPos).IsPunct(*mSource, ';'))
+        {
+            mPos++;
+            return;
+        }
+        mPos++;
+    }
+
+    if (AtEnd())
+        return;
+
+    SyntaxSection& section = *ctx.section;
+
+    SyntaxNamespace* newNamespace = mArena->Make<SyntaxNamespace>();
+    newNamespace->mBegin = Tok(begin).begin;
+    newNamespace->mLine = Tok(begin).line;
+    newNamespace->mName = name;
+    newNamespace->mFullName = section.mFullName.empty() ? name : section.mFullName + "::" + name;
     newNamespace->mFile = section.mFile;
     newNamespace->mParentSection = &section;
     section.mSections.push_back(newNamespace);
 
-    ParseSyntaxSection(*newNamespace, newNamespace->mData, *section.mFile, SyntaxProtectionSection::Public);
+    int bodyBegin = mPos + 1;
+    mPos++;
+
+    SectionContext bodyCtx;
+    bodyCtx.section = newNamespace;
+    bodyCtx.protection = SyntaxProtectionSection::Public;
+    ParseSectionBody(bodyCtx);
+
+    string body = Slice(bodyBegin, mPos);
+    newNamespace->mData = Trim(body, " \r\t\n");
+    newNamespace->mLength = (AtEnd() ? (int)mSource->length() : Tok(mPos).end) - newNamespace->mBegin;
+
+    if (!AtEnd())
+        mPos++; // closing brace
 }
 
-void CppSyntaxParser::ParseComment(SyntaxSection& section, int& caret,
-                                   SyntaxProtectionSection& protectionSection)
+void CppSyntaxParser::ParseClassOrStruct(SectionContext& ctx, bool isClass, const string& templates)
 {
-    int begin = caret;
-    caret += (int)strlen("//");
+    int begin = mPos;
+    mPos++;
+    SkipComments();
 
-    SyntaxComment* comment = new SyntaxComment();
+    if (AtEnd() || Tok(mPos).type != TokenType::Identifier)
+        return;
 
-    int dataLength = (int)section.mData.length();
-    string skipSymbols = " \r\t;";
-    int tmpCaret = caret;
-    bool first = true;
-    int line = 0;
-    do
+    int nameBegin = mPos;
+    int nameLine = Tok(mPos).line;
+    mPos++;
+
+    // Template specialization: the name continues with template arguments,
+    // like AnimationTrack<o2::Color4>
+    if (!AtEnd() && Tok(mPos).IsPunct(*mSource, '<'))
+        mPos = SkipBalancedAngles(mPos);
+
+    string shortName = Slice(nameBegin, mPos);
+
+    // Collect base classes list up to '{' or ';', tracking nesting for template arguments
+    vector<pair<int, int>> baseRanges; // [begin, end) token ranges split by top-level commas
+    int baseBegin = -1;
+    int lastSignificant = -1;
+    int depth = 0;
+    bool sawColon = false;
+
+    while (!AtEnd())
     {
-        caret = tmpCaret;
+        const Token& token = Tok(mPos);
 
-        if (!first)
+        if (token.type == TokenType::LineComment || token.type == TokenType::BlockComment)
         {
-            caret += 2;
-            comment->mData += '\n';
+            mPos++;
+            continue;
         }
 
-        string buffRaw = ReadWord(section.mData, caret, "\n", "");
-        string buff = Trim(buffRaw, " \r");
-        comment->mData += buff;
-
-        line = GetLineNumber(section.mData, caret);
-
-        tmpCaret = caret + 1;
-        for (; tmpCaret < dataLength; tmpCaret++)
+        if (token.type == TokenType::Punct)
         {
-            if (skipSymbols.find(section.mData[tmpCaret]) == string::npos)
+            char c = (*mSource)[token.begin];
+
+            if (depth == 0 && (c == '{' || c == ';'))
                 break;
-        }
 
-        if (first)
-            first = false;
-    } while (tmpCaret < dataLength - 2 && section.mData[tmpCaret] == '/' && section.mData[tmpCaret + 1] == '/');
-
-    caret = tmpCaret;
-
-    comment->mBegin = begin;
-    comment->mLength = caret - begin;
-    comment->mFile = section.mFile;
-    comment->mLine = line;
-
-    section.mComments.push_back(comment);
-}
-
-void CppSyntaxParser::ParseMultilineComment(SyntaxSection& section, int& caret,
-                                            SyntaxProtectionSection& protectionSection)
-{
-    int begin = caret;
-    caret += (int)strlen("/*");
-    int end = (int)section.mData.find("*/", caret);
-    caret = end;
-
-    SyntaxComment* comment = new SyntaxComment();
-    string sub = section.mData.substr(begin + 2, end - 4 - begin);
-    comment->mData = Trim(sub, " \r\t\n");
-    comment->mBegin = begin;
-    comment->mLength = caret - begin;
-    comment->mFile = section.mFile;
-
-    section.mComments.push_back(comment);
-}
-
-void CppSyntaxParser::ParsePragma(SyntaxSection& section, int& caret,
-                                  SyntaxProtectionSection& protectionSection)
-{
-    caret += (int)strlen("#pragma");
-    ReadWord(section.mData, caret, "\n", "");
-}
-
-void CppSyntaxParser::ParseInclude(SyntaxSection& section, int& caret,
-                                   SyntaxProtectionSection& protectionSection)
-{
-    caret += (int)strlen("#include");
-    ReadWord(section.mData, caret, "\n", "");
-}
-
-void CppSyntaxParser::ParseDefine(SyntaxSection& section, int& caret,
-                                  SyntaxProtectionSection& protectionSection)
-{
-    caret += (int)strlen("#define");
-    ReadWord(section.mData, caret, "\n", "");
-}
-
-void CppSyntaxParser::ParseUndef(SyntaxSection& section, int& caret, SyntaxProtectionSection& protectionSection)
-{
-    caret += (int)strlen("#undef");
-    ReadWord(section.mData, caret, "\n", "");
-}
-
-void CppSyntaxParser::ParseIfdefMacros(SyntaxSection& section, int& caret,
-                                    SyntaxProtectionSection& protectionSection)
-{
-    caret += (int)strlen("#ifdef");
-
-    SyntaxDefineIf* newDefine = new SyntaxDefineIf();
-    newDefine->mDefintion = "defined " + ReadWord(section.mData, caret, "\n", "");
-
-    section.mDefines.push_back(newDefine);
-    mCurrentDefine = newDefine;
-}
-
-void CppSyntaxParser::ParseIfMacros(SyntaxSection& section, int& caret,
-                                    SyntaxProtectionSection& protectionSection)
-{
-    caret += (int)strlen("#if");
-
-    SyntaxDefineIf* newDefine = new SyntaxDefineIf();
-    newDefine->mDefintion = ReadWord(section.mData, caret, "\n", "");
-
-    section.mDefines.push_back(newDefine);
-    mCurrentDefine = newDefine;
-}
-
-void CppSyntaxParser::ParseEndIfMacros(SyntaxSection& section, int& caret,
-                                    SyntaxProtectionSection& protectionSection)
-{
-    caret += (int)strlen("#endif");
-    ReadWord(section.mData, caret, "\n", "");
-    mCurrentDefine = nullptr;
-}
-
-void CppSyntaxParser::ParseElifMacros(SyntaxSection& section, int& caret,
-                                    SyntaxProtectionSection& protectionSection)
-{
-    caret += (int)strlen("#elif");
-
-    SyntaxDefineIf* newDefine = new SyntaxDefineIf();
-    newDefine->mDefintion = ReadWord(section.mData, caret, "\n", "");
-
-    section.mDefines.push_back(newDefine);
-    mCurrentDefine = newDefine;
-}
-
-void CppSyntaxParser::ParseElseMacros(SyntaxSection& section, int& caret,
-                                    SyntaxProtectionSection& protectionSection)
-{
-    caret += (int)strlen("#else");
-    ReadWord(section.mData, caret, "\n", "");
-
-    if (mCurrentDefine)
-    {
-        SyntaxDefineIf* newDefine = new SyntaxDefineIf();
-        newDefine->mDefintion = "!(" + mCurrentDefine->mDefintion + ")";
-
-        section.mDefines.push_back(newDefine);
-        mCurrentDefine = newDefine;
-    }
-}
-
-void CppSyntaxParser::ParseMetaClass(SyntaxSection& section, int& caret,
-                                     SyntaxProtectionSection& protectionSection)
-{
-    ParseClassOrStruct(section, caret, protectionSection, true, true, "");
-}
-
-void CppSyntaxParser::ParseClass(SyntaxSection& section, int& caret,
-                                 SyntaxProtectionSection& protectionSection)
-{
-    ParseClassOrStruct(section, caret, protectionSection, true, false, "");
-}
-
-void CppSyntaxParser::ParseStruct(SyntaxSection& section, int& caret,
-                                  SyntaxProtectionSection& protectionSection)
-{
-    ParseClassOrStruct(section, caret, protectionSection, false, false, "");
-}
-
-void CppSyntaxParser::ParseClassOrStruct(SyntaxSection& section, int& caret,
-                                         SyntaxProtectionSection& protectionSection,
-                                         bool isClass, bool isMeta, const string& templates)
-{
-    int begin = caret;
-
-    if (isMeta)
-        caret += (int)strlen("meta");
-
-    if (isClass) caret += (int)strlen("class");
-    else         caret += (int)strlen("struct");
-
-    string className = ReadWord(section.mData, caret, " \n\t\r:;/");
-    string afterNameRaw = ReadWord(section.mData, caret, ";{/");
-    string afterName = Trim(afterNameRaw, " :\r\n\t");
-
-    string shortClassName = className;
-    className = section.mFullName.empty() ? className : section.mFullName + "::" + className;
-
-    SyntaxClass* newClass = new SyntaxClass();
-
-    newClass->mBegin = begin;
-    newClass->mLength = caret - begin;
-    newClass->mLine = GetLineNumber(section.mData, caret);
-    newClass->mData = section.mData.substr(begin, caret - begin);
-    newClass->mName = shortClassName;
-    newClass->mFullName = className;
-    newClass->mFile = section.mFile;
-    newClass->mParentSection = &section;
-    newClass->mClassSection = protectionSection;
-    newClass->mTemplateParameters = templates;
-
-    if (mCurrentDefine)
-        newClass->mDefine = mCurrentDefine;
-
-    if (!afterName.empty())
-    {
-        auto baseClasses = Split(afterName, ',');
-
-        for (auto& baseClass : baseClasses)
-        {
-            Trim(baseClass);
-
-            int spacePos = (int)baseClass.find(' ');
-            if (spacePos == baseClass.npos)
-                newClass->mBaseClasses.push_back(SyntaxClassInheritance(baseClass, SyntaxProtectionSection::Private));
-            else
+            if (c == '<' || c == '(' || c == '[')
+                depth++;
+            else if (c == '>' || c == ')' || c == ']')
+                depth = max(0, depth - 1);
+            else if (c == ':' && depth == 0 && !sawColon)
             {
-                if (StartsWith(baseClass, "virtual"))
-                {
-                    baseClass.erase(0, strlen("virtual") + 1);
-                    spacePos = (int)baseClass.find(' ');
-                }
-
-                string sectionTypeName = baseClass.substr(0, spacePos);
-                string baseClassName = baseClass.substr(spacePos + 1);
-
-                if (StartsWith(baseClassName, "virtual"))
-                    baseClassName.erase(0, strlen("virtual") + 1);
-
-                SyntaxProtectionSection sectionType = SyntaxProtectionSection::Private;
-
-                if (sectionTypeName == "public")
-                    sectionType = SyntaxProtectionSection::Public;
-                else if (sectionTypeName == "protected")
-                    sectionType = SyntaxProtectionSection::Protected;
-
-                newClass->mBaseClasses.push_back(SyntaxClassInheritance(baseClassName, sectionType));
+                sawColon = true;
+                mPos++;
+                continue;
+            }
+            else if (c == ',' && depth == 0)
+            {
+                if (baseBegin >= 0)
+                    baseRanges.push_back({ baseBegin, lastSignificant + 1 });
+                baseBegin = -1;
+                mPos++;
+                continue;
             }
         }
-    }
 
-    int dataLength = (int)section.mData.length();
-
-    if (caret < dataLength && section.mData[caret] == '/')
-    {
-        string comment = ReadWord(section.mData, caret, "\n");
-        ReadWord(section.mData, caret, ";{/");
-    }
-
-    if (caret < dataLength && section.mData[caret] == '{')
-    {
-        string block = ReadBlock(section.mData, caret);
-        newClass->mData = Trim(block, "{} \n\r\t");
-
-        section.mSections.push_back(newClass);
-
-        // For class, default protection is Private; for struct, it's Public
-        SyntaxProtectionSection initialProtection = isClass ? SyntaxProtectionSection::Private : SyntaxProtectionSection::Public;
-        ParseSyntaxSection(*newClass, newClass->mData, *newClass->mFile, initialProtection);
-    }
-}
-
-void CppSyntaxParser::ParseTemplate(SyntaxSection& section, int& caret,
-                                    SyntaxProtectionSection& protectionSection)
-{
-    caret += (int)strlen("template");
-
-    int dataLen = (int)section.mData.length();
-
-    for (; caret < dataLen; caret++)
-        if (section.mData[caret] == '<')
-            break;
-
-    caret++;
-    int braces = 1;
-    int begin = caret;
-
-    for (; caret < dataLen; caret++)
-    {
-        if (section.mData[caret] == '<')
-            braces++;
-
-        if (section.mData[caret] == '>')
+        if (sawColon)
         {
-            braces--;
-
-            if (braces == 0)
-                break;
+            if (baseBegin < 0)
+                baseBegin = mPos;
+            lastSignificant = mPos;
         }
+
+        mPos++;
     }
 
-    string tempInside = section.mData.substr(begin, caret - begin);
+    if (baseBegin >= 0)
+        baseRanges.push_back({ baseBegin, lastSignificant + 1 });
 
-    int tmpCaret = caret + 1;
-    string blockRaw = ReadBlock(section.mData, tmpCaret);
-    string block = Trim(blockRaw, " \n\r\t");
+    if (AtEnd() || Tok(mPos).IsPunct(*mSource, ';'))
+    {
+        // Forward declaration
+        if (!AtEnd())
+            mPos++;
+        return;
+    }
 
-    if (StartsWith(block, "class"))
-    {
-        caret = (int)section.mData.find("class", caret + 1);
-        ParseClassOrStruct(section, caret, protectionSection, true, false, tempInside);
-    }
-    else if (StartsWith(block, "struct"))
-    {
-        caret = (int)section.mData.find("struct", caret + 1);
-        ParseClassOrStruct(section, caret, protectionSection, false, false, tempInside);
-    }
-    else if (StartsWith(block, "metaclass"))
-    {
-        caret = (int)section.mData.find("metaclass", caret + 1);
-        ParseClassOrStruct(section, caret, protectionSection, true, true, tempInside);
-    }
-    else if (StartsWith(block, "friend"))
-    {
-        caret = (int)section.mData.find("friend", caret + 1);
-        ParseFriend(section, caret, protectionSection);
-    }
-    else if (IsFunction(block))
-    {
-        auto func = ParseFunction(block, protectionSection, 0, (int)block.length());
-        func->mTemplates = tempInside;
-        func->mFile = section.mFile;
-        func->mLine = GetLineNumber(section.mData, caret);
-        section.mFunctions.push_back(func);
+    SyntaxSection& section = *ctx.section;
 
-        caret = tmpCaret;
+    SyntaxClass* newClass = mArena->Make<SyntaxClass>();
+    newClass->mBegin = Tok(begin).begin;
+    newClass->mLine = nameLine;
+    newClass->mName = shortName;
+    newClass->mFullName = section.mFullName.empty() ? shortName : section.mFullName + "::" + shortName;
+    newClass->mFile = section.mFile;
+    newClass->mParentSection = &section;
+    newClass->mClassSection = ctx.protection;
+    newClass->mTemplateParameters = templates;
+    newClass->mDefine = CurrentDefine();
+
+    for (auto& range : baseRanges)
+    {
+        int i = range.first;
+
+        if (Tok(i).Is(*mSource, "virtual"))
+            i++;
+
+        SyntaxProtectionSection baseProtection = SyntaxProtectionSection::Private;
+        if (Tok(i).Is(*mSource, "public"))
+        {
+            baseProtection = SyntaxProtectionSection::Public;
+            i++;
+        }
+        else if (Tok(i).Is(*mSource, "protected"))
+        {
+            baseProtection = SyntaxProtectionSection::Protected;
+            i++;
+        }
+        else if (Tok(i).Is(*mSource, "private"))
+            i++;
+
+        if (Tok(i).Is(*mSource, "virtual"))
+            i++;
+
+        if (i >= range.second)
+            continue;
+
+        string baseName = Slice(i, range.second);
+        newClass->mBaseClasses.push_back(SyntaxClassInheritance(Trim(baseName, " \r\n\t"), baseProtection));
     }
-    else caret = tmpCaret;
+
+    section.mSections.push_back(newClass);
+
+    int bodyBegin = mPos + 1;
+    mPos++; // opening brace
+
+    // Class members default to private, struct members to public
+    SectionContext bodyCtx;
+    bodyCtx.section = newClass;
+    bodyCtx.protection = isClass ? SyntaxProtectionSection::Private : SyntaxProtectionSection::Public;
+    ParseSectionBody(bodyCtx);
+
+    string body = Slice(bodyBegin, mPos);
+    newClass->mData = Trim(body, "{} \n\r\t");
+    newClass->mLength = (AtEnd() ? (int)mSource->length() : Tok(mPos).end) - newClass->mBegin;
+
+    if (!AtEnd())
+        mPos++; // closing brace
 }
 
-void CppSyntaxParser::ParseTypedef(SyntaxSection& section, int& caret,
-                                   SyntaxProtectionSection& protectionSection)
+void CppSyntaxParser::ParseTemplate(SectionContext& ctx)
 {
-    int begin = caret;
-    caret += (int)strlen("typedef");
-    string word = ReadWord(section.mData, caret, ";");
-    string temp = Trim(word, " \r\n\t");
+    mPos++;
+    SkipComments();
 
-    int lastSpace = (int)temp.rfind(' ');
+    if (AtEnd() || !Tok(mPos).IsPunct(*mSource, '<'))
+        return;
 
-    string valueRaw = temp.substr(0, lastSpace);
-    string value = Trim(valueRaw, " \r\t\n");
+    int paramsEnd = SkipBalancedAngles(mPos);
+    string templates = mSource->substr(Tok(mPos).end, Tok(paramsEnd - 1).begin - Tok(mPos).end);
+    mPos = paramsEnd;
+    SkipComments();
 
-    string nameRaw = temp.substr(lastSpace + 1);
-    string name = Trim(nameRaw, " \r\t\n;");
+    if (AtEnd())
+        return;
 
-    if (StartsWith(value, "typename"))
-        value.erase(0, strlen("typename "));
+    const Token& next = Tok(mPos);
 
-    SyntaxTypedef* synTypedef = new SyntaxTypedef();
-    synTypedef->mBegin = begin;
-    synTypedef->mLength = caret - begin;
-    synTypedef->mLine = GetLineNumber(section.mData, caret);
-    synTypedef->mData = section.mData.substr(begin, caret - begin);
-    synTypedef->mWhatName = value;
-    synTypedef->mNewDefName = name;
+    if (next.Is(*mSource, "class") || next.Is(*mSource, "struct"))
+    {
+        ParseClassOrStruct(ctx, next.Is(*mSource, "class"), templates);
+        return;
+    }
 
-    section.mTypedefs.push_back(synTypedef);
+    if (next.Is(*mSource, "friend"))
+    {
+        ParseFriend();
+        return;
+    }
+
+    if (next.Is(*mSource, "using") || next.Is(*mSource, "typedef"))
+    {
+        SkipToSemicolon();
+        return;
+    }
+
+    ParseMemberDeclaration(ctx, templates);
 }
 
-void CppSyntaxParser::ParseEnum(SyntaxSection& section, int& caret,
-                                SyntaxProtectionSection& protectionSection)
+void CppSyntaxParser::ParseEnum(SectionContext& ctx)
 {
-    int begin = caret;
-    caret += (int)strlen("enum");
+    int begin = mPos;
+    mPos++;
+    SkipComments();
 
-    string name = ReadWord(section.mData, caret);
+    if (!AtEnd() && (Tok(mPos).Is(*mSource, "class") || Tok(mPos).Is(*mSource, "struct")))
+    {
+        mPos++;
+        SkipComments();
+    }
 
-    if (name == "class")
-        name = ReadWord(section.mData, caret);
+    string name;
+    if (!AtEnd() && Tok(mPos).type == TokenType::Identifier)
+    {
+        name = Tok(mPos).Text(*mSource);
+        mPos++;
+    }
 
-    string blockRaw = ReadBlock(section.mData, caret);
-    string block = Trim(blockRaw, " {}\r\t\n");
-    RemoveComments(block);
-    auto content = Split(block, ',');
+    // Skip optional underlying type up to the body
+    while (!AtEnd() && !Tok(mPos).IsPunct(*mSource, '{'))
+    {
+        if (Tok(mPos).IsPunct(*mSource, ';'))
+        {
+            mPos++; // forward declaration
+            return;
+        }
+        mPos++;
+    }
 
-    SyntaxEnum* newEnum = new SyntaxEnum();
-    newEnum->mBegin = begin;
-    newEnum->mLength = caret - begin;
-    newEnum->mLine = GetLineNumber(section.mData, caret);
-    newEnum->mData = section.mData.substr(begin, caret - begin);
+    if (AtEnd())
+        return;
+
+    SyntaxSection& section = *ctx.section;
+
+    SyntaxEnum* newEnum = mArena->Make<SyntaxEnum>();
+    newEnum->mBegin = Tok(begin).begin;
     newEnum->mName = name;
     newEnum->mFullName = section.GetFullName().empty() ? name : section.GetFullName() + "::" + name;
     newEnum->mFile = section.mFile;
     newEnum->mOwnerSection = &section;
-    newEnum->mClassSection = protectionSection;
+    newEnum->mClassSection = ctx.protection;
 
-    for (auto& x : content)
+    mPos++; // opening brace
+
+    while (!AtEnd() && !Tok(mPos).IsPunct(*mSource, '}'))
     {
-        Trim(x, " \n\t\r");
+        const Token& token = Tok(mPos);
 
-        string name, value;
-        int valuePos = (int)x.find('=');
-
-        if (valuePos != x.npos)
+        if (token.type == TokenType::LineComment || token.type == TokenType::BlockComment ||
+            token.IsPunct(*mSource, ','))
         {
-            string sub = x.substr(0, valuePos);
-            name = Trim(sub, " \n\t\r");
-
-            string sub2 = x.substr(valuePos + 1);
-            value = Trim(sub2, " \n\t\r");
+            mPos++;
+            continue;
         }
-        else name = x;
 
-        newEnum->mEntries[name] = value;
+        // Entry: name [= value] up to top-level ',' or '}'. Angle brackets are not
+        // counted as nesting: values commonly contain shifts and comparisons like 1 << 4
+        int entryBegin = mPos;
+        int entryEnd = mPos; // one past the last non-comment token, keeps comments out of slices
+        int eqPos = -1;
+        int depth = 0;
+
+        while (!AtEnd())
+        {
+            const Token& entryToken = Tok(mPos);
+
+            if (entryToken.type == TokenType::Punct)
+            {
+                char c = (*mSource)[entryToken.begin];
+
+                if (depth == 0 && (c == ',' || c == '}'))
+                    break;
+
+                if (c == '(' || c == '{' || c == '[')
+                    depth++;
+                else if (c == ')' || c == '}' || c == ']')
+                    depth = max(0, depth - 1);
+                else if (c == '=' && depth == 0 && eqPos < 0)
+                    eqPos = mPos;
+            }
+
+            if (entryToken.type != TokenType::LineComment && entryToken.type != TokenType::BlockComment)
+                entryEnd = mPos + 1;
+
+            mPos++;
+        }
+
+        string entryName, entryValue;
+        if (eqPos >= 0)
+        {
+            entryName = Slice(entryBegin, eqPos);
+            entryValue = Slice(NextSignificant(eqPos + 1), entryEnd);
+            Trim(entryValue, " \n\t\r");
+        }
+        else
+            entryName = Slice(entryBegin, entryEnd);
+
+        Trim(entryName, " \n\t\r");
+        newEnum->mEntries[entryName] = entryValue;
+    }
+
+    if (!AtEnd())
+    {
+        newEnum->mLine = Tok(mPos).line;
+        newEnum->mLength = Tok(mPos).end - newEnum->mBegin;
+        mPos++; // closing brace
     }
 
     section.mEnums.push_back(newEnum);
 }
 
-void CppSyntaxParser::ParseUsing(SyntaxSection& section, int& caret,
-                                 SyntaxProtectionSection& protectionSection)
+void CppSyntaxParser::ParseTypedef(SectionContext& ctx)
 {
-    int begin = caret;
-    caret += (int)strlen("using");
+    int begin = mPos;
+    mPos++;
 
-    int tmpCaret = caret;
-    string allWord = ReadWord(section.mData, tmpCaret, ";");
-    if (allWord.find(':') != string::npos)
+    int textBegin = NextSignificant(mPos);
+    SkipToSemicolon();
+    int textEnd = mPos - 1; // points after ';'
+
+    string text = Slice(textBegin, textEnd);
+    Trim(text, " \r\n\t");
+
+    int lastSpace = (int)text.rfind(' ');
+    if (lastSpace == (int)string::npos)
+        return;
+
+    string value = text.substr(0, lastSpace);
+    Trim(value, " \r\t\n");
+
+    string name = text.substr(lastSpace + 1);
+    Trim(name, " \r\t\n;");
+
+    if (StartsWith(value, "typename "))
+        value.erase(0, strlen("typename "));
+
+    SyntaxTypedef* newTypedef = mArena->Make<SyntaxTypedef>();
+    newTypedef->mBegin = Tok(begin).begin;
+    newTypedef->mLine = Tok(begin).line;
+    newTypedef->mFile = mFile;
+    newTypedef->mData = text;
+    newTypedef->mWhatName = value;
+    newTypedef->mNewDefName = name;
+
+    ctx.section->mTypedefs.push_back(newTypedef);
+}
+
+void CppSyntaxParser::ParseUsing(SectionContext& ctx)
+{
+    int begin = mPos;
+    mPos++;
+
+    int textBegin = NextSignificant(mPos);
+    SkipToSemicolon();
+    int textEnd = mPos - 1;
+
+    // Only plain `using namespace X;` matters for name resolution; qualified names
+    // and alias declarations are ignored
+    if (textEnd - textBegin != 2 || !Tok(textBegin).Is(*mSource, "namespace") ||
+        Tok(textBegin + 1).type != TokenType::Identifier)
     {
-        caret = tmpCaret + 1;
         return;
     }
 
-    ReadWord(section.mData, caret);
-    string word = ReadWord(section.mData, caret);
-    string name = Trim(word, " \r\n;");
+    SyntaxUsingNamespace* newUsing = mArena->Make<SyntaxUsingNamespace>();
+    newUsing->mBegin = Tok(begin).begin;
+    newUsing->mLine = Tok(begin).line;
+    newUsing->mFile = mFile;
+    newUsing->mUsingNamespaceName = Tok(textBegin + 1).Text(*mSource);
 
-    SyntaxUsingNamespace* newUsing = new SyntaxUsingNamespace();
-
-    newUsing->mBegin = begin;
-    newUsing->mLength = caret - begin;
-    newUsing->mLine = GetLineNumber(section.mData, caret);
-    newUsing->mData = section.mData.substr(begin, caret - caret);
-    newUsing->mUsingNamespaceName = name;
-
-    section.mUsingNamespaces.push_back(newUsing);
+    ctx.section->mUsingNamespaces.push_back(newUsing);
 }
 
-void CppSyntaxParser::ParsePublicSection(SyntaxSection& section, int& caret,
-                                         SyntaxProtectionSection& protectionSection)
+void CppSyntaxParser::ParseFriend()
 {
-    caret += (int)strlen("public:");
-    protectionSection = SyntaxProtectionSection::Public;
+    mPos++;
+    SkipToSemicolon();
 }
 
-void CppSyntaxParser::ParsePrivateSection(SyntaxSection& section, int& caret,
-                                          SyntaxProtectionSection& protectionSection)
+void CppSyntaxParser::ParseLineComments(SectionContext& ctx)
 {
-    caret += (int)strlen("private:");
-    protectionSection = SyntaxProtectionSection::Private;
-}
+    const Token& first = Tok(mPos);
 
-void CppSyntaxParser::ParseProtectedSection(SyntaxSection& section, int& caret,
-                                            SyntaxProtectionSection& protectionSection)
-{
-    caret += (int)strlen("protected:");
-    protectionSection = SyntaxProtectionSection::Protected;
-}
-
-void CppSyntaxParser::ParseFriend(SyntaxSection& section, int& caret,
-                                  SyntaxProtectionSection& protectionSection)
-{
-    caret += (int)strlen("friend");
-    ReadWord(section.mData, caret, " \n\r\t");
-    ReadWord(section.mData, caret, " \n\r\t");
-}
-
-void CppSyntaxParser::ParseAttributeCommentDef(SyntaxSection& section, int& caret,
-                                               SyntaxProtectionSection& protectionSection)
-{
-    SyntaxClass* classSection = dynamic_cast<SyntaxClass*>(&section);
-
-    caret += (int)strlen("ATTRIBUTE_COMMENT_DEFINITION");
-    caret = (int)section.mData.find('"', caret) + 1;
-    int begin = caret;
-    caret = (int)section.mData.find('"', caret);
-
-    classSection->mAttributeCommentDef = section.mData.substr(begin, caret - begin);
-
-    caret = (int)section.mData.find(';', caret) + 1;
-}
-
-void CppSyntaxParser::ParseAttributeShortDef(SyntaxSection& section, int& caret,
-                                             SyntaxProtectionSection& protectionSection)
-{
-    SyntaxClass* classSection = dynamic_cast<SyntaxClass*>(&section);
-
-    caret += (int)strlen("ATTRIBUTE_SHORT_DEFINITION");
-    caret = (int)section.mData.find('"', caret) + 1;
-    int begin = caret;
-    caret = (int)section.mData.find('"', caret);
-
-    classSection->mAttributeShortDef = section.mData.substr(begin, caret - begin);
-
-    caret = (int)section.mData.find(';', caret) + 1;
-}
-
-void CppSyntaxParser::ParseAttributes(SyntaxSection& section, int& caret, SyntaxProtectionSection& protectionSection)
-{
-    int begin = caret;
-
-    caret += (int)strlen("ATTRIBUTES");
-    caret = (int)section.mData.find('(', caret) + 1;
-    string bracesRaw = ReadBraces(section.mData, caret);
-    string braces = Trim(bracesRaw, " \n\r\t()");
-    caret = (int)section.mData.find(';', caret);
-
-    vector<string> separated = Split(braces, ',');
-    for (auto& x : separated)
-        Trim(x, " \n\r\t,");
-
-    SyntaxAttributes* attributes = new SyntaxAttributes();
-    attributes->mBegin = begin;
-    attributes->mLength = caret - begin;
-    attributes->mLine = GetLineNumber(section.mData, caret);
-    attributes->mData = section.mData.substr(begin, caret - caret);
-    attributes->mAttributesList = separated;
-
-    section.mAttributes.push_back(attributes);
-}
-
-void CppSyntaxParser::ParseProperties(SyntaxSection& section, int& caret, SyntaxProtectionSection& protectionSection)
-{
-    caret += (int)strlen("PROPERTIES");
-    caret = (int)section.mData.find('(', caret);
-    string bracesRaw = ReadBraces(section.mData, caret);
-    string braces = Trim(bracesRaw, " \n\r\t()");
-    caret = (int)section.mData.find(';', caret);
-}
-
-void CppSyntaxParser::ParseProperty(SyntaxSection& section, int& caret, SyntaxProtectionSection& protectionSection)
-{
-    int begin = caret;
-
-    caret += (int)strlen("PROPERTY");
-    caret = (int)section.mData.find('(', caret);
-    string bracesRaw = ReadBraces(section.mData, caret);
-    string braces = Trim(bracesRaw, " \n\r\t()");
-    caret = (int)section.mData.find(';', caret);
-
-    vector<string> separated = Split(braces, ',');
-    for (auto& x : separated)
-        Trim(x, " \n\r\t,");
-
-    SyntaxVariable* res = new SyntaxVariable();
-    res->mBegin = begin;
-    res->mLength = caret - begin;
-    res->mData = section.mData.substr(begin, caret - caret);
-    res->mLine = GetLineNumber(section.mData, caret);
-    res->mName = separated[1];
-    res->mType.mName = separated[0];
-
-    if (mCurrentDefine)
-        res->mDefine = mCurrentDefine;
-
-    section.mVariables.push_back(res);
-}
-
-void CppSyntaxParser::ParseGetter(SyntaxSection& section, int& caret, SyntaxProtectionSection& protectionSection)
-{
-    int begin = caret;
-
-    caret += (int)strlen("GETTER");
-    caret = (int)section.mData.find('(', caret);
-    string bracesRaw = ReadBraces(section.mData, caret); ReadBraces(section.mData, caret);
-    string braces = Trim(bracesRaw, " \n\r\t()");
-    caret = (int)section.mData.find(';', caret);
-
-    vector<string> separated = Split(braces, ',');
-    for (auto& x : separated)
-        Trim(x, " \n\r\t,");
-
-    SyntaxVariable* res = new SyntaxVariable();
-    res->mBegin = begin;
-    res->mLength = caret - begin;
-    res->mData = section.mData.substr(begin, caret - caret);
-    res->mLine = GetLineNumber(section.mData, caret);
-    res->mName = separated[1];
-    res->mType.mName = separated[0];
-
-    if (mCurrentDefine)
-        res->mDefine = mCurrentDefine;
-
-    section.mVariables.push_back(res);
-}
-
-void CppSyntaxParser::ParseSetter(SyntaxSection& section, int& caret, SyntaxProtectionSection& protectionSection)
-{
-    int begin = caret;
-
-    caret += (int)strlen("SETTER");
-    caret = (int)section.mData.find('(', caret);
-    string bracesRaw = ReadBraces(section.mData, caret);
-    string braces = Trim(bracesRaw, " \n\r\t()");
-    caret = (int)section.mData.find(';', caret);
-
-    vector<string> separated = Split(braces, ',');
-    for (auto& x : separated)
-        Trim(x, " \n\r\t,");
-
-    SyntaxVariable* res = new SyntaxVariable();
-    res->mBegin = begin;
-    res->mLength = caret - begin;
-    res->mData = section.mData.substr(begin, caret - caret);
-    res->mLine = GetLineNumber(section.mData, caret);
-    res->mName = separated[1];
-    res->mType.mName = separated[0];
-
-    if (mCurrentDefine)
-        res->mDefine = mCurrentDefine;
-
-    section.mVariables.push_back(res);
-}
-
-void CppSyntaxParser::ParseAccessor(SyntaxSection& section, int& caret, SyntaxProtectionSection& protectionSection)
-{
-    int begin = caret;
-
-    caret += (int)strlen("ACCESSOR");
-    caret = (int)section.mData.find('(', caret);
-    string bracesRaw = ReadBraces(section.mData, caret);
-    string braces = Trim(bracesRaw, " \n\r\t()");
-    caret = (int)section.mData.find(';', caret);
-
-    vector<string> separated = Split(braces, ',');
-    for (auto& x : separated)
-        Trim(x, " \n\r\t,");
-
-    SyntaxVariable* res = new SyntaxVariable();
-    res->mBegin = begin;
-    res->mLength = caret - begin;
-    res->mData = section.mData.substr(begin, caret - caret);
-    res->mLine = GetLineNumber(section.mData, caret);
-    res->mName = separated[1];
-    res->mType.mName = separated[0];
-
-    if (mCurrentDefine)
-        res->mDefine = mCurrentDefine;
-
-    section.mVariables.push_back(res);
-}
-
-string CppSyntaxParser::ReadWord(const string& data, int& caret,
-                                 const char* breakSymbols /*= " \n\r(){}.,;+-* /=@!|&*:~\\"*/,
-                                 const char* skipSymbols /*= " \n\r"*/,
-                                 bool checkBraces /*= true*/, bool checkFgBraces /*= true*/, bool checkTrBraces /*= true*/)
-{
-    string res = "";
-    int braces = 0, sqBraces = 0, trBraces = 0, fgBraces = 0;
-    int dataLen = (int)data.length();
-
-    for (; caret < dataLen; caret++)
+    // Trailing comment on the last member's line is attached to it alone, without merging
+    // with the following lines. It never becomes pending: it belongs to that member even
+    // when the member already has a comment attached
+    if (ctx.lastMember && first.line == ctx.lastMember->mLine)
     {
-        int i = 0;
-        bool stop = true;
-        char s = data[caret];
-
-        while (skipSymbols[i] != '\0')
+        if (!ctx.lastMember->mComment)
         {
-            if (skipSymbols[i] == s)
-            {
-                stop = false;
-                break;
-            }
+            SyntaxComment* comment = mArena->Make<SyntaxComment>();
+            string text = mSource->substr(first.begin + 2, first.end - first.begin - 2);
+            comment->mData = Trim(text, " \r");
+            comment->mBegin = first.begin;
+            comment->mLength = first.Length();
+            comment->mLine = first.line;
+            comment->mFile = ctx.section->mFile;
 
-            i++;
+            ctx.lastMember->mComment = comment;
         }
 
-        if (stop)
+        mPos++;
+        return;
+    }
+
+    SyntaxComment* comment = mArena->Make<SyntaxComment>();
+    comment->mBegin = first.begin;
+
+    string data;
+    int line = 0;
+
+    while (!AtEnd())
+    {
+        const Token& token = Tok(mPos);
+
+        string text = mSource->substr(token.begin + 2, token.end - token.begin - 2);
+        data += Trim(text, " \r");
+        line = token.line;
+
+        mPos++;
+
+        // Merge directly adjacent comment lines into one comment
+        if (!AtEnd() && Tok(mPos).type == TokenType::LineComment && Tok(mPos).line == token.line + 1)
+            data += '\n';
+        else
             break;
     }
 
-    for (; caret < dataLen; caret++)
-    {
-        int i = 0;
-        bool stop = false;
-        char s = data[caret];
+    comment->mData = data;
+    comment->mLine = line;
+    comment->mFile = ctx.section->mFile;
+    comment->mLength = (mPos > 0 ? Tok(mPos - 1).end : 0) - comment->mBegin;
 
-        if ((fgBraces == 0 || !checkFgBraces) && (braces == 0 || !checkBraces) && (trBraces == 0 || !checkTrBraces))
+    ctx.pendingComment = comment;
+}
+
+void CppSyntaxParser::ParseBlockComment(SectionContext& ctx)
+{
+    const Token& token = Tok(mPos);
+
+    int textBegin = token.begin + 2;
+    int textEnd = max(token.end - 2, textBegin);
+
+    SyntaxComment* comment = mArena->Make<SyntaxComment>();
+    string text = mSource->substr(textBegin, textEnd - textBegin);
+    comment->mData = Trim(text, " \r\t\n");
+    comment->mBegin = token.begin;
+    comment->mLength = token.Length();
+    comment->mFile = ctx.section->mFile;
+
+    // End line matters for attachment-above; start line for trailing attachment
+    int endLine = token.line;
+    for (int i = token.begin; i < token.end; i++)
+    {
+        if ((*mSource)[i] == '\n')
+            endLine++;
+    }
+    comment->mLine = endLine;
+
+    PlaceComment(ctx, comment, token.line);
+
+    mPos++;
+}
+
+void CppSyntaxParser::PlaceComment(SectionContext& ctx, SyntaxComment* comment, int startLine)
+{
+    if (ctx.lastMember && startLine == ctx.lastMember->mLine)
+    {
+        // Trailing comment belongs to the last member; dropped if one is already attached
+        if (!ctx.lastMember->mComment)
+            ctx.lastMember->mComment = comment;
+    }
+    else
+        ctx.pendingComment = comment;
+}
+
+void CppSyntaxParser::HandleDirective(SectionContext& ctx)
+{
+    const Token& token = Tok(mPos);
+
+    // Text right after '#'; condition text is taken verbatim to the end of line,
+    // including original spacing - generated #if lines must match older output
+    int kwBegin = token.begin + 1;
+    auto restAfter = [&](int kwLength) {
+        return mSource->substr(kwBegin + kwLength, token.end - (kwBegin + kwLength));
+    };
+    auto isKw = [&](const char* kw) {
+        return mSource->compare(kwBegin, strlen(kw), kw) == 0;
+    };
+
+    auto makeDefine = [&](const string& definition) {
+        SyntaxDefineIf* define = mArena->Make<SyntaxDefineIf>();
+        define->mDefinition = definition;
+        define->mFile = mFile;
+        define->mLine = token.line;
+        return define;
+    };
+
+    if (isKw("ifdef"))
+        mDefinesStack.push_back(makeDefine("defined " + restAfter(5)));
+    else if (isKw("ifndef"))
+    {
+        string name = restAfter(6);
+        mDefinesStack.push_back(makeDefine("!defined(" + Trim(name, " \t\r") + ")"));
+    }
+    else if (isKw("if"))
+        mDefinesStack.push_back(makeDefine(restAfter(2)));
+    else if (isKw("endif"))
+    {
+        if (!mDefinesStack.empty())
+            mDefinesStack.pop_back();
+    }
+    else if (isKw("elif"))
+    {
+        SyntaxDefineIf* define = makeDefine(restAfter(4));
+        if (!mDefinesStack.empty())
+            mDefinesStack.back() = define;
+        else
+            mDefinesStack.push_back(define);
+    }
+    else if (isKw("else"))
+    {
+        if (!mDefinesStack.empty())
+            mDefinesStack.back() = makeDefine("!(" + mDefinesStack.back()->mDefinition + ")");
+    }
+    // #pragma, #include, #define, #undef are ignored
+}
+
+void CppSyntaxParser::ParseAttributeDefinition(SectionContext& ctx, bool shortDefinition)
+{
+    mPos++;
+
+    string value;
+    while (!AtEnd() && !Tok(mPos).IsPunct(*mSource, ';'))
+    {
+        if (Tok(mPos).IsPunct(*mSource, '}'))
+            break;
+
+        if (Tok(mPos).type == TokenType::String)
+            value = mSource->substr(Tok(mPos).begin + 1, Tok(mPos).Length() - 2);
+
+        mPos++;
+    }
+
+    if (!AtEnd() && Tok(mPos).IsPunct(*mSource, ';'))
+        mPos++;
+
+    if (SyntaxClass* classSection = dynamic_cast<SyntaxClass*>(ctx.section))
+    {
+        if (shortDefinition)
+            classSection->mAttributeShortDef = value;
+        else
+            classSection->mAttributeCommentDef = value;
+    }
+}
+
+bool CppSyntaxParser::ReadMacroArguments(vector<string>& args)
+{
+    SkipComments();
+    if (AtEnd() || !Tok(mPos).IsPunct(*mSource, '('))
+        return false;
+
+    mPos++;
+
+    int argBegin = mPos;
+    int depth = 0;
+
+    while (!AtEnd())
+    {
+        const Token& token = Tok(mPos);
+
+        if (token.type == TokenType::Punct)
         {
-            while (breakSymbols[i] != '\0')
+            char c = (*mSource)[token.begin];
+
+            if (depth == 0 && c == ')')
+                break;
+
+            if (c == '(' || c == '{' || c == '[' || c == '<')
+                depth++;
+            else if (c == ')' || c == '}' || c == ']' || c == '>')
+                depth = max(0, depth - 1); // clamped: '>' shows up as '->' or comparison in arguments
+            else if (c == ',' && depth == 0)
             {
-                if (breakSymbols[i] == s)
+                string arg = Slice(argBegin, mPos);
+                args.push_back(Trim(arg, " \n\r\t,"));
+                argBegin = mPos + 1;
+            }
+        }
+
+        mPos++;
+    }
+
+    string arg = Slice(argBegin, mPos);
+    args.push_back(Trim(arg, " \n\r\t,"));
+
+    if (!AtEnd())
+        mPos++; // closing parenthesis
+
+    return true;
+}
+
+void CppSyntaxParser::SkipToSemicolon()
+{
+    int depth = 0;
+    while (!AtEnd())
+    {
+        const Token& token = Tok(mPos);
+
+        if (token.type == TokenType::Punct)
+        {
+            char c = (*mSource)[token.begin];
+
+            if (depth == 0 && c == ';')
+            {
+                mPos++;
+                return;
+            }
+
+            // Unmatched '}' closes the enclosing section - stop before it
+            if (depth == 0 && c == '}')
+                return;
+
+            if (c == '(' || c == '{' || c == '[')
+                depth++;
+            else if (c == ')' || c == '}' || c == ']')
+                depth = max(0, depth - 1);
+        }
+
+        mPos++;
+    }
+}
+
+int CppSyntaxParser::SkipToSemicolonLine()
+{
+    SkipToSemicolon();
+    int lastIdx = min(mPos, (int)mTokens.size()) - 1;
+    return lastIdx >= 0 ? Tok(lastIdx).line : 0;
+}
+
+void CppSyntaxParser::ParseAttributesMacro(SectionContext& ctx)
+{
+    int begin = mPos;
+    mPos++;
+
+    vector<string> args;
+    if (!ReadMacroArguments(args))
+        return;
+
+    int line = SkipToSemicolonLine();
+
+    SyntaxAttributes* attributes = mArena->Make<SyntaxAttributes>();
+    attributes->mBegin = Tok(begin).begin;
+    attributes->mLine = line;
+    attributes->mFile = ctx.section->mFile;
+    attributes->mAttributesList = args;
+
+    ctx.pendingAttributes = attributes;
+}
+
+void CppSyntaxParser::ParsePropertyMacro(SectionContext& ctx)
+{
+    int begin = mPos;
+    int startLine = Tok(begin).line;
+    mPos++;
+
+    vector<string> args;
+    if (!ReadMacroArguments(args))
+        return;
+
+    int line = SkipToSemicolonLine();
+
+    if (args.size() < 2)
+        return;
+
+    SyntaxVariable* variable = mArena->Make<SyntaxVariable>();
+    variable->mBegin = Tok(begin).begin;
+    variable->mLine = line;
+    variable->mFile = ctx.section->mFile;
+    variable->mName = args[1];
+    variable->mType.mName = args[0];
+    variable->mDefine = CurrentDefine();
+
+    ctx.section->mVariables.push_back(variable);
+
+    RegisterMember(ctx, variable, startLine);
+}
+
+void CppSyntaxParser::RegisterMember(SectionContext& ctx, ISyntaxExpression* member, int startLine)
+{
+    // Lines only grow during parsing, so a pending item is either adjacent to this member
+    // or will never be adjacent to any - it can be consumed in both cases
+    if (ctx.pendingComment &&
+        (ctx.pendingComment->mLine == startLine - 1 || ctx.pendingComment->mLine == startLine))
+    {
+        member->mComment = ctx.pendingComment;
+    }
+    ctx.pendingComment = nullptr;
+
+    if (ctx.pendingAttributes && ctx.pendingAttributes->mLine == startLine - 1)
+        member->mAttributesMacro = ctx.pendingAttributes;
+    ctx.pendingAttributes = nullptr;
+
+    ctx.lastMember = member;
+}
+
+void CppSyntaxParser::ParseMemberDeclaration(SectionContext& ctx, const string& templates /*= ""*/)
+{
+    int declBegin = mPos;
+
+    // A stray brace block at declaration level - skip it whole
+    if (Tok(mPos).IsPunct(*mSource, '{'))
+    {
+        int depth = 0;
+        while (!AtEnd())
+        {
+            if (Tok(mPos).IsPunct(*mSource, '{'))
+                depth++;
+            else if (Tok(mPos).IsPunct(*mSource, '}'))
+            {
+                depth--;
+                if (depth == 0)
                 {
-                    stop = true;
-                    break;
+                    mPos++;
+                    return;
+                }
+            }
+            mPos++;
+        }
+        return;
+    }
+
+    // Declaration runs to the first top-level ';', or through a brace block
+    // (function body or braced initializer)
+    int stop = -1;
+    int sigEnd = -1;
+    bool consumeStop = true;
+
+    int i = declBegin;
+    for (; !AtEnd(i); i++)
+    {
+        if (Tok(i).type != TokenType::Punct)
+            continue;
+
+        char c = (*mSource)[Tok(i).begin];
+
+        if (c == ';')
+        {
+            stop = i;
+            sigEnd = i;
+            break;
+        }
+
+        // Unmatched '}' closes the enclosing section - the declaration can't cross it
+        if (c == '}')
+        {
+            stop = i;
+            sigEnd = i;
+            consumeStop = false;
+            break;
+        }
+
+        if (c == '{')
+        {
+            sigEnd = i;
+
+            int fgBraces = 0, braces = 0, sqBraces = 0;
+            for (; !AtEnd(i); i++)
+            {
+                if (Tok(i).type != TokenType::Punct)
+                    continue;
+
+                char bc = (*mSource)[Tok(i).begin];
+                switch (bc)
+                {
+                case '{': fgBraces++; break;
+                case '}': fgBraces--; break;
+                case '(': braces++; break;
+                case ')': braces--; break;
+                case '[': sqBraces++; break;
+                case ']': sqBraces--; break;
                 }
 
-                i++;
+                if (bc == '}' && fgBraces == 0 && braces == 0 && sqBraces == 0)
+                    break;
             }
 
-            if (stop)
-                break;
+            stop = min(i, (int)mTokens.size() - 1);
+            break;
         }
-
-        switch (s)
-        {
-        case '{': fgBraces++; break;
-        case '}': fgBraces--; if (fgBraces < 0) fgBraces = 0; break;
-
-        case ')': braces--; if (braces < 0) braces = 0; break;
-        case '(': braces++; break;
-
-        case '[': sqBraces++; break;
-        case ']': sqBraces--; if (sqBraces < 0) sqBraces = 0; break;
-
-        case '<': trBraces++; break;
-        case '>': trBraces--; if (trBraces < 0) trBraces = 0; break;
-        }
-
-        res += s;
     }
 
-    return res;
+    int endLine;
+    if (stop < 0)
+    {
+        stop = (int)mTokens.size() - 1;
+        sigEnd = (int)mTokens.size();
+        endLine = mTokens.empty() ? 0 : mTokens.back().line;
+        mPos = (int)mTokens.size();
+    }
+    else
+    {
+        endLine = Tok(stop).line;
+        mPos = consumeStop ? stop + 1 : stop;
+    }
+
+    ParseMemberSignature(ctx, declBegin, sigEnd, templates, declBegin, endLine);
 }
 
-string CppSyntaxParser::ReadBlock(const string& data, int& caret)
+void CppSyntaxParser::ParseMemberSignature(SectionContext& ctx, int first, int sigEnd, const string& templates,
+                                           int declBegin, int endLine)
 {
-    int begin = caret;
-    int braces = 0, fgBraces = 0, sqBraces = 0, trBraces = 0;
-    bool isInstring = false;
-    int dataLen = (int)data.length();
+    int i = NextSignificant(first);
+    if (i >= sigEnd)
+        return;
 
-    for (; caret < dataLen; caret++)
+    bool isVirtual = false, isStatic = false;
+
+    while (i < sigEnd && Tok(i).type == TokenType::Identifier)
     {
-        if (data[caret] == '{')
-            break;
-
-        if (data[caret] == ';')
-            return data.substr(begin, caret - begin);
-    }
-
-    caret++;
-    fgBraces++;
-
-    bool complete = false;
-    for (; caret < dataLen && !complete; caret++)
-    {
-        if (isInstring)
+        if (Tok(i).Is(*mSource, "virtual"))
+            isVirtual = true;
+        else if (Tok(i).Is(*mSource, "static"))
+            isStatic = true;
+        else if (!Tok(i).Is(*mSource, "inline") && !Tok(i).Is(*mSource, "explicit") &&
+                 !Tok(i).Is(*mSource, "constexpr") && !Tok(i).Is(*mSource, "typename"))
         {
-            if (data[caret] == '"' && data[caret - 1] != '\\')
-                isInstring = false;
-
-            continue;
+            break;
         }
 
-        switch (data[caret])
-        {
-        case '{': fgBraces++; break;
-        case '}':
-            fgBraces--;
-            if (fgBraces == 0 && braces == 0 && sqBraces == 0)
-                complete = true;
-            break;
-
-        case ')': braces--; break;
-        case '(': braces++; break;
-
-        case '[': sqBraces++; break;
-        case ']': sqBraces--; break;
-
-        case '<': trBraces++; break;
-        case '>': trBraces--; break;
-
-        case '"':
-            isInstring = true;
-            break;
-        }
+        i = NextSignificant(i + 1);
     }
 
-    return data.substr(begin, min(caret, dataLen - 1) - begin);
-}
+    if (i >= sigEnd)
+        return;
 
-string CppSyntaxParser::ReadBraces(const string& data, int& caret)
-{
-    int begin = caret;
-    int braces = 0, fgBraces = 0, sqBraces = 0, trBraces = 0;
-    bool isInstring = false;
-    int dataLen = (int)data.length();
+    auto finalize = [&](ISyntaxExpression* member) {
+        member->mBegin = Tok(declBegin).begin;
+        member->mLength = Tok(min(sigEnd, (int)mTokens.size()) - 1).end - member->mBegin;
+        member->mLine = endLine;
+        member->mFile = ctx.section->mFile;
+        member->mData = Slice(declBegin, sigEnd);
+        RegisterMember(ctx, member, Tok(declBegin).line);
+    };
 
-    for (; caret < dataLen; caret++)
+    auto makeFunction = [&](const string& name, const ParsedType& returnType, int parenIdx) {
+        SyntaxFunction* function = mArena->Make<SyntaxFunction>();
+        function->mName = name;
+        function->mReturnType.mName = returnType.text;
+        function->mReturnType.mIsConstant = returnType.isConst;
+        function->mReturnType.mIsReference = !returnType.text.empty() && returnType.text.back() == '&';
+        function->mReturnType.mIsPointer = !returnType.text.empty() && returnType.text.back() == '*';
+        function->mIsStatic = isStatic;
+        function->mIsVirtual = isVirtual;
+        function->mClassSection = ctx.protection;
+        function->mDefine = CurrentDefine();
+        function->mTemplates = templates;
+
+        if (parenIdx >= 0 && parenIdx < sigEnd)
+            ParseFunctionParameters(function, parenIdx, sigEnd);
+
+        ctx.section->mFunctions.push_back(function);
+        finalize(function);
+    };
+
+    auto findParen = [&](int from) {
+        for (int k = from; k < sigEnd; k++)
+        {
+            if (Tok(k).IsPunct(*mSource, '('))
+                return k;
+        }
+        return -1;
+    };
+
+    ParsedType voidType;
+    voidType.text = "void";
+    voidType.valid = true;
+
+    // Destructor
+    if (Tok(i).IsPunct(*mSource, '~'))
     {
-        if (data[caret] == '(')
-            break;
+        int nameIdx = NextSignificant(i + 1);
+        string name = "~";
+        if (nameIdx < sigEnd && Tok(nameIdx).type == TokenType::Identifier)
+            name += Tok(nameIdx).Text(*mSource);
 
-        if (data[caret] == ';')
-            return data.substr(begin, caret - begin);
+        makeFunction(name, voidType, findParen(i));
+        return;
     }
 
-    caret++;
-    braces++;
-
-    bool complete = false;
-    for (; caret < dataLen && !complete; caret++)
+    // Conversion operator: `operator bool() const`
+    if (Tok(i).Is(*mSource, "operator"))
     {
-        if (isInstring)
-        {
-            if (data[caret] == '"' && data[caret - 1] != '\\')
-                isInstring = false;
-
-            continue;
-        }
-
-        switch (data[caret])
-        {
-        case '}': fgBraces--; break;
-        case '{': fgBraces++; break;
-
-        case '[': sqBraces++; break;
-        case ']': sqBraces--; break;
-
-        case '<': trBraces++; break;
-        case '>': trBraces--; break;
-
-        case '(': braces++; break;
-        case ')':
-            braces--;
-            if (fgBraces == 0 && braces == 0 && sqBraces == 0 && trBraces == 0)
-                complete = true;
-            break;
-
-        case '"':
-            isInstring = true;
-            break;
-        }
+        int parenIdx = findParen(i);
+        string name = parenIdx > 0 ? Slice(i, parenIdx) : Slice(i, sigEnd);
+        makeFunction(name, voidType, parenIdx);
+        return;
     }
 
-    string res = data.substr(begin, min(caret, dataLen) - begin);
-    int resLen = (int)res.length();
+    ParsedType type = ParseType(i, sigEnd);
+    if (!type.valid)
+        return;
 
-    if (!res.empty() && res[resLen - 1] == ')')
-        res.erase(resLen - 1, 1);
+    int next = NextSignificant(i);
+    if (next >= sigEnd)
+        return; // type without a name - nothing to register
 
-    if (!res.empty() && res[0] == '(')
-        res.erase(0, 1);
-
-    return res;
-}
-
-char CppSyntaxParser::GetNextSymbol(const string& data, int begin, const char* skipSymbols /*= " \n\r\t()[]{}"*/)
-{
-    int dataLen = (int)data.length();
-    for (; begin < dataLen; begin++)
+    if (Tok(next).IsPunct(*mSource, '('))
     {
-        int i = 0;
-        bool stop = true;
-        char s = data[begin];
+        int inside = NextSignificant(next + 1);
 
-        while (skipSymbols[i] != '\0')
+        // Pointer to member like void(Class::*name)(): '*' right after '::' - not reflectable
+        int close = min(FindMatchingParen(next), sigEnd);
+        for (int k = next + 1; k < close; k++)
         {
-            if (skipSymbols[i] == s)
+            if (Tok(k).IsPunct(*mSource, '*') && k > next + 1 && Tok(k - 1).IsPunct(*mSource, ':'))
+                return;
+        }
+
+        if (inside < sigEnd && Tok(inside).IsPunct(*mSource, '*'))
+        {
+            // Function pointer variable: type (*name)(params)
+            if (!templates.empty())
+                return;
+
+            int close = FindMatchingParen(next);
+            int nameIdx = NextSignificant(inside + 1);
+
+            SyntaxVariable* variable = mArena->Make<SyntaxVariable>();
+            if (nameIdx < close && Tok(nameIdx).type == TokenType::Identifier)
+                variable->mName = Tok(nameIdx).Text(*mSource);
+
+            string paramsInner;
+            int paramsParen = NextSignificant(close + 1);
+            if (paramsParen < sigEnd && Tok(paramsParen).IsPunct(*mSource, '('))
+                paramsInner = Slice(paramsParen + 1, FindMatchingParen(paramsParen));
+
+            variable->mType.mName = type.text + " (*)(" + paramsInner + ")";
+            variable->mType.mIsConstant = type.isConst;
+            variable->mIsStatic = isStatic;
+            variable->mClassSection = ctx.protection;
+            variable->mDefine = CurrentDefine();
+
+            ctx.section->mVariables.push_back(variable);
+            finalize(variable);
+            return;
+        }
+
+        // Constructor or a macro marker like IOBJECT(...): function named as the type
+        makeFunction(type.text, voidType, next);
+        return;
+    }
+
+    if (Tok(next).type == TokenType::Identifier)
+    {
+        // Operator with return type: `bool operator==(...)`
+        if (Tok(next).Is(*mSource, "operator"))
+        {
+            int parenIdx = findParen(next);
+            string name = parenIdx > 0 ? Slice(next, parenIdx) : Slice(next, sigEnd);
+            makeFunction(name, type, parenIdx);
+            return;
+        }
+
+        string name = Tok(next).Text(*mSource);
+        int j = NextSignificant(next + 1);
+
+        if (j < sigEnd && Tok(j).IsPunct(*mSource, '('))
+        {
+            makeFunction(name, type, j);
+            return;
+        }
+
+        // Template variables aren't registered
+        if (!templates.empty())
+            return;
+
+        SyntaxVariable* variable = mArena->Make<SyntaxVariable>();
+        variable->mName = name;
+        variable->mType.mName = type.text;
+        variable->mType.mIsConstant = type.isConst;
+        variable->mType.mIsMutable = type.isMutable;
+        variable->mType.mIsReference = !type.text.empty() && type.text.back() == '&';
+        variable->mType.mIsPointer = !type.text.empty() && type.text.back() == '*';
+        variable->mIsStatic = isStatic;
+        variable->mClassSection = ctx.protection;
+        variable->mDefine = CurrentDefine();
+
+        // Default value after '='
+        for (int k = j; k < sigEnd; k++)
+        {
+            if (Tok(k).IsPunct(*mSource, '='))
             {
-                stop = false;
+                int valueBegin = NextSignificant(k + 1);
+                if (valueBegin < sigEnd)
+                    variable->mDefaultValue = Slice(valueBegin, sigEnd);
                 break;
             }
-
-            i++;
         }
 
-        if (stop)
-            return s;
+        ctx.section->mVariables.push_back(variable);
+        finalize(variable);
+        return;
     }
 
-    return '\0';
+    // Anything else (unnamed bitfields, unrecognized constructs) - not registered
 }
 
-vector<string> CppSyntaxParser::Split(const string& data, char splitSymbol)
+CppSyntaxParser::ParsedType CppSyntaxParser::ParseType(int& i, int endTok) const
 {
-    vector<string> res;
-    int braces = 0, sqBraces = 0, trBraces = 0, fgBraces = 0;
-    int dataLen = (int)data.length();
+    ParsedType res;
 
-    int lastSplit = 0;
-    for (int i = 0; i < dataLen; i++)
+    // Leading const/mutable are flags, not part of the type text
+    while (i < endTok && Tok(i).type == TokenType::Identifier)
     {
-        switch (data[i])
-        {
-        case '{': fgBraces++; break;
-        case '}': fgBraces--; break;
+        if (Tok(i).Is(*mSource, "const"))
+            res.isConst = true;
+        else if (Tok(i).Is(*mSource, "mutable"))
+            res.isMutable = true;
+        else
+            break;
 
-        case '(': braces++; break;
-        case ')': braces--; break;
-
-        case '<': trBraces++; break;
-        case '>': trBraces--; break;
-
-        case '[': sqBraces++; break;
-        case ']': sqBraces--; break;
-        }
-
-        if (braces == 0 && sqBraces == 0 && trBraces == 0 && fgBraces == 0 && data[i] == splitSymbol)
-        {
-            res.push_back(data.substr(lastSplit, i - lastSplit));
-            lastSplit = i + 1;
-        }
+        i = NextSignificant(i + 1);
     }
 
-    res.push_back(data.substr(lastSplit));
+    if (i >= endTok || Tok(i).type != TokenType::Identifier)
+        return res;
+
+    static auto isFundamental = [](const string& word) {
+        return word == "unsigned" || word == "signed" || word == "long" || word == "short" ||
+            word == "int" || word == "char" || word == "double" || word == "float" || word == "bool";
+    };
+
+    int typeBegin = i;
+    string firstWord = Tok(i).Text(*mSource);
+    i++;
+
+    // Multi-word fundamental types like `unsigned int`
+    if (isFundamental(firstWord))
+    {
+        while (i < endTok && Tok(i).type == TokenType::Identifier && isFundamental(Tok(i).Text(*mSource)))
+            i++;
+    }
+
+    // Qualified names and template arguments: A::B<...>::C
+    while (i < endTok)
+    {
+        if (Tok(i).IsPunct(*mSource, '<'))
+        {
+            i = min(SkipBalancedAngles(i), endTok);
+            continue;
+        }
+
+        if (i + 2 < endTok && Tok(i).IsPunct(*mSource, ':') && Tok(i + 1).IsPunct(*mSource, ':') &&
+            Tok(i + 2).type == TokenType::Identifier)
+        {
+            i += 3;
+            continue;
+        }
+
+        break;
+    }
+
+    // Pointer and reference suffixes; `const` after them (like `Foo* const`) is consumed
+    // but stays out of the type text
+    int typeEnd = i;
+    while (i < endTok)
+    {
+        if (Tok(i).IsPunct(*mSource, '*') || Tok(i).IsPunct(*mSource, '&'))
+        {
+            i++;
+            typeEnd = i;
+            continue;
+        }
+
+        if (Tok(i).Is(*mSource, "const"))
+        {
+            i = NextSignificant(i + 1);
+            continue;
+        }
+
+        break;
+    }
+
+    res.text = Slice(typeBegin, typeEnd);
+    res.valid = true;
 
     return res;
 }
 
-void CppSyntaxParser::RemoveComments(string& input)
+void CppSyntaxParser::ParseFunctionParameters(SyntaxFunction* function, int parenIdx, int sigEnd)
 {
-    size_t p;
-    do
+    int close = FindMatchingParen(parenIdx);
+
+    int rangeBegin = parenIdx + 1;
+    int depth = 0;
+
+    for (int i = parenIdx + 1; i <= close && !AtEnd(i); i++)
     {
-        p = input.find("/*");
+        bool atClose = i == close;
+        bool split = atClose;
 
-        if (p == string::npos)
-            break;
+        if (!atClose && Tok(i).type == TokenType::Punct)
+        {
+            char c = (*mSource)[Tok(i).begin];
 
-        size_t end = input.find("*/", p);
+            if (c == '(' || c == '{' || c == '[' || c == '<')
+                depth++;
+            else if (c == ')' || c == '}' || c == ']' || c == '>')
+                depth = max(0, depth - 1); // clamped: '>' shows up as '->' or comparison in default arguments
+            else if (c == ',' && depth == 0)
+                split = true;
+        }
 
-        if (end == string::npos)
-            end = input.length();
-        else
-            end += 2;
+        if (split)
+        {
+            if (NextSignificant(rangeBegin) < i)
+                function->mParameters.push_back(ParseParameter(rangeBegin, i));
 
-        input.erase(p, end - p);
-    } while (p != string::npos);
+            rangeBegin = i + 1;
+        }
+    }
 
-    do
-    {
-        p = input.find("//");
-
-        if (p == string::npos)
-            break;
-
-        size_t end = input.find('\n', p);
-
-        if (end == string::npos)
-            end = input.length();
-        else
-            end++;
-
-        input.erase(p, end - p);
-    } while (p != string::npos);
+    // Trailing const
+    int after = NextSignificant(close + 1);
+    if (after < sigEnd && !AtEnd(after) && Tok(after).Is(*mSource, "const"))
+        function->mIsConstant = true;
 }
 
-CppSyntaxParser::ExpressionParser::ExpressionParser(const char* keyWord, ParserDelegate parser,
-                                                    bool isPossibleInClass /*= true*/,
-                                                    bool isPossibleInNamespace /*= true*/) :
-    keyWord(keyWord), parser(parser), isPossibleInClass(isPossibleInClass), isPossibleInNamespace(isPossibleInNamespace)
-{}
+SyntaxVariable* CppSyntaxParser::ParseParameter(int first, int last)
+{
+    SyntaxVariable* param = mArena->Make<SyntaxVariable>();
+    param->mFile = mFile;
+    param->mData = Slice(first, last);
+
+    int i = NextSignificant(first);
+    ParsedType type = ParseType(i, last);
+
+    if (!type.valid)
+    {
+        // Varargs and other unrecognized parameters - keep raw text as the type
+        string text = Slice(first, last);
+        param->mType.mName = Trim(text, " \r\n\t");
+        return param;
+    }
+
+    int next = NextSignificant(i);
+
+    if (next < last && Tok(next).IsPunct(*mSource, '('))
+    {
+        // Function pointer parameter: type (*name)(params)
+        int close = min(FindMatchingParen(next), last);
+        int nameIdx = NextSignificant(next + 2);
+
+        if (nameIdx < close && Tok(nameIdx).type == TokenType::Identifier)
+            param->mName = Tok(nameIdx).Text(*mSource);
+
+        string paramsInner;
+        int paramsParen = NextSignificant(close + 1);
+        if (paramsParen < last && Tok(paramsParen).IsPunct(*mSource, '('))
+            paramsInner = Slice(paramsParen + 1, min(FindMatchingParen(paramsParen), last));
+
+        param->mType.mName = type.text + " (*)(" + paramsInner + ")";
+        param->mType.mIsConstant = type.isConst;
+        return param;
+    }
+
+    param->mType.mName = type.text;
+    param->mType.mIsConstant = type.isConst;
+    param->mType.mIsReference = !type.text.empty() && type.text.back() == '&';
+    param->mType.mIsPointer = !type.text.empty() && type.text.back() == '*';
+
+    if (next < last && Tok(next).type == TokenType::Identifier)
+    {
+        param->mName = Tok(next).Text(*mSource);
+        next = NextSignificant(next + 1);
+    }
+
+    // Default value after '='
+    for (int k = next; k < last; k++)
+    {
+        if (Tok(k).IsPunct(*mSource, '='))
+        {
+            int valueBegin = NextSignificant(k + 1);
+            if (valueBegin < last)
+                param->mDefaultValue = Slice(valueBegin, last);
+            break;
+        }
+    }
+
+    return param;
+}

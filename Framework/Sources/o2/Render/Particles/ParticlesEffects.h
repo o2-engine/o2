@@ -72,6 +72,36 @@ namespace o2
         Vec3F mGravity; // Vector of gravity @SERIALIZABLE
     };
 
+    // ---------------------------------------------------------------
+    // Particles damping effect: slows particles down proportionally to
+    // their velocity, like air drag
+    // ---------------------------------------------------------------
+    class ParticlesDampingEffect : public ParticlesEffect
+    {
+    public:
+        PROPERTIES(ParticlesDampingEffect);
+        PROPERTY(float, damping, SetDamping, GetDamping);
+
+    public:
+        // Default constructor @SCRIPTABLE
+        ParticlesDampingEffect() {}
+
+        // Set damping coefficient, portion of velocity lost per second @SCRIPTABLE
+        void SetDamping(float damping) { mDamping = damping; OnChanged(); }
+
+        // Get damping coefficient
+        float GetDamping() const { return mDamping; }
+
+        // Update particles velocity with damping
+        void Update(float dt, ParticlesEmitter* emitter) override;
+
+        SERIALIZABLE(ParticlesDampingEffect);
+        CLONEABLE_REF(ParticlesDampingEffect);
+
+    protected:
+        float mDamping = 1.0f; // Portion of velocity lost per second @SERIALIZABLE
+    };
+
     // --------------------------------
     // Particles color over time effect
     // --------------------------------
@@ -440,6 +470,27 @@ CLASS_METHODS_META(o2::ParticlesGravityEffect)
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().CONSTRUCTOR();
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetGravity, const Vec3F&);
     FUNCTION().PUBLIC().SIGNATURE(const Vec3F&, GetGravity);
+    FUNCTION().PUBLIC().SIGNATURE(void, Update, float, ParticlesEmitter*);
+}
+END_META;
+
+CLASS_BASES_META(o2::ParticlesDampingEffect)
+{
+    BASE_CLASS(o2::ParticlesEffect);
+}
+END_META;
+CLASS_FIELDS_META(o2::ParticlesDampingEffect)
+{
+    FIELD().PUBLIC().NAME(damping);
+    FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(1.0f).NAME(mDamping);
+}
+END_META;
+CLASS_METHODS_META(o2::ParticlesDampingEffect)
+{
+
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().CONSTRUCTOR();
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetDamping, float);
+    FUNCTION().PUBLIC().SIGNATURE(float, GetDamping);
     FUNCTION().PUBLIC().SIGNATURE(void, Update, float, ParticlesEmitter*);
 }
 END_META;

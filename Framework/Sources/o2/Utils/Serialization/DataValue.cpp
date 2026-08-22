@@ -820,7 +820,22 @@ namespace o2
 
 ENUM_META(o2::DataValue::Flags, o2__DataValue__Flags)
 {
+    ENUM_ENTRY(Array);
     ENUM_ENTRY(Bool);
+    ENUM_ENTRY(BoolFalse);
+    ENUM_ENTRY(BoolTrue);
+    ENUM_ENTRY(Double);
+    ENUM_ENTRY(Int);
+    ENUM_ENTRY(Int64);
+    ENUM_ENTRY(Null);
+    ENUM_ENTRY(Object);
+    ENUM_ENTRY(ShortString);
+    ENUM_ENTRY(String);
+    ENUM_ENTRY(StringCopy);
+    ENUM_ENTRY(StringRef);
+    ENUM_ENTRY(UInt);
+    ENUM_ENTRY(UInt64);
+    ENUM_ENTRY(Value);
 }
 END_ENUM_META;
 

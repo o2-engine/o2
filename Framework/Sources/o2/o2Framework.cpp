@@ -1,3 +1,7 @@
+extern void __RegisterEnum__o2__HttpMethod();
+extern void __RegisterEnum__o2__HttpError();
+extern void __RegisterEnum__o2__HttpCachePolicy();
+extern void __RegisterEnum__o2__HttpBackendType();
 extern void __RegisterEnum__o2__Camera__Projection();
 extern void __RegisterEnum__o2__Shader__Type();
 extern void __RegisterEnum__o2__SkinnedModelData__AnimationChannel__Path();
@@ -121,6 +125,12 @@ extern void __RegisterClass__o2__Physics3DConfig();
 extern void __RegisterClass__o2__PhysicsConfig();
 extern void __RegisterClass__o2__ProjectConfig();
 extern void __RegisterClass__o2__Integration();
+extern void __RegisterClass__o2__Http();
+extern void __RegisterClass__o2__HttpRequest();
+extern void __RegisterClass__o2__HttpResponse();
+extern void __RegisterClass__o2__TcpMessageChannel();
+extern void __RegisterClass__o2__TcpMessageServer();
+extern void __RegisterClass__o2__UdpSocket();
 extern void __RegisterClass__o2__Camera();
 extern void __RegisterClass__o2__FontStyle();
 extern void __RegisterClass__o2__IRectDrawable();
@@ -138,6 +148,7 @@ extern void __RegisterClass__o2__SingleSpriteParticleSource();
 extern void __RegisterClass__o2__MultiSpriteParticleSource();
 extern void __RegisterClass__o2__ParticlesEffect();
 extern void __RegisterClass__o2__ParticlesGravityEffect();
+extern void __RegisterClass__o2__ParticlesDampingEffect();
 extern void __RegisterClass__o2__ParticlesColorEffect();
 extern void __RegisterClass__o2__ParticlesRandomColorEffect();
 extern void __RegisterClass__o2__ParticlesSizeEffect();
@@ -285,6 +296,10 @@ extern void __RegisterClass__o2__TimeStamp();
 
 extern void InitializeTypeso2Framework()
 {
+    __RegisterEnum__o2__HttpMethod();
+    __RegisterEnum__o2__HttpError();
+    __RegisterEnum__o2__HttpCachePolicy();
+    __RegisterEnum__o2__HttpBackendType();
     __RegisterEnum__o2__Camera__Projection();
     __RegisterEnum__o2__Shader__Type();
     __RegisterEnum__o2__SkinnedModelData__AnimationChannel__Path();
@@ -408,6 +423,12 @@ extern void InitializeTypeso2Framework()
     __RegisterClass__o2__PhysicsConfig();
     __RegisterClass__o2__ProjectConfig();
     __RegisterClass__o2__Integration();
+    __RegisterClass__o2__Http();
+    __RegisterClass__o2__HttpRequest();
+    __RegisterClass__o2__HttpResponse();
+    __RegisterClass__o2__TcpMessageChannel();
+    __RegisterClass__o2__TcpMessageServer();
+    __RegisterClass__o2__UdpSocket();
     __RegisterClass__o2__Camera();
     __RegisterClass__o2__FontStyle();
     __RegisterClass__o2__IRectDrawable();
@@ -425,6 +446,7 @@ extern void InitializeTypeso2Framework()
     __RegisterClass__o2__MultiSpriteParticleSource();
     __RegisterClass__o2__ParticlesEffect();
     __RegisterClass__o2__ParticlesGravityEffect();
+    __RegisterClass__o2__ParticlesDampingEffect();
     __RegisterClass__o2__ParticlesColorEffect();
     __RegisterClass__o2__ParticlesRandomColorEffect();
     __RegisterClass__o2__ParticlesSizeEffect();

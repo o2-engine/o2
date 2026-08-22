@@ -50,6 +50,9 @@ namespace o2
         // Loading image from file
         bool Load(const String& fileName, ImageType type = ImageType::Auto);
 
+        // Loading image from a memory buffer, e.g. a downloaded response body
+        bool LoadFromMemory(const UInt8* data, UInt size, ImageType type = ImageType::Auto);
+
         // Saving image to file
         bool Save(const String& fileName, ImageType type) const;
 

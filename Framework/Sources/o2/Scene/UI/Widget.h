@@ -779,7 +779,8 @@ CLASS_FIELDS_META(o2::Widget)
     FIELD().PROTECTED().DEFAULT_TYPE_ATTRIBUTE(o2::Widget).DONT_DELETE_ATTRIBUTE().NAME(mInternalWidgets);
     FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(1.0f).NAME(mTransparency);
     FIELD().PROTECTED().DEFAULT_VALUE(1.0f).NAME(mResTransparency);
-    FIELD().PROTECTED().NAME(mDrawingLayers);
+    FIELD().PROTECTED().DEFAULT_TYPE_ATTRIBUTE(o2::WidgetLayer).DONT_DELETE_ATTRIBUTE().NAME(mDrawingLayers);
+    FIELD().PROTECTED().DEFAULT_TYPE_ATTRIBUTE(o2::WidgetLayer).DONT_DELETE_ATTRIBUTE().NAME(mTopDrawingLayers);
     FIELD().PROTECTED().DEFAULT_TYPE_ATTRIBUTE(o2::WidgetState).DONT_DELETE_ATTRIBUTE().NAME(mFocusedState);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mIsFocused);
     FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(false).NAME(mIsFocusable);
@@ -823,7 +824,7 @@ CLASS_METHODS_META(o2::Widget)
     FUNCTION().PUBLIC().SIGNATURE(const Vector<Ref<Widget>>&, GetChildWidgets);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetIndexInSiblings, int);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(Ref<WidgetLayer>, AddLayer, const Ref<WidgetLayer>&);
-    FUNCTION().PUBLIC().SIGNATURE(Ref<WidgetLayer>, AddLayer, const String&, const Ref<IRectDrawable>&, const Layout&, float);
+    FUNCTION().PUBLIC().SCRIPTABLE_NAME_ATTRIBUTE(AddLayerNew).SIGNATURE(Ref<WidgetLayer>, AddLayer, const String&, const Ref<IRectDrawable>&, const Layout&, float);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, RemoveLayer, const Ref<WidgetLayer>&);
     FUNCTION().PUBLIC().SCRIPTABLE_NAME_ATTRIBUTE(RemoveLayerByPath).SIGNATURE(void, RemoveLayer, const String&);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, RemoveAllLayers);

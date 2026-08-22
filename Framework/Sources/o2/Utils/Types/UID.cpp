@@ -1,6 +1,8 @@
 #include "o2/stdafx.h"
 #include "UID.h"
 
+#include <random>
+
 namespace o2
 {
     UID::UID()
@@ -69,9 +71,13 @@ namespace o2
 
     void UID::Randomize()
     {
+        // own generator: global rand() gets reseeded with fixed seeds (e.g. particle
+        // emitters), which produced colliding ids for assets saved in different runs
+        static std::mt19937 rnd(std::random_device{}());
+
         for (int i = 0; i < 16; i += 2)
         {
-            auto r = rand();
+            auto r = (int)rnd();
             memcpy(data + i, &r, 2);
         }
     }

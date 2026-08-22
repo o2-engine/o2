@@ -1,8 +1,9 @@
 #pragma once
 
+#include <map>
+#include <memory>
 #include <string>
 #include <vector>
-#include <map>
 #include "pugixml/pugixml.hpp"
 
 #undef GetClassName
@@ -13,6 +14,7 @@ class SyntaxAttributes;
 class SyntaxClass;
 class SyntaxClassInheritance;
 class SyntaxComment;
+class SyntaxDefineIf;
 class SyntaxEnum;
 class SyntaxFile;
 class SyntaxFunction;
@@ -22,12 +24,10 @@ class SyntaxType;
 class SyntaxTypedef;
 class SyntaxUsingNamespace;
 class SyntaxVariable;
-class SyntaxDefineIf;
+class ISyntaxExpression;
 
 typedef map<string, string>           StringStringDict;
-typedef vector<SyntaxAttributes*>     SyntaxAttributesVec;
 typedef vector<SyntaxClass*>          SyntaxClassesVec;
-typedef vector<SyntaxComment*>        SyntaxCommentsVec;
 typedef vector<SyntaxEnum*>           SyntaxEnumsVec;
 typedef vector<SyntaxFile*>           SyntaxFilesVec;
 typedef vector<SyntaxFunction*>       SyntaxFunctionsVec;
@@ -35,37 +35,32 @@ typedef vector<SyntaxSection*>        SyntaxSectionsVec;
 typedef vector<SyntaxTypedef*>        SyntaxTypedefsVec;
 typedef vector<SyntaxUsingNamespace*> SyntaxUsingNamespacesVec;
 typedef vector<SyntaxVariable*>       SyntaxVariablesVec;
-typedef vector<SyntaxDefineIf*>       SyntaxDefinesVec;
-typedef vector<string>                StringsVec;
 
 enum class SyntaxProtectionSection { Public, Private, Protected };
 
-// Date time stamp
-struct TimeStamp
+// Owns all syntax nodes. The cache merges files into one global namespace by reparenting
+// nodes between sections, so nodes can't own each other - the arena holds them all instead
+class SyntaxNodeArena
 {
-    int year, month, day, hour, minute, second; 
+public:
+    template<typename T>
+    T* Make()
+    {
+        auto node = make_unique<T>();
+        T* raw = node.get();
+        mNodes.push_back(std::move(node));
+        return raw;
+    }
 
-    TimeStamp(int seconds = 0, int minutes = 0, int hours = 0, int days = 0, int months = 0, int years = 0);
-
-    bool operator==(const TimeStamp& wt) const;
-    bool operator!=(const TimeStamp& wt) const;
-
-    // Saves data to xml node
-    void SaveTo(pugi::xml_node& node) const;
-
-    // Loads data from xml node
-    void LoadFrom(const pugi::xml_node& node);
+private:
+    vector<unique_ptr<ISyntaxExpression>> mNodes;
 };
 
-// Abstract syntax tree file
+// Abstract syntax tree of one source file
 class SyntaxFile
 {
 public:
-    // Default constructor
     SyntaxFile();
-
-    // Destructor
-    ~SyntaxFile();
 
     // Returns file path
     const string& GetPath() const;
@@ -73,11 +68,11 @@ public:
     // Returns file's data
     const string& GetData() const;
 
-    // Returns file last edit date
-    const TimeStamp& GetLastEditedDate() const;
-
     // Returns global syntax namespace in this file
     SyntaxNamespace* GetGlobalNamespace() const;
+
+    // Returns arena that owns this file's nodes
+    SyntaxNodeArena& GetArena();
 
     // Saves data to xml node
     void SaveTo(pugi::xml_node& node) const;
@@ -89,7 +84,7 @@ protected:
     string mPath; // File path
     string mData; // File data
 
-    TimeStamp mLastEditedDate; // Last file edited date
+    SyntaxNodeArena mArena; // Owns all nodes of this file's tree
 
     SyntaxNamespace* mGlobalNamespace = nullptr; // Global syntax namespace in file
 
@@ -101,6 +96,8 @@ protected:
 class ISyntaxExpression
 {
 public:
+    virtual ~ISyntaxExpression() = default;
+
     // Returns start of expression in owner file data
     int GetBegin() const;
 
@@ -110,7 +107,7 @@ public:
     // Returns end of expression
     int GetEnd() const;
 
-    // Returns line of expression
+    // Returns line of expression end
     int GetLine() const;
 
     // Returns expression text
@@ -122,16 +119,25 @@ public:
     // Returns pointer to owner define
     SyntaxDefineIf* GetDefine() const;
 
+    // Returns attached comment: trailing on the same line or directly above the expression
+    SyntaxComment* GetComment() const;
+
+    // Returns attached ATTRIBUTES(...) macro from the line directly above
+    SyntaxAttributes* GetAttributesMacro() const;
+
 protected:
     int mBegin = 0;  // Data begin position
     int mLength = 0; // Data length
-    int mLine = 0;   // Data line number
+    int mLine = 0;   // Line number of expression end
 
     string mData; // Expression text
 
     SyntaxFile* mFile = nullptr; // Owner file
 
     SyntaxDefineIf* mDefine = nullptr; // Owner define
+
+    SyntaxComment*    mComment = nullptr;         // Attached comment (if any)
+    SyntaxAttributes* mAttributesMacro = nullptr; // Attached ATTRIBUTES(...) macro (if any)
 
     friend class CppSyntaxParser;
 };
@@ -175,11 +181,8 @@ public:
     // Returns new defined name (Y)
     const string& GetNewDefName() const;
 
-    // Returns what was defined (X)
+    // Returns section of what was defined (X), if resolved
     SyntaxSection* GetWhat() const;
-
-    // Returns new defined name (Y)
-    SyntaxSection* GetNewDef() const;
 
     // Saves data to xml node
     void SaveTo(pugi::xml_node& node) const;
@@ -200,12 +203,6 @@ protected:
 class SyntaxSection: public ISyntaxExpression
 {
 public:
-    // Default constructor
-    SyntaxSection();
-
-    // Destructor
-    ~SyntaxSection();
-
     // Returns parent section
     virtual SyntaxSection* GetParentSection() const;
 
@@ -233,12 +230,6 @@ public:
     // Returns using namespaces in this section
     virtual const SyntaxUsingNamespacesVec& GetUsingNamespaces() const;
 
-    // Returns comment in section
-    virtual const SyntaxCommentsVec& GetComments() const;
-
-    // Returns comment above or on this line
-    SyntaxComment* FindCommentNearLine(int line) const;
-
     // Returns all inside sections
     virtual SyntaxSectionsVec GetAllSections() const;
 
@@ -251,30 +242,24 @@ public:
     // Returns is this section is class
     virtual bool IsClass() const;
 
-    // Returns attributes definitions
-    virtual const SyntaxAttributesVec& GetAttributes() const;
-
     // Saves data to xml node
     virtual void SaveTo(pugi::xml_node& node) const;
 
     // Loads data from xml node
-    virtual void LoadFrom(const pugi::xml_node& node);
+    virtual void LoadFrom(const pugi::xml_node& node, SyntaxNodeArena& arena);
 
 protected:
     string mName;     // Short name of section
     string mFullName; // Full name of section with all parents names
 
-    SyntaxSection* mParentSection = nullptr; // Pointer to parent section (nullptr of section is global)
+    SyntaxSection* mParentSection = nullptr; // Pointer to parent section (nullptr for global section)
 
     SyntaxFunctionsVec       mFunctions;       // List of functions
     SyntaxVariablesVec       mVariables;       // List of variables
     SyntaxSectionsVec        mSections;        // List of nested sections (classes or namespaces)
-    SyntaxEnumsVec           mEnums;           // List of enum
-    SyntaxCommentsVec        mComments;        // List of comments
+    SyntaxEnumsVec           mEnums;           // List of enums
     SyntaxTypedefsVec        mTypedefs;        // List of typedefs
     SyntaxUsingNamespacesVec mUsingNamespaces; // List of using namespaces
-    SyntaxAttributesVec      mAttributes;      // List of attributes
-    SyntaxDefinesVec         mDefines;         // List of defines
 
     friend class CodeToolCache;
     friend class CppSyntaxParser;
@@ -284,27 +269,22 @@ protected:
 class SyntaxNamespace: public SyntaxSection
 {
 public:
-    SyntaxNamespace();
-
     friend class CodeToolCache;
     friend class CppSyntaxParser;
 };
 
 // Syntax class inheritance definition
-class SyntaxClassInheritance: public ISyntaxExpression
+class SyntaxClassInheritance
 {
 public:
-    // Default constructor
     SyntaxClassInheritance() {}
-
-    // Constructor by class name and inheritance protection type
     SyntaxClassInheritance(const string& className, SyntaxProtectionSection type);
 
     // Returns class name
     const string& GetClassName() const;
 
     // Returns class
-    SyntaxClass* GetClass();
+    SyntaxClass* GetClass() const;
 
     // Returns class inheritance protection type
     SyntaxProtectionSection GetInheritanceType() const;
@@ -321,12 +301,12 @@ public:
 protected:
     string                  mClassName;       // Inheritance class name
     SyntaxClass*            mClass = nullptr; // Inheritance class (if found)
-    SyntaxProtectionSection mInheritanceType; // Inheritance protection type
+    SyntaxProtectionSection mInheritanceType = SyntaxProtectionSection::Private; // Inheritance protection type
 
     friend class CodeToolCache;
     friend class CppSyntaxParser;
 };
-typedef vector<SyntaxClassInheritance> SyntaxClassInheritancsVec;
+typedef vector<SyntaxClassInheritance> SyntaxClassInheritancesVec;
 
 // Syntax class or struct
 class SyntaxClass: public SyntaxSection
@@ -360,13 +340,10 @@ public:
     bool IsClass() const;
 
     // Returns base classes
-    const SyntaxClassInheritancsVec& GetBaseClasses() const;
+    const SyntaxClassInheritancesVec& GetBaseClasses() const;
 
-    // Returns is class template
+    // Returns is class template, including nesting into template class
     bool IsTemplate() const;
-
-    // Returns is class meta (defined as "meta class name { ... };")
-    bool IsMetaClass() const;
 
     // Returns template parameters (if exist)
     const string& GetTemplateParameters() const;
@@ -380,33 +357,29 @@ public:
     // Returns short definition for attribute (empty for not attribute classes)
     const string& GetAttributeShortDef() const;
 
-    // Returns attributes definitions
-    const SyntaxAttributesVec& GetAttributes() const;
-
     // Saves data to xml node
     void SaveTo(pugi::xml_node& node) const;
 
     // Loads data from xml node
-    void LoadFrom(const pugi::xml_node& node);
+    void LoadFrom(const pugi::xml_node& node, SyntaxNodeArena& arena);
 
 protected:
-    SyntaxClassInheritancsVec mBaseClasses; // Base classe
+    SyntaxClassInheritancesVec mBaseClasses; // Base classes
 
     string mTemplateParameters; // Template parameters (empty if class isn't template)
 
-    bool mIsMeta = false; // Is class meta (defined as "meta class name { ... };")
-    SyntaxProtectionSection mClassSection = SyntaxProtectionSection::Public; // protection section of parent class
+    SyntaxProtectionSection mClassSection = SyntaxProtectionSection::Public; // Protection section of parent class
 
     SyntaxClass* mSourceClass = nullptr; // Source class for template specialized classes
 
-    string  mAttributeCommentDef; // Attribute comment definition
-    string  mAttributeShortDef;   // Attribute short definition
+    string mAttributeCommentDef; // Attribute comment definition
+    string mAttributeShortDef;   // Attribute short definition
 
     friend class CodeToolCache;
     friend class CppSyntaxParser;
 };
 
-// Syntax attributes list
+// Syntax attributes list, from ATTRIBUTES(...) macro
 class SyntaxAttributes: public ISyntaxExpression
 {
 public:
@@ -421,7 +394,7 @@ protected:
 };
 
 // Syntax variable type
-class SyntaxType: public ISyntaxExpression
+class SyntaxType
 {
 public:
     // Returns name of type
@@ -437,9 +410,9 @@ public:
     bool IsPointer() const;
 
 protected:
-    string mName;    
+    string mName;
 
-    bool mIsContant = false;
+    bool mIsConstant = false;
     bool mIsReference = false;
     bool mIsPointer = false;
     bool mIsMutable = false;
@@ -483,12 +456,6 @@ protected:
 class SyntaxFunction: public ISyntaxExpression
 {
 public:
-    // Default constructor
-    SyntaxFunction();
-
-    // Destructor
-    ~SyntaxFunction();
-
     // Returns function's returning type
     const SyntaxType& GetReturnType() const;
 
@@ -510,20 +477,22 @@ public:
     // Returns is function static
     bool IsStatic() const;
 
+    // Returns is function virtual
+    bool IsVirtual() const;
+
 protected:
     SyntaxType mReturnType; // Returning type
 
     string mTemplates; // Function templates
-    string mName; // Name of function
+    string mName;      // Name of function
 
     SyntaxVariablesVec mParameters; // List of parameters
 
-    SyntaxProtectionSection mClassSection = SyntaxProtectionSection::Public; // Protection Section
+    SyntaxProtectionSection mClassSection = SyntaxProtectionSection::Public; // Protection section
 
-    bool mIsStatic = false;    // Is function static
-    bool mIsVirtual = false;   // Is function virtual
-    bool mIsContstant = false; // Is function constant
-
+    bool mIsStatic = false;   // Is function static
+    bool mIsVirtual = false;  // Is function virtual
+    bool mIsConstant = false; // Is function constant
 
     friend class CppSyntaxParser;
 };
@@ -559,15 +528,14 @@ protected:
     friend class CppSyntaxParser;
 };
 
-
-// Syntax #define
-class SyntaxDefineIf : public ISyntaxExpression
+// Syntax #if/#ifdef condition, attached to expressions inside conditional blocks
+class SyntaxDefineIf: public ISyntaxExpression
 {
 public:
     const string& GetDefinition() const;
 
 protected:
-    string mDefintion; // Definition statement after #define
+    string mDefinition; // Condition statement after #if
 
     friend class CppSyntaxParser;
 };
