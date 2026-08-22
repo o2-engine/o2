@@ -142,7 +142,12 @@ namespace o2
                 }
 
                 const char* p2data = p2.IsEmpty() ? nullptr : p2.Data();
-                if (IsBulkPath(p1) && (p2.IsEmpty() || IsBulkPath(p2)))
+
+                // Any operation touching the bulk tree goes through the same queue.
+                // Splitting them by transport reorders on the server: a copy into
+                // BuiltAssets was landing before the delete of its destination that
+                // the engine had issued first, so the built file ended up erased.
+                if (IsBulkPath(p1) || (!p2.IsEmpty() && IsBulkPath(p2)))
                     o2webfs_op_async(op, p1.Data(), p2data, mtime);
                 else
                     o2webfs_op(op, p1.Data(), p2data, mtime);

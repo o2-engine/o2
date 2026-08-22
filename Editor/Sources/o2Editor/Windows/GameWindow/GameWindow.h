@@ -70,6 +70,9 @@ namespace Editor
         };
 
     public:
+        // Returns the game view widget, so the page can map world points into canvas pixels
+        const Ref<GameView>& GetGameViewWidget() const { return mGameView; }
+
         // Default constructor, initializes window and creates controls
         GameWindow();
 
@@ -149,6 +152,7 @@ END_META;
 CLASS_METHODS_META(Editor::GameWindow)
 {
 
+    FUNCTION().PUBLIC().SIGNATURE(const Ref<GameView>&, GetGameViewWidget);
     FUNCTION().PUBLIC().CONSTRUCTOR();
     FUNCTION().PUBLIC().CONSTRUCTOR(const GameWindow&);
     FUNCTION().PUBLIC().SIGNATURE(void, Update, float);

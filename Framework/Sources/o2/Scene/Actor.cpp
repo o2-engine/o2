@@ -757,7 +757,13 @@ namespace o2
 
         OnComponentAdded(component);
 
-        component->OnTransformUpdated();
+        // While the actor is still being constructed (the clone constructor copies
+        // components from the source) the derived part does not exist yet: for a widget
+        // that means WidgetLayout has no owner widget, and asking it for a world basis
+        // reads uninitialized memory. The regular transform update notifies components
+        // once the object is complete, so only the runtime path needs this call.
+        if (mState != State::Initializing)
+            component->OnTransformUpdated();
 
 #if IS_EDITOR
         OnChanged();
@@ -921,7 +927,10 @@ namespace o2
         mState = State::Default;
 
         for (auto& comp : mComponents)
+        {
             comp->OnInitialized();
+            comp->OnTransformUpdated();
+        }
     }
 
     void Actor::OnStart()
