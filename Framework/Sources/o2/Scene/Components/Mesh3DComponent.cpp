@@ -141,7 +141,8 @@ namespace o2
 
     void Mesh3DComponent::OnDraw()
     {
-        if (mNeedRebuildMesh || ScenePassFilters::IsRawAlbedoMode() != mMeshRawAlbedo)
+        // The raw albedo mode only changes baked shading, an unshaded mesh fills identically
+        if (mNeedRebuildMesh || (mShaded && ScenePassFilters::IsRawAlbedoMode() != mMeshRawAlbedo))
             RebuildMesh();
 
         mMesh.SetMaterial(GetMaterial());

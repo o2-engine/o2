@@ -187,9 +187,10 @@ namespace o2
     void MeshPrimitiveComponent::OnDraw()
     {
         // The shading mode is picked up here and not in EnsureMesh, so that filling the mesh for
-        // something else (bounds queries) doesn't flip it and cost the drawing pass a second fill
+        // something else (bounds queries) doesn't flip it and cost the drawing pass a second fill.
+        // The raw albedo mode only changes baked shading, an unshaded mesh fills identically
         bool rawAlbedo = ScenePassFilters::IsRawAlbedoMode();
-        if (rawAlbedo != mMeshRawAlbedo)
+        if (mShaded && rawAlbedo != mMeshRawAlbedo)
         {
             mMeshRawAlbedo = rawAlbedo;
             mNeedApplyTransform = true;

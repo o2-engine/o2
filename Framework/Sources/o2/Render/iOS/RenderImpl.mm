@@ -122,6 +122,36 @@ namespace o2
         indexBuffer = indexBuffers[0];
     }
 
+    // Keeps an overflow-allocated frame buffer alive until its frame leaves the GPU, passing
+    // ownership to the retired list. The permanent ring buffers are owned by the device
+    // arrays and are skipped: retaining them again here leaked every overflow frame
+    static void RetireOverflowBuffer(id<MTLBuffer> buffer, id<MTLBuffer> permanent, int frameIndex)
+    {
+        if (!buffer || buffer == permanent)
+            return;
+
+        [RenderDevice::retiredBuffers[frameIndex] addObject:buffer];
+        [buffer release];
+    }
+
+    // Per-frame autorelease pools: the frame allocates autoreleased Metal objects (command
+    // buffer, encoders, drawables), and the render thread has no pool of its own — without
+    // draining one per frame every command buffer stays retained forever
+    static NSAutoreleasePool* gFramePool = nil;
+    static NSAutoreleasePool* gThreadFramePool = nil;
+
+    static void OpenFramePool(NSAutoreleasePool*& pool)
+    {
+        if (!pool)
+            pool = [[NSAutoreleasePool alloc] init];
+    }
+
+    static void DrainFramePool(NSAutoreleasePool*& pool)
+    {
+        [pool drain];
+        pool = nil;
+    }
+
     void Render::InitializePlatform()
     {
         mLog->Out("Initializing Metal render (iOS)..");
@@ -202,6 +232,13 @@ namespace o2
 
     void Render::PlatformBegin()
     {
+        OpenFramePool(gFramePool);
+
+        // The last overflow buffers of the previous frame are still in flight: retire them with it
+        int previousIndex = RenderDevice::currentBufferIndex;
+        RetireOverflowBuffer(RenderDevice::vertexBuffer, RenderDevice::vertexBuffers[previousIndex], previousIndex);
+        RetireOverflowBuffer(RenderDevice::indexBuffer, RenderDevice::indexBuffers[previousIndex], previousIndex);
+
         RenderDevice::currentBufferIndex = (RenderDevice::currentBufferIndex + 1) % 2;
         RenderDevice::vertexBuffer = RenderDevice::vertexBuffers[RenderDevice::currentBufferIndex];
         RenderDevice::indexBuffer = RenderDevice::indexBuffers[RenderDevice::currentBufferIndex];
@@ -338,9 +375,9 @@ namespace o2
             if (mVertexBufferOffset + vertexDataSize > [RenderDevice::vertexBuffer length] ||
                 mIndexBufferOffset + indexDataSize > [RenderDevice::indexBuffer length])
             {
-                NSMutableArray* retired = RenderDevice::retiredBuffers[RenderDevice::currentBufferIndex];
-                [retired addObject:RenderDevice::vertexBuffer];
-                [retired addObject:RenderDevice::indexBuffer];
+                int frameIndex = RenderDevice::currentBufferIndex;
+                RetireOverflowBuffer(RenderDevice::vertexBuffer, RenderDevice::vertexBuffers[frameIndex], frameIndex);
+                RetireOverflowBuffer(RenderDevice::indexBuffer, RenderDevice::indexBuffers[frameIndex], frameIndex);
 
                 RenderDevice::vertexBuffer = [RenderDevice::device newBufferWithLength:[RenderDevice::vertexBuffers[0] length]
                                                                                options:MTLResourceStorageModeShared];
@@ -453,13 +490,16 @@ namespace o2
     {
         PlatformEndPass();
 
-        if (!RenderDevice::commandBuffer)
-            return;
+        if (RenderDevice::commandBuffer)
+        {
+            if (!mCurrentRenderTarget && RenderDevice::view.currentDrawable)
+                [RenderDevice::commandBuffer presentDrawable:RenderDevice::view.currentDrawable];
 
-        if (!mCurrentRenderTarget && RenderDevice::view.currentDrawable)
-            [RenderDevice::commandBuffer presentDrawable:RenderDevice::view.currentDrawable];
+            [RenderDevice::commandBuffer commit];
+            RenderDevice::commandBuffer = nil;
+        }
 
-        [RenderDevice::commandBuffer commit];
+        DrainFramePool(gFramePool);
     }
 
     bool Render::PlatformSupportsMultithreadedRender()
@@ -503,6 +543,13 @@ namespace o2
         // Block only if the GPU is already kMaxFramesInFlight frames behind; otherwise proceed. Paired
         // with the signal in the command buffer's completion handler in PlatformEndThreaded
         dispatch_semaphore_wait(RenderDevice::frameSemaphore, DISPATCH_TIME_FOREVER);
+
+        OpenFramePool(gThreadFramePool);
+
+        // The last overflow buffers of the previous frame are still in flight: retire them with it
+        int previousIndex = RenderDevice::currentBufferIndex;
+        RetireOverflowBuffer(RenderDevice::vertexBuffer, RenderDevice::vertexBuffers[previousIndex], previousIndex);
+        RetireOverflowBuffer(RenderDevice::indexBuffer, RenderDevice::indexBuffers[previousIndex], previousIndex);
 
         RenderDevice::currentBufferIndex = (RenderDevice::currentBufferIndex + 1) % 2;
         RenderDevice::vertexBuffer = RenderDevice::vertexBuffers[RenderDevice::currentBufferIndex];
@@ -641,9 +688,9 @@ namespace o2
             if (mVertexBufferOffset + vertexDataSize > [RenderDevice::vertexBuffer length] ||
                 mIndexBufferOffset + indexDataSize > [RenderDevice::indexBuffer length])
             {
-                NSMutableArray* retired = RenderDevice::retiredBuffers[RenderDevice::currentBufferIndex];
-                [retired addObject:RenderDevice::vertexBuffer];
-                [retired addObject:RenderDevice::indexBuffer];
+                int frameIndex = RenderDevice::currentBufferIndex;
+                RetireOverflowBuffer(RenderDevice::vertexBuffer, RenderDevice::vertexBuffers[frameIndex], frameIndex);
+                RetireOverflowBuffer(RenderDevice::indexBuffer, RenderDevice::indexBuffers[frameIndex], frameIndex);
 
                 RenderDevice::vertexBuffer = [RenderDevice::device newBufferWithLength:[RenderDevice::vertexBuffers[0] length]
                                                                                options:MTLResourceStorageModeShared];
@@ -761,6 +808,7 @@ namespace o2
         {
             // Nothing was submitted this frame, keep the semaphore balanced with PlatformBeginThreaded
             dispatch_semaphore_signal(RenderDevice::frameSemaphore);
+            DrainFramePool(gThreadFramePool);
             return;
         }
 
@@ -785,9 +833,12 @@ namespace o2
         if (mCaptureTarget)
             [RenderDevice::commandBuffer waitUntilCompleted];
 
+        RenderDevice::commandBuffer = nil;
         RenderDevice::threadRenderPassDescriptor = nil;
         RenderDevice::threadDrawable = nil;
         RenderDevice::threadDepthTexture = nil;
+
+        DrainFramePool(gThreadFramePool);
     }
 
     void Render::PlatformResetState()

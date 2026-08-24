@@ -335,10 +335,11 @@ namespace o2
             return;
         }
 
-        // Bone actors can be moved outside of scene updates (editor drag): the pose follows them
+        // Bone actors can be moved outside of scene updates (editor drag): the pose follows them.
+        // The raw albedo mode only changes baked shading, an unshaded mesh fills identically
         if (mNeedRebuildPose || IsBonePoseChanged())
             RebuildPose();
-        else if (ScenePassFilters::IsRawAlbedoMode() != mMeshRawAlbedo)
+        else if (mShaded && ScenePassFilters::IsRawAlbedoMode() != mMeshRawAlbedo)
             ApplyTransform();
 
         mMesh.SetMaterial(GetMaterial());
