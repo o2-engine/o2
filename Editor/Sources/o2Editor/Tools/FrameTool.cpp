@@ -807,8 +807,11 @@ namespace Editor
             SetHandlesEnable(true);
             HandleReleased();
 
+            // a click-sized move in screen pixels selects instead of dragging, whatever the zoom
             const float hasntMovedThreshold = 2.0f;
-            if ((mFrame.origin - mBeginDraggingFrame.origin).Length() < hasntMovedThreshold)
+            Vec2F screenDelta = o2EditorSceneScreen.LocalToScreenPoint(mFrame.origin) -
+                o2EditorSceneScreen.LocalToScreenPoint(mBeginDraggingFrame.origin);
+            if (screenDelta.Length() < hasntMovedThreshold)
                 SelectionTool::OnCursorReleased(cursor);
         }
         else

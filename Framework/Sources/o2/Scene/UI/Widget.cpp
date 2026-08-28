@@ -1055,11 +1055,24 @@ namespace o2
         if ((!mResEnabledInHierarchy || mIsClipped) && GetLayoutData().mDirtyFrame != o2Time.GetCurrentFrame())
             return;
 
-        mBounds = GetLayoutData().mWorldBox.ToRect();
-        mBoundsWithChilds = mBounds;
+        if (layout->IsWorldTransformPlain())
+        {
+            mBounds = GetLayoutData().mWorldBox.ToRect();
 
-        for (auto& layer : mDrawingLayers)
-            mBounds.Expand(layer->GetRect());
+            for (auto& layer : mDrawingLayers)
+                mBounds.Expand(layer->GetRect());
+        }
+        else
+        {
+            // rotated or scaled: bounds are the world footprint of the layout rect and layers
+            Basis layoutToWorld = layout->GetLayoutToWorldBasis();
+            mBounds = (Basis(GetLayoutData().mWorldBox.ToRect())*layoutToWorld).AABB();
+
+            for (auto& layer : mDrawingLayers)
+                mBounds.Expand((Basis(layer->GetRect())*layoutToWorld).AABB());
+        }
+
+        mBoundsWithChilds = mBounds;
 
         bool anyEnabled = false;
         for (auto& child : mChildWidgets)
@@ -1257,6 +1270,9 @@ namespace o2
         {
             mChildWidgets.Remove(widget);
             mInternalWidgets.Remove(widget);
+
+            if (widget->mParentWidget == this)
+                widget->mParentWidget = nullptr;
 
             OnChildRemoved(widget);
         }

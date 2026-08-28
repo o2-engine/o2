@@ -235,6 +235,7 @@ namespace o2
             mSelectGroup->OnHandleCursorPressed(Ref(this), cursor);
 
         mPressedCursorPos = cursor.position;
+        mLastDragCursorPos = cursor.position;
     }
 
     void DragHandle::OnCursorDblClicked(const Input::Cursor& cursor)
@@ -288,8 +289,11 @@ namespace o2
         if (cursor.id != mPressedCursorId)
             return;
 
-        if (cursor.delta.Length() < 0.5f)
+        // per-frame deltas of a slow drag are tiny: accumulate them instead of dropping every frame
+        if ((cursor.position - mLastDragCursorPos).Length() < 0.5f)
             return;
+
+        mLastDragCursorPos = cursor.position;
 
         if (!mIsDragging)
         {

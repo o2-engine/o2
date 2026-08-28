@@ -2,6 +2,7 @@
 #include "EditorApplication.h"
 
 #include "o2/Animation/Tracks/AnimationColor4Track.h"
+#include "o2/Scene/UI/WidgetLayout.h"
 #include "o2/Animation/Tracks/AnimationFloatTrack.h"
 #include "o2/Animation/Tracks/AnimationVec2FTrack.h"
 #include "o2/Application/Input.h"
@@ -120,6 +121,7 @@ namespace Editor
         mIsPlaying = playing;
 
         o2Scene.SetEditorPlaying(mIsPlaying);
+        WidgetLayout::SetSceneLayoutsRounding(mIsPlaying);
     }
 
     bool EditorApplication::IsPlaying() const
@@ -162,6 +164,9 @@ namespace Editor
 
     void EditorApplication::OnStarted()
     {
+        // edit mode: scene widgets keep fractional layouts so frame handles move smoothly at any zoom
+        WidgetLayout::SetSceneLayoutsRounding(mIsPlaying);
+
         PROFILE_SAMPLE_FUNC();
 
         PushEditorScopeOnStack enterScope;

@@ -1129,6 +1129,9 @@ namespace o2
         mChildren.Add(widget);
         mChildWidgets.Add(widget);
         mChildrenInheritedDepth.Add(widget);
+
+        // children attached while the node widget was detached computed a stale enabled state
+        widget->UpdateResEnabledInHierarchy();
     }
 
     void Tree::UpdateNodeView(const Ref<Node>& node, const Ref<TreeNode>& widget, int idx)

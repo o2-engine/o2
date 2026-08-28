@@ -247,6 +247,26 @@ namespace o2
         // Returns height layout weight @SCRIPTABLE
         float GetHeightWeight();
 
+        // Returns transform from the axis-aligned layout rect (GetWorldRect) to the world: rotation and scale
+        // of this widget and its parents applied. Layers and children are placed through it
+        Basis GetLayoutToWorldBasis() const;
+
+        // Returns true when the point is inside the layout rect, honoring the widget's world rotation and scale
+        bool IsPointInside(const Vec2F& point) const;
+
+        // Returns world point in the axis-aligned layout space (inverse of GetLayoutToWorldBasis)
+        Vec2F WorldToLayoutPoint(const Vec2F& worldPoint) const;
+
+        // Returns true when the world transform is the plain layout rect: no rotation, scale or shear in the chain
+        bool IsWorldTransformPlain() const;
+
+        // Enables rounding of scene widgets layouts to whole units (pixel-perfect UI). The editor turns it off
+        // while editing so frame handles move smoothly at any zoom
+        static void SetSceneLayoutsRounding(bool enabled);
+
+        // Returns is scene widgets layouts rounding enabled
+        static bool IsSceneLayoutsRounding();
+
         // Returns both axis stretching by parent layout with border offsets @SCRIPTABLE
         static WidgetLayout BothStretch(float borderLeft = 0, float borderBottom = 0, float borderRight = 0, float borderTop = 0);
 
@@ -292,6 +312,8 @@ namespace o2
         RectF GetParentRectangle() const override;
 
         // Floors all local rectangle properties
+        static bool mSceneLayoutsRounding; // Scene widgets layouts are rounded to whole units
+
         void FloorRectangle();
 
         // Updates offsets to match existing rectangle to offsets and anchors rectangle
@@ -448,6 +470,12 @@ CLASS_METHODS_META(o2::WidgetLayout)
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(float, GetWidthWeight);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetHeightWeight, float);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(float, GetHeightWeight);
+    FUNCTION().PUBLIC().SIGNATURE(Basis, GetLayoutToWorldBasis);
+    FUNCTION().PUBLIC().SIGNATURE(bool, IsPointInside, const Vec2F&);
+    FUNCTION().PUBLIC().SIGNATURE(Vec2F, WorldToLayoutPoint, const Vec2F&);
+    FUNCTION().PUBLIC().SIGNATURE(bool, IsWorldTransformPlain);
+    FUNCTION().PUBLIC().SIGNATURE_STATIC(void, SetSceneLayoutsRounding, bool);
+    FUNCTION().PUBLIC().SIGNATURE_STATIC(bool, IsSceneLayoutsRounding);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE_STATIC(WidgetLayout, BothStretch, float, float, float, float);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE_STATIC(WidgetLayout, Based, BaseCorner, const Vec2F&, const Vec2F&);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE_STATIC(WidgetLayout, HorStretch, VerAlign, float, float, float, float);

@@ -692,6 +692,8 @@ namespace o2
 
         if (withEvent)
             actor->OnParentChanged(oldParent);
+        else
+            actor->ISceneDrawable::OnDrawbleParentChanged(); // leaves this drawing registry even without events
 
         OnChildRemoved(actor);
 

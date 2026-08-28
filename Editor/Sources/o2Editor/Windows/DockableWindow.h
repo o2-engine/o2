@@ -83,6 +83,9 @@ namespace Editor
         // Updates layout
         void UpdateSelfTransform() override;
 
+        // Returns rect of tab click/drag area
+        const RectF& GetHeadDragAreaRect() const;
+
         // Returns true if point is under drawable
         bool IsUnderPoint(const Vec2F& point) override;
 
@@ -161,6 +164,9 @@ namespace Editor
         // Sets window regular state, not as tab
         void SetNonTabState();
 
+        // Recalculates tab click/drag rect from the tab layer
+        void UpdateHeadDragArea();
+
         // Sets tab as active
         void SetActiveTab();
 
@@ -228,6 +234,7 @@ CLASS_METHODS_META(Editor::DockableWindow)
     FUNCTION().PUBLIC().SIGNATURE(void, PlaceDock, const Ref<DockWindowPlace>&);
     FUNCTION().PUBLIC().SIGNATURE(void, Undock);
     FUNCTION().PUBLIC().SIGNATURE(void, UpdateSelfTransform);
+    FUNCTION().PUBLIC().SIGNATURE(const RectF&, GetHeadDragAreaRect);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsUnderPoint, const Vec2F&);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetCreateMenuCategory);
     FUNCTION().PROTECTED().SIGNATURE(void, OnEnabled);
@@ -244,6 +251,7 @@ CLASS_METHODS_META(Editor::DockableWindow)
     FUNCTION().PROTECTED().SIGNATURE(void, PlaceLineDock, const Ref<DockWindowPlace>&, Side, RectF);
     FUNCTION().PROTECTED().SIGNATURE(void, SetTabState, float, int, bool);
     FUNCTION().PROTECTED().SIGNATURE(void, SetNonTabState);
+    FUNCTION().PROTECTED().SIGNATURE(void, UpdateHeadDragArea);
     FUNCTION().PROTECTED().SIGNATURE(void, SetActiveTab);
     FUNCTION().PROTECTED().SIGNATURE(void, SetDocked, bool);
     FUNCTION().PROTECTED().SIGNATURE(void, RecalculateTabWidth);

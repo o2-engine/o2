@@ -9,6 +9,8 @@ Inherits all actor properties: name, transform, components, prototyping. It also
 #### layout
 An extension of the transform that adds adaptive layout. It defines coordinates relative to the parent transform, to which numeric offsets are then added. Relative coordinates allow aligning to an edge or corner, as well as setting the percentage of occupied area horizontally and vertically. Numeric offsets allow specifying the area more precisely, or setting an explicit size.
 
+Rotation, scale and shear of the transform apply on top of the layout: the layout itself stays an axis-aligned rectangle in "layout space" (`GetWorldRect`), while the world basis (`GetWorldBasis`) is that rectangle with the rotation/scale of the widget and all its parents applied. Layers and child widgets are placed through this mapping (`WidgetLayout::GetLayoutToWorldBasis`), layer hit-testing maps points back (`WorldToLayoutPoint`). Limitation: the `ScrollArea` clipping area stays axis-aligned. Scene widget layouts are rounded to whole units (pixel-perfect); the editor switches the rounding off while editing (`WidgetLayout::SetSceneLayoutsRounding`) so frame handles move smoothly at any zoom.
+
 #### Layers
 UI graphics are drawn with layers, which are a simplified version of an actor. Layers are also organized into a structure; each layer has its own layout and a graphical element. The graphical element is any descendant of `o2::IRectDrawable`: Sprite, Text, etc.
 

@@ -240,6 +240,7 @@ namespace o2
 
         int    mPressedCursorId;    // Id of pressed cursor
         Vec2F  mPressedCursorPos;   // Cursor pressed position
+        Vec2F  mLastDragCursorPos;  // Cursor position the handle was last moved to
         bool   mIsDragging = false; // Is handle in dragging mode
         bool   mIsHovered = false;  // Is handle under cursor, used for hover IRectDrawable appearing
 
@@ -574,6 +575,7 @@ CLASS_FIELDS_META(o2::DragHandle)
     FIELD().PROTECTED().NAME(mDragBeginPosition);
     FIELD().PROTECTED().NAME(mPressedCursorId);
     FIELD().PROTECTED().NAME(mPressedCursorPos);
+    FIELD().PROTECTED().NAME(mLastDragCursorPos);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mIsDragging);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mIsHovered);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mIsSelected);

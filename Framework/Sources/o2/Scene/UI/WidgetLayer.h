@@ -178,6 +178,8 @@ namespace o2
         RectF mAbsolutePosition; // Result absolute drawable position
         RectF mInteractableArea; // Intractable area, depends on interactableLayout
 
+        bool mDrawableTransformed = false; // Drawable got the owner's rotation/scale basis and needs a reset when it turns plain
+
         WeakRef<Widget> mOwnerWidget; // Owner widget pointer 
 
         WeakRef<WidgetLayer>     mParent;   // Pointer to parent layer 
@@ -384,6 +386,7 @@ CLASS_FIELDS_META(o2::WidgetLayer)
     FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(0.0f).NAME(mDepth);
     FIELD().PROTECTED().NAME(mAbsolutePosition);
     FIELD().PROTECTED().NAME(mInteractableArea);
+    FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mDrawableTransformed);
     FIELD().PROTECTED().NAME(mOwnerWidget);
     FIELD().PROTECTED().NAME(mParent);
     FIELD().PROTECTED().NAME(mChildren);

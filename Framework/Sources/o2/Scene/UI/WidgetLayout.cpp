@@ -644,7 +644,10 @@ namespace o2
 
         (this->*mCheckMinMaxFunc)();
 
-        FloorRectangle();
+        // editor UI stays pixel-perfect always; scene widgets follow the rounding switch
+        if (mSceneLayoutsRounding || !mOwnerWidget || !mOwnerWidget->IsOnScene())
+            FloorRectangle();
+
         UpdateLocalBox();
         UpdateTransform();
         UpdateWorldBoxAndTransform();
@@ -656,6 +659,61 @@ namespace o2
             mOwnerWidget->SetChildrenWorldRect(mWorldBox.ToRect());
             mOwnerWidget->OnTransformUpdated();
         }
+    }
+
+    bool WidgetLayout::mSceneLayoutsRounding = true;
+
+    void WidgetLayout::SetSceneLayoutsRounding(bool enabled)
+    {
+        mSceneLayoutsRounding = enabled;
+    }
+
+    bool WidgetLayout::IsSceneLayoutsRounding()
+    {
+        return mSceneLayoutsRounding;
+    }
+
+    Basis WidgetLayout::GetLayoutToWorldBasis() const
+    {
+        RectF rect = mWorldBox.ToRect();
+        Basis world = mWorldTransform.ToBasis();
+        Vec2F size = rect.Size();
+
+        // a zero-sized axis keeps unit direction, the world vector carries no information there
+        Vec2F xv = size.x > FLT_EPSILON ? world.xv/size.x : Vec2F(1, 0);
+        Vec2F yv = size.y > FLT_EPSILON ? world.yv/size.y : Vec2F(0, 1);
+        Vec2F origin = world.origin - xv*rect.left - yv*rect.bottom;
+
+        return Basis(origin, xv, yv);
+    }
+
+    Vec2F WidgetLayout::WorldToLayoutPoint(const Vec2F& worldPoint) const
+    {
+        if (IsWorldTransformPlain())
+            return worldPoint;
+
+        Basis basis = GetLayoutToWorldBasis();
+        float det = basis.xv.x*basis.yv.y - basis.xv.y*basis.yv.x;
+        if (Math::Abs(det) < FLT_EPSILON) // collapsed axis (zero scale): nothing maps back
+            return Vec2F(FLT_MAX, FLT_MAX);
+
+        return basis.Inverted().Transform(worldPoint);
+    }
+
+    bool WidgetLayout::IsPointInside(const Vec2F& point) const
+    {
+        return mWorldBox.ToRect().IsInside(WorldToLayoutPoint(point));
+    }
+
+    bool WidgetLayout::IsWorldTransformPlain() const
+    {
+        RectF rect = mWorldBox.ToRect();
+        Basis world = mWorldTransform.ToBasis();
+        const float eps = 0.001f;
+
+        return Math::Equals(world.origin.x, rect.left, eps) && Math::Equals(world.origin.y, rect.bottom, eps) &&
+            Math::Equals(world.xv.x, rect.Width(), eps) && Math::Equals(world.xv.y, 0.0f, eps) &&
+            Math::Equals(world.yv.x, 0.0f, eps) && Math::Equals(world.yv.y, rect.Height(), eps);
     }
 
     void WidgetLayout::FloorRectangle()

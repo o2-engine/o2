@@ -446,6 +446,9 @@ namespace o2
 
     bool WidgetLayer::IsUnderPoint(const Vec2F& point)
     {
+        if (auto owner = mOwnerWidget.Lock())
+            return mInteractableArea.IsInside(owner->layout->WorldToLayoutPoint(point));
+
         return mInteractableArea.IsInside(point);
     }
 
@@ -503,7 +506,26 @@ namespace o2
         mInteractableArea = interactableLayout.Calculate(mAbsolutePosition);
 
         if (mDrawable)
-            mDrawable->SetRect(mAbsolutePosition);
+        {
+            // layers live in the widget's axis-aligned layout space; the widget rotation/scale is applied on top
+            auto owner = mOwnerWidget.Lock();
+            if (owner && !owner->layout->IsWorldTransformPlain())
+            {
+                mDrawable->SetBasis(Basis(mAbsolutePosition)*owner->layout->GetLayoutToWorldBasis());
+                mDrawableTransformed = true;
+            }
+            else
+            {
+                if (mDrawableTransformed)
+                {
+                    mDrawable->SetAngle(0.0f);
+                    mDrawable->SetShear(Vec3F());
+                    mDrawableTransformed = false;
+                }
+
+                mDrawable->SetRect(mAbsolutePosition);
+            }
+        }
 
         for (auto& child : mChildren)
             child->UpdateLayout();

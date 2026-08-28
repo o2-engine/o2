@@ -257,6 +257,8 @@ namespace Editor
 
         if (auto tabLayer = GetLayer(mTabLayerPath))
             tabLayer->layout.offsetRight = tabLayer->layout.offsetLeft + width;
+
+        UpdateHeadDragArea();
     }
 
     float DockableWindow::GetTabWidth() const
@@ -294,7 +296,16 @@ namespace Editor
     void DockableWindow::UpdateSelfTransform()
     {
         Window::UpdateSelfTransform();
+        UpdateHeadDragArea();
+    }
 
+    const RectF& DockableWindow::GetHeadDragAreaRect() const
+    {
+        return mHeadDragAreaRect;
+    }
+
+    void DockableWindow::UpdateHeadDragArea()
+    {
         if (auto tabLayer = GetLayer(mTabLayerPath))
             mHeadDragAreaRect = mHeadDragAreaLayout.Calculate(tabLayer->GetRect());
     }
@@ -692,6 +703,7 @@ namespace Editor
         }
 
         mTabState = true;
+        UpdateHeadDragArea();
     }
 
     void DockableWindow::SetNonTabState()
@@ -712,6 +724,7 @@ namespace Editor
         }
 
         mTabState = false;
+        UpdateHeadDragArea();
     }
 
     void DockableWindow::SetActiveTab()
