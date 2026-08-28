@@ -34,3 +34,7 @@ You also need to override the needed cursor and touch message functions:
 -`OnCursorDblClicked` - double click on the area
 
 For the right and middle mouse buttons there are analogous messages: `OnCursorRightMousePressed`/`OnCursorRightMouseReleased`, `OnCursorMiddleMousePressed`/`OnCursorMiddleMouseReleased`, etc.
+
+### Mouse wheel
+
+`o2Input.GetMouseWheelDelta()` returns the per-frame wheel delta in engine units: one classic wheel notch is ~120 (as `WHEEL_DELTA` on Windows/Linux). macOS reports deltas differently: touchpad and Magic Mouse give precise ones (`hasPreciseScrollingDeltas`, in pixels, frequent and large), a classic wheel gives lines (±1..3). The platform layer brings them to one scale with `Input::NormalizeWheelDelta(delta, preciseDeltas)`: precise deltas pass through, line deltas are multiplied by `Input::kWheelLineDelta` (60). The distinction is made by the system flag, not by guessing from delta magnitude.

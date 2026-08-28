@@ -162,6 +162,14 @@ namespace o2
         // Call when changed mouse wheel delta
         void OnMouseWheel(float delta);
 
+        // Normalizes platform wheel delta to the engine convention (one classic wheel
+        // notch ~ 120, as WHEEL_DELTA on Windows). Precise deltas (touchpad, Magic
+        // Mouse) are already pixels and pass through; classic wheel deltas come in
+        // lines and are scaled by kWheelLineDelta
+        static float NormalizeWheelDelta(float delta, bool preciseDeltas);
+
+        static constexpr float kWheelLineDelta = 60.0f;  // engine units per classic wheel line (half a Windows notch)
+
     public:
         // -----------------
         // Cursor definition

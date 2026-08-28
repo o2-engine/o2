@@ -439,6 +439,11 @@ namespace o2
         OnKeyReleased(-2);
     }
 
+    float Input::NormalizeWheelDelta(float delta, bool preciseDeltas)
+    {
+        return preciseDeltas ? delta : delta*kWheelLineDelta;
+    }
+
     void Input::OnMouseWheel(float delta)
     {
         auto msg = mmake<InputMouseWheelMsg>();

@@ -34,3 +34,7 @@
 -`OnCursorDblClicked` - двойной клик по области
 
 Для правой и средней кнопок мыши есть аналогичные сообщения: `OnCursorRightMousePressed`/`OnCursorRightMouseReleased`, `OnCursorMiddleMousePressed`/`OnCursorMiddleMouseReleased` и тд
+
+### Колесо мыши
+
+`o2Input.GetMouseWheelDelta()` отдает дельту колеса за кадр в единицах движка: один щелчок классического колеса ~120 (как `WHEEL_DELTA` на Windows/Linux). На macOS система сообщает дельты по-разному: тачпад и Magic Mouse — точные (`hasPreciseScrollingDeltas`, в пикселях, частые и крупные), классическое колесо — в строках (±1..3). Платформенный слой приводит их к единой шкале через `Input::NormalizeWheelDelta(delta, preciseDeltas)`: точные дельты проходят как есть, строчные умножаются на `Input::kWheelLineDelta` (60). Различение — по системному флагу, а не по величине дельт.

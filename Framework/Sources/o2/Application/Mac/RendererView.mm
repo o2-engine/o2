@@ -200,7 +200,10 @@ static o2::MacKeyboardHandler::Modifiers GetModifiers(NSEventModifierFlags flags
 
 - (void)scrollWheel:(NSEvent *)event
 {
-    o2Input.OnMouseWheel((float)event.scrollingDeltaY);
+    // touchpad and Magic Mouse report precise pixel deltas, a classic wheel reports
+    // lines - the system flag tells them apart, no guessing by delta magnitude
+    o2Input.OnMouseWheel(o2::Input::NormalizeWheelDelta((float)event.scrollingDeltaY,
+                                                        event.hasPreciseScrollingDeltas));
 }
 
 @end

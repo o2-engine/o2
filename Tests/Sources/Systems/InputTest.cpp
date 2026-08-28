@@ -290,3 +290,16 @@ TEST(Input, MouseWheelDeltaAccumulatesAndResetsAfterUpdate) {
     o2Input.Update(0.016f);
     EXPECT_FLOAT_EQ(o2Input.GetMouseWheelDelta(), 0.0f);
 }
+
+// ===== Wheel delta normalization (macOS classic wheel vs touchpad) =====
+
+// Precise deltas (touchpad, Magic Mouse) are pixels and pass through; a classic
+// wheel reports lines and is scaled by kWheelLineDelta
+TEST(Input, NormalizeWheelDeltaScalesClassicWheelOnly) {
+    EXPECT_FLOAT_EQ(Input::NormalizeWheelDelta(24.0f, true), 24.0f);
+    EXPECT_FLOAT_EQ(Input::NormalizeWheelDelta(-7.5f, true), -7.5f);
+
+    EXPECT_FLOAT_EQ(Input::NormalizeWheelDelta(1.0f, false), Input::kWheelLineDelta);
+    EXPECT_FLOAT_EQ(Input::NormalizeWheelDelta(-3.0f, false), -3.0f*Input::kWheelLineDelta);
+    EXPECT_FLOAT_EQ(Input::NormalizeWheelDelta(0.0f, false), 0.0f);
+}
