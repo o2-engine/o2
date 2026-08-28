@@ -85,3 +85,20 @@ TEST(Curve, EqualsComparesKeys)
     b.InsertKey(2.0f, 3.0f);
     EXPECT_TRUE(a != b);
 }
+
+// Outside the key range the curve holds its end values (a clip may be longer than a track)
+TEST(Curve, EvaluateOutsideKeysHoldsEndValues)
+{
+    Curve c;
+    c.InsertKey(0.0f, 0.0f);
+    c.InsertKey(0.5f, 1.0f);
+    c.InsertKey(1.0f, 0.25f);
+
+    EXPECT_NEAR(c.Evaluate(-1.0f), 0.0f, 0.001f);
+    EXPECT_NEAR(c.Evaluate(1.0f), 0.25f, 0.001f);
+    EXPECT_NEAR(c.Evaluate(5.0f), 0.25f, 0.001f);
+
+    // inside the range it still interpolates
+    EXPECT_GT(c.Evaluate(0.25f), 0.1f);
+    EXPECT_LT(c.Evaluate(0.25f), 0.9f);
+}

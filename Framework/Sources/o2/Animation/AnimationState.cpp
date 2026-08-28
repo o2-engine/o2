@@ -29,6 +29,11 @@ namespace o2
 		return 0.0f;
 	}
 
+	bool IAnimationState::IsInEditMode() const
+	{
+		return false;
+	}
+
 	void IAnimationState::SetWeight(float weight)
 	{}
 
@@ -168,6 +173,11 @@ namespace o2
     void AnimationState::OnDeserialized(const DataValue& node)
     {
         player->SetClip(mAnimation ? mAnimation->animation : nullptr);
+	}
+
+	bool AnimationState::IsInEditMode() const
+	{
+		return mInEditMode;
 	}
 
 	void AnimationState::BeginPreview()

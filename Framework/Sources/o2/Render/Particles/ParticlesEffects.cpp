@@ -21,9 +21,20 @@ namespace o2
     void ParticlesEffect::OnChanged()
     {
 #if IS_EDITOR
-        if (mEmitter)
-            mEmitter.Lock() ->InvalidateBakedFrames();
+        if (auto emitter = mEmitter.Lock())
+            emitter->InvalidateBakedFrames();
 #endif
+    }
+
+    void ParticlesEffect::ListenKeysChanged(Function<void()>& keysEvent)
+    {
+        keysEvent -= MakeFunction(this, &ParticlesEffect::OnChanged);
+        keysEvent += MakeFunction(this, &ParticlesEffect::OnChanged);
+    }
+
+    void ParticlesEffect::UnlistenKeysChanged(Function<void()>& keysEvent)
+    {
+        keysEvent -= MakeFunction(this, &ParticlesEffect::OnChanged);
     }
 
     void ParticlesGravityEffect::Update(float dt, ParticlesEmitter* emitter)
@@ -43,7 +54,19 @@ namespace o2
     ParticlesColorEffect::ParticlesColorEffect()
     {
         colorGradient = mmake<ColorGradient>();
-        colorGradient->onKeysChanged += [this]() { OnChanged(); };
+        ListenKeysChanged(colorGradient->onKeysChanged);
+    }
+
+    ParticlesColorEffect::ParticlesColorEffect(const ParticlesColorEffect& other):
+        ParticlesEffect(other), colorGradient(mmake<ColorGradient>(*other.colorGradient))
+    {
+        ListenKeysChanged(colorGradient->onKeysChanged);
+    }
+
+    ParticlesColorEffect::~ParticlesColorEffect()
+    {
+        if (colorGradient)
+            UnlistenKeysChanged(colorGradient->onKeysChanged);
     }
 
     void ParticlesColorEffect::OnParticleEmitted(Particle& particle)
@@ -83,7 +106,7 @@ namespace o2
 
     void ParticlesColorEffect::OnDeserialized(const DataValue& node)
     {
-        colorGradient->onKeysChanged += [this]() { OnChanged(); };
+        ListenKeysChanged(colorGradient->onKeysChanged);
     }
 
     ParticlesRandomColorEffect::ParticlesRandomColorEffect()
@@ -91,8 +114,25 @@ namespace o2
         colorGradientA = mmake<ColorGradient>();
         colorGradientB = mmake<ColorGradient>();
 
-        colorGradientA->onKeysChanged += [this]() { OnChanged(); };
-        colorGradientB->onKeysChanged += [this]() { OnChanged(); };
+        ListenKeysChanged(colorGradientA->onKeysChanged);
+        ListenKeysChanged(colorGradientB->onKeysChanged);
+    }
+
+    ParticlesRandomColorEffect::ParticlesRandomColorEffect(const ParticlesRandomColorEffect& other):
+        ParticlesEffect(other), colorGradientA(mmake<ColorGradient>(*other.colorGradientA)),
+        colorGradientB(mmake<ColorGradient>(*other.colorGradientB))
+    {
+        ListenKeysChanged(colorGradientA->onKeysChanged);
+        ListenKeysChanged(colorGradientB->onKeysChanged);
+    }
+
+    ParticlesRandomColorEffect::~ParticlesRandomColorEffect()
+    {
+        if (colorGradientA)
+            UnlistenKeysChanged(colorGradientA->onKeysChanged);
+
+        if (colorGradientB)
+            UnlistenKeysChanged(colorGradientB->onKeysChanged);
     }
 
     void ParticlesRandomColorEffect::CheckDataBufferSize(int particlesCount)
@@ -103,8 +143,8 @@ namespace o2
 
     void ParticlesRandomColorEffect::OnDeserialized(const DataValue& node)
     {
-        colorGradientA->onKeysChanged += [this]() { OnChanged(); };
-        colorGradientB->onKeysChanged += [this]() { OnChanged(); };
+        ListenKeysChanged(colorGradientA->onKeysChanged);
+        ListenKeysChanged(colorGradientB->onKeysChanged);
     }
 
     void ParticlesRandomColorEffect::OnParticleEmitted(Particle& particle)
@@ -140,7 +180,19 @@ namespace o2
     ParticlesSizeEffect::ParticlesSizeEffect()
     {
         curve = mmake<Curve>(Curve::Linear(0.0f, 1.0f));
-        curve->onKeysChanged += [this]() { OnChanged(); };
+        ListenKeysChanged(curve->onKeysChanged);
+    }
+
+    ParticlesSizeEffect::ParticlesSizeEffect(const ParticlesSizeEffect& other):
+        ParticlesEffect(other), curve(mmake<Curve>(*other.curve))
+    {
+        ListenKeysChanged(curve->onKeysChanged);
+    }
+
+    ParticlesSizeEffect::~ParticlesSizeEffect()
+    {
+        if (curve)
+            UnlistenKeysChanged(curve->onKeysChanged);
     }
 
     void ParticlesSizeEffect::OnParticleEmitted(Particle& particle)
@@ -178,13 +230,25 @@ namespace o2
 
     void ParticlesSizeEffect::OnDeserialized(const DataValue& node)
     {
-        curve->onKeysChanged += [this]() { OnChanged(); };
+        ListenKeysChanged(curve->onKeysChanged);
     }
 
     ParticlesAngleEffect::ParticlesAngleEffect()
     {
         curve = mmake<Curve>(Curve::Linear(0.0f, 360.0f));
-        curve->onKeysChanged += [this]() { OnChanged(); };
+        ListenKeysChanged(curve->onKeysChanged);
+    }
+
+    ParticlesAngleEffect::ParticlesAngleEffect(const ParticlesAngleEffect& other):
+        ParticlesEffect(other), curve(mmake<Curve>(*other.curve))
+    {
+        ListenKeysChanged(curve->onKeysChanged);
+    }
+
+    ParticlesAngleEffect::~ParticlesAngleEffect()
+    {
+        if (curve)
+            UnlistenKeysChanged(curve->onKeysChanged);
     }
 
     void ParticlesAngleEffect::OnParticleEmitted(Particle& particle)
@@ -222,13 +286,25 @@ namespace o2
 
     void ParticlesAngleEffect::OnDeserialized(const DataValue& node)
     {
-        curve->onKeysChanged += [this]() { OnChanged(); };
+        ListenKeysChanged(curve->onKeysChanged);
     }
 
     ParticlesAngleSpeedEffect::ParticlesAngleSpeedEffect()
     {
         curve = mmake<Curve>(Curve::Linear(0.0f, 360.0f));
-        curve->onKeysChanged += [this]() { OnChanged(); };
+        ListenKeysChanged(curve->onKeysChanged);
+    }
+
+    ParticlesAngleSpeedEffect::ParticlesAngleSpeedEffect(const ParticlesAngleSpeedEffect& other):
+        ParticlesEffect(other), curve(mmake<Curve>(*other.curve))
+    {
+        ListenKeysChanged(curve->onKeysChanged);
+    }
+
+    ParticlesAngleSpeedEffect::~ParticlesAngleSpeedEffect()
+    {
+        if (curve)
+            UnlistenKeysChanged(curve->onKeysChanged);
     }
 
     void ParticlesAngleSpeedEffect::OnParticleEmitted(Particle& particle)
@@ -266,16 +342,32 @@ namespace o2
 
     void ParticlesAngleSpeedEffect::OnDeserialized(const DataValue& node)
     {
-        curve->onKeysChanged += [this]() { OnChanged(); };
+        ListenKeysChanged(curve->onKeysChanged);
     }
 
     ParticlesVelocityEffect::ParticlesVelocityEffect()
     {
         XCurve = mmake<Curve>(Curve::Linear(0.0f, 10.0f));
-        XCurve->onKeysChanged += [this]() { OnChanged(); };
+        ListenKeysChanged(XCurve->onKeysChanged);
 
         YCurve = mmake<Curve>(Curve::Linear(0.0f, 10.0f));
-        YCurve->onKeysChanged += [this]() { OnChanged(); };
+        ListenKeysChanged(YCurve->onKeysChanged);
+    }
+
+    ParticlesVelocityEffect::ParticlesVelocityEffect(const ParticlesVelocityEffect& other):
+        ParticlesEffect(other), XCurve(mmake<Curve>(*other.XCurve)), YCurve(mmake<Curve>(*other.YCurve))
+    {
+        ListenKeysChanged(XCurve->onKeysChanged);
+        ListenKeysChanged(YCurve->onKeysChanged);
+    }
+
+    ParticlesVelocityEffect::~ParticlesVelocityEffect()
+    {
+        if (XCurve)
+            UnlistenKeysChanged(XCurve->onKeysChanged);
+
+        if (YCurve)
+            UnlistenKeysChanged(YCurve->onKeysChanged);
     }
 
     void ParticlesVelocityEffect::OnParticleEmitted(Particle& particle)
@@ -321,17 +413,33 @@ namespace o2
 
     void ParticlesVelocityEffect::OnDeserialized(const DataValue& node)
     {
-        XCurve->onKeysChanged += [this]() { OnChanged(); };
-        YCurve->onKeysChanged += [this]() { OnChanged(); };
+        ListenKeysChanged(XCurve->onKeysChanged);
+        ListenKeysChanged(YCurve->onKeysChanged);
     }
 
     ParticlesSplineEffect::ParticlesSplineEffect()
     {
         timeCurve = mmake<Curve>(Curve::EaseInOut());
-        timeCurve->onKeysChanged += [this]() { OnChanged(); };
+        ListenKeysChanged(timeCurve->onKeysChanged);
 
         spline = mmake<Spline>(Vector<Vec2F>{ Vec2F(), Vec2F(100, 0) });
-        spline->onKeysChanged += [this]() { OnChanged(); };
+        ListenKeysChanged(spline->onKeysChanged);
+    }
+
+    ParticlesSplineEffect::ParticlesSplineEffect(const ParticlesSplineEffect& other):
+        ParticlesEffect(other), timeCurve(mmake<Curve>(*other.timeCurve)), spline(mmake<Spline>(*other.spline))
+    {
+        ListenKeysChanged(timeCurve->onKeysChanged);
+        ListenKeysChanged(spline->onKeysChanged);
+    }
+
+    ParticlesSplineEffect::~ParticlesSplineEffect()
+    {
+        if (timeCurve)
+            UnlistenKeysChanged(timeCurve->onKeysChanged);
+
+        if (spline)
+            UnlistenKeysChanged(spline->onKeysChanged);
     }
 
     void ParticlesSplineEffect::OnParticleEmitted(Particle& particle)
@@ -380,8 +488,8 @@ namespace o2
 
     void ParticlesSplineEffect::OnDeserialized(const DataValue& node)
     {
-        timeCurve->onKeysChanged += [this]() { OnChanged(); };
-        spline->onKeysChanged += [this]() { OnChanged(); };
+        ListenKeysChanged(timeCurve->onKeysChanged);
+        ListenKeysChanged(spline->onKeysChanged);
     }
 }
 // --- META ---

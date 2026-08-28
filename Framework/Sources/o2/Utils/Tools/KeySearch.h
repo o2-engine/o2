@@ -10,6 +10,11 @@ namespace o2
         end = 1;
 
         bool found = false;
+
+        // the cache index comes from a previous evaluation, possibly of another key set
+        if (cacheKey < 0 || cacheKey >= keysCount)
+            cacheKey = 0;
+
         if (direction)
         {
             if (keys[cacheKey].position < position)

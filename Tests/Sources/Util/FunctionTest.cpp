@@ -196,3 +196,131 @@ TEST(Function, AddingTwoLambdasViaFunctionInterface) {
     EXPECT_EQ(callsA, 1);
     EXPECT_EQ(callsB, 1);
 }
+
+// Handlers may unsubscribe themselves or others while the event dispatches
+namespace
+{
+    struct DispatchSubscriber
+    {
+        Function<void()>* event = nullptr;
+        DispatchSubscriber* other = nullptr;
+        int calls = 0;
+        bool removeSelf = false;
+        bool removeOther = false;
+
+        void OnEvent()
+        {
+            calls++;
+            if (removeSelf)
+                *event -= MakeFunction(this, &DispatchSubscriber::OnEvent);
+            if (removeOther && other)
+                *event -= MakeFunction(other, &DispatchSubscriber::OnEvent);
+        }
+    };
+}
+
+TEST(Function, HandlerRemovingItselfDuringDispatch)
+{
+    Function<void()> event;
+    DispatchSubscriber a, b;
+    a.event = &event; b.event = &event;
+    a.removeSelf = true;
+    b.removeSelf = true;
+
+    event += MakeFunction(&a, &DispatchSubscriber::OnEvent);
+    event += MakeFunction(&b, &DispatchSubscriber::OnEvent);
+
+    event();
+    EXPECT_EQ(a.calls, 1);
+    EXPECT_EQ(b.calls, 1);
+
+    event();
+    EXPECT_EQ(a.calls, 1);
+    EXPECT_EQ(b.calls, 1);
+}
+
+TEST(Function, HandlerRemovingLaterOneSkipsIt)
+{
+    Function<void()> event;
+    DispatchSubscriber a, b, c;
+    a.event = &event; b.event = &event; c.event = &event;
+    a.removeOther = true;
+    a.other = &c;
+
+    event += MakeFunction(&a, &DispatchSubscriber::OnEvent);
+    event += MakeFunction(&b, &DispatchSubscriber::OnEvent);
+    event += MakeFunction(&c, &DispatchSubscriber::OnEvent);
+
+    event();
+    EXPECT_EQ(a.calls, 1);
+    EXPECT_EQ(b.calls, 1);
+    EXPECT_EQ(c.calls, 0) << "a removed c before it ran";
+}
+
+TEST(Function, HandlerAddingDelegateDuringDispatchIsNotCalledNow)
+{
+    Function<void()> event;
+    int added = 0;
+    int first = 0;
+
+    event += [&]() {
+        first++;
+        event += [&]() { added++; };
+    };
+
+    event();
+    EXPECT_EQ(first, 1);
+    EXPECT_EQ(added, 0);
+
+    event();
+    EXPECT_EQ(first, 2);
+    EXPECT_EQ(added, 1);
+}
+
+TEST(Function, RecursiveInvokeFromHandlerRemovingOthers)
+{
+    Function<void()> event;
+    int depth = 0;
+    int second = 0;
+    Function<void()> secondHandler = [&]() { second++; };
+
+    event += [&]() {
+        if (depth == 0)
+        {
+            depth++;
+            event -= secondHandler;
+            event();
+        }
+    };
+    event += secondHandler;
+
+    event();
+    EXPECT_EQ(second, 0);
+    EXPECT_EQ(depth, 1);
+
+    // the removed slot is compacted after the outer dispatch: a later Add works and the new handler
+    // is reached by both the nested and the outer dispatch
+    int third = 0;
+    event += [&]() { third++; };
+    depth = 0;
+    event();
+    EXPECT_EQ(third, 2);
+    EXPECT_EQ(second, 0);
+}
+
+TEST(Function, ClearDuringDispatchStopsRemainingHandlers)
+{
+    Function<void()> event;
+    int calls = 0;
+
+    event += [&]() { calls++; event.Clear(); };
+    event += [&]() { calls++; };
+    event += [&]() { calls++; };
+
+    event();
+    EXPECT_EQ(calls, 1);
+    EXPECT_TRUE(event.IsEmpty());
+
+    event();
+    EXPECT_EQ(calls, 1);
+}

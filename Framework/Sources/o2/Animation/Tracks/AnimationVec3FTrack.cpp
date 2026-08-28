@@ -40,6 +40,9 @@ namespace o2
         else if (count == 0)
             return Vec3F();
 
+        // outside the keys the track holds its end values instead of extrapolating the last segment
+        position = Math::Clamp(position, mKeys[0].position, mKeys[count - 1].position);
+
         int keyLeftIdx = -1, rightKeyIdx = -1;
         SearchKey(mKeys, count, position, keyLeftIdx, rightKeyIdx, direction, cacheKey);
 

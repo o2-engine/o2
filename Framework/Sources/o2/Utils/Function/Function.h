@@ -1,5 +1,7 @@
 #pragma once
 
+#include <algorithm>
+
 #include <string>
 #include <functional>
 #include <vector>
@@ -410,7 +412,9 @@ namespace o2
 
         struct TypeData
         {
-            Byte padding[payloadSize];
+            Byte padding[sizeof(std::vector<void*>)];
+            int  dispatchDepth; // Nested Invoke depth of the functions list: removals inside are tombstoned
+            Byte padding2[payloadSize - sizeof(std::vector<void*>) - sizeof(int)];
             DataType type;
         };
 
@@ -457,10 +461,12 @@ namespace o2
                 DestroyOneFunction();
 
                 new (&mData.functions) std::vector<IFunction<_res_type(_args ...)>*>();
+                mData.typeData.dispatchDepth = 0;
                 mData.functions.push_back(firstFunction);
             }
             else if (mData.typeData.type == DataType::Empty)
                 new (&mData.functions) std::vector<IFunction<_res_type(_args ...)>*>();
+                mData.typeData.dispatchDepth = 0;
 
             mData.typeData.type = DataType::CoupleOfFunctions;
         }
@@ -488,7 +494,10 @@ namespace o2
             }
 
             for (auto& func : other.mData.functions)
-                Add(*func);
+            {
+                if (func)
+                    Add(*func);
+            }
         }
 
         // Move-constructor
@@ -588,9 +597,13 @@ namespace o2
             if (mData.typeData.type == DataType::CoupleOfFunctions)
             {
                 for (auto& func : mData.functions)
+                {
                     delete func;
+                    func = nullptr;
+                }
 
-                mData.functions.clear();
+                if (mData.typeData.dispatchDepth == 0)
+                    mData.functions.clear();
             }
             else if (mData.typeData.type == DataType::OneFunction)
             {
@@ -665,14 +678,23 @@ namespace o2
             {
                 for (auto funcIt = mData.functions.begin(); funcIt != mData.functions.end(); ++funcIt)
                 {
-                    if ((*funcIt)->Equals(&function))
+                    if (*funcIt && (*funcIt)->Equals(&function))
                     {
                         delete* funcIt;
-                        mData.functions.erase(funcIt);
+                        EraseFunction(funcIt);
                         break;
                     }
                 }
             }
+        }
+
+        // Erases a functions list slot; while dispatching the slot is only tombstoned
+        void EraseFunction(typename std::vector<IFunction<_res_type(_args ...)>*>::iterator it)
+        {
+            if (mData.typeData.dispatchDepth > 0)
+                *it = nullptr;
+            else
+                mData.functions.erase(it);
         }
 
         // Removes function pointer
@@ -682,7 +704,7 @@ namespace o2
             {
                 auto fnd = std::find(mData.functions.begin(), mData.functions.end(), function);
                 if (fnd != mData.functions.end())
-                    mData.functions.erase(fnd);
+                    EraseFunction(fnd);
 
                 delete function;
             }
@@ -717,7 +739,10 @@ namespace o2
             else if (func.mData.typeData.type == DataType::CoupleOfFunctions)
             {
                 for (auto& x : func.mData.functions)
-                    Add(*x);
+                {
+                    if (x)
+                        Add(*x);
+                }
             }
         }
 
@@ -729,7 +754,10 @@ namespace o2
             else if (func.mData.typeData.type == DataType::CoupleOfFunctions)
             {
                 for (auto& x : func.mData.functions)
-                    Remove(*x);
+                {
+                    if (x)
+                        Remove(*x);
+                }
             }
         }
 
@@ -756,7 +784,7 @@ namespace o2
             {
                 for (auto& x : mData.functions)
                 {
-                    if (x->Equals(&func))
+                    if (x && x->Equals(&func))
                         return true;
                 }
             }
@@ -777,13 +805,47 @@ namespace o2
                 return OneFunctionRef().Invoke(args ...);
             else if (mData.typeData.type == DataType::CoupleOfFunctions)
             {
-                if (mData.functions.size() == 0)
-                    return _res_type();
+                // handlers may unsubscribe (tombstoned while dispatching) or subscribe (appended, not called now)
+                auto& depth = const_cast<int&>(mData.typeData.dispatchDepth);
+                depth++;
 
-                for (int i = 0; i < mData.functions.size() - 1; i++)
-                    mData.functions[i]->Invoke(args ...);
+                size_t count = mData.functions.size();
+                auto stillDispatching = [&](size_t i) {
+                    return mData.typeData.type == DataType::CoupleOfFunctions && i < mData.functions.size();
+                };
+                auto finish = [&]() {
+                    if (mData.typeData.type != DataType::CoupleOfFunctions || depth <= 0)
+                        return;
 
-                return mData.functions.back()->Invoke(args ...);
+                    if (--depth == 0)
+                    {
+                        auto& functions = const_cast<std::vector<IFunction<_res_type(_args ...)>*>&>(mData.functions);
+                        functions.erase(std::remove(functions.begin(), functions.end(), nullptr), functions.end());
+                    }
+                };
+
+                if constexpr (std::is_void<_res_type>::value)
+                {
+                    for (size_t i = 0; i < count && stillDispatching(i); i++)
+                    {
+                        if (auto function = mData.functions[i])
+                            function->Invoke(args ...);
+                    }
+
+                    finish();
+                }
+                else
+                {
+                    _res_type result = _res_type();
+                    for (size_t i = 0; i < count && stillDispatching(i); i++)
+                    {
+                        if (auto function = mData.functions[i])
+                            result = function->Invoke(args ...);
+                    }
+
+                    finish();
+                    return result;
+                }
             }
 
             return _res_type();
@@ -835,7 +897,7 @@ namespace o2
                     return OneFunctionRef().Equals(&other.OneFunctionRef());
                 else if (other.mData.typeData.type == DataType::CoupleOfFunctions)
                 {
-                    if (other.mData.functions.size() != 1)
+                    if (other.mData.functions.size() != 1 || !other.mData.functions[0])
                         return false;
 
                     return OneFunctionRef().Equals(other.mData.functions[0]);
@@ -851,7 +913,7 @@ namespace o2
 
             if (other.mData.typeData.type == DataType::OneFunction)
             {
-                if (mData.functions.size() != 1)
+                if (mData.functions.size() != 1 || !mData.functions[0])
                     return false;
 
                 return mData.functions[0]->Equals(&other.OneFunctionRef());
@@ -859,10 +921,13 @@ namespace o2
 
             for (auto& func : mData.functions)
             {
+                if (!func)
+                    continue;
+
                 bool found = false;
                 for (auto& otherFunc : other.mData.functions)
                 {
-                    if (func->Equals(otherFunc))
+                    if (otherFunc && func->Equals(otherFunc))
                     {
                         found = true;
                         break;
@@ -891,7 +956,7 @@ namespace o2
             if (mData.typeData.type == DataType::OneFunction)
                 return OneFunctionRef().Equals(&func);
 
-            if (mData.functions.size() != 1)
+            if (mData.functions.size() != 1 || !mData.functions[0])
                 return false;
 
             return mData.functions[0]->Equals(&func);
@@ -991,7 +1056,10 @@ namespace o2
             else if (mData.typeData.type == DataType::CoupleOfFunctions)
             {
                 for (auto& it : mData.functions)
-                    func(it);
+                {
+                    if (it)
+                        func(it);
+                }
             }
         }
 

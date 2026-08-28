@@ -5,7 +5,7 @@ This window edits an animation asset. The functionality is similar to other anim
 
 The window has a toolbar with the typical functionality of such editors: record, rewind, play/stop, looping, curves mode, parameters list and key adding.
 
-On the left the window shows the list of parameters, mirroring the scene hierarchy (4). On the right — keys on the timeline (3). Above the timeline — animation time controls (2).
+On the left the window shows the list of parameters, mirroring the scene hierarchy (4). On the right — keys on the timeline (3). Above the timeline — animation time controls (2). While an `AnimationComponent` state is previewed, the window drives the actor with its own player: the component's mixers for that state's tracks are suspended, so scrubbing is not overwritten by the state's values. Sub-track particle frames are baked on scrub frame by frame: for every frame the clip's value tracks are evaluated at that frame time, so the emitter sits where the clip puts the actor at that moment — world-space particles stay along the path, relative ones travel with the actor. A baked frame that does not match the current transform (edited trajectory) drops the cache, which is re-simulated with the same seed, so the particle pattern stays the same. Editing a sub-track emitter's parameters or effects rebakes the frame at the current cursor position right away — even if the emitter was left "playing" (play in the component header): a sub-controlled emitter never advances on its own, so that flag is ignored.
 
 ### Animation component
 To add an animation to an actor, add the Animation component through the add-component menu.

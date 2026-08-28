@@ -62,6 +62,11 @@ namespace o2
         // Called when actor's transform was changed
         void OnTransformUpdated() override;
 
+#if IS_EDITOR
+        // Editor scrub: evaluates the clip at the frame time and brings the actor transform up to date
+        void OnEditorBakeFrame(float time) override;
+#endif
+
         // Beginning serialization callback
         void OnSerialize(DataValue& node) const override;
 
@@ -103,6 +108,9 @@ CLASS_METHODS_META(o2::ParticlesEmitterComponent)
     FUNCTION().PUBLIC().SIGNATURE_STATIC(Ref<RefCounterable>, CastToRefCounterable, const Ref<ParticlesEmitterComponent>&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnDraw);
     FUNCTION().PROTECTED().SIGNATURE(void, OnTransformUpdated);
+#if  IS_EDITOR
+    FUNCTION().PROTECTED().SIGNATURE(void, OnEditorBakeFrame, float);
+#endif
     FUNCTION().PROTECTED().SIGNATURE(void, OnSerialize, DataValue&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnDeserialized, const DataValue&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnSerializeDelta, DataValue&, const IObject&);

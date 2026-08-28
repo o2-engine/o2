@@ -60,6 +60,9 @@ namespace o2
         // Returns looped state
         virtual bool IsLooped() const;
 
+        // Returns true while the state is previewed by the editor and driven by its player
+        virtual bool IsInEditMode() const;
+
         SERIALIZABLE(IAnimationState);
         CLONEABLE_REF(IAnimationState);
 
@@ -115,6 +118,9 @@ namespace o2
 
         // Returns looped state
         bool IsLooped() const override;
+
+        // Returns true while the state is previewed by the editor
+        bool IsInEditMode() const override;
 
         // Sets animation @SCRIPTABLE
         void SetAnimation(const AssetRef<AnimationAsset>& animationAsset);
@@ -205,6 +211,7 @@ CLASS_METHODS_META(o2::IAnimationState)
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(float, GetWeight);
     FUNCTION().PUBLIC().SIGNATURE(void, SetLooped, bool);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsLooped);
+    FUNCTION().PUBLIC().SIGNATURE(bool, IsInEditMode);
     FUNCTION().PROTECTED().SIGNATURE(void, Register, const Ref<AnimationComponent>&);
     FUNCTION().PROTECTED().SIGNATURE(void, Unregister);
 }
@@ -238,6 +245,7 @@ CLASS_METHODS_META(o2::AnimationState)
     FUNCTION().PUBLIC().SIGNATURE(float, GetWeight);
     FUNCTION().PUBLIC().SIGNATURE(void, SetLooped, bool);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsLooped);
+    FUNCTION().PUBLIC().SIGNATURE(bool, IsInEditMode);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetAnimation, const AssetRef<AnimationAsset>&);
     FUNCTION().PUBLIC().SIGNATURE(const AssetRef<AnimationAsset>&, GetAnimation);
     FUNCTION().PUBLIC().SIGNATURE(RefCounter*, GetRefCounter);

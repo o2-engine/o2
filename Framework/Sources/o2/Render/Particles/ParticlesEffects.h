@@ -40,6 +40,12 @@ namespace o2
         // Called  when particle effect parameters are changed, used to invalidate baked frames
         void OnChanged();
 
+        // Routes a curve/gradient keys event to OnChanged with a removable delegate (idempotent)
+        void ListenKeysChanged(Function<void()>& keysEvent);
+
+        // Drops the keys event delegate
+        void UnlistenKeysChanged(Function<void()>& keysEvent);
+
         friend class ParticlesEmitter;
     };
 
@@ -114,6 +120,12 @@ namespace o2
         // Default constructor @SCRIPTABLE
         ParticlesColorEffect();
 
+        // Copy-constructor: the gradient is cloned, not shared
+        ParticlesColorEffect(const ParticlesColorEffect& other);
+
+        // Destructor
+        ~ParticlesColorEffect();
+
         // Called when particle is emitted, used to initialize effect data
         void OnParticleEmitted(Particle& particle) override;
 
@@ -156,6 +168,12 @@ namespace o2
     public:
         // Default constructor
         ParticlesRandomColorEffect();
+
+        // Copy-constructor: the gradients are cloned, not shared
+        ParticlesRandomColorEffect(const ParticlesRandomColorEffect& other);
+
+        // Destructor
+        ~ParticlesRandomColorEffect();
 
         // Called when particle is emitted, used to initialize effect data
         void OnParticleEmitted(Particle& particle) override;
@@ -200,6 +218,12 @@ namespace o2
     public:
         // Default constructor
         ParticlesSizeEffect();
+
+        // Copy-constructor: the curve is cloned, not shared
+        ParticlesSizeEffect(const ParticlesSizeEffect& other);
+
+        // Destructor
+        ~ParticlesSizeEffect();
 
         // Called when particle is emitted, used to initialize effect data
         void OnParticleEmitted(Particle& particle) override;
@@ -247,6 +271,12 @@ namespace o2
         // Default constructor
         ParticlesAngleEffect();
 
+        // Copy-constructor: the curve is cloned, not shared
+        ParticlesAngleEffect(const ParticlesAngleEffect& other);
+
+        // Destructor
+        ~ParticlesAngleEffect();
+
         // Called when particle is emitted, used to initialize effect data
         void OnParticleEmitted(Particle& particle) override;
 
@@ -292,6 +322,12 @@ namespace o2
     public:
         // Default constructor
         ParticlesAngleSpeedEffect();
+
+        // Copy-constructor: the curve is cloned, not shared
+        ParticlesAngleSpeedEffect(const ParticlesAngleSpeedEffect& other);
+
+        // Destructor
+        ~ParticlesAngleSpeedEffect();
 
         // Called when particle is emitted, used to initialize effect data
         void OnParticleEmitted(Particle& particle) override;
@@ -339,6 +375,12 @@ namespace o2
     public:
         // Default constructor
         ParticlesVelocityEffect();
+
+        // Copy-constructor: the curves are cloned, not shared
+        ParticlesVelocityEffect(const ParticlesVelocityEffect& other);
+
+        // Destructor
+        ~ParticlesVelocityEffect();
 
         // Called when particle is emitted, used to initialize effect data
         void OnParticleEmitted(Particle& particle) override;
@@ -389,6 +431,12 @@ namespace o2
     public:
         // Default constructor
         ParticlesSplineEffect();
+
+        // Copy-constructor: the curve and spline are cloned, not shared
+        ParticlesSplineEffect(const ParticlesSplineEffect& other);
+
+        // Destructor
+        ~ParticlesSplineEffect();
 
         // Called when particle is emitted, used to initialize effect data
         void OnParticleEmitted(Particle& particle) override;
@@ -450,6 +498,8 @@ CLASS_METHODS_META(o2::ParticlesEffect)
     FUNCTION().PUBLIC().SIGNATURE(Vector<Particle>&, GetParticlesDirect, ParticlesEmitter*);
     FUNCTION().PUBLIC().SIGNATURE(Ref<ParticlesEmitter>, GetEmitter);
     FUNCTION().PROTECTED().SIGNATURE(void, OnChanged);
+    FUNCTION().PROTECTED().SIGNATURE(void, ListenKeysChanged, Function<void()>&);
+    FUNCTION().PROTECTED().SIGNATURE(void, UnlistenKeysChanged, Function<void()>&);
 }
 END_META;
 
@@ -510,6 +560,7 @@ CLASS_METHODS_META(o2::ParticlesColorEffect)
 {
 
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().CONSTRUCTOR();
+    FUNCTION().PUBLIC().CONSTRUCTOR(const ParticlesColorEffect&);
     FUNCTION().PUBLIC().SIGNATURE(void, OnParticleEmitted, Particle&);
     FUNCTION().PUBLIC().SIGNATURE(void, Update, float, ParticlesEmitter*);
     FUNCTION().PRIVATE().SIGNATURE(void, CheckDataBufferSize, int);
@@ -533,6 +584,7 @@ CLASS_METHODS_META(o2::ParticlesRandomColorEffect)
 {
 
     FUNCTION().PUBLIC().CONSTRUCTOR();
+    FUNCTION().PUBLIC().CONSTRUCTOR(const ParticlesRandomColorEffect&);
     FUNCTION().PUBLIC().SIGNATURE(void, OnParticleEmitted, Particle&);
     FUNCTION().PUBLIC().SIGNATURE(void, Update, float, ParticlesEmitter*);
     FUNCTION().PRIVATE().SIGNATURE(void, CheckDataBufferSize, int);
@@ -555,6 +607,7 @@ CLASS_METHODS_META(o2::ParticlesSizeEffect)
 {
 
     FUNCTION().PUBLIC().CONSTRUCTOR();
+    FUNCTION().PUBLIC().CONSTRUCTOR(const ParticlesSizeEffect&);
     FUNCTION().PUBLIC().SIGNATURE(void, OnParticleEmitted, Particle&);
     FUNCTION().PUBLIC().SIGNATURE(void, Update, float, ParticlesEmitter*);
     FUNCTION().PRIVATE().SIGNATURE(void, CheckDataBufferSize, int);
@@ -577,6 +630,7 @@ CLASS_METHODS_META(o2::ParticlesAngleEffect)
 {
 
     FUNCTION().PUBLIC().CONSTRUCTOR();
+    FUNCTION().PUBLIC().CONSTRUCTOR(const ParticlesAngleEffect&);
     FUNCTION().PUBLIC().SIGNATURE(void, OnParticleEmitted, Particle&);
     FUNCTION().PUBLIC().SIGNATURE(void, Update, float, ParticlesEmitter*);
     FUNCTION().PRIVATE().SIGNATURE(void, CheckDataBufferSize, int);
@@ -599,6 +653,7 @@ CLASS_METHODS_META(o2::ParticlesAngleSpeedEffect)
 {
 
     FUNCTION().PUBLIC().CONSTRUCTOR();
+    FUNCTION().PUBLIC().CONSTRUCTOR(const ParticlesAngleSpeedEffect&);
     FUNCTION().PUBLIC().SIGNATURE(void, OnParticleEmitted, Particle&);
     FUNCTION().PUBLIC().SIGNATURE(void, Update, float, ParticlesEmitter*);
     FUNCTION().PRIVATE().SIGNATURE(void, CheckDataBufferSize, int);
@@ -622,6 +677,7 @@ CLASS_METHODS_META(o2::ParticlesVelocityEffect)
 {
 
     FUNCTION().PUBLIC().CONSTRUCTOR();
+    FUNCTION().PUBLIC().CONSTRUCTOR(const ParticlesVelocityEffect&);
     FUNCTION().PUBLIC().SIGNATURE(void, OnParticleEmitted, Particle&);
     FUNCTION().PUBLIC().SIGNATURE(void, Update, float, ParticlesEmitter*);
     FUNCTION().PRIVATE().SIGNATURE(void, CheckDataBufferSize, int);
@@ -645,6 +701,7 @@ CLASS_METHODS_META(o2::ParticlesSplineEffect)
 {
 
     FUNCTION().PUBLIC().CONSTRUCTOR();
+    FUNCTION().PUBLIC().CONSTRUCTOR(const ParticlesSplineEffect&);
     FUNCTION().PUBLIC().SIGNATURE(void, OnParticleEmitted, Particle&);
     FUNCTION().PUBLIC().SIGNATURE(void, Update, float, ParticlesEmitter*);
     FUNCTION().PRIVATE().SIGNATURE(void, CheckDataBufferSize, int);

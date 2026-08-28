@@ -70,6 +70,22 @@ namespace o2
         return mSubControlled;
     }
 
+    void IAnimation::SetSubControlEvaluator(const Function<void(float)>& evaluator)
+    {
+        mSubControlEvaluator = evaluator;
+    }
+
+    const Function<void(float)>& IAnimation::GetSubControlEvaluator() const
+    {
+        return mSubControlEvaluator;
+    }
+
+    void IAnimation::EvaluateSubControlOwner(float localTime)
+    {
+        if (!mSubControlEvaluator.IsEmpty())
+            mSubControlEvaluator(localTime);
+    }
+
     void IAnimation::UpdateTime()
     {
         if (mLoop == Loop::None)

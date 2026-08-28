@@ -41,6 +41,8 @@ namespace o2
 
         PROPERTY(bool, particlesRelative, SetParticlesRelativity, IsParticlesRelative); // Is particles relative to emitter @GROUP("Emission")
 
+    public:
+
         PROPERTY(bool, is3D, SetIs3D, Is3D); // Is emitter working in 3D mode: emits in 3D space, draws camera facing billboards @GROUP("Emission")
 
         PROPERTY(float, emittingCoefficient, SetEmittingCoef, GetEmittingCoef); // Particles emitting coefficient property (0...1) @RANGE(0, 1) @GROUP("Emission")
@@ -121,6 +123,14 @@ namespace o2
 
         // Adds effect @SCRIPTABLE
         void AddEffect(const Ref<ParticlesEffect>& effect);
+
+        // Links effects and shape to this emitter, called by mmake after construction
+        void PostRefConstruct();
+
+#if IS_EDITOR
+        // Returns number of baked frames (editor scrub cache)
+        int GetBakedFramesCount() const;
+#endif
 
         // Adds effect
         template<typename _type, typename ... _args>
@@ -398,6 +408,7 @@ namespace o2
             Vector<int>      deadParticles;         // Dead particles indexes
             int              numAliveParticles = 0; // Count of current alive particles
             float            emitTimeBuffer = 0;    // Emitting next particle time buffer
+            Basis            transform;             // Emitter transform the frame was baked with
 
             bool operator==(const BakedFrame& other) const { return false; }
         };
@@ -406,6 +417,7 @@ namespace o2
         static int mBakedFPS; // Baked particles frames per second
 
         Vector<BakedFrame> mBakedFrames; // Baked particles frames for editor
+        bool mIsBaking = false;          // Frames are being (re)baked now: invalidation requests are ignored
 
         size_t mRandomSeed = 0; // Random seed for particles emitting
 
@@ -427,6 +439,9 @@ namespace o2
 
         // Restores baked frame by index
         void RestoreBakedFrame(int frameIdx);
+
+        // Editor scrub: puts the owning actor where the clip has it at the baked frame time
+        virtual void OnEditorBakeFrame(float time);
 #endif
     };
 
@@ -508,6 +523,7 @@ CLASS_FIELDS_META(o2::ParticlesEmitter)
     FIELD().PROTECTED().NAME(mLast3DBasis);
 #if  IS_EDITOR
     FIELD().PROTECTED().NAME(mBakedFrames);
+    FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mIsBaking);
     FIELD().PROTECTED().DEFAULT_VALUE(0).NAME(mRandomSeed);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mIsUpdating);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mParticlesPaused);
@@ -533,6 +549,10 @@ CLASS_METHODS_META(o2::ParticlesEmitter)
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetShape, const Ref<ParticlesEmitterShape>&);
     FUNCTION().PUBLIC().SIGNATURE(const Ref<ParticlesEmitterShape>&, GetShape);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, AddEffect, const Ref<ParticlesEffect>&);
+    FUNCTION().PUBLIC().SIGNATURE(void, PostRefConstruct);
+#if  IS_EDITOR
+    FUNCTION().PUBLIC().SIGNATURE(int, GetBakedFramesCount);
+#endif
     FUNCTION().PUBLIC().SIGNATURE(const Vector<Ref<ParticlesEffect>>&, GetEffects);
     FUNCTION().PUBLIC().SIGNATURE(void, RemoveEffect, const Ref<ParticlesEffect>&);
     FUNCTION().PUBLIC().SIGNATURE(void, RemoveAllEffects);
@@ -605,6 +625,7 @@ CLASS_METHODS_META(o2::ParticlesEmitter)
     FUNCTION().PROTECTED().SIGNATURE(int, GetBakedFrameIndex, float);
     FUNCTION().PROTECTED().SIGNATURE(void, CheckBakedFrames, int);
     FUNCTION().PROTECTED().SIGNATURE(void, RestoreBakedFrame, int);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnEditorBakeFrame, float);
 #endif
 }
 END_META;

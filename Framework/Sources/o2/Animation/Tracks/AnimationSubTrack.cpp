@@ -87,19 +87,47 @@ namespace o2
     {}
 
     AnimationSubTrack::Player::~Player()
-    {}
+    {
+        ReleaseTarget();
+    }
 
     void AnimationSubTrack::Player::SetTarget(IAnimation* value)
     {
+        ReleaseTarget();
+
         mTarget = value;
+        mTargetLink = value ? WeakRef<IAnimation>(value) : nullptr;
 
         // target can be null when the track path doesn't resolve to an IAnimation
         if (!mTarget)
             return;
 
         mTarget->SetSubControlled(true);
+        mTarget->onDurationChanged += THIS_FUNC(UpdateSubTrackDuration);
+        mTarget->SetSubControlEvaluator(THIS_FUNC(EvaluateOwnerAt));
 
         UpdateSubTrackDuration();
+    }
+
+    void AnimationSubTrack::Player::ReleaseTarget()
+    {
+        // the target is held raw and may be gone already (scene reload): touch it only while it lives
+        auto target = mTargetLink.Lock();
+        if (!target)
+            return;
+
+        target->onDurationChanged -= THIS_FUNC(UpdateSubTrackDuration);
+
+        // another player may have taken the target over since
+        if (target->GetSubControlEvaluator() == Function<void(float)>(THIS_FUNC(EvaluateOwnerAt)))
+            target->SetSubControlEvaluator(Function<void(float)>());
+    }
+
+    void AnimationSubTrack::Player::EvaluateOwnerAt(float subTime)
+    {
+        auto owner = mOwnerPlayer.Lock();
+        if (mTrack && owner)
+            owner->EvaluateValueTracks(mTrack->GetBeginTime() + subTime);
     }
 
     void AnimationSubTrack::Player::SetTrack(const Ref<AnimationSubTrack>& track)
@@ -165,7 +193,8 @@ namespace o2
         if (!mTrack)
             return;
 
-        if (mTarget)
+        // the target is held raw: after a scene reload it may be gone while the editor's player lives on
+        if (mTarget && mTargetLink.IsValid())
         {
             if (mTime >= mTrack->mSubTrackBeginTime + mTrack->mSubTrackBeginOffset &&
                 mTime <= mTrack->mSubTrackBeginTime + mTrack->mSubTrackDuration - mTrack->mSubTrackEndOffset)
@@ -183,7 +212,7 @@ namespace o2
 
     void AnimationSubTrack::Player::UpdateSubTrackDuration()
     {
-        if (mTrack && mTarget)
+        if (mTrack && mTarget && mTargetLink.IsValid())
         {
             float targetDuration = mTarget->GetDuration();
             if (!Math::Equals(mTrack->mSubTrackDuration, targetDuration))

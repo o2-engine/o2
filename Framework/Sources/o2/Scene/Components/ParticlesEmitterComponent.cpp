@@ -2,6 +2,7 @@
 #include "ParticlesEmitterComponent.h"
 
 #include "o2/Scene/Actor.h"
+#include "o2/Scene/Scene.h"
 
 namespace o2
 {
@@ -82,6 +83,26 @@ namespace o2
         basis = transform->GetWorldBasis();
         Set3DBasis(transform->GetWorldBasis3D());
     }
+
+#if IS_EDITOR
+    void ParticlesEmitterComponent::OnEditorBakeFrame(float time)
+    {
+        // play mode runs the real thing: frames are baked as the game moves the actor
+        if (Scene::IsSingletonInitialzed() && o2Scene.IsEditorPlaying())
+            return;
+
+        ParticlesEmitter::OnEditorBakeFrame(time);
+
+        if (auto actor = mOwner.Lock())
+        {
+            auto root = actor;
+            while (auto parent = root->GetParent().Lock())
+                root = parent;
+
+            root->UpdateTransform();
+        }
+    }
+#endif
 
     void ParticlesEmitterComponent::OnSerialize(DataValue& node) const
     {

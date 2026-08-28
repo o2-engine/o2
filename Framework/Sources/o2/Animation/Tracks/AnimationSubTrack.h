@@ -79,6 +79,9 @@ namespace o2
             // Returns animation track
             const Ref<AnimationSubTrack>& GetTrackT() const;
 
+            // Evaluates the owner player's value tracks at the sub-track local time (target baking in the editor)
+            void EvaluateOwnerAt(float subTime);
+
             // Sets target by void pointer
             void SetTargetVoid(void* target) override;
 
@@ -102,10 +105,14 @@ namespace o2
             float mPrevInDurationTime = 0.0f; // Previous evaluation in duration time
 
             IAnimation* mTarget = nullptr; // Animation target value pointer
+            WeakRef<IAnimation> mTargetLink; // Target lifetime link: subscriptions are dropped only while it is alive
 
         protected:
             // Evaluates value
             void Evaluate() override;
+
+            // Unsubscribes from the current target and drops the evaluator it got from this player
+            void ReleaseTarget();
 
             // Registering this in value mixer
             void RegMixer(const Ref<AnimationState>& state, const String& path) override;
@@ -172,6 +179,7 @@ CLASS_FIELDS_META(o2::AnimationSubTrack::Player)
     FIELD().PROTECTED().DEFAULT_VALUE(nullptr).NAME(mTrack);
     FIELD().PROTECTED().DEFAULT_VALUE(0.0f).NAME(mPrevInDurationTime);
     FIELD().PROTECTED().DEFAULT_VALUE(nullptr).NAME(mTarget);
+    FIELD().PROTECTED().NAME(mTargetLink);
 }
 END_META;
 CLASS_METHODS_META(o2::AnimationSubTrack::Player)
@@ -181,12 +189,14 @@ CLASS_METHODS_META(o2::AnimationSubTrack::Player)
     FUNCTION().PUBLIC().SIGNATURE(void, SetTarget, IAnimation*);
     FUNCTION().PUBLIC().SIGNATURE(void, SetTrack, const Ref<AnimationSubTrack>&);
     FUNCTION().PUBLIC().SIGNATURE(const Ref<AnimationSubTrack>&, GetTrackT);
+    FUNCTION().PUBLIC().SIGNATURE(void, EvaluateOwnerAt, float);
     FUNCTION().PUBLIC().SIGNATURE(void, SetTargetVoid, void*);
     FUNCTION().PUBLIC().SIGNATURE(void, SetTargetProxy, const Ref<IAbstractValueProxy>&);
     FUNCTION().PUBLIC().SIGNATURE(void, SetTrack, const Ref<IAnimationTrack>&);
     FUNCTION().PUBLIC().SIGNATURE(void*, AdjustTargetType, void*, const Type&);
     FUNCTION().PUBLIC().SIGNATURE(Ref<IAnimationTrack>, GetTrack);
     FUNCTION().PROTECTED().SIGNATURE(void, Evaluate);
+    FUNCTION().PROTECTED().SIGNATURE(void, ReleaseTarget);
     FUNCTION().PROTECTED().SIGNATURE(void, RegMixer, const Ref<AnimationState>&, const String&);
     FUNCTION().PROTECTED().SIGNATURE(void, UpdateSubTrackDuration);
 }

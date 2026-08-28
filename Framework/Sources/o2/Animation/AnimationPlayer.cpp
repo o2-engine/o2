@@ -1,6 +1,8 @@
 #include "o2/stdafx.h"
 #include "AnimationPlayer.h"
 
+#include "o2/Animation/Tracks/AnimationSubTrack.h"
+
 #include "o2/Animation/AnimationClip.h"
 #include "o2/Animation/AnimationState.h"
 #include "o2/Utils/Debug/Debug.h"
@@ -155,6 +157,16 @@ namespace o2
     {
         for (auto& trackPlayer : mTrackPlayers)
             trackPlayer->ForceSetTime(mInDurationTime, mDuration);
+    }
+
+    void AnimationPlayer::EvaluateValueTracks(float time)
+    {
+        float inDurationTime = Math::Clamp(time, 0.0f, mDuration);
+        for (auto& trackPlayer : mTrackPlayers)
+        {
+            if (!DynamicCast<AnimationSubTrack::Player>(trackPlayer))
+                trackPlayer->ForceSetTime(inDurationTime, mDuration);
+        }
     }
 }
 // --- META ---

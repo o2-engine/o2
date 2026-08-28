@@ -10,8 +10,19 @@ namespace o2
     FORWARD_REF_IMPL(AnimationPlayer);
     //FORWARD_REF_IMPL(AnimationState);
 
+    IAnimationTrack::IPlayer::~IPlayer()
+    {
+        if (auto bound = mBoundTrack.Lock())
+            bound->onKeysChanged -= THIS_FUNC(OnTrackKeysChanged);
+    }
+
     void IAnimationTrack::IPlayer::SetTrack(const Ref<IAnimationTrack>& track)
     {
+        if (auto bound = mBoundTrack.Lock())
+            bound->onKeysChanged -= THIS_FUNC(OnTrackKeysChanged);
+
+        mBoundTrack = track;
+
         if (!track)
             return;
 
@@ -20,11 +31,17 @@ namespace o2
         mBeginTime = 0;
         mEndTime = mDuration;
 
-        track->onKeysChanged += [=]()
+        // a removable delegate: a lambda would outlive the player and write into freed memory
+        track->onKeysChanged += THIS_FUNC(OnTrackKeysChanged);
+    }
+
+    void IAnimationTrack::IPlayer::OnTrackKeysChanged()
+    {
+        if (auto bound = mBoundTrack.Lock())
         {
-            mDuration = track->GetDuration();
+            mDuration = bound->GetDuration();
             mEndTime = mDuration;
-        };
+        }
     }
 
     void IAnimationTrack::IPlayer::ForceSetTime(float time, float duration)

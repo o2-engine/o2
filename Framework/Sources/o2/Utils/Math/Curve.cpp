@@ -76,8 +76,13 @@ namespace o2
         else if (count == 0)
             return 0.0f;
 
+        // outside the keys the curve holds its end values instead of extrapolating the last segment
+        position = Math::Clamp(position, mKeys[0].position, mKeys[count - 1].position);
+
         int prevCacheKey = cacheKey;
         int keyLeftIdx = -1, keyRightIdx = -1;
+
+
         SearchKey(mKeys, count, position, keyLeftIdx, keyRightIdx, direction, cacheKey);
 
         if (keyLeftIdx < 0 || keyRightIdx < 0 || keyLeftIdx >= mKeys.Count() || keyRightIdx >= mKeys.Count())

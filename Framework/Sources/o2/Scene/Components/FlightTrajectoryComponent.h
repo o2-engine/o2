@@ -7,18 +7,15 @@
 namespace o2
 {
     // ------------------------------------------------------------------------------------------
-    // Flies the actor along a spline trajectory. The spline (key ranges give a corridor for the
-    // random offset) is geometrically mapped between the start and finish points: a transform
-    // from the actual spline ends to the target points is computed and cached as Basis (rotation,
-    // scale, translation). Flight progress is driven externally by the position parameter
-    // (0..1, animatable): each update the trajectory point is written into the actor transform
-    // (widgets get layout offsets). The random offset within the corridor is rerolled by
-    // ResetRandomOffset() or when position returns to 0
+    // Flies the actor along a spline mapped between the start and finish points; progress is the
+    // animatable position (0..1), the random corridor offset changes only by ResetRandomOffset()
     // ------------------------------------------------------------------------------------------
     class FlightTrajectoryComponent: public Component
     {
     public:
-        float position = 0.0f;  // Flight progress: 0 - start, 1 - finish @SERIALIZABLE @EDITOR_PROPERTY @ANIMATABLE @RANGE(0, 1)
+        PROPERTIES(FlightTrajectoryComponent);
+        PROPERTY(float, position, SetPosition, GetPosition); // Flight progress: 0 - start, 1 - finish; applies immediately @EDITOR_PROPERTY @ANIMATABLE @RANGE(0, 1)
+
         Ref<Spline> spline;     // Trajectory; key ranges give the random offset corridor @SERIALIZABLE @EDITOR_PROPERTY
         Vec2F startPoint;       // Flight start point @SERIALIZABLE @EDITOR_PROPERTY
         Vec2F finishPoint;      // Flight finish point @SERIALIZABLE @EDITOR_PROPERTY
@@ -36,7 +33,7 @@ namespace o2
         // Picks a new random offset within the spline width corridor @SCRIPTABLE
         void ResetRandomOffset();
 
-        // Sets flight progress; 0 rerolls the random offset @SCRIPTABLE
+        // Sets flight progress and moves the actor @SCRIPTABLE
         void SetPosition(float value);
 
         // Returns flight progress @SCRIPTABLE
@@ -58,8 +55,8 @@ namespace o2
         CLONEABLE_REF(FlightTrajectoryComponent);
 
     private:
+        float mPosition = 0.0f;      // Flight progress @SERIALIZABLE
         float mRandomCoef = 0.5f;    // Picked offset within the width corridor (0..1)
-        float mPrevPosition = 0.0f;  // For rerolling the offset when position returns to 0
 
         Basis mBasis;                // Transform from spline space to start/finish points
         Vec2F mBasisStart;           // Points the cached transform was computed for
@@ -87,12 +84,12 @@ CLASS_BASES_META(o2::FlightTrajectoryComponent)
 END_META;
 CLASS_FIELDS_META(o2::FlightTrajectoryComponent)
 {
-    FIELD().PUBLIC().ANIMATABLE_ATTRIBUTE().EDITOR_PROPERTY_ATTRIBUTE().RANGE_ATTRIBUTE(0, 1).SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(0.0f).NAME(position);
+    FIELD().PUBLIC().ANIMATABLE_ATTRIBUTE().EDITOR_PROPERTY_ATTRIBUTE().RANGE_ATTRIBUTE(0, 1).NAME(position);
     FIELD().PUBLIC().EDITOR_PROPERTY_ATTRIBUTE().SERIALIZABLE_ATTRIBUTE().NAME(spline);
     FIELD().PUBLIC().EDITOR_PROPERTY_ATTRIBUTE().SERIALIZABLE_ATTRIBUTE().NAME(startPoint);
     FIELD().PUBLIC().EDITOR_PROPERTY_ATTRIBUTE().SERIALIZABLE_ATTRIBUTE().NAME(finishPoint);
+    FIELD().PRIVATE().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(0.0f).NAME(mPosition);
     FIELD().PRIVATE().DEFAULT_VALUE(0.5f).NAME(mRandomCoef);
-    FIELD().PRIVATE().DEFAULT_VALUE(0.0f).NAME(mPrevPosition);
     FIELD().PRIVATE().NAME(mBasis);
     FIELD().PRIVATE().NAME(mBasisStart);
     FIELD().PRIVATE().NAME(mBasisFinish);

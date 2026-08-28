@@ -41,6 +41,9 @@ namespace o2
         // Returns track players list
         const Vector<Ref<IAnimationTrack::IPlayer>>& GetTrackPlayers() const;
 
+        // Evaluates value tracks (not sub-tracks) at time, leaving the player's own time untouched
+        void EvaluateValueTracks(float time);
+
         IOBJECT(AnimationPlayer);
         CLONEABLE_REF(AnimationPlayer);
 
@@ -106,6 +109,7 @@ CLASS_METHODS_META(o2::AnimationPlayer)
     FUNCTION().PUBLIC().SIGNATURE(void, SetClip, const Ref<AnimationClip>&);
     FUNCTION().PUBLIC().SIGNATURE(const Ref<AnimationClip>&, GetClip);
     FUNCTION().PUBLIC().SIGNATURE(const Vector<Ref<IAnimationTrack::IPlayer>>&, GetTrackPlayers);
+    FUNCTION().PUBLIC().SIGNATURE(void, EvaluateValueTracks, float);
     FUNCTION().PROTECTED().SIGNATURE(void, OnPlay);
     FUNCTION().PROTECTED().SIGNATURE(void, Evaluate);
     FUNCTION().PROTECTED().SIGNATURE(void, BindTracks, bool);

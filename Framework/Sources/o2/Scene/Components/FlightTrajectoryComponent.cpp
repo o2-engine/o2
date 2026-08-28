@@ -12,8 +12,8 @@ namespace o2
     {}
 
     FlightTrajectoryComponent::FlightTrajectoryComponent(const FlightTrajectoryComponent& other):
-        Component(other), position(other.position), startPoint(other.startPoint),
-        finishPoint(other.finishPoint), mRandomCoef(other.mRandomCoef)
+        Component(other), startPoint(other.startPoint), finishPoint(other.finishPoint),
+        mPosition(other.mPosition), mRandomCoef(other.mRandomCoef)
     {
         if (other.spline)
             spline = mmake<Spline>(*other.spline);
@@ -45,17 +45,13 @@ namespace o2
 
     void FlightTrajectoryComponent::SetPosition(float value)
     {
-        if (value <= 0.0f && mPrevPosition > 0.0f)
-            ResetRandomOffset();
-
-        position = value;
-        mPrevPosition = value;
+        mPosition = value;
         ApplyToActor();
     }
 
     float FlightTrajectoryComponent::GetPosition() const
     {
-        return position;
+        return mPosition;
     }
 
     Vec2F FlightTrajectoryComponent::EvaluatePoint(float t)
@@ -118,11 +114,6 @@ namespace o2
 
     void FlightTrajectoryComponent::OnUpdate(float dt)
     {
-        // position returning to 0 (e.g. animation rewind) picks a new offset
-        if (position <= 0.0f && mPrevPosition > 0.0f)
-            ResetRandomOffset();
-        mPrevPosition = position;
-
         ApplyToActor();
     }
 
@@ -132,7 +123,7 @@ namespace o2
         if (!actor)
             return;
 
-        Vec2F point = EvaluatePoint(position);
+        Vec2F point = EvaluatePoint(mPosition);
 
         // widgets are positioned by layout - move offsets around the anchor point
         if (auto widget = DynamicCast<Widget>(actor))

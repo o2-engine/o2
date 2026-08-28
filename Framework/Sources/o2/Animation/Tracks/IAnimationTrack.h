@@ -32,6 +32,9 @@ namespace o2
             // Sets target property by void pointer
             virtual void SetTargetProxy(const Ref<IAbstractValueProxy>& targetProxy) {}
 
+            // Destructor: drops the keys subscription of the bound track
+            virtual ~IPlayer();
+
             // Sets animation track
             virtual void SetTrack(const Ref<IAnimationTrack>& track);
 
@@ -54,6 +57,11 @@ namespace o2
 
         protected:
             WeakRef<AnimationPlayer> mOwnerPlayer;
+            WeakRef<IAnimationTrack> mBoundTrack; // Track whose keys changes this player follows
+
+        protected:
+            // Refreshes duration when the bound track keys changed
+            void OnTrackKeysChanged();
 
             friend class AnimationPlayer;
         };
@@ -142,6 +150,7 @@ END_META;
 CLASS_FIELDS_META(o2::IAnimationTrack::IPlayer)
 {
     FIELD().PROTECTED().NAME(mOwnerPlayer);
+    FIELD().PROTECTED().NAME(mBoundTrack);
 }
 END_META;
 CLASS_METHODS_META(o2::IAnimationTrack::IPlayer)
@@ -156,6 +165,7 @@ CLASS_METHODS_META(o2::IAnimationTrack::IPlayer)
     FUNCTION().PUBLIC().SIGNATURE(void, RegMixer, const Ref<AnimationState>&, const String&);
     FUNCTION().PUBLIC().SIGNATURE(void, ForceSetTime, float, float);
     FUNCTION().PUBLIC().SIGNATURE(const WeakRef<AnimationPlayer>&, GetOwnerPlayer);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnTrackKeysChanged);
 }
 END_META;
 // --- END META ---

@@ -51,7 +51,7 @@ namespace o2
         mInitialMoveDirection3D(other.mInitialMoveDirection3D)
     {
         for (auto& effect : other.mEffects)
-            AddEffect(effect->CloneAsRef<ParticlesEffect>());
+            mEffects.Add(effect->CloneAsRef<ParticlesEffect>()); // PostRefConstruct links them
 
 		mLastTransform = mTransform.ToBasis();
 		UpdateDuration();
@@ -222,7 +222,15 @@ namespace o2
             mDuration = mEmissionDuration;
 
         ResetBounds();
+        onDurationChanged();
 	}
+
+#if IS_EDITOR
+    void ParticlesEmitter::OnEditorBakeFrame(float time)
+    {
+        EvaluateSubControlOwner(time);
+    }
+#endif
 
 	void ParticlesEmitter::CreateParticlesContainer()
     {
@@ -379,14 +387,20 @@ namespace o2
         if (!mIsParticlesRelative || mIs3D)
             return;
 
-        Basis change = mLastTransform.Inverted()*mTransform.ToBasis();
+        Basis current = mTransform.ToBasis();
+
+        // a zero-sized emitter has a degenerate basis: move by the offset only
+        float determinant = mLastTransform.xv.x*mLastTransform.yv.y - mLastTransform.xv.y*mLastTransform.yv.x;
+        Basis change = Math::Abs(determinant) > FLT_EPSILON ? mLastTransform.Inverted()*current :
+            Basis::Translated(current.origin - mLastTransform.origin);
+
         for (auto& particle : mParticles)
         {
             Vec2F position = change.Transform(Vec2F(particle.position.x, particle.position.y));
             particle.position = Vec3F(position.x, position.y, particle.position.z);
         }
 
-        mLastTransform = mTransform.ToBasis();
+        mLastTransform = current;
     }
 
     void ParticlesEmitter::Play()
@@ -407,6 +421,9 @@ namespace o2
 
     void ParticlesEmitter::SetDuration(float duration)
     {
+        if (Math::Equals(mParticlesLifetime, duration - mEmissionDuration))
+            return;
+
         mParticlesLifetime = duration - mEmissionDuration;
 
 		UpdateDuration();
@@ -427,6 +444,9 @@ namespace o2
 
     void ParticlesEmitter::SetParticlesSource(const Ref<ParticleSource>& source)
     {
+        if (mParticlesSource == source)
+            return;
+
         mParticlesSource = source;
         CreateParticlesContainer();
         OnChanged();
@@ -439,6 +459,9 @@ namespace o2
 
     void ParticlesEmitter::SetEmittingCoef(float coef)
     {
+        if (mEmittingCoefficient == coef)
+            return;
+
         mEmittingCoefficient = coef;
         OnChanged();
     }
@@ -450,6 +473,9 @@ namespace o2
 
     void ParticlesEmitter::SetShape(const Ref<ParticlesEmitterShape>& shape)
     {
+        if (mShape == shape)
+            return;
+
         mShape = shape;
         OnChanged();
     }
@@ -462,6 +488,7 @@ namespace o2
     void ParticlesEmitter::AddEffect(const Ref<ParticlesEffect>& effect)
     {
         mEffects.Add(effect);
+        effect->mEmitter = Ref(this);
         OnChanged();
     }
 
@@ -473,11 +500,15 @@ namespace o2
     void ParticlesEmitter::RemoveEffect(const Ref<ParticlesEffect>& effect)
     {
         mEffects.Remove(effect);
+        effect->mEmitter = nullptr;
         OnChanged();
     }
 
     void ParticlesEmitter::RemoveAllEffects()
     {
+        for (auto& effect : mEffects)
+            effect->mEmitter = nullptr;
+
         mEffects.Clear();
         OnChanged();
     }
@@ -524,6 +555,9 @@ namespace o2
 
     void ParticlesEmitter::SetParticlesRelativity(bool relative)
     {
+        if (mIsParticlesRelative == relative)
+            return;
+
         mIsParticlesRelative = relative;
         OnChanged();
     }
@@ -535,6 +569,9 @@ namespace o2
 
     void ParticlesEmitter::SetIs3D(bool is3D)
     {
+        if (mIs3D == is3D)
+            return;
+
         mIs3D = is3D;
         OnChanged();
     }
@@ -601,6 +638,9 @@ namespace o2
 
     void ParticlesEmitter::SetParticlesEmitFromShell(bool fromShell)
     {
+        if (mEmitParticlesFromShell == fromShell)
+            return;
+
         mEmitParticlesFromShell = fromShell;
         OnChanged();
     }
@@ -636,6 +676,9 @@ namespace o2
 
     void ParticlesEmitter::SetParticlesPerSecond(float numParticles)
     {
+        if (mEmitParticlesPerSecond == numParticles)
+            return;
+
         mEmitParticlesPerSecond = numParticles;
         OnChanged();
     }
@@ -647,6 +690,9 @@ namespace o2
 
     void ParticlesEmitter::SetPrewarmTime(float time)
     {
+        if (mPrewarmTime == time)
+            return;
+
         mPrewarmTime = time;
         OnChanged();
     }
@@ -658,6 +704,9 @@ namespace o2
 
     void ParticlesEmitter::SetInitialAngle(float angle)
     {
+        if (mInitialAngle == angle)
+            return;
+
         mInitialAngle = angle;
         OnChanged();
     }
@@ -669,6 +718,9 @@ namespace o2
 
     void ParticlesEmitter::SetInitialAngleRange(float range)
     {
+        if (mInitialAngleRange == range)
+            return;
+
         mInitialAngleRange = range;
         OnChanged();
     }
@@ -680,6 +732,9 @@ namespace o2
 
     void ParticlesEmitter::SetInitialSize(float size)
     {
+        if (mInitialSize == size)
+            return;
+
         mInitialSize = size;
         OnChanged();
     }
@@ -691,6 +746,9 @@ namespace o2
 
     void ParticlesEmitter::SetInitialSizeRange(float range)
     {
+        if (mInitialSizeRange == range)
+            return;
+
         mInitialSizeRange = range;
         OnChanged();
     }
@@ -702,6 +760,9 @@ namespace o2
 
     void ParticlesEmitter::SetInitialWidthScale(float scale)
     {
+        if (mInitialWidthScale == scale)
+            return;
+
         mInitialWidthScale = scale;
         OnChanged();
     }
@@ -713,6 +774,9 @@ namespace o2
 
     void ParticlesEmitter::SetInitialWidthScaleRange(float scaleRange)
     {
+        if (mInitialWidthScaleRange == scaleRange)
+            return;
+
         mInitialWidthScaleRange = scaleRange;
         OnChanged();
     }
@@ -724,6 +788,9 @@ namespace o2
 
     void ParticlesEmitter::SetInitialAngleSpeed(float speed)
     {
+        if (mInitialAngleSpeed == speed)
+            return;
+
         mInitialAngleSpeed = speed;
         OnChanged();
     }
@@ -735,6 +802,9 @@ namespace o2
 
     void ParticlesEmitter::SetInitialAngleSpeedRange(float speedRange)
     {
+        if (mInitialAngleSpeedRange == speedRange)
+            return;
+
         mInitialAngleSpeedRange = speedRange;
         OnChanged();
     }
@@ -746,6 +816,9 @@ namespace o2
 
     void ParticlesEmitter::SetInitialSpeed(float speed)
     {
+        if (mInitialSpeed == speed)
+            return;
+
         mInitialSpeed = speed;
         OnChanged();
     }
@@ -757,6 +830,9 @@ namespace o2
 
     void ParticlesEmitter::SetInitialSpeedRange(float speedRange)
     {
+        if (mInitialSpeedRangle == speedRange)
+            return;
+
         mInitialSpeedRangle = speedRange;
         OnChanged();
     }
@@ -768,6 +844,9 @@ namespace o2
 
     void ParticlesEmitter::SetEmitParticlesMoveDirection(float direction)
     {
+        if (mInitialMoveDirection == direction)
+            return;
+
         mInitialMoveDirection = direction;
         OnChanged();
     }
@@ -779,6 +858,9 @@ namespace o2
 
     void ParticlesEmitter::SetEmitParticlesMoveDirectionRange(float directionRange)
     {
+        if (mInitialMoveDirectionRange == directionRange)
+            return;
+
         mInitialMoveDirectionRange = directionRange;
         OnChanged();
     }
@@ -790,6 +872,9 @@ namespace o2
 
     void ParticlesEmitter::SetEmitParticlesMoveDirection3D(const Vec3F& direction)
     {
+        if (mInitialMoveDirection3D == direction)
+            return;
+
         mInitialMoveDirection3D = direction;
         OnChanged();
     }
@@ -802,6 +887,11 @@ namespace o2
     Ref<RefCounterable> ParticlesEmitter::CastToRefCounterable(const Ref<ParticlesEmitter>& ref)
     {
         return DynamicCast<IAnimation>(ref);
+    }
+
+    void ParticlesEmitter::PostRefConstruct()
+    {
+        OnEffectsListChanged();
     }
 
     void ParticlesEmitter::OnEffectsListChanged()
@@ -833,9 +923,13 @@ namespace o2
 
     void ParticlesEmitter::InvalidateBakedFrames()
     {
+        if (mIsBaking)
+            return;
+
         mBakedFrames.Clear();
 
-        if (!mPlaying)
+        // a sub-controlled emitter never advances on its own: its playing flag is stale
+        if (!mPlaying || mSubControlled)
         {
             srand(mRandomSeed);
 
@@ -859,13 +953,25 @@ namespace o2
             mBakedFrames[frameIdx].deadParticles = mDeadParticles;
             mBakedFrames[frameIdx].numAliveParticles = mNumAliveParticles;
             mBakedFrames[frameIdx].emitTimeBuffer = mEmitTimeBuffer;
+            mBakedFrames[frameIdx].transform = mTransform.ToBasis();
 
             //o2Debug.Log("Baked frame %i with %i particles, time: %f", frameIdx, mParticles.Count(), mTime);
         }
         else
         {
             RestoreBakedFrame(GetBakedFrameIndex(mTime));
+
+            // scrubbing from a parent animation: nothing calls Update, so sync the drawn mesh here
+            if (!mParticlesContainer)
+                CreateParticlesContainer();
+
+            mParticlesContainer->Update(mParticles, mParticlesNumLimit);
         }
+    }
+
+    int ParticlesEmitter::GetBakedFramesCount() const
+    {
+        return mBakedFrames.Count();
     }
 
     int ParticlesEmitter::GetBakedFrameIndex(float time) const
@@ -928,15 +1034,29 @@ namespace o2
 
         mSubControlled = false;
 
-        // Update and bake frames
+        if (mRandomSeed == 0)
+            mRandomSeed = ::time(0);
+
+        bool prevBaking = mIsBaking;
+        mIsBaking = true;
+
+        float frameDt = 1.0f/(float)mBakedFPS;
+
+        // every frame is simulated with the emitter where the clip puts it at that time
+        OnEditorBakeFrame((float)startIdx*frameDt);
+        mLastTransform = mTransform.ToBasis();
+
         for (int i = startIdx; i <= maxFrameIdx; i++)
         {
-            //o2Debug.Log("To bake frame: %i", i);
-            Update(1.0f/(float)mBakedFPS);
+            OnEditorBakeFrame((float)(i + 1)*frameDt);
+            srand((unsigned int)(mRandomSeed + (size_t)i)); // per-frame seed: the pattern survives any rebake order
+            Update(frameDt);
         }
 
         // Restore previous state
         mTime = prevTime;
+        OnEditorBakeFrame(prevTime);
+        mIsBaking = prevBaking;
         mPlaying = prevPlaying;
         mParticlesPaused = prevPaused;
         mParticles = prevParticles;
@@ -944,13 +1064,27 @@ namespace o2
         mNumAliveParticles = prevNumAliveParticles;
         mEmitTimeBuffer = prevEmitTimeBuffer;
         mSubControlled = prevSubControlled;
+        mLastTransform = mTransform.ToBasis();
     }
 
     void ParticlesEmitter::RestoreBakedFrame(int frameIdx)
     {
-        //o2Debug.Log("\n------------------------\nRestore baked frame %i", frameIdx);
+        bool prevBaking = mIsBaking;
+        mIsBaking = true;
+
+        // a frame baked with the emitter elsewhere (edited trajectory, moved actor) means the cache is stale
+        if (frameIdx > 0 && frameIdx < mBakedFrames.Count())
+        {
+            OnEditorBakeFrame((float)frameIdx/(float)mBakedFPS);
+            bool stale = !(mBakedFrames[frameIdx].transform == mTransform.ToBasis());
+            OnEditorBakeFrame(mTime);
+
+            if (stale)
+                mBakedFrames.Clear();
+        }
 
         CheckBakedFrames(frameIdx);
+        mIsBaking = prevBaking;
 
         if (frameIdx == 0)
         {
@@ -966,7 +1100,10 @@ namespace o2
             mNumAliveParticles = mBakedFrames[frameIdx].numAliveParticles;
             mEmitTimeBuffer = mBakedFrames[frameIdx].emitTimeBuffer;
         }
+
+        mLastTransform = mTransform.ToBasis();
     }
+
 
 #endif
 }

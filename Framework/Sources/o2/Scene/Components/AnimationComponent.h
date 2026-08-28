@@ -143,6 +143,9 @@ namespace o2
 
             // Returns is agent hasn't no values
             virtual bool IsEmpty() const = 0;
+
+            // Returns true if one of the tracks belongs to a state previewed by the editor
+            virtual bool IsPreviewedInEditor() const = 0;
         };
 
         // ------------------------------
@@ -170,6 +173,9 @@ namespace o2
 
             // Returns is agent hasn't no values
             bool IsEmpty() const override;
+
+            // Returns true if one of the tracks belongs to a state previewed by the editor
+            bool IsPreviewedInEditor() const override;
         };
 
         // ------------------------------
@@ -192,6 +198,9 @@ namespace o2
 
             // Returns is agent hasn't no values
             bool IsEmpty() const override;
+
+            // Returns true if one of the tracks belongs to a state previewed by the editor
+            bool IsPreviewedInEditor() const override;
         };
 
         // ----------------------
@@ -329,6 +338,12 @@ namespace o2
     template<typename _type>
     AnimationComponent::TrackMixer<_type>::~TrackMixer()
     {}
+
+    template<typename _type>
+    bool AnimationComponent::TrackMixer<_type>::IsPreviewedInEditor() const
+    {
+        return tracks.Any([](auto& track) { return track.first && track.first->IsInEditMode(); });
+    }
 
     template<typename _type>
     bool AnimationComponent::TrackMixer<_type>::IsEmpty() const

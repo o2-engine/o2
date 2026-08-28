@@ -2,6 +2,7 @@
 #include <gtest/gtest.h>
 
 #include "o2/Animation/AnimationClip.h"
+#include "o2/Animation/AnimationPlayer.h"
 #include "o2/Animation/AnimationState.h"
 #include "o2/Scene/Actor.h"
 #include "o2/Scene/Components/AnimationComponent.h"
@@ -70,25 +71,41 @@ TEST(FlightTrajectory, PointsChangeRetargetsBasis)
     EXPECT_NEAR(finish.y, 500.0f, 1.0f);
 }
 
-TEST(FlightTrajectory, RandomOffsetResetsOnZeroPosition)
+TEST(FlightTrajectory, ResetRandomOffsetVariesCorridorPoint)
 {
     auto trajectory = mmake<FlightTrajectoryComponent>();
     trajectory->spline = MakeArcSpline(300.0f);
     trajectory->SetPoints(0, 0, 400, 0);
 
-    // wide corridor: the trajectory middle must vary after rerolls
+    // wide corridor: the trajectory middle must vary after explicit rerolls
     bool varied = false;
-    trajectory->SetPosition(0.5f);
     Vec2F prev = trajectory->EvaluatePoint(0.5f);
     for (int i = 0; i < 16 && !varied; i++)
     {
-        trajectory->SetPosition(0.0f); // returning to 0 rerolls the offset
-        trajectory->SetPosition(0.5f);
+        trajectory->ResetRandomOffset();
         Vec2F mid = trajectory->EvaluatePoint(0.5f);
         varied = (mid - prev).Length() > 1.0f;
         prev = mid;
     }
     EXPECT_TRUE(varied);
+}
+
+// Editor scrubbing goes through 0 all the time: position alone must never reroll the offset
+TEST(FlightTrajectory, PositionReturningToZeroKeepsOffset)
+{
+    auto trajectory = mmake<FlightTrajectoryComponent>();
+    trajectory->spline = MakeArcSpline(300.0f);
+    trajectory->SetPoints(0, 0, 400, 0);
+
+    Vec2F mid = trajectory->EvaluatePoint(0.5f);
+    for (int i = 0; i < 16; i++)
+    {
+        trajectory->SetPosition(0.7f);
+        trajectory->SetPosition(0.0f);
+        Vec2F again = trajectory->EvaluatePoint(0.5f);
+        EXPECT_NEAR(mid.x, again.x, 0.001f);
+        EXPECT_NEAR(mid.y, again.y, 0.001f);
+    }
 }
 
 TEST(FlightTrajectory, UpdateWritesTrajectoryPointToActorTransform)
@@ -196,4 +213,40 @@ TEST(FlightTrajectory, AnimationDrivesPositionOnDeserializedActor)
     TickFrames(10, 0.05f);
 
     EXPECT_GT(restoredTrajectory->position, 0.5f);
+}
+
+// Editor scrubbing: the player writes position through the property without any scene update
+TEST(FlightTrajectory, AnimationPlayerScrubMovesActorWithoutSceneUpdate)
+{
+    auto actor = mmake<Actor>(ActorCreateMode::NotInScene);
+    auto trajectory = actor->AddComponent<FlightTrajectoryComponent>();
+    trajectory->spline = MakeArcSpline();
+    trajectory->SetPoints(0, 0, 400, 0);
+
+    auto clip = mmake<AnimationClip>();
+    *clip->AddTrack<float>("component/o2::FlightTrajectoryComponent/position") =
+        AnimationTrack<float>::Linear(0.0f, 1.0f, 1.0f);
+
+    auto player = mmake<AnimationPlayer>(actor.Get(), clip);
+    player->SetTime(1.0f);
+
+    EXPECT_NEAR(trajectory->GetPosition(), 1.0f, 0.001f);
+    EXPECT_NEAR(actor->transform->GetPosition2D().x, 400.0f, 1.0f);
+
+    player->SetTime(0.0f);
+    EXPECT_NEAR(actor->transform->GetPosition2D().x, 0.0f, 1.0f);
+}
+
+TEST(FlightTrajectory, PositionSurvivesSerialization)
+{
+    auto trajectory = mmake<FlightTrajectoryComponent>();
+    trajectory->spline = MakeArcSpline();
+    trajectory->position = 0.25f;
+
+    DataDocument data;
+    trajectory->Serialize(data);
+
+    auto restored = mmake<FlightTrajectoryComponent>();
+    restored->Deserialize(data);
+    EXPECT_NEAR(restored->GetPosition(), 0.25f, 0.001f);
 }

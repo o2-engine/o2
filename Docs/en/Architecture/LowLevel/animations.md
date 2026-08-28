@@ -8,7 +8,7 @@ An animation clip contains a list of tracks with keys. Each track binds to a spe
 
 When the target is an actor, accessors are available in the path: `component/<type name>` — a component by type name (the full name including namespace: `component/o2::ParticlesEmitterComponent`; game types without a namespace go by their own name), `child/<name>` — a child actor. Example path to a child's component field: `child/Sparks/component/o2::ParticlesEmitterComponent`. A track with an unresolvable path or a mismatched value type is not bound and logs a warning.
 
-A track also has a set of keys representing the key states of the parameter at specific moments in time and the interpolation method between them.
+A track also has a set of keys representing the key states of the parameter at specific moments in time and the interpolation method between them. Outside its key range a track holds the value of its end key (no extrapolation) — a clip may be longer than its tracks.
 
 Track types:
 - float - numeric, represented as a bezier curve
@@ -16,7 +16,7 @@ Track types:
 - color - color change over time
 - vector2 - a combination of a movement spline in 2D space and a time curve: the value travels along the spline, and the time curve maps the track time to the normalized spline position from 0 (spline start) to 1 (spline end). Meant for movement trajectories; to animate a scale use two float tracks on the `scaleX`/`scaleY` properties instead of a vector2 track on `scale`
 - vector3 - 3D vector animation
-- sub-track (`o2::AnimationSubTrack`) - playback of a nested animation on a part of the timeline
+- sub-track (`o2::AnimationSubTrack`) - playback of a nested animation on a part of the timeline. The sub-track player marks the target `SetSubControlled` and hands it `SetSubControlEvaluator` — a callback evaluating the owner's value tracks at the target's local time (`EvaluateSubControlOwner`), so dependent state (e.g. particle frames in the editor) is recomputed where the clip puts the actor at that moment, without the track knowing the target type
 - any custom ones
 
 An animation clip can be created from code or from the editor. It can be saved to and loaded from an asset — `o2::AnimationAsset`.

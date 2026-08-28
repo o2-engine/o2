@@ -73,6 +73,8 @@ namespace o2
         else if (count == 0)
             return Color4();
 
+        position = Math::Clamp(position, mKeys[0].position, mKeys[count - 1].position);
+
         int prevCacheKey = cacheKey;
         int keyLeftIdx = -1, keyRightIdx = -1;
         SearchKey(mKeys, count, position, keyLeftIdx, keyRightIdx, direction, cacheKey);

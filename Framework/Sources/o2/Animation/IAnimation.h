@@ -29,6 +29,7 @@ namespace o2
         Function<void()>      onStop;   // Event calling when stopping playing
         Function<void()>      onPlayed; // Event calling when finishing playing
         Function<void(float)> onUpdate; // Event calling on animation update
+        Function<void()>      onDurationChanged; // Event calling when duration changed
 
     public:
         // Default constructor
@@ -57,6 +58,15 @@ namespace o2
 
         // Returns true if animation is sub controlled
         virtual bool IsSubControlled() const;
+
+        // Sets the evaluator of the controlling animation at this animation's local time (set by a sub-track player)
+        void SetSubControlEvaluator(const Function<void(float)>& evaluator);
+
+        // Returns the evaluator of the controlling animation
+        const Function<void(float)>& GetSubControlEvaluator() const;
+
+        // Evaluates the controlling animation at this animation's local time, if there is one
+        void EvaluateSubControlOwner(float localTime);
 
         // Starting playing animation 
         virtual void Play();
@@ -177,6 +187,8 @@ namespace o2
         bool  mPlaying = false;        // True if animation playing @SERIALIZABLE
         bool  mSubControlled = false;  // True if animation is controlled by parent animation
 
+        Function<void(float)> mSubControlEvaluator; // Evaluates the controlling animation at a local time of this one
+
         Vector<Pair<float, Function<void()>>> mTimeEvents; // Animation time events
 
     protected:
@@ -219,6 +231,7 @@ CLASS_FIELDS_META(o2::IAnimation)
     FIELD().PUBLIC().NAME(onStop);
     FIELD().PUBLIC().NAME(onPlayed);
     FIELD().PUBLIC().NAME(onUpdate);
+    FIELD().PUBLIC().NAME(onDurationChanged);
     FIELD().PROTECTED().DEFAULT_VALUE(0.0f).NAME(mTime);
     FIELD().PROTECTED().DEFAULT_VALUE(0.0f).NAME(mInDurationTime);
     FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(0.0f).NAME(mDuration);
@@ -229,6 +242,7 @@ CLASS_FIELDS_META(o2::IAnimation)
     FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(Loop::None).NAME(mLoop);
     FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(false).NAME(mPlaying);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mSubControlled);
+    FIELD().PROTECTED().NAME(mSubControlEvaluator);
     FIELD().PROTECTED().NAME(mTimeEvents);
 }
 END_META;
@@ -242,6 +256,9 @@ CLASS_METHODS_META(o2::IAnimation)
     FUNCTION().PUBLIC().SIGNATURE(void, Update, float);
     FUNCTION().PUBLIC().SIGNATURE(void, SetSubControlled, bool);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsSubControlled);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetSubControlEvaluator, const Function<void(float)>&);
+    FUNCTION().PUBLIC().SIGNATURE(const Function<void(float)>&, GetSubControlEvaluator);
+    FUNCTION().PUBLIC().SIGNATURE(void, EvaluateSubControlOwner, float);
     FUNCTION().PUBLIC().SIGNATURE(void, Play);
     FUNCTION().PUBLIC().SIGNATURE(void, PlayInBounds, float, float);
     FUNCTION().PUBLIC().SIGNATURE(void, PlayBackInBounds, float, float);

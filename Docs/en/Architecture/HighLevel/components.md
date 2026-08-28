@@ -26,7 +26,7 @@ Plays EsotericSoftware Spine animations, derived from `o2::AnimationComponent`
 Wrapper over the render particle emitter. Can do all the same things
 
 - `o2::FlightTrajectoryComponent`  
-Flies the actor along a spline trajectory. The spline (key ranges give a random offset corridor) is geometrically mapped between the start and finish points; progress is driven by the animatable `position` parameter 0..1, and each update the trajectory point is written into the actor transform (widgets get layout offsets). The spline is edited in the scene with the spline tool when the component is selected
+Flies the actor along a spline trajectory. The spline (key ranges give a random offset corridor) is geometrically mapped between the start and finish points; progress is driven by the animatable `position` property 0..1 (`SetPosition`); the trajectory point is written into the actor transform (widgets get layout offsets) immediately when the property is set — including editor scrubbing — and on each update. The random offset within the corridor changes only by an explicit `ResetRandomOffset()` (the game calls it before a flight; the trajectory stays stable while scrubbing in the editor). The spline is edited in the scene with the spline tool when the component is selected
 
 - `o2::ScissorClippingComponent`  
 Clips child objects by its transform. Clipping only affects entities that inherit their drawing depth from it

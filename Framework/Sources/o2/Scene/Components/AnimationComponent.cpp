@@ -36,7 +36,14 @@ namespace o2
             state->Update(dt);
 
         for (auto& val : mValues)
+        {
+#if IS_EDITOR
+            // a state previewed in the editor is driven by the editor's player: mixing would overwrite it
+            if (val->IsPreviewedInEditor())
+                continue;
+#endif
             val->Update();
+        }
 
         if (mBlend.time > 0)
             mBlend.Update(dt);
@@ -385,6 +392,11 @@ namespace o2
     void AnimationComponent::SubTrackMixer::RemoveTrack(IAnimationTrack::IPlayer* track)
     {
         tracks.RemoveAll([&](const auto& x) { return x.second == track; });
+    }
+
+    bool AnimationComponent::SubTrackMixer::IsPreviewedInEditor() const
+    {
+        return tracks.Any([](auto& track) { return track.first && track.first->IsInEditMode(); });
     }
 
     bool AnimationComponent::SubTrackMixer::IsEmpty() const
