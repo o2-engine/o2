@@ -9,8 +9,10 @@
 #include "o2/Render/Particles/ParticlesEmitter.h"
 #include "o2/Render/Particles/ParticlesEmitterShapes.h"
 #include "o2/Scene/Actor.h"
+#include "o2/Scene/Components/FlightTrajectoryComponent.h"
 #include "o2/Scene/Components/ParticlesEmitterComponent.h"
 #include "o2/Scene/Scene.h"
+#include "o2/Utils/Math/Spline.h"
 #include "Scene/SceneTestHelpers.h"
 
 using namespace o2;
@@ -519,5 +521,63 @@ TEST(ParticlesEmitterScrub, UnchangedSetterDoesNotRebake)
 
     rig.emitter->SetParticlesPerSecond(rig.emitter->GetParticlesPerSecond()*2.0f);
     EXPECT_GT(container->updates, updates) << "a real change rebakes the current frame";
+}
+#endif
+
+#if IS_EDITOR
+// Frame baking seeds its own generator: the global rand() sequence other code relies on
+// (trajectory offsets, gameplay) must not be reset or consumed by it
+TEST(ParticlesEmitterScrub, BakingLeavesTheGlobalRandomUntouched)
+{
+    SceneCleanGuard guard;
+    auto rig = MakeFlightRig(false);
+
+    srand(11);
+    float expected = Math::Random(0.0f, 1.0f);
+
+    srand(11);
+    rig.player->SetTime(0.5f);
+    ASSERT_GT(rig.emitter->GetParticlesCount(), 0);
+    rig.emitter->SetParticlesPerSecond(200.0f);
+
+    EXPECT_FLOAT_EQ(Math::Random(0.0f, 1.0f), expected);
+}
+#endif
+
+#if IS_EDITOR
+// Baking the sub-track emitter replays the clip's value tracks from zero: that replay must not
+// count as a flight start for the trajectory (no corridor reroll mid-flight)
+TEST(ParticlesEmitterScrub, BakingDoesNotRestartTheFlightTrajectory)
+{
+    SceneCleanGuard guard;
+    auto rig = MakeFlightRig(false);
+
+    auto trajectory = rig.actor->AddComponent<FlightTrajectoryComponent>();
+    trajectory->spline = mmake<Spline>();
+    trajectory->spline->AppendKey(Vec2F(0, 0), 0.0f);
+    trajectory->spline->AppendKey(Vec2F(200, 150), 200.0f);
+    trajectory->spline->AppendKey(Vec2F(400, 0), 0.0f);
+    trajectory->SetPoints(0, 0, 400, 0);
+
+    auto positionTrack = rig.clip->AddTrack<float>("component/o2::FlightTrajectoryComponent/position");
+    *positionTrack = AnimationTrack<float>::Linear(0.0f, 1.0f, 1.0f);
+    rig.player = mmake<AnimationPlayer>(rig.actor.Get(), rig.clip);
+
+    rig.player->SetTime(0.0f);
+    trajectory->ResetRandomOffset();
+    float offset = trajectory->GetRandomOffset();
+
+    rig.player->SetTime(0.5f);
+    EXPECT_GT(rig.emitter->GetParticlesCount(), 0);
+    EXPECT_EQ(trajectory->GetRandomOffset(), offset) << "the first bake replays position 0";
+
+    // a moved finish invalidates the baked frames: the rebake replays from zero again
+    trajectory->SetPoints(0, 0, 400, 100);
+    rig.player->SetTime(0.6f);
+    EXPECT_EQ(trajectory->GetRandomOffset(), offset) << "the rebake replays position 0";
+
+    // a real restart still rerolls
+    rig.player->SetTime(0.0f);
+    EXPECT_NE(trajectory->GetRandomOffset(), offset);
 }
 #endif

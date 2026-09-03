@@ -1,6 +1,8 @@
 #include "o2/stdafx.h"
 #include "FlightTrajectoryComponent.h"
 
+#include "o2/Animation/IAnimation.h"
+
 #include "o2/Scene/Actor.h"
 #include "o2/Scene/UI/Widget.h"
 #include "o2/Scene/UI/WidgetLayout.h"
@@ -43,8 +45,27 @@ namespace o2
         mRandomCoef = Math::Random(0.0f, 1.0f);
     }
 
+    void FlightTrajectoryComponent::SetRandomOffset(float value)
+    {
+        mRandomCoef = Math::Clamp01(value);
+        ApplyToActor();
+    }
+
+    float FlightTrajectoryComponent::GetRandomOffset() const
+    {
+        return mRandomCoef;
+    }
+
     void FlightTrajectoryComponent::SetPosition(float value)
     {
+        // a flight (re)start: entering zero picks a fresh corridor offset; staying at zero
+        // or scrubbing mid-range never rerolls
+        const float startEps = 0.001f;
+        // (re-evaluation of the clip for a dependent animation - particle frame baking - replays
+        // the position from zero and is not a start)
+        if (value < startEps && mPosition >= startEps && !IAnimation::IsEvaluatingSubControlOwner())
+            ResetRandomOffset();
+
         mPosition = value;
         ApplyToActor();
     }

@@ -8,6 +8,36 @@ namespace o2
 {
     namespace Math
     {
+        static thread_local RandomScope* tCurrentRandomScope = nullptr;
+
+        float RandomUnit()
+        {
+            if (tCurrentRandomScope)
+                return tCurrentRandomScope->Next();
+
+            return (float)rand()/RAND_MAX;
+        }
+
+        RandomScope::RandomScope(UInt seed):
+            mState(seed%2147483647u), mPrevious(tCurrentRandomScope)
+        {
+            if (mState == 0)
+                mState = 1;
+
+            tCurrentRandomScope = this;
+        }
+
+        RandomScope::~RandomScope()
+        {
+            tCurrentRandomScope = mPrevious;
+        }
+
+        float RandomScope::Next()
+        {
+            mState = (UInt)(((UInt64)mState*48271ull)%2147483647ull); // minstd
+            return (float)(mState - 1)/2147483646.0f;
+        }
+
 
         float Floor(float value)
         {

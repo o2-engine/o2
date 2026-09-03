@@ -80,10 +80,21 @@ namespace o2
         return mSubControlEvaluator;
     }
 
+    static thread_local int tSubControlEvaluationDepth = 0;
+
     void IAnimation::EvaluateSubControlOwner(float localTime)
     {
-        if (!mSubControlEvaluator.IsEmpty())
-            mSubControlEvaluator(localTime);
+        if (mSubControlEvaluator.IsEmpty())
+            return;
+
+        tSubControlEvaluationDepth++;
+        mSubControlEvaluator(localTime);
+        tSubControlEvaluationDepth--;
+    }
+
+    bool IAnimation::IsEvaluatingSubControlOwner()
+    {
+        return tSubControlEvaluationDepth > 0;
     }
 
     void IAnimation::UpdateTime()

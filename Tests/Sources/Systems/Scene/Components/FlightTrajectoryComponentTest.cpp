@@ -1,6 +1,8 @@
 #include "o2/stdafx.h"
 #include <gtest/gtest.h>
 
+#include "o2/Utils/Math/Math.h"
+
 #include "o2/Animation/AnimationClip.h"
 #include "o2/Animation/AnimationPlayer.h"
 #include "o2/Animation/AnimationState.h"
@@ -90,22 +92,41 @@ TEST(FlightTrajectory, ResetRandomOffsetVariesCorridorPoint)
     EXPECT_TRUE(varied);
 }
 
-// Editor scrubbing goes through 0 all the time: position alone must never reroll the offset
-TEST(FlightTrajectory, PositionReturningToZeroKeepsOffset)
+// Entering zero is a flight start and rerolls the corridor offset; staying at zero or
+// scrubbing mid-range keeps the trajectory stable
+TEST(FlightTrajectory, PositionEnteringZeroRerollsOffset)
 {
+    Math::RandomScope random(7);
+
     auto trajectory = mmake<FlightTrajectoryComponent>();
     trajectory->spline = MakeArcSpline(300.0f);
     trajectory->SetPoints(0, 0, 400, 0);
 
+    trajectory->SetPosition(0.7f);
+    float offset = trajectory->GetRandomOffset();
+
+    trajectory->SetPosition(0.0f);
+    EXPECT_NE(trajectory->GetRandomOffset(), offset) << "flight start picks a fresh offset";
+
+    // repeated zero writes (idle mixers) don't reroll again
+    offset = trajectory->GetRandomOffset();
     Vec2F mid = trajectory->EvaluatePoint(0.5f);
     for (int i = 0; i < 16; i++)
     {
-        trajectory->SetPosition(0.7f);
         trajectory->SetPosition(0.0f);
-        Vec2F again = trajectory->EvaluatePoint(0.5f);
-        EXPECT_NEAR(mid.x, again.x, 0.001f);
-        EXPECT_NEAR(mid.y, again.y, 0.001f);
+        EXPECT_EQ(trajectory->GetRandomOffset(), offset);
     }
+
+    // mid-range scrubbing (editor) keeps the trajectory
+    for (float t : { 0.2f, 0.5f, 0.9f, 0.3f, 0.05f })
+    {
+        trajectory->SetPosition(t);
+        EXPECT_EQ(trajectory->GetRandomOffset(), offset);
+    }
+
+    Vec2F again = trajectory->EvaluatePoint(0.5f);
+    EXPECT_NEAR(mid.x, again.x, 0.001f);
+    EXPECT_NEAR(mid.y, again.y, 0.001f);
 }
 
 TEST(FlightTrajectory, UpdateWritesTrajectoryPointToActorTransform)

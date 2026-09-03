@@ -135,10 +135,7 @@ namespace o2
         mIsUpdating = true;
 
         if (mRandomSeed == 0)
-        {
-            mRandomSeed = ::time(0);
-            srand(mRandomSeed);
-        }
+            mRandomSeed = (size_t)Math::Random();
 #endif
 
         if (!mParticlesContainer)
@@ -931,8 +928,6 @@ namespace o2
         // a sub-controlled emitter never advances on its own: its playing flag is stale
         if (!mPlaying || mSubControlled)
         {
-            srand(mRandomSeed);
-
             if (mLoop == Loop::Repeat && GetRelativeTime() > 1.0f)
                 mTime = Math::Mod(mTime, GetDuration());
 
@@ -1035,7 +1030,7 @@ namespace o2
         mSubControlled = false;
 
         if (mRandomSeed == 0)
-            mRandomSeed = ::time(0);
+            mRandomSeed = (size_t)Math::Random();
 
         bool prevBaking = mIsBaking;
         mIsBaking = true;
@@ -1049,7 +1044,8 @@ namespace o2
         for (int i = startIdx; i <= maxFrameIdx; i++)
         {
             OnEditorBakeFrame((float)(i + 1)*frameDt);
-            srand((unsigned int)(mRandomSeed + (size_t)i)); // per-frame seed: the pattern survives any rebake order
+
+            Math::RandomScope random((UInt)(mRandomSeed + (size_t)i)); // per-frame seed: the pattern survives any rebake order
             Update(frameDt);
         }
 

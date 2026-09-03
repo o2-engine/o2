@@ -57,6 +57,24 @@ namespace o2
         
         UInt64 Random();
 
+        // Random value in 0..1 from the current source: the scoped generator if any, else rand()
+        float RandomUnit();
+
+        // Routes Math::Random through its own deterministic generator while alive; the global rand() stays
+        // untouched. Nested scopes restore the previous one
+        class RandomScope
+        {
+        public:
+            explicit RandomScope(UInt seed);
+            ~RandomScope();
+
+            float Next();
+
+        private:
+            UInt         mState;
+            RandomScope* mPrevious;
+        };
+
         template<typename T>
         T Lerp(const T& a, const T& b, float coef);
 
@@ -156,7 +174,7 @@ namespace o2
         template<typename T>
         T Random(const T& minValue /*= 0*/, const T& maxValue /*= 1*/)
         {
-            return (T)((float)rand() / RAND_MAX*(float)(maxValue - minValue) + (float)minValue);
+            return (T)(RandomUnit()*(float)(maxValue - minValue) + (float)minValue);
         }
 
         template<typename T>

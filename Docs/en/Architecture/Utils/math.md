@@ -38,3 +38,11 @@ A Bezier curve in two-dimensional space. Anchor points are defined, with optiona
 
 ## Curve
 Also a curve, but representing a function interpolated along the X axis, returning a single function result value along Y. It also uses 4-point Bezier curves internally.
+
+## Random numbers
+
+`Math::Random(min, max)` draws from the current source, the global `rand()` by default.
+`Math::RandomScope scope(seed)` routes `Math::Random` through its own deterministic generator
+(minstd) while alive — nested scopes restore the previous one, the global `rand()` is neither reseeded
+nor consumed. The particles emitter bakes frames reproducibly this way (`seed + frame index`) without
+breaking randomness elsewhere (`Math::RandomUnit()` — a 0..1 value from the current source)

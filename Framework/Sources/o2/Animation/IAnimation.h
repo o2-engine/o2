@@ -68,6 +68,10 @@ namespace o2
         // Evaluates the controlling animation at this animation's local time, if there is one
         void EvaluateSubControlOwner(float localTime);
 
+        // Returns true while some animation re-evaluates its controlling one for a dependent (baking):
+        // value writes made then replay the clip and are not timeline events
+        static bool IsEvaluatingSubControlOwner();
+
         // Starting playing animation 
         virtual void Play();
 
@@ -259,6 +263,7 @@ CLASS_METHODS_META(o2::IAnimation)
     FUNCTION().PUBLIC().SIGNATURE(void, SetSubControlEvaluator, const Function<void(float)>&);
     FUNCTION().PUBLIC().SIGNATURE(const Function<void(float)>&, GetSubControlEvaluator);
     FUNCTION().PUBLIC().SIGNATURE(void, EvaluateSubControlOwner, float);
+    FUNCTION().PUBLIC().SIGNATURE_STATIC(bool, IsEvaluatingSubControlOwner);
     FUNCTION().PUBLIC().SIGNATURE(void, Play);
     FUNCTION().PUBLIC().SIGNATURE(void, PlayInBounds, float, float);
     FUNCTION().PUBLIC().SIGNATURE(void, PlayBackInBounds, float, float);

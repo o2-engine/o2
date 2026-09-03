@@ -8,13 +8,15 @@ namespace o2
 {
     // ------------------------------------------------------------------------------------------
     // Flies the actor along a spline mapped between the start and finish points; progress is the
-    // animatable position (0..1), the random corridor offset changes only by ResetRandomOffset()
+    // animatable position (0..1). The random corridor offset rerolls when position enters zero
+    // (flight start) or by an explicit ResetRandomOffset(); mid-range scrubbing keeps it stable
     // ------------------------------------------------------------------------------------------
     class FlightTrajectoryComponent: public Component
     {
     public:
         PROPERTIES(FlightTrajectoryComponent);
         PROPERTY(float, position, SetPosition, GetPosition); // Flight progress: 0 - start, 1 - finish; applies immediately @EDITOR_PROPERTY @ANIMATABLE @RANGE(0, 1)
+        PROPERTY(float, randomOffset, SetRandomOffset, GetRandomOffset); // Offset within the spline width corridor: 0 - one edge, 1 - the other @EDITOR_PROPERTY @RANGE(0, 1)
 
         Ref<Spline> spline;     // Trajectory; key ranges give the random offset corridor @SERIALIZABLE @EDITOR_PROPERTY
         Vec2F startPoint;       // Flight start point @SERIALIZABLE @EDITOR_PROPERTY
@@ -32,6 +34,12 @@ namespace o2
 
         // Picks a new random offset within the spline width corridor @SCRIPTABLE
         void ResetRandomOffset();
+
+        // Sets the offset within the corridor (0..1) and moves the actor @SCRIPTABLE
+        void SetRandomOffset(float value);
+
+        // Returns the offset within the corridor @SCRIPTABLE
+        float GetRandomOffset() const;
 
         // Sets flight progress and moves the actor @SCRIPTABLE
         void SetPosition(float value);
@@ -85,6 +93,7 @@ END_META;
 CLASS_FIELDS_META(o2::FlightTrajectoryComponent)
 {
     FIELD().PUBLIC().ANIMATABLE_ATTRIBUTE().EDITOR_PROPERTY_ATTRIBUTE().RANGE_ATTRIBUTE(0, 1).NAME(position);
+    FIELD().PUBLIC().EDITOR_PROPERTY_ATTRIBUTE().RANGE_ATTRIBUTE(0, 1).NAME(randomOffset);
     FIELD().PUBLIC().EDITOR_PROPERTY_ATTRIBUTE().SERIALIZABLE_ATTRIBUTE().NAME(spline);
     FIELD().PUBLIC().EDITOR_PROPERTY_ATTRIBUTE().SERIALIZABLE_ATTRIBUTE().NAME(startPoint);
     FIELD().PUBLIC().EDITOR_PROPERTY_ATTRIBUTE().SERIALIZABLE_ATTRIBUTE().NAME(finishPoint);
@@ -103,6 +112,8 @@ CLASS_METHODS_META(o2::FlightTrajectoryComponent)
     FUNCTION().PUBLIC().CONSTRUCTOR(const FlightTrajectoryComponent&);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetPoints, float, float, float, float);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, ResetRandomOffset);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetRandomOffset, float);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(float, GetRandomOffset);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetPosition, float);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(float, GetPosition);
     FUNCTION().PUBLIC().SIGNATURE(Vec2F, EvaluatePoint, float);

@@ -398,8 +398,8 @@ TEST(AnimationWindowStateScrubUI, ScrubbingIsStableWithPropertiesRefresh)
         EXPECT_NEAR(first.x, firstAgain.x, 0.01f);
         EXPECT_NEAR(first.y, firstAgain.y, 0.01f);
 
-        // forward, back through the start, forward again: the same time must give the same point
-        for (float t : { 0.3f, 0.4f, 0.45f, 0.6f, 0.3f, 0.1f, 0.0f, 0.1f, 0.2f })
+        // forward and back within the flight: the same time must give the same point
+        for (float t : { 0.3f, 0.4f, 0.45f, 0.6f, 0.3f, 0.1f, 0.05f, 0.1f, 0.2f })
             frame(t);
 
         Vec2F afterRoundTrip = frame(0.2f);
@@ -407,8 +407,18 @@ TEST(AnimationWindowStateScrubUI, ScrubbingIsStableWithPropertiesRefresh)
         EXPECT_NEAR(first.y, afterRoundTrip.y, 0.01f);
 
         Vec2F midAfter = trajectory->EvaluatePoint(0.5f);
-        EXPECT_NEAR(mid.x, midAfter.x, 0.01f) << "corridor offset must not reroll while scrubbing";
+        EXPECT_NEAR(mid.x, midAfter.x, 0.01f) << "corridor offset must not reroll while scrubbing mid-flight";
         EXPECT_NEAR(mid.y, midAfter.y, 0.01f);
+
+        // back to the very start is a new flight: the corridor offset rerolls once and then holds
+        float offset = trajectory->GetRandomOffset();
+        frame(0.0f);
+        float rerolled = trajectory->GetRandomOffset();
+        EXPECT_NE(rerolled, offset) << "entering zero starts a new flight";
+        frame(0.0f);
+        frame(0.3f);
+        frame(0.2f);
+        EXPECT_EQ(trajectory->GetRandomOffset(), rerolled) << "no further rerolls until the next start";
     }
 }
 
