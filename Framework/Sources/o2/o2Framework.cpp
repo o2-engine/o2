@@ -110,6 +110,7 @@ extern void __RegisterClass__o2__ImageAsset__Meta();
 extern void __RegisterClass__o2__JavaScriptAsset();
 extern void __RegisterClass__o2__MaterialAsset();
 extern void __RegisterClass__o2__Mesh3DAsset();
+extern void __RegisterClass__o2__PipelineAsset();
 extern void __RegisterClass__o2__SceneAsset();
 extern void __RegisterClass__o2__ShaderAsset();
 extern void __RegisterClass__o2__SkinnedModelAsset();
@@ -408,6 +409,7 @@ extern void InitializeTypeso2Framework()
     __RegisterClass__o2__JavaScriptAsset();
     __RegisterClass__o2__MaterialAsset();
     __RegisterClass__o2__Mesh3DAsset();
+    __RegisterClass__o2__PipelineAsset();
     __RegisterClass__o2__SceneAsset();
     __RegisterClass__o2__ShaderAsset();
     __RegisterClass__o2__SkinnedModelAsset();

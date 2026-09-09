@@ -415,6 +415,7 @@ namespace o2
         static bool Transcode(rapidjson::GenericStringBuffer<rapidjson::UTF16<>>& target, const char* source);
 
         friend class JsonDataDocumentParseHandler;
+        friend class DataDocument;
 
         template<typename T>
         friend class TType;
@@ -477,6 +478,10 @@ namespace o2
 
     protected:
         ChunkPoolAllocator mAllocator;
+
+    protected:
+        // Points every nested value at this document after a move
+        void RebindDocument(DataValue& value);
 
         friend class DataValue;
         friend class JsonDataDocumentParseHandler;

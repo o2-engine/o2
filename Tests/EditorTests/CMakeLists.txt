@@ -13,6 +13,7 @@ target_include_directories(o2EditorTests PRIVATE
 target_link_libraries(o2EditorTests PRIVATE
     GTest::gtest
     o2Editor
+    o2TestsSupport
 )
 
 add_dependencies(o2EditorTests o2Editor o2EditorCodegen o2FrameworkCodegen)

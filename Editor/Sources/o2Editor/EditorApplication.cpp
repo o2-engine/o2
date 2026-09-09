@@ -2,7 +2,6 @@
 #include "EditorApplication.h"
 
 #include "o2/Animation/Tracks/AnimationColor4Track.h"
-#include "o2/Scene/UI/WidgetLayout.h"
 #include "o2/Animation/Tracks/AnimationFloatTrack.h"
 #include "o2/Animation/Tracks/AnimationVec2FTrack.h"
 #include "o2/Application/Input.h"
@@ -15,9 +14,9 @@
 #include "o2/Scene/Scene.h"
 #include "o2/Scene/UI/UIManager.h"
 #include "o2/Scene/UI/Widget.h"
+#include "o2/Scene/UI/WidgetLayout.h"
+#include "o2/Scene/UI/Widgets/MenuPanel.h"
 #include "o2/Scene/UI/WidgetState.h"
-#include "o2/Scene/UI/Widgets/MenuPanel.h"
-#include "o2/Scene/UI/Widgets/MenuPanel.h"
 #include "o2/Scripts/ScriptEngine.h"
 #include "o2/Utils/Debug/Debug.h"
 #include "o2/Utils/Editor/EditorScope.h"
@@ -26,21 +25,23 @@
 #include "o2/Utils/System/Time/Time.h"
 #include "o2/Utils/System/Time/Timer.h"
 #include "o2/Utils/Tasks/TaskManager.h"
-#include "o2Editor/Windows/AnimationWindow/AnimationWindow.h"
 #include "o2Editor/Actions/AssetsTrash.h"
 #include "o2Editor/Actions/IAction.h"
 #include "o2Editor/Actions/PropertyChange.h"
 #include "o2Editor/MenuPanel.h"
+#include "o2/Assets/Types/PipelineAsset.h"
 #include "o2Editor/Properties/Properties.h"
 #include "o2Editor/ToolsPanel.h"
-#include "o2Editor/UIRoot.h"
 #include "o2Editor/UI/Style/EditorUIStyle.h"
-#include "o2Editor/Windows/WindowsManager.h"
+#include "o2Editor/UIRoot.h"
+#include "o2Editor/Utils/CommonTextures.h"
+#include "o2Editor/Windows/AnimationWindow/AnimationWindow.h"
+#include "o2Editor/Windows/PipelineWindow/PipelineWindow.h"
 #include "o2Editor/Windows/PropertiesWindow/PropertiesWindow.h"
 #include "o2Editor/Windows/SceneWindow/SceneEditScreen.h"
 #include "o2Editor/Windows/SceneWindow/SceneWindow.h"
 #include "o2Editor/Windows/TreeWindow/TreeWindow.h"
-#include "o2Editor/Utils/CommonTextures.h"
+#include "o2Editor/Windows/WindowsManager.h"
 
 namespace Editor
 {
@@ -186,6 +187,7 @@ namespace Editor
         mConfig->LoadConfigs();
 
         String lastLoadedScene = o2EditorConfig.projectConfig.lastLoadedScene;
+        String lastPipeline = o2EditorConfig.projectConfig.lastPipelineAsset;
 
         LoadUIStyle();
 
@@ -212,6 +214,18 @@ namespace Editor
 
         if (!lastLoadedScene.IsEmpty())
             o2EditorSceneWindow.EditAsset(AssetRef<Asset>(AssetRef<SceneAsset>(lastLoadedScene)));
+
+        if (!lastPipeline.IsEmpty())
+        {
+            if (!o2Assets.IsAssetExist(lastPipeline))
+                o2Debug.Log("Pipeline: last asset '" + lastPipeline + "' is not in the assets tree, not reopened");
+            else if (auto pipelineWindow = mWindowsManager->GetWindow<PipelineWindow>())
+            {
+                o2Debug.Log("Pipeline: reopening '" + lastPipeline + "'");
+                pipelineWindow->OpenAsset(AssetRef<Asset>(AssetRef<PipelineAsset>(lastPipeline)));
+                pipelineWindow->Show();
+            }
+        }
 
         o2Scripts.CollectGarbage();
 

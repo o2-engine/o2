@@ -238,18 +238,31 @@ namespace o2
                 Vec2F prevNorm = prevDir.Perpendicular().Inverted();
                 Vec2F nextNorm = nextDir.Perpendicular();
 
-                Vec2F upBorder = Intersection::LinesNoChek(point - prevNorm*halfWidhtBorderTop, prevDir,
-                                                           point - nextNorm*halfWidhtBorderTop, nextDir);
+                Vec2F upBorder, up, down, downBorder;
 
+                // Collinear neighbours have no join intersection: a plain offset keeps the vertices finite
+                float joinDet = prevDir.x*nextDir.y - nextDir.x*prevDir.y;
+                if (Math::Abs(joinDet) < 0.001f)
+                {
+                    upBorder = point - prevNorm*halfWidhtBorderTop;
+                    up = point - prevNorm*halfWidth;
+                    down = point + prevNorm*halfWidth;
+                    downBorder = point + prevNorm*halfWidhtBorderBottom;
+                }
+                else
+                {
+                    upBorder = Intersection::LinesNoChek(point - prevNorm*halfWidhtBorderTop, prevDir,
+                                                         point - nextNorm*halfWidhtBorderTop, nextDir);
 
-                Vec2F up = Intersection::LinesNoChek(point - prevNorm*halfWidth, prevDir,
-                                                     point - nextNorm*halfWidth, nextDir);
+                    up = Intersection::LinesNoChek(point - prevNorm*halfWidth, prevDir,
+                                                   point - nextNorm*halfWidth, nextDir);
 
-                Vec2F down = Intersection::LinesNoChek(point + prevNorm*halfWidth, prevDir,
-                                                       point + nextNorm*halfWidth, nextDir);
+                    down = Intersection::LinesNoChek(point + prevNorm*halfWidth, prevDir,
+                                                     point + nextNorm*halfWidth, nextDir);
 
-                Vec2F downBorder = Intersection::LinesNoChek(point + prevNorm*halfWidhtBorderBottom, prevDir,
-                                                             point + nextNorm*halfWidhtBorderBottom, nextDir);
+                    downBorder = Intersection::LinesNoChek(point + prevNorm*halfWidhtBorderBottom, prevDir,
+                                                           point + nextNorm*halfWidhtBorderBottom, nextDir);
+                }
 
                 up = (up - point)*invCameraScale + point;
                 down = (down - point)*invCameraScale + point;

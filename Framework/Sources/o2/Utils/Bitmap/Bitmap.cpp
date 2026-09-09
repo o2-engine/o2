@@ -2,6 +2,7 @@
 #include "Bitmap.h"
 
 #include "o2/Utils/Bitmap/PngFormat.h"
+#include "o2/Utils/Bitmap/StbImageFormat.h"
 #include "o2/Utils/Debug/Debug.h"
 #include "o2/Utils/Reflection/Reflection.h"
 
@@ -87,6 +88,9 @@ namespace o2
             if (LoadPngImage(fileName, this, false))
                 return true;
 
+            if (LoadStbImage(fileName, this, false))
+                return true;
+
             o2Debug.LogError("Can't load image '" + fileName + "': unknown format");
         }
 
@@ -103,6 +107,9 @@ namespace o2
             return LoadPngImageFromMemory(data, size, this, true);
 
         if (LoadPngImageFromMemory(data, size, this, false))
+            return true;
+
+        if (LoadStbImageFromMemory(data, size, this, false))
             return true;
 
         o2Debug.LogError("Can't load image from memory: unknown format");

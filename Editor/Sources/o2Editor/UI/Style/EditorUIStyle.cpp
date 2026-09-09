@@ -1,4 +1,5 @@
 #include "o2Editor/stdafx.h"
+#include "o2Editor/Windows/PipelineWindow/PipelineControls.h"
 #include "EditorUIStyle.h"
 
 #include "o2/Animation/Animate.h"
@@ -5391,6 +5392,135 @@ namespace Editor
         BuildPropertyWithCaption<Vec2IProperty>("standard", "with caption");
         BuildPropertyWithCaption<WStringProperty>("standard", "with caption");
         BuildPropertyWithCaption<SceneLayersListProperty>("standard", "with caption");
+    }
+
+    // Colours shared by the pipeline widget styles
+    namespace PipelineStyle
+    {
+        const Color4 text(96, 125, 139, 255);
+        const Color4 accent(0, 150, 136, 255);
+
+        Ref<Sprite> Icon(const String& image, const Color4& color)
+        {
+            auto sprite = mmake<Sprite>(image);
+            sprite->color = color;
+            return sprite;
+        }
+    }
+
+    void EditorUIStyleBuilder::RebuildPipelineNodeStyle()
+    {
+        using namespace PipelineStyle;
+
+        auto sample = mmake<Widget>();
+        sample->layout->minSize = Vec2F(180, 80);
+
+        sample->AddLayer("shadow", mmake<Sprite>("ui/UI4_animation_state_shadow.png"), Layout::BothStretch(1, -17, -13, -1));
+        sample->AddLayer("back", mmake<Sprite>("ui/UI4_animation_state_regular.png"), Layout::BothStretch(-6, -10, -6, -8));
+
+        // The card art's visible top edge sits 4 units above the layout rect with a 6 unit corner radius
+        auto header = mmake<PipelineRoundedRect>();
+        header->color = text;
+        header->radius = 6.0f;
+        sample->AddLayer("header", header, Layout::HorStretch(VerAlign::Top, 0, 0, 32, -4))->transparency = 0.09f;
+        auto kind = mmake<PipelineRoundedRect>();
+        kind->radius = 6.0f;
+        sample->AddLayer("kindTint", kind, Layout::HorStretch(VerAlign::Top, 0, 0, 32, -4))->transparency = 0.0f;
+        sample->AddLayer("headerLine", mmake<Sprite>(text), Layout::HorStretch(VerAlign::Top, 1, 1, 1, 28))->transparency = 0.28f;
+
+        auto frame = [&](const String& name, const Color4& color, const Layout& layout)
+        {
+            auto sprite = mmake<Sprite>("ui/UI4_animation_state_frame.png");
+            sprite->color = color;
+            sample->AddLayer(name, sprite, layout);
+        };
+        frame("done", Color4(76, 175, 80, 255), Layout::BothStretch(-6, -10, -6, -8));
+        frame("running", Color4(33, 150, 243, 255), Layout::BothStretch(-6, -10, -6, -8));
+        frame("queued", Color4(159, 190, 254, 255), Layout::BothStretch(-6, -10, -6, -8));
+        frame("error", Color4(249, 93, 72, 255), Layout::BothStretch(-6, -10, -6, -8));
+        frame("selected", accent, Layout::BothStretch(-9, -13, -9, -11));
+
+        sample->AddState("selected", AnimationClip::EaseInOut("layer/selected/transparency", 0.0f, 1.0f, 0.08f))->offStateAnimationSpeed = 0.5f;
+        sample->AddState("done", AnimationClip::EaseInOut("layer/done/transparency", 0.0f, 1.0f, 0.15f))->offStateAnimationSpeed = 0.5f;
+        sample->AddState("running", AnimationClip::EaseInOut("layer/running/transparency", 0.0f, 1.0f, 0.15f))->offStateAnimationSpeed = 0.5f;
+        sample->AddState("queued", AnimationClip::EaseInOut("layer/queued/transparency", 0.0f, 1.0f, 0.15f))->offStateAnimationSpeed = 0.5f;
+        sample->AddState("error", AnimationClip::EaseInOut("layer/error/transparency", 0.0f, 1.0f, 0.15f))->offStateAnimationSpeed = 0.5f;
+
+        o2UI.AddWidgetStyle(sample, "pipeline node");
+    }
+
+    void EditorUIStyleBuilder::RebuildPipelineIconButtonStyle()
+    {
+        using namespace PipelineStyle;
+
+        auto sample = mmake<Button>();
+        sample->layout->minSize = Vec2F(20, 20);
+        sample->AddLayer("hover", mmake<Sprite>("ui/UI4_panel_button_select.png"), Layout::BothStretch(-4, -4, -5, -5));
+        sample->AddLayer("pressed", mmake<Sprite>("ui/UI4_panel_button_pressed.png"), Layout::BothStretch(-4, -4, -5, -5));
+        sample->AddLayer("icon", Icon("ui/pipeline/btn_settings.png", text), Layout::Based(BaseCorner::Center, Vec2F(16, 16)));
+
+        sample->AddState("hover", AnimationClip::EaseInOut("layer/hover/transparency", 0.0f, 1.0f, 0.1f))->offStateAnimationSpeed = 0.25f;
+        sample->AddState("pressed", AnimationClip::EaseInOut("layer/pressed/transparency", 0.0f, 1.0f, 0.05f))->offStateAnimationSpeed = 0.5f;
+        sample->AddState("visible", AnimationClip::EaseInOut("transparency", 0.0f, 1.0f, 0.2f))->offStateAnimationSpeed = 0.5f;
+
+        o2UI.AddWidgetStyle(sample, "pipeline icon");
+    }
+
+    void EditorUIStyleBuilder::RebuildPipelineSegmentToggleStyle()
+    {
+        using namespace PipelineStyle;
+
+        auto sample = mmake<Toggle>();
+        sample->layout->minSize = Vec2F(20, 20);
+        sample->AddLayer("regular", mmake<Sprite>("ui/UI4_button_regular.png"), Layout::BothStretch(-9, -9, -10, -10));
+        sample->AddLayer("hover", mmake<Sprite>("ui/UI4_button_select.png"), Layout::BothStretch(-9, -9, -10, -10));
+        sample->AddLayer("pressed", mmake<Sprite>("ui/UI4_button_pressed.png"), Layout::BothStretch(-9, -9, -10, -10));
+        auto on = mmake<Sprite>("ui/UI4_button_focus.png");
+        on->color = accent;
+        sample->AddLayer("value", on, Layout::BothStretch(-9, -9, -10, -10));
+
+        auto captionText = mmake<Text>("stdFont.ttf");
+        captionText->text = "Segment";
+        captionText->horAlign = HorAlign::Middle;
+        captionText->verAlign = VerAlign::Middle;
+        captionText->dotsEngings = true;
+        captionText->color = text;
+        sample->AddLayer("caption", captionText, Layout::BothStretch(2, 0, 2, 0));
+
+        sample->AddState("hover", AnimationClip::EaseInOut("layer/hover/transparency", 0.0f, 1.0f, 0.1f))->offStateAnimationSpeed = 0.25f;
+        sample->AddState("pressed", AnimationClip::EaseInOut("layer/pressed/transparency", 0.0f, 1.0f, 0.05f))->offStateAnimationSpeed = 0.5f;
+        sample->AddState("value", AnimationClip::EaseInOut("layer/value/transparency", 0.0f, 1.0f, 0.1f))->offStateAnimationSpeed = 0.5f;
+        sample->AddState("visible", AnimationClip::EaseInOut("transparency", 0.0f, 1.0f, 0.2f))->offStateAnimationSpeed = 0.5f;
+
+        o2UI.AddWidgetStyle(sample, "pipeline segment");
+    }
+
+    void EditorUIStyleBuilder::RebuildPipelineMenuButtonStyles()
+    {
+        struct Entry { const char* style; const char* icon; };
+        Entry entries[] = {
+            { "menu pipeline run", "ui/pipeline/btn_play.png" },
+            { "menu pipeline stop", "ui/pipeline/btn_stop.png" },
+            { "menu pipeline settings", "ui/pipeline/btn_settings.png" },
+            { "menu pipeline fit", "ui/pipeline/btn_fit.png" },
+            { "menu pipeline import", "ui/pipeline/btn_import.png" },
+        };
+        const Color4 toolbarGlyph(24, 104, 104, 255);
+
+        for (auto& entry : entries)
+        {
+            auto sample = mmake<Button>();
+            sample->layout->minSize = Vec2F(20, 20);
+            sample->AddLayer("hover", mmake<Sprite>("ui/UI4_panel_button_select.png"), Layout::BothStretch(-4, -4, -5, -5));
+            sample->AddLayer("pressed", mmake<Sprite>("ui/UI4_panel_button_pressed.png"), Layout::BothStretch(-4, -4, -5, -5));
+            sample->AddLayer("icon", PipelineStyle::Icon(entry.icon, toolbarGlyph), Layout::Based(BaseCorner::Center, Vec2F(20, 20), Vec2F(0, 1)));
+
+            sample->AddState("hover", AnimationClip::EaseInOut("layer/hover/transparency", 0.0f, 1.0f, 0.1f))->offStateAnimationSpeed = 0.25f;
+            sample->AddState("pressed", AnimationClip::EaseInOut("layer/pressed/transparency", 0.0f, 1.0f, 0.05f))->offStateAnimationSpeed = 0.5f;
+            sample->AddState("visible", AnimationClip::EaseInOut("transparency", 0.0f, 1.0f, 0.2f))->offStateAnimationSpeed = 0.5f;
+
+            o2UI.AddWidgetStyle(sample, entry.style);
+        }
     }
 
     void EditorUIStyleBuilder::RebuildEditorUIManager(const String& stylesFolder, bool saveStyle /*= true*/, bool checkEditedDate /*= true*/)

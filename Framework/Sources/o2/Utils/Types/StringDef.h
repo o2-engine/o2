@@ -322,13 +322,13 @@ namespace o2
         void TrimEnd(const TString& trimSymbols = " ");
 
         // Removing specified symbols at start of string
-        TString Trimed(const TString& trimSymbols = " ");
+        TString Trimed(const TString& trimSymbols = " ") const;
 
         // Removing specified symbols at start of string
-        TString TrimedStart(const TString& trimSymbols = " ");
+        TString TrimedStart(const TString& trimSymbols = " ") const;
 
         // Removing specified symbols at end of string
-        TString TrimedEnd(const TString& trimSymbols = " ");
+        TString TrimedEnd(const TString& trimSymbols = " ") const;
 
         // Returns formatted string, like sprintf()
         static TString Format(TString format, ...);

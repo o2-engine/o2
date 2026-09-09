@@ -419,7 +419,7 @@ namespace o2
             float scale = mCurrentRenderTarget ? 1.0f : o2Application.GetGraphicsScale();
             [renderEncoder setViewport:(MTLViewport){0.0, 0.0, (double)(mCurrentResolution.x * scale), (double)(mCurrentResolution.y * scale), 0.0, 1.0 }];
             
-            if (mScissorEnabled && mCurrentRenderTarget == nullptr)
+            if (mScissorEnabled)
             {
                 Vec2I resolution = mCurrentResolution*scale;
                 RectF scissorRectF = RectF(mScissorRect.left*scale, mScissorRect.top*scale, mScissorRect.right*scale, mScissorRect.bottom*scale)
@@ -433,7 +433,7 @@ namespace o2
                 
                 [renderEncoder setScissorRect:(MTLScissorRect){
                     (ULong)scissorRect.left,
-                    (ULong)(resolution.y - scissorRect.bottom - scissorRect.Height()),
+                    (ULong)(mCurrentRenderTarget ? scissorRect.bottom : resolution.y - scissorRect.bottom - scissorRect.Height()),
                     (ULong)scissorRect.Width(),
                     (ULong)scissorRect.Height()
                 }];
@@ -737,7 +737,7 @@ namespace o2
             float scale = command.renderTarget ? 1.0f : RenderDevice::threadGraphicsScale;
             [renderEncoder setViewport:(MTLViewport){0.0, 0.0, (double)(command.resolution.x * scale), (double)(command.resolution.y * scale), 0.0, 1.0 }];
 
-            if (command.scissorEnabled && command.renderTarget == nullptr)
+            if (command.scissorEnabled)
             {
                 Vec2I resolution = command.resolution * scale;
                 RectF scissorRectF = RectF(command.scissorRect.left * scale, command.scissorRect.top * scale,
@@ -752,7 +752,7 @@ namespace o2
 
                 [renderEncoder setScissorRect:(MTLScissorRect){
                     (ULong)scissorRect.left,
-                    (ULong)(resolution.y - scissorRect.bottom - scissorRect.Height()),
+                    (ULong)(command.renderTarget ? scissorRect.bottom : resolution.y - scissorRect.bottom - scissorRect.Height()),
                     (ULong)scissorRect.Width(),
                     (ULong)scissorRect.Height()
                 }];

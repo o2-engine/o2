@@ -29,3 +29,5 @@ Windows and elements of the default layout:
 - (6) [Log](/Docs/en/Editor/Log/log.md). Log window, debug messages are printed here
 
 - (6) [Animation](/Docs/en/Editor/Animation/animation.md). Animation editor; keys, parameters and curves are edited here
+
+- [Pipeline](/Docs/en/Editor/Pipeline/pipeline.md). Node editor of AI content pipelines; opens on a pipeline asset and saves generated files into the assets folder. [Internals](/Docs/en/Editor/Pipeline/internals.md): graph, executor, nodes and providers

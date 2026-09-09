@@ -641,6 +641,13 @@ namespace o2
             auto copyNewInfos = newInfos;
             for (auto& newAssetInfo : copyNewInfos)
             {
+                if (!newAssetInfo->meta)
+                {
+                    o2Debug.LogWarning("Built asset without meta skipped: " + newAssetInfo->path);
+                    newInfos.Remove(newAssetInfo);
+                    continue;
+                }
+
                 Ref<AssetInfo> oldAssetInfo = mMainAssetsTree->allAssetsByUID[newAssetInfo->meta->ID()].Lock();
 
                 if (oldAssetInfo)

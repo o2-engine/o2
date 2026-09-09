@@ -594,13 +594,15 @@ namespace o2
     template<typename T>
     void TString<T>::ReplaceAll(const TString& oldStr, const TString& newStr)
     {
-        while (true)
-        {
-            int fnd = Find(oldStr);
-            if (fnd < 0)
-                break;
+        if (oldStr.IsEmpty())
+            return;
 
+        // The search resumes after the inserted text, so a replacement containing the needle cannot loop forever
+        int fnd = Find(oldStr);
+        while (fnd >= 0)
+        {
             Replace(newStr, fnd, fnd + oldStr.Length());
+            fnd = Find(oldStr, fnd + newStr.Length());
         }
     }
 
@@ -776,7 +778,7 @@ namespace o2
     }
 
     template<typename T>
-    TString<T> TString<T>::TrimedEnd(const TString& trimSymbols /*= " "*/)
+    TString<T> TString<T>::TrimedEnd(const TString& trimSymbols /*= " "*/) const
     {
         TString res(*this);
         res.TrimEnd(trimSymbols);
@@ -784,7 +786,7 @@ namespace o2
     }
 
     template<typename T>
-    TString<T> TString<T>::TrimedStart(const TString& trimSymbols /*= " "*/)
+    TString<T> TString<T>::TrimedStart(const TString& trimSymbols /*= " "*/) const
     {
         TString res(*this);
         res.TrimStart(trimSymbols);
@@ -792,7 +794,7 @@ namespace o2
     }
 
     template<typename T>
-    TString<T> TString<T>::Trimed(const TString& trimSymbols /*= " "*/)
+    TString<T> TString<T>::Trimed(const TString& trimSymbols /*= " "*/) const
     {
         TString res(*this);
         res.Trim(trimSymbols);

@@ -106,9 +106,9 @@ namespace o2
                         {
                             CFIndex length = CFDataGetLength(cfData);
                             String utf8Str;
-                            utf8Str.resize((size_t)length + 1);
-                            CFDataGetBytes(cfData, CFRangeMake(0, length), (UInt8*)&utf8Str[0]);
-                            utf8Str[(size_t)length] = '\0';
+                            utf8Str.resize((size_t)length);
+                            if (length > 0)
+                                CFDataGetBytes(cfData, CFRangeMake(0, length), (UInt8*)&utf8Str[0]);
                             ConvertString(res, utf8Str);
                             CFRelease(cfData);
                             CFRelease(flavorTypeArray);

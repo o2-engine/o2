@@ -274,3 +274,33 @@ TEST(DataValue, IntDeltaRestoresChangedValue) {
     doc.GetDelta(restored, origin);
     EXPECT_EQ(restored, curr);
 }
+
+// Moving a parsed document must keep its values readable and writable after the source is gone
+TEST(DataDocument, MoveKeepsParsedValues)
+{
+    auto parse = []()
+    {
+        DataDocument doc;
+        EXPECT_TRUE(doc.LoadFromData("{\"candidates\":[{\"content\":{\"parts\":[{\"text\":\"hello\"}]}}],\"n\":3}"));
+        return doc;
+    };
+
+    DataDocument moved = parse();
+    ASSERT_TRUE(moved.IsObject());
+    auto candidates = moved.FindMember("candidates");
+    ASSERT_TRUE(candidates && candidates->IsArray());
+    EXPECT_EQ((String)(*candidates)[0]["content"]["parts"][0]["text"], String("hello"));
+    EXPECT_EQ((int)moved["n"], 3);
+
+    DataDocument assigned;
+    assigned["old"] = 1;
+    assigned = std::move(moved);
+    EXPECT_EQ((int)assigned["n"], 3);
+    EXPECT_FALSE(moved.IsObject());
+
+    // New members allocate in the receiving document
+    for (int i = 0; i < 2000; i++)
+        assigned[(String)"key" + (String)i] = i;
+    EXPECT_EQ((int)assigned["key1999"], 1999);
+    EXPECT_EQ((String)assigned["candidates"][0]["content"]["parts"][0]["text"], String("hello"));
+}

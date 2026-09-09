@@ -27,6 +27,7 @@
 #include "o2Editor/UI/Style/EditorUIStyle.h"
 #include "o2Editor/UIRoot.h"
 #include "o2Editor/Windows/AnimationStateGraphWindow/AnimationStateGraphWindow.h"
+#include "o2Editor/Windows/PipelineWindow/PipelineWindow.h"
 #include "o2Editor/Windows/AnimationWindow/AnimationWindow.h"
 #include "o2Editor/Windows/AssetsWindow/AssetsWindow.h"
 #include "o2Editor/Windows/GameWindow/GameWindow.h"
@@ -82,6 +83,7 @@ namespace Editor
 		mMenuPanel->AddItem("View/Show Properties", [&]() { OnShowPropertiesPressed(); });
 		mMenuPanel->AddItem("View/Show Animation", [&]() { OnShowAnimationPressed(); });
 		mMenuPanel->AddItem("View/Show Animation State graph", [&]() { OnShowAnimationStateGraphPressed(); });
+        mMenuPanel->AddItem("View/Show Pipeline", [&]() { OnShowPipelinePressed(); });
         mMenuPanel->AddItem("View/Show Log", [&]() { OnShowLogPressed(); });
         mMenuPanel->AddItem("View/Show Game", [&]() { OnShowGamePressed(); });
 
@@ -325,6 +327,13 @@ namespace Editor
 		if (window)
 			window->Show();
 	}
+
+    void MenuPanel::OnShowPipelinePressed()
+    {
+        auto window = o2EditorWindows.GetWindow<PipelineWindow>();
+        if (window)
+            window->Show();
+    }
 
 	void MenuPanel::OnShowGamePressed()
     {

@@ -149,6 +149,11 @@ namespace Editor
 
 		void RebuildASGStateWidget();
 
+        void RebuildPipelineNodeStyle();
+        void RebuildPipelineIconButtonStyle();
+        void RebuildPipelineSegmentToggleStyle();
+        void RebuildPipelineMenuButtonStyles();
+
         void RebuildEditorUIManager(const String& stylesFolder, bool saveStyle = true, bool checkEditedDate = true);
 
         IOBJECT(EditorUIStyleBuilder);
@@ -308,6 +313,10 @@ CLASS_METHODS_META(Editor::EditorUIStyleBuilder)
     FUNCTION().PUBLIC().SIGNATURE(void, RebuildBacklessDropdownButton);
     FUNCTION().PUBLIC().SIGNATURE(void, RebuildMemoryAnalyzerTree);
     FUNCTION().PUBLIC().SIGNATURE(void, RebuildASGStateWidget);
+    FUNCTION().PUBLIC().SIGNATURE(void, RebuildPipelineNodeStyle);
+    FUNCTION().PUBLIC().SIGNATURE(void, RebuildPipelineIconButtonStyle);
+    FUNCTION().PUBLIC().SIGNATURE(void, RebuildPipelineSegmentToggleStyle);
+    FUNCTION().PUBLIC().SIGNATURE(void, RebuildPipelineMenuButtonStyles);
     FUNCTION().PUBLIC().SIGNATURE(void, RebuildEditorUIManager, const String&, bool, bool);
 }
 END_META;

@@ -1082,10 +1082,21 @@ namespace o2
 
 		DrawPrimitives();
 		PlatformFlushPendingClear();
-		PlatformBindRenderTarget(nullptr);
 
-		mCurrentRenderTarget = TextureRef();
-		mExtraRenderTargets.Clear();
+		// A frame being captured keeps drawing into the capture target after a nested render target is released
+		bool backToCapture = mCaptureTarget && mCurrentRenderTarget != mCaptureTarget;
+		if (backToCapture)
+		{
+			mCurrentRenderTarget = mCaptureTarget;
+			mExtraRenderTargets.Clear();
+			PlatformBindRenderTarget(mCaptureTarget);
+		}
+		else
+		{
+			PlatformBindRenderTarget(nullptr);
+			mCurrentRenderTarget = TextureRef();
+			mExtraRenderTargets.Clear();
+		}
 
 		SetupViewMatrix(mResolution);
 		SetCamera(Camera());
@@ -1257,8 +1268,9 @@ namespace o2
 
 	RectI Render::CalculateScreenSpaceScissorRect(const RectF& cameraSpaceScissorRect) const
 	{
-		float scale = mCurrentRenderTarget ? o2Integration.GetGraphicsScale() : 1.0f;
-		Vec2I resolution = Vec2I(Vec2F(mCurrentResolution) * scale);
+		// Both the screen and a render target are addressed in their own resolution units here;
+		// the backend applies the graphics scale for the screen
+		Vec2I resolution = mCurrentResolution;
 
 		Basis defaultCameraBasis((Vec2F)resolution * -0.5f, Vec2F((float)resolution.x, 0.0f), Vec2F(0.0f, (float)resolution.y));
 		Basis camTransf = mCamera.GetBasis().Inverted() * defaultCameraBasis;

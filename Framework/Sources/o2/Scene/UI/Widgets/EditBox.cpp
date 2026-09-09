@@ -436,7 +436,7 @@ namespace o2
         if (pressedState)
             *pressedState = true;
 
-        if (o2Time.GetApplicationTime() - mLastClickTime < 0.3f || o2Input.IsKeyDown(VK_CONTROL))
+        if (o2Time.GetApplicationTime() - mLastClickTime < 0.3f || o2Input.IsKeyDown(VK_CTRL_CMD))
         {
             mSelectionBegin = mSelectionEnd = GetTextCaretPosition(cursor.position);
             JumpSelection(false, false);
@@ -1121,7 +1121,7 @@ namespace o2
 
     void EditBox::CheckCharacterTyping(KeyboardKey key)
     {
-        if (o2Input.IsKeyDown(VK_CONTROL))
+        if (o2Input.IsKeyDown(VK_CONTROL) || o2Input.IsKeyDown(VK_CTRL_CMD))
             return;
 
         if (key == VK_ESCAPE)
@@ -1228,7 +1228,7 @@ namespace o2
     void EditBox::CheckCaretMoving(KeyboardKey key)
     {
         bool selecting = o2Input.IsKeyDown(VK_SHIFT);
-        bool control = o2Input.IsKeyDown(VK_CONTROL);
+        bool control = o2Input.IsKeyDown(VK_CTRL_CMD);
 
         if (key == VK_LEFT)
         {
@@ -1290,7 +1290,7 @@ namespace o2
 
     void EditBox::CheckClipboard(KeyboardKey key)
     {
-        if (!o2Input.IsKeyDown(VK_CONTROL))
+        if (!o2Input.IsKeyDown(VK_CTRL_CMD))
             return;
 
         if (key == 'C')

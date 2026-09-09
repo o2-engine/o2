@@ -301,4 +301,74 @@ namespace o2
         return true;
     }
 
+    namespace
+    {
+        struct PngMemoryWriter
+        {
+            std::string data;
+        };
+
+        void PngMemoryWriteFn(png_structp png_ptr, png_bytep bytes, png_size_t byteCountToWrite)
+        {
+            auto writer = (PngMemoryWriter*)png_get_io_ptr(png_ptr);
+            if (!writer)
+                return;
+
+            writer->data.append((const char*)bytes, byteCountToWrite);
+        }
+
+        void PngMemoryFlushFn(png_structp png_ptr) {}
+    }
+
+    bool SavePngImageToMemory(const Bitmap* image, String& out)
+    {
+        if (!image || !image->GetData())
+            return false;
+
+        png_structp png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+        if (!png_ptr)
+            return false;
+
+        png_infop info_ptr = png_create_info_struct(png_ptr);
+        if (!info_ptr)
+        {
+            png_destroy_write_struct(&png_ptr, NULL);
+            return false;
+        }
+
+        png_bytep* row_pointers = nullptr;
+        if (setjmp(png_jmpbuf(png_ptr)))
+        {
+            if (row_pointers) delete[] row_pointers;
+            png_destroy_write_struct(&png_ptr, &info_ptr);
+            return false;
+        }
+
+        PngMemoryWriter writer;
+        png_set_write_fn(png_ptr, &writer, PngMemoryWriteFn, PngMemoryFlushFn);
+
+        int width = image->GetSize().x;
+        int height = image->GetSize().y;
+        bool rgba = image->GetFormat() == PixelFormat::R8G8B8A8;
+        png_set_IHDR(png_ptr, info_ptr, (unsigned int)width, (unsigned int)height, 8,
+                     rgba ? PNG_COLOR_TYPE_RGB_ALPHA : PNG_COLOR_TYPE_RGB, PNG_INTERLACE_NONE,
+                     PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_BASE);
+
+        png_write_info(png_ptr, info_ptr);
+
+        int rowbytes = (int)png_get_rowbytes(png_ptr, info_ptr);
+        row_pointers = new png_bytep[height];
+        for (int i = 0; i < height; ++i)
+            row_pointers[height - 1 - i] = (png_bytep)image->GetData() + i * rowbytes;
+
+        png_write_image(png_ptr, row_pointers);
+        png_write_end(png_ptr, NULL);
+
+        delete[] row_pointers;
+        row_pointers = nullptr;
+        png_destroy_write_struct(&png_ptr, &info_ptr);
+
+        out = String(writer.data);
+        return true;
+    }
 }

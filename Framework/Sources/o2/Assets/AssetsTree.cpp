@@ -1,6 +1,7 @@
 #include "o2/stdafx.h"
 #include "AssetsTree.h"
 
+#include "o2/Assets/Types/BinaryAsset.h"
 #include "o2/Assets/Types/FolderAsset.h"
 #include "o2/Utils/Debug/Debug.h"
 #include "o2/Utils/Debug/Log/LogStream.h"
@@ -193,6 +194,12 @@ namespace o2
 
         Ref<AssetMeta> mmeta;
         metaData.Get<Ref<AssetMeta>>(mmeta);
+        if (!mmeta && metaData.IsObject())
+        {
+            // An asset type unknown to this build (an editor-only type) is handled as the standard binary asset, keeping its id
+            metaData["Type"] = TypeOf(DefaultAssetMeta<BinaryAsset>).GetName();
+            metaData.Get<Ref<AssetMeta>>(mmeta);
+        }
 
         Ref<AssetInfo> asset = mmake<AssetInfo>();
 

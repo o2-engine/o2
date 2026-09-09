@@ -696,8 +696,12 @@ namespace o2
     }
 
     DataDocument::DataDocument(DataDocument&& other) :
-        DataValue(other, *this), mAllocator(other.mAllocator)
-    {}
+        DataValue(*this), mAllocator(other.mAllocator)
+    {
+        mData = other.mData;
+        other.mData.flagsData.flags = Flags::Null;
+        RebindDocument(*this);
+    }
 
     DataDocument::~DataDocument()
     {
@@ -722,9 +726,33 @@ namespace o2
 
     DataDocument& DataDocument::operator=(DataDocument&& other)
     {
-        DataValue::operator=(static_cast<DataValue&&>(other));
+        if (this == &other)
+            return *this;
+
+        mAllocator.Clear();
         mAllocator = other.mAllocator;
+        mData = other.mData;
+        other.mData.flagsData.flags = Flags::Null;
+        RebindDocument(*this);
         return *this;
+    }
+
+    void DataDocument::RebindDocument(DataValue& value)
+    {
+        value.mDocument = this;
+        if (value.IsObject())
+        {
+            for (auto it = value.BeginMember(); it != value.EndMember(); ++it)
+            {
+                it->name.mDocument = this;
+                RebindDocument(it->value);
+            }
+        }
+        else if (value.IsArray())
+        {
+            for (int i = 0; i < value.GetElementsCount(); i++)
+                RebindDocument(value.GetElement(i));
+        }
     }
 
     bool DataDocument::LoadFromFile(const String& fileName, Format format /*= Format::JSON*/)

@@ -1,6 +1,8 @@
 #include "o2/stdafx.h"
 #include "AssetInfo.h"
 
+#include "o2/Assets/Types/BinaryAsset.h"
+
 #include "o2/Assets/Asset.h"
 #include "o2/Assets/AssetsTree.h"
 #include "o2/Assets/Assets.h"
@@ -79,6 +81,19 @@ namespace o2
 
     void AssetInfo::OnDeserialized(const DataValue& node)
     {
+        if (!meta)
+        {
+            // A meta of a type this build does not know is read as the standard binary asset with the same id
+            if (auto metaNode = const_cast<DataValue&>(node).FindMember("meta"))
+            {
+                if (metaNode->IsObject())
+                {
+                    (*metaNode)["Type"] = TypeOf(DefaultAssetMeta<BinaryAsset>).GetName();
+                    metaNode->Get(meta);
+                }
+            }
+        }
+
         auto thisRef = Ref(this);
         for (auto& child : mChildren)
             child->parent = thisRef;

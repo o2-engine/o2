@@ -339,6 +339,10 @@ Sound is managed by the `o2::SoundSystem` subsystem (`o2Sounds` singleton) built
 
 The network system `o2::NetworkSystem` (`o2Network` singleton) provides an HTTP client and TCP/UDP sockets. Every asynchronous operation has both a callback and a coroutine form, and all callbacks are invoked from the per-frame pump on the main thread. HTTP requests go through a platform-native backend (NSURLSession, HttpURLConnection, browser fetch) or a portable socket-based one, with engine-side cookies, response cache and redirects. On top of raw sockets there is a message level with length-prefixed framing: `TcpMessageChannel`/`TcpMessageServer` for chats and lobbies, and `UdpSocket` covers realtime gameplay exchange. The HTTP shortcuts and socket classes are also bound into scripts (`o2.Http`, `o2.TcpMessageChannel`, `o2.UdpSocket`).
 
+## Pipelines [(detailed documentation)](/Docs/en/Editor/Pipeline/internals.md)
+
+AI content pipelines are an editor-only subsystem: the `.pipeline` assets, the node registry, the executor and the provider clients live in `o2/Editor/Sources/o2Editor/Pipeline` and are not part of the runtime. A game build treats `.pipeline` files as plain binary assets. See the editor documentation for the internals and the Pipeline window.
+
 ## Scene and Actors [(detailed documentation)](/Docs/en/Architecture/HighLevel/scene.md)
 
 Above all subsystems is the scene system, accessed via the `o2Scene` singleton. It stores a list of actors (`o2::Actor`), which have components defining logic and rendering. Actors can belong to different types, such as `o2::Widget` (UI), `o2::RigidBody` (physics), or any user-defined class.

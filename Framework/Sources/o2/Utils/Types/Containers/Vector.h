@@ -82,6 +82,9 @@ namespace o2
         // Returns data pointer
         _type* Data();
 
+        // Returns data pointer
+        const _type* Data() const;
+
         // Returns count of elements in vector
         int Count() const;
 
@@ -314,6 +317,12 @@ namespace o2
 
     template<typename _type>
     _type* Vector<_type>::Data()
+    {
+        return std::vector<_type>::data();
+    }
+
+    template<typename _type>
+    const _type* Vector<_type>::Data() const
     {
         return std::vector<_type>::data();
     }
