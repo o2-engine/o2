@@ -457,6 +457,9 @@ namespace o2
 
         // Editor scrub: puts the owning actor where the clip has it at the baked frame time
         virtual void OnEditorBakeFrame(float time);
+
+        // Returns true while time changes are editor scrubbing served by baked frames; otherwise the emitter simulates forward
+        virtual bool IsEditorScrubbing() const;
 #endif
     };
 
@@ -645,6 +648,7 @@ CLASS_METHODS_META(o2::ParticlesEmitter)
     FUNCTION().PROTECTED().SIGNATURE(void, CheckBakedFrames, int);
     FUNCTION().PROTECTED().SIGNATURE(void, RestoreBakedFrame, int);
     FUNCTION().PROTECTED().SIGNATURE(void, OnEditorBakeFrame, float);
+    FUNCTION().PROTECTED().SIGNATURE(bool, IsEditorScrubbing);
 #endif
 }
 END_META;

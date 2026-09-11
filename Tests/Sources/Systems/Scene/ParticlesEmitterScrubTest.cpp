@@ -1,5 +1,6 @@
 #include "o2/stdafx.h"
 #include <gtest/gtest.h>
+#include <memory>
 
 #include "o2/Animation/AnimationClip.h"
 #include "o2/Animation/AnimationPlayer.h"
@@ -35,6 +36,15 @@ namespace
         }
 
         void Draw() override {}
+    };
+
+    // Scrub baking belongs to the editor: the scene is marked as edited for the scope
+    struct EditorSceneScope
+    {
+        bool previous = o2Scene.IsEditor();
+
+        EditorSceneScope(bool editor = true) { o2Scene.SetIsEditor(editor); }
+        ~EditorSceneScope() { o2Scene.SetIsEditor(previous); }
     };
 
     class CountingSource : public ParticleSource
@@ -131,6 +141,7 @@ TEST(ParticlesEmitterScrub, MovedEmitterRebakesFramesInPlace)
     for (bool relative : { false, true })
     {
         SceneCleanGuard guard;
+        EditorSceneScope editorScene;
 
         auto actor = mmake<Actor>(ActorCreateMode::InScene);
         actor->transform->SetSize2D(Vec2F(10, 10));
@@ -168,6 +179,7 @@ TEST(ParticlesEmitterScrub, MovedEmitterRebakesFramesInPlace)
 TEST(ParticlesEmitterScrub, RebakeKeepsParticlePattern)
 {
     SceneCleanGuard guard;
+    EditorSceneScope editorScene;
 
     auto actor = mmake<Actor>(ActorCreateMode::InScene);
     auto emitter = actor->AddComponent<ParticlesEmitterComponent>();
@@ -229,6 +241,7 @@ namespace
 {
     struct FlightRig
     {
+        std::shared_ptr<EditorSceneScope> editorScene;
         Ref<Actor> actor;
         Ref<Actor> sparks;
         Ref<ParticlesEmitterComponent> emitter;
@@ -237,9 +250,10 @@ namespace
     };
 
     // Actor flying 0 -> 400 over one second with a sub-track emitter under it
-    FlightRig MakeFlightRig(bool relative)
+    FlightRig MakeFlightRig(bool relative, bool editor = true)
     {
         FlightRig rig;
+        rig.editorScene = std::make_shared<EditorSceneScope>(editor);
         rig.actor = mmake<Actor>(ActorCreateMode::InScene);
         rig.sparks = mmake<Actor>(ActorCreateMode::InScene);
         rig.sparks->SetName("Sparks");
@@ -291,6 +305,7 @@ namespace
 TEST(ParticlesEmitterScrub, JumpScrubBakesFramesAlongThePath)
 {
     SceneCleanGuard guard;
+    EditorSceneScope editorScene;
     auto rig = MakeFlightRig(false);
 
     rig.player->SetTime(1.0f);
@@ -315,9 +330,34 @@ TEST(ParticlesEmitterScrub, JumpScrubBakesFramesAlongThePath)
     EXPECT_NEAR(maxX, actorMidX, 40.0f);
 }
 
+// A running game is not the editor: a sub-track emitter simulates forward like a shipped build.
+// Baking re-simulated every frame from the start with the whole actor tree updated per frame
+// whenever the flight was retargeted
+TEST(ParticlesEmitterScrub, RunningGameSimulatesSubTrackEmittersWithoutBaking)
+{
+    SceneCleanGuard guard;
+    auto rig = MakeFlightRig(false, false);
+
+    for (int frame = 1; frame <= 30; frame++)
+    {
+        rig.player->SetTime((float)frame/60.0f);
+        o2Scene.UpdateTransforms(); // the game loop moves the actor between frames
+    }
+
+    EXPECT_EQ(rig.emitter->GetBakedFramesCount(), 0);
+
+    float minX, maxX;
+    int alive;
+    AliveRange(rig.emitter, minX, maxX, alive);
+    EXPECT_GT(alive, 30) << "half a second of emission";
+    EXPECT_LT(minX, 40.0f) << "world-space particles stay along the path";
+    EXPECT_GT(maxX, 150.0f);
+}
+
 TEST(ParticlesEmitterScrub, RelativeParticlesTravelWithTheActorOnScrub)
 {
     SceneCleanGuard guard;
+    EditorSceneScope editorScene;
     auto rig = MakeFlightRig(true);
 
     rig.player->SetTime(1.0f);
@@ -341,6 +381,7 @@ TEST(ParticlesEmitterScrub, RelativeParticlesTravelWithTheActorOnScrub)
 TEST(ParticlesEmitterScrub, EmitterDurationChangeResizesSubTrack)
 {
     SceneCleanGuard guard;
+    EditorSceneScope editorScene;
     auto rig = MakeFlightRig(false);
 
     auto subTrack = rig.clip->GetTracks().FindOrDefault([](auto& t) { return DynamicCast<AnimationSubTrack>(t) != nullptr; });
@@ -400,6 +441,7 @@ TEST(ParticlesEmitterScrub, SubTrackPlayerAndEmitterOutliveEachOtherSafely)
 TEST(ParticlesEmitterScrub, LateSubTrackEmitterAppliesEditsWithoutScrub)
 {
     SceneCleanGuard guard;
+    EditorSceneScope editorScene;
     auto rig = MakeFlightRig(false);
     rig.emitter->SetMaxParticles(2000);
 
@@ -459,6 +501,7 @@ TEST(ParticlesEmitterScrub, PlayingFlagDoesNotBlockEditsOfSubControlledEmitter)
 TEST(ParticlesEmitterScrub, ValueTrackOnEmitterPropertyDoesNotCorruptBaking)
 {
     SceneCleanGuard guard;
+    EditorSceneScope editorScene;
     auto rig = MakeFlightRig(false);
 
     auto coefTrack = rig.clip->AddTrack<float>("child/Sparks/component/o2::ParticlesEmitterComponent/emittingCoefficient");
@@ -485,6 +528,7 @@ TEST(ParticlesEmitterScrub, ValueTrackOnEmitterPropertyDoesNotCorruptBaking)
 TEST(ParticlesEmitterScrub, OffGridScrubKeepsBakedFrames)
 {
     SceneCleanGuard guard;
+    EditorSceneScope editorScene;
     auto rig = MakeFlightRig(false);
     auto container = DynamicCast<CountingSource>(rig.emitter->GetParticlesSource())->container;
 
@@ -507,6 +551,7 @@ TEST(ParticlesEmitterScrub, OffGridScrubKeepsBakedFrames)
 TEST(ParticlesEmitterScrub, UnchangedSetterDoesNotRebake)
 {
     SceneCleanGuard guard;
+    EditorSceneScope editorScene;
     auto rig = MakeFlightRig(false);
     auto container = DynamicCast<CountingSource>(rig.emitter->GetParticlesSource())->container;
 
@@ -530,6 +575,7 @@ TEST(ParticlesEmitterScrub, UnchangedSetterDoesNotRebake)
 TEST(ParticlesEmitterScrub, BakingLeavesTheGlobalRandomUntouched)
 {
     SceneCleanGuard guard;
+    EditorSceneScope editorScene;
     auto rig = MakeFlightRig(false);
 
     srand(11);
@@ -550,6 +596,7 @@ TEST(ParticlesEmitterScrub, BakingLeavesTheGlobalRandomUntouched)
 TEST(ParticlesEmitterScrub, BakingDoesNotRestartTheFlightTrajectory)
 {
     SceneCleanGuard guard;
+    EditorSceneScope editorScene;
     auto rig = MakeFlightRig(false);
 
     auto trajectory = rig.actor->AddComponent<FlightTrajectoryComponent>();

@@ -236,6 +236,7 @@ namespace o2
     {
         mParticlesContainer = mParticlesSource->CreateContainer();
         mParticlesContainer->emitter = this;
+        mParticlesContainer->SetMaterial(GetMaterial());
     }
 
     void ParticlesEmitter::UpdateEmitting(float dt)
@@ -1004,12 +1005,19 @@ namespace o2
         mParticlesPaused = paused;
     }
 
+    bool ParticlesEmitter::IsEditorScrubbing() const
+    {
+        return true;
+    }
+
     void ParticlesEmitter::InvalidateBakedFrames()
     {
         if (mIsBaking)
             return;
 
         mBakedFrames.Clear();
+        if (!IsEditorScrubbing())
+            return;
 
         // a sub-controlled emitter never advances on its own: its playing flag is stale
         if (!mPlaying || mSubControlled)
@@ -1023,6 +1031,13 @@ namespace o2
 
     void ParticlesEmitter::Evaluate()
     {
+        if (!IsEditorScrubbing())
+        {
+            if (mSubControlled)
+                SimulateTo(mTime);
+            return;
+        }
+
         if (mIsUpdating)
         {
             int frameIdx = GetBakedFrameIndex(mTime);

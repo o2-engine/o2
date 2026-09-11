@@ -1,6 +1,7 @@
 #include "o2/stdafx.h"
 #include "o2/O2.h"
 #include "o2/Application/Application.h"
+#include "o2/Scene/Scene.h"
 #include "o2/Sound/SoundSystem.h"
 #include "o2/Scene/UI/UIManager.h"
 #include "o2/Scene/UI/Widgets/Label.h"
@@ -55,6 +56,7 @@ int main(int argc, char** argv)
     {
         app = mmake<Application>();
         app->Initialize();
+        o2Scene.SetIsEditor(true); // as the editor application does: animation scrubbing and edit-time reshapes are on
 
         EditorUIStyleBuilder().RebuildEditorUIManager("Editor UI styles", false, true);
         properties = mmake<Properties>();

@@ -4,6 +4,7 @@
 #include "o2/Render/Particles/ParticlesEffects.h"
 #include "o2/Render/Particles/ParticlesEmitter.h"
 #include "o2/Render/Particles/ParticlesEmitterShapes.h"
+#include "o2/Render/Material.h"
 
 using namespace o2;
 
@@ -220,4 +221,42 @@ TEST(ParticlesEffects, CloneKeepsEmissionParameters)
     EXPECT_FLOAT_EQ(clone->GetInitialAngleSpeed(), 90.0f);
     EXPECT_FLOAT_EQ(clone->GetInitialAngleSpeedRange(), 30.0f);
     EXPECT_FLOAT_EQ(clone->GetDuration(), emitter->GetDuration());
+}
+
+namespace
+{
+    struct MaterialProbeContainer: public ParticlesContainer
+    {
+        Ref<Material> material;
+
+        void SetMaterial(const Ref<Material>& value) override { material = value; }
+        void Update(Vector<Particle>& particles, int maxParticles) override {}
+        void Draw() override {}
+    };
+
+    struct MaterialProbeSource: public ParticleSource
+    {
+        Ref<MaterialProbeContainer> container;
+
+        Ref<ParticlesContainer> CreateContainer() override
+        {
+            container = mmake<MaterialProbeContainer>();
+            return container;
+        }
+    };
+}
+
+// A container made later (new source, deserialization) draws with the emitter's material
+TEST(ParticlesEmitter, NewContainerTakesTheEmitterMaterial)
+{
+    auto emitter = mmake<ParticlesEmitter>();
+    auto material = mmake<Material>();
+    material->SetBlendMode(BlendMode::Add);
+    emitter->SetMaterial(material);
+
+    auto source = mmake<MaterialProbeSource>();
+    emitter->SetParticlesSource(source);
+
+    ASSERT_TRUE(source->container);
+    EXPECT_EQ(source->container->material, material);
 }

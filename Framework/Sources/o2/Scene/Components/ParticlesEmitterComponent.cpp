@@ -85,6 +85,11 @@ namespace o2
     }
 
 #if IS_EDITOR
+    bool ParticlesEmitterComponent::IsEditorScrubbing() const
+    {
+        return Scene::IsSingletonInitialzed() && o2Scene.IsEditor() && !o2Scene.IsEditorPlaying();
+    }
+
     void ParticlesEmitterComponent::OnEditorBakeFrame(float time)
     {
         // play mode runs the real thing: frames are baked as the game moves the actor

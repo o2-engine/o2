@@ -2,6 +2,7 @@
 #include "Material.h"
 
 #include "o2/EngineSettings.h"
+#include "o2/Render/Render.h"
 #include "o2/Utils/Debug/Debug.h"
 #include "o2/Utils/FileSystem/FileSystem.h"
 
@@ -455,6 +456,19 @@ namespace o2
 	bool Material::Build()
 	{
 		PlatformDestroy();
+
+		// Without its own shaders a material draws with the default ones: only blending, texture and params differ
+		if ((!mVertexShader || !mFragmentShader) && Render::IsSingletonInitialzed())
+		{
+			auto& defaultMaterial = o2Render.GetDefaultMaterial();
+			if (defaultMaterial && defaultMaterial.Get() != this)
+			{
+				if (!mVertexShader)
+					mVertexShader = defaultMaterial->GetVertexShader();
+				if (!mFragmentShader)
+					mFragmentShader = defaultMaterial->GetFragmentShader();
+			}
+		}
 
 		if (!mVertexShader || !mVertexShader->IsReady() || !mFragmentShader || !mFragmentShader->IsReady())
 			return false;

@@ -65,6 +65,9 @@ namespace o2
 #if IS_EDITOR
         // Editor scrub: evaluates the clip at the frame time and brings the actor transform up to date
         void OnEditorBakeFrame(float time) override;
+
+        // Scrubs only in the editor's edit mode: a running game and play mode simulate forward like a shipped build
+        bool IsEditorScrubbing() const override;
 #endif
 
         // Beginning serialization callback
@@ -110,6 +113,7 @@ CLASS_METHODS_META(o2::ParticlesEmitterComponent)
     FUNCTION().PROTECTED().SIGNATURE(void, OnTransformUpdated);
 #if  IS_EDITOR
     FUNCTION().PROTECTED().SIGNATURE(void, OnEditorBakeFrame, float);
+    FUNCTION().PROTECTED().SIGNATURE(bool, IsEditorScrubbing);
 #endif
     FUNCTION().PROTECTED().SIGNATURE(void, OnSerialize, DataValue&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnDeserialized, const DataValue&);

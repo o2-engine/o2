@@ -2,6 +2,7 @@
 #include <gtest/gtest.h>
 
 #include "o2/Render/Material.h"
+#include "o2/Render/Render.h"
 #include "o2/Utils/Math/Color.h"
 #include "o2/Utils/Math/Vector2.h"
 
@@ -289,4 +290,19 @@ TEST(Material, SetParamsReplacesEntireListAndInvalidatesHash)
 
     size_t hashFresh = m.GetHash();
     EXPECT_NE(hashWithOld, hashFresh);
+}
+
+// A material without its own shaders draws with the default ones, keeping its blending
+TEST(Material, WithoutShadersBuildsWithTheDefaultOnes)
+{
+    ASSERT_TRUE(o2Render.GetDefaultMaterial());
+
+    auto material = mmake<Material>();
+    material->SetBlendMode(BlendMode::Add);
+
+    EXPECT_TRUE(material->Build());
+    EXPECT_TRUE(material->IsReady());
+    EXPECT_EQ(material->GetVertexShader(), o2Render.GetDefaultMaterial()->GetVertexShader());
+    EXPECT_EQ(material->GetFragmentShader(), o2Render.GetDefaultMaterial()->GetFragmentShader());
+    EXPECT_EQ(material->GetBlendMode(), BlendMode::Add);
 }
