@@ -114,6 +114,18 @@ TEST(ScriptSceneApi, MaterialParamsBuildFromScript)
 	EXPECT_FLOAT_EQ(param->GetValue(), 0.75f);
 }
 
+TEST(ScriptSceneApi, EmitterRewindsAndPlaysFromScript)
+{
+	auto res = EvalChecked(
+		"var sceneApi_burst = new o2.ParticlesEmitterComponent();"
+		"sceneApi_burst.Stop();"
+		"var sceneApi_wasPlaying = sceneApi_burst.IsPlaying();"
+		"sceneApi_burst.RewindAndPlay();"
+		"!sceneApi_wasPlaying && sceneApi_burst.IsPlaying()");
+
+	EXPECT_TRUE(res.GetValue<bool>());
+}
+
 TEST(ScriptSceneApi, HeadlessFlagVisibleFromScript)
 {
 	auto res = EvalChecked("o2.Integration.IsHeadless()");

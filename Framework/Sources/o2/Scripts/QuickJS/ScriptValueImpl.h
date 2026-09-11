@@ -930,6 +930,7 @@ namespace o2
                 data.Set(value.ToBool());
             else if (type == ScriptValue::ValueType::Array)
             {
+                data.SetArray();
                 int length = value.GetLength();
                 for (int i = 0; i < length; i++)
                     data.AddElement().Set(value.GetElement(i));
@@ -972,6 +973,7 @@ namespace o2
                 value = String(data.GetString());
             else if (data.IsArray())
             {
+                value = ScriptValue::EmptyArray();
                 for (auto& element : data)
                 {
                     ScriptValue newElement;

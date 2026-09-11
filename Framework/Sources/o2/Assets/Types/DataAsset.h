@@ -23,6 +23,9 @@ namespace o2
         // Check equals operator
         DataAsset& operator=(const DataAsset& asset);
 
+        // Returns data as JSON text @SCRIPTABLE
+        String GetJson() const;
+
         // Returns extensions string
         static Vector<String> GetFileExtensions();
 
@@ -65,6 +68,7 @@ CLASS_METHODS_META(o2::DataAsset)
 
     FUNCTION().PUBLIC().CONSTRUCTOR();
     FUNCTION().PUBLIC().CONSTRUCTOR(const DataAsset&);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(String, GetJson);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(Vector<String>, GetFileExtensions);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetEditorIcon);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(int, GetEditorSorting);

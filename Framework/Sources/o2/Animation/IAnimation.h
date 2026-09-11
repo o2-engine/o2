@@ -72,7 +72,7 @@ namespace o2
         // value writes made then replay the clip and are not timeline events
         static bool IsEvaluatingSubControlOwner();
 
-        // Starting playing animation 
+        // Starting playing animation @SCRIPTABLE
         virtual void Play();
 
         // Starting playing animation in bounds
@@ -84,10 +84,10 @@ namespace o2
         // Toggles animation direction
         virtual void TogglePlay();
 
-        // Rewinds to starts and play animation
+        // Rewinds to starts and play animation @SCRIPTABLE
         virtual void RewindAndPlay();
 
-        // Stops animation
+        // Stops animation @SCRIPTABLE
         virtual void Stop();
 
         // Sets begin time bound
@@ -111,7 +111,7 @@ namespace o2
         // Sets playing flag
         virtual void SetPlaying(bool playing);
 
-        // Returns true if animation playing
+        // Returns true if animation playing @SCRIPTABLE
         virtual bool IsPlaying() const;
 
         // Sets time
@@ -264,12 +264,12 @@ CLASS_METHODS_META(o2::IAnimation)
     FUNCTION().PUBLIC().SIGNATURE(const Function<void(float)>&, GetSubControlEvaluator);
     FUNCTION().PUBLIC().SIGNATURE(void, EvaluateSubControlOwner, float);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(bool, IsEvaluatingSubControlOwner);
-    FUNCTION().PUBLIC().SIGNATURE(void, Play);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, Play);
     FUNCTION().PUBLIC().SIGNATURE(void, PlayInBounds, float, float);
     FUNCTION().PUBLIC().SIGNATURE(void, PlayBackInBounds, float, float);
     FUNCTION().PUBLIC().SIGNATURE(void, TogglePlay);
-    FUNCTION().PUBLIC().SIGNATURE(void, RewindAndPlay);
-    FUNCTION().PUBLIC().SIGNATURE(void, Stop);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, RewindAndPlay);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, Stop);
     FUNCTION().PUBLIC().SIGNATURE(void, SetBeginBound, float);
     FUNCTION().PUBLIC().SIGNATURE(float, GetBeginBound);
     FUNCTION().PUBLIC().SIGNATURE(void, SetEndBound, float);
@@ -277,7 +277,7 @@ CLASS_METHODS_META(o2::IAnimation)
     FUNCTION().PUBLIC().SIGNATURE(void, SetBounds, float, float);
     FUNCTION().PUBLIC().SIGNATURE(void, ResetBounds);
     FUNCTION().PUBLIC().SIGNATURE(void, SetPlaying, bool);
-    FUNCTION().PUBLIC().SIGNATURE(bool, IsPlaying);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(bool, IsPlaying);
     FUNCTION().PUBLIC().SIGNATURE(void, SetTime, float);
     FUNCTION().PUBLIC().SIGNATURE(float, GetTime);
     FUNCTION().PUBLIC().SIGNATURE(float, GetLoopTime);

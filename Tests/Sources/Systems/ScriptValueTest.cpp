@@ -1,6 +1,7 @@
 #include "o2/stdafx.h"
 #include <gtest/gtest.h>
 #include "o2/Scripts/ScriptValue.h"
+#include "o2/Utils/Serialization/DataValue.h"
 #include "o2/Scripts/ScriptEngine.h"
 #include "o2/Utils/Math/Vector2.h"
 #include "o2/Utils/Types/Containers/Vector.h"
@@ -685,3 +686,33 @@ TEST(ScriptValue, ScriptingDisabled) {
 }
 
 #endif // IS_SCRIPTING_SUPPORTED
+
+// Script component fields go through DataValue in scenes: an empty list must stay a list
+TEST(ScriptValue, EmptyArrayRoundTripsThroughDataValue) {
+    ScriptValue source = o2Scripts.Eval("({ levels: [], nested: { cells: [] }, filled: [1, 2] })");
+
+    DataDocument data;
+    data.Set(source);
+    ASSERT_TRUE(data.FindMember("levels"));
+    EXPECT_TRUE(data["levels"].IsArray());
+    EXPECT_TRUE(data["nested"]["cells"].IsArray());
+
+    ScriptValue restored;
+    data.Get(restored);
+    o2Scripts.GetGlobal().SetProperty("dataRoundTrip_restored", restored);
+    EXPECT_TRUE(o2Scripts.Eval("Array.isArray(dataRoundTrip_restored.levels) && dataRoundTrip_restored.levels.length == 0").GetValue<bool>());
+    EXPECT_TRUE(o2Scripts.Eval("Array.isArray(dataRoundTrip_restored.nested.cells)").GetValue<bool>());
+    EXPECT_EQ(o2Scripts.Eval("dataRoundTrip_restored.filled.length").GetValue<int>(), 2);
+}
+
+// Reading a list into a value that already holds one replaces it instead of appending
+TEST(ScriptValue, ArrayReadReplacesExistingArray) {
+    DataDocument data;
+    data.SetArray();
+    data.AddElement().Set(7.0f);
+
+    ScriptValue value = o2Scripts.Eval("[1, 2, 3]");
+    data.Get(value);
+    EXPECT_EQ(value.GetLength(), 1);
+    EXPECT_FLOAT_EQ(value.GetElement(0).ToNumber(), 7.0f);
+}

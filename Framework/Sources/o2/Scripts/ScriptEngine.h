@@ -4,6 +4,8 @@
 
 #include "o2/Scripts/ScriptValue.h"
 #include "o2/Utils/Singleton.h"
+#include "o2/Utils/System/Time/TimeStamp.h"
+#include "o2/Utils/Types/Containers/Map.h"
 #include "o2/Utils/Types/Ref.h"
 #include "o2/Utils/Types/String.h"
 
@@ -79,6 +81,12 @@ namespace o2
         // Starts debugging session and waits for connect
         void ConnectDebugger() const;
 
+        // Runs the script asset at path (relative to the assets) unless it already ran unchanged; scripts reach it as include(path)
+        bool Include(const String& path);
+
+    private:
+        Map<String, TimeStamp> mIncludedScripts; // Included script paths and the dates of the files they ran from
+
     private:
         // Registers all types from reflection
         void RegisterTypes();
@@ -88,6 +96,9 @@ namespace o2
 
         // Runs built in script from file
         void RunBuiltinScript(const String& filename);
+
+        // Registers include() and o2.FileSystem for scripts
+        void RegisterBuiltinFunctions();
 
     private:
         typedef void(*RegisterConstructorFunc)(void*, ScriptPrototypeProcessor&);

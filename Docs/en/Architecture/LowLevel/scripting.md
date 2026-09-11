@@ -5,6 +5,24 @@ The scripting engine is managed by the `o2::ScriptEngine` subsystem, with quick 
 
 It also manages connecting the debugger.
 
+### Script libraries and data
+Scripts attached to components (`o2::ScriptableComponent`) define one class each. Code shared between them lives in plain script assets and is pulled in with `include(path)` (a path inside the assets, like `"Scripts/Game/Core/Board.js"`): the file runs in the global scope once and again only after its built file changes; scripts including each other do not loop; `include` returns `false` on a missing or broken file and logs why.
+
+`o2.FileSystem.ReadFile(path)` (`undefined` for a missing file), `WriteFile(path, text)`, `IsFileExist(path)` and `FileDelete(path)` give scripts plain text files, e.g. a save file. A data asset reaches scripts as JSON text: `JSON.parse(new o2.AssetRefDataAsset(path).Get().GetJson())`.
+
+<details>
+<summary>Example</summary>
+
+```js
+include("Scripts/Game/Core/Board.js");
+
+var campaign = JSON.parse(new o2.AssetRefDataAsset("Game/campaign.json").Get().GetJson());
+var saved = o2.FileSystem.ReadFile("progress.json");
+var progress = saved !== undefined ? JSON.parse(saved) : { level: 0 };
+o2.FileSystem.WriteFile("progress.json", JSON.stringify(progress));
+```
+</details>
+
 ### Script value wrapper, o2::ScriptValue
 This class is a universal wrapper of any script value. It can hold a simple type (number, string, bool ...) as well as arrays, objects and functions.
 
@@ -21,6 +39,8 @@ There is also a `Construct` function for constructing an object from a construct
 
 #### Arrays
 For working with arrays there are element access functions: `operator[int]` and `Set/GetElement`. As well as getting the array length, `GetLength()`. And adding/removing an element of the array: `Add/RemoveElement`.
+
+Script values serialize to `DataValue` and back (fields of script components in scenes and prototypes): an array stays an array even when empty, and reading an array replaces the value instead of appending to it.
 
 #### Functions
 A variable can also hold a function that can be called. It can be called passing C++ parameters through templates, in which case they are converted internally into script values: `Invoke`. Or directly with already prepared script values: `InvokeRaw`.

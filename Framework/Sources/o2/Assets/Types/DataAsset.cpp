@@ -20,6 +20,11 @@ namespace o2
         return *this;
     }
 
+    String DataAsset::GetJson() const
+    {
+        return data.SaveAsString(DataDocument::Format::JSON);
+    }
+
     Vector<String> DataAsset::GetFileExtensions()
     {
         return { "json" };
