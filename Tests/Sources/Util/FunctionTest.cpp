@@ -277,6 +277,32 @@ TEST(Function, HandlerAddingDelegateDuringDispatchIsNotCalledNow)
     EXPECT_EQ(added, 1);
 }
 
+// A subscription during dispatch must keep later removals tombstoned: erasing would shift the slots
+// and the dispatch would reach the new handler
+TEST(Function, HandlerAddingThenAnotherRemovingDuringDispatch)
+{
+    Function<void()> event;
+    DispatchSubscriber b, c;
+    b.event = &event; c.event = &event;
+    b.removeOther = true;
+    b.other = &c;
+
+    int added = 0;
+    event += [&]() { event += [&]() { added++; }; };
+    event += MakeFunction(&b, &DispatchSubscriber::OnEvent);
+    event += MakeFunction(&c, &DispatchSubscriber::OnEvent);
+
+    event();
+    EXPECT_EQ(b.calls, 1);
+    EXPECT_EQ(c.calls, 0);
+    EXPECT_EQ(added, 0);
+
+    event();
+    EXPECT_EQ(b.calls, 2);
+    EXPECT_EQ(c.calls, 0);
+    EXPECT_EQ(added, 1);
+}
+
 TEST(Function, RecursiveInvokeFromHandlerRemovingOthers)
 {
     Function<void()> event;

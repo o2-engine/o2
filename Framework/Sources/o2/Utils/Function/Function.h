@@ -465,8 +465,10 @@ namespace o2
                 mData.functions.push_back(firstFunction);
             }
             else if (mData.typeData.type == DataType::Empty)
+            {
                 new (&mData.functions) std::vector<IFunction<_res_type(_args ...)>*>();
                 mData.typeData.dispatchDepth = 0;
+            }
 
             mData.typeData.type = DataType::CoupleOfFunctions;
         }
