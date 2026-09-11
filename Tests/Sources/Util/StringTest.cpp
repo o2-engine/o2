@@ -12,3 +12,11 @@ TEST(String, ReplaceAllMovesPastEveryReplacement)
     EXPECT_EQ(String("abc").ReplacedAll("", "-"), String("abc"));
     EXPECT_EQ(String("no match").ReplacedAll("/", " / "), String("no match"));
 }
+
+TEST(String, PopBackRemovesAndReturnsTheLastSymbol)
+{
+    WString text = "cd\n";
+    EXPECT_EQ(text.PopBack(), L'\n');
+    EXPECT_EQ(text, WString("cd"));
+    EXPECT_EQ(text.Length(), 2);
+}

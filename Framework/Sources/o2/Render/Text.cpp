@@ -666,6 +666,7 @@ namespace o2
                 curLine = &mLines.Last();
                 curLine->mSize.y = linesDist;
                 curLine->mLineBegSymbol = i + 1;
+                wrapCharIdx = -1;
             }
             else if (mText[i] == ' '/* || mFont->mAllSymbolReturn*/)
             {

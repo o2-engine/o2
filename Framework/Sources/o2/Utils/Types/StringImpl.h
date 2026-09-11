@@ -858,9 +858,8 @@ namespace o2
     template<typename T>
     T TString<T>::PopBack()
     {
-        int l = Length();
-        T res = (*this)[l - 1];
-        (*this)[l] = '\0';
+        T res = std::basic_string<T>::back();
+        std::basic_string<T>::pop_back();
         return res;
     }
 
