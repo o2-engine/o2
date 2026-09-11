@@ -108,6 +108,28 @@ namespace o2
                          (float)(gCanvasResolution.y * 0.5 - y));
         }
 
+        // Where the canvas sits in the page. The hosting page may put chrome
+        // above or beside it (the web editor's top bar and agent panel do), and
+        // the events bound to the window report window coordinates.
+        Vec2F gCanvasOffset;
+
+        void RefreshCanvasOffset()
+        {
+            gCanvasOffset = Vec2F((float)EM_ASM_DOUBLE({
+                var c = document.getElementById('canvas');
+                return c ? c.getBoundingClientRect().left : 0;
+            }), (float)EM_ASM_DOUBLE({
+                var c = document.getElementById('canvas');
+                return c ? c.getBoundingClientRect().top : 0;
+            }));
+        }
+
+        // For the handlers bound to the window rather than to the canvas
+        Vec2F GetWindowCursorPos(double x, double y)
+        {
+            return GetCanvasCursorPos(x - gCanvasOffset.x, y - gCanvasOffset.y);
+        }
+
         // Unhandled keys are left to the browser (EM_FALSE): consuming them would kill the
         // page shortcuts, while the handled ones must be consumed so arrows and space don't
         // scroll the page under the canvas
@@ -155,6 +177,7 @@ namespace o2
         EM_BOOL OnMouseDown(int, const EmscriptenMouseEvent* e, void*)
         {
             if (!Application::IsSingletonInitialzed()) return EM_TRUE;
+            RefreshCanvasOffset();   // the page may have moved the canvas since the last one
             Vec2F p = GetCanvasCursorPos(e->targetX, e->targetY);
             if (e->button == 0) o2Input.OnCursorPressed(p);
             return EM_TRUE;
@@ -171,7 +194,7 @@ namespace o2
         {
             if (Application::IsSingletonInitialzed())
             {
-                o2Input.OnCursorMoved(GetCanvasCursorPos(e->targetX, e->targetY));
+                o2Input.OnCursorMoved(GetWindowCursorPos(e->targetX, e->targetY));
 
                 // A mouseup that happened outside the window may never arrive: a move with the
                 // button bit cleared while the cursor is still held down is that missed release
@@ -220,6 +243,7 @@ namespace o2
             if (newSize.x <= 0) newSize.x = 1;
             if (newSize.y <= 0) newSize.y = 1;
 
+            RefreshCanvasOffset();
             if (newSize != gCanvasResolution)
             {
                 gCanvasResolution = newSize;
@@ -261,6 +285,7 @@ namespace o2
         if (w <= 0 || h <= 0) { w = 960; h = 640; }
         gCanvasResolution = Vec2I((int)w, (int)h);
         emscripten_set_canvas_element_size("#canvas", gCanvasResolution.x, gCanvasResolution.y);
+        RefreshCanvasOffset();
 
         emscripten_set_keydown_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, nullptr, EM_TRUE, OnKeyDown);
         emscripten_set_keyup_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, nullptr, EM_TRUE, OnKeyUp);
