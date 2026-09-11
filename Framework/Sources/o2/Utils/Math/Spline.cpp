@@ -97,7 +97,7 @@ namespace o2
         const ApproximationVec2F& segEndRight = rightKey.mRightApproxValues[segEndIdx];
 
         float dist = segEndLeft.position - segBeginLeft.position;
-        float coef = (position - segBeginLeft.position) / dist;
+        float coef = dist != 0.0f ? (position - segBeginLeft.position) / dist : 0.0f;
 
         return Math::Lerp(Math::Lerp(segBeginLeft.value, segEndLeft.value, coef),
                           Math::Lerp(segBeginRight.value, segEndRight.value, coef), randomRangeCoef);

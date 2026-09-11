@@ -106,7 +106,7 @@ namespace o2
         const ApproximationValue& segBottomRight = rightKey.mApproxBottomValues[segRightIdx];
 
         float dist = segTopRight.position - segTopLeft.position;
-        float coef = (position - segTopLeft.position) / dist;
+        float coef = dist != 0.0f ? (position - segTopLeft.position) / dist : 0.0f;
 
         float topSegValue = Math::Lerp(segTopLeft.value, segTopRight.value, coef);
         float bottomSegValue = Math::Lerp(segBottomLeft.value, segBottomRight.value, coef);

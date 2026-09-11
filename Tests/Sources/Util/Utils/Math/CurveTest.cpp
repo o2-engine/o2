@@ -102,3 +102,16 @@ TEST(Curve, EvaluateOutsideKeysHoldsEndValues)
     EXPECT_GT(c.Evaluate(0.25f), 0.1f);
     EXPECT_LT(c.Evaluate(0.25f), 0.9f);
 }
+
+// Coincident keys form a zero-length segment: the first key's value wins instead of a 0/0 blend
+TEST(Curve, CoincidentKeysGiveTheFirstKeyValue)
+{
+    Curve c;
+    c.InsertKey(0.0f, 1.0f);
+    c.InsertKey(0.0f, 2.0f);
+    c.InsertKey(1.0f, 3.0f);
+
+    float value = c.Evaluate(0.0f);
+    EXPECT_FALSE(std::isnan(value));
+    EXPECT_NEAR(value, 1.0f, 0.001f);
+}

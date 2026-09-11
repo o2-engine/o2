@@ -339,7 +339,7 @@ namespace o2
         const ApproximationValue& segRight = rightKey.mCurveApproxValues[segRightIdx];
 
         float dist = segRight.position - segLeft.position;
-        float coef = (position - segLeft.position) / dist;
+        float coef = dist != 0.0f ? (position - segLeft.position) / dist : 0.0f;
         float curveCoef = Math::Lerp(segLeft.value, segRight.value, coef);
 
         return Math::Lerp(leftKey.value, rightKey.value, curveCoef);

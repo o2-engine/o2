@@ -52,7 +52,8 @@ namespace o2
         const Key& leftKey = mKeys[keyLeftIdx];
         const Key& rightKey = mKeys[rightKeyIdx];
 
-        float coef = (position - leftKey.position)/(rightKey.position - leftKey.position);
+        float dist = rightKey.position - leftKey.position;
+        float coef = dist != 0.0f ? (position - leftKey.position)/dist : 0.0f;
         return Math::Lerp(leftKey.value, rightKey.value, coef);
     }
 

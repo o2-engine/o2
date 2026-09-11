@@ -66,3 +66,37 @@ TEST(AnimationTrackRange, Vec2FTrackHoldsEndValues)
     EXPECT_NEAR(after.x, 10.0f, 0.01f);
     EXPECT_NEAR(after.y, 20.0f, 0.01f);
 }
+
+// Coincident keys form a zero-length segment: the first key's value wins instead of a 0/0 blend
+TEST(AnimationTrackCoincidentKeys, Vec3FTrackGivesTheFirstKeyValue)
+{
+    AnimationTrack<Vec3F> track;
+    track.AddKey(0.0f, Vec3F(1, 2, 3));
+    track.AddKey(0.0f, Vec3F(4, 5, 6));
+    track.AddKey(1.0f, Vec3F(7, 8, 9));
+
+    Vec3F value = track.GetValue(0.0f);
+    EXPECT_FALSE(std::isnan(value.x));
+    EXPECT_NEAR(value.x, 1.0f, 0.001f);
+    EXPECT_NEAR(value.z, 3.0f, 0.001f);
+}
+
+TEST(AnimationTrackCoincidentKeys, Color4TrackGivesTheFirstKeyValue)
+{
+    AnimationTrack<Color4> track;
+    track.AddKey(0.0f, Color4::Red());
+    track.AddKey(0.0f, Color4::Blue());
+    track.AddKey(1.0f, Color4::Blue());
+
+    EXPECT_EQ(track.GetValue(0.0f), Color4::Red());
+}
+
+TEST(AnimationTrackCoincidentKeys, GenericTrackGivesTheFirstKeyValue)
+{
+    AnimationTrack<bool> track;
+    track.AddKey(0.0f, true);
+    track.AddKey(0.0f, false);
+    track.AddKey(1.0f, false);
+
+    EXPECT_TRUE(track.GetValue(0.0f));
+}

@@ -72,3 +72,17 @@ TEST(Spline, IndexOperatorReturnsKey)
     s.AppendKey(Vec2F(3, 4));
     EXPECT_EQ(s[0].value, Vec2F(3, 4));
 }
+
+// Two keys at one point form a zero-length segment: evaluating there gives that point, not a 0/0 blend
+TEST(Spline, CoincidentKeysEvaluateToTheirPoint)
+{
+    Spline s;
+    s.AppendKey(Vec2F(0, 0), 0.0f, Vec2F(), Vec2F());
+    s.AppendKey(Vec2F(0, 0), 0.0f, Vec2F(), Vec2F());
+    s.AppendKey(Vec2F(4, 0), 0.0f, Vec2F(), Vec2F());
+
+    Vec2F value = s.Evaluate(0.0f);
+    EXPECT_FALSE(std::isnan(value.x) || std::isnan(value.y));
+    EXPECT_NEAR(value.x, 0.0f, 0.001f);
+    EXPECT_NEAR(value.y, 0.0f, 0.001f);
+}
