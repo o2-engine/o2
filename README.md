@@ -5,11 +5,27 @@
 [![WebAssembly](https://github.com/o2-engine/o2-Template/actions/workflows/wasm-cmake.yml/badge.svg?branch=main)](https://github.com/o2-engine/o2-Template/actions/workflows/wasm-cmake.yml)
 [![Android](https://github.com/o2-engine/o2-Template/actions/workflows/android-cmake.yml/badge.svg?branch=main)](https://github.com/o2-engine/o2-Template/actions/workflows/android-cmake.yml)
 
+[![Tests](https://img.shields.io/badge/tests-2464%20cases-brightgreen)](/Tests)
+
 # o2
 
-o2 - it's an open-source technology for easy making 2D games and applications for mobile and PC platforms using C++ and JavaScript with visual editor. The main features are performance, usability and effective development. [More about motiovation and architecture](/Docs/en/main.md) ([rus](/Docs/ru/main.md))
+o2 - it's an open-source technology for easy making 2D games and applications for mobile and PC platforms using C++ and JavaScript with visual editor. The main features are performance, usability and effective development. [More about motivation and architecture](/Docs/en/main.md) ([rus](/Docs/ru/main.md))
 
-Here is the test project: https://github.com/zenkovich/PetStory
+- [Web editor demo](https://o2editor.zenkovich.space/) — the o2 editor running in the browser
+- [Demo projects](https://games.zenkovich.space/) — games made with o2, playable in the browser
+
+Start a new project from [o2-Template](https://github.com/o2-engine/o2-Template) — a minimal game project with the engine as a submodule; CMake builds the game, the editor and the tests:
+
+```sh
+git clone --recursive https://github.com/o2-engine/o2-Template.git MyGame
+cd MyGame
+cmake --preset mac                 # windows / linux; *-release for release builds
+cmake --build --preset mac -j 8
+Bin/Mac/Editor                     # the editor with the project opened
+Bin/Mac/Game                       # the game
+```
+
+Binaries go to `Bin/<Platform>/`. `GenerateProject.command` / `GenerateProject.bat` generate an Xcode / Visual Studio / CLion project from the same presets. iOS, Android, WebAssembly and web editor builds, the project layout and how to rename the game are in the [o2-Template README](https://github.com/o2-engine/o2-Template#readme).
 
 **Now work in progress.**
 
@@ -20,38 +36,19 @@ Here is the test project: https://github.com/zenkovich/PetStory
 ![](https://github.com/zenkovich/o2/blob/master/editor.png)
 
 ### Features
-- Assets  
-Automatic assets building and converting, automatic atlases packing, easy to add to project, flixible configuration.
-
-- Scenes  
-Component-objects based scene graph, nested prototypes and good integration with editor
-
-- UI  
-Fast and flexible UI system, a lot of default widgets, styles, integration with scenes
-
-- Render  
-Easy to learn rendering system with meshes, fonts, sprites, culling, shaders and render targets.
-
-- Sound (WIP)
-Playing sounds, music, streaming sounds, audio mixer
-
-- Animations  
-Animate everything, retargeting, easy to serialize, layers, weights, IK, animation state machine, mesh skinning, editor integradion
-
-- Effects  
-Particle emitters with different forms, particle effects, editor integration
-
-- Physics  
-Rigid bodies, colliders, joints, effects
-
-- Input  
-Multiplatform input processing, easy clicks and touches processing
-
-- Platforms 
-Windows, IOS (WIP), Android (WIP), MAC OSX (WIP), Webassembly (WIP)
-
-- Scripting
-JavaScript on jerry script engine
-
-- Editor  
-Flexible editor "all-in-one", plugins
+- **Platforms** — Windows, macOS, Linux, iOS, Android, WebAssembly.
+- **Assets** — automatic building and converting, atlas packing and texture compression, references by uid, assets embedded into scenes and prototypes. Images, fonts, sounds, video, Spine, 3D and skinned models, shaders, materials, scripts.
+- **Scenes** — component-based actor hierarchy, nested prototypes (prefabs) with overrides, layers and explicit draw order, tags, cameras, incremental loading.
+- **UI** — part of the scene: anchored layout, widget layers, animated states, layout containers and a wide set of widgets (buttons, labels, edit boxes, lists, trees, drop-downs, scroll areas, windows, context menus). The whole editor is built on it.
+- **Render** — OpenGL, WebGL and Metal backends with batching, render targets, stencil masks, shaders and materials. Sprites (9-slice, tiled, fill), bitmap and vector fonts with effects, 2D and 3D meshes, forward and deferred pipelines with lights, hardware-decoded video, multithreaded rendering on Metal.
+- **Animations** — animate any field through reflection, curves, layers and weights, animation state graph, skinned meshes with bones, Spine, animations built from code; sounds, video and particles as animation sub-tracks.
+- **Effects** — particle emitters with shapes and effects, sprite or frame-by-frame particles, 3D billboard mode, scrubbing in the editor.
+- **Physics** — 2D on Box2D and 3D on Box3D: rigid bodies, box, circle and spline colliders (box, sphere and capsule in 3D), joints.
+- **Sound** — built on miniaudio: wav, ogg, mp3, flac, spatial sound with listeners, sounds as animation tracks.
+- **Input** — keyboard, mouse and multi-touch on every platform; clicks and hover aware of draw order and clipping; shortcuts.
+- **Network** — HTTP client over native backends, TCP/UDP sockets and message channels, callback and coroutine APIs, available in scripts.
+- **Scripting** — JavaScript and TypeScript on QuickJS, JerryScript or the browser's JS engine; C++ types are bound automatically through reflection.
+- **Core** — reflection and serialization generated by CodeTool, smart pointers with leak analysis, properties, multicast delegates, jobs and coroutines, built-in profiler and Tracy support.
+- **Editor** — "all-in-one" editor with dockable windows: scene (2D and 3D view), hierarchy, properties, assets, animation and state graph editors, game window with resolution emulation, log, memory analyzer. Transform, mesh, skeleton and spline tools, undo/redo, play mode with pause, frame step and speed control. Runs natively and in the browser.
+- **AI** — node-based content pipelines in the editor: image generation and editing, background removal, sound effects, speech, music and video (Gemini, ElevenLabs, Veo, Kling). The web editor has a built-in Claude Code agent, and a local Claude Code can drive the editor through an MCP server.
+- **Tests** — GoogleTest suites for the engine, rendering and editor, headless and rendered; an app test driver with input injection and screenshots.
