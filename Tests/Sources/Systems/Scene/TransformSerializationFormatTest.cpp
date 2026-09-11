@@ -9,7 +9,7 @@
 using namespace o2;
 
 // Locks the on-disk "Transform" node format: flat Vec3F members named position/size/scale/pivot/
-// eulerAngles/shear (+ anchors/offsets/minSize/maxSize/weight for widgets). Legacy formats must
+// eulerAngles/shear (widgets: anchors/offsets/minSize/maxSize/weight + pivot only). Legacy formats must
 // still load: pre-3D (2D vectors, float angle and shear) and phase-2 (positionZ/angleXY/scaleZ).
 
 namespace
@@ -163,12 +163,12 @@ TEST(TransformSerializationFormat, WidgetLayoutWritesOwnFieldsOnly)
     doc.Set(static_cast<const ActorTransform&>(l));
 
     ASSERT_TRUE(doc.IsObject());
-    EXPECT_EQ(doc.GetMembersCount(), 7);
+    EXPECT_EQ(doc.GetMembersCount(), 8);
 
     EXPECT_EQ(doc.FindMember("position"), nullptr);
     EXPECT_EQ(doc.FindMember("size"), nullptr);
     EXPECT_EQ(doc.FindMember("scale"), nullptr);
-    EXPECT_EQ(doc.FindMember("pivot"), nullptr);
+    EXPECT_EQ(GetVec3(doc, "pivot"), Vec3F(0.5f, 0.5f, 0)); // the only base field a widget keeps
     EXPECT_EQ(doc.FindMember("eulerAngles"), nullptr);
     EXPECT_EQ(doc.FindMember("shear"), nullptr);
 
@@ -195,6 +195,7 @@ TEST(TransformSerializationFormat, WidgetLayoutUsesDeclaredDefaultsForSkipping)
     EXPECT_EQ(doc.FindMember("minSize"), nullptr);
     EXPECT_EQ(doc.FindMember("maxSize"), nullptr);
     EXPECT_EQ(doc.FindMember("weight"), nullptr);
+    EXPECT_EQ(doc.FindMember("pivot"), nullptr);
 
     EXPECT_EQ(GetVec2(doc, "anchorMax"), Vec2F(1, 1));
     EXPECT_EQ(GetVec2(doc, "offsetMax"), Vec2F(0, 0));
@@ -205,6 +206,7 @@ TEST(TransformSerializationFormat, WidgetLayoutDeserializeReadsFields)
     WidgetLayout l(Vec2F(0.1f, 0.2f), Vec2F(0.7f, 0.8f), Vec2F(1, 2), Vec2F(3, 4));
     l.SetMinimalSize(Vec2F(5, 6));
     l.SetWeight(Vec2F(2, 3));
+    l.SetPivot2D(Vec2F(0.5f, 0.5f));
 
     DataDocument doc;
     doc.Set(static_cast<const ActorTransform&>(l));
@@ -218,6 +220,7 @@ TEST(TransformSerializationFormat, WidgetLayoutDeserializeReadsFields)
     EXPECT_EQ(r.GetOffsetMax(), Vec2F(3, 4));
     EXPECT_EQ(r.GetMinimalSize(), Vec2F(5, 6));
     EXPECT_EQ(r.GetWeight(), Vec2F(2, 3));
+    EXPECT_EQ(r.GetPivot2D(), Vec2F(0.5f, 0.5f));
 }
 
 TEST(TransformSerializationFormat, PlainTransformDeltaWritesOnlyDifferences)
@@ -272,15 +275,21 @@ TEST(TransformSerializationFormat, WidgetLayoutDeltaSkipsBaseTransformFields)
 
     WidgetLayout changed(origin);
     changed.SetAnchorMin(Vec2F(0.5f, 0.5f));
-    changed.SetPivot2D(Vec2F(0.1f, 0.9f)); // differs from origin, but disabled for serialization
+    changed.SetPivot2D(Vec2F(0.1f, 0.9f));
 
     DataDocument doc;
     changed.SerializeDelta(doc, origin);
 
     ASSERT_TRUE(doc.IsObject());
-    EXPECT_EQ(doc.GetMembersCount(), 1);
+    EXPECT_EQ(doc.GetMembersCount(), 2);
+    EXPECT_EQ(doc.FindMember("position"), nullptr);
     EXPECT_EQ(GetVec2(doc, "anchorMin"), Vec2F(0.5f, 0.5f));
-    EXPECT_EQ(doc.FindMember("pivot"), nullptr);
+    EXPECT_EQ(GetVec3(doc, "pivot"), Vec3F(0.1f, 0.9f, 0));
+
+    WidgetLayout same(origin);
+    DataDocument sameDoc;
+    same.SerializeDelta(sameDoc, origin);
+    EXPECT_EQ(sameDoc.FindMember("pivot"), nullptr); // an equal pivot is inherited, not written
 
     WidgetLayout restored;
     restored.DeserializeDelta(doc, origin);
@@ -288,5 +297,5 @@ TEST(TransformSerializationFormat, WidgetLayoutDeltaSkipsBaseTransformFields)
     EXPECT_EQ(restored.GetAnchorMin(), Vec2F(0.5f, 0.5f));
     EXPECT_EQ(restored.GetAnchorMax(), Vec2F(1, 1));
     EXPECT_EQ(restored.GetOffsetMax(), Vec2F(0, 0));
-    EXPECT_EQ(restored.GetPivot2D(), Vec2F(0.5f, 0.5f)); // unchanged fields come from origin
+    EXPECT_EQ(restored.GetPivot2D(), Vec2F(0.1f, 0.9f));
 }

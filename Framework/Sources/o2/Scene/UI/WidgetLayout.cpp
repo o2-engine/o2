@@ -798,6 +798,10 @@ namespace o2
         serialize("minSize", mMinSize, Vec2F(0, 0));
         serialize("maxSize", mMaxSize, Vec2F(10000, 10000));
         serialize("weight", mWeight, Vec2F(1, 1));
+
+        // the pivot is not derivable from the rect: rotation and children hang off it
+        if (!Math::Equals(mPivot, Vec3F()))
+            node.AddMember("pivot").Set(mPivot);
     }
 
     void WidgetLayout::OnDeserialized(const DataValue& node)
@@ -835,6 +839,9 @@ namespace o2
         serialize("minSize", mMinSize, other.mMinSize);
         serialize("maxSize", mMaxSize, other.mMaxSize);
         serialize("weight", mWeight, other.mWeight);
+
+        if (!EqualsForDeltaSerialize(mPivot, other.mPivot))
+            node.AddMember("pivot").Set(mPivot);
     }
 
     void WidgetLayout::OnDeserializedDelta(const DataValue& node, const IObject& origin)
