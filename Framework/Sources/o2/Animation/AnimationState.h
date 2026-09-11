@@ -50,6 +50,12 @@ namespace o2
         // Sets state weight @SCRIPTABLE
         virtual void SetWeight(float weight);
 
+        // Sets playback speed, 1 is the clip's own pace @SCRIPTABLE
+        virtual void SetSpeed(float speed);
+
+        // Returns playback speed @SCRIPTABLE
+        virtual float GetSpeed() const;
+
         // Returns state weight (0...1) of blending
         // Returns state weight @SCRIPTABLE
         virtual float GetWeight() const;
@@ -109,6 +115,12 @@ namespace o2
 
         // Sets state weight
         void SetWeight(float weight) override;
+
+        // Sets playback speed of the state's player
+        void SetSpeed(float speed) override;
+
+        // Returns playback speed
+        float GetSpeed() const override;
 
         // Returns state weight
         float GetWeight() const override;
@@ -208,6 +220,8 @@ CLASS_METHODS_META(o2::IAnimationState)
     FUNCTION().PUBLIC().SIGNATURE(IAnimation&, GetPlayer);
     FUNCTION().PUBLIC().SIGNATURE(float, GetDuration);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetWeight, float);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetSpeed, float);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(float, GetSpeed);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(float, GetWeight);
     FUNCTION().PUBLIC().SIGNATURE(void, SetLooped, bool);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsLooped);
@@ -242,6 +256,8 @@ CLASS_METHODS_META(o2::AnimationState)
     FUNCTION().PUBLIC().SIGNATURE(IAnimation&, GetPlayer);
     FUNCTION().PUBLIC().SIGNATURE(float, GetDuration);
     FUNCTION().PUBLIC().SIGNATURE(void, SetWeight, float);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetSpeed, float);
+    FUNCTION().PUBLIC().SIGNATURE(float, GetSpeed);
     FUNCTION().PUBLIC().SIGNATURE(float, GetWeight);
     FUNCTION().PUBLIC().SIGNATURE(void, SetLooped, bool);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsLooped);

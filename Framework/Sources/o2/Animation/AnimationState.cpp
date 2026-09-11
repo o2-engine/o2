@@ -37,6 +37,14 @@ namespace o2
 	void IAnimationState::SetWeight(float weight)
 	{}
 
+	void IAnimationState::SetSpeed(float speed)
+	{}
+
+	float IAnimationState::GetSpeed() const
+	{
+		return 1.0f;
+	}
+
 	float IAnimationState::GetWeight() const
 	{
 		return 1.0f;
@@ -94,6 +102,16 @@ namespace o2
 	void AnimationState::SetWeight(float weight)
     {
         mWeight = weight;
+    }
+
+    void AnimationState::SetSpeed(float speed)
+    {
+        player->SetSpeed(speed);
+    }
+
+    float AnimationState::GetSpeed() const
+    {
+        return player->GetSpeed();
     }
 
     float AnimationState::GetWeight() const

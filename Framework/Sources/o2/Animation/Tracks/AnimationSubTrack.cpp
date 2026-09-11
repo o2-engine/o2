@@ -196,12 +196,17 @@ namespace o2
         // the target is held raw: after a scene reload it may be gone while the editor's player lives on
         if (mTarget && mTargetLink.IsValid())
         {
-            if (mTime >= mTrack->mSubTrackBeginTime + mTrack->mSubTrackBeginOffset &&
-                mTime <= mTrack->mSubTrackBeginTime + mTrack->mSubTrackDuration - mTrack->mSubTrackEndOffset)
-            {
-                float subTrackTime = mTime - mTrack->mSubTrackBeginTime;
-                mTarget->SetTime(subTrackTime);
-            }
+            float begin = mTrack->mSubTrackBeginTime + mTrack->mSubTrackBeginOffset;
+            float end = mTrack->mSubTrackBeginTime + mTrack->mSubTrackDuration - mTrack->mSubTrackEndOffset;
+
+            if (mTime >= begin && mTime <= end)
+                mTarget->SetTime(mTime - mTrack->mSubTrackBeginTime);
+            else if (mTime > end && mPrevInDurationTime <= end) // a frame stepped over the end: finish the target
+                mTarget->SetTime(end - mTrack->mSubTrackBeginTime);
+            else if (mTime < begin && mPrevInDurationTime >= begin) // rewound ahead of the window: back to the start
+                mTarget->SetTime(0.0f);
+
+            mPrevInDurationTime = mTime;
         }
     }
 
