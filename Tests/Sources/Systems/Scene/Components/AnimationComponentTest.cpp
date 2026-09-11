@@ -200,6 +200,26 @@ TEST(AnimationComponent, StopAllResetsBlend)
     EXPECT_FLOAT_EQ(dst->GetWeight(), dstAfterStop);
 }
 
+// A state that has not played yet feeds its mixer the clip value at its player's time, not an unset value
+TEST(AnimationComponent, StateNotPlayedYetHoldsTheClipValueAtItsTime)
+{
+    SceneCleanGuard guard;
+    auto a = mmake<Actor>(ActorCreateMode::InScene);
+    auto comp = a->AddComponent<AnimationComponent>();
+
+    auto clip = mmake<AnimationClip>();
+    auto track = clip->AddTrack<float>("transform/angleDegrees");
+    track->AddKey(0.0f, 30.0f);
+    track->AddKey(1.0f, 100.0f);
+
+    auto state = DynamicCast<AnimationState>(comp->AddState("turn", clip, AnimationMask(), 1.0f));
+    ASSERT_TRUE(state);
+    state->autoPlay = false;
+
+    TickFrame();
+    EXPECT_NEAR(a->transform->GetAngleDegrees(), 30.0f, 0.001f);
+}
+
 TEST(AnimationComponent, MismatchedTrackTypeDoesNotCrash)
 {
     SceneCleanGuard guard;

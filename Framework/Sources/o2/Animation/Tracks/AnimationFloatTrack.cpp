@@ -233,6 +233,10 @@ namespace o2
     {
         mTrack = track;
         IPlayer::SetTrack(track);
+
+        // mixers read the value before the first evaluation
+        if (mTrack && !mTrack->curve->IsEmpty())
+            mCurrentValue = mTrack->curve->Evaluate(mInDurationTime, mRandomRangeCoef);
     }
 
     const Ref<AnimationTrack<float>>& AnimationTrack<float>::Player::GetTrackT() const

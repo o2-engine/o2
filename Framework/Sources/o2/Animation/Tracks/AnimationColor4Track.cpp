@@ -332,6 +332,10 @@ namespace o2
     {
         mTrack = track;
         IPlayer::SetTrack(track);
+
+        // mixers read the value before the first evaluation
+        if (mTrack && !mTrack->GetKeys().IsEmpty())
+            mCurrentValue = mTrack->GetValue(mInDurationTime);
     }
 
     void AnimationTrack<Color4>::Player::SetTargetVoid(void* target)

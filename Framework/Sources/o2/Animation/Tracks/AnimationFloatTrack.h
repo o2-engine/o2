@@ -179,7 +179,7 @@ namespace o2
         protected:
             Ref<AnimationTrack<float>> mTrack = nullptr; // Animation track
 
-            float mCurrentValue; // Current animation track
+            float mCurrentValue = 0.0f; // Current animation track
 
             float mPrevInDurationTime = 0.0f; // Previous evaluation in duration time
             int   mPrevKey = 0;               // Previous evaluation key index
@@ -275,7 +275,7 @@ CLASS_FIELDS_META(o2::AnimationTrack<float>::Player)
     FIELD().PUBLIC().NAME(value);
     FIELD().PUBLIC().NAME(target);
     FIELD().PROTECTED().DEFAULT_VALUE(nullptr).NAME(mTrack);
-    FIELD().PROTECTED().NAME(mCurrentValue);
+    FIELD().PROTECTED().DEFAULT_VALUE(0.0f).NAME(mCurrentValue);
     FIELD().PROTECTED().DEFAULT_VALUE(0.0f).NAME(mPrevInDurationTime);
     FIELD().PROTECTED().DEFAULT_VALUE(0).NAME(mPrevKey);
     FIELD().PROTECTED().DEFAULT_VALUE(0).NAME(mPrevKeyApproximation);

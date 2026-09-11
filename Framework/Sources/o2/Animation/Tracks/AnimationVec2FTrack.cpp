@@ -134,6 +134,13 @@ namespace o2
     {
         mTrack = track;
         IPlayer::SetTrack(track);
+
+        // mixers read the value before the first evaluation
+        if (mTrack && !mTrack->timeCurve->IsEmpty())
+        {
+            mCurrentValue = mTrack->GetValue(mInDurationTime, mRandomRangeCoef, true, mPrevTimeKey, mPrevTimeKeyApproximation,
+                                             mPrevSplineKey, mPrevSplineKeyApproximation);
+        }
     }
 
     void AnimationTrack<Vec2F>::Player::SetTargetVoid(void* target)

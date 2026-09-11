@@ -25,3 +25,22 @@ TEST(ColorGradient, EvaluateOutsideKeysHoldsEndColors)
     EXPECT_GT(mid.r, 0);
     EXPECT_LT(mid.r, 255);
 }
+
+// Coincident keys form a zero-length segment: the first key's color wins, as on a step inside the range
+TEST(ColorGradient, CoincidentKeysGiveTheFirstKeyColor)
+{
+    ColorGradient gradient;
+    gradient.RemoveAllKeys();
+    gradient.InsertKey(0.0f, Color4::Red());
+    gradient.InsertKey(0.0f, Color4::Blue());
+    gradient.InsertKey(1.0f, Color4::Blue());
+
+    EXPECT_EQ(gradient.Evaluate(0.0f), Color4::Red());
+
+    int cacheKey = 1;
+    EXPECT_EQ(gradient.Evaluate(0.0f, false, cacheKey), Color4::Red());
+
+    gradient.InsertKey(0.5f, Color4::Green());
+    gradient.InsertKey(0.5f, Color4::Red());
+    EXPECT_EQ(gradient.Evaluate(0.5f), Color4::Green());
+}

@@ -186,7 +186,7 @@ namespace o2
         protected:
             Ref<AnimationTrack<_type>> mTrack; // Animation track
 
-            _type mCurrentValue; // Current animation track
+            _type mCurrentValue = _type(); // Current animation track
 
             float mPrevInDurationTime = 0.0f; // Previous evaluation in duration time
             int   mPrevKey = 0;               // Previous evaluation key index
@@ -815,6 +815,10 @@ namespace o2
     {
         mTrack = track;
         IPlayer::SetTrack(track);
+
+        // mixers read the value before the first evaluation
+        if (mTrack && !mTrack->GetKeys().IsEmpty())
+            mCurrentValue = mTrack->GetValue(mInDurationTime);
     }
 
     template<typename _type>
@@ -931,7 +935,7 @@ CLASS_FIELDS_META(o2::AnimationTrack<_type>::Player)
     FIELD().PUBLIC().NAME(value);
     FIELD().PUBLIC().NAME(target);
     FIELD().PROTECTED().NAME(mTrack);
-    FIELD().PROTECTED().NAME(mCurrentValue);
+    FIELD().PROTECTED().DEFAULT_VALUE(_type()).NAME(mCurrentValue);
     FIELD().PROTECTED().DEFAULT_VALUE(0.0f).NAME(mPrevInDurationTime);
     FIELD().PROTECTED().DEFAULT_VALUE(0).NAME(mPrevKey);
     FIELD().PROTECTED().DEFAULT_VALUE(0).NAME(mPrevKeyApproximation);
