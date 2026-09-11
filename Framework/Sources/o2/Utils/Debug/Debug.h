@@ -48,6 +48,9 @@ namespace o2
         // Returns pointer to main log
         const Ref<LogStream>& GetLog();
 
+        // Sends the file log to another file; tools started from an application folder call it before their first message so they never truncate the application log
+        void SetLogFile(const String& fileName);
+
         // Draws debug line from begin to end with color and disappearing delay
         void DrawLine(const Vec2F& begin, const Vec2F& end, const Color4& color, float delay);
 

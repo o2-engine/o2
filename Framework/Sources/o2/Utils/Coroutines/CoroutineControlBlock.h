@@ -111,4 +111,10 @@ namespace o2
     // appear on their own Tracy fiber track (following it across threads)
     void StartCoroutine(const SharedRef<CoroutineControlBlock>& controlBlock, JobThread thread,
                         JobPriority priority = JobPriority::Normal, const char* fiberName = nullptr);
+
+    namespace Detail
+    {
+        // Logs the exception being handled, then terminates; called from a coroutine's unhandled_exception
+        [[noreturn]] void TerminateWithUnhandledException();
+    }
 }

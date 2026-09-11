@@ -360,8 +360,28 @@ namespace o2
         PostDrawFrame();
 
 		PostUpdateFrame(dt);
+        mFrameExceptionsInRow = 0;
 
         PROFILE_FRAME();
+    }
+
+    void Integration::RecoverFrame(const String& what)
+    {
+        o2Debug.LogError("Unhandled exception in the frame, the rest of it is skipped: " + what);
+
+        if (mFrameDrawing)
+        {
+            mRender->UnbindRenderTexture();
+            mMainListenersLayer->OnEndDraw();
+            mRender->End();
+            mFrameDrawing = false;
+        }
+
+        if (++mFrameExceptionsInRow >= maxFrameExceptionsInRow)
+        {
+            o2Debug.LogError("Every frame fails, giving up");
+            std::terminate();
+        }
     }
 
     void Integration::EnsureLifecycleStarted()
@@ -381,7 +401,16 @@ namespace o2
 
             while (self->mReady)
             {
-                self->ProcessFrameBody();
+                // An exception escaping the frame would terminate the coroutine and the process; the frame is abandoned instead
+                try
+                {
+                    self->ProcessFrameBody();
+                }
+                catch (const std::exception& e)
+                {
+                    self->RecoverFrame(e.what());
+                }
+
                 co_await WaitNextFrame();
             }
         }(this);
@@ -469,6 +498,7 @@ namespace o2
 		mMainListenersLayer->OnBeginDraw();
 		mRender->SetCamera(Camera());
 		mMainListenersLayer->camera = o2Render.GetCamera();
+		mFrameDrawing = true;
 	}
 
 	void Integration::DrawFrame()
@@ -489,6 +519,7 @@ namespace o2
 			mRender->DrawCross(o2Input.cursorPos.Get(), 20, Color4::Red());
 
 		mRender->End();
+		mFrameDrawing = false;
 	}
 
 	void Integration::PostUpdateFrame(float dt)

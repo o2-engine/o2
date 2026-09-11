@@ -19,12 +19,19 @@ namespace o2
         // Destructor
         ~FileLogStream();
 
-    protected:
-        std::ofstream mStream; // Output stream
+        // Sets the file the log goes to; a file already written stays as it is, the new one opens on the next message
+        void SetFileName(const String& fileName);
+
+        // Returns the log file name
+        const String& GetFileName() const { return mFileName; }
 
     protected:
-        // Opens file stream
-        void OpenStream(const String& fileName);
+        String        mFileName; // Log file, opened on the first message so a renamed log never touches the default file
+        std::ofstream mStream;   // Output stream
+
+    protected:
+        // Opens the file stream when it is not open yet
+        void EnsureOpen();
 
         // Outs string into file
         void OutStrEx(const WString& str);

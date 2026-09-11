@@ -11,6 +11,7 @@ extern void InitializeTypesAssetsBuildTool();
 int main(int argc, char* argv[])
 {
     INITIALIZE_O2;
+    o2Debug.SetLogFile("AssetsBuilder.log");
     InitializeTypesGameLib();
     InitializeTypesAssetsBuildTool();
 

@@ -68,7 +68,8 @@ namespace o2
 
             FinalAwaiter final_suspend() noexcept { return {}; }
 
-            void unhandled_exception() { std::terminate(); }
+            // Logs the escaped exception and terminates; a coroutine has no caller frame to rethrow into
+            void unhandled_exception() { Detail::TerminateWithUnhandledException(); }
         };
 
         using Handle = std::coroutine_handle<promise_type>;

@@ -136,6 +136,12 @@ namespace o2
         mInstance->mLogStream->ErrorStr(out);
     }
 
+    void Debug::SetLogFile(const String& fileName)
+    {
+        if (auto file = DynamicCast<FileLogStream>(mFileLogStream))
+            file->SetFileName(fileName);
+    }
+
     const Ref<LogStream>& Debug::GetLog()
     {
         return mInstance->mLogStream;

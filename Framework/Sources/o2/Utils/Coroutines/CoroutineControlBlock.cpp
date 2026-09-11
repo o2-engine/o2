@@ -1,6 +1,7 @@
 #include "o2/stdafx.h"
 #include "CoroutineControlBlock.h"
 
+#include "o2/Utils/Debug/Debug.h"
 #include "o2/Utils/Jobs/JobSystem.h"
 
 namespace o2
@@ -44,6 +45,27 @@ namespace o2
             controlBlock->resumePriority.Store((int)priority);
             controlBlock->fiberName = fiberName;
             ScheduleCoroutineResume(controlBlock);
+        }
+    }
+
+    namespace Detail
+    {
+        void TerminateWithUnhandledException()
+        {
+            try
+            {
+                throw;
+            }
+            catch (const std::exception& e)
+            {
+                o2Debug.LogError(String("Unhandled exception in a coroutine: ") + e.what());
+            }
+            catch (...)
+            {
+                o2Debug.LogError("Unhandled exception in a coroutine");
+            }
+
+            std::terminate();
         }
     }
 }

@@ -785,8 +785,8 @@ namespace o2
 
     void Scene::RemoveEditableObjectFromScene(const Ref<SceneEditableObject>& object)
     {
-        mChangedObjects.RemoveAll([&](auto x) { return x == object; });
-        mEditableObjects.RemoveAll([&](auto x) { return x == object; });
+        mChangedObjects.RemoveAll([&](const auto& x) { return x == object; });
+        mEditableObjects.RemoveAll([&](const auto& x) { return x == object; });
         mEditableObjectsByUID.Remove(object->GetID());
     }
 

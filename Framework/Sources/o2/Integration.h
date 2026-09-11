@@ -167,7 +167,11 @@ namespace o2
 
         float mAccumulatedDT = 0.0f; // Accumulated delta time for fixed FPS update
 
+        static const int maxFrameExceptionsInRow = 3; // Abandoned frames in a row after which the process terminates
+
         bool  mLifecycleStarted = false;      // True once the lifecycle coroutine has been started
+        bool  mFrameDrawing = false;          // True between the render begin and end of the frame, so an abandoned frame can be closed
+        int   mFrameExceptionsInRow = 0;      // Frames abandoned by an exception one after another; the process gives up at maxFrameExceptionsInRow
         float mMainThreadJobsQuota = -1.0f;   // Per-frame time budget for main-thread jobs, seconds. < 0 = unlimited
 
         Ref<CursorAreaEventListenersLayer> mMainListenersLayer; // Main listeners layer, required for processing default scaled camera
@@ -203,6 +207,9 @@ namespace o2
 		// Starts the application lifecycle coroutine on the first frame. The lifecycle runs OnLifecycleLoad
 		// once and then ProcessFrameBody every frame, yielding via co_await WaitNextFrame
 		void EnsureLifecycleStarted();
+
+		// Logs the exception that escaped the frame, closes the render if it was open and terminates after repeated failures
+		void RecoverFrame(const String& what);
 
 		// Loading stage of the lifecycle, called once before the frame loop. Override to load content
 		virtual void OnLifecycleLoad();
@@ -337,6 +344,8 @@ CLASS_FIELDS_META(o2::Integration)
     FIELD().PROTECTED().NAME(mTimer);
     FIELD().PROTECTED().DEFAULT_VALUE(0.0f).NAME(mAccumulatedDT);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mLifecycleStarted);
+    FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mFrameDrawing);
+    FIELD().PROTECTED().DEFAULT_VALUE(0).NAME(mFrameExceptionsInRow);
     FIELD().PROTECTED().DEFAULT_VALUE(-1.0f).NAME(mMainThreadJobsQuota);
     FIELD().PROTECTED().NAME(mMainListenersLayer);
 }
@@ -374,6 +383,7 @@ CLASS_METHODS_META(o2::Integration)
     FUNCTION().PROTECTED().SIGNATURE(void, ProcessFrame);
     FUNCTION().PROTECTED().SIGNATURE(void, ProcessFrameBody);
     FUNCTION().PROTECTED().SIGNATURE(void, EnsureLifecycleStarted);
+    FUNCTION().PROTECTED().SIGNATURE(void, RecoverFrame, const String&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnLifecycleLoad);
     FUNCTION().PROTECTED().SIGNATURE(void, CalculateAndSyncFPS, float&, float&);
     FUNCTION().PROTECTED().SIGNATURE(void, PreUpdateFrame, float, float);
