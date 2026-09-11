@@ -249,7 +249,7 @@ namespace Editor
 
                 String type = schema->type;
                 String path = (filter ? String() : "Add " + category.second + "/") + schema->label;
-                AssetRef<ImageAsset> icon(PipelineNodeWidget::IconForType(type));
+                AssetRef<ImageAsset> icon(PipelineNodeWidget::MenuIconForType(type));
                 menu->AddItem(path, [this, type, filter = filter != nullptr]()
                 {
                     if (filter)

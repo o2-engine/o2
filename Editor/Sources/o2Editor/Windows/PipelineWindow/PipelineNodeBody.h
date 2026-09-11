@@ -108,6 +108,9 @@ namespace Editor
         // Draws the content rows when zoomed far out; the composer draws its stage instead
         virtual void DrawFarContent();
 
+        // Shows the folders of the assets tree in the editor popup menu; pick receives the chosen folder, empty for the root
+        void ShowAssetFolderMenu(const Function<void(const String&)>& pick);
+
         // Removes all rows and drops the result views
         void ClearRows();
 
@@ -292,6 +295,7 @@ CLASS_METHODS_META(Editor::PipelineNodeBody)
     FUNCTION().PUBLIC().SIGNATURE(Ref<Widget>, AddFlexible, const Ref<Widget>&, float);
     FUNCTION().PUBLIC().SIGNATURE(Ref<Widget>, AddFlexible, const Ref<Widget>&, const Function<float(float)>&);
     FUNCTION().PUBLIC().SIGNATURE(void, DrawFarContent);
+    FUNCTION().PUBLIC().SIGNATURE(void, ShowAssetFolderMenu, const Function<void(const String&)>&);
     FUNCTION().PUBLIC().SIGNATURE(void, ClearRows);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(float, RowHeight, const Row&, float);
     FUNCTION().PUBLIC().SIGNATURE(String, GetString, const String&, const String&);

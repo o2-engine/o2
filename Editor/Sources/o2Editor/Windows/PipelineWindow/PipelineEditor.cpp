@@ -33,9 +33,11 @@ namespace Editor
             e->RestoreGraph(before);
     }
 
-    static const float edgeWidth = 2.0f;
+    static const float edgeWidth = 1.5f;
+    static const float activeEdgeWidth = 2.5f;
+    static const float minEdgePixels = 1.0f;
     static const float bendHandleRadius = 5.0f;
-    static const float farViewScale = 2.8f;
+    static const float farViewScale = 4.5f;
     static const float cullingMargin = 0.1f;
     static const float edgeCullingMargin = 200.0f;
     static const float edgeSegmentLength = 5.0f;
@@ -48,6 +50,10 @@ namespace Editor
         *mNodesContainer->layout = WidgetLayout::Based(BaseCorner::LeftBottom, Vec2F(), Vec2F());
         mViewCameraMinScale = 0.15f;
         mViewCameraMaxScale = 40.0f;
+
+        // The card layer hides the view from the scroll pass of the event system, so the wheel over a card comes back through it
+        mListenersLayer->passScrollThrough = true;
+        mListenersLayer->onScrollPassed = [this](float scroll) { OnScrolled(scroll); };
 
         mExecutor = mmake<PipelineExecutor>();
         WeakRef<PipelineEditor> weakThis(this);
@@ -402,8 +408,12 @@ namespace Editor
     void PipelineEditor::DrawEdge(const Vec2F& from, const Vec2F& to, const Vector<Vec2F>& points, const Color4& color, float width)
     {
         auto line = BuildEdgePolyline(from, to, points);
-        if (line.Count() >= 2)
-            o2Render.DrawAALine(line, color, width);
+        if (line.Count() < 2)
+            return;
+
+        // Canvas units on screen, floored so a zoomed-out link never fades below a pixel
+        float pixels = Math::Max(minEdgePixels, width / mViewCamera.GetScale2D().x);
+        o2Render.DrawAALine(line, color, pixels);
     }
 
     bool PipelineEditor::GetEdgeEnds(const PipelineEdge& edge, Vec2F& from, Vec2F& to) const
@@ -463,13 +473,13 @@ namespace Editor
                 if (fromRt->state == "error" || toRt->state == "error") color = Color4(249, 93, 72, 255);
                 else if (fromRt->state == "running" || toRt->state == "running" || fromRt->state == "queued") color = Color4(33, 150, 243, 255);
                 else if (fromRt->state == "done") color = Color4(76, 175, 80, 255);
-                width = 3.0f;
+                width = activeEdgeWidth;
             }
 
             bool selected = edge->id == mSelectedEdgeId;
             if (selected)
             {
-                DrawEdge(from, to, edge->points, Color4(0, 150, 136, 80), width + 4.0f);
+                DrawEdge(from, to, edge->points, Color4(0, 150, 136, 80), width + 3.0f);
                 width += 1.0f;
             }
 
@@ -576,6 +586,8 @@ namespace Editor
 
     void PipelineEditor::Update(float dt)
     {
+        PushEditorScopeOnStack scope;
+
         FrameScrollView::Update(dt);
 
         UpdateCardsVisibility();
@@ -600,6 +612,15 @@ namespace Editor
 
         if (mBendDragging || !mSelectedEdgeId.IsEmpty())
             mNeedRedraw = true;
+
+        // Queued targets start here: the executor's Done arrives from inside its coroutine, where IsRunning() still holds
+        if (!IsRunning() && !mRunQueue.IsEmpty())
+        {
+            String next = mRunQueue[0];
+            mRunQueue.RemoveAt(0);
+            mRunIsAutoApply = false;
+            StartRun(next, {}, false);
+        }
 
         // Auto-apply of local nodes, debounced
         if (!mAutoApplyQueue.IsEmpty())

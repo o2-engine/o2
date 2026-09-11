@@ -21,7 +21,7 @@ Image helpers: `Editor::PipelineImageOps` (resize, crop, crop to content, chroma
 
 ## Execution
 
-`Editor::PipelineExecutor::Execute(pipelineId, graph, targetNodeId, dirtyNodeIds, cachedOnly)` runs the upstream chain of the target in dependency order. Results are cached under `Work/Pipelines/cache/<pipelineId>/{content,previews,ran}` by node signature: a node whose signature matches the cached one is served from disk, `cachedOnly` refuses provider nodes that are not cached (`Not cached`). `ExecuteSingle` runs one node, `Cancel()` stops after the current node, `assetsPathOverride` redirects finish nodes (tests). Events (`Editor::PipelineExecEvent`): `NodeState` (`queued`, `running`, `done`, `error`), `NodeOutput` (the `Editor::PipelineValue` with `previewPath`/`srcPreviewPath`), `Retry`, `Log`, `Done`, `Fatal`. `LoadPreview` and `ClearNodeCache` manage the cache from the editor.
+`Editor::PipelineExecutor::Execute(pipelineId, graph, targetNodeId, dirtyNodeIds, cachedOnly)` runs the upstream chain of the target in dependency order. Results are cached under `Work/Pipelines/cache/<pipelineId>/{content,previews,ran}` by node signature: a node whose signature matches the cached one is served from disk, `cachedOnly` serves provider nodes from their cache entry or, failing that, from their last rendered preview (without marking them ran), and refuses only nodes that have neither (`Not cached`). `PipelineGraph::GetRunTargets()` returns what a whole-graph run targets: every node with no outgoing edges, finish nodes first, skipping sources nothing consumes. `ExecuteSingle` runs one node, `Cancel()` stops after the current node, `assetsPathOverride` redirects finish nodes (tests). Events (`Editor::PipelineExecEvent`): `NodeState` (`queued`, `running`, `done`, `error`), `NodeOutput` (the `Editor::PipelineValue` with `previewPath`/`srcPreviewPath`), `Retry`, `Log`, `Done`, `Fatal`. `LoadPreview` and `ClearNodeCache` manage the cache from the editor.
 
 Finish nodes write the result to `<assets>/<assetPath>.<ext>` (optionally cropped and resized) and set `assetsChanged`; in the editor the executor then calls `o2Assets.RebuildAssets()`.
 
@@ -46,7 +46,11 @@ executor->Execute("coin", graph, finish->id, {}, false);
 ```
 </details>
 
+Every entry point that can build card widgets between frames (`PipelineEditor::Update`, `OnExecutorEvent`, `PipelineNodeWidget::OnOutputChanged/OnConfigChanged/ApplyRuntime`, `PipelineNodeBody::RebuildBody`, the composer's layer panel) pushes `PushEditorScopeOnStack`: a widget built outside the editor scope is registered as a scene object, which polluted the scene and crashed it when the card was rebuilt.
+
 ## Import
 `PipelineImport::ParseBytes` reads an AssetsLine export by content: a pipeline JSON, a JSON bundle with data URL results (`Parse`) or a ZIP bundle (`ParseZip`: `pipeline.json`, an optional `manifest.json` listing `results/<file>` per node with its media type and mime, files not in the manifest keyed by `results/<nodeId>.<ext>`) into a `PipelineGraph` with a fresh `id` and a map of `PipelineValue` results; `StoreResults` writes them as previews, content cache entries and freshness markers of a pipeline id; `ImportFile` creates the asset under a folder, stores the results under the graph id and rebuilds the assets. `PipelineZip` is the small archive reader and writer behind it (stored and deflate entries, zlib).
+
+`O2_PIPELINE_IMPORT=<file>` makes the Pipeline window import that AssetsLine export on its first update (a development aid for reproducing import problems without the file dialog); `PipelineWindow::ImportFile` catches exceptions and reports them in the status line.
 
 The graph `id` is the cache key the editor uses (`PipelineEditor::GetPipelineId`); an asset without one adopts its UID on open, so results cached by UID before the field existed stay reachable, and a graph saved into another asset keeps its cache.

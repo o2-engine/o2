@@ -1,6 +1,10 @@
 #include "o2Editor/stdafx.h"
 #include "PipelineNodeBody.h"
 
+#include "o2/Assets/Assets.h"
+#include "o2/Utils/Editor/EditorScope.h"
+#include "o2/Assets/Types/FolderAsset.h"
+
 #include "o2Editor/Windows/PipelineWindow/PipelineNodeBodyFactories.h"
 
 #include "o2/Render/Render.h"
@@ -144,6 +148,33 @@ namespace Editor
         }
     }
 
+    void PipelineNodeBody::ShowAssetFolderMenu(const Function<void(const String&)>& pick)
+    {
+        PushEditorScopeOnStack scope;
+        auto editor = mEditor.Lock();
+        if (!editor)
+            return;
+
+        Vector<String> folders;
+        for (auto& weak : o2Assets.GetAssetsTree().allAssets)
+        {
+            auto info = weak.Lock();
+            if (info && info->meta && info->meta->GetAssetType() == &TypeOf(FolderAsset))
+                folders.Add(info->path);
+        }
+        folders.Sort([](const String& a, const String& b) { return a < b; });
+
+        Vector<Pair<String, Function<void()>>> items;
+        items.Add({ "Assets", [pick]() { pick(""); } });
+        for (auto& folder : folders)
+        {
+            String value = folder;
+            // A slash in a menu label opens a submenu, so the path is shown with another separator
+            items.Add({ folder.ReplacedAll("/", " > "), [pick, value]() { pick(value); } });
+        }
+        editor->ShowPopupMenu(items);
+    }
+
     void PipelineNodeBody::ClearRows()
     {
         for (auto& row : mRows)
@@ -219,6 +250,7 @@ namespace Editor
 
     void PipelineNodeBody::RebuildBody()
     {
+        PushEditorScopeOnStack scope;
         if (auto owner = mOwner.Lock())
         {
             auto editor = mEditor.Lock();

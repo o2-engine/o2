@@ -20,6 +20,9 @@ namespace o2
 
         bool isEditor      = false; // Is this layer drawn in editor scope
         bool isTransparent = false; // Is this layer transparent to input other listeners
+        bool passScrollThrough = false; // Leaves the wheel to onScrollPassed instead of the listeners, so a view can zoom over its content
+
+        Function<void(float)> onScrollPassed; // Wheel delta over the layer's listeners when passScrollThrough is set
 
 		String name; // Layer name, used to debug
 

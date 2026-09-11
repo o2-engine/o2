@@ -5406,6 +5406,17 @@ namespace Editor
             sprite->color = color;
             return sprite;
         }
+
+        // Flat rounded fill for the hover, pressed and on states; atlas sprites bleed into stripes under a fractional canvas zoom.
+        // Its strength comes from the layer transparency, which overrides the drawable alpha
+        Ref<PipelineRoundedRect> Fill(const Color4& color)
+        {
+            auto rect = mmake<PipelineRoundedRect>();
+            rect->color = color;
+            rect->radius = 4.0f;
+            rect->roundBottom = true;
+            return rect;
+        }
     }
 
     void EditorUIStyleBuilder::RebuildPipelineNodeStyle()
@@ -5428,24 +5439,7 @@ namespace Editor
         sample->AddLayer("kindTint", kind, Layout::HorStretch(VerAlign::Top, 0, 0, 32, -4))->transparency = 0.0f;
         sample->AddLayer("headerLine", mmake<Sprite>(text), Layout::HorStretch(VerAlign::Top, 1, 1, 1, 28))->transparency = 0.28f;
 
-        auto frame = [&](const String& name, const Color4& color, const Layout& layout)
-        {
-            auto sprite = mmake<Sprite>("ui/UI4_animation_state_frame.png");
-            sprite->color = color;
-            sample->AddLayer(name, sprite, layout);
-        };
-        frame("done", Color4(76, 175, 80, 255), Layout::BothStretch(-6, -10, -6, -8));
-        frame("running", Color4(33, 150, 243, 255), Layout::BothStretch(-6, -10, -6, -8));
-        frame("queued", Color4(159, 190, 254, 255), Layout::BothStretch(-6, -10, -6, -8));
-        frame("error", Color4(249, 93, 72, 255), Layout::BothStretch(-6, -10, -6, -8));
-        frame("selected", accent, Layout::BothStretch(-9, -13, -9, -11));
-
-        sample->AddState("selected", AnimationClip::EaseInOut("layer/selected/transparency", 0.0f, 1.0f, 0.08f))->offStateAnimationSpeed = 0.5f;
-        sample->AddState("done", AnimationClip::EaseInOut("layer/done/transparency", 0.0f, 1.0f, 0.15f))->offStateAnimationSpeed = 0.5f;
-        sample->AddState("running", AnimationClip::EaseInOut("layer/running/transparency", 0.0f, 1.0f, 0.15f))->offStateAnimationSpeed = 0.5f;
-        sample->AddState("queued", AnimationClip::EaseInOut("layer/queued/transparency", 0.0f, 1.0f, 0.15f))->offStateAnimationSpeed = 0.5f;
-        sample->AddState("error", AnimationClip::EaseInOut("layer/error/transparency", 0.0f, 1.0f, 0.15f))->offStateAnimationSpeed = 0.5f;
-
+        // State and selection outlines are drawn by the card itself, scaled with the camera
         o2UI.AddWidgetStyle(sample, "pipeline node");
     }
 
@@ -5455,13 +5449,12 @@ namespace Editor
 
         auto sample = mmake<Button>();
         sample->layout->minSize = Vec2F(20, 20);
-        sample->AddLayer("hover", mmake<Sprite>("ui/UI4_panel_button_select.png"), Layout::BothStretch(-4, -4, -5, -5));
-        sample->AddLayer("pressed", mmake<Sprite>("ui/UI4_panel_button_pressed.png"), Layout::BothStretch(-4, -4, -5, -5));
+        sample->AddLayer("hover", Fill(text), Layout::BothStretch(-2, -2, -2, -2))->transparency = 0.0f;
+        sample->AddLayer("pressed", Fill(text), Layout::BothStretch(-2, -2, -2, -2))->transparency = 0.0f;
         sample->AddLayer("icon", Icon("ui/pipeline/btn_settings.png", text), Layout::Based(BaseCorner::Center, Vec2F(16, 16)));
 
-        sample->AddState("hover", AnimationClip::EaseInOut("layer/hover/transparency", 0.0f, 1.0f, 0.1f))->offStateAnimationSpeed = 0.25f;
-        sample->AddState("pressed", AnimationClip::EaseInOut("layer/pressed/transparency", 0.0f, 1.0f, 0.05f))->offStateAnimationSpeed = 0.5f;
-        sample->AddState("visible", AnimationClip::EaseInOut("transparency", 0.0f, 1.0f, 0.2f))->offStateAnimationSpeed = 0.5f;
+        sample->AddState("hover", AnimationClip::EaseInOut("layer/hover/transparency", 0.0f, 0.16f, 0.1f))->offStateAnimationSpeed = 0.25f;
+        sample->AddState("pressed", AnimationClip::EaseInOut("layer/pressed/transparency", 0.0f, 0.28f, 0.05f))->offStateAnimationSpeed = 0.5f;
 
         o2UI.AddWidgetStyle(sample, "pipeline icon");
     }
@@ -5472,12 +5465,10 @@ namespace Editor
 
         auto sample = mmake<Toggle>();
         sample->layout->minSize = Vec2F(20, 20);
-        sample->AddLayer("regular", mmake<Sprite>("ui/UI4_button_regular.png"), Layout::BothStretch(-9, -9, -10, -10));
-        sample->AddLayer("hover", mmake<Sprite>("ui/UI4_button_select.png"), Layout::BothStretch(-9, -9, -10, -10));
-        sample->AddLayer("pressed", mmake<Sprite>("ui/UI4_button_pressed.png"), Layout::BothStretch(-9, -9, -10, -10));
-        auto on = mmake<Sprite>("ui/UI4_button_focus.png");
-        on->color = accent;
-        sample->AddLayer("value", on, Layout::BothStretch(-9, -9, -10, -10));
+        sample->AddLayer("regular", Fill(text), Layout::BothStretch(-1, -1, -1, -1))->transparency = 0.10f;
+        sample->AddLayer("hover", Fill(text), Layout::BothStretch(-1, -1, -1, -1))->transparency = 0.0f;
+        sample->AddLayer("pressed", Fill(text), Layout::BothStretch(-1, -1, -1, -1))->transparency = 0.0f;
+        sample->AddLayer("value", Fill(accent), Layout::BothStretch(-1, -1, -1, -1))->transparency = 0.0f;
 
         auto captionText = mmake<Text>("stdFont.ttf");
         captionText->text = "Segment";
@@ -5487,10 +5478,9 @@ namespace Editor
         captionText->color = text;
         sample->AddLayer("caption", captionText, Layout::BothStretch(2, 0, 2, 0));
 
-        sample->AddState("hover", AnimationClip::EaseInOut("layer/hover/transparency", 0.0f, 1.0f, 0.1f))->offStateAnimationSpeed = 0.25f;
-        sample->AddState("pressed", AnimationClip::EaseInOut("layer/pressed/transparency", 0.0f, 1.0f, 0.05f))->offStateAnimationSpeed = 0.5f;
-        sample->AddState("value", AnimationClip::EaseInOut("layer/value/transparency", 0.0f, 1.0f, 0.1f))->offStateAnimationSpeed = 0.5f;
-        sample->AddState("visible", AnimationClip::EaseInOut("transparency", 0.0f, 1.0f, 0.2f))->offStateAnimationSpeed = 0.5f;
+        sample->AddState("hover", AnimationClip::EaseInOut("layer/hover/transparency", 0.0f, 0.16f, 0.1f))->offStateAnimationSpeed = 0.25f;
+        sample->AddState("pressed", AnimationClip::EaseInOut("layer/pressed/transparency", 0.0f, 0.28f, 0.05f))->offStateAnimationSpeed = 0.5f;
+        sample->AddState("value", AnimationClip::EaseInOut("layer/value/transparency", 0.0f, 0.30f, 0.1f))->offStateAnimationSpeed = 0.5f;
 
         o2UI.AddWidgetStyle(sample, "pipeline segment");
     }

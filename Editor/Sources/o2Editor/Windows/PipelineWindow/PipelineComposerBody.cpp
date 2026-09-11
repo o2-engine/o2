@@ -1,6 +1,8 @@
 #include "o2Editor/stdafx.h"
 #include "PipelineNodeBodyFactories.h"
 
+#include "o2/Assets/Assets.h"
+#include "o2/Utils/Editor/EditorScope.h"
 #include "o2/Render/Render.h"
 #include "o2/Render/Sprite.h"
 #include "o2/Scene/UI/UIManager.h"
@@ -21,7 +23,6 @@
 #include "o2/Utils/FileSystem/FileSystem.h"
 #include "o2/Utils/System/Clipboard.h"
 #include "o2Editor/Dialogs/ColorPickerDlg.h"
-#include "o2Editor/Dialogs/System/OpenSaveDialog.h"
 #include "o2Editor/Pipeline/PipelineExecutor.h"
 #include "o2Editor/Pipeline/PipelineImageOps.h"
 #include "o2Editor/Pipeline/PipelineUtils.h"
@@ -77,6 +78,7 @@ namespace Editor
 
             BuildToolbar();
             BuildMain();
+            BuildAssetRows();
             RebuildLayersPanel();
             UpdateToolbarState();
             OnOutputChanged();
@@ -132,6 +134,9 @@ namespace Editor
         String mZoomCaption;
         Ref<Toggle> mFlipH;
         Ref<Toggle> mFlipV;
+        Ref<EditBox> mFolderEdit; // Folder inside Assets the layers are written to
+        Ref<EditBox> mNameEdit;   // File name prefix of the layer assets
+        Ref<Label> mSaveInfo;     // Target pattern or the outcome of the last save
 
         float GetPanelWidth() const
         {
@@ -222,20 +227,6 @@ namespace Editor
             if (GetBool("outBgEnabled", false))
                 row2->AddChild(MakeColorSwatch("outBg", "#ffffff"));
 
-            auto png = MakeIconButton("ui/pipeline/btn_save.png", PipelineControls::textColor, Color4(0, 0, 0, 0));
-            png->caption = "PNG";
-            png->layout->minWidth = 60; png->layout->maxWidth = 60;
-            if (auto icon = png->GetLayer("icon")) icon->layout = Layout(Vec2F(0, 0.5f), Vec2F(0, 0.5f), Vec2F(4, -8), Vec2F(20, 8));
-            png->AddLayer("caption", MakeCaptionText("PNG"), Layout::BothStretch(22, 0, 2, 0));
-            png->onClick = [weakThis]() { if (auto self = weakThis.Lock()) self->SaveComposed(); };
-            row2->AddChild(png);
-
-            auto layers = MakeIconButton("ui/pipeline/btn_save.png", PipelineControls::textColor, Color4(0, 0, 0, 0));
-            layers->layout->minWidth = 72; layers->layout->maxWidth = 72;
-            if (auto icon = layers->GetLayer("icon")) icon->layout = Layout(Vec2F(0, 0.5f), Vec2F(0, 0.5f), Vec2F(4, -8), Vec2F(20, 8));
-            layers->AddLayer("caption", MakeCaptionText("Layers"), Layout::BothStretch(22, 0, 2, 0));
-            layers->onClick = [weakThis]() { if (auto self = weakThis.Lock()) self->SaveLayers(); };
-            row2->AddChild(layers);
             AddToolRow(row2);
         }
 
@@ -390,6 +381,7 @@ namespace Editor
 
         void RebuildLayersPanel()
         {
+            PushEditorScopeOnStack scope;
             if (!mList || !mStage)
                 return;
 
@@ -798,30 +790,118 @@ namespace Editor
                 editor->RenameCustomInput(owner, portId, name);
         }
 
-        void SaveComposed()
+        void BuildAssetRows()
         {
-            auto output = GetOutput();
-            if (!output.IsImage() || output.data.IsEmpty())
-                return;
+            WeakRef<ComposerBody> weakThis(this);
 
-            Map<String, String> filter;
-            filter["PNG image"] = "*.png";
-            String path = GetSaveFileNameDialog("Save composed image", filter, "composed.png");
-            if (path.IsEmpty())
-                return;
-            if (!path.EndsWith(".png")) path += ".png";
-            PipelineUtils::WriteFileBytes(path, output.data);
+            auto folderRow = MakeRow("Folder", nullptr, 56);
+            mFolderEdit = MakeEditBox(GetString("layersFolder", "Generated"), false, "folder inside Assets");
+            mFolderEdit->onChangeCompleted = [weakThis](const WString& text)
+            {
+                if (auto self = weakThis.Lock())
+                {
+                    self->SetString("layersFolder", CleanPath((String)text), true);
+                    self->UpdateSaveInfo();
+                }
+            };
+            folderRow->AddChild(mFolderEdit);
+            auto browse = MakeButton("...");
+            browse->name = "browse";
+            browse->layout->minWidth = 28;
+            browse->layout->maxWidth = 28;
+            browse->onClick = [weakThis]()
+            {
+                auto self = weakThis.Lock();
+                if (!self)
+                    return;
+
+                self->ShowAssetFolderMenu([weakThis](const String& folder)
+                {
+                    if (auto self = weakThis.Lock())
+                    {
+                        self->mFolderEdit->SetText(folder);
+                        self->SetString("layersFolder", folder, true);
+                        self->UpdateSaveInfo();
+                    }
+                });
+            };
+            folderRow->AddChild(browse);
+            AddRow(folderRow, 22);
+
+            auto nameRow = MakeRow("Name", nullptr, 56);
+            mNameEdit = MakeEditBox(GetString("layersName", "layer"), false, "file name prefix");
+            mNameEdit->onChangeCompleted = [weakThis](const WString& text)
+            {
+                if (auto self = weakThis.Lock())
+                {
+                    self->SetString("layersName", CleanPath((String)text), true);
+                    self->UpdateSaveInfo();
+                }
+            };
+            nameRow->AddChild(mNameEdit);
+            AddRow(nameRow, 22);
+
+            mSaveInfo = MakeLabel("", true);
+            mSaveInfo->horOverflow = Label::HorOverflow::Dots;
+            AddRow(mSaveInfo, 18);
+
+            auto save = MakeButton("Save layers to Assets");
+            save->name = "save layers";
+            save->onClick = [weakThis]() { if (auto self = weakThis.Lock()) self->SaveLayersToAssets(); };
+            AddRow(save, 24);
+            UpdateSaveInfo();
         }
 
-        void SaveLayers()
+        static String CleanPath(const String& text)
         {
-            Map<String, String> filter;
-            filter["PNG image"] = "*.png";
-            String path = GetSaveFileNameDialog("Save layers (one PNG per layer)", filter, "layers.png");
-            if (path.IsEmpty())
+            String value = text.Trimed(" \n\r\t");
+            value.ReplaceAll("\\", "/");
+            while (value.StartsWith("/"))
+                value = value.SubStr(1);
+            while (value.EndsWith("/"))
+                value = value.SubStr(0, value.Length() - 1);
+            return value;
+        }
+
+        static String SafeFileName(const String& name)
+        {
+            String safe;
+            for (int i = 0; i < name.Length(); i++)
+            {
+                char c = name[i];
+                safe += (isalnum((unsigned char)c) || c == '-' || c == '_') ? c : '_';
+            }
+            return safe.IsEmpty() ? String("layer") : safe;
+        }
+
+        String LayersFolder() const
+        {
+            return CleanPath(GetString("layersFolder", "Generated"));
+        }
+
+        String LayersName() const
+        {
+            String name = CleanPath(GetString("layersName", "layer"));
+            return name.IsEmpty() ? String("layer") : name;
+        }
+
+        void UpdateSaveInfo()
+        {
+            if (!mSaveInfo)
                 return;
 
-            String base = path.EndsWith(".png") ? path.SubStr(0, path.Length() - 4) : path;
+            String folder = LayersFolder();
+            mSaveInfo->text = "Assets/" + (folder.IsEmpty() ? String() : folder + "/") + LayersName() + "_<layer>.png";
+        }
+
+        // Writes every layer as its own PNG asset, the way a finish node writes its result
+        void SaveLayersToAssets()
+        {
+            String folder = LayersFolder();
+            String dir = o2Assets.GetAssetsPath() + (folder.IsEmpty() ? String() : folder + "/");
+            o2FileSystem.FolderCreate(dir, true);
+
+            int saved = 0;
             Vector<String> taken;
             for (auto& layer : mStage->GetLayers())
             {
@@ -829,27 +909,21 @@ namespace Editor
                 if (!bitmap)
                     continue;
 
-                String name = layer.name.IsEmpty() ? String("layer") : layer.name;
-                String safe;
-                for (int i = 0; i < name.Length(); i++)
-                {
-                    char c = name[i];
-                    safe += (isalnum((unsigned char)c) || c == '-' || c == '_') ? c : '_';
-                }
-                String file = safe;
-                int n = 2;
-                while (taken.Contains(file))
-                    file = safe + "_" + (String)(n++);
-                taken.Add(file);
+                String file = LayersName() + "_" + SafeFileName(layer.name);
+                String unique = file;
+                for (int n = 2; taken.Contains(unique); n++)
+                    unique = file + "_" + (String)n;
+                taken.Add(unique);
 
-                String png;
-                if (SavePngImageToMemory(bitmap.Get(), png))
-                    PipelineUtils::WriteFileBytes(base + "_" + file + ".png", png);
+                if (PipelineUtils::WriteFileBytes(dir + unique + ".png", PipelineValue::Image(bitmap).GetPngBytes()))
+                    saved++;
             }
 
-            auto output = GetOutput();
-            if (output.IsImage() && !output.data.IsEmpty())
-                PipelineUtils::WriteFileBytes(base + "_composed.png", output.data);
+            if (saved > 0)
+                o2Assets.RebuildAssets();
+
+            if (mSaveInfo)
+                mSaveInfo->text = saved > 0 ? (String)saved + " layers saved to Assets/" + folder : String("Nothing to save - connect image layers");
         }
     };
 

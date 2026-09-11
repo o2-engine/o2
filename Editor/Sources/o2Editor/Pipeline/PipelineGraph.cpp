@@ -2,6 +2,7 @@
 #include "PipelineGraph.h"
 
 #include "o2/Utils/Types/UID.h"
+#include "o2Editor/Pipeline/PipelineNodeType.h"
 #include "o2Editor/Pipeline/PipelineUtils.h"
 
 namespace Editor
@@ -338,6 +339,31 @@ namespace Editor
         return edges.FindAll([&](const Ref<PipelineEdge>& e) { return e->fromNodeId == nodeId; });
     }
 
+    Vector<String> PipelineGraph::GetRunTargets() const
+    {
+        Vector<String> finishes, others;
+        for (auto& node : nodes)
+        {
+            if (!GetOutgoingEdges(node->id).IsEmpty())
+                continue;
+
+            if (PipelineNodeRegistry::IsFinishType(node->nodeType))
+            {
+                finishes.Add(node->id);
+                continue;
+            }
+
+            // A source nobody consumes has nothing to compute
+            auto schema = PipelineNodeRegistry::GetSchema(node->nodeType);
+            if (schema && schema->category == PipelineNodeCategory::Source)
+                continue;
+
+            others.Add(node->id);
+        }
+
+        return finishes + others;
+    }
+
     Ref<PipelineEdge> PipelineGraph::FindEdgeToPort(const String& nodeId, const String& portId) const
     {
         return edges.FindOrDefault([&](const Ref<PipelineEdge>& e) { return e->toNodeId == nodeId && e->toPortId == portId; });
@@ -460,7 +486,7 @@ namespace Editor
         static Vector<String> keys = {
             "drawOver", "drawTool", "brushSize", "brushColor", "brushOpacity",
             "selectedLayer", "layersPanelW", "openLayerSettings",
-            "viewZoom", "viewPanX", "viewPanY", "cmpBg", "cmpBgEnabled", "checker"
+            "viewZoom", "viewPanX", "viewPanY", "cmpBg", "cmpBgEnabled", "checker", "layersFolder", "layersName"
         };
         return keys;
     }

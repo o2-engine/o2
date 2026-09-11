@@ -1,6 +1,7 @@
 #include "o2Editor/stdafx.h"
 #include <gtest/gtest.h>
 
+#include "o2/Utils/FileSystem/FileSystem.h"
 #include "o2/Utils/Serialization/DataValue.h"
 #include "o2/Assets/Types/PipelineAsset.h"
 #include "o2Editor/Pipeline/PipelineGraph.h"
@@ -186,4 +187,79 @@ TEST(PipelineGraph, CacheIdTravelsWithTheGraph)
     old.id = "stale";
     old.LoadFromAsset(legacy);
     EXPECT_TRUE(old.id.IsEmpty());
+}
+
+namespace
+{
+    // Every node whose result something else consumes, plus the targets themselves
+    Vector<String> CoveredByRun(const PipelineGraph& graph)
+    {
+        Vector<String> covered;
+        Vector<String> stack = graph.GetRunTargets();
+        while (!stack.IsEmpty())
+        {
+            String id = stack.PopBack();
+            if (covered.Contains(id))
+                continue;
+
+            covered.Add(id);
+            for (auto& edge : graph.GetIncomingEdges(id))
+                stack.Add(edge->fromNodeId);
+        }
+        return covered;
+    }
+}
+
+// Run all targets every branch end: a graph with one finish node still has chains hanging off other ends
+TEST(PipelineGraph, RunTargetsAreEveryBranchEnd)
+{
+    PipelineGraph graph;
+    auto source = AddNode(graph, "sourceText", Vec2F());
+    auto edit = AddNode(graph, "textEdit", Vec2F(300, 0));
+    auto finish = AddNode(graph, "finishText", Vec2F(600, 0));
+    auto sideA = AddNode(graph, "textEdit", Vec2F(300, 200));
+    auto sideB = AddNode(graph, "textEdit", Vec2F(600, 200));
+    auto lonelySource = AddNode(graph, "sourceImage", Vec2F(0, 400));
+    Connect(graph, source, "out", edit, "text");
+    Connect(graph, edit, "out", finish, "in");
+    Connect(graph, source, "out", sideA, "text");
+    Connect(graph, sideA, "out", sideB, "text");
+
+    auto targets = graph.GetRunTargets();
+    ASSERT_EQ(targets.Count(), 2);
+    EXPECT_EQ(targets[0], finish->id) << "finish nodes run first";
+    EXPECT_EQ(targets[1], sideB->id);
+
+    // A source nobody consumes has nothing to compute; everything else is reached
+    auto covered = CoveredByRun(graph);
+    EXPECT_EQ(covered.Count(), graph.nodes.Count() - 1);
+    EXPECT_FALSE(covered.Contains(lonelySource->id));
+    for (auto& node : graph.nodes)
+        EXPECT_TRUE(covered.Contains(node->id) || node->id == lonelySource->id) << node->nodeType;
+}
+
+// Checks a real pipeline file (O2_PIPELINE_BIG_ASSET=<.pipeline>): a whole-graph run must reach all of it
+TEST(PipelineGraph, RunTargetsCoverAWholeRealPipeline)
+{
+    const char* path = getenv("O2_PIPELINE_BIG_ASSET");
+    if (!path)
+        GTEST_SKIP() << "set O2_PIPELINE_BIG_ASSET to a .pipeline file";
+
+    PipelineAsset asset;
+    ASSERT_TRUE(asset.document.LoadFromFile(path)) << path;
+    PipelineGraph graph;
+    graph.LoadFromAsset(asset);
+    ASSERT_FALSE(graph.nodes.IsEmpty());
+
+    auto covered = CoveredByRun(graph);
+    Vector<String> missed;
+    for (auto& node : graph.nodes)
+    {
+        auto schema = PipelineNodeRegistry::GetSchema(node->nodeType);
+        bool unusedSource = schema && schema->category == PipelineNodeCategory::Source && graph.GetOutgoingEdges(node->id).IsEmpty();
+        if (!covered.Contains(node->id) && !unusedSource)
+            missed.Add(node->nodeType);
+    }
+    printf("[run] %d nodes, %d targets, %d covered, %d missed\n", graph.nodes.Count(), graph.GetRunTargets().Count(), covered.Count(), missed.Count());
+    EXPECT_TRUE(missed.IsEmpty()) << missed.Count() << " nodes never run, first: " << (missed.IsEmpty() ? String() : missed[0]);
 }

@@ -2,6 +2,7 @@
 #include "PipelineWindow.h"
 
 #include "o2/Assets/Assets.h"
+#include "o2/Utils/Editor/EditorScope.h"
 #include "o2/Render/Sprite.h"
 #include "o2/Scene/UI/UIManager.h"
 #include "o2/Scene/UI/WidgetLayer.h"
@@ -25,6 +26,8 @@ namespace Editor
         Singleton<PipelineWindow>(refCounter), IAssetEditorWindow(refCounter)
     {
         InitializeWindow();
+        if (const char* file = getenv("O2_PIPELINE_IMPORT"))
+            mAutoImport = file;
     }
 
     PipelineWindow::~PipelineWindow()
@@ -136,10 +139,18 @@ namespace Editor
 
     void PipelineWindow::Update(float dt)
     {
+        PushEditorScopeOnStack scope;
         IAssetEditorWindow::Update(dt);
 
         bool running = mEditor && mEditor->IsRunning();
         mStopButton->interactable = running;
+
+        if (!mAutoImport.IsEmpty())
+        {
+            String file = mAutoImport;
+            mAutoImport = "";
+            ImportFile(file);
+        }
     }
 
     void PipelineWindow::OnImportPressed()
@@ -149,10 +160,28 @@ namespace Editor
         if (file.IsEmpty())
             return;
 
+        ImportFile(file);
+    }
+
+    void PipelineWindow::ImportFile(const String& file)
+    {
         CheckDirtyAssetAndExecute([this, file]()
         {
             String error;
-            String assetPath = PipelineImport::ImportFile(file, "Pipelines/", error);
+            String assetPath;
+            // The frame runs inside a coroutine that terminates on any escaped exception, so a broken file must not throw past here
+            try
+            {
+                assetPath = PipelineImport::ImportFile(file, "Pipelines/", error);
+                if (!assetPath.IsEmpty())
+                    OpenAsset(AssetRef<Asset>(AssetRef<PipelineAsset>(assetPath)));
+            }
+            catch (const std::exception& e)
+            {
+                error = e.what();
+                assetPath = "";
+            }
+
             if (assetPath.IsEmpty())
             {
                 mStatusLabel->text = "Import failed: " + error;
@@ -161,7 +190,6 @@ namespace Editor
             }
 
             mStatusLabel->text = "Imported " + assetPath;
-            OpenAsset(AssetRef<Asset>(AssetRef<PipelineAsset>(assetPath)));
         });
     }
 

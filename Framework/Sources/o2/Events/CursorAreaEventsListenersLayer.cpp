@@ -498,7 +498,21 @@ namespace o2
     void CursorAreaEventListenersLayer::ProcessScrolling()
     {
         float scroll = o2Input.GetMouseWheelDelta();
-        if (!Math::Equals(scroll, 0.0f))
+        if (Math::Equals(scroll, 0.0f))
+            return;
+
+        if (passScrollThrough)
+        {
+            bool anyUnderCursor = false;
+            for (auto& kv : mUnderCursorListeners)
+                anyUnderCursor = anyUnderCursor || !kv.second.IsEmpty();
+
+            if (anyUnderCursor && onScrollPassed)
+                onScrollPassed(scroll);
+
+            return;
+        }
+
         {
             for (auto& kv : mUnderCursorListeners)
             {

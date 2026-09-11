@@ -72,6 +72,28 @@ namespace Editor
             sFarView = far;
         }
 
+        void DrawRoundedFrame(const RectF& rect, float radius, const Color4& color, float widthPixels)
+        {
+            float r = Math::Clamp(radius, 0.0f, Math::Min(rect.Width(), rect.Height()) * 0.5f);
+            const int segments = 6;
+            float pi = Math::PI();
+            Vector<Vec2F> points;
+            auto corner = [&](const Vec2F& center, float fromAngle, float toAngle)
+            {
+                for (int i = 0; i <= segments; i++)
+                {
+                    float a = Math::Lerp(fromAngle, toAngle, (float)i / segments);
+                    points.Add(center + Vec2F(Math::Cos(a), Math::Sin(a)) * r);
+                }
+            };
+            corner(Vec2F(rect.left + r, rect.bottom + r), pi, pi * 1.5f);
+            corner(Vec2F(rect.right - r, rect.bottom + r), pi * 1.5f, pi * 2.0f);
+            corner(Vec2F(rect.right - r, rect.top - r), 0.0f, pi * 0.5f);
+            corner(Vec2F(rect.left + r, rect.top - r), pi * 0.5f, pi);
+            points.Add(points[0]);
+            o2Render.DrawAALine(points, color, widthPixels);
+        }
+
         const Color4 textColor(96, 125, 139, 255);
         const Color4 dimTextColor(96, 125, 139, 170);
         const Color4 accentColor(0, 150, 136, 255);
@@ -216,9 +238,25 @@ namespace Editor
         return lines > 0 ? lines * lineHeight + (lines - 1) * lineSpacing : 0.0f;
     }
 
+    void PipelineWrapRow::Update(float dt)
+    {
+        Widget::Update(dt);
+
+        Vector<int> enabled;
+        for (auto& child : mChildWidgets)
+            enabled.Add(child->IsEnabled() ? 1 : 0);
+
+        if (enabled != mLaidOutEnabled)
+            UpdateSelfTransform();
+    }
+
     void PipelineWrapRow::UpdateSelfTransform()
     {
         Widget::UpdateSelfTransform();
+
+        mLaidOutEnabled.Clear();
+        for (auto& child : mChildWidgets)
+            mLaidOutEnabled.Add(child->IsEnabled() ? 1 : 0);
 
         float width = layout->GetWidth();
         Vector<Vector<Ref<Widget>>> lines;
@@ -256,7 +294,14 @@ namespace Editor
             for (auto& child : line)
             {
                 float itemWidth = ItemWidth(child) + (child->layout->maxWidth <= 0.0f ? share : 0.0f);
+                // A whole layout assignment would drop the size limits the next pass relies on
+                float minWidth = child->layout->minWidth, maxWidth = child->layout->maxWidth;
+                float minHeight = child->layout->minHeight, maxHeight = child->layout->maxHeight;
                 *child->layout = WidgetLayout::Based(BaseCorner::LeftTop, Vec2F(itemWidth, lineHeight), Vec2F(x, -y));
+                child->layout->minWidth = minWidth;
+                child->layout->maxWidth = maxWidth;
+                child->layout->minHeight = minHeight;
+                child->layout->maxHeight = maxHeight;
                 x += itemWidth + spacing;
             }
             y += lineHeight + lineSpacing;
@@ -391,7 +436,7 @@ namespace Editor
 
             RectF rect = layer->GetDrawable()->GetRect();
             o2Render.DrawFilledPolygon({ rect.LeftBottom(), Vec2F(rect.left, rect.top), rect.RightTop(), Vec2F(rect.right, rect.bottom) },
-                                       Color4(208, 208, 208, 255));
+                                       Color4(61, 63, 69, (int)(mCheckerLayer->transparency * 255.0f)));
         }
 
         OnDrawn();

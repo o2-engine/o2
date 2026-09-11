@@ -52,6 +52,7 @@ namespace Editor
         Ref<Button>         mFitButton;      // Fits the view to all cards
         Ref<Button>         mImportButton;   // Imports an AssetsLine pipeline file
         Ref<Label>          mStatusLabel;    // Last log line
+        String              mAutoImport;     // File imported on the first update, from O2_PIPELINE_IMPORT (development aid)
 
     protected:
         // Creates window, toolbar buttons, status label and the editor
@@ -65,6 +66,9 @@ namespace Editor
 
         // Called when the import button is pressed; asks for an AssetsLine file and opens the imported asset
         void OnImportPressed();
+
+        // Imports the AssetsLine export as a new pipeline asset and opens it; errors go to the status line and the log
+        void ImportFile(const String& file);
 
         // Called when asset editing completed, stops the run
         void OnCompletedEditingAsset() override;
@@ -99,6 +103,7 @@ CLASS_FIELDS_META(Editor::PipelineWindow)
     FIELD().PROTECTED().NAME(mFitButton);
     FIELD().PROTECTED().NAME(mImportButton);
     FIELD().PROTECTED().NAME(mStatusLabel);
+    FIELD().PROTECTED().NAME(mAutoImport);
 }
 END_META;
 CLASS_METHODS_META(Editor::PipelineWindow)
@@ -113,6 +118,7 @@ CLASS_METHODS_META(Editor::PipelineWindow)
     FUNCTION().PROTECTED().SIGNATURE(String, GetWindowTitle);
     FUNCTION().PROTECTED().SIGNATURE(void, OnStartEditingAsset);
     FUNCTION().PROTECTED().SIGNATURE(void, OnImportPressed);
+    FUNCTION().PROTECTED().SIGNATURE(void, ImportFile, const String&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnCompletedEditingAsset);
     FUNCTION().PROTECTED().SIGNATURE(bool, IsComponentPreviewAvailable);
     FUNCTION().PROTECTED().SIGNATURE(bool, IsCreateNewAssetAtStartupEnabled);

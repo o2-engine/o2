@@ -21,7 +21,7 @@ AI-пайплайны контента: графы нод, которые пре
 
 ## Выполнение
 
-`Editor::PipelineExecutor::Execute(pipelineId, graph, targetNodeId, dirtyNodeIds, cachedOnly)` выполняет цепочку выше целевой ноды в порядке зависимостей. Результаты кешируются в `Work/Pipelines/cache/<pipelineId>/{content,previews,ran}` по сигнатуре ноды: нода с совпавшей сигнатурой берётся с диска, `cachedOnly` отказывает нодам провайдеров без кеша (`Not cached`). `ExecuteSingle` выполняет одну ноду, `Cancel()` останавливает после текущей, `assetsPathOverride` перенаправляет финишные ноды (тесты). События (`Editor::PipelineExecEvent`): `NodeState` (`queued`, `running`, `done`, `error`), `NodeOutput` (`Editor::PipelineValue` с `previewPath`/`srcPreviewPath`), `Retry`, `Log`, `Done`, `Fatal`. `LoadPreview` и `ClearNodeCache` управляют кешем из редактора.
+`Editor::PipelineExecutor::Execute(pipelineId, graph, targetNodeId, dirtyNodeIds, cachedOnly)` выполняет цепочку выше целевой ноды в порядке зависимостей. Результаты кешируются в `Work/Pipelines/cache/<pipelineId>/{content,previews,ran}` по сигнатуре ноды: нода с совпавшей сигнатурой берётся с диска, `cachedOnly` берёт ноды провайдеров из кеша или, если его нет, из последнего отрисованного превью (без отметки о запуске) и отказывает только нодам без того и другого (`Not cached`). `PipelineGraph::GetRunTargets()` возвращает цели запуска всего графа: все ноды без исходящих связей, финишные первыми, без источников, которые никто не читает. `ExecuteSingle` выполняет одну ноду, `Cancel()` останавливает после текущей, `assetsPathOverride` перенаправляет финишные ноды (тесты). События (`Editor::PipelineExecEvent`): `NodeState` (`queued`, `running`, `done`, `error`), `NodeOutput` (`Editor::PipelineValue` с `previewPath`/`srcPreviewPath`), `Retry`, `Log`, `Done`, `Fatal`. `LoadPreview` и `ClearNodeCache` управляют кешем из редактора.
 
 Финишные ноды пишут результат в `<assets>/<assetPath>.<ext>` (при необходимости обрезанный и масштабированный) и ставят `assetsChanged`; в редакторе исполнитель затем вызывает `o2Assets.RebuildAssets()`.
 
@@ -46,7 +46,11 @@ executor->Execute("coin", graph, finish->id, {}, false);
 ```
 </details>
 
+Все точки входа, из которых карточки могут строить виджеты между кадрами (`PipelineEditor::Update`, `OnExecutorEvent`, `PipelineNodeWidget::OnOutputChanged/OnConfigChanged/ApplyRuntime`, `PipelineNodeBody::RebuildBody`, панель слоёв композера), выставляют `PushEditorScopeOnStack`: виджет, созданный вне editor-scope, регистрируется как объект сцены - это засоряло сцену и роняло её при пересборке карточки.
+
 ## Импорт
 `PipelineImport::ParseBytes` читает экспорт AssetsLine по содержимому: JSON пайплайна, JSON-бандл с результатами в data URL (`Parse`) или ZIP-бандл (`ParseZip`: `pipeline.json`, необязательный `manifest.json` со списком `results/<файл>` по нодам с типом и mime, файлы вне манифеста берутся по имени `results/<nodeId>.<ext>`) в `PipelineGraph` со свежим `id` и карту результатов `PipelineValue`; `StoreResults` записывает их как превью, записи кеша содержимого и отметки актуальности для id пайплайна; `ImportFile` создаёт ассет в папке, сохраняет результаты под id графа и пересобирает ассеты. `PipelineZip` - небольшой читатель и писатель архивов под этим (записи stored и deflate, zlib).
+
+`O2_PIPELINE_IMPORT=<файл>` заставляет окно Pipeline импортировать этот экспорт AssetsLine на первом обновлении (отладочный ключ, чтобы воспроизводить проблемы импорта без файлового диалога); `PipelineWindow::ImportFile` ловит исключения и показывает их в строке статуса.
 
 `id` графа - ключ кеша, которым пользуется редактор (`PipelineEditor::GetPipelineId`); ассет без id при открытии берёт свой UID, поэтому результаты, закешированные по UID до появления поля, остаются доступны, а граф, сохранённый в другой ассет, сохраняет свой кеш.

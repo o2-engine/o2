@@ -9,6 +9,7 @@
 #include "o2/Render/Camera.h"
 #include "o2/Render/Render.h"
 #include "o2/Render/Sprite.h"
+#include "o2/Scene/Scene.h"
 #include "o2/Scene/UI/UIManager.h"
 #include "o2/Scene/UI/WidgetLayout.h"
 #include "o2/Scene/UI/Widgets/Button.h"
@@ -28,6 +29,7 @@
 #include "o2Editor/Pipeline/PipelineAudio.h"
 #include "o2Editor/Pipeline/PipelineExecutor.h"
 #include "o2Editor/Pipeline/PipelineImageOps.h"
+#include "o2Editor/Pipeline/PipelineImport.h"
 #include "o2Editor/Pipeline/PipelineNodeType.h"
 #include "o2Editor/Pipeline/PipelineUtils.h"
 #include "o2Editor/UIRoot.h"
@@ -669,6 +671,51 @@ TEST_F(PipelineUiFixture, FinishFolderMenuListsFoldersWithoutSubmenus)
     }
 }
 
+TEST_F(PipelineUiFixture, LinksFollowTheZoomButStayAtLeastOnePixel)
+{
+    PipelineGraph graph;
+    auto text = AddNode(graph, "sourceText", Vec2F(0, 0));
+    auto edit = AddNode(graph, "textEdit", Vec2F(700, 0));
+    Connect(graph, text, "out", edit, "text");
+    graph.SaveToAsset(*asset);
+    editor->SetAsset(asset);
+    UiDriver::Step(3);
+    text = Live(text);
+    edit = Live(edit);
+
+    Vec2F from = editor->GetNodeWidget(text->id)->GetPortPosition(text->outputs[0].id, false);
+    auto input = edit->inputs.Find([](const PipelinePort& p) { return p.name == "text"; });
+    ASSERT_TRUE(input);
+    Vec2F to = editor->GetNodeWidget(edit->id)->GetPortPosition(input->id, true);
+    ASSERT_NEAR(from.y, to.y, 0.5f);
+    Vec2F middle = (from + to) * 0.5f;
+
+    // Counts the rows around the link middle painted in the link color: the on-screen thickness
+    auto paintedRows = [&](float scale)
+    {
+        editor->SetView(middle, scale);
+        UiDriver::Step(4);
+        auto capture = UiDriver::Capture();
+        Vec2I px = ScreenToCapture(editor->LocalToScreenPoint(middle), capture);
+        int rows = 0;
+        for (int dy = -6; dy <= 6; dy++)
+        {
+            const UInt8* p = PipelineImageOps::Pixel(*capture, px.x, px.y + dy);
+            if ((int)p[2] - (int)p[0] > 40)
+                rows++;
+        }
+        return rows;
+    };
+
+    int far = paintedRows(12.0f);
+    int normal = paintedRows(1.0f);
+    int close = paintedRows(0.5f);
+    EXPECT_GE(far, 1);
+    EXPECT_GE(normal, 1);
+    EXPECT_LE(normal, 3);
+    EXPECT_GT(close, normal);
+}
+
 TEST_F(PipelineUiFixture, NodeControlsStayInsideCardsAtDefaultWidth)
 {
     PipelineGraph graph;
@@ -896,8 +943,9 @@ TEST_F(PipelineUiFixture, CullsOffscreenCardsAndDropsDetailsWhenZoomedOut)
 
 TEST_F(PipelineUiFixture, FarZoomHidesControlsButKeepsContentInPlace)
 {
+    // A provider node: it keeps its play button, unlike self-applying effect nodes
     PipelineGraph graph;
-    auto image = AddNode(graph, "imageOutline", Vec2F(0, 0));
+    auto image = AddNode(graph, "nanoBananaGen", Vec2F(0, 0));
     graph.SaveToAsset(*asset);
     editor->SetAsset(asset);
     UiDriver::Step(3);
@@ -918,7 +966,7 @@ TEST_F(PipelineUiFixture, FarZoomHidesControlsButKeepsContentInPlace)
     };
     auto distance = [](const Color4& a, const Color4& b) { return Math::Abs(a.r - b.r) + Math::Abs(a.g - b.g) + Math::Abs(a.b - b.b); };
 
-    for (float scale : { 1.0f, 4.0f })
+    for (float scale : { 1.0f, 6.0f })
     {
         editor->SetView(card->GetCardRect().Center(), scale);
         UiDriver::Step(4);
@@ -1075,4 +1123,330 @@ TEST_F(PipelineUiFixture, LargeAssetFitsAndStaysFast)
     }
     printf("[perf] %d nodes at scale 1: %.2f ms per frame, culled %d\n", count, timeFrames(30), culled);
     EXPECT_TRUE(UiDriver::Screenshot(dir + "/pipeline_big_close.png"));
+}
+
+// Imports a real AssetsLine export (O2_PIPELINE_IMPORT_FILE=<zip or json>) exactly the way the import button does:
+// asset file, assets rebuild, load by path, cards, previews and video extraction
+TEST_F(PipelineUiFixture, ImportsRealExportWithoutThrowing)
+{
+    const char* path = getenv("O2_PIPELINE_IMPORT_FILE");
+    if (!path)
+        GTEST_SKIP() << "set O2_PIPELINE_IMPORT_FILE to an AssetsLine export";
+
+    if (!AssetsWindow::IsSingletonInitialzed())
+        mmake<AssetsWindow>();
+
+    if (!o2FileSystem.IsFileExist("./AssetsBuilder") && o2FileSystem.IsFileExist("../../Bin/Mac/AssetsBuilder"))
+        symlink("../../Bin/Mac/AssetsBuilder", "./AssetsBuilder");
+
+    String error;
+    String assetPath = PipelineImport::ImportFile(path, "Pipelines/uitest-import/", error);
+    ASSERT_FALSE(assetPath.IsEmpty()) << error;
+    printf("[import] asset %s\n", assetPath.Data());
+
+    AssetRef<PipelineAsset> imported(assetPath);
+    ASSERT_TRUE(imported);
+    editor->SetAsset(imported);
+    UiDriver::Step(5);
+    editor->FitView();
+    UiDriver::Wait(0.6f);
+    printf("[import] %d nodes shown, cache id %s\n", editor->GetGraph()->nodes.Count(), editor->GetPipelineId().Data());
+
+    // Video previews are extracted in the background; the crash may hide in their arrival
+    for (int i = 0; i < 60 * 40; i++)
+    {
+        bool pending = false;
+        for (auto& node : editor->GetGraph()->nodes)
+        {
+            auto widget = editor->GetNodeWidget(node->id);
+            auto video = widget ? widget->FindChildByType<PipelineVideoView>() : nullptr;
+            if (video && video->HasVideo() && !video->IsReady())
+                pending = true;
+        }
+        if (!pending)
+            break;
+        UiDriver::Step();
+    }
+    UiDriver::Step(10);
+
+    String dir = ScreenshotDir();
+    o2FileSystem.FolderCreate(dir, true);
+    EXPECT_TRUE(UiDriver::Screenshot(dir + "/pipeline_import_real.png"));
+
+    String cacheId = editor->GetPipelineId();
+    editor->SetAsset(nullptr);
+    UiDriver::Step(2);
+    o2FileSystem.FolderRemove(PipelineExecutor::GetCachePath(cacheId), true);
+    o2FileSystem.FolderRemove(o2Assets.GetAssetsPath() + "Pipelines/uitest-import", true);
+    o2FileSystem.FileDelete(o2Assets.GetAssetsPath() + "Pipelines/uitest-import.meta");
+    o2Assets.RebuildAssets();
+}
+
+TEST_F(PipelineUiFixture, RunAllRunsEveryFinishNode)
+{
+    if (!AssetsWindow::IsSingletonInitialzed())
+        mmake<AssetsWindow>();
+    if (!o2FileSystem.IsFileExist("./AssetsBuilder") && o2FileSystem.IsFileExist("../../Bin/Mac/AssetsBuilder"))
+        symlink("../../Bin/Mac/AssetsBuilder", "./AssetsBuilder");
+
+    PipelineGraph graph;
+    auto text = AddNode(graph, "sourceText", Vec2F());
+    text->SetConfigString("text", "hello");
+    auto first = AddNode(graph, "finishText", Vec2F(400, 0));
+    first->SetConfigString("assetPath", "Generated/uitest-runall/first");
+    auto second = AddNode(graph, "finishText", Vec2F(400, 300));
+    second->SetConfigString("assetPath", "Generated/uitest-runall/second");
+    Connect(graph, text, "out", first, "in");
+    Connect(graph, text, "out", second, "in");
+    graph.SaveToAsset(*asset);
+    editor->SetAsset(asset);
+    UiDriver::Step(3);
+    first = Live(first);
+    second = Live(second);
+
+    // The second target waits in the queue and starts from the frame loop once the first run is done
+    editor->RunAll();
+    for (int i = 0; i < 1800 && (editor->IsRunning() || !editor->GetNodeWidget(second->id)->GetRuntime().fresh); i++)
+        UiDriver::Step();
+
+    String dir = o2Assets.GetAssetsPath() + "Generated/uitest-runall/";
+    EXPECT_TRUE(o2FileSystem.IsFileExist(dir + "first.txt"));
+    EXPECT_TRUE(o2FileSystem.IsFileExist(dir + "second.txt"));
+    EXPECT_TRUE(editor->GetNodeWidget(first->id)->GetRuntime().fresh);
+    EXPECT_TRUE(editor->GetNodeWidget(second->id)->GetRuntime().fresh);
+    UiDriver::Step(3);
+
+    o2FileSystem.FolderRemove(dir, true);
+    o2FileSystem.FileDelete(o2Assets.GetAssetsPath() + "Generated/uitest-runall.meta");
+    o2Assets.RebuildAssets();
+}
+
+TEST_F(PipelineUiFixture, WheelOverACardZoomsTheCanvas)
+{
+    PipelineGraph graph;
+    auto text = AddNode(graph, "sourceText", Vec2F());
+    text->SetConfigString("text", "some text to hover");
+    graph.SaveToAsset(*asset);
+    editor->SetAsset(asset);
+    UiDriver::Step(3);
+
+    auto card = editor->GetNodeWidget(Live(text)->id);
+    ASSERT_TRUE(card);
+    editor->SetView(card->GetCardRect().Center(), 1.0f);
+    UiDriver::Step(3);
+    auto area = card->FindChildByType<EditBox>();
+    ASSERT_TRUE(area);
+
+    // The text area is a scrollable control inside the card layer; the wheel over it still zooms the canvas
+    o2Input.OnCursorMoved(editor->LocalToScreenPoint(area->layout->GetWorldRect().Center()), 0, false);
+    UiDriver::Step(2);
+    float before = editor->GetCamera().GetScale2D().x;
+    o2Input.OnMouseWheel(-120.0f);
+    UiDriver::Step(8);
+    EXPECT_GT(Math::Abs(editor->GetCamera().GetScale2D().x - before), 0.01f);
+}
+
+TEST_F(PipelineUiFixture, LocalNodeReappliesOverTheLastProviderResult)
+{
+    PipelineGraph graph;
+    auto gen = AddNode(graph, "nanoBananaGen", Vec2F());
+    auto outline = AddNode(graph, "imageOutline", Vec2F(400, 0));
+    Connect(graph, gen, "out", outline, "image");
+    graph.SaveToAsset(*asset);
+    editor->SetAsset(asset);
+    UiDriver::Step(3);
+    gen = Live(gen);
+    outline = Live(outline);
+
+    // The provider's result exists only as its preview, the way an imported or re-edited pipeline has it
+    auto bitmap = PipelineImageOps::Blank(16, 16, Color4(255, 0, 0, 255));
+    auto genWidget = editor->GetNodeWidget(gen->id);
+    genWidget->GetRuntime().output = PipelineValue::Image(bitmap);
+    genWidget->OnOutputChanged();
+    PipelineUtils::WriteFileBytes(PipelineExecutor::GetPreviewPath(editor->GetPipelineId(), gen->id, "png"), PipelineValue::Image(bitmap).GetPngBytes());
+
+    outline->SetConfigNumber("width", 6);
+    editor->OnNodeConfigChanged(editor->GetNodeWidget(outline->id), "width", true);
+    for (int i = 0; i < 600 && !editor->GetNodeWidget(outline->id)->GetRuntime().output.IsValid(); i++)
+        UiDriver::Step();
+
+    auto& runtime = editor->GetNodeWidget(outline->id)->GetRuntime();
+    EXPECT_TRUE(runtime.output.IsImage());
+    EXPECT_NE(runtime.state, String("error"));
+    o2FileSystem.FolderRemove(PipelineExecutor::GetCachePath(editor->GetPipelineId()), true);
+}
+
+TEST_F(PipelineUiFixture, SelectionOutlineFollowsTheZoomButStaysVisible)
+{
+    PipelineGraph graph;
+    auto text = AddNode(graph, "sourceText", Vec2F());
+    graph.SaveToAsset(*asset);
+    editor->SetAsset(asset);
+    UiDriver::Step(3);
+    auto card = editor->GetNodeWidget(Live(text)->id);
+    ASSERT_TRUE(card);
+    card->SetSelected(true);
+
+    RectF rect = card->layout->GetWorldRect();
+    Vec2F edge(rect.left - 2.0f, rect.Center().y);
+    auto tealNear = [&](float scale)
+    {
+        editor->SetView(card->GetCardRect().Center(), scale);
+        UiDriver::Step(4);
+        auto capture = UiDriver::Capture();
+        Vec2I px = ScreenToCapture(editor->LocalToScreenPoint(edge), capture);
+        for (int dx = -2; dx <= 2; dx++)
+        {
+            const UInt8* p = PipelineImageOps::Pixel(*capture, px.x + dx, px.y);
+            if (p[0] < 70 && p[1] > 120 && p[2] > 100 && p[2] < p[1] + 20)
+                return true;
+        }
+        return false;
+    };
+    EXPECT_TRUE(tealNear(1.0f));
+    EXPECT_TRUE(tealNear(12.0f));
+}
+
+TEST_F(PipelineUiFixture, ComposerSavesLayersAsAssets)
+{
+    if (!AssetsWindow::IsSingletonInitialzed())
+        mmake<AssetsWindow>();
+    if (!o2FileSystem.IsFileExist("./AssetsBuilder") && o2FileSystem.IsFileExist("../../Bin/Mac/AssetsBuilder"))
+        symlink("../../Bin/Mac/AssetsBuilder", "./AssetsBuilder");
+
+    PipelineGraph graph;
+    auto comp = AddNode(graph, "composer", Vec2F(420, 0));
+    Vector<PipelinePort> customs = {
+        PipelinePort(PipelineNode::GenerateId(), "sprite", PipelinePortType::Image, true),
+        PipelinePort(PipelineNode::GenerateId(), "back", PipelinePortType::Image, true)
+    };
+    comp->SetCustomInputs(customs);
+    PipelineNodeRegistry::SyncNodeWithSchema(comp);
+    comp->SetConfigString("layersFolder", "Generated/uitest-composer");
+    comp->SetConfigString("layersName", "part");
+    auto src1 = AddNode(graph, "sourceImage", Vec2F(-300, 0));
+    auto src2 = AddNode(graph, "sourceImage", Vec2F(-300, 260));
+    Connect(graph, src1, "out", comp, "sprite");
+    Connect(graph, src2, "out", comp, "back");
+    graph.SaveToAsset(*asset);
+    editor->SetAsset(asset);
+    UiDriver::Step(3);
+    comp = Live(comp);
+
+    auto feed = [&](const Ref<PipelineNode>& node, const Ref<Bitmap>& bitmap)
+    {
+        auto widget = editor->GetNodeWidget(node->id);
+        widget->GetRuntime().output = PipelineValue::Image(bitmap);
+        widget->OnOutputChanged();
+    };
+    feed(Live(src1), PipelineImageOps::Blank(64, 64, Color4(255, 0, 0, 255)));
+    feed(Live(src2), PipelineImageOps::Blank(128, 96, Color4(0, 0, 255, 255)));
+    auto card = editor->GetNodeWidget(comp->id);
+    card->OnOutputChanged();
+    editor->SetView(card->GetCardRect().Center(), 1.0f);
+    UiDriver::Step(4);
+
+    auto save = card->FindChildByTypeAndName<Button>("save layers");
+    ASSERT_TRUE(save);
+    String dir0 = ScreenshotDir();
+    o2FileSystem.FolderCreate(dir0, true);
+    EXPECT_TRUE(UiDriver::Screenshot(dir0 + "/pipeline_composer_assets.png"));
+    UiDriver::Press(editor->LocalToScreenPoint(save->layout->GetWorldRect().Center()));
+    UiDriver::Release();
+    UiDriver::Step(3);
+
+    String dir = o2Assets.GetAssetsPath() + "Generated/uitest-composer/";
+    EXPECT_TRUE(o2FileSystem.IsFileExist(dir + "part_sprite.png"));
+    EXPECT_TRUE(o2FileSystem.IsFileExist(dir + "part_back.png"));
+
+    o2FileSystem.FolderRemove(dir, true);
+    o2FileSystem.FileDelete(o2Assets.GetAssetsPath() + "Generated/uitest-composer.meta");
+    o2Assets.RebuildAssets();
+}
+
+// Editing an early node and running everything must reach every branch end, not just the finish nodes
+TEST_F(PipelineUiFixture, RunAllReachesBranchEndsWithoutFinishNodes)
+{
+    PipelineGraph graph;
+    auto source = AddNode(graph, "sourceText", Vec2F());
+    source->SetConfigString("text", "hello");
+    auto shallow = AddNode(graph, "textCompose", Vec2F(400, 0));
+    auto deepA = AddNode(graph, "textCompose", Vec2F(400, 300));
+    auto deepB = AddNode(graph, "textCompose", Vec2F(800, 300));
+    Connect(graph, source, "out", shallow, "template");
+    Connect(graph, source, "out", deepA, "template");
+    Connect(graph, deepA, "out", deepB, "template");
+    graph.SaveToAsset(*asset);
+    editor->SetAsset(asset);
+    UiDriver::Step(3);
+
+    int actorsBefore = o2Scene.GetRootActors().Count();
+    int editablesBefore = o2Scene.GetAllEditableObjects().Count();
+
+    editor->RunAll();
+    for (int i = 0; i < 1800; i++)
+    {
+        bool allFresh = true;
+        for (auto& node : editor->GetGraph()->nodes)
+        {
+            if (node->nodeType == "textCompose" && !editor->GetNodeWidget(node->id)->GetRuntime().fresh)
+                allFresh = false;
+        }
+        if (allFresh && !editor->IsRunning())
+            break;
+
+        UiDriver::Step();
+    }
+
+    for (auto& node : editor->GetGraph()->nodes)
+    {
+        if (node->nodeType != "textCompose")
+            continue;
+
+        auto& runtime = editor->GetNodeWidget(node->id)->GetRuntime();
+        EXPECT_TRUE(runtime.fresh) << node->id;
+        EXPECT_EQ(runtime.output.data, String("hello"));
+    }
+
+    // The cards refreshed by executor events are editor UI, not scene content
+    EXPECT_EQ(o2Scene.GetRootActors().Count(), actorsBefore);
+    EXPECT_EQ(o2Scene.GetAllEditableObjects().Count(), editablesBefore);
+    o2FileSystem.FolderRemove(PipelineExecutor::GetCachePath(editor->GetPipelineId()), true);
+}
+
+// Pipeline cards are editor UI: rebuilding one must not register widgets in the scene
+TEST_F(PipelineUiFixture, CardRebuildsOutsideEditorScopeStayOutOfTheScene)
+{
+    PipelineGraph graph;
+    auto comp = AddNode(graph, "composer", Vec2F());
+    Vector<PipelinePort> customs = {
+        PipelinePort(PipelineNode::GenerateId(), "sprite", PipelinePortType::Image, true),
+        PipelinePort(PipelineNode::GenerateId(), "back", PipelinePortType::Image, true)
+    };
+    comp->SetCustomInputs(customs);
+    PipelineNodeRegistry::SyncNodeWithSchema(comp);
+    auto src = AddNode(graph, "sourceImage", Vec2F(-300, 0));
+    Connect(graph, src, "out", comp, "sprite");
+    graph.SaveToAsset(*asset);
+    editor->SetAsset(asset);
+    UiDriver::Step(3);
+
+    auto card = editor->GetNodeWidget(Live(comp)->id);
+    ASSERT_TRUE(card);
+    int actorsBefore = o2Scene.GetRootActors().Count();
+    int editablesBefore = o2Scene.GetAllEditableObjects().Count();
+
+    // Straight from the test body, like an executor event arriving between frames
+    auto feed = editor->GetNodeWidget(Live(src)->id);
+    feed->GetRuntime().output = PipelineValue::Image(PipelineImageOps::Blank(8, 8, Color4(255, 0, 0, 255)));
+    feed->OnOutputChanged();
+    for (int i = 0; i < 5; i++)
+    {
+        card->OnOutputChanged();
+        card->OnConfigChanged();
+        UiDriver::Step();
+    }
+
+    EXPECT_EQ(o2Scene.GetRootActors().Count(), actorsBefore);
+    EXPECT_EQ(o2Scene.GetAllEditableObjects().Count(), editablesBefore);
 }

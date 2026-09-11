@@ -423,6 +423,7 @@ namespace Editor
         Map<String, PipelineValue> byPortId;
         PipelineValue finishValue;
         PipelineValue srcValue;
+        PipelineValue lastResult;
         bool produced = true;
         String error;
 
@@ -439,19 +440,28 @@ namespace Editor
                 DeleteContent(run->pipelineId, cacheSig);
 
             PipelineValue stored = LoadContent(run->pipelineId, cacheSig, outPort.portType);
-            if (stored.IsValid())
+            if (!stored.IsValid() && run->cachedOnly && !impl->GetSchema().instant)
+            {
+                // A local node re-applying its settings takes what the provider upstream last rendered
+                lastResult = LoadPreview(run->pipelineId, *node);
+                if (!lastResult.IsValid())
+                {
+                    run->notCached = true;
+                    run->visiting.Remove(nodeId);
+                    co_return false;
+                }
+
+                produced = false;
+                byPortId[outPort.id] = lastResult;
+                EmitLog(node->nodeType + ": last result");
+            }
+            else if (stored.IsValid())
             {
                 produced = false;
                 EmitLog(node->nodeType + ": cache hit (" + cacheSig.SubStr(0, 8) + ")");
             }
             else
             {
-                if (run->cachedOnly && !impl->GetSchema().instant)
-                {
-                    run->notCached = true;
-                    run->visiting.Remove(nodeId);
-                    co_return false;
-                }
 
                 PipelineRunResult result = co_await impl->Run(ctx, inputs, node);
                 if (run->cancelled)
@@ -475,7 +485,7 @@ namespace Editor
                 }
             }
 
-            if (error.IsEmpty())
+            if (error.IsEmpty() && !lastResult.IsValid())
             {
                 PipelineValue value = stored;
                 if (chroma && value.IsImage())
@@ -559,7 +569,9 @@ namespace Editor
         if (preview.IsValid() && writePreview)
             WritePreview(run, nodeId, preview, srcValue.IsValid() ? &srcValue : nullptr);
 
-        MarkRan(run->pipelineId, sig);
+        if (!lastResult.IsValid())
+            MarkRan(run->pipelineId, sig);
+
         EmitState(nodeId, "done");
         run->visiting.Remove(nodeId);
         co_return true;

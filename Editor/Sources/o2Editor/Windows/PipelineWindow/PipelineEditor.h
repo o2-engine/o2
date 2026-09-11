@@ -314,7 +314,7 @@ namespace Editor
         // Draws all links and the pending one
         void DrawEdges();
 
-        // Draws one link as a smooth curve through bend points
+        // Draws one link as a smooth curve through bend points; the width is in canvas units and never thinner than a pixel on screen
         void DrawEdge(const Vec2F& from, const Vec2F& to, const Vector<Vec2F>& points, const Color4& color, float width);
 
         // Returns polyline of a link curve through bend points

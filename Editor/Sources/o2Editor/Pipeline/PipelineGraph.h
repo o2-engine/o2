@@ -211,6 +211,10 @@ namespace Editor
         // Returns edges starting at the node
         Vector<Ref<PipelineEdge>> GetOutgoingEdges(const String& nodeId) const;
 
+        // Returns the nodes a whole-graph run targets: every node nothing else consumes, finish nodes
+        // first. Their upstream branches together cover every node that produces something
+        Vector<String> GetRunTargets() const;
+
         // Returns the edge ending at the input port of the node, null when unconnected
         Ref<PipelineEdge> FindEdgeToPort(const String& nodeId, const String& portId) const;
 
@@ -378,6 +382,7 @@ CLASS_METHODS_META(Editor::PipelineGraph)
     FUNCTION().PUBLIC().SIGNATURE(Ref<PipelineEdge>, FindEdge, const String&);
     FUNCTION().PUBLIC().SIGNATURE(Vector<Ref<PipelineEdge>>, GetIncomingEdges, const String&);
     FUNCTION().PUBLIC().SIGNATURE(Vector<Ref<PipelineEdge>>, GetOutgoingEdges, const String&);
+    FUNCTION().PUBLIC().SIGNATURE(Vector<String>, GetRunTargets);
     FUNCTION().PUBLIC().SIGNATURE(Ref<PipelineEdge>, FindEdgeToPort, const String&, const String&);
     FUNCTION().PUBLIC().SIGNATURE(void, RemoveNode, const String&);
     FUNCTION().PUBLIC().SIGNATURE(void, RemoveEdge, const String&);

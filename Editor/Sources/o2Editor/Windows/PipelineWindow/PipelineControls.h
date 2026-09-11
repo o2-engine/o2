@@ -58,6 +58,9 @@ namespace Editor
         // Sets the far view flag for the drawing that follows
         void SetFarView(bool far);
 
+        // Draws a rounded rectangle outline; the width is in screen pixels
+        void DrawRoundedFrame(const RectF& rect, float radius, const Color4& color, float widthPixels);
+
         // Creates a left-aligned label; a dim label uses the dim text color and wraps
         Ref<Label> MakeLabel(const String& text, bool dim = false);
 
@@ -111,7 +114,13 @@ namespace Editor
         // Updates the transform and lays the enabled children out into lines for the current width
         void UpdateSelfTransform() override;
 
+        // Updates the widget and lays the children out again when one of them was enabled or disabled
+        void Update(float dt) override;
+
         SERIALIZABLE(PipelineWrapRow);
+
+    protected:
+        Vector<int> mLaidOutEnabled; // Enabled flags of the children at the last layout
 
     protected:
         // Returns the width a child takes before sharing: its minimum width or a default
@@ -306,6 +315,7 @@ CLASS_FIELDS_META(Editor::PipelineWrapRow)
     FIELD().PUBLIC().DEFAULT_VALUE(4.0f).NAME(spacing);
     FIELD().PUBLIC().DEFAULT_VALUE(22.0f).NAME(lineHeight);
     FIELD().PUBLIC().DEFAULT_VALUE(3.0f).NAME(lineSpacing);
+    FIELD().PROTECTED().NAME(mLaidOutEnabled);
 }
 END_META;
 CLASS_METHODS_META(Editor::PipelineWrapRow)
@@ -314,6 +324,7 @@ CLASS_METHODS_META(Editor::PipelineWrapRow)
     FUNCTION().PUBLIC().CONSTRUCTOR(RefCounter*);
     FUNCTION().PUBLIC().SIGNATURE(float, GetHeightForWidth, float);
     FUNCTION().PUBLIC().SIGNATURE(void, UpdateSelfTransform);
+    FUNCTION().PUBLIC().SIGNATURE(void, Update, float);
     FUNCTION().PROTECTED().SIGNATURE_STATIC(float, ItemWidth, const Ref<Widget>&);
 }
 END_META;

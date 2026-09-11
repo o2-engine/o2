@@ -187,8 +187,14 @@ namespace Editor
         // Draws the port circles in canvas space; the editor calls it after all cards so ports stay above every frame
         void DrawPorts();
 
+        // Draws the state and selection outlines around the card art, scaled with the camera but never thinner than a pixel
+        void DrawOutline();
+
         // Returns the icon image path of a node type
         static String IconForType(const String& nodeType);
+
+        // Returns the editor-green variant of the node type icon, for menus that cannot tint
+        static String MenuIconForType(const String& nodeType);
 
         SERIALIZABLE(PipelineNodeWidget);
 
@@ -344,7 +350,9 @@ CLASS_METHODS_META(Editor::PipelineNodeWidget)
     FUNCTION().PUBLIC().SIGNATURE(void, UpdateChildren, float);
     FUNCTION().PUBLIC().SIGNATURE(void, Draw);
     FUNCTION().PUBLIC().SIGNATURE(void, DrawPorts);
+    FUNCTION().PUBLIC().SIGNATURE(void, DrawOutline);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, IconForType, const String&);
+    FUNCTION().PUBLIC().SIGNATURE_STATIC(String, MenuIconForType, const String&);
     FUNCTION().PROTECTED().SIGNATURE(void, BuildHeader);
     FUNCTION().PROTECTED().SIGNATURE(void, BuildResizeHandles, const Ref<PipelineEditor>&);
     FUNCTION().PROTECTED().SIGNATURE(bool, IsResizeHandleAt, const ResizeHandle&, const Vec2F&);

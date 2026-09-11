@@ -153,20 +153,16 @@ namespace Editor
         if (!graph)
             return;
 
-        Vector<String> finishes;
-        for (auto& node : graph->nodes)
+        // Every branch end, not just the finish nodes: a graph whose results are saved by one
+        // finish node still has whole chains hanging off other ends, and they are part of "run all"
+        auto targets = graph->GetRunTargets();
+        if (targets.IsEmpty())
         {
-            if (PipelineNodeRegistry::IsFinishType(node->nodeType))
-                finishes.Add(node->id);
-        }
-
-        if (finishes.IsEmpty())
-        {
-            if (onLog) onLog("No finish nodes to run");
+            if (onLog) onLog("Nothing to run");
             return;
         }
 
-        for (auto& id : finishes)
+        for (auto& id : targets)
             RunNode(id, false);
     }
 
@@ -208,6 +204,10 @@ namespace Editor
 
     void PipelineEditor::OnExecutorEvent(const PipelineExecEvent& event)
     {
+        // Executor events arrive from a job between frames; the cards they refresh build widgets,
+        // and widgets built outside the editor scope are registered as scene objects
+        PushEditorScopeOnStack scope;
+
         using Type = PipelineExecEvent::Type;
         switch (event.type)
         {
@@ -294,13 +294,6 @@ namespace Editor
                     ResetTransientStates();
 
                 RefreshFreshness();
-
-                if (!mRunQueue.IsEmpty())
-                {
-                    String next = mRunQueue[0];
-                    mRunQueue.RemoveAt(0);
-                    StartRun(next, {}, false);
-                }
                 break;
             }
         }

@@ -273,37 +273,15 @@ namespace Editor
 
         void ShowFolderMenu()
         {
-            auto editor = mEditor.Lock();
-            if (!editor)
-                return;
-
-            Vector<String> folders;
-            for (auto& weak : o2Assets.GetAssetsTree().allAssets)
-            {
-                auto info = weak.Lock();
-                if (info && info->meta && info->meta->GetAssetType() == &TypeOf(FolderAsset))
-                    folders.Add(info->path);
-            }
-            folders.Sort([](const String& a, const String& b) { return a < b; });
-
             WeakRef<FinishBody> weakThis(this);
-            auto pick = [weakThis](const String& folder)
+            ShowAssetFolderMenu([weakThis](const String& folder)
             {
                 if (auto self = weakThis.Lock())
                 {
                     self->mFolderEdit->SetText(folder);
                     self->OnPathEdited();
                 }
-            };
-            Vector<Pair<String, Function<void()>>> items;
-            items.Add({ "Assets", [pick]() { pick(""); } });
-            for (auto& folder : folders)
-            {
-                String value = folder;
-                // A slash in a menu label opens a submenu, so the path is shown with another separator
-                items.Add({ folder.ReplacedAll("/", " > "), [pick, value]() { pick(value); } });
-            }
-            editor->ShowPopupMenu(items);
+            });
         }
 
         void ShowInAssets()

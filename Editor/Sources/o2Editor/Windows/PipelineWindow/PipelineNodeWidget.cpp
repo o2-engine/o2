@@ -27,6 +27,9 @@ namespace Editor
     const float PipelineNodeWidget::minWidth = 180.0f;
     const float PipelineNodeWidget::minHeight = 80.0f;
     static const int farUpdateFrames = 3;
+    static const float cornerRadius = 6.0f;
+    static const float outlineWidth = 2.0f;
+    static const float selectionWidth = 2.5f;
 
     static const Widget& PipelineNodeStyle()
     {
@@ -130,6 +133,11 @@ namespace Editor
         if (t == "promptGen") return "ui/pipeline/node_prompt.png";
         if (t == "imageOutline" || t == "imageShadow" || t == "imageGradient" || t == "imageColor") return "ui/pipeline/node_effect.png";
         return "ui/pipeline/node_ai.png";
+    }
+
+    String PipelineNodeWidget::MenuIconForType(const String& nodeType)
+    {
+        return IconForType(nodeType).ReplacedAll("/node_", "/menu_node_");
     }
 
     void PipelineNodeWidget::BuildHeader()
@@ -562,21 +570,17 @@ namespace Editor
     void PipelineNodeWidget::SetSelected(bool selected)
     {
         mSelected = selected;
-        SetState("selected", selected);
     }
 
     void PipelineNodeWidget::ApplyRuntime()
     {
-        const String& s = mRuntime.state;
-        SetState("running", s == "running");
-        SetState("queued", s == "queued");
-        SetState("error", s == "error");
-        SetState("done", s != "running" && s != "queued" && s != "error" && mRuntime.fresh);
+        PushEditorScopeOnStack scope;
         UpdateHeaderButtons();
     }
 
     void PipelineNodeWidget::OnOutputChanged()
     {
+        PushEditorScopeOnStack scope;
         mFarUpdateFrames = farUpdateFrames;
         if (mBody)
             mBody->OnOutputChanged();
@@ -584,6 +588,7 @@ namespace Editor
 
     void PipelineNodeWidget::OnConfigChanged()
     {
+        PushEditorScopeOnStack scope;
         mFarUpdateFrames = farUpdateFrames;
         if (mBody)
             mBody->OnConfigChanged();
@@ -629,10 +634,39 @@ namespace Editor
             mBodyHost->Draw();
             PipelineControls::SetFarView(false);
             DrawTopLayers();
+            DrawOutline();
             return;
         }
 
         Widget::Draw();
+        DrawOutline();
+    }
+
+    void PipelineNodeWidget::DrawOutline()
+    {
+        auto editor = mEditor.Lock();
+        float scale = editor ? editor->GetCamera().GetScale2D().x : 1.0f;
+        auto pixels = [&](float units) { return Math::Max(1.0f, units / scale); };
+
+        // The card art's body edge: 2 units below the layout top and 1 above its bottom
+        RectF rect = layout->GetWorldRect();
+        rect.top -= 2.0f;
+        rect.bottom += 1.0f;
+
+        const String& s = mRuntime.state;
+        Color4 color(96, 125, 139, 110);
+        float width = 1.0f;
+        if (s == "error") { color = Color4(249, 93, 72, 255); width = outlineWidth; }
+        else if (s == "running") { color = Color4(33, 150, 243, 255); width = outlineWidth; }
+        else if (s == "queued") { color = Color4(159, 190, 254, 255); width = outlineWidth; }
+        else if (mRuntime.fresh) { color = Color4(76, 175, 80, 255); width = outlineWidth; }
+        PipelineControls::DrawRoundedFrame(rect, cornerRadius, color, pixels(width));
+
+        if (mSelected)
+        {
+            RectF outer(rect.left - 2.0f, rect.top + 2.0f, rect.right + 2.0f, rect.bottom - 2.0f);
+            PipelineControls::DrawRoundedFrame(outer, cornerRadius + 2.0f, PipelineEditor::GetPortColor(PipelinePortType::Audio), pixels(selectionWidth));
+        }
     }
 
     void PipelineNodeWidget::DrawPorts()
