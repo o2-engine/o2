@@ -5,7 +5,7 @@
 [![WebAssembly](https://github.com/o2-engine/o2-Template/actions/workflows/wasm-cmake.yml/badge.svg?branch=main)](https://github.com/o2-engine/o2-Template/actions/workflows/wasm-cmake.yml)
 [![Android](https://github.com/o2-engine/o2-Template/actions/workflows/android-cmake.yml/badge.svg?branch=main)](https://github.com/o2-engine/o2-Template/actions/workflows/android-cmake.yml)
 
-[![Tests](https://img.shields.io/badge/tests-2464%20cases-brightgreen)](/Tests)
+[![Tests](https://img.shields.io/badge/tests-2470%20cases-brightgreen)](/Tests)
 
 # o2
 
