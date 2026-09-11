@@ -5519,6 +5519,16 @@ namespace Editor
         }
     }
 
+    static bool IsStyleGeneratedAt(const String& stylesPath, const TimeStamp& date)
+    {
+        DataDocument data;
+        if (!data.LoadFromFile(stylesPath + "/rebuildDate.json"))
+            return false;
+
+        TimeStamp generatedDate = data["generatedDate"];
+        return generatedDate == date;
+    }
+
     void EditorUIStyleBuilder::RebuildEditorUIManager(const String& stylesFolder, bool saveStyle /*= true*/, bool checkEditedDate /*= true*/)
     {
         PushEditorScopeOnStack scope;
@@ -5526,16 +5536,11 @@ namespace Editor
         String thisSourcePath = "../../o2/Editor/Sources/o2Editor/UI/Style/EditorUIStyle.cpp";
         TimeStamp thisSourceEditedDate = o2FileSystem.GetFileInfo(thisSourcePath).editDate;
 
-        DataDocument stylesRebuildDateData;
-        if (stylesRebuildDateData.LoadFromFile(GetEditorAssetsPath() + stylesFolder + "/rebuildDate.json"))
+        // The style loads from the built copy, which lags behind the saved one until editor assets are rebuilt
+        if (checkEditedDate && IsStyleGeneratedAt(GetEditorBuiltAssetsPath() + stylesFolder, thisSourceEditedDate))
         {
-            TimeStamp cachedDate = stylesRebuildDateData["generatedDate"];
-
-            if (thisSourceEditedDate == cachedDate && checkEditedDate)
-            {
-                o2UI.LoadStyle(stylesFolder);
-                return;
-            }
+            o2UI.LoadStyle(stylesFolder);
+            return;
         }
 
         o2UI.ClearStyle();
@@ -5558,7 +5563,7 @@ namespace Editor
             o2Debug.Log(func->GetName() + " for " + (String)time + " sec");
         }
 
-        if (saveStyle)
+        if (saveStyle && (!checkEditedDate || !IsStyleGeneratedAt(GetEditorAssetsPath() + stylesFolder, thisSourceEditedDate)))
         {
             o2UI.SaveStyle(stylesFolder);
 

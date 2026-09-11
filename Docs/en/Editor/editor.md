@@ -31,3 +31,6 @@ Windows and elements of the default layout:
 - (6) [Animation](/Docs/en/Editor/Animation/animation.md). Animation editor; keys, parameters and curves are edited here
 
 - [Pipeline](/Docs/en/Editor/Pipeline/pipeline.md). Node editor of AI content pipelines; opens on a pipeline asset and saves generated files into the assets folder. [Internals](/Docs/en/Editor/Pipeline/internals.md): graph, executor, nodes and providers
+
+### Editor UI style
+The look of the editor widgets is built by code (`EditorUIStyleBuilder`, `EditorUIStyle.cpp`) and cached as prototypes in `o2/Editor/Assets/Editor UI styles` (not in git). The editor loads the cache only when its built copy in `BuiltAssets/<platform>/EditorData` was generated from the current `EditorUIStyle.cpp`; otherwise it rebuilds the style in memory at startup (about 0.1 s) and refreshes the saved prototypes, which reach the built copy with the next build of the `Editor` target.
