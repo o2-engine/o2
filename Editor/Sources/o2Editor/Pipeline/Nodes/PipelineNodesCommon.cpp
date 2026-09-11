@@ -1,6 +1,8 @@
 #include "o2Editor/stdafx.h"
 #include "PipelineNodesCommon.h"
 
+#include "o2Editor/Pipeline/PipelineUtils.h"
+
 namespace Editor
 {
     namespace PipelineTransparency
@@ -130,5 +132,59 @@ namespace Editor
                 ordered.Add(layer);
         }
         return ordered;
+    }
+
+    bool ResolveSourceValue(const PipelineNode& node, const String& assetsPath, PipelineValue& value, String& error)
+    {
+        if (node.nodeType == "sourceText")
+        {
+            value = PipelineValue::Text(node.GetConfigString("text", ""));
+            return true;
+        }
+
+        bool image = node.nodeType == "sourceImage";
+        if (!image && node.nodeType != "sourceAudio")
+        {
+            error = node.nodeType + " is not a source node";
+            return false;
+        }
+
+        String kind = image ? "sourceImage" : "sourceAudio";
+        String assetPath = node.GetConfigString("assetPath", "").Trimed();
+        String uploadId = node.GetConfigString("uploadId", "").Trimed();
+        String path;
+        if (!assetPath.IsEmpty())
+            path = assetsPath + assetPath;
+        else if (!uploadId.IsEmpty())
+            path = PipelineUtils::GetUploadPath(uploadId);
+        else
+        {
+            error = kind + (image ? ": no image chosen yet" : ": no audio chosen yet");
+            return false;
+        }
+
+        String bytes = PipelineUtils::ReadFileBytes(path);
+        if (bytes.IsEmpty())
+        {
+            error = kind + ": file not found: " + path;
+            return false;
+        }
+
+        if (!image)
+        {
+            String ext = path.SubStr(path.FindLast(".") + 1).ToLowerCase();
+            value = PipelineValue::Bytes(PipelinePortType::Audio, bytes, PipelineUtils::MimeForExtension(ext));
+            return true;
+        }
+
+        auto bitmap = DecodeImageBytes(bytes);
+        if (!bitmap)
+        {
+            error = "sourceImage: unsupported image format (png expected)";
+            return false;
+        }
+
+        value = PipelineValue::Image(bitmap);
+        return true;
     }
 }

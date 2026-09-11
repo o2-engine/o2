@@ -1,10 +1,12 @@
 #include "o2Editor/stdafx.h"
 #include <gtest/gtest.h>
 
+#include "o2/Assets/Types/ImageAsset.h"
 #include "o2/Render/Render.h"
 #include "o2/Scene/UI/UIManager.h"
 #include "o2/Scene/UI/Widgets/ContextMenu.h"
 #include "o2/Utils/Editor/EditorScope.h"
+#include "o2/Scene/UI/WidgetLayer.h"
 #include "o2Editor/UIRoot.h"
 
 using namespace o2;
@@ -65,6 +67,44 @@ TEST(ContextMenuRebuild, HiddenMenuShowsItsNewItems)
     auto sub = SubMenuOf(menu, "New");
     ASSERT_TRUE(sub);
     EXPECT_EQ(sub->GetItems().Count(), 2);
+
+    menu->Hide(true);
+    EditorUIRoot.RemoveWidget(menu);
+}
+
+// Reused item widgets carry exactly the icon of the item they show now, never the one they showed before
+TEST(ContextMenuRebuild, ReusedItemsDoNotStackIcons)
+{
+    MenuRoot root;
+    PushEditorScopeOnStack scope;
+    auto menu = o2UI.CreateWidget<ContextMenu>();
+    EditorUIRoot.AddWidget(menu);
+
+    AssetRef<ImageAsset> icon("ui/UI4_small_trash_icon.png");
+    auto fill = [&](bool withIcons)
+    {
+        menu->RemoveAllItems();
+        for (auto name : { "one", "two", "three" })
+            menu->AddItem(name, Function<void()>(), withIcons ? icon : AssetRef<ImageAsset>());
+        menu->Show(Vec2F());
+        root.Frame();
+    };
+    auto iconLayersOf = [&](const char* name)
+    {
+        auto item = menu->FindChildByTypeAndName<ContextMenuItem>((String)"Context Item " + name);
+        auto layer = item ? item->FindLayer("icon") : nullptr;
+        return layer ? layer->GetChildren().Count() : -1;
+    };
+
+    fill(true);
+    fill(true);
+    fill(true);
+    for (auto name : { "one", "two", "three" })
+        EXPECT_EQ(iconLayersOf(name), 1) << name;
+
+    fill(false);
+    for (auto name : { "one", "two", "three" })
+        EXPECT_EQ(iconLayersOf(name), 0) << name;
 
     menu->Hide(true);
     EditorUIRoot.RemoveWidget(menu);

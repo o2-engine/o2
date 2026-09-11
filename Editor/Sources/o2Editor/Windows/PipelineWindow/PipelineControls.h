@@ -56,7 +56,7 @@ namespace Editor
         bool IsFarView();
 
         // Sets the far view flag for the drawing that follows
-        void SetFarView(bool far);
+        void SetFarView(bool enabled);
 
         // Draws a rounded rectangle outline; the width is in screen pixels
         void DrawRoundedFrame(const RectF& rect, float radius, const Color4& color, float widthPixels);

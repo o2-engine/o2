@@ -741,8 +741,8 @@ namespace Editor
         if (!mResEnabledInHierarchy || mIsClipped)
             return;
 
-        bool far = PipelineControls::IsFarView();
-        if (far)
+        bool farView = PipelineControls::IsFarView();
+        if (farView)
         {
             DrawLayers();
             Widget::OnDrawn();
@@ -777,19 +777,35 @@ namespace Editor
 
         CursorAreaEventsListener::OnDrawn();
 
-        if (mWithRegion && !far)
+        if (mWithRegion && !farView)
         {
             if (!mRegionDragging)
                 SyncRegionFromConfig();
 
             const Basis& b = mRegionFrame->GetCurrentBasis();
             RectF frame(b.origin, b.origin + b.xv + b.yv);
+
+            // Everything outside the box is not sent to the model: shade it
+            RectF box(Math::Clamp(Math::Min(frame.left, frame.right), stage.left, stage.right),
+                      Math::Clamp(Math::Max(frame.top, frame.bottom), stage.bottom, stage.top),
+                      Math::Clamp(Math::Max(frame.left, frame.right), stage.left, stage.right),
+                      Math::Clamp(Math::Min(frame.top, frame.bottom), stage.bottom, stage.top));
+            Color4 shade(0, 0, 0, 120);
+            auto fill = [&](const RectF& r)
+            {
+                if (r.Width() > 0.0f && r.Height() > 0.0f)
+                    o2Render.DrawFilledPolygon({ r.LeftBottom(), Vec2F(r.left, r.top), r.RightTop(), Vec2F(r.right, r.bottom) }, shade);
+            };
+            fill(RectF(stage.left, stage.top, stage.right, box.top));
+            fill(RectF(stage.left, box.bottom, stage.right, stage.bottom));
+            fill(RectF(stage.left, box.top, box.left, box.bottom));
+            fill(RectF(box.right, box.top, stage.right, box.bottom));
             o2Render.DrawAARectFrame(frame, GetTool() == "roi" ? Color4(0, 150, 136, 255) : Color4(0, 150, 136, 150), 1.5f);
             if (GetTool() == "roi")
                 mRegionFrame->Draw();
         }
 
-        if (mHovered && !far && GetTool() != "roi")
+        if (mHovered && !farView && GetTool() != "roi")
         {
             bool eraser = GetTool() == "eraser";
             o2Render.DrawAACircle(mHoverPoint, GetBrushSize() * 0.5f, eraser ? Color4(96, 125, 139, 255) : GetBrushColor(), 28, 1.0f);

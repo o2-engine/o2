@@ -14,6 +14,7 @@
 #include "o2/Scene/UI/WidgetLayout.h"
 #include "o2/Scene/UI/Widgets/Button.h"
 #include "o2/Scene/UI/Widgets/ContextMenu.h"
+#include "o2/Scene/UI/Widgets/DropDown.h"
 #include "o2/Scene/UI/Widgets/EditBox.h"
 #include "o2/Scene/UI/Widgets/HorizontalScrollBar.h"
 #include "o2/Scene/UI/Widgets/VerticalScrollBar.h"
@@ -25,7 +26,6 @@
 #include "o2/Utils/Test/AppTestDriver.h"
 
 #include <chrono>
-#include <unistd.h>
 #include "o2/Assets/Types/PipelineAsset.h"
 #include "o2Editor/Pipeline/PipelineAudio.h"
 #include "o2Editor/Pipeline/PipelineExecutor.h"
@@ -871,8 +871,9 @@ TEST_F(PipelineUiFixture, GeminiShowcaseScreenshots)
 
 TEST_F(PipelineUiFixture, CacheIdFollowsTheGraphAcrossAssets)
 {
+    // A node whose result exists only in the cache (sources take theirs from the config)
     PipelineGraph graph;
-    auto text = AddNode(graph, "sourceText", Vec2F());
+    auto text = AddNode(graph, "textEdit", Vec2F());
     graph.SaveToAsset(*asset);
     editor->SetAsset(asset);
     UiDriver::Step(2);
@@ -1590,4 +1591,128 @@ TEST_F(PipelineUiFixture, CardHeaderAndOutlineShareOneEdge)
         const UInt8* p = PipelineImageOps::Pixel(*capture, above.x, above.y);
         EXPECT_TRUE(IsBackgroundPixel(capture, above)) << "scale " << scale << " rgb " << (int)p[0] << " " << (int)p[1] << " " << (int)p[2];
     }
+}
+
+// A node reading an image shows it before anything runs, and the extract region shades what it cuts away
+TEST_F(PipelineUiFixture, ExtractShowsItsInputBeforeRunningAndShadesOutsideTheRegion)
+{
+    String uploadId = "uitest-extract-" + PipelineNode::GenerateId() + ".png";
+    ASSERT_TRUE(PipelineUtils::WriteFileBytes(PipelineUtils::GetUploadPath(uploadId),
+                                              PipelineValue::Image(PipelineImageOps::Blank(64, 48, Color4(255, 255, 255, 255))).GetPngBytes()));
+
+    PipelineGraph graph;
+    auto source = AddNode(graph, "sourceImage", Vec2F());
+    source->SetConfigString("uploadId", uploadId);
+    auto extract = AddNode(graph, "imageExtract", Vec2F(360, 0));
+    Connect(graph, source, "out", extract, "image");
+    graph.SaveToAsset(*asset);
+    editor->SetAsset(asset);
+    UiDriver::Step(3);
+
+    auto card = editor->GetNodeWidget(Live(extract)->id);
+    ASSERT_TRUE(card);
+    auto paint = card->FindChildByType<PipelinePaintEditor>();
+    ASSERT_TRUE(paint);
+    ASSERT_TRUE(paint->GetBackground()) << "the input image is not shown before running";
+    EXPECT_EQ(paint->GetBackground()->GetSize(), Vec2I(64, 48));
+
+    editor->SetView(card->GetCardRect().Center(), 1.0f);
+    UiDriver::Step(4);
+    auto capture = UiDriver::Capture();
+    ASSERT_TRUE(capture);
+    RectF stage = paint->GetStageRectangle();
+    auto brightness = [&](const Vec2F& p)
+    {
+        Vec2I px = ScreenToCapture(editor->LocalToScreenPoint(p), capture);
+        const UInt8* c = PipelineImageOps::Pixel(*capture, px.x, px.y);
+        return (int)c[0] + c[1] + c[2];
+    };
+    int inside = brightness(stage.Center());
+    int outside = brightness(Vec2F(stage.left + stage.Width() * 0.03f, stage.Center().y));
+    EXPECT_GT(inside - outside, 150) << "inside " << inside << " outside " << outside;
+    String dir = ScreenshotDir();
+    o2FileSystem.FolderCreate(dir, true);
+    capture->Save(dir + "/pipeline_extract_input.png", Bitmap::ImageType::Png);
+
+    o2FileSystem.FileDelete(PipelineUtils::GetUploadPath(uploadId));
+}
+
+// Dragging a link from an image into an extract node shows the image in it at once
+TEST_F(PipelineUiFixture, NewLinkShowsTheInputImmediately)
+{
+    String uploadId = "uitest-link-" + PipelineNode::GenerateId() + ".png";
+    ASSERT_TRUE(PipelineUtils::WriteFileBytes(PipelineUtils::GetUploadPath(uploadId),
+                                              PipelineValue::Image(PipelineImageOps::Blank(40, 30, Color4(0, 0, 255, 255))).GetPngBytes()));
+
+    PipelineGraph graph;
+    auto source = AddNode(graph, "sourceImage", Vec2F());
+    source->SetConfigString("uploadId", uploadId);
+    auto extract = AddNode(graph, "imageExtract", Vec2F(380, 0));
+    graph.SaveToAsset(*asset);
+    editor->SetAsset(asset);
+    UiDriver::Step(3);
+    source = Live(source);
+    extract = Live(extract);
+
+    auto sourceCard = editor->GetNodeWidget(source->id);
+    auto extractCard = editor->GetNodeWidget(extract->id);
+    auto paint = extractCard->FindChildByType<PipelinePaintEditor>();
+    ASSERT_TRUE(paint);
+    EXPECT_FALSE(paint->GetBackground());
+
+    editor->SetView((sourceCard->GetCardRect().Center() + extractCard->GetCardRect().Center()) * 0.5f, 1.0f);
+    UiDriver::Step(3);
+    auto input = extract->inputs.Find([](const PipelinePort& p) { return p.name == "image"; });
+    ASSERT_TRUE(input);
+    Vec2F from = editor->LocalToScreenPoint(sourceCard->GetPortPosition(source->outputs[0].id, false));
+    Vec2F to = editor->LocalToScreenPoint(extractCard->GetPortPosition(input->id, true));
+    UiDriver::Drag(from, to);
+    UiDriver::Step(2);
+
+    ASSERT_EQ(editor->GetGraph()->edges.Count(), 1);
+    ASSERT_TRUE(paint->GetBackground());
+    EXPECT_EQ(paint->GetBackground()->GetSize(), Vec2I(40, 30));
+    o2FileSystem.FileDelete(PipelineUtils::GetUploadPath(uploadId));
+}
+
+// The model list shows product names and stores the model id
+TEST_F(PipelineUiFixture, ModelListShowsReadableNamesAndStoresIds)
+{
+    PipelineGraph graph;
+    auto gen = AddNode(graph, "nanoBananaGen", Vec2F());
+    gen->SetConfigString("model", "gemini-3.1-flash-image");
+    graph.SaveToAsset(*asset);
+    editor->SetAsset(asset);
+    UiDriver::Step(3);
+    gen = Live(gen);
+
+    auto card = editor->GetNodeWidget(gen->id);
+    auto dropdown = card->FindChildByTypeAndName<DropDown>("model");
+    ASSERT_TRUE(dropdown);
+    editor->SetView(card->GetCardRect().Center(), 1.0f);
+    UiDriver::Step(3);
+    String dir = ScreenshotDir();
+    o2FileSystem.FolderCreate(dir, true);
+    EXPECT_TRUE(UiDriver::Screenshot(dir + "/pipeline_model_names.png"));
+    dropdown->Expand();
+    UiDriver::Wait(0.5f);
+    EXPECT_GE(dropdown->GetListView()->layout->GetWidth(), 319.0f);
+    EXPECT_FALSE(dropdown->GetListView()->GetHorizontalScrollbar());
+    EXPECT_NEAR(dropdown->GetListView()->layout->GetWorldRect().left, dropdown->layout->GetWorldRect().left, 2.0f);
+    EXPECT_TRUE(UiDriver::Screenshot(dir + "/pipeline_model_list.png"));
+    dropdown->Collapse();
+    EXPECT_EQ((String)dropdown->GetSelectedItemText(), String("Gemini 3.1 Flash Image \xC2\xB7 Nano Banana 2"));
+
+    int pro = -1;
+    for (int i = 0; i < dropdown->GetItemsCount(); i++)
+    {
+        if ((String)dropdown->GetItemText(i) == String("Gemini 3 Pro Image \xC2\xB7 Nano Banana Pro"))
+            pro = i;
+    }
+    ASSERT_GE(pro, 0);
+    dropdown->SelectItemAt(pro);
+    if (dropdown->onSelectedPos)
+        dropdown->onSelectedPos(pro);
+    UiDriver::Step(2);
+    EXPECT_EQ(Live(gen)->GetConfigString("model", ""), String("gemini-3-pro-image"));
 }

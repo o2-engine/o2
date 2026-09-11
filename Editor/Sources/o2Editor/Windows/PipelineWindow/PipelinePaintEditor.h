@@ -43,6 +43,12 @@ namespace Editor
         // Sets the background image; the drawing resolution follows its size
         void SetBackground(const Ref<Bitmap>& bitmap);
 
+        // Returns the background image, null for a blank canvas
+        const Ref<Bitmap>& GetBackground() const { return mBackground; }
+
+        // Returns the stage rectangle the drawing is shown in, world space
+        RectF GetStageRectangle() const { return GetStageRect(); }
+
         // Reloads the strokes and the tool settings from the node config
         void RefreshFromConfig();
 
@@ -296,6 +302,8 @@ CLASS_METHODS_META(Editor::PipelinePaintEditor)
     FUNCTION().PUBLIC().CONSTRUCTOR(RefCounter*);
     FUNCTION().PUBLIC().SIGNATURE(void, Init, const Ref<PipelineNode>&, bool);
     FUNCTION().PUBLIC().SIGNATURE(void, SetBackground, const Ref<Bitmap>&);
+    FUNCTION().PUBLIC().SIGNATURE(const Ref<Bitmap>&, GetBackground);
+    FUNCTION().PUBLIC().SIGNATURE(RectF, GetStageRectangle);
     FUNCTION().PUBLIC().SIGNATURE(void, RefreshFromConfig);
     FUNCTION().PUBLIC().SIGNATURE(float, GetMinHeight);
     FUNCTION().PUBLIC().SIGNATURE(float, GetMinHeightForWidth, float);

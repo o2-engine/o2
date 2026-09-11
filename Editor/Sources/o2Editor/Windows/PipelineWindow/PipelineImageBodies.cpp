@@ -202,7 +202,7 @@ namespace Editor
         {
             AddColor("Color", "color", "#000000");
             AddSlider("Alpha", "opacity", 0, 1, 0.05f, 0.6f);
-            AddSlider("Angle", "angle", 0, 359, 1, 45, "°");
+            AddSlider("Angle", "angle", 0, 359, 1, 45, "\xC2\xB0");
             AddSlider("Dist", "distance", 0, 128, 1, 8, "px");
             AddSlider("Blur", "blur", 0, 128, 1, 8, "px");
             AddSlider("Spread", "spread", 0, 64, 1, 0, "px");
@@ -225,7 +225,7 @@ namespace Editor
             AddColor("B", "color2", "#000000");
             AddSlider("B alpha", "alpha2", 0, 1, 0.05f, 1);
             if (GetString("blend", "normal") != "map" && GetString("kind", "linear") != "radial")
-                AddSlider("Angle", "angle", 0, 359, 1, 90, "°");
+                AddSlider("Angle", "angle", 0, 359, 1, 90, "\xC2\xB0");
             AddSlider("Amount", "opacity", 0, 1, 0.05f, 1);
             AddCheckbox("Keep inside the artwork", "clipToAlpha", true);
             if (GetString("blend", "normal") == "map")
@@ -246,7 +246,7 @@ namespace Editor
             AddSlider("Bright", "brightness", -100, 100, 1, 0);
             AddSlider("Contr", "contrast", -100, 100, 1, 0);
             AddSlider("Sat", "saturation", -100, 100, 1, 0);
-            AddSlider("Hue", "hue", -180, 180, 1, 0, "°");
+            AddSlider("Hue", "hue", -180, 180, 1, 0, "\xC2\xB0");
             AddColor("Tint", "tint", "#ff8800");
             AddSlider("Tint a", "tintStrength", 0, 1, 0.05f, 0);
             AddCheckbox("Colorize (tint hue, keep luminance)", "colorize", false);

@@ -308,7 +308,7 @@ namespace Editor
         if (mTextView)
             mTextView->SetText(value.IsText() ? value.data : String());
         if (mAudioView)
-            mAudioView->SetAudio(value, value.IsAudio() ? "Result (" + PipelineUtils::ExtensionForMime(value.mimeType) + ")" : "");
+            mAudioView->SetAudio(value, value.IsAudio() ? "Result (" + PipelineUtils::ExtensionForMime(value.mimeType) + ")" : String());
         if (mVideoView)
         {
             String cacheDir;
@@ -324,7 +324,45 @@ namespace Editor
 
     Ref<DropDown> PipelineNodeBody::AddModelRow(const Vector<String>& presets, const String& defaultModel)
     {
-        return AddSelectRow("Model", "model", presets, defaultModel);
+        // The list shows product names, the config keeps the model id
+        String current = GetString("model", defaultModel);
+        Vector<String> ids = presets;
+        if (!current.IsEmpty() && !ids.Contains(current))
+            ids.Insert(current, 0);
+
+        Vector<String> names;
+        for (auto& id : ids)
+            names.Add(PipelineUtils::PrettyModelName(id));
+
+        auto dropdown = MakeDropDown(names, PipelineUtils::PrettyModelName(current));
+        dropdown->name = "model";
+        // Product names are longer than the field: the opened list starts at the field and is wide enough to read them whole
+        if (auto list = dropdown->GetListView())
+        {
+            list->layout->anchorLeft = 0.0f;
+            list->layout->anchorRight = 0.0f;
+            list->layout->offsetLeft = 0.0f;
+            list->layout->offsetRight = 320.0f;
+
+            // Names fit this width; the list's horizontal bar would only take the room of the last item
+            if (auto bar = list->GetHorizontalScrollbar())
+            {
+                bar->SetEnabledForcible(false);
+                list->SetHorizontalScrollBar(nullptr, false);
+            }
+        }
+        WeakRef<PipelineNodeBody> weakThis(this);
+        dropdown->onSelectedPos = [weakThis, ids](int position)
+        {
+            auto self = weakThis.Lock();
+            if (!self || position < 0 || position >= ids.Count())
+                return;
+
+            if (self->mNode->GetConfigString("model", "") != ids[position])
+                self->SetString("model", ids[position], true);
+        };
+        AddRow(MakeRow("Model", dropdown), 22);
+        return dropdown;
     }
 
     Ref<DropDown> PipelineNodeBody::AddSelectRow(const String& label, const String& key, const Vector<String>& options, const String& def)

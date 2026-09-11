@@ -7,6 +7,8 @@
 #include "o2Editor/Pipeline/PipelineGraph.h"
 #include "o2Editor/Pipeline/PipelineNodeType.h"
 #include "o2Editor/Pipeline/PipelineUtils.h"
+#include "o2Editor/Pipeline/PipelineImageOps.h"
+#include "o2Editor/Pipeline/Nodes/PipelineNodesCommon.h"
 
 using namespace o2;
 using namespace Editor;
@@ -262,4 +264,52 @@ TEST(PipelineGraph, RunTargetsCoverAWholeRealPipeline)
     }
     printf("[run] %d nodes, %d targets, %d covered, %d missed\n", graph.nodes.Count(), graph.GetRunTargets().Count(), covered.Count(), missed.Count());
     EXPECT_TRUE(missed.IsEmpty()) << missed.Count() << " nodes never run, first: " << (missed.IsEmpty() ? String() : missed[0]);
+}
+
+// Model ids are shown by the product name AssetsLine uses; unknown ids become capitalised words
+TEST(PipelineUtils, PrettyModelNames)
+{
+    EXPECT_EQ(PipelineUtils::PrettyModelName("gemini-3.1-flash-image"), String("Gemini 3.1 Flash Image \xC2\xB7 Nano Banana 2"));
+    EXPECT_EQ(PipelineUtils::PrettyModelName("models/veo-3.1-fast-generate-preview"), String("Google Veo 3.1 Fast"));
+    EXPECT_EQ(PipelineUtils::PrettyModelName("eleven_multilingual_v2"), String("ElevenLabs Multilingual v2"));
+    EXPECT_EQ(PipelineUtils::PrettyModelName("gemini-3.5-flash"), String("Gemini 3.5 Flash"));
+    EXPECT_EQ(PipelineUtils::PrettyModelName("gemini-2.5-flash-lite"), String("Gemini 2.5 Flash Lite"));
+    EXPECT_EQ(PipelineUtils::PrettyModelName("gemini-3.1-pro-preview"), String("Gemini 3.1 Pro \xC2\xB7 preview"));
+    EXPECT_EQ(PipelineUtils::PrettyModelName(""), String());
+}
+
+// A slash in a label opens a sub menu in the add menu and a dot starts a group: labels have neither
+TEST(PipelineGraph, NodeLabelsReadAsPlainMenuItems)
+{
+    for (auto schema : PipelineNodeRegistry::AllSchemas())
+    {
+        EXPECT_FALSE(schema->label.Contains("/")) << schema->label;
+        EXPECT_FALSE(schema->label.Contains(".")) << schema->label;
+    }
+}
+
+// Source nodes resolve their value from the config alone, the same way their run does
+TEST(PipelineGraph, SourceValuesComeFromTheConfig)
+{
+    PipelineGraph graph;
+    auto text = AddNode(graph, "sourceText", Vec2F());
+    text->SetConfigString("text", "hello");
+    PipelineValue value;
+    String error;
+    ASSERT_TRUE(ResolveSourceValue(*text, "", value, error)) << error;
+    EXPECT_EQ(value.data, String("hello"));
+
+    auto image = AddNode(graph, "sourceImage", Vec2F());
+    EXPECT_FALSE(ResolveSourceValue(*image, "", value, error));
+    EXPECT_TRUE(error.Contains("no image chosen"));
+
+    String uploadId = "test-source-" + PipelineNode::GenerateId() + ".png";
+    ASSERT_TRUE(PipelineUtils::WriteFileBytes(PipelineUtils::GetUploadPath(uploadId),
+                                              PipelineValue::Image(PipelineImageOps::Blank(6, 4, Color4(255, 0, 0, 255))).GetPngBytes()));
+    image->SetConfigString("uploadId", uploadId);
+    ASSERT_TRUE(ResolveSourceValue(*image, "", value, error)) << error;
+    ASSERT_TRUE(value.IsImage());
+    ASSERT_TRUE(value.GetBitmap());
+    EXPECT_EQ(value.GetBitmap()->GetSize(), Vec2I(6, 4));
+    o2FileSystem.FileDelete(PipelineUtils::GetUploadPath(uploadId));
 }

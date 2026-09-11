@@ -151,6 +151,8 @@ namespace Editor
             asset->SetDirty();
         }
 
+        RefreshCardsWithChangedInputs();
+
         if (onChanged)
             onChanged();
 
@@ -178,6 +180,12 @@ namespace Editor
             return;
 
         auto schema = node->GetSchema();
+        if (schema && schema->category == PipelineNodeCategory::Source)
+        {
+            RefreshSourceOutput(node);
+            return;
+        }
+
         bool chromaKey = key == "chromaColor" || key == "chromaTolerance" || key == "chromaSoftness" || key == "chromaSpill";
         bool instant = schema && schema->instant;
         if (instant || (chromaKey && node->GetNode()->GetConfigBool("transparentBg", false) &&

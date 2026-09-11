@@ -2,6 +2,7 @@
 #include "PipelineEditor.h"
 
 #include "o2/Application/Application.h"
+#include "o2/Assets/Assets.h"
 #include "o2/Application/Input.h"
 #include "o2/Render/Render.h"
 #include "o2/Render/Sprite.h"
@@ -15,6 +16,7 @@
 #include "o2/Utils/FileSystem/FileSystem.h"
 #include "o2/Utils/System/Clipboard.h"
 #include "o2Editor/Dialogs/YesNoCancelDlg.h"
+#include "o2Editor/Pipeline/Nodes/PipelineNodesCommon.h"
 #include "o2Editor/Pipeline/PipelineNodeType.h"
 #include "o2Editor/Pipeline/PipelineUtils.h"
 #include "o2Editor/Windows/PipelineWindow/PipelineNodeBody.h"
@@ -217,7 +219,6 @@ namespace Editor
             {
                 widget->GetRuntime() = runtime;
                 widget->ApplyRuntime();
-                widget->OnOutputChanged();
             }
             mNodesContainer->AddChild(widget);
             mNodeWidgets.Add(widget);
@@ -225,7 +226,13 @@ namespace Editor
             mHandleToNode[widget->dragHandle] = widget;
         }
 
+        // Every card exists and holds its result before any of them reads its inputs
+        for (auto& widget : mNodeWidgets)
+            widget->OnOutputChanged();
+
         graph->RemoveDanglingEdges();
+        mInputLinks.Clear();
+        RefreshCardsWithChangedInputs();
         RebuildBendHandles();
         RecalculateViewArea();
         mNeedRedraw = true;
@@ -238,6 +245,17 @@ namespace Editor
         {
             String path;
             PipelineValue value = PipelineExecutor::LoadPreview(pipelineId, *widget->GetNode(), &path);
+
+            // A source is its config: the file it points at now, not what the last run read
+            PipelineValue sourceValue;
+            String error;
+            auto schema = widget->GetSchema();
+            if (schema && schema->category == PipelineNodeCategory::Source &&
+                ResolveSourceValue(*widget->GetNode(), o2Assets.GetAssetsPath(), sourceValue, error))
+            {
+                value = sourceValue;
+            }
+
             auto& runtime = widget->GetRuntime();
             runtime.output = value;
             runtime.previewPath = path;
@@ -247,6 +265,55 @@ namespace Editor
 
         for (auto& widget : mNodeWidgets)
             widget->OnOutputChanged();
+    }
+
+    void PipelineEditor::RefreshSourceOutput(const Ref<PipelineNodeWidget>& widget)
+    {
+        auto schema = widget ? widget->GetSchema() : nullptr;
+        auto graph = GetGraph();
+        if (!schema || schema->category != PipelineNodeCategory::Source || !graph)
+            return;
+
+        PipelineValue value;
+        String error;
+        if (!ResolveSourceValue(*widget->GetNode(), o2Assets.GetAssetsPath(), value, error))
+            value = PipelineValue();
+
+        widget->GetRuntime().output = value;
+        widget->OnOutputChanged();
+
+        for (auto& edge : graph->GetOutgoingEdges(widget->GetNode()->id))
+        {
+            if (auto downstream = GetNodeWidget(edge->toNodeId))
+            {
+                downstream->OnOutputChanged();
+                if (downstream->GetSchema() && downstream->GetSchema()->instant)
+                    ScheduleAutoApply(edge->toNodeId);
+            }
+        }
+    }
+
+    void PipelineEditor::RefreshCardsWithChangedInputs()
+    {
+        auto graph = GetGraph();
+        if (!graph)
+            return;
+
+        Map<String, String> links;
+        for (auto& edge : graph->edges)
+            links[edge->toNodeId] += edge->fromNodeId + ":" + edge->fromPortId + ">" + edge->toPortId + ";";
+
+        for (auto& widget : mNodeWidgets)
+        {
+            String id = widget->GetNode()->id;
+            String now, was;
+            links.TryGetValue(id, now);
+            mInputLinks.TryGetValue(id, was);
+            if (now != was)
+                widget->OnOutputChanged();
+        }
+
+        mInputLinks = links;
     }
 
     void PipelineEditor::RefreshFreshness()

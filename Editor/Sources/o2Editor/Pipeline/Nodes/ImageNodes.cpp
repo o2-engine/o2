@@ -39,25 +39,12 @@ namespace Editor
         Coroutine<PipelineRunResult> Run(const Ref<PipelineExecContext>& ctx, const Map<String, PipelineValue>& inputs,
                                          const Ref<PipelineNode>& node) override
         {
-            String assetPath = node->GetConfigString("assetPath", "").Trimed();
-            String uploadId = node->GetConfigString("uploadId", "").Trimed();
-            String path;
-            if (!assetPath.IsEmpty())
-                path = ctx->assetsPath + assetPath;
-            else if (!uploadId.IsEmpty())
-                path = PipelineUtils::GetUploadPath(uploadId);
-            else
-                co_return PipelineRunResult::Fail("sourceImage: no image chosen yet");
+            PipelineValue value;
+            String error;
+            if (!ResolveSourceValue(*node, ctx->assetsPath, value, error))
+                co_return PipelineRunResult::Fail(error);
 
-            String bytes = PipelineUtils::ReadFileBytes(path);
-            if (bytes.IsEmpty())
-                co_return PipelineRunResult::Fail("sourceImage: file not found: " + path);
-
-            auto bitmap = DecodeImageBytes(bytes);
-            if (!bitmap)
-                co_return PipelineRunResult::Fail("sourceImage: unsupported image format (png expected)");
-
-            co_return ImageResult(bitmap);
+            co_return PipelineRunResult::Single(value);
         }
     };
 
@@ -174,7 +161,7 @@ namespace Editor
         ImageShadowNode()
         {
             mSchema.type = "imageShadow";
-            mSchema.label = "Shadow / glow";
+            mSchema.label = "Shadow";
             mSchema.category = PipelineNodeCategory::Transform;
             mSchema.instant = true;
             mSchema.description = "Drop a shadow (or a glow) behind a transparent image - colour, direction, distance, blur and spread - or cast it inside the shape. Works offline.";
@@ -227,7 +214,7 @@ namespace Editor
 
             PipelineImageOps::GradientOptions opt;
             String blend = node->GetConfigString("blend", "normal");
-            opt.blend = (blend == "multiply" || blend == "screen" || blend == "overlay" || blend == "map") ? blend : "normal";
+            opt.blend = (blend == "multiply" || blend == "screen" || blend == "overlay" || blend == "map") ? blend : String("normal");
             opt.kind = node->GetConfigString("kind", "linear") == "radial" ? "radial" : "linear";
             opt.color1 = ConfigColor(*node, "color1", Color4::White());
             opt.color2 = ConfigColor(*node, "color2", Color4::Black());

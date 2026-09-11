@@ -127,10 +127,10 @@ namespace o2
 		for (auto& layer : mTopDrawingLayers)
 			layer->Draw();
 
-		if (mOwnHorScrollBar)
+		if (mOwnHorScrollBar && mHorScrollBar)
 			mHorScrollBar->Draw();
 
-		if (mOwnVerScrollBar)
+		if (mOwnVerScrollBar && mVerScrollBar)
 			mVerScrollBar->Draw();
 
 		DrawDebugFrame();

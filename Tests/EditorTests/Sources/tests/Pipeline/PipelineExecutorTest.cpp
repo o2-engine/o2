@@ -74,7 +74,7 @@ namespace
         {
             result.events.Add(e);
             if (e.type == PipelineExecEvent::Type::NodeOutput) result.outputs[e.nodeId] = e.value;
-            if (e.type == PipelineExecEvent::Type::NodeState) result.states[e.nodeId] = e.state + (e.error.IsEmpty() ? "" : ": " + e.error);
+            if (e.type == PipelineExecEvent::Type::NodeState) result.states[e.nodeId] = e.state + (e.error.IsEmpty() ? String() : ": " + e.error);
             if (e.type == PipelineExecEvent::Type::Done) result.done = true;
             if (e.type == PipelineExecEvent::Type::Fatal) result.fatal = e.error;
         };
@@ -317,7 +317,7 @@ TEST(PipelineExecutorLive, GeminiTextToImageFinish)
     {
         result.events.Add(e);
         if (e.type == PipelineExecEvent::Type::NodeOutput) result.outputs[e.nodeId] = e.value;
-        if (e.type == PipelineExecEvent::Type::NodeState) result.states[e.nodeId] = e.state + (e.error.IsEmpty() ? "" : ": " + e.error);
+        if (e.type == PipelineExecEvent::Type::NodeState) result.states[e.nodeId] = e.state + (e.error.IsEmpty() ? String() : ": " + e.error);
         if (e.type == PipelineExecEvent::Type::Done) result.done = true;
         if (e.type == PipelineExecEvent::Type::Fatal) result.fatal = e.error;
         if (e.type == PipelineExecEvent::Type::Log) printf("[pipeline] %s\n", e.message.Data());

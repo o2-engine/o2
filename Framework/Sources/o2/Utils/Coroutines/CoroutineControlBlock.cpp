@@ -52,6 +52,7 @@ namespace o2
     {
         void TerminateWithUnhandledException()
         {
+#if defined(__cpp_exceptions) || defined(_CPPUNWIND)
             try
             {
                 throw;
@@ -64,6 +65,7 @@ namespace o2
             {
                 o2Debug.LogError("Unhandled exception in a coroutine");
             }
+#endif
 
             std::terminate();
         }

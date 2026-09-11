@@ -839,6 +839,13 @@ namespace o2
         name = (WString)"Context Item " + item->text;
 
         if (auto iconLayer = FindLayer("icon")) {
+            // A reused item widget still holds the icon of the item it showed before
+            if (!iconLayer->GetChildren().IsEmpty())
+            {
+                iconLayer->RemoveAllChildren();
+                UpdateLayersDrawingSequence();
+            }
+
             if (item->icon) {
                 Vec2F size = item->icon->GetAtlasRect().Size();
 

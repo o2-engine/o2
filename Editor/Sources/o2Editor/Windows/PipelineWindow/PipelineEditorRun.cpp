@@ -222,7 +222,7 @@ namespace Editor
                     }
                     else
                     {
-                        rt.state = event.state == "done" ? "idle" : event.state;
+                        rt.state = event.state == "done" ? String("idle") : event.state;
                         rt.error = event.error;
                         if (event.state == "done") rt.fresh = true;
                     }

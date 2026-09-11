@@ -67,9 +67,9 @@ namespace Editor
             return sFarView;
         }
 
-        void SetFarView(bool far)
+        void SetFarView(bool enabled)
         {
-            sFarView = far;
+            sFarView = enabled;
         }
 
         void DrawRoundedFrame(const RectF& rect, float radius, const Color4& color, float widthPixels)

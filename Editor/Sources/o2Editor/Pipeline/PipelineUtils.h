@@ -59,6 +59,9 @@ namespace Editor
         // Returns file extension for a mime type, "bin" when unknown
         String ExtensionForMime(const String& mime);
 
+        // Returns the name a person reads for a model id: the known product name, else the id split into capitalised words
+        String PrettyModelName(const String& id);
+
         // Returns root of the pipeline working directory (caches, uploads, settings)
         String GetWorkPath();
 

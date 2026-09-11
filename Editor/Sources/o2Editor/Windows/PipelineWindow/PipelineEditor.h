@@ -259,6 +259,8 @@ namespace Editor
         String mEditSnapshotName;           // Undo step name of the continuous edit
         bool   mEditSnapshotActive = false; // True while a continuous edit is in progress
 
+        Map<String, String> mInputLinks; // Incoming links of every node at the last refresh, to find cards whose inputs changed
+
         bool  mNeedAdjustView = false; // True when the view must be fitted at next update
         bool  mCameraDirty = false;    // True when the camera must be saved to the graph
         RectF mCullingRect;            // Visible canvas rectangle with a margin; cards and links outside it are skipped
@@ -386,8 +388,15 @@ namespace Editor
         // Returns target node id with all its upstream node ids
         Vector<String> UpstreamNodes(const String& targetId) const;
 
-        // Loads cached previews of all nodes from disk
+        // Loads cached previews of all nodes from disk; source nodes take their value from their config
         void LoadPreviews();
+
+        // Gives a source node its value from the config right away and refreshes the cards reading it,
+        // so nodes below show their input before anything runs
+        void RefreshSourceOutput(const Ref<PipelineNodeWidget>& widget);
+
+        // Refreshes the cards whose incoming links changed since the last call
+        void RefreshCardsWithChangedInputs();
 
         // Stores camera position and scale into the graph
         void SaveCameraToGraph();
@@ -465,6 +474,7 @@ CLASS_FIELDS_META(Editor::PipelineEditor)
     FIELD().PROTECTED().NAME(mEditSnapshot);
     FIELD().PROTECTED().NAME(mEditSnapshotName);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mEditSnapshotActive);
+    FIELD().PROTECTED().NAME(mInputLinks);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mNeedAdjustView);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mCameraDirty);
     FIELD().PROTECTED().NAME(mCullingRect);
@@ -566,6 +576,8 @@ CLASS_METHODS_META(Editor::PipelineEditor)
     FUNCTION().PROTECTED().SIGNATURE(void, ScheduleAutoApply, const String&);
     FUNCTION().PROTECTED().SIGNATURE(Vector<String>, UpstreamNodes, const String&);
     FUNCTION().PROTECTED().SIGNATURE(void, LoadPreviews);
+    FUNCTION().PROTECTED().SIGNATURE(void, RefreshSourceOutput, const Ref<PipelineNodeWidget>&);
+    FUNCTION().PROTECTED().SIGNATURE(void, RefreshCardsWithChangedInputs);
     FUNCTION().PROTECTED().SIGNATURE(void, SaveCameraToGraph);
 }
 END_META;

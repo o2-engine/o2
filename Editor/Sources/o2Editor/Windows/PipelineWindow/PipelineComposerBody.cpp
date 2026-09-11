@@ -439,7 +439,7 @@ namespace Editor
                     if (auto self = weakThis.Lock())
                     {
                         bool wasOpen = self->GetString("openLayerSettings", "") == id;
-                        self->mNode->SetConfigString("openLayerSettings", wasOpen ? "" : id);
+                        self->mNode->SetConfigString("openLayerSettings", wasOpen ? String() : id);
                         self->Notify("openLayerSettings", true);
                         self->mStage->SelectLayer(id);
                         self->RebuildLayersPanel();

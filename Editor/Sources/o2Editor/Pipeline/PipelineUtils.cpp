@@ -411,6 +411,87 @@ namespace Editor::PipelineUtils
         return "application/octet-stream";
     }
 
+    String PrettyModelName(const String& idIn)
+    {
+        // The same names AssetsLine shows, so a pipeline reads the same in both editors
+        static const Map<String, String> known = {
+            { "gemini-3.1-flash-image", "Gemini 3.1 Flash Image \xC2\xB7 Nano Banana 2" },
+            { "gemini-3-pro-image", "Gemini 3 Pro Image \xC2\xB7 Nano Banana Pro" },
+            { "gemini-3-pro-image-preview", "Gemini 3 Pro Image \xC2\xB7 preview" },
+            { "gemini-2.5-flash-image", "Gemini 2.5 Flash Image \xC2\xB7 Nano Banana" },
+            { "gemini-2.5-flash-image-preview", "Gemini 2.5 Flash Image \xC2\xB7 preview" },
+            { "imagen-4.0-generate-001", "Imagen 4.0" },
+            { "imagen-3.0-generate-001", "Imagen 3.0" },
+            { "gemini-pro-latest", "Gemini Pro \xC2\xB7 latest" },
+            { "gemini-flash-latest", "Gemini Flash \xC2\xB7 latest" },
+            { "veo-3.1-generate-preview", "Google Veo 3.1" },
+            { "veo-3.1-fast-generate-preview", "Google Veo 3.1 Fast" },
+            { "veo-3.0-generate-001", "Google Veo 3" },
+            { "veo-3.0-fast-generate-001", "Google Veo 3 Fast" },
+            { "veo-2.0-generate-001", "Google Veo 2" },
+            { "kling-v2-5-turbo", "Kling 2.5 Turbo" },
+            { "kling-v2-1-master", "Kling 2.1 Master" },
+            { "kling-v2-1", "Kling 2.1" },
+            { "kling-v2-master", "Kling 2.0 Master" },
+            { "kling-v1-6", "Kling 1.6 \xC2\xB7 multi-ref" },
+            { "lyria-3-clip-preview", "Lyria 3 \xC2\xB7 30 s clip" },
+            { "lyria-3-pro-preview", "Lyria 3 Pro \xC2\xB7 full track" },
+            { "gemini-2.5-flash-preview-tts", "Gemini 2.5 Flash TTS" },
+            { "gemini-2.5-pro-preview-tts", "Gemini 2.5 Pro TTS" },
+            { "gemini-3.1-flash-tts-preview", "Gemini 3.1 Flash TTS" },
+            { "eleven_text_to_sound_v2", "ElevenLabs SFX v2" },
+            { "eleven_multilingual_v2", "ElevenLabs Multilingual v2" },
+            { "eleven_flash_v2_5", "ElevenLabs Flash v2.5" },
+            { "eleven_turbo_v2_5", "ElevenLabs Turbo v2.5" },
+            { "eleven_v3", "ElevenLabs v3" }
+        };
+
+        String id = idIn.StartsWith("models/") ? idIn.SubStr(7) : idIn;
+        if (id.IsEmpty())
+            return id;
+
+        String name;
+        if (known.TryGetValue(id, name))
+            return name;
+
+        // Unknown ids: words capitalised, versions as they are, qualifiers after a dot
+        String result;
+        String word;
+        auto flush = [&]()
+        {
+            if (word.IsEmpty())
+                return;
+
+            String part = word;
+            if (part == "latest" || part == "preview" || part == "exp")
+                part = String("\xC2\xB7 ") + part;
+            else if (part == "lite")
+                part = "Lite";
+            else if (!(part[0] >= '0' && part[0] <= '9'))
+            {
+                String first;
+                first += (char)toupper((unsigned char)part[0]);
+                part = first + part.SubStr(1);
+            }
+
+            if (!result.IsEmpty())
+                result += " ";
+            result += part;
+            word = "";
+        };
+
+        for (int i = 0; i < id.Length(); i++)
+        {
+            char c = id[i];
+            if (c == '-' || c == '_')
+                flush();
+            else
+                word += c;
+        }
+        flush();
+        return result;
+    }
+
     String ExtensionForMime(const String& mimeIn)
     {
         String mime = mimeIn.ToLowerCase();

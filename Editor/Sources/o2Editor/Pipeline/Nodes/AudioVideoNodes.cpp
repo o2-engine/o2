@@ -33,18 +33,12 @@ namespace Editor
         Coroutine<PipelineRunResult> Run(const Ref<PipelineExecContext>& ctx, const Map<String, PipelineValue>& inputs,
                                          const Ref<PipelineNode>& node) override
         {
-            String assetPath = node->GetConfigString("assetPath", "").Trimed();
-            String uploadId = node->GetConfigString("uploadId", "").Trimed();
-            String path = !assetPath.IsEmpty() ? ctx->assetsPath + assetPath : PipelineUtils::GetUploadPath(uploadId);
-            if (assetPath.IsEmpty() && uploadId.IsEmpty())
-                co_return PipelineRunResult::Fail("sourceAudio: no audio chosen yet");
+            PipelineValue value;
+            String error;
+            if (!ResolveSourceValue(*node, ctx->assetsPath, value, error))
+                co_return PipelineRunResult::Fail(error);
 
-            String bytes = PipelineUtils::ReadFileBytes(path);
-            if (bytes.IsEmpty())
-                co_return PipelineRunResult::Fail("sourceAudio: file not found: " + path);
-
-            String ext = path.SubStr(path.FindLast(".") + 1).ToLowerCase();
-            co_return PipelineRunResult::Single(PipelineValue::Bytes(PipelinePortType::Audio, bytes, PipelineUtils::MimeForExtension(ext)));
+            co_return PipelineRunResult::Single(value);
         }
     };
 
@@ -174,7 +168,7 @@ namespace Editor
 
             PipelineAudio::ProcessOptions opt;
             String format = node->GetConfigString("format", "keep");
-            opt.format = (format == "wav" || format == "ogg" || format == "mp3") ? format : "keep";
+            opt.format = (format == "wav" || format == "ogg" || format == "mp3") ? format : String("keep");
             String rate = node->GetConfigString("sampleRate", "keep");
             opt.sampleRate = rate == "keep" ? 0 : (int)PipelineUtils::ValueToNumber(*node->GetConfigValue("sampleRate"), 44100);
             String channels = node->GetConfigString("channels", "keep");

@@ -66,12 +66,12 @@ namespace Editor::PipelineImageOps
             int w = raw.width, h = raw.height;
             Vector<float> d;
             d.Resize(w * h);
-            const float FAR = 1e9f;
+            const float unreachable = 1e9f;
             for (int i = 0; i < w * h; i++)
             {
                 float a = raw.data[i * 4 + 3];
                 bool solid = inside ? a < threshold : a >= threshold;
-                d[i] = solid ? 0.0f : FAR;
+                d[i] = solid ? 0.0f : unreachable;
             }
 
             const float D1 = 1.0f, D2 = 1.41421356f;
@@ -659,7 +659,7 @@ namespace Editor::PipelineImageOps
         if (maxR <= 0) maxR = 1;
         float strength = Clamp01(opt.opacity);
         bool isMap = opt.blend == "map";
-        String mode = isMap ? "normal" : opt.blend;
+        String mode = isMap ? String("normal") : opt.blend;
 
         for (int y = 0; y < h; y++)
         {

@@ -169,6 +169,7 @@ namespace Editor
         {
             String error;
             String assetPath;
+#if defined(__cpp_exceptions) || defined(_CPPUNWIND)
             // The frame runs inside a coroutine that terminates on any escaped exception, so a broken file must not throw past here
             try
             {
@@ -181,6 +182,11 @@ namespace Editor
                 error = e.what();
                 assetPath = "";
             }
+#else
+            assetPath = PipelineImport::ImportFile(file, "Pipelines/", error);
+            if (!assetPath.IsEmpty())
+                OpenAsset(AssetRef<Asset>(AssetRef<PipelineAsset>(assetPath)));
+#endif
 
             if (assetPath.IsEmpty())
             {

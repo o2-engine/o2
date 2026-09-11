@@ -401,6 +401,7 @@ namespace o2
 
             while (self->mReady)
             {
+#if defined(__cpp_exceptions) || defined(_CPPUNWIND)
                 // An exception escaping the frame would terminate the coroutine and the process; the frame is abandoned instead
                 try
                 {
@@ -410,6 +411,9 @@ namespace o2
                 {
                     self->RecoverFrame(e.what());
                 }
+#else
+                self->ProcessFrameBody();
+#endif
 
                 co_await WaitNextFrame();
             }

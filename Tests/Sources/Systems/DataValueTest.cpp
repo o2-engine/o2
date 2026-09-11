@@ -289,7 +289,7 @@ TEST(DataDocument, MoveKeepsParsedValues)
     ASSERT_TRUE(moved.IsObject());
     auto candidates = moved.FindMember("candidates");
     ASSERT_TRUE(candidates && candidates->IsArray());
-    EXPECT_EQ((String)(*candidates)[0]["content"]["parts"][0]["text"], String("hello"));
+    EXPECT_STREQ((*candidates)[0]["content"]["parts"][0]["text"].GetString(), "hello");
     EXPECT_EQ((int)moved["n"], 3);
 
     DataDocument assigned;
@@ -302,5 +302,5 @@ TEST(DataDocument, MoveKeepsParsedValues)
     for (int i = 0; i < 2000; i++)
         assigned[(String)"key" + (String)i] = i;
     EXPECT_EQ((int)assigned["key1999"], 1999);
-    EXPECT_EQ((String)assigned["candidates"][0]["content"]["parts"][0]["text"], String("hello"));
+    EXPECT_STREQ(assigned["candidates"][0]["content"]["parts"][0]["text"].GetString(), "hello");
 }
