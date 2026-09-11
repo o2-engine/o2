@@ -581,3 +581,75 @@ TEST(ParticlesEmitterScrub, BakingDoesNotRestartTheFlightTrajectory)
     EXPECT_NE(trajectory->GetRandomOffset(), offset);
 }
 #endif
+
+// Runtime builds have no baked frames: a sub-track drives the emitter with SimulateTo, which
+// steps forward from the last simulated time and restarts when the time goes back
+TEST(ParticlesEmitterScrub, SimulateToDrivesSubControlledEmitterForward)
+{
+    auto emitter = mmake<ParticlesEmitter>();
+    emitter->SetShape(mmake<CircleParticlesEmitterShape>());
+    emitter->SetEmissionDuration(1.0f);
+    emitter->SetParticlesLifetime(0.5f);
+    emitter->SetParticlesPerSecond(100.0f);
+    emitter->SetMaxParticles(500);
+    emitter->SetInitialSpeed(100.0f);
+    emitter->SetLoop(Loop::None);
+    emitter->SetSubControlled(true);
+    emitter->Stop();
+
+    auto alive = [&]()
+    {
+        int count = 0;
+        for (auto& particle : emitter->GetParticles())
+            if (particle.alive)
+                count++;
+        return count;
+    };
+
+    emitter->SimulateTo(0.5f);
+    int atHalf = alive();
+    EXPECT_GT(atHalf, 30) << "half a second of emission";
+
+    emitter->SimulateTo(0.5f);
+    EXPECT_EQ(alive(), atHalf) << "same time simulates nothing";
+
+    Vec2F before = emitter->GetParticles()[0].position.XY();
+    emitter->SimulateTo(0.7f);
+    EXPECT_GT(alive(), 30);
+    EXPECT_NE(emitter->GetParticles()[0].position.XY(), before) << "particles kept moving";
+
+    // emission ended at 1.0, particles die out by 1.5
+    emitter->SimulateTo(1.6f);
+    EXPECT_EQ(alive(), 0);
+
+    // rewind restarts the emission from scratch
+    emitter->SimulateTo(0.0f);
+    EXPECT_EQ(alive(), 0);
+    emitter->SimulateTo(0.3f);
+    EXPECT_GT(alive(), 15);
+}
+
+// The end of a one-shot emitter is a clean state: the leftover of the last fixed step must not keep a dying particle
+TEST(ParticlesEmitterScrub, SimulateToEndOfOneShotLeavesNoParticles)
+{
+    auto emitter = mmake<ParticlesEmitter>();
+    emitter->SetShape(mmake<CircleParticlesEmitterShape>());
+    emitter->SetEmissionDuration(0.1f);
+    emitter->SetParticlesLifetime(0.18f);
+    emitter->SetParticlesPerSecond(10.0f);
+    emitter->SetMaxParticles(1);
+    emitter->SetLoop(Loop::None);
+    emitter->SetSubControlled(true);
+    emitter->Stop();
+
+    auto alive = [&]()
+    {
+        return emitter->GetParticles().Count([](const Particle& p) { return p.alive; });
+    };
+
+    emitter->SimulateTo(0.2f);
+    EXPECT_EQ(alive(), 1);
+
+    emitter->SimulateTo(emitter->GetDuration());
+    EXPECT_EQ(alive(), 0) << "0.28 is not a multiple of 1/60: the particle must still be dead at the end";
+}

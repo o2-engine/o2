@@ -42,11 +42,14 @@ namespace o2
         mShape(other.mShape->CloneAsRef<ParticlesEmitterShape>()),
         mParticlesNumLimit(other.mParticlesNumLimit), mEmitParticlesFromShell(other.mEmitParticlesFromShell),
         mEmittingCoefficient(other.mEmittingCoefficient), mIsParticlesRelative(other.mIsParticlesRelative),
-        mIs3D(other.mIs3D),
-        mParticlesLifetime(other.mParticlesLifetime), mEmitParticlesPerSecond(other.mEmitParticlesPerSecond),
+        mIs3D(other.mIs3D), mEmissionDuration(other.mEmissionDuration),
+        mParticlesLifetime(other.mParticlesLifetime), mParticlesLifetimeRange(other.mParticlesLifetimeRange),
+        mEmitParticlesPerSecond(other.mEmitParticlesPerSecond), mPrewarmTime(other.mPrewarmTime),
         mInitialAngle(other.mInitialAngle), mInitialAngleRange(other.mInitialAngleRange),
         mInitialSize(other.mInitialSize), mInitialSizeRange(other.mInitialSizeRange),
+        mInitialWidthScale(other.mInitialWidthScale), mInitialWidthScaleRange(other.mInitialWidthScaleRange),
         mInitialSpeed(other.mInitialSpeed), mInitialSpeedRangle(other.mInitialSpeedRangle),
+        mInitialAngleSpeed(other.mInitialAngleSpeed), mInitialAngleSpeedRange(other.mInitialAngleSpeedRange),
         mInitialMoveDirection(other.mInitialMoveDirection), mInitialMoveDirectionRange(other.mInitialMoveDirectionRange),
         mInitialMoveDirection3D(other.mInitialMoveDirection3D)
     {
@@ -903,6 +906,89 @@ namespace o2
             mShape->mEmitter = Ref(this);
     }
 
+    void ParticlesEmitter::SimulateStep(float dt)
+    {
+        if (!mParticlesContainer)
+            CreateParticlesContainer();
+
+        bool prevPlaying = mPlaying;
+        mPlaying = true;
+
+        UpdateEmitting(dt);
+        UpdateEffects(dt);
+        UpdateParticles(dt);
+
+        mPlaying = prevPlaying;
+    }
+
+    void ParticlesEmitter::SimulateTo(float time)
+    {
+        const float step = 1.0f/60.0f;
+
+        if (time < mSimulatedTime - 0.0001f)
+        {
+            mParticles.Clear();
+            mDeadParticles.Clear();
+            mNumAliveParticles = 0;
+            mEmitTimeBuffer = 0.0f;
+            mSimulatedTime = 0.0f;
+        }
+
+        // emission checks the animation time against the emission duration
+        float realTime = mTime;
+        while (mSimulatedTime + step <= time + 0.0001f)
+        {
+            mTime = mSimulatedTime;
+            SimulateStep(step);
+            mSimulatedTime += step;
+        }
+        mTime = realTime;
+
+        // the fixed step leaves a remainder: at the end of a one-shot nothing may survive it
+        if (mLoop == Loop::None && time >= GetDuration() - 0.0001f)
+            KillAllParticles();
+
+        if (mParticlesContainer)
+            mParticlesContainer->Update(mParticles, mParticlesNumLimit);
+    }
+
+    void ParticlesEmitter::KillAllParticles()
+    {
+        int idx = 0;
+        for (auto& particle : mParticles)
+        {
+            if (particle.alive)
+            {
+                particle.alive = false;
+                particle.timeLeft = 0.0f;
+
+                if (mParticlesContainer)
+                    mParticlesContainer->OnParticleDied(particle);
+
+                for (auto& effect : mEffects)
+                {
+                    if (effect)
+                        effect->OnParticleDied(particle);
+                }
+
+                mDeadParticles.Add(idx);
+            }
+
+            idx++;
+        }
+
+        mNumAliveParticles = 0;
+    }
+
+#if !IS_EDITOR
+    void ParticlesEmitter::Evaluate()
+    {
+        // a playing emitter advances in Update; only the sub-track time drives it here
+        if (mSubControlled)
+            SimulateTo(mTime);
+    }
+#endif
+
     void ParticlesEmitter::OnChanged()
     {
 #if IS_EDITOR
@@ -955,6 +1041,10 @@ namespace o2
         else
         {
             RestoreBakedFrame(GetBakedFrameIndex(mTime));
+
+            // baked frames keep particles with a zero remainder alive; the end of a one-shot is empty
+            if (mLoop == Loop::None && mTime >= GetDuration() - 0.0001f)
+                KillAllParticles();
 
             // scrubbing from a parent animation: nothing calls Update, so sync the drawn mesh here
             if (!mParticlesContainer)

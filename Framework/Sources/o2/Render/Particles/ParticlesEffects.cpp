@@ -491,6 +491,23 @@ namespace o2
         ListenKeysChanged(timeCurve->onKeysChanged);
         ListenKeysChanged(spline->onKeysChanged);
     }
+
+    void ParticlesVelocityStretchEffect::Update(float dt, ParticlesEmitter* emitter)
+    {
+        for (auto& p : GetParticlesDirect(emitter))
+        {
+            if (!p.alive)
+                continue;
+
+            Vec2F velocity(p.velocity.x, p.velocity.y);
+            float speed = velocity.Length();
+            if (speed < 0.001f)
+                continue;
+
+            p.angle = atan2f(velocity.y, velocity.x);
+            p.size.x = p.size.y*Math::Clamp(1.0f + mStretch*speed, 1.0f, mMaxStretch);
+        }
+    }
 }
 // --- META ---
 
@@ -513,4 +530,6 @@ DECLARE_CLASS(o2::ParticlesAngleSpeedEffect, o2__ParticlesAngleSpeedEffect);
 DECLARE_CLASS(o2::ParticlesVelocityEffect, o2__ParticlesVelocityEffect);
 
 DECLARE_CLASS(o2::ParticlesSplineEffect, o2__ParticlesSplineEffect);
+
+DECLARE_CLASS(o2::ParticlesVelocityStretchEffect, o2__ParticlesVelocityStretchEffect);
 // --- END META ---

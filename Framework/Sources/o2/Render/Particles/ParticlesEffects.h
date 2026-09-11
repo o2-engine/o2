@@ -474,6 +474,45 @@ namespace o2
         // Called when deserialization is done, used to subscribe to size curve changes
         void OnDeserialized(const DataValue& node) override;
     };
+
+    // -----------------------------------------------------------------------------------
+    // Turns particles along their velocity and stretches them by speed: sparks become
+    // streaks. Meant for square sprites - the x side becomes the streak length. Add it
+    // after a size effect, the size effect rewrites both sides every frame
+    // -----------------------------------------------------------------------------------
+    class ParticlesVelocityStretchEffect : public ParticlesEffect
+    {
+    public:
+        PROPERTIES(ParticlesVelocityStretchEffect);
+        PROPERTY(float, stretch, SetStretch, GetStretch);          // Extra length factor per unit of speed
+        PROPERTY(float, maxStretch, SetMaxStretch, GetMaxStretch); // Upper bound of the length factor
+
+    public:
+        // Default constructor @SCRIPTABLE
+        ParticlesVelocityStretchEffect() {}
+
+        // Sets extra length factor per unit of speed @SCRIPTABLE
+        void SetStretch(float stretch) { mStretch = stretch; OnChanged(); }
+
+        // Returns extra length factor per unit of speed
+        float GetStretch() const { return mStretch; }
+
+        // Sets upper bound of the length factor @SCRIPTABLE
+        void SetMaxStretch(float maxStretch) { mMaxStretch = maxStretch; OnChanged(); }
+
+        // Returns upper bound of the length factor
+        float GetMaxStretch() const { return mMaxStretch; }
+
+        // Aligns particles to velocity and stretches them by speed
+        void Update(float dt, ParticlesEmitter* emitter) override;
+
+        SERIALIZABLE(ParticlesVelocityStretchEffect);
+        CLONEABLE_REF(ParticlesVelocityStretchEffect);
+
+    protected:
+        float mStretch = 0.003f;  // Extra length factor per px/s of speed @SERIALIZABLE
+        float mMaxStretch = 4.0f; // Upper bound of the length factor @SERIALIZABLE
+    };
 }
 // --- META ---
 
@@ -706,6 +745,31 @@ CLASS_METHODS_META(o2::ParticlesSplineEffect)
     FUNCTION().PUBLIC().SIGNATURE(void, Update, float, ParticlesEmitter*);
     FUNCTION().PRIVATE().SIGNATURE(void, CheckDataBufferSize, int);
     FUNCTION().PRIVATE().SIGNATURE(void, OnDeserialized, const DataValue&);
+}
+END_META;
+
+CLASS_BASES_META(o2::ParticlesVelocityStretchEffect)
+{
+    BASE_CLASS(o2::ParticlesEffect);
+}
+END_META;
+CLASS_FIELDS_META(o2::ParticlesVelocityStretchEffect)
+{
+    FIELD().PUBLIC().NAME(stretch);
+    FIELD().PUBLIC().NAME(maxStretch);
+    FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(0.003f).NAME(mStretch);
+    FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(4.0f).NAME(mMaxStretch);
+}
+END_META;
+CLASS_METHODS_META(o2::ParticlesVelocityStretchEffect)
+{
+
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().CONSTRUCTOR();
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetStretch, float);
+    FUNCTION().PUBLIC().SIGNATURE(float, GetStretch);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetMaxStretch, float);
+    FUNCTION().PUBLIC().SIGNATURE(float, GetMaxStretch);
+    FUNCTION().PUBLIC().SIGNATURE(void, Update, float, ParticlesEmitter*);
 }
 END_META;
 // --- END META ---

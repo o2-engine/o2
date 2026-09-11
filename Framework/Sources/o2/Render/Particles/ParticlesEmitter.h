@@ -396,6 +396,24 @@ namespace o2
         friend class ParticlesEffect;
         friend class ParticlesEmitterShape;
 
+    public:
+        // Simulates a sub-controlled emitter forward in fixed steps up to time; a time before the
+        // last simulated one restarts the emission. Runtime builds drive sub-tracks with it
+        void SimulateTo(float time);
+
+        // Marks every particle dead, notifying the container and effects
+        void KillAllParticles();
+
+    protected:
+        float mSimulatedTime = 0.0f; // Time SimulateTo has reached
+
+    protected:
+        // One simulation step: emission, effects, particles
+        void SimulateStep(float dt);
+
+        // Called when time changed: the editor bakes and restores frames, runtime simulates forward
+        void Evaluate() override;
+
 #if IS_EDITOR
     public:
         // Sets particles pause for editor
@@ -427,9 +445,6 @@ namespace o2
     protected:
         // Invalidates baked frames
         void InvalidateBakedFrames();
-
-        // Called when updated or time changed, updates baked particles for editor
-        void Evaluate() override;
 
         // Returns baked frame index by time
         int GetBakedFrameIndex(float time) const;
@@ -521,6 +536,7 @@ CLASS_FIELDS_META(o2::ParticlesEmitter)
     FIELD().PROTECTED().NAME(mLastTransform);
     FIELD().PROTECTED().NAME(mEmission3DBasis);
     FIELD().PROTECTED().NAME(mLast3DBasis);
+    FIELD().PROTECTED().DEFAULT_VALUE(0.0f).NAME(mSimulatedTime);
 #if  IS_EDITOR
     FIELD().PROTECTED().NAME(mBakedFrames);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mIsBaking);
@@ -618,10 +634,13 @@ CLASS_METHODS_META(o2::ParticlesEmitter)
     FUNCTION().PROTECTED().SIGNATURE(void, BasisChanged);
     FUNCTION().PROTECTED().SIGNATURE(void, OnEffectsListChanged);
     FUNCTION().PROTECTED().SIGNATURE(void, OnChanged);
+    FUNCTION().PUBLIC().SIGNATURE(void, SimulateTo, float);
+    FUNCTION().PUBLIC().SIGNATURE(void, KillAllParticles);
+    FUNCTION().PROTECTED().SIGNATURE(void, SimulateStep, float);
+    FUNCTION().PROTECTED().SIGNATURE(void, Evaluate);
 #if  IS_EDITOR
     FUNCTION().PUBLIC().SIGNATURE(void, SetParticlesPause, bool);
     FUNCTION().PROTECTED().SIGNATURE(void, InvalidateBakedFrames);
-    FUNCTION().PROTECTED().SIGNATURE(void, Evaluate);
     FUNCTION().PROTECTED().SIGNATURE(int, GetBakedFrameIndex, float);
     FUNCTION().PROTECTED().SIGNATURE(void, CheckBakedFrames, int);
     FUNCTION().PROTECTED().SIGNATURE(void, RestoreBakedFrame, int);

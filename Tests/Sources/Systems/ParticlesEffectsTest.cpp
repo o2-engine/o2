@@ -151,3 +151,73 @@ TEST(ParticlesEffects, GradientEditRebakesParticlesImmediately)
     }
 }
 #endif
+
+// Streaks: a particle turns along its velocity and its x side grows with speed
+TEST(ParticlesEffects, VelocityStretchAlignsAndElongatesParticles)
+{
+    auto emitter = mmake<ParticlesEmitter>();
+    emitter->SetShape(mmake<CircleParticlesEmitterShape>());
+    emitter->SetEmissionDuration(1.0f);
+    emitter->SetParticlesLifetime(2.0f);
+    emitter->SetParticlesPerSecond(100.0f);
+    emitter->SetMaxParticles(50);
+    emitter->SetInitialSpeed(300.0f);
+    emitter->SetInitialSpeedRange(0.0f);
+    emitter->SetInitialSize(0.5f);
+    emitter->SetInitialSizeRange(0.0f);
+    emitter->SetEmitParticlesMoveDirection(90.0f);
+    emitter->SetEmitParticlesMoveDirectionRange(0.0f);
+
+    auto stretch = mmake<ParticlesVelocityStretchEffect>();
+    stretch->SetStretch(0.005f);
+    stretch->SetMaxStretch(4.0f);
+    emitter->AddEffect(stretch);
+
+    emitter->Play();
+    emitter->Update(0.1f);
+
+    int checked = 0;
+    for (auto& particle : emitter->GetParticles())
+    {
+        if (!particle.alive)
+            continue;
+
+        checked++;
+        EXPECT_NEAR(particle.angle, Math::PI()*0.5f, 0.05f) << "the streak points up, along the velocity";
+        EXPECT_NEAR(particle.size.x/particle.size.y, 1.0f + 0.005f*300.0f, 0.05f);
+    }
+    EXPECT_GT(checked, 0);
+
+    // the bound caps runaway speeds
+    stretch->SetMaxStretch(1.5f);
+    emitter->Update(0.05f);
+    for (auto& particle : emitter->GetParticles())
+    {
+        if (particle.alive)
+            EXPECT_NEAR(particle.size.x/particle.size.y, 1.5f, 0.05f);
+    }
+}
+
+// Prototype instances are copies: every emission parameter must survive the copy constructor
+TEST(ParticlesEffects, CloneKeepsEmissionParameters)
+{
+    auto emitter = mmake<ParticlesEmitter>();
+    emitter->SetEmissionDuration(0.72f);
+    emitter->SetParticlesLifetime(0.46f);
+    emitter->SetPrewarmTime(0.3f);
+    emitter->SetInitialWidthScale(1.5f);
+    emitter->SetInitialWidthScaleRange(0.25f);
+    emitter->SetInitialAngleSpeed(90.0f);
+    emitter->SetInitialAngleSpeedRange(30.0f);
+    emitter->SetParticlesPerSecond(260.0f);
+
+    auto clone = emitter->CloneAsRef<ParticlesEmitter>();
+    EXPECT_FLOAT_EQ(clone->GetEmissionDuration(), 0.72f);
+    EXPECT_FLOAT_EQ(clone->GetParticlesLifetime(), 0.46f);
+    EXPECT_FLOAT_EQ(clone->GetPrewarmTime(), 0.3f);
+    EXPECT_FLOAT_EQ(clone->GetInitialWidthScale(), 1.5f);
+    EXPECT_FLOAT_EQ(clone->GetInitialWidthScaleRange(), 0.25f);
+    EXPECT_FLOAT_EQ(clone->GetInitialAngleSpeed(), 90.0f);
+    EXPECT_FLOAT_EQ(clone->GetInitialAngleSpeedRange(), 30.0f);
+    EXPECT_FLOAT_EQ(clone->GetDuration(), emitter->GetDuration());
+}

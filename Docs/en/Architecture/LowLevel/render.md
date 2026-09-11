@@ -130,6 +130,7 @@ Graphic effects can be applied to a vector font — stroke, gradient, shadow and
 ### Particle effects, o2::ParticlesEmitter
 Inherits from `o2::IRectDrawable` and `o2::IAnimation`. Emits specific particles, handles their dynamics and effects.
 
-The emission shape is set by an `o2::ParticlesEmitterShape` object (circle, rectangle, sphere). The particle limit, the number of particles emitted per second, emission duration, lifetime and initial particle parameters (speed, angle, size) are configured. There is a 3D mode: emission in 3D space with billboard rendering.
+The emission shape is set by an `o2::ParticlesEmitterShape` object (circle, rectangle, sphere). The particle limit, the number of particles emitted per second, emission duration, lifetime and initial particle parameters (speed, angle, size) are configured. There is a 3D mode: emission in 3D space with billboard rendering. An emitter driven by an animation sub-track (`SetSubControlled`) bakes frames for scrubbing in the editor and, in a game build, is simulated forward in 1/60 steps up to the sub-track time (`SimulateTo`); a time going backwards restarts the emission. Once a one-shot emitter (`Loop::None`) reaches its full duration every particle is killed (`KillAllParticles`) — the remainder of the last fixed step leaves no dying particles behind, in both modes.
 
-During the update, effects — descendants of `o2::ParticlesEffect` — are applied to the particles: gravity, color, size, velocity, movement along a spline and custom ones
+During the update, effects — descendants of `o2::ParticlesEffect` — are applied to the particles: gravity, color, size, velocity, movement along a spline and custom ones; `ParticlesVelocityStretchEffect` turns a particle along its velocity and stretches its x side with speed — sparks become streaks (add it after a size effect, which rewrites both sides).
+
