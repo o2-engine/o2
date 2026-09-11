@@ -226,9 +226,10 @@ namespace o2
 
         UInt64 Random()
         {
-            static std::default_random_engine generator;
-            static std::uniform_int_distribution<unsigned long long> distribution;
-            return distribution(generator);
+            // Seeded per process: actor and component ids come from here, a fixed sequence
+            // makes assets extended in a later run reuse ids saved in an earlier one
+            static std::mt19937_64 generator(((UInt64)std::random_device{}() << 32) ^ std::random_device{}());
+            return generator();
         }
 
         void mtxMultiply(float* ret, const float* lhs, const float* rhs)

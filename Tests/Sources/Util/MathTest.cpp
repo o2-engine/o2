@@ -1,5 +1,7 @@
 #include "o2/stdafx.h"
 #include <gtest/gtest.h>
+#include <random>
+#include <unordered_set>
 #include <cmath>
 #include "o2/Utils/Math/Math.h"
 
@@ -140,4 +142,21 @@ TEST(Math, WrapAngleStaysInPiRange) {
     EXPECT_NEAR(Math::WrapAngle(Math::PI() + 0.5f), -Math::PI() + 0.5f, 1e-5f);
     EXPECT_NEAR(Math::WrapAngle(-Math::PI() - 0.5f), Math::PI() - 0.5f, 1e-5f);
     EXPECT_NEAR(Math::WrapAngle(4.0f*Math::PI() + 0.1f), 0.1f, 1e-4f);
+}
+
+// Ids of actors and components come from here: a sequence repeated by every process makes
+// assets extended in a later run reuse ids saved in an earlier one
+TEST(Math, RandomDoesNotRepeatTheDefaultSeededSequence)
+{
+    std::default_random_engine defaultEngine;
+    std::uniform_int_distribution<unsigned long long> distribution;
+    std::unordered_set<unsigned long long> defaultSequence;
+    for (int i = 0; i < 200000; i++)
+        defaultSequence.insert(distribution(defaultEngine));
+
+    int repeated = 0;
+    for (int i = 0; i < 16; i++)
+        repeated += defaultSequence.count(Math::Random()) ? 1 : 0;
+
+    EXPECT_EQ(repeated, 0);
 }

@@ -46,3 +46,5 @@ Also a curve, but representing a function interpolated along the X axis, returni
 (minstd) while alive — nested scopes restore the previous one, the global `rand()` is neither reseeded
 nor consumed. The particles emitter bakes frames reproducibly this way (`seed + frame index`) without
 breaking randomness elsewhere (`Math::RandomUnit()` — a 0..1 value from the current source)
+
+`Math::Random()` without arguments gives a 64-bit value from a generator seeded per process: actor and component ids come from it, so ids created in different runs do not repeat
