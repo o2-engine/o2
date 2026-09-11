@@ -648,10 +648,7 @@ namespace Editor
         float scale = editor ? editor->GetCamera().GetScale2D().x : 1.0f;
         auto pixels = [&](float units) { return Math::Max(1.0f, units / scale); };
 
-        // The card art's body edge: 2 units below the layout top and 1 above its bottom
         RectF rect = layout->GetWorldRect();
-        rect.top -= 2.0f;
-        rect.bottom += 1.0f;
 
         const String& s = mRuntime.state;
         Color4 color(96, 125, 139, 110);

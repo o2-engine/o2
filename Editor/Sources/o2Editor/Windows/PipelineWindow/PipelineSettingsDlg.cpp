@@ -29,7 +29,7 @@ namespace Editor
     void PipelineSettingsDlg::InitializeControls()
     {
         mWindow = o2UI.CreateWindow("Pipeline settings");
-        *mWindow->layout = WidgetLayout::Based(BaseCorner::Center, Vec2F(460, 260));
+        *mWindow->layout = WidgetLayout::Based(BaseCorner::Center, Vec2F(460, 280));
         mWindow->SetClippingLayout(Layout::BothStretch(-1, 0, 0, 17));
         mWindow->SetViewLayout(Layout::BothStretch(5, 5, 5, 20));
 
@@ -68,6 +68,7 @@ namespace Editor
         content->AddChild(buttons);
 
         auto save = o2UI.CreateButton("Save", [this]() { OnSavePressed(); });
+        save->name = "Save";
         save->layout->minWidth = 90;
         buttons->AddChild(save);
 

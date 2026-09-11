@@ -55,6 +55,12 @@ namespace Editor
         mListenersLayer->passScrollThrough = true;
         mListenersLayer->onScrollPassed = [this](float scroll) { OnScrolled(scroll); };
 
+        // The same for the right button: cards and their controls would take it, so the canvas pans over them
+        mListenersLayer->passRightButtonThrough = true;
+        mListenersLayer->onRightButtonPassPressed = [this](const Input::Cursor& cursor) { OnCursorRightMousePressed(cursor); };
+        mListenersLayer->onRightButtonPassDown = [this](const Input::Cursor& cursor) { OnCursorRightMouseStayDown(cursor); };
+        mListenersLayer->onRightButtonPassReleased = [this](const Input::Cursor& cursor) { OnRightButtonClickOrPanEnd(cursor); };
+
         mExecutor = mmake<PipelineExecutor>();
         WeakRef<PipelineEditor> weakThis(this);
         mExecutor->onEvent = [weakThis](const PipelineExecEvent& event)

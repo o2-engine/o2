@@ -20,9 +20,13 @@ namespace o2
 
         bool isEditor      = false; // Is this layer drawn in editor scope
         bool isTransparent = false; // Is this layer transparent to input other listeners
-        bool passScrollThrough = false; // Leaves the wheel to onScrollPassed instead of the listeners, so a view can zoom over its content
+        bool passScrollThrough = false;      // Leaves the wheel to onScrollPassed instead of the listeners, so a view can zoom over its content
+        bool passRightButtonThrough = false; // Leaves the right button to the onRightButtonPass* callbacks instead of the listeners, so a view can pan over its content
 
-        Function<void(float)> onScrollPassed; // Wheel delta over the layer's listeners when passScrollThrough is set
+        Function<void(float)>                onScrollPassed;            // Wheel delta over the layer's listeners when passScrollThrough is set
+        Function<void(const Input::Cursor&)> onRightButtonPassPressed;  // Right button pressed over the layer, in layer space, when passRightButtonThrough is set
+        Function<void(const Input::Cursor&)> onRightButtonPassDown;     // Right button held after a passed press
+        Function<void(const Input::Cursor&)> onRightButtonPassReleased; // Right button released after a passed press
 
 		String name; // Layer name, used to debug
 
@@ -90,6 +94,7 @@ namespace o2
 
         Map<CursorId, Vector<Ref<CursorAreaEventsListener>>> mPressedListeners;             // Pressed listeners for all pressed cursors
         Vector<Ref<CursorAreaEventsListener>>                mRightButtonPressedListeners;  // Right mouse button pressed listener
+        bool                                                 mRightButtonPassed = false;    // True between a right button press handed to the callbacks and its release
         Vector<Ref<CursorAreaEventsListener>>                mMiddleButtonPressedListeners; // Middle mouse button pressed listener
 
         Map<CursorId, Vector<Ref<CursorAreaEventsListener>>> mUnderCursorListeners;     // Under cursor listeners for each cursor

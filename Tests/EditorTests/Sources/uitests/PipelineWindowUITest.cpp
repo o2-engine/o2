@@ -13,6 +13,7 @@
 #include "o2/Scene/UI/UIManager.h"
 #include "o2/Scene/UI/WidgetLayout.h"
 #include "o2/Scene/UI/Widgets/Button.h"
+#include "o2/Scene/UI/Widgets/ContextMenu.h"
 #include "o2/Scene/UI/Widgets/EditBox.h"
 #include "o2/Scene/UI/Widgets/HorizontalScrollBar.h"
 #include "o2/Scene/UI/Widgets/VerticalScrollBar.h"
@@ -40,6 +41,7 @@
 #include "o2Editor/Windows/PipelineWindow/PipelineMediaViews.h"
 #include "o2Editor/Windows/PipelineWindow/PipelineNodeWidget.h"
 #include "o2Editor/Windows/PipelineWindow/PipelinePaintEditor.h"
+#include "o2Editor/Windows/PipelineWindow/PipelineSettingsDlg.h"
 
 using namespace o2;
 using namespace Editor;
@@ -1449,4 +1451,143 @@ TEST_F(PipelineUiFixture, CardRebuildsOutsideEditorScopeStayOutOfTheScene)
 
     EXPECT_EQ(o2Scene.GetRootActors().Count(), actorsBefore);
     EXPECT_EQ(o2Scene.GetAllEditableObjects().Count(), editablesBefore);
+}
+
+// The right button pans the canvas over cards and their controls; a click without a pan opens the card menu
+TEST_F(PipelineUiFixture, RightButtonPansOverCardsAndClicksOpenTheCardMenu)
+{
+    PipelineGraph graph;
+    auto text = AddNode(graph, "sourceText", Vec2F());
+    text->SetConfigString("text", "pan over me");
+    graph.SaveToAsset(*asset);
+    editor->SetAsset(asset);
+    UiDriver::Step(3);
+
+    auto card = editor->GetNodeWidget(Live(text)->id);
+    ASSERT_TRUE(card);
+    editor->SetView(card->GetCardRect().Center(), 1.0f);
+    UiDriver::Step(3);
+
+    // Over the text area, the deepest control of the card
+    auto area = card->FindChildByType<EditBox>();
+    ASSERT_TRUE(area);
+    Vec2F from = editor->LocalToScreenPoint(area->layout->GetWorldRect().Center());
+    Vec2F cameraBefore = editor->GetCamera().GetPosition2D();
+    o2Input.OnCursorMoved(from, 0, false);
+    UiDriver::Step();
+    o2Input.OnAltCursorPressed(from);
+    UiDriver::Step();
+    for (int i = 1; i <= 10; i++)
+    {
+        o2Input.OnCursorMoved(from + Vec2F(12.0f * i, 0.0f), 0);
+        UiDriver::Step();
+    }
+    o2Input.OnAltCursorReleased();
+    UiDriver::Wait(0.4f);
+
+    EXPECT_GT((editor->GetCamera().GetPosition2D() - cameraBefore).Length(), 40.0f);
+    EXPECT_FALSE(editor->GetContextMenu()->IsEnabled());
+
+    // A click in place opens the menu of the card under the cursor
+    Vec2F at = editor->LocalToScreenPoint(card->GetCardRect().Center());
+    o2Input.OnCursorMoved(at, 0, false);
+    UiDriver::Step();
+    o2Input.OnAltCursorPressed(at);
+    UiDriver::Step();
+    o2Input.OnAltCursorReleased();
+    UiDriver::Step(3);
+    EXPECT_TRUE(card->IsSelected());
+}
+
+// The settings dialog is tall enough for its fields and the buttons below them
+TEST_F(PipelineUiFixture, SettingsDialogFitsItsButtons)
+{
+    PipelineSettingsDlg::Show();
+    UiDriver::Step(5);
+    auto& dlg = PipelineSettingsDlg::Instance();
+    auto window = dlg.GetWindow();
+    ASSERT_TRUE(window);
+    auto save = window->FindChildByTypeAndName<Button>("Save");
+    ASSERT_TRUE(save);
+    RectF windowRect = window->layout->GetWorldRect();
+    RectF saveRect = save->layout->GetWorldRect();
+    // The view area ends 5 units above the window bottom
+    EXPECT_GE(saveRect.bottom, windowRect.bottom + 5.0f);
+    EXPECT_LE(saveRect.top, windowRect.top);
+    String dir = ScreenshotDir();
+    o2FileSystem.FolderCreate(dir, true);
+    EXPECT_TRUE(UiDriver::Screenshot(dir + "/pipeline_settings.png"));
+    window->Hide(true);
+}
+
+// A second right click while the add menu is still open refills it in place; every category keeps all its nodes
+TEST_F(PipelineUiFixture, AddMenuRefilledWhileOpenKeepsEverySubMenuItem)
+{
+    PipelineGraph graph;
+    AddNode(graph, "sourceText", Vec2F());
+    graph.SaveToAsset(*asset);
+    editor->SetAsset(asset);
+    UiDriver::Step(3);
+    editor->SetView(Vec2F(), 1.0f);
+    UiDriver::Step(3);
+
+    Vec2F at = editor->LocalToScreenPoint(Vec2F(-300, 200));
+    auto rightClick = [&]()
+    {
+        o2Input.OnCursorMoved(at, 0, false);
+        UiDriver::Step();
+        o2Input.OnAltCursorPressed(at);
+        UiDriver::Step();
+        o2Input.OnAltCursorReleased();
+        UiDriver::Step();
+    };
+    rightClick();
+    auto menu = editor->GetContextMenu();
+    ASSERT_TRUE(menu->IsEnabledInHierarchy());
+    rightClick();
+    UiDriver::Step(3);
+
+    int aiNodes = 0;
+    for (auto schema : PipelineNodeRegistry::AllSchemas())
+    {
+        if (schema->category == PipelineNodeCategory::AI)
+            aiNodes++;
+    }
+    ASSERT_GT(aiNodes, 1);
+
+    auto item = menu->FindChildByTypeAndName<ContextMenuItem>("Context Item Add AI");
+    ASSERT_TRUE(item);
+    ASSERT_TRUE(item->GetSubMenu());
+    EXPECT_EQ(item->GetSubMenu()->GetItems().Count(), aiNodes);
+    menu->Hide(true);
+}
+
+// The header fill, the body fill and the outline share one rect: nothing sticks out above the outline
+TEST_F(PipelineUiFixture, CardHeaderAndOutlineShareOneEdge)
+{
+    PipelineGraph graph;
+    auto text = AddNode(graph, "sourceText", Vec2F());
+    graph.SaveToAsset(*asset);
+    editor->SetAsset(asset);
+    UiDriver::Step(3);
+    auto card = editor->GetNodeWidget(Live(text)->id);
+    ASSERT_TRUE(card);
+    card->SetSelected(true);
+
+    for (float scale : { 0.25f, 1.0f })
+    {
+        RectF rect = card->GetCardRect();
+        editor->SetView(Vec2F(rect.left + 40.0f, rect.top - 30.0f), scale);
+        UiDriver::Step(4);
+        auto capture = UiDriver::Capture();
+        ASSERT_TRUE(capture);
+        String dir = ScreenshotDir();
+        o2FileSystem.FolderCreate(dir, true);
+        capture->Save(dir + "/pipeline_card_edge_" + (String)(int)(scale * 100) + ".png", Bitmap::ImageType::Png);
+
+        // Just above the selection outline is the canvas, never a piece of the header
+        Vec2I above = ScreenToCapture(editor->LocalToScreenPoint(Vec2F(rect.left + 60.0f, rect.top + 5.0f + 3.0f * scale)), capture);
+        const UInt8* p = PipelineImageOps::Pixel(*capture, above.x, above.y);
+        EXPECT_TRUE(IsBackgroundPixel(capture, above)) << "scale " << scale << " rgb " << (int)p[0] << " " << (int)p[1] << " " << (int)p[2];
+    }
 }

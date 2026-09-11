@@ -284,6 +284,9 @@ namespace Editor
         // Called when right mouse button released, opens link or canvas context menu
         void OnCursorRightMouseReleased(const Input::Cursor& cursor) override;
 
+        // Ends a right button press handed over by the cards layer: a pan just stops, a click opens the menu of the card, link or canvas under it
+        void OnRightButtonClickOrPanEnd(const Input::Cursor& cursor);
+
         // Called when key pressed, handles escape, delete and clipboard shortcuts
         void OnKeyPressed(const Input::Key& key) override;
 
@@ -528,6 +531,7 @@ CLASS_METHODS_META(Editor::PipelineEditor)
     FUNCTION().PROTECTED().SIGNATURE(void, OnCursorStillDown, const Input::Cursor&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnCursorDblClicked, const Input::Cursor&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnCursorRightMouseReleased, const Input::Cursor&);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnRightButtonClickOrPanEnd, const Input::Cursor&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnKeyPressed, const Input::Key&);
     FUNCTION().PROTECTED().SIGNATURE(void, DrawInheritedDepthChildren);
     FUNCTION().PROTECTED().SIGNATURE(void, RedrawContent);

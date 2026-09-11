@@ -295,6 +295,8 @@ object.Draw();
 ```
 </details>
 
+A view that draws its content through its own `CursorAreaEventListenersLayer` (a scroll view with widgets inside) can keep navigation over that content: `passScrollThrough` hands the wheel to `onScrollPassed`, `passRightButtonThrough` hands the right button to `onRightButtonPassPressed/Down/Released` (in layer space) instead of routing them to the listeners under the cursor.
+
 ## Scripting [(detailed documentation)](/Docs/en/Architecture/LowLevel/scripting.md)
 
 The engine has several JavaScript backends: **QuickJS** (default), **JerryScript** and **BrowserJS** (the browser's JS engine in Emscripten builds); TypeScript can also be used if you want static typing.

@@ -383,6 +383,15 @@ namespace o2
 
 		mRightButtonPressedListeners.Clear();
 
+        if (passRightButtonThrough)
+        {
+            mRightButtonPassed = mUnderCursorListeners.ContainsKey(localCursor.id) && !mUnderCursorListeners[localCursor.id].IsEmpty();
+            if (mRightButtonPassed && onRightButtonPassPressed)
+                onRightButtonPassPressed(localCursor);
+
+            return;
+        }
+
         if (!mUnderCursorListeners.ContainsKey(localCursor.id))
             return;
 
@@ -402,6 +411,14 @@ namespace o2
     void CursorAreaEventListenersLayer::ProcessRBDown()
     {
         auto localCursor = ConvertLocalCursor(*o2Input.GetCursor(0));
+
+        if (mRightButtonPassed)
+        {
+            if (onRightButtonPassDown)
+                onRightButtonPassDown(localCursor);
+
+            return;
+        }
 
         bool broken = false;
         for (auto it = mRightButtonPressedListeners.begin(); it != mRightButtonPressedListeners.end();)
@@ -428,6 +445,15 @@ namespace o2
     void CursorAreaEventListenersLayer::ProcessRBReleased()
     {
         auto localCursor = ConvertLocalCursor(*o2Input.GetCursor(0));
+
+        if (mRightButtonPassed)
+        {
+            mRightButtonPassed = false;
+            if (onRightButtonPassReleased)
+                onRightButtonPassReleased(localCursor);
+
+            return;
+        }
 
         for (auto& listener : mRightButtonPressedListeners)
         {

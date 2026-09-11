@@ -117,6 +117,21 @@ namespace Editor
         }
     }
 
+    void PipelineEditor::OnRightButtonClickOrPanEnd(const Input::Cursor& cursor)
+    {
+        if (!mViewCameraMoved)
+        {
+            if (auto node = FindNodeAt(cursor.position))
+            {
+                FrameScrollView::OnCursorRightMouseReleased(cursor);
+                OpenNodeContextMenu(node);
+                return;
+            }
+        }
+
+        OnCursorRightMouseReleased(cursor);
+    }
+
     void PipelineEditor::OnCursorRightMouseReleased(const Input::Cursor& cursor)
     {
         if (!mViewCameraMoved)

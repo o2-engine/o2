@@ -297,6 +297,8 @@ object.Draw();
 ```
 </details>
 
+Вид, который рисует содержимое через собственный `CursorAreaEventListenersLayer` (scroll view с виджетами внутри), может сохранить навигацию над этим содержимым: `passScrollThrough` отдаёт колесо в `onScrollPassed`, `passRightButtonThrough` отдаёт правую кнопку в `onRightButtonPassPressed/Down/Released` (в координатах слоя) вместо слушателей под курсором.
+
 ## Скрипты [(подробная документация)](/Docs/ru/Architecture/LowLevel/scripting.md)
 
 В движке несколько JavaScript-бекендов: **QuickJS** (по умолчанию), **JerryScript** и **BrowserJS** (JS-движок браузера в Emscripten-сборках); также можно писать код на TypeScript при желании иметь статическую типизацию.

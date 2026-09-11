@@ -49,8 +49,8 @@ namespace Editor
 
         mWindow->caption = "Pipeline";
         mWindow->name = "pipeline window";
-        mWindow->SetIcon(mmake<Sprite>("ui/UI4_graph_icon.png"));
-        mWindow->SetIconLayout(Layout::Based(BaseCorner::LeftTop, Vec2F(20, 20), Vec2F(-1, 1)));
+        mWindow->SetIcon(mmake<Sprite>("ui/pipeline/window_icon.png"));
+        mWindow->SetIconLayout(Layout::Based(BaseCorner::LeftTop, Vec2F(20, 20), Vec2F(-1, 2)));
 
         mRunAllButton = o2UI.CreateWidget<Button>("menu pipeline run");
         mRunAllButton->name = "run all";

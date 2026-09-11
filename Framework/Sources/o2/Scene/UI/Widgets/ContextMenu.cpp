@@ -777,7 +777,13 @@ namespace o2
             for (auto item : kv.second) 
             {
                 if (item->widget)
-                    mItemsLayout->AddChild(item->widget.Lock());
+                {
+                    // A kept widget is set up again: its sub menu was built from the sub items it had then,
+                    // and a menu refilled while open would otherwise keep only the first one
+                    auto widget = item->widget.Lock();
+                    widget->Setup(item);
+                    mItemsLayout->AddChild(widget);
+                }
                 else {
                     if (item->text == Item::separatorText) {
                         auto newItem = mSeparatorSample->CloneAsRef<Widget>();
@@ -977,6 +983,8 @@ namespace o2
             FitSizeAndPosition(layout->worldLeftTop);
             SetLayoutDirty();
         }
+        else
+            mItemsBuilt = false;
     }
 }
 

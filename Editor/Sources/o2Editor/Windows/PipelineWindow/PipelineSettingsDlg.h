@@ -28,6 +28,9 @@ namespace Editor
         // Shows the dialog with keys loaded from settings, creates it on first call
         static void Show();
 
+        // Returns the dialog window
+        const Ref<Window>& GetWindow() const { return mWindow; }
+
         REF_COUNTERABLE_IMPL(Singleton<PipelineSettingsDlg>);
 
     private:

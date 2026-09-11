@@ -5426,18 +5426,24 @@ namespace Editor
         auto sample = mmake<Widget>();
         sample->layout->minSize = Vec2F(180, 80);
 
+        // The body, the header and the outline drawn by the card share the layout rect and the corner radius,
+        // so they meet exactly at any zoom; only the soft shadow is art
+        const float radius = 6.0f;
         sample->AddLayer("shadow", mmake<Sprite>("ui/UI4_animation_state_shadow.png"), Layout::BothStretch(1, -17, -13, -1));
-        sample->AddLayer("back", mmake<Sprite>("ui/UI4_animation_state_regular.png"), Layout::BothStretch(-6, -10, -6, -8));
+        auto back = mmake<PipelineRoundedRect>();
+        back->color = Color4(251, 251, 251, 255);
+        back->radius = radius;
+        back->roundBottom = true;
+        sample->AddLayer("back", back, Layout::BothStretch(0, 0, 0, 0));
 
-        // The card art's visible top edge sits 4 units above the layout rect with a 6 unit corner radius
         auto header = mmake<PipelineRoundedRect>();
         header->color = text;
-        header->radius = 6.0f;
-        sample->AddLayer("header", header, Layout::HorStretch(VerAlign::Top, 0, 0, 32, -4))->transparency = 0.09f;
+        header->radius = radius;
+        sample->AddLayer("header", header, Layout::HorStretch(VerAlign::Top, 0, 0, 28, 0))->transparency = 0.09f;
         auto kind = mmake<PipelineRoundedRect>();
-        kind->radius = 6.0f;
-        sample->AddLayer("kindTint", kind, Layout::HorStretch(VerAlign::Top, 0, 0, 32, -4))->transparency = 0.0f;
-        sample->AddLayer("headerLine", mmake<Sprite>(text), Layout::HorStretch(VerAlign::Top, 1, 1, 1, 28))->transparency = 0.28f;
+        kind->radius = radius;
+        sample->AddLayer("kindTint", kind, Layout::HorStretch(VerAlign::Top, 0, 0, 28, 0))->transparency = 0.0f;
+        sample->AddLayer("headerLine", mmake<Sprite>(text), Layout::HorStretch(VerAlign::Top, 0, 0, 1, 28))->transparency = 0.28f;
 
         // State and selection outlines are drawn by the card itself, scaled with the camera
         o2UI.AddWidgetStyle(sample, "pipeline node");
