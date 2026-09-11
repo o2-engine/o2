@@ -22,6 +22,9 @@ namespace o2
         Vec2F startPoint;       // Flight start point @SERIALIZABLE @EDITOR_PROPERTY
         Vec2F finishPoint;      // Flight finish point @SERIALIZABLE @EDITOR_PROPERTY
 
+        bool  alignToDirection = false;    // Turns the actor along the flight direction @SERIALIZABLE @EDITOR_PROPERTY
+        float directionAngleOffset = 0.0f; // Degrees added to the direction angle: which way the sprite faces @SERIALIZABLE @EDITOR_PROPERTY
+
     public:
         // Default constructor
         FlightTrajectoryComponent();
@@ -97,6 +100,8 @@ CLASS_FIELDS_META(o2::FlightTrajectoryComponent)
     FIELD().PUBLIC().EDITOR_PROPERTY_ATTRIBUTE().SERIALIZABLE_ATTRIBUTE().NAME(spline);
     FIELD().PUBLIC().EDITOR_PROPERTY_ATTRIBUTE().SERIALIZABLE_ATTRIBUTE().NAME(startPoint);
     FIELD().PUBLIC().EDITOR_PROPERTY_ATTRIBUTE().SERIALIZABLE_ATTRIBUTE().NAME(finishPoint);
+    FIELD().PUBLIC().EDITOR_PROPERTY_ATTRIBUTE().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(false).NAME(alignToDirection);
+    FIELD().PUBLIC().EDITOR_PROPERTY_ATTRIBUTE().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(0.0f).NAME(directionAngleOffset);
     FIELD().PRIVATE().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(0.0f).NAME(mPosition);
     FIELD().PRIVATE().DEFAULT_VALUE(0.5f).NAME(mRandomCoef);
     FIELD().PRIVATE().NAME(mBasis);

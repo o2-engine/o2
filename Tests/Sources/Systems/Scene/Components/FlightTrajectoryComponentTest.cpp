@@ -271,3 +271,30 @@ TEST(FlightTrajectory, PositionSurvivesSerialization)
     restored->Deserialize(data);
     EXPECT_NEAR(restored->GetPosition(), 0.25f, 0.001f);
 }
+
+// alignToDirection turns the actor along the flight; the offset says which way the sprite faces
+TEST(FlightTrajectory, AlignToDirectionTurnsActorAlongFlight)
+{
+    SceneCleanGuard guard;
+    auto actor = mmake<Actor>(ActorCreateMode::InScene);
+    auto trajectory = actor->AddComponent<FlightTrajectoryComponent>();
+    trajectory->spline = nullptr; // straight lerp between the points
+    trajectory->SetPoints(0, 0, 0, 400);
+    trajectory->SetPosition(0.5f);
+    EXPECT_NEAR(actor->transform->GetAngleDegrees(), 0.0f, 0.01f) << "off by default";
+
+    trajectory->alignToDirection = true;
+    trajectory->directionAngleOffset = -90.0f; // sprite drawn pointing up
+    trajectory->SetPosition(0.6f);
+    EXPECT_NEAR(actor->transform->GetAngleDegrees(), 0.0f, 0.5f) << "flying up: an up-facing sprite needs no turn";
+
+    trajectory->SetPoints(0, 0, 400, 0);
+    trajectory->SetPosition(0.6f);
+    EXPECT_NEAR(actor->transform->GetAngleDegrees(), -90.0f, 0.5f) << "flying right turns the up-facing sprite clockwise";
+
+    auto clone = actor->CloneAsRef<Actor>();
+    auto cloned = clone->GetComponent<FlightTrajectoryComponent>();
+    ASSERT_TRUE(cloned);
+    EXPECT_TRUE(cloned->alignToDirection);
+    EXPECT_NEAR(cloned->directionAngleOffset, -90.0f, 0.001f);
+}

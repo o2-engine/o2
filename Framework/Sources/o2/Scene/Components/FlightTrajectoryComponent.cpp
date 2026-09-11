@@ -15,6 +15,7 @@ namespace o2
 
     FlightTrajectoryComponent::FlightTrajectoryComponent(const FlightTrajectoryComponent& other):
         Component(other), startPoint(other.startPoint), finishPoint(other.finishPoint),
+        alignToDirection(other.alignToDirection), directionAngleOffset(other.directionAngleOffset),
         mPosition(other.mPosition), mRandomCoef(other.mRandomCoef)
     {
         if (other.spline)
@@ -155,6 +156,15 @@ namespace o2
         }
         else
             actor->transform->SetPosition2D(point);
+
+        if (alignToDirection)
+        {
+            const float step = 0.01f;
+            Vec2F direction = EvaluatePoint(Math::Min(mPosition + step, 1.0f)) -
+                EvaluatePoint(Math::Max(mPosition - step, 0.0f));
+            if (direction.Length() > 0.001f)
+                actor->transform->SetAngleDegrees(Math::Rad2deg(atan2f(direction.y, direction.x)) + directionAngleOffset);
+        }
     }
 }
 // --- META ---
