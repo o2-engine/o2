@@ -71,5 +71,8 @@ namespace Editor
 
 		// Called when cursor pressed outside from window
 		void OnCursorPressedOutside();
+
+		// Closes the dialog and then calls the answer's callback, so the callback may ask the next question
+		void Answer(Function<void()> callback);
 	};
 }

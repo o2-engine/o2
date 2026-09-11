@@ -42,6 +42,8 @@
 #include "o2Editor/Windows/PipelineWindow/PipelineNodeWidget.h"
 #include "o2Editor/Windows/PipelineWindow/PipelinePaintEditor.h"
 #include "o2Editor/Windows/PipelineWindow/PipelineSettingsDlg.h"
+#include "o2Editor/Windows/PipelineWindow/PipelineWindow.h"
+#include "o2Editor/Dialogs/YesNoCancelDlg.h"
 
 using namespace o2;
 using namespace Editor;
@@ -1183,6 +1185,100 @@ TEST_F(PipelineUiFixture, ImportsRealExportWithoutThrowing)
     o2FileSystem.FolderRemove(o2Assets.GetAssetsPath() + "Pipelines/uitest-import", true);
     o2FileSystem.FileDelete(o2Assets.GetAssetsPath() + "Pipelines/uitest-import.meta");
     o2Assets.RebuildAssets();
+}
+
+namespace
+{
+    // Removes what the window imported into the project, also when the test fails halfway
+    struct ImportedPipelineGuard
+    {
+        String folder = o2Assets.GetAssetsPath() + "Pipelines/";
+        bool folderExisted = o2FileSystem.IsFolderExist(folder);
+        String namePrefix;
+        String sourceFile;
+
+        ~ImportedPipelineGuard()
+        {
+            if (PipelineWindow::IsSingletonInitialzed())
+            {
+                auto window = PipelineWindow::InstancePtr();
+                String cacheId = window->GetEditor()->GetPipelineId();
+                window->EditAsset(AssetRef<Asset>(AssetRef<PipelineAsset>(mmake<PipelineAsset>())));
+                if (!cacheId.IsEmpty())
+                    o2FileSystem.FolderRemove(PipelineExecutor::GetCachePath(cacheId), true);
+            }
+
+            for (auto& file : o2FileSystem.GetFolderInfo(folder).files)
+            {
+                if (o2FileSystem.GetPathWithoutDirectories(file.path).StartsWith(namePrefix))
+                    o2FileSystem.FileDelete(file.path);
+            }
+
+            if (!folderExisted)
+            {
+                o2FileSystem.FolderRemove(folder, true);
+                o2FileSystem.FileDelete(o2Assets.GetAssetsPath() + "Pipelines.meta");
+            }
+
+            o2FileSystem.FileDelete(sourceFile);
+            o2Assets.RebuildAssets();
+        }
+    };
+}
+
+// Import asks about the unsaved pipeline once; answering No must still open the imported one
+TEST_F(PipelineUiFixture, ImportOverModifiedPipelineOpensTheImportAfterNo)
+{
+    ImportedPipelineGuard guard;
+    guard.namePrefix = "Import over modified";
+    if (!AssetsWindow::IsSingletonInitialzed())
+        mmake<AssetsWindow>();
+
+    if (!o2FileSystem.IsFileExist("./AssetsBuilder") && o2FileSystem.IsFileExist("../../Bin/Mac/AssetsBuilder"))
+        symlink("../../Bin/Mac/AssetsBuilder", "./AssetsBuilder");
+
+    Ref<PipelineWindow> window;
+    {
+        PushEditorScopeOnStack scope;
+        if (!YesNoCancelDlg::IsSingletonInitialzed())
+            mmake<YesNoCancelDlg>();
+        window = PipelineWindow::IsSingletonInitialzed() ? Ref(PipelineWindow::InstancePtr()) : mmake<PipelineWindow>();
+    }
+
+    AssetRef<PipelineAsset> modified(mmake<PipelineAsset>());
+    window->EditAsset(AssetRef<Asset>(modified));
+    modified->SetDirty();
+
+    String file = PipelineUtils::GetWorkPath() + "import-over-modified.json";
+    guard.sourceFile = file;
+    o2FileSystem.FolderCreate(PipelineUtils::GetWorkPath(), true);
+    // A line break followed by a long word used to break the word wrap of the card being built
+    o2FileSystem.WriteFile(file, R"({"schemaVersion":1,"id":"p","name":"Import over modified","nodes":[)"
+                                 R"({"id":"a","type":"sourceText","position":{"x":0,"y":0},)"
+                                 R"("config":{"text":"Word Fall rules:\nletterblocksburnandthecolumnsabovefalldown"},"inputs":[],)"
+                                 R"("outputs":[{"id":"o","name":"out","type":"text"}]},)"
+                                 R"({"id":"b","type":"sourceText","position":{"x":400,"y":0},"config":{"text":"second"},"inputs":[],)"
+                                 R"("outputs":[{"id":"o2","name":"out","type":"text"}]}],"edges":[]})");
+
+    window->ImportFile(file);
+
+    auto dialog = EditorUIRoot.GetRootWidget()->FindChildByTypeAndName<o2::Window>("Confirmation window");
+    ASSERT_TRUE(dialog != nullptr);
+    ASSERT_TRUE(dialog->IsEnabled());
+    dialog->FindChildByTypeAndName<Button>("No button")->onClick();
+    UiDriver::Step(2);
+
+    auto editing = window->GetEditingAsset();
+    ASSERT_TRUE(editing);
+    EXPECT_TRUE(editing->GetPath().StartsWith("Pipelines/Import over modified")) << editing->GetPath();
+    EXPECT_FALSE(dialog->IsEnabled()) << "no second question about the same changes";
+    EXPECT_EQ(window->GetEditor()->GetGraph()->nodes.Count(), 2);
+    EXPECT_TRUE(window->GetEditor()->GetNodeWidget("a") != nullptr);
+    EXPECT_TRUE(window->GetEditor()->GetNodeWidget("b") != nullptr);
+
+    auto status = window->GetWindow()->FindChildByTypeAndName<Label>("status");
+    ASSERT_TRUE(status != nullptr);
+    EXPECT_TRUE(((String)status->GetText()).StartsWith("Imported")) << (String)status->GetText();
 }
 
 TEST_F(PipelineUiFixture, RunAllRunsEveryFinishNode)

@@ -38,6 +38,9 @@ namespace Editor
         // Updates window and the stop button availability
         void Update(float dt) override;
 
+        // Imports the AssetsLine export as a new pipeline asset and opens it; errors go to the status line and the log
+        void ImportFile(const String& file);
+
         // Dynamic cast to RefCounterable via Singleton
         static Ref<RefCounterable> CastToRefCounterable(const Ref<PipelineWindow>& ref);
 
@@ -67,8 +70,8 @@ namespace Editor
         // Called when the import button is pressed; asks for an AssetsLine file and opens the imported asset
         void OnImportPressed();
 
-        // Imports the AssetsLine export as a new pipeline asset and opens it; errors go to the status line and the log
-        void ImportFile(const String& file);
+        // Opens the freshly imported asset and shows the window
+        void OpenImported(const String& assetPath);
 
         // Called when asset editing completed, stops the run
         void OnCompletedEditingAsset() override;
@@ -113,12 +116,13 @@ CLASS_METHODS_META(Editor::PipelineWindow)
     FUNCTION().PUBLIC().SIGNATURE(const Type&, GetAssetType);
     FUNCTION().PUBLIC().SIGNATURE(const Ref<PipelineEditor>&, GetEditor);
     FUNCTION().PUBLIC().SIGNATURE(void, Update, float);
+    FUNCTION().PUBLIC().SIGNATURE(void, ImportFile, const String&);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(Ref<RefCounterable>, CastToRefCounterable, const Ref<PipelineWindow>&);
     FUNCTION().PROTECTED().SIGNATURE(void, InitializeWindow);
     FUNCTION().PROTECTED().SIGNATURE(String, GetWindowTitle);
     FUNCTION().PROTECTED().SIGNATURE(void, OnStartEditingAsset);
     FUNCTION().PROTECTED().SIGNATURE(void, OnImportPressed);
-    FUNCTION().PROTECTED().SIGNATURE(void, ImportFile, const String&);
+    FUNCTION().PROTECTED().SIGNATURE(void, OpenImported, const String&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnCompletedEditingAsset);
     FUNCTION().PROTECTED().SIGNATURE(bool, IsComponentPreviewAvailable);
     FUNCTION().PROTECTED().SIGNATURE(bool, IsCreateNewAssetAtStartupEnabled);

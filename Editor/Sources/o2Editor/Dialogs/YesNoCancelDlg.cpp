@@ -91,25 +91,31 @@ namespace Editor
 
 	void YesNoCancelDlg::OnYesPressed()
 	{
-		mOnYesCallback();
-		mWindow->Hide();
+		Answer(mOnYesCallback);
 	}
 
 	void YesNoCancelDlg::OnNoPressed()
 	{
-		mOnNoCallback();
-		mWindow->Hide();
+		Answer(mOnNoCallback);
 	}
 
 	void YesNoCancelDlg::OnCancelPressed()
 	{
-		mOnCancelCallback();
-		mWindow->Hide();
+		Answer(mOnCancelCallback);
 	}
 
 	void YesNoCancelDlg::OnCursorPressedOutside()
 	{
-		mOnCancelCallback();
+		Answer(mOnCancelCallback);
+	}
+
+	void YesNoCancelDlg::Answer(Function<void()> callback)
+	{
+		mOnYesCallback = Function<void()>();
+		mOnNoCallback = Function<void()>();
+		mOnCancelCallback = Function<void()>();
 		mWindow->Hide();
+
+		callback();
 	}
 }

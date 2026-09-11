@@ -175,7 +175,7 @@ namespace Editor
             {
                 assetPath = PipelineImport::ImportFile(file, "Pipelines/", error);
                 if (!assetPath.IsEmpty())
-                    OpenAsset(AssetRef<Asset>(AssetRef<PipelineAsset>(assetPath)));
+                    OpenImported(assetPath);
             }
             catch (const std::exception& e)
             {
@@ -185,7 +185,7 @@ namespace Editor
 #else
             assetPath = PipelineImport::ImportFile(file, "Pipelines/", error);
             if (!assetPath.IsEmpty())
-                OpenAsset(AssetRef<Asset>(AssetRef<PipelineAsset>(assetPath)));
+                OpenImported(assetPath);
 #endif
 
             if (assetPath.IsEmpty())
@@ -197,6 +197,13 @@ namespace Editor
 
             mStatusLabel->text = "Imported " + assetPath;
         });
+    }
+
+    void PipelineWindow::OpenImported(const String& assetPath)
+    {
+        // Unsaved changes were asked about before the import; OpenAsset would ask again
+        EditAsset(AssetRef<Asset>(AssetRef<PipelineAsset>(assetPath)));
+        Show();
     }
 
     void PipelineWindow::OnSettingsPressed()
