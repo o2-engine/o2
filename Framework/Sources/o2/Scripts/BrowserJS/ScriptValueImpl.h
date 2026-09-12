@@ -750,24 +750,10 @@ namespace o2
                 }
                 else
                 {
-                    // Secondary bases can't join the single JS prototype chain; once all types are
-                    // registered, copy their function members here. Method thunks resolve the native
-                    // object via dynamic_cast, so multiple-inheritance offsets stay correct
-                    ScriptPrototypesRegistry::GetPostRegisterFuncs().Add([]()
-                        {
-                            ScriptValue derivedProto = _object_type::GetScriptPrototype();
-                            _base_type::GetScriptPrototype().ForEachProperties(
-                                [&](const ScriptValue& name, const ScriptValue& value)
-                                {
-                                    if (value.GetValueType() == ScriptValue::ValueType::Function &&
-                                        derivedProto.GetProperty(name).GetValueType() == ScriptValue::ValueType::Undefined)
-                                    {
-                                        derivedProto.SetProperty(name, value);
-                                    }
-
-                                    return true;
-                                });
-                        });
+                    // Method thunks resolve the native object via dynamic_cast, so copied members
+                    // keep multiple-inheritance offsets correct
+                    ScriptPrototypesRegistry::AddSecondaryBase(_object_type::GetScriptPrototype(),
+                                                               _base_type::GetScriptPrototype());
                 }
             }
         }

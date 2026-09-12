@@ -50,4 +50,4 @@ When calling a function, the this parameter can also be passed as the first argu
 #### Binding classes and functions into scripting
 Every object, with scripting enabled, can store a cached script value for that object. This script value is an object with a native pointer to itself inside. It also has fields that are bound to scripting
 
-For each type in reflection, a prototype is generated, which instances of that type then reference. That is, functions are effectively stored in the prototype. Base classes become the prototypes of their descendants.
+For each type in reflection, a prototype is generated, which instances of that type then reference. That is, functions are effectively stored in the prototype. Base classes become the prototypes of their descendants. With multiple inheritance only the first base joins the prototype chain; the functions of the other bases (and of their own bases, at any depth) are copied into the derived prototype once all types are registered, so the result does not depend on the order types register in (it differs between platforms).

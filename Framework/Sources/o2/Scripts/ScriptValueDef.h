@@ -359,8 +359,21 @@ namespace o2
         // Returns (creating on demand) the script prototype of a type by its typeid name
         static ScriptValue& Get(const char* typeName);
 
-        // Deferred copies of secondary base classes members, invoked after all types registration
-        static Vector<Function<void()>>& GetPostRegisterFuncs();
+        // Secondary bases can't join the single JS prototype chain: their function members are copied
+        // into the derived prototype by ApplySecondaryBases once all types are registered
+        static void AddSecondaryBase(const ScriptValue& derivedPrototype, const ScriptValue& basePrototype);
+
+        // Copies the secondary bases' functions into the derived prototypes
+        static void ApplySecondaryBases();
+
+    private:
+        struct SecondaryBase
+        {
+            ScriptValue derived;
+            ScriptValue base;
+        };
+
+        static Vector<SecondaryBase>& GetSecondaryBases();
     };
 
 }

@@ -679,14 +679,6 @@ TEST(ScriptValue, DumpPrimitives) {
     EXPECT_EQ(ScriptValue().Dump(), "Undefined");
 }
 
-#else
-
-TEST(ScriptValue, ScriptingDisabled) {
-    SUCCEED() << "Scripting is disabled in this build";
-}
-
-#endif // IS_SCRIPTING_SUPPORTED
-
 // Script component fields go through DataValue in scenes: an empty list must stay a list
 TEST(ScriptValue, EmptyArrayRoundTripsThroughDataValue) {
     ScriptValue source = o2Scripts.Eval("({ levels: [], nested: { cells: [] }, filled: [1, 2] })");
@@ -716,3 +708,27 @@ TEST(ScriptValue, ArrayReadReplacesExistingArray) {
     EXPECT_EQ(value.GetLength(), 1);
     EXPECT_FLOAT_EQ(value.GetElement(0).ToNumber(), 7.0f);
 }
+
+// A secondary base's own secondary bases reach the derived prototype whatever order the types
+// registered in (ParticlesEmitterComponent -> ParticlesEmitter -> IAnimation)
+TEST(ScriptValue, SecondaryBasesChainRegardlessOfRegistrationOrder) {
+    ScriptValue animation = ScriptValue::EmptyObject();
+    animation.SetProperty("RewindAndPlay", Function<int()>([]() { return 7; }));
+    ScriptValue emitter = ScriptValue::EmptyObject();
+    ScriptValue component = ScriptValue::EmptyObject();
+
+    ScriptPrototypesRegistry::AddSecondaryBase(component, emitter);
+    ScriptPrototypesRegistry::AddSecondaryBase(emitter, animation);
+    ScriptPrototypesRegistry::ApplySecondaryBases();
+
+    ASSERT_EQ(component.GetProperty("RewindAndPlay").GetValueType(), ScriptValue::ValueType::Function);
+    EXPECT_EQ(component.GetProperty("RewindAndPlay").Invoke<int>(), 7);
+}
+
+#else
+
+TEST(ScriptValue, ScriptingDisabled) {
+    SUCCEED() << "Scripting is disabled in this build";
+}
+
+#endif // IS_SCRIPTING_SUPPORTED

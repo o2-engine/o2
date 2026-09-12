@@ -182,9 +182,41 @@ namespace o2
         return prototypes[key] = ScriptValue::EmptyObject();
     }
 
-    Vector<Function<void()>>& ScriptPrototypesRegistry::GetPostRegisterFuncs()
+    void ScriptPrototypesRegistry::AddSecondaryBase(const ScriptValue& derivedPrototype, const ScriptValue& basePrototype)
     {
-        static Vector<Function<void()>> funcs;
-        return funcs;
+        GetSecondaryBases().Add({ derivedPrototype, basePrototype });
+    }
+
+    void ScriptPrototypesRegistry::ApplySecondaryBases()
+    {
+        // A secondary base receives its own secondary bases' members by the same copying, so passes
+        // repeat until nothing is added: the result mustn't depend on the types registration order
+        bool added = true;
+        while (added)
+        {
+            added = false;
+            for (auto& link : GetSecondaryBases())
+            {
+                link.base.ForEachProperties([&](const ScriptValue& name, const ScriptValue& value)
+                {
+                    if (value.GetValueType() == ScriptValue::ValueType::Function &&
+                        link.derived.GetProperty(name).GetValueType() == ScriptValue::ValueType::Undefined)
+                    {
+                        link.derived.SetProperty(name, value);
+                        added = true;
+                    }
+
+                    return true;
+                });
+            }
+        }
+
+        GetSecondaryBases().Clear();
+    }
+
+    Vector<ScriptPrototypesRegistry::SecondaryBase>& ScriptPrototypesRegistry::GetSecondaryBases()
+    {
+        static Vector<SecondaryBase> links;
+        return links;
     }
 }
