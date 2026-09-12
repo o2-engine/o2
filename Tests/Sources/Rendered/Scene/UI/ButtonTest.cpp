@@ -4,6 +4,7 @@
 
 #include "o2/Render/Sprite.h"
 #include "o2/Scene/UI/Widgets/Button.h"
+#include "o2/Scene/UI/WidgetLayout.h"
 #include "Scene/SceneTestHelpers.h"
 
 using namespace o2;
@@ -57,4 +58,41 @@ TEST(Button, IsFocusableTrueByDefault)
     SceneCleanGuard guard;
     auto b = mmake<Button>();
     EXPECT_TRUE(b->IsFocusable());
+}
+
+// ===== Clicks =====
+
+namespace
+{
+    // Открывает обработчик двойного клика: слой событий шлёт его вместо нажатия при быстром повторе
+    class ClickableButton: public Button
+    {
+    public:
+        ClickableButton(RefCounter* refCounter): Button(refCounter) {}
+
+        using Button::OnCursorDblClicked;
+
+        void CoverScreen() { mDrawingScissorRect = RectF(-10000, -10000, 10000, 10000); }
+    };
+}
+
+TEST(Button, QuickSecondPressReportedAsDoubleClickCountsAsClick)
+{
+    SceneCleanGuard guard;
+    auto button = mmake<ClickableButton>();
+    button->layout->anchorMin = Vec2F(0, 0);
+    button->layout->anchorMax = Vec2F(0, 0);
+    button->layout->offsetMin = Vec2F(0, 0);
+    button->layout->offsetMax = Vec2F(100, 40);
+    button->CoverScreen();
+    TickFrames(2);
+
+    int clicks = 0;
+    button->onClick = [&]() { clicks++; };
+
+    button->OnCursorDblClicked(Input::Cursor(Vec2F(50, 20)));
+    EXPECT_EQ(clicks, 1);
+
+    button->OnCursorDblClicked(Input::Cursor(Vec2F(500, 20)));
+    EXPECT_EQ(clicks, 1) << "double click outside the button is not a click";
 }

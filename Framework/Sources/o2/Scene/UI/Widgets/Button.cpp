@@ -115,6 +115,14 @@ namespace o2
             *pressedState = false;
     }
 
+    // The events layer reports a quick second press as a double click and sends no press or release
+    // for it, so the click fires here: rapid taps on a button must all count
+    void Button::OnCursorDblClicked(const Input::Cursor& cursor)
+    {
+        if (IsUnderPoint(cursor.position))
+            onClick();
+    }
+
     void Button::OnCursorEnter(const Input::Cursor& cursor)
     {
         auto selectState = state["hover"];

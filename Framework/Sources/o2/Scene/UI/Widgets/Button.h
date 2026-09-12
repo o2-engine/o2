@@ -80,6 +80,9 @@ namespace o2
         // Called when cursor pressing was broken (when scrolled scroll area or some other)
         void OnCursorPressBreak(const Input::Cursor& cursor) override;
 
+        // Called instead of press when the cursor is pressed again within the double click time; counts as a click
+        void OnCursorDblClicked(const Input::Cursor& cursor) override;
+
         // Called when cursor enters this object. Sets state "select" to true
         void OnCursorEnter(const Input::Cursor& cursor) override;
 
@@ -146,6 +149,7 @@ CLASS_METHODS_META(o2::Button)
     FUNCTION().PROTECTED().SIGNATURE(void, OnCursorPressed, const Input::Cursor&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnCursorReleased, const Input::Cursor&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnCursorPressBreak, const Input::Cursor&);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnCursorDblClicked, const Input::Cursor&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnCursorEnter, const Input::Cursor&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnCursorExit, const Input::Cursor&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnKeyPressed, const Input::Key&);

@@ -36,7 +36,7 @@ Widgets allow making such elements internal: they behave like children, but enum
 
 ## Built-in widget types
 - `Grid/Horizontal/VerticalLayout` - dynamic arrangement of children in a grid / horizontally / vertically
-- `Button` - button
+- `Button` - button; every tap fires `onClick`, a quick second tap within the double click time included
 - `EditBox` - text input field
 - `Image` - sprite
 - `Label` - text
