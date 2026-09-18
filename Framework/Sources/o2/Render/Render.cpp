@@ -407,6 +407,25 @@ namespace o2
 		{
 			memcpy(&mVertexData[mLastDrawVertex * dstStride], vertices, srcStride * verticesCount);
 		}
+		else if (srcVertexType == Vertex::Type() && mCurrentBatchVertexType == Vertex3Tex::Type() &&
+				 !needsUVRemap && (!mCurrentMaterial || mCurrentMaterial->GetTextureSamplers().IsEmpty()))
+		{
+			// Expand Metal's common Vertex layout directly.
+			const Vertex* src = reinterpret_cast<const Vertex*>(vertices);
+			Vertex3Tex* dst = reinterpret_cast<Vertex3Tex*>(&mVertexData[mLastDrawVertex * dstStride]);
+			for (UInt i = 0; i < verticesCount; i++)
+			{
+				dst[i].x = src[i].x;
+				dst[i].y = src[i].y;
+				dst[i].z = src[i].z;
+				dst[i].color = src[i].color;
+				dst[i].tu = dst[i].tu2 = dst[i].tu3 = src[i].tu;
+				dst[i].tv = dst[i].tv2 = dst[i].tv3 = src[i].tv;
+				dst[i].nx = src[i].nx;
+				dst[i].ny = src[i].ny;
+				dst[i].nz = src[i].nz;
+			}
+		}
 		else
 		{
 			bool srcHasUV = srcVertexType.HasParam(VertexParam::TexCoord0);

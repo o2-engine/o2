@@ -629,14 +629,19 @@ namespace Editor
         mUIRoot->Update(dt);
         mToolsPanel->Update(dt);
 
-        String currentScene = GetLoadedSceneName();
-
-        o2Application.windowCaption = String("o2 Editor: ") + currentScene +
-            "; FPS: " + (String)((int)o2Time.GetFPS()) +
-            " DC: " + (String)mDrawCalls +
-            " Tris: " + (String)mDrawnPrimitives +
-            " Cursor: " + (String)o2Input.GetCursorPos() +
-            " JS: " + (String)(o2Scripts.GetUsedMemory() / 1024) + "kb";
+        // Native title updates are synchronous; refresh diagnostics at 4 Hz.
+        mCaptionUpdateTime += dt;
+        if (mCaptionUpdateTime >= 0.25f)
+        {
+            mCaptionUpdateTime = 0.0f;
+            String currentScene = GetLoadedSceneName();
+            o2Application.windowCaption = String("o2 Editor: ") + currentScene +
+                "; FPS: " + (String)((int)o2Time.GetFPS()) +
+                " DC: " + (String)mDrawCalls +
+                " Tris: " + (String)mDrawnPrimitives +
+                " Cursor: " + (String)o2Input.GetCursorPos() +
+                " JS: " + (String)(o2Scripts.GetUsedMemory() / 1024) + "kb";
+        }
 
         if (o2Input.IsKeyPressed('K'))
             o2Memory.DumpInfo();

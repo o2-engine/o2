@@ -62,6 +62,8 @@ namespace Editor
 
     void SceneEditScreen::Draw()
 	{
+        // Scene is a live viewport and redraws every frame.
+        mNeedRedraw = true;
         ScrollView::Draw();
 
  		if (mEnabledTool)
@@ -688,8 +690,16 @@ namespace Editor
         o2Render.PushRenderTargets({ mSelectionMaskTarget });
         o2Render.Clear(Color4(0.0f, 0.0f, 0.0f, 0.0f));
 
-        for (auto& component : components)
-            component->Draw();
+        // Avoid redrawing every child mesh for large selections.
+        constexpr int detailedOutlineComponentLimit = 32;
+        bool boundsDrawn = components.Count() > detailedOutlineComponentLimit &&
+                           DrawSelectionBoundsMask(components);
+
+        if (!boundsDrawn)
+        {
+            for (auto& component : components)
+                component->Draw();
+        }
 
         o2Render.PopRenderTargets();
 
@@ -723,6 +733,72 @@ namespace Editor
         mSelectionOutlineQuad->Draw();
 
         o2Render.SetCamera(sceneCamera);
+    }
+
+    bool SceneEditScreen::DrawSelectionBoundsMask(const Vector<Ref<Component>>& components)
+    {
+        AABB combinedBounds;
+        bool hasBounds = false;
+        for (auto& component : components)
+        {
+            AABB componentBounds;
+            if (!component->Get3DDrawableBounds(componentBounds))
+                continue;
+
+            if (hasBounds)
+                combinedBounds.Include(componentBounds);
+            else
+            {
+                combinedBounds = componentBounds;
+                hasBounds = true;
+            }
+        }
+
+        if (!hasBounds)
+            return false;
+
+        if (!mSelectionBoundsMesh)
+            mSelectionBoundsMesh = mmake<Mesh>(TextureRef(), 8, 12);
+
+        // Avoid a zero-thickness box disappearing because of face culling.
+        constexpr float minimumThickness = 0.001f;
+        for (int axis = 0; axis < 3; axis++)
+        {
+            if (combinedBounds.max[axis] - combinedBounds.min[axis] < minimumThickness)
+            {
+                combinedBounds.min[axis] -= minimumThickness*0.5f;
+                combinedBounds.max[axis] += minimumThickness*0.5f;
+            }
+        }
+
+        const Vec3F& min = combinedBounds.min;
+        const Vec3F& max = combinedBounds.max;
+        ULong color = Color4::White().ABGR();
+        Vertex* vertices = mSelectionBoundsMesh->GetVertices<Vertex>();
+        vertices[0] = Vertex(min.x, min.y, min.z, color, 0.0f, 0.0f);
+        vertices[1] = Vertex(max.x, min.y, min.z, color, 1.0f, 0.0f);
+        vertices[2] = Vertex(max.x, max.y, min.z, color, 1.0f, 1.0f);
+        vertices[3] = Vertex(min.x, max.y, min.z, color, 0.0f, 1.0f);
+        vertices[4] = Vertex(min.x, min.y, max.z, color, 0.0f, 0.0f);
+        vertices[5] = Vertex(max.x, min.y, max.z, color, 1.0f, 0.0f);
+        vertices[6] = Vertex(max.x, max.y, max.z, color, 1.0f, 1.0f);
+        vertices[7] = Vertex(min.x, max.y, max.z, color, 0.0f, 1.0f);
+
+        static const VertexIndex boxIndexes[] = {
+            0, 2, 1, 0, 3, 2, // min z
+            4, 5, 6, 4, 6, 7, // max z
+            0, 1, 5, 0, 5, 4, // min y
+            3, 7, 6, 3, 6, 2, // max y
+            0, 4, 7, 0, 7, 3, // min x
+            1, 2, 6, 1, 6, 5  // max x
+        };
+
+        memcpy(mSelectionBoundsMesh->GetIndexes(), boxIndexes, sizeof(boxIndexes));
+        mSelectionBoundsMesh->vertexCount = 8;
+        mSelectionBoundsMesh->polyCount = 12;
+        mSelectionBoundsMesh->SetMaterial(nullptr);
+        mSelectionBoundsMesh->Draw();
+        return true;
     }
 
     void SceneEditScreen::DrawGizmos2D()

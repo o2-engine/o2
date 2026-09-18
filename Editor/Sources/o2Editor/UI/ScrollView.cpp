@@ -59,7 +59,8 @@ namespace Editor
         if (!mReady)
             return;
 
-        RedrawRenderTarget();
+        if (mNeedRedraw)
+            RedrawRenderTarget();
 
         mRenderTargetSprite->transparency = mResTransparency;
         mRenderTargetSprite->Draw();

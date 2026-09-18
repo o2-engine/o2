@@ -170,28 +170,28 @@ namespace o2
 
         mBuiltAssetsTree->SortAssetsInverse();
 
+        // Folder removal mutates the tree, so iterate a snapshot.
+        auto builtAssets = mBuiltAssetsTree->allAssets;
+
         // in first pass processing files, in second - folders
         for (int pass = 0; pass < 2; pass++)
         {
-            for (auto builtAssetInfoIt = mBuiltAssetsTree->allAssets.Begin(); builtAssetInfoIt != mBuiltAssetsTree->allAssets.End(); )
+            for (auto& builtAssetInfoWeak : builtAssets)
             {
-                auto builtAssetInfo = (*builtAssetInfoIt).Lock();
+                auto builtAssetInfo = builtAssetInfoWeak.Lock();
+                if (!builtAssetInfo)
+                    continue;
+
                 bool isFolder = builtAssetInfo->meta->GetAssetType() == folderTypeId;
                 bool skip = pass == 0 ? isFolder : !isFolder;
                 if (skip)
-                {
-                    ++builtAssetInfoIt;
                     continue;
-                }
 
                 auto fnd = mSourceAssetsTree->allAssetsByUID.find(builtAssetInfo->meta->ID());
                 bool needRemove = fnd == mSourceAssetsTree->allAssetsByUID.end();
 
                 if (!needRemove)
-                {
-                    ++builtAssetInfoIt;
                     continue;
-                }
 
                 GetAssetConverter(builtAssetInfo->meta->GetAssetType())->RemoveAsset(*builtAssetInfo);
 
@@ -199,15 +199,8 @@ namespace o2
 
                 mLog->OutStr("Removed asset: " + builtAssetInfo->path);
 
-                mBuiltAssetsTree->allAssetsByUID.Remove(builtAssetInfo->meta->ID());
-                mBuiltAssetsTree->allAssetsByPath.Remove(builtAssetInfo->path);
-
-                builtAssetInfoIt = mBuiltAssetsTree->allAssets.Remove(builtAssetInfoIt);
-
-                if (builtAssetInfo->parent)
-                    builtAssetInfo->parent.Lock()->RemoveChild(builtAssetInfo);
-                else
-                    mBuiltAssetsTree->rootAssets.Remove(builtAssetInfo);
+                // Remove descendant indices with the folder.
+                mBuiltAssetsTree->RemoveAsset(builtAssetInfo);
             }
         }
     }

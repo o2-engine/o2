@@ -99,6 +99,7 @@ namespace Editor
         bool mUpdateStep = false;     // True when frame updating available on this frame
 
         float mGameTimeScale = 1.0f; // Game update time scale; scales scene dt only, not editor
+        float mCaptionUpdateTime = 0.0f; // Native title refresh timer
 
         int mDrawCalls = 0;       // Draw calls count, stored before beginning rendering
         int mDrawnPrimitives = 0; // DRaw promitives at frame
@@ -214,6 +215,7 @@ CLASS_FIELDS_META(Editor::EditorApplication)
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mPlayingChanged);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mUpdateStep);
     FIELD().PROTECTED().DEFAULT_VALUE(1.0f).NAME(mGameTimeScale);
+    FIELD().PROTECTED().DEFAULT_VALUE(0.0f).NAME(mCaptionUpdateTime);
     FIELD().PROTECTED().DEFAULT_VALUE(0).NAME(mDrawCalls);
     FIELD().PROTECTED().DEFAULT_VALUE(0).NAME(mDrawnPrimitives);
 }

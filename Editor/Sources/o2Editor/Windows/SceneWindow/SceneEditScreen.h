@@ -237,6 +237,7 @@ namespace Editor
         TextureRef    mSelectionMaskTarget;      // Offscreen silhouette mask of selected objects
         Ref<Material> mSelectionOutlineMaterial; // Outline composite material (Shaders/SelectionOutline)
         Ref<Mesh>     mSelectionOutlineQuad;     // Fullscreen quad for the outline composite
+        Ref<Mesh>     mSelectionBoundsMesh;      // Bounds silhouette for large selections
         float  mObjectMinimalSelectionSize = 10.0f;                    // Minimal object size on pixels
 
         Vector<Ref<SceneEditableObject>> mSelectedObjects;          // Current selected objects
@@ -381,6 +382,9 @@ namespace Editor
         // Draws silhouette outline of selected objects drawable content through an offscreen mask
         void DrawSelectionOutline(SceneDrawableCategory category);
 
+        // Draws combined bounds into the selection mask
+        bool DrawSelectionBoundsMask(const Vector<Ref<Component>>& components);
+
         // Draws scene objects gizmos in scene space (2D mode)
         void DrawGizmos2D();
 
@@ -480,6 +484,7 @@ CLASS_FIELDS_META(Editor::SceneEditScreen)
     FIELD().PROTECTED().NAME(mSelectionMaskTarget);
     FIELD().PROTECTED().NAME(mSelectionOutlineMaterial);
     FIELD().PROTECTED().NAME(mSelectionOutlineQuad);
+    FIELD().PROTECTED().NAME(mSelectionBoundsMesh);
     FIELD().PROTECTED().DEFAULT_VALUE(10.0f).NAME(mObjectMinimalSelectionSize);
     FIELD().PROTECTED().NAME(mSelectedObjects);
     FIELD().PROTECTED().NAME(mTopSelectedObjects);
@@ -596,6 +601,7 @@ CLASS_METHODS_META(Editor::SceneEditScreen)
     FUNCTION().PROTECTED().SIGNATURE(void, DrawScenePipeline);
     FUNCTION().PROTECTED().SIGNATURE(void, DrawSelection);
     FUNCTION().PROTECTED().SIGNATURE(void, DrawSelectionOutline, SceneDrawableCategory);
+    FUNCTION().PROTECTED().SIGNATURE(bool, DrawSelectionBoundsMask, const Vector<Ref<Component>>&);
     FUNCTION().PROTECTED().SIGNATURE(void, DrawGizmos2D);
     FUNCTION().PROTECTED().SIGNATURE(void, DrawGizmos3D);
     FUNCTION().PROTECTED().SIGNATURE(void, BindSceneTree);
