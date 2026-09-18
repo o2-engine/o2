@@ -120,7 +120,7 @@ namespace Editor
         if (t.StartsWith("finish")) return "ui/pipeline/node_finish.png";
         if (t == "sourceText" || t == "textCompose" || t == "textConcat") return "ui/pipeline/node_text.png";
         if (t == "sourceImage") return "ui/pipeline/node_image.png";
-        if (t == "removeBackground") return "ui/pipeline/node_removebg.png";
+        if (t == "removeBackground" || t == "aiRemoveBg") return "ui/pipeline/node_removebg.png";
         if (t == "sourceAudio" || t == "sfxGen") return "ui/pipeline/node_audio.png";
         if (t == "audioProcess") return "ui/pipeline/node_process.png";
         if (t == "ttsSpeech") return "ui/pipeline/node_voice.png";
@@ -171,6 +171,12 @@ namespace Editor
         *mPlayButton->layout = WidgetLayout(Vec2F(1, 1), Vec2F(1, 1), Vec2F(-36, -24), Vec2F(-4, -4));
         mPlayButton->onClick = THIS_FUNC(OnPlayPressed);
         AddChild(mPlayButton);
+
+        // The dot carries the result state; the outline is left to selection, running and errors
+        auto dot = mmake<PipelineRoundedRect>();
+        dot->radius = 3.5f;
+        dot->roundBottom = true;
+        mDotLayer = AddLayer("dot", dot, Layout(Vec2F(1, 1), Vec2F(1, 1), Vec2F(-48, -17.5f), Vec2F(-41, -10.5f)), 1.0f);
 
         mErrorButton = o2UI.CreateWidget<Button>("pipeline icon");
         mErrorButton->name = "error";
@@ -302,7 +308,9 @@ namespace Editor
 
     void PipelineNodeWidget::UpdateHeaderButtons()
     {
-        bool runnable = mSchema && mSchema->category != PipelineNodeCategory::Source && (!mSchema->inputs.IsEmpty() || !mSchema->outputs.IsEmpty());
+        // A finish node writes what reaches it: it is run from its own Save button or from Run all, not from a header play
+        bool runnable = mSchema && mSchema->category != PipelineNodeCategory::Source &&
+            !PipelineNodeRegistry::IsFinishType(mNode->nodeType) && (!mSchema->inputs.IsEmpty() || !mSchema->outputs.IsEmpty());
         bool selfApplying = mSchema && mSchema->instant && mSchema->category != PipelineNodeCategory::Output;
         mPlayButton->enabled = runnable && !selfApplying;
 
@@ -317,6 +325,19 @@ namespace Editor
         mErrorButton->enabled = hasError;
 
         bool retry = mRuntime.retryAttempt > 0 && busy;
+        if (mDotLayer)
+        {
+            mDotLayer->enabled = mPlayButton->enabled && !hasError && !retry;
+            if (auto drawable = mDotLayer->GetDrawable())
+            {
+                const String& state = mRuntime.state;
+                if (state == "running") drawable->color = Color4(0, 150, 136, 255);
+                else if (state == "queued") drawable->color = Color4(0, 150, 136, 120);
+                else if (mRuntime.fresh) drawable->color = Color4(76, 175, 80, 255);
+                else if (mRuntime.output.IsValid()) drawable->color = Color4(255, 179, 0, 255);
+                else drawable->color = Color4(96, 125, 139, 70);
+            }
+        }
         mRetryLabel->enabled = retry;
         if (retry)
             mRetryLabel->text = (String)mRuntime.retryAttempt + "/" + (String)mRuntime.retryMax;
@@ -339,12 +360,13 @@ namespace Editor
         mInputs.Clear();
         mOutputs.Clear();
 
-        auto makeCircle = [&](const PipelinePort& port)
+        auto makeCircle = [&](const PipelinePort& port) -> Ref<IRectDrawable>
         {
-            auto sprite = mmake<Sprite>("ui/pipeline/port_fill.png");
-            sprite->color = ColorOfPortType(port.portType);
-            sprite->size = Vec2F(portRadius * 2, portRadius * 2);
-            return sprite;
+            auto marker = mmake<PipelinePortMarker>();
+            marker->portType = port.portType;
+            marker->color = ColorOfPortType(port.portType);
+            marker->size = Vec2F(portRadius * 2, portRadius * 2);
+            return marker;
         };
 
         auto makeLabel = [&](const PipelinePort& port, bool input)
@@ -421,10 +443,22 @@ namespace Editor
         }
     }
 
+    bool PipelineNodeWidget::IsBodyPort(const String& portId, Vec2F& offset) const
+    {
+        return mBody && mBody->GetBodyPortOffset(portId, offset);
+    }
+
     float PipelineNodeWidget::GetPortsHeight() const
     {
         int extra = (mSchema && !mSchema->addableInputs.IsEmpty()) ? 1 : 0;
-        int rows = Math::Max(mNode->inputs.Count() + extra, mNode->outputs.Count());
+        int outputs = 0;
+        Vec2F offset;
+        for (auto& port : mNode->outputs)
+        {
+            if (!IsBodyPort(port.id, offset))
+                outputs++;
+        }
+        int rows = Math::Max(mNode->inputs.Count() + extra, outputs);
         return rows * portRow;
     }
 
@@ -496,12 +530,28 @@ namespace Editor
             }
         }
 
-        for (int i = 0; i < mOutputs.Count(); i++)
+        float bodyTop = headerHeight + padTop + GetPortsHeight();
+        int row = 0;
+        for (auto& view : mOutputs)
         {
-            auto& view = mOutputs[i];
-            float cy = headerHeight + padTop + (i + 0.5f) * portRow;
+            // An output the body places (a part of the extract grid) sits in the body, without a row of its own
+            Vec2F offset;
+            if (IsBodyPort(view.port.id, offset))
+            {
+                view.localPos = Vec2F(offset.x, bodyTop + offset.y);
+                if (view.label)
+                    view.label->enabled = false;
+                continue;
+            }
+
+            float cy = headerHeight + padTop + (row + 0.5f) * portRow;
+            row++;
             view.localPos = Vec2F(size.x, cy);
-            view.label->layout = Layout(Vec2F(0, 1), Vec2F(1, 1), Vec2F(14, -cy - portRow / 2), Vec2F(-14, -cy + portRow / 2));
+            if (view.label)
+            {
+                view.label->enabled = true;
+                view.label->layout = Layout(Vec2F(0, 1), Vec2F(1, 1), Vec2F(14, -cy - portRow / 2), Vec2F(-14, -cy + portRow / 2));
+            }
         }
 
         if (mAddInputButton->enabled)
@@ -656,7 +706,6 @@ namespace Editor
         if (s == "error") { color = Color4(249, 93, 72, 255); width = outlineWidth; }
         else if (s == "running") { color = Color4(33, 150, 243, 255); width = outlineWidth; }
         else if (s == "queued") { color = Color4(159, 190, 254, 255); width = outlineWidth; }
-        else if (mRuntime.fresh) { color = Color4(76, 175, 80, 255); width = outlineWidth; }
         PipelineControls::DrawRoundedFrame(rect, cornerRadius, color, pixels(width));
 
         if (mSelected)

@@ -58,6 +58,42 @@ namespace Editor
         o2Render.DrawFilledPolygon(points, mColor);
     }
 
+    PipelinePortMarker::PipelinePortMarker(const PipelinePortMarker& other):
+        IRectDrawable(other), portType(other.portType)
+    {}
+
+    void PipelinePortMarker::Draw()
+    {
+        if (!mEnabled || mColor.a == 0)
+            return;
+
+        Basis basis = GetBasis();
+        Vec2F center = basis.origin + (basis.xv + basis.yv) * 0.5f;
+        float r = Math::Min(basis.xv.Length(), basis.yv.Length()) * 0.5f;
+
+        Vector<Vec2F> points;
+        switch (portType)
+        {
+            case PipelinePortType::Image:
+            {
+                float s = r * 0.9f, c = s * 0.35f;
+                points = { center + Vec2F(-s + c, -s), center + Vec2F(s - c, -s), center + Vec2F(s, -s + c), center + Vec2F(s, s - c),
+                           center + Vec2F(s - c, s), center + Vec2F(-s + c, s), center + Vec2F(-s, s - c), center + Vec2F(-s, -s + c) };
+                break;
+            }
+            case PipelinePortType::Audio:
+                points = { center + Vec2F(0, r), center + Vec2F(r, 0), center + Vec2F(0, -r), center + Vec2F(-r, 0) };
+                break;
+            case PipelinePortType::Video:
+                points = { center + Vec2F(-r * 0.85f, r), center + Vec2F(r, 0), center + Vec2F(-r * 0.85f, -r) };
+                break;
+            default:
+                o2Render.DrawFilledCircle(center, r, mColor, 24);
+                return;
+        }
+        o2Render.DrawFilledPolygon(points, mColor);
+    }
+
     namespace PipelineControls
     {
         static bool sFarView = false;
@@ -610,6 +646,8 @@ namespace Editor
 // --- META ---
 
 DECLARE_CLASS(Editor::PipelineRoundedRect, Editor__PipelineRoundedRect);
+
+DECLARE_CLASS(Editor::PipelinePortMarker, Editor__PipelinePortMarker);
 
 DECLARE_CLASS(Editor::PipelineWrapRow, Editor__PipelineWrapRow);
 

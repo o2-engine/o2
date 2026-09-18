@@ -30,8 +30,9 @@ namespace Editor
         Vector<PipelinePort> inputs;  // Fixed input ports, ids are generated per node
         Vector<PipelinePort> outputs; // Output ports, ids are generated per node
 
-        bool hasPlay = false; // Terminal node: has the play button that pulls the whole branch
-        bool instant = false; // Local and free: re-applied automatically on every parameter change
+        bool hasPlay = false;    // Terminal node: has the play button that pulls the whole branch
+        bool instant = false;    // Local and free: re-applied automatically on every parameter change
+        bool perPortRun = false; // Computes its outputs one at a time: each is run, cached and previewed on its own
 
         Vector<PipelinePortType> addableInputs; // Input kinds the user may add with "+"
 
@@ -82,6 +83,9 @@ namespace Editor
         String pipelineId; // Owner pipeline uid, for caches
         String assetsPath; // Project assets folder, where finish nodes write
 
+        String outputPortId; // Output being computed, per-port nodes only
+        String outputPort;   // Name of that output
+
         bool assetsChanged = false; // Set by finish nodes when the assets folder got new files
 
     public:
@@ -111,6 +115,18 @@ namespace Editor
         virtual Coroutine<PipelineRunResult> Run(const Ref<PipelineExecContext>& ctx,
                                                  const Map<String, PipelineValue>& inputs,
                                                  const Ref<PipelineNode>& node) = 0;
+
+        // Fills the config a fresh node of this type starts with
+        virtual void InitNode(const Ref<PipelineNode>& node) const {}
+
+        // Config keys the cache of a per-port node ignores, because its port variant carries them
+        virtual Vector<String> PortCacheExcludedKeys() const { return {}; }
+
+        // Returns what makes one output of a per-port node its own, folded into its cache signature
+        virtual String PortCacheVariant(const PipelineNode& node, const String& portId) const { return portId; }
+
+        // Rebuilds the outputs a per-port node takes from its own config; the schema outputs are left alone when it does
+        virtual bool SyncPorts(const Ref<PipelineNode>& node) const { return false; }
     };
 
     // -------------------------------------------

@@ -484,7 +484,7 @@ namespace Editor
     const Vector<String>& PipelineGraph::GetUiOnlyConfigKeys()
     {
         static Vector<String> keys = {
-            "drawOver", "drawTool", "brushSize", "brushColor", "brushOpacity",
+            "drawOver", "drawTool", "brushSize", "brushColor", "brushOpacity", "paramsOpen", "selectedRegion",
             "selectedLayer", "layersPanelW", "openLayerSettings",
             "viewZoom", "viewPanX", "viewPanY", "cmpBg", "cmpBgEnabled", "checker", "layersFolder", "layersName"
         };
@@ -589,6 +589,22 @@ namespace Editor
             payload += "|" + variant;
 
         return PipelineUtils::Fnv1a64Hex(payload);
+    }
+
+    Map<String, String> PipelineGraph::UpstreamSignatures(const PipelineNode& node, const Map<String, String>& nodeSignatures) const
+    {
+        Map<String, String> upstream;
+        for (auto& edge : GetIncomingEdges(node.id))
+        {
+            auto port = node.FindInput(edge->toPortId);
+            if (!port)
+                continue;
+
+            String sig;
+            if (nodeSignatures.TryGetValue(edge->fromNodeId, sig) && !sig.IsEmpty())
+                upstream[UpstreamSigKey(node, *port)] = sig;
+        }
+        return upstream;
     }
 
     Map<String, String> PipelineGraph::ComputeSignatures() const

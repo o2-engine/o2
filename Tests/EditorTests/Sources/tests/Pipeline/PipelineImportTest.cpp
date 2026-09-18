@@ -70,6 +70,30 @@ namespace
         }
         return PipelineZip::Write(entries, withManifest);
     }
+
+    // A v3 bundle: a source upload and the parts of a per-port node
+    String BundleZipV3()
+    {
+        String pipeline = String(R"({"schemaVersion":1,"id":"p3","name":"Parts","nodes":[)"
+            R"({"id":"n0","type":"sourceImage","position":{"x":0,"y":0},"config":{"uploadId":"up1.png"},"inputs":[],"outputs":[{"id":"o0","name":"out","type":"image"}]},)"
+            R"({"id":"n3","type":"imageExtract","position":{"x":300,"y":0},)"
+            R"("config":{"regions":[{"id":"pa","name":"coin","x":0,"y":0,"w":0.5,"h":1},{"id":"pb","name":"chest","x":0.5,"y":0,"w":0.5,"h":1}]},)"
+            R"("inputs":[{"id":"i3","name":"image","type":"image"}],)"
+            R"("outputs":[{"id":"pa","name":"coin","type":"image"},{"id":"pb","name":"chest","type":"image"}]}],)"
+            R"("edges":[{"id":"e3","fromNodeId":"n0","fromPortId":"o0","toNodeId":"n3","toPortId":"i3","points":[]}]})");
+
+        Vector<PipelineZip::Entry> entries = {
+            { "pipeline.json", pipeline },
+            { "results/n3.pa.png", PngBytes() },
+            { "results/n3.pb.png", PngBytes() },
+            { "uploads/up1.png", PngBytes() },
+            { "manifest.json", R"({"format":"assetsline-bundle","version":3,"pipeline":"pipeline.json","results":{)"
+                R"("n3#pa":{"mediaType":"image","mime":"image/png","file":"results/n3.pa.png","nodeId":"n3","portId":"pa"},)"
+                R"("n3#pb":{"mediaType":"image","mime":"image/png","file":"results/n3.pb.png","nodeId":"n3","portId":"pb"}},)"
+                R"("uploads":{"up1.png":{"file":"uploads/up1.png","name":"coin.png"}}})" }
+        };
+        return PipelineZip::Write(entries, true);
+    }
 }
 
 TEST(PipelineImport, ParsesAssetsLineBundleWithResults)
@@ -172,4 +196,35 @@ TEST(PipelineImport, StoresResultsAsPreviewsAndFreshness)
 
     auto fresh = PipelineExecutor::ComputeFreshNodes("pipe1", bundle.graph);
     EXPECT_TRUE(fresh.Contains("n2"));
+}
+
+
+// A v3 bundle brings the parts of a per-port node and the files its sources read
+TEST(PipelineImport, ImportsPartsAndSourceUploadsOfAV3Bundle)
+{
+    ImportWorkDir work;
+    auto bundle = PipelineImport::ParseBytes(BundleZipV3());
+    ASSERT_TRUE(bundle.ok) << bundle.error;
+
+    ASSERT_TRUE(bundle.portResults.ContainsKey("n3"));
+    EXPECT_EQ(bundle.portResults["n3"].size(), 2u);
+    EXPECT_TRUE(bundle.portResults["n3"]["pa"].IsImage());
+    EXPECT_TRUE(bundle.results.IsEmpty());
+    ASSERT_TRUE(bundle.uploads.ContainsKey("up1.png"));
+
+    EXPECT_EQ(PipelineImport::StoreResults("pipe3", bundle), 2);
+    EXPECT_TRUE(o2FileSystem.IsFileExist(PipelineUtils::GetUploadPath("up1.png")));
+
+    // Each part comes back as its own preview and is a cache hit for the next run
+    auto part = PipelineExecutor::LoadPortPreview("pipe3", "n3", "pb");
+    ASSERT_TRUE(part.IsImage());
+    EXPECT_EQ(part.GetBitmap()->GetSize(), Vec2I(4, 3));
+
+    auto node = bundle.graph.FindNode("n3");
+    ASSERT_TRUE(node);
+    auto upstream = bundle.graph.UpstreamSignatures(*node, bundle.graph.ComputeSignatures());
+    int seed = -1;
+    bundle.graph.ResolveSeeds().TryGetValue("n3", seed);
+    String sig = PipelineExecutor::PortSignature(*node, upstream, seed, "pa");
+    EXPECT_TRUE(o2FileSystem.IsFileExist(PipelineExecutor::GetContentPath("pipe3", sig, "png")));
 }

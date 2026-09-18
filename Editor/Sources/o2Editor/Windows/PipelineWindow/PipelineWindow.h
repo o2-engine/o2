@@ -3,6 +3,7 @@
 #include "o2/Assets/Types/PipelineAsset.h"
 #include "o2Editor/Windows/IAssetEditorWindow.h"
 #include "o2Editor/Windows/PipelineWindow/PipelineEditor.h"
+#include "o2Editor/Windows/PipelineWindow/PipelineNodePalette.h"
 
 using namespace o2;
 
@@ -41,6 +42,12 @@ namespace Editor
         // Imports the AssetsLine export as a new pipeline asset and opens it; errors go to the status line and the log
         void ImportFile(const String& file);
 
+        // Returns the node palette panel
+        const Ref<PipelineNodePalette>& GetPalette() const { return mPalette; }
+
+        // Shows or hides the node palette panel
+        void SetPaletteOpened(bool opened);
+
         // Dynamic cast to RefCounterable via Singleton
         static Ref<RefCounterable> CastToRefCounterable(const Ref<PipelineWindow>& ref);
 
@@ -54,6 +61,9 @@ namespace Editor
         Ref<Button>         mSettingsButton; // Opens provider API keys dialog
         Ref<Button>         mFitButton;      // Fits the view to all cards
         Ref<Button>         mImportButton;   // Imports an AssetsLine pipeline file
+        Ref<Button>         mPaletteButton;  // Shows and hides the node palette
+
+        Ref<PipelineNodePalette> mPalette; // Node palette panel over the left edge of the canvas
         Ref<Label>          mStatusLabel;    // Last log line
         String              mAutoImport;     // File imported on the first update, from O2_PIPELINE_IMPORT (development aid)
 
@@ -105,6 +115,8 @@ CLASS_FIELDS_META(Editor::PipelineWindow)
     FIELD().PROTECTED().NAME(mSettingsButton);
     FIELD().PROTECTED().NAME(mFitButton);
     FIELD().PROTECTED().NAME(mImportButton);
+    FIELD().PROTECTED().NAME(mPaletteButton);
+    FIELD().PROTECTED().NAME(mPalette);
     FIELD().PROTECTED().NAME(mStatusLabel);
     FIELD().PROTECTED().NAME(mAutoImport);
 }
@@ -117,6 +129,8 @@ CLASS_METHODS_META(Editor::PipelineWindow)
     FUNCTION().PUBLIC().SIGNATURE(const Ref<PipelineEditor>&, GetEditor);
     FUNCTION().PUBLIC().SIGNATURE(void, Update, float);
     FUNCTION().PUBLIC().SIGNATURE(void, ImportFile, const String&);
+    FUNCTION().PUBLIC().SIGNATURE(const Ref<PipelineNodePalette>&, GetPalette);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetPaletteOpened, bool);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(Ref<RefCounterable>, CastToRefCounterable, const Ref<PipelineWindow>&);
     FUNCTION().PROTECTED().SIGNATURE(void, InitializeWindow);
     FUNCTION().PROTECTED().SIGNATURE(String, GetWindowTitle);

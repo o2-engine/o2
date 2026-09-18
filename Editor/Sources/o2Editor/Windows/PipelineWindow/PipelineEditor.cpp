@@ -259,6 +259,22 @@ namespace Editor
             auto& runtime = widget->GetRuntime();
             runtime.output = value;
             runtime.previewPath = path;
+
+            // A per-port node keeps a preview per output, so its parts come back with the asset
+            runtime.portOutputs.Clear();
+            if (schema && schema->perPortRun)
+            {
+                for (auto& port : widget->GetNode()->outputs)
+                {
+                    PipelineValue portValue = PipelineExecutor::LoadPortPreview(pipelineId, widget->GetNode()->id, port.id, port.portType);
+                    if (portValue.IsValid())
+                        runtime.portOutputs[port.id] = portValue;
+                }
+
+                if (!runtime.output.IsValid() && !runtime.portOutputs.empty())
+                    runtime.output = runtime.portOutputs.begin()->second;
+            }
+
             String srcPath = PipelineExecutor::GetSourcePreviewPath(pipelineId, widget->GetNode()->id);
             runtime.srcPreviewPath = o2FileSystem.IsFileExist(srcPath) ? srcPath : String();
         }

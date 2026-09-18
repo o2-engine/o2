@@ -64,6 +64,16 @@ namespace Editor
             String assetPath = GetString("assetPath", "Generated/output");
             WeakRef<FinishBody> weakThis(this);
 
+            // The result comes first: a finish node shows what reaches it before anything runs
+            if (kind == PipelinePortType::Image)
+                AddCropSection("nothing connected - link a source to save it", "Result");
+            else if (kind == PipelinePortType::Text)
+                AddResultText("nothing connected - link a source to save it", 100);
+            else if (kind == PipelinePortType::Audio)
+                AddResultAudio("nothing connected - link a source to save it");
+            else
+                AddResultVideo("nothing connected - link a source to save it");
+
             auto folderRow = MakeRow("Folder", nullptr, 56);
             mFolderEdit = MakeEditBox(FolderOf(assetPath), false, "folder inside Assets");
             mFolderEdit->onChangeCompleted = [weakThis](const WString&) { if (auto self = weakThis.Lock()) self->OnPathEdited(); };
@@ -151,15 +161,7 @@ namespace Editor
                 h->onChangeCompleted = [weakThis](const WString& t) { if (auto self = weakThis.Lock()) { self->SetNumber("resizeH", (float)atoi(((String)t).Data()), true); self->UpdateAssetInfo(); } };
                 resizeRow->AddChild(h);
                 AddRow(resizeRow, 22);
-
-                AddCropSection("no image to crop - run the upstream node", 200);
             }
-            else if (kind == PipelinePortType::Text)
-                AddResultText("no result yet - Play to render", 80);
-            else if (kind == PipelinePortType::Audio)
-                AddResultAudio("no result yet - Play to render");
-            else
-                AddResultVideo("no result yet - Play to render");
 
             OnOutputChanged();
         }
@@ -316,13 +318,13 @@ namespace Editor
         void Build() override
         {
             bool has = !GetString("uploadId").IsEmpty() || !GetString("assetPath").IsEmpty();
-            AddFilePicker(has ? "Replace image..." : "Choose image...", { "png", "jpg", "jpeg", "bmp" }, true);
+            AddResultImage("no image - choose png / jpg / bmp");
             String name = GetString("name");
             if (!GetString("assetPath").IsEmpty())
                 AddMutedLine("asset: " + GetString("assetPath"));
             else if (!name.IsEmpty())
                 AddMutedLine(name);
-            AddResultImage("no image", 120);
+            AddFilePicker(has ? "Replace image..." : "Choose image...", { "png", "jpg", "jpeg", "bmp" }, true);
             OnOutputChanged();
         }
 
@@ -348,13 +350,13 @@ namespace Editor
         void Build() override
         {
             bool has = !GetString("uploadId").IsEmpty() || !GetString("assetPath").IsEmpty();
-            AddFilePicker(has ? "Replace audio..." : "Choose audio...", { "mp3", "wav", "ogg", "flac" }, false);
+            AddResultAudio("no audio - choose mp3 / wav / ogg");
             String name = GetString("name");
             if (!GetString("assetPath").IsEmpty())
                 AddMutedLine("asset: " + GetString("assetPath"));
             else if (!name.IsEmpty())
                 AddMutedLine(name);
-            AddResultAudio("no audio");
+            AddFilePicker(has ? "Replace audio..." : "Choose audio...", { "mp3", "wav", "ogg", "flac" }, false);
             OnOutputChanged();
         }
 
@@ -381,8 +383,7 @@ namespace Editor
         using PipelineNodeBody::PipelineNodeBody;
         void Build() override
         {
-            AddMutedLine("Connect template, add variables on the inputs (+), reference them as {name}", 30);
-            AddResultText("no result yet", 50);
+            AddResultText("connect a template - add variables on the inputs (+) and reference them as {name}");
             OnOutputChanged();
         }
     };
@@ -393,9 +394,10 @@ namespace Editor
         using PipelineNodeBody::PipelineNodeBody;
         void Build() override
         {
-            AddCheckbox("Separate parts by an empty line", "newlineSeparator", false);
-            AddMutedLine("Add parts on the inputs (+); joined top-to-bottom");
-            AddResultText("no result yet", 50);
+            AddResultText("no result - connect the texts to join on the inputs (+)");
+            if (BeginParams({ "Separate parts by an empty line" }))
+                AddCheckbox("Separate parts by an empty line", "newlineSeparator", false);
+            EndParams();
             OnOutputChanged();
         }
     };
@@ -406,9 +408,13 @@ namespace Editor
         using PipelineNodeBody::PipelineNodeBody;
         void Build() override
         {
-            AddModelRow(textModelPresets, GeminiProvider::defaultTextModel);
-            AddTextArea("systemPrompt", "System prompt (optional)", 44);
-            AddResultText("no result yet - Play to render", 90);
+            AddResultText("no result - press play to compute the branch");
+            if (BeginParams({ "Model", "System prompt" }))
+            {
+                AddModelRow(textModelPresets, GeminiProvider::defaultTextModel);
+                AddTextArea("systemPrompt", "System prompt (optional)", 46);
+            }
+            EndParams();
             OnOutputChanged();
         }
     };
@@ -419,10 +425,11 @@ namespace Editor
         using PipelineNodeBody::PipelineNodeBody;
         void Build() override
         {
-            AddModelRow(textModelPresets, GeminiProvider::defaultTextModel);
-            AddTextArea("instruction", "Describe the edit to apply - everything else stays unchanged", 60);
-            AddMutedLine("Result");
-            AddResultText("no result yet - Play to render", 80);
+            AddResultText("no result - connect the text and describe the edit");
+            AddPrimaryField("instruction", "Describe the edit to apply - everything else stays unchanged");
+            if (BeginParams({ "Model" }))
+                AddModelRow(textModelPresets, GeminiProvider::defaultTextModel);
+            EndParams();
             OnOutputChanged();
         }
     };
@@ -446,48 +453,53 @@ namespace Editor
                 { "speech", "The actual line of dialogue, in the character's language" }
             };
 
-            AddModelRow(textModelPresets, GeminiProvider::defaultTextModel);
+            AddResultText("no result - press play to compute the branch");
 
-            String current = GetString("target", "image");
-            Vector<String> labels;
-            String currentLabel;
-            for (auto& t : targets)
+            if (BeginParams({ "Target", "Model", "Max chars", "System prompt" }))
             {
-                labels.Add(t.second);
-                if (t.first == current) currentLabel = t.second;
-            }
-            auto dropdown = MakeDropDown(labels, currentLabel.IsEmpty() ? labels[0] : currentLabel);
-            WeakRef<PipelineNodeBody> weakThis(this);
-            dropdown->onSelectedText = [weakThis](const WString& text)
-            {
-                auto self = weakThis.Lock();
-                if (!self) return;
+                String current = GetString("target", "image");
+                Vector<String> labels;
+                String currentLabel;
                 for (auto& t : targets)
                 {
-                    if (t.second == (String)text && self->GetString("target", "image") != t.first)
-                    {
-                        self->SetString("target", t.first, true);
-                        self->RebuildBody();
-                        return;
-                    }
+                    labels.Add(t.second);
+                    if (t.first == current) currentLabel = t.second;
                 }
-            };
-            AddRow(MakeRow("Target", dropdown), 22);
+                auto dropdown = MakeDropDown(labels, currentLabel.IsEmpty() ? labels[0] : currentLabel);
+                WeakRef<PipelineNodeBody> weakThis(this);
+                dropdown->onSelectedText = [weakThis](const WString& text)
+                {
+                    auto self = weakThis.Lock();
+                    if (!self) return;
+                    for (auto& t : targets)
+                    {
+                        if (t.second == (String)text && self->GetString("target", "image") != t.first)
+                        {
+                            self->SetString("target", t.first, true);
+                            self->RebuildBody();
+                            return;
+                        }
+                    }
+                };
+                AddRow(MakeRow("Target", dropdown), 22);
+                String hint;
+                hints.TryGetValue(current, hint);
+                AddMutedLine(hint, 30);
 
-            int budget = current == "sfx" ? 450 : current == "music" ? 1200 : current == "speech" ? 300 : 0;
-            if (budget > 0)
-            {
-                auto edit = MakeEditBox(GetString("maxChars", ""), false, (String)budget);
-                edit->SetFilterInteger();
-                edit->onChangeCompleted = [weakThis](const WString& t) { if (auto self = weakThis.Lock()) self->SetString("maxChars", (String)t, true); };
-                AddRow(MakeRow("Max chars", edit), 22);
+                AddModelRow(textModelPresets, GeminiProvider::defaultTextModel);
+
+                int budget = current == "sfx" ? 450 : current == "music" ? 1200 : current == "speech" ? 300 : 0;
+                if (budget > 0)
+                {
+                    auto edit = MakeEditBox(GetString("maxChars", ""), false, (String)budget);
+                    edit->SetFilterInteger();
+                    edit->onChangeCompleted = [weakThis](const WString& t) { if (auto self = weakThis.Lock()) self->SetString("maxChars", (String)t, true); };
+                    AddRow(MakeRow("Max chars", edit), 22);
+                }
+
+                AddTextArea("systemPrompt", "System prompt (optional extra instructions)", 46);
             }
-
-            AddTextArea("systemPrompt", "System prompt (optional extra instructions)", 44);
-            String hint;
-            hints.TryGetValue(current, hint);
-            AddMutedLine(hint, 30);
-            AddResultText("no result yet - Play to render", 90);
+            EndParams();
             OnOutputChanged();
         }
     };
@@ -498,20 +510,24 @@ namespace Editor
         using PipelineNodeBody::PipelineNodeBody;
         void Build() override
         {
-            AddModelRow(videoModelPresets, VeoProvider::defaultModel);
-            AddTextArea("extraPrompt", "Extra prompt (optional style hints)", 44);
-            AddSelectRow("Aspect", "aspectRatio", { "16:9", "9:16", "1:1" }, "16:9");
-            AddSelectRow("Duration", "duration", { "4", "5", "6", "8", "10" }, "8");
-            auto toggle = AddCheckbox("Solid background colour", "bgColorEnabled", false);
-            WeakRef<PipelineNodeBody> weakThis(this);
-            toggle->onToggleByUser = [weakThis](bool value)
+            AddResultVideo("no result - press play to compute the branch");
+            AddPrimaryField("extraPrompt", "Extra prompt (optional style hints)");
+            if (BeginParams({ "Aspect", "Duration", "Model", "Solid background colour" }))
             {
-                if (auto self = weakThis.Lock()) { self->SetBool("bgColorEnabled", value, true); self->RebuildBody(); }
-            };
-            if (GetBool("bgColorEnabled", false))
-                AddColor("Color", "bgColor", "#00b140");
-            AddMutedLine("Veo 3 renders 8s clips when reference images are used", 20);
-            AddResultVideo("no result yet - Play to render");
+                AddSelectRow("Aspect", "aspectRatio", { "16:9", "9:16", "1:1" }, "16:9");
+                AddSelectRow("Duration", "duration", { "4", "5", "6", "8", "10" }, "8");
+                AddMutedLine("Veo 3 renders 8s clips when reference images are used", 20);
+                AddModelRow(videoModelPresets, VeoProvider::defaultModel);
+                auto toggle = AddCheckbox("Solid background colour", "bgColorEnabled", false);
+                WeakRef<PipelineNodeBody> weakThis(this);
+                toggle->onToggleByUser = [weakThis](bool value)
+                {
+                    if (auto self = weakThis.Lock()) { self->SetBool("bgColorEnabled", value, true); self->RebuildBody(); }
+                };
+                if (GetBool("bgColorEnabled", false))
+                    AddColor("Color", "bgColor", "#00b140");
+            }
+            EndParams();
             OnOutputChanged();
         }
     };
@@ -522,13 +538,16 @@ namespace Editor
         using PipelineNodeBody::PipelineNodeBody;
         void Build() override
         {
-            AddModelRow({ ElevenLabsProvider::sfxModel }, ElevenLabsProvider::sfxModel);
-            AddTextArea("extraPrompt", "Extra prompt (style hints appended after the prompt)", 44);
-            AddSelectRow("Duration", "duration", { "auto", "0.5", "1", "2", "3", "5", "10", "20", "30" }, "auto");
-            AddTextRow("Influence", "promptInfluence", "0.3");
-            AddSelectRow("Format", "outputFormat", { "mp3_44100_128", "mp3_44100_192", "pcm_44100", "opus_48000_64" }, "mp3_44100_128");
-            AddCheckbox("Seamless loop", "loop", false);
-            AddResultAudio("no result yet - Play to render");
+            AddResultAudio("no result - press play to compute the branch");
+            AddPrimaryField("extraPrompt", "Extra prompt (e.g. dry, close-mic, cartoon)");
+            if (BeginParams({ "Seamless loop", "Length", "Model", "Influence" }))
+            {
+                AddCheckbox("Seamless loop", "loop", false);
+                AddSelectRow("Length", "duration", { "auto", "0.5", "1", "2", "3", "5", "10", "20", "30" }, "auto");
+                AddModelRow({ ElevenLabsProvider::sfxModel }, ElevenLabsProvider::sfxModel);
+                AddTextRow("Influence", "promptInfluence", "0.3");
+            }
+            EndParams();
             OnOutputChanged();
         }
     };
@@ -540,34 +559,25 @@ namespace Editor
         void Build() override
         {
             String provider = GetString("provider", "gemini");
-            auto dropdown = MakeDropDown({ "gemini", "elevenlabs" }, provider);
-            WeakRef<PipelineNodeBody> weakThis(this);
-            dropdown->onSelectedText = [weakThis](const WString& text)
-            {
-                if (auto self = weakThis.Lock())
-                {
-                    if (self->GetString("provider", "gemini") != (String)text)
-                    {
-                        self->SetString("provider", (String)text, true);
-                        self->RebuildBody();
-                    }
-                }
-            };
-            AddRow(MakeRow("Provider", dropdown), 22);
-
-            if (provider == "elevenlabs")
-            {
-                AddModelRow({ "eleven_multilingual_v2", "eleven_turbo_v2_5", "eleven_flash_v2_5" }, ElevenLabsProvider::defaultTtsModel);
-                AddTextRow("Voice id", "voice", "21m00Tcm4TlvDq8ikWAM");
-                AddSelectRow("Format", "outputFormat", { "mp3_44100_128", "mp3_44100_192", "pcm_44100" }, "mp3_44100_128");
-            }
-            else
-            {
-                AddModelRow({ "gemini-2.5-flash-preview-tts", "gemini-2.5-pro-preview-tts" }, GeminiProvider::defaultTtsModel);
-                AddSelectRow("Voice", "voice", GeminiProvider::voices, "Kore");
+            AddResultAudio("no result - press play to compute the branch");
+            if (provider != "elevenlabs")
                 AddTextRow("Delivery", "styleInstructions", "Say cheerfully / whisper / shout");
+
+            if (BeginParams({ "Provider", "Voice", "Model" }))
+            {
+                AddSegmented("provider", { { "gemini", "Gemini TTS" }, { "elevenlabs", "ElevenLabs" } }, "gemini");
+                if (provider == "elevenlabs")
+                {
+                    AddTextRow("Voice id", "voice", "21m00Tcm4TlvDq8ikWAM");
+                    AddModelRow({ "eleven_multilingual_v2", "eleven_turbo_v2_5", "eleven_flash_v2_5" }, ElevenLabsProvider::defaultTtsModel);
+                }
+                else
+                {
+                    AddSelectRow("Voice", "voice", GeminiProvider::voices, "Kore");
+                    AddModelRow({ "gemini-2.5-flash-preview-tts", "gemini-2.5-pro-preview-tts" }, GeminiProvider::defaultTtsModel);
+                }
             }
-            AddResultAudio("no result yet - Play to render");
+            EndParams();
             OnOutputChanged();
         }
     };
@@ -578,36 +588,39 @@ namespace Editor
         using PipelineNodeBody::PipelineNodeBody;
         void Build() override
         {
-            AddModelRow({ "lyria-3-clip-preview", "lyria-3-pro-preview" }, GeminiProvider::defaultMusicModel);
-            AddTextArea("extraPrompt", "Style, instruments, tempo, mood", 44);
-            AddCheckbox("Instrumental (no vocals)", "instrumental", true);
-            AddResultAudio("no result yet - Play to render");
+            AddResultAudio("no result - press play to compute the branch");
+            AddPrimaryField("extraPrompt", "Style, instruments, tempo, mood");
+            if (BeginParams({ "Instrumental only", "Model" }))
+            {
+                AddCheckbox("Instrumental only (no vocals)", "instrumental", true);
+                AddSegmented("model", { { "lyria-3-clip-preview", "Lyria 3 clip" }, { "lyria-3-pro-preview", "Lyria 3 pro" } }, GeminiProvider::defaultMusicModel);
+            }
+            EndParams();
             OnOutputChanged();
         }
     };
 
+    // An instant node: its controls are its work, so they stay on view under the result
     class AudioProcessBody : public PipelineNodeBody
     {
     public:
         using PipelineNodeBody::PipelineNodeBody;
         void Build() override
         {
-            AddSelectRow("Format", "format", { "keep", "wav", "ogg", "mp3" }, "keep");
-            AddSelectRow("Rate", "sampleRate", { "keep", "48000", "44100", "22050" }, "keep");
-            AddSelectRow("Channels", "channels", { "keep", "mono", "stereo" }, "keep");
+            AddResultAudio("no audio - connect the input");
+            AddSegmented("format", { { "keep", "keep" }, { "wav", "wav" }, { "ogg", "ogg" }, { "mp3", "mp3" } }, "keep");
+            AddSegmented("channels", { { "keep", "keep" }, { "mono", "mono" }, { "stereo", "stereo" } }, "keep");
             AddCheckbox("Trim silence", "trimSilence", false);
             auto normalize = AddCheckbox("Normalise loudness", "normalize", false);
             WeakRef<PipelineNodeBody> weakThis(this);
             normalize->onToggleByUser = [weakThis](bool value) { if (auto self = weakThis.Lock()) { self->SetBool("normalize", value, true); self->RebuildBody(); } };
             if (GetBool("normalize", false))
-                AddTextRow("LUFS", "loudnessTarget", "-14");
-            auto loop = AddCheckbox("Seamless loop crossfade", "seamlessLoop", false);
+                AddSlider("LUFS", "loudnessTarget", -40, 0, 1, -14);
+            auto loop = AddCheckbox("Seamless loop (crossfade)", "seamlessLoop", false);
             loop->onToggleByUser = [weakThis](bool value) { if (auto self = weakThis.Lock()) { self->SetBool("seamlessLoop", value, true); self->RebuildBody(); } };
             if (GetBool("seamlessLoop", false))
-                AddTextRow("Crossfade ms", "crossfadeMs", "250");
-            AddTextRow("Fade in ms", "fadeInMs", "0");
-            AddTextRow("Fade out ms", "fadeOutMs", "0");
-            AddResultAudio("no result yet - Play to render");
+                AddSlider("Fade", "crossfadeMs", 20, 5000, 10, 250, " ms");
+            AddSelectRow("Rate", "sampleRate", { "keep", "48000", "44100", "22050" }, "keep");
             OnOutputChanged();
         }
     };

@@ -239,6 +239,9 @@ namespace Editor
         // Returns content signature of every node: type + config + upstream signatures
         Map<String, String> ComputeSignatures() const;
 
+        // Returns the upstream signatures of a node keyed the way ComputeNodeSignature expects them
+        Map<String, String> UpstreamSignatures(const PipelineNode& node, const Map<String, String>& nodeSignatures) const;
+
         // Returns content signature of one node with given upstream signatures
         static String ComputeNodeSignature(const PipelineNode& node, const Map<String, String>& upstreamByPortKey,
                                            const Vector<String>& extraExcludeKeys, int seed, const String& variant = "");
@@ -372,7 +375,9 @@ CLASS_METHODS_META(Editor::PipelineGraph)
 
     typedef Map<String, int> _tmp1;
     typedef Map<String, String> _tmp2;
-    typedef const Map<String, String>& _tmp3;
+    typedef Map<String, String> _tmp3;
+    typedef const Map<String, String>& _tmp4;
+    typedef const Map<String, String>& _tmp5;
 
     FUNCTION().PUBLIC().CONSTRUCTOR();
     FUNCTION().PUBLIC().CONSTRUCTOR(const PipelineGraph&);
@@ -391,7 +396,8 @@ CLASS_METHODS_META(Editor::PipelineGraph)
     FUNCTION().PUBLIC().SIGNATURE(bool, WouldMakeCycle, const String&, const String&);
     FUNCTION().PUBLIC().SIGNATURE(_tmp1, ResolveSeeds);
     FUNCTION().PUBLIC().SIGNATURE(_tmp2, ComputeSignatures);
-    FUNCTION().PUBLIC().SIGNATURE_STATIC(String, ComputeNodeSignature, const PipelineNode&, _tmp3, const Vector<String>&, int, const String&);
+    FUNCTION().PUBLIC().SIGNATURE(_tmp3, UpstreamSignatures, const PipelineNode&, _tmp4);
+    FUNCTION().PUBLIC().SIGNATURE_STATIC(String, ComputeNodeSignature, const PipelineNode&, _tmp5, const Vector<String>&, int, const String&);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, UpstreamSigKey, const PipelineNode&, const PipelinePort&);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(const Vector<String>&, GetUiOnlyConfigKeys);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(bool, IsSeededType, const String&);

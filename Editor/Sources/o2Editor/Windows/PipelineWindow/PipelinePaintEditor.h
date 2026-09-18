@@ -31,7 +31,23 @@ namespace Editor
     class PipelinePaintEditor : public Widget, public CursorAreaEventsListener
     {
     public:
+        // ----------------------------------------
+        // Box of another part shown over the source
+        // ----------------------------------------
+        struct RegionBox
+        {
+            String id;                                     // Part id, reported when the box is clicked
+            int    index = 0;                              // Number shown in the badge
+            float  x = 0.0f, y = 0.0f, w = 1.0f, h = 1.0f; // Normalised box on the source
+
+            // Boxes are equal when they belong to the same part
+            bool operator==(const RegionBox& other) const { return id == other.id; }
+        };
+
+    public:
         Function<void(const String&, bool)> onConfigChanged; // Called with the config key and the completed flag after a write
+        Function<void(const String&)>       onRegionPicked;  // A box of another part was clicked with the region tool
+        Function<void()>                    onRegionRemoved; // The remove tab of the selected part was pressed
 
     public:
         // Default constructor
@@ -51,6 +67,9 @@ namespace Editor
 
         // Reloads the strokes and the tool settings from the node config
         void RefreshFromConfig();
+
+        // Shows the boxes of the other parts over the source, numbers the selected one and offers its remove tab
+        void SetRegions(const Vector<RegionBox>& others, int selectedIndex, bool removable);
 
         // Returns the smallest height fitting the toolbar and the paint area
         float GetMinHeight() const;
@@ -127,6 +146,13 @@ namespace Editor
         bool              mRegionSyncing = false;  // True while the frame is set from the config
         bool              mRegionDragging = false; // True while the region handles are dragged
 
+        Vector<RegionBox> mOtherRegions;            // Boxes of the parts that are not selected
+        int               mSelectedIndex = 0;       // Badge number of the selected part, 0 for none
+        bool              mRegionRemovable = false; // True when the selected part may be removed
+        Ref<Button>       mRemoveButton;            // Remove tab at the corner of the selected box
+        Ref<Text>         mBadgeText;               // Number drawn in the badge of a box
+        RectF             mRemovePlaced;            // Where the remove tab was last placed
+
     protected:
         // Returns the active tool: "brush", "eraser" or "roi"
         String GetTool() const;
@@ -163,6 +189,15 @@ namespace Editor
 
         // Returns the drawing rectangle: the area fitted to the background aspect, inset for the region handles
         RectF GetStageRect() const;
+
+        // Returns the box of another part under the point, null when none
+        const RegionBox* OtherRegionAt(const Vec2F& point) const;
+
+        // Returns the stage rectangle of a normalised box
+        RectF BoxRect(float x, float y, float w, float h, const RectF& stage) const;
+
+        // Draws a numbered badge in the top-left corner of the rectangle
+        void DrawBadge(const RectF& rect, int index, const Color4& color);
 
         // Converts a screen point to image pixels (y down)
         Vec2F ToImage(const Vec2F& canvasPoint) const;
@@ -253,6 +288,8 @@ END_META;
 CLASS_FIELDS_META(Editor::PipelinePaintEditor)
 {
     FIELD().PUBLIC().NAME(onConfigChanged);
+    FIELD().PUBLIC().NAME(onRegionPicked);
+    FIELD().PUBLIC().NAME(onRegionRemoved);
     FIELD().PROTECTED().NAME(mNode);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mWithRegion);
     FIELD().PROTECTED().NAME(mBrushToggle);
@@ -294,6 +331,12 @@ CLASS_FIELDS_META(Editor::PipelinePaintEditor)
     FIELD().PROTECTED().NAME(mRegionFrame);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mRegionSyncing);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mRegionDragging);
+    FIELD().PROTECTED().NAME(mOtherRegions);
+    FIELD().PROTECTED().DEFAULT_VALUE(0).NAME(mSelectedIndex);
+    FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mRegionRemovable);
+    FIELD().PROTECTED().NAME(mRemoveButton);
+    FIELD().PROTECTED().NAME(mBadgeText);
+    FIELD().PROTECTED().NAME(mRemovePlaced);
 }
 END_META;
 CLASS_METHODS_META(Editor::PipelinePaintEditor)
@@ -305,6 +348,7 @@ CLASS_METHODS_META(Editor::PipelinePaintEditor)
     FUNCTION().PUBLIC().SIGNATURE(const Ref<Bitmap>&, GetBackground);
     FUNCTION().PUBLIC().SIGNATURE(RectF, GetStageRectangle);
     FUNCTION().PUBLIC().SIGNATURE(void, RefreshFromConfig);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetRegions, const Vector<RegionBox>&, int, bool);
     FUNCTION().PUBLIC().SIGNATURE(float, GetMinHeight);
     FUNCTION().PUBLIC().SIGNATURE(float, GetMinHeightForWidth, float);
     FUNCTION().PUBLIC().SIGNATURE(const Vec2I&, GetResolution);
@@ -324,6 +368,9 @@ CLASS_METHODS_META(Editor::PipelinePaintEditor)
     FUNCTION().PROTECTED().SIGNATURE(float, BarsHeight, float);
     FUNCTION().PROTECTED().SIGNATURE_STATIC(Vec2I, CanvasResolution, const Vec2F&);
     FUNCTION().PROTECTED().SIGNATURE(RectF, GetStageRect);
+    FUNCTION().PROTECTED().SIGNATURE(const RegionBox*, OtherRegionAt, const Vec2F&);
+    FUNCTION().PROTECTED().SIGNATURE(RectF, BoxRect, float, float, float, float, const RectF&);
+    FUNCTION().PROTECTED().SIGNATURE(void, DrawBadge, const RectF&, int, const Color4&);
     FUNCTION().PROTECTED().SIGNATURE(Vec2F, ToImage, const Vec2F&);
     FUNCTION().PROTECTED().SIGNATURE(void, EnsureBuffers);
     FUNCTION().PROTECTED().SIGNATURE(void, SetResolution, const Vec2I&, bool);

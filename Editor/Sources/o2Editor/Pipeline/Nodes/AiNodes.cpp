@@ -1,5 +1,6 @@
 #include "o2Editor/stdafx.h"
 #include "o2Editor/Pipeline/Nodes/PipelineNodesCommon.h"
+#include "o2Editor/Pipeline/PipelineRegions.h"
 
 #include "o2Editor/Pipeline/Providers/ElevenLabsProvider.h"
 
@@ -398,6 +399,23 @@ namespace Editor
             mSchema.description = "Cut a described (and optionally drawn-over) part out of the input image as a complete, transparent game sprite.";
             mSchema.inputs = { In("image", PipelinePortType::Image) };
             mSchema.outputs = { Out("out", PipelinePortType::Image) };
+            mSchema.perPortRun = true;
+        }
+
+        // Editing one part must not invalidate the others: the shared config is hashed without the
+        // part list, and this part's own name and box are folded back in
+        Vector<String> PortCacheExcludedKeys() const override { return { "regions", "roi", "prompt" }; }
+
+        bool SyncPorts(const Ref<PipelineNode>& node) const override
+        {
+            PipelineRegions::SyncPorts(*node);
+            return true;
+        }
+
+        String PortCacheVariant(const PipelineNode& node, const String& portId) const override
+        {
+            auto region = PipelineRegions::RegionOfPort(node, portId);
+            return "region:" + region.name + ":" + (String)region.x + "," + (String)region.y + "," + (String)region.w + "," + (String)region.h;
         }
 
         static String BuildExtractPrompt(const String& part, const String& backdrop)
@@ -415,8 +433,12 @@ namespace Editor
         {
             auto imageVal = Input(inputs, "image");
             if (!imageVal || !imageVal->IsImage()) co_return PipelineRunResult::Fail("imageExtract: input \"image\" is not connected");
-            String prompt = node->GetConfigString("prompt", "").Trimed(" \n\r\t");
-            if (prompt.IsEmpty()) co_return PipelineRunResult::Fail("imageExtract: no extraction prompt provided");
+
+            // Each output port carries one part: its box is the region of interest, its name the prompt
+            auto region = PipelineRegions::RegionOfPort(*node, ctx->outputPortId);
+            String partName = ctx->outputPort.IsEmpty() ? String("out") : ctx->outputPort;
+            String prompt = region.name.Trimed(" \n\r\t");
+            if (prompt.IsEmpty()) co_return PipelineRunResult::Fail("imageExtract: no extraction prompt for \"" + partName + "\" - name the part to cut out");
 
             auto source = imageVal->GetBitmap();
             if (!source) co_return PipelineRunResult::Fail("imageExtract: input is not a decodable image");
@@ -424,8 +446,8 @@ namespace Editor
             String model = node->GetConfigString("model", GeminiProvider::defaultImageModel);
             String apiKey = ctx->settings.GetGeminiKey();
 
-            PipelineImageOps::CropRect roi;
-            bool hasRoi = ReadNodeCrop(*node, "roi", roi);
+            PipelineImageOps::CropRect roi{ region.x, region.y, region.w, region.h };
+            bool hasRoi = region.x > 0.0f || region.y > 0.0f || region.w < 1.0f || region.h < 1.0f;
             Ref<Bitmap> roiInput = hasRoi ? PipelineImageOps::Crop(*source, roi) : source;
             Vector<AiImageRef> references = { { "image/png", EncodeBitmapPng(*roiInput) } };
             if (auto drawing = DecodeImageBytes(PipelineUtils::DataUrlToBytes(node->GetConfigString("drawing", ""))))
@@ -439,7 +461,7 @@ namespace Editor
 
             bool transparent = node->GetConfigBool("transparentBg", false);
             auto tr = PipelineTransparency::Read(*node);
-            ctx->Log("imageExtract: model=" + model + " refs=" + (String)references.Count() + " transparent=" + (transparent ? "true" : "false"));
+            ctx->Log("imageExtract . " + partName + ": model=" + model + " refs=" + (String)references.Count() + " transparent=" + (transparent ? "true" : "false"));
 
             if (transparent && tr.mode == "chroma")
             {
@@ -464,8 +486,61 @@ namespace Editor
             if (PipelineImageOps::HasContent(*recovered))
                 co_return PipelineRunResult::Single(PipelineValue::Image(PipelineImageOps::CropToContent(*recovered, PipelineImageOps::ContentMode::Alpha)));
 
-            ctx->Log("imageExtract: matte was empty - falling back to the white result");
+            ctx->Log("imageExtract . " + partName + ": matte was empty - falling back to the white result");
             co_return PipelineRunResult::Single(PipelineValue::Image(PipelineImageOps::CropToContent(*whiteBmp, PipelineImageOps::ContentMode::White)));
+        }
+    };
+
+    // Background removal by the image model: the subject stays exactly as it is, everything
+    // around it is painted over with a flat backdrop, which is then keyed out or matted away
+    class AiRemoveBgNode : public PipelineNodeBase
+    {
+    public:
+        AiRemoveBgNode()
+        {
+            mSchema.type = "aiRemoveBg";
+            mSchema.label = "AI remove background";
+            mSchema.category = PipelineNodeCategory::AI;
+            mSchema.description = "Make the background of an image transparent with the image model: the subject stays exactly as it is, everything around it goes.";
+            mSchema.inputs = { In("image", PipelinePortType::Image) };
+            mSchema.outputs = { Out("out", PipelinePortType::Image) };
+        }
+
+        void InitNode(const Ref<PipelineNode>& node) const override
+        {
+            // The node exists to make the background transparent: only the method is a choice
+            node->SetConfigBool("transparentBg", true);
+            node->SetConfigString("transparentMode", "chroma");
+        }
+
+        static String BuildPrompt(const String& hint, const String& backdrop)
+        {
+            String subject = hint.IsEmpty() ?
+                String("Keep the main subject - the foreground object(s) or character(s) - exactly as it appears: same shape, position, size, colors, shading, texture and art style.") :
+                "The subject to keep is: " + hint + ". Keep it exactly as it appears - same shape, position, size, colors, shading, texture and art style.";
+
+            return "Remove the background of this image. " + subject +
+                " Do NOT move, resize, recolor, restyle or redraw the subject. Keep a shadow, outline or glow that belongs to the subject itself. "
+                "Replace EVERYTHING that is background with " + backdrop + ": scenery, floor, sky, walls, gradients, patterns, props and clutter that are not part of the subject. "
+                "The result must be the untouched subject on that flat backdrop and nothing else. Output only the resulting image.";
+        }
+
+        Coroutine<PipelineRunResult> Run(const Ref<PipelineExecContext>& ctx, const Map<String, PipelineValue>& inputs,
+                                         const Ref<PipelineNode>& node) override
+        {
+            auto imageVal = Input(inputs, "image");
+            if (!imageVal || !imageVal->IsImage()) co_return PipelineRunResult::Fail("aiRemoveBg: input \"image\" is not connected");
+
+            String model = node->GetConfigString("model", GeminiProvider::defaultImageModel);
+            String hint = node->GetConfigString("hint", "").Trimed(" \n\r\t");
+            auto tr = PipelineTransparency::Read(*node);
+            Vector<AiImageRef> references = { { imageVal->mimeType.IsEmpty() ? String("image/png") : imageVal->mimeType, imageVal->data } };
+
+            ctx->Log("aiRemoveBg: model=" + model + " hintChars=" + (String)hint.Length() + " mode=" + tr.mode);
+
+            co_return co_await GenerateWithTransparency(ctx, *node, model, BuildPrompt(hint, "a flat, solid backdrop"), references,
+                BuildPrompt(hint, PipelineTransparency::ChromaEraseInstruction(tr)),
+                BuildPrompt(hint, "flat, solid, pure white (#FFFFFF)"));
         }
     };
 
@@ -477,5 +552,6 @@ namespace Editor
         PipelineNodeRegistry::Register(mmake<NanoBananaGenNode>());
         PipelineNodeRegistry::Register(mmake<ImageEditNode>());
         PipelineNodeRegistry::Register(mmake<ImageExtractNode>());
+        PipelineNodeRegistry::Register(mmake<AiRemoveBgNode>());
     }
 }

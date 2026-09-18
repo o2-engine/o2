@@ -24,6 +24,7 @@ namespace Editor
         String message;          // Log line, Retry reason
 
         PipelineValue value;          // NodeOutput: the produced value
+        String        portId;         // NodeOutput: output port of a per-port node, empty for the node result
         String        previewPath;    // NodeOutput: where the preview file was written
         String        srcPreviewPath; // NodeOutput: uncropped source preview when a crop was applied
 
@@ -68,8 +69,15 @@ namespace Editor
         // Returns the path of the preview file of a node with the given extension
         static String GetPreviewPath(const String& pipelineId, const String& nodeId, const String& ext);
 
+        // Returns path of the preview file of one output of a per-port node
+        static String GetPortPreviewPath(const String& pipelineId, const String& nodeId, const String& portId, const String& ext);
+
         // Returns the path of the uncropped source preview of a node
         static String GetSourcePreviewPath(const String& pipelineId, const String& nodeId);
+
+        // Returns the cache signature of one output of a per-port node: the shared config without the keys
+        // the implementation excludes, plus what makes this port its own
+        static String PortSignature(const PipelineNode& node, const Map<String, String>& upstreamSigs, int seed, const String& portId);
 
         // Returns the path of the content cached under a node signature
         static String GetContentPath(const String& pipelineId, const String& sig, const String& ext);
@@ -79,6 +87,10 @@ namespace Editor
 
         // Returns the stored preview of a node (any known extension), invalid when none
         static PipelineValue LoadPreview(const String& pipelineId, const PipelineNode& node, String* pathOut = nullptr);
+
+        // Loads the cached preview of one output of a per-port node, invalid when it was never produced
+        static PipelineValue LoadPortPreview(const String& pipelineId, const String& nodeId, const String& portId,
+                                             PipelinePortType type = PipelinePortType::Image, String* pathOut = nullptr);
 
         // Returns true when the node signature was produced by a previous run
         static bool RanExists(const String& pipelineId, const String& sig);
@@ -113,7 +125,8 @@ namespace Editor
             bool           notCached = false;     // A node needed a provider call in cachedOnly mode
             bool           assetsChanged = false; // A finish node wrote into the assets folder, rebuilt when the run ends
 
-            Map<String, Map<String, PipelineValue>> outputs;   // Node id -> port id -> value
+            Map<String, Map<String, PipelineValue>> outputs;     // Node id -> port id -> value
+            Map<String, Vector<String>>             neededPorts; // Outputs of a per-port node this run consumes; the target computes all of its own
             Map<String, String>                     sigByNode; // Node signatures computed during this run
             Map<String, int>                        seeds;     // Resolved seeds by node id
             Map<String, bool>                       visiting;  // Nodes on the evaluation stack, for cycle detection
@@ -123,6 +136,9 @@ namespace Editor
         Coroutine<void> mCoroutine; // Coroutine driving mCurrent on the main thread
 
     private:
+        // Fills run->neededPorts: the outputs each node must produce for the target branch
+        void CollectNeededPorts(const Ref<Run>& run);
+
         // Coroutine body of Execute: validates the graph, evaluates the target branch and finishes the run
         Coroutine<void> ExecuteCoroutine(Ref<Run> run);
 
@@ -143,6 +159,9 @@ namespace Editor
 
         // Emits a Log event
         void EmitLog(const String& message);
+
+        // Stores the preview of one output of a per-port node and emits NodeOutput for it
+        void WritePortPreview(const Ref<Run>& run, const String& nodeId, const String& portId, const PipelineValue& value);
 
         // Stores the preview of a node and emits NodeOutput
         void WritePreview(const Ref<Run>& run, const String& nodeId, const PipelineValue& value, const PipelineValue* srcValue);

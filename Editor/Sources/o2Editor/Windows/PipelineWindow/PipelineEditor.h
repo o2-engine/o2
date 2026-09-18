@@ -133,6 +133,9 @@ namespace Editor
         // Runs node with its upstream branch, queued when a run is in progress
         void RunNode(const String& nodeId, bool bypassSelf);
 
+        // Runs the node again for one of its outputs: that part's cache is dropped, the others are kept
+        void RunNodePort(const String& nodeId, const String& portId);
+
         // Runs every finish node
         void RunAll();
 
@@ -156,6 +159,9 @@ namespace Editor
 
         // Returns value connected to input port by id
         PipelineValue GetInputValueById(const Ref<PipelineNode>& node, const String& portId) const;
+
+        // Adds a node of the type in the middle of the view, steps aside from an occupied spot and selects it
+        Ref<PipelineNode> AddNodeAtViewCenter(const String& type);
 
         // Rebuilds all cards from the graph, keeping their runtimes
         void RebuildAll();
@@ -511,6 +517,7 @@ CLASS_METHODS_META(Editor::PipelineEditor)
     FUNCTION().PUBLIC().SIGNATURE(void, BeginContinuousEdit, const String&);
     FUNCTION().PUBLIC().SIGNATURE(void, EndContinuousEdit);
     FUNCTION().PUBLIC().SIGNATURE(void, RunNode, const String&, bool);
+    FUNCTION().PUBLIC().SIGNATURE(void, RunNodePort, const String&, const String&);
     FUNCTION().PUBLIC().SIGNATURE(void, RunAll);
     FUNCTION().PUBLIC().SIGNATURE(void, StopRun);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsRunning);
@@ -519,6 +526,7 @@ CLASS_METHODS_META(Editor::PipelineEditor)
     FUNCTION().PUBLIC().SIGNATURE(const PipelineNodeRuntime*, GetRuntime, const String&);
     FUNCTION().PUBLIC().SIGNATURE(PipelineValue, GetInputValue, const Ref<PipelineNode>&, const String&);
     FUNCTION().PUBLIC().SIGNATURE(PipelineValue, GetInputValueById, const Ref<PipelineNode>&, const String&);
+    FUNCTION().PUBLIC().SIGNATURE(Ref<PipelineNode>, AddNodeAtViewCenter, const String&);
     FUNCTION().PUBLIC().SIGNATURE(void, RebuildAll);
     FUNCTION().PUBLIC().SIGNATURE(void, FitView);
     FUNCTION().PUBLIC().SIGNATURE(void, SetView, const Vec2F&, float);

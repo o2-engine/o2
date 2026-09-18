@@ -275,8 +275,14 @@ namespace Editor
                     {
                         for (auto it = results->BeginMember(); it != results->EndMember(); ++it)
                         {
-                            String nodeId = it->name.GetString();
-                            if (!it->value.IsObject() || !bundle.graph.FindNode(nodeId))
+                            if (!it->value.IsObject())
+                                continue;
+
+                            // A part of a per-port node is keyed "<node id>#<port id>" and names them in its entry
+                            String key = it->name.GetString();
+                            String nodeId = StringOf(it->value.FindMember("nodeId"), key.Contains("#") ? key.SubStr(0, key.Find("#")) : key);
+                            String portId = StringOf(it->value.FindMember("portId"));
+                            if (!bundle.graph.FindNode(nodeId))
                                 continue;
 
                             auto file = find(StringOf(it->value.FindMember("file")));
@@ -285,8 +291,32 @@ namespace Editor
 
                             PipelineValue value = MakeValue(MediaTypeOf(StringOf(it->value.FindMember("mediaType"), "text")),
                                                             StringOf(it->value.FindMember("mime")), file->data);
-                            if (value.IsValid())
+                            if (!value.IsValid())
+                                continue;
+
+                            if (portId.IsEmpty())
                                 bundle.results[nodeId] = value;
+                            else
+                                bundle.portResults[nodeId][portId] = value;
+                        }
+                    }
+                }
+            }
+
+            // Source images and sounds are uploads, not results: without them the imported sources are empty
+            if (manifest.IsObject())
+            {
+                if (auto uploads = manifest.FindMember("uploads"))
+                {
+                    if (uploads->IsObject())
+                    {
+                        for (auto it = uploads->BeginMember(); it != uploads->EndMember(); ++it)
+                        {
+                            if (!it->value.IsObject())
+                                continue;
+
+                            if (auto file = find(StringOf(it->value.FindMember("file"))))
+                                bundle.uploads[String(it->name.GetString())] = file->data;
                         }
                     }
                 }
@@ -321,8 +351,43 @@ namespace Editor
 
         int StoreResults(const String& pipelineId, const Bundle& bundle)
         {
+            // The source files first: a source node hashes what it reads, so they belong in the signatures below
+            for (auto& upload : bundle.uploads)
+            {
+                String path = PipelineUtils::GetUploadPath(upload.first);
+                if (!upload.second.IsEmpty() && !o2FileSystem.IsFileExist(path))
+                    PipelineUtils::WriteFileBytes(path, upload.second);
+            }
+
             auto signatures = bundle.graph.ComputeSignatures();
+            auto seeds = bundle.graph.ResolveSeeds();
             int stored = 0;
+
+            // The parts of a per-port node: each gets its own preview and cache entry, so nothing is re-generated
+            for (auto& nodeParts : bundle.portResults)
+            {
+                auto node = bundle.graph.FindNode(nodeParts.first);
+                if (!node)
+                    continue;
+
+                auto upstream = bundle.graph.UpstreamSignatures(*node, signatures);
+                int seed = -1;
+                seeds.TryGetValue(node->id, seed);
+
+                for (auto& part : nodeParts.second)
+                {
+                    if (!node->FindOutput(part.first))
+                        continue;
+
+                    const PipelineValue& value = part.second;
+                    if (!PipelineUtils::WriteFileBytes(PipelineExecutor::GetPortPreviewPath(pipelineId, node->id, part.first,
+                                                                                            value.GetExtension()), value.data))
+                        continue;
+
+                    PipelineExecutor::SaveContent(pipelineId, PipelineExecutor::PortSignature(*node, upstream, seed, part.first), value);
+                    stored++;
+                }
+            }
             for (auto& kv : bundle.results)
             {
                 auto node = bundle.graph.FindNode(kv.first);

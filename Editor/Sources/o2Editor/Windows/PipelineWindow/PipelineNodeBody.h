@@ -17,6 +17,7 @@ namespace o2
     class HorizontalLayout;
     class Label;
     class Toggle;
+    class VerticalLayout;
 }
 
 namespace Editor
@@ -46,6 +47,9 @@ namespace Editor
 
         // Called when the node config changed outside the body (undo, paste, another view)
         virtual void OnConfigChanged() {}
+
+        // Returns true and the position, relative to the body's top-left (y down), of an output port the body places itself
+        virtual bool GetBodyPortOffset(const String& portId, Vec2F& offset) const { return false; }
 
         // Returns the summed height of the rows with spacing when the body is width wide
         float GetPreferredHeight(float width) const;
@@ -91,6 +95,21 @@ namespace Editor
         Ref<PipelineAudioView>  mAudioView;  // Result audio player, when the body has one
         Ref<PipelineCropEditor> mCropEditor; // Result image with the crop frame, when the body has one
         Ref<PipelineVideoView>  mVideoView;  // Result video player, when the body has one
+
+        // ------------------------------------------------------------------
+        // Parameter list being built: its rows and their heights, folded away
+        // ------------------------------------------------------------------
+        struct ParamsList : public RefCounterable
+        {
+            Ref<VerticalLayout> list;    // Rows of the list
+            Vector<float>       heights; // Height of each row
+            float               spacing; // Gap between the rows
+
+            // Returns the height of the rows with the gaps between them
+            float GetHeight() const;
+        };
+
+        Ref<ParamsList> mParams; // Rows are added into it while a parameter list is open, null otherwise
 
     public:
         // Appends a fixed-height row and adds its widget as a child
@@ -153,6 +172,22 @@ namespace Editor
         // Returns the value connected to the named input port
         PipelineValue GetInput(const String& portName) const;
 
+        // Adds the fold row of the parameter list ("Parameters · a · b"); returns true when the list is open and
+        // the rows added until EndParams belong to it
+        bool BeginParams(const Vector<String>& names);
+
+        // Closes the parameter list opened by BeginParams
+        void EndParams();
+
+        // Adds a row of buttons sharing the width
+        void AddActions(const Vector<Ref<Widget>>& buttons);
+
+        // Adds the primary multiline field of the node bound to a config key: three lines tall
+        Ref<EditBox> AddPrimaryField(const String& key, const String& placeholder);
+
+        // Adds the title row of an always-open section
+        void AddSectionTitle(const String& title);
+
         // Adds the "Model" dropdown row bound to the "model" config key
         Ref<DropDown> AddModelRow(const Vector<String>& presets, const String& defaultModel);
 
@@ -183,23 +218,23 @@ namespace Editor
         // Adds the "Inherit seed" toggle with the seed edit box
         void AddSeedRow();
 
-        // Adds the transparent background toggle with the two-pass / chroma key settings
-        void AddTransparencyBlock();
+        // Adds the transparent background toggle with the two-pass / chroma key settings; always leaves the toggle out
+        void AddTransparencyBlock(bool always = false);
 
         // Adds the flexible result image view
-        void AddResultImage(const String& hint, float minHeight = 120.0f);
+        void AddResultImage(const String& hint, float minHeight = 176.0f);
 
         // Adds the flexible result text view
-        void AddResultText(const String& hint, float minHeight = 70.0f);
+        void AddResultText(const String& hint, float minHeight = 100.0f);
 
         // Adds the result audio player row
         void AddResultAudio(const String& hint);
 
         // Adds the flexible result video player
-        void AddResultVideo(const String& hint, float minHeight = 170.0f);
+        void AddResultVideo(const String& hint, float minHeight = 176.0f);
 
-        // Adds the "Result" header with the crop toggle and the crop editor below it
-        void AddCropSection(const String& hint, float minHeight = 150.0f);
+        // Adds the crop editor showing the result and, under it, a caption with the crop toggle
+        void AddCropSection(const String& emptyHint, const String& caption = "Result", float minHeight = 176.0f);
 
         // Adds a button opening a file dialog; the pick is stored as an asset path or copied into uploads
         void AddFilePicker(const String& buttonCaption, const Vector<String>& extensions, bool image);
@@ -274,6 +309,7 @@ CLASS_FIELDS_META(Editor::PipelineNodeBody)
     FIELD().PUBLIC().NAME(mAudioView);
     FIELD().PUBLIC().NAME(mCropEditor);
     FIELD().PUBLIC().NAME(mVideoView);
+    FIELD().PUBLIC().NAME(mParams);
 }
 END_META;
 CLASS_METHODS_META(Editor::PipelineNodeBody)
@@ -286,6 +322,7 @@ CLASS_METHODS_META(Editor::PipelineNodeBody)
     FUNCTION().PUBLIC().SIGNATURE(void, Build);
     FUNCTION().PUBLIC().SIGNATURE(void, OnOutputChanged);
     FUNCTION().PUBLIC().SIGNATURE(void, OnConfigChanged);
+    FUNCTION().PUBLIC().SIGNATURE(bool, GetBodyPortOffset, const String&, Vec2F&);
     FUNCTION().PUBLIC().SIGNATURE(float, GetPreferredHeight, float);
     FUNCTION().PUBLIC().SIGNATURE(void, Relayout, float, float);
     FUNCTION().PUBLIC().SIGNATURE(void, MarkContent, const Ref<Widget>&);
@@ -310,6 +347,11 @@ CLASS_METHODS_META(Editor::PipelineNodeBody)
     FUNCTION().PUBLIC().SIGNATURE(Ref<Bitmap>, GetOutputBitmap);
     FUNCTION().PUBLIC().SIGNATURE(Ref<Bitmap>, GetSourceOutputBitmap);
     FUNCTION().PUBLIC().SIGNATURE(PipelineValue, GetInput, const String&);
+    FUNCTION().PUBLIC().SIGNATURE(bool, BeginParams, const Vector<String>&);
+    FUNCTION().PUBLIC().SIGNATURE(void, EndParams);
+    FUNCTION().PUBLIC().SIGNATURE(void, AddActions, const Vector<Ref<Widget>>&);
+    FUNCTION().PUBLIC().SIGNATURE(Ref<EditBox>, AddPrimaryField, const String&, const String&);
+    FUNCTION().PUBLIC().SIGNATURE(void, AddSectionTitle, const String&);
     FUNCTION().PUBLIC().SIGNATURE(Ref<DropDown>, AddModelRow, const Vector<String>&, const String&);
     FUNCTION().PUBLIC().SIGNATURE(Ref<DropDown>, AddSelectRow, const String&, const String&, const Vector<String>&, const String&);
     FUNCTION().PUBLIC().SIGNATURE(Ref<EditBox>, AddTextArea, const String&, const String&, float);
@@ -320,12 +362,12 @@ CLASS_METHODS_META(Editor::PipelineNodeBody)
     FUNCTION().PUBLIC().SIGNATURE(void, AddSegmented, const String&, _tmp1, const String&);
     FUNCTION().PUBLIC().SIGNATURE(void, AddMutedLine, const String&, float);
     FUNCTION().PUBLIC().SIGNATURE(void, AddSeedRow);
-    FUNCTION().PUBLIC().SIGNATURE(void, AddTransparencyBlock);
+    FUNCTION().PUBLIC().SIGNATURE(void, AddTransparencyBlock, bool);
     FUNCTION().PUBLIC().SIGNATURE(void, AddResultImage, const String&, float);
     FUNCTION().PUBLIC().SIGNATURE(void, AddResultText, const String&, float);
     FUNCTION().PUBLIC().SIGNATURE(void, AddResultAudio, const String&);
     FUNCTION().PUBLIC().SIGNATURE(void, AddResultVideo, const String&, float);
-    FUNCTION().PUBLIC().SIGNATURE(void, AddCropSection, const String&, float);
+    FUNCTION().PUBLIC().SIGNATURE(void, AddCropSection, const String&, const String&, float);
     FUNCTION().PUBLIC().SIGNATURE(void, AddFilePicker, const String&, const Vector<String>&, bool);
 }
 END_META;

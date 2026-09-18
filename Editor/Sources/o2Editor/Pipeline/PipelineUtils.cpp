@@ -565,13 +565,30 @@ namespace Editor::PipelineUtils
         return id;
     }
 
+    String CutUtf8(const String& text, int maxBytes)
+    {
+        if (maxBytes <= 0)
+            return String();
+
+        if (text.Length() <= maxBytes)
+            return text;
+
+        // A byte 10xxxxxx continues a character: step back to where that character starts, half a
+        // letter is not text any more and every conversion to WString throws on it
+        int cut = maxBytes;
+        while (cut > 0 && ((UInt8)text[cut] & 0xC0) == 0x80)
+            cut--;
+
+        return text.SubStr(0, cut);
+    }
+
     String ClampPromptChars(const String& textIn, int maxChars)
     {
         String t = textIn.Trimed(" \n\r\t");
         if (t.Length() <= maxChars)
             return t;
 
-        String head = t.SubStr(0, maxChars);
+        String head = CutUtf8(t, maxChars);
 
         auto lastOf = [&](const char* symbols) -> int
         {

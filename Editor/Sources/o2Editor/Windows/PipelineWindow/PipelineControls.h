@@ -5,6 +5,7 @@
 #include "o2/Render/TextureRef.h"
 #include "o2/Scene/UI/Widget.h"
 #include "o2/Utils/Function/Function.h"
+#include "o2Editor/Pipeline/PipelineGraph.h"
 #include "o2Editor/Pipeline/PipelineValue.h"
 
 using namespace o2;
@@ -45,6 +46,29 @@ namespace Editor
 
         SERIALIZABLE(PipelineRoundedRect);
         CLONEABLE_REF(PipelineRoundedRect);
+    };
+
+    // ----------------------------------------------------------------------------------
+    // Port marker: the shape says the data type - circle for text, square for image,
+    // diamond for audio, triangle for video - so a link still reads without its colour
+    // ----------------------------------------------------------------------------------
+    class PipelinePortMarker : public IRectDrawable
+    {
+    public:
+        PipelinePortType portType = PipelinePortType::Text; // Type the shape stands for @SERIALIZABLE
+
+    public:
+        // Default constructor
+        PipelinePortMarker() = default;
+
+        // Copy-constructor
+        PipelinePortMarker(const PipelinePortMarker& other);
+
+        // Draws the shape of the port type filling the rectangle
+        void Draw() override;
+
+        SERIALIZABLE(PipelinePortMarker);
+        CLONEABLE_REF(PipelinePortMarker);
     };
 
     // ----------------------------------------
@@ -301,6 +325,25 @@ CLASS_METHODS_META(Editor::PipelineRoundedRect)
 
     FUNCTION().PUBLIC().CONSTRUCTOR();
     FUNCTION().PUBLIC().CONSTRUCTOR(const PipelineRoundedRect&);
+    FUNCTION().PUBLIC().SIGNATURE(void, Draw);
+}
+END_META;
+
+CLASS_BASES_META(Editor::PipelinePortMarker)
+{
+    BASE_CLASS(o2::IRectDrawable);
+}
+END_META;
+CLASS_FIELDS_META(Editor::PipelinePortMarker)
+{
+    FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(PipelinePortType::Text).NAME(portType);
+}
+END_META;
+CLASS_METHODS_META(Editor::PipelinePortMarker)
+{
+
+    FUNCTION().PUBLIC().CONSTRUCTOR();
+    FUNCTION().PUBLIC().CONSTRUCTOR(const PipelinePortMarker&);
     FUNCTION().PUBLIC().SIGNATURE(void, Draw);
 }
 END_META;

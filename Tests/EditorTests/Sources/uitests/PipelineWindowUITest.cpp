@@ -17,6 +17,7 @@
 #include "o2/Scene/UI/Widgets/DropDown.h"
 #include "o2/Scene/UI/Widgets/EditBox.h"
 #include "o2/Scene/UI/Widgets/HorizontalScrollBar.h"
+#include "o2/Scene/UI/Widgets/Toggle.h"
 #include "o2/Scene/UI/Widgets/VerticalScrollBar.h"
 #include "o2/Utils/Bitmap/Bitmap.h"
 #include "o2/Utils/Editor/DragHandle.h"
@@ -32,6 +33,7 @@
 #include "o2Editor/Pipeline/PipelineImageOps.h"
 #include "o2Editor/Pipeline/PipelineImport.h"
 #include "o2Editor/Pipeline/PipelineNodeType.h"
+#include "o2Editor/Pipeline/PipelineRegions.h"
 #include "o2Editor/Pipeline/PipelineUtils.h"
 #include "o2Editor/UIRoot.h"
 #include "o2Editor/Windows/AssetsWindow/AssetsWindow.h"
@@ -39,6 +41,7 @@
 #include "o2Editor/Windows/PipelineWindow/PipelineControls.h"
 #include "o2Editor/Windows/PipelineWindow/PipelineEditor.h"
 #include "o2Editor/Windows/PipelineWindow/PipelineMediaViews.h"
+#include "o2Editor/Windows/PipelineWindow/PipelineNodePalette.h"
 #include "o2Editor/Windows/PipelineWindow/PipelineNodeWidget.h"
 #include "o2Editor/Windows/PipelineWindow/PipelinePaintEditor.h"
 #include "o2Editor/Windows/PipelineWindow/PipelineSettingsDlg.h"
@@ -812,6 +815,333 @@ TEST_F(PipelineUiFixture, AddNodeMenuCarriesNodeIcons)
     EXPECT_TRUE(editor->GetContextMenu()->IsEnabled());
     editor->GetContextMenu()->Hide();
     UiDriver::Step(2);
+}
+
+TEST_F(PipelineUiFixture, NodePaletteSearchesAndDropsTheNodeInTheViewCentre)
+{
+    PipelineGraph graph;
+    graph.SaveToAsset(*asset);
+    editor->SetAsset(asset);
+    UiDriver::Step(3);
+    editor->SetView(Vec2F(400, -300), 1.0f);
+    UiDriver::Step(3);
+
+    Ref<PipelineNodePalette> palette;
+    {
+        PushEditorScopeOnStack scope;
+        palette = mmake<PipelineNodePalette>();
+        *palette->layout = WidgetLayout::VerStretch(HorAlign::Left, 4, 4, 300, 4);
+        palette->onPick = [&](const String& type) { editor->AddNodeAtViewCenter(type); };
+        EditorUIRoot.AddWidget(palette);
+    }
+    UiDriver::Step(3);
+
+    // Everything the registry knows is browsable, grouped by category
+    EXPECT_EQ(palette->GetShownTypes().Count(), PipelineNodeRegistry::AllSchemas().Count());
+
+    auto filter = palette->FindChildByTypeAndName<EditBox>("filter");
+    ASSERT_TRUE(filter);
+    filter->SetText("extract");
+    UiDriver::Step(2);
+    auto found = palette->GetShownTypes();
+    EXPECT_TRUE(found.Contains("imageExtract")) << found.Count();
+    EXPECT_FALSE(found.Contains("sourceText"));
+
+    String dir = ScreenshotDir();
+    o2FileSystem.FolderCreate(dir, true);
+    EXPECT_TRUE(UiDriver::Screenshot(dir + "/pipeline_palette.png"));
+
+    // A category tab narrows the browse without a query
+    filter->SetText("");
+    auto sources = palette->FindChildByTypeAndName<Toggle>("Source");
+    ASSERT_TRUE(sources);
+    sources->SetValue(true);
+    sources->onToggleByUser(true);
+    UiDriver::Step(2);
+    for (auto& type : palette->GetShownTypes())
+        EXPECT_EQ(PipelineNodeRegistry::GetSchema(type)->category, PipelineNodeCategory::Source) << type;
+
+    // A click puts the node in the middle of the view and selects it
+    auto entry = palette->FindChildByTypeAndName<Button>("sourceImage");
+    ASSERT_TRUE(entry);
+    UiDriver::Press(entry->layout->GetWorldRect().Center());
+    UiDriver::Release();
+    UiDriver::Step(2);
+
+    auto nodes = editor->GetGraph()->nodes;
+    ASSERT_EQ(nodes.Count(), 1);
+    EXPECT_EQ(nodes[0]->nodeType, "sourceImage");
+    Vec2F centre = editor->GetVisibleCanvasRect().Center();
+    auto card = editor->GetNodeWidget(nodes[0]->id);
+    ASSERT_TRUE(card);
+    EXPECT_NEAR(card->GetCardRect().Center().x, centre.x, 60.0f);
+    EXPECT_NEAR(card->GetCardRect().Center().y, centre.y, 90.0f);
+    EXPECT_TRUE(card->IsSelected());
+
+    // The same node again steps aside instead of stacking exactly on top
+    UiDriver::Press(entry->layout->GetWorldRect().Center());
+    UiDriver::Release();
+    UiDriver::Step(2);
+    ASSERT_EQ(editor->GetGraph()->nodes.Count(), 2);
+    EXPECT_NE(editor->GetGraph()->nodes[0]->position, editor->GetGraph()->nodes[1]->position);
+
+    EditorUIRoot.RemoveWidget(palette);
+    UiDriver::Step();
+}
+
+// An imported extract node whose prompt is long non-ASCII text: its port name must stay readable text
+TEST_F(PipelineUiFixture, ExtractCardBuildsWithALongCyrillicPartName)
+{
+    PipelineGraph graph;
+    auto source = AddNode(graph, "sourceImage", Vec2F(0, 0));
+    auto extract = AddNode(graph, "imageExtract", Vec2F(400, 0));
+    extract->SetConfigString("prompt", "UI подложка под кол-во очков, с пустым прогресс-баром. Без текста, без звезд");
+    Connect(graph, source, "out", extract, "image");
+    graph.SaveToAsset(*asset);
+
+    editor->SetAsset(asset);
+    UiDriver::Step(3);
+
+    auto live = Live(extract);
+    ASSERT_TRUE(live);
+    ASSERT_EQ(live->outputs.Count(), 1);
+    EXPECT_FALSE(live->outputs[0].name.IsEmpty());
+    auto card = editor->GetNodeWidget(live->id);
+    ASSERT_TRUE(card);
+    EXPECT_TRUE(card->IsEnabled());
+}
+
+// One card per node type at 1:1 with a result where the type shows one - the material the node UX is judged on
+TEST_F(PipelineUiFixture, NodeCardGalleryScreenshots)
+{
+    String dir = ScreenshotDir() + "/gallery";
+    o2FileSystem.FolderCreate(dir, true);
+
+    auto picture = PipelineImageOps::Blank(320, 240, Color4(0, 0, 0, 0));
+    for (int y = 0; y < 240; y++)
+        for (int x = 0; x < 320; x++)
+        {
+            float dx = (x - 160) / 110.0f, dy = (y - 120) / 90.0f;
+            bool inside = dx * dx + dy * dy < 1.0f;
+            UInt8* p = PipelineImageOps::Pixel(*picture, x, y);
+            p[0] = inside ? 240 : 0; p[1] = inside ? 180 : 0; p[2] = inside ? 60 : 0; p[3] = inside ? 255 : 0;
+            if (inside && dx * dx + dy * dy > 0.8f) { p[0] = 120; p[1] = 70; p[2] = 20; }
+        }
+    PipelineValue image = PipelineValue::Image(picture);
+    PipelineValue text = PipelineValue::Text("A pixel-art gold coin with a thick dark outline and shiny highlights, isolated on a plain background, 2D game icon.");
+    o2FileSystem.FolderCreate(PipelineUtils::GetUploadsPath(), true);
+    PipelineUtils::WriteFileBytes(PipelineUtils::GetUploadPath("gallery.png"), image.GetPngBytes());
+
+    for (auto schema : PipelineNodeRegistry::AllSchemas())
+    {
+        PipelineGraph graph;
+        auto node = AddNode(graph, schema->type, Vec2F(0, 0));
+        auto source = AddNode(graph, "sourceImage", Vec2F(-500, 0));
+        source->SetConfigString("uploadId", "gallery.png");
+        auto words = AddNode(graph, "sourceText", Vec2F(-500, 300));
+        words->SetConfigString("text", text.data);
+        for (auto& port : node->inputs)
+        {
+            if (port.portType == PipelinePortType::Image) Connect(graph, source, "out", node, port.name);
+            if (port.portType == PipelinePortType::Text) Connect(graph, words, "out", node, port.name);
+        }
+        if (schema->type == "sourceImage")
+            node->SetConfigString("uploadId", "gallery.png");
+        if (schema->type == "sourceText")
+            node->SetConfigString("text", text.data);
+        if (schema->type == "imageExtract")
+        {
+            Vector<PipelineExtractRegion> regions;
+            const char* names[] = { "gold coin", "treasure chest", "health bar" };
+            for (int i = 0; i < 3; i++)
+            {
+                PipelineExtractRegion r;
+                r.id = "part" + (String)i; r.name = names[i]; r.x = i * 0.33f; r.y = 0.1f; r.w = 0.3f; r.h = 0.6f;
+                regions.Add(r);
+            }
+            PipelineRegions::Write(*node, regions);
+            PipelineNodeRegistry::SyncNodeWithSchema(node);
+        }
+        graph.SaveToAsset(*asset);
+        editor->SetAsset(asset);
+        UiDriver::Step(3);
+
+        auto live = Live(node);
+        auto card = editor->GetNodeWidget(live->id);
+        ASSERT_TRUE(card) << schema->type;
+        auto& runtime = card->GetRuntime();
+        bool imageOut = live->outputs.Any([](const PipelinePort& p) { return p.portType == PipelinePortType::Image; });
+        bool textOut = live->outputs.Any([](const PipelinePort& p) { return p.portType == PipelinePortType::Text; });
+        if (imageOut) runtime.output = image;
+        else if (textOut) runtime.output = text;
+        for (auto& port : live->outputs)
+            if (port.portType == PipelinePortType::Image) runtime.portOutputs[port.id] = image;
+        runtime.fresh = imageOut || textOut;
+        card->ApplyRuntime();
+        card->OnOutputChanged();
+        for (auto& other : editor->GetGraph()->nodes)
+            if (auto w = editor->GetNodeWidget(other->id)) w->OnOutputChanged();
+        UiDriver::Step(3);
+
+        RectF rect = card->GetCardRect();
+        editor->SetView(rect.Center(), 1.0f);
+        UiDriver::Step(4);
+        auto capture = UiDriver::Capture();
+        ASSERT_TRUE(capture);
+        Vec2I a = ScreenToCapture(editor->LocalToScreenPoint(rect.LeftTop()), capture);
+        Vec2I b = ScreenToCapture(editor->LocalToScreenPoint(rect.RightBottom()), capture);
+        int margin = 24;
+        int left = Math::Max(0, Math::Min(a.x, b.x) - margin), top = Math::Max(0, Math::Min(a.y, b.y) - margin);
+        int right = Math::Min(capture->GetSize().x, Math::Max(a.x, b.x) + margin), bottom = Math::Min(capture->GetSize().y, Math::Max(a.y, b.y) + margin);
+        auto crop = PipelineImageOps::CropPixels(*capture, left, top, right - left, bottom - top);
+        ASSERT_TRUE(crop);
+        EXPECT_TRUE(crop->Save(dir + "/" + schema->type + ".png", Bitmap::ImageType::Png)) << schema->type;
+    }
+}
+
+// The parameters of a runnable node fold away under one row; the row opens them and the card grows by their rows
+TEST_F(PipelineUiFixture, ParameterListFoldsAndUnfolds)
+{
+    PipelineGraph graph;
+    auto gen = AddNode(graph, "nanoBananaGen", Vec2F());
+    graph.SaveToAsset(*asset);
+    editor->SetAsset(asset);
+    UiDriver::Step(3);
+    gen = Live(gen);
+
+    auto card = editor->GetNodeWidget(gen->id);
+    ASSERT_TRUE(card);
+    EXPECT_FALSE(card->FindChildByTypeAndName<DropDown>("model"));
+    float folded = card->GetCardRect().Height();
+
+    auto head = card->FindChildByTypeAndName<Button>("params");
+    ASSERT_TRUE(head);
+    head->onClick();
+    UiDriver::Step(3);
+
+    card = editor->GetNodeWidget(gen->id);
+    ASSERT_TRUE(card);
+    EXPECT_TRUE(Live(gen)->GetConfigBool("paramsOpen", false));
+    EXPECT_TRUE(card->FindChildByTypeAndName<DropDown>("model"));
+    EXPECT_GT(card->GetCardRect().Height(), folded + 40.0f);
+
+    // The fold is a view setting: it must not change what the node computes
+    EXPECT_EQ(PipelineGraph::ComputeNodeSignature(*Live(gen), {}, {}, -1), PipelineGraph::ComputeNodeSignature(*gen, {}, {}, -1));
+}
+
+// The parts of an extract node are cells of a grid: clicking one selects it, its name is edited in place
+TEST_F(PipelineUiFixture, ExtractPartsGridSelectsAndRenames)
+{
+    PipelineGraph graph;
+    auto extract = AddNode(graph, "imageExtract", Vec2F());
+    Vector<PipelineExtractRegion> regions;
+    for (int i = 0; i < 3; i++)
+    {
+        PipelineExtractRegion r;
+        r.id = "p" + (String)i; r.name = "part " + (String)(i + 1); r.x = i * 0.3f; r.y = 0; r.w = 0.3f; r.h = 1;
+        regions.Add(r);
+    }
+    PipelineRegions::Write(*extract, regions);
+    PipelineNodeRegistry::SyncNodeWithSchema(extract);
+    graph.SaveToAsset(*asset);
+    editor->SetAsset(asset);
+    UiDriver::Step(3);
+    extract = Live(extract);
+
+    auto card = editor->GetNodeWidget(extract->id);
+    ASSERT_TRUE(card);
+    auto grid = card->FindChildByTypeAndName<Widget>("parts");
+    ASSERT_TRUE(grid);
+    ASSERT_EQ(grid->GetChildWidgets().Count(), 3);
+    ASSERT_TRUE(card->FindChildByTypeAndName<Widget>("part cell selected"));
+
+    // Cells are laid out in rows: the third cell sits under the first at the default width
+    auto cells = grid->GetChildWidgets();
+    EXPECT_LT(cells[2]->layout->GetWorldRect().top, cells[0]->layout->GetWorldRect().bottom + 1.0f);
+    EXPECT_NEAR(cells[2]->layout->GetWorldRect().left, cells[0]->layout->GetWorldRect().left, 0.5f);
+
+    // The parts' output ports leave the cells' corners, not the port column; the input keeps its row
+    RectF cardRect = card->GetCardRect();
+    for (int i = 0; i < 3; i++)
+    {
+        Vec2F port = card->GetPortPosition(Live(extract)->outputs[i].id, false);
+        EXPECT_NEAR(port.x, cells[i]->layout->GetWorldRect().right, 1.0f) << i;
+        EXPECT_GT(port.y, cells[i]->layout->GetWorldRect().bottom) << i;
+        EXPECT_LT(port.y, cells[i]->layout->GetWorldRect().top) << i;
+    }
+    EXPECT_NEAR(card->GetPortPosition(Live(extract)->inputs[0].id, true).x, cardRect.left, 0.5f);
+    EXPECT_GT(cells[0]->layout->GetWorldRect().top, cardRect.top - PipelineNodeWidget::headerHeight - 2 * PipelineNodeWidget::portRow - 20.0f);
+
+    // Selecting another part keeps the cells: nothing is rebuilt or decoded again
+    auto pick = cells[1]->FindChildByTypeAndName<Button>("select part");
+    ASSERT_TRUE(pick);
+    pick->onClick();
+    UiDriver::Step(3);
+    EXPECT_EQ(Live(extract)->GetConfigString("selectedRegion", ""), "p1");
+    EXPECT_EQ(card->FindChildByTypeAndName<Widget>("parts"), grid);
+    EXPECT_EQ(grid->GetChildWidgets()[1]->name, String("part cell selected"));
+
+    // Every part is outlined over the source; the remove tab belongs to the selected one
+    auto paint = card->FindChildByType<PipelinePaintEditor>();
+    ASSERT_TRUE(paint);
+    auto removeTab = paint->FindChildByTypeAndName<Button>("remove region");
+    ASSERT_TRUE(removeTab);
+    EXPECT_TRUE(removeTab->IsEnabled());
+
+    // Every cell carries a name field; only the selected one is enabled and edits its own part
+    auto name = grid->GetChildWidgets()[1]->FindChildByTypeAndName<EditBox>("part name");
+    ASSERT_TRUE(name);
+    EXPECT_TRUE(name->IsEnabled());
+    EXPECT_FALSE(grid->GetChildWidgets()[0]->FindChildByTypeAndName<EditBox>("part name")->IsEnabled());
+    name->SetText("chest");
+    name->onChangeCompleted(name->GetText());
+    UiDriver::Step(3);
+    auto renamed = PipelineRegions::Read(*Live(extract));
+    ASSERT_EQ(renamed.Count(), 3);
+    EXPECT_EQ(renamed[1].name, "chest");
+    EXPECT_EQ(Live(extract)->outputs[1].name, "chest");
+    EXPECT_EQ(Live(extract)->outputs[1].id, "p1");
+
+    // The remove tab drops the selected part and its port
+    card = editor->GetNodeWidget(extract->id);
+    paint = card->FindChildByType<PipelinePaintEditor>();
+    ASSERT_TRUE(paint);
+    removeTab = paint->FindChildByTypeAndName<Button>("remove region");
+    ASSERT_TRUE(removeTab);
+    removeTab->onClick();
+    UiDriver::Step(3);
+    EXPECT_EQ(PipelineRegions::Read(*Live(extract)).Count(), 2);
+    EXPECT_EQ(Live(extract)->outputs.Count(), 2);
+    EXPECT_FALSE(Live(extract)->outputs.Any([](const PipelinePort& p) { return p.id == "p1"; }));
+}
+
+TEST_F(PipelineUiFixture, PipelineWindowOpensThePaletteAndAddsWhatItPicks)
+{
+    Ref<PipelineWindow> window;
+    {
+        PushEditorScopeOnStack scope;
+        window = PipelineWindow::IsSingletonInitialzed() ? Ref(PipelineWindow::InstancePtr()) : mmake<PipelineWindow>();
+    }
+    window->EditAsset(AssetRef<Asset>(mmake<PipelineAsset>()));
+    UiDriver::Step(2);
+
+    ASSERT_TRUE(window->GetPalette());
+    EXPECT_FALSE(window->GetPalette()->IsEnabled());
+
+    window->SetPaletteOpened(true);
+    UiDriver::Step(2);
+    EXPECT_TRUE(window->GetPalette()->IsEnabled());
+
+    window->GetPalette()->onPick("sourceText");
+    UiDriver::Step(2);
+    auto graph = window->GetEditor()->GetGraph();
+    ASSERT_TRUE(graph);
+    ASSERT_EQ(graph->nodes.Count(), 1);
+    EXPECT_EQ(graph->nodes[0]->nodeType, "sourceText");
+
+    window->SetPaletteOpened(false);
+    UiDriver::Step();
+    EXPECT_FALSE(window->GetPalette()->IsEnabled());
 }
 
 // Screenshots of the Gemini showcase asset with its cached results (PIPELINE_SHOWCASE=1)
@@ -1777,6 +2107,8 @@ TEST_F(PipelineUiFixture, ModelListShowsReadableNamesAndStoresIds)
     PipelineGraph graph;
     auto gen = AddNode(graph, "nanoBananaGen", Vec2F());
     gen->SetConfigString("model", "gemini-3.1-flash-image");
+    // The model row lives in the folded parameter list
+    gen->SetConfigBool("paramsOpen", true);
     graph.SaveToAsset(*asset);
     editor->SetAsset(asset);
     UiDriver::Step(3);

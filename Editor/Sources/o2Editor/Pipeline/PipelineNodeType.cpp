@@ -124,6 +124,9 @@ namespace Editor
         for (auto& port : schema->outputs)
             node->outputs.Add(PipelinePort(PipelineNode::GenerateId(), port.name, port.portType, false));
 
+        if (auto impl = Get(type))
+            impl->InitNode(node);
+
         return node;
     }
 
@@ -133,10 +136,17 @@ namespace Editor
         if (!schema)
             return;
 
-        for (auto& port : schema->outputs)
+        bool ownPorts = false;
+        if (auto impl = Get(node->nodeType))
+            ownPorts = impl->SyncPorts(node);
+
+        if (!ownPorts)
         {
-            if (!node->outputs.Any([&](const PipelinePort& p) { return p.name == port.name; }))
-                node->outputs.Add(PipelinePort(PipelineNode::GenerateId(), port.name, port.portType, false));
+            for (auto& port : schema->outputs)
+            {
+                if (!node->outputs.Any([&](const PipelinePort& p) { return p.name == port.name; }))
+                    node->outputs.Add(PipelinePort(PipelineNode::GenerateId(), port.name, port.portType, false));
+            }
         }
 
         node->RegenerateInputs(schema->inputs);

@@ -33,6 +33,33 @@ namespace Editor
         return GetCachePath(pipelineId) + "previews/" + nodeId + "." + ext;
     }
 
+    String PipelineExecutor::GetPortPreviewPath(const String& pipelineId, const String& nodeId, const String& portId, const String& ext)
+    {
+        return GetCachePath(pipelineId) + "previews/" + nodeId + "." + portId + "." + ext;
+    }
+
+    String PipelineExecutor::PortSignature(const PipelineNode& node, const Map<String, String>& upstreamSigs, int seed,
+                                           const String& portId)
+    {
+        auto impl = PipelineNodeRegistry::Get(node.nodeType);
+        bool chroma = PipelineTransparency::UsesChromaPostStep(node);
+
+        Vector<String> exclude = { "crop", "cropEnabled" };
+        if (impl)
+            exclude.Add(impl->PortCacheExcludedKeys());
+        if (chroma)
+            exclude.Add(PipelineTransparency::ChromaConfigKeys());
+
+        String variant = (impl ? impl->PortCacheVariant(node, portId) : portId) + (chroma ? "|chroma-raw" : "");
+        return PipelineGraph::ComputeNodeSignature(node, upstreamSigs, exclude, seed, variant);
+    }
+
+    PipelineValue PipelineExecutor::LoadPortPreview(const String& pipelineId, const String& nodeId, const String& portId,
+                                                    PipelinePortType type /*= PipelinePortType::Image*/, String* pathOut /*= nullptr*/)
+    {
+        return LoadValueFile(GetCachePath(pipelineId) + "previews/" + nodeId + "." + portId, type, pathOut);
+    }
+
     String PipelineExecutor::GetSourcePreviewPath(const String& pipelineId, const String& nodeId)
     {
         return GetCachePath(pipelineId) + "previews/" + nodeId + ".src.png";
@@ -248,6 +275,20 @@ namespace Editor
         return ctx;
     }
 
+    void PipelineExecutor::WritePortPreview(const Ref<Run>& run, const String& nodeId, const String& portId, const PipelineValue& value)
+    {
+        String path = GetPortPreviewPath(run->pipelineId, nodeId, portId, value.GetExtension());
+        PipelineUtils::WriteFileBytes(path, value.IsImage() ? value.GetPngBytes() : value.data);
+
+        PipelineExecEvent ev;
+        ev.type = PipelineExecEvent::Type::NodeOutput;
+        ev.nodeId = nodeId;
+        ev.portId = portId;
+        ev.value = value;
+        ev.previewPath = path;
+        Emit(ev);
+    }
+
     void PipelineExecutor::WritePreview(const Ref<Run>& run, const String& nodeId, const PipelineValue& value, const PipelineValue* srcValue)
     {
         // Other containers of a previous run must not shadow the fresh one
@@ -323,6 +364,7 @@ namespace Editor
         }
 
         run->seeds = run->graph.ResolveSeeds();
+        CollectNeededPorts(run);
 
         bool ok = co_await Evaluate(run, run->targetNodeId);
         if (run->cancelled)
@@ -333,6 +375,27 @@ namespace Editor
             FinishRun(run, "Pipeline failed");
         else
             FinishRun(run, "");
+    }
+
+    void PipelineExecutor::CollectNeededPorts(const Ref<Run>& run)
+    {
+        run->neededPorts.Clear();
+
+        Vector<String> stack = { run->targetNodeId };
+        Vector<String> seen = { run->targetNodeId };
+        while (!stack.IsEmpty())
+        {
+            String id = stack.PopBack();
+            for (auto& edge : run->graph.GetIncomingEdges(id))
+            {
+                run->neededPorts[edge->fromNodeId].Add(edge->fromPortId);
+                if (!seen.Contains(edge->fromNodeId))
+                {
+                    seen.Add(edge->fromNodeId);
+                    stack.Add(edge->fromNodeId);
+                }
+            }
+        }
     }
 
     Coroutine<bool> PipelineExecutor::Evaluate(Ref<Run> run, String nodeId)
@@ -405,7 +468,6 @@ namespace Editor
         run->sigByNode[nodeId] = sig;
 
         bool isFinish = PipelineNodeRegistry::IsFinishType(node->nodeType);
-        bool cacheable = !isFinish && node->outputs.Count() == 1;
 
         auto impl = PipelineNodeRegistry::Get(node->nodeType);
         if (!impl)
@@ -414,6 +476,11 @@ namespace Editor
             run->visiting.Remove(nodeId);
             co_return false;
         }
+
+        // A node that computes its outputs one at a time is cached and previewed per port, a single
+        // part included: its port is named after that part, so it can only be run by port id
+        bool perPort = impl->GetSchema().perPortRun && !node->outputs.IsEmpty();
+        bool cacheable = !isFinish && (node->outputs.Count() == 1 || perPort);
 
         auto ctx = MakeContext(run, nodeId);
         ctx->inputsById = inputsById;
@@ -427,7 +494,101 @@ namespace Editor
         bool produced = true;
         String error;
 
-        if (cacheable)
+        if (perPort)
+        {
+            // Only the outputs this run consumes are produced; the target itself is computed in full
+            Vector<String> wanted;
+            if (nodeId == run->targetNodeId)
+            {
+                for (auto& port : node->outputs)
+                    wanted.Add(port.id);
+            }
+            else
+            {
+                Vector<String> needed;
+                run->neededPorts.TryGetValue(nodeId, needed);
+                for (auto& port : node->outputs)
+                {
+                    if (needed.Contains(port.id))
+                        wanted.Add(port.id);
+                }
+            }
+
+            if (wanted.IsEmpty() && !node->outputs.IsEmpty())
+                wanted.Add(node->outputs[0].id);
+
+            bool chroma = PipelineTransparency::UsesChromaPostStep(*node);
+            int failed = 0;
+            for (auto& portId : wanted)
+            {
+                auto port = node->outputs.FindOrDefault([&](const PipelinePort& p) { return p.id == portId; });
+                if (port.id.IsEmpty())
+                    continue;
+
+                String portSig = PortSignature(*node, upstreamSigs, nodeSeed, portId);
+                // "<node id>#<port id>" in the bypass list regenerates that one part
+                if (run->bypass.Contains(nodeId) || run->bypass.Contains(nodeId + "#" + portId))
+                    DeleteContent(run->pipelineId, portSig);
+
+                PipelineValue stored = LoadContent(run->pipelineId, portSig, port.portType);
+                if (stored.IsValid())
+                    EmitLog(node->nodeType + " . " + port.name + ": cache hit (" + portSig.SubStr(0, 8) + ")");
+                else if (run->cachedOnly)
+                {
+                    // Re-applying settings without a provider: what this port last rendered
+                    stored = LoadPortPreview(run->pipelineId, nodeId, portId, port.portType);
+                    if (!stored.IsValid())
+                    {
+                        run->notCached = true;
+                        run->visiting.Remove(nodeId);
+                        co_return false;
+                    }
+
+                    produced = false;
+                    byPortId[portId] = stored;
+                    continue;
+                }
+                else
+                {
+                    ctx->outputPortId = portId;
+                    ctx->outputPort = port.name;
+                    PipelineRunResult result = co_await impl->Run(ctx, inputs, node);
+                    if (run->cancelled)
+                    {
+                        run->visiting.Remove(nodeId);
+                        co_return false;
+                    }
+
+                    if (!result.ok || result.outputs.empty())
+                    {
+                        failed++;
+                        EmitLog(node->nodeType + " . " + port.name + ": " + (result.ok ? String("produced nothing") : result.error));
+                        error = result.ok ? "Output \"" + port.name + "\" produced nothing" : result.error;
+                        continue;
+                    }
+
+                    stored = result.outputs.begin()->second;
+                    SaveContent(run->pipelineId, portSig, stored);
+                }
+
+                PipelineValue value = stored;
+                if (chroma && value.IsImage())
+                {
+                    if (auto raw = value.GetBitmap())
+                        value = PipelineValue::Image(PipelineTransparency::ApplyChromaPostStep(*node, *raw));
+                }
+
+                byPortId[portId] = value;
+                WritePortPreview(run, nodeId, portId, value);
+            }
+
+            // One part failing leaves the others in place; the node fails only when nothing came out
+            if (!byPortId.empty())
+                error = "";
+            else if (error.IsEmpty() && failed > 0)
+                error = "No part could be extracted";
+        }
+        else if (cacheable)
         {
             auto& outPort = node->outputs[0];
             bool chroma = PipelineTransparency::UsesChromaPostStep(*node);

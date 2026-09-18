@@ -67,6 +67,11 @@ namespace Editor
         mFitButton->onClick = [this]() { mEditor->FitView(); };
         mButtonsPanel->AddChild(mFitButton);
 
+        mPaletteButton = o2UI.CreateWidget<Button>("menu pipeline add");
+        mPaletteButton->name = "palette";
+        mPaletteButton->onClick = [this]() { SetPaletteOpened(!mPalette->IsEnabled()); };
+        mButtonsPanel->AddChild(mPaletteButton);
+
         mImportButton = o2UI.CreateWidget<Button>("menu pipeline import");
         mImportButton->name = "import";
         mImportButton->onClick = THIS_FUNC(OnImportPressed);
@@ -94,6 +99,13 @@ namespace Editor
         };
         mWindow->AddChild(mEditor);
 
+        mPalette = mmake<PipelineNodePalette>();
+        mPalette->name = "node palette";
+        *mPalette->layout = WidgetLayout::VerStretch(HorAlign::Left, 4, 24, 300, 4);
+        mPalette->enabled = false;
+        mPalette->onPick = [this](const String& type) { mEditor->AddNodeAtViewCenter(type); };
+        mWindow->AddChild(mPalette);
+
         auto horScroll = o2UI.CreateHorScrollBar();
         *horScroll->layout = WidgetLayout::HorStretch(VerAlign::Bottom, 5, 15, 10);
         mEditor->SetHorScrollbar(horScroll);
@@ -101,6 +113,13 @@ namespace Editor
         auto verScroll = o2UI.CreateVerScrollBar();
         *verScroll->layout = WidgetLayout::VerStretch(HorAlign::Right, 5, 15, 10);
         mEditor->SetVerScrollbar(verScroll);
+    }
+
+    void PipelineWindow::SetPaletteOpened(bool opened)
+    {
+        mPalette->enabled = opened;
+        if (opened)
+            mPalette->Reset();
     }
 
     String PipelineWindow::GetWindowTitle() const

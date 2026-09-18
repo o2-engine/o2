@@ -429,6 +429,38 @@ namespace Editor
         return node;
     }
 
+    Ref<PipelineNode> PipelineEditor::AddNodeAtViewCenter(const String& type)
+    {
+        auto graph = GetGraph();
+        if (!graph)
+            return nullptr;
+
+        auto schema = PipelineNodeRegistry::GetSchema(type);
+        Vec2F size = schema && schema->defaultSize.Length() > 0.0f ? schema->defaultSize : Vec2F(220, 140);
+        Vec2F center = GetVisibleCanvasRect().Center();
+        Vec2F position(center.x - size.x*0.5f, center.y + size.y*0.5f);
+
+        // Adds in a row would land exactly on top of one another, so an occupied spot steps down-right
+        for (int i = 0; i < 12; i++)
+        {
+            Vec2F node = CanvasToNode(position);
+            node = Vec2F(Math::Round(node.x/20.0f)*20.0f, Math::Round(node.y/20.0f)*20.0f);
+            if (!graph->nodes.Any([&](const Ref<PipelineNode>& x) { return x->position == node; }))
+                break;
+
+            position += Vec2F(40, -40);
+        }
+
+        String before = SerializeGraph();
+        auto node = CreateNodeAt(type, position);
+        if (!node)
+            return nullptr;
+
+        RecordAction("Add node", before, SerializeGraph());
+        SelectNodes({ node->id });
+        return node;
+    }
+
     void PipelineEditor::CreateNodeFromPendingEdge(const String& type, const Vec2F& canvasPos)
     {
         String before = SerializeGraph();

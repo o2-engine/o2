@@ -3,6 +3,7 @@
 #include "o2/Scene/UI/Widget.h"
 #include "o2/Utils/Editor/DragHandle.h"
 #include "o2Editor/Pipeline/PipelineNodeType.h"
+#include "o2Editor/Windows/PipelineWindow/PipelineControls.h"
 
 using namespace o2;
 
@@ -35,6 +36,8 @@ namespace Editor
         PipelineValue output;         // Last run result
         String        previewPath;    // Preview image file of the result
         String        srcPreviewPath; // Preview image file of the source, empty when there is none
+
+        Map<String, PipelineValue> portOutputs; // Last result of each output of a per-port node, by port id
     };
 
     // ----------------------------------------------------------------------
@@ -63,7 +66,7 @@ namespace Editor
             PipelinePort     port;         // Port data copied from the node
             bool             input = true; // True for an input port, false for an output
             Vec2F            localPos;     // Port center relative to the card left-top, y down
-            Ref<Sprite>      circle;       // Filled circle colored by the port type, drawn by the editor above every card
+            Ref<IRectDrawable> circle;     // Type-shaped marker coloured by the port type, drawn by the editor above every card
             Ref<WidgetLayer> label;        // Port name text layer, fixed ports only
             Ref<EditBox>     nameEdit;     // Name edit box, custom inputs only
             Ref<Button>      deleteButton; // Remove button, custom inputs only
@@ -102,6 +105,9 @@ namespace Editor
 
         // Returns the pipeline node shown by this card
         const Ref<PipelineNode>& GetNode() const { return mNode; }
+
+        // Returns true and its offset in the body when the body places the output port itself
+        bool IsBodyPort(const String& portId, Vec2F& offset) const;
 
         // Returns the owner editor, null when it was destroyed
         Ref<PipelineEditor> GetEditor() const;
@@ -211,6 +217,7 @@ namespace Editor
         Ref<WidgetLayer>      mTitleLayer;     // Title text layer
         Ref<WidgetLayer>      mIconLayer;      // Node type icon layer
         Ref<Button>           mPlayButton;     // Run / stop button
+        Ref<WidgetLayer>      mDotLayer;       // Status dot before the play button: fresh, stale, idle or running
         Ref<Button>           mErrorButton;    // Opens the last error, shown in the error state
         Ref<Label>            mRetryLabel;     // Retry counter badge, shown while retrying
         Ref<Button>           mAddInputButton; // Adds a custom input, shown when the schema allows it
@@ -304,6 +311,7 @@ CLASS_FIELDS_META(Editor::PipelineNodeWidget)
     FIELD().PROTECTED().NAME(mTitleLayer);
     FIELD().PROTECTED().NAME(mIconLayer);
     FIELD().PROTECTED().NAME(mPlayButton);
+    FIELD().PROTECTED().NAME(mDotLayer);
     FIELD().PROTECTED().NAME(mErrorButton);
     FIELD().PROTECTED().NAME(mRetryLabel);
     FIELD().PROTECTED().NAME(mAddInputButton);
@@ -322,6 +330,7 @@ CLASS_METHODS_META(Editor::PipelineNodeWidget)
     FUNCTION().PUBLIC().CONSTRUCTOR(RefCounter*);
     FUNCTION().PUBLIC().CONSTRUCTOR(RefCounter*, const Ref<PipelineEditor>&, const Ref<PipelineNode>&);
     FUNCTION().PUBLIC().SIGNATURE(const Ref<PipelineNode>&, GetNode);
+    FUNCTION().PUBLIC().SIGNATURE(bool, IsBodyPort, const String&, Vec2F&);
     FUNCTION().PUBLIC().SIGNATURE(Ref<PipelineEditor>, GetEditor);
     FUNCTION().PUBLIC().SIGNATURE(PipelineNodeRuntime&, GetRuntime);
     FUNCTION().PUBLIC().SIGNATURE(const PipelineNodeSchema*, GetSchema);

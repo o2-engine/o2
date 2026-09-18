@@ -80,6 +80,9 @@ namespace Editor
         // Shortens text to max characters preferring a sentence, clause or word boundary
         String ClampPromptChars(const String& text, int maxChars);
 
+        // Returns the text cut to at most maxBytes, never splitting a UTF-8 character in half
+        String CutUtf8(const String& text, int maxBytes);
+
         // Parses #rgb / #rrggbb, returns false when it is not a color
         bool ParseHexColor(const String& text, Color4& color);
 

@@ -51,7 +51,15 @@ namespace Editor
             return PipelineValue();
 
         auto rt = GetRuntime(edge->fromNodeId);
-        return rt ? rt->output : PipelineValue();
+        if (!rt)
+            return PipelineValue();
+
+        // A per-port node keeps a value per output, the node result is only the last one it produced
+        PipelineValue portValue;
+        if (rt->portOutputs.TryGetValue(edge->fromPortId, portValue) && portValue.IsValid())
+            return portValue;
+
+        return rt->output;
     }
 
     bool PipelineEditor::IsRunning() const
@@ -147,6 +155,20 @@ namespace Editor
         StartRun(nodeId, bypassSelf ? Vector<String>{ nodeId } : Vector<String>{}, false);
     }
 
+    void PipelineEditor::RunNodePort(const String& nodeId, const String& portId)
+    {
+        if (IsRunning())
+        {
+            if (!mRunQueue.Contains(nodeId))
+                mRunQueue.Add(nodeId);
+            MarkBranchQueued(nodeId);
+            return;
+        }
+
+        mRunIsAutoApply = false;
+        StartRun(nodeId, { nodeId + "#" + portId }, false);
+    }
+
     void PipelineEditor::RunAll()
     {
         auto graph = GetGraph();
@@ -236,6 +258,19 @@ namespace Editor
                 if (auto widget = GetNodeWidget(event.nodeId))
                 {
                     auto& rt = widget->GetRuntime();
+                    if (!event.portId.IsEmpty())
+                    {
+                        // One part of a per-port node: the card shows each of them on its own
+                        rt.portOutputs[event.portId] = event.value;
+                        if (!rt.output.IsValid())
+                        {
+                            rt.output = event.value;
+                            rt.previewPath = event.previewPath;
+                        }
+                        widget->OnOutputChanged();
+                        break;
+                    }
+
                     rt.output = event.value;
                     rt.previewPath = event.previewPath;
                     rt.srcPreviewPath = event.srcPreviewPath;

@@ -53,7 +53,59 @@ namespace Editor
         mRegionFrame->onPressed = [this]() { mRegionDragging = true; };
         mRegionFrame->onReleased = [this]() { mRegionDragging = false; };
 
+        mBadgeText = mmake<Text>("stdFont.ttf");
+        mBadgeText->horAlign = HorAlign::Middle;
+        mBadgeText->verAlign = VerAlign::Middle;
+        mBadgeText->color = Color4(255, 255, 255, 255);
+        mBadgeText->SetHeight(9);
+
         BuildToolbar();
+
+        WeakRef<PipelinePaintEditor> weakThis(this);
+        mRemoveButton = PipelineControls::MakeIconButton("ui/UI4_small_trash_icon.png", PipelineControls::textColor, Color4(255, 255, 255, 230));
+        mRemoveButton->name = "remove region";
+        mRemoveButton->enabled = false;
+        mRemoveButton->onClick = [weakThis]()
+        {
+            if (auto self = weakThis.Lock())
+                if (self->onRegionRemoved) self->onRegionRemoved();
+        };
+        AddChild(mRemoveButton);
+    }
+
+    void PipelinePaintEditor::SetRegions(const Vector<RegionBox>& others, int selectedIndex, bool removable)
+    {
+        mOtherRegions = others;
+        mSelectedIndex = selectedIndex;
+        mRegionRemovable = removable;
+    }
+
+    RectF PipelinePaintEditor::BoxRect(float x, float y, float w, float h, const RectF& stage) const
+    {
+        float left = stage.left + stage.Width() * x;
+        float top = stage.top - stage.Height() * y;
+        return RectF(left, top, left + stage.Width() * w, top - stage.Height() * h);
+    }
+
+    const PipelinePaintEditor::RegionBox* PipelinePaintEditor::OtherRegionAt(const Vec2F& point) const
+    {
+        RectF stage = GetStageRect();
+        for (int i = mOtherRegions.Count() - 1; i >= 0; i--)
+        {
+            auto& box = mOtherRegions[i];
+            if (BoxRect(box.x, box.y, box.w, box.h, stage).IsInside(point))
+                return &mOtherRegions[i];
+        }
+        return nullptr;
+    }
+
+    void PipelinePaintEditor::DrawBadge(const RectF& rect, int index, const Color4& color)
+    {
+        RectF badge(rect.left, rect.top, rect.left + 14.0f, rect.top - 12.0f);
+        o2Render.DrawFilledPolygon({ badge.LeftBottom(), Vec2F(badge.left, badge.top), badge.RightTop(), Vec2F(badge.right, badge.bottom) }, color);
+        mBadgeText->text = (String)index;
+        mBadgeText->rect = badge;
+        mBadgeText->Draw();
     }
 
     void PipelinePaintEditor::Init(const Ref<PipelineNode>& node, bool withRegion)
@@ -112,7 +164,7 @@ namespace Editor
 
         auto toolbar = mmake<PipelineWrapRow>();
         toolbar->name = "toolbar";
-        toolbar->spacing = 3;
+        toolbar->spacing = 2;
         toolbar->lineHeight = toolbarHeight;
         *toolbar->layout = WidgetLayout::HorStretch(VerAlign::Top, 0, 0, toolbarHeight, 0);
         AddChild(toolbar);
@@ -174,8 +226,8 @@ namespace Editor
         {
             auto button = PipelineControls::MakeIconButton(icon, PipelineControls::textColor, Color4(0, 0, 0, 0));
             button->name = name;
-            button->layout->minWidth = 22;
-            button->layout->maxWidth = 22;
+            button->layout->minWidth = 20;
+            button->layout->maxWidth = 20;
             button->onClick = action;
             toolbar->AddChild(button);
             return button;
@@ -345,8 +397,9 @@ namespace Editor
 
     bool PipelinePaintEditor::IsUnderPoint(const Vec2F& point)
     {
+        // With the region tool the selected box belongs to its handles; a click on another box picks that part
         if (GetTool() == "roi")
-            return false;
+            return mWithRegion && OtherRegionAt(point) != nullptr;
 
         return GetStageRect().IsInside(point);
     }
@@ -711,6 +764,25 @@ namespace Editor
     {
         Widget::Update(dt);
 
+        // The remove tab follows the selected box, at its top-right corner
+        bool showRemove = mWithRegion && mRegionRemovable && GetTool() == "roi";
+        if (mRemoveButton->IsEnabled() != showRemove)
+            mRemoveButton->enabled = showRemove;
+        if (showRemove)
+        {
+            const Basis& b = mRegionFrame->GetCurrentBasis();
+            RectF frame(b.origin, b.origin + b.xv + b.yv);
+            RectF box(Math::Min(frame.left, frame.right), Math::Max(frame.top, frame.bottom), Math::Max(frame.left, frame.right), Math::Min(frame.top, frame.bottom));
+            RectF want(box.right - 18.0f, box.top, box.right, box.top - 18.0f);
+            if (want.left != mRemovePlaced.left || want.top != mRemovePlaced.top || want.right != mRemovePlaced.right || want.bottom != mRemovePlaced.bottom)
+            {
+                RectF parent = layout->GetWorldRect();
+                *mRemoveButton->layout = WidgetLayout(Vec2F(0, 0), Vec2F(0, 0), Vec2F(want.left - parent.left, want.bottom - parent.bottom),
+                                                      Vec2F(want.right - parent.left, want.top - parent.bottom));
+                mRemovePlaced = want;
+            }
+        }
+
         if (!mBackground)
         {
             RectF stage = GetStageRect();
@@ -742,18 +814,20 @@ namespace Editor
             return;
 
         bool farView = PipelineControls::IsFarView();
-        if (farView)
-        {
-            DrawLayers();
-            Widget::OnDrawn();
-            DrawTopLayers();
-        }
-        else
-            Widget::Draw();
+        DrawLayers();
+        Widget::OnDrawn();
 
         RectF stage = GetStageRect();
         if (stage.Width() < 2 || stage.Height() < 2)
+        {
+            if (!farView)
+            {
+                DrawInheritedDepthChildren();
+                DrawInternalChildren();
+            }
+            DrawTopLayers();
             return;
+        }
 
         o2Render.DrawFilledPolygon({ stage.LeftBottom(), Vec2F(stage.left, stage.top), stage.RightTop(), Vec2F(stage.right, stage.bottom) }, Color4(255, 255, 255, 255));
         if (mBackground)
@@ -801,6 +875,17 @@ namespace Editor
             fill(RectF(stage.left, box.top, box.left, box.bottom));
             fill(RectF(box.right, box.top, stage.right, box.bottom));
             o2Render.DrawAARectFrame(frame, GetTool() == "roi" ? Color4(0, 150, 136, 255) : Color4(0, 150, 136, 150), 1.5f);
+
+            // The other parts are outlined and numbered; only the selected one has handles
+            for (auto& other : mOtherRegions)
+            {
+                RectF r = BoxRect(other.x, other.y, other.w, other.h, stage);
+                o2Render.DrawAARectFrame(r, Color4(255, 255, 255, 190), 1.0f);
+                DrawBadge(r, other.index, Color4(96, 125, 139, 230));
+            }
+            if (mSelectedIndex > 0)
+                DrawBadge(box, mSelectedIndex, Color4(0, 150, 136, 255));
+
             if (GetTool() == "roi")
                 mRegionFrame->Draw();
         }
@@ -810,10 +895,25 @@ namespace Editor
             bool eraser = GetTool() == "eraser";
             o2Render.DrawAACircle(mHoverPoint, GetBrushSize() * 0.5f, eraser ? Color4(96, 125, 139, 255) : GetBrushColor(), 28, 1.0f);
         }
+
+        // The toolbar and the remove tab are drawn over the stage
+        if (!farView)
+        {
+            DrawInheritedDepthChildren();
+            DrawInternalChildren();
+        }
+        DrawTopLayers();
     }
 
     void PipelinePaintEditor::OnCursorPressed(const Input::Cursor& cursor)
     {
+        if (GetTool() == "roi")
+        {
+            if (auto box = OtherRegionAt(cursor.position))
+                if (onRegionPicked) onRegionPicked(box->id);
+            return;
+        }
+
         if (!mBase)
             return;
 

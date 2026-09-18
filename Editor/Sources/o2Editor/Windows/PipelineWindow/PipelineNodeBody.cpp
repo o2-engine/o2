@@ -9,6 +9,7 @@
 
 #include "o2/Render/Render.h"
 #include "o2/Render/Sprite.h"
+#include "o2/Render/Text.h"
 #include "o2/Scene/UI/UIManager.h"
 #include "o2/Scene/UI/WidgetLayer.h"
 #include "o2/Scene/UI/WidgetLayout.h"
@@ -69,8 +70,26 @@ namespace Editor
         return row.heightForWidth ? row.heightForWidth(rowWidth) : row.height;
     }
 
+    float PipelineNodeBody::ParamsList::GetHeight() const
+    {
+        float total = 0.0f;
+        for (float h : heights)
+            total += h;
+        return total + spacing * Math::Max(0, heights.Count() - 1);
+    }
+
     Ref<Widget> PipelineNodeBody::AddRow(const Ref<Widget>& widget, float height)
     {
+        // Inside an open parameter list the row is one of its lines
+        if (mParams)
+        {
+            widget->layout->minHeight = height;
+            widget->layout->maxHeight = height;
+            mParams->list->AddChild(widget);
+            mParams->heights.Add(height);
+            return widget;
+        }
+
         Row row;
         row.widget = widget;
         row.height = height;
@@ -82,6 +101,13 @@ namespace Editor
 
     Ref<Widget> PipelineNodeBody::AddRow(const Ref<Widget>& widget, const Function<float(float)>& heightForWidth)
     {
+        if (mParams)
+        {
+            auto owner = mOwner.Lock();
+            float width = (owner ? owner->GetCardSize().x : 260.0f) - mPadding * 2.0f;
+            return AddRow(widget, heightForWidth(width));
+        }
+
         Row row;
         row.widget = widget;
         row.heightForWidth = heightForWidth;
@@ -93,6 +119,9 @@ namespace Editor
 
     Ref<Widget> PipelineNodeBody::AddFlexible(const Ref<Widget>& widget, float minHeight)
     {
+        if (mParams)
+            return AddRow(widget, minHeight);
+
         Row row;
         row.widget = widget;
         row.height = minHeight;
@@ -180,6 +209,7 @@ namespace Editor
         for (auto& row : mRows)
             RemoveChild(row.widget);
         mRows.Clear();
+        mParams = nullptr;
         mImageView = nullptr;
         mTextView = nullptr;
         mAudioView = nullptr;
@@ -294,15 +324,19 @@ namespace Editor
 
     void PipelineNodeBody::OnOutputChanged()
     {
+        bool isFinish = PipelineNodeRegistry::IsFinishType(mNode->nodeType);
         auto value = GetOutput();
+        // A finish node saves what reaches it, so it shows its input - visible before the node itself has run
+        if (isFinish && !value.IsValid())
+            value = GetInput("in");
+
         if (mImageView)
         {
             mImageView->SetBitmap(value.IsImage() ? value.GetBitmap() : nullptr);
         }
         if (mCropEditor)
         {
-            bool isFinish = PipelineNodeRegistry::IsFinishType(mNode->nodeType);
-            Ref<Bitmap> source = isFinish ? (GetInput("in").IsImage() ? GetInput("in").GetBitmap() : nullptr) : GetSourceOutputBitmap();
+            Ref<Bitmap> source = isFinish ? (value.IsImage() ? value.GetBitmap() : nullptr) : GetSourceOutputBitmap();
             mCropEditor->SetBitmap(source);
         }
         if (mTextView)
@@ -320,6 +354,90 @@ namespace Editor
             }
             mVideoView->SetVideo(value.IsVideo() ? value : PipelineValue(), cacheDir);
         }
+    }
+
+    bool PipelineNodeBody::BeginParams(const Vector<String>& names)
+    {
+        bool open = GetBool("paramsOpen", false);
+
+        String caption = "Parameters";
+        for (int i = 0; i < names.Count() && i < 4; i++)
+            caption += " · " + names[i];
+        if (names.Count() > 4)
+            caption += " · ...";
+
+        auto head = o2UI.CreateWidget<Button>("pipeline icon");
+        head->name = "params";
+        if (auto icon = head->GetLayerDrawable<Sprite>("icon"))
+        {
+            icon->imageName = open ? "ui/UI4_Down_icn.png" : "ui/UI4_Right_icn.png";
+            icon->color = dimTextColor;
+        }
+        if (auto iconLayer = head->GetLayer("icon"))
+            iconLayer->layout = Layout::Based(BaseCorner::Left, Vec2F(16, 16), Vec2F(8, 0));
+
+        auto text = mmake<Text>("stdFont.ttf");
+        text->text = caption;
+        text->horAlign = HorAlign::Left;
+        text->verAlign = VerAlign::Middle;
+        text->dotsEngings = true;
+        text->color = dimTextColor;
+        head->AddLayer("caption", text, Layout::BothStretch(20, 0, 2, 0));
+
+        WeakRef<PipelineNodeBody> weakThis(this);
+        head->onClick = [weakThis]()
+        {
+            if (auto self = weakThis.Lock())
+            {
+                self->mNode->SetConfigBool("paramsOpen", !self->GetBool("paramsOpen", false));
+                self->RebuildBody();
+            }
+        };
+        AddRow(head, 20);
+
+        if (!open)
+            return false;
+
+        auto params = mmake<ParamsList>();
+        params->spacing = mSpacing;
+        params->list = mmake<VerticalLayout>();
+        params->list->name = "params list";
+        params->list->spacing = mSpacing;
+        params->list->expandWidth = true;
+        params->list->expandHeight = false;
+        params->list->fitByChildren = false;
+        params->list->baseCorner = BaseCorner::Top;
+        // The row is registered before its lines exist: the height is read when the body is laid out
+        AddRow(params->list, [params](float) { return params->GetHeight(); });
+        mParams = params;
+        return true;
+    }
+
+    void PipelineNodeBody::EndParams()
+    {
+        mParams = nullptr;
+    }
+
+    void PipelineNodeBody::AddActions(const Vector<Ref<Widget>>& buttons)
+    {
+        auto row = mmake<HorizontalLayout>();
+        row->spacing = 6;
+        row->expandWidth = true;
+        row->expandHeight = true;
+        row->baseCorner = BaseCorner::Left;
+        for (auto& button : buttons)
+            row->AddChild(button);
+        AddRow(row, 24);
+    }
+
+    Ref<EditBox> PipelineNodeBody::AddPrimaryField(const String& key, const String& placeholder)
+    {
+        return AddTextArea(key, placeholder, 46);
+    }
+
+    void PipelineNodeBody::AddSectionTitle(const String& title)
+    {
+        AddRow(MakeLabel(title, true), 18);
     }
 
     Ref<DropDown> PipelineNodeBody::AddModelRow(const Vector<String>& presets, const String& defaultModel)
@@ -525,20 +643,23 @@ namespace Editor
         AddRow(row, 22);
     }
 
-    void PipelineNodeBody::AddTransparencyBlock()
+    void PipelineNodeBody::AddTransparencyBlock(bool always /*= false*/)
     {
-        bool on = GetBool("transparentBg", false);
-        auto toggle = MakeCheckbox("Transparent background", on);
+        bool on = always || GetBool("transparentBg", false);
         WeakRef<PipelineNodeBody> weakThis(this);
-        toggle->onToggleByUser = [weakThis](bool value)
+        if (!always)
         {
-            if (auto self = weakThis.Lock())
+            auto toggle = MakeCheckbox("Transparent background", on);
+            toggle->onToggleByUser = [weakThis](bool value)
             {
-                self->SetBool("transparentBg", value, true);
-                self->RebuildBody();
-            }
-        };
-        AddRow(toggle, 20);
+                if (auto self = weakThis.Lock())
+                {
+                    self->SetBool("transparentBg", value, true);
+                    self->RebuildBody();
+                }
+            };
+            AddRow(toggle, 20);
+        }
 
         if (!on)
             return;
@@ -626,22 +747,35 @@ namespace Editor
         MarkContent(mVideoView);
     }
 
-    void PipelineNodeBody::AddCropSection(const String& hint, float minHeight /*= 150.0f*/)
+    void PipelineNodeBody::AddCropSection(const String& emptyHint, const String& caption /*= "Result"*/, float minHeight /*= 176.0f*/)
     {
+        WeakRef<PipelineNodeBody> weakThis(this);
+        bool cropOn = GetBool("cropEnabled", false);
+        mCropEditor = mmake<PipelineCropEditor>();
+        mCropEditor->SetHint(emptyHint);
+        mCropEditor->SetNode(mNode, "crop");
+        mCropEditor->SetCropEnabled(cropOn);
+        mCropEditor->onCropChanged = [weakThis](bool completed)
+        {
+            if (auto self = weakThis.Lock())
+                self->Notify("crop", completed);
+        };
+        AddFlexible(mCropEditor, minHeight);
+        MarkContent(mCropEditor);
+
         auto head = mmake<HorizontalLayout>();
         head->spacing = 6;
         head->expandWidth = true;
         head->expandHeight = true;
         head->baseCorner = BaseCorner::Left;
 
-        auto caption = MakeLabel("Result", true);
-        head->AddChild(caption);
+        auto label = MakeLabel(caption, true);
+        label->horOverflow = caption.Length() > 26 ? Label::HorOverflow::Wrap : Label::HorOverflow::Dots;
+        head->AddChild(label);
 
-        bool cropOn = GetBool("cropEnabled", false);
         auto cropButton = MakeSegment("Crop", cropOn);
-        cropButton->layout->minWidth = 70;
-        cropButton->layout->maxWidth = 70;
-        WeakRef<PipelineNodeBody> weakThis(this);
+        cropButton->layout->minWidth = 60;
+        cropButton->layout->maxWidth = 60;
         cropButton->onToggleByUser = [weakThis](bool)
         {
             if (auto self = weakThis.Lock())
@@ -658,19 +792,7 @@ namespace Editor
             }
         };
         head->AddChild(cropButton);
-        AddRow(head, 20);
-
-        mCropEditor = mmake<PipelineCropEditor>();
-        mCropEditor->SetHint(hint);
-        mCropEditor->SetNode(mNode, "crop");
-        mCropEditor->SetCropEnabled(cropOn);
-        mCropEditor->onCropChanged = [weakThis](bool completed)
-        {
-            if (auto self = weakThis.Lock())
-                self->Notify("crop", completed);
-        };
-        AddFlexible(mCropEditor, minHeight);
-        MarkContent(mCropEditor);
+        AddRow(head, caption.Length() > 26 ? 30.0f : 20.0f);
     }
 
     void PipelineNodeBody::AddFilePicker(const String& buttonCaption, const Vector<String>& extensions, bool image)

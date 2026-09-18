@@ -5500,6 +5500,7 @@ namespace Editor
             { "menu pipeline settings", "ui/pipeline/btn_settings.png" },
             { "menu pipeline fit", "ui/pipeline/btn_fit.png" },
             { "menu pipeline import", "ui/pipeline/btn_import.png" },
+            { "menu pipeline add", "ui/UI4_add_asset_icon.png" },
         };
         const Color4 toolbarGlyph(24, 104, 104, 255);
 
