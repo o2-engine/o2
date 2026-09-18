@@ -1,6 +1,7 @@
 #include "o2/stdafx.h"
 #include <gtest/gtest.h>
 
+#include "o2/Integration.h"
 #include "o2/Render/Pipeline/DeferredPasses.h"
 #include "o2/Render/Pipeline/Pipelines.h"
 #include "o2/Render/Render.h"
@@ -263,6 +264,41 @@ TEST(RenderPipelineDraw, DeferredGBufferMRTContainsPlausibleData)
 
     const UInt8* positionBackground = GetPixel(positions, size.x/16, size.y/16);
     EXPECT_LT((int)positionBackground[3], 16);
+}
+
+// The G-buffer matches the pixels it composites into: the backbuffer's physical ones (retina, browser DPR) or a target's
+TEST(RenderPipelineDraw, DeferredGBufferMatchesTargetPixels)
+{
+    SceneCleanGuard guard;
+    auto camera = BuildUpperHalfBoxScene();
+    auto pipeline = mmake<DeferredPipeline>();
+    camera->SetRenderPipeline(pipeline);
+    TickFrame();
+
+    o2Render.Begin();
+    camera->SetupAndDraw();
+    o2Render.End();
+
+    auto gBufferPass = pipeline->GetPass<GBufferPass>();
+    ASSERT_NE(gBufferPass, nullptr);
+    ASSERT_TRUE(gBufferPass->GetAlbedoTarget());
+
+    float scale = o2Integration.GetGraphicsScale();
+    Vec2I resolution = o2Render.GetResolution();
+    Vec2I backbufferSize = gBufferPass->GetAlbedoTarget()->GetSize();
+    EXPECT_EQ(backbufferSize.x, (int)Math::Round(resolution.x*scale)) << "scale " << scale;
+    EXPECT_EQ(backbufferSize.y, (int)Math::Round(resolution.y*scale)) << "scale " << scale;
+
+    TextureRef target(Vec2I(256, 128), TextureFormat::R8G8B8A8, Texture::Usage::RenderTarget);
+    o2Render.Begin();
+    o2Render.BindRenderTexture(target);
+    camera->SetupAndDraw();
+    o2Render.UnbindRenderTexture();
+    o2Render.End();
+
+    Vec2I targetSize = gBufferPass->GetAlbedoTarget()->GetSize();
+    EXPECT_EQ(targetSize.x, 256);
+    EXPECT_EQ(targetSize.y, 128);
 }
 
 TEST(RenderPipelineDraw, DeferredPointLightGradientIsSmooth)

@@ -73,6 +73,19 @@ namespace o2
     {
         Vec2I gCanvasResolution = Vec2I(960, 640);
 
+        float GetDeviceGraphicsScale()
+        {
+            float scale = (float)emscripten_get_device_pixel_ratio();
+            return scale > 0.0f ? scale : 1.0f;
+        }
+
+        void SetCanvasBackingSize(const Vec2I& logicalSize, float scale)
+        {
+            int width = Math::Max(1, (int)Math::Round((float)logicalSize.x*scale));
+            int height = Math::Max(1, (int)Math::Round((float)logicalSize.y*scale));
+            emscripten_set_canvas_element_size("#canvas", width, height);
+        }
+
         // Single-character "key" values are the typed character; named keys map to the
         // control codes the desktop backends produce. EditBox consumes this via
         // GetWasmUnicodeForKey - the browser is the only place that knows the layout
@@ -244,12 +257,22 @@ namespace o2
             if (newSize.y <= 0) newSize.y = 1;
 
             RefreshCanvasOffset();
-            if (newSize != gCanvasResolution)
+            float scale = GetDeviceGraphicsScale();
+            bool sizeChanged = newSize != gCanvasResolution;
+            bool scaleChanged = Application::IsSingletonInitialzed() &&
+                                !Math::Equals(o2Application.GetGraphicsScale(), scale);
+            if (sizeChanged || scaleChanged)
             {
-                gCanvasResolution = newSize;
-                emscripten_set_canvas_element_size("#canvas", newSize.x, newSize.y);
                 if (Application::IsSingletonInitialzed())
+                {
+                    o2Application.SetContentSize(newSize);
                     o2Application.SetWindowSize(newSize);
+                }
+                else
+                {
+                    gCanvasResolution = newSize;
+                    SetCanvasBackingSize(newSize, scale);
+                }
             }
             return EM_TRUE;
         }
@@ -284,7 +307,8 @@ namespace o2
         emscripten_get_element_css_size("#canvas", &w, &h);
         if (w <= 0 || h <= 0) { w = 960; h = 640; }
         gCanvasResolution = Vec2I((int)w, (int)h);
-        emscripten_set_canvas_element_size("#canvas", gCanvasResolution.x, gCanvasResolution.y);
+        mGraphicsScale = GetDeviceGraphicsScale();
+        SetCanvasBackingSize(gCanvasResolution, mGraphicsScale);
         RefreshCanvasOffset();
 
         emscripten_set_keydown_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, nullptr, EM_TRUE, OnKeyDown);
@@ -354,7 +378,8 @@ namespace o2
     void Application::SetContentSize(const Vec2I& size)
     {
         gCanvasResolution = size;
-        emscripten_set_canvas_element_size("#canvas", size.x, size.y);
+        mGraphicsScale = GetDeviceGraphicsScale();
+        SetCanvasBackingSize(size, mGraphicsScale);
     }
 
     Vec2I Application::GetContentSize() const

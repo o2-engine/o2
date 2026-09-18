@@ -331,7 +331,9 @@ namespace o2
         Math::mtxMultiply(finalCamMtx, modelMatrix, viewMatrix);
         Math::mtxMultiply(mCurrentMvp, projMatrix, finalCamMtx);
 
-        glViewport(0, 0, mCurrentResolution.x, mCurrentResolution.y);
+        float scale = mCurrentRenderTarget ? 1.0f : o2Integration.GetGraphicsScale();
+        glViewport(0, 0, (int)Math::Round(mCurrentResolution.x*scale),
+                   (int)Math::Round(mCurrentResolution.y*scale));
         glUniformMatrix4fv(mActiveMvpUniform, 1, GL_FALSE, mCurrentMvp);
 
         GL_CHECK_ERROR();
@@ -406,9 +408,10 @@ namespace o2
 
     void Render::PlatformSetScissorRect(const RectI& rect)
     {
-        glScissor((int)(rect.left + mCurrentResolution.x * 0.5f),
-                  (int)(rect.bottom + mCurrentResolution.y * 0.5f),
-                  (int)rect.Width(), (int)rect.Height());
+        float scale = mCurrentRenderTarget ? 1.0f : o2Integration.GetGraphicsScale();
+        glScissor((int)Math::Round((rect.left + mCurrentResolution.x*0.5f)*scale),
+                  (int)Math::Round((rect.bottom + mCurrentResolution.y*0.5f)*scale),
+                  (int)Math::Round(rect.Width()*scale), (int)Math::Round(rect.Height()*scale));
     }
 
     void Render::PlatformFlushPendingClear()

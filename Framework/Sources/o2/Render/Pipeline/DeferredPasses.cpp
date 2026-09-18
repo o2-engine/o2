@@ -2,6 +2,7 @@
 #include "DeferredPasses.h"
 
 #include "o2/EngineSettings.h"
+#include "o2/Integration.h"
 #include "o2/Render/Pipeline/RenderPipeline.h"
 #include "o2/Render/Pipeline/ScenePasses.h"
 #include "o2/Render/Render.h"
@@ -200,6 +201,13 @@ namespace o2
 
         TextureRef previousTarget = o2Render.GetRenderTexture();
         Vec2I size = previousTarget ? (Vec2I)previousTarget->GetSize() : o2Render.GetResolution();
+        // Rounded like the backbuffer viewport, otherwise the composite resamples the G-buffer by a pixel
+        if (!previousTarget)
+        {
+            float scale = o2Integration.GetGraphicsScale();
+            size = Vec2I((int)Math::Round(size.x*scale), (int)Math::Round(size.y*scale));
+        }
+
         if (size.x < 1 || size.y < 1 || !EnsureResources(size))
             return;
 
