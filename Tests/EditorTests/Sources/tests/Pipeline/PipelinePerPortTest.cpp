@@ -285,3 +285,35 @@ TEST_F(PerPortFixture, OnePartIsRegeneratedAlone)
     EXPECT_EQ(partRuns["coin"], 1);
     EXPECT_EQ(partRuns["chest"], 2);
 }
+
+// Two identically configured consumers, each reading its own port of a per-port node, must not
+// share a cache slot: the upstream signature names the port, not just the node
+TEST_F(PerPortFixture, ConsumersOfDifferentPortsDoNotShareCache)
+{
+    PipelineGraph graph;
+    auto source = AddNode(graph, "sourceText");
+    source->SetConfigString("text", "src");
+    auto parts = AddPerPortNode(graph, "coin,chest");
+    Connect(graph, source, "out", parts, "text");
+
+    auto coin = AddNode(graph, "textConcat");
+    auto chest = AddNode(graph, "textConcat");
+    for (auto& node : Vector<Ref<PipelineNode>>{ coin, chest })
+    {
+        node->SetCustomInputs({ PipelinePort("a", "a", PipelinePortType::Text, true) });
+        PipelineNodeRegistry::SyncNodeWithSchema(node);
+    }
+    Connect(graph, parts, "coin", coin, "a");
+    Connect(graph, parts, "chest", chest, "a");
+
+    auto sigs = graph.ComputeSignatures();
+    EXPECT_NE(sigs[coin->id], sigs[chest->id]) << "consumers of two parts hash to the same signature";
+
+    auto first = RunPipeline(graph, coin->id);
+    ASSERT_TRUE(first.done) << first.Errors();
+    EXPECT_EQ(first.PortOutput(coin->id, "").data, "src|coin");
+
+    auto second = RunPipeline(graph, chest->id);
+    ASSERT_TRUE(second.done) << second.Errors();
+    EXPECT_EQ(second.PortOutput(chest->id, "").data, "src|chest") << "the second consumer was served the cached result of the first";
+}

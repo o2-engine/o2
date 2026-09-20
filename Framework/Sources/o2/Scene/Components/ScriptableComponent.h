@@ -66,6 +66,9 @@ namespace o2
         ScriptValue mUpdateFunc;
 
     protected:
+        // Copies the instance field values of another component into this one's fresh instance
+        void CopyInstanceFields(const ScriptableComponent& other);
+
         // Loads script and creates object instance
         void LoadScriptAndCreateObject();
 
@@ -126,6 +129,7 @@ CLASS_METHODS_META(o2::ScriptableComponent)
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetName);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetCategory);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetIcon);
+    FUNCTION().PROTECTED().SIGNATURE(void, CopyInstanceFields, const ScriptableComponent&);
     FUNCTION().PROTECTED().SIGNATURE(void, LoadScriptAndCreateObject);
     FUNCTION().PROTECTED().SIGNATURE(void, OnSerialize, DataValue&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnDeserialized, const DataValue&);

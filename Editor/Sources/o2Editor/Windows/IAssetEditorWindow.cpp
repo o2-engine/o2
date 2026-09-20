@@ -79,7 +79,12 @@ namespace Editor
 		UpdateWindowTitle();
 
 		if (mWindow)
+		{
+			// Focus() does nothing when the window already holds the focus, and a tabbed window would
+			// stay behind its neighbour: undrawn and deaf to the cursor, as if the asset never opened
+			mWindow->SetTabActive();
 			mWindow->Focus();
+		}
 
 		mEditingAssetProperty = nullptr;
 	}

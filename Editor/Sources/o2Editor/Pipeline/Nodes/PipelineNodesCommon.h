@@ -99,7 +99,7 @@ namespace Editor
         extern const String whiteBgInstruction; // First two-pass prompt: subject on pure white
         extern const String blackBgInstruction; // Second two-pass prompt: the same render with the background turned black
 
-        // Config keys that only feed the chroma post-step
+        // Config keys that only feed the local chroma post-step, so changing them reuses the render
         const Vector<String>& ChromaConfigKeys();
 
         // True when the node renders onto a key colour the executor must cut

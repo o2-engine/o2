@@ -38,6 +38,9 @@ namespace Editor
         // Scales to the size, box-filtering when shrinking two times or more so thin lines survive
         Ref<Bitmap> Resize(const Bitmap& src, const Vec2I& size);
 
+        // Scales to fit inside the size keeping the aspect ratio, centred on a transparent canvas of that size
+        Ref<Bitmap> Fit(const Bitmap& src, const Vec2I& size);
+
         // True when any pixel has non-zero alpha; bitmaps without an alpha channel always do
         bool HasContent(const Bitmap& src);
 

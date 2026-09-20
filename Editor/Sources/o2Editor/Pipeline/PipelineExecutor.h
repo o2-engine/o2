@@ -128,6 +128,7 @@ namespace Editor
             Map<String, Map<String, PipelineValue>> outputs;     // Node id -> port id -> value
             Map<String, Vector<String>>             neededPorts; // Outputs of a per-port node this run consumes; the target computes all of its own
             Map<String, String>                     sigByNode; // Node signatures computed during this run
+            Map<String, String>                     sigByPort; // Part signatures of per-port nodes, keyed "<node id>#<port id>"
             Map<String, int>                        seeds;     // Resolved seeds by node id
             Map<String, bool>                       visiting;  // Nodes on the evaluation stack, for cycle detection
         };

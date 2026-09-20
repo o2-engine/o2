@@ -15,6 +15,7 @@ namespace o2
         Component(other)
     {
         SetScript(other.mScript);
+        CopyInstanceFields(other);
     }
 
     ScriptableComponent::~ScriptableComponent()
@@ -25,7 +26,23 @@ namespace o2
     ScriptableComponent& ScriptableComponent::operator=(const ScriptableComponent& other)
     {
         Component::operator=(other);
+        SetScript(other.mScript);
+        CopyInstanceFields(other);
         return *this;
+    }
+
+    // A copy starts from a fresh instance built by the class constructor, so the fields edited on
+    // the source - a prototype, a copied actor - have to be carried over, the same way saving and
+    // loading carries them
+    void ScriptableComponent::CopyInstanceFields(const ScriptableComponent& other)
+    {
+        if (!mInstance.IsObject() || !other.mInstance.IsObject())
+            return;
+
+        DataDocument document;
+        document.Set(other.mInstance);
+        if (document.IsObject())
+            document.Get(mInstance);
     }
 
     void ScriptableComponent::SetScript(const AssetRef<JavaScriptAsset>& script)

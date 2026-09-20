@@ -2,6 +2,7 @@
 #include "PipelineGraph.h"
 
 #include "o2/Utils/Types/UID.h"
+#include "o2Editor/Pipeline/Nodes/PipelineNodesCommon.h"
 #include "o2Editor/Pipeline/PipelineNodeType.h"
 #include "o2Editor/Pipeline/PipelineUtils.h"
 
@@ -591,6 +592,28 @@ namespace Editor
         return PipelineUtils::Fnv1a64Hex(payload);
     }
 
+    String PipelineGraph::OutputSigKey(const PipelineNode& fromNode, const String& fromPortId)
+    {
+        auto schema = PipelineNodeRegistry::GetSchema(fromNode.nodeType);
+        return schema && schema->perPortRun ? fromNode.id + "#" + fromPortId : fromNode.id;
+    }
+
+    String PipelineGraph::ComputePortSignature(const PipelineNode& node, const Map<String, String>& upstreamByPortKey,
+                                               int seed, const String& portId, bool rawRender /*= true*/)
+    {
+        auto impl = PipelineNodeRegistry::Get(node.nodeType);
+        bool chroma = rawRender && PipelineTransparency::UsesChromaPostStep(node);
+
+        Vector<String> exclude = { "crop", "cropEnabled" };
+        if (impl)
+            exclude.Add(impl->PortCacheExcludedKeys());
+        if (chroma)
+            exclude.Add(PipelineTransparency::ChromaConfigKeys());
+
+        String variant = (impl ? impl->PortCacheVariant(node, portId) : portId) + (chroma ? "|chroma-raw" : "");
+        return ComputeNodeSignature(node, upstreamByPortKey, exclude, seed, variant);
+    }
+
     Map<String, String> PipelineGraph::UpstreamSignatures(const PipelineNode& node, const Map<String, String>& nodeSignatures) const
     {
         Map<String, String> upstream;
@@ -601,7 +624,11 @@ namespace Editor
                 continue;
 
             String sig;
-            if (nodeSignatures.TryGetValue(edge->fromNodeId, sig) && !sig.IsEmpty())
+            auto from = FindNode(edge->fromNodeId);
+            if (!from || !nodeSignatures.TryGetValue(OutputSigKey(*from, edge->fromPortId), sig))
+                nodeSignatures.TryGetValue(edge->fromNodeId, sig);
+
+            if (!sig.IsEmpty())
                 upstream[UpstreamSigKey(node, *port)] = sig;
         }
         return upstream;
@@ -636,14 +663,28 @@ namespace Editor
                     continue;
 
                 String us = sigOf(edge->fromNodeId);
-                if (!us.IsEmpty())
-                    upstream[UpstreamSigKey(*node, *port)] = us;
+                if (us.IsEmpty())
+                    continue;
+
+                // A per-port upstream caches every part apart: hash the part this edge reads
+                if (auto from = FindNode(edge->fromNodeId))
+                    result.TryGetValue(OutputSigKey(*from, edge->fromPortId), us);
+
+                upstream[UpstreamSigKey(*node, *port)] = us;
             }
 
             int seed = -1;
             seeds.TryGetValue(id, seed);
             String sig = ComputeNodeSignature(*node, upstream, {}, seed);
             result[id] = sig;
+
+            auto schema = PipelineNodeRegistry::GetSchema(node->nodeType);
+            if (schema && schema->perPortRun)
+            {
+                for (auto& output : node->outputs)
+                    result[id + "#" + output.id] = ComputePortSignature(*node, upstream, seed, output.id, false);
+            }
+
             visiting.Remove(id);
             return sig;
         };

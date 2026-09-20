@@ -386,8 +386,10 @@ namespace Editor
             int h = (int)Math::Round(node->GetConfigNumber("resizeH", 0));
             if (node->GetConfigBool("resize", false) && w > 0 && h > 0)
             {
-                bitmap = PipelineImageOps::Resize(*bitmap, Vec2I(w, h));
-                ctx->Log("finishImage: rescaled to " + (String)w + "x" + (String)h);
+                bool keepAspect = node->GetConfigBool("keepAspect", false);
+                bitmap = keepAspect ? PipelineImageOps::Fit(*bitmap, Vec2I(w, h))
+                                    : PipelineImageOps::Resize(*bitmap, Vec2I(w, h));
+                ctx->Log("finishImage: rescaled to " + (String)w + "x" + (String)h + (keepAspect ? " keeping aspect" : ""));
             }
 
             PipelineValue result = PipelineValue::Image(bitmap);

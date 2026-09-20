@@ -311,6 +311,26 @@ namespace Editor::PipelineImageOps
         return CropPixels(*src, minX, minY, maxX - minX + 1, maxY - minY + 1);
     }
 
+    Ref<Bitmap> Fit(const Bitmap& srcIn, const Vec2I& sizeIn)
+    {
+        Vec2I size(Math::Max(1, sizeIn.x), Math::Max(1, sizeIn.y));
+        auto src = EnsureRgba(Ref<Bitmap>(mmake<Bitmap>(srcIn)));
+        Vec2I srcSize = src->GetSize();
+        if (srcSize.x < 1 || srcSize.y < 1)
+            return Blank(size.x, size.y);
+
+        float scale = Math::Min((float)size.x/srcSize.x, (float)size.y/srcSize.y);
+        Vec2I inner(Math::Max(1, (int)Math::Round(srcSize.x*scale)), Math::Max(1, (int)Math::Round(srcSize.y*scale)));
+        auto scaled = Resize(*src, inner);
+
+        auto out = Blank(size.x, size.y);
+        int left = (size.x - inner.x)/2, top = (size.y - inner.y)/2;
+        for (int y = 0; y < inner.y; y++)
+            std::memcpy(Pixel(*out, left, top + y), Pixel(*scaled, 0, y), inner.x*4);
+
+        return out;
+    }
+
     Ref<Bitmap> Resize(const Bitmap& srcIn, const Vec2I& sizeIn)
     {
         auto src = EnsureRgba(Ref<Bitmap>(mmake<Bitmap>(srcIn)));
@@ -444,8 +464,18 @@ namespace Editor::PipelineImageOps
         float t0 = (opt.tolerance / 100.0f) * 140.0f;
         float t1 = t0 + Math::Max(1.0f, (opt.softness / 100.0f) * 140.0f);
         float spill = opt.spill / 100.0f;
-        int keyMax = Math::Max(opt.color.r, Math::Max(opt.color.g, opt.color.b));
-        int dom = keyMax == opt.color.g ? 1 : keyMax == opt.color.b ? 2 : 0;
+
+        // Channels the key colour is made of: magenta and cyan have two of them, and pulling only
+        // one down leaves the other tinting every edge pixel
+        int keyCh[3] = { opt.color.r, opt.color.g, opt.color.b };
+        int keyMax = Math::Max(keyCh[0], Math::Max(keyCh[1], keyCh[2]));
+        bool dominant[3];
+        int dominantCount = 0;
+        for (int c = 0; c < 3; c++)
+        {
+            dominant[c] = keyCh[c] >= keyMax - 8;
+            dominantCount += dominant[c] ? 1 : 0;
+        }
 
         for (int y = 0; y < size.y; y++)
         {
@@ -459,16 +489,18 @@ namespace Editor::PipelineImageOps
                 float dist = std::sqrt((cb - keyCb) * (cb - keyCb) + (cr - keyCr) * (cr - keyCr));
                 float alpha = dist <= t0 ? 0.0f : dist >= t1 ? 1.0f : (dist - t0) / (t1 - t0);
 
-                if (alpha > 0 && spill > 0)
+                if (alpha > 0 && spill > 0 && dominantCount < 3)
                 {
-                    float others[2];
-                    int k = 0;
-                    for (int c = 0; c < 3; c++) if (c != dom) others[k++] = ch[c];
-                    float avg = (others[0] + others[1]) / 2.0f;
-                    if (ch[dom] > avg)
+                    float rest = 0.0f;
+                    int restCount = 0;
+                    for (int c = 0; c < 3; c++) if (!dominant[c]) { rest += ch[c]; restCount++; }
+
+                    float avg = rest / restCount;
+                    float amount = spill * (1.0f - alpha * 0.5f);
+                    for (int c = 0; c < 3; c++)
                     {
-                        float amount = spill * (1.0f - alpha * 0.5f);
-                        ch[dom] = ch[dom] + (avg - ch[dom]) * amount;
+                        if (dominant[c] && ch[c] > avg)
+                            ch[c] = ch[c] + (avg - ch[c]) * amount;
                     }
                 }
 

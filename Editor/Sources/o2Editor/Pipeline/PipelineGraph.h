@@ -236,7 +236,9 @@ namespace Editor
         // Returns effective seed of every seeded node, following "inherit seed" over the image input
         Map<String, int> ResolveSeeds() const;
 
-        // Returns content signature of every node: type + config + upstream signatures
+        // Returns content signature of every node: type + config + upstream signatures. A per-port node
+        // also gets an entry per output, keyed "<node id>#<port id>": its parts are cached apart, so a
+        // consumer has to hash the part it reads instead of the whole node
         Map<String, String> ComputeSignatures() const;
 
         // Returns the upstream signatures of a node keyed the way ComputeNodeSignature expects them
@@ -248,6 +250,15 @@ namespace Editor
 
         // Returns key of an upstream signature for the port: name, or name#id when the name is duplicated
         static String UpstreamSigKey(const PipelineNode& node, const PipelinePort& port);
+
+        // Returns content signature of one output of a per-port node. rawRender addresses the provider
+        // render before the local chroma cut, so its settings can be retuned without a new request;
+        // without it the signature addresses what the port hands downstream
+        static String ComputePortSignature(const PipelineNode& node, const Map<String, String>& upstreamByPortKey,
+                                           int seed, const String& portId, bool rawRender = true);
+
+        // Returns the signature key an edge from this output reads: the port entry of a per-port node, the node otherwise
+        static String OutputSigKey(const PipelineNode& fromNode, const String& fromPortId);
 
         // Returns config keys that never take part in signatures
         static const Vector<String>& GetUiOnlyConfigKeys();
@@ -378,6 +389,7 @@ CLASS_METHODS_META(Editor::PipelineGraph)
     typedef Map<String, String> _tmp3;
     typedef const Map<String, String>& _tmp4;
     typedef const Map<String, String>& _tmp5;
+    typedef const Map<String, String>& _tmp6;
 
     FUNCTION().PUBLIC().CONSTRUCTOR();
     FUNCTION().PUBLIC().CONSTRUCTOR(const PipelineGraph&);
@@ -399,6 +411,8 @@ CLASS_METHODS_META(Editor::PipelineGraph)
     FUNCTION().PUBLIC().SIGNATURE(_tmp3, UpstreamSignatures, const PipelineNode&, _tmp4);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, ComputeNodeSignature, const PipelineNode&, _tmp5, const Vector<String>&, int, const String&);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, UpstreamSigKey, const PipelineNode&, const PipelinePort&);
+    FUNCTION().PUBLIC().SIGNATURE_STATIC(String, ComputePortSignature, const PipelineNode&, _tmp6, int, const String&, bool);
+    FUNCTION().PUBLIC().SIGNATURE_STATIC(String, OutputSigKey, const PipelineNode&, const String&);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(const Vector<String>&, GetUiOnlyConfigKeys);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(bool, IsSeededType, const String&);
 }

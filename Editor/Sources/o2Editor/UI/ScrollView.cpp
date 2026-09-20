@@ -61,6 +61,8 @@ namespace Editor
 
         if (mNeedRedraw)
             RedrawRenderTarget();
+        else
+            RegisterCursorArea();
 
         mRenderTargetSprite->transparency = mResTransparency;
         mRenderTargetSprite->Draw();
@@ -123,8 +125,15 @@ namespace Editor
         size.x = Math::Max(size.x, 32);
         size.y = Math::Max(size.y, 32);
 
-        mRenderTarget = TextureRef(size, TextureFormat::R8G8B8A8, Texture::Usage::RenderTarget);
-        *mRenderTargetSprite = Sprite(mRenderTarget, RectI(Vec2I(), size));
+        // A moved view keeps its texture: the transform updates every frame while a dock splitter is
+        // dragged or the window is resized, and a fresh render target on each of them costs far more
+        // than the repaint it forces
+        if (!mRenderTarget.Get() || mRenderTarget.Get()->GetSize() != size)
+        {
+            mRenderTarget = TextureRef(size, TextureFormat::R8G8B8A8, Texture::Usage::RenderTarget);
+            *mRenderTargetSprite = Sprite(mRenderTarget, RectI(Vec2I(), size));
+        }
+
         mRenderTargetSprite->SetRect(layout->worldRect);
         mNeedRedraw = true;
 
@@ -272,6 +281,26 @@ namespace Editor
         o2Render.UnbindRenderTexture();
     }
 
+    void ScrollView::RegisterCursorArea()
+    {
+        // The view takes the cursor from inside its render target, and that used to ride along with
+        // the repaint. A view with nothing to repaint would go deaf for good: no input means the camera
+        // never moves, and a still camera means no repaint. Registering costs nothing next to a repaint,
+        // so it happens every frame - in the same target and camera, so the hit area stays the same
+        Camera prevCamera = o2Render.GetCamera();
+        o2Render.BindRenderTexture(mRenderTarget);
+        o2Render.SetCamera(mViewCamera);
+
+        mListenersLayer->OnBeginDraw();
+        mListenersLayer->camera = o2Render.GetCamera();
+
+        CursorAreaEventsListener::OnDrawn();
+
+        mListenersLayer->OnEndDraw();
+        o2Render.SetCamera(prevCamera);
+        o2Render.UnbindRenderTexture();
+    }
+
     void ScrollView::RedrawContent()
     {
         DrawGrid();
@@ -338,7 +367,21 @@ namespace Editor
 
     void ScrollView::OnScrolled(float scroll)
     {
-        ChangeCameraScaleRelativeToCursor(mViewCameraTargetScale*(1.0f - (scroll*mViewCameraScaleSence)));
+        ChangeCameraScaleRelativeToCursor(mViewCameraTargetScale*(1.0f - WheelZoomStep(scroll)));
+    }
+
+    float ScrollView::WheelZoomStep(float scroll) const
+    {
+        // A wheel notch reports about 120 units, a touchpad reports pixels - an order of magnitude less.
+        // The step follows the delta but never falls below a visible minimum, so the view reacts to any mouse
+        const float notchDelta = 120.0f;
+        const float minNotches = 0.25f;
+
+        float notches = Math::Clamp(scroll/notchDelta, -1.0f, 1.0f);
+        if (!Math::Equals(notches, 0.0f) && Math::Abs(notches) < minNotches)
+            notches = Math::Sign(notches)*minNotches;
+
+        return notches*notchDelta*mViewCameraScaleSence;
     }
 
     void ScrollView::ChangeCameraScaleRelativeToCursor(const Vec2F& newScale)

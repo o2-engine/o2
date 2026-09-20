@@ -49,7 +49,9 @@ namespace Editor
 
         const Vector<String>& ChromaConfigKeys()
         {
-            static Vector<String> keys = { "chromaColor", "chromaTolerance", "chromaSoftness", "chromaSpill" };
+            // chromaColor is not here: it is the backdrop the provider is asked to render, so a render
+            // made against one key colour must never be reused for another
+            static Vector<String> keys = { "chromaTolerance", "chromaSoftness", "chromaSpill" };
             return keys;
         }
 

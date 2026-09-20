@@ -47,6 +47,8 @@
 #include "o2Editor/Windows/PipelineWindow/PipelineSettingsDlg.h"
 #include "o2Editor/Windows/PipelineWindow/PipelineWindow.h"
 #include "o2Editor/Dialogs/YesNoCancelDlg.h"
+#include "o2Editor/Windows/DockWindowPlace.h"
+#include "o2Editor/Windows/DockableWindow.h"
 
 using namespace o2;
 using namespace Editor;
@@ -2143,4 +2145,200 @@ TEST_F(PipelineUiFixture, ModelListShowsReadableNamesAndStoresIds)
         dropdown->onSelectedPos(pro);
     UiDriver::Step(2);
     EXPECT_EQ(Live(gen)->GetConfigString("model", ""), String("gemini-3-pro-image"));
+}
+
+TEST_F(PipelineUiFixture, WheelOverTheEmptyCanvasZoomsIt)
+{
+    PipelineGraph graph;
+    auto text = AddNode(graph, "sourceText", Vec2F(4000, 4000)); // карточка далеко от центра вида
+    graph.SaveToAsset(*asset);
+    editor->SetAsset(asset);
+    editor->SetView(Vec2F(), 1.0f);
+    UiDriver::Step(3);
+
+    // вид стоит в нуле, карточка - в (4000, 4000), поэтому под центром вида пусто
+    o2Input.OnCursorMoved(editor->layout->GetWorldRect().Center(), 0, false);
+    UiDriver::Step(2);
+
+    float before = editor->GetCamera().GetScale2D().x;
+    o2Input.OnMouseWheel(-120.0f);
+    UiDriver::Step(8);
+    EXPECT_GT(Math::Abs(editor->GetCamera().GetScale2D().x - before), 0.01f) << "колесо над пустым холстом не масштабирует";
+}
+
+// Трекпад и Magic Mouse на macOS дают дельты в пикселях - единицы против ~120 у щелчка колеса.
+// Вид должен заметно реагировать и на них, иначе кажется, что колесо не работает
+TEST_F(PipelineUiFixture, SmallPreciseWheelDeltaStillZooms)
+{
+    PipelineGraph graph;
+    AddNode(graph, "sourceText", Vec2F(4000, 4000));
+    graph.SaveToAsset(*asset);
+    editor->SetAsset(asset);
+    editor->SetView(Vec2F(), 1.0f);
+    UiDriver::Step(3);
+
+    o2Input.OnCursorMoved(editor->layout->GetWorldRect().Center(), 0, false);
+    UiDriver::Step(2);
+
+    float before = editor->GetCamera().GetScale2D().x;
+    o2Input.OnMouseWheel(Input::NormalizeWheelDelta(-3.0f, true)); // короткий жест трекпада
+    UiDriver::Step(8);
+
+    float change = Math::Abs(editor->GetCamera().GetScale2D().x - before)/before;
+    EXPECT_GT(change, 0.01f) << "мелкая дельта не двигает масштаб: изменение " << change*100 << "%";
+}
+
+// Полосы прокрутки холста должны двигать вид мышью
+TEST_F(PipelineUiFixture, ScrollbarDragMovesTheView)
+{
+    PipelineGraph graph;
+    AddNode(graph, "sourceText", Vec2F(-1500, 0));
+    AddNode(graph, "sourceText", Vec2F(1500, 0));
+    graph.SaveToAsset(*asset);
+    editor->SetAsset(asset);
+    editor->SetView(Vec2F(), 1.0f);
+    UiDriver::Step(6);
+
+    auto bar = editor->FindInternalWidgetByType<HorizontalScrollBar>();
+    ASSERT_TRUE(bar) << "у холста нет горизонтальной полосы";
+    EXPECT_GT(bar->GetMaxValue() - bar->GetMinValue(), 1.0f) << "полоса без диапазона - тащить нечего";
+
+    auto rect = bar->layout->GetWorldRect();
+    float before = editor->GetCamera().GetPosition().x;
+    UiDriver::Drag(rect.Center(), Vec2F(rect.right - 4.0f, rect.Center().y), 16);
+    UiDriver::Step(8);
+
+    EXPECT_GT(editor->GetCamera().GetPosition().x - before, 10.0f) << "полоса прокрутки не сдвинула вид";
+}
+
+// Настоящий ассет проекта: зум колесом и пан правой кнопкой должны работать и на большом графе
+// с сохранённой в нём камерой
+TEST_F(PipelineUiFixture, RealAssetZoomsAndPans)
+{
+    String relative = "Assets/Pipelines/wordfall_main_screen.pipeline";
+    DataDocument document;
+    for (int up = 0; up < 6 && !document.LoadFromFile(relative); up++)
+        relative = "../" + relative;
+
+    if (!document.IsObject())
+        GTEST_SKIP() << "нет " << relative;
+
+    asset->document = document;
+    editor->SetAsset(asset);
+    UiDriver::Step(6);
+
+    auto graph = editor->GetGraph();
+    ASSERT_TRUE(graph);
+    EXPECT_GT(graph->nodes.Count(), 10);
+
+    auto rect = editor->layout->GetWorldRect();
+    Vec2F at = rect.Center();
+
+    o2Input.OnCursorMoved(at, 0, false);
+    UiDriver::Step(2);
+
+    float scaleBefore = editor->GetCamera().GetScale2D().x;
+    o2Input.OnMouseWheel(-120.0f);
+    UiDriver::Step(10);
+    EXPECT_GT(Math::Abs(editor->GetCamera().GetScale2D().x - scaleBefore), 0.001f) << "колесо не масштабирует";
+
+    Vec2F posBefore = editor->GetCamera().GetPosition2D();
+    o2Input.OnAltCursorPressed(at);
+    for (int i = 1; i <= 10; i++)
+    {
+        o2Input.OnCursorMoved(at + Vec2F(-12.0f*i, 0), 0, false);
+        UiDriver::Step();
+    }
+    o2Input.OnAltCursorReleased();
+    UiDriver::Step(6);
+    EXPECT_GT(Math::Abs(editor->GetCamera().GetPosition2D().x - posBefore.x), 1.0f) << "правая кнопка не двигает вид";
+}
+
+// Окно пайплайна, состыкованное вкладкой рядом с другим окном - как в сохранённом layout
+// редактора. Зум колесом и пан правой кнопкой должны работать и там
+TEST_F(PipelineUiFixture, DockedAsTabZoomsAndPans)
+{
+    editor->SetEnabledForcible(false); // холст фикстуры растянут на весь корень
+
+    Ref<PipelineWindow> window;
+    Ref<DockWindowPlace> place;
+    Ref<DockableWindow> neighbour;
+    {
+        PushEditorScopeOnStack scope;
+        window = PipelineWindow::IsSingletonInitialzed() ? Ref(PipelineWindow::InstancePtr()) : mmake<PipelineWindow>();
+
+        auto root = mmake<DockWindowPlace>();
+        root->name = "test main dock";
+        *root->layout = WidgetLayout::BothStretch(0, 0, 0, 0);
+        EditorUIRoot.AddWidget(root);
+
+        place = mmake<DockWindowPlace>();
+        place->name = "test place";
+        *place->layout = WidgetLayout::BothStretch();
+        root->AddChild(place);
+
+        neighbour = mmake<DockableWindow>();
+        neighbour->name = "neighbour";
+        neighbour->layout->size2D = Vec2F(200, 200);
+        neighbour->PlaceDock(place);
+        window->GetWindow()->PlaceDock(place);
+    }
+
+    place->ArrangeChildWindows();
+    UiDriver::Step(6);
+
+    // сосед - активная вкладка; открытие ассета должно поднять окно пайплайна
+    place->SetActiveTab(neighbour);
+    UiDriver::Step(2);
+    ASSERT_FALSE(window->GetWindow()->IsTabActive());
+
+    window->EditAsset(AssetRef<Asset>(mmake<PipelineAsset>()));
+    UiDriver::Step(4);
+    ASSERT_TRUE(window->GetWindow()->IsTabActive()) << "открытый ассет не поднял окно на активную вкладку";
+
+    auto canvas = window->GetEditor();
+    ASSERT_TRUE(canvas);
+    auto rect = canvas->layout->GetWorldRect();
+    ASSERT_GT(rect.Width(), 100.0f) << "холст вкладки не разложен";
+
+    canvas->SetView(Vec2F(), 1.0f);
+    UiDriver::Step(3);
+
+    Vec2F at = rect.Center();
+    o2Input.OnCursorMoved(at, 0, false);
+    UiDriver::Step(2);
+
+    float scaleBefore = canvas->GetCamera().GetScale2D().x;
+    o2Input.OnMouseWheel(-120.0f);
+    UiDriver::Step(10);
+    EXPECT_GT(Math::Abs(canvas->GetCamera().GetScale2D().x - scaleBefore), 0.001f) << "колесо не масштабирует вкладку";
+
+    Vec2F posBefore = canvas->GetCamera().GetPosition2D();
+    o2Input.OnAltCursorPressed(at);
+    for (int i = 1; i <= 10; i++)
+    {
+        o2Input.OnCursorMoved(at + Vec2F(-12.0f*i, 0), 0, false);
+        UiDriver::Step();
+    }
+    o2Input.OnAltCursorReleased();
+    UiDriver::Step(6);
+    EXPECT_GT(Math::Abs(canvas->GetCamera().GetPosition2D().x - posBefore.x), 1.0f) << "правая кнопка не двигает вкладку";
+
+    editor->SetEnabledForcible(true);
+}
+
+// Ассет с масштабом вне диапазона вида (руками или из импорта) не должен запирать холст:
+// открывается с ближайшим допустимым масштабом, колесо работает
+TEST_F(PipelineUiFixture, OutOfRangeSavedScaleIsClamped)
+{
+    PipelineGraph graph;
+    AddNode(graph, "sourceText", Vec2F());
+    graph.cameraPosition = Vec2F(1800, 600);
+    graph.cameraScale = 0.0001f;
+    graph.SaveToAsset(*asset);
+
+    editor->SetAsset(asset);
+    UiDriver::Step(6);
+
+    EXPECT_GE(editor->GetCamera().GetScale2D().x, 0.1f) << "холст открылся за пределами диапазона масштаба";
 }

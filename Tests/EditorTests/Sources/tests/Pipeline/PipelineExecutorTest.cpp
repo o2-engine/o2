@@ -524,3 +524,82 @@ TEST(PipelineShowcase, GeminiAllNodesAsset)
 
     o2Assets.RebuildAssets();
 }
+
+// The key colour is part of the prompt the provider renders against, so a render cached under one
+// colour must not be handed to another; tolerance, softness and spill are local post-steps and reuse it
+TEST(PipelineSignature, ChromaColourChangesTheCachedRenderWhileToleranceReusesIt)
+{
+    auto node = PipelineNodeRegistry::CreateNode("imageExtract", Vec2F());
+    node->SetConfigBool("transparentBg", true);
+    node->SetConfigString("transparentMode", "chroma");
+    node->SetConfigString("chromaColor", "#00b140");
+    PipelineNodeRegistry::SyncNodeWithSchema(node);
+    ASSERT_FALSE(node->outputs.IsEmpty());
+
+    String port = node->outputs[0].id;
+    String green = PipelineExecutor::PortSignature(*node, {}, -1, port);
+
+    node->SetConfigNumber("chromaTolerance", 42);
+    node->SetConfigNumber("chromaSoftness", 3);
+    EXPECT_EQ(PipelineExecutor::PortSignature(*node, {}, -1, port), green);
+
+    node->SetConfigString("chromaColor", "#ff00ff");
+    EXPECT_NE(PipelineExecutor::PortSignature(*node, {}, -1, port), green);
+}
+
+// Вниз по графу уходит уже вырезанная картинка, поэтому настройки хромакея должны менять
+// сигнатуру, которую видят потребители порта - иначе они отдадут старый результат из кеша
+TEST(PipelineSignature, DownstreamSignatureFollowsTheChromaSettings)
+{
+    auto node = PipelineNodeRegistry::CreateNode("imageExtract", Vec2F());
+    node->SetConfigBool("transparentBg", true);
+    node->SetConfigString("transparentMode", "chroma");
+    node->SetConfigNumber("chromaTolerance", 30);
+    PipelineNodeRegistry::SyncNodeWithSchema(node);
+    ASSERT_FALSE(node->outputs.IsEmpty());
+
+    String port = node->outputs[0].id;
+    String before = PipelineGraph::ComputePortSignature(*node, {}, -1, port, false);
+
+    node->SetConfigNumber("chromaTolerance", 52);
+    EXPECT_NE(PipelineGraph::ComputePortSignature(*node, {}, -1, port, false), before);
+    EXPECT_EQ(PipelineExecutor::PortSignature(*node, {}, -1, port),
+              PipelineExecutor::PortSignature(*node, {}, -1, port)) << "сигнатура сырого рендера стабильна";
+}
+
+// A finish node asked to keep the aspect ratio letterboxes the sprite instead of squashing it
+TEST(PipelineImageOps, FitKeepsTheAspectRatioAndCentresTheContent)
+{
+    auto wide = PipelineImageOps::Blank(80, 40, Color4(255, 0, 0, 255));
+    auto fitted = PipelineImageOps::Fit(*wide, Vec2I(100, 100));
+
+    ASSERT_TRUE(fitted);
+    EXPECT_EQ(fitted->GetSize(), Vec2I(100, 100));
+    EXPECT_EQ((int)PipelineImageOps::Pixel(*fitted, 50, 50)[3], 255);  // содержимое по центру
+    EXPECT_EQ((int)PipelineImageOps::Pixel(*fitted, 50, 4)[3], 0);     // поля сверху прозрачные
+    EXPECT_EQ((int)PipelineImageOps::Pixel(*fitted, 50, 95)[3], 0);
+    EXPECT_EQ((int)PipelineImageOps::Pixel(*fitted, 2, 50)[3], 255);   // по ширине вписано впритык
+}
+
+// Подавление ореола должно гасить все каналы ключевого цвета: у мадженты их два, и если
+// опустить только синий, по краям спрайта остаётся розовая кайма
+TEST(PipelineImageOps, ChromaSpillSuppressesEveryKeyChannel)
+{
+    auto bitmap = PipelineImageOps::Blank(3, 1, Color4(0, 0, 0, 0));
+    UInt8* edge = PipelineImageOps::Pixel(*bitmap, 1, 0);
+    edge[0] = 240; edge[1] = 120; edge[2] = 230; edge[3] = 255; // кремовый, подмешанный магентой
+
+    PipelineImageOps::ChromaOptions options;
+    options.color = Color4(255, 0, 255, 255);
+    options.tolerance = 20;
+    options.softness = 10;
+    options.spill = 100;
+
+    auto cut = PipelineImageOps::ChromaKey(*bitmap, options);
+    ASSERT_TRUE(cut);
+
+    const UInt8* result = PipelineImageOps::Pixel(*cut, 1, 0);
+    EXPECT_GT((int)result[3], 200) << "пиксель не должен вырезаться";
+    EXPECT_LT(Math::Abs((int)result[0] - (int)result[2]), 24) << "красный и синий разошлись - осталась розовая кайма";
+    EXPECT_LT((int)result[0], 200) << "красный канал ключа не погашен";
+}

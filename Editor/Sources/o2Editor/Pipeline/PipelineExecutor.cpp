@@ -41,17 +41,7 @@ namespace Editor
     String PipelineExecutor::PortSignature(const PipelineNode& node, const Map<String, String>& upstreamSigs, int seed,
                                            const String& portId)
     {
-        auto impl = PipelineNodeRegistry::Get(node.nodeType);
-        bool chroma = PipelineTransparency::UsesChromaPostStep(node);
-
-        Vector<String> exclude = { "crop", "cropEnabled" };
-        if (impl)
-            exclude.Add(impl->PortCacheExcludedKeys());
-        if (chroma)
-            exclude.Add(PipelineTransparency::ChromaConfigKeys());
-
-        String variant = (impl ? impl->PortCacheVariant(node, portId) : portId) + (chroma ? "|chroma-raw" : "");
-        return PipelineGraph::ComputeNodeSignature(node, upstreamSigs, exclude, seed, variant);
+        return PipelineGraph::ComputePortSignature(node, upstreamSigs, seed, portId);
     }
 
     PipelineValue PipelineExecutor::LoadPortPreview(const String& pipelineId, const String& nodeId, const String& portId,
@@ -146,7 +136,7 @@ namespace Editor
         auto sigs = graph.ComputeSignatures();
         for (auto& kv : sigs)
         {
-            if (RanExists(pipelineId, kv.second))
+            if (!kv.first.Contains("#") && RanExists(pipelineId, kv.second))
                 res.Add(kv.first);
         }
         return res;
@@ -457,9 +447,13 @@ namespace Editor
                 }
             }
 
+            // A per-port upstream cached every part apart: take the signature of the part this edge reads
             String upstreamSig;
-            if (run->sigByNode.TryGetValue(edge->fromNodeId, upstreamSig))
+            if (run->sigByPort.TryGetValue(edge->fromNodeId + "#" + edge->fromPortId, upstreamSig) ||
+                run->sigByNode.TryGetValue(edge->fromNodeId, upstreamSig))
+            {
                 upstreamSigs[PipelineGraph::UpstreamSigKey(*node, *port)] = upstreamSig;
+            }
         }
 
         int nodeSeed = -1;
@@ -525,7 +519,10 @@ namespace Editor
                 if (port.id.IsEmpty())
                     continue;
 
+                // Кеш адресует сырой рендер, а вниз по графу уходит уже вырезанная картинка
                 String portSig = PortSignature(*node, upstreamSigs, nodeSeed, portId);
+                run->sigByPort[nodeId + "#" + portId] =
+                    PipelineGraph::ComputePortSignature(*node, upstreamSigs, nodeSeed, portId, false);
                 // "<node id>#<port id>" in the bypass list regenerates that one part
                 if (run->bypass.Contains(nodeId) || run->bypass.Contains(nodeId + "#" + portId))
                     DeleteContent(run->pipelineId, portSig);
@@ -820,7 +817,9 @@ namespace Editor
             for (auto& edge : run->graph.GetIncomingEdges(node->id))
             {
                 String s;
-                if (!sigs.TryGetValue(edge->fromNodeId, s) || !RanExists(run->pipelineId, s))
+                auto from = run->graph.FindNode(edge->fromNodeId);
+                String key = from ? PipelineGraph::OutputSigKey(*from, edge->fromPortId) : edge->fromNodeId;
+                if (!sigs.TryGetValue(key, s) || !RanExists(run->pipelineId, s))
                     upstreamFresh = false;
                 if (auto port = node->FindInput(edge->toPortId))
                     upstream[PipelineGraph::UpstreamSigKey(*node, *port)] = s;

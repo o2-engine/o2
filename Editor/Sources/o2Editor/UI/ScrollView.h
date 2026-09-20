@@ -134,6 +134,9 @@ namespace Editor
         // Redraws content into render target
         void RedrawRenderTarget();
 
+        // Registers the view in the cursor system without repainting its content
+        void RegisterCursorArea();
+
         // Redraws content into render target
         virtual void RedrawContent();
 
@@ -145,6 +148,10 @@ namespace Editor
 
         // Called when scrolling
         void OnScrolled(float scroll) override;
+
+        // Returns the relative zoom step for a wheel delta: keeps the direction, clamps a big notch and
+        // lifts a tiny touchpad delta to a visible minimum
+        float WheelZoomStep(float scroll) const;
 
         // Updates camera's scale and position
         void ChangeCameraScaleRelativeToCursor(const Vec2F& newScale);
@@ -226,10 +233,12 @@ CLASS_METHODS_META(Editor::ScrollView)
     FUNCTION().PROTECTED().SIGNATURE(Basis, GetCameraScreenToLocalTransform, const Camera&);
     FUNCTION().PROTECTED().SIGNATURE(void, UpdateLocalScreenTransforms);
     FUNCTION().PROTECTED().SIGNATURE(void, RedrawRenderTarget);
+    FUNCTION().PROTECTED().SIGNATURE(void, RegisterCursorArea);
     FUNCTION().PROTECTED().SIGNATURE(void, RedrawContent);
     FUNCTION().PROTECTED().SIGNATURE(void, DrawGrid);
     FUNCTION().PROTECTED().SIGNATURE(void, OnCameraTransformChanged);
     FUNCTION().PROTECTED().SIGNATURE(void, OnScrolled, float);
+    FUNCTION().PROTECTED().SIGNATURE(float, WheelZoomStep, float);
     FUNCTION().PROTECTED().SIGNATURE(void, ChangeCameraScaleRelativeToCursor, const Vec2F&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnCursorRightMousePressed, const Input::Cursor&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnCursorRightMouseStayDown, const Input::Cursor&);

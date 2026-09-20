@@ -125,10 +125,13 @@ namespace Editor
         if (asset && mGraph.cameraScale > 0.0f && !mGraph.nodes.IsEmpty() &&
             (mGraph.cameraPosition != Vec2F() || mGraph.cameraScale != 1.0f))
         {
+            // A hand-written or imported asset may carry a scale outside the view's range: taken as is
+            // it locks the canvas at a magnification the wheel can no longer leave
+            float scale = Math::Clamp(mGraph.cameraScale, mViewCameraMinScale, mViewCameraMaxScale);
             mViewCamera.center = mGraph.cameraPosition;
             mViewCameraTargetPos = mGraph.cameraPosition;
-            mViewCameraTargetScale = Vec2F(mGraph.cameraScale, mGraph.cameraScale);
-            mViewCamera.scale = Vec2F(mGraph.cameraScale, mGraph.cameraScale);
+            mViewCameraTargetScale = Vec2F(scale, scale);
+            mViewCamera.scale = Vec2F(scale, scale);
             mNeedAdjustView = false;
         }
         else
@@ -757,7 +760,7 @@ namespace Editor
 
     void PipelineEditor::OnScrolled(float scroll)
     {
-        Vec2F newScale = mViewCameraTargetScale * (1.0f - (scroll * mViewCameraScaleSence));
+        Vec2F newScale = mViewCameraTargetScale * (1.0f - WheelZoomStep(scroll));
         ChangeCameraScaleRelativeToCursor(newScale);
         mCameraDirty = true;
     }
