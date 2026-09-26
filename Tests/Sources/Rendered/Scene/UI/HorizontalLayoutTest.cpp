@@ -141,3 +141,27 @@ TEST(HorizontalLayout, ExpandedChildrenWidthIsProportionalToWeight)
     EXPECT_NEAR(b->layout->GetWidth(), 200.0f, 1.0f);
     EXPECT_NEAR(c->layout->GetWidth(), 300.0f, 1.0f);
 }
+
+// A disabled child is skipped when arranging, so it adds no spacing to the width either
+TEST(HorizontalLayout, DisabledChildAddsNoSpacingToTheFittedWidth)
+{
+    SceneCleanGuard guard;
+    auto outer = mmake<HorizontalLayout>();
+    outer->layout->SetSize2D(Vec2F(300, 100));
+    outer->SetBaseCorner(BaseCorner::Left);
+    outer->SetWidthExpand(false);
+
+    auto inner = mmake<HorizontalLayout>();
+    inner->SetBaseCorner(BaseCorner::Left);
+    inner->SetWidthExpand(false);
+    inner->SetFitByChildren(true);
+    inner->SetSpacing(5);
+    outer->AddChild(inner);
+
+    for (auto name : { "a", "b", "c" })
+        MakeChildWidget(inner, name)->layout->SetMinimalSize(Vec2F(30, 50));
+    inner->GetChildWidgets()[1]->SetEnabled(false);
+
+    TickAndUpdateLayout(2);
+    EXPECT_FLOAT_EQ(inner->layout->GetWidth(), 65.0f);
+}

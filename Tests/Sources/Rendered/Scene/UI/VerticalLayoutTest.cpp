@@ -115,3 +115,27 @@ TEST(VerticalLayout, ChildrenLayoutTopToBottomHaveOrderedY)
     EXPECT_GE(posA.y, posB.y);
     EXPECT_GE(posB.y, posC.y);
 }
+
+// A disabled child is skipped when arranging, so it adds no spacing to the height either
+TEST(VerticalLayout, DisabledChildAddsNoSpacingToTheFittedHeight)
+{
+    SceneCleanGuard guard;
+    auto outer = mmake<VerticalLayout>();
+    outer->layout->SetSize2D(Vec2F(100, 300));
+    outer->SetBaseCorner(BaseCorner::Top);
+    outer->SetHeightExpand(false);
+
+    auto inner = mmake<VerticalLayout>();
+    inner->SetBaseCorner(BaseCorner::Top);
+    inner->SetHeightExpand(false);
+    inner->SetFitByChildren(true);
+    inner->SetSpacing(5);
+    outer->AddChild(inner);
+
+    for (auto name : { "a", "b", "c" })
+        MakeChildWidget(inner, name)->layout->SetMinimalSize(Vec2F(50, 30));
+    inner->GetChildWidgets()[1]->SetEnabled(false);
+
+    TickAndUpdateLayout(2);
+    EXPECT_FLOAT_EQ(inner->layout->GetHeight(), 65.0f);
+}

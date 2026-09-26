@@ -197,12 +197,18 @@ namespace o2
         if (!mFitByChildren)
             return Widget::GetMinHeightWithChildren();
 
-        float res = mBorder.top + mBorder.bottom + Math::Max(mChildWidgets.Count() - 1, 0)*mSpacing;
+        float res = mBorder.top + mBorder.bottom;
+        int shown = 0;
         for (auto& child : mChildWidgets)
         {
             if (child->mResEnabledInHierarchy)
+            {
                 res += child->GetMinHeightWithChildren();
+                shown++;
+            }
         }
+
+        res += Math::Max(shown - 1, 0)*mSpacing;
 
         res = Math::Max(res, GetLayoutData().mMinSize.y);
 

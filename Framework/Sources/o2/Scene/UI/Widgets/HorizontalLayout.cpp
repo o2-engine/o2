@@ -176,12 +176,18 @@ namespace o2
         if (!mFitByChildren)
             return Widget::GetMinWidthWithChildren();
 
-        float res = mBorder.left + mBorder.right + Math::Max(mChildWidgets.Count() - 1, 0)*mSpacing;
+        float res = mBorder.left + mBorder.right;
+        int shown = 0;
         for (auto& child : mChildWidgets)
         {
             if (child->mResEnabledInHierarchy)
+            {
                 res += child->GetMinWidthWithChildren();
+                shown++;
+            }
         }
+
+        res += Math::Max(shown - 1, 0)*mSpacing;
 
         res = Math::Max(res, GetLayoutData().mMinSize.x);
 
