@@ -208,6 +208,23 @@ TEST(PipelineExecutor, CachedOnlyRefusesProviderNodes)
     EXPECT_FALSE(result.states.ContainsKey(ai->id) && result.states[ai->id].StartsWith("error"));
 }
 
+// Sources cost nothing: a cached-only run reads one that never ran instead of stopping at it, as AssetsLine does
+TEST(PipelineExecutor, CachedOnlyReadsSourcesThatNeverRan)
+{
+    WorkDirGuard work;
+    PipelineGraph graph;
+    auto text = AddNode(graph, "sourceText");
+    text->SetConfigString("text", "never ran");
+    auto concat = AddNode(graph, "textConcat");
+    concat->SetCustomInputs({ PipelinePort("a", "a", PipelinePortType::Text, true) });
+    PipelineNodeRegistry::SyncNodeWithSchema(concat);
+    Connect(graph, text, "out", concat, "a");
+
+    auto result = RunPipeline(graph, concat->id, "test", true);
+    EXPECT_TRUE(result.done) << result.fatal;
+    EXPECT_EQ(result.outputs[concat->id].data, "never ran");
+}
+
 TEST(PipelineImageOps, ChromaKeyAndTwoPassMatte)
 {
     auto white = PipelineImageOps::Blank(8, 8, Color4(255, 255, 255, 255));

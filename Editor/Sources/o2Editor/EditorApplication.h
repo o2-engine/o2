@@ -18,6 +18,7 @@ namespace o2
 
 namespace Editor
 {
+    FORWARD_CLASS_REF(AssetsLineSync);
     FORWARD_CLASS_REF(EditorConfig);
     FORWARD_CLASS_REF(IAction);
     FORWARD_CLASS_REF(MenuPanel);
@@ -88,6 +89,8 @@ namespace Editor
         Ref<EditorConfig>   mConfig;         // Application configuration
         Ref<ToolsPanel>     mToolsPanel;     // Tools panel
         Ref<MenuPanel>      mMenuPanel;      // Menu panel
+
+        Ref<AssetsLineSync> mAssetsLineSync; // Sync of the pipelines with a linked AssetsLine project
 
         Ref<Properties>  mProperties;  // Properties manager
         Ref<SceneWindow> mSceneWindow; // Scene window reference
@@ -208,6 +211,7 @@ CLASS_FIELDS_META(Editor::EditorApplication)
     FIELD().PROTECTED().NAME(mConfig);
     FIELD().PROTECTED().NAME(mToolsPanel);
     FIELD().PROTECTED().NAME(mMenuPanel);
+    FIELD().PROTECTED().NAME(mAssetsLineSync);
     FIELD().PROTECTED().NAME(mProperties);
     FIELD().PROTECTED().NAME(mSceneWindow);
     FIELD().PROTECTED().NAME(mSceneDump);

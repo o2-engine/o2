@@ -58,6 +58,8 @@ namespace Editor
         config = static_cast<const DataValue&>(other.config);
         if (!config.IsObject())
             config.SetObject();
+
+        extra = static_cast<const DataValue&>(other.extra);
     }
 
     PipelineNode& PipelineNode::operator=(const PipelineNode& other)
@@ -72,6 +74,7 @@ namespace Editor
         if (!config.IsObject())
             config.SetObject();
 
+        extra = static_cast<const DataValue&>(other.extra);
         return *this;
     }
 
@@ -276,7 +279,9 @@ namespace Editor
     PipelineEdge::PipelineEdge(RefCounter* refCounter, const PipelineEdge& other):
         RefCounterable(refCounter), id(other.id), fromNodeId(other.fromNodeId), fromPortId(other.fromPortId),
         toNodeId(other.toNodeId), toPortId(other.toPortId), points(other.points)
-    {}
+    {
+        extra = static_cast<const DataValue&>(other.extra);
+    }
 
     PipelineGraph::PipelineGraph(const PipelineGraph& other)
     {
@@ -285,21 +290,402 @@ namespace Editor
 
     void PipelineGraph::LoadFromAsset(const PipelineAsset& asset)
     {
-        id = "";
-        nodes.Clear();
-        edges.Clear();
-        cameraPosition = Vec2F();
-        cameraScale = 1.0f;
+        if (IsLegacyDocument(asset.document))
+        {
+            *this = PipelineGraph();
+            Deserialize(*asset.document.FindMember("graph"));
+            return;
+        }
 
-        if (auto graph = asset.document.FindMember("graph"))
-            Deserialize(*graph);
+        if (!LoadFromJson(asset.document))
+            *this = PipelineGraph();
     }
 
     void PipelineGraph::SaveToAsset(PipelineAsset& asset) const
     {
-        // Serializing into an existing member keeps its old arrays, so the member is rebuilt from scratch
-        asset.document.RemoveMember("graph");
-        asset.document["graph"] = *this;
+        asset.document.Clear();
+        SaveToJson(asset.document);
+    }
+
+    bool PipelineGraph::IsLegacyDocument(const DataValue& document)
+    {
+        return document.IsObject() && document.FindMember("graph") != nullptr && document.FindMember("nodes") == nullptr;
+    }
+
+    Vec2F PipelineGraph::GetNominalViewSize()
+    {
+        return Vec2F(1600.0f, 1000.0f);
+    }
+
+    // Whole numbers stay integers and the rest is rounded, so a document written back unchanged stays byte-stable
+
+    static void SetJsonNumber(DataValue& value, float number)
+    {
+        double rounded = std::round((double)number);
+        if (std::fabs((double)number - rounded) < 0.0005 && std::fabs(rounded) < 2.0e9)
+            value = (int)rounded;
+        else
+            value = std::round((double)number * 1000.0) / 1000.0;
+    }
+
+    static float JsonNumber(const DataValue* value, float def = 0.0f)
+    {
+        return value ? PipelineUtils::ValueToNumber(*value, def) : def;
+    }
+
+    static String JsonString(const DataValue* value)
+    {
+        return value ? PipelineUtils::ValueToString(*value, "") : String();
+    }
+
+    static Vec2F ReadPoint(const DataValue* value, const char* xName, const char* yName)
+    {
+        if (!value || !value->IsObject())
+            return Vec2F();
+
+        return Vec2F(JsonNumber(value->FindMember(xName)), JsonNumber(value->FindMember(yName)));
+    }
+
+    static void WritePoint(DataValue& value, const Vec2F& point, const char* xName, const char* yName)
+    {
+        value.SetObject();
+        SetJsonNumber(value.AddMember(xName), point.x);
+        SetJsonNumber(value.AddMember(yName), point.y);
+    }
+
+    static void CopyUnknownMembers(const DataValue& from, DataValue& to, const Vector<const char*>& known)
+    {
+        to.SetObject();
+        if (!from.IsObject())
+            return;
+
+        for (auto it = from.BeginMember(); it != from.EndMember(); ++it)
+        {
+            String name = it->name.GetString();
+            if (known.Any([&](const char* k) { return name == k; }))
+                continue;
+
+            to.AddMember(name.Data()) = it->value;
+        }
+    }
+
+    static void AppendMembers(const DataValue& from, DataValue& to)
+    {
+        if (!from.IsObject())
+            return;
+
+        for (auto it = from.BeginMember(); it != from.EndMember(); ++it)
+        {
+            if (!to.FindMember(it->name.GetString()))
+                to.AddMember(it->name.GetString()) = it->value;
+        }
+    }
+
+    static bool ReadPort(const DataValue& json, PipelinePort& port)
+    {
+        if (!json.IsObject())
+            return false;
+
+        port.id = JsonString(json.FindMember("id"));
+        port.name = JsonString(json.FindMember("name"));
+        port.portType = PipelinePortTypeFromString(JsonString(json.FindMember("type")));
+        port.color = JsonString(json.FindMember("color"));
+        auto custom = json.FindMember("custom");
+        port.custom = custom && custom->IsBoolean() && (bool)*custom;
+        return !port.id.IsEmpty();
+    }
+
+    static void WritePort(DataValue& json, const PipelinePort& port)
+    {
+        json.SetObject();
+        json.AddMember("id") = port.id;
+        json.AddMember("name") = port.name;
+        json.AddMember("type") = PipelinePortTypeToString(port.portType);
+        if (!port.color.IsEmpty())
+            json.AddMember("color") = port.color;
+
+        if (port.custom)
+            json.AddMember("custom") = true;
+    }
+
+    void PipelineNode::RemapConfigPortIds(const Map<String, String>& portIdMap)
+    {
+        if (!config.IsObject())
+            return;
+
+        Map<String, String> idMap = portIdMap;
+        auto mapId = [&](const String& id) { String v; return idMap.TryGetValue(id, v) ? v : id; };
+        auto remapStringMember = [&](const char* key)
+        {
+            if (auto value = config.FindMember(key); value && value->IsString())
+                *value = mapId(value->GetString());
+        };
+
+        if (auto customs = config.FindMember("customInputs"); customs && customs->IsArray())
+        {
+            for (auto& item : *customs)
+                if (auto id = item.IsObject() ? item.FindMember("id") : nullptr; id && id->IsString())
+                    *id = mapId(id->GetString());
+        }
+
+        // Composer: duplicated layers own ids of their own, minted anew and mapped alongside
+        if (auto dups = config.FindMember("dupLayers"); dups && dups->IsArray())
+        {
+            for (auto& item : *dups)
+                if (auto id = item.IsObject() ? item.FindMember("id") : nullptr; id && id->IsString())
+                    idMap[id->GetString()] = GenerateId();
+
+            for (auto& item : *dups)
+            {
+                if (!item.IsObject())
+                    continue;
+
+                if (auto id = item.FindMember("id"); id && id->IsString()) *id = mapId(id->GetString());
+                if (auto src = item.FindMember("srcPortId"); src && src->IsString()) *src = mapId(src->GetString());
+            }
+        }
+
+        if (auto layers = config.FindMember("layers"); layers && layers->IsObject())
+        {
+            DataDocument remapped;
+            remapped.SetObject();
+            for (auto it = layers->BeginMember(); it != layers->EndMember(); ++it)
+                remapped.AddMember(mapId(it->name.GetString()).Data()) = it->value;
+
+            *layers = static_cast<const DataValue&>(remapped);
+        }
+
+        if (auto order = config.FindMember("layerOrder"); order && order->IsArray())
+        {
+            for (auto& item : *order)
+                if (item.IsString()) item = mapId(item.GetString());
+        }
+
+        remapStringMember("selectedLayer");
+        remapStringMember("openLayerSettings");
+
+        // AI extract: one region per output port, keyed by the port id
+        if (auto regions = config.FindMember("regions"); regions && regions->IsArray())
+        {
+            for (auto& item : *regions)
+                if (auto id = item.IsObject() ? item.FindMember("id") : nullptr; id && id->IsString())
+                    *id = mapId(id->GetString());
+        }
+
+        remapStringMember("selectedRegion");
+    }
+
+    bool PipelineNode::LoadFromJson(const DataValue& json)
+    {
+        if (!json.IsObject())
+            return false;
+
+        id = JsonString(json.FindMember("id"));
+        nodeType = JsonString(json.FindMember("type"));
+        position = ReadPoint(json.FindMember("position"), "x", "y");
+        size = ReadPoint(json.FindMember("size"), "width", "height");
+
+        config.Clear();
+        if (auto cfg = json.FindMember("config"))
+            config = *cfg;
+
+        if (!config.IsObject())
+            config.SetObject();
+
+        inputs.Clear();
+        outputs.Clear();
+        PipelinePort port;
+        if (auto list = json.FindMember("inputs"); list && list->IsArray())
+        {
+            for (auto& item : *list)
+                if (ReadPort(item, port)) inputs.Add(port);
+        }
+
+        if (auto list = json.FindMember("outputs"); list && list->IsArray())
+        {
+            for (auto& item : *list)
+                if (ReadPort(item, port)) outputs.Add(port);
+        }
+
+        extra.Clear();
+        CopyUnknownMembers(json, extra, { "id", "type", "position", "size", "config", "inputs", "outputs" });
+        return !id.IsEmpty() && !nodeType.IsEmpty();
+    }
+
+    void PipelineNode::SaveToJson(DataValue& json) const
+    {
+        json.SetObject();
+        json.AddMember("id") = id;
+        json.AddMember("type") = nodeType;
+        WritePoint(json.AddMember("position"), position, "x", "y");
+        if (size != Vec2F())
+            WritePoint(json.AddMember("size"), size, "width", "height");
+
+        auto& cfg = json.AddMember("config");
+        cfg = static_cast<const DataValue&>(config);
+        if (!cfg.IsObject())
+            cfg.SetObject();
+
+        auto& inList = json.AddMember("inputs");
+        inList.SetArray();
+        for (auto& port : inputs)
+            WritePort(inList.AddElement(), port);
+
+        auto& outList = json.AddMember("outputs");
+        outList.SetArray();
+        for (auto& port : outputs)
+            WritePort(outList.AddElement(), port);
+
+        AppendMembers(extra, json);
+    }
+
+    bool PipelineEdge::LoadFromJson(const DataValue& json)
+    {
+        if (!json.IsObject())
+            return false;
+
+        id = JsonString(json.FindMember("id"));
+        fromNodeId = JsonString(json.FindMember("fromNodeId"));
+        fromPortId = JsonString(json.FindMember("fromPortId"));
+        toNodeId = JsonString(json.FindMember("toNodeId"));
+        toPortId = JsonString(json.FindMember("toPortId"));
+
+        points.Clear();
+        if (auto list = json.FindMember("points"); list && list->IsArray())
+        {
+            for (auto& item : *list)
+                points.Add(ReadPoint(&item, "x", "y"));
+        }
+
+        extra.Clear();
+        CopyUnknownMembers(json, extra, { "id", "fromNodeId", "fromPortId", "toNodeId", "toPortId", "points" });
+        if (id.IsEmpty())
+            id = PipelineNode::GenerateId();
+
+        return !fromNodeId.IsEmpty() && !fromPortId.IsEmpty() && !toNodeId.IsEmpty() && !toPortId.IsEmpty();
+    }
+
+    void PipelineEdge::SaveToJson(DataValue& json) const
+    {
+        json.SetObject();
+        json.AddMember("id") = id;
+        json.AddMember("fromNodeId") = fromNodeId;
+        json.AddMember("fromPortId") = fromPortId;
+        json.AddMember("toNodeId") = toNodeId;
+        json.AddMember("toPortId") = toPortId;
+        if (!points.IsEmpty())
+        {
+            auto& list = json.AddMember("points");
+            list.SetArray();
+            for (auto& point : points)
+                WritePoint(list.AddElement(), point, "x", "y");
+        }
+
+        AppendMembers(extra, json);
+    }
+
+    bool PipelineGraph::LoadFromJson(const DataValue& json)
+    {
+        *this = PipelineGraph();
+        if (!json.IsObject() || IsLegacyDocument(json))
+            return false;
+
+        auto nodeList = json.FindMember("nodes");
+        auto edgeList = json.FindMember("edges");
+        if (!nodeList || !nodeList->IsArray() || (edgeList && !edgeList->IsArray()))
+            return false;
+
+        id = JsonString(json.FindMember("id"));
+        name = JsonString(json.FindMember("name"));
+
+        for (auto& item : *nodeList)
+        {
+            auto node = mmake<PipelineNode>();
+            if (node->LoadFromJson(item))
+                nodes.Add(node);
+        }
+
+        if (edgeList)
+        {
+            for (auto& item : *edgeList)
+            {
+                auto edge = mmake<PipelineEdge>();
+                if (edge->LoadFromJson(item) && FindNode(edge->fromNodeId) && FindNode(edge->toNodeId))
+                    edges.Add(edge);
+            }
+        }
+
+        // AssetsLine keeps screen = world * scale + (x, y), y down; the editor a canvas centre (y up) and units per pixel
+        cameraPosition = Vec2F();
+        cameraScale = 1.0f;
+        if (auto camera = json.FindMember("camera"); camera && camera->IsObject())
+        {
+            float scale = JsonNumber(camera->FindMember("scale"), 0.0f);
+            if (scale > 0.0f)
+            {
+                Vec2F view = GetNominalViewSize();
+                Vec2F offset = ReadPoint(camera, "x", "y");
+                Vec2F center = (view * 0.5f - offset) / scale;
+                cameraPosition = Vec2F(center.x, -center.y);
+                cameraScale = 1.0f / scale;
+            }
+        }
+
+        extra.Clear();
+        CopyUnknownMembers(json, extra, { "schemaVersion", "id", "name", "nodes", "edges", "camera" });
+        return true;
+    }
+
+    void PipelineGraph::SaveToJson(DataValue& json) const
+    {
+        json.SetObject();
+        json.AddMember("schemaVersion") = 1;
+        json.AddMember("id") = id;
+        json.AddMember("name") = name;
+
+        auto& nodeList = json.AddMember("nodes");
+        nodeList.SetArray();
+        for (auto& node : nodes)
+            node->SaveToJson(nodeList.AddElement());
+
+        auto& edgeList = json.AddMember("edges");
+        edgeList.SetArray();
+        for (auto& edge : edges)
+            edge->SaveToJson(edgeList.AddElement());
+
+        if (cameraScale > 0.0f && (cameraPosition != Vec2F() || cameraScale != 1.0f))
+        {
+            Vec2F view = GetNominalViewSize();
+            float scale = 1.0f / cameraScale;
+            Vec2F center(cameraPosition.x, -cameraPosition.y);
+            Vec2F offset = view * 0.5f - center * scale;
+            auto& camera = json.AddMember("camera");
+            camera.SetObject();
+            camera.AddMember("x") = std::round((double)offset.x * 100.0) / 100.0;
+            camera.AddMember("y") = std::round((double)offset.y * 100.0) / 100.0;
+            camera.AddMember("scale") = std::round((double)scale * 1.0e6) / 1.0e6;
+        }
+
+        AppendMembers(extra, json);
+    }
+
+    bool PipelineGraph::LoadFromJsonString(const String& text)
+    {
+        DataDocument doc;
+        if (!doc.LoadFromData(text))
+        {
+            *this = PipelineGraph();
+            return false;
+        }
+
+        return LoadFromJson(doc);
+    }
+
+    String PipelineGraph::ToJsonString() const
+    {
+        DataDocument doc;
+        SaveToJson(doc);
+        return doc.SaveAsString();
     }
 
     PipelineGraph& PipelineGraph::operator=(const PipelineGraph& other)
@@ -314,8 +700,10 @@ namespace Editor
             edges.Add(mmake<PipelineEdge>(*edge));
 
         id = other.id;
+        name = other.name;
         cameraPosition = other.cameraPosition;
         cameraScale = other.cameraScale;
+        extra = static_cast<const DataValue&>(other.extra);
 
         return *this;
     }
@@ -486,7 +874,7 @@ namespace Editor
     {
         static Vector<String> keys = {
             "drawOver", "drawTool", "brushSize", "brushColor", "brushOpacity", "paramsOpen", "selectedRegion",
-            "selectedLayer", "layersPanelW", "openLayerSettings",
+            "splitRatio", "fieldH", "selectedLayer", "layersPanelW", "openLayerSettings",
             "viewZoom", "viewPanX", "viewPanY", "cmpBg", "cmpBgEnabled", "checker", "layersFolder", "layersName"
         };
         return keys;
@@ -497,16 +885,64 @@ namespace Editor
         return type == "nanoBananaGen" || type == "imageEdit" || type == "imageExtract";
     }
 
-    static int OwnSeed(const PipelineNode& node)
+    // AssetsLine's implicit seed (32-bit FNV-1a over UTF-16 code units), so both editors render alike
+    static int HashSeed(const String& id)
     {
-        if (node.HasConfig("seed"))
+        UInt32 h = 2166136261u;
+        WString wide = id;
+        for (auto c : wide)
         {
-            String s = node.GetConfigString("seed", "");
-            if (!s.Trimed().IsEmpty())
-                return Math::Max(0, (int)Math::Floor(node.GetConfigNumber("seed", 0.0f)));
+            h ^= (UInt32)c;
+            h *= 16777619u;
         }
 
-        return (int)(PipelineUtils::Fnv1a64(node.id) % 2147483647ull);
+        return (int)(h % 2147483647u);
+    }
+
+    // JavaScript's Number(value) for a config value: false for NaN and infinities
+    static bool JsNumber(const DataValue* value, double& out)
+    {
+        if (!value)
+            return false;
+
+        if (value->IsNull()) { out = 0.0; return true; }
+        if (value->IsBoolean()) { out = (bool)*value ? 1.0 : 0.0; return true; }
+        if (value->IsNumber()) { out = (double)*value; return std::isfinite(out); }
+        if (!value->IsString())
+            return false;
+
+        String text = PipelineUtils::Trim(value->GetString());
+        if (text.IsEmpty()) { out = 0.0; return true; }
+
+        const char* begin = text.Data();
+        char* end = nullptr;
+        if (text.Length() > 2 && text[0] == '0' && (text[1] == 'x' || text[1] == 'X'))
+            out = (double)std::strtoull(begin + 2, &end, 16);
+        else
+        {
+            if (text.Contains("inf") || text.Contains("INF") || text.Contains("nan") || text.Contains("NAN"))
+                return false;
+
+            out = std::strtod(begin, &end);
+        }
+
+        return end == begin + text.Length() && std::isfinite(out);
+    }
+
+    static int OwnSeed(const PipelineNode& node)
+    {
+        double seed = 0.0;
+        if (JsNumber(node.GetConfigValue("seed"), seed))
+            return (int)Math::Clamp(std::floor(seed), -2147483648.0, 2147483647.0);
+
+        return HashSeed(node.id);
+    }
+
+    // Seed inheritance is on unless the config says a literal false
+    static bool InheritsSeed(const PipelineNode& node)
+    {
+        auto value = node.GetConfigValue("inheritSeed");
+        return !(value && value->IsBoolean() && !(bool)*value);
     }
 
     Map<String, int> PipelineGraph::ResolveSeeds() const
@@ -528,7 +964,7 @@ namespace Editor
 
             visiting[id] = true;
             int seed = OwnSeed(*node);
-            if (node->GetConfigBool("inheritSeed", true))
+            if (InheritsSeed(*node))
             {
                 for (auto& edge : GetIncomingEdges(id))
                 {

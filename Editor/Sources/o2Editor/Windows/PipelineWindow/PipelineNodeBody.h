@@ -48,6 +48,9 @@ namespace Editor
         // Called when the node config changed outside the body (undo, paste, another view)
         virtual void OnConfigChanged() {}
 
+        // Writes what the node shows into the project assets, for "save all"; returns false when the node saves nothing
+        virtual bool SaveToAssets() { return false; }
+
         // Returns true and the position, relative to the body's top-left (y down), of an output port the body places itself
         virtual bool GetBodyPortOffset(const String& portId, Vec2F& offset) const { return false; }
 
@@ -109,7 +112,8 @@ namespace Editor
             float GetHeight() const;
         };
 
-        Ref<ParamsList> mParams; // Rows are added into it while a parameter list is open, null otherwise
+        Ref<ParamsList>        mParams;      // Rows are added into it while a parameter list is open, null otherwise
+        Ref<PipelineFoldArrow> mParamsArrow; // Fold arrow of the parameter list row
 
     public:
         // Appends a fixed-height row and adds its widget as a child
@@ -178,6 +182,12 @@ namespace Editor
 
         // Closes the parameter list opened by BeginParams
         void EndParams();
+
+        // Turns the fold arrow with the sliding parameter list
+        void UpdateParamsSlide();
+
+        // Returns how far the parameter list is open: 0 or 1, or the slide in between
+        float GetParamsReveal() const;
 
         // Adds a row of buttons sharing the width
         void AddActions(const Vector<Ref<Widget>>& buttons);
@@ -310,6 +320,7 @@ CLASS_FIELDS_META(Editor::PipelineNodeBody)
     FIELD().PUBLIC().NAME(mCropEditor);
     FIELD().PUBLIC().NAME(mVideoView);
     FIELD().PUBLIC().NAME(mParams);
+    FIELD().PUBLIC().NAME(mParamsArrow);
 }
 END_META;
 CLASS_METHODS_META(Editor::PipelineNodeBody)
@@ -322,6 +333,7 @@ CLASS_METHODS_META(Editor::PipelineNodeBody)
     FUNCTION().PUBLIC().SIGNATURE(void, Build);
     FUNCTION().PUBLIC().SIGNATURE(void, OnOutputChanged);
     FUNCTION().PUBLIC().SIGNATURE(void, OnConfigChanged);
+    FUNCTION().PUBLIC().SIGNATURE(bool, SaveToAssets);
     FUNCTION().PUBLIC().SIGNATURE(bool, GetBodyPortOffset, const String&, Vec2F&);
     FUNCTION().PUBLIC().SIGNATURE(float, GetPreferredHeight, float);
     FUNCTION().PUBLIC().SIGNATURE(void, Relayout, float, float);
@@ -349,6 +361,8 @@ CLASS_METHODS_META(Editor::PipelineNodeBody)
     FUNCTION().PUBLIC().SIGNATURE(PipelineValue, GetInput, const String&);
     FUNCTION().PUBLIC().SIGNATURE(bool, BeginParams, const Vector<String>&);
     FUNCTION().PUBLIC().SIGNATURE(void, EndParams);
+    FUNCTION().PUBLIC().SIGNATURE(void, UpdateParamsSlide);
+    FUNCTION().PUBLIC().SIGNATURE(float, GetParamsReveal);
     FUNCTION().PUBLIC().SIGNATURE(void, AddActions, const Vector<Ref<Widget>>&);
     FUNCTION().PUBLIC().SIGNATURE(Ref<EditBox>, AddPrimaryField, const String&, const String&);
     FUNCTION().PUBLIC().SIGNATURE(void, AddSectionTitle, const String&);

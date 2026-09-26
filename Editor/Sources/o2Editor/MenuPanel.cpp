@@ -27,6 +27,7 @@
 #include "o2Editor/UI/Style/EditorUIStyle.h"
 #include "o2Editor/UIRoot.h"
 #include "o2Editor/Windows/AnimationStateGraphWindow/AnimationStateGraphWindow.h"
+#include "o2Editor/Windows/PipelineWindow/AssetsLineDlg.h"
 #include "o2Editor/Windows/PipelineWindow/PipelineWindow.h"
 #include "o2Editor/Windows/AnimationWindow/AnimationWindow.h"
 #include "o2Editor/Windows/AssetsWindow/AssetsWindow.h"
@@ -75,6 +76,8 @@ namespace Editor
         mMenuPanel->AddItem("Edit/Project/Physics", [&]() {
             o2EditorPropertiesWindow.SetTarget(&o2Config.physics);
         });
+
+        mMenuPanel->AddItem("Edit/Project/AssetsLine", [&]() { AssetsLineDlg::Show(); });
 
         // VIEW
         mMenuPanel->AddItem("View/Show Tree", [&]() { OnShowTreePressed(); });

@@ -41,7 +41,14 @@ namespace Editor
         if (!mEditSnapshotActive)
             BeginContinuousEdit("Move nodes");
 
-        Vec2F delta = CanvasToNode(position) - node->GetNode()->position;
+        // The card under the cursor lands on the grid; the other selected cards keep their distance to it
+        Vec2F delta = SnapToGrid(CanvasToNode(position)) - node->GetNode()->position;
+        if (delta == Vec2F())
+        {
+            node->UpdateFromNode();
+            return;
+        }
+
         for (auto& widget : mNodeWidgets)
         {
             if (widget == node || widget->IsSelected())
@@ -101,9 +108,7 @@ namespace Editor
         if (!graph)
             return "";
 
-        DataDocument doc;
-        doc.Set(*graph);
-        return doc.SaveAsString();
+        return graph->ToJsonString();
     }
 
     void PipelineEditor::RestoreGraph(const String& serialized)
@@ -112,9 +117,7 @@ namespace Editor
         if (!graph)
             return;
 
-        DataDocument doc;
-        doc.LoadFromData(serialized);
-        doc.Get(*graph);
+        graph->LoadFromJsonString(serialized);
 
         mSelectedEdgeId = "";
         mSelectedPointIndex = -1;
@@ -209,8 +212,12 @@ namespace Editor
 
         for (auto& edge : incoming)
         {
+            // A part of a multi-output node has its own result; the node's main one is some other part
             auto rt = GetRuntime(edge->fromNodeId);
-            if (!rt || !rt->output.IsValid())
+            auto from = graph->FindNode(edge->fromNodeId);
+            auto schema = from ? PipelineNodeRegistry::GetSchema(from->nodeType) : nullptr;
+            bool part = schema && schema->perPortRun && from->outputs.Count() > 1;
+            if (!rt || (part ? !rt->portOutputs.ContainsKey(edge->fromPortId) : !rt->output.IsValid()))
                 return;
         }
 
@@ -416,7 +423,7 @@ namespace Editor
         if (!node)
             return nullptr;
 
-        node->position = Vec2F(Math::Round(node->position.x / 20.0f) * 20.0f, Math::Round(node->position.y / 20.0f) * 20.0f);
+        node->position = SnapToGrid(node->position);
         graph->nodes.Add(node);
 
         auto widget = mmake<PipelineNodeWidget>(Ref(this), node);
@@ -444,7 +451,7 @@ namespace Editor
         for (int i = 0; i < 12; i++)
         {
             Vec2F node = CanvasToNode(position);
-            node = Vec2F(Math::Round(node.x/20.0f)*20.0f, Math::Round(node.y/20.0f)*20.0f);
+            node = SnapToGrid(node);
             if (!graph->nodes.Any([&](const Ref<PipelineNode>& x) { return x->position == node; }))
                 break;
 
@@ -567,9 +574,8 @@ namespace Editor
                 clip.edges.Add(mmake<PipelineEdge>(*edge));
         }
 
-        DataDocument doc;
-        doc.Set(clip);
-        Clipboard::SetText("o2pipeline:" + doc.SaveAsString());
+        // The pipeline format itself: a copy keeps every member of its nodes and edges
+        Clipboard::SetText("o2pipeline:" + clip.ToJsonString());
     }
 
     void PipelineEditor::Paste(const Vec2F& canvasPos, bool useCursor)
@@ -582,13 +588,8 @@ namespace Editor
         if (!text.StartsWith("o2pipeline:"))
             return;
 
-        DataDocument doc;
-        if (!doc.LoadFromData(text.SubStr(11)))
-            return;
-
         PipelineGraph clip;
-        doc.Get(clip);
-        if (clip.nodes.IsEmpty())
+        if (!clip.LoadFromJsonString(text.SubStr(11)) || clip.nodes.IsEmpty())
             return;
 
         // Fresh ids everywhere so a copy never aliases its original
@@ -600,9 +601,7 @@ namespace Editor
             node->id = newId;
             for (auto& port : node->inputs) { String pid = PipelineNode::GenerateId(); idMap[port.id] = pid; port.id = pid; }
             for (auto& port : node->outputs) { String pid = PipelineNode::GenerateId(); idMap[port.id] = pid; port.id = pid; }
-            auto customs = node->GetCustomInputs();
-            for (auto& c : customs) { String pid; if (idMap.TryGetValue(c.id, pid)) c.id = pid; }
-            node->SetCustomInputs(customs);
+            node->RemapConfigPortIds(idMap);
         }
         for (auto& edge : clip.edges)
         {

@@ -43,6 +43,8 @@ namespace Editor
     static const float cullingMargin = 0.1f;
     static const float edgeCullingMargin = 200.0f;
     static const float edgeSegmentLength = 5.0f;
+    static const float gridStep = 20.0f;
+    static const int gridLevels = 5;
 
     PipelineEditor::PipelineEditor(RefCounter* refCounter):
         FrameScrollView(refCounter), SelectableDragHandlesGroup(refCounter)
@@ -50,7 +52,7 @@ namespace Editor
         mSelectionSprite = mmake<Sprite>(Color4(0, 150, 136, 30));
         mNodesContainer = mmake<Widget>();
         *mNodesContainer->layout = WidgetLayout::Based(BaseCorner::LeftBottom, Vec2F(), Vec2F());
-        mViewCameraMinScale = 0.15f;
+        mViewCameraMinScale = 0.25f;
         mViewCameraMaxScale = 40.0f;
 
         // The card layer hides the view from the scroll pass of the event system, so the wheel over a card comes back through it
@@ -114,6 +116,10 @@ namespace Editor
             // Older assets keyed their cache by the asset UID; adopting it keeps their results
             if (mGraph.id.IsEmpty())
                 mGraph.id = (String)asset->GetUID();
+
+            // A pipeline is named after its file, the way a linked AssetsLine project lists it
+            if (!asset->GetPath().IsEmpty())
+                mGraph.name = o2FileSystem.GetFileNameWithoutExtension(o2FileSystem.GetPathWithoutDirectories(asset->GetPath()));
         }
         else
             mGraph = PipelineGraph();
@@ -137,6 +143,34 @@ namespace Editor
         else
             mNeedAdjustView = true;
 
+        mNeedRedraw = true;
+    }
+
+    void PipelineEditor::ReloadGraph()
+    {
+        auto asset = mAsset.Lock();
+        if (!asset)
+            return;
+
+        String id = mGraph.id;
+        String name = mGraph.name;
+        mGraph.LoadFromAsset(*asset);
+        if (mGraph.id.IsEmpty())
+            mGraph.id = id;
+
+        mGraph.name = name;
+        mSelectedEdgeId = "";
+        mSelectedPointIndex = -1;
+        RebuildAll();
+        LoadPreviews();
+        RefreshFreshness();
+        mNeedRedraw = true;
+    }
+
+    void PipelineEditor::ReloadResults()
+    {
+        LoadPreviews();
+        RefreshFreshness();
         mNeedRedraw = true;
     }
 
@@ -276,6 +310,11 @@ namespace Editor
 
                 if (!runtime.output.IsValid() && !runtime.portOutputs.empty())
                     runtime.output = runtime.portOutputs.begin()->second;
+
+                // AssetsLine keeps a single part only as the node's result
+                auto& outputs = widget->GetNode()->outputs;
+                if (outputs.Count() == 1 && runtime.output.IsValid() && !runtime.portOutputs.ContainsKey(outputs[0].id))
+                    runtime.portOutputs[outputs[0].id] = runtime.output;
             }
 
             String srcPath = PipelineExecutor::GetSourcePreviewPath(pipelineId, widget->GetNode()->id);
@@ -415,6 +454,46 @@ namespace Editor
     {
         ScrollView::Draw();
         DrawSelection();
+    }
+
+    Vec2F PipelineEditor::SnapToGrid(const Vec2F& p)
+    {
+        return Vec2F(Math::Round(p.x/gridStep)*gridStep, Math::Round(p.y/gridStep)*gridStep);
+    }
+
+    void PipelineEditor::DrawGrid()
+    {
+        // Lines at the snapping step, every fifth one stronger; zoomed out, the finest lines fade and the grid steps up by five
+        const float minSpacing = 4.0f;
+        const float fullSpacing = 12.0f;
+        const float strengths[] = { 0.3f, 0.65f, 1.0f };
+
+        float unitsPerPixel = Math::Max(mViewCamera.GetScale().x, 0.0001f);
+        float step = gridStep;
+        while (step/unitsPerPixel < minSpacing)
+            step *= gridLevels;
+
+        // The coarser lines take over the strength of the finer ones as those fade, so zooming never jumps
+        float fade = Math::Clamp01((step/unitsPerPixel - minSpacing)/(fullSpacing - minSpacing));
+        auto lineColor = [&](int index)
+        {
+            int level = 0;
+            while (level < 2 && index % gridLevels == 0)
+            {
+                index /= gridLevels;
+                level++;
+            }
+
+            float strength = level == 0 ? strengths[0]*fade : Math::Lerp(strengths[level - 1], strengths[level], fade);
+            return Math::Lerp(mBackColor, mGridColor, strength);
+        };
+
+        RectF view = GetVisibleCanvasRect();
+        for (int i = Math::FloorToInt(view.left/step); i*step <= view.right; i++)
+            o2Render.DrawLine(Vec2F(i*step, view.bottom), Vec2F(i*step, view.top), lineColor(i));
+
+        for (int i = Math::FloorToInt(view.bottom/step); i*step <= view.top; i++)
+            o2Render.DrawLine(Vec2F(view.left, i*step), Vec2F(view.right, i*step), lineColor(i));
     }
 
     void PipelineEditor::RedrawContent()
@@ -714,6 +793,15 @@ namespace Editor
             StartRun(next, {}, false);
         }
 
+        // Finish nodes saving what they receive, one after another
+        if (!IsRunning() && !mSaveQueue.IsEmpty())
+        {
+            String next = mSaveQueue[0];
+            mSaveQueue.RemoveAt(0);
+            mRunIsAutoApply = false;
+            StartSingleRun(next);
+        }
+
         // Auto-apply of local nodes, debounced
         if (!mAutoApplyQueue.IsEmpty())
         {
@@ -726,8 +814,14 @@ namespace Editor
                 if (mNodeWidgetsById.ContainsKey(nodeId))
                 {
                     mRunIsAutoApply = true;
-                    mNodeWidgetsById[nodeId]->GetRuntime().applying = true;
-                    StartRun(nodeId, {}, true);
+                    auto widget = mNodeWidgetsById[nodeId];
+                    widget->GetRuntime().applying = true;
+                    // An effect re-applies from the results on screen: its own stored result may be made from an
+                    // upstream picture that was generated again since, under the same signature
+                    if (widget->GetSchema() && widget->GetSchema()->instant)
+                        StartSingleRun(nodeId);
+                    else
+                        StartRun(nodeId, {}, true);
                 }
             }
         }

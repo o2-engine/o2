@@ -26,6 +26,7 @@
 #include "o2/Utils/System/Clipboard.h"
 #include "o2Editor/Dialogs/ColorPickerDlg.h"
 #include "o2Editor/Dialogs/System/OpenSaveDialog.h"
+#include "o2Editor/Pipeline/Nodes/PipelineNodesCommon.h"
 #include "o2Editor/Pipeline/PipelineExecutor.h"
 #include "o2Editor/Pipeline/PipelineImageOps.h"
 #include "o2Editor/Pipeline/PipelineUtils.h"
@@ -61,7 +62,7 @@ namespace Editor
         void Build() override
         {
             mExtension = kind == PipelinePortType::Image ? "png" : kind == PipelinePortType::Text ? "txt" : kind == PipelinePortType::Video ? "mp4" : "mp3";
-            String assetPath = GetString("assetPath", "Generated/output");
+            String assetPath = PipelineNodeRegistry::GetFinishAssetPath(*mNode);
             WeakRef<FinishBody> weakThis(this);
 
             // The result comes first: a finish node shows what reaches it before anything runs
@@ -148,18 +149,36 @@ namespace Editor
             {
                 auto resizeRow = mmake<HorizontalLayout>();
                 resizeRow->spacing = 6; resizeRow->expandWidth = true; resizeRow->expandHeight = true; resizeRow->baseCorner = BaseCorner::Left;
-                auto toggle = MakeCheckbox("Resize", GetBool("resize", false));
-                toggle->layout->minWidth = 70; toggle->layout->maxWidth = 70;
-                toggle->onToggleByUser = [weakThis](bool value) { if (auto self = weakThis.Lock()) { self->SetBool("resize", value, true); self->UpdateAssetInfo(); } };
-                resizeRow->AddChild(toggle);
-                auto w = MakeEditBox(GetString("resizeW", ""), false, "width");
-                w->SetFilterInteger();
-                w->onChangeCompleted = [weakThis](const WString& t) { if (auto self = weakThis.Lock()) { self->SetNumber("resizeW", (float)atoi(((String)t).Data()), true); self->UpdateAssetInfo(); } };
-                resizeRow->AddChild(w);
-                auto h = MakeEditBox(GetString("resizeH", ""), false, "height");
-                h->SetFilterInteger();
-                h->onChangeCompleted = [weakThis](const WString& t) { if (auto self = weakThis.Lock()) { self->SetNumber("resizeH", (float)atoi(((String)t).Data()), true); self->UpdateAssetInfo(); } };
-                resizeRow->AddChild(h);
+                mResizeToggle = MakeCheckbox("Resize", GetBool("resize", false));
+                mResizeToggle->name = "resize";
+                mResizeToggle->layout->minWidth = 80; mResizeToggle->layout->maxWidth = 80;
+                mResizeToggle->onToggleByUser = [weakThis](bool value) { if (auto self = weakThis.Lock()) self->OnResizeToggled(value); };
+                resizeRow->AddChild(mResizeToggle);
+
+                mResizeW = MakeEditBox("", false, "width");
+                mResizeW->name = "resize width";
+                mResizeW->SetFilterInteger();
+                mResizeW->onChangeCompleted = [weakThis](const WString& t) { if (auto self = weakThis.Lock()) self->OnResizeEdited(true, atoi(((String)t).Data())); };
+                resizeRow->AddChild(mResizeW);
+
+                mLockButton = MakeIconButton("ui/pipeline/btn_link.png", accentColor, Color4(0, 0, 0, 0));
+                mLockButton->name = "lock aspect";
+                mLockButton->layout->minWidth = 22; mLockButton->layout->maxWidth = 22;
+                mLockButton->onClick = [weakThis]()
+                {
+                    if (auto self = weakThis.Lock())
+                    {
+                        self->SetBool("lockAspect", !self->GetBool("lockAspect", true), true);
+                        self->UpdateResizeFields();
+                    }
+                };
+                resizeRow->AddChild(mLockButton);
+
+                mResizeH = MakeEditBox("", false, "height");
+                mResizeH->name = "resize height";
+                mResizeH->SetFilterInteger();
+                mResizeH->onChangeCompleted = [weakThis](const WString& t) { if (auto self = weakThis.Lock()) self->OnResizeEdited(false, atoi(((String)t).Data())); };
+                resizeRow->AddChild(mResizeH);
                 AddRow(resizeRow, 22);
             }
 
@@ -172,15 +191,111 @@ namespace Editor
             UpdateAssetInfo();
         }
 
+        bool SaveToAssets() override
+        {
+            auto editor = mEditor.Lock();
+            if (!editor || !GetInput("in").IsValid())
+                return false;
+
+            editor->SaveFinishOutput(mNode->id);
+            return true;
+        }
+
         void OnConfigChanged() override
         {
-            String assetPath = GetString("assetPath", "Generated/output");
+            String assetPath = PipelineNodeRegistry::GetFinishAssetPath(*mNode);
             if (mFolderEdit) mFolderEdit->SetText(FolderOf(assetPath));
             if (mNameEdit) mNameEdit->SetText(NameOf(assetPath));
+            if (mResizeToggle) mResizeToggle->SetValue(GetBool("resize", false));
             UpdateAssetInfo();
         }
 
     private:
+        Ref<Toggle>  mResizeToggle; // Rescales the saved image
+        Ref<EditBox> mResizeW;      // Target width; the size it has while resizing is off
+        Ref<EditBox> mResizeH;      // Target height; the size it has while resizing is off
+        Ref<Button>  mLockButton;   // Keeps the aspect ratio while editing one side
+
+        // Size of what reaches the node, after its crop; zero while nothing is connected
+        Vec2I GetSourceSize() const
+        {
+            if (!mCropEditor || !mCropEditor->HasImage())
+                return Vec2I();
+
+            Vec2I size = mCropEditor->GetImageSize();
+            PipelineImageOps::CropRect crop;
+            if (GetBool("cropEnabled", false) && ReadNodeCrop(*mNode, "crop", crop))
+                size = Vec2I(Math::Max(1, (int)Math::Round(size.x*crop.w)), Math::Max(1, (int)Math::Round(size.y*crop.h)));
+
+            return size;
+        }
+
+        void OnResizeToggled(bool on)
+        {
+            // Turned on, the fields start from the size the image has
+            Vec2I size = GetSourceSize();
+            if (on && GetNumber("resizeW", 0) <= 0 && size.x > 0)
+                mNode->SetConfigNumber("resizeW", (float)size.x);
+            if (on && GetNumber("resizeH", 0) <= 0 && size.y > 0)
+                mNode->SetConfigNumber("resizeH", (float)size.y);
+
+            SetBool("resize", on, true);
+            UpdateAssetInfo();
+        }
+
+        void OnResizeEdited(bool width, int value)
+        {
+            // Typing a size while resizing is off asks for it
+            if (!GetBool("resize", false))
+            {
+                mNode->SetConfigBool("resize", true);
+                mResizeToggle->SetValue(true);
+            }
+
+            value = Math::Max(value, 1);
+            Vec2I size = GetSourceSize();
+            bool lock = GetBool("lockAspect", true) && size.x > 0 && size.y > 0;
+            if (width)
+            {
+                mNode->SetConfigNumber("resizeW", (float)value);
+                if (lock)
+                    mNode->SetConfigNumber("resizeH", (float)Math::Max(1, (int)Math::Round(value*(float)size.y/size.x)));
+                SetNumber("resizeW", (float)value, true);
+            }
+            else
+            {
+                mNode->SetConfigNumber("resizeH", (float)value);
+                if (lock)
+                    mNode->SetConfigNumber("resizeW", (float)Math::Max(1, (int)Math::Round(value*(float)size.x/size.y)));
+                SetNumber("resizeH", (float)value, true);
+            }
+
+            UpdateAssetInfo();
+        }
+
+        void UpdateResizeFields()
+        {
+            if (!mResizeW)
+                return;
+
+            // Resizing off, the fields show the size the image is saved with
+            bool on = GetBool("resize", false);
+            Vec2I size = GetSourceSize();
+            auto show = [&](const Ref<EditBox>& edit, float configured, int natural)
+            {
+                int value = on && configured > 0 ? (int)configured : natural;
+                if (!edit->IsFocused())
+                    edit->SetText(value > 0 ? (String)value : String());
+                edit->transparency = on ? 1.0f : 0.55f;
+            };
+            show(mResizeW, GetNumber("resizeW", 0), size.x);
+            show(mResizeH, GetNumber("resizeH", 0), size.y);
+
+            bool lock = GetBool("lockAspect", true);
+            mLockButton->interactable = on;
+            mLockButton->transparency = !on ? 0.3f : lock ? 1.0f : 0.5f;
+        }
+
         String       mExtension;   // File extension of the result kind
         Ref<EditBox> mFolderEdit;  // Folder inside Assets
         Ref<EditBox> mNameEdit;    // File name without the extension
@@ -268,6 +383,8 @@ namespace Editor
                 else if (value.IsValid())
                     size = (String)(value.data.Length() / 1024) + " KB";
             }
+
+            UpdateResizeFields();
 
             String state = exists ? "Saved" : "Not saved yet";
             mStatusLabel->text = size.IsEmpty() ? state : state + " - " + size;

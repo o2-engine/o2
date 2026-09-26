@@ -41,10 +41,8 @@
 #include "o2Editor/Windows/PipelineWindow/PipelineControls.h"
 #include "o2Editor/Windows/PipelineWindow/PipelineEditor.h"
 #include "o2Editor/Windows/PipelineWindow/PipelineMediaViews.h"
-#include "o2Editor/Windows/PipelineWindow/PipelineNodePalette.h"
 #include "o2Editor/Windows/PipelineWindow/PipelineNodeWidget.h"
 #include "o2Editor/Windows/PipelineWindow/PipelinePaintEditor.h"
-#include "o2Editor/Windows/PipelineWindow/PipelineSettingsDlg.h"
 #include "o2Editor/Windows/PipelineWindow/PipelineWindow.h"
 #include "o2Editor/Dialogs/YesNoCancelDlg.h"
 #include "o2Editor/Windows/DockWindowPlace.h"
@@ -855,78 +853,6 @@ TEST_F(PipelineUiFixture, AddNodeMenuCarriesNodeIcons)
     UiDriver::Step(2);
 }
 
-TEST_F(PipelineUiFixture, NodePaletteSearchesAndDropsTheNodeInTheViewCentre)
-{
-    PipelineGraph graph;
-    graph.SaveToAsset(*asset);
-    editor->SetAsset(asset);
-    UiDriver::Step(3);
-    editor->SetView(Vec2F(400, -300), 1.0f);
-    UiDriver::Step(3);
-
-    Ref<PipelineNodePalette> palette;
-    {
-        PushEditorScopeOnStack scope;
-        palette = mmake<PipelineNodePalette>();
-        *palette->layout = WidgetLayout::VerStretch(HorAlign::Left, 4, 4, 300, 4);
-        palette->onPick = [&](const String& type) { editor->AddNodeAtViewCenter(type); };
-        EditorUIRoot.AddWidget(palette);
-    }
-    UiDriver::Step(3);
-
-    // Everything the registry knows is browsable, grouped by category
-    EXPECT_EQ(palette->GetShownTypes().Count(), PipelineNodeRegistry::AllSchemas().Count());
-
-    auto filter = palette->FindChildByTypeAndName<EditBox>("filter");
-    ASSERT_TRUE(filter);
-    filter->SetText("extract");
-    UiDriver::Step(2);
-    auto found = palette->GetShownTypes();
-    EXPECT_TRUE(found.Contains("imageExtract")) << found.Count();
-    EXPECT_FALSE(found.Contains("sourceText"));
-
-    String dir = ScreenshotDir();
-    o2FileSystem.FolderCreate(dir, true);
-    EXPECT_TRUE(UiDriver::Screenshot(dir + "/pipeline_palette.png"));
-
-    // A category tab narrows the browse without a query
-    filter->SetText("");
-    auto sources = palette->FindChildByTypeAndName<Toggle>("Source");
-    ASSERT_TRUE(sources);
-    sources->SetValue(true);
-    sources->onToggleByUser(true);
-    UiDriver::Step(2);
-    for (auto& type : palette->GetShownTypes())
-        EXPECT_EQ(PipelineNodeRegistry::GetSchema(type)->category, PipelineNodeCategory::Source) << type;
-
-    // A click puts the node in the middle of the view and selects it
-    auto entry = palette->FindChildByTypeAndName<Button>("sourceImage");
-    ASSERT_TRUE(entry);
-    UiDriver::Press(entry->layout->GetWorldRect().Center());
-    UiDriver::Release();
-    UiDriver::Step(2);
-
-    auto nodes = editor->GetGraph()->nodes;
-    ASSERT_EQ(nodes.Count(), 1);
-    EXPECT_EQ(nodes[0]->nodeType, "sourceImage");
-    Vec2F centre = editor->GetVisibleCanvasRect().Center();
-    auto card = editor->GetNodeWidget(nodes[0]->id);
-    ASSERT_TRUE(card);
-    EXPECT_NEAR(card->GetCardRect().Center().x, centre.x, 60.0f);
-    EXPECT_NEAR(card->GetCardRect().Center().y, centre.y, 90.0f);
-    EXPECT_TRUE(card->IsSelected());
-
-    // The same node again steps aside instead of stacking exactly on top
-    UiDriver::Press(entry->layout->GetWorldRect().Center());
-    UiDriver::Release();
-    UiDriver::Step(2);
-    ASSERT_EQ(editor->GetGraph()->nodes.Count(), 2);
-    EXPECT_NE(editor->GetGraph()->nodes[0]->position, editor->GetGraph()->nodes[1]->position);
-
-    EditorUIRoot.RemoveWidget(palette);
-    UiDriver::Step();
-}
-
 // An imported extract node whose prompt is long non-ASCII text: its port name must stay readable text
 TEST_F(PipelineUiFixture, ExtractCardBuildsWithALongCyrillicPartName)
 {
@@ -1054,17 +980,236 @@ TEST_F(PipelineUiFixture, ParameterListFoldsAndUnfolds)
 
     auto head = card->FindChildByTypeAndName<Button>("params");
     ASSERT_TRUE(head);
-    head->onClick();
-    UiDriver::Step(3);
+    // The fold row starts at the left edge of the other rows, the arrow at its very start
+    auto prompt = card->FindChildByType<EditBox>();
+    ASSERT_TRUE(prompt);
+    EXPECT_NEAR(head->layout->GetWorldRect().left, prompt->layout->GetWorldRect().left, 0.5f);
+    auto arrow = head->GetLayerDrawable<PipelineFoldArrow>("icon");
+    ASSERT_TRUE(arrow);
+    EXPECT_NEAR(arrow->GetRect().left, head->layout->GetWorldRect().left, 0.5f);
+    EXPECT_FLOAT_EQ(arrow->open, 0.0f);
 
+    String dir = ScreenshotDir();
+    o2FileSystem.FolderCreate(dir, true);
+    editor->SetView(card->GetCardRect().Center(), 1.0f);
+    UiDriver::Step(2);
+
+    // Opening slides the rows in: the card grows over a few frames and the arrow turns with it
+    head->onClick();
+    UiDriver::Step(4);
+    EXPECT_TRUE(UiDriver::Screenshot(dir + "/pipeline_params_sliding.png"));
     card = editor->GetNodeWidget(gen->id);
     ASSERT_TRUE(card);
     EXPECT_TRUE(Live(gen)->GetConfigBool("paramsOpen", false));
     EXPECT_TRUE(card->FindChildByTypeAndName<DropDown>("model"));
-    EXPECT_GT(card->GetCardRect().Height(), folded + 40.0f);
+    EXPECT_TRUE(card->IsParamsAnimating());
+    float sliding = card->GetCardRect().Height();
+    EXPECT_GT(sliding, folded);
+    arrow = card->FindChildByTypeAndName<Button>("params")->GetLayerDrawable<PipelineFoldArrow>("icon");
+    EXPECT_GT(arrow->open, 0.0f);
+    EXPECT_LT(arrow->open, 1.0f);
+
+    UiDriver::Step(20);
+    EXPECT_FALSE(card->IsParamsAnimating());
+    float open = card->GetCardRect().Height();
+    EXPECT_GT(open, sliding);
+    EXPECT_GT(open, folded + 40.0f);
+    EXPECT_FLOAT_EQ(arrow->open, 1.0f);
+
+    EXPECT_TRUE(UiDriver::Screenshot(dir + "/pipeline_params_open.png"));
+
+    // Closing slides the rows away first and drops them once the list is shut
+    card->FindChildByTypeAndName<Button>("params")->onClick();
+    EXPECT_FALSE(Live(gen)->GetConfigBool("paramsOpen", true));
+    UiDriver::Step(2);
+    EXPECT_TRUE(card->FindChildByTypeAndName<DropDown>("model"));
+    EXPECT_LT(card->GetCardRect().Height(), open);
+    UiDriver::Step(20);
+    EXPECT_FALSE(card->IsParamsAnimating());
+    EXPECT_FALSE(card->FindChildByTypeAndName<DropDown>("model"));
+    EXPECT_NEAR(card->GetCardRect().Height(), folded, 0.5f);
+    EXPECT_TRUE(UiDriver::Screenshot(dir + "/pipeline_params_closed.png"));
 
     // The fold is a view setting: it must not change what the node computes
     EXPECT_EQ(PipelineGraph::ComputeNodeSignature(*Live(gen), {}, {}, -1), PipelineGraph::ComputeNodeSignature(*gen, {}, {}, -1));
+}
+
+// A dragged card lands on the grid points; the other selected cards keep their distance to it
+TEST_F(PipelineUiFixture, DraggedCardsSnapToTheGrid)
+{
+    PipelineGraph graph;
+    auto a = AddNode(graph, "sourceText", Vec2F(0, 0));
+    auto b = AddNode(graph, "sourceText", Vec2F(400, 7));
+    graph.SaveToAsset(*asset);
+    editor->SetAsset(asset);
+    UiDriver::Step(2);
+
+    editor->SelectNodes({ a->id, b->id });
+    auto card = editor->GetNodeWidget(a->id);
+    editor->OnNodeDragged(card, PipelineEditor::NodeToCanvas(Vec2F(33, 51)));
+    EXPECT_EQ(Live(a)->position, Vec2F(40, 60));
+    EXPECT_EQ(Live(b)->position, Vec2F(440, 67));
+
+    // Within the same cell nothing moves
+    editor->OnNodeDragged(card, PipelineEditor::NodeToCanvas(Vec2F(46, 55)));
+    EXPECT_EQ(Live(a)->position, Vec2F(40, 60));
+    editor->OnNodeDragCompleted(card);
+}
+
+// Zoomed in, the interface is never drawn larger than four times its size
+TEST_F(PipelineUiFixture, ZoomStopsAtFourTimesTheNaturalSize)
+{
+    editor->SetView(Vec2F(), 0.05f);
+    EXPECT_NEAR(editor->GetCamera().GetScale().x, 0.25f, 0.0001f);
+}
+
+// AssetsLine keeps the only part of an extract node as the node's result: the parts grid shows it
+TEST_F(PipelineUiFixture, TheOnlyPartOfAnExtractNodeShowsItsResult)
+{
+    PipelineGraph graph;
+    graph.id = "single-part-test";
+    auto ex = AddNode(graph, "imageExtract", Vec2F(0, 0));
+    ASSERT_EQ(ex->outputs.Count(), 1);
+    PipelineUtils::WriteFileBytes(PipelineExecutor::GetPreviewPath(graph.id, ex->id, "png"),
+                                  PipelineValue::Image(PipelineImageOps::Blank(8, 8, Color4(200, 0, 0, 255))).GetPngBytes());
+    graph.SaveToAsset(*asset);
+    editor->SetAsset(asset);
+    UiDriver::Step(2);
+
+    auto rt = editor->GetRuntime(ex->id);
+    ASSERT_TRUE(rt);
+    PipelineValue part;
+    ASSERT_TRUE(rt->portOutputs.TryGetValue(ex->outputs[0].id, part));
+    EXPECT_TRUE(part.IsImage());
+    o2FileSystem.FolderRemove(PipelineExecutor::GetCachePath(graph.id), true);
+}
+
+namespace
+{
+    // A source image of the size and colour; the upload lives in the test work folder
+    Ref<PipelineNode> AddUploadedImage(PipelineGraph& graph, const Vec2I& size, const Color4& color)
+    {
+        String uploadId = "ui-test-" + (String)size.x + "x" + (String)size.y + ".png";
+        PipelineUtils::WriteFileBytes(PipelineUtils::GetUploadPath(uploadId),
+                                      PipelineValue::Image(PipelineImageOps::Blank(size.x, size.y, color)).GetPngBytes());
+        auto source = AddNode(graph, "sourceImage", Vec2F(0, 0));
+        source->SetConfigString("uploadId", uploadId);
+        return source;
+    }
+}
+
+// The resize fields show the size the image is saved with; turned on they start from it and keep its aspect
+TEST_F(PipelineUiFixture, FinishResizeStartsFromTheImageSize)
+{
+    PipelineGraph graph;
+    auto source = AddUploadedImage(graph, Vec2I(64, 32), Color4(0, 120, 200, 255));
+    auto finish = AddNode(graph, "finishImage", Vec2F(400, 0));
+    Connect(graph, source, "out", finish, "in");
+    graph.SaveToAsset(*asset);
+    editor->SetAsset(asset);
+    UiDriver::Step(3);
+
+    auto card = editor->GetNodeWidget(finish->id);
+    auto toggle = card->FindChildByTypeAndName<Toggle>("resize");
+    auto width = card->FindChildByTypeAndName<EditBox>("resize width");
+    auto height = card->FindChildByTypeAndName<EditBox>("resize height");
+    ASSERT_TRUE(toggle && width && height);
+    EXPECT_GE(toggle->layout->GetWidth(), 80.0f) << "the caption is cut";
+    EXPECT_EQ((String)width->GetText(), "64");
+    EXPECT_EQ((String)height->GetText(), "32");
+    EXPECT_LT(width->GetTransparency(), 1.0f) << "dimmed while resizing is off";
+
+    toggle->SetValue(true);
+    toggle->onToggleByUser(true);
+    EXPECT_EQ(Live(finish)->GetConfigNumber("resizeW", 0), 64.0f);
+    EXPECT_EQ(Live(finish)->GetConfigNumber("resizeH", 0), 32.0f);
+
+    card = editor->GetNodeWidget(finish->id);
+    width = card->FindChildByTypeAndName<EditBox>("resize width");
+    width->SetText("128");
+    width->onChangeCompleted(width->GetText());
+    EXPECT_EQ(Live(finish)->GetConfigNumber("resizeH", 0), 64.0f);
+
+    // Typing a size with resizing off turns it on
+    Live(finish)->SetConfigBool("resize", false);
+    height = editor->GetNodeWidget(finish->id)->FindChildByTypeAndName<EditBox>("resize height");
+    height->SetText("16");
+    height->onChangeCompleted(height->GetText());
+    EXPECT_TRUE(Live(finish)->GetConfigBool("resize", false));
+    EXPECT_EQ(Live(finish)->GetConfigNumber("resizeW", 0), 32.0f);
+}
+
+// "Save all" writes what each finish node receives, without running anything that would generate
+TEST_F(PipelineUiFixture, SaveAllWritesWhatTheFinishNodesReceive)
+{
+    PipelineGraph graph;
+    auto source = AddUploadedImage(graph, Vec2I(16, 16), Color4(10, 200, 10, 255));
+    auto finish = AddNode(graph, "finishImage", Vec2F(400, 0));
+    finish->SetConfigString("assetPath", "SaveAllTest/picture");
+    Connect(graph, source, "out", finish, "in");
+    auto idle = AddNode(graph, "finishImage", Vec2F(400, 300));
+    idle->SetConfigString("assetPath", "SaveAllTest/nothing");
+    graph.SaveToAsset(*asset);
+    editor->SetAsset(asset);
+    UiDriver::Step(3);
+
+    String assets = PipelineUtils::GetWorkPath() + "save-all-assets/";
+    o2FileSystem.FolderRemove(assets, true);
+    editor->GetExecutor()->assetsPathOverride = assets;
+    editor->SaveAllOutputs();
+    UiDriver::Wait(1.0f);
+    EXPECT_FALSE(editor->IsRunning());
+    EXPECT_TRUE(o2FileSystem.IsFileExist(assets + "SaveAllTest/picture.png"));
+    EXPECT_FALSE(o2FileSystem.IsFileExist(assets + "SaveAllTest/nothing.png"));
+    editor->GetExecutor()->assetsPathOverride = "";
+    o2FileSystem.FolderRemove(assets, true);
+}
+
+// A node generated again keeps its signature: the effects after it re-apply from the picture it shows now,
+// not from what they stored for the old one
+TEST_F(PipelineUiFixture, EffectsFollowANodeGeneratedAgain)
+{
+    PipelineGraph graph;
+    auto gen = AddNode(graph, "nanoBananaGen", Vec2F(0, 0));
+    gen->SetConfigString("prompt", "a square");
+    auto color = AddNode(graph, "imageColor", Vec2F(400, 0));
+    Connect(graph, gen, "out", color, "image");
+    graph.SaveToAsset(*asset);
+    editor->SetAsset(asset);
+    UiDriver::Step(3);
+    String id = editor->GetPipelineId();
+
+    // What a generation of the node leaves behind; running it then is served from there without a provider
+    auto generate = [&](const Color4& c)
+    {
+        auto live = editor->GetGraph();
+        auto node = live->FindNode(gen->id);
+        auto sigs = live->ComputeSignatures();
+        String sig = PipelineExecutor::ContentSignature(*node, live->UpstreamSignatures(*node, sigs), live->ResolveSeeds()[gen->id]);
+        PipelineExecutor::SaveContent(id, sig, PipelineValue::Image(PipelineImageOps::Blank(8, 8, c)));
+        PipelineExecutor::MarkRan(id, sigs[gen->id]);
+        editor->RunNode(gen->id, false);
+        UiDriver::Wait(1.0f);
+        ASSERT_FALSE(editor->IsRunning());
+    };
+
+    auto shown = [&]()
+    {
+        auto rt = editor->GetRuntime(color->id);
+        auto bitmap = rt && rt->output.IsImage() ? rt->output.GetBitmap() : nullptr;
+        if (!bitmap)
+            return Color4(0, 0, 0, 0);
+
+        const UInt8* p = PipelineImageOps::Pixel(*bitmap, 4, 4);
+        return Color4(p[0], p[1], p[2], p[3]);
+    };
+
+    generate(Color4(220, 20, 20, 255));
+    EXPECT_GT(shown().r, 150);
+
+    generate(Color4(20, 20, 220, 255));
+    EXPECT_GT(shown().b, 150) << "the effect kept what it made from the old picture";
+    EXPECT_LT(shown().r, 100);
 }
 
 // The parts of an extract node are cells of a grid: clicking one selects it, its name is edited in place
@@ -1153,7 +1298,8 @@ TEST_F(PipelineUiFixture, ExtractPartsGridSelectsAndRenames)
     EXPECT_FALSE(Live(extract)->outputs.Any([](const PipelinePort& p) { return p.id == "p1"; }));
 }
 
-TEST_F(PipelineUiFixture, PipelineWindowOpensThePaletteAndAddsWhatItPicks)
+// The header holds the toolbar and the AssetsLine state; nodes are added from the canvas menu only
+TEST_F(PipelineUiFixture, PipelineWindowHeaderHasTheToolbarAndTheSyncState)
 {
     Ref<PipelineWindow> window;
     {
@@ -1163,23 +1309,23 @@ TEST_F(PipelineUiFixture, PipelineWindowOpensThePaletteAndAddsWhatItPicks)
     window->EditAsset(AssetRef<Asset>(mmake<PipelineAsset>()));
     UiDriver::Step(2);
 
-    ASSERT_TRUE(window->GetPalette());
-    EXPECT_FALSE(window->GetPalette()->IsEnabled());
+    auto wnd = window->GetWindow();
+    for (auto name : { "run all", "stop", "fit", "import", "settings", "save all" })
+        EXPECT_TRUE(wnd->FindChild(name)) << name;
+    EXPECT_FALSE(wnd->FindChild("palette"));
+    EXPECT_FALSE(wnd->FindChild("node palette"));
 
-    window->SetPaletteOpened(true);
-    UiDriver::Step(2);
-    EXPECT_TRUE(window->GetPalette()->IsEnabled());
+    // The gear opens the settings and carries the state of the AssetsLine link; no caption beside it
+    EXPECT_FALSE(wnd->FindChild("assetsline"));
+    auto settings = DynamicCast<Button>(wnd->FindChild("settings"));
+    ASSERT_TRUE(settings);
+    EXPECT_TRUE(settings->GetLayer("status dot"));
 
-    window->GetPalette()->onPick("sourceText");
-    UiDriver::Step(2);
-    auto graph = window->GetEditor()->GetGraph();
-    ASSERT_TRUE(graph);
-    ASSERT_EQ(graph->nodes.Count(), 1);
-    EXPECT_EQ(graph->nodes[0]->nodeType, "sourceText");
-
-    window->SetPaletteOpened(false);
-    UiDriver::Step();
-    EXPECT_FALSE(window->GetPalette()->IsEnabled());
+    *wnd->layout = WidgetLayout::Based(BaseCorner::Center, Vec2F(900, 400));
+    UiDriver::Step(3);
+    String dir = ScreenshotDir();
+    o2FileSystem.FolderCreate(dir, true);
+    EXPECT_TRUE(UiDriver::Screenshot(dir + "/pipeline_window_header.png"));
 }
 
 // Screenshots of the Gemini showcase asset with its cached results (PIPELINE_SHOWCASE=1)
@@ -1194,7 +1340,7 @@ TEST_F(PipelineUiFixture, GeminiShowcaseScreenshots)
     AssetRef<PipelineAsset> showcase(assetPath);
     asset = showcase;
     ASSERT_TRUE(asset);
-    ASSERT_TRUE(asset->document.FindMember("graph") != nullptr);
+    ASSERT_TRUE(asset->document.FindMember("graph") != nullptr || asset->document.FindMember("nodes") != nullptr);
 
     editor->SetAsset(asset);
     ASSERT_GT(editor->GetGraph()->nodes.Count(), 10);
@@ -1962,27 +2108,6 @@ TEST_F(PipelineUiFixture, RightButtonPansOverCardsAndClicksOpenTheCardMenu)
     o2Input.OnAltCursorReleased();
     UiDriver::Step(3);
     EXPECT_TRUE(card->IsSelected());
-}
-
-// The settings dialog is tall enough for its fields and the buttons below them
-TEST_F(PipelineUiFixture, SettingsDialogFitsItsButtons)
-{
-    PipelineSettingsDlg::Show();
-    UiDriver::Step(5);
-    auto& dlg = PipelineSettingsDlg::Instance();
-    auto window = dlg.GetWindow();
-    ASSERT_TRUE(window);
-    auto save = window->FindChildByTypeAndName<Button>("Save");
-    ASSERT_TRUE(save);
-    RectF windowRect = window->layout->GetWorldRect();
-    RectF saveRect = save->layout->GetWorldRect();
-    // The view area ends 5 units above the window bottom
-    EXPECT_GE(saveRect.bottom, windowRect.bottom + 5.0f);
-    EXPECT_LE(saveRect.top, windowRect.top);
-    String dir = ScreenshotDir();
-    o2FileSystem.FolderCreate(dir, true);
-    EXPECT_TRUE(UiDriver::Screenshot(dir + "/pipeline_settings.png"));
-    window->Hide(true);
 }
 
 // A second right click while the add menu is still open refills it in place; every category keeps all its nodes

@@ -71,6 +71,45 @@ namespace Editor
         CLONEABLE_REF(PipelinePortMarker);
     };
 
+    // ---------------------------------------------------------------------------------
+    // Fold arrow of a collapsible row: a triangle pointing right when closed, turning to
+    // point down as it opens
+    // ---------------------------------------------------------------------------------
+    class PipelineFoldArrow : public IRectDrawable
+    {
+    public:
+        float open = 0.0f; // 0 closed, 1 open; the arrow turns in between @SERIALIZABLE
+
+    public:
+        // Default constructor
+        PipelineFoldArrow() = default;
+
+        // Copy-constructor
+        PipelineFoldArrow(const PipelineFoldArrow& other);
+
+        // Draws the triangle centred in the rectangle, turned by the open amount
+        void Draw() override;
+
+        SERIALIZABLE(PipelineFoldArrow);
+        CLONEABLE_REF(PipelineFoldArrow);
+    };
+
+    // -------------------------------------------------------------
+    // Container that clips its children to its rectangle, for rows
+    // that slide open
+    // -------------------------------------------------------------
+    class PipelineClipBox : public Widget
+    {
+    public:
+        // Default constructor
+        explicit PipelineClipBox(RefCounter* refCounter);
+
+        // Draws the children clipped to the rectangle
+        void Draw() override;
+
+        SERIALIZABLE(PipelineClipBox);
+    };
+
     // ----------------------------------------
     // Factory helpers for the pipeline widgets
     // ----------------------------------------
@@ -344,6 +383,42 @@ CLASS_METHODS_META(Editor::PipelinePortMarker)
 
     FUNCTION().PUBLIC().CONSTRUCTOR();
     FUNCTION().PUBLIC().CONSTRUCTOR(const PipelinePortMarker&);
+    FUNCTION().PUBLIC().SIGNATURE(void, Draw);
+}
+END_META;
+
+CLASS_BASES_META(Editor::PipelineFoldArrow)
+{
+    BASE_CLASS(o2::IRectDrawable);
+}
+END_META;
+CLASS_FIELDS_META(Editor::PipelineFoldArrow)
+{
+    FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(0.0f).NAME(open);
+}
+END_META;
+CLASS_METHODS_META(Editor::PipelineFoldArrow)
+{
+
+    FUNCTION().PUBLIC().CONSTRUCTOR();
+    FUNCTION().PUBLIC().CONSTRUCTOR(const PipelineFoldArrow&);
+    FUNCTION().PUBLIC().SIGNATURE(void, Draw);
+}
+END_META;
+
+CLASS_BASES_META(Editor::PipelineClipBox)
+{
+    BASE_CLASS(o2::Widget);
+}
+END_META;
+CLASS_FIELDS_META(Editor::PipelineClipBox)
+{
+}
+END_META;
+CLASS_METHODS_META(Editor::PipelineClipBox)
+{
+
+    FUNCTION().PUBLIC().CONSTRUCTOR(RefCounter*);
     FUNCTION().PUBLIC().SIGNATURE(void, Draw);
 }
 END_META;

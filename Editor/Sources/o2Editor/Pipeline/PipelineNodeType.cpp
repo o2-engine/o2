@@ -156,6 +156,26 @@ namespace Editor
     {
         return type == "finishText" || type == "finishImage" || type == "finishVideo" || type == "finishAudio";
     }
+
+    String PipelineNodeRegistry::GetFinishAssetPath(const PipelineNode& node)
+    {
+        String path = node.GetConfigString("assetPath", "").Trimed(" \n\r\t");
+        if (!path.IsEmpty())
+            return path;
+
+        // A pipeline made in the AssetsLine web editor names the download, not an asset
+        String name = node.GetConfigString("filename", "").Trimed(" \n\r\t");
+        name.ReplaceAll("\\", "/");
+        int slash = name.FindLast("/");
+        if (slash >= 0)
+            name = name.SubStr(slash + 1);
+
+        int dot = name.FindLast(".");
+        if (dot > 0)
+            name = name.SubStr(0, dot);
+
+        return "Generated/" + (name.IsEmpty() ? String("output") : name);
+    }
 }
 // --- META ---
 

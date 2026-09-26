@@ -33,6 +33,7 @@ namespace Editor
         String           name;                              // Display name, run-time inputs are keyed by it @SERIALIZABLE
         PipelinePortType portType = PipelinePortType::Text; // Kind of data the port carries @SERIALIZABLE
         bool             custom = false;                    // True for user-added inputs stored in node config @SERIALIZABLE
+        String           color;                             // Colour override the web editor may store, kept as is @SERIALIZABLE
 
     public:
         // Default constructor
@@ -62,6 +63,7 @@ namespace Editor
         Vector<PipelinePort> outputs; // Output ports @SERIALIZABLE
 
         DataDocument config; // Node parameters; serialized by hand in OnSerialize and OnDeserialized
+        DataDocument extra;  // Members of the stored node this editor does not use, written back untouched
 
     public:
         // Default constructor
@@ -127,6 +129,16 @@ namespace Editor
         // Rebuilds the input ports: fixed ports first (keeping ids of existing ones), custom inputs after them
         void RegenerateInputs(const Vector<PipelinePort>& fixedInputs);
 
+        // Rewrites the port ids the config refers to after the ports got new ids (a copy): custom inputs,
+        // Composer layers (keyed by input port, duplicates get new ids) and AI extract regions (one per output)
+        void RemapConfigPortIds(const Map<String, String>& portIdMap);
+
+        // Reads the node from its AssetsLine JSON form; returns false when id or type is missing
+        bool LoadFromJson(const DataValue& json);
+
+        // Writes the node in its AssetsLine JSON form
+        void SaveToJson(DataValue& json) const;
+
         SERIALIZABLE(PipelineNode);
         CLONEABLE_REF(PipelineNode);
 
@@ -152,6 +164,8 @@ namespace Editor
 
         Vector<Vec2F> points; // Bend points in world space, source to target @SERIALIZABLE
 
+        DataDocument extra; // Members of the stored edge this editor does not use, written back untouched
+
     public:
         // Default constructor
         PipelineEdge();
@@ -165,23 +179,34 @@ namespace Editor
         // Copy-constructor with ref counter
         PipelineEdge(RefCounter* refCounter, const PipelineEdge& other);
 
+        // Reads the edge from its AssetsLine JSON form; returns false when an endpoint is missing
+        bool LoadFromJson(const DataValue& json);
+
+        // Writes the edge in its AssetsLine JSON form
+        void SaveToJson(DataValue& json) const;
+
         SERIALIZABLE(PipelineEdge);
         CLONEABLE_REF(PipelineEdge);
     };
 
-    // -----------------------------------------------
-    // Whole pipeline: nodes, edges and the saved view
-    // -----------------------------------------------
+    // ----------------------------------------------------------------------
+    // Whole pipeline: nodes, edges and the saved view. Stored in the AssetsLine
+    // pipeline format (the JSON the AssetsLine web editor and server keep), so a
+    // .pipeline asset is the same document a linked AssetsLine project holds
+    // ----------------------------------------------------------------------
     class PipelineGraph : public ISerializable
     {
     public:
-        String id; // Key of the results cache, kept across save-as and copies; empty until the editor adopts one @SERIALIZABLE
+        String id;   // Pipeline id: identity in a linked AssetsLine project and key of the results cache @SERIALIZABLE
+        String name; // Pipeline name; the asset's file name when stored as an asset @SERIALIZABLE
 
         Vector<Ref<PipelineNode>> nodes; // All nodes @SERIALIZABLE
         Vector<Ref<PipelineEdge>> edges; // All edges @SERIALIZABLE
 
         Vec2F cameraPosition;     // Saved editor view position @SERIALIZABLE
         float cameraScale = 1.0f; // Saved editor view scale @SERIALIZABLE
+
+        DataDocument extra; // Top-level members this editor does not use (annotations, icon...), written back untouched
 
     public:
         // Default constructor
@@ -190,11 +215,31 @@ namespace Editor
         // Copy-constructor, deep copies nodes and edges
         PipelineGraph(const PipelineGraph& other);
 
-        // Reads the graph from the "graph" member of the asset document; a missing member gives an empty graph
+        // Reads the graph from the asset document: the AssetsLine format, or the older o2 one ({"graph": ...})
         void LoadFromAsset(const PipelineAsset& asset);
 
-        // Writes the graph into the "graph" member of the asset document
+        // Writes the graph into the asset document in the AssetsLine format
         void SaveToAsset(PipelineAsset& asset) const;
+
+        // Reads an AssetsLine pipeline document; returns false when the value is not one
+        bool LoadFromJson(const DataValue& json);
+
+        // Writes the graph as an AssetsLine pipeline document
+        void SaveToJson(DataValue& json) const;
+
+        // Parses AssetsLine pipeline JSON text; returns false when it is not one
+        bool LoadFromJsonString(const String& text);
+
+        // Returns the AssetsLine pipeline document as JSON text
+        String ToJsonString() const;
+
+        // Returns true when the document is in the older o2 format: {"graph": {...}}
+        static bool IsLegacyDocument(const DataValue& document);
+
+        // Viewport the saved camera is expressed for. AssetsLine keeps the view as a screen
+        // offset and a zoom, the editor as a centre and a scale; this fixed size converts
+        // between them the same way in both directions
+        static Vec2F GetNominalViewSize();
 
         // Assign operator, deep copies nodes and edges
         PipelineGraph& operator=(const PipelineGraph& other);
@@ -284,6 +329,7 @@ CLASS_FIELDS_META(Editor::PipelinePort)
     FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().NAME(name);
     FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(PipelinePortType::Text).NAME(portType);
     FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(false).NAME(custom);
+    FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().NAME(color);
 }
 END_META;
 CLASS_METHODS_META(Editor::PipelinePort)
@@ -310,10 +356,13 @@ CLASS_FIELDS_META(Editor::PipelineNode)
     FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().NAME(inputs);
     FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().NAME(outputs);
     FIELD().PUBLIC().NAME(config);
+    FIELD().PUBLIC().NAME(extra);
 }
 END_META;
 CLASS_METHODS_META(Editor::PipelineNode)
 {
+
+    typedef const Map<String, String>& _tmp1;
 
     FUNCTION().PUBLIC().CONSTRUCTOR();
     FUNCTION().PUBLIC().CONSTRUCTOR(RefCounter*);
@@ -335,6 +384,9 @@ CLASS_METHODS_META(Editor::PipelineNode)
     FUNCTION().PUBLIC().SIGNATURE(Vector<PipelinePort>, GetCustomInputs);
     FUNCTION().PUBLIC().SIGNATURE(void, SetCustomInputs, const Vector<PipelinePort>&);
     FUNCTION().PUBLIC().SIGNATURE(void, RegenerateInputs, const Vector<PipelinePort>&);
+    FUNCTION().PUBLIC().SIGNATURE(void, RemapConfigPortIds, _tmp1);
+    FUNCTION().PUBLIC().SIGNATURE(bool, LoadFromJson, const DataValue&);
+    FUNCTION().PUBLIC().SIGNATURE(void, SaveToJson, DataValue&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnSerialize, DataValue&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnDeserialized, const DataValue&);
 }
@@ -355,6 +407,7 @@ CLASS_FIELDS_META(Editor::PipelineEdge)
     FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().NAME(toNodeId);
     FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().NAME(toPortId);
     FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().NAME(points);
+    FIELD().PUBLIC().NAME(extra);
 }
 END_META;
 CLASS_METHODS_META(Editor::PipelineEdge)
@@ -364,6 +417,8 @@ CLASS_METHODS_META(Editor::PipelineEdge)
     FUNCTION().PUBLIC().CONSTRUCTOR(RefCounter*);
     FUNCTION().PUBLIC().CONSTRUCTOR(const PipelineEdge&);
     FUNCTION().PUBLIC().CONSTRUCTOR(RefCounter*, const PipelineEdge&);
+    FUNCTION().PUBLIC().SIGNATURE(bool, LoadFromJson, const DataValue&);
+    FUNCTION().PUBLIC().SIGNATURE(void, SaveToJson, DataValue&);
 }
 END_META;
 
@@ -375,10 +430,12 @@ END_META;
 CLASS_FIELDS_META(Editor::PipelineGraph)
 {
     FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().NAME(id);
+    FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().NAME(name);
     FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().NAME(nodes);
     FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().NAME(edges);
     FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().NAME(cameraPosition);
     FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(1.0f).NAME(cameraScale);
+    FIELD().PUBLIC().NAME(extra);
 }
 END_META;
 CLASS_METHODS_META(Editor::PipelineGraph)
@@ -395,6 +452,12 @@ CLASS_METHODS_META(Editor::PipelineGraph)
     FUNCTION().PUBLIC().CONSTRUCTOR(const PipelineGraph&);
     FUNCTION().PUBLIC().SIGNATURE(void, LoadFromAsset, const PipelineAsset&);
     FUNCTION().PUBLIC().SIGNATURE(void, SaveToAsset, PipelineAsset&);
+    FUNCTION().PUBLIC().SIGNATURE(bool, LoadFromJson, const DataValue&);
+    FUNCTION().PUBLIC().SIGNATURE(void, SaveToJson, DataValue&);
+    FUNCTION().PUBLIC().SIGNATURE(bool, LoadFromJsonString, const String&);
+    FUNCTION().PUBLIC().SIGNATURE(String, ToJsonString);
+    FUNCTION().PUBLIC().SIGNATURE_STATIC(bool, IsLegacyDocument, const DataValue&);
+    FUNCTION().PUBLIC().SIGNATURE_STATIC(Vec2F, GetNominalViewSize);
     FUNCTION().PUBLIC().SIGNATURE(Ref<PipelineNode>, FindNode, const String&);
     FUNCTION().PUBLIC().SIGNATURE(Ref<PipelineEdge>, FindEdge, const String&);
     FUNCTION().PUBLIC().SIGNATURE(Vector<Ref<PipelineEdge>>, GetIncomingEdges, const String&);

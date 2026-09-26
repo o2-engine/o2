@@ -122,6 +122,7 @@ extern void __RegisterClass__o2__VectorFontAsset__Meta();
 extern void __RegisterClass__o2__VertexShaderAsset();
 extern void __RegisterClass__o2__VertexShaderAsset__Meta();
 extern void __RegisterClass__o2__VideoAsset();
+extern void __RegisterClass__o2__AssetsLineConfig();
 extern void __RegisterClass__o2__Physics3DConfig();
 extern void __RegisterClass__o2__PhysicsConfig();
 extern void __RegisterClass__o2__ProjectConfig();
@@ -422,6 +423,7 @@ extern void InitializeTypeso2Framework()
     __RegisterClass__o2__VertexShaderAsset();
     __RegisterClass__o2__VertexShaderAsset__Meta();
     __RegisterClass__o2__VideoAsset();
+    __RegisterClass__o2__AssetsLineConfig();
     __RegisterClass__o2__Physics3DConfig();
     __RegisterClass__o2__PhysicsConfig();
     __RegisterClass__o2__ProjectConfig();

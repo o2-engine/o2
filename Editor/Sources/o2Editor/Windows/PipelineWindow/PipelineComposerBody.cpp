@@ -894,8 +894,13 @@ namespace Editor
             mSaveInfo->text = "Assets/" + (folder.IsEmpty() ? String() : folder + "/") + LayersName() + "_<layer>.png";
         }
 
-        // Writes every layer as its own PNG asset, the way a finish node writes its result
-        void SaveLayersToAssets()
+        bool SaveToAssets() override
+        {
+            return SaveLayersToAssets() > 0;
+        }
+
+        // Writes every layer as its own PNG asset, the way a finish node writes its result; returns how many were written
+        int SaveLayersToAssets()
         {
             String folder = LayersFolder();
             String dir = o2Assets.GetAssetsPath() + (folder.IsEmpty() ? String() : folder + "/");
@@ -924,6 +929,8 @@ namespace Editor
 
             if (mSaveInfo)
                 mSaveInfo->text = saved > 0 ? (String)saved + " layers saved to Assets/" + folder : String("Nothing to save - connect image layers");
+
+            return saved;
         }
     };
 

@@ -93,7 +93,7 @@ namespace o2
 
     bool ProjectConfig::IsDefault() const
     {
-        return physics == PhysicsConfig() && mProjectName.IsEmpty();
+        return physics == PhysicsConfig() && mProjectName.IsEmpty() && assetsLine == AssetsLineConfig();
     }
 }
 // --- META ---

@@ -13,10 +13,11 @@
 #include "o2/Scene/UI/Widgets/Label.h"
 #include "o2/Scene/UI/Widgets/VerticalScrollBar.h"
 #include "o2/Utils/Debug/Debug.h"
+#include "o2Editor/Pipeline/Sync/AssetsLineSync.h"
+#include "o2Editor/Windows/PipelineWindow/AssetsLineDlg.h"
 #include "o2Editor/Dialogs/System/OpenSaveDialog.h"
 #include "o2Editor/EditorConfig.h"
 #include "o2Editor/Pipeline/PipelineImport.h"
-#include "o2Editor/Windows/PipelineWindow/PipelineSettingsDlg.h"
 
 DECLARE_SINGLETON(Editor::PipelineWindow);
 
@@ -50,7 +51,7 @@ namespace Editor
         mWindow->caption = "Pipeline";
         mWindow->name = "pipeline window";
         mWindow->SetIcon(mmake<Sprite>("ui/pipeline/window_icon.png"));
-        mWindow->SetIconLayout(Layout::Based(BaseCorner::LeftTop, Vec2F(20, 20), Vec2F(-1, 2)));
+        mWindow->SetIconLayout(Layout::Based(BaseCorner::LeftTop, Vec2F(20, 20), Vec2F(-1, 1)));
 
         mRunAllButton = o2UI.CreateWidget<Button>("menu pipeline run");
         mRunAllButton->name = "run all";
@@ -67,20 +68,10 @@ namespace Editor
         mFitButton->onClick = [this]() { mEditor->FitView(); };
         mButtonsPanel->AddChild(mFitButton);
 
-        mPaletteButton = o2UI.CreateWidget<Button>("menu pipeline add");
-        mPaletteButton->name = "palette";
-        mPaletteButton->onClick = [this]() { SetPaletteOpened(!mPalette->IsEnabled()); };
-        mButtonsPanel->AddChild(mPaletteButton);
-
         mImportButton = o2UI.CreateWidget<Button>("menu pipeline import");
         mImportButton->name = "import";
         mImportButton->onClick = THIS_FUNC(OnImportPressed);
         mButtonsPanel->AddChild(mImportButton);
-
-        mSettingsButton = o2UI.CreateWidget<Button>("menu pipeline settings");
-        mSettingsButton->name = "settings";
-        mSettingsButton->onClick = THIS_FUNC(OnSettingsPressed);
-        mButtonsPanel->AddChild(mSettingsButton);
 
         mStatusLabel = o2UI.CreateLabel("");
         mStatusLabel->name = "status";
@@ -88,6 +79,24 @@ namespace Editor
         mStatusLabel->horOverflow = Label::HorOverflow::Dots;
         mStatusLabel->layout->minWidth = 200;
         mUpPanel->AddChild(mStatusLabel);
+
+        mSaveAllButton = o2UI.CreateWidget<Button>("menu pipeline save");
+        mSaveAllButton->name = "save all";
+        mSaveAllButton->onClick = [this]() { mEditor->SaveAllOutputs(); };
+        mSaveAllButton->layout->minWidth = 24;
+        mSaveAllButton->layout->maxWidth = 24;
+        mUpPanel->AddChild(mSaveAllButton);
+
+        // Provider keys and the AssetsLine link share one window; the dot on the gear is the state of the link
+        mSettingsButton = o2UI.CreateWidget<Button>("menu pipeline settings");
+        mSettingsButton->name = "settings";
+        mSettingsButton->onClick = THIS_FUNC(OnSettingsPressed);
+        mSettingsButton->layout->minWidth = 24;
+        mSettingsButton->layout->maxWidth = 24;
+        mSyncDot.hideWhenOff = true;
+        mSyncDot.Attach(mSettingsButton, Vec2F(1.0f, 0.0f), Vec2F(-5.0f, 5.0f), 7.0f);
+        mUpPanel->AddChild(mSettingsButton);
+        AttachSync();
 
         mEditor = mmake<PipelineEditor>();
         *mEditor->layout = WidgetLayout::BothStretch(0, 0, 0, 20);
@@ -99,13 +108,6 @@ namespace Editor
         };
         mWindow->AddChild(mEditor);
 
-        mPalette = mmake<PipelineNodePalette>();
-        mPalette->name = "node palette";
-        *mPalette->layout = WidgetLayout::VerStretch(HorAlign::Left, 4, 24, 300, 4);
-        mPalette->enabled = false;
-        mPalette->onPick = [this](const String& type) { mEditor->AddNodeAtViewCenter(type); };
-        mWindow->AddChild(mPalette);
-
         auto horScroll = o2UI.CreateHorScrollBar();
         *horScroll->layout = WidgetLayout::HorStretch(VerAlign::Bottom, 5, 15, 10);
         mEditor->SetHorScrollbar(horScroll);
@@ -113,13 +115,6 @@ namespace Editor
         auto verScroll = o2UI.CreateVerScrollBar();
         *verScroll->layout = WidgetLayout::VerStretch(HorAlign::Right, 5, 15, 10);
         mEditor->SetVerScrollbar(verScroll);
-    }
-
-    void PipelineWindow::SetPaletteOpened(bool opened)
-    {
-        mPalette->enabled = opened;
-        if (opened)
-            mPalette->Reset();
     }
 
     String PipelineWindow::GetWindowTitle() const
@@ -153,7 +148,96 @@ namespace Editor
 
     void PipelineWindow::OnAssetSaved()
     {
-        mStatusLabel->text = "Saved";
+        if (AssetsLineSync::IsSingletonInitialzed())
+            o2AssetsLineSync.NotifyLocalChange();
+    }
+
+    void PipelineWindow::AttachSync()
+    {
+        if (!AssetsLineSync::IsSingletonInitialzed())
+            return;
+
+        auto& sync = o2AssetsLineSync;
+        mAttachedSync = &sync;
+        sync.isPipelineFileBusy = [this](const String& path)
+        {
+            auto asset = mEditingAsset.Lock();
+            return asset && asset->GetPath() == path && asset->IsDirty();
+        };
+        sync.onPipelineFileChanged = [this](const String& path)
+        {
+            auto asset = mEditingAsset.Lock();
+            if (asset && asset->GetPath() == path)
+                mReloadPending = true;
+        };
+        sync.onResultsChanged = [this](const String& pipelineId)
+        {
+            if (mEditor && mEditor->GetAsset() && mEditor->GetPipelineId() == pipelineId)
+                mEditor->ReloadResults();
+        };
+    }
+
+    bool PipelineWindow::IsSyncedPath(const String& path) const
+    {
+        String folder = o2AssetsLineSync.GetConfig().folder.Trimed(" /\\");
+        return folder.IsEmpty() || path.StartsWith(folder + "/");
+    }
+
+    void PipelineWindow::UpdateSync(float dt)
+    {
+        if (!AssetsLineSync::IsSingletonInitialzed())
+            return;
+
+        auto& sync = o2AssetsLineSync;
+        if (mAttachedSync != &sync)
+            AttachSync();
+
+        mSyncDot.Update(dt, sync.GetStatus());
+
+        // A synced pipeline saves itself shortly after an edit, like the web editor does
+        auto asset = DynamicCast<PipelineAsset>(mEditingAsset.Lock());
+        bool synced = sync.GetConfig().enabled && sync.IsConnected() && asset && !asset->GetPath().IsEmpty() &&
+            IsSyncedPath(asset->GetPath());
+        if (synced && asset->IsDirty())
+        {
+            mUnsavedTime += dt;
+            if (mUnsavedTime > 1.0f)
+            {
+                mUnsavedTime = 0.0f;
+                SaveEditingAsset();
+            }
+        }
+        else
+            mUnsavedTime = 0.0f;
+
+        if (mReloadPending && !sync.IsBusy())
+        {
+            mReloadPending = false;
+            ReloadFromDisk();
+        }
+    }
+
+    void PipelineWindow::ReloadFromDisk()
+    {
+        auto asset = DynamicCast<PipelineAsset>(mEditingAsset.Lock());
+        if (!asset || asset->IsDirty())
+            return;
+
+        // Renamed by the sync: the asset lives under its new path now
+        String path = o2Assets.GetAssetPath(asset->GetUID());
+        if (!path.IsEmpty() && path != asset->GetPath())
+        {
+            OpenAsset(AssetRef<Asset>(AssetRef<PipelineAsset>(path)));
+            return;
+        }
+
+        DataDocument doc;
+        if (!doc.LoadFromFile(o2Assets.GetAssetsPath() + asset->GetPath()))
+            return;
+
+        asset->document = doc;
+        mEditor->ReloadGraph();
+        mStatusLabel->text = "Updated from AssetsLine";
     }
 
     void PipelineWindow::Update(float dt)
@@ -163,6 +247,7 @@ namespace Editor
 
         bool running = mEditor && mEditor->IsRunning();
         mStopButton->interactable = running;
+        UpdateSync(dt);
 
         if (!mAutoImport.IsEmpty())
         {
@@ -227,7 +312,7 @@ namespace Editor
 
     void PipelineWindow::OnSettingsPressed()
     {
-        PipelineSettingsDlg::Show();
+        AssetsLineDlg::Show();
     }
 }
 // --- META ---

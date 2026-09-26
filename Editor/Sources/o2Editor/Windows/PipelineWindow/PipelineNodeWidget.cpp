@@ -26,6 +26,7 @@ namespace Editor
     const float PipelineNodeWidget::defaultWidth = 260.0f;
     const float PipelineNodeWidget::minWidth = 180.0f;
     const float PipelineNodeWidget::minHeight = 80.0f;
+    const float PipelineNodeWidget::paramsSlideTime = 0.16f;
     static const int farUpdateFrames = 3;
     static const float cornerRadius = 6.0f;
     static const float outlineWidth = 2.0f;
@@ -196,7 +197,8 @@ namespace Editor
         mRetryLabel->enabled = false;
         AddChild(mRetryLabel);
 
-        mAddInputButton = o2UI.CreateWidget<Button>("add small");
+        // Only the click area: the button is drawn with the ports, over the card frame
+        mAddInputButton = mmake<Button>();
         mAddInputButton->name = "add input";
         mAddInputButton->onClick = THIS_FUNC(OnAddInputPressed);
         mAddInputButton->enabled = false;
@@ -649,7 +651,48 @@ namespace Editor
         if (mCulled)
             return;
 
+        UpdateParamsSlide(dt);
         Widget::Update(dt);
+    }
+
+    void PipelineNodeWidget::AnimateParams(bool open)
+    {
+        if (!IsParamsAnimating())
+            mParamsProgress = open ? 0.0f : 1.0f;
+
+        mParamsOpening = open;
+    }
+
+    bool PipelineNodeWidget::IsParamsAnimating() const
+    {
+        return mParamsOpening ? mParamsProgress < 1.0f : mParamsProgress > 0.0f;
+    }
+
+    float PipelineNodeWidget::GetParamsReveal() const
+    {
+        float t = Math::Clamp01(mParamsProgress);
+        return t*t*(3.0f - 2.0f*t);
+    }
+
+    void PipelineNodeWidget::UpdateParamsSlide(float dt)
+    {
+        if (!IsParamsAnimating())
+            return;
+
+        float step = dt/paramsSlideTime;
+        mParamsProgress = Math::Clamp01(mParamsProgress + (mParamsOpening ? step : -step));
+
+        if (!mParamsOpening && !IsParamsAnimating())
+        {
+            Rebuild();
+            UpdateFromNode();
+            return;
+        }
+
+        if (mBody)
+            mBody->UpdateParamsSlide();
+
+        UpdateFromNode();
     }
 
     void PipelineNodeWidget::UpdateChildren(float dt)
@@ -735,6 +778,20 @@ namespace Editor
         };
         draw(mInputs);
         draw(mOutputs);
+
+        if (mAddInputButton->enabled)
+        {
+            float cy = headerHeight + padTop + (mInputs.Count() + 0.5f)*portRow;
+            Vec2F center(rect.left, rect.top - cy);
+            float r = portRadius;
+            Color4 color = mAddInputButton->IsPressed() ? Color4(0, 121, 107, 255) : Color4(0, 150, 136, 255);
+            o2Render.DrawFilledCircle(center, r, color, 24);
+            o2Render.DrawAACircle(center, r, color, 24, 1.0f, LineType::Solid, false);
+            float arm = r*0.55f;
+            float thickness = Math::Max(r*0.28f, 1.0f);
+            o2Render.DrawAALine(center - Vec2F(arm, 0), center + Vec2F(arm, 0), Color4::White(), thickness, LineType::Solid, false);
+            o2Render.DrawAALine(center - Vec2F(0, arm), center + Vec2F(0, arm), Color4::White(), thickness, LineType::Solid, false);
+        }
     }
 
     void PipelineNodeWidget::OnDragged(const Vec2F& position)

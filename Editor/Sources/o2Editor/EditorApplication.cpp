@@ -7,6 +7,8 @@
 #include "o2/Application/Input.h"
 #include "o2/Assets/Assets.h"
 #include "o2/Config/ProjectConfig.h"
+#include "o2Editor/Pipeline/Sync/AssetsLineSync.h"
+#include "o2Editor/Windows/PipelineWindow/AssetsLineDlg.h"
 #include "o2/Events/EventSystem.h"
 #include "o2/Render/Render.h"
 #include "o2/Scene/Actor.h"
@@ -185,6 +187,8 @@ namespace Editor
 
         mConfig = mmake<EditorConfig>();
         mConfig->LoadConfigs();
+
+        mAssetsLineSync = mmake<AssetsLineSync>();
 
         String lastLoadedScene = o2EditorConfig.projectConfig.lastLoadedScene;
         String lastPipeline = o2EditorConfig.projectConfig.lastPipelineAsset;
@@ -403,6 +407,7 @@ namespace Editor
 
     void EditorApplication::OnClosing()
     {
+        mAssetsLineSync = nullptr;
         mConfig = nullptr;
         mWindowsManager = nullptr;
         mSceneWindow = nullptr;
@@ -628,6 +633,9 @@ namespace Editor
         mWindowsManager->Update(dt);
         mUIRoot->Update(dt);
         mToolsPanel->Update(dt);
+        mAssetsLineSync->Update(dt);
+        if (AssetsLineDlg::IsSingletonInitialzed())
+            AssetsLineDlg::Instance().Update(dt);
 
         // Native title updates are synchronous; refresh diagnostics at 4 Hz.
         mCaptionUpdateTime += dt;
@@ -642,9 +650,6 @@ namespace Editor
                 " Cursor: " + (String)o2Input.GetCursorPos() +
                 " JS: " + (String)(o2Scripts.GetUsedMemory() / 1024) + "kb";
         }
-
-        if (o2Input.IsKeyPressed('K'))
-            o2Memory.DumpInfo();
 
 #if defined(TRACY_ENABLE)
         TracyPlot("FPS", o2Time.GetFPS());

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "o2/Config/AssetsLineConfig.h"
 #include "o2/Config/PhysicsConfig.h"
 #include "o2/Config/Physics3DConfig.h"
 #include "o2/Utils/Property.h"
@@ -29,6 +30,8 @@ namespace o2
         PhysicsConfig physics; // Physics world config @SERIALIZABLE
 
         Physics3DConfig physics3D; // 3D physics world config @SERIALIZABLE
+
+        AssetsLineConfig assetsLine; // Link to an AssetsLine project the pipelines sync with @SERIALIZABLE
 
     public:
         // Default constructor
@@ -101,6 +104,7 @@ CLASS_FIELDS_META(o2::ProjectConfig)
     FIELD().PUBLIC().NAME(currentPlatform);
     FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().NAME(physics);
     FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().NAME(physics3D);
+    FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().NAME(assetsLine);
     FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().NAME(mProjectName);
     FIELD().PROTECTED().NAME(mPlatform);
     FIELD().PROTECTED().NAME(mLoadedState);

@@ -21,45 +21,6 @@ namespace Editor
             return String(value->GetString());
         }
 
-        static float NumberOf(DataValue* value, float def = 0.0f)
-        {
-            return value ? PipelineUtils::ValueToNumber(*value, def) : def;
-        }
-
-        static Vec2F PointOf(DataValue* value)
-        {
-            if (!value || !value->IsObject())
-                return Vec2F();
-
-            return Vec2F(NumberOf(value->FindMember("x")), NumberOf(value->FindMember("y")));
-        }
-
-        static Vector<PipelinePort> PortsOf(DataValue* value)
-        {
-            Vector<PipelinePort> ports;
-            if (!value || !value->IsArray())
-                return ports;
-
-            for (int i = 0; i < value->GetElementsCount(); i++)
-            {
-                auto& port = value->GetElement(i);
-                if (!port.IsObject())
-                    continue;
-
-                bool custom = false;
-                if (auto flag = port.FindMember("custom"))
-                {
-                    if (flag->IsBoolean())
-                        flag->Get(custom);
-                }
-
-                ports.Add(PipelinePort(StringOf(port.FindMember("id")), StringOf(port.FindMember("name")),
-                                       PipelinePortTypeFromString(StringOf(port.FindMember("type"), "text")), custom));
-            }
-
-            return ports;
-        }
-
         static PipelinePortType MediaTypeOf(const String& mediaType)
         {
             if (mediaType == "image") return PipelinePortType::Image;
@@ -134,71 +95,16 @@ namespace Editor
 
             auto nodes = pipeline->FindMember("nodes");
             auto edges = pipeline->FindMember("edges");
-            if (!nodes || !nodes->IsArray() || !edges || !edges->IsArray())
+            if (!nodes || !nodes->IsArray() || !edges || !edges->IsArray() || !bundle.graph.LoadFromJson(*pipeline))
             {
                 bundle.error = "missing nodes or edges";
                 return bundle;
             }
 
-            bundle.name = StringOf(pipeline->FindMember("name"));
-            for (int i = 0; i < nodes->GetElementsCount(); i++)
-            {
-                auto& value = nodes->GetElement(i);
-                if (!value.IsObject())
-                    continue;
-
-                auto node = mmake<PipelineNode>();
-                node->id = StringOf(value.FindMember("id"));
-                node->nodeType = StringOf(value.FindMember("type"));
-                node->position = PointOf(value.FindMember("position"));
-                if (auto size = value.FindMember("size"))
-                {
-                    if (size->IsObject())
-                        node->size = Vec2F(NumberOf(size->FindMember("width")), NumberOf(size->FindMember("height")));
-                }
-
-                node->config.Clear();
-                if (auto config = value.FindMember("config"))
-                    node->config = *config;
-
-                if (!node->config.IsObject())
-                    node->config.SetObject();
-
-                node->inputs = PortsOf(value.FindMember("inputs"));
-                node->outputs = PortsOf(value.FindMember("outputs"));
-                if (node->id.IsEmpty() || node->nodeType.IsEmpty())
-                    continue;
-
-                bundle.graph.nodes.Add(node);
-            }
-
-            for (int i = 0; i < edges->GetElementsCount(); i++)
-            {
-                auto& value = edges->GetElement(i);
-                if (!value.IsObject())
-                    continue;
-
-                auto edge = mmake<PipelineEdge>();
-                edge->id = StringOf(value.FindMember("id"));
-                edge->fromNodeId = StringOf(value.FindMember("fromNodeId"));
-                edge->fromPortId = StringOf(value.FindMember("fromPortId"));
-                edge->toNodeId = StringOf(value.FindMember("toNodeId"));
-                edge->toPortId = StringOf(value.FindMember("toPortId"));
-                if (auto points = value.FindMember("points"))
-                {
-                    if (points->IsArray())
-                    {
-                        for (int k = 0; k < points->GetElementsCount(); k++)
-                            edge->points.Add(PointOf(&points->GetElement(k)));
-                    }
-                }
-
-                if (edge->id.IsEmpty())
-                    edge->id = PipelineNode::GenerateId();
-
-                if (bundle.graph.FindNode(edge->fromNodeId) && bundle.graph.FindNode(edge->toNodeId))
-                    bundle.graph.edges.Add(edge);
-            }
+            // The store's bookkeeping belongs to where the pipeline came from, not to the copy
+            bundle.name = bundle.graph.name;
+            bundle.graph.extra.RemoveMember("rev");
+            bundle.graph.extra.RemoveMember("updatedAt");
 
             if (auto results = doc.FindMember("results"))
             {

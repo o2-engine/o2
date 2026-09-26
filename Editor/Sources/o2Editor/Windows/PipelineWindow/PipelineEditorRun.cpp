@@ -141,6 +141,16 @@ namespace Editor
         mExecutor->Execute(GetPipelineId(), *graph, targetId, bypass, cachedOnly);
     }
 
+    void PipelineEditor::StartSingleRun(const String& nodeId)
+    {
+        auto graph = GetGraph();
+        if (!graph || IsRunning())
+            return;
+
+        mRunTarget = nodeId;
+        mExecutor->ExecuteSingle(GetPipelineId(), *graph, nodeId);
+    }
+
     void PipelineEditor::RunNode(const String& nodeId, bool bypassSelf)
     {
         if (IsRunning())
@@ -188,9 +198,34 @@ namespace Editor
             RunNode(id, false);
     }
 
+    void PipelineEditor::SaveAllOutputs()
+    {
+        auto graph = GetGraph();
+        if (!graph)
+            return;
+
+        int count = 0;
+        for (auto& widget : mNodeWidgets)
+        {
+            auto body = widget->GetBody();
+            if (body && body->SaveToAssets())
+                count++;
+        }
+
+        if (onLog)
+            onLog(count > 0 ? "Saving " + (String)count + " results to Assets" : String("Nothing to save: no finish or composer node has a result"));
+    }
+
+    void PipelineEditor::SaveFinishOutput(const String& nodeId)
+    {
+        if (!mSaveQueue.Contains(nodeId))
+            mSaveQueue.Add(nodeId);
+    }
+
     void PipelineEditor::StopRun()
     {
         mRunQueue.Clear();
+        mSaveQueue.Clear();
         mAutoApplyQueue.Clear();
         if (mExecutor)
             mExecutor->Cancel();

@@ -57,6 +57,7 @@ namespace Editor
         static const float defaultWidth;  // Card width when neither the node nor the schema sets one
         static const float minWidth;      // Smallest card width
         static const float minHeight;     // Smallest card height
+        static const float paramsSlideTime; // Seconds the parameter list takes to slide open or closed
 
         // ----------------------------------------------------------
         // Port view: port data, its layers and custom input controls
@@ -157,11 +158,23 @@ namespace Editor
         // Returns the body height the current node type wants
         float GetBodyHeight() const;
 
+        // Returns the type-specific body, null for a type without one
+        const Ref<PipelineNodeBody>& GetBody() const { return mBody; }
+
         // Returns the card height fitting the header, the port rows and the body
         float GetAutoHeight() const;
 
         // Returns the height of the port rows, including the add-input row
         float GetPortsHeight() const;
+
+        // Slides the parameter list open or closed; the body keeps the rows until it has closed
+        void AnimateParams(bool open);
+
+        // Returns true while the parameter list slides
+        bool IsParamsAnimating() const;
+
+        // Returns how far the sliding parameter list is open, 0..1, eased
+        float GetParamsReveal() const;
 
         // Notifies the body that the node output changed
         void OnOutputChanged();
@@ -183,6 +196,9 @@ namespace Editor
 
         // Updates the card unless it is culled
         void Update(float dt) override;
+
+        // Moves the parameter list slide on and lays the card out for it; rebuilds the body once it has closed
+        void UpdateParamsSlide(float dt);
 
         // Updates the children unless the card is culled; without details the body updates for a few frames after a change
         void UpdateChildren(float dt) override;
@@ -213,6 +229,8 @@ namespace Editor
         bool                      mCulled = false;   // True when the card is outside the view
         bool                      mDetailed = true;  // False when the view is zoomed too far out for the controls
         int                       mFarUpdateFrames = 0; // Frames the body still updates without details; layout and content changes reset it
+        float                     mParamsProgress = 1.0f;  // Linear progress of the parameter list slide, 0 closed .. 1 open
+        bool                      mParamsOpening = true;   // Direction of the parameter list slide
 
         Ref<WidgetLayer>      mTitleLayer;     // Title text layer
         Ref<WidgetLayer>      mIconLayer;      // Node type icon layer
@@ -308,6 +326,8 @@ CLASS_FIELDS_META(Editor::PipelineNodeWidget)
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mCulled);
     FIELD().PROTECTED().DEFAULT_VALUE(true).NAME(mDetailed);
     FIELD().PROTECTED().DEFAULT_VALUE(0).NAME(mFarUpdateFrames);
+    FIELD().PROTECTED().DEFAULT_VALUE(1.0f).NAME(mParamsProgress);
+    FIELD().PROTECTED().DEFAULT_VALUE(true).NAME(mParamsOpening);
     FIELD().PROTECTED().NAME(mTitleLayer);
     FIELD().PROTECTED().NAME(mIconLayer);
     FIELD().PROTECTED().NAME(mPlayButton);
@@ -347,8 +367,12 @@ CLASS_METHODS_META(Editor::PipelineNodeWidget)
     FUNCTION().PUBLIC().SIGNATURE(bool, IsSelected);
     FUNCTION().PUBLIC().SIGNATURE(void, ApplyRuntime);
     FUNCTION().PUBLIC().SIGNATURE(float, GetBodyHeight);
+    FUNCTION().PUBLIC().SIGNATURE(const Ref<PipelineNodeBody>&, GetBody);
     FUNCTION().PUBLIC().SIGNATURE(float, GetAutoHeight);
     FUNCTION().PUBLIC().SIGNATURE(float, GetPortsHeight);
+    FUNCTION().PUBLIC().SIGNATURE(void, AnimateParams, bool);
+    FUNCTION().PUBLIC().SIGNATURE(bool, IsParamsAnimating);
+    FUNCTION().PUBLIC().SIGNATURE(float, GetParamsReveal);
     FUNCTION().PUBLIC().SIGNATURE(void, OnOutputChanged);
     FUNCTION().PUBLIC().SIGNATURE(void, OnConfigChanged);
     FUNCTION().PUBLIC().SIGNATURE(void, SetCulled, bool);
@@ -356,6 +380,7 @@ CLASS_METHODS_META(Editor::PipelineNodeWidget)
     FUNCTION().PUBLIC().SIGNATURE(void, SetDetailed, bool);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsDetailed);
     FUNCTION().PUBLIC().SIGNATURE(void, Update, float);
+    FUNCTION().PUBLIC().SIGNATURE(void, UpdateParamsSlide, float);
     FUNCTION().PUBLIC().SIGNATURE(void, UpdateChildren, float);
     FUNCTION().PUBLIC().SIGNATURE(void, Draw);
     FUNCTION().PUBLIC().SIGNATURE(void, DrawPorts);

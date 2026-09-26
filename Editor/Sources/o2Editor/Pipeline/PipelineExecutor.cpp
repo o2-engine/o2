@@ -60,6 +60,20 @@ namespace Editor
         return GetCachePath(pipelineId) + "content/" + sig + "." + ext;
     }
 
+    String PipelineExecutor::ContentSignature(const PipelineNode& node, const Map<String, String>& upstreamSigs, int seed,
+                                              const String& portId /*= ""*/)
+    {
+        if (!portId.IsEmpty())
+            return PipelineGraph::ComputePortSignature(node, upstreamSigs, seed, portId);
+
+        bool chroma = PipelineTransparency::UsesChromaPostStep(node);
+        Vector<String> exclude = { "crop", "cropEnabled" };
+        if (chroma)
+            exclude.Add(PipelineTransparency::ChromaConfigKeys());
+
+        return PipelineGraph::ComputeNodeSignature(node, upstreamSigs, exclude, seed, chroma ? "chroma-raw" : "");
+    }
+
     String PipelineExecutor::GetRanMarkerPath(const String& pipelineId, const String& sig)
     {
         return GetCachePath(pipelineId) + "ran/" + sig;
@@ -589,16 +603,14 @@ namespace Editor
         {
             auto& outPort = node->outputs[0];
             bool chroma = PipelineTransparency::UsesChromaPostStep(*node);
-            Vector<String> exclude = { "crop", "cropEnabled" };
-            if (chroma)
-                exclude.Add(PipelineTransparency::ChromaConfigKeys());
-
-            String cacheSig = PipelineGraph::ComputeNodeSignature(*node, upstreamSigs, exclude, nodeSeed, chroma ? "chroma-raw" : "");
+            String cacheSig = ContentSignature(*node, upstreamSigs, nodeSeed);
             if (run->bypass.Contains(nodeId))
                 DeleteContent(run->pipelineId, cacheSig);
 
+            // Cached-only runs still compute what costs nothing: local effects and sources, which only read their file
+            bool free = impl->GetSchema().instant || impl->GetSchema().category == PipelineNodeCategory::Source;
             PipelineValue stored = LoadContent(run->pipelineId, cacheSig, outPort.portType);
-            if (!stored.IsValid() && run->cachedOnly && !impl->GetSchema().instant)
+            if (!stored.IsValid() && run->cachedOnly && !free)
             {
                 // A local node re-applying its settings takes what the provider upstream last rendered
                 lastResult = LoadPreview(run->pipelineId, *node);
@@ -668,7 +680,7 @@ namespace Editor
         }
         else
         {
-            if (run->cachedOnly && !impl->GetSchema().instant && !isFinish)
+            if (run->cachedOnly && !impl->GetSchema().instant && impl->GetSchema().category != PipelineNodeCategory::Source && !isFinish)
             {
                 run->notCached = true;
                 run->visiting.Remove(nodeId);
@@ -758,7 +770,19 @@ namespace Editor
             auto targetPort = node->FindInput(edge->toPortId);
             if (!sourcePort || !targetPort) continue;
 
-            PipelineValue value = LoadValueFile(GetCachePath(run->pipelineId) + "previews/" + source->id, sourcePort->portType);
+            // What the upstream shows: a source reads its file, one part of a multi-output node its own preview
+            PipelineValue value;
+            auto sourceSchema = PipelineNodeRegistry::GetSchema(source->nodeType);
+            if (sourceSchema && sourceSchema->category == PipelineNodeCategory::Source)
+            {
+                String error;
+                ResolveSourceValue(*source, assetsPathOverride.IsEmpty() ? o2Assets.GetAssetsPath() : assetsPathOverride, value, error);
+            }
+            else if (sourceSchema && sourceSchema->perPortRun && source->outputs.Count() > 1)
+                value = LoadPortPreview(run->pipelineId, source->id, sourcePort->id, sourcePort->portType);
+            else
+                value = LoadValueFile(GetCachePath(run->pipelineId) + "previews/" + source->id, sourcePort->portType);
+
             if (!value.IsValid())
             {
                 String err = "Cached output of upstream node " + source->nodeType + " not found - run the full pipeline first";

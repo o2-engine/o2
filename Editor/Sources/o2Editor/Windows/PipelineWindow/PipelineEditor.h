@@ -91,13 +91,16 @@ namespace Editor
         // Converts canvas point (y up) to node position (y down)
         static Vec2F CanvasToNode(const Vec2F& p) { return Vec2F(p.x, -p.y); }
 
+        // Returns the node position rounded to the nearest point of the canvas grid
+        static Vec2F SnapToGrid(const Vec2F& p);
+
         // Returns port and link color for port type
         static Color4 GetPortColor(PipelinePortType type);
 
         // Called when node card is pressed, brings it to front and drops link selection
         void OnNodePressed(const Ref<PipelineNodeWidget>& node);
 
-        // Called when node card is dragged, moves all selected nodes by the same delta
+        // Called when node card is dragged: the card lands on the grid, the other selected cards move by the same delta
         void OnNodeDragged(const Ref<PipelineNodeWidget>& node, const Vec2F& position);
 
         // Called when node drag completed, records the move as one undo step
@@ -139,7 +142,16 @@ namespace Editor
         // Runs every finish node
         void RunAll();
 
-        // Cancels the executor and clears run and auto-apply queues
+        // Returns the executor of the runs
+        const Ref<PipelineExecutor>& GetExecutor() const { return mExecutor; }
+
+        // Saves what every finish and composer node shows into the assets, without generating anything
+        void SaveAllOutputs();
+
+        // Writes what the finish node receives now into its asset, from the results on screen
+        void SaveFinishOutput(const String& nodeId);
+
+        // Cancels the executor and clears the run, save and auto-apply queues
         void StopRun();
 
         // Returns true while the executor is running
@@ -165,6 +177,12 @@ namespace Editor
 
         // Rebuilds all cards from the graph, keeping their runtimes
         void RebuildAll();
+
+        // Reads the graph again from the asset document, keeping the view; the document was changed outside
+        void ReloadGraph();
+
+        // Reads the results and freshness of the nodes again; they were changed outside
+        void ReloadResults();
 
         // Animates the camera to show all cards
         void FitView();
@@ -254,6 +272,7 @@ namespace Editor
 
         Ref<PipelineExecutor> mExecutor;               // Graph executor
         Vector<String>        mRunQueue;               // Nodes waiting to run after the current run
+        Vector<String>        mSaveQueue;              // Finish nodes waiting to save what they receive
         String                mRunTarget;              // Target node of the current run
         bool                  mRunIsAutoApply = false; // True when the current run is an auto-apply
 
@@ -303,6 +322,9 @@ namespace Editor
 
         // Redraws grid, links, cards and bend handles into render target
         void RedrawContent() override;
+
+        // Draws the grid lines at the snapping step with every fifth one stronger, stepping up by five when zoomed out
+        void DrawGrid() override;
 
         // Called when handles selection changed, updates cards selection
         void OnSelectionChanged() override;
@@ -381,6 +403,9 @@ namespace Editor
 
         // Starts execution of target node branch, cachedOnly reuses cached inputs without marking the branch queued
         void StartRun(const String& targetId, const Vector<String>& bypass, bool cachedOnly);
+
+        // Runs one node from the results its inputs show now
+        void StartSingleRun(const String& nodeId);
 
         // Marks target node and its upstream as queued
         void MarkBranchQueued(const String& targetId);
@@ -472,6 +497,7 @@ CLASS_FIELDS_META(Editor::PipelineEditor)
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mBendDragging);
     FIELD().PROTECTED().NAME(mExecutor);
     FIELD().PROTECTED().NAME(mRunQueue);
+    FIELD().PROTECTED().NAME(mSaveQueue);
     FIELD().PROTECTED().NAME(mRunTarget);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mRunIsAutoApply);
     FIELD().PROTECTED().NAME(mAutoApplyQueue);
@@ -503,6 +529,7 @@ CLASS_METHODS_META(Editor::PipelineEditor)
     FUNCTION().PUBLIC().SIGNATURE(void, UpdateSelfTransform);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(Vec2F, NodeToCanvas, const Vec2F&);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(Vec2F, CanvasToNode, const Vec2F&);
+    FUNCTION().PUBLIC().SIGNATURE_STATIC(Vec2F, SnapToGrid, const Vec2F&);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(Color4, GetPortColor, PipelinePortType);
     FUNCTION().PUBLIC().SIGNATURE(void, OnNodePressed, const Ref<PipelineNodeWidget>&);
     FUNCTION().PUBLIC().SIGNATURE(void, OnNodeDragged, const Ref<PipelineNodeWidget>&, const Vec2F&);
@@ -519,6 +546,9 @@ CLASS_METHODS_META(Editor::PipelineEditor)
     FUNCTION().PUBLIC().SIGNATURE(void, RunNode, const String&, bool);
     FUNCTION().PUBLIC().SIGNATURE(void, RunNodePort, const String&, const String&);
     FUNCTION().PUBLIC().SIGNATURE(void, RunAll);
+    FUNCTION().PUBLIC().SIGNATURE(const Ref<PipelineExecutor>&, GetExecutor);
+    FUNCTION().PUBLIC().SIGNATURE(void, SaveAllOutputs);
+    FUNCTION().PUBLIC().SIGNATURE(void, SaveFinishOutput, const String&);
     FUNCTION().PUBLIC().SIGNATURE(void, StopRun);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsRunning);
     FUNCTION().PUBLIC().SIGNATURE(void, ClearNodeResult, const String&);
@@ -528,6 +558,8 @@ CLASS_METHODS_META(Editor::PipelineEditor)
     FUNCTION().PUBLIC().SIGNATURE(PipelineValue, GetInputValueById, const Ref<PipelineNode>&, const String&);
     FUNCTION().PUBLIC().SIGNATURE(Ref<PipelineNode>, AddNodeAtViewCenter, const String&);
     FUNCTION().PUBLIC().SIGNATURE(void, RebuildAll);
+    FUNCTION().PUBLIC().SIGNATURE(void, ReloadGraph);
+    FUNCTION().PUBLIC().SIGNATURE(void, ReloadResults);
     FUNCTION().PUBLIC().SIGNATURE(void, FitView);
     FUNCTION().PUBLIC().SIGNATURE(void, SetView, const Vec2F&, float);
     FUNCTION().PUBLIC().SIGNATURE(void, RestoreGraph, const String&);
@@ -553,6 +585,7 @@ CLASS_METHODS_META(Editor::PipelineEditor)
     FUNCTION().PROTECTED().SIGNATURE(void, OnKeyPressed, const Input::Key&);
     FUNCTION().PROTECTED().SIGNATURE(void, DrawInheritedDepthChildren);
     FUNCTION().PROTECTED().SIGNATURE(void, RedrawContent);
+    FUNCTION().PROTECTED().SIGNATURE(void, DrawGrid);
     FUNCTION().PROTECTED().SIGNATURE(void, OnSelectionChanged);
     FUNCTION().PROTECTED().SIGNATURE(void, DeselectAll);
     FUNCTION().PROTECTED().SIGNATURE(void, InitializeContextMenus);
@@ -579,6 +612,7 @@ CLASS_METHODS_META(Editor::PipelineEditor)
     FUNCTION().PROTECTED().SIGNATURE(void, RefreshNodeWidget, const Ref<PipelineNodeWidget>&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnExecutorEvent, const PipelineExecEvent&);
     FUNCTION().PROTECTED().SIGNATURE(void, StartRun, const String&, const Vector<String>&, bool);
+    FUNCTION().PROTECTED().SIGNATURE(void, StartSingleRun, const String&);
     FUNCTION().PROTECTED().SIGNATURE(void, MarkBranchQueued, const String&);
     FUNCTION().PROTECTED().SIGNATURE(void, ResetTransientStates);
     FUNCTION().PROTECTED().SIGNATURE(void, ScheduleAutoApply, const String&);

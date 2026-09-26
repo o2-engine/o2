@@ -237,7 +237,7 @@ namespace Editor
         for (auto& row : mRows)
         {
             float h = RowHeight(row, rowWidth) + (row.flexible ? bonus : 0.0f);
-            *row.widget->layout = WidgetLayout(Vec2F(0, 1), Vec2F(1, 1), Vec2F(mPadding, -y - h), Vec2F(-mPadding, -y));
+            *row.widget->layout = WidgetLayout(Vec2F(0, 1), Vec2F(1, 1), Vec2F(mPadding, -y - Math::Max(h, 0.0f)), Vec2F(-mPadding, -y));
             y += h + mSpacing;
         }
     }
@@ -356,9 +356,24 @@ namespace Editor
         }
     }
 
+    float PipelineNodeBody::GetParamsReveal() const
+    {
+        auto owner = mOwner.Lock();
+        if (owner && owner->IsParamsAnimating())
+            return owner->GetParamsReveal();
+
+        return GetBool("paramsOpen", false) ? 1.0f : 0.0f;
+    }
+
+    void PipelineNodeBody::UpdateParamsSlide()
+    {
+        if (mParamsArrow)
+            mParamsArrow->open = GetParamsReveal();
+    }
+
     bool PipelineNodeBody::BeginParams(const Vector<String>& names)
     {
-        bool open = GetBool("paramsOpen", false);
+        float reveal = GetParamsReveal();
 
         String caption = "Parameters";
         for (int i = 0; i < names.Count() && i < 4; i++)
@@ -368,13 +383,15 @@ namespace Editor
 
         auto head = o2UI.CreateWidget<Button>("pipeline icon");
         head->name = "params";
-        if (auto icon = head->GetLayerDrawable<Sprite>("icon"))
-        {
-            icon->imageName = open ? "ui/UI4_Down_icn.png" : "ui/UI4_Right_icn.png";
-            icon->color = dimTextColor;
-        }
+        mParamsArrow = mmake<PipelineFoldArrow>();
+        // The dimmed text colour over the card back, opaque
+        mParamsArrow->color = Color4(147, 167, 176, 255);
+        mParamsArrow->open = reveal;
         if (auto iconLayer = head->GetLayer("icon"))
-            iconLayer->layout = Layout::Based(BaseCorner::Left, Vec2F(16, 16), Vec2F(8, 0));
+        {
+            iconLayer->SetDrawable(mParamsArrow);
+            iconLayer->layout = Layout::Based(BaseCorner::Left, Vec2F(10, 10), Vec2F(0, 0));
+        }
 
         auto text = mmake<Text>("stdFont.ttf");
         text->text = caption;
@@ -382,20 +399,28 @@ namespace Editor
         text->verAlign = VerAlign::Middle;
         text->dotsEngings = true;
         text->color = dimTextColor;
-        head->AddLayer("caption", text, Layout::BothStretch(20, 0, 2, 0));
+        head->AddLayer("caption", text, Layout::BothStretch(14, 0, 2, 0));
 
         WeakRef<PipelineNodeBody> weakThis(this);
         head->onClick = [weakThis]()
         {
-            if (auto self = weakThis.Lock())
-            {
-                self->mNode->SetConfigBool("paramsOpen", !self->GetBool("paramsOpen", false));
+            auto self = weakThis.Lock();
+            auto owner = self ? self->mOwner.Lock() : nullptr;
+            if (!owner)
+                return;
+
+            bool open = !self->GetBool("paramsOpen", false);
+            self->mNode->SetConfigBool("paramsOpen", open);
+            owner->AnimateParams(open);
+            // Opening builds the rows now; closing keeps them until the list has slid shut
+            if (open)
                 self->RebuildBody();
-            }
         };
         AddRow(head, 20);
 
-        if (!open)
+        auto owner = mOwner.Lock();
+        bool sliding = owner && owner->IsParamsAnimating();
+        if (!GetBool("paramsOpen", false) && !sliding)
             return false;
 
         auto params = mmake<ParamsList>();
@@ -407,8 +432,21 @@ namespace Editor
         params->list->expandHeight = false;
         params->list->fitByChildren = false;
         params->list->baseCorner = BaseCorner::Top;
-        // The row is registered before its lines exist: the height is read when the body is laid out
-        AddRow(params->list, [params](float) { return params->GetHeight(); });
+
+        auto clip = mmake<PipelineClipBox>();
+        clip->name = "params clip";
+        clip->AddChild(params->list);
+        *params->list->layout = WidgetLayout::BothStretch();
+
+        // The row is registered before its lines exist: the height is read when the body is laid out.
+        // Sliding, the row brings its gap in with it, so a shut list takes no space at all
+        float spacing = mSpacing;
+        AddRow(clip, [params, weakThis, spacing](float)
+        {
+            auto self = weakThis.Lock();
+            float reveal = self ? self->GetParamsReveal() : 1.0f;
+            return (params->GetHeight() + spacing)*reveal - spacing;
+        });
         mParams = params;
         return true;
     }

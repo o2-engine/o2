@@ -82,6 +82,11 @@ namespace Editor
         // Returns the path of the content cached under a node signature
         static String GetContentPath(const String& pipelineId, const String& sig, const String& ext);
 
+        // Returns the content-cache key of a node's generation, before its crop and chroma cut; with a port id,
+        // the key of that part's raw render of a per-port node
+        static String ContentSignature(const PipelineNode& node, const Map<String, String>& upstreamSigs, int seed,
+                                       const String& portId = "");
+
         // Returns the path of the marker recording a successful run of a node signature
         static String GetRanMarkerPath(const String& pipelineId, const String& sig);
 

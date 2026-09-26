@@ -58,6 +58,43 @@ namespace Editor
         o2Render.DrawFilledPolygon(points, mColor);
     }
 
+    PipelineFoldArrow::PipelineFoldArrow(const PipelineFoldArrow& other):
+        IRectDrawable(other), open(other.open)
+    {}
+
+    void PipelineFoldArrow::Draw()
+    {
+        if (!mEnabled || mColor.a == 0)
+            return;
+
+        Basis basis = GetBasis();
+        Vec2F center = basis.origin + (basis.xv + basis.yv)*0.5f;
+        float half = Math::Min(basis.xv.Length(), basis.yv.Length())*0.5f;
+        float angle = -Math::Clamp01(open)*Math::PI()*0.5f;
+        float c = Math::Cos(angle), s = Math::Sin(angle);
+        auto point = [&](float x, float y) { return center + Vec2F(x*c - y*s, x*s + y*c)*half; };
+
+        Vector<Vec2F> points = { point(-0.6f, 0.8f), point(0.6f, 0.0f), point(-0.6f, -0.8f) };
+        o2Render.DrawFilledPolygon(points, mColor);
+        // A hairline around the triangle smooths its edges; an opaque colour keeps them no darker than the fill
+        points.Add(points[0]);
+        o2Render.DrawAALine(points, mColor, 1.0f);
+    }
+
+    PipelineClipBox::PipelineClipBox(RefCounter* refCounter):
+        Widget(refCounter)
+    {}
+
+    void PipelineClipBox::Draw()
+    {
+        if (!mResEnabledInHierarchy || mIsClipped)
+            return;
+
+        o2Render.EnableScissorTest((RectI)layout->GetWorldRect());
+        Widget::Draw();
+        o2Render.DisableScissorTest();
+    }
+
     PipelinePortMarker::PipelinePortMarker(const PipelinePortMarker& other):
         IRectDrawable(other), portType(other.portType)
     {}
@@ -648,6 +685,10 @@ namespace Editor
 DECLARE_CLASS(Editor::PipelineRoundedRect, Editor__PipelineRoundedRect);
 
 DECLARE_CLASS(Editor::PipelinePortMarker, Editor__PipelinePortMarker);
+
+DECLARE_CLASS(Editor::PipelineFoldArrow, Editor__PipelineFoldArrow);
+
+DECLARE_CLASS(Editor::PipelineClipBox, Editor__PipelineClipBox);
 
 DECLARE_CLASS(Editor::PipelineWrapRow, Editor__PipelineWrapRow);
 

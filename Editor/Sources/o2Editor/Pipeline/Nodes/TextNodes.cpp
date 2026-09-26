@@ -9,7 +9,7 @@ namespace Editor
     String WriteFinishAsset(const Ref<PipelineExecContext>& ctx, const PipelineNode& node, const String& defaultName,
                             const String& ext, const String& bytes)
     {
-        String path = node.GetConfigString("assetPath", "").Trimed(" \n\r\t");
+        String path = PipelineNodeRegistry::GetFinishAssetPath(node);
         if (path.IsEmpty())
             path = defaultName;
 

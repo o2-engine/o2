@@ -52,6 +52,7 @@ TEST(ProjectConfig, SaveAfterFailedLoadWithDefaultsDoesNotCreateFile)
 	ConfigGuard guard;
 
 	o2Config.physics = PhysicsConfig();
+	o2Config.assetsLine = AssetsLineConfig();
 	o2Config.SetProjectName("");
 	o2Config.Load(kTempPath);
 

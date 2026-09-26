@@ -159,6 +159,10 @@ namespace Editor
         // Returns true for finish node types, which write results into the assets folder
         static bool IsFinishType(const String& type);
 
+        // Returns where a finish node writes inside the assets folder, without the extension: its
+        // assetPath, or Generated/<the file name the web editor downloads it as>, or Generated/output
+        static String GetFinishAssetPath(const PipelineNode& node);
+
     private:
         // Returns the implementations storage
         static Vector<Ref<IPipelineNodeImpl>>& Impls();
