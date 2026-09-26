@@ -59,10 +59,7 @@ namespace Editor
         if (!mReady)
             return;
 
-        if (mNeedRedraw)
-            RedrawRenderTarget();
-        else
-            RegisterCursorArea();
+        RedrawRenderTarget();
 
         mRenderTargetSprite->transparency = mResTransparency;
         mRenderTargetSprite->Draw();
@@ -125,9 +122,7 @@ namespace Editor
         size.x = Math::Max(size.x, 32);
         size.y = Math::Max(size.y, 32);
 
-        // A moved view keeps its texture: the transform updates every frame while a dock splitter is
-        // dragged or the window is resized, and a fresh render target on each of them costs far more
-        // than the repaint it forces
+        // The transform updates every frame while a dock splitter is dragged; only a new size needs a new texture
         if (!mRenderTarget.Get() || mRenderTarget.Get()->GetSize() != size)
         {
             mRenderTarget = TextureRef(size, TextureFormat::R8G8B8A8, Texture::Usage::RenderTarget);
@@ -277,26 +272,6 @@ namespace Editor
         
 		mListenersLayer->OnEndDraw();
 
-        o2Render.SetCamera(prevCamera);
-        o2Render.UnbindRenderTexture();
-    }
-
-    void ScrollView::RegisterCursorArea()
-    {
-        // The view takes the cursor from inside its render target, and that used to ride along with
-        // the repaint. A view with nothing to repaint would go deaf for good: no input means the camera
-        // never moves, and a still camera means no repaint. Registering costs nothing next to a repaint,
-        // so it happens every frame - in the same target and camera, so the hit area stays the same
-        Camera prevCamera = o2Render.GetCamera();
-        o2Render.BindRenderTexture(mRenderTarget);
-        o2Render.SetCamera(mViewCamera);
-
-        mListenersLayer->OnBeginDraw();
-        mListenersLayer->camera = o2Render.GetCamera();
-
-        CursorAreaEventsListener::OnDrawn();
-
-        mListenersLayer->OnEndDraw();
         o2Render.SetCamera(prevCamera);
         o2Render.UnbindRenderTexture();
     }

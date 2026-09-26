@@ -62,8 +62,6 @@ namespace Editor
 
     void SceneEditScreen::Draw()
 	{
-        // Scene is a live viewport and redraws every frame.
-        mNeedRedraw = true;
         ScrollView::Draw();
 
  		if (mEnabledTool)

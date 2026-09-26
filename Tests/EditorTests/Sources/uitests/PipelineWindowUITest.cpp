@@ -83,6 +83,9 @@ namespace
     // widgets both render and register for input before every frame is processed
     struct UiDriver
     {
+        // Off leaves the editor as an untouched window has it: no transform updates between frames
+        static inline bool updateLayout = true;
+
         static void DrawRoot()
         {
             PushEditorScopeOnStack scope;
@@ -92,7 +95,8 @@ namespace
             auto root = EditorUIRoot.GetRootWidget();
             root->Update(1.0f / 60.0f);
             root->UpdateChildren(1.0f / 60.0f);
-            root->UpdateChildrenTransforms();
+            if (updateLayout)
+                root->UpdateChildrenTransforms();
             root->Draw();
             o2Render.End();
         }
@@ -209,6 +213,7 @@ namespace
 
         void TearDown() override
         {
+            UiDriver::updateLayout = true;
             editor = nullptr;
             asset = nullptr;
             PipelineUtils::SetWorkPathOverride("");
@@ -303,6 +308,37 @@ TEST_F(PipelineUiFixture, ConnectsPortsByDragAndUndoes)
     UiDriver::Drag(header, header + Vec2F(80, -40), 16);
     UiDriver::Step(2);
     EXPECT_NE(edit->position, before);
+}
+
+// A card pressed on an untouched canvas is dragged, not taken for the start of a selection frame
+TEST_F(PipelineUiFixture, DragsACardWhileTheCanvasIdles)
+{
+    PipelineGraph graph;
+    auto text = AddNode(graph, "sourceText", Vec2F(0, 0));
+    graph.SaveToAsset(*asset);
+    editor->SetAsset(asset);
+    UiDriver::Step(3);
+    editor->FitView();
+    UiDriver::Wait(0.6f);
+
+    text = Live(text);
+    auto card = editor->GetNodeWidget(text->id);
+    ASSERT_TRUE(card);
+
+    editor->SetView(editor->GetCamera().GetPosition2D(), editor->GetCamera().GetScale2D().x);
+    UiDriver::updateLayout = false;
+    UiDriver::Step(5);
+
+    RectF cardRect = card->GetCardRect();
+    Vec2F header = editor->LocalToScreenPoint(cardRect.LeftBottom() + Vec2F(60, cardRect.Height() - 12));
+    o2Input.OnCursorMoved(header, 0, false);
+    UiDriver::Step(3);
+
+    Vec2F before = text->position;
+    UiDriver::Drag(header, header + Vec2F(80, -40), 16);
+    UiDriver::Step(2);
+
+    EXPECT_NE(text->position, before) << "a card pressed on an idle canvas does not move";
 }
 
 TEST_F(PipelineUiFixture, PaintsStrokeAndDragsComposerLayer)

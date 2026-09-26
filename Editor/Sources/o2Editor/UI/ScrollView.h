@@ -134,9 +134,6 @@ namespace Editor
         // Redraws content into render target
         void RedrawRenderTarget();
 
-        // Registers the view in the cursor system without repainting its content
-        void RegisterCursorArea();
-
         // Redraws content into render target
         virtual void RedrawContent();
 
@@ -233,7 +230,6 @@ CLASS_METHODS_META(Editor::ScrollView)
     FUNCTION().PROTECTED().SIGNATURE(Basis, GetCameraScreenToLocalTransform, const Camera&);
     FUNCTION().PROTECTED().SIGNATURE(void, UpdateLocalScreenTransforms);
     FUNCTION().PROTECTED().SIGNATURE(void, RedrawRenderTarget);
-    FUNCTION().PROTECTED().SIGNATURE(void, RegisterCursorArea);
     FUNCTION().PROTECTED().SIGNATURE(void, RedrawContent);
     FUNCTION().PROTECTED().SIGNATURE(void, DrawGrid);
     FUNCTION().PROTECTED().SIGNATURE(void, OnCameraTransformChanged);

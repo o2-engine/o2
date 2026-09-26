@@ -16,18 +16,31 @@
 using namespace o2;
 using namespace Editor;
 
-// Вид редактора рисует содержимое в свой render target и перерисовывает его только когда есть что
-// менять. Приём курсора не должен от этого зависеть: у простоявшего вида перерисовывать нечего, и
-// если регистрация в системе курсора едет вместе с перерисовкой, вид глохнет навсегда - без ввода
-// камера стоит, а без движения камеры нет и перерисовки
+// Вид редактора перерисовывает свой render target каждый кадр, даже когда его никто не трогает:
+// слушатели содержимого регистрируются в системе курсора вместе с перерисовкой
 namespace
 {
+    // Слушатель внутри содержимого вида - как ручка перетаскивания ноды
+    class ContentProbe : public RefCounterable, public CursorAreaEventsListener
+    {
+    public:
+        RectF rect = RectF(150, 250, 250, 150);
+        int presses = 0;
+
+        bool IsUnderPoint(const Vec2F& point) override { return rect.IsInside(point); }
+        void OnCursorPressed(const Input::Cursor& cursor) override { presses++; }
+
+        RefCounter* GetRefCounter() const override { return RefCounterable::GetRefCounter(); }
+    };
+
     class IdleProbeView : public ScrollView
     {
     public:
         explicit IdleProbeView(RefCounter* refCounter) : ScrollView(refCounter) {}
 
         Camera GetCamera() const { return mViewCamera; }
+
+        Ref<ContentProbe> content = mmake<ContentProbe>();
 
         int redraws = 0;
         int rightPresses = 0;
@@ -44,8 +57,6 @@ namespace
             mNeedRedraw = false;
         }
 
-        bool IsIdle() const { return !mNeedRedraw; }
-
         const TextureRef& RenderTarget() const { return mRenderTarget; }
         RectF SpriteRect() const { return mRenderTargetSprite->GetRect(); }
         Vec2F CameraSize() const { return mViewCamera.GetSize2D(); }
@@ -54,6 +65,7 @@ namespace
         {
             redraws++;
             ScrollView::RedrawContent();
+            content->OnDrawn();
         }
 
         void OnCursorPressed(const Input::Cursor& cursor) override
@@ -77,8 +89,8 @@ namespace
 
     // Тестовый Application рисует только сцену: корень редакторского UI прогоняем руками,
     // иначе виджеты не регистрируются в системе курсора
-    // layout=true повторяет первые кадры окна, когда раскладка ещё едет; в простое трансформы
-    // не трогаются - иначе ScrollView каждый кадр пересоздаёт render target и простоя не бывает
+    // layout=true повторяет первые кадры окна, когда раскладка ещё едет; дальше трансформы не трогаются,
+    // как у окна, которое не двигают
     void Step(int frames = 1, bool layout = false)
     {
         for (int i = 0; i < frames; i++)
@@ -125,7 +137,7 @@ namespace
 
             Step(10, true);
             view->Settle();
-            Step(2); // кадры простоя: вид рисуется, но содержимое не перерисовывает
+            Step(2); // кадры, в которые вид никто не трогает
             view->redraws = 0;
         }
 
@@ -139,11 +151,10 @@ namespace
     };
 }
 
-TEST_F(IdleViewInputFixture, IdleViewDoesNotRepaint)
+TEST_F(IdleViewInputFixture, IdleViewRepaintsEveryFrame)
 {
     Step(5);
-    EXPECT_EQ(view->redraws, 0) << "вид перерисовывается вхолостую - стенд не воспроизводит простой";
-    EXPECT_TRUE(view->IsIdle());
+    EXPECT_EQ(view->redraws, 5) << "нетронутый вид пропускает перерисовку";
 }
 
 TEST_F(IdleViewInputFixture, IdleViewTakesTheLeftButton)
@@ -158,6 +169,22 @@ TEST_F(IdleViewInputFixture, IdleViewTakesTheLeftButton)
     Step();
 
     EXPECT_GT(view->leftPresses, 0) << "левая кнопка не доходит до простоявшего вида";
+}
+
+// Иначе нажатие на ноду достаётся канвасу, и ноду не утащить
+TEST_F(IdleViewInputFixture, IdleViewContentTakesTheLeftButton)
+{
+    Vec2F at = view->LocalToScreenPoint(view->content->rect.Center());
+    o2Input.OnCursorMoved(at);
+    Step(2);
+
+    o2Input.OnCursorPressed(at);
+    Step(2);
+    o2Input.OnCursorReleased();
+    Step();
+
+    EXPECT_GT(view->content->presses, 0) << "левая кнопка не доходит до содержимого простоявшего вида";
+    EXPECT_EQ(view->leftPresses, 0) << "нажатие на содержимое досталось самому виду";
 }
 
 TEST_F(IdleViewInputFixture, IdleViewTakesTheWheel)
