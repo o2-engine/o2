@@ -2,6 +2,7 @@
 
 #include <gtest/gtest.h>
 
+#include "o2/Scene/UI/WidgetLayout.h"
 #include "o2/Scene/UI/Widgets/LongList.h"
 #include "Scene/SceneTestHelpers.h"
 
@@ -78,3 +79,62 @@ TEST(LongList, SetHoverDrawableLayoutRoundTrip)
 
 // ===== Callbacks =====
 
+
+// ===== Scrolling =====
+
+namespace
+{
+    struct TenItems
+    {
+        Ref<LongList> list = mmake<LongList>();
+        Vector<int>   items;
+        Vector<int>   shown;
+
+        TenItems()
+        {
+            for (int i = 0; i < 10; i++)
+                items.Add(i);
+
+            auto sample = mmake<Widget>();
+            sample->layout->minHeight = 25;
+            list->SetItemSample(sample);
+            list->getItemsCountFunc = [this]() { return items.Count(); };
+            list->getItemsRangeFunc = [this](int min, int max)
+            {
+                Vector<void*> res;
+                for (int i = Math::Max(0, min); i < max && i < items.Count(); i++)
+                    res.Add(&items[i]);
+                return res;
+            };
+            list->setupItemFunc = [this](const Ref<Widget>&, void* object) { shown.Add(*(int*)object); };
+            *list->layout = WidgetLayout::Based(BaseCorner::LeftBottom, Vec2F(200, 100));
+            Update();
+        }
+
+        void Update()
+        {
+            list->UpdateSelfTransform();
+            list->UpdateChildrenTransforms();
+        }
+    };
+}
+
+TEST(LongList, ScrollRangeCoversExactlyTheItems)
+{
+    SceneCleanGuard guard;
+    TenItems t;
+    auto range = t.list->GetScrollRange();
+    EXPECT_FLOAT_EQ(range.bottom, 0.0f);
+    EXPECT_FLOAT_EQ(range.top, 10 * 25.0f - 100.0f);
+}
+
+TEST(LongList, ScrolledToTheEndShowsTheLastItem)
+{
+    SceneCleanGuard guard;
+    TenItems t;
+    t.shown.Clear();
+    t.list->SetScrollForcible(Vec2F(0, t.list->GetScrollRange().top));
+    t.Update();
+    EXPECT_FALSE(t.list->GetChildWidgets().IsEmpty());
+    EXPECT_TRUE(t.shown.Contains(9));
+}

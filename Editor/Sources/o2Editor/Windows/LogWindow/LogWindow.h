@@ -1,5 +1,6 @@
 #pragma once
 
+#include <mutex>
 #include "o2/Utils/Debug/Log/LogStream.h"
 #include "o2Editor/Windows/IEditorWindow.h"
 
@@ -71,6 +72,11 @@ namespace Editor
         int mWarningMessagesCount = 0; // Count of warning messages
         int mErrorMessagesCount = 0;   // Count of error messages
 
+        std::mutex         mPendingMutex; // Guards the messages logged since the last update
+        Vector<LogMessage> mPending;      // Messages logged since the last update, from any thread
+
+        static constexpr int maxMessages = 20000; // Oldest messages beyond this are dropped
+
     protected:
         // Initializes window
         void InitializeWindow();
@@ -111,6 +117,12 @@ namespace Editor
         // Updates last message view
         void UpdateLastMessageView();
 
+        // Queues a message; the list takes it on the next update
+        void Enqueue(LogMessage::Type type, const WString& str);
+
+        // Moves the queued messages into the list, following them when it is scrolled to the end
+        void FlushPending();
+
         REF_COUNTERABLE_IMPL(IEditorWindow, LogStream);
     };
 }
@@ -139,6 +151,8 @@ CLASS_FIELDS_META(Editor::LogWindow)
     FIELD().PROTECTED().DEFAULT_VALUE(0).NAME(mRegularMessagesCount);
     FIELD().PROTECTED().DEFAULT_VALUE(0).NAME(mWarningMessagesCount);
     FIELD().PROTECTED().DEFAULT_VALUE(0).NAME(mErrorMessagesCount);
+    FIELD().PROTECTED().NAME(mPendingMutex);
+    FIELD().PROTECTED().NAME(mPending);
 }
 END_META;
 CLASS_METHODS_META(Editor::LogWindow)
@@ -160,6 +174,8 @@ CLASS_METHODS_META(Editor::LogWindow)
     FUNCTION().PROTECTED().SIGNATURE(void, OutErrorEx, const WString&);
     FUNCTION().PROTECTED().SIGNATURE(void, OutWarningEx, const WString&);
     FUNCTION().PROTECTED().SIGNATURE(void, UpdateLastMessageView);
+    FUNCTION().PROTECTED().SIGNATURE(void, Enqueue, LogMessage::Type, const WString&);
+    FUNCTION().PROTECTED().SIGNATURE(void, FlushPending);
 }
 END_META;
 // --- END META ---

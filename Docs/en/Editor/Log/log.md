@@ -6,7 +6,7 @@ This window shows logs printed through the engine debug system. Logs are split b
 - warnings (yellow)
 - errors (red)
 
-They are listed in order of appearance (1).
+They are listed in order of appearance (1). While the list is scrolled to the end it follows new messages; scrolled up, it stays where it is. Messages logged from other threads are shown on the next frame.
 
 Logs can be cleared (2), and display can be toggled per severity (3) (4) (5).
 

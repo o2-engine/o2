@@ -16,14 +16,7 @@ namespace Editor
 {
     void LogWindow::Update(float dt)
     {
-        if (o2Input.IsKeyDown('H'))
-            o2Debug.Log("Regular message " + (String)o2Time.GetLocalTime());
-
-        if (o2Input.IsKeyDown('J'))
-            o2Debug.LogWarning("Warning message " + (String)o2Time.GetLocalTime());
-
-        if (o2Input.IsKeyDown('K'))
-            o2Debug.LogError("Error message " + (String)o2Time.GetLocalTime());
+        FlushPending();
     }
 
     Ref<RefCounterable> LogWindow::CastToRefCounterable(const Ref<LogWindow>& ref)
@@ -120,9 +113,14 @@ namespace Editor
 
     void LogWindow::OnClearPressed()
     {
+        {
+            std::lock_guard<std::mutex> lock(mPendingMutex);
+            mPending.Clear();
+        }
+
         mAllMessages.Clear();
         mVisibleMessages.Clear();
-        mList->OnItemsUpdated();
+        mList->OnItemsUpdated(true);
 
         mRegularMessagesCount = 0;
         mWarningMessagesCount = 0;
@@ -207,81 +205,85 @@ namespace Editor
 
     void LogWindow::OutStrEx(const WString& str)
     {
-        bool isScrollDown = Math::Equals(mList->GetScroll().y, mList->GetScrollRange().bottom, 5.0f);
-
-        LogMessage msg;
-        msg.message = str;
-        msg.type = LogMessage::Type::Regular;
-        msg.idx = mAllMessages.Count();
-
-        mAllMessages.Add(msg);
-        if (mRegularMessagesEnabled)
-        {
-            msg.idx = mVisibleMessages.Count();
-            mVisibleMessages.Add(msg);
-        }
-
-        mList->OnItemsUpdated();
-
-        if (isScrollDown)
-            mList->SetScrollForcible(Vec2F(0, mList->GetScrollRange().top));
-
-        mRegularMessagesCount++;
-        mMessagesCountLabel->text = (String)mRegularMessagesCount;
-
-        UpdateLastMessageView();
+        Enqueue(LogMessage::Type::Regular, str);
     }
 
     void LogWindow::OutErrorEx(const WString& str)
     {
-        bool isScrollDown = Math::Equals(mList->GetScroll().y, mList->GetScrollRange().bottom, 5.0f);
-
-        LogMessage msg;
-        msg.message = str;
-        msg.type = LogMessage::Type::Error;
-        msg.idx = mAllMessages.Count();
-
-        mAllMessages.Add(msg);
-        if (mErrorMessagesEnabled)
-        {
-            msg.idx = mVisibleMessages.Count();
-            mVisibleMessages.Add(msg);
-        }
-
-        mList->OnItemsUpdated();
-
-        if (isScrollDown)
-            mList->SetScrollForcible(Vec2F(0, mList->GetScrollRange().top));
-
-        mErrorMessagesCount++;
-        mErrorsCountLabel->text = (String)mErrorMessagesCount;
-
-        UpdateLastMessageView();
+        Enqueue(LogMessage::Type::Error, str);
     }
 
     void LogWindow::OutWarningEx(const WString& str)
     {
-        bool isScrollDown = Math::Equals(mList->GetScroll().y, mList->GetScrollRange().bottom, 5.0f);
+        Enqueue(LogMessage::Type::Warning, str);
+    }
 
+    void LogWindow::Enqueue(LogMessage::Type type, const WString& str)
+    {
         LogMessage msg;
         msg.message = str;
-        msg.type = LogMessage::Type::Warning;
-        msg.idx = mAllMessages.Count();
+        msg.type = type;
+        msg.idx = 0;
 
-        mAllMessages.Add(msg);
-        if (mWarningMessagesEnabled)
+        std::lock_guard<std::mutex> lock(mPendingMutex);
+        mPending.Add(msg);
+    }
+
+    void LogWindow::FlushPending()
+    {
+        Vector<LogMessage> pending;
         {
-            msg.idx = mVisibleMessages.Count();
-            mVisibleMessages.Add(msg);
+            std::lock_guard<std::mutex> lock(mPendingMutex);
+            if (mPending.IsEmpty())
+                return;
+
+            pending = mPending;
+            mPending.Clear();
         }
 
-        mList->OnItemsUpdated();
+        bool atEnd = mList->GetScroll().y >= mList->GetScrollRange().top - 5.0f;
 
-        if (isScrollDown)
+        for (auto& msg : pending)
+        {
+            mAllMessages.Add(msg);
+            if (msg.type == LogMessage::Type::Regular) mRegularMessagesCount++;
+            else if (msg.type == LogMessage::Type::Warning) mWarningMessagesCount++;
+            else mErrorMessagesCount++;
+        }
+
+        bool trimmed = mAllMessages.Count() > maxMessages;
+        if (trimmed)
+            mAllMessages.RemoveRange(0, mAllMessages.Count() - maxMessages);
+
+        if (trimmed)
+            UpdateVisibleMessages();
+        else
+        {
+            for (auto msg : pending)
+            {
+                bool shown = (msg.type == LogMessage::Type::Regular && mRegularMessagesEnabled) ||
+                    (msg.type == LogMessage::Type::Warning && mWarningMessagesEnabled) ||
+                    (msg.type == LogMessage::Type::Error && mErrorMessagesEnabled);
+
+                if (!shown)
+                    continue;
+
+                msg.idx = mVisibleMessages.Count();
+                mVisibleMessages.Add(msg);
+            }
+
+            mList->OnItemsUpdated();
+        }
+
+        // The range grows with the new rows only after a layout pass
+        mList->UpdateSelfTransform();
+        mList->UpdateChildrenTransforms();
+        if (atEnd)
             mList->SetScrollForcible(Vec2F(0, mList->GetScrollRange().top));
 
-        mWarningMessagesCount++;
+        mMessagesCountLabel->text = (String)mRegularMessagesCount;
         mWarningsCountLabel->text = (String)mWarningMessagesCount;
+        mErrorsCountLabel->text = (String)mErrorMessagesCount;
 
         UpdateLastMessageView();
     }

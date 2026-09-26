@@ -38,7 +38,16 @@ namespace Editor
     {}
 
     IEditorWindow::~IEditorWindow()
-    {}
+    {
+        if (!mWindow)
+            return;
+
+        // UIManager can keep the window focused after its editor window is gone
+        mWindow->onOpened -= THIS_FUNC(OnOpened);
+        mWindow->onClosed -= THIS_FUNC(OnClosed);
+        mWindow->onFocused -= THIS_FUNC(OnFocused);
+        mWindow->onUnfocused -= THIS_FUNC(OnUnfocused);
+    }
 
 	void IEditorWindow::Initialize()
 	{}
