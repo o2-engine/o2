@@ -1,7 +1,10 @@
 #include "o2Editor/stdafx.h"
 #include "o2Editor/Pipeline/Nodes/PipelineNodesCommon.h"
+#include "o2Editor/Pipeline/PipelineEditRegion.h"
 #include "o2Editor/Pipeline/PipelineRegions.h"
+#include "o2Editor/Pipeline/PipelineUpscale.h"
 
+#include "o2Editor/Pipeline/Providers/AiRouter.h"
 #include "o2Editor/Pipeline/Providers/ElevenLabsProvider.h"
 
 namespace Editor
@@ -58,7 +61,7 @@ namespace Editor
             String prompt = JoinNonEmpty(parts, "\n\n");
 
             ctx->Log("aiText: model=" + model + " promptChars=" + (String)prompt.Length() + " images=" + (String)images.Count());
-            AiTextResult r = co_await GeminiProvider::GenerateText(ctx, ctx->settings.GetGeminiKey(), model, prompt, images);
+            AiTextResult r = co_await AiRouter::GenerateText(ctx, model, prompt, images);
             if (!r.ok) co_return PipelineRunResult::Fail(r.error);
             co_return PipelineRunResult::Single(PipelineValue::Text(r.text));
         }
@@ -100,7 +103,7 @@ namespace Editor
             String model = node->GetConfigString("model", GeminiProvider::defaultTextModel);
             String prompt = systemPrompt + "\n\nEDIT INSTRUCTION:\n" + instruction + "\n\nORIGINAL TEXT:\n" + textVal->data;
             ctx->Log("textEdit: model=" + model + " chars=" + (String)textVal->data.Length());
-            AiTextResult r = co_await GeminiProvider::GenerateText(ctx, ctx->settings.GetGeminiKey(), model, prompt, {});
+            AiTextResult r = co_await AiRouter::GenerateText(ctx, model, prompt, {});
             if (!r.ok) co_return PipelineRunResult::Fail(r.error);
             co_return PipelineRunResult::Single(PipelineValue::Text(r.text));
         }
@@ -247,7 +250,7 @@ namespace Editor
 
             ctx->Log("promptGen: model=" + model + " target=" + target + " chars=" + (String)description.Length() +
                      (maxChars ? " budget=" + (String)maxChars : String()));
-            AiTextResult r = co_await GeminiProvider::GenerateText(ctx, ctx->settings.GetGeminiKey(), model, prompt, images);
+            AiTextResult r = co_await AiRouter::GenerateText(ctx, model, prompt, images);
             if (!r.ok) co_return PipelineRunResult::Fail(r.error);
 
             String result = String(r.text).Trimed(" \n\r\t");
@@ -261,27 +264,32 @@ namespace Editor
         }
     };
 
-    // Common transparent-render flow of the image nodes: chroma raw render, or white/black matte
+    // Common transparent-render flow of the image nodes: the model's own alpha, chroma raw render, or white/black matte
     static Coroutine<PipelineRunResult> GenerateWithTransparency(const Ref<PipelineExecContext>& ctx, const PipelineNode& node,
                                                                  const String& model, const String& prompt,
                                                                  const Vector<AiImageRef>& references, const String& chromaSuffixPrompt,
-                                                                 const String& whitePrompt)
+                                                                 const String& whitePrompt, const String& nativePrompt)
     {
-        String apiKey = ctx->settings.GetGeminiKey();
         bool transparent = node.GetConfigBool("transparentBg", false);
         auto tr = PipelineTransparency::Read(node);
 
+        if (PipelineTransparency::UsesNativeTransparency(node))
+        {
+            AiBytesResult png = co_await AiRouter::GenerateImage(ctx, model, nativePrompt, references, ctx->seed, true);
+            co_return ImageBytesResult(png);
+        }
+
         if (transparent && tr.mode == "chroma")
         {
-            AiBytesResult raw = co_await GeminiProvider::GenerateImage(ctx, apiKey, model, chromaSuffixPrompt, references, ctx->seed);
+            AiBytesResult raw = co_await AiRouter::GenerateImage(ctx, model, chromaSuffixPrompt, references, ctx->seed);
             co_return ImageBytesResult(raw);
         }
 
         if (transparent)
         {
-            AiBytesResult white = co_await GeminiProvider::GenerateImage(ctx, apiKey, model, whitePrompt, references, ctx->seed);
+            AiBytesResult white = co_await AiRouter::GenerateImage(ctx, model, whitePrompt, references, ctx->seed);
             if (!white.ok) co_return PipelineRunResult::Fail(white.error);
-            AiBytesResult black = co_await GeminiProvider::GenerateImage(ctx, apiKey, model, PipelineTransparency::blackBgInstruction,
+            AiBytesResult black = co_await AiRouter::GenerateImage(ctx, model, PipelineTransparency::blackBgInstruction,
                                                                          { { "image/png", white.data } }, ctx->seed);
             if (!black.ok) co_return PipelineRunResult::Fail(black.error);
 
@@ -291,7 +299,7 @@ namespace Editor
             co_return PipelineRunResult::Single(PipelineValue::Image(PipelineTransparency::MatteFromPair(*w, *b)));
         }
 
-        AiBytesResult png = co_await GeminiProvider::GenerateImage(ctx, apiKey, model, prompt, references, ctx->seed);
+        AiBytesResult png = co_await AiRouter::GenerateImage(ctx, model, prompt, references, ctx->seed);
         co_return ImageBytesResult(png);
     }
 
@@ -326,7 +334,7 @@ namespace Editor
 
             PipelineRunResult r = co_await GenerateWithTransparency(ctx, *node, model, prompt, references,
                 JoinNonEmpty({ PipelineTransparency::ChromaBgInstruction(tr), prompt }, "\n\n"),
-                JoinNonEmpty({ PipelineTransparency::whiteBgInstruction, prompt }, "\n\n"));
+                JoinNonEmpty({ PipelineTransparency::whiteBgInstruction, prompt }, "\n\n"), prompt);
             co_return r;
         }
     };
@@ -367,22 +375,54 @@ namespace Editor
             if (prompt.IsEmpty()) co_return PipelineRunResult::Fail("imageEdit: no edit prompt provided");
 
             String model = node->GetConfigString("model", GeminiProvider::defaultImageModel);
-            Vector<AiImageRef> references = { { "image/png", imageVal->GetPngBytes() } };
+            auto base = imageVal->GetBitmap();
+            Ref<Bitmap> overlaid;
             if (auto drawing = DecodeImageBytes(PipelineUtils::DataUrlToBytes(node->GetConfigString("drawing", ""))))
             {
-                if (PipelineImageOps::HasContent(*drawing))
-                {
-                    if (auto base = imageVal->GetBitmap())
-                        references.Add({ "image/png", EncodeBitmapPng(*PipelineImageOps::CompositeOverlay(*base, *drawing)) });
-                }
+                if (base && PipelineImageOps::HasContent(*drawing))
+                    overlaid = PipelineImageOps::CompositeOverlay(*base, *drawing);
             }
+
+            // A frame: the model edits a crop around it, pasted back; the rest of the image, background included, is kept
+            PipelineImageOps::CropRect region;
+            if (base && PipelineEditRegion::Of(*node, region))
+            {
+                auto boxes = PipelineEditRegion::PixelBoxes(base->GetSize(), region);
+                auto& box = boxes.box;
+                Vector<AiImageRef> cropped;
+                for (auto& image : { base, overlaid })
+                {
+                    if (image)
+                        cropped.Add({ "image/png", EncodeBitmapPng(*PipelineImageOps::CropPixels(*image, box.left, box.top, box.Width(), box.Height())) });
+                }
+
+                auto& r = boxes.region;
+                ctx->Log("imageEdit: model=" + model + " frame=" + (String)r.left + "," + (String)r.top + "-" + (String)r.right + "," +
+                         (String)r.bottom + " box=" + (String)box.left + "," + (String)box.top + "-" + (String)box.right + "," +
+                         (String)box.bottom + " refs=" + (String)cropped.Count());
+                AiBytesResult edited = co_await AiRouter::GenerateImage(ctx, model,
+                    systemPrompt + "\n\n" + prompt + "\n\n" + PipelineEditRegion::promptSuffix, cropped, ctx->seed);
+                if (!edited.ok)
+                    co_return PipelineRunResult::Fail(edited.error);
+
+                auto patch = DecodeImageBytes(edited.data);
+                if (!patch)
+                    co_return PipelineRunResult::Fail("provider returned an undecodable image (" + edited.mimeType + ")");
+
+                co_return PipelineRunResult::Single(PipelineValue::Image(PipelineEditRegion::PasteRegionEdit(*base, *patch, boxes)));
+            }
+
+            Vector<AiImageRef> references = { { "image/png", imageVal->GetPngBytes() } };
+            if (overlaid)
+                references.Add({ "image/png", EncodeBitmapPng(*overlaid) });
 
             auto tr = PipelineTransparency::Read(*node);
             ctx->Log("imageEdit: model=" + model + " refs=" + (String)references.Count() + " promptChars=" + (String)prompt.Length());
 
             PipelineRunResult r = co_await GenerateWithTransparency(ctx, *node, model, systemPrompt + "\n\n" + prompt, references,
                 systemPrompt + "\n\n" + prompt + "\n\nThen isolate the main subject of the edited result and remove the original background entirely. " + PipelineTransparency::ChromaBgInstruction(tr),
-                systemPrompt + "\n\n" + prompt + "\n\n" + whiteBgSystem);
+                systemPrompt + "\n\n" + prompt + "\n\n" + whiteBgSystem,
+                systemPrompt + "\n\n" + prompt + "\n\n" + PipelineTransparency::nativeEditSuffix);
             co_return r;
         }
     };
@@ -396,7 +436,7 @@ namespace Editor
             mSchema.type = "imageExtract";
             mSchema.label = "AI extract part";
             mSchema.category = PipelineNodeCategory::AI;
-            mSchema.description = "Cut a described (and optionally drawn-over) part out of the input image as a complete, transparent game sprite.";
+            mSchema.description = "Cut a described element out of an image as a clean, transparent game sprite; a box on the source marks where each part is.";
             mSchema.inputs = { In("image", PipelinePortType::Image) };
             mSchema.outputs = { Out("out", PipelinePortType::Image) };
             mSchema.perPortRun = true;
@@ -418,13 +458,15 @@ namespace Editor
             return "region:" + region.name + ":" + (String)region.x + "," + (String)region.y + "," + (String)region.w + "," + (String)region.h;
         }
 
-        static String BuildExtractPrompt(const String& part, const String& backdrop)
+        static String BuildExtractPrompt(const String& part, const String& backdrop, bool native = false)
         {
+            String result = native ? "The result must be almost entirely transparent with only the requested element visible." :
+                "The result must be almost entirely that flat backdrop colour with only the requested element visible.";
+
             return "This image is a cropped region of a 2D game that contains the element to extract: " + part + ". "
                 "Keep ONLY that element, exactly as it appears - same shape, position, size, colors, shading, texture and art style. Do NOT move, resize, recolor, restyle, or redraw it. "
                 "Erase EVERYTHING else in the crop to " + backdrop + ": the background AND any other objects, pieces, icons, text or fragments that are not the requested element. "
-                "If a SECOND image with hand-drawn marks is provided, the marked areas are EXTRA things to remove - erase them too, and never paint the drawn strokes into the result. "
-                "This is NOT background removal - remove the other objects as well. The result must be almost entirely that flat backdrop colour with only the requested element visible. If the element is partly hidden, plausibly complete it. "
+                "This is NOT background removal - remove the other objects as well. " + result + " If the element is partly hidden, plausibly complete it. "
                 "Output only the resulting image.";
         }
 
@@ -444,32 +486,38 @@ namespace Editor
             if (!source) co_return PipelineRunResult::Fail("imageExtract: input is not a decodable image");
 
             String model = node->GetConfigString("model", GeminiProvider::defaultImageModel);
-            String apiKey = ctx->settings.GetGeminiKey();
 
             PipelineImageOps::CropRect roi{ region.x, region.y, region.w, region.h };
             bool hasRoi = region.x > 0.0f || region.y > 0.0f || region.w < 1.0f || region.h < 1.0f;
             Ref<Bitmap> roiInput = hasRoi ? PipelineImageOps::Crop(*source, roi) : source;
+            // A drawing left in an older pipeline is ignored: the extract has no drawing any more
             Vector<AiImageRef> references = { { "image/png", EncodeBitmapPng(*roiInput) } };
-            if (auto drawing = DecodeImageBytes(PipelineUtils::DataUrlToBytes(node->GetConfigString("drawing", ""))))
-            {
-                if (PipelineImageOps::HasContent(*drawing))
-                {
-                    Ref<Bitmap> roiDrawing = hasRoi ? PipelineImageOps::Crop(*drawing, roi) : drawing;
-                    references.Add({ "image/png", EncodeBitmapPng(*PipelineImageOps::CompositeOverlay(*roiInput, *roiDrawing)) });
-                }
-            }
 
-            bool transparent = node->GetConfigBool("transparentBg", false);
-            auto tr = PipelineTransparency::Read(*node);
+            // The part's own background settings, when it has them, replace the node's
+            auto tr = PipelineTransparency::Read(*node, region.id);
+            bool transparent = tr.transparent;
             ctx->Log("imageExtract . " + partName + ": model=" + model + " refs=" + (String)references.Count() + " transparent=" + (transparent ? "true" : "false"));
+
+            if (transparent && tr.mode == "native")
+            {
+                AiBytesResult png = co_await AiRouter::GenerateImage(ctx, model, BuildExtractPrompt(prompt, PipelineTransparency::nativeBackdrop, true), references, ctx->seed, true);
+                if (!png.ok) co_return PipelineRunResult::Fail(png.error);
+                auto rendered = DecodeImageBytes(png.data);
+                if (!rendered) co_return PipelineRunResult::Fail("provider returned an undecodable image");
+
+                if (!PipelineImageOps::HasContent(*rendered))
+                    co_return PipelineRunResult::Single(PipelineValue::Image(rendered));
+
+                co_return PipelineRunResult::Single(PipelineValue::Image(PipelineImageOps::CropToContent(*rendered, PipelineImageOps::ContentMode::Alpha)));
+            }
 
             if (transparent && tr.mode == "chroma")
             {
-                AiBytesResult raw = co_await GeminiProvider::GenerateImage(ctx, apiKey, model, BuildExtractPrompt(prompt, PipelineTransparency::ChromaEraseInstruction(tr)), references, ctx->seed);
+                AiBytesResult raw = co_await AiRouter::GenerateImage(ctx, model, BuildExtractPrompt(prompt, PipelineTransparency::ChromaEraseInstruction(tr)), references, ctx->seed);
                 co_return ImageBytesResult(raw);
             }
 
-            AiBytesResult white = co_await GeminiProvider::GenerateImage(ctx, apiKey, model, BuildExtractPrompt(prompt, "flat, solid, pure white (#FFFFFF)"), references, ctx->seed);
+            AiBytesResult white = co_await AiRouter::GenerateImage(ctx, model, BuildExtractPrompt(prompt, "flat, solid, pure white (#FFFFFF)"), references, ctx->seed);
             if (!white.ok) co_return PipelineRunResult::Fail(white.error);
             auto whiteBmp = DecodeImageBytes(white.data);
             if (!whiteBmp) co_return PipelineRunResult::Fail("provider returned an undecodable image");
@@ -477,7 +525,7 @@ namespace Editor
             if (!transparent)
                 co_return PipelineRunResult::Single(PipelineValue::Image(PipelineImageOps::CropToContent(*whiteBmp, PipelineImageOps::ContentMode::White)));
 
-            AiBytesResult black = co_await GeminiProvider::GenerateImage(ctx, apiKey, model, PipelineTransparency::blackBgInstruction, { { "image/png", white.data } }, ctx->seed);
+            AiBytesResult black = co_await AiRouter::GenerateImage(ctx, model, PipelineTransparency::blackBgInstruction, { { "image/png", white.data } }, ctx->seed);
             if (!black.ok) co_return PipelineRunResult::Fail(black.error);
             auto blackBmp = DecodeImageBytes(black.data);
             if (!blackBmp) co_return PipelineRunResult::Fail("provider returned an undecodable image");
@@ -493,6 +541,112 @@ namespace Editor
 
     // Background removal by the image model: the subject stays exactly as it is, everything
     // around it is painted over with a flat backdrop, which is then keyed out or matted away
+    // AI upscale: the image model redraws the input at a higher resolution with more detail, in one generation. The input is
+    // padded with its edge pixels to the nearest frame the model renders, Gemini 3 image models are asked for the resolution
+    // that covers the target, the padding is cut off the answer and it is resampled to the exact size. Models answer opaque:
+    // a transparent input keeps its own shape, its alpha scaled to the target
+    class AiUpscaleNode : public PipelineNodeBase
+    {
+    public:
+        AiUpscaleNode()
+        {
+            mSchema.type = "aiUpscale";
+            mSchema.label = "AI upscale";
+            mSchema.category = PipelineNodeCategory::AI;
+            mSchema.description = "Enlarge an image with the image model: it is redrawn at the new size with added detail; a prompt says which details and how.";
+            mSchema.inputs = { In("image", PipelinePortType::Image) };
+            mSchema.outputs = { Out("out", PipelinePortType::Image) };
+        }
+
+        // The input on a flat gray when it is transparent, centred in the padded size, the edge pixels repeated outwards
+        static Ref<Bitmap> Pad(const Bitmap& source, const Vec2I& padded, const Vec2I& offset, bool flatten)
+        {
+            Vec2I size = source.GetSize();
+            auto out = mmake<Bitmap>(PixelFormat::R8G8B8A8, padded);
+            for (int y = 0; y < padded.y; y++)
+            {
+                int sy = Math::Clamp(y - offset.y, 0, size.y - 1);
+                for (int x = 0; x < padded.x; x++)
+                {
+                    int sx = Math::Clamp(x - offset.x, 0, size.x - 1);
+                    const UInt8* p = PipelineImageOps::Pixel(source, sx, sy);
+                    UInt8* d = PipelineImageOps::Pixel(*out, x, y);
+                    float a = flatten ? p[3]/255.0f : 1.0f;
+                    for (int c = 0; c < 3; c++)
+                        d[c] = (UInt8)Math::Clamp((int)std::lround(p[c]*a + 128.0f*(1.0f - a)), 0, 255);
+                    d[3] = 255;
+                }
+            }
+            return out;
+        }
+
+        Coroutine<PipelineRunResult> Run(const Ref<PipelineExecContext>& ctx, const Map<String, PipelineValue>& inputs,
+                                         const Ref<PipelineNode>& node) override
+        {
+            auto imageVal = Input(inputs, "image");
+            if (!imageVal || !imageVal->IsImage()) co_return PipelineRunResult::Fail("aiUpscale: input \"image\" is not connected");
+
+            auto source = EnsureRgba(imageVal->GetBitmap());
+            if (!source) co_return PipelineRunResult::Fail("aiUpscale: input is not a decodable image");
+
+            String model = node->GetConfigString("model", GeminiProvider::defaultImageModel);
+            String details = node->GetConfigString("prompt", "").Trimed(" \n\r\t");
+            Vec2I in = source->GetSize();
+            Vec2I target = PipelineUpscale::Target(*node, in);
+
+            bool transparent = false;
+            for (int y = 0; y < in.y && !transparent; y++)
+            {
+                for (int x = 0; x < in.x; x++)
+                {
+                    if (PipelineImageOps::Pixel(*source, x, y)[3] < 255) { transparent = true; break; }
+                }
+            }
+
+            // 1. Pad to the frame the model renders
+            auto frame = PipelineUpscale::ClosestAspect((float)in.x, (float)in.y);
+            Vec2I padded = in;
+            if ((float)in.x/in.y < frame.ratio)
+                padded.x = (int)std::lround(in.y*frame.ratio);
+            else
+                padded.y = (int)std::lround(in.x/frame.ratio);
+            Vec2I offset((padded.x - in.x)/2, (padded.y - in.y)/2);
+            auto paddedImage = Pad(*source, padded, offset, transparent);
+
+            // 2. One generation at the resolution that covers the target
+            float longSide = Math::Max((float)target.x*padded.x/in.x, (float)target.y*padded.y/in.y);
+            AiImageOptions options;
+            options.renderSize = PipelineUpscale::RenderSizeFor(longSide);
+            options.aspectRatio = frame.label;
+            ctx->Log("aiUpscale: model=" + model + " " + (String)in.x + "\xC3\x97" + (String)in.y + " -> " + (String)target.x + "\xC3\x97" +
+                     (String)target.y + " (" + PipelineUpscale::ModeOf(*node) + ") frame=" + frame.label +
+                     (PipelineUpscale::RendersLargeSizes(model) ? " render=" + options.renderSize : String()) +
+                     (transparent ? " alpha=kept" : "") + " detailChars=" + (String)details.Length());
+
+            AiBytesResult answer = co_await AiRouter::GenerateImage(ctx, model, PipelineUpscale::Prompt(details, transparent),
+                                                                    { { "image/png", EncodeBitmapPng(*paddedImage) } }, ctx->seed, false, options);
+            if (!answer.ok) co_return PipelineRunResult::Fail(answer.error);
+            auto rendered = EnsureRgba(DecodeImageBytes(answer.data));
+            if (!rendered) co_return PipelineRunResult::Fail("provider returned an undecodable image (" + answer.mimeType + ")");
+
+            // 3. Cut the padding off, in the answer's own pixels, and resample to the exact size
+            Vec2I a = rendered->GetSize();
+            int cx = (int)std::lround((double)offset.x*a.x/padded.x), cy = (int)std::lround((double)offset.y*a.y/padded.y);
+            int cw = Math::Max(1, Math::Min(a.x - cx, (int)std::lround((double)in.x*a.x/padded.x)));
+            int ch = Math::Max(1, Math::Min(a.y - cy, (int)std::lround((double)in.y*a.y/padded.y)));
+            auto result = PipelineImageOps::Resize(*PipelineImageOps::CropPixels(*rendered, cx, cy, cw, ch), target);
+
+            // 4. The input's shape, scaled, is the result's alpha
+            auto alpha = transparent ? PipelineImageOps::Resize(*source, target) : nullptr;
+            for (int y = 0; y < target.y; y++)
+            {
+                for (int x = 0; x < target.x; x++)
+                    PipelineImageOps::Pixel(*result, x, y)[3] = alpha ? PipelineImageOps::Pixel(*alpha, x, y)[3] : 255;
+            }
+            co_return PipelineRunResult::Single(PipelineValue::Image(result));
+        }
+    };
+
     class AiRemoveBgNode : public PipelineNodeBase
     {
     public:
@@ -513,8 +667,11 @@ namespace Editor
             node->SetConfigString("transparentMode", "chroma");
         }
 
-        static String BuildPrompt(const String& hint, const String& backdrop)
+        static String BuildPrompt(const String& hint, const String& backdrop, bool native = false)
         {
+            String result = native ? "The result must be the untouched subject on a transparent background and nothing else." :
+                "The result must be the untouched subject on that flat backdrop and nothing else.";
+
             String subject = hint.IsEmpty() ?
                 String("Keep the main subject - the foreground object(s) or character(s) - exactly as it appears: same shape, position, size, colors, shading, texture and art style.") :
                 "The subject to keep is: " + hint + ". Keep it exactly as it appears - same shape, position, size, colors, shading, texture and art style.";
@@ -522,7 +679,7 @@ namespace Editor
             return "Remove the background of this image. " + subject +
                 " Do NOT move, resize, recolor, restyle or redraw the subject. Keep a shadow, outline or glow that belongs to the subject itself. "
                 "Replace EVERYTHING that is background with " + backdrop + ": scenery, floor, sky, walls, gradients, patterns, props and clutter that are not part of the subject. "
-                "The result must be the untouched subject on that flat backdrop and nothing else. Output only the resulting image.";
+                + result + " Output only the resulting image.";
         }
 
         Coroutine<PipelineRunResult> Run(const Ref<PipelineExecContext>& ctx, const Map<String, PipelineValue>& inputs,
@@ -540,7 +697,8 @@ namespace Editor
 
             co_return co_await GenerateWithTransparency(ctx, *node, model, BuildPrompt(hint, "a flat, solid backdrop"), references,
                 BuildPrompt(hint, PipelineTransparency::ChromaEraseInstruction(tr)),
-                BuildPrompt(hint, "flat, solid, pure white (#FFFFFF)"));
+                BuildPrompt(hint, "flat, solid, pure white (#FFFFFF)"),
+                BuildPrompt(hint, PipelineTransparency::nativeBackdrop, true));
         }
     };
 
@@ -553,5 +711,6 @@ namespace Editor
         PipelineNodeRegistry::Register(mmake<ImageEditNode>());
         PipelineNodeRegistry::Register(mmake<ImageExtractNode>());
         PipelineNodeRegistry::Register(mmake<AiRemoveBgNode>());
+        PipelineNodeRegistry::Register(mmake<AiUpscaleNode>());
     }
 }

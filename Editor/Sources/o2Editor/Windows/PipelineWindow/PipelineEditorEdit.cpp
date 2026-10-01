@@ -15,6 +15,7 @@
 #include "o2/Utils/FileSystem/FileSystem.h"
 #include "o2/Utils/System/Clipboard.h"
 #include "o2Editor/Dialogs/YesNoCancelDlg.h"
+#include "o2Editor/Pipeline/Nodes/PipelineNodesCommon.h"
 #include "o2Editor/Pipeline/PipelineNodeType.h"
 #include "o2Editor/Pipeline/PipelineUtils.h"
 #include "o2Editor/Windows/PipelineWindow/PipelineNodeBody.h"
@@ -189,13 +190,11 @@ namespace Editor
             return;
         }
 
+        // The cut settings re-cut the cached raw render, the node's or a part's own
         bool chromaKey = key == "chromaColor" || key == "chromaTolerance" || key == "chromaSoftness" || key == "chromaSpill";
         bool instant = schema && schema->instant;
-        if (instant || (chromaKey && node->GetNode()->GetConfigBool("transparentBg", false) &&
-                        node->GetNode()->GetConfigString("transparentMode", "twoPass") == "chroma"))
-        {
+        if (instant || (chromaKey && PipelineTransparency::AnyChromaPostStep(*node->GetNode())))
             ScheduleAutoApply(node->GetNode()->id);
-        }
     }
 
     void PipelineEditor::ScheduleAutoApply(const String& nodeId)
@@ -422,6 +421,9 @@ namespace Editor
         auto node = PipelineNodeRegistry::CreateNode(type, CanvasToNode(canvasPos));
         if (!node)
             return nullptr;
+
+        // A new pair node gets room for its two panes; its height follows the content
+        node->size = PipelinePairLayout::NewNodeSize(type, node->size);
 
         node->position = SnapToGrid(node->position);
         graph->nodes.Add(node);

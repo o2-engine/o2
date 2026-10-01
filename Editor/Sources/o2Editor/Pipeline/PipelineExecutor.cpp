@@ -228,11 +228,13 @@ namespace Editor
             onEvent(event);
     }
 
-    void PipelineExecutor::EmitState(const String& nodeId, const String& state, const String& error /*= ""*/)
+    void PipelineExecutor::EmitState(const String& nodeId, const String& state, const String& error /*= ""*/,
+                                     const String& portId /*= ""*/)
     {
         PipelineExecEvent ev;
         ev.type = PipelineExecEvent::Type::NodeState;
         ev.nodeId = nodeId;
+        ev.portId = portId;
         ev.state = state;
         ev.error = error;
         Emit(ev);
@@ -525,10 +527,10 @@ namespace Editor
             if (wanted.IsEmpty() && !node->outputs.IsEmpty())
                 wanted.Add(node->outputs[0].id);
 
-            bool chroma = PipelineTransparency::UsesChromaPostStep(*node);
             int failed = 0;
             for (auto& portId : wanted)
             {
+                bool computed = false;
                 auto port = node->outputs.FindOrDefault([&](const PipelinePort& p) { return p.id == portId; });
                 if (port.id.IsEmpty())
                     continue;
@@ -561,8 +563,10 @@ namespace Editor
                 }
                 else
                 {
+                    // A part that is really computed reports its own progress; a cache hit does not
                     ctx->outputPortId = portId;
                     ctx->outputPort = port.name;
+                    EmitState(nodeId, "running", "", portId);
                     PipelineRunResult result = co_await impl->Run(ctx, inputs, node);
                     if (run->cancelled)
                     {
@@ -575,22 +579,27 @@ namespace Editor
                         failed++;
                         EmitLog(node->nodeType + " . " + port.name + ": " + (result.ok ? String("produced nothing") : result.error));
                         error = result.ok ? "Output \"" + port.name + "\" produced nothing" : result.error;
+                        EmitState(nodeId, "error", error, portId);
                         continue;
                     }
 
                     stored = result.outputs.begin()->second;
                     SaveContent(run->pipelineId, portSig, stored);
+                    computed = true;
                 }
 
+                // Every part is cut with its own effective settings
                 PipelineValue value = stored;
-                if (chroma && value.IsImage())
+                if (PipelineTransparency::UsesChromaPostStep(*node, portId) && value.IsImage())
                 {
                     if (auto raw = value.GetBitmap())
-                        value = PipelineValue::Image(PipelineTransparency::ApplyChromaPostStep(*node, *raw));
+                        value = PipelineValue::Image(PipelineTransparency::ApplyChromaPostStep(*node, *raw, portId));
                 }
 
                 byPortId[portId] = value;
                 WritePortPreview(run, nodeId, portId, value);
+                if (computed)
+                    EmitState(nodeId, "done", "", portId);
             }
 
             // One part failing leaves the others in place; the node fails only when nothing came out

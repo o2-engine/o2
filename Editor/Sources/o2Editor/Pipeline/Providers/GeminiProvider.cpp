@@ -1,6 +1,7 @@
 #include "o2Editor/stdafx.h"
 #include "GeminiProvider.h"
 
+#include "o2Editor/Pipeline/PipelineUpscale.h"
 #include "o2Editor/Pipeline/PipelineAudio.h"
 #include "o2Editor/Pipeline/PipelineUtils.h"
 
@@ -134,20 +135,9 @@ namespace Editor::GeminiProvider
         co_return result;
     }
 
-    Coroutine<AiBytesResult> GenerateImage(const Ref<PipelineExecContext>& ctx, const String& apiKey, const String& modelIn,
-                                           const String& prompt, const Vector<AiImageRef>& references, int seed)
+    void BuildImageBody(DataDocument& body, const String& model, const String& prompt, const Vector<AiImageRef>& references,
+                        int seed, const AiImageOptions& options /*= AiImageOptions()*/)
     {
-        AiBytesResult result;
-        if (apiKey.IsEmpty()) { result.error = MissingKey(); co_return result; }
-
-        String model = modelIn.IsEmpty() ? defaultImageModel : modelIn;
-        if (model.ToLowerCase().StartsWith("imagen"))
-        {
-            result = co_await ImagenGenerate(ctx, apiKey, model, prompt, seed);
-            co_return result;
-        }
-
-        DataDocument body;
         body.SetObject();
         auto& contents = body["contents"];
         contents.SetArray();
@@ -173,6 +163,35 @@ namespace Editor::GeminiProvider
         modalities.AddElement() = String("TEXT");
         if (seed >= 0)
             config["seed"] = seed;
+
+        bool size = !options.renderSize.IsEmpty() && PipelineUpscale::RendersLargeSizes(model);
+        if (size || !options.aspectRatio.IsEmpty())
+        {
+            auto& imageConfig = config["imageConfig"];
+            imageConfig.SetObject();
+            if (size)
+                imageConfig["imageSize"] = options.renderSize;
+            if (!options.aspectRatio.IsEmpty())
+                imageConfig["aspectRatio"] = options.aspectRatio;
+        }
+    }
+
+    Coroutine<AiBytesResult> GenerateImage(const Ref<PipelineExecContext>& ctx, const String& apiKey, const String& modelIn,
+                                           const String& prompt, const Vector<AiImageRef>& references, int seed,
+                                           const AiImageOptions& options /*= AiImageOptions()*/)
+    {
+        AiBytesResult result;
+        if (apiKey.IsEmpty()) { result.error = MissingKey(); co_return result; }
+
+        String model = modelIn.IsEmpty() ? defaultImageModel : modelIn;
+        if (model.ToLowerCase().StartsWith("imagen"))
+        {
+            result = co_await ImagenGenerate(ctx, apiKey, model, prompt, seed);
+            co_return result;
+        }
+
+        DataDocument body;
+        BuildImageBody(body, model, prompt, references, seed, options);
 
         auto request = AiHttp::MakeJsonPost(baseUrl + "/models/" + model + ":generateContent", body, KeyHeaders(apiKey), 300.0f);
         AiHttpResult http = co_await AiHttp::Send(ctx, request, "Gemini image call");

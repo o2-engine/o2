@@ -150,6 +150,18 @@ namespace
             return text;
         }
 
+        // Returns the run states one part went through, in order
+        Vector<String> PortStates(const String& nodeId, const String& portId) const
+        {
+            Vector<String> states;
+            for (auto& event : events)
+            {
+                if (event.type == PipelineExecEvent::Type::NodeState && event.nodeId == nodeId && event.portId == portId)
+                    states.Add(event.state + (event.error.IsEmpty() ? String() : ": " + event.error));
+            }
+            return states;
+        }
+
         // Returns the value the node produced on the port, invalid when it produced none
         PipelineValue PortOutput(const String& nodeId, const String& portId) const
         {
@@ -170,7 +182,11 @@ namespace
         executor->onEvent = [&](const PipelineExecEvent& e)
         {
             result.events.Add(e);
-            if (e.type == PipelineExecEvent::Type::NodeState) result.states[e.nodeId] = e.state + (e.error.IsEmpty() ? String() : ": " + e.error);
+            if (e.type == PipelineExecEvent::Type::NodeState)
+            {
+                String key = e.portId.IsEmpty() ? e.nodeId : e.nodeId + "#" + e.portId;
+                result.states[key] = e.state + (e.error.IsEmpty() ? String() : ": " + e.error);
+            }
             if (e.type == PipelineExecEvent::Type::Done) result.done = true;
             if (e.type == PipelineExecEvent::Type::Fatal) result.fatal = e.error;
         };
@@ -316,4 +332,40 @@ TEST_F(PerPortFixture, ConsumersOfDifferentPortsDoNotShareCache)
     auto second = RunPipeline(graph, chest->id);
     ASSERT_TRUE(second.done) << second.Errors();
     EXPECT_EQ(second.PortOutput(chest->id, "").data, "src|chest") << "the second consumer was served the cached result of the first";
+}
+
+// A part that is computed reports its own progress - running, then done or error - between the node's own
+// running and done; a part served from the cache reports nothing
+TEST_F(PerPortFixture, ComputedPartsReportTheirOwnProgress)
+{
+    PipelineGraph graph;
+    auto source = AddNode(graph, "sourceText");
+    source->SetConfigString("text", "src");
+    auto parts = AddPerPortNode(graph, "coin,fail");
+    Connect(graph, source, "out", parts, "text");
+    String coin = parts->outputs[0].id, fail = parts->outputs[1].id;
+
+    auto first = RunPipeline(graph, parts->id);
+    ASSERT_TRUE(first.done) << first.Errors();
+    EXPECT_EQ(first.PortStates(parts->id, coin), Vector<String>({ "running", "done" }));
+    EXPECT_EQ(first.PortStates(parts->id, fail), Vector<String>({ "running", "error: part \"fail\" always fails" }));
+    EXPECT_EQ(first.PortStates(parts->id, ""), Vector<String>({ "running", "done" }));
+
+    int nodeRunning = -1, nodeDone = -1, partRunning = -1;
+    for (int i = 0; i < first.events.Count(); i++)
+    {
+        auto& e = first.events[i];
+        if (e.type != PipelineExecEvent::Type::NodeState || e.nodeId != parts->id) continue;
+        if (e.portId.IsEmpty() && e.state == "running") nodeRunning = i;
+        if (e.portId.IsEmpty() && e.state == "done") nodeDone = i;
+        if (e.portId == coin && e.state == "running") partRunning = i;
+    }
+    EXPECT_LT(nodeRunning, partRunning);
+    EXPECT_LT(partRunning, nodeDone);
+
+    auto second = RunPipeline(graph, parts->id);
+    ASSERT_TRUE(second.done) << second.Errors();
+    EXPECT_EQ(partRuns["coin"], 1);
+    EXPECT_TRUE(second.PortStates(parts->id, coin).IsEmpty()) << "a cache hit is not a computation";
+    EXPECT_EQ(second.PortStates(parts->id, fail), Vector<String>({ "running", "error: part \"fail\" always fails" }));
 }

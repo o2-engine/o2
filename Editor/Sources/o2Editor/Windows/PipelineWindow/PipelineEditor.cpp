@@ -227,6 +227,13 @@ namespace Editor
     void PipelineEditor::RebuildAll()
     {
         PushEditorScopeOnStack scope;
+
+        // The field the menu writes to is rebuilt with its card
+        if (mModelPicker)
+            mModelPicker->Close();
+        if (mOptionPicker)
+            mOptionPicker->Close();
+
         Map<String, PipelineNodeRuntime> runtimes;
         for (auto& widget : mNodeWidgets)
         {
@@ -499,8 +506,9 @@ namespace Editor
     void PipelineEditor::RedrawContent()
     {
         DrawGrid();
-        DrawEdges();
+        DrawEdges(false);
         mNodesContainer->Draw();
+        DrawEdges(true);
         for (auto& widget : mNodeWidgets)
             widget->DrawPorts();
 
@@ -513,6 +521,10 @@ namespace Editor
         mNodeContextMenu->Draw();
         mEdgeContextMenu->Draw();
         mPopupMenu->Draw();
+        if (mModelPicker)
+            mModelPicker->Draw();
+        if (mOptionPicker)
+            mOptionPicker->Draw();
     }
 
     void PipelineEditor::DrawSelection()
@@ -598,7 +610,7 @@ namespace Editor
         return true;
     }
 
-    void PipelineEditor::DrawEdges()
+    void PipelineEditor::DrawEdges(bool overCards)
     {
         auto graph = GetGraph();
         if (!graph)
@@ -607,6 +619,12 @@ namespace Editor
         bool culling = mCullingRect.Width() > 0.0f;
         for (auto& edge : graph->edges)
         {
+            Ref<PipelineNodeWidget> fromWidget;
+            Vec2F bodyOffset;
+            bool bodyPort = mNodeWidgetsById.TryGetValue(edge->fromNodeId, fromWidget) && fromWidget->IsBodyPort(edge->fromPortId, bodyOffset);
+            if (bodyPort != overCards)
+                continue;
+
             Vec2F from, to;
             if (!GetEdgeEnds(*edge, from, to))
                 continue;
@@ -657,7 +675,7 @@ namespace Editor
             DrawEdge(from, to, edge->points, color, width);
         }
 
-        if (mPendingEdge.active)
+        if (mPendingEdge.active && !overCards)
         {
             Ref<PipelineNodeWidget> widget;
             if (mNodeWidgetsById.TryGetValue(mPendingEdge.nodeId, widget))
@@ -824,6 +842,21 @@ namespace Editor
                         StartRun(nodeId, {}, true);
                 }
             }
+        }
+
+        // The view setting of the image-to-image nodes changed: their cards are built again, at the same height
+        if (mIoViewVersion != PipelinePairLayout::GetIoViewVersion())
+        {
+            mIoViewVersion = PipelinePairLayout::GetIoViewVersion();
+            for (auto& widget : mNodeWidgets)
+            {
+                if (PipelinePairLayout::IsPairNode(widget->GetNode()->nodeType))
+                {
+                    widget->Rebuild();
+                    widget->UpdateFromNode();
+                }
+            }
+            mNeedRedraw = true;
         }
 
         if (mViewCameraMoved || mCameraDirty)

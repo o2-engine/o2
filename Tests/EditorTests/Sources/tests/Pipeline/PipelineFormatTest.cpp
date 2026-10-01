@@ -298,18 +298,38 @@ TEST(PipelineFormat, SchemaSyncKeepsEveryPortAndLinkOfAssetsLineDocuments)
             // An extract with a region list has one output per region, like the web editor
             // makes it on load; an older build stored a leftover "out" beside them
             Vector<String> regionIds;
+            bool legacyExtract = false;
             if (node->nodeType == "imageExtract")
             {
                 if (auto regions = (*stored)["config"].FindMember("regions"); regions && regions->IsArray())
                     for (auto& region : *regions) regionIds.Add(region["id"].GetString());
+
+                legacyExtract = regionIds.IsEmpty();
+            }
+
+            // An extract without a region list keeps the one output "out", as the web editor regenerates it; the
+            // unlinked extra outputs such a node picked up (a phantom "out" beside a prompt-named port) are dropped,
+            // a linked one never
+            if (legacyExtract)
+            {
+                ASSERT_EQ(node->outputs.Count(), 1) << file;
+                EXPECT_EQ(node->outputs[0].name, "out") << file;
             }
 
             for (auto& port : (*stored)["outputs"])
             {
-                if (!regionIds.IsEmpty() && !regionIds.Contains(port["id"].GetString()))
+                String portId = port["id"].GetString();
+                if (!regionIds.IsEmpty() && !regionIds.Contains(portId))
                     continue;
 
-                EXPECT_TRUE(node->FindOutput(port["id"].GetString())) << file << " " << node->nodeType << " lost output " << port["name"].GetString();
+                bool linked = false;
+                for (auto& edge : original["edges"])
+                    linked = linked || (String(edge["fromNodeId"].GetString()) == node->id && String(edge["fromPortId"].GetString()) == portId);
+
+                if (legacyExtract && !linked && portId != (*stored)["outputs"].GetElement(0)["id"].GetString())
+                    continue;
+
+                EXPECT_TRUE(node->FindOutput(portId)) << file << " " << node->nodeType << " lost output " << port["name"].GetString();
             }
         }
     }

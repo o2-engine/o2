@@ -293,6 +293,32 @@ namespace Editor
         mPopupMenu->Show();
     }
 
+    void PipelineEditor::ShowModelPicker(const PipelineModelPickerRequest& request)
+    {
+        PushEditorScopeOnStack scope;
+        if (!mModelPicker)
+        {
+            mModelPicker = mmake<PipelineModelPicker>();
+            mModelPicker->name = "model picker";
+            AddChild(mModelPicker);
+        }
+
+        mModelPicker->Open(request);
+    }
+
+    void PipelineEditor::ShowOptionPicker(const PipelineOptionPickerRequest& request)
+    {
+        PushEditorScopeOnStack scope;
+        if (!mOptionPicker)
+        {
+            mOptionPicker = mmake<PipelineOptionPicker>();
+            mOptionPicker->name = "option picker";
+            AddChild(mOptionPicker);
+        }
+
+        mOptionPicker->Open(request);
+    }
+
     void PipelineEditor::OpenNodeContextMenu(const Ref<PipelineNodeWidget>& node)
     {
         if (!node->IsSelected())

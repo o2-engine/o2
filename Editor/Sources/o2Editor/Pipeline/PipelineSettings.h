@@ -13,6 +13,8 @@ namespace Editor
     struct PipelineSettings
     {
         String geminiApiKey;     // Google Gemini API key
+        String openAiApiKey;     // OpenAI API key
+        String openRouterApiKey; // OpenRouter API key
         String klingAccessKey;   // Kling access key
         String klingSecretKey;   // Kling secret key
         String elevenLabsApiKey; // ElevenLabs API key
@@ -29,6 +31,12 @@ namespace Editor
 
         // Returns effective Gemini key: stored key, GEMINI_API_KEY or the ImageGen tool key file
         String GetGeminiKey() const;
+
+        // Returns effective OpenAI key: stored key or OPENAI_API_KEY
+        String GetOpenAiKey() const;
+
+        // Returns effective OpenRouter key: stored key or OPENROUTER_API_KEY
+        String GetOpenRouterKey() const;
 
         // Returns effective ElevenLabs key: stored key or ELEVENLABS_API_KEY
         String GetElevenLabsKey() const;

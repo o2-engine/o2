@@ -19,14 +19,44 @@ namespace Editor
             h = Math::Clamp(h, 0.001f, 1.0f - y);
         }
 
+        static const Vector<String>& OwnKeys()
+        {
+            static Vector<String> keys = { "id", "name", "x", "y", "w", "h" };
+            return keys;
+        }
+
+        static String RegionId(const DataValue& value, int index)
+        {
+            String id;
+            if (auto member = value.FindMember("id"))
+                id = String(member->IsString() ? member->GetString() : "");
+
+            return id.IsEmpty() ? "r" + (String)index : id;
+        }
+
+        // Returns the stored object of the region with the id, null when there is none
+        static const DataValue* FindElement(const PipelineNode& node, const String& id)
+        {
+            auto raw = node.GetConfigValue("regions");
+            if (id.IsEmpty() || !raw || !raw->IsArray())
+                return nullptr;
+
+            for (int i = 0; i < raw->GetElementsCount(); i++)
+            {
+                auto& element = raw->GetElement(i);
+                if (element.IsObject() && RegionId(element, i) == id)
+                    return &element;
+            }
+
+            return nullptr;
+        }
+
         static PipelineExtractRegion ReadOne(const DataValue& value, int index)
         {
             PipelineExtractRegion region;
-            if (auto id = value.FindMember("id"))
-                region.id = String(id->IsString() ? id->GetString() : "");
-
-            if (region.id.IsEmpty())
-                region.id = "r" + (String)index;
+            region.id = RegionId(value, index);
+            auto own = value.FindMember("transparency");
+            region.ownTransparency = own && own->IsObject();
 
             if (auto name = value.FindMember("name"))
                 region.name = name->IsString() ? String(name->GetString()) : String();
@@ -86,8 +116,7 @@ namespace Editor
             if (!node.config.IsObject())
                 node.config.SetObject();
 
-            node.RemoveConfig("regions");
-            auto& arr = node.config["regions"];
+            DataDocument arr;
             arr.SetArray();
             for (auto& region : regions)
             {
@@ -99,7 +128,18 @@ namespace Editor
                 item["y"] = region.y;
                 item["w"] = region.w;
                 item["h"] = region.h;
+                if (auto previous = FindElement(node, region.id))
+                {
+                    for (auto it = previous->BeginMember(); it != previous->EndMember(); ++it)
+                    {
+                        if (!OwnKeys().Contains(String(it->name.GetString())))
+                            item.AddMember(it->name.GetString()) = it->value;
+                    }
+                }
             }
+
+            node.RemoveConfig("regions");
+            node.config["regions"] = static_cast<const DataValue&>(arr);
         }
 
         Vector<String> PortNames(const Vector<PipelineExtractRegion>& regions)
@@ -123,6 +163,24 @@ namespace Editor
 
         void SyncPorts(PipelineNode& node)
         {
+            // Without a region list AssetsLine looks the output up by the schema name "out": the first port stays, with its links
+            bool hasList = false;
+            if (auto list = node.GetConfigValue("regions"); list && list->IsArray())
+            {
+                for (auto& item : *list)
+                    hasList = hasList || item.IsObject();
+            }
+
+            if (!hasList)
+            {
+                PipelinePort port = node.outputs.IsEmpty() ? PipelinePort(PipelineNode::GenerateId(), "", PipelinePortType::Image, false)
+                                                           : node.outputs[0];
+                port.name = "out";
+                port.portType = PipelinePortType::Image;
+                node.outputs = { port };
+                return;
+            }
+
             auto regions = Read(node);
             auto names = PortNames(regions);
 
@@ -242,6 +300,40 @@ namespace Editor
             }
 
             return regions.IsEmpty() ? PipelineExtractRegion() : regions[0];
+        }
+
+        const DataValue* FindTransparency(const PipelineNode& node, const String& portId)
+        {
+            auto element = FindElement(node, portId);
+            auto own = element ? element->FindMember("transparency") : nullptr;
+            return own && own->IsObject() ? own : nullptr;
+        }
+
+        DataValue* FindTransparency(PipelineNode& node, const String& portId)
+        {
+            return const_cast<DataValue*>(FindTransparency(static_cast<const PipelineNode&>(node), portId));
+        }
+
+        bool SetOwnTransparency(PipelineNode& node, const String& portId, bool own)
+        {
+            // A node from before regions existed gets its list written first
+            if (own && !FindElement(node, portId) && RegionOfPort(node, portId).id == portId)
+                Write(node, Read(node));
+
+            auto element = const_cast<DataValue*>(FindElement(node, portId));
+            if (!element || (FindTransparency(node, portId) != nullptr) == own)
+                return false;
+
+            if (own)
+            {
+                DataDocument settings;
+                PipelineTransparency::WriteSettings(node, portId, settings);
+                (*element)["transparency"] = static_cast<const DataValue&>(settings);
+            }
+            else
+                element->RemoveMember("transparency");
+
+            return true;
         }
     }
 }

@@ -38,6 +38,7 @@ namespace Editor
         String        srcPreviewPath; // Preview image file of the source, empty when there is none
 
         Map<String, PipelineValue> portOutputs; // Last result of each output of a per-port node, by port id
+        Map<String, String>        portStates;  // Run state of each part being computed: running / done / error, by port id; dropped when the node stops
     };
 
     // ----------------------------------------------------------------------
@@ -57,7 +58,6 @@ namespace Editor
         static const float defaultWidth;  // Card width when neither the node nor the schema sets one
         static const float minWidth;      // Smallest card width
         static const float minHeight;     // Smallest card height
-        static const float paramsSlideTime; // Seconds the parameter list takes to slide open or closed
 
         // ----------------------------------------------------------
         // Port view: port data, its layers and custom input controls
@@ -152,7 +152,7 @@ namespace Editor
         // Returns true when the card is selected
         bool IsSelected() const { return mSelected; }
 
-        // Updates the visual states and the header buttons from the runtime state
+        // Updates the visual states, the header buttons and the body from the runtime state; the part states go once the node stops running
         void ApplyRuntime();
 
         // Returns the body height the current node type wants
@@ -164,17 +164,21 @@ namespace Editor
         // Returns the card height fitting the header, the port rows and the body
         float GetAutoHeight() const;
 
+        // Returns the height the card needs for its content at the width
+        float GetAutoHeightForWidth(float width) const;
+
         // Returns the height of the port rows, including the add-input row
         float GetPortsHeight() const;
 
-        // Slides the parameter list open or closed; the body keeps the rows until it has closed
-        void AnimateParams(bool open);
+        // Returns the height the body is laid out in: the card height below the header and the port rows
+        float GetBodyAreaHeight() const;
 
-        // Returns true while the parameter list slides
-        bool IsParamsAnimating() const;
+        // Shows or hides the parameter list at once; a card with a set height grows or shrinks by the list, so the rest keeps its size
+        void SetParamsOpen(bool open);
 
-        // Returns how far the sliding parameter list is open, 0..1, eased
-        float GetParamsReveal() const;
+        // Applies a change of the card's content; a card with a set height changes it by exactly what the content did, never
+        // snapped to the grid, so the pictures keep their size
+        void KeepAreaThrough(const Function<void()>& change);
 
         // Notifies the body that the node output changed
         void OnOutputChanged();
@@ -197,10 +201,8 @@ namespace Editor
         // Updates the card unless it is culled
         void Update(float dt) override;
 
-        // Moves the parameter list slide on and lays the card out for it; rebuilds the body once it has closed
-        void UpdateParamsSlide(float dt);
-
-        // Updates the children unless the card is culled; without details the body updates for a few frames after a change
+        // Updates the children unless the card is culled; without details the body updates for a few frames after a change. Then
+        // the ports the body places follow its widgets as they are now laid out
         void UpdateChildren(float dt) override;
 
         // Draws the card: nothing when culled; without details the layers and the body content only
@@ -229,8 +231,7 @@ namespace Editor
         bool                      mCulled = false;   // True when the card is outside the view
         bool                      mDetailed = true;  // False when the view is zoomed too far out for the controls
         int                       mFarUpdateFrames = 0; // Frames the body still updates without details; layout and content changes reset it
-        float                     mParamsProgress = 1.0f;  // Linear progress of the parameter list slide, 0 closed .. 1 open
-        bool                      mParamsOpening = true;   // Direction of the parameter list slide
+        int                       mBodyPortPasses = 0;  // Updates in which the ports the body places still follow its widgets
 
         Ref<WidgetLayer>      mTitleLayer;     // Title text layer
         Ref<WidgetLayer>      mIconLayer;      // Node type icon layer
@@ -326,8 +327,7 @@ CLASS_FIELDS_META(Editor::PipelineNodeWidget)
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mCulled);
     FIELD().PROTECTED().DEFAULT_VALUE(true).NAME(mDetailed);
     FIELD().PROTECTED().DEFAULT_VALUE(0).NAME(mFarUpdateFrames);
-    FIELD().PROTECTED().DEFAULT_VALUE(1.0f).NAME(mParamsProgress);
-    FIELD().PROTECTED().DEFAULT_VALUE(true).NAME(mParamsOpening);
+    FIELD().PROTECTED().DEFAULT_VALUE(0).NAME(mBodyPortPasses);
     FIELD().PROTECTED().NAME(mTitleLayer);
     FIELD().PROTECTED().NAME(mIconLayer);
     FIELD().PROTECTED().NAME(mPlayButton);
@@ -369,10 +369,11 @@ CLASS_METHODS_META(Editor::PipelineNodeWidget)
     FUNCTION().PUBLIC().SIGNATURE(float, GetBodyHeight);
     FUNCTION().PUBLIC().SIGNATURE(const Ref<PipelineNodeBody>&, GetBody);
     FUNCTION().PUBLIC().SIGNATURE(float, GetAutoHeight);
+    FUNCTION().PUBLIC().SIGNATURE(float, GetAutoHeightForWidth, float);
     FUNCTION().PUBLIC().SIGNATURE(float, GetPortsHeight);
-    FUNCTION().PUBLIC().SIGNATURE(void, AnimateParams, bool);
-    FUNCTION().PUBLIC().SIGNATURE(bool, IsParamsAnimating);
-    FUNCTION().PUBLIC().SIGNATURE(float, GetParamsReveal);
+    FUNCTION().PUBLIC().SIGNATURE(float, GetBodyAreaHeight);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetParamsOpen, bool);
+    FUNCTION().PUBLIC().SIGNATURE(void, KeepAreaThrough, const Function<void()>&);
     FUNCTION().PUBLIC().SIGNATURE(void, OnOutputChanged);
     FUNCTION().PUBLIC().SIGNATURE(void, OnConfigChanged);
     FUNCTION().PUBLIC().SIGNATURE(void, SetCulled, bool);
@@ -380,7 +381,6 @@ CLASS_METHODS_META(Editor::PipelineNodeWidget)
     FUNCTION().PUBLIC().SIGNATURE(void, SetDetailed, bool);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsDetailed);
     FUNCTION().PUBLIC().SIGNATURE(void, Update, float);
-    FUNCTION().PUBLIC().SIGNATURE(void, UpdateParamsSlide, float);
     FUNCTION().PUBLIC().SIGNATURE(void, UpdateChildren, float);
     FUNCTION().PUBLIC().SIGNATURE(void, Draw);
     FUNCTION().PUBLIC().SIGNATURE(void, DrawPorts);

@@ -79,24 +79,32 @@ namespace Editor
                         results[node->id + "#" + port.id] = { node->id, port.id, "part", PipelineExecutor::GetPortPreviewPath(id, node->id, port.id, "png") };
                 }
 
-                if (!PipelineTransparency::UsesChromaPostStep(*node))
+                // Each part decides by its own effective settings whether it has a raw render
+                Vector<String> rawPorts;
+                if (multi)
+                {
+                    for (auto& port : node->outputs)
+                    {
+                        if (PipelineTransparency::UsesChromaPostStep(*node, port.id))
+                            rawPorts.Add(port.id);
+                    }
+                }
+                else if (PipelineTransparency::UsesChromaPostStep(*node, perPort ? node->outputs[0].id : String()))
+                    rawPorts.Add(perPort ? node->outputs[0].id : String());
+
+                if (rawPorts.IsEmpty())
                     continue;
 
                 int seed = -1;
                 seeds.TryGetValue(node->id, seed);
                 auto upstream = graph.UpstreamSignatures(*node, sigs);
-                if (multi)
+                for (auto& portId : rawPorts)
                 {
-                    for (auto& port : node->outputs)
-                    {
-                        String sig = PipelineExecutor::ContentSignature(*node, upstream, seed, port.id);
-                        results[node->id + "#" + port.id + ".raw"] = { node->id, port.id, "raw", PipelineExecutor::GetContentPath(id, sig, "png") };
-                    }
-                }
-                else
-                {
-                    String sig = PipelineExecutor::ContentSignature(*node, upstream, seed, perPort ? node->outputs[0].id : String());
-                    results[node->id + ".raw"] = { node->id, "", "raw", PipelineExecutor::GetContentPath(id, sig, "png") };
+                    String path = PipelineExecutor::GetContentPath(id, PipelineExecutor::ContentSignature(*node, upstream, seed, portId), "png");
+                    if (multi)
+                        results[node->id + "#" + portId + ".raw"] = { node->id, portId, "raw", path };
+                    else
+                        results[node->id + ".raw"] = { node->id, "", "raw", path };
                 }
             }
 
@@ -108,12 +116,13 @@ namespace Editor
         void SeedContent(const String& id, const PipelineGraph& graph, const PipelineNode& node,
                          const Map<String, String>& sigs, const Map<String, int>& seeds, bool replace)
         {
-            if (PipelineNodeRegistry::IsFinishType(node.nodeType) || PipelineTransparency::UsesChromaPostStep(node))
+            if (PipelineNodeRegistry::IsFinishType(node.nodeType))
                 return;
 
+            // A chroma render is cached raw, before the cut the preview shows: it comes as its own ".raw" result
             auto schema = PipelineNodeRegistry::GetSchema(node.nodeType);
             bool perPort = schema && schema->perPortRun && !node.outputs.IsEmpty();
-            if (!perPort && node.outputs.Count() != 1)
+            if (!perPort && (node.outputs.Count() != 1 || PipelineTransparency::UsesChromaPostStep(node)))
                 return;
 
             int seed = -1;
@@ -145,6 +154,9 @@ namespace Editor
             {
                 for (auto& port : node.outputs)
                 {
+                    if (PipelineTransparency::UsesChromaPostStep(node, port.id))
+                        continue;
+
                     String source = node.outputs.Count() > 1 ? PipelineExecutor::GetPortPreviewPath(id, node.id, port.id, "png") : main;
                     copy(PipelineExecutor::ContentSignature(node, upstream, seed, port.id), "png", source);
                 }

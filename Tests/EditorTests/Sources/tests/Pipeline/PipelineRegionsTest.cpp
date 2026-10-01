@@ -1,9 +1,14 @@
 #include "o2Editor/stdafx.h"
 #include <gtest/gtest.h>
 
+#include "Network/NetworkTestHelpers.h"
+#include "o2/Utils/FileSystem/FileSystem.h"
+#include "o2Editor/Pipeline/PipelineExecutor.h"
 #include "o2Editor/Pipeline/PipelineGraph.h"
+#include "o2Editor/Pipeline/PipelineImageOps.h"
 #include "o2Editor/Pipeline/PipelineNodeType.h"
 #include "o2Editor/Pipeline/PipelineRegions.h"
+#include "o2Editor/Pipeline/PipelineUtils.h"
 
 using namespace o2;
 using namespace Editor;
@@ -158,4 +163,123 @@ TEST(PipelineRegions, LongNonAsciiNamesAreCutOnCharacterBoundaries)
     ASSERT_EQ(parsed.Count(), 1);
     EXPECT_LE(parsed[0].name.Length(), 60);
     EXPECT_NO_THROW({ WString wide = parsed[0].name; (void)wide; });
+}
+
+// A node from before regions existed has the one output AssetsLine gives it, "out": a port named after the
+// prompt was not found there by that name and got a phantom "out" added beside it
+TEST(PipelineRegions, NodeWithoutRegionsKeepsOneOutputNamedOut)
+{
+    auto node = MakeExtractNode();
+    node->SetConfigString("prompt", "gold coin");
+    String schemaPort = node->outputs[0].id;
+    PipelineRegions::SyncPorts(*node);
+    ASSERT_EQ(node->outputs.Count(), 1);
+    EXPECT_EQ(node->outputs[0].id, schemaPort);
+    EXPECT_EQ(node->outputs[0].name, "out");
+
+    // An older o2 named it after the prompt: renamed, the id and so the links stay
+    node->outputs = { PipelinePort("keep", "gold coin", PipelinePortType::Image, false) };
+    PipelineRegions::SyncPorts(*node);
+    ASSERT_EQ(node->outputs.Count(), 1);
+    EXPECT_EQ(node->outputs[0].id, "keep");
+    EXPECT_EQ(node->outputs[0].name, "out");
+
+    // The phantom the web editor added beside it has no links and goes, also when the editor syncs the schema
+    node->outputs = { PipelinePort("keep", "gold coin", PipelinePortType::Image, false), PipelinePort("phantom", "out", PipelinePortType::Image, false) };
+    PipelineNodeRegistry::SyncNodeWithSchema(node);
+    ASSERT_EQ(node->outputs.Count(), 1);
+    EXPECT_EQ(node->outputs[0].id, "keep");
+    EXPECT_EQ(node->outputs[0].name, "out");
+
+    auto legacy = PipelineRegions::Read(*node);
+    ASSERT_EQ(legacy.Count(), 1);
+    EXPECT_EQ(legacy[0].id, "keep");
+    EXPECT_EQ(legacy[0].name, "gold coin");
+
+    // A node without any output gets one
+    node->outputs.Clear();
+    PipelineRegions::SyncPorts(*node);
+    ASSERT_EQ(node->outputs.Count(), 1);
+    EXPECT_FALSE(node->outputs[0].id.IsEmpty());
+    EXPECT_EQ(node->outputs[0].name, "out");
+
+    // A second part writes the region list: from then on the ports are named after the parts
+    node->outputs = { PipelinePort("keep", "out", PipelinePortType::Image, false) };
+    auto regions = PipelineRegions::Read(*node);
+    regions.Add(MakeRegion("b", "chest", 0.5f, 0, 0.5f, 1));
+    PipelineRegions::Write(*node, regions);
+    PipelineNodeRegistry::SyncNodeWithSchema(node);
+    ASSERT_EQ(node->outputs.Count(), 2);
+    EXPECT_EQ(node->outputs[0].id, "keep");
+    EXPECT_EQ(node->outputs[0].name, "gold coin");
+    EXPECT_EQ(node->outputs[1].id, "b");
+    EXPECT_EQ(node->outputs[1].name, "chest");
+}
+
+// The result of a node without regions leaves through its "out" port and reaches the node linked to it. The part's
+// render is seeded into the content cache and the run is cached-only, so no provider is asked
+TEST(PipelineRegions, NodeWithoutRegionsHandsItsResultThroughOut)
+{
+    String relative = "./pipeline-legacy-extract-" + (String)(int)Math::Random(0, 1000000);
+    o2FileSystem.FolderCreate(relative, true);
+    String work = o2FileSystem.CanonicalizePath(relative) + "/";
+    PipelineUtils::SetWorkPathOverride(work);
+    o2FileSystem.FolderCreate(PipelineUtils::GetUploadsPath(), true);
+    PipelineUtils::WriteFileBytes(PipelineUtils::GetUploadPath("sheet.png"),
+                                  PipelineValue::Image(PipelineImageOps::Blank(32, 32, Color4(90, 90, 90, 255))).GetPngBytes());
+
+    PipelineGraph graph;
+    auto source = PipelineNodeRegistry::CreateNode("sourceImage", Vec2F());
+    source->SetConfigString("uploadId", "sheet.png");
+    auto extract = MakeExtractNode();
+    extract->SetConfigString("prompt", "gold coin");
+    extract->outputs = { PipelinePort("keep", "gold coin", PipelinePortType::Image, false), PipelinePort("phantom", "out", PipelinePortType::Image, false) };
+    auto invert = PipelineNodeRegistry::CreateNode("imageColor", Vec2F());
+    invert->SetConfigBool("invert", true);
+    graph.nodes = { source, extract, invert };
+    PipelineNodeRegistry::SyncNodeWithSchema(extract);
+
+    auto link = [&](const Ref<PipelineNode>& from, const String& fromPort, const Ref<PipelineNode>& to)
+    {
+        auto edge = mmake<PipelineEdge>();
+        edge->id = PipelineNode::GenerateId();
+        edge->fromNodeId = from->id;
+        edge->fromPortId = fromPort;
+        edge->toNodeId = to->id;
+        edge->toPortId = to->inputs[0].id;
+        graph.edges.Add(edge);
+    };
+    link(source, source->outputs[0].id, extract);
+    link(extract, "keep", invert);
+
+    auto upstream = graph.UpstreamSignatures(*extract, graph.ComputeSignatures());
+    int seed = graph.ResolveSeeds()[extract->id];
+    PipelineExecutor::SaveContent("legacy", PipelineExecutor::PortSignature(*extract, upstream, seed, "keep"),
+                                  PipelineValue::Image(PipelineImageOps::Blank(8, 8, Color4(255, 200, 0, 255))));
+
+    PipelineValue part, inverted;
+    bool done = false;
+    String fatal;
+    auto executor = mmake<PipelineExecutor>();
+    executor->onEvent = [&](const PipelineExecEvent& e)
+    {
+        if (e.type == PipelineExecEvent::Type::NodeOutput && e.nodeId == extract->id && e.portId == "keep") part = e.value;
+        if (e.type == PipelineExecEvent::Type::NodeOutput && e.nodeId == invert->id) inverted = e.value;
+        if (e.type == PipelineExecEvent::Type::Done) done = true;
+        if (e.type == PipelineExecEvent::Type::Fatal) fatal = e.error;
+    };
+    executor->Execute("legacy", graph, invert->id, {}, true);
+    EXPECT_TRUE(NetPumpUntil([&] { return done || !fatal.IsEmpty(); }, 20.0f));
+    EXPECT_TRUE(fatal.IsEmpty()) << fatal;
+
+    EXPECT_EQ(extract->outputs[0].name, "out");
+    EXPECT_TRUE(part.IsImage());
+    ASSERT_TRUE(inverted.IsImage());
+    const UInt8* pixel = PipelineImageOps::Pixel(*inverted.GetBitmap(), 4, 4);
+    EXPECT_EQ((int)pixel[0], 0);
+    EXPECT_EQ((int)pixel[1], 55);
+    EXPECT_EQ((int)pixel[2], 255);
+
+    PipelineUtils::SetWorkPathOverride("");
+    o2FileSystem.FolderRemove(work, true);
 }

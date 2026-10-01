@@ -38,6 +38,9 @@ namespace Editor
         // True for the statuses worth a retry: 408, 429 and the 5xx gateway errors
         bool IsRetryableStatus(int status);
 
+        // True for an answer no retry can change: a 429 that reports an exhausted quota
+        bool IsFinalError(int status, const String& body);
+
         // Sends the request with retries; the context receives retry signals and cancellation
         Coroutine<AiHttpResult> Send(const Ref<PipelineExecContext>& ctx, const Ref<HttpRequest>& request,
                                      const String& opName, bool parseJson = true);
@@ -45,6 +48,10 @@ namespace Editor
         // Builds a POST request with a JSON body, cookies and caching off
         Ref<HttpRequest> MakeJsonPost(const String& url, const DataDocument& body, const Map<String, String>& headers,
                                       float timeout = 300.0f);
+
+        // Builds a POST request with a raw body of the given content type, cookies and caching off
+        Ref<HttpRequest> MakeRawPost(const String& url, const String& body, const String& contentType,
+                                     const Map<String, String>& headers, float timeout = 300.0f);
 
         // Builds a GET request with cookies and caching off
         Ref<HttpRequest> MakeGet(const String& url, const Map<String, String>& headers, float timeout = 60.0f);

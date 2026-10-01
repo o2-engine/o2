@@ -275,6 +275,23 @@ TEST(PipelineUtils, PrettyModelNames)
     EXPECT_EQ(PipelineUtils::PrettyModelName("gemini-3.5-flash"), String("Gemini 3.5 Flash"));
     EXPECT_EQ(PipelineUtils::PrettyModelName("gemini-2.5-flash-lite"), String("Gemini 2.5 Flash Lite"));
     EXPECT_EQ(PipelineUtils::PrettyModelName("gemini-3.1-pro-preview"), String("Gemini 3.1 Pro \xC2\xB7 preview"));
+    EXPECT_EQ(PipelineUtils::PrettyModelName("openai/gpt-5.5"), String("OpenAI: GPT-5.5 \xC2\xB7 OpenRouter"));
+    EXPECT_EQ(PipelineUtils::PrettyModelName("google/gemini-3.1-flash-image"), String("Google: Nano Banana 2 \xC2\xB7 OpenRouter"));
+    EXPECT_EQ(PipelineUtils::PrettyModelName("x-ai/grok-9-fast"), String("xAI: Grok 9 Fast \xC2\xB7 OpenRouter"));
+    EXPECT_EQ(PipelineUtils::PrettyModelName("somevendor/cool-model-2"), String("Somevendor: Cool Model 2 \xC2\xB7 OpenRouter"));
+    EXPECT_EQ(PipelineUtils::PrettyModelName("gpt-5.4-mini"), String("GPT-5.4 Mini \xC2\xB7 OpenAI"));
+    EXPECT_EQ(PipelineUtils::PrettyModelName("gpt-image-1.5"), String("GPT Image 1.5 \xC2\xB7 OpenAI"));
+    EXPECT_EQ(PipelineUtils::PrettyModelName("gpt-6-turbo"), String("GPT-6 Turbo \xC2\xB7 OpenAI"));
+    EXPECT_EQ(PipelineUtils::PrettyModelName("gpt-image-2-mini"), String("GPT Image 2 Mini \xC2\xB7 OpenAI"));
+    EXPECT_EQ(PipelineUtils::PrettyModelName("dall-e-3"), String("DALL-E 3 \xC2\xB7 OpenAI"));
+    EXPECT_EQ(PipelineUtils::PrettyModelName("o3-mini"), String("o3 Mini \xC2\xB7 OpenAI"));
+    EXPECT_EQ(PipelineUtils::PrettyModelName("gpt-image-2.5-flare"), String("GPT Image 2.5 Flare \xC2\xB7 OpenAI"));
+    EXPECT_EQ(PipelineUtils::PrettyModelName("openai/gpt-image-1"), String("OpenAI: GPT Image 1 \xC2\xB7 OpenRouter"));
+    EXPECT_EQ(PipelineUtils::PrettyModelName("openai/gpt-image-1-mini"), String("OpenAI: GPT Image 1 Mini \xC2\xB7 OpenRouter"));
+    EXPECT_EQ(PipelineUtils::PrettyModelName("openai/gpt-6-image-2"), String("OpenAI: GPT-6 Image 2 \xC2\xB7 OpenRouter"));
+    EXPECT_EQ(PipelineUtils::PrettyModelName("z-ai/glm-5"), String("Z.ai: GLM 5 \xC2\xB7 OpenRouter")) << "a short part without a vowel is an acronym";
+    EXPECT_EQ(PipelineUtils::PrettyModelName("somelab/new-flux-3"), String("Somelab: New Flux 3 \xC2\xB7 OpenRouter"));
+    EXPECT_EQ(PipelineUtils::PrettyModelName("gemini-9-flash-tts"), String("Gemini 9 Flash Tts")) << "the acronym rule is OpenRouter's";
     EXPECT_EQ(PipelineUtils::PrettyModelName(""), String());
 }
 

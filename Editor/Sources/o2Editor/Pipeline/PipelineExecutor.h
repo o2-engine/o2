@@ -24,7 +24,7 @@ namespace Editor
         String message;          // Log line, Retry reason
 
         PipelineValue value;          // NodeOutput: the produced value
-        String        portId;         // NodeOutput: output port of a per-port node, empty for the node result
+        String        portId;         // NodeOutput, NodeState: the part of a per-port node it is about, empty for the node
         String        previewPath;    // NodeOutput: where the preview file was written
         String        srcPreviewPath; // NodeOutput: uncropped source preview when a crop was applied
 
@@ -160,8 +160,8 @@ namespace Editor
         // Passes the event to onEvent when it is set
         void Emit(const PipelineExecEvent& event);
 
-        // Emits a NodeState event: running / done / error
-        void EmitState(const String& nodeId, const String& state, const String& error = "");
+        // Emits a NodeState event: running / done / error, of the node or, with a port id, of one of its parts
+        void EmitState(const String& nodeId, const String& state, const String& error = "", const String& portId = "");
 
         // Emits a Log event
         void EmitLog(const String& message);

@@ -1,12 +1,20 @@
 #include "o2Editor/stdafx.h"
 #include "PipelineNodesCommon.h"
 
+#include "o2Editor/Pipeline/PipelineEditRegion.h"
+#include "o2Editor/Pipeline/PipelineRegions.h"
 #include "o2Editor/Pipeline/PipelineUtils.h"
 
 namespace Editor
 {
     namespace PipelineTransparency
     {
+        const String nativeBackdrop = "full transparency (alpha 0, no colour at all)";
+
+        const String nativeEditSuffix =
+            "Then isolate the main subject of the edited result and remove the original background entirely, leaving it fully transparent. "
+            "Keep the subject fully opaque with crisp edges. Do not add shadows, gradients, reflections, or vignettes.";
+
         const String whiteBgInstruction =
             "Place the described subject on a solid, uniform, pure white (#FFFFFF) background that fills the whole frame. "
             "Keep the subject fully opaque with crisp edges. Do not add shadows, gradients, reflections, vignettes, or any non-white background.";
@@ -16,22 +24,104 @@ namespace Editor
             "colors, lighting and details - changing ONLY the background to a solid, uniform, pure black (#000000) that fills the whole frame. "
             "Do not move, resize, recolor, or alter the subject in any way. Do not add shadows or gradients. Output only the resulting image.";
 
-        Config Read(const PipelineNode& node)
+        // True for YYYY-MM-DD
+        static bool IsDateSuffix(const String& text)
         {
+            if (text.Length() != 10)
+                return false;
+
+            for (int i = 0; i < 10; i++)
+            {
+                bool dash = i == 4 || i == 7;
+                if (dash ? text[i] != '-' : !(text[i] >= '0' && text[i] <= '9'))
+                    return false;
+            }
+            return true;
+        }
+
+        bool SupportsNativeTransparency(const String& modelIn)
+        {
+            String model = modelIn.Trimed(" \n\r\t");
+            if (model.StartsWith("models/"))
+                model = model.SubStr(7);
+
+            model = model.ToLowerCase();
+            if (model.StartsWith("gpt-image"))
+                return true;
+
+            // OpenRouter takes only an automatic or opaque background for this one and its dated snapshots
+            static const String opaqueOnly = "openai/gpt-image-2";
+            if (model == opaqueOnly || (model.StartsWith(opaqueOnly + "-") && IsDateSuffix(model.SubStr(opaqueOnly.Length() + 1))))
+                return false;
+
+            return model.StartsWith("openai/gpt-image-") || model == "openai/gpt-5-image" || model == "openai/gpt-5-image-mini" ||
+                model == "sourceful/riverflow-v2.5-pro";
+        }
+
+        bool UsesNativeTransparency(const PipelineNode& node, const String& portId /*= ""*/)
+        {
+            auto config = Read(node, portId);
+            return (config.transparent || node.nodeType == "aiRemoveBg") && config.mode == "native";
+        }
+
+        const Vector<String>& SettingKeys()
+        {
+            static Vector<String> keys = { "transparentBg", "transparentMode", "chromaColor", "chromaTolerance", "chromaSoftness", "chromaSpill" };
+            return keys;
+        }
+
+        const DataValue* SettingValue(const PipelineNode& node, const String& portId, const char* key)
+        {
+            // A partial own object still reads: a key it lacks comes from the node
+            if (auto own = PipelineRegions::FindTransparency(node, portId))
+            {
+                if (auto value = own->FindMember(key))
+                    return value;
+            }
+
+            return node.GetConfigValue(key);
+        }
+
+        Config Read(const PipelineNode& node, const String& portId /*= ""*/)
+        {
+            auto str = [&](const char* key, const String& def) { auto v = SettingValue(node, portId, key); return v ? PipelineUtils::ValueToString(*v, def) : def; };
+            auto num = [&](const char* key, float def) { auto v = SettingValue(node, portId, key); return v ? PipelineUtils::ValueToNumber(*v, def) : def; };
+            auto flag = SettingValue(node, portId, "transparentBg");
+
+            // A framed edit keeps the rest of the image, background included; the stored keys apply again without the frame
+            PipelineImageOps::CropRect region;
             Config config;
-            config.mode = node.GetConfigString("transparentMode", "twoPass") == "chroma" ? "chroma" : "twoPass";
+            config.transparent = flag && PipelineUtils::ValueToBool(*flag, false) && !PipelineEditRegion::Of(node, region);
+            config.storedMode = str("transparentMode", "twoPass") == "chroma" ? "chroma" : "twoPass";
+            config.mode = SupportsNativeTransparency(node.GetConfigString("model", GeminiProvider::defaultImageModel)) ?
+                String("native") : config.storedMode;
 
             Color4 color;
-            if (!PipelineUtils::ParseHexColor(node.GetConfigString("chromaColor", "#00b140"), color))
+            if (!PipelineUtils::ParseHexColor(str("chromaColor", "#00b140"), color))
                 color = Color4(0, 177, 64, 255);
 
             config.chroma.color = color;
-            config.chroma.tolerance = Math::Clamp(node.GetConfigNumber("chromaTolerance", 30.0f), 0.0f, 100.0f);
-            config.chroma.softness = Math::Clamp(node.GetConfigNumber("chromaSoftness", 15.0f), 0.0f, 100.0f);
-            config.chroma.spill = Math::Clamp(node.GetConfigNumber("chromaSpill", 60.0f), 0.0f, 100.0f);
+            config.chroma.tolerance = Math::Clamp(num("chromaTolerance", 30.0f), 0.0f, 100.0f);
+            config.chroma.softness = Math::Clamp(num("chromaSoftness", 15.0f), 0.0f, 100.0f);
+            config.chroma.spill = Math::Clamp(num("chromaSpill", 60.0f), 0.0f, 100.0f);
             config.colorName = PipelineUtils::ColorName(color);
             config.colorHex = PipelineUtils::ColorToHex(color).ToUpperCase();
             return config;
+        }
+
+        void WriteSettings(const PipelineNode& node, const String& portId, DataValue& target)
+        {
+            auto str = [&](const char* key, const String& def) { auto v = SettingValue(node, portId, key); return v ? PipelineUtils::ValueToString(*v, def) : def; };
+            auto num = [&](const char* key, float def) { auto v = SettingValue(node, portId, key); return v ? PipelineUtils::ValueToNumber(*v, def) : def; };
+            auto config = Read(node, portId);
+
+            target.SetObject();
+            target["transparentBg"] = config.transparent;
+            target["transparentMode"] = config.storedMode;
+            target["chromaColor"] = str("chromaColor", "#00b140");
+            target["chromaTolerance"] = num("chromaTolerance", 30.0f);
+            target["chromaSoftness"] = num("chromaSoftness", 15.0f);
+            target["chromaSpill"] = num("chromaSpill", 60.0f);
         }
 
         String ChromaBgInstruction(const Config& c)
@@ -55,15 +145,54 @@ namespace Editor
             return keys;
         }
 
-        bool UsesChromaPostStep(const PipelineNode& node)
+        bool UsesChromaPostStep(const PipelineNode& node, const String& portId /*= ""*/)
         {
             bool chromaType = node.nodeType == "nanoBananaGen" || node.nodeType == "imageEdit" || node.nodeType == "imageExtract";
-            return chromaType && node.GetConfigBool("transparentBg", false) && node.GetConfigString("transparentMode", "twoPass") == "chroma";
+            if (!chromaType)
+                return false;
+
+            auto config = Read(node, portId);
+            return config.transparent && config.mode == "chroma";
         }
 
-        Ref<Bitmap> ApplyChromaPostStep(const PipelineNode& node, const Bitmap& raw)
+        bool AnyChromaPostStep(const PipelineNode& node)
         {
-            auto config = Read(node);
+            if (UsesChromaPostStep(node))
+                return true;
+
+            return node.outputs.Any([&](const PipelinePort& port) { return UsesChromaPostStep(node, port.id); });
+        }
+
+        String PortCacheSuffix(const PipelineNode& node, const String& portId, bool rawRender, Vector<String>& exclude)
+        {
+            bool chroma = UsesChromaPostStep(node, portId);
+            String suffix;
+            if (PipelineRegions::FindTransparency(node, portId))
+            {
+                // The key colour stays in: a render made against one colour is never reused for another
+                auto config = Read(node, portId);
+                exclude.Add(SettingKeys());
+                suffix = "|bg:[" + String(config.transparent ? "true" : "false") + ",\"" + config.storedMode + "\",\"" + config.colorHex + "\"]";
+
+                // What goes downstream is the cut, so its consumers follow the cut settings the raw render ignores
+                if (chroma && !rawRender)
+                {
+                    suffix += "|cut:[" + (String)config.chroma.tolerance + "," + (String)config.chroma.softness + "," +
+                        (String)config.chroma.spill + "]";
+                }
+            }
+            else if (chroma && rawRender)
+                exclude.Add(ChromaConfigKeys());
+
+            if (chroma && rawRender)
+                suffix += "|chroma-raw";
+
+            return suffix;
+        }
+
+        Ref<Bitmap> ApplyChromaPostStep(const PipelineNode& node, const Bitmap& raw, const String& portId /*= ""*/)
+        {
+            auto config = Read(node, portId);
             auto cut = PipelineImageOps::ChromaKey(raw, config.chroma);
             if (!PipelineImageOps::HasContent(*cut))
                 return EnsureRgba(Ref<Bitmap>(mmake<Bitmap>(raw)));
@@ -72,6 +201,25 @@ namespace Editor
                 return cut;
 
             return PipelineImageOps::CropToContent(*cut, PipelineImageOps::ContentMode::Alpha);
+        }
+
+        int ImageGenerations(const PipelineNode& node)
+        {
+            auto generations = [&](const String& portId)
+            {
+                auto config = Read(node, portId);
+                bool transparent = node.nodeType == "aiRemoveBg" || config.transparent;
+                return transparent && config.mode == "twoPass" ? 2 : 1;
+            };
+
+            if (node.nodeType != "imageExtract")
+                return generations("");
+
+            int total = 0;
+            for (auto& region : PipelineRegions::Read(node))
+                total += generations(region.id);
+
+            return total;
         }
 
         Ref<Bitmap> MatteFromPair(const Bitmap& white, const Bitmap& black)

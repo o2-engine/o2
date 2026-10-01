@@ -29,6 +29,7 @@
 #include "o2Editor/Pipeline/Providers/ElevenLabsProvider.h"
 #include "o2Editor/Pipeline/Providers/GeminiProvider.h"
 #include "o2Editor/Pipeline/Providers/VideoProviders.h"
+#include "o2Editor/Windows/PipelineWindow/PipelineComposerLayers.h"
 #include "o2Editor/Windows/PipelineWindow/PipelineComposerStage.h"
 #include "o2Editor/Windows/PipelineWindow/PipelineEditor.h"
 #include "o2Editor/Windows/PipelineWindow/PipelineMediaViews.h"
@@ -39,14 +40,122 @@ namespace Editor
 {
     using namespace PipelineControls;
 
+    // ------------------------------------------------------------------------------------------------------------
+    // The composer's parameters under its work area: captioned groups, right-aligned, wrapping onto more lines when
+    // the column is narrow
+    // ------------------------------------------------------------------------------------------------------------
+    class PipelineComposerControls : public Widget
+    {
+    public:
+        static constexpr float lineHeight = 22.0f; // One line of groups
+        static constexpr float lineGap = 4.0f;     // Between the lines
+        static constexpr float groupGap = 12.0f;   // Between the groups of a line
+
+    public:
+        explicit PipelineComposerControls(RefCounter* refCounter): Widget(refCounter) {}
+
+        // Adds a group of the width
+        void AddGroup(const Ref<Widget>& group, float width)
+        {
+            mGroups.Add({ group, width });
+            AddChild(group);
+        }
+
+        // Returns the height of the lines the shown groups take in the width
+        float GetHeightForWidth(float width) const
+        {
+            int lines = Lines(width).Count();
+            return lines > 0 ? lines*lineHeight + (lines - 1)*lineGap : 0.0f;
+        }
+
+        void UpdateSelfTransform() override
+        {
+            Widget::UpdateSelfTransform();
+            float y = 0.0f;
+            for (auto& line : Lines(layout->GetWidth()))
+            {
+                float x = 0.0f;
+                for (int i = line.Count() - 1; i >= 0; i--)
+                {
+                    auto& group = mGroups[line[i]];
+                    *group.widget->layout = WidgetLayout(Vec2F(1, 1), Vec2F(1, 1), Vec2F(-x - group.width, -y - lineHeight), Vec2F(-x, -y));
+                    x += group.width + groupGap;
+                }
+                y += lineHeight + lineGap;
+            }
+        }
+
+    private:
+        struct Group
+        {
+            Ref<Widget> widget; // Caption and controls
+            float       width;  // Width they take
+
+            bool operator==(const Group& other) const { return widget == other.widget; }
+        };
+
+        Vector<Group> mGroups;
+
+    private:
+        // Returns the indices of the shown groups by line, filled in order
+        Vector<Vector<int>> Lines(float width) const
+        {
+            Vector<Vector<int>> lines;
+            float x = 0.0f;
+            for (int i = 0; i < mGroups.Count(); i++)
+            {
+                if (!mGroups[i].widget->IsEnabled())
+                    continue;
+
+                float need = mGroups[i].width + (lines.IsEmpty() || lines.Last().IsEmpty() ? 0.0f : groupGap);
+                if (lines.IsEmpty() || (x + need > width + 0.5f && !lines.Last().IsEmpty()))
+                {
+                    lines.Add(Vector<int>());
+                    x = 0.0f;
+                    need = mGroups[i].width;
+                }
+                lines.Last().Add(i);
+                x += need;
+            }
+            return lines;
+        }
+    };
+
+    // -------------------------------------------------------------------------------
+    // Right column of the composer: the work area over its parameters, laid out for the
+    // column's own width
+    // -------------------------------------------------------------------------------
+    class PipelineComposerColumn : public Widget
+    {
+    public:
+        static constexpr float gap = 6.0f; // Between the work area and the parameters
+
+        Ref<Widget>                   stage;    // Work area
+        Ref<PipelineComposerControls> controls; // Parameters
+
+    public:
+        explicit PipelineComposerColumn(RefCounter* refCounter): Widget(refCounter) {}
+
+        void UpdateSelfTransform() override
+        {
+            Widget::UpdateSelfTransform();
+            float height = controls ? controls->GetHeightForWidth(layout->GetWidth()) : 0.0f;
+            if (stage)
+                *stage->layout = WidgetLayout::BothStretch(0, height + gap, 0, 0);
+            if (controls)
+                *controls->layout = WidgetLayout(Vec2F(0, 0), Vec2F(1, 0), Vec2F(0, 0), Vec2F(0, height));
+        }
+    };
+
     class ComposerBody : public PipelineNodeBody
     {
     public:
         using PipelineNodeBody::PipelineNodeBody;
 
-        static constexpr float panelMin = 150.0f;
+        static constexpr float panelMin = 200.0f;
         static constexpr float panelMax = 560.0f;
-        static constexpr float panelDefault = 230.0f;
+        static constexpr float panelDefault = 290.0f;
+        static constexpr float workAreaMin = 300.0f;
 
         void Build() override
         {
@@ -67,19 +176,21 @@ namespace Editor
                 if (auto self = weakThis.Lock())
                 {
                     self->Notify(key, completed);
+                    // Only the highlight moves: a rebuild would take the focus from a name field that selected its layer
                     if (key == "selectedLayer")
                     {
-                        self->RebuildLayersPanel();
+                        if (self->mLayers)
+                            self->mLayers->UpdateSelection();
                         self->UpdateToolbarState();
                     }
                 }
             };
             mStage->Init(mNode);
 
-            BuildToolbar();
             BuildMain();
+            BuildControls();
             BuildAssetRows();
-            RebuildLayersPanel();
+            RefreshLayers(false);
             UpdateToolbarState();
             OnOutputChanged();
         }
@@ -90,8 +201,40 @@ namespace Editor
             if (mStage)
             {
                 mStage->Refresh();
-                RebuildLayersPanel();
+                RefreshLayers(false);
             }
+        }
+
+        // The input ports sit on the layer rows, at the card's left edge
+        bool InputsInBody() const override { return true; }
+
+        bool HasBodyPort(const String& portId) const override
+        {
+            return mNode->inputs.Any([&](const PipelinePort& port) { return port.id == portId; });
+        }
+
+        bool GetBodyPortOffset(const String& portId, Vec2F& offset) const override
+        {
+            auto owner = mOwner.Lock();
+            if (!owner || !mLayers || !HasBodyPort(portId))
+                return false;
+
+            float top = 0.0f, height = 0.0f;
+            if (!GetRowPlacement(mMain, owner->GetCardWidth(), owner->GetBodyAreaHeight(), top, height))
+                return false;
+
+            // An input without a layer row sits by "+ input"
+            float y = 0.0f;
+            if (!mLayers->GetPortCenter(portId, y))
+                y = mLayers->GetAddRowCenter();
+
+            offset = Vec2F(0.0f, top + y);
+            return true;
+        }
+
+        bool IsAddInputAt(const Vec2F& point) const override
+        {
+            return mLayers && mLayers->GetAddRow() && mLayers->GetAddRow()->layout->IsPointInside(point);
         }
 
         void DrawFarContent() override
@@ -105,7 +248,7 @@ namespace Editor
             if (mStage)
             {
                 mStage->Refresh();
-                RebuildLayersPanel();
+                RefreshLayers(true);
                 UpdateToolbarState();
             }
         }
@@ -127,13 +270,15 @@ namespace Editor
     private:
         Ref<PipelineComposerStage> mStage;
         Ref<Widget> mMain;
-        Ref<ScrollArea> mPanel;
-        Ref<VerticalLayout> mList;
+        Ref<PipelineComposerLayersPanel> mLayers;
         Ref<DragHandle> mSplitter;
         Ref<Button> mZoomButton;
         String mZoomCaption;
         Ref<Toggle> mFlipH;
         Ref<Toggle> mFlipV;
+        Ref<Widget> mFlipGroup;                    // Flips, shown while a layer is selected
+        Ref<PipelineComposerControls> mControls; // Parameters under the work area
+        Ref<PipelineComposerColumn>   mColumn;   // The work area over the parameters
         Ref<EditBox> mFolderEdit; // Folder inside Assets the layers are written to
         Ref<EditBox> mNameEdit;   // File name prefix of the layer assets
         Ref<Label> mSaveInfo;     // Target pattern or the outcome of the last save
@@ -141,19 +286,6 @@ namespace Editor
         float GetPanelWidth() const
         {
             return Math::Clamp(GetNumber("layersPanelW", panelDefault), panelMin, panelMax);
-        }
-
-        Ref<PipelineWrapRow> MakeToolRow()
-        {
-            auto row = mmake<PipelineWrapRow>();
-            row->spacing = 4;
-            return row;
-        }
-
-        // Adds a tool row whose height follows the lines it wraps into
-        void AddToolRow(const Ref<PipelineWrapRow>& row)
-        {
-            AddRow(row, [row](float width) { return row->GetHeightForWidth(width); });
         }
 
         Ref<EditBox> MakeNumberEdit(float value, float width, const Function<void(float)>& onChange)
@@ -166,78 +298,111 @@ namespace Editor
             return edit;
         }
 
-        void BuildToolbar()
+        // Returns a group of controls after a small dim caption; width gets the width they take
+        Ref<Widget> MakeGroup(const String& caption, const Vector<Ref<Widget>>& controls, float& width)
+        {
+            auto group = mmake<HorizontalLayout>();
+            group->name = caption;
+            group->spacing = 3;
+            group->expandWidth = false;
+            group->expandHeight = true;
+            group->baseCorner = BaseCorner::Left;
+
+            auto label = MakeLabel(caption, true);
+            label->height = 10;
+            label->horOverflow = Label::HorOverflow::None;
+            // Glyphs the font has not rasterized yet measure too narrow
+            auto font = mmake<Text>("stdFont.ttf")->GetFont();
+            font->CheckCharacters(caption, 10);
+            float captionWidth = Math::Ceil(Text::GetTextSize(caption, font, 10, Vec2F(), HorAlign::Left, VerAlign::Top, false).x) + 4.0f;
+            label->layout->minWidth = captionWidth;
+            label->layout->maxWidth = captionWidth;
+            group->AddChild(label);
+            width = captionWidth;
+            for (auto& control : controls)
+            {
+                group->AddChild(control);
+                width += group->spacing + control->layout->minWidth;
+            }
+            return group;
+        }
+
+        void BuildControls()
         {
             WeakRef<ComposerBody> weakThis(this);
+            mControls = mmake<PipelineComposerControls>();
+            mControls->name = "composer controls";
+            mColumn->controls = mControls;
+            mColumn->AddChild(mControls);
 
-            auto row1 = MakeToolRow();
-            auto wLabel = MakeLabel("W", false); wLabel->layout->minWidth = 16; wLabel->layout->maxWidth = 16; wLabel->horOverflow = Label::HorOverflow::None;
-            row1->AddChild(wLabel);
-            row1->AddChild(MakeNumberEdit(GetNumber("canvasW", 1024), 54, [weakThis](float v)
+            auto fixed = [](const Ref<Widget>& widget, float width) { widget->layout->minWidth = width; widget->layout->maxWidth = width; return widget; };
+            auto small = [&](const String& text, float width)
             {
-                if (auto self = weakThis.Lock()) self->SetNumber("canvasW", Math::Clamp(Math::Round(v), 16.0f, 8192.0f), true);
-            }));
-            auto hLabel = MakeLabel("H", false); hLabel->layout->minWidth = 16; hLabel->layout->maxWidth = 16; hLabel->horOverflow = Label::HorOverflow::None;
-            row1->AddChild(hLabel);
-            row1->AddChild(MakeNumberEdit(GetNumber("canvasH", 1024), 54, [weakThis](float v)
-            {
-                if (auto self = weakThis.Lock()) self->SetNumber("canvasH", Math::Clamp(Math::Round(v), 16.0f, 8192.0f), true);
-            }));
+                auto label = MakeLabel(text, false);
+                label->horOverflow = Label::HorOverflow::None;
+                return fixed(label, width);
+            };
+
+            float width = 0.0f;
+            auto canvas = MakeGroup("Canvas", {
+                small("W", 12),
+                fixed(MakeNumberEdit(GetNumber("canvasW", 1024), 54, [weakThis](float v)
+                {
+                    if (auto self = weakThis.Lock()) self->SetNumber("canvasW", Math::Clamp(Math::Round(v), 16.0f, 8192.0f), true);
+                }), 54),
+                small("x", 8),
+                small("H", 12),
+                fixed(MakeNumberEdit(GetNumber("canvasH", 1024), 54, [weakThis](float v)
+                {
+                    if (auto self = weakThis.Lock()) self->SetNumber("canvasH", Math::Clamp(Math::Round(v), 16.0f, 8192.0f), true);
+                }), 54) }, width);
+            mControls->AddGroup(canvas, width);
 
             auto zoomOut = MakeButton("-");
-            zoomOut->layout->minWidth = 22; zoomOut->layout->maxWidth = 22;
-            zoomOut->onClick = [weakThis]() { if (auto self = weakThis.Lock()) self->SetZoom(self->GetNumber("viewZoom", 1) / 1.25f); };
-            row1->AddChild(zoomOut);
+            zoomOut->onClick = [weakThis]() { if (auto self = weakThis.Lock()) self->SetZoom(self->GetNumber("viewZoom", 1)/1.25f); };
             mZoomButton = MakeButton("100%");
-            mZoomButton->layout->minWidth = 48; mZoomButton->layout->maxWidth = 48;
             mZoomButton->onClick = [weakThis]() { if (auto self = weakThis.Lock()) self->SetZoom(1.0f); };
-            row1->AddChild(mZoomButton);
             auto zoomIn = MakeButton("+");
-            zoomIn->layout->minWidth = 22; zoomIn->layout->maxWidth = 22;
-            zoomIn->onClick = [weakThis]() { if (auto self = weakThis.Lock()) self->SetZoom(self->GetNumber("viewZoom", 1) * 1.25f); };
-            row1->AddChild(zoomIn);
+            zoomIn->onClick = [weakThis]() { if (auto self = weakThis.Lock()) self->SetZoom(self->GetNumber("viewZoom", 1)*1.25f); };
+            auto zoom = MakeGroup("Zoom", { fixed(zoomOut, 22), fixed(mZoomButton, 48), fixed(zoomIn, 22) }, width);
+            mControls->AddGroup(zoom, width);
 
             auto makeFlip = [&](bool vertical)
             {
                 auto toggle = MakeSegment("", false);
-                toggle->layout->minWidth = 26; toggle->layout->maxWidth = 26;
                 auto icon = mmake<Sprite>(vertical ? "ui/pipeline/btn_flip_v.png" : "ui/pipeline/btn_flip_h.png");
                 icon->color = PipelineControls::textColor;
                 toggle->AddLayer("icon", icon, Layout::Based(BaseCorner::Center, Vec2F(14, 14)));
                 toggle->onToggleByUser = [weakThis, vertical](bool) { if (auto self = weakThis.Lock()) self->FlipSelected(vertical); };
-                row1->AddChild(toggle);
-                return toggle;
+                return fixed(toggle, 26);
             };
-            mFlipH = makeFlip(false);
-            mFlipV = makeFlip(true);
-            AddToolRow(row1);
+            mFlipH = DynamicCast<Toggle>(makeFlip(false));
+            mFlipV = DynamicCast<Toggle>(makeFlip(true));
+            mFlipGroup = MakeGroup("Flip", { mFlipH, mFlipV }, width);
+            mControls->AddGroup(mFlipGroup, width);
 
-            auto row2 = MakeToolRow();
-            auto bg = MakeCheckbox("BG", GetBool("cmpBgEnabled", false));
-            bg->layout->minWidth = 54; bg->layout->maxWidth = 54;
-            bg->onToggleByUser = [weakThis](bool v) { if (auto self = weakThis.Lock()) { self->SetBool("cmpBgEnabled", v, true); self->RebuildBody(); } };
-            row2->AddChild(bg);
+            auto preview = MakeCheckbox("Preview", GetBool("cmpBgEnabled", false));
+            preview->name = "preview background";
+            preview->onToggleByUser = [weakThis](bool v) { if (auto self = weakThis.Lock()) { self->SetBool("cmpBgEnabled", v, true); self->RebuildBody(); } };
+            Vector<Ref<Widget>> background = { fixed(preview, 84) };
             if (GetBool("cmpBgEnabled", false))
-                row2->AddChild(MakeColorSwatch("cmpBg", "#3a6ea5"));
-
-            auto outBg = MakeCheckbox("Out BG", GetBool("outBgEnabled", false));
-            outBg->layout->minWidth = 80; outBg->layout->maxWidth = 80;
-            outBg->onToggleByUser = [weakThis](bool v) { if (auto self = weakThis.Lock()) { self->SetBool("outBgEnabled", v, true); self->RebuildBody(); } };
-            row2->AddChild(outBg);
+                background.Add(MakeColorSwatch("cmpBg", "#3a6ea5"));
+            auto output = MakeCheckbox("Output", GetBool("outBgEnabled", false));
+            output->name = "output background";
+            output->onToggleByUser = [weakThis](bool v) { if (auto self = weakThis.Lock()) { self->SetBool("outBgEnabled", v, true); self->RebuildBody(); } };
+            background.Add(fixed(output, 80));
             if (GetBool("outBgEnabled", false))
-                row2->AddChild(MakeColorSwatch("outBg", "#ffffff"));
+                background.Add(MakeColorSwatch("outBg", "#ffffff"));
+            mControls->AddGroup(MakeGroup("Background", background, width), width);
 
-            AddToolRow(row2);
+            LayoutMain();
         }
 
-        Ref<Text> MakeCaptionText(const String& caption)
+        // Returns the height of the parameters under the work area for the card width
+        float ControlsHeight(float cardWidth) const
         {
-            auto text = mmake<Text>("stdFont.ttf");
-            text->text = caption;
-            text->horAlign = HorAlign::Left;
-            text->verAlign = VerAlign::Middle;
-            text->color = PipelineControls::textColor;
-            return text;
+            float column = cardWidth - mPadding*2.0f - GetPanelWidth() - 8.0f;
+            return mControls ? mControls->GetHeightForWidth(column) : PipelineComposerControls::lineHeight;
         }
 
         Ref<Widget> MakeColorSwatch(const String& key, const String& def)
@@ -295,33 +460,71 @@ namespace Editor
             {
                 if (layer.id == selected) { has = true; p = mStage->GetPlacement(layer); }
             }
-            mFlipH->enabled = has;
-            mFlipV->enabled = has;
+            if (mFlipGroup && mFlipGroup->IsEnabled() != has)
+            {
+                mFlipGroup->enabled = has;
+                LayoutMain();
+            }
             mFlipH->SetValue(has && p.flipH);
             mFlipV->SetValue(has && p.flipV);
         }
 
         void BuildMain()
         {
+            WeakRef<ComposerBody> weakThis(this);
             mMain = mmake<Widget>();
             mMain->name = "composer main";
-            AddFlexible(mMain, 300);
+            // The list never scrolls: the row is as tall as the list, at least the work area's minimum
+            // The right column reserves two lines of parameters under the work area's minimum
+            AddFlexible(mMain, [weakThis](float rowWidth)
+            {
+                auto self = weakThis.Lock();
+                if (!self || !self->mLayers)
+                    return workAreaMin;
 
-            mMain->AddChild(mStage);
+                float controls = Math::Max(self->ControlsHeight(rowWidth + self->mPadding*2.0f),
+                                           PipelineComposerControls::lineHeight*2.0f + PipelineComposerControls::lineGap);
+                return Math::Max(self->mLayers->GetContentHeight(), workAreaMin + PipelineComposerColumn::gap + controls);
+            });
 
-            mPanel = o2UI.CreateScrollArea();
-            mPanel->name = "layers panel";
-            mPanel->SetEnableScrollsHiding(true);
-            mMain->AddChild(mPanel);
+            mColumn = mmake<PipelineComposerColumn>();
+            mColumn->name = "composer column";
+            mColumn->stage = mStage;
+            mColumn->AddChild(mStage);
+            mMain->AddChild(mColumn);
 
-            mList = mmake<VerticalLayout>();
-            mList->spacing = 2;
-            mList->expandWidth = true;
-            mList->expandHeight = false;
-            mList->fitByChildren = true;
-            mList->baseCorner = BaseCorner::Top;
-            *mList->layout = WidgetLayout::HorStretch(VerAlign::Top, 0, 0, 20, 0);
-            mPanel->AddChild(mList);
+            mLayers = mmake<PipelineComposerLayersPanel>();
+            mLayers->name = "layers panel";
+            mLayers->Setup(mNode, mStage);
+            mLayers->onConfigChanged = [weakThis](const String& key, bool completed) { if (auto self = weakThis.Lock()) self->Notify(key, completed); };
+            mLayers->onLayoutChanged = [weakThis]() { if (auto self = weakThis.Lock()) self->RelayoutCard(); };
+            mLayers->onDuplicate = [weakThis](const String& id) { if (auto self = weakThis.Lock()) self->DuplicateLayer(id); };
+            mLayers->onMove = [weakThis](int index, int dir) { if (auto self = weakThis.Lock()) self->ReorderLayer(index, dir); };
+            mLayers->onRemove = [weakThis](const String& id, const String& portId, bool dup)
+            {
+                if (auto self = weakThis.Lock()) self->RemoveLayer(id, portId, dup);
+            };
+            mLayers->onRename = [weakThis](const String& id, const String& portId, bool dup, const String& name)
+            {
+                if (auto self = weakThis.Lock()) self->RenameLayer(id, portId, dup, name);
+            };
+            mLayers->onReorder = [weakThis](const Vector<String>& ids)
+            {
+                if (auto self = weakThis.Lock())
+                {
+                    self->WriteOrder(ids);
+                    self->AfterStructureChange("layerOrder");
+                }
+            };
+            mLayers->onAddInput = [weakThis]()
+            {
+                auto self = weakThis.Lock();
+                auto editor = self ? self->mEditor.Lock() : nullptr;
+                auto owner = self ? self->mOwner.Lock() : nullptr;
+                if (editor && owner)
+                    editor->AddCustomInput(owner);
+            };
+            mMain->AddChild(mLayers);
 
             auto bar = mmake<Sprite>("ui/UI4_Ver_separator.png");
             auto barHover = mmake<Sprite>("ui/UI4_Ver_separator.png");
@@ -329,13 +532,13 @@ namespace Editor
             mSplitter = mmake<DragHandle>(bar, barHover, barHover);
             mSplitter->SetDrawablesSize(Vec2F(8, 40));
             mSplitter->cursorType = CursorType::SizeWE;
-            WeakRef<ComposerBody> weakThis(this);
             mSplitter->onChangedPos = [weakThis](const Vec2F& pos)
             {
                 if (auto self = weakThis.Lock())
                 {
+                    // Dragging the splitter to the right widens the list
                     RectF rect = self->mMain->layout->GetWorldRect();
-                    float width = Math::Clamp(rect.right - pos.x - 4.0f, panelMin, panelMax);
+                    float width = Math::Clamp(pos.x - rect.left - 4.0f, panelMin, panelMax);
                     self->mNode->SetConfigNumber("layersPanelW", Math::Round(width));
                     self->Notify("layersPanelW", false);
                     self->LayoutMain();
@@ -347,7 +550,7 @@ namespace Editor
                 if (auto self = weakThis.Lock())
                 {
                     RectF rect = self->mMain->layout->GetWorldRect();
-                    float x = rect.right - self->GetPanelWidth() - 4.0f;
+                    float x = rect.left + self->GetPanelWidth() + 4.0f;
                     if (!self->mSplitter->IsPressed())
                         self->mSplitter->position = Vec2F(x, rect.Center().y);
                     self->mSplitter->SetDrawablesSize(Vec2F(8, Math::Max(20.0f, rect.Height())));
@@ -359,269 +562,31 @@ namespace Editor
 
         void LayoutMain()
         {
+            // The list keeps its own height at the top; the work area takes the rest of the right column over the parameters
             float panelW = GetPanelWidth();
-            *mStage->layout = WidgetLayout(Vec2F(0, 0), Vec2F(1, 1), Vec2F(0, 0), Vec2F(-(panelW + 8), 0));
-            *mPanel->layout = WidgetLayout(Vec2F(1, 0), Vec2F(1, 1), Vec2F(-panelW, 0), Vec2F(0, 0));
+            float panelH = mLayers ? mLayers->GetContentHeight() : workAreaMin;
+            *mLayers->layout = WidgetLayout(Vec2F(0, 1), Vec2F(0, 1), Vec2F(0, -panelH), Vec2F(panelW, 0));
+            *mColumn->layout = WidgetLayout(Vec2F(0, 0), Vec2F(1, 1), Vec2F(panelW + 8, 0), Vec2F(0, 0));
+            mColumn->SetLayoutDirty();
         }
 
-        Ref<Button> MakeRowAction(const String& icon, float angle, bool enabled, const Function<void()>& action)
+        // Rebuilds the layer rows; relayout moves the card and its ports with a list that changed its height
+        void RefreshLayers(bool relayout)
         {
-            auto button = MakeIconButton(icon, PipelineControls::textColor, Color4(0, 0, 0, 0));
-            button->layout->minWidth = 18; button->layout->maxWidth = 18;
-            if (auto ic = button->GetLayerDrawable<Sprite>("icon"))
-            {
-                ic->angleDegree = angle;
-                if (auto layer = button->GetLayer("icon")) layer->layout = Layout::Based(BaseCorner::Center, Vec2F(13, 13));
-            }
-            button->interactable = enabled;
-            button->transparency = enabled ? 1.0f : 0.35f;
-            button->onClick = action;
-            return button;
-        }
-
-        void RebuildLayersPanel()
-        {
-            PushEditorScopeOnStack scope;
-            if (!mList || !mStage)
+            if (!mLayers)
                 return;
 
-            mList->RemoveAllChildren();
-
-            auto layers = mStage->GetLayers();
-            String selected = mStage->GetSelectedLayer();
-            String open = GetString("openLayerSettings", "");
-            WeakRef<ComposerBody> weakThis(this);
-
-            auto head = MakeLabel("Layers - " + (String)layers.Count(), true);
-            head->layout->minHeight = 18;
-            mList->AddChild(head);
-
-            if (layers.IsEmpty())
-            {
-                auto empty = MakeLabel("Add image inputs with + and connect sprites", true);
-                empty->layout->minHeight = 34;
-                mList->AddChild(empty);
-            }
-
-            for (int i = layers.Count() - 1; i >= 0; i--)
-            {
-                auto layer = layers[i];
-                auto p = mStage->GetPlacement(layer);
-                auto image = mStage->GetLayerImage(layer.portId);
-                String id = layer.id;
-                String portId = layer.portId;
-                bool isSelected = id == selected;
-
-                auto container = mmake<Widget>();
-                container->layout->minHeight = 24;
-                if (isSelected)
-                    container->AddLayer("select", mmake<Sprite>(PipelineControls::accentColor), Layout::BothStretch(0, 0, 0, 0))->transparency = 0.16f;
-
-                auto selectButton = o2UI.CreateWidget<Button>("pipeline icon");
-                if (auto icon = selectButton->GetLayer("icon")) selectButton->RemoveLayer(icon);
-                *selectButton->layout = WidgetLayout::BothStretch(0, 0, 0, 0);
-                selectButton->onClick = [weakThis, id]() { if (auto self = weakThis.Lock()) self->mStage->SelectLayer(id); };
-                container->AddChild(selectButton);
-
-                auto row = mmake<HorizontalLayout>();
-                row->spacing = 2;
-                row->expandWidth = true;
-                row->expandHeight = true;
-                row->baseCorner = BaseCorner::Left;
-                *row->layout = WidgetLayout::BothStretch(2, 1, 2, 1);
-                container->AddChild(row);
-
-                auto expand = o2UI.CreateWidget<Button>("expand");
-                expand->layout->minWidth = 16; expand->layout->maxWidth = 16;
-                expand->SetStateForcible("expanded", open == id);
-                expand->onClick = [weakThis, id]()
-                {
-                    if (auto self = weakThis.Lock())
-                    {
-                        bool wasOpen = self->GetString("openLayerSettings", "") == id;
-                        self->mNode->SetConfigString("openLayerSettings", wasOpen ? String() : id);
-                        self->Notify("openLayerSettings", true);
-                        self->mStage->SelectLayer(id);
-                        self->RebuildLayersPanel();
-                    }
-                };
-                row->AddChild(expand);
-
-                row->AddChild(MakeRowAction(p.hidden ? "ui/UI4_eye_closed_icon.png" : "ui/UI4_eye_opened_icon.png", 0, true, [weakThis, id, layer]()
-                {
-                    if (auto self = weakThis.Lock())
-                    {
-                        auto np = self->mStage->GetPlacement(layer);
-                        np.hidden = !np.hidden;
-                        self->mStage->WritePlacement(id, np, true);
-                        self->RebuildLayersPanel();
-                    }
-                }));
-
-                auto thumb = mmake<PipelineImageView>();
-                thumb->layout->minSize = Vec2F(22, 22);
-                thumb->layout->maxWidth = 22;
-                thumb->SetHint("");
-                thumb->SetBitmap(image);
-                row->AddChild(thumb);
-
-                auto name = MakeEditBox(layer.name, false);
-                name->layout->minWidth = 40;
-                bool dup = layer.dup;
-                name->onChangeCompleted = [weakThis, id, portId, dup](const WString& text)
-                {
-                    if (auto self = weakThis.Lock()) self->RenameLayer(id, portId, dup, (String)text);
-                };
-                row->AddChild(name);
-
-                if (layer.dup)
-                {
-                    auto tag = MakeLabel("copy", true);
-                    tag->layout->minWidth = 30; tag->layout->maxWidth = 30;
-                    row->AddChild(tag);
-                }
-
-                row->AddChild(MakeRowAction("ui/pipeline/btn_copy.png", 0, true, [weakThis, id]() { if (auto self = weakThis.Lock()) self->DuplicateLayer(id); }));
-                row->AddChild(MakeRowAction("ui/UI4_Down_icn.png", 180, i < layers.Count() - 1, [weakThis, i]() { if (auto self = weakThis.Lock()) self->ReorderLayer(i, 1); }));
-                row->AddChild(MakeRowAction("ui/UI4_Down_icn.png", 0, i > 0, [weakThis, i]() { if (auto self = weakThis.Lock()) self->ReorderLayer(i, -1); }));
-                row->AddChild(MakeRowAction("ui/UI4_revert.png", 0, true, [weakThis, id, layer]()
-                {
-                    if (auto self = weakThis.Lock())
-                    {
-                        auto np = self->mStage->DefaultPlacement(layer.portId);
-                        np.hidden = self->mStage->GetPlacement(layer).hidden;
-                        self->mStage->WritePlacement(id, np, true);
-                    }
-                }));
-                row->AddChild(MakeRowAction("ui/UI4_small_trash_icon.png", 0, true, [weakThis, id, portId, dup]() { if (auto self = weakThis.Lock()) self->RemoveLayer(id, portId, dup); }));
-
-                mList->AddChild(container);
-
-                if (open == id)
-                    BuildLayerSettings(layer, p, image);
-            }
+            mLayers->Rebuild();
+            LayoutMain();
+            if (relayout)
+                RelayoutCard();
         }
 
-        void BuildLayerSettings(const ComposerLayerRef& layer, const ComposerLayerPlacement& p, const Ref<Bitmap>& image)
+        void RelayoutCard()
         {
-            WeakRef<ComposerBody> weakThis(this);
-            String id = layer.id;
-            Vec2I natural = image ? image->GetSize() : Vec2I();
-
-            auto patch = [weakThis, layer](const Function<void(ComposerLayerPlacement&)>& change, bool completed)
-            {
-                if (auto self = weakThis.Lock())
-                {
-                    auto np = self->mStage->GetPlacement(layer);
-                    change(np);
-                    self->mStage->WritePlacement(layer.id, np, completed);
-                }
-            };
-
-            auto sizeRow = mmake<HorizontalLayout>();
-            sizeRow->spacing = 3; sizeRow->expandWidth = false; sizeRow->expandHeight = true; sizeRow->baseCorner = BaseCorner::Left;
-            sizeRow->layout->minHeight = 22;
-            auto sizeLabel = MakeLabel("Size", true); sizeLabel->layout->minWidth = 34; sizeLabel->layout->maxWidth = 34;
-            sizeRow->AddChild(sizeLabel);
-            bool lock = p.lockAspect;
-            sizeRow->AddChild(MakeNumberEdit(Math::Round(p.w), 48, [patch, lock](float v)
-            {
-                patch([v, lock](ComposerLayerPlacement& np)
-                {
-                    float w = Math::Max(1.0f, Math::Round(v));
-                    float h = lock && np.w > 0 ? Math::Round(w * np.h / np.w) : np.h;
-                    np.w = w; np.h = Math::Max(1.0f, h);
-                }, true);
-            }));
-            auto lockToggle = MakeSegment("", p.lockAspect);
-            lockToggle->layout->minWidth = 22; lockToggle->layout->maxWidth = 22;
-            auto lockIcon = mmake<Sprite>("ui/pipeline/btn_link.png");
-            lockIcon->color = PipelineControls::textColor;
-            lockToggle->AddLayer("icon", lockIcon, Layout::Based(BaseCorner::Center, Vec2F(14, 14)));
-            lockToggle->onToggleByUser = [patch, weakThis](bool v) { patch([v](ComposerLayerPlacement& np) { np.lockAspect = v; }, true); if (auto self = weakThis.Lock()) self->RebuildLayersPanel(); };
-            sizeRow->AddChild(lockToggle);
-            sizeRow->AddChild(MakeNumberEdit(Math::Round(p.h), 48, [patch, lock](float v)
-            {
-                patch([v, lock](ComposerLayerPlacement& np)
-                {
-                    float h = Math::Max(1.0f, Math::Round(v));
-                    float w = lock && np.h > 0 ? Math::Round(h * np.w / np.h) : np.w;
-                    np.h = h; np.w = Math::Max(1.0f, w);
-                }, true);
-            }));
-            if (natural.x > 0)
-            {
-                auto one = MakeButton("1:1");
-                one->layout->minWidth = 34; one->layout->maxWidth = 34;
-                one->onClick = [patch, natural, weakThis]() { patch([natural](ComposerLayerPlacement& np) { np.w = (float)natural.x; np.h = (float)natural.y; }, true); if (auto self = weakThis.Lock()) self->RebuildLayersPanel(); };
-                sizeRow->AddChild(one);
-            }
-            mList->AddChild(sizeRow);
-
-            auto opacity = mmake<PipelineSlider>();
-            opacity->layout->minHeight = 20;
-            opacity->Setup("Alpha", 0, 100, 1, Math::Round(p.opacity * 100.0f), "%");
-            opacity->onChanged = [patch](float v, bool completed) { patch([v](ComposerLayerPlacement& np) { np.opacity = v / 100.0f; }, completed); };
-            mList->AddChild(opacity);
-
-            auto nineRow = mmake<HorizontalLayout>();
-            nineRow->spacing = 4; nineRow->expandWidth = false; nineRow->expandHeight = true; nineRow->baseCorner = BaseCorner::Left;
-            nineRow->layout->minHeight = 20;
-            auto nine = MakeCheckbox("9-slice", p.nine);
-            nine->layout->minWidth = 80; nine->layout->maxWidth = 80;
-            nine->onToggleByUser = [patch, weakThis](bool v) { patch([v](ComposerLayerPlacement& np) { np.nine = v; }, true); if (auto self = weakThis.Lock()) self->RebuildLayersPanel(); };
-            nineRow->AddChild(nine);
-            if (p.nine && natural.x > 0)
-            {
-                auto autoBtn = MakeButton("auto");
-                autoBtn->layout->minWidth = 44; autoBtn->layout->maxWidth = 44;
-                autoBtn->onClick = [patch, natural, weakThis]()
-                {
-                    patch([natural](ComposerLayerPlacement& np)
-                    {
-                        np.slice = { natural.x / 4, natural.y / 4, natural.x / 4, natural.y / 4 };
-                    }, true);
-                    if (auto self = weakThis.Lock()) self->RebuildLayersPanel();
-                };
-                nineRow->AddChild(autoBtn);
-            }
-            mList->AddChild(nineRow);
-
-            if (p.nine)
-            {
-                auto sliceRow = mmake<HorizontalLayout>();
-                sliceRow->spacing = 2; sliceRow->expandWidth = false; sliceRow->expandHeight = true; sliceRow->baseCorner = BaseCorner::Left;
-                sliceRow->layout->minHeight = 22;
-                struct Field { const char* label; int value; int which; };
-                Field fields[] = { { "L", p.slice.l, 0 }, { "T", p.slice.t, 1 }, { "R", p.slice.r, 2 }, { "B", p.slice.b, 3 } };
-                for (auto& f : fields)
-                {
-                    auto label = MakeLabel(f.label, true); label->layout->minWidth = 12; label->layout->maxWidth = 12;
-                    sliceRow->AddChild(label);
-                    int which = f.which;
-                    sliceRow->AddChild(MakeNumberEdit((float)f.value, 40, [patch, which](float v)
-                    {
-                        patch([v, which](ComposerLayerPlacement& np)
-                        {
-                            int value = Math::Max(0, (int)Math::Round(v));
-                            if (which == 0) np.slice.l = value; else if (which == 1) np.slice.t = value; else if (which == 2) np.slice.r = value; else np.slice.b = value;
-                        }, true);
-                    }));
-                }
-                mList->AddChild(sliceRow);
-
-                auto corners = mmake<PipelineSlider>();
-                corners->layout->minHeight = 20;
-                corners->Setup("Corners", 10, 300, 5, Math::Round(p.sliceScale * 100.0f), "%");
-                corners->onChanged = [patch](float v, bool completed) { patch([v](ComposerLayerPlacement& np) { np.sliceScale = v / 100.0f; }, completed); };
-                mList->AddChild(corners);
-
-                String hint = "Insets in source px";
-                if (natural.x > 0) hint += " - source " + (String)natural.x + "x" + (String)natural.y;
-                auto hintLabel = MakeLabel(hint, true);
-                hintLabel->layout->minHeight = 18;
-                mList->AddChild(hintLabel);
-            }
+            LayoutMain();
+            if (auto owner = mOwner.Lock())
+                owner->UpdateFromNode();
         }
 
         Vector<String> OrderIds() const
@@ -645,7 +610,7 @@ namespace Editor
         {
             Notify(key, true);
             mStage->Refresh();
-            RebuildLayersPanel();
+            RefreshLayers(true);
             UpdateToolbarState();
         }
 

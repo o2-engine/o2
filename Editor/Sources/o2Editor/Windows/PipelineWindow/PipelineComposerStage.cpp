@@ -19,6 +19,8 @@ namespace Editor
         Widget(refCounter)
     {
         layout->minSize = Vec2F(120, 120);
+        // The frame and soft shadow of the result cards
+        AddLayer("frame", mmake<Sprite>("ui/UI4_Editbox_regular.png"), Layout::BothStretch(-9, -9, -9, -9), -1.0f);
 
         mCheckerSprite = mmake<Sprite>("ui/pipeline/checker.png");
         mCheckerSprite->mode = SpriteMode::Tiled;

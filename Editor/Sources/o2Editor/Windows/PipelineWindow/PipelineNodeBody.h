@@ -4,8 +4,10 @@
 #include "o2/Utils/Editor/FrameHandles.h"
 #include "o2/Utils/Math/Basis.h"
 #include "o2Editor/Pipeline/PipelineNodeType.h"
+#include "o2Editor/Pipeline/PipelineModelMenu.h"
 #include "o2Editor/Windows/PipelineWindow/PipelineControls.h"
 #include "o2Editor/Windows/PipelineWindow/PipelineMediaViews.h"
+#include "o2Editor/Windows/PipelineWindow/PipelinePairViews.h"
 
 using namespace o2;
 
@@ -48,11 +50,31 @@ namespace Editor
         // Called when the node config changed outside the body (undo, paste, another view)
         virtual void OnConfigChanged() {}
 
+        // Called when the run state of the node or of one of its parts changed
+        virtual void OnRunStateChanged() {}
+
         // Writes what the node shows into the project assets, for "save all"; returns false when the node saves nothing
         virtual bool SaveToAssets() { return false; }
 
         // Returns true and the position, relative to the body's top-left (y down), of an output port the body places itself
         virtual bool GetBodyPortOffset(const String& portId, Vec2F& offset) const { return false; }
+
+        // Returns true for an output port the body places itself; cheaper than the offset, which reads the card height
+        virtual bool HasBodyPort(const String& portId) const { return false; }
+
+        // Returns true when the body places every input port itself (GetBodyPortOffset, at the card's left edge) and offers
+        // the add-input row in place of the port rows
+        virtual bool InputsInBody() const { return false; }
+
+        // Returns true when the canvas point is on the body's add-input row
+        virtual bool IsAddInputAt(const Vec2F& point) const { return false; }
+
+        // Returns the pair row of an image-to-image node, null for the other bodies
+        const Ref<PipelineIoPair>& GetPair() const { return mPair; }
+
+        // Returns the own background settings of the part the body edits, which the transparency keys are read from
+        // and written to instead of the node config; null when they belong to the node
+        virtual DataValue* GetPartTransparency() const { return nullptr; }
 
         // Returns the summed height of the rows with spacing when the body is width wide
         float GetPreferredHeight(float width) const;
@@ -98,6 +120,7 @@ namespace Editor
         Ref<PipelineAudioView>  mAudioView;  // Result audio player, when the body has one
         Ref<PipelineCropEditor> mCropEditor; // Result image with the crop frame, when the body has one
         Ref<PipelineVideoView>  mVideoView;  // Result video player, when the body has one
+        Ref<PipelineIoPair>     mPair;       // Input | result row of an image-to-image node
 
         // ------------------------------------------------------------------
         // Parameter list being built: its rows and their heights, folded away
@@ -112,8 +135,7 @@ namespace Editor
             float GetHeight() const;
         };
 
-        Ref<ParamsList>        mParams;      // Rows are added into it while a parameter list is open, null otherwise
-        Ref<PipelineFoldArrow> mParamsArrow; // Fold arrow of the parameter list row
+        Ref<ParamsList> mParams; // Rows are added into it while a parameter list is open, null otherwise
 
     public:
         // Appends a fixed-height row and adds its widget as a child
@@ -140,6 +162,35 @@ namespace Editor
         // Returns the height of the row for the row width
         static float RowHeight(const Row& row, float rowWidth);
 
+        // Returns where the row of the widget sits when the body is laid out in the size, as Relayout places it:
+        // its top from the body top and its height
+        bool GetRowPlacement(const Ref<Widget>& widget, float width, float height, float& top, float& rowHeight) const;
+
+        // Appends the input | result row; result is the widget of the right pane
+        Ref<PipelineIoPair> AddPairRow(const Ref<Widget>& result);
+
+        // Creates the result preview for a pair row
+        Ref<PipelineImageView> MakeResultView(const String& hint);
+
+        // Creates the crop editor showing the result, without adding a row
+        Ref<PipelineCropEditor> MakeCropEditor(const String& emptyHint);
+
+        // Adds the row under the pictures: the transparent background switch when asked, then the Crop button, at the right;
+        // a caption, when given, at the left
+        void AddPictureSwitches(bool transparentSwitch, const String& caption = "");
+
+        // Creates the transparent background switch; the method and its settings stay in the parameters
+        Ref<Toggle> MakeTransparentSwitch();
+
+        // Creates the transparent background switch, when asked, and the Crop button side by side; width gets their width
+        Ref<Widget> MakePictureSwitches(bool transparentSwitch, float& width);
+
+        // Returns the stored value of a config key: a transparency key of a part with its own settings from them
+        const DataValue* FindConfigValue(const String& key) const;
+
+        // Returns the value a config key is written to, created when missing
+        DataValue& ConfigSlot(const String& key);
+
         // Returns the node config string under key, or def when it is missing
         String GetString(const String& key, const String& def = "") const;
 
@@ -164,6 +215,10 @@ namespace Editor
         // Rebuilds the whole body through the owner widget, for rows that depend on a toggle
         void RebuildBody();
 
+        // Rebuilds the body for a change the user made to its content; a hand-sized card changes its height by exactly what
+        // the content did, so the pictures keep their size
+        void RebuildBodyKeepingArea();
+
         // Returns the current runtime output of the node
         PipelineValue GetOutput() const;
 
@@ -183,12 +238,6 @@ namespace Editor
         // Closes the parameter list opened by BeginParams
         void EndParams();
 
-        // Turns the fold arrow with the sliding parameter list
-        void UpdateParamsSlide();
-
-        // Returns how far the parameter list is open: 0 or 1, or the slide in between
-        float GetParamsReveal() const;
-
         // Adds a row of buttons sharing the width
         void AddActions(const Vector<Ref<Widget>>& buttons);
 
@@ -198,8 +247,8 @@ namespace Editor
         // Adds the title row of an always-open section
         void AddSectionTitle(const String& title);
 
-        // Adds the "Model" dropdown row bound to the "model" config key
-        Ref<DropDown> AddModelRow(const Vector<String>& presets, const String& defaultModel);
+        // Adds the "Model" row bound to the "model" config key: a field opening the grouped, searchable model menu
+        Ref<Button> AddModelRow(const Vector<String>& presets, const String& defaultModel, PipelineModelKind kind);
 
         // Adds a labelled dropdown row bound to a config key
         Ref<DropDown> AddSelectRow(const String& label, const String& key, const Vector<String>& options, const String& def);
@@ -228,7 +277,8 @@ namespace Editor
         // Adds the "Inherit seed" toggle with the seed edit box
         void AddSeedRow();
 
-        // Adds the transparent background toggle with the two-pass / chroma key settings; always leaves the toggle out
+        // Adds the transparency method rows (two-pass / chroma key and its settings) while the transparent background is on;
+        // always shows them regardless of the switch
         void AddTransparencyBlock(bool always = false);
 
         // Adds the flexible result image view
@@ -243,8 +293,8 @@ namespace Editor
         // Adds the flexible result video player
         void AddResultVideo(const String& hint, float minHeight = 176.0f);
 
-        // Adds the crop editor showing the result and, under it, a caption with the crop toggle
-        void AddCropSection(const String& emptyHint, const String& caption = "Result", float minHeight = 176.0f);
+        // Adds the crop editor showing the result and, under it, the row with the switches
+        void AddCropSection(const String& emptyHint, bool transparentSwitch, const String& caption = "", float minHeight = 176.0f);
 
         // Adds a button opening a file dialog; the pick is stored as an asset path or copied into uploads
         void AddFilePicker(const String& buttonCaption, const Vector<String>& extensions, bool image);
@@ -319,8 +369,8 @@ CLASS_FIELDS_META(Editor::PipelineNodeBody)
     FIELD().PUBLIC().NAME(mAudioView);
     FIELD().PUBLIC().NAME(mCropEditor);
     FIELD().PUBLIC().NAME(mVideoView);
+    FIELD().PUBLIC().NAME(mPair);
     FIELD().PUBLIC().NAME(mParams);
-    FIELD().PUBLIC().NAME(mParamsArrow);
 }
 END_META;
 CLASS_METHODS_META(Editor::PipelineNodeBody)
@@ -333,8 +383,14 @@ CLASS_METHODS_META(Editor::PipelineNodeBody)
     FUNCTION().PUBLIC().SIGNATURE(void, Build);
     FUNCTION().PUBLIC().SIGNATURE(void, OnOutputChanged);
     FUNCTION().PUBLIC().SIGNATURE(void, OnConfigChanged);
+    FUNCTION().PUBLIC().SIGNATURE(void, OnRunStateChanged);
     FUNCTION().PUBLIC().SIGNATURE(bool, SaveToAssets);
     FUNCTION().PUBLIC().SIGNATURE(bool, GetBodyPortOffset, const String&, Vec2F&);
+    FUNCTION().PUBLIC().SIGNATURE(bool, HasBodyPort, const String&);
+    FUNCTION().PUBLIC().SIGNATURE(bool, InputsInBody);
+    FUNCTION().PUBLIC().SIGNATURE(bool, IsAddInputAt, const Vec2F&);
+    FUNCTION().PUBLIC().SIGNATURE(const Ref<PipelineIoPair>&, GetPair);
+    FUNCTION().PUBLIC().SIGNATURE(DataValue*, GetPartTransparency);
     FUNCTION().PUBLIC().SIGNATURE(float, GetPreferredHeight, float);
     FUNCTION().PUBLIC().SIGNATURE(void, Relayout, float, float);
     FUNCTION().PUBLIC().SIGNATURE(void, MarkContent, const Ref<Widget>&);
@@ -347,6 +403,15 @@ CLASS_METHODS_META(Editor::PipelineNodeBody)
     FUNCTION().PUBLIC().SIGNATURE(void, ShowAssetFolderMenu, const Function<void(const String&)>&);
     FUNCTION().PUBLIC().SIGNATURE(void, ClearRows);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(float, RowHeight, const Row&, float);
+    FUNCTION().PUBLIC().SIGNATURE(bool, GetRowPlacement, const Ref<Widget>&, float, float, float&, float&);
+    FUNCTION().PUBLIC().SIGNATURE(Ref<PipelineIoPair>, AddPairRow, const Ref<Widget>&);
+    FUNCTION().PUBLIC().SIGNATURE(Ref<PipelineImageView>, MakeResultView, const String&);
+    FUNCTION().PUBLIC().SIGNATURE(Ref<PipelineCropEditor>, MakeCropEditor, const String&);
+    FUNCTION().PUBLIC().SIGNATURE(void, AddPictureSwitches, bool, const String&);
+    FUNCTION().PUBLIC().SIGNATURE(Ref<Toggle>, MakeTransparentSwitch);
+    FUNCTION().PUBLIC().SIGNATURE(Ref<Widget>, MakePictureSwitches, bool, float&);
+    FUNCTION().PUBLIC().SIGNATURE(const DataValue*, FindConfigValue, const String&);
+    FUNCTION().PUBLIC().SIGNATURE(DataValue&, ConfigSlot, const String&);
     FUNCTION().PUBLIC().SIGNATURE(String, GetString, const String&, const String&);
     FUNCTION().PUBLIC().SIGNATURE(float, GetNumber, const String&, float);
     FUNCTION().PUBLIC().SIGNATURE(bool, GetBool, const String&, bool);
@@ -355,18 +420,17 @@ CLASS_METHODS_META(Editor::PipelineNodeBody)
     FUNCTION().PUBLIC().SIGNATURE(void, SetBool, const String&, bool, bool);
     FUNCTION().PUBLIC().SIGNATURE(void, Notify, const String&, bool);
     FUNCTION().PUBLIC().SIGNATURE(void, RebuildBody);
+    FUNCTION().PUBLIC().SIGNATURE(void, RebuildBodyKeepingArea);
     FUNCTION().PUBLIC().SIGNATURE(PipelineValue, GetOutput);
     FUNCTION().PUBLIC().SIGNATURE(Ref<Bitmap>, GetOutputBitmap);
     FUNCTION().PUBLIC().SIGNATURE(Ref<Bitmap>, GetSourceOutputBitmap);
     FUNCTION().PUBLIC().SIGNATURE(PipelineValue, GetInput, const String&);
     FUNCTION().PUBLIC().SIGNATURE(bool, BeginParams, const Vector<String>&);
     FUNCTION().PUBLIC().SIGNATURE(void, EndParams);
-    FUNCTION().PUBLIC().SIGNATURE(void, UpdateParamsSlide);
-    FUNCTION().PUBLIC().SIGNATURE(float, GetParamsReveal);
     FUNCTION().PUBLIC().SIGNATURE(void, AddActions, const Vector<Ref<Widget>>&);
     FUNCTION().PUBLIC().SIGNATURE(Ref<EditBox>, AddPrimaryField, const String&, const String&);
     FUNCTION().PUBLIC().SIGNATURE(void, AddSectionTitle, const String&);
-    FUNCTION().PUBLIC().SIGNATURE(Ref<DropDown>, AddModelRow, const Vector<String>&, const String&);
+    FUNCTION().PUBLIC().SIGNATURE(Ref<Button>, AddModelRow, const Vector<String>&, const String&, PipelineModelKind);
     FUNCTION().PUBLIC().SIGNATURE(Ref<DropDown>, AddSelectRow, const String&, const String&, const Vector<String>&, const String&);
     FUNCTION().PUBLIC().SIGNATURE(Ref<EditBox>, AddTextArea, const String&, const String&, float);
     FUNCTION().PUBLIC().SIGNATURE(Ref<EditBox>, AddTextRow, const String&, const String&, const String&);
@@ -381,7 +445,7 @@ CLASS_METHODS_META(Editor::PipelineNodeBody)
     FUNCTION().PUBLIC().SIGNATURE(void, AddResultText, const String&, float);
     FUNCTION().PUBLIC().SIGNATURE(void, AddResultAudio, const String&);
     FUNCTION().PUBLIC().SIGNATURE(void, AddResultVideo, const String&, float);
-    FUNCTION().PUBLIC().SIGNATURE(void, AddCropSection, const String&, const String&, float);
+    FUNCTION().PUBLIC().SIGNATURE(void, AddCropSection, const String&, bool, const String&, float);
     FUNCTION().PUBLIC().SIGNATURE(void, AddFilePicker, const String&, const Vector<String>&, bool);
 }
 END_META;

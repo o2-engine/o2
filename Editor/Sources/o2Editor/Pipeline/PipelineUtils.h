@@ -38,6 +38,9 @@ namespace Editor
         // Returns value as number tolerant to the stored JSON type, def when it is not numeric
         float ValueToNumber(const DataValue& value, float def = 0.0f);
 
+        // Returns value as a flag: a boolean, a non-zero number or "true"/"1"; def for anything else
+        bool ValueToBool(const DataValue& value, bool def = false);
+
         // Returns whole file as binary-safe string; empty when missing
         String ReadFileBytes(const String& path);
 
@@ -58,6 +61,9 @@ namespace Editor
 
         // Returns file extension for a mime type, "bin" when unknown
         String ExtensionForMime(const String& mime);
+
+        // True for the ids of the OpenAI models: gpt-, o1/o3/..., chatgpt- and dall-e, in any letter case
+        bool IsOpenAiModelId(const String& id);
 
         // Returns the name a person reads for a model id: the known product name, else the id split into capitalised words
         String PrettyModelName(const String& id);

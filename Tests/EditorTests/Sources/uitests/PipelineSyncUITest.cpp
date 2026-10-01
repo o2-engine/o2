@@ -16,6 +16,7 @@
 #include "o2/Utils/FileSystem/FileSystem.h"
 #include "o2/Utils/Test/AppTestDriver.h"
 #include "o2Editor/Pipeline/PipelineNodeType.h"
+#include "o2Editor/Pipeline/PipelinePairLayout.h"
 #include "o2Editor/Pipeline/PipelineSettings.h"
 #include "o2Editor/Pipeline/PipelineUtils.h"
 #include "o2Editor/Pipeline/Sync/AssetsLineSync.h"
@@ -271,11 +272,34 @@ TEST_F(PipelineSyncUiFixture, TheSettingsWindowStoresTheProviderKeys)
     Step(2);
     auto window = AssetsLineDlg::Instance().GetWindow();
     auto gemini = DynamicCast<EditBox>(window->FindChild("gemini key"));
+    auto openAi = DynamicCast<EditBox>(window->FindChild("openai key"));
+    auto openRouter = DynamicCast<EditBox>(window->FindChild("openrouter key"));
     auto kling = DynamicCast<EditBox>(window->FindChild("kling secret"));
-    ASSERT_TRUE(gemini && kling);
+    ASSERT_TRUE(gemini && openAi && openRouter && kling);
     gemini->SetText("test-gemini-key");
     gemini->onChangeCompleted(gemini->GetText());
     EXPECT_EQ(PipelineSettings::Load().geminiApiKey, "test-gemini-key");
+    openAi->SetText("test-openai-key");
+    openAi->onChangeCompleted(openAi->GetText());
+    EXPECT_EQ(PipelineSettings::Load().openAiApiKey, "test-openai-key");
+    openRouter->SetText("test-openrouter-key");
+    openRouter->onChangeCompleted(openRouter->GetText());
+    EXPECT_EQ(PipelineSettings::Load().openRouterApiKey, "test-openrouter-key");
+    EXPECT_EQ(PipelineSettings::Load().openAiApiKey, "test-openai-key");
+    EXPECT_EQ(PipelineSettings::Load().geminiApiKey, "test-gemini-key");
+
+    // The view of the image nodes is a local setting: stored at once, read back when the window opens
+    auto sideView = DynamicCast<Toggle>(window->FindChild("side view"));
+    auto compareView = DynamicCast<Toggle>(window->FindChild("compare view"));
+    ASSERT_TRUE(sideView && compareView);
+    EXPECT_TRUE(sideView->GetValue());
+    compareView->onToggleByUser(true);
+    EXPECT_EQ(PipelinePairLayout::GetIoView(), PipelineIoView::Compare);
+    EXPECT_TRUE(compareView->GetValue());
+    EXPECT_FALSE(sideView->GetValue());
+    EXPECT_TRUE(PipelineUtils::ReadFileBytes(PipelinePairLayout::GetViewPrefsPath()).Contains("compare"));
+    sideView->onToggleByUser(true);
+    EXPECT_EQ(PipelinePairLayout::GetIoView(), PipelineIoView::SideBySide);
 
     // The window is tall enough for the last row
     Step(2);

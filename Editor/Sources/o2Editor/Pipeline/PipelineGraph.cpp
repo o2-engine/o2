@@ -134,22 +134,7 @@ namespace Editor
     bool PipelineNode::GetConfigBool(const String& key, bool def /*= false*/) const
     {
         auto value = GetConfigValue(key);
-        if (!value)
-            return def;
-
-        if (value->IsBoolean())
-            return (bool)*value;
-
-        if (value->IsNumber())
-            return PipelineUtils::ValueToNumber(*value, 0.0f) != 0.0f;
-
-        if (value->IsString())
-        {
-            String s = value->GetString();
-            return s == "true" || s == "1";
-        }
-
-        return def;
+        return value ? PipelineUtils::ValueToBool(*value, def) : def;
     }
 
     void PipelineNode::SetConfigString(const String& key, const String& value)
@@ -882,7 +867,7 @@ namespace Editor
 
     bool PipelineGraph::IsSeededType(const String& type)
     {
-        return type == "nanoBananaGen" || type == "imageEdit" || type == "imageExtract";
+        return type == "nanoBananaGen" || type == "imageEdit" || type == "imageExtract" || type == "aiUpscale";
     }
 
     // AssetsLine's implicit seed (32-bit FNV-1a over UTF-16 code units), so both editors render alike
@@ -1038,15 +1023,12 @@ namespace Editor
                                                int seed, const String& portId, bool rawRender /*= true*/)
     {
         auto impl = PipelineNodeRegistry::Get(node.nodeType);
-        bool chroma = rawRender && PipelineTransparency::UsesChromaPostStep(node);
-
         Vector<String> exclude = { "crop", "cropEnabled" };
         if (impl)
             exclude.Add(impl->PortCacheExcludedKeys());
-        if (chroma)
-            exclude.Add(PipelineTransparency::ChromaConfigKeys());
 
-        String variant = (impl ? impl->PortCacheVariant(node, portId) : portId) + (chroma ? "|chroma-raw" : "");
+        String variant = (impl ? impl->PortCacheVariant(node, portId) : portId) +
+            PipelineTransparency::PortCacheSuffix(node, portId, rawRender, exclude);
         return ComputeNodeSignature(node, upstreamByPortKey, exclude, seed, variant);
     }
 

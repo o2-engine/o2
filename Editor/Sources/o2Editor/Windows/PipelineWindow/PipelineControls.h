@@ -78,7 +78,7 @@ namespace Editor
     class PipelineFoldArrow : public IRectDrawable
     {
     public:
-        float open = 0.0f; // 0 closed, 1 open; the arrow turns in between @SERIALIZABLE
+        float open = 0.0f; // 0 closed (pointing right), 1 open (pointing down) @SERIALIZABLE
 
     public:
         // Default constructor
@@ -92,22 +92,6 @@ namespace Editor
 
         SERIALIZABLE(PipelineFoldArrow);
         CLONEABLE_REF(PipelineFoldArrow);
-    };
-
-    // -------------------------------------------------------------
-    // Container that clips its children to its rectangle, for rows
-    // that slide open
-    // -------------------------------------------------------------
-    class PipelineClipBox : public Widget
-    {
-    public:
-        // Default constructor
-        explicit PipelineClipBox(RefCounter* refCounter);
-
-        // Draws the children clipped to the rectangle
-        void Draw() override;
-
-        SERIALIZABLE(PipelineClipBox);
     };
 
     // ----------------------------------------
@@ -188,6 +172,9 @@ namespace Editor
     protected:
         // Returns the width a child takes before sharing: its minimum width or a default
         static float ItemWidth(const Ref<Widget>& child);
+
+        // Returns true for a child without a maximum width: it takes a share of the spare width of its line
+        static bool IsFlexible(const Ref<Widget>& child);
     };
 
     // -------------------------------------------------------------
@@ -214,6 +201,9 @@ namespace Editor
         // Returns the width of the track between the caption and the value
         float GetTrackWidth() const;
 
+        // Narrows the caption to its text and drops the value text, for a toolbar that shares its line with other controls
+        void SetCompact(bool compact);
+
         // Updates the widget; fires the completed callback once the cursor is released after a change
         void Update(float dt) override;
 
@@ -231,8 +221,12 @@ namespace Editor
         Ref<HorizontalProgress> mProgress;   // Progress bar used as the slider track
 
         bool mPendingComplete = false; // True after a user change until the cursor is released
+        bool mCompact = false;         // Caption only as wide as its text, no value text
 
     protected:
+        // Places the caption, the track and the value
+        void LayoutParts();
+
         // Called when the progress bar is changed by the user; snaps the value and notifies
         void OnProgressChanged(float value);
 
@@ -406,23 +400,6 @@ CLASS_METHODS_META(Editor::PipelineFoldArrow)
 }
 END_META;
 
-CLASS_BASES_META(Editor::PipelineClipBox)
-{
-    BASE_CLASS(o2::Widget);
-}
-END_META;
-CLASS_FIELDS_META(Editor::PipelineClipBox)
-{
-}
-END_META;
-CLASS_METHODS_META(Editor::PipelineClipBox)
-{
-
-    FUNCTION().PUBLIC().CONSTRUCTOR(RefCounter*);
-    FUNCTION().PUBLIC().SIGNATURE(void, Draw);
-}
-END_META;
-
 CLASS_BASES_META(Editor::PipelineWrapRow)
 {
     BASE_CLASS(o2::Widget);
@@ -444,6 +421,7 @@ CLASS_METHODS_META(Editor::PipelineWrapRow)
     FUNCTION().PUBLIC().SIGNATURE(void, UpdateSelfTransform);
     FUNCTION().PUBLIC().SIGNATURE(void, Update, float);
     FUNCTION().PROTECTED().SIGNATURE_STATIC(float, ItemWidth, const Ref<Widget>&);
+    FUNCTION().PROTECTED().SIGNATURE_STATIC(bool, IsFlexible, const Ref<Widget>&);
 }
 END_META;
 
@@ -464,6 +442,7 @@ CLASS_FIELDS_META(Editor::PipelineSlider)
     FIELD().PROTECTED().NAME(mValueLayer);
     FIELD().PROTECTED().NAME(mProgress);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mPendingComplete);
+    FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mCompact);
 }
 END_META;
 CLASS_METHODS_META(Editor::PipelineSlider)
@@ -474,7 +453,9 @@ CLASS_METHODS_META(Editor::PipelineSlider)
     FUNCTION().PUBLIC().SIGNATURE(void, SetValue, float, bool);
     FUNCTION().PUBLIC().SIGNATURE(float, GetValue);
     FUNCTION().PUBLIC().SIGNATURE(float, GetTrackWidth);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetCompact, bool);
     FUNCTION().PUBLIC().SIGNATURE(void, Update, float);
+    FUNCTION().PROTECTED().SIGNATURE(void, LayoutParts);
     FUNCTION().PROTECTED().SIGNATURE(void, OnProgressChanged, float);
     FUNCTION().PROTECTED().SIGNATURE(void, UpdateVisuals);
 }

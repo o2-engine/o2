@@ -13,6 +13,13 @@ namespace Editor
         String data;     // Encoded image bytes
     };
 
+    // How an image call is asked to render
+    struct AiImageOptions
+    {
+        String renderSize;  // Output resolution, 1K, 2K or 4K, for the models that render it; empty for the model's own
+        String aspectRatio; // Frame such as 3:2; empty for the model's choice
+    };
+
     // Binary result of a provider call: image, audio or video bytes
     struct AiBytesResult
     {
@@ -66,7 +73,13 @@ namespace Editor
 
         // Generates an image from the prompt and references; Imagen models go through the predict endpoint, seed < 0 is random
         Coroutine<AiBytesResult> GenerateImage(const Ref<PipelineExecContext>& ctx, const String& apiKey, const String& model,
-                                               const String& prompt, const Vector<AiImageRef>& references, int seed);
+                                               const String& prompt, const Vector<AiImageRef>& references, int seed,
+                                               const AiImageOptions& options = AiImageOptions());
+
+        // Builds the generateContent body of an image call: the render size (Gemini 3 image models only) and the frame go
+        // into generationConfig.imageConfig
+        void BuildImageBody(DataDocument& body, const String& model, const String& prompt, const Vector<AiImageRef>& references,
+                            int seed, const AiImageOptions& options = AiImageOptions());
 
         // Speaks the text with a prebuilt voice; style instructions are prepended to the text, PCM answers are wrapped into wav
         Coroutine<AiBytesResult> GenerateSpeech(const Ref<PipelineExecContext>& ctx, const String& apiKey, const String& model,

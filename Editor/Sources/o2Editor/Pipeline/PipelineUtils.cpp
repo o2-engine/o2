@@ -326,6 +326,23 @@ namespace Editor::PipelineUtils
         return def;
     }
 
+    bool ValueToBool(const DataValue& value, bool def /*= false*/)
+    {
+        if (value.IsBoolean())
+            return (bool)value;
+
+        if (value.IsNumber())
+            return ValueToNumber(value, 0.0f) != 0.0f;
+
+        if (value.IsString())
+        {
+            String s = value.GetString();
+            return s == "true" || s == "1";
+        }
+
+        return def;
+    }
+
     String ReadFileBytes(const String& path)
     {
         InFile file(path);
@@ -411,6 +428,109 @@ namespace Editor::PipelineUtils
         return "application/octet-stream";
     }
 
+    // Words capitalised, versions as they are, qualifiers after a dot; with acronyms, short parts without a vowel
+    // are upper-cased (gpt, glm), as AssetsLine names OpenRouter models it has no name for
+    static String CapitaliseModelWords(const String& id, bool acronyms = false)
+    {
+        String result;
+        String word;
+        auto flush = [&]()
+        {
+            if (word.IsEmpty())
+                return;
+
+            String part = word;
+            if (part == "latest" || part == "preview" || part == "exp")
+                part = String("\xC2\xB7 ") + part;
+            else if (part == "lite")
+                part = "Lite";
+            else if (acronyms && part.Length() <= 3 && !(part[0] >= '0' && part[0] <= '9') &&
+                     !part.ToLowerCase().Contains("a") && !part.ToLowerCase().Contains("e") && !part.ToLowerCase().Contains("i") &&
+                     !part.ToLowerCase().Contains("o") && !part.ToLowerCase().Contains("u"))
+            {
+                part = part.ToUpperCase();
+            }
+            else if (!(part[0] >= '0' && part[0] <= '9'))
+            {
+                String first;
+                first += (char)toupper((unsigned char)part[0]);
+                part = first + part.SubStr(1);
+            }
+
+            if (!result.IsEmpty())
+                result += " ";
+            result += part;
+            word = "";
+        };
+
+        for (int i = 0; i < id.Length(); i++)
+        {
+            char c = id[i];
+            if (c == '-' || c == '_')
+                flush();
+            else
+                word += c;
+        }
+        flush();
+        return result;
+    }
+
+    bool IsOpenAiModelId(const String& idIn)
+    {
+        String id = idIn.ToLowerCase();
+        bool reasoning = id.Length() > 1 && id[0] == 'o' && id[1] >= '0' && id[1] <= '9';
+        return id.StartsWith("gpt-") || reasoning || id.StartsWith("chatgpt-") || id.StartsWith("dall-e");
+    }
+
+    static String WithWords(const String& head, const String& words)
+    {
+        return words.IsEmpty() ? head : head + " " + words;
+    }
+
+    // Name of an OpenAI model id outside the known table
+    static String OpenAiModelName(const String& id)
+    {
+        String lower = id.ToLowerCase();
+        if (lower.StartsWith("gpt-image"))
+            return WithWords("GPT Image", CapitaliseModelWords(id.SubStr(9)));
+
+        if (lower.StartsWith("dall-e"))
+            return WithWords("DALL-E", CapitaliseModelWords(id.SubStr(6)));
+
+        int dash = id.Find("-");
+        String first = dash < 0 ? id : id.SubStr(0, dash);
+        String rest = dash < 0 ? String() : id.SubStr(dash + 1);
+        if (lower.StartsWith("gpt-"))
+        {
+            int next = rest.Find("-");
+            first = "GPT-" + (next < 0 ? rest : rest.SubStr(0, next));
+            rest = next < 0 ? String() : rest.SubStr(next + 1);
+        }
+
+        return WithWords(first, CapitaliseModelWords(rest));
+    }
+
+    // Name OpenRouter shows for the vendor part of a vendor/model id
+    static String OpenRouterVendorLabel(const String& vendor)
+    {
+        static const Map<String, String> labels = {
+            { "openai", "OpenAI" }, { "anthropic", "Anthropic" }, { "google", "Google" }, { "x-ai", "xAI" },
+            { "meta-llama", "Meta" }, { "mistralai", "Mistral" }, { "deepseek", "DeepSeek" }, { "qwen", "Qwen" },
+            { "z-ai", "Z.ai" }, { "moonshotai", "Moonshot" }, { "minimax", "MiniMax" }
+        };
+
+        String label;
+        if (labels.TryGetValue(vendor.ToLowerCase(), label))
+            return label;
+
+        if (vendor.IsEmpty())
+            return vendor;
+
+        String first;
+        first += (char)toupper((unsigned char)vendor[0]);
+        return first + vendor.SubStr(1);
+    }
+
     String PrettyModelName(const String& idIn)
     {
         // The same names AssetsLine shows, so a pipeline reads the same in both editors
@@ -443,7 +563,37 @@ namespace Editor::PipelineUtils
             { "eleven_multilingual_v2", "ElevenLabs Multilingual v2" },
             { "eleven_flash_v2_5", "ElevenLabs Flash v2.5" },
             { "eleven_turbo_v2_5", "ElevenLabs Turbo v2.5" },
-            { "eleven_v3", "ElevenLabs v3" }
+            { "eleven_v3", "ElevenLabs v3" },
+            { "gpt-5.5", "GPT-5.5 \xC2\xB7 OpenAI" },
+            { "gpt-5.4", "GPT-5.4 \xC2\xB7 OpenAI" },
+            { "gpt-5.4-mini", "GPT-5.4 Mini \xC2\xB7 OpenAI" },
+            { "gpt-5.4-nano", "GPT-5.4 Nano \xC2\xB7 OpenAI" },
+            { "gpt-4.1", "GPT-4.1 \xC2\xB7 OpenAI" },
+            { "gpt-image-2.5-sunburst", "GPT Image 2.5 Sunburst \xC2\xB7 OpenAI" },
+            { "gpt-image-2.5-flare", "GPT Image 2.5 Flare \xC2\xB7 OpenAI" },
+            { "gpt-image-2", "GPT Image 2 \xC2\xB7 OpenAI" },
+            { "gpt-image-1.5", "GPT Image 1.5 \xC2\xB7 OpenAI" },
+            { "gpt-image-1", "GPT Image 1 \xC2\xB7 OpenAI" },
+            { "gpt-image-1-mini", "GPT Image 1 Mini \xC2\xB7 OpenAI" },
+            { "openai/gpt-5.5", "OpenAI: GPT-5.5 \xC2\xB7 OpenRouter" },
+            { "openai/gpt-5.4-mini", "OpenAI: GPT-5.4 Mini \xC2\xB7 OpenRouter" },
+            { "anthropic/claude-sonnet-5.5", "Anthropic: Claude Sonnet 5.5 \xC2\xB7 OpenRouter" },
+            { "anthropic/claude-opus-5.5", "Anthropic: Claude Opus 5.5 \xC2\xB7 OpenRouter" },
+            { "x-ai/grok-4.7", "xAI: Grok 4.7 \xC2\xB7 OpenRouter" },
+            { "google/gemini-3.5-flash", "Google: Gemini 3.5 Flash \xC2\xB7 OpenRouter" },
+            { "deepseek/deepseek-v4-pro", "DeepSeek: V4 Pro \xC2\xB7 OpenRouter" },
+            { "meta-llama/llama-4-maverick", "Meta: Llama 4 Maverick \xC2\xB7 OpenRouter" },
+            { "mistralai/mistral-large-2512", "Mistral: Large 2512 \xC2\xB7 OpenRouter" },
+            { "qwen/qwen3.7-plus", "Qwen: Qwen3.7 Plus \xC2\xB7 OpenRouter" },
+            { "google/gemini-3.1-flash-image", "Google: Nano Banana 2 \xC2\xB7 OpenRouter" },
+            { "google/gemini-3-pro-image", "Google: Nano Banana Pro \xC2\xB7 OpenRouter" },
+            { "google/gemini-2.5-flash-image", "Google: Nano Banana \xC2\xB7 OpenRouter" },
+            { "openai/gpt-5.4-image-2", "OpenAI: GPT-5.4 Image 2 \xC2\xB7 OpenRouter" },
+            { "openai/gpt-5-image", "OpenAI: GPT-5 Image \xC2\xB7 OpenRouter" },
+            { "openai/gpt-5-image-mini", "OpenAI: GPT-5 Image Mini \xC2\xB7 OpenRouter" },
+            { "openai/gpt-image-2.5-sunburst", "OpenAI: GPT Image 2.5 Sunburst \xC2\xB7 OpenRouter" },
+            { "openai/gpt-image-2.5-flare", "OpenAI: GPT Image 2.5 Flare \xC2\xB7 OpenRouter" },
+            { "openai/gpt-image-1", "OpenAI: GPT Image 1 \xC2\xB7 OpenRouter" }
         };
 
         String id = idIn.StartsWith("models/") ? idIn.SubStr(7) : idIn;
@@ -454,42 +604,20 @@ namespace Editor::PipelineUtils
         if (known.TryGetValue(id, name))
             return name;
 
-        // Unknown ids: words capitalised, versions as they are, qualifiers after a dot
-        String result;
-        String word;
-        auto flush = [&]()
+        // A vendor/model id is an OpenRouter model
+        int slash = id.Find("/");
+        if (slash >= 0)
         {
-            if (word.IsEmpty())
-                return;
-
-            String part = word;
-            if (part == "latest" || part == "preview" || part == "exp")
-                part = String("\xC2\xB7 ") + part;
-            else if (part == "lite")
-                part = "Lite";
-            else if (!(part[0] >= '0' && part[0] <= '9'))
-            {
-                String first;
-                first += (char)toupper((unsigned char)part[0]);
-                part = first + part.SubStr(1);
-            }
-
-            if (!result.IsEmpty())
-                result += " ";
-            result += part;
-            word = "";
-        };
-
-        for (int i = 0; i < id.Length(); i++)
-        {
-            char c = id[i];
-            if (c == '-' || c == '_')
-                flush();
-            else
-                word += c;
+            String vendor = id.SubStr(0, slash);
+            String model = id.SubStr(slash + 1);
+            bool openAi = vendor.ToLowerCase() == "openai" && IsOpenAiModelId(model);
+            return OpenRouterVendorLabel(vendor) + ": " + (openAi ? OpenAiModelName(model) : CapitaliseModelWords(model, true)) + " \xC2\xB7 OpenRouter";
         }
-        flush();
-        return result;
+
+        if (IsOpenAiModelId(id))
+            return OpenAiModelName(id) + " \xC2\xB7 OpenAI";
+
+        return CapitaliseModelWords(id);
     }
 
     String ExtensionForMime(const String& mimeIn)

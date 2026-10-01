@@ -6,6 +6,7 @@
 #include "o2/Utils/Editor/FrameHandles.h"
 #include "o2/Utils/Function/Function.h"
 #include "o2Editor/Pipeline/PipelineGraph.h"
+#include "o2Editor/Pipeline/PipelineImageOps.h"
 #include "o2Editor/Windows/PipelineWindow/PipelineControls.h"
 
 using namespace o2;
@@ -25,8 +26,9 @@ namespace Editor
     // ------------------------------------------------------------------------
     // Brush editor over an optional background image. The committed strokes
     // are stored in the node config as a PNG data URL ("drawing", "dw", "dh"),
-    // brush settings and the active tool live in UI-only keys. An optional
-    // region box ("roi") is edited with the region tool
+    // brush settings and the active tool live in UI-only keys. A region box
+    // (the extract node's "roi", or the image edit node's optional
+    // "editRegion") is edited with the region tool
     // ------------------------------------------------------------------------
     class PipelinePaintEditor : public Widget, public CursorAreaEventsListener
     {
@@ -53,8 +55,18 @@ namespace Editor
         // Default constructor
         explicit PipelinePaintEditor(RefCounter* refCounter);
 
-        // Sets the node, enables the region tool when asked and loads the drawing
-        void Init(const Ref<PipelineNode>& node, bool withRegion);
+        // Sets the node, enables the region tool when asked and loads the drawing. The region is kept under the key; an
+        // optional one exists only while the key holds a valid box: the region tool creates it and its remove tab clears it
+        void Init(const Ref<PipelineNode>& node, bool withRegion, const String& regionKey = "roi", bool optionalRegion = false);
+
+        // Returns true when the region box is shown: always for a required region, while it is set for an optional one
+        bool HasRegion() const;
+
+        // Returns the region box over the stage, world space
+        RectF GetRegionRectangle() const;
+
+        // Returns the active tool: brush, eraser or roi
+        String GetTool() const;
 
         // Sets the background image; the drawing resolution follows its size
         void SetBackground(const Ref<Bitmap>& bitmap);
@@ -77,6 +89,42 @@ namespace Editor
         // Returns the smallest height fitting the toolbar wrapped into the width and the paint area
         float GetMinHeightForWidth(float width) const;
 
+        // Returns the height of the tool row and the palette at the width
+        float GetBarsHeight(float width) const { return BarsHeight(width); }
+
+        // Puts the widget beside the stage: the tool row keeps the whole width, the stage takes the left pane of the
+        // row under it and the widget the right one; null gives the stage the whole row
+        void SetBeside(const Ref<Widget>& widget);
+
+        // Moves the tool row under the stage, with the end widget (the switches) at its right end when the row is at least
+        // toolbarInlineWidth wide, else on a line of its own under it, at the right; endWidth is the end widget's width
+        void SetToolbarBelow(const Ref<Widget>& end, float endWidth);
+
+        // Returns true when the tool row is under the stage
+        bool IsToolbarBelow() const { return mToolbarBelow; }
+
+        // Turns the drawing off: no tool row, no drawing shown, the region boxes always editable
+        void SetDrawingEnabled(bool enabled);
+
+        // Returns true when the editor draws
+        bool IsDrawingEnabled() const { return !mNoDrawing; }
+
+        // Returns true when the end widget shares the line of the tools at the width
+        bool IsToolbarInline(float width) const { return width >= toolbarInlineWidth; }
+
+        // Shows the result over the stage right of a divider, the input with its drawing left of it; a null result ends
+        // it. Only the divider strip drags it, and strokes start on the input side only
+        void SetCompare(const Ref<Bitmap>& result, const String& nodeId);
+
+        // Returns true while the result is shown over the stage
+        bool IsComparing() const { return mCompareSize.x > 0; }
+
+        // Returns the x of the compare divider over the stage
+        float GetDividerX() const;
+
+        // Returns true when the point is on the strip that drags the compare divider, about 12 screen pixels wide
+        bool IsOnDivider(const Vec2F& point) const;
+
         // Returns the drawing resolution in pixels
         const Vec2I& GetResolution() const { return mResolution; }
 
@@ -94,12 +142,17 @@ namespace Editor
 
         SERIALIZABLE(PipelinePaintEditor);
 
+    public:
+        static constexpr float toolbarInlineWidth = 540.0f; // Row width of a 560 wide card: from it the switches share the tool line
+
     protected:
         static const float toolbarHeight;   // Height of the tool row
         static const int   maxHistory = 15; // Undo steps kept
 
-        Ref<PipelineNode> mNode;               // Edited node
-        bool              mWithRegion = false; // True when the region tool is available
+        Ref<PipelineNode> mNode;                   // Edited node
+        bool              mWithRegion = false;     // True when the region tool is available
+        String            mRegionKey = "roi";      // Config key of the region box
+        bool              mOptionalRegion = false; // True when the region may be absent: the tool creates it, the remove tab clears it
 
         Ref<Toggle>           mBrushToggle;         // Brush tool toggle
         Ref<Toggle>           mEraserToggle;        // Eraser tool toggle
@@ -121,8 +174,21 @@ namespace Editor
         TextureRef  mBackgroundTexture; // Background texture
         TextureRef  mTexture;           // Texture of the composed drawing
         Ref<Sprite> mBackgroundSprite;  // Background sprite
+        Ref<Sprite> mFrameSprite;       // Frame and soft shadow round the picture area, as the result cards have
         Ref<Sprite> mSprite;            // Composed drawing sprite
         Ref<Text>   mHintText;          // Hint text drawable
+
+        Ref<Widget> mBeside;                 // Widget in the right pane of the row: the result, or the parts grid
+        bool        mToolbarBelow = false;   // The tool row is under the stage
+        bool        mNoDrawing = false;      // No drawing: only the source and its region boxes
+        Ref<Widget> mToolbarEnd;             // Widget at the right end of the tool row, or on its own line under it
+        float       mToolbarEndWidth = 0.0f; // Width of that widget
+        Ref<Sprite> mCompareSprite;          // Result shown right of the divider
+        Vec2I       mCompareSize;            // Result display texture size, zero while not comparing
+        String      mCompareNode;            // Node the divider belongs to
+        bool        mDividerDragging = false; // True while the divider strip is dragged
+        float       mPixelSize = 1.0f;       // Screen pixel size in canvas units at the last draw
+        Ref<Sprite> mCompareChecker;         // Checkerboard behind the result side
 
         Vec2I mResolution;           // Drawing resolution in pixels: the stored drawing size, the background size or twice the stage of a blank canvas
         Vec2F mCommittedArea;        // Stage size the resolution was last taken from, blank canvas only
@@ -154,11 +220,15 @@ namespace Editor
         RectF             mRemovePlaced;            // Where the remove tab was last placed
 
     protected:
-        // Returns the active tool: "brush", "eraser" or "roi"
-        String GetTool() const;
-
-        // Stores the tool in the config, notifies and updates the toolbar
+        // Stores the tool in the config, notifies and updates the toolbar; picking the region tool without an optional
+        // region creates the default one
         void SetTool(const String& tool);
+
+        // Clears the optional region and goes back to the brush
+        void RemoveOptionalRegion();
+
+        // Reads the region box from the config; false when an optional region is not set
+        bool ReadRegion(PipelineImageOps::CropRect& region) const;
 
         // Returns the brush diameter in stage pixels from the config, 1..80
         float GetBrushSize() const;
@@ -244,10 +314,10 @@ namespace Editor
         // Clears the drawing, keeping the current one in the history
         void OnClear();
 
-        // Sets the region frame from the config "roi", defaulting to the central 80%
+        // Sets the region frame from the config; a required region defaults to the central 80%
         void SyncRegionFromConfig();
 
-        // Called when the region frame is transformed; writes the normalized "roi" box
+        // Called when the region frame is transformed; writes the normalized box under the region key
         void OnRegionTransformed(const Basis& basis);
 
         // Called when the region transform is completed; notifies as completed
@@ -292,6 +362,8 @@ CLASS_FIELDS_META(Editor::PipelinePaintEditor)
     FIELD().PUBLIC().NAME(onRegionRemoved);
     FIELD().PROTECTED().NAME(mNode);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mWithRegion);
+    FIELD().PROTECTED().DEFAULT_VALUE("roi").NAME(mRegionKey);
+    FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mOptionalRegion);
     FIELD().PROTECTED().NAME(mBrushToggle);
     FIELD().PROTECTED().NAME(mEraserToggle);
     FIELD().PROTECTED().NAME(mRegionToggle);
@@ -311,8 +383,20 @@ CLASS_FIELDS_META(Editor::PipelinePaintEditor)
     FIELD().PROTECTED().NAME(mBackgroundTexture);
     FIELD().PROTECTED().NAME(mTexture);
     FIELD().PROTECTED().NAME(mBackgroundSprite);
+    FIELD().PROTECTED().NAME(mFrameSprite);
     FIELD().PROTECTED().NAME(mSprite);
     FIELD().PROTECTED().NAME(mHintText);
+    FIELD().PROTECTED().NAME(mBeside);
+    FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mToolbarBelow);
+    FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mNoDrawing);
+    FIELD().PROTECTED().NAME(mToolbarEnd);
+    FIELD().PROTECTED().DEFAULT_VALUE(0.0f).NAME(mToolbarEndWidth);
+    FIELD().PROTECTED().NAME(mCompareSprite);
+    FIELD().PROTECTED().NAME(mCompareSize);
+    FIELD().PROTECTED().NAME(mCompareNode);
+    FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mDividerDragging);
+    FIELD().PROTECTED().DEFAULT_VALUE(1.0f).NAME(mPixelSize);
+    FIELD().PROTECTED().NAME(mCompareChecker);
     FIELD().PROTECTED().NAME(mResolution);
     FIELD().PROTECTED().NAME(mCommittedArea);
     FIELD().PROTECTED().DEFAULT_VALUE(-1.0f).NAME(mResizeTimer);
@@ -343,7 +427,10 @@ CLASS_METHODS_META(Editor::PipelinePaintEditor)
 {
 
     FUNCTION().PUBLIC().CONSTRUCTOR(RefCounter*);
-    FUNCTION().PUBLIC().SIGNATURE(void, Init, const Ref<PipelineNode>&, bool);
+    FUNCTION().PUBLIC().SIGNATURE(void, Init, const Ref<PipelineNode>&, bool, const String&, bool);
+    FUNCTION().PUBLIC().SIGNATURE(bool, HasRegion);
+    FUNCTION().PUBLIC().SIGNATURE(RectF, GetRegionRectangle);
+    FUNCTION().PUBLIC().SIGNATURE(String, GetTool);
     FUNCTION().PUBLIC().SIGNATURE(void, SetBackground, const Ref<Bitmap>&);
     FUNCTION().PUBLIC().SIGNATURE(const Ref<Bitmap>&, GetBackground);
     FUNCTION().PUBLIC().SIGNATURE(RectF, GetStageRectangle);
@@ -351,13 +438,25 @@ CLASS_METHODS_META(Editor::PipelinePaintEditor)
     FUNCTION().PUBLIC().SIGNATURE(void, SetRegions, const Vector<RegionBox>&, int, bool);
     FUNCTION().PUBLIC().SIGNATURE(float, GetMinHeight);
     FUNCTION().PUBLIC().SIGNATURE(float, GetMinHeightForWidth, float);
+    FUNCTION().PUBLIC().SIGNATURE(float, GetBarsHeight, float);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetBeside, const Ref<Widget>&);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetToolbarBelow, const Ref<Widget>&, float);
+    FUNCTION().PUBLIC().SIGNATURE(bool, IsToolbarBelow);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetDrawingEnabled, bool);
+    FUNCTION().PUBLIC().SIGNATURE(bool, IsDrawingEnabled);
+    FUNCTION().PUBLIC().SIGNATURE(bool, IsToolbarInline, float);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetCompare, const Ref<Bitmap>&, const String&);
+    FUNCTION().PUBLIC().SIGNATURE(bool, IsComparing);
+    FUNCTION().PUBLIC().SIGNATURE(float, GetDividerX);
+    FUNCTION().PUBLIC().SIGNATURE(bool, IsOnDivider, const Vec2F&);
     FUNCTION().PUBLIC().SIGNATURE(const Vec2I&, GetResolution);
     FUNCTION().PUBLIC().SIGNATURE(void, UpdateSelfTransform);
     FUNCTION().PUBLIC().SIGNATURE(void, Update, float);
     FUNCTION().PUBLIC().SIGNATURE(void, Draw);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsUnderPoint, const Vec2F&);
-    FUNCTION().PROTECTED().SIGNATURE(String, GetTool);
     FUNCTION().PROTECTED().SIGNATURE(void, SetTool, const String&);
+    FUNCTION().PROTECTED().SIGNATURE(void, RemoveOptionalRegion);
+    FUNCTION().PROTECTED().SIGNATURE(bool, ReadRegion, PipelineImageOps::CropRect&);
     FUNCTION().PROTECTED().SIGNATURE(float, GetBrushSize);
     FUNCTION().PROTECTED().SIGNATURE(float, GetBrushOpacity);
     FUNCTION().PROTECTED().SIGNATURE(Color4, GetBrushColor);

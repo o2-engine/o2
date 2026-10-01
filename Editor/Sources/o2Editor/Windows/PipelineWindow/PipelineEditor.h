@@ -7,6 +7,8 @@
 #include "o2/Assets/Types/PipelineAsset.h"
 #include "o2Editor/Pipeline/PipelineExecutor.h"
 #include "o2Editor/UI/FrameScrollView.h"
+#include "o2Editor/Windows/PipelineWindow/PipelineModelPicker.h"
+#include "o2Editor/Windows/PipelineWindow/PipelineOptionPicker.h"
 #include "o2Editor/Windows/PipelineWindow/PipelineNodeWidget.h"
 
 using namespace o2;
@@ -169,7 +171,8 @@ namespace Editor
         // Returns value connected to input port by name
         PipelineValue GetInputValue(const Ref<PipelineNode>& node, const String& portName) const;
 
-        // Returns value connected to input port by id
+        // Returns the value linked to the input port by id: what the linked output shows; for a source with several
+        // outputs (extract parts) only that output's own result, nothing while it has none
         PipelineValue GetInputValueById(const Ref<PipelineNode>& node, const String& portId) const;
 
         // Adds a node of the type in the middle of the view, steps aside from an occupied spot and selects it
@@ -204,6 +207,18 @@ namespace Editor
 
         // Returns the menu shown by ShowPopupMenu
         const Ref<ContextMenu>& GetPopupMenu() const { return mPopupMenu; }
+
+        // Opens the model menu of a card's model field, in screen space above every card
+        void ShowModelPicker(const PipelineModelPickerRequest& request);
+
+        // Returns the model menu, null until a model field opened it
+        const Ref<PipelineModelPicker>& GetModelPicker() const { return mModelPicker; }
+
+        // Opens the option menu of a card's option field, in screen space above every card
+        void ShowOptionPicker(const PipelineOptionPickerRequest& request);
+
+        // Returns the option menu, null until an option field opened it
+        const Ref<PipelineOptionPicker>& GetOptionPicker() const { return mOptionPicker; }
 
         // Returns selected node cards
         Vector<Ref<PipelineNodeWidget>> GetSelectedNodes() const;
@@ -256,6 +271,8 @@ namespace Editor
         Ref<ContextMenu>        mNodeContextMenu; // Node context menu
         Ref<ContextMenu>        mEdgeContextMenu; // Link context menu
         Ref<ContextMenu>        mPopupMenu;       // Menu of a card control, shown by ShowPopupMenu
+        Ref<PipelineModelPicker> mModelPicker;    // Model menu of the model fields, created when first opened
+        Ref<PipelineOptionPicker> mOptionPicker;  // Option menu of the option fields, created when first opened
         Vec2F                   mContextMenuPos;  // Canvas point where a context menu was opened
         Ref<PipelineNodeWidget> mContextNode;     // Node the context menu was opened for
         String                  mContextEdgeId;   // Link the context menu was opened for
@@ -288,6 +305,7 @@ namespace Editor
 
         bool  mNeedAdjustView = false; // True when the view must be fitted at next update
         bool  mCameraDirty = false;    // True when the camera must be saved to the graph
+        int   mIoViewVersion = 0;      // Version of the input | result view setting the cards were built with
         RectF mCullingRect;            // Visible canvas rectangle with a margin; cards and links outside it are skipped
 
         ActionsList mActionsList; // Local actions list, used when actionsListDelegate is null
@@ -344,8 +362,9 @@ namespace Editor
         // Marks cards outside the view as culled and drops card details when zoomed far out
         void UpdateCardsVisibility();
 
-        // Draws all links and the pending one
-        void DrawEdges();
+        // Draws the links under the cards and the pending one; overCards draws, after the cards, the links that leave
+        // a port inside a card (a part of an extract node), so their start stays visible
+        void DrawEdges(bool overCards);
 
         // Draws one link as a smooth curve through bend points; the width is in canvas units and never thinner than a pixel on screen
         void DrawEdge(const Vec2F& from, const Vec2F& to, const Vector<Vec2F>& points, const Color4& color, float width);
@@ -484,6 +503,8 @@ CLASS_FIELDS_META(Editor::PipelineEditor)
     FIELD().PROTECTED().NAME(mNodeContextMenu);
     FIELD().PROTECTED().NAME(mEdgeContextMenu);
     FIELD().PROTECTED().NAME(mPopupMenu);
+    FIELD().PROTECTED().NAME(mModelPicker);
+    FIELD().PROTECTED().NAME(mOptionPicker);
     FIELD().PROTECTED().NAME(mContextMenuPos);
     FIELD().PROTECTED().NAME(mContextNode);
     FIELD().PROTECTED().NAME(mContextEdgeId);
@@ -509,6 +530,7 @@ CLASS_FIELDS_META(Editor::PipelineEditor)
     FIELD().PROTECTED().NAME(mInputLinks);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mNeedAdjustView);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mCameraDirty);
+    FIELD().PROTECTED().DEFAULT_VALUE(0).NAME(mIoViewVersion);
     FIELD().PROTECTED().NAME(mCullingRect);
     FIELD().PROTECTED().NAME(mActionsList);
 }
@@ -567,6 +589,10 @@ CLASS_METHODS_META(Editor::PipelineEditor)
     FUNCTION().PUBLIC().SIGNATURE(const Ref<ContextMenu>&, GetContextMenu);
     FUNCTION().PUBLIC().SIGNATURE(void, ShowPopupMenu, _tmp1);
     FUNCTION().PUBLIC().SIGNATURE(const Ref<ContextMenu>&, GetPopupMenu);
+    FUNCTION().PUBLIC().SIGNATURE(void, ShowModelPicker, const PipelineModelPickerRequest&);
+    FUNCTION().PUBLIC().SIGNATURE(const Ref<PipelineModelPicker>&, GetModelPicker);
+    FUNCTION().PUBLIC().SIGNATURE(void, ShowOptionPicker, const PipelineOptionPickerRequest&);
+    FUNCTION().PUBLIC().SIGNATURE(const Ref<PipelineOptionPicker>&, GetOptionPicker);
     FUNCTION().PUBLIC().SIGNATURE(Vector<Ref<PipelineNodeWidget>>, GetSelectedNodes);
     FUNCTION().PUBLIC().SIGNATURE(void, SelectNodes, const Vector<String>&);
     FUNCTION().PUBLIC().SIGNATURE(void, DeleteSelection);
@@ -592,7 +618,7 @@ CLASS_METHODS_META(Editor::PipelineEditor)
     FUNCTION().PROTECTED().SIGNATURE(void, FillAddNodeMenu, const Ref<ContextMenu>&, const PendingEdge*);
     FUNCTION().PROTECTED().SIGNATURE(void, RecalculateViewArea);
     FUNCTION().PROTECTED().SIGNATURE(void, UpdateCardsVisibility);
-    FUNCTION().PROTECTED().SIGNATURE(void, DrawEdges);
+    FUNCTION().PROTECTED().SIGNATURE(void, DrawEdges, bool);
     FUNCTION().PROTECTED().SIGNATURE(void, DrawEdge, const Vec2F&, const Vec2F&, const Vector<Vec2F>&, const Color4&, float);
     FUNCTION().PROTECTED().SIGNATURE(Vector<Vec2F>, BuildEdgePolyline, const Vec2F&, const Vec2F&, const Vector<Vec2F>&);
     FUNCTION().PROTECTED().SIGNATURE(void, DrawSelection);

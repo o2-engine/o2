@@ -75,20 +75,41 @@ namespace Editor
         }
     };
 
-    // Transparency approaches shared by the image gen / edit / extract nodes
+    // Transparency approaches shared by the image gen / edit / extract nodes. A part of the extract node may carry
+    // its own background settings ("transparency" of its region), which replace the node's for that part.
+    // A model that renders the alpha itself is asked for it (native), whatever approach the config names
     namespace PipelineTransparency
     {
-        // Transparency settings of a node
+        // Transparency settings of a node or of one of its parts
         struct Config
         {
-            String                          mode = "twoPass"; // Approach: twoPass (white and black renders) or chroma (key colour cut)
-            PipelineImageOps::ChromaOptions chroma;           // Key colour, tolerance, softness and spill of the chroma cut
-            String                          colorName;        // Key colour name used in prompts
-            String                          colorHex;         // Key colour as upper-case hex used in prompts
+            bool                            transparent = false; // Transparent background asked for
+            String                          mode = "twoPass";    // Effective approach: twoPass (white and black renders), chroma (key colour cut) or native (the model renders the alpha)
+            String                          storedMode = "twoPass"; // Approach the config names, twoPass or chroma: used again once the model cannot render the alpha
+            PipelineImageOps::ChromaOptions chroma;              // Key colour, tolerance, softness and spill of the chroma cut
+            String                          colorName;           // Key colour name used in prompts
+            String                          colorHex;            // Key colour as upper-case hex used in prompts
         };
 
-        // Reads the mode and the chroma settings from the node config, clamping the percentages
-        Config Read(const PipelineNode& node);
+        // True for the models that render a transparent background themselves when asked: the OpenAI GPT Image models
+        // and the OpenRouter models whose images endpoint takes the request
+        bool SupportsNativeTransparency(const String& model);
+
+        // True when the node, or the part the port carries, gets its transparent background from the model itself
+        bool UsesNativeTransparency(const PipelineNode& node, const String& portId = "");
+
+        // The six config keys a part's own background settings replace: transparentBg, transparentMode and the chroma keys
+        const Vector<String>& SettingKeys();
+
+        // Returns a background setting of the part the port carries: its own when it has one, else the node's; null when
+        // neither is set. An empty port id reads the node
+        const DataValue* SettingValue(const PipelineNode& node, const String& portId, const char* key);
+
+        // Reads the effective settings of the node, or of the part the port carries, clamping the percentages
+        Config Read(const PipelineNode& node, const String& portId = "");
+
+        // Writes the complete effective settings of the part the port carries into target, as its own copy
+        void WriteSettings(const PipelineNode& node, const String& portId, DataValue& target);
 
         // Prompt part asking for the subject on a flat chroma key backdrop
         String ChromaBgInstruction(const Config& config);
@@ -96,20 +117,34 @@ namespace Editor
         // Backdrop description for prompts that erase everything else to the key colour
         String ChromaEraseInstruction(const Config& config);
 
+        extern const String nativeBackdrop;     // What the prompts call the background when the model renders the alpha
+        extern const String nativeEditSuffix;   // Ending of an edit prompt when the model renders the alpha
         extern const String whiteBgInstruction; // First two-pass prompt: subject on pure white
         extern const String blackBgInstruction; // Second two-pass prompt: the same render with the background turned black
 
         // Config keys that only feed the local chroma post-step, so changing them reuses the render
         const Vector<String>& ChromaConfigKeys();
 
-        // True when the node renders onto a key colour the executor must cut
-        bool UsesChromaPostStep(const PipelineNode& node);
+        // True when the node, or the part the port carries, renders onto a key colour the executor must cut
+        bool UsesChromaPostStep(const PipelineNode& node, const String& portId = "");
 
-        // Cuts the key colour out of a raw render (trims margins for extract nodes)
-        Ref<Bitmap> ApplyChromaPostStep(const PipelineNode& node, const Bitmap& raw);
+        // True when the node or any of its parts cuts a key colour
+        bool AnyChromaPostStep(const PipelineNode& node);
+
+        // Adds the keys the signature of a per-port output drops to exclude and returns what it appends to the port
+        // variant: a part with its own settings drops the node's and adds its own ("|bg:[...]", downstream also the cut),
+        // a raw chroma render is tagged "|chroma-raw". A part without own settings hashes as before they existed
+        String PortCacheSuffix(const PipelineNode& node, const String& portId, bool rawRender, Vector<String>& exclude);
+
+        // Cuts the key colour out of a raw render (trims margins for extract nodes) with the settings of the node or the part
+        Ref<Bitmap> ApplyChromaPostStep(const PipelineNode& node, const Bitmap& raw, const String& portId = "");
 
         // Recovers alpha from two renders of the same subject on white and on black
         Ref<Bitmap> MatteFromPair(const Bitmap& white, const Bitmap& black);
+
+        // Image generations one run of the node takes: per part, two for a transparent two-pass render, else one;
+        // a background rendered by the model takes one
+        int ImageGenerations(const PipelineNode& node);
     }
 
     // ----------------------------------------------------------------------------------------

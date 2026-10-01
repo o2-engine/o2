@@ -73,7 +73,11 @@ namespace Editor
         Ref<Toggle>         mEnabledToggle;    // Sync on or off
         Ref<Toggle>         mFinishToggle;     // Finish results written into the assets
         Ref<Button>         mSyncButton;       // Runs a pass now
+        Ref<Toggle>         mSideView;         // Image nodes show the input beside the result
+        Ref<Toggle>         mCompareView;      // Image nodes show input and result split by a divider
         Ref<EditBox>        mGeminiEdit;       // Gemini API key
+        Ref<EditBox>        mOpenAiEdit;       // OpenAI API key
+        Ref<EditBox>        mOpenRouterEdit;   // OpenRouter API key
         Ref<EditBox>        mElevenEdit;       // ElevenLabs API key
         Ref<EditBox>        mKlingAccessEdit;  // Kling API key or access key
         Ref<EditBox>        mKlingSecretEdit;  // Kling secret key of a legacy key pair

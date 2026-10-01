@@ -10,6 +10,12 @@ namespace Editor
     // Creates the body of an image generation, edit, extract, background removal, effect or draw node; null for other types
     Ref<PipelineNodeBody> CreateImageNodeBody(const String& type);
 
+    // Creates the body of the AI extract node; null for other types
+    Ref<PipelineNodeBody> CreateExtractNodeBody(const String& type);
+
+    // Model presets of the image generating nodes
+    const Vector<String>& PipelineImageModelPresets();
+
     // Creates the composer body; null for other types
     Ref<PipelineNodeBody> CreateComposerNodeBody(const String& type);
 }

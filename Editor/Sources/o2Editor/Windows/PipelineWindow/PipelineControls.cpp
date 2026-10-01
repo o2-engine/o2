@@ -81,20 +81,6 @@ namespace Editor
         o2Render.DrawAALine(points, mColor, 1.0f);
     }
 
-    PipelineClipBox::PipelineClipBox(RefCounter* refCounter):
-        Widget(refCounter)
-    {}
-
-    void PipelineClipBox::Draw()
-    {
-        if (!mResEnabledInHierarchy || mIsClipped)
-            return;
-
-        o2Render.EnableScissorTest((RectI)layout->GetWorldRect());
-        Widget::Draw();
-        o2Render.DisableScissorTest();
-    }
-
     PipelinePortMarker::PipelinePortMarker(const PipelinePortMarker& other):
         IRectDrawable(other), portType(other.portType)
     {}
@@ -284,6 +270,12 @@ namespace Editor
         Widget(refCounter)
     {}
 
+    bool PipelineWrapRow::IsFlexible(const Ref<Widget>& child)
+    {
+        // A layout without a maximum keeps o2's default limit of 10000
+        return child->layout->maxWidth <= 0.0f || child->layout->maxWidth >= 10000.0f;
+    }
+
     float PipelineWrapRow::ItemWidth(const Ref<Widget>& child)
     {
         float width = child->layout->minWidth;
@@ -357,7 +349,7 @@ namespace Editor
             for (auto& child : line)
             {
                 fixed += ItemWidth(child);
-                if (child->layout->maxWidth <= 0.0f)
+                if (IsFlexible(child))
                     flexible++;
             }
 
@@ -366,7 +358,7 @@ namespace Editor
             x = 0.0f;
             for (auto& child : line)
             {
-                float itemWidth = ItemWidth(child) + (child->layout->maxWidth <= 0.0f ? share : 0.0f);
+                float itemWidth = ItemWidth(child) + (IsFlexible(child) ? share : 0.0f);
                 // A whole layout assignment would drop the size limits the next pass relies on
                 float minWidth = child->layout->minWidth, maxWidth = child->layout->maxWidth;
                 float minHeight = child->layout->minHeight, maxHeight = child->layout->maxHeight;
@@ -413,6 +405,8 @@ namespace Editor
         mSuffix = suffix;
         if (auto text = DynamicCast<Text>(mLabelLayer->GetDrawable()))
             text->text = label;
+        if (mCompact)
+            LayoutParts();
         mProgress->SetValueRange(mMin, mMax);
         mProgress->SetScrollSense(mStep);
         SetValue(value, false);
@@ -441,6 +435,27 @@ namespace Editor
     float PipelineSlider::GetTrackWidth() const
     {
         return mProgress->layout->GetWidth();
+    }
+
+    void PipelineSlider::SetCompact(bool compact)
+    {
+        mCompact = compact;
+        LayoutParts();
+    }
+
+    void PipelineSlider::LayoutParts()
+    {
+        // Compact, the caption takes just its text
+        float label = 52.0f;
+        auto text = DynamicCast<Text>(mLabelLayer->GetDrawable());
+        if (mCompact && text && text->GetFont())
+            label = Math::Ceil(Text::GetTextSize(text->GetText(), text->GetFont(), text->GetFontHeight()).x) + 6.0f;
+        if (text)
+            text->dotsEngings = !mCompact;
+
+        mLabelLayer->layout = Layout(Vec2F(0, 0), Vec2F(0, 1), Vec2F(0, 0), Vec2F(label, 0));
+        *mProgress->layout = WidgetLayout(Vec2F(0, 0), Vec2F(1, 1), Vec2F(label + 4.0f, 0), Vec2F(mCompact ? 0.0f : -46.0f, 0));
+        mValueLayer->enabled = !mCompact;
     }
 
     void PipelineSlider::Update(float dt)
@@ -687,8 +702,6 @@ DECLARE_CLASS(Editor::PipelineRoundedRect, Editor__PipelineRoundedRect);
 DECLARE_CLASS(Editor::PipelinePortMarker, Editor__PipelinePortMarker);
 
 DECLARE_CLASS(Editor::PipelineFoldArrow, Editor__PipelineFoldArrow);
-
-DECLARE_CLASS(Editor::PipelineClipBox, Editor__PipelineClipBox);
 
 DECLARE_CLASS(Editor::PipelineWrapRow, Editor__PipelineWrapRow);
 

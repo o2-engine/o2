@@ -17,19 +17,19 @@
 #include "o2Editor/Pipeline/PipelineUtils.h"
 #include "o2Editor/Pipeline/PipelineValue.h"
 #include "o2Editor/Windows/PipelineWindow/PipelineControls.h"
+#include "o2Editor/Windows/PipelineWindow/PipelinePairViews.h"
 
 #include <cstring>
 
 namespace Editor
 {
     const float PipelinePaintEditor::toolbarHeight = 22.0f;
+    static const float toolbarBelowGap = 6.0f;      // Between the stage and the tool row under it
+    static const float toolbarEndGap = 8.0f;        // Before the end widget on the tool line
+    static const float toolbarEndHeight = 20.0f;    // Height of the end widget
+    static const float compactSliderWidth = 76.0f;  // Narrowest slider sharing the line with the end widget
     static const float paletteHeight = 20.0f;
-    static const float sliderMinWidth = 170.0f;
     static const float maxCanvasSide = 1536.0f;
-
-    static const Vector<String> drawPalette = {
-        "#ff3b30", "#ff9500", "#ffcc00", "#34c759", "#00c7be", "#007aff", "#5856d6", "#af52de", "#ffffff", "#8e8e93", "#000000"
-    };
 
     PipelinePaintEditor::PipelinePaintEditor(RefCounter* refCounter):
         Widget(refCounter)
@@ -37,6 +37,8 @@ namespace Editor
         layout->minHeight = 180;
 
         mBackgroundSprite = mmake<Sprite>();
+        mFrameSprite = mmake<Sprite>("ui/UI4_Editbox_regular.png");
+        mFrameSprite->mode = SpriteMode::Sliced;
         mSprite = mmake<Sprite>();
 
         mHintText = mmake<Text>("stdFont.ttf");
@@ -67,51 +69,25 @@ namespace Editor
         mRemoveButton->enabled = false;
         mRemoveButton->onClick = [weakThis]()
         {
-            if (auto self = weakThis.Lock())
-                if (self->onRegionRemoved) self->onRegionRemoved();
+            auto self = weakThis.Lock();
+            if (!self)
+                return;
+
+            if (self->mOptionalRegion)
+                self->RemoveOptionalRegion();
+            else if (self->onRegionRemoved)
+                self->onRegionRemoved();
         };
         AddChild(mRemoveButton);
     }
 
-    void PipelinePaintEditor::SetRegions(const Vector<RegionBox>& others, int selectedIndex, bool removable)
-    {
-        mOtherRegions = others;
-        mSelectedIndex = selectedIndex;
-        mRegionRemovable = removable;
-    }
-
-    RectF PipelinePaintEditor::BoxRect(float x, float y, float w, float h, const RectF& stage) const
-    {
-        float left = stage.left + stage.Width() * x;
-        float top = stage.top - stage.Height() * y;
-        return RectF(left, top, left + stage.Width() * w, top - stage.Height() * h);
-    }
-
-    const PipelinePaintEditor::RegionBox* PipelinePaintEditor::OtherRegionAt(const Vec2F& point) const
-    {
-        RectF stage = GetStageRect();
-        for (int i = mOtherRegions.Count() - 1; i >= 0; i--)
-        {
-            auto& box = mOtherRegions[i];
-            if (BoxRect(box.x, box.y, box.w, box.h, stage).IsInside(point))
-                return &mOtherRegions[i];
-        }
-        return nullptr;
-    }
-
-    void PipelinePaintEditor::DrawBadge(const RectF& rect, int index, const Color4& color)
-    {
-        RectF badge(rect.left, rect.top, rect.left + 14.0f, rect.top - 12.0f);
-        o2Render.DrawFilledPolygon({ badge.LeftBottom(), Vec2F(badge.left, badge.top), badge.RightTop(), Vec2F(badge.right, badge.bottom) }, color);
-        mBadgeText->text = (String)index;
-        mBadgeText->rect = badge;
-        mBadgeText->Draw();
-    }
-
-    void PipelinePaintEditor::Init(const Ref<PipelineNode>& node, bool withRegion)
+    void PipelinePaintEditor::Init(const Ref<PipelineNode>& node, bool withRegion, const String& regionKey /*= "roi"*/,
+                                   bool optionalRegion /*= false*/)
     {
         mNode = node;
         mWithRegion = withRegion;
+        mRegionKey = regionKey;
+        mOptionalRegion = withRegion && optionalRegion;
         mRegionToggle->enabled = withRegion;
         mSelfDrawing = "\x01";
         RefreshFromConfig();
@@ -122,9 +98,15 @@ namespace Editor
         if (!mNode)
             return "brush";
 
+        // Without drawing a stored tool is ignored: the region boxes are always editable
+        if (mNoDrawing)
+            return mWithRegion ? "roi" : "brush";
+
         String raw = mNode->GetConfigString("drawTool", "");
         if (raw == "eraser") return "eraser";
         if (raw == "brush") return "brush";
+        if (mOptionalRegion)
+            return raw == "roi" && HasRegion() ? "roi" : "brush";
         return mWithRegion ? "roi" : "brush";
     }
 
@@ -133,10 +115,23 @@ namespace Editor
         if (!mNode)
             return;
 
+        bool create = tool == "roi" && mOptionalRegion && !HasRegion();
         mNode->SetConfigString("drawTool", tool);
-        if (onConfigChanged)
-            onConfigChanged("drawTool", true);
+        if (create)
+        {
+            auto& region = mNode->config[mRegionKey.Data()];
+            region.SetObject();
+            region["x"] = 0.25f; region["y"] = 0.25f; region["w"] = 0.5f; region["h"] = 0.5f;
+        }
+
         UpdateToolbar();
+        // A new region may rebuild the card, so the tool is stored first
+        if (onConfigChanged)
+        {
+            onConfigChanged("drawTool", true);
+            if (create)
+                onConfigChanged(mRegionKey, true);
+        }
     }
 
     float PipelinePaintEditor::GetBrushSize() const
@@ -158,167 +153,6 @@ namespace Editor
         return color;
     }
 
-    void PipelinePaintEditor::BuildToolbar()
-    {
-        WeakRef<PipelinePaintEditor> weakThis(this);
-
-        auto toolbar = mmake<PipelineWrapRow>();
-        toolbar->name = "toolbar";
-        toolbar->spacing = 2;
-        toolbar->lineHeight = toolbarHeight;
-        *toolbar->layout = WidgetLayout::HorStretch(VerAlign::Top, 0, 0, toolbarHeight, 0);
-        AddChild(toolbar);
-        mToolbar = toolbar;
-
-        auto makeTool = [&](const String& icon, const String& tool, const String& name)
-        {
-            auto toggle = o2UI.CreateWidget<Toggle>("pipeline segment");
-            toggle->name = name;
-            toggle->caption = "";
-            auto sprite = mmake<Sprite>(icon);
-            sprite->color = PipelineControls::textColor;
-            toggle->AddLayer("icon", sprite, Layout::Based(BaseCorner::Center, Vec2F(14, 14)));
-            toggle->layout->minWidth = 24;
-            toggle->layout->maxWidth = 24;
-            toggle->onToggleByUser = [weakThis, tool](bool) { if (auto self = weakThis.Lock()) self->SetTool(tool); };
-            toolbar->AddChild(toggle);
-            return toggle;
-        };
-
-        mBrushToggle = makeTool("ui/pipeline/btn_brush.png", "brush", "brush");
-        mEraserToggle = makeTool("ui/pipeline/btn_eraser.png", "eraser", "eraser");
-        mRegionToggle = makeTool("ui/pipeline/btn_region.png", "roi", "region");
-
-        mColorButton = o2UI.CreateButton("");
-        mColorButton->name = "color";
-        mColorButton->layout->minWidth = 24;
-        mColorButton->layout->maxWidth = 24;
-        mColorButton->onClick = [weakThis]() { if (auto self = weakThis.Lock()) self->TogglePalette(); };
-        toolbar->AddChild(mColorButton);
-
-        mSizeSlider = mmake<PipelineSlider>();
-        mSizeSlider->name = "size";
-        mSizeSlider->layout->minWidth = sliderMinWidth;
-        mSizeSlider->onChanged = [weakThis](float value, bool completed)
-        {
-            if (auto self = weakThis.Lock())
-            {
-                self->mNode->SetConfigNumber("brushSize", value);
-                if (self->onConfigChanged) self->onConfigChanged("brushSize", completed);
-            }
-        };
-        toolbar->AddChild(mSizeSlider);
-
-        mOpacitySlider = mmake<PipelineSlider>();
-        mOpacitySlider->name = "opacity";
-        mOpacitySlider->layout->minWidth = sliderMinWidth;
-        mOpacitySlider->onChanged = [weakThis](float value, bool completed)
-        {
-            if (auto self = weakThis.Lock())
-            {
-                self->mNode->SetConfigNumber("brushOpacity", value);
-                if (self->onConfigChanged) self->onConfigChanged("brushOpacity", completed);
-            }
-        };
-        toolbar->AddChild(mOpacitySlider);
-
-        auto makeAction = [&](const String& icon, const String& name, const Function<void()>& action)
-        {
-            auto button = PipelineControls::MakeIconButton(icon, PipelineControls::textColor, Color4(0, 0, 0, 0));
-            button->name = name;
-            button->layout->minWidth = 20;
-            button->layout->maxWidth = 20;
-            button->onClick = action;
-            toolbar->AddChild(button);
-            return button;
-        };
-        mUndoButton = makeAction("ui/pipeline/btn_undo.png", "undo", [weakThis]() { if (auto self = weakThis.Lock()) self->OnUndo(); });
-        mRedoButton = makeAction("ui/pipeline/btn_redo.png", "redo", [weakThis]() { if (auto self = weakThis.Lock()) self->OnRedo(); });
-        mClearButton = makeAction("ui/UI4_small_trash_icon.png", "clear", [weakThis]() { if (auto self = weakThis.Lock()) self->OnClear(); });
-
-        mPaletteRow = mmake<PipelineWrapRow>();
-        mPaletteRow->name = "palette";
-        mPaletteRow->spacing = 3;
-        mPaletteRow->lineHeight = paletteHeight;
-        *mPaletteRow->layout = WidgetLayout::HorStretch(VerAlign::Top, 0, 0, paletteHeight, toolbarHeight + 2);
-        mPaletteRow->enabled = false;
-        AddChild(mPaletteRow);
-
-        for (auto& hex : drawPalette)
-        {
-            Color4 color;
-            PipelineUtils::ParseHexColor(hex, color);
-            auto swatch = o2UI.CreateButton("");
-            swatch->layout->minWidth = 20;
-            swatch->layout->maxWidth = 20;
-            if (auto regular = swatch->GetLayerDrawable<Sprite>("regular"))
-                regular->color = color;
-            String value = hex;
-            swatch->onClick = [weakThis, value]()
-            {
-                if (auto self = weakThis.Lock())
-                {
-                    self->mNode->SetConfigString("brushColor", value);
-                    if (self->onConfigChanged) self->onConfigChanged("brushColor", true);
-                    self->UpdateToolbar();
-                }
-            };
-            mPaletteRow->AddChild(swatch);
-        }
-
-        auto pick = o2UI.CreateButton("...");
-        pick->layout->minWidth = 28;
-        pick->layout->maxWidth = 28;
-        pick->onClick = [weakThis]()
-        {
-            auto self = weakThis.Lock();
-            if (!self)
-                return;
-
-            ColorPickerDlg::Show(self->GetBrushColor(), [weakThis](const Color4& value, bool)
-            {
-                if (auto self = weakThis.Lock())
-                {
-                    self->mNode->SetConfigString("brushColor", PipelineUtils::ColorToHex(Color4(value.r, value.g, value.b, 255)));
-                    if (self->onConfigChanged) self->onConfigChanged("brushColor", false);
-                    self->UpdateToolbar();
-                }
-            }, [weakThis]()
-            {
-                if (auto self = weakThis.Lock())
-                    if (self->onConfigChanged) self->onConfigChanged("brushColor", true);
-            });
-        };
-        mPaletteRow->AddChild(pick);
-    }
-
-    void PipelinePaintEditor::UpdateToolbar()
-    {
-        String tool = GetTool();
-        mBrushToggle->SetValue(tool == "brush");
-        mEraserToggle->SetValue(tool == "eraser");
-        mRegionToggle->SetValue(tool == "roi");
-
-        if (auto regular = mColorButton->GetLayerDrawable<Sprite>("regular"))
-            regular->color = GetBrushColor();
-
-        mSizeSlider->Setup("Size", 1, 80, 1, GetBrushSize());
-        mOpacitySlider->Setup("Alpha", 0, 1, 0.05f, GetBrushOpacity());
-
-        mUndoButton->interactable = !mUndo.IsEmpty();
-        mRedoButton->interactable = !mRedo.IsEmpty();
-        mClearButton->interactable = mNode && !mNode->GetConfigString("drawing", "").IsEmpty();
-        mUndoButton->transparency = mUndo.IsEmpty() ? 0.4f : 1.0f;
-        mRedoButton->transparency = mRedo.IsEmpty() ? 0.4f : 1.0f;
-        mClearButton->transparency = mClearButton->interactable ? 1.0f : 0.4f;
-    }
-
-    void PipelinePaintEditor::TogglePalette()
-    {
-        mPaletteOpen = !mPaletteOpen;
-        mPaletteRow->enabled = mPaletteOpen;
-    }
-
     float PipelinePaintEditor::GetMinHeight() const
     {
         return GetMinHeightForWidth(layout->GetWidth());
@@ -331,9 +165,18 @@ namespace Editor
 
     float PipelinePaintEditor::BarsHeight(float width) const
     {
-        float toolbar = mToolbar ? Math::Max(toolbarHeight, mToolbar->GetHeightForWidth(width)) : toolbarHeight;
+        if (mNoDrawing)
+            return 0.0f;
+
+        bool inlineEnd = mToolbarBelow && mToolbarEnd && IsToolbarInline(width);
+        float toolsWidth = inlineEnd ? width - mToolbarEndWidth - toolbarEndGap : width;
+        float toolbar = mToolbar ? Math::Max(toolbarHeight, mToolbar->GetHeightForWidth(toolsWidth)) : toolbarHeight;
         float palette = mPaletteOpen && mPaletteRow ? Math::Max(paletteHeight, mPaletteRow->GetHeightForWidth(width)) + 2 : 0.0f;
-        return toolbar + 4 + palette;
+        if (!mToolbarBelow)
+            return toolbar + 4 + palette;
+
+        float endLine = mToolbarEnd && !inlineEnd ? 2 + toolbarEndHeight : 0.0f;
+        return toolbarBelowGap + toolbar + palette + endLine;
     }
 
     Vec2I PipelinePaintEditor::CanvasResolution(const Vec2F& stage)
@@ -350,27 +193,130 @@ namespace Editor
     {
         Widget::UpdateSelfTransform();
 
-        if (mToolbar && mPaletteRow)
+        float width = layout->GetWidth();
+        if (mToolbar && mPaletteRow && !mToolbarBelow && !mNoDrawing)
         {
-            float width = layout->GetWidth();
             float toolbar = Math::Max(toolbarHeight, mToolbar->GetHeightForWidth(width));
             float palette = Math::Max(paletteHeight, mPaletteRow->GetHeightForWidth(width));
             *mToolbar->layout = WidgetLayout::HorStretch(VerAlign::Top, 0, 0, toolbar, 0);
             *mPaletteRow->layout = WidgetLayout::HorStretch(VerAlign::Top, 0, 0, palette, toolbar + 2);
         }
+        else if (mToolbar && mPaletteRow && !mNoDrawing)
+        {
+            // Under the stage, top down: the tools (with the end widget at their right when it fits), the palette, the end
+            // widget's own line
+            bool inlineEnd = mToolbarEnd && IsToolbarInline(width);
+            float toolsWidth = inlineEnd ? width - mToolbarEndWidth - toolbarEndGap : width;
+            float toolbar = Math::Max(toolbarHeight, mToolbar->GetHeightForWidth(toolsWidth));
+            float palette = Math::Max(paletteHeight, mPaletteRow->GetHeightForWidth(width));
+            float top = BarsHeight(width) - toolbarBelowGap;
+            *mToolbar->layout = WidgetLayout(Vec2F(0, 0), Vec2F(1, 0), Vec2F(0, top - toolbar), Vec2F(inlineEnd ? -mToolbarEndWidth - toolbarEndGap : 0.0f, top));
+            *mPaletteRow->layout = WidgetLayout(Vec2F(0, 0), Vec2F(1, 0), Vec2F(0, top - toolbar - 2 - palette), Vec2F(0, top - toolbar - 2));
+            if (mToolbarEnd)
+            {
+                float endTop = inlineEnd ? top - (toolbarHeight - toolbarEndHeight)*0.5f : toolbarEndHeight;
+                *mToolbarEnd->layout = WidgetLayout(Vec2F(1, 0), Vec2F(1, 0), Vec2F(-mToolbarEndWidth, endTop - toolbarEndHeight), Vec2F(0, endTop));
+            }
+        }
+
+        if (mBeside)
+        {
+            float left = PipelinePairLayout::PaneWidth(width) + PipelinePairLayout::paneGap;
+            if (mToolbarBelow)
+                *mBeside->layout = WidgetLayout(Vec2F(0, 0), Vec2F(0, 1), Vec2F(left, BarsHeight(width)), Vec2F(width, 0));
+            else
+                *mBeside->layout = WidgetLayout(Vec2F(0, 0), Vec2F(0, 1), Vec2F(left, 0), Vec2F(width, -BarsHeight(width)));
+        }
+    }
+
+    void PipelinePaintEditor::SetDrawingEnabled(bool enabled)
+    {
+        mNoDrawing = !enabled;
+        mToolbar->SetEnabledForcible(enabled);
+        mPaletteRow->SetEnabledForcible(enabled && mPaletteOpen);
+        SetLayoutDirty();
+    }
+
+    void PipelinePaintEditor::SetToolbarBelow(const Ref<Widget>& end, float endWidth)
+    {
+        mToolbarBelow = true;
+        if (mToolbarEnd)
+            RemoveChild(mToolbarEnd);
+
+        mToolbarEnd = end;
+        mToolbarEndWidth = endWidth;
+        if (mToolbarEnd)
+            AddChild(mToolbarEnd);
+
+        // The sliders give up their value text to share the line with the switches
+        for (auto& slider : { mSizeSlider, mOpacitySlider })
+        {
+            slider->SetCompact(true);
+            slider->layout->minWidth = compactSliderWidth;
+        }
+    }
+
+    void PipelinePaintEditor::SetBeside(const Ref<Widget>& widget)
+    {
+        if (mBeside)
+            RemoveChild(mBeside);
+
+        mBeside = widget;
+        if (mBeside)
+            AddChild(mBeside);
+    }
+
+    void PipelinePaintEditor::SetCompare(const Ref<Bitmap>& result, const String& nodeId)
+    {
+        mCompareNode = nodeId;
+        mCompareSize = Vec2I();
+        auto display = PipelinePairDraw::DisplayCopy(result);
+        if (display)
+        {
+            if (!mCompareSprite)
+            {
+                mCompareSprite = mmake<Sprite>();
+                mCompareChecker = PipelinePairDraw::MakeChecker();
+            }
+            mCompareSprite->SetTexture(TextureRef(*display));
+            mCompareSize = display->GetSize();
+        }
+
+        // The stage takes the whole row while it shows both sides
+        if (mBeside)
+            mBeside->SetEnabledForcible(!IsComparing());
+    }
+
+    float PipelinePaintEditor::GetDividerX() const
+    {
+        RectF stage = GetStageRect();
+        return stage.left + stage.Width()*PipelinePairLayout::GetDivider(mCompareNode);
+    }
+
+    bool PipelinePaintEditor::IsOnDivider(const Vec2F& point) const
+    {
+        RectF stage = GetStageRect();
+        float grab = PipelinePairLayout::dividerGrab*PipelinePairDraw::BadgeScale(mPixelSize);
+        return IsComparing() && Math::Abs(point.x - GetDividerX()) <= grab && point.y <= stage.top && point.y >= stage.bottom;
     }
 
     RectF PipelinePaintEditor::GetAreaRect() const
     {
         RectF rect = layout->GetWorldRect();
-        rect.top -= BarsHeight(layout->GetWidth());
+        if (mToolbarBelow)
+            rect.bottom += BarsHeight(layout->GetWidth());
+        else
+            rect.top -= BarsHeight(layout->GetWidth());
+        if (mBeside && !IsComparing())
+            rect.right = rect.left + PipelinePairLayout::PaneWidth(rect.Width());
         return rect;
     }
 
     RectF PipelinePaintEditor::GetStageRect() const
     {
         RectF area = GetAreaRect();
-        float pad = mWithRegion ? 18.0f : 0.0f;
+        // The extract source keeps room round the image for the handles of its box
+        float pad = mWithRegion && !mOptionalRegion ? 18.0f : 0.0f;
         RectF avail(area.left + pad, area.top - pad, area.right - pad, area.bottom + pad);
         if (avail.Width() < 2 || avail.Height() < 2)
             return avail;
@@ -397,6 +343,9 @@ namespace Editor
 
     bool PipelinePaintEditor::IsUnderPoint(const Vec2F& point)
     {
+        if (IsOnDivider(point))
+            return true;
+
         // With the region tool the selected box belongs to its handles; a click on another box picks that part
         if (GetTool() == "roi")
             return mWithRegion && OtherRegionAt(point) != nullptr;
@@ -707,73 +656,26 @@ namespace Editor
         WriteDrawing("");
     }
 
-    void PipelinePaintEditor::SyncRegionFromConfig()
-    {
-        if (!mNode)
-            return;
-
-        PipelineImageOps::CropRect roi;
-        if (!PipelineImageOps::ParseCrop(mNode->GetConfigValue("roi"), roi))
-        {
-            roi.x = 0.1f; roi.y = 0.1f; roi.w = 0.8f; roi.h = 0.8f;
-        }
-
-        RectF stage = GetStageRect();
-        float left = stage.left + stage.Width() * roi.x;
-        float top = stage.top - stage.Height() * roi.y;
-        float w = stage.Width() * roi.w;
-        float h = stage.Height() * roi.h;
-        mRegionSyncing = true;
-        mRegionFrame->SetBasis(Basis(Vec2F(left, top - h), Vec2F(w, 0), Vec2F(0, h)));
-        mRegionSyncing = false;
-    }
-
-    void PipelinePaintEditor::OnRegionTransformed(const Basis& basis)
-    {
-        if (mRegionSyncing || !mNode)
-            return;
-
-        RectF stage = GetStageRect();
-        if (stage.Width() <= 0 || stage.Height() <= 0)
-            return;
-
-        RectF frame(basis.origin, basis.origin + basis.xv + basis.yv);
-        float x = Math::Clamp((frame.left - stage.left) / stage.Width(), 0.0f, 1.0f);
-        float right = Math::Clamp((frame.right - stage.left) / stage.Width(), 0.0f, 1.0f);
-        float y = Math::Clamp((stage.top - frame.top) / stage.Height(), 0.0f, 1.0f);
-        float bottom = Math::Clamp((stage.top - frame.bottom) / stage.Height(), 0.0f, 1.0f);
-
-        auto& roi = mNode->config["roi"];
-        roi.SetObject();
-        roi["x"] = x;
-        roi["y"] = y;
-        roi["w"] = Math::Max(0.005f, right - x);
-        roi["h"] = Math::Max(0.005f, bottom - y);
-
-        if (onConfigChanged)
-            onConfigChanged("roi", false);
-    }
-
-    void PipelinePaintEditor::OnRegionCompleted()
-    {
-        if (onConfigChanged)
-            onConfigChanged("roi", true);
-    }
-
     void PipelinePaintEditor::Update(float dt)
     {
         Widget::Update(dt);
 
-        // The remove tab follows the selected box, at its top-right corner
-        bool showRemove = mWithRegion && mRegionRemovable && GetTool() == "roi";
+        // The remove tab follows the selected box, at its top-right corner; an optional region offers it with any tool
+        bool showRemove = mOptionalRegion ? HasRegion() && !PipelineControls::IsFarView() : mWithRegion && mRegionRemovable && GetTool() == "roi";
+        const Basis& b = mRegionFrame->GetCurrentBasis();
+        RectF frame(b.origin, b.origin + b.xv + b.yv);
+        RectF box(Math::Min(frame.left, frame.right), Math::Max(frame.top, frame.bottom), Math::Max(frame.left, frame.right), Math::Min(frame.top, frame.bottom));
+        RectF want(box.right - 18.0f, box.top, box.right, box.top - 18.0f);
+
+        // Without the region tool the divider stays on top: a tab over its strip gives way
+        float grab = PipelinePairLayout::dividerGrab*PipelinePairDraw::BadgeScale(mPixelSize);
+        if (showRemove && IsComparing() && GetTool() != "roi" && want.right >= GetDividerX() - grab && want.left <= GetDividerX() + grab)
+            showRemove = false;
+
         if (mRemoveButton->IsEnabled() != showRemove)
             mRemoveButton->enabled = showRemove;
         if (showRemove)
         {
-            const Basis& b = mRegionFrame->GetCurrentBasis();
-            RectF frame(b.origin, b.origin + b.xv + b.yv);
-            RectF box(Math::Min(frame.left, frame.right), Math::Max(frame.top, frame.bottom), Math::Max(frame.left, frame.right), Math::Min(frame.top, frame.bottom));
-            RectF want(box.right - 18.0f, box.top, box.right, box.top - 18.0f);
             if (want.left != mRemovePlaced.left || want.top != mRemovePlaced.top || want.right != mRemovePlaced.right || want.bottom != mRemovePlaced.bottom)
             {
                 RectF parent = layout->GetWorldRect();
@@ -814,6 +716,7 @@ namespace Editor
             return;
 
         bool farView = PipelineControls::IsFarView();
+        mPixelSize = PipelinePairDraw::PixelSize();
         DrawLayers();
         Widget::OnDrawn();
 
@@ -829,29 +732,48 @@ namespace Editor
             return;
         }
 
-        o2Render.DrawFilledPolygon({ stage.LeftBottom(), Vec2F(stage.left, stage.top), stage.RightTop(), Vec2F(stage.right, stage.bottom) }, Color4(255, 255, 255, 255));
-        if (mBackground)
-        {
-            mBackgroundSprite->rect = stage;
-            mBackgroundSprite->Draw();
-        }
+        RectF area = GetAreaRect();
+        mFrameSprite->rect = RectF(area.left - 9.0f, area.top + 9.0f, area.right + 9.0f, area.bottom - 9.0f);
+        mFrameSprite->Draw();
 
-        if (mComposed && mTexture)
+        // Comparing, the input and the drawing end at the divider and the result takes the rest of the stage
+        float cut = IsComparing() ? GetDividerX() : stage.right;
+        o2Render.DrawFilledPolygon({ stage.LeftBottom(), Vec2F(stage.left, stage.top), Vec2F(cut, stage.top), Vec2F(cut, stage.bottom) }, Color4(255, 255, 255, 255));
+        if (mBackground)
+            PipelinePairDraw::DrawClipped(*mBackgroundSprite, mBackground->GetSize(), stage, stage.left, cut);
+
+        if (mComposed && mTexture && !mNoDrawing)
         {
             if (mTextureDirty)
             {
                 mTexture->SetData(*mComposed);
                 mTextureDirty = false;
             }
-            mSprite->rect = stage;
-            mSprite->Draw();
+            PipelinePairDraw::DrawClipped(*mSprite, mResolution, stage, stage.left, cut);
+        }
+
+        if (IsComparing())
+        {
+            PipelinePairDraw::DrawChecker(*mCompareChecker, stage, cut, stage.right);
+            PipelinePairDraw::DrawClipped(*mCompareSprite, mCompareSize, PipelinePairDraw::FitRect(mCompareSize, stage), cut, stage.right);
         }
 
         o2Render.DrawAARectFrame(stage, Color4(96, 125, 139, 140), 1.0f);
 
         CursorAreaEventsListener::OnDrawn();
 
-        if (mWithRegion && !farView)
+        // Comparing, the box spans both halves and marks the same place on the result. With the region tool it lies above
+        // the divider, so its handles on the divider stay usable; with another tool the divider is on top
+        bool regionTool = GetTool() == "roi";
+        auto drawDivider = [&]()
+        {
+            if (IsComparing() && !farView)
+                PipelinePairDraw::DrawDivider(stage, cut, mDividerDragging || (mHovered && IsOnDivider(mHoverPoint)));
+        };
+        if (regionTool)
+            drawDivider();
+
+        if (mWithRegion && HasRegion() && !farView)
         {
             if (!mRegionDragging)
                 SyncRegionFromConfig();
@@ -859,12 +781,12 @@ namespace Editor
             const Basis& b = mRegionFrame->GetCurrentBasis();
             RectF frame(b.origin, b.origin + b.xv + b.yv);
 
-            // Everything outside the box is not sent to the model: shade it
+            // Everything outside the box is not sent to the model, or not changed by it: shade it
             RectF box(Math::Clamp(Math::Min(frame.left, frame.right), stage.left, stage.right),
                       Math::Clamp(Math::Max(frame.top, frame.bottom), stage.bottom, stage.top),
                       Math::Clamp(Math::Max(frame.left, frame.right), stage.left, stage.right),
                       Math::Clamp(Math::Min(frame.top, frame.bottom), stage.bottom, stage.top));
-            Color4 shade(0, 0, 0, 120);
+            Color4 shade(0, 0, 0, 128);
             auto fill = [&](const RectF& r)
             {
                 if (r.Width() > 0.0f && r.Height() > 0.0f)
@@ -886,11 +808,12 @@ namespace Editor
             if (mSelectedIndex > 0)
                 DrawBadge(box, mSelectedIndex, Color4(0, 150, 136, 255));
 
-            if (GetTool() == "roi")
+            if (regionTool)
                 mRegionFrame->Draw();
         }
 
-        if (mHovered && !farView && GetTool() != "roi")
+        bool brushOff = IsComparing() && (IsOnDivider(mHoverPoint) || mHoverPoint.x > cut);
+        if (mHovered && !farView && GetTool() != "roi" && !brushOff)
         {
             bool eraser = GetTool() == "eraser";
             o2Render.DrawAACircle(mHoverPoint, GetBrushSize() * 0.5f, eraser ? Color4(96, 125, 139, 255) : GetBrushColor(), 28, 1.0f);
@@ -902,11 +825,23 @@ namespace Editor
             DrawInheritedDepthChildren();
             DrawInternalChildren();
         }
+
+        if (!regionTool)
+            drawDivider();
+
         DrawTopLayers();
     }
 
     void PipelinePaintEditor::OnCursorPressed(const Input::Cursor& cursor)
     {
+        if (IsComparing())
+        {
+            // Only the strip on the divider drags it; the result side takes no strokes
+            mDividerDragging = IsOnDivider(cursor.position);
+            if (mDividerDragging || cursor.position.x > GetDividerX())
+                return;
+        }
+
         if (GetTool() == "roi")
         {
             if (auto box = OtherRegionAt(cursor.position))
@@ -928,6 +863,14 @@ namespace Editor
     void PipelinePaintEditor::OnCursorStillDown(const Input::Cursor& cursor)
     {
         mHoverPoint = cursor.position;
+        if (mDividerDragging)
+        {
+            RectF stage = GetStageRect();
+            if (stage.Width() > 0.0f)
+                PipelinePairLayout::SetDivider(mCompareNode, (cursor.position.x - stage.left)/stage.Width());
+            return;
+        }
+
         if (!mPainting)
             return;
 
@@ -942,6 +885,7 @@ namespace Editor
 
     void PipelinePaintEditor::OnCursorReleased(const Input::Cursor& cursor)
     {
+        mDividerDragging = false;
         CommitStroke();
     }
 

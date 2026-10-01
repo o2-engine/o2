@@ -9,6 +9,7 @@
 #include "o2/Render/Camera.h"
 #include "o2/Render/Render.h"
 #include "o2/Render/Sprite.h"
+#include "o2/Render/Text.h"
 #include "o2/Scene/Scene.h"
 #include "o2/Scene/UI/UIManager.h"
 #include "o2/Scene/UI/WidgetLayout.h"
@@ -17,6 +18,7 @@
 #include "o2/Scene/UI/Widgets/DropDown.h"
 #include "o2/Scene/UI/Widgets/EditBox.h"
 #include "o2/Scene/UI/Widgets/HorizontalScrollBar.h"
+#include "o2/Scene/UI/Widgets/ScrollArea.h"
 #include "o2/Scene/UI/Widgets/Toggle.h"
 #include "o2/Scene/UI/Widgets/VerticalScrollBar.h"
 #include "o2/Utils/Bitmap/Bitmap.h"
@@ -27,11 +29,13 @@
 #include "o2/Utils/Test/AppTestDriver.h"
 
 #include <chrono>
+#include <thread>
 #include "o2/Assets/Types/PipelineAsset.h"
 #include "o2Editor/Pipeline/PipelineAudio.h"
 #include "o2Editor/Pipeline/PipelineExecutor.h"
 #include "o2Editor/Pipeline/PipelineImageOps.h"
 #include "o2Editor/Pipeline/PipelineImport.h"
+#include "o2Editor/Pipeline/PipelineModelMenu.h"
 #include "o2Editor/Pipeline/PipelineNodeType.h"
 #include "o2Editor/Pipeline/PipelineRegions.h"
 #include "o2Editor/Pipeline/PipelineUtils.h"
@@ -96,6 +100,8 @@ namespace
             if (updateLayout)
                 root->UpdateChildrenTransforms();
             root->Draw();
+            // Popups draw above the rest and take input from there, as EditorApplication::DrawUIManager has them
+            o2UI.DrawCurrentLayerTopWidgets();
             o2Render.End();
         }
 
@@ -154,6 +160,24 @@ namespace
             Step();
         }
 
+        // A press the editor's own update sees too, as it does inside an application frame; widgets that poll the
+        // input (a popup closing on a press outside it) need it
+        static void PressSeenByUpdate(const Vec2F& pos)
+        {
+            o2Input.OnCursorMoved(pos, 0, false);
+            o2Input.OnCursorPressed(pos);
+            o2Input.PreUpdate();
+            Step();
+        }
+
+        static void Key(KeyboardKey key)
+        {
+            o2Input.OnKeyPressed(key);
+            Step();
+            o2Input.OnKeyReleased(key);
+            Step();
+        }
+
         static void Drag(const Vec2F& from, const Vec2F& to, int steps = 12)
         {
             Press(from);
@@ -207,6 +231,32 @@ namespace
         Ref<PipelineNode> Live(const Ref<PipelineNode>& node) const
         {
             return editor->GetGraph()->FindNode(node->id);
+        }
+
+        // Returns the screen rectangle of a widget on the canvas
+        RectF ScreenRectOf(const Ref<Widget>& widget) const
+        {
+            RectF world = widget->layout->GetWorldRect();
+            Vec2F a = editor->LocalToScreenPoint(Vec2F(world.left, world.bottom));
+            Vec2F b = editor->LocalToScreenPoint(Vec2F(world.right, world.top));
+            return RectF(Math::Min(a.x, b.x), Math::Max(a.y, b.y), Math::Max(a.x, b.x), Math::Min(a.y, b.y));
+        }
+
+        // Clicks the model field of the card and returns the model menu
+        Ref<PipelineModelPicker> ClickModelField(const Ref<PipelineNodeWidget>& card)
+        {
+            auto field = card ? card->FindChildByTypeAndName<Button>("model") : nullptr;
+            if (!field)
+                return nullptr;
+
+            // A layer drawn twice between two frames (a screenshot, then a step) is updated twice, and so is the press;
+            // two presses on one button within 0.3 s of real time are a double click, which clicks it on the press too
+            UiDriver::Step();
+            std::this_thread::sleep_for(std::chrono::milliseconds(350));
+            UiDriver::PressSeenByUpdate(ScreenRectOf(field).Center());
+            UiDriver::Release();
+            UiDriver::Step(2);
+            return editor->GetModelPicker();
         }
 
         void TearDown() override
@@ -975,7 +1025,7 @@ TEST_F(PipelineUiFixture, ParameterListFoldsAndUnfolds)
 
     auto card = editor->GetNodeWidget(gen->id);
     ASSERT_TRUE(card);
-    EXPECT_FALSE(card->FindChildByTypeAndName<DropDown>("model"));
+    EXPECT_FALSE(card->FindChildByTypeAndName<Button>("model"));
     float folded = card->GetCardRect().Height();
 
     auto head = card->FindChildByTypeAndName<Button>("params");
@@ -994,41 +1044,30 @@ TEST_F(PipelineUiFixture, ParameterListFoldsAndUnfolds)
     editor->SetView(card->GetCardRect().Center(), 1.0f);
     UiDriver::Step(2);
 
-    // Opening slides the rows in: the card grows over a few frames and the arrow turns with it
+    // Opening shows the rows at once and the card grows by them; nothing slides
     head->onClick();
-    UiDriver::Step(4);
-    EXPECT_TRUE(UiDriver::Screenshot(dir + "/pipeline_params_sliding.png"));
+    UiDriver::Step(1);
     card = editor->GetNodeWidget(gen->id);
     ASSERT_TRUE(card);
     EXPECT_TRUE(Live(gen)->GetConfigBool("paramsOpen", false));
-    EXPECT_TRUE(card->FindChildByTypeAndName<DropDown>("model"));
-    EXPECT_TRUE(card->IsParamsAnimating());
-    float sliding = card->GetCardRect().Height();
-    EXPECT_GT(sliding, folded);
-    arrow = card->FindChildByTypeAndName<Button>("params")->GetLayerDrawable<PipelineFoldArrow>("icon");
-    EXPECT_GT(arrow->open, 0.0f);
-    EXPECT_LT(arrow->open, 1.0f);
-
-    UiDriver::Step(20);
-    EXPECT_FALSE(card->IsParamsAnimating());
+    EXPECT_TRUE(card->FindChildByTypeAndName<Button>("model"));
     float open = card->GetCardRect().Height();
-    EXPECT_GT(open, sliding);
     EXPECT_GT(open, folded + 40.0f);
-    EXPECT_FLOAT_EQ(arrow->open, 1.0f);
-
+    EXPECT_NEAR(open, card->GetAutoHeight(), 0.5f);
+    EXPECT_FLOAT_EQ(card->FindChildByTypeAndName<Button>("params")->GetLayerDrawable<PipelineFoldArrow>("icon")->open, 1.0f);
+    UiDriver::Step(3);
+    EXPECT_NEAR(card->GetCardRect().Height(), open, 0.5f);
     EXPECT_TRUE(UiDriver::Screenshot(dir + "/pipeline_params_open.png"));
 
-    // Closing slides the rows away first and drops them once the list is shut
+    // Closing drops the rows at once
     card->FindChildByTypeAndName<Button>("params")->onClick();
+    UiDriver::Step(1);
     EXPECT_FALSE(Live(gen)->GetConfigBool("paramsOpen", true));
-    UiDriver::Step(2);
-    EXPECT_TRUE(card->FindChildByTypeAndName<DropDown>("model"));
-    EXPECT_LT(card->GetCardRect().Height(), open);
-    UiDriver::Step(20);
-    EXPECT_FALSE(card->IsParamsAnimating());
-    EXPECT_FALSE(card->FindChildByTypeAndName<DropDown>("model"));
+    EXPECT_FALSE(card->FindChildByTypeAndName<Button>("model"));
     EXPECT_NEAR(card->GetCardRect().Height(), folded, 0.5f);
+    EXPECT_FLOAT_EQ(card->FindChildByTypeAndName<Button>("params")->GetLayerDrawable<PipelineFoldArrow>("icon")->open, 0.0f);
     EXPECT_TRUE(UiDriver::Screenshot(dir + "/pipeline_params_closed.png"));
+    EXPECT_FLOAT_EQ(Live(gen)->size.y, 0.0f) << "a card without a set height keeps following its content";
 
     // The fold is a view setting: it must not change what the node computes
     EXPECT_EQ(PipelineGraph::ComputeNodeSignature(*Live(gen), {}, {}, -1), PipelineGraph::ComputeNodeSignature(*gen, {}, {}, -1));
@@ -1253,7 +1292,12 @@ TEST_F(PipelineUiFixture, ExtractPartsGridSelectsAndRenames)
         EXPECT_LT(port.y, cells[i]->layout->GetWorldRect().top) << i;
     }
     EXPECT_NEAR(card->GetPortPosition(Live(extract)->inputs[0].id, true).x, cardRect.left, 0.5f);
-    EXPECT_GT(cells[0]->layout->GetWorldRect().top, cardRect.top - PipelineNodeWidget::headerHeight - 2 * PipelineNodeWidget::portRow - 20.0f);
+    // The grid fills the right pane of the row under the drawing tools, beside the source stage
+    auto stage = card->FindChildByTypeAndName<PipelinePaintEditor>("draw stage");
+    ASSERT_TRUE(stage);
+    float rowTop = stage->layout->GetWorldRect().top - stage->GetBarsHeight(stage->layout->GetWidth());
+    EXPECT_NEAR(cells[0]->layout->GetWorldRect().top, rowTop, 0.5f);
+    EXPECT_GT(cells[0]->layout->GetWorldRect().left, stage->layout->GetWorldRect().Center().x);
 
     // Selecting another part keeps the cells: nothing is rebuilt or decoded again
     auto pick = cells[1]->FindChildByTypeAndName<Button>("select part");
@@ -2193,6 +2237,10 @@ TEST_F(PipelineUiFixture, ExtractShowsItsInputBeforeRunningAndShadesOutsideTheRe
     auto source = AddNode(graph, "sourceImage", Vec2F());
     source->SetConfigString("uploadId", uploadId);
     auto extract = AddNode(graph, "imageExtract", Vec2F(360, 0));
+    // The part's box: a node without one takes the whole image and shades nothing
+    auto& roi = extract->config["roi"];
+    roi.SetObject();
+    roi["x"] = 0.2f; roi["y"] = 0.2f; roi["w"] = 0.6f; roi["h"] = 0.6f;
     Connect(graph, source, "out", extract, "image");
     graph.SaveToAsset(*asset);
     editor->SetAsset(asset);
@@ -2264,9 +2312,10 @@ TEST_F(PipelineUiFixture, NewLinkShowsTheInputImmediately)
     o2FileSystem.FileDelete(PipelineUtils::GetUploadPath(uploadId));
 }
 
-// The model list shows product names and stores the model id
+// The model field shows the product name; its menu lists names by group and a click on a row stores the id
 TEST_F(PipelineUiFixture, ModelListShowsReadableNamesAndStoresIds)
 {
+    o2FileSystem.FileDelete(PipelineModelMenu::GetRecentPath());
     PipelineGraph graph;
     auto gen = AddNode(graph, "nanoBananaGen", Vec2F());
     gen->SetConfigString("model", "gemini-3.1-flash-image");
@@ -2278,34 +2327,279 @@ TEST_F(PipelineUiFixture, ModelListShowsReadableNamesAndStoresIds)
     gen = Live(gen);
 
     auto card = editor->GetNodeWidget(gen->id);
-    auto dropdown = card->FindChildByTypeAndName<DropDown>("model");
-    ASSERT_TRUE(dropdown);
+    auto field = card->FindChildByTypeAndName<Button>("model");
+    ASSERT_TRUE(field);
+    EXPECT_EQ((String)field->GetLayerDrawable<Text>("caption")->GetText(), String("Gemini 3.1 Flash Image \xC2\xB7 Nano Banana 2"));
+    EXPECT_FLOAT_EQ(field->FindLayer("alpha")->transparency, 0.0f);
     editor->SetView(card->GetCardRect().Center(), 1.0f);
     UiDriver::Step(3);
     String dir = ScreenshotDir();
     o2FileSystem.FolderCreate(dir, true);
     EXPECT_TRUE(UiDriver::Screenshot(dir + "/pipeline_model_names.png"));
-    dropdown->Expand();
-    UiDriver::Wait(0.5f);
-    EXPECT_GE(dropdown->GetListView()->layout->GetWidth(), 319.0f);
-    EXPECT_FALSE(dropdown->GetListView()->GetHorizontalScrollbar());
-    EXPECT_NEAR(dropdown->GetListView()->layout->GetWorldRect().left, dropdown->layout->GetWorldRect().left, 2.0f);
-    EXPECT_TRUE(UiDriver::Screenshot(dir + "/pipeline_model_list.png"));
-    dropdown->Collapse();
-    EXPECT_EQ((String)dropdown->GetSelectedItemText(), String("Gemini 3.1 Flash Image \xC2\xB7 Nano Banana 2"));
 
-    int pro = -1;
-    for (int i = 0; i < dropdown->GetItemsCount(); i++)
-    {
-        if ((String)dropdown->GetItemText(i) == String("Gemini 3 Pro Image \xC2\xB7 Nano Banana Pro"))
-            pro = i;
-    }
-    ASSERT_GE(pro, 0);
-    dropdown->SelectItemAt(pro);
-    if (dropdown->onSelectedPos)
-        dropdown->onSelectedPos(pro);
+    auto picker = ClickModelField(card);
+    ASSERT_TRUE(picker);
+    ASSERT_TRUE(picker->IsOpen());
+    RectF fieldRect = ScreenRectOf(field);
+    RectF menu = picker->layout->GetWorldRect();
+    EXPECT_GE(menu.Width(), 319.0f);
+    EXPECT_NEAR(menu.left, fieldRect.left, 1.0f);
+    EXPECT_LE(menu.Height(), 440.5f);
+    EXPECT_TRUE(UiDriver::Screenshot(dir + "/pipeline_model_list.png"));
+
+    // A row names the product without the provider part, its id beside it; the node's value carries the check
+    auto row = picker->FindRow("gemini-3-pro-image");
+    ASSERT_TRUE(row);
+    EXPECT_EQ((String)row->GetLayerDrawable<Text>("name")->GetText(), String("Gemini 3 Pro Image \xC2\xB7 Nano Banana Pro"));
+    EXPECT_EQ((String)row->GetLayerDrawable<Text>("id")->GetText(), String("gemini-3-pro-image"));
+    EXPECT_FLOAT_EQ(row->FindLayer("check")->transparency, 0.0f);
+    EXPECT_FLOAT_EQ(picker->FindRow("gemini-3.1-flash-image")->FindLayer("check")->transparency, 1.0f);
+    EXPECT_TRUE(picker->FindRow("gpt-image-1")->FindLayer("alpha")) << "image lists mark the models that render the alpha";
+    EXPECT_FALSE(row->FindLayer("alpha"));
+
+    ASSERT_TRUE(picker->IsRowInView(picker->GetPickableIds().IndexOf("gemini-3-pro-image")));
+    UiDriver::Press(row->layout->GetWorldRect().Center());
+    UiDriver::Release();
     UiDriver::Step(2);
+    EXPECT_FALSE(picker->IsOpen());
     EXPECT_EQ(Live(gen)->GetConfigString("model", ""), String("gemini-3-pro-image"));
+    field = editor->GetNodeWidget(gen->id)->FindChildByTypeAndName<Button>("model");
+    ASSERT_TRUE(field);
+    EXPECT_EQ((String)field->GetLayerDrawable<Text>("caption")->GetText(), String("Gemini 3 Pro Image \xC2\xB7 Nano Banana Pro"));
+}
+
+// Search by the squashed id, arrows over the rows, Enter picks: the value goes through the card's edit path
+TEST_F(PipelineUiFixture, ModelMenuPicksTheSearchedModelOnEnter)
+{
+    o2FileSystem.FileDelete(PipelineModelMenu::GetRecentPath());
+    PipelineGraph graph;
+    auto text = AddNode(graph, "aiText", Vec2F());
+    text->SetConfigBool("paramsOpen", true);
+    graph.SaveToAsset(*asset);
+    editor->SetAsset(asset);
+    UiDriver::Step(3);
+    text = Live(text);
+    auto card = editor->GetNodeWidget(text->id);
+    ASSERT_TRUE(card);
+    editor->SetView(card->GetCardRect().Center(), 1.0f);
+    UiDriver::Step(3);
+
+    auto picker = ClickModelField(card);
+    ASSERT_TRUE(picker);
+    ASSERT_TRUE(picker->IsOpen());
+    EXPECT_TRUE(picker->GetSearch()->IsFocused());
+
+    // It opens on the node's value, in view, with the vendor groups of OpenRouter folded
+    EXPECT_EQ(picker->GetHighlightedId(), String("gemini-pro-latest"));
+    EXPECT_TRUE(picker->IsRowInView(picker->GetHighlight()));
+    EXPECT_FALSE(picker->GetPickableIds().Contains("openai/gpt-5.5"));
+    EXPECT_TRUE(picker->FindHeader("openrouter:openai"));
+
+    String dir = ScreenshotDir();
+    o2FileSystem.FolderCreate(dir, true);
+    EXPECT_TRUE(UiDriver::Screenshot(dir + "/pipeline_model_menu.png"));
+
+    // Letters come from the machine's keyboard layout, so they are set; the digits are typed as keys
+    picker->GetSearch()->SetText("gpt");
+    picker->GetSearch()->SetCaretPosition(3);
+    UiDriver::Key('5');
+    UiDriver::Key('5');
+    EXPECT_EQ((String)picker->GetSearch()->GetText(), String("gpt55"));
+    // A search opens every group with a match; the text itself is no listed id, so it is offered last
+    EXPECT_EQ(picker->GetPickableIds(), (Vector<String>{ "gpt-5.5", "openai/gpt-5.5", "gpt55" }));
+    EXPECT_EQ(picker->GetCustomId(), String("gpt55"));
+    EXPECT_EQ(picker->GetHighlightedId(), String("gpt-5.5")) << "a new search starts from its first row";
+    EXPECT_TRUE(UiDriver::Screenshot(dir + "/pipeline_model_menu_search.png"));
+
+    // The arrows go through the menu's key handler; sent as keys here, they would also reach the scene editor's
+    // move tool, which this test process has without a scene window
+    picker->MoveHighlight(1);
+    EXPECT_EQ(picker->GetHighlightedId(), String("openai/gpt-5.5"));
+    picker->MoveHighlight(1);
+    EXPECT_EQ(picker->GetHighlightedId(), String("gpt55"));
+    picker->MoveHighlight(1);
+    EXPECT_EQ(picker->GetHighlightedId(), String("gpt-5.5")) << "the highlight wraps around";
+    picker->MoveHighlight(-1);
+    EXPECT_EQ(picker->GetHighlightedId(), String("gpt55"));
+    picker->MoveHighlight(1);
+    EXPECT_EQ(picker->GetHighlightedId(), String("gpt-5.5"));
+
+    UiDriver::Key(VK_RETURN);
+    UiDriver::Step(2);
+    EXPECT_FALSE(picker->IsOpen());
+    EXPECT_EQ(editor->GetGraph()->nodes.Count(), 1) << "the keys never reached the canvas shortcuts";
+    EXPECT_EQ(Live(text)->GetConfigString("model", ""), String("gpt-5.5"));
+    auto field = editor->GetNodeWidget(text->id)->FindChildByTypeAndName<Button>("model");
+    ASSERT_TRUE(field);
+    EXPECT_EQ((String)field->GetLayerDrawable<Text>("caption")->GetText(), String("GPT-5.5 \xC2\xB7 OpenAI"));
+    EXPECT_NE(o2UI.GetFocusedWidget(), DynamicCast<Widget>(picker->GetSearch()));
+
+    // The pick is remembered for text fields and heads Recent the next time
+    auto recent = PipelineModelMenu::LoadRecent(PipelineModelKind::Text);
+    ASSERT_FALSE(recent.IsEmpty());
+    EXPECT_EQ(recent[0], String("gpt-5.5"));
+    picker = ClickModelField(editor->GetNodeWidget(text->id));
+    ASSERT_TRUE(picker && picker->IsOpen());
+    ASSERT_FALSE(picker->GetVisibleGroups().IsEmpty());
+    EXPECT_EQ(picker->GetVisibleGroups()[0].group.key, String("recent"));
+    EXPECT_EQ(picker->GetHighlight(), 0) << "Recent holds the value first";
+    picker->Close();
+}
+
+// Text without whitespace that no row has is offered as the id itself; a click on that row stores it
+TEST_F(PipelineUiFixture, ModelMenuTakesTheSearchTextAsAModelId)
+{
+    o2FileSystem.FileDelete(PipelineModelMenu::GetRecentPath());
+    PipelineGraph graph;
+    auto gen = AddNode(graph, "nanoBananaGen", Vec2F());
+    gen->SetConfigBool("paramsOpen", true);
+    graph.SaveToAsset(*asset);
+    editor->SetAsset(asset);
+    UiDriver::Step(3);
+    gen = Live(gen);
+    auto card = editor->GetNodeWidget(gen->id);
+    ASSERT_TRUE(card);
+    editor->SetView(card->GetCardRect().Center(), 1.0f);
+    UiDriver::Step(3);
+
+    auto picker = ClickModelField(card);
+    ASSERT_TRUE(picker && picker->IsOpen());
+    picker->GetSearch()->SetText("sonnet 5");
+    UiDriver::Step(2);
+    EXPECT_TRUE(picker->GetCustomId().IsEmpty()) << "text with a space is a search";
+
+    picker->GetSearch()->SetText("moonshotai/kimi-image-1");
+    UiDriver::Step(2);
+    EXPECT_EQ(picker->GetCustomId(), String("moonshotai/kimi-image-1"));
+    EXPECT_EQ(picker->GetPickableIds(), (Vector<String>{ "moonshotai/kimi-image-1" }));
+    auto row = picker->FindRow("moonshotai/kimi-image-1");
+    ASSERT_TRUE(row);
+    EXPECT_EQ(row->name, String("custom id"));
+    EXPECT_EQ((String)row->GetLayerDrawable<Text>("name")->GetText(), String("Use \"moonshotai/kimi-image-1\" as model id"));
+    String dir = ScreenshotDir();
+    o2FileSystem.FolderCreate(dir, true);
+    EXPECT_TRUE(UiDriver::Screenshot(dir + "/pipeline_model_menu_custom.png"));
+
+    UiDriver::Press(row->layout->GetWorldRect().Center());
+    UiDriver::Release();
+    UiDriver::Step(2);
+    EXPECT_FALSE(picker->IsOpen());
+    EXPECT_EQ(Live(gen)->GetConfigString("model", ""), String("moonshotai/kimi-image-1"));
+
+    // Opened again, the id outside the list has its own group and is not repeated in Recent
+    picker = ClickModelField(editor->GetNodeWidget(gen->id));
+    ASSERT_TRUE(picker && picker->IsOpen());
+    ASSERT_FALSE(picker->GetVisibleGroups().IsEmpty());
+    EXPECT_EQ(picker->GetVisibleGroups()[0].group.key, String("current"));
+    EXPECT_FALSE(picker->GetVisibleGroups().Any([](const PipelineVisibleGroup& g) { return g.group.key == "recent"; }));
+    EXPECT_EQ(picker->GetHighlightedId(), String("moonshotai/kimi-image-1"));
+    picker->Close();
+}
+
+// Typing an exact id highlights that model even when a longer id holding it is listed first; Enter writes it
+TEST_F(PipelineUiFixture, ModelMenuPicksTheExactIdTyped)
+{
+    o2FileSystem.FileDelete(PipelineModelMenu::GetRecentPath());
+    PipelineGraph graph;
+    auto gen = AddNode(graph, "nanoBananaGen", Vec2F());
+    gen->SetConfigBool("paramsOpen", true);
+    graph.SaveToAsset(*asset);
+    editor->SetAsset(asset);
+    UiDriver::Step(3);
+    gen = Live(gen);
+    auto card = editor->GetNodeWidget(gen->id);
+    ASSERT_TRUE(card);
+    editor->SetView(card->GetCardRect().Center(), 1.0f);
+    UiDriver::Step(3);
+
+    auto picker = ClickModelField(card);
+    ASSERT_TRUE(picker && picker->IsOpen());
+    picker->GetSearch()->SetText("gpt-image-1");
+    UiDriver::Step(2);
+    auto ids = picker->GetPickableIds();
+    ASSERT_GE(ids.Count(), 2);
+    EXPECT_EQ(ids[0], String("gpt-image-1.5"));
+    EXPECT_EQ(picker->GetHighlightedId(), String("gpt-image-1"));
+    EXPECT_TRUE(picker->GetCustomId().IsEmpty());
+
+    UiDriver::Key(VK_RETURN);
+    UiDriver::Step(2);
+    EXPECT_FALSE(picker->IsOpen());
+    EXPECT_EQ(Live(gen)->GetConfigString("model", ""), String("gpt-image-1"));
+    auto field = editor->GetNodeWidget(gen->id)->FindChildByTypeAndName<Button>("model");
+    ASSERT_TRUE(field);
+    EXPECT_FLOAT_EQ(field->FindLayer("alpha")->transparency, 1.0f) << "the field marks a model that renders the alpha";
+}
+
+// The menu keeps the canvas still under it and closes like a menu: Escape, a click outside, the field again
+TEST_F(PipelineUiFixture, ModelMenuKeepsTheCanvasStillAndClosesLikeAMenu)
+{
+    o2FileSystem.FileDelete(PipelineModelMenu::GetRecentPath());
+    PipelineGraph graph;
+    auto text = AddNode(graph, "aiText", Vec2F());
+    text->SetConfigBool("paramsOpen", true);
+    graph.SaveToAsset(*asset);
+    editor->SetAsset(asset);
+    UiDriver::Step(3);
+    text = Live(text);
+    auto card = editor->GetNodeWidget(text->id);
+    ASSERT_TRUE(card);
+    editor->SetView(card->GetCardRect().Center(), 1.0f);
+    UiDriver::Step(3);
+
+    auto picker = ClickModelField(card);
+    ASSERT_TRUE(picker && picker->IsOpen());
+
+    // The wheel over the menu scrolls its list, never the canvas
+    auto list = picker->GetList();
+    o2Input.OnCursorMoved(list->layout->GetWorldRect().Center(), 0, false);
+    UiDriver::Step(2);
+    float scale = editor->GetCamera().GetScale2D().x;
+    Vec2F position = editor->GetCamera().GetPosition2D();
+    float scroll = list->GetScroll().y;
+    o2Input.OnMouseWheel(-120.0f);
+    UiDriver::Step(8);
+    EXPECT_FLOAT_EQ(editor->GetCamera().GetScale2D().x, scale);
+    EXPECT_EQ(editor->GetCamera().GetPosition2D(), position);
+    EXPECT_NE(list->GetScroll().y, scroll) << "the list is longer than the menu and scrolls";
+    EXPECT_TRUE(picker->IsOpen());
+
+    // A header click folds its group, until the menu closes
+    auto header = picker->FindHeader("openai");
+    ASSERT_TRUE(header);
+    Vec2F headerCenter = header->layout->GetWorldRect().Center();
+    ASSERT_TRUE(list->layout->GetWorldRect().IsInside(headerCenter));
+    UiDriver::Press(headerCenter);
+    UiDriver::Release();
+    UiDriver::Step(2);
+    EXPECT_FALSE(picker->GetPickableIds().Contains("gpt-5.5"));
+    EXPECT_TRUE(picker->IsOpen());
+
+    // Escape closes without a change and gives the focus back
+    UiDriver::Key(VK_ESCAPE);
+    UiDriver::Step(2);
+    EXPECT_FALSE(picker->IsOpen());
+    EXPECT_FALSE(Live(text)->HasConfig("model"));
+    EXPECT_FALSE(picker->GetSearch()->IsFocused());
+
+    // A click on the field toggles the menu; the press that closes it is not the start of a new opening
+    picker = ClickModelField(editor->GetNodeWidget(text->id));
+    ASSERT_TRUE(picker->IsOpen());
+    EXPECT_TRUE(picker->GetPickableIds().Contains("gpt-5.5")) << "a header toggle lasts until the menu closes";
+    picker = ClickModelField(editor->GetNodeWidget(text->id));
+    EXPECT_FALSE(picker->IsOpen());
+    picker = ClickModelField(editor->GetNodeWidget(text->id));
+    EXPECT_TRUE(picker->IsOpen()) << "the next click opens it again";
+
+    // A press outside closes it
+    RectF menu = picker->layout->GetWorldRect();
+    RectF view = editor->layout->GetWorldRect();
+    UiDriver::PressSeenByUpdate(Vec2F(view.right - 30.0f, view.top - 30.0f));
+    UiDriver::Release();
+    UiDriver::Step(2);
+    EXPECT_FALSE(menu.IsInside(Vec2F(view.right - 30.0f, view.top - 30.0f)));
+    EXPECT_FALSE(picker->IsOpen());
+    EXPECT_FALSE(Live(text)->HasConfig("model"));
 }
 
 TEST_F(PipelineUiFixture, WheelOverTheEmptyCanvasZoomsIt)

@@ -26,7 +26,6 @@ namespace Editor
     const float PipelineNodeWidget::defaultWidth = 260.0f;
     const float PipelineNodeWidget::minWidth = 180.0f;
     const float PipelineNodeWidget::minHeight = 80.0f;
-    const float PipelineNodeWidget::paramsSlideTime = 0.16f;
     static const int farUpdateFrames = 3;
     static const float cornerRadius = 6.0f;
     static const float outlineWidth = 2.0f;
@@ -132,6 +131,7 @@ namespace Editor
         if (t == "imageExtract") return "ui/pipeline/node_extract.png";
         if (t == "imageEdit") return "ui/pipeline/node_edit.png";
         if (t == "promptGen") return "ui/pipeline/node_prompt.png";
+        if (t == "aiUpscale") return "ui/pipeline/node_upscale.png";
         if (t == "imageOutline" || t == "imageShadow" || t == "imageGradient" || t == "imageColor") return "ui/pipeline/node_effect.png";
         return "ui/pipeline/node_ai.png";
     }
@@ -452,16 +452,21 @@ namespace Editor
 
     float PipelineNodeWidget::GetPortsHeight() const
     {
-        int extra = (mSchema && !mSchema->addableInputs.IsEmpty()) ? 1 : 0;
+        bool inputsInBody = mBody && mBody->InputsInBody();
+        int extra = (mSchema && !mSchema->addableInputs.IsEmpty() && !inputsInBody) ? 1 : 0;
         int outputs = 0;
-        Vec2F offset;
         for (auto& port : mNode->outputs)
         {
-            if (!IsBodyPort(port.id, offset))
+            if (!mBody || !mBody->HasBodyPort(port.id))
                 outputs++;
         }
-        int rows = Math::Max(mNode->inputs.Count() + extra, outputs);
+        int rows = Math::Max(inputsInBody ? 0 : mNode->inputs.Count() + extra, outputs);
         return rows * portRow;
+    }
+
+    float PipelineNodeWidget::GetBodyAreaHeight() const
+    {
+        return GetCardSize().y - (headerHeight + padTop + GetPortsHeight()) - padBottom;
     }
 
     float PipelineNodeWidget::GetBodyHeight() const
@@ -469,9 +474,15 @@ namespace Editor
         return mBody ? mBody->GetPreferredHeight(GetCardWidth()) : 0.0f;
     }
 
+    float PipelineNodeWidget::GetAutoHeightForWidth(float width) const
+    {
+        float body = mBody ? mBody->GetPreferredHeight(width) : 0.0f;
+        return headerHeight + padTop + GetPortsHeight() + body + padBottom;
+    }
+
     float PipelineNodeWidget::GetAutoHeight() const
     {
-        return headerHeight + padTop + GetPortsHeight() + GetBodyHeight() + padBottom;
+        return GetAutoHeightForWidth(GetCardWidth());
     }
 
     float PipelineNodeWidget::GetCardWidth() const
@@ -515,9 +526,29 @@ namespace Editor
     void PipelineNodeWidget::LayoutPorts()
     {
         Vec2F size = GetCardSize();
+        float bodyTop = headerHeight + padTop + GetPortsHeight();
+        bool inputsInBody = mBody && mBody->InputsInBody();
+        if (inputsInBody)
+            mAddInputButton->enabled = false;
+
         for (int i = 0; i < mInputs.Count(); i++)
         {
             auto& view = mInputs[i];
+
+            // The body's rows carry the inputs: the marker sits on the left edge, the row names and removes it
+            Vec2F offset;
+            if (inputsInBody)
+            {
+                view.localPos = IsBodyPort(view.port.id, offset) ? Vec2F(0, bodyTop + offset.y) : Vec2F(0, bodyTop);
+                if (view.label)
+                    view.label->enabled = false;
+                if (view.nameEdit)
+                    view.nameEdit->SetEnabledForcible(false);
+                if (view.deleteButton)
+                    view.deleteButton->SetEnabledForcible(false);
+                continue;
+            }
+
             float cy = headerHeight + padTop + (i + 0.5f) * portRow;
             view.localPos = Vec2F(0, cy);
             float rightReserve = i < mOutputs.Count() ? 60.0f : 16.0f;
@@ -532,7 +563,6 @@ namespace Editor
             }
         }
 
-        float bodyTop = headerHeight + padTop + GetPortsHeight();
         int row = 0;
         for (auto& view : mOutputs)
         {
@@ -540,6 +570,7 @@ namespace Editor
             Vec2F offset;
             if (IsBodyPort(view.port.id, offset))
             {
+                mBodyPortPasses = 2;
                 view.localPos = Vec2F(offset.x, bodyTop + offset.y);
                 if (view.label)
                     view.label->enabled = false;
@@ -604,6 +635,9 @@ namespace Editor
 
     bool PipelineNodeWidget::IsAddInputAt(const Vec2F& p) const
     {
+        if (mBody && mBody->InputsInBody())
+            return mSchema && !mSchema->addableInputs.IsEmpty() && mBody->IsAddInputAt(p);
+
         if (!mAddInputButton->enabled)
             return false;
 
@@ -627,15 +661,26 @@ namespace Editor
     void PipelineNodeWidget::ApplyRuntime()
     {
         PushEditorScopeOnStack scope;
+        if (mRuntime.state != "running" && mRuntime.state != "queued")
+            mRuntime.portStates.Clear();
+
         UpdateHeaderButtons();
+        if (mBody)
+            mBody->OnRunStateChanged();
     }
 
     void PipelineNodeWidget::OnOutputChanged()
     {
         PushEditorScopeOnStack scope;
         mFarUpdateFrames = farUpdateFrames;
-        if (mBody)
-            mBody->OnOutputChanged();
+        if (!mBody)
+            return;
+
+        // A pair row grows once an image arrives on either side
+        float before = GetAutoHeight();
+        mBody->OnOutputChanged();
+        if (!Math::Equals(before, GetAutoHeight()))
+            UpdateFromNode();
     }
 
     void PipelineNodeWidget::OnConfigChanged()
@@ -651,48 +696,35 @@ namespace Editor
         if (mCulled)
             return;
 
-        UpdateParamsSlide(dt);
         Widget::Update(dt);
     }
 
-    void PipelineNodeWidget::AnimateParams(bool open)
+    void PipelineNodeWidget::SetParamsOpen(bool open)
     {
-        if (!IsParamsAnimating())
-            mParamsProgress = open ? 0.0f : 1.0f;
-
-        mParamsOpening = open;
-    }
-
-    bool PipelineNodeWidget::IsParamsAnimating() const
-    {
-        return mParamsOpening ? mParamsProgress < 1.0f : mParamsProgress > 0.0f;
-    }
-
-    float PipelineNodeWidget::GetParamsReveal() const
-    {
-        float t = Math::Clamp01(mParamsProgress);
-        return t*t*(3.0f - 2.0f*t);
-    }
-
-    void PipelineNodeWidget::UpdateParamsSlide(float dt)
-    {
-        if (!IsParamsAnimating())
-            return;
-
-        float step = dt/paramsSlideTime;
-        mParamsProgress = Math::Clamp01(mParamsProgress + (mParamsOpening ? step : -step));
-
-        if (!mParamsOpening && !IsParamsAnimating())
+        KeepAreaThrough([&]()
         {
+            mNode->SetConfigBool("paramsOpen", open);
             Rebuild();
-            UpdateFromNode();
-            return;
-        }
+        });
+    }
 
-        if (mBody)
-            mBody->UpdateParamsSlide();
+    void PipelineNodeWidget::KeepAreaThrough(const Function<void()>& change)
+    {
+        PushEditorScopeOnStack scope;
+        Ref<PipelineNodeWidget> self(this);
+        auto editor = mEditor.Lock();
+        bool sized = mNode->size.y > 0.0f;
+        float shown = GetCardSize().y, before = GetAutoHeight();
+        if (sized && editor)
+            editor->OnNodeResized(self, false);
+
+        change();
+        if (sized)
+            mNode->size.y = Math::Max(minHeight, shown + GetAutoHeight() - before);
 
         UpdateFromNode();
+        if (sized && editor)
+            editor->OnNodeResized(self, true);
     }
 
     void PipelineNodeWidget::UpdateChildren(float dt)
@@ -708,10 +740,17 @@ namespace Editor
             mFarUpdateFrames--;
             mBodyHost->Update(dt);
             mBodyHost->UpdateChildren(dt);
-            return;
         }
+        else
+            Widget::UpdateChildren(dt);
 
-        Widget::UpdateChildren(dt);
+        // The body's widgets snap to pixels as they update: the ports placed on them follow for an update or two after a change
+        if (mBodyPortPasses > 0)
+        {
+            int left = mBodyPortPasses - 1;
+            LayoutPorts();
+            mBodyPortPasses = left;
+        }
     }
 
     void PipelineNodeWidget::Draw()
@@ -812,18 +851,29 @@ namespace Editor
     void PipelineNodeWidget::OnResizeDragged(const ResizeHandle& handle, const Vec2F& position)
     {
         RectF rect = mResizeStartRect;
-        float minH = Math::Max(minHeight, GetAutoHeight());
         if (handle.left)
             rect.left = Math::Min(position.x, rect.right - minWidth);
         if (handle.right)
             rect.right = Math::Max(position.x, rect.left + minWidth);
         if (handle.top)
-            rect.top = Math::Max(position.y, rect.bottom + minH);
+            rect.top = position.y;
         if (handle.bottom)
-            rect.bottom = Math::Min(position.y, rect.top - minH);
+            rect.bottom = position.y;
+
+        // Never shorter than the content at the new width: a narrower card may wrap its rows taller
+        float minH = Math::Max(minHeight, GetAutoHeightForWidth(Math::Round(rect.Width())));
+        if (rect.Height() < minH)
+        {
+            if (handle.top)
+                rect.top = rect.bottom + minH;
+            else
+                rect.bottom = rect.top - minH;
+        }
 
         mNode->position = PipelineEditor::CanvasToNode(Vec2F(Math::Round(rect.left), Math::Round(rect.top)));
-        mNode->size = Vec2F(Math::Round(rect.Width()), Math::Round(rect.Height()));
+        // A side edge sets the width alone: an automatic height stays automatic
+        mNode->size = Vec2F(Math::Round(rect.Width()),
+                            PipelinePairLayout::HeightAfterResize(handle.top || handle.bottom, mNode->size.y, Math::Round(rect.Height())));
         UpdateFromNode();
         if (auto editor = mEditor.Lock())
             editor->OnNodeResized(Ref(this), false);

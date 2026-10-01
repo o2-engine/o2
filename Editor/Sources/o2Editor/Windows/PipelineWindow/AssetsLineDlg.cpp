@@ -14,9 +14,11 @@
 #include "o2/Scene/UI/Widgets/VerticalLayout.h"
 #include "o2/Scene/UI/Widgets/Window.h"
 #include "o2/Utils/Editor/EditorScope.h"
+#include "o2Editor/Pipeline/PipelinePairLayout.h"
 #include "o2Editor/Pipeline/PipelineSettings.h"
 #include "o2Editor/Pipeline/Sync/AssetsLineSync.h"
 #include "o2Editor/UIRoot.h"
+#include "o2Editor/Windows/PipelineWindow/PipelineControls.h"
 
 DECLARE_SINGLETON(Editor::AssetsLineDlg);
 
@@ -272,6 +274,28 @@ namespace Editor
 
         addSeparator();
 
+        // How the image-to-image nodes show their input next to their result; a local setting, not synced
+        auto viewRow = addRow(content, "Image nodes");
+        auto addView = [&](const String& caption, const String& name, PipelineIoView view)
+        {
+            auto segment = PipelineControls::MakeSegment(caption, PipelinePairLayout::GetIoView() == view);
+            segment->name = name;
+            segment->layout->minWidth = 100;
+            segment->layout->maxWidth = 100;
+            segment->onToggleByUser = [this, view](bool)
+            {
+                PipelinePairLayout::SetIoView(view);
+                mSideView->SetValue(view == PipelineIoView::SideBySide);
+                mCompareView->SetValue(view == PipelineIoView::Compare);
+            };
+            viewRow->AddChild(segment);
+            return segment;
+        };
+        mSideView = addView("Side by side", "side view", PipelineIoView::SideBySide);
+        mCompareView = addView("Compare", "compare view", PipelineIoView::Compare);
+
+        addSeparator();
+
         // Keys of the providers the nodes call when they run in this editor
         auto keysTitle = o2UI.CreateLabel("Provider keys");
         keysTitle->name = "provider keys";
@@ -287,6 +311,8 @@ namespace Editor
             return edit;
         };
         mGeminiEdit = addKey("Gemini", "gemini key");
+        mOpenAiEdit = addKey("OpenAI", "openai key");
+        mOpenRouterEdit = addKey("OpenRouter", "openrouter key");
         mElevenEdit = addKey("ElevenLabs", "elevenlabs key");
         mKlingAccessEdit = addKey("Kling key", "kling key");
         mKlingSecretEdit = addKey("Kling secret", "kling secret");
@@ -333,6 +359,8 @@ namespace Editor
     {
         PipelineSettings settings = PipelineSettings::Load();
         settings.geminiApiKey = ((String)mGeminiEdit->GetText()).Trimed(" \n\r\t");
+        settings.openAiApiKey = ((String)mOpenAiEdit->GetText()).Trimed(" \n\r\t");
+        settings.openRouterApiKey = ((String)mOpenRouterEdit->GetText()).Trimed(" \n\r\t");
         settings.elevenLabsApiKey = ((String)mElevenEdit->GetText()).Trimed(" \n\r\t");
         settings.klingAccessKey = ((String)mKlingAccessEdit->GetText()).Trimed(" \n\r\t");
         settings.klingSecretKey = ((String)mKlingSecretEdit->GetText()).Trimed(" \n\r\t");
@@ -341,8 +369,13 @@ namespace Editor
 
     void AssetsLineDlg::ReadConfig()
     {
+        mSideView->SetValue(PipelinePairLayout::GetIoView() == PipelineIoView::SideBySide);
+        mCompareView->SetValue(PipelinePairLayout::GetIoView() == PipelineIoView::Compare);
+
         auto keys = PipelineSettings::Load();
         mGeminiEdit->SetText(keys.geminiApiKey);
+        mOpenAiEdit->SetText(keys.openAiApiKey);
+        mOpenRouterEdit->SetText(keys.openRouterApiKey);
         mElevenEdit->SetText(keys.elevenLabsApiKey);
         mKlingAccessEdit->SetText(keys.klingAccessKey);
         mKlingSecretEdit->SetText(keys.klingSecretKey);

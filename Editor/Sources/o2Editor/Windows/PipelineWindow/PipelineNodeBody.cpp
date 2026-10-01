@@ -29,7 +29,10 @@
 #include "o2/Utils/System/Clipboard.h"
 #include "o2Editor/Dialogs/ColorPickerDlg.h"
 #include "o2Editor/Dialogs/System/OpenSaveDialog.h"
+#include "o2Editor/Pipeline/PipelineUpscale.h"
+#include "o2Editor/Pipeline/Nodes/PipelineNodesCommon.h"
 #include "o2Editor/Pipeline/PipelineExecutor.h"
+#include "o2Editor/Windows/PipelineWindow/PipelineModelPicker.h"
 #include "o2Editor/Pipeline/PipelineImageOps.h"
 #include "o2Editor/Pipeline/PipelineUtils.h"
 #include "o2Editor/Pipeline/Providers/ElevenLabsProvider.h"
@@ -217,6 +220,34 @@ namespace Editor
         mVideoView = nullptr;
     }
 
+    bool PipelineNodeBody::GetRowPlacement(const Ref<Widget>& widget, float width, float height, float& top, float& rowHeight) const
+    {
+        float rowWidth = width - mPadding*2.0f;
+        float fixed = mSpacing, flexibleMin = 0.0f;
+        int flexibleCount = 0;
+        for (auto& row : mRows)
+        {
+            fixed += mSpacing;
+            if (row.flexible) { flexibleCount++; flexibleMin += RowHeight(row, rowWidth); }
+            else fixed += RowHeight(row, rowWidth);
+        }
+
+        float bonus = flexibleCount > 0 ? Math::Max(0.0f, height - fixed - flexibleMin)/flexibleCount : 0.0f;
+        float y = mSpacing;
+        for (auto& row : mRows)
+        {
+            float h = RowHeight(row, rowWidth) + (row.flexible ? bonus : 0.0f);
+            if (row.widget == widget)
+            {
+                top = y;
+                rowHeight = h;
+                return true;
+            }
+            y += h + mSpacing;
+        }
+        return false;
+    }
+
     void PipelineNodeBody::Relayout(float width, float height)
     {
         float rowWidth = width - mPadding * 2.0f;
@@ -242,9 +273,49 @@ namespace Editor
         }
     }
 
-    String PipelineNodeBody::GetString(const String& key, const String& def /*= ""*/) const { return mNode->GetConfigString(key, def); }
-    float PipelineNodeBody::GetNumber(const String& key, float def /*= 0.0f*/) const { return mNode->GetConfigNumber(key, def); }
-    bool PipelineNodeBody::GetBool(const String& key, bool def /*= false*/) const { return mNode->GetConfigBool(key, def); }
+    const DataValue* PipelineNodeBody::FindConfigValue(const String& key) const
+    {
+        if (PipelineTransparency::SettingKeys().Contains(key))
+        {
+            if (auto part = GetPartTransparency())
+            {
+                if (auto value = part->FindMember(key.Data()))
+                    return value;
+            }
+        }
+
+        return mNode->GetConfigValue(key);
+    }
+
+    DataValue& PipelineNodeBody::ConfigSlot(const String& key)
+    {
+        auto part = PipelineTransparency::SettingKeys().Contains(key) ? GetPartTransparency() : nullptr;
+        if (part)
+            return (*part)[key.Data()];
+
+        if (!mNode->config.IsObject())
+            mNode->config.SetObject();
+
+        return mNode->config[key.Data()];
+    }
+
+    String PipelineNodeBody::GetString(const String& key, const String& def /*= ""*/) const
+    {
+        auto value = FindConfigValue(key);
+        return value ? PipelineUtils::ValueToString(*value, def) : def;
+    }
+
+    float PipelineNodeBody::GetNumber(const String& key, float def /*= 0.0f*/) const
+    {
+        auto value = FindConfigValue(key);
+        return value ? PipelineUtils::ValueToNumber(*value, def) : def;
+    }
+
+    bool PipelineNodeBody::GetBool(const String& key, bool def /*= false*/) const
+    {
+        auto value = FindConfigValue(key);
+        return value ? PipelineUtils::ValueToBool(*value, def) : def;
+    }
 
     void PipelineNodeBody::Notify(const String& key, bool completed)
     {
@@ -257,24 +328,22 @@ namespace Editor
 
     void PipelineNodeBody::SetString(const String& key, const String& value, bool completed /*= true*/)
     {
-        if (mNode->GetConfigString(key, "\x01") == value && completed == true && mNode->HasConfig(key))
-        {
-            Notify(key, completed);
-            return;
-        }
-        mNode->SetConfigString(key, value);
+        auto current = FindConfigValue(key);
+        if (!current || !completed || PipelineUtils::ValueToString(*current, "\x01") != value)
+            ConfigSlot(key) = value;
+
         Notify(key, completed);
     }
 
     void PipelineNodeBody::SetNumber(const String& key, float value, bool completed /*= true*/)
     {
-        mNode->SetConfigNumber(key, value);
+        ConfigSlot(key) = value;
         Notify(key, completed);
     }
 
     void PipelineNodeBody::SetBool(const String& key, bool value, bool completed /*= true*/)
     {
-        mNode->SetConfigBool(key, value);
+        ConfigSlot(key) = value;
         Notify(key, completed);
     }
 
@@ -287,6 +356,13 @@ namespace Editor
             owner->Rebuild();
             owner->UpdateFromNode();
         }
+    }
+
+    void PipelineNodeBody::RebuildBodyKeepingArea()
+    {
+        PushEditorScopeOnStack scope;
+        if (auto owner = mOwner.Lock())
+            owner->KeepAreaThrough([owner]() { owner->Rebuild(); });
     }
 
     PipelineValue PipelineNodeBody::GetOutput() const
@@ -339,6 +415,12 @@ namespace Editor
             Ref<Bitmap> source = isFinish ? (value.IsImage() ? value.GetBitmap() : nullptr) : GetSourceOutputBitmap();
             mCropEditor->SetBitmap(source);
         }
+        if (mPair)
+        {
+            auto input = GetInput(PipelinePairLayout::InputPortOf(mNode->nodeType));
+            mPair->SetCropOn(mCropEditor && GetBool("cropEnabled", false));
+            mPair->SetImages(input.IsImage() ? input.GetBitmap() : nullptr, value.IsImage() ? value.GetBitmap() : nullptr);
+        }
         if (mTextView)
             mTextView->SetText(value.IsText() ? value.data : String());
         if (mAudioView)
@@ -356,24 +438,9 @@ namespace Editor
         }
     }
 
-    float PipelineNodeBody::GetParamsReveal() const
-    {
-        auto owner = mOwner.Lock();
-        if (owner && owner->IsParamsAnimating())
-            return owner->GetParamsReveal();
-
-        return GetBool("paramsOpen", false) ? 1.0f : 0.0f;
-    }
-
-    void PipelineNodeBody::UpdateParamsSlide()
-    {
-        if (mParamsArrow)
-            mParamsArrow->open = GetParamsReveal();
-    }
-
     bool PipelineNodeBody::BeginParams(const Vector<String>& names)
     {
-        float reveal = GetParamsReveal();
+        bool open = GetBool("paramsOpen", false);
 
         String caption = "Parameters";
         for (int i = 0; i < names.Count() && i < 4; i++)
@@ -383,13 +450,13 @@ namespace Editor
 
         auto head = o2UI.CreateWidget<Button>("pipeline icon");
         head->name = "params";
-        mParamsArrow = mmake<PipelineFoldArrow>();
+        auto arrow = mmake<PipelineFoldArrow>();
         // The dimmed text colour over the card back, opaque
-        mParamsArrow->color = Color4(147, 167, 176, 255);
-        mParamsArrow->open = reveal;
+        arrow->color = Color4(147, 167, 176, 255);
+        arrow->open = open ? 1.0f : 0.0f;
         if (auto iconLayer = head->GetLayer("icon"))
         {
-            iconLayer->SetDrawable(mParamsArrow);
+            iconLayer->SetDrawable(arrow);
             iconLayer->layout = Layout::Based(BaseCorner::Left, Vec2F(10, 10), Vec2F(0, 0));
         }
 
@@ -402,25 +469,15 @@ namespace Editor
         head->AddLayer("caption", text, Layout::BothStretch(14, 0, 2, 0));
 
         WeakRef<PipelineNodeBody> weakThis(this);
-        head->onClick = [weakThis]()
+        head->onClick = [weakThis, open]()
         {
             auto self = weakThis.Lock();
-            auto owner = self ? self->mOwner.Lock() : nullptr;
-            if (!owner)
-                return;
-
-            bool open = !self->GetBool("paramsOpen", false);
-            self->mNode->SetConfigBool("paramsOpen", open);
-            owner->AnimateParams(open);
-            // Opening builds the rows now; closing keeps them until the list has slid shut
-            if (open)
-                self->RebuildBody();
+            if (auto owner = self ? self->mOwner.Lock() : nullptr)
+                owner->SetParamsOpen(!open);
         };
         AddRow(head, 20);
 
-        auto owner = mOwner.Lock();
-        bool sliding = owner && owner->IsParamsAnimating();
-        if (!GetBool("paramsOpen", false) && !sliding)
+        if (!open)
             return false;
 
         auto params = mmake<ParamsList>();
@@ -433,20 +490,8 @@ namespace Editor
         params->list->fitByChildren = false;
         params->list->baseCorner = BaseCorner::Top;
 
-        auto clip = mmake<PipelineClipBox>();
-        clip->name = "params clip";
-        clip->AddChild(params->list);
-        *params->list->layout = WidgetLayout::BothStretch();
-
-        // The row is registered before its lines exist: the height is read when the body is laid out.
-        // Sliding, the row brings its gap in with it, so a shut list takes no space at all
-        float spacing = mSpacing;
-        AddRow(clip, [params, weakThis, spacing](float)
-        {
-            auto self = weakThis.Lock();
-            float reveal = self ? self->GetParamsReveal() : 1.0f;
-            return (params->GetHeight() + spacing)*reveal - spacing;
-        });
+        // The row is registered before its lines exist: the height is read when the body is laid out
+        AddRow(params->list, [params](float) { return params->GetHeight(); });
         mParams = params;
         return true;
     }
@@ -478,47 +523,71 @@ namespace Editor
         AddRow(MakeLabel(title, true), 18);
     }
 
-    Ref<DropDown> PipelineNodeBody::AddModelRow(const Vector<String>& presets, const String& defaultModel)
+    Ref<Button> PipelineNodeBody::AddModelRow(const Vector<String>& presets, const String& defaultModel, PipelineModelKind kind)
     {
-        // The list shows product names, the config keeps the model id
-        String current = GetString("model", defaultModel);
-        Vector<String> ids = presets;
-        if (!current.IsEmpty() && !ids.Contains(current))
-            ids.Insert(current, 0);
+        // The field shows the product name, the config keeps the model id; the menu groups and filters the list
+        auto field = MakeModelField();
+        SetModelFieldValue(field, GetString("model", defaultModel), kind);
 
-        Vector<String> names;
-        for (auto& id : ids)
-            names.Add(PipelineUtils::PrettyModelName(id));
-
-        auto dropdown = MakeDropDown(names, PipelineUtils::PrettyModelName(current));
-        dropdown->name = "model";
-        // Product names are longer than the field: the opened list starts at the field and is wide enough to read them whole
-        if (auto list = dropdown->GetListView())
-        {
-            list->layout->anchorLeft = 0.0f;
-            list->layout->anchorRight = 0.0f;
-            list->layout->offsetLeft = 0.0f;
-            list->layout->offsetRight = 320.0f;
-
-            // Names fit this width; the list's horizontal bar would only take the room of the last item
-            if (auto bar = list->GetHorizontalScrollbar())
-            {
-                bar->SetEnabledForcible(false);
-                list->SetHorizontalScrollBar(nullptr, false);
-            }
-        }
         WeakRef<PipelineNodeBody> weakThis(this);
-        dropdown->onSelectedPos = [weakThis, ids](int position)
+        WeakRef<Button> weakField(field);
+        field->onClick = [weakThis, weakField, presets, defaultModel, kind]()
         {
             auto self = weakThis.Lock();
-            if (!self || position < 0 || position >= ids.Count())
+            auto fieldRef = weakField.Lock();
+            auto editor = self ? self->mEditor.Lock() : nullptr;
+            if (!self || !fieldRef || !editor)
                 return;
 
-            if (self->mNode->GetConfigString("model", "") != ids[position])
-                self->SetString("model", ids[position], true);
+            // A click on the field of the open menu closes it: the press already did, the click must not reopen it
+            if (auto picker = editor->GetModelPicker())
+            {
+                if (picker->IsOpenFor(fieldRef))
+                {
+                    picker->Close();
+                    return;
+                }
+
+                if (picker->ConsumeClosedByField(fieldRef))
+                    return;
+            }
+
+            RectF world = fieldRef->layout->GetWorldRect();
+            Vec2F a = editor->LocalToScreenPoint(Vec2F(world.left, world.bottom));
+            Vec2F b = editor->LocalToScreenPoint(Vec2F(world.right, world.top));
+
+            PipelineModelPickerRequest request;
+            request.ids = presets;
+            request.kind = kind;
+            request.current = self->GetString("model", defaultModel);
+            request.anchor = RectF(Math::Min(a.x, b.x), Math::Max(a.y, b.y), Math::Max(a.x, b.x), Math::Min(a.y, b.y));
+            request.field = fieldRef;
+            request.onPick = [weakThis, weakField, defaultModel, kind](const String& id)
+            {
+                auto self = weakThis.Lock();
+                if (!self)
+                    return;
+
+                String previous = self->GetString("model", defaultModel);
+                if (previous == id)
+                    return;
+
+                self->SetString("model", id, true);
+
+                // The background rows depend on whether the model renders the alpha itself, the upscale note on whether it
+                // renders 2K / 4K itself
+                bool upscaleNote = self->mNode->nodeType == "aiUpscale" &&
+                    PipelineUpscale::RendersLargeSizes(previous) != PipelineUpscale::RendersLargeSizes(id);
+                if (PipelineTransparency::SupportsNativeTransparency(previous) != PipelineTransparency::SupportsNativeTransparency(id) || upscaleNote)
+                    self->RebuildBodyKeepingArea();
+                else
+                    SetModelFieldValue(weakField.Lock(), id, kind);
+            };
+            editor->ShowModelPicker(request);
         };
-        AddRow(MakeRow("Model", dropdown), 22);
-        return dropdown;
+
+        AddRow(MakeRow("Model", field), 22);
+        return field;
     }
 
     Ref<DropDown> PipelineNodeBody::AddSelectRow(const String& label, const String& key, const Vector<String>& options, const String& def)
@@ -605,6 +674,7 @@ namespace Editor
     void PipelineNodeBody::AddSegmented(const String& key, const Vector<Pair<String, String>>& options, const String& def)
     {
         auto row = mmake<HorizontalLayout>();
+        row->name = key + " options";
         row->spacing = 4;
         row->expandWidth = true;
         row->expandHeight = true;
@@ -622,7 +692,7 @@ namespace Editor
                 if (auto self = weakThis.Lock())
                 {
                     self->SetString(k, value, true);
-                    self->RebuildBody();
+                    self->RebuildBodyKeepingArea();
                 }
             };
             row->AddChild(toggle);
@@ -681,78 +751,6 @@ namespace Editor
         AddRow(row, 22);
     }
 
-    void PipelineNodeBody::AddTransparencyBlock(bool always /*= false*/)
-    {
-        bool on = always || GetBool("transparentBg", false);
-        WeakRef<PipelineNodeBody> weakThis(this);
-        if (!always)
-        {
-            auto toggle = MakeCheckbox("Transparent background", on);
-            toggle->onToggleByUser = [weakThis](bool value)
-            {
-                if (auto self = weakThis.Lock())
-                {
-                    self->SetBool("transparentBg", value, true);
-                    self->RebuildBody();
-                }
-            };
-            AddRow(toggle, 20);
-        }
-
-        if (!on)
-            return;
-
-        AddSegmented("transparentMode", { { "twoPass", "White / black x2" }, { "chroma", "Chroma key x1" } }, "twoPass");
-
-        if (GetString("transparentMode", "twoPass") == "chroma")
-        {
-            auto colorRow = mmake<HorizontalLayout>();
-            colorRow->spacing = 4;
-            colorRow->expandWidth = true;
-            colorRow->expandHeight = true;
-            colorRow->baseCorner = BaseCorner::Left;
-
-            Color4 color;
-            if (!PipelineUtils::ParseHexColor(GetString("chromaColor", "#00b140"), color))
-                color = Color4(0, 177, 64, 255);
-            auto field = mmake<PipelineColorField>();
-            field->Setup("Key", color);
-            field->onChanged = [weakThis](const Color4& value, bool completed)
-            {
-                if (auto self = weakThis.Lock()) self->SetString("chromaColor", PipelineUtils::ColorToHex(value), completed);
-            };
-            colorRow->AddChild(field);
-
-            static const Vector<String> presets = { "#00b140", "#0047bb", "#ff00ff", "#ffffff" };
-            for (auto& preset : presets)
-            {
-                Color4 pc;
-                PipelineUtils::ParseHexColor(preset, pc);
-                auto swatch = MakeButton("");
-                swatch->layout->minWidth = 18;
-                swatch->layout->maxWidth = 18;
-                if (auto regular = swatch->GetLayerDrawable<Sprite>("regular")) regular->color = pc;
-                String value = preset;
-                Ref<PipelineColorField> fieldRef = field;
-                swatch->onClick = [weakThis, value, fieldRef]()
-                {
-                    if (auto self = weakThis.Lock())
-                    {
-                        Color4 c; PipelineUtils::ParseHexColor(value, c);
-                        fieldRef->SetColor(c);
-                        self->SetString("chromaColor", value, true);
-                    }
-                };
-                colorRow->AddChild(swatch);
-            }
-            AddRow(colorRow, 22);
-
-            AddSlider("Tol", "chromaTolerance", 0, 100, 1, 30);
-            AddSlider("Soft", "chromaSoftness", 0, 100, 1, 15);
-            AddSlider("Spill", "chromaSpill", 0, 100, 1, 60);
-        }
-    }
-
     void PipelineNodeBody::AddResultImage(const String& hint, float minHeight /*= 120.0f*/)
     {
         mImageView = mmake<PipelineImageView>();
@@ -783,54 +781,6 @@ namespace Editor
         mVideoView->SetHint(hint);
         AddFlexible(mVideoView, minHeight);
         MarkContent(mVideoView);
-    }
-
-    void PipelineNodeBody::AddCropSection(const String& emptyHint, const String& caption /*= "Result"*/, float minHeight /*= 176.0f*/)
-    {
-        WeakRef<PipelineNodeBody> weakThis(this);
-        bool cropOn = GetBool("cropEnabled", false);
-        mCropEditor = mmake<PipelineCropEditor>();
-        mCropEditor->SetHint(emptyHint);
-        mCropEditor->SetNode(mNode, "crop");
-        mCropEditor->SetCropEnabled(cropOn);
-        mCropEditor->onCropChanged = [weakThis](bool completed)
-        {
-            if (auto self = weakThis.Lock())
-                self->Notify("crop", completed);
-        };
-        AddFlexible(mCropEditor, minHeight);
-        MarkContent(mCropEditor);
-
-        auto head = mmake<HorizontalLayout>();
-        head->spacing = 6;
-        head->expandWidth = true;
-        head->expandHeight = true;
-        head->baseCorner = BaseCorner::Left;
-
-        auto label = MakeLabel(caption, true);
-        label->horOverflow = caption.Length() > 26 ? Label::HorOverflow::Wrap : Label::HorOverflow::Dots;
-        head->AddChild(label);
-
-        auto cropButton = MakeSegment("Crop", cropOn);
-        cropButton->layout->minWidth = 60;
-        cropButton->layout->maxWidth = 60;
-        cropButton->onToggleByUser = [weakThis](bool)
-        {
-            if (auto self = weakThis.Lock())
-            {
-                bool on = !self->GetBool("cropEnabled", false);
-                self->SetBool("cropEnabled", on, true);
-                if (on && !self->mNode->HasConfig("crop"))
-                {
-                    auto& crop = self->mNode->config["crop"];
-                    crop.SetObject();
-                    crop["x"] = 0.1f; crop["y"] = 0.1f; crop["w"] = 0.8f; crop["h"] = 0.8f;
-                }
-                self->RebuildBody();
-            }
-        };
-        head->AddChild(cropButton);
-        AddRow(head, caption.Length() > 26 ? 30.0f : 20.0f);
     }
 
     void PipelineNodeBody::AddFilePicker(const String& buttonCaption, const Vector<String>& extensions, bool image)
@@ -874,114 +824,6 @@ namespace Editor
             self->RebuildBody();
         };
         AddRow(button, 24);
-    }
-
-    PipelineCropEditor::PipelineCropEditor(RefCounter* refCounter):
-        PipelineImageView(refCounter)
-    {
-        mFrame = mmake<FrameHandles>();
-        mFrame->SetPivotEnabled(false);
-        mFrame->SetRotationEnabled(false);
-        mFrame->onTransformed = THIS_FUNC(OnFrameTransformed);
-        mFrame->onChangeCompleted = THIS_FUNC(OnFrameCompleted);
-        mFrame->onPressed = [this]() { mFrameDragging = true; };
-        mFrame->onReleased = [this]() { mFrameDragging = false; };
-    }
-
-    void PipelineCropEditor::SetNode(const Ref<PipelineNode>& node, const String& key /*= "crop"*/)
-    {
-        mNode = node;
-        mKey = key;
-    }
-
-    void PipelineCropEditor::SetCropEnabled(bool enabled)
-    {
-        mCropEnabled = enabled;
-    }
-
-    void PipelineCropEditor::SyncFrameFromConfig()
-    {
-        if (!mNode)
-            return;
-
-        PipelineImageOps::CropRect crop;
-        PipelineImageOps::ParseCrop(mNode->GetConfigValue(mKey.Data()), crop);
-        RectF image = GetImageRect();
-        float left = image.left + image.Width() * crop.x;
-        float top = image.top - image.Height() * crop.y;
-        float w = image.Width() * crop.w;
-        float h = image.Height() * crop.h;
-        mSyncing = true;
-        mFrame->SetBasis(Basis(Vec2F(left, top - h), Vec2F(w, 0), Vec2F(0, h)));
-        mSyncing = false;
-    }
-
-    void PipelineCropEditor::Draw()
-    {
-        PipelineImageView::Draw();
-        if (!mCropEnabled || !HasImage() || PipelineControls::IsFarView())
-            return;
-
-        if (!mFrameDragging)
-            SyncFrameFromConfig();
-
-        RectF image = GetImageRect();
-        const Basis& b = mFrame->GetCurrentBasis();
-        RectF frame(b.origin, b.origin + b.xv + b.yv);
-        // Darken what is cut away
-        Color4 shade(0, 0, 0, 120);
-        o2Render.DrawFilledPolygon({ image.LeftBottom(), Vec2F(image.left, image.top), Vec2F(frame.left, image.top), Vec2F(frame.left, image.bottom) }, shade);
-        o2Render.DrawFilledPolygon({ Vec2F(frame.right, image.bottom), Vec2F(frame.right, image.top), image.RightTop(), Vec2F(image.right, image.bottom) }, shade);
-        o2Render.DrawFilledPolygon({ Vec2F(frame.left, frame.top), Vec2F(frame.left, image.top), Vec2F(frame.right, image.top), Vec2F(frame.right, frame.top) }, shade);
-        o2Render.DrawFilledPolygon({ Vec2F(frame.left, image.bottom), Vec2F(frame.left, frame.bottom), Vec2F(frame.right, frame.bottom), Vec2F(frame.right, image.bottom) }, shade);
-        mFrame->Draw();
-    }
-
-    void PipelineCropEditor::OnFrameTransformed(const Basis& basis)
-    {
-        if (mSyncing || !mNode)
-            return;
-
-        RectF image = GetImageRect();
-        if (image.Width() <= 0 || image.Height() <= 0)
-            return;
-
-        RectF frame(basis.origin, basis.origin + basis.xv + basis.yv);
-        float x = Math::Clamp((frame.left - image.left) / image.Width(), 0.0f, 1.0f);
-        float y = Math::Clamp((image.top - frame.top) / image.Height(), 0.0f, 1.0f);
-        float w = Math::Clamp(frame.Width() / image.Width(), 0.01f, 1.0f - x);
-        float h = Math::Clamp(frame.Height() / image.Height(), 0.01f, 1.0f - y);
-
-        auto& crop = mNode->config[mKey.Data()];
-        crop.SetObject();
-        crop["x"] = x; crop["y"] = y; crop["w"] = w; crop["h"] = h;
-
-        if (onCropChanged)
-            onCropChanged(false);
-    }
-
-    void PipelineCropEditor::OnFrameCompleted()
-    {
-        if (onCropChanged)
-            onCropChanged(true);
-    }
-
-    namespace PipelineNodeBodies
-    {
-        Ref<PipelineNodeBody> Create(const String& type, const Ref<PipelineNodeWidget>& owner)
-        {
-            Ref<PipelineNodeBody> body = CreateBasicNodeBody(type);
-            if (!body)
-                body = CreateImageNodeBody(type);
-
-            if (!body)
-                body = CreateComposerNodeBody(type);
-
-            if (body)
-                body->Init(owner);
-
-            return body;
-        }
     }
 }
 // --- META ---

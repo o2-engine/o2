@@ -13,6 +13,24 @@ namespace Editor::AiHttp
         return status == 408 || status == 429 || status == 500 || status == 502 || status == 503 || status == 504;
     }
 
+    bool IsFinalError(int status, const String& body)
+    {
+        return status == 429 && body.Contains("insufficient_quota");
+    }
+
+    Ref<HttpRequest> MakeRawPost(const String& url, const String& body, const String& contentType,
+                                 const Map<String, String>& headers, float timeout /*= 300.0f*/)
+    {
+        auto request = mmake<HttpRequest>(url, HttpMethod::Post);
+        request->timeout = timeout;
+        request->useCookies = false;
+        request->cachePolicy = HttpCachePolicy::Bypass;
+        for (auto& kv : headers)
+            request->headers[kv.first] = kv.second;
+        request->SetBody(body, contentType);
+        return request;
+    }
+
     Ref<HttpRequest> MakeJsonPost(const String& url, const DataDocument& body, const Map<String, String>& headers, float timeout /*= 300.0f*/)
     {
         auto request = mmake<HttpRequest>(url, HttpMethod::Post);
@@ -77,6 +95,9 @@ namespace Editor::AiHttp
 
             bool transient = response && (response->error == HttpError::Timeout || response->error == HttpError::ConnectionFailed ||
                                           response->error == HttpError::ConnectionClosed || IsRetryableStatus(response->status));
+            if (transient && IsFinalError(result.status, result.body))
+                transient = false;
+
             if (result.ok || !transient || attempt == maxAttempts)
                 co_return result;
 

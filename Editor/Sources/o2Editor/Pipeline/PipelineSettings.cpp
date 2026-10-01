@@ -35,6 +35,8 @@ namespace Editor
         };
 
         res.geminiApiKey = read("gemini");
+        res.openAiApiKey = read("openai");
+        res.openRouterApiKey = read("openrouter");
         res.klingAccessKey = read("klingAccessKey");
         res.klingSecretKey = read("klingSecretKey");
         res.elevenLabsApiKey = read("elevenlabs");
@@ -46,6 +48,8 @@ namespace Editor
         DataDocument doc;
         doc.SetObject();
         doc["gemini"] = geminiApiKey;
+        doc["openai"] = openAiApiKey;
+        doc["openrouter"] = openRouterApiKey;
         doc["klingAccessKey"] = klingAccessKey;
         doc["klingSecretKey"] = klingSecretKey;
         doc["elevenlabs"] = elevenLabsApiKey;
@@ -68,6 +72,22 @@ namespace Editor
             return PipelineUtils::ReadFileBytes(keyFile).Trimed(" \n\r\t");
 
         return "";
+    }
+
+    String PipelineSettings::GetOpenAiKey() const
+    {
+        if (!openAiApiKey.Trimed().IsEmpty())
+            return openAiApiKey.Trimed();
+
+        return EnvOrEmpty("OPENAI_API_KEY");
+    }
+
+    String PipelineSettings::GetOpenRouterKey() const
+    {
+        if (!openRouterApiKey.Trimed().IsEmpty())
+            return openRouterApiKey.Trimed();
+
+        return EnvOrEmpty("OPENROUTER_API_KEY");
     }
 
     String PipelineSettings::GetElevenLabsKey() const

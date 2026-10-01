@@ -45,7 +45,11 @@ namespace Editor
 
     static const Vector<String> textModelPresets = {
         "gemini-pro-latest", "gemini-flash-latest", "gemini-3.5-pro", "gemini-3.5-flash", "gemini-3.1-pro-preview",
-        "gemini-3-flash-preview", "gemini-3.1-flash-lite", "gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.5-flash-lite"
+        "gemini-3-flash-preview", "gemini-3.1-flash-lite", "gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.5-flash-lite",
+        "gpt-5.5", "gpt-5.4", "gpt-5.4-mini", "gpt-5.4-nano", "gpt-4.1",
+        "openai/gpt-5.5", "openai/gpt-5.4-mini", "anthropic/claude-sonnet-5.5", "anthropic/claude-opus-5.5", "x-ai/grok-4.7",
+        "google/gemini-3.5-flash", "deepseek/deepseek-v4-pro", "meta-llama/llama-4-maverick", "mistralai/mistral-large-2512",
+        "qwen/qwen3.7-plus"
     };
 
     static const Vector<String> videoModelPresets = {
@@ -67,7 +71,7 @@ namespace Editor
 
             // The result comes first: a finish node shows what reaches it before anything runs
             if (kind == PipelinePortType::Image)
-                AddCropSection("nothing connected - link a source to save it", "Result");
+                AddCropSection("nothing connected - link a source to save it", false, "Result");
             else if (kind == PipelinePortType::Text)
                 AddResultText("nothing connected - link a source to save it", 100);
             else if (kind == PipelinePortType::Audio)
@@ -528,7 +532,7 @@ namespace Editor
             AddResultText("no result - press play to compute the branch");
             if (BeginParams({ "Model", "System prompt" }))
             {
-                AddModelRow(textModelPresets, GeminiProvider::defaultTextModel);
+                AddModelRow(textModelPresets, GeminiProvider::defaultTextModel, PipelineModelKind::Text);
                 AddTextArea("systemPrompt", "System prompt (optional)", 46);
             }
             EndParams();
@@ -545,7 +549,7 @@ namespace Editor
             AddResultText("no result - connect the text and describe the edit");
             AddPrimaryField("instruction", "Describe the edit to apply - everything else stays unchanged");
             if (BeginParams({ "Model" }))
-                AddModelRow(textModelPresets, GeminiProvider::defaultTextModel);
+                AddModelRow(textModelPresets, GeminiProvider::defaultTextModel, PipelineModelKind::Text);
             EndParams();
             OnOutputChanged();
         }
@@ -557,53 +561,76 @@ namespace Editor
         using PipelineNodeBody::PipelineNodeBody;
         void Build() override
         {
-            static const Vector<Pair<String, String>> targets = {
-                { "image", "Image prompt" }, { "video", "Video prompt" }, { "text", "Text prompt" },
-                { "sfx", "Sound effect prompt" }, { "music", "Music prompt" }, { "speech", "Spoken line" }
-            };
-            static const Map<String, String> hints = {
-                { "image", "Detailed English prompt - subject, style, light, composition" },
-                { "video", "Scene plus action and camera work over the clip" },
-                { "text", "Self-contained instruction for a text model" },
-                { "sfx", "Short and concrete (10-60 words) - ElevenLabs caps the prompt at 450 characters" },
-                { "music", "Genre, instruments, BPM, key, mood - for Lyria" },
-                { "speech", "The actual line of dialogue, in the character's language" }
+            // Each target shows the icon of the node it writes for
+            static const Vector<PipelineOption> targets = {
+                { "image", "Image prompt", "Detailed English prompt - subject, style, light, composition", PipelineNodeWidget::IconForType("nanoBananaGen") },
+                { "video", "Video prompt", "Scene plus action and camera work over the clip", PipelineNodeWidget::IconForType("videoGen") },
+                { "text", "Text prompt", "Self-contained instruction for a text model", PipelineNodeWidget::IconForType("aiText") },
+                { "sfx", "Sound effect prompt", "Short and concrete (10-60 words) - ElevenLabs caps the prompt at 450 characters",
+                  PipelineNodeWidget::IconForType("sfxGen") },
+                { "music", "Music prompt", "Genre, instruments, BPM, key, mood - for Lyria", PipelineNodeWidget::IconForType("musicGen") },
+                { "speech", "Spoken line", "The actual line of dialogue, in the character's language", PipelineNodeWidget::IconForType("ttsSpeech") }
             };
 
             AddResultText("no result - press play to compute the branch");
 
-            if (BeginParams({ "Target", "Model", "Max chars", "System prompt" }))
+            if (BeginParams({ "Model", "Target", "Max chars", "System prompt" }))
             {
+                AddModelRow(textModelPresets, GeminiProvider::defaultTextModel, PipelineModelKind::Text);
+
                 String current = GetString("target", "image");
-                Vector<String> labels;
-                String currentLabel;
-                for (auto& t : targets)
-                {
-                    labels.Add(t.second);
-                    if (t.first == current) currentLabel = t.second;
-                }
-                auto dropdown = MakeDropDown(labels, currentLabel.IsEmpty() ? labels[0] : currentLabel);
+                auto option = targets.FindOrDefault([&](const PipelineOption& t) { return t.value == current; });
+                if (option.value.IsEmpty())
+                    option = targets[0];
+
+                auto field = MakeOptionField();
+                field->name = "target";
+                SetOptionFieldValue(field, option);
                 WeakRef<PipelineNodeBody> weakThis(this);
-                dropdown->onSelectedText = [weakThis](const WString& text)
+                WeakRef<Button> weakField(field);
+                field->onClick = [weakThis, weakField]()
                 {
                     auto self = weakThis.Lock();
-                    if (!self) return;
-                    for (auto& t : targets)
+                    auto fieldRef = weakField.Lock();
+                    auto editor = self ? self->mEditor.Lock() : nullptr;
+                    if (!self || !fieldRef || !editor)
+                        return;
+
+                    // A click on the field of the open menu closes it: the press already did, the click must not reopen it
+                    if (auto picker = editor->GetOptionPicker())
                     {
-                        if (t.second == (String)text && self->GetString("target", "image") != t.first)
+                        if (picker->IsOpenFor(fieldRef))
                         {
-                            self->SetString("target", t.first, true);
-                            self->RebuildBody();
+                            picker->Close();
                             return;
                         }
-                    }
-                };
-                AddRow(MakeRow("Target", dropdown), 22);
-                String hint;
-                hints.TryGetValue(current, hint);
-                AddMutedLine(hint, 30);
 
-                AddModelRow(textModelPresets, GeminiProvider::defaultTextModel);
+                        if (picker->ConsumeClosedByField(fieldRef))
+                            return;
+                    }
+
+                    RectF world = fieldRef->layout->GetWorldRect();
+                    Vec2F a = editor->LocalToScreenPoint(Vec2F(world.left, world.bottom));
+                    Vec2F b = editor->LocalToScreenPoint(Vec2F(world.right, world.top));
+                    PipelineOptionPickerRequest request;
+                    request.options = targets;
+                    request.current = self->GetString("target", "image");
+                    request.anchor = RectF(Math::Min(a.x, b.x), Math::Max(a.y, b.y), Math::Max(a.x, b.x), Math::Min(a.y, b.y));
+                    request.field = fieldRef;
+                    request.onPick = [weakThis](const String& value)
+                    {
+                        auto self = weakThis.Lock();
+                        if (!self || self->GetString("target", "image") == value)
+                            return;
+
+                        self->SetString("target", value, true);
+                        self->RebuildBodyKeepingArea();
+                    };
+                    editor->ShowOptionPicker(request);
+                };
+                AddRow(MakeRow("Target", field), 22);
+                // o2 has no tooltips: the hint of the target stays on view under its field
+                AddMutedLine(option.hint, 30);
 
                 int budget = current == "sfx" ? 450 : current == "music" ? 1200 : current == "speech" ? 300 : 0;
                 if (budget > 0)
@@ -629,17 +656,17 @@ namespace Editor
         {
             AddResultVideo("no result - press play to compute the branch");
             AddPrimaryField("extraPrompt", "Extra prompt (optional style hints)");
-            if (BeginParams({ "Aspect", "Duration", "Model", "Solid background colour" }))
+            if (BeginParams({ "Model", "Aspect", "Duration", "Solid background colour" }))
             {
+                AddModelRow(videoModelPresets, VeoProvider::defaultModel, PipelineModelKind::Video);
                 AddSelectRow("Aspect", "aspectRatio", { "16:9", "9:16", "1:1" }, "16:9");
                 AddSelectRow("Duration", "duration", { "4", "5", "6", "8", "10" }, "8");
                 AddMutedLine("Veo 3 renders 8s clips when reference images are used", 20);
-                AddModelRow(videoModelPresets, VeoProvider::defaultModel);
                 auto toggle = AddCheckbox("Solid background colour", "bgColorEnabled", false);
                 WeakRef<PipelineNodeBody> weakThis(this);
                 toggle->onToggleByUser = [weakThis](bool value)
                 {
-                    if (auto self = weakThis.Lock()) { self->SetBool("bgColorEnabled", value, true); self->RebuildBody(); }
+                    if (auto self = weakThis.Lock()) { self->SetBool("bgColorEnabled", value, true); self->RebuildBodyKeepingArea(); }
                 };
                 if (GetBool("bgColorEnabled", false))
                     AddColor("Color", "bgColor", "#00b140");
@@ -657,11 +684,11 @@ namespace Editor
         {
             AddResultAudio("no result - press play to compute the branch");
             AddPrimaryField("extraPrompt", "Extra prompt (e.g. dry, close-mic, cartoon)");
-            if (BeginParams({ "Seamless loop", "Length", "Model", "Influence" }))
+            if (BeginParams({ "Model", "Seamless loop", "Length", "Influence" }))
             {
+                AddModelRow({ ElevenLabsProvider::sfxModel }, ElevenLabsProvider::sfxModel, PipelineModelKind::ElevenLabs);
                 AddCheckbox("Seamless loop", "loop", false);
                 AddSelectRow("Length", "duration", { "auto", "0.5", "1", "2", "3", "5", "10", "20", "30" }, "auto");
-                AddModelRow({ ElevenLabsProvider::sfxModel }, ElevenLabsProvider::sfxModel);
                 AddTextRow("Influence", "promptInfluence", "0.3");
             }
             EndParams();
@@ -680,18 +707,19 @@ namespace Editor
             if (provider != "elevenlabs")
                 AddTextRow("Delivery", "styleInstructions", "Say cheerfully / whisper / shout");
 
-            if (BeginParams({ "Provider", "Voice", "Model" }))
+            if (BeginParams({ "Provider", "Model", "Voice" }))
             {
                 AddSegmented("provider", { { "gemini", "Gemini TTS" }, { "elevenlabs", "ElevenLabs" } }, "gemini");
                 if (provider == "elevenlabs")
                 {
+                    AddModelRow({ "eleven_multilingual_v2", "eleven_turbo_v2_5", "eleven_flash_v2_5" }, ElevenLabsProvider::defaultTtsModel,
+                                PipelineModelKind::ElevenLabs);
                     AddTextRow("Voice id", "voice", "21m00Tcm4TlvDq8ikWAM");
-                    AddModelRow({ "eleven_multilingual_v2", "eleven_turbo_v2_5", "eleven_flash_v2_5" }, ElevenLabsProvider::defaultTtsModel);
                 }
                 else
                 {
+                    AddModelRow({ "gemini-2.5-flash-preview-tts", "gemini-2.5-pro-preview-tts" }, GeminiProvider::defaultTtsModel, PipelineModelKind::Tts);
                     AddSelectRow("Voice", "voice", GeminiProvider::voices, "Kore");
-                    AddModelRow({ "gemini-2.5-flash-preview-tts", "gemini-2.5-pro-preview-tts" }, GeminiProvider::defaultTtsModel);
                 }
             }
             EndParams();
@@ -707,10 +735,10 @@ namespace Editor
         {
             AddResultAudio("no result - press play to compute the branch");
             AddPrimaryField("extraPrompt", "Style, instruments, tempo, mood");
-            if (BeginParams({ "Instrumental only", "Model" }))
+            if (BeginParams({ "Model", "Instrumental only" }))
             {
-                AddCheckbox("Instrumental only (no vocals)", "instrumental", true);
                 AddSegmented("model", { { "lyria-3-clip-preview", "Lyria 3 clip" }, { "lyria-3-pro-preview", "Lyria 3 pro" } }, GeminiProvider::defaultMusicModel);
+                AddCheckbox("Instrumental only (no vocals)", "instrumental", true);
             }
             EndParams();
             OnOutputChanged();

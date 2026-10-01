@@ -54,10 +54,14 @@ namespace Editor
         if (!rt)
             return PipelineValue();
 
-        // A per-port node keeps a value per output, the node result is only the last one it produced
         PipelineValue portValue;
         if (rt->portOutputs.TryGetValue(edge->fromPortId, portValue) && portValue.IsValid())
             return portValue;
+
+        // The node result of a source with several outputs is whichever part came last: a part not produced has nothing
+        auto from = graph->FindNode(edge->fromNodeId);
+        if (from && from->outputs.Count() > 1)
+            return PipelineValue();
 
         return rt->output;
     }
@@ -273,6 +277,14 @@ namespace Editor
                 if (auto widget = GetNodeWidget(event.nodeId))
                 {
                     auto& rt = widget->GetRuntime();
+                    if (!event.portId.IsEmpty())
+                    {
+                        // One part of a per-port node: its cell shows the progress, the node keeps its own state
+                        rt.portStates[event.portId] = event.state;
+                        widget->ApplyRuntime();
+                        break;
+                    }
+
                     if (mRunIsAutoApply)
                     {
                         if (event.state == "error") { rt.state = "error"; rt.error = event.error; }

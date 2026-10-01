@@ -363,6 +363,180 @@ TEST(PipelineExecutorLive, GeminiTextToImageFinish)
     printf("[pipeline] image %dx%d\n", image->GetSize().x, image->GetSize().y);
 }
 
+namespace
+{
+    // Runs the branch of the target against the real providers, printing the log and the node states
+    RunResult RunLive(const PipelineGraph& graph, const String& target, const String& assetsDir)
+    {
+        RunResult result;
+        auto executor = mmake<PipelineExecutor>();
+        executor->onEvent = [&](const PipelineExecEvent& e)
+        {
+            result.events.Add(e);
+            if (e.type == PipelineExecEvent::Type::NodeOutput) result.outputs[e.nodeId] = e.value;
+            if (e.type == PipelineExecEvent::Type::NodeState) result.states[e.nodeId] = e.state + (e.error.IsEmpty() ? String() : ": " + e.error);
+            if (e.type == PipelineExecEvent::Type::Done) result.done = true;
+            if (e.type == PipelineExecEvent::Type::Fatal) result.fatal = e.error;
+            if (e.type == PipelineExecEvent::Type::Log) printf("[pipeline] %s\n", e.message.Data());
+        };
+        executor->assetsPathOverride = assetsDir;
+        auto start = std::chrono::steady_clock::now();
+        executor->Execute("live", graph, target, {}, false);
+        EXPECT_TRUE(NetPumpUntil([&] { return result.done || !result.fatal.IsEmpty(); }, 300.0f));
+        EXPECT_TRUE(result.fatal.IsEmpty()) << result.fatal;
+        for (auto& kv : result.states)
+            printf("[pipeline] state %s: %s\n", kv.first.Data(), kv.second.Data());
+
+        printf("[pipeline] run took %.1f s\n", std::chrono::duration<float>(std::chrono::steady_clock::now() - start).count());
+        return result;
+    }
+}
+
+// Live provider smoke through OpenRouter: text -> image -> finish on vendor/model ids. Runs only with
+// PIPELINE_LIVE_OPENROUTER_KEY set, so the default suite stays offline
+TEST(PipelineExecutorLive, OpenRouterTextToImageFinish)
+{
+    const char* key = getenv("PIPELINE_LIVE_OPENROUTER_KEY");
+    if (!key || !*key)
+        GTEST_SKIP() << "PIPELINE_LIVE_OPENROUTER_KEY is not set";
+
+    WorkDirGuard work;
+    PipelineSettings settings = PipelineSettings::Load();
+    settings.openRouterApiKey = key;
+    settings.Save();
+
+    String assetsDir = work.path + "Assets/";
+    o2FileSystem.FolderCreate(assetsDir, true);
+
+    PipelineGraph graph;
+    auto text = AddNode(graph, "sourceText");
+    text->SetConfigString("text", "Write one short sentence describing a gold game coin icon on a white background.");
+    auto describe = AddNode(graph, "aiText");
+    describe->SetConfigString("model", "openai/gpt-5.4-mini");
+    auto gen = AddNode(graph, "nanoBananaGen");
+    gen->SetConfigString("model", "google/gemini-2.5-flash-image");
+    gen->SetConfigBool("transparentBg", false);
+    auto finish = AddNode(graph, "finishImage");
+    finish->SetConfigString("assetPath", "Generated/goldcoin");
+    Connect(graph, text, "out", describe, "prompt");
+    Connect(graph, describe, "out", gen, "prompt");
+    Connect(graph, gen, "out", finish, "in");
+
+    RunResult result = RunLive(graph, finish->id, assetsDir);
+
+    ASSERT_TRUE(result.outputs.ContainsKey(describe->id));
+    EXPECT_FALSE(result.outputs[describe->id].data.Trimed(" \n\r\t").IsEmpty());
+    ASSERT_TRUE(result.outputs.ContainsKey(gen->id));
+    auto image = result.outputs[gen->id].GetBitmap();
+    ASSERT_TRUE(image != nullptr);
+    EXPECT_GT(image->GetSize().x, 64);
+    EXPECT_TRUE(o2FileSystem.IsFileExist(assetsDir + "Generated/goldcoin.png"));
+    if (const char* keep = getenv("PIPELINE_LIVE_KEEP"))
+        PipelineUtils::WriteFileBytes(keep, PipelineUtils::ReadFileBytes(assetsDir + "Generated/goldcoin.png"));
+
+    printf("[pipeline] text: %s\n", result.outputs[describe->id].data.SubStr(0, 200).Data());
+    printf("[pipeline] image %dx%d\n", image->GetSize().x, image->GetSize().y);
+}
+
+// Live check of a background rendered by the model through the OpenRouter images endpoint
+TEST(PipelineExecutorLive, OpenRouterNativeTransparency)
+{
+    const char* key = getenv("PIPELINE_LIVE_OPENROUTER_KEY");
+    if (!key || !*key)
+        GTEST_SKIP() << "PIPELINE_LIVE_OPENROUTER_KEY is not set";
+
+    WorkDirGuard work;
+    PipelineSettings settings = PipelineSettings::Load();
+    settings.openRouterApiKey = key;
+    settings.Save();
+
+    String assetsDir = work.path + "Assets/";
+    o2FileSystem.FolderCreate(assetsDir, true);
+
+    PipelineGraph graph;
+    auto text = AddNode(graph, "sourceText");
+    text->SetConfigString("text", "A simple gold game coin icon, centred, with empty space around it.");
+    auto gen = AddNode(graph, "nanoBananaGen");
+    gen->SetConfigString("model", "openai/gpt-5-image-mini");
+    gen->SetConfigBool("transparentBg", true);
+    gen->SetConfigString("transparentMode", "chroma");
+    Connect(graph, text, "out", gen, "prompt");
+
+    RunResult result = RunLive(graph, gen->id, assetsDir);
+
+    ASSERT_TRUE(result.outputs.ContainsKey(gen->id));
+    auto image = result.outputs[gen->id].GetBitmap();
+    ASSERT_TRUE(image != nullptr);
+    EXPECT_GT(image->GetSize().x, 64);
+    const UInt8* corner = PipelineImageOps::Pixel(*image, 1, 1);
+    EXPECT_LT(corner[3], 40);
+    printf("[pipeline] image %dx%d, corner alpha %d\n", image->GetSize().x, image->GetSize().y, (int)corner[3]);
+    if (const char* keep = getenv("PIPELINE_LIVE_KEEP"))
+        PipelineUtils::WriteFileBytes(keep, EncodeBitmapPng(*image));
+}
+
+// Live check of the other vendors behind OpenRouter: a vision text call and an image call with a reference
+TEST(PipelineExecutorLive, OpenRouterVisionAndEdit)
+{
+    const char* key = getenv("PIPELINE_LIVE_OPENROUTER_KEY");
+    if (!key || !*key)
+        GTEST_SKIP() << "PIPELINE_LIVE_OPENROUTER_KEY is not set";
+
+    WorkDirGuard work;
+    PipelineSettings settings = PipelineSettings::Load();
+    settings.openRouterApiKey = key;
+    settings.Save();
+
+    String assetsDir = work.path + "Assets/";
+    o2FileSystem.FolderCreate(assetsDir, true);
+    // Pixels are written byte by byte: the answer of the vision model then checks the channel order on the way out
+    Bitmap flat(PixelFormat::R8G8B8A8, Vec2I(256, 256));
+    for (int y = 0; y < 256; y++)
+    {
+        for (int x = 0; x < 256; x++)
+        {
+            UInt8* pixel = PipelineImageOps::Pixel(flat, x, y);
+            pixel[0] = 40; pixel[1] = 90; pixel[2] = 220; pixel[3] = 255;
+        }
+    }
+    ASSERT_TRUE(PipelineUtils::WriteFileBytes(assetsDir + "flat.png", EncodeBitmapPng(flat)));
+
+    PipelineGraph graph;
+    auto source = AddNode(graph, "sourceImage");
+    source->SetConfigString("assetPath", "flat.png");
+    auto question = AddNode(graph, "sourceText");
+    question->SetConfigString("text", "Name the dominant colour of the attached image in one word.");
+    auto vision = AddNode(graph, "aiText");
+    vision->SetConfigString("model", "anthropic/claude-sonnet-5.5");
+    vision->inputs.Add(PipelinePort(PipelineNode::GenerateId(), "image", PipelinePortType::Image, true));
+    Connect(graph, question, "out", vision, "prompt");
+    Connect(graph, source, "out", vision, "image");
+
+    auto request = AddNode(graph, "sourceText");
+    request->SetConfigString("text", "A simple gold coin icon in the centre, the background keeps the colour of the reference image.");
+    auto gen = AddNode(graph, "nanoBananaGen");
+    gen->SetConfigString("model", "openai/gpt-5-image-mini");
+    gen->SetConfigBool("transparentBg", false);
+    Connect(graph, request, "out", gen, "prompt");
+    Connect(graph, source, "out", gen, "reference");
+
+    RunResult seen = RunLive(graph, vision->id, assetsDir);
+    ASSERT_TRUE(seen.outputs.ContainsKey(vision->id));
+    String answer = seen.outputs[vision->id].data.Trimed(" \n\r\t");
+    EXPECT_FALSE(answer.IsEmpty());
+    EXPECT_TRUE(answer.ToLowerCase().Contains("blue")) << answer;
+    printf("[pipeline] vision answer: %s\n", answer.SubStr(0, 200).Data());
+
+    RunResult drawn = RunLive(graph, gen->id, assetsDir);
+    ASSERT_TRUE(drawn.outputs.ContainsKey(gen->id));
+    auto image = drawn.outputs[gen->id].GetBitmap();
+    ASSERT_TRUE(image != nullptr);
+    EXPECT_GT(image->GetSize().x, 64);
+    printf("[pipeline] image %dx%d\n", image->GetSize().x, image->GetSize().y);
+    if (const char* keep = getenv("PIPELINE_LIVE_KEEP_EDIT"))
+        PipelineUtils::WriteFileBytes(keep, EncodeBitmapPng(*image));
+}
+
 // Providers may answer with JPEG: the decoder must accept it next to PNG
 TEST(PipelineImageOps, DecodesJpegBytes)
 {
