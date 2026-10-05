@@ -17,10 +17,12 @@ namespace Editor
         int   cols = 1;          // Columns of cells
         int   rows = 1;          // Rows of cells
         float cellW = 0.0f;      // Cell width
-        float cellH = 0.0f;      // Cell image height, stretched to fill the row
+        float cellH = 0.0f;      // Cell image height: square cells, or the whole row for a single part
         float labelH = 0.0f;     // Caption height under each cell, none for a single part
+        float offX = 0.0f;       // Where the first cell starts in the pane: the grid is centred
+        float offY = 0.0f;
         float rowNatural = 0.0f; // Row height before a hand-sized card adds to it
-        float rowH = 0.0f;       // Row height the cells fill
+        float rowH = 0.0f;       // Row height the grid sits in
     };
 
     // --------------------------------------------------------------------------------------------------
@@ -50,10 +52,13 @@ namespace Editor
         // Returns the row height before a hand-sized card adds to it
         float PairRowHeight(bool anyImage);
 
-        // Returns the parts grid of an extract row; rowHeight above the natural height stretches the cells
+        // Returns the parts grid of an extract row. The natural row: as many columns of at least minPaneCell as fit,
+        // square cells up to the result card's height. In the row (rowHeight above the natural height makes it taller)
+        // one part fills the pane; several are square cells in the column count whose cells come out largest (the
+        // fewest columns on a tie), the grid centred: AssetsLine's partsLayout
         PipelineExtractGrid ExtractGrid(float rowWidth, int parts, float rowHeight = 0.0f);
 
-        // Returns the bottom-right corner of a part cell's image, where its output port sits, from the row's
+        // Returns the top-right corner of a part cell's image, where its output port sits, from the row's
         // top-left corner with y pointing down
         Vec2F ExtractCellCorner(const PipelineExtractGrid& grid, int index);
 

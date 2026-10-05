@@ -181,14 +181,14 @@ namespace Editor
                 if (auto icon = cell.pick->GetLayer("icon"))
                     icon->enabled = false;
                 cell.pick->onClick = [weakThis, id]() { if (auto self = weakThis.Lock()) self->onSelect(id); };
-                // The part's output port sits on the bottom-right corner of the image: that corner is the port's
+                // The part's output port sits on the top-right corner of the image: that corner is the port's
                 WeakRef<Button> weakPick(cell.pick);
                 cell.pick->isPointInside = [weakPick](const Vec2F& p)
                 {
                     auto pick = weakPick.Lock();
                     if (!pick) return false;
                     RectF rect = pick->layout->GetWorldRect();
-                    return rect.IsInside(p) && (p - Vec2F(rect.right, rect.bottom)).Length() > 14.0f;
+                    return rect.IsInside(p) && (p - Vec2F(rect.right, rect.top)).Length() > 14.0f;
                 };
                 cell.root->AddChild(cell.pick);
 
@@ -196,7 +196,7 @@ namespace Editor
                 tools->spacing = 2;
                 tools->expandWidth = false;
                 tools->expandHeight = true;
-                tools->baseCorner = BaseCorner::Right;
+                tools->baseCorner = BaseCorner::Left;
                 cell.tools = tools;
                 auto regen = MakeIconButton("ui/pipeline/btn_loop.svg", textColor, Color4(255, 255, 255, 220));
                 regen->name = "regen part";
@@ -303,14 +303,14 @@ namespace Editor
         // Returns the number of cells
         int GetCellCount() const { return mCells.Count(); }
 
-        // Returns true and the drawn bottom-right corner of the part's image in world space, once its cell is laid out
+        // Returns true and the drawn top-right corner of the part's image in world space, once its cell is laid out
         bool GetImageCorner(int index, Vec2F& corner) const
         {
             if (index < 0 || index >= mCells.Count() || mCells[index].image->layout->GetWidth() <= 0.0f)
                 return false;
 
             RectF rect = mCells[index].image->layout->GetWorldRect();
-            corner = Vec2F(rect.right, rect.bottom);
+            corner = Vec2F(rect.right, rect.top);
             return true;
         }
 
@@ -362,7 +362,7 @@ namespace Editor
             bool operator==(const Cell& other) const { return id == other.id; }
         };
 
-        struct Geometry { int cols = 1, rows = 1; float cellW = 0.0f, cellH = 0.0f, labelH = 0.0f; };
+        struct Geometry { int cols = 1, rows = 1; float cellW = 0.0f, cellH = 0.0f, labelH = 0.0f, offX = 0.0f, offY = 0.0f; };
 
         Vector<Cell> mCells;
         bool         mSingle = true;
@@ -377,6 +377,8 @@ namespace Editor
             g.cellW = pair.cellW;
             g.cellH = pair.cellH;
             g.labelH = pair.labelH;
+            g.offX = pair.offX;
+            g.offY = pair.offY;
             return g;
         }
 
@@ -391,7 +393,7 @@ namespace Editor
             {
                 auto& cell = mCells[i];
                 int col = i % g.cols, row = i / g.cols;
-                float x = col * (g.cellW + gap), y = row * (g.cellH + g.labelH + gap);
+                float x = g.offX + col * (g.cellW + gap), y = g.offY + row * (g.cellH + g.labelH + gap);
                 *cell.root->layout = WidgetLayout(Vec2F(0, 1), Vec2F(0, 1), Vec2F(x, -(y + g.cellH + g.labelH)), Vec2F(x + g.cellW, -y));
                 *cell.image->layout = WidgetLayout::HorStretch(VerAlign::Top, 0, 0, g.cellH, 0);
                 *cell.spinner->layout = WidgetLayout::HorStretch(VerAlign::Top, 0, 0, g.cellH, 0);
@@ -399,7 +401,8 @@ namespace Editor
                 if (cell.frame)
                     cell.frame->layout = Layout(Vec2F(0, 1), Vec2F(1, 1), Vec2F(-2, -g.cellH - 2), Vec2F(2, 2));
                 cell.errorFrame->layout = Layout(Vec2F(0, 1), Vec2F(1, 1), Vec2F(-2, -g.cellH - 2), Vec2F(2, 2));
-                *cell.tools->layout = WidgetLayout(Vec2F(1, 1), Vec2F(1, 1), Vec2F(-46, -24), Vec2F(-3, -3));
+                // Top left: the part's output port sits on the top-right corner
+                *cell.tools->layout = WidgetLayout(Vec2F(0, 1), Vec2F(0, 1), Vec2F(3, -24), Vec2F(46, -3));
                 // The name field of the selected part makes room for the dot; a centred caption has it right before its text
                 float fieldLeft = cell.own ? dotSize + 4.0f : 0.0f, nameMiddle = (g.labelH - 2.0f)*0.5f;
                 float captionArea = g.cellW - 16.0f;

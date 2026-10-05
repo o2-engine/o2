@@ -3,6 +3,7 @@
 #include "o2/Scene/UI/Widget.h"
 #include "o2/Utils/Editor/FrameHandles.h"
 #include "o2/Utils/Math/Basis.h"
+#include "o2Editor/Pipeline/PipelineComposerLayout.h"
 #include "o2Editor/Pipeline/PipelineNodeType.h"
 #include "o2Editor/Pipeline/PipelineModelMenu.h"
 #include "o2Editor/Windows/PipelineWindow/PipelineControls.h"
@@ -68,6 +69,9 @@ namespace Editor
 
         // Returns true when the canvas point is on the body's add-input row
         virtual bool IsAddInputAt(const Vec2F& point) const { return false; }
+
+        // Returns where the add-input row at the canvas point puts a new composer layer
+        virtual PipelineLayerPlace GetAddInputPlace(const Vec2F& point) const { return PipelineLayerPlace::Front; }
 
         // Returns the pair row of an image-to-image node, null for the other bodies
         const Ref<PipelineIoPair>& GetPair() const { return mPair; }
@@ -389,6 +393,7 @@ CLASS_METHODS_META(Editor::PipelineNodeBody)
     FUNCTION().PUBLIC().SIGNATURE(bool, HasBodyPort, const String&);
     FUNCTION().PUBLIC().SIGNATURE(bool, InputsInBody);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsAddInputAt, const Vec2F&);
+    FUNCTION().PUBLIC().SIGNATURE(PipelineLayerPlace, GetAddInputPlace, const Vec2F&);
     FUNCTION().PUBLIC().SIGNATURE(const Ref<PipelineIoPair>&, GetPair);
     FUNCTION().PUBLIC().SIGNATURE(DataValue*, GetPartTransparency);
     FUNCTION().PUBLIC().SIGNATURE(float, GetPreferredHeight, float);

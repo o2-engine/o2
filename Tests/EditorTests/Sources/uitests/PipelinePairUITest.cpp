@@ -161,7 +161,7 @@ TEST_F(PipelinePairUiFixture, ImageEditDrawsOnTheInputSideOfTheCompareView)
     ShotCard(node, "imageEdit_compare_drawn");
 }
 
-// Each part's output port sits on its cell's image corner, at any card width
+// Each part's output port sits on the top-right corner of its cell's image, at any card width
 TEST_F(PipelinePairUiFixture, ExtractPortsSitOnTheCellCorners)
 {
     for (float width : { 480.0f, 312.0f })
@@ -200,7 +200,7 @@ TEST_F(PipelinePairUiFixture, ExtractPortsSitOnTheCellCorners)
             RectF imageRect = image->layout->GetWorldRect();
             Vec2F port = card->GetPortPosition(live->outputs[i].id, false);
             EXPECT_NEAR(port.x, imageRect.right, 1.0f) << width << " part " << i;
-            EXPECT_NEAR(port.y, imageRect.bottom, 1.0f) << width << " part " << i;
+            EXPECT_NEAR(port.y, imageRect.top, 1.0f) << width << " part " << i;
         }
 
         ShotCard(live, "imageExtract_ports_" + (String)(int)width);

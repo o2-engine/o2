@@ -7,15 +7,17 @@
 #include "o2/Render/Text.h"
 #include "o2/Scene/UI/WidgetLayout.h"
 #include "o2/Utils/Bitmap/Bitmap.h"
+#include "o2Editor/Pipeline/PipelineComposerLayout.h"
 #include "o2Editor/Pipeline/PipelineImageOps.h"
 #include "o2Editor/Pipeline/PipelineUtils.h"
 #include "o2Editor/Windows/PipelineWindow/PipelineControls.h"
-
 #include "o2Editor/Windows/PipelineWindow/PipelinePairViews.h"
 #include "o2/Render/VectorSprite.h"
+
 namespace Editor
 {
     static const float stagePad = 14.0f;
+    static const float badgeGap = 6.0f;     // Between the frame and its size badge, screen pixels
 
     PipelineComposerStage::PipelineComposerStage(RefCounter* refCounter):
         Widget(refCounter)
@@ -34,7 +36,7 @@ namespace Editor
         mNameText->color = PipelineControls::textColor;
         mNameText->wordWrap = true;
 
-        mFrame = mmake<FrameHandles>();
+        mFrame = mmake<PipelineComposerFrame>();
         mFrame->SetPivotEnabled(false);
         mFrame->SetRotationEnabled(true);
         mFrame->onTransformed = THIS_FUNC(OnFrameTransformed);
@@ -136,6 +138,7 @@ namespace Editor
         }
         p.sliceScale = Math::Clamp(num("sliceScale", 1), 0.1f, 4.0f);
         p.lockAspect = flag("lockAspect", true);
+        p.exportW = num("exportW", 0); p.exportH = num("exportH", 0);
         return p;
     }
 
@@ -168,6 +171,11 @@ namespace Editor
         slice["b"] = placement.slice.b;
         L["sliceScale"] = placement.sliceScale;
         L["lockAspect"] = placement.lockAspect;
+        if (PipelineComposerLayout::HasExportSize(placement.exportW, placement.exportH))
+        {
+            L["exportW"] = placement.exportW;
+            L["exportH"] = placement.exportH;
+        }
 
         if (onConfigChanged)
             onConfigChanged("layers", completed);
@@ -228,8 +236,10 @@ namespace Editor
 
         auto p = GetPlacement(layer);
         int w = Math::Max(1, (int)Math::Round(p.w)), h = Math::Max(1, (int)Math::Round(p.h));
-        Ref<Bitmap> buf = p.nine ? PipelineImageOps::NineSliceResize(*source, w, h, p.slice, p.sliceScale)
-            : PipelineImageOps::Resize(*source, Vec2I(w, h));
+        // The 9-slice is laid out in layer pixels and then scaled to the file's size; a plain layer is sampled once
+        Vec2I size = PipelineComposerLayout::LayerExportSize(p.w, p.h, p.exportW, p.exportH);
+        Ref<Bitmap> buf = p.nine ? PipelineImageOps::NineSliceResize(*source, w, h, p.slice, p.sliceScale) : source;
+        buf = PipelineImageOps::Resize(*buf, size);
         return PipelineImageOps::Flip(*buf, p.flipH, p.flipV);
     }
 
@@ -428,6 +438,9 @@ namespace Editor
             auto p = GetPlacement(view->ref);
             if (!p.hidden)
             {
+                // Sized in screen pixels whatever the editor camera's zoom
+                float pixel = PipelinePairDraw::PixelSize(), k = PipelineComposerLayout::FrameScale(pixel);
+                mFrame->SetScreenScale(k);
                 if (!mFrameDragging)
                     SyncFrame();
 
@@ -444,16 +457,19 @@ namespace Editor
                     o2Render.DrawAALine(b.origin + b.yv - yu * t, b.origin + b.yv - yu * t + b.xv, guide, 1.0f);
                 }
 
-                mFrame->Draw();
+                mFrame->Draw(pixel);
 
                 String badge = (String)(int)Math::Round(p.w) + "x" + (String)(int)Math::Round(p.h);
                 if (Math::Abs(p.rot) > 0.5f)
                     badge += " . " + (String)(int)Math::Round(p.rot) + " deg";
                 Vec2F center = b.origin + b.xv * 0.5f + b.yv * 0.5f;
                 float below = Math::Min(b.origin.y, Math::Min((b.origin + b.xv).y, Math::Min((b.origin + b.yv).y, (b.origin + b.xv + b.yv).y)));
+                int textHeight = mNameText->GetFontHeight();
+                mNameText->height = Math::Max(1, (int)Math::Round(textHeight*k));
                 mNameText->text = badge;
-                mNameText->rect = RectF(center.x - 80, below - 2, center.x + 80, below - 18);
+                mNameText->rect = RectF(center.x - 80*k, below - badgeGap*k, center.x + 80*k, below - (badgeGap + textHeight + 4)*k);
                 mNameText->Draw();
+                mNameText->height = textHeight;
             }
         }
 

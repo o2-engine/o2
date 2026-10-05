@@ -75,9 +75,16 @@ namespace Editor
         mStage = stage;
     }
 
-    float PipelineComposerLayersPanel::SettingsHeight(bool nine)
+    Ref<Button> PipelineComposerLayersPanel::MakeAddRow(PipelineLayerPlace place, float top)
     {
-        return settingsHeight + (nine ? nineHeight : 0.0f);
+        WeakRef<PipelineComposerLayersPanel> weakThis(this);
+        bool front = place == PipelineLayerPlace::Front;
+        auto row = MakeButton(front ? "+ layer on top" : "+ layer below");
+        row->name = front ? "add layer on top" : "add layer below";
+        *row->layout = WidgetLayout::HorStretch(VerAlign::Top, 4, 4, addRowHeight, top);
+        row->onClick = [weakThis, place]() { if (auto self = weakThis.Lock()) if (self->onAddInput) self->onAddInput(place); };
+        AddChild(row);
+        return row;
     }
 
     bool PipelineComposerLayersPanel::GetPortCenter(const String& portId, float& y) const
@@ -125,47 +132,45 @@ namespace Editor
         *head->layout = WidgetLayout::HorStretch(VerAlign::Top, 8, 8, headHeight, border);
         AddChild(head);
 
-        float y = border + headHeight + listPadding;
+        int openRow = -1;
+        for (int i = layers.Count() - 1; i >= 0; i--)
+        {
+            if (open == layers[i].id)
+                openRow = layers.Count() - 1 - i;
+        }
+        bool openNine = openRow >= 0 && mStage->GetPlacement(layers[layers.Count() - 1 - openRow]).nine;
+        auto rows = PipelineComposerLayout::Rows(layers.Count(), openRow, openNine);
+
+        mAddTopRow = MakeAddRow(PipelineLayerPlace::Front, rows.addTopRow);
         if (layers.IsEmpty())
         {
             auto empty = MakeLabel("Add image inputs and connect sprites", true);
             empty->name = "empty";
-            *empty->layout = WidgetLayout::HorStretch(VerAlign::Top, 8, 8, rowHeight, y);
+            *empty->layout = WidgetLayout::HorStretch(VerAlign::Top, 8, 8, rowHeight, rows.emptyTop);
             AddChild(empty);
-            y += rowHeight + rowGap;
         }
 
         for (int i = layers.Count() - 1; i >= 0; i--)
         {
             auto& layer = layers[i];
-            bool isOpen = open == layer.id;
+            int display = layers.Count() - 1 - i;
+            float y = rows.rowTops[display];
             mDisplayIds.Add(layer.id);
             mDisplayPorts.Add(layer.dup ? String() : layer.portId);
             mRowTops.Add(y);
 
-            auto row = MakeRow(layer, i, layers.Count(), layer.id == selected, isOpen);
+            auto row = MakeRow(layer, i, layers.Count(), layer.id == selected, display == openRow);
             *row->layout = WidgetLayout::HorStretch(VerAlign::Top, 4, 4, rowHeight, y);
             AddChild(row);
             mRows.Add(row);
-            y += rowHeight;
 
-            if (isOpen)
-            {
-                AddSettings(layer, y);
-                y += SettingsHeight(mStage->GetPlacement(layer).nine);
-            }
-            y += rowGap;
+            if (display == openRow)
+                AddSettings(layer, rows.settingsTop);
         }
 
-        WeakRef<PipelineComposerLayersPanel> weakThis(this);
-        mAddTop = y;
-        mAddRow = MakeButton("+ input");
-        mAddRow->name = "add input";
-        *mAddRow->layout = WidgetLayout::HorStretch(VerAlign::Top, 4, 4, addRowHeight, y);
-        mAddRow->onClick = [weakThis]() { if (auto self = weakThis.Lock()) if (self->onAddInput) self->onAddInput(); };
-        AddChild(mAddRow);
-        y += addRowHeight + listPadding + border;
-        mContentHeight = y;
+        mAddTop = rows.addBottomRow;
+        mAddRow = MakeAddRow(PipelineLayerPlace::Back, rows.addBottomRow);
+        mContentHeight = rows.height;
     }
 
     Ref<Widget> PipelineComposerLayersPanel::MakeRow(const ComposerLayerRef& layer, int stackIndex, int count, bool selected, bool open)
@@ -304,9 +309,11 @@ namespace Editor
 
         auto settings = mmake<Widget>();
         settings->name = "layer settings";
-        *settings->layout = WidgetLayout::HorStretch(VerAlign::Top, 22, 6, SettingsHeight(p.nine), top);
+        *settings->layout = WidgetLayout::HorStretch(VerAlign::Top, 22, 6, PipelineComposerLayout::SettingsHeight(p.nine), top);
         AddChild(settings);
 
+        // The export line stands between the size and the rest
+        const float line = PipelineComposerLayout::settingsLine;
         auto place = [&](const Ref<Widget>& widget, float y, float height)
         {
             *widget->layout = WidgetLayout::HorStretch(VerAlign::Top, 0, 0, height, y);
@@ -383,11 +390,12 @@ namespace Editor
             sizeRow->AddChild(one);
         }
         place(sizeRow, 4, 22);
+        AddExportRow(settings, layer, p);
 
         auto opacity = mmake<PipelineSlider>();
         opacity->Setup("Alpha", 0, 100, 1, Math::Round(p.opacity*100.0f), "%");
         opacity->onChanged = [patch](float v, bool completed) { patch([v](ComposerLayerPlacement& np) { np.opacity = v/100.0f; }, completed); };
-        place(opacity, 29, 20);
+        place(opacity, 29 + line, 20);
 
         auto nineRow = makeLine();
         auto nine = MakeCheckbox("9-slice", p.nine);
@@ -406,7 +414,7 @@ namespace Editor
             };
             nineRow->AddChild(autoButton);
         }
-        place(nineRow, 52, 20);
+        place(nineRow, 52 + line, 20);
 
         if (!p.nine)
             return;
@@ -429,17 +437,97 @@ namespace Editor
                 }, true);
             }));
         }
-        place(sliceRow, 75, 22);
+        place(sliceRow, 75 + line, 22);
 
         auto corners = mmake<PipelineSlider>();
         corners->Setup("Corners", 10, 300, 5, Math::Round(p.sliceScale*100.0f), "%");
         corners->onChanged = [patch](float v, bool completed) { patch([v](ComposerLayerPlacement& np) { np.sliceScale = v/100.0f; }, completed); };
-        place(corners, 100, 20);
+        place(corners, 100 + line, 20);
 
         String hint = "Insets in source px";
         if (natural.x > 0)
             hint += " - source " + (String)natural.x + "x" + (String)natural.y;
-        place(MakeLabel(hint, true), 123, 18);
+        place(MakeLabel(hint, true), 123 + line, 18);
+    }
+
+    void PipelineComposerLayersPanel::AddExportRow(const Ref<Widget>& settings, const ComposerLayerRef& layer, const ComposerLayerPlacement& p)
+    {
+        WeakRef<PipelineComposerLayersPanel> weakThis(this);
+        bool exportOn = PipelineComposerLayout::HasExportSize(p.exportW, p.exportH);
+
+        auto row = mmake<HorizontalLayout>();
+        row->name = "export size";
+        row->spacing = 3; row->expandWidth = false; row->expandHeight = true; row->baseCorner = BaseCorner::Left;
+        *row->layout = WidgetLayout::HorStretch(VerAlign::Top, 0, 0, 22, 4 + PipelineComposerLayout::settingsLine);
+        settings->AddChild(row);
+
+        auto label = MakeLabel("Export", true);
+        label->layout->minWidth = 34; label->layout->maxWidth = 34;
+        row->AddChild(label);
+
+        // An empty field shows the layer's own size, dimmed: that is what the file gets
+        auto sideEdit = [&](bool horizontal)
+        {
+            float value = horizontal ? p.exportW : p.exportH;
+            auto edit = MakeEditBox(exportOn ? FormatNumber(Math::Round(value), 1) : String(), false);
+            edit->name = horizontal ? "export width" : "export height";
+            edit->SetFilterInteger();
+            edit->layout->minWidth = 48; edit->layout->maxWidth = 48;
+
+            auto hint = mmake<Text>("stdFont.ttf");
+            hint->text = FormatNumber(Math::Round(horizontal ? p.w : p.h), 1);
+            hint->color = dimTextColor;
+            hint->horAlign = HorAlign::Left;
+            hint->verAlign = VerAlign::Middle;
+            hint->height = 11;
+            auto hintLayer = edit->AddLayer("placeholder", hint, Layout::BothStretch(6, 0, 6, 0), 1.0f);
+            hintLayer->transparency = exportOn ? 0.0f : 1.0f;
+            WeakRef<WidgetLayer> weakHint(hintLayer);
+            edit->onChanged = [weakHint](const WString& text) { if (auto h = weakHint.Lock()) h->transparency = text.IsEmpty() ? 1.0f : 0.0f; };
+
+            edit->onChangeCompleted = [weakThis, layer, horizontal](const WString& text)
+            {
+                auto self = weakThis.Lock();
+                if (!self)
+                    return;
+
+                auto np = self->mStage->GetPlacement(layer);
+                float exportW = np.exportW, exportH = np.exportH;
+                PipelineComposerLayout::TypeExportSide(np.w, np.h, np.lockAspect, horizontal, Math::Round((float)atof(((String)text).Data())),
+                                                       np.exportW, np.exportH);
+                if (np.exportW == exportW && np.exportH == exportH)
+                    return;
+
+                self->mStage->WritePlacement(layer.id, np, true);
+                self->Rebuild();
+            };
+            return edit;
+        };
+
+        row->AddChild(sideEdit(true));
+        auto cross = MakeLabel("x", true);
+        cross->horAlign = HorAlign::Middle;
+        cross->layout->minWidth = 22; cross->layout->maxWidth = 22;
+        row->AddChild(cross);
+        row->AddChild(sideEdit(false));
+
+        if (!exportOn)
+            return;
+
+        auto autoButton = MakeButton("auto");
+        autoButton->name = "export auto";
+        autoButton->layout->minWidth = 34; autoButton->layout->maxWidth = 34;
+        autoButton->onClick = [weakThis, layer]()
+        {
+            if (auto self = weakThis.Lock())
+            {
+                auto np = self->mStage->GetPlacement(layer);
+                np.exportW = np.exportH = 0.0f;
+                self->mStage->WritePlacement(layer.id, np, true);
+                self->Rebuild();
+            }
+        };
+        row->AddChild(autoButton);
     }
 
     void PipelineComposerLayersPanel::UpdateSelection()
@@ -514,7 +602,7 @@ namespace Editor
         if (mDragging.IsEmpty() || PipelineControls::IsFarView())
             return;
 
-        // The landing place: above the row the dragged one would go before, or above "+ input" for the end
+        // The landing place: above the row the dragged one would go before, or above "+ layer below" for the end
         RectF panel = layout->GetWorldRect();
         float y = mDropIndex < mRows.Count() ? mRows[mDropIndex]->layout->GetWorldRect().top : mAddRow->layout->GetWorldRect().top;
         y += rowGap*0.5f;

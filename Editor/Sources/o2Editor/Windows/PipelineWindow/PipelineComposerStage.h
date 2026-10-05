@@ -3,10 +3,10 @@
 #include "o2/Events/CursorAreaEventsListener.h"
 #include "o2/Render/TextureRef.h"
 #include "o2/Scene/UI/Widget.h"
-#include "o2/Utils/Editor/FrameHandles.h"
 #include "o2/Utils/Function/Function.h"
 #include "o2Editor/Pipeline/Nodes/PipelineNodesCommon.h"
 #include "o2Editor/Pipeline/PipelineGraph.h"
+#include "o2Editor/Windows/PipelineWindow/PipelineComposerFrame.h"
 
 using namespace o2;
 
@@ -36,6 +36,8 @@ namespace Editor
         float                       sliceScale = 1.0f; // Scale of the nine-slice borders
 
         bool lockAspect = true; // Keeps the aspect ratio when resizing
+
+        float exportW = 0, exportH = 0; // Size the layer's own file is written at; 0 = its work-area size
         bool stored = false;    // True when read from the config, false for a default placement
     };
 
@@ -74,7 +76,7 @@ namespace Editor
         // Returns the upstream image of the port, null when it is not loaded
         Ref<Bitmap> GetLayerImage(const String& portId) const;
 
-        // Returns the layer image resized, nine-sliced and flipped by its placement
+        // Returns the layer image resized, nine-sliced and flipped by its placement, at the layer's export size
         Ref<Bitmap> RenderLayer(const ComposerLayerRef& layer) const;
 
         // Stores the placement in the config "layers" object and notifies
@@ -92,7 +94,7 @@ namespace Editor
         // Updates the widget
         void Update(float dt) override;
 
-        // Draws the background, the layers, the selection frame with the size badge and the hint
+        // Draws the background, the layers, the screen-sized selection frame with the size badge and the hint
         void Draw() override;
 
         // Returns true when the point is inside the widget
@@ -121,7 +123,7 @@ namespace Editor
         Ref<Sprite>       mCheckerSprite; // Tiled checkerboard background
         Ref<Text>         mNameText;      // Text used for layer names, the size badge and the hint
 
-        Ref<FrameHandles> mFrame;                 // Transform frame of the selected layer
+        Ref<PipelineComposerFrame> mFrame;        // Transform frame of the selected layer
         bool              mFrameSyncing = false;  // True while the frame is set from the placement
         bool              mFrameDragging = false; // True while the frame handles are dragged
 

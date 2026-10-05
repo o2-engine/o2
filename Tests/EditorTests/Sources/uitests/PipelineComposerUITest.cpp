@@ -6,7 +6,7 @@
 #include "o2Editor/Windows/PipelineWindow/PipelineComposerLayers.h"
 
 // The composer card: the layers list left of the work area, each input's port on its layer row, a grip that reorders
-// the rows, "+ input" in the list and a card that grows with the list
+// the rows, the two add rows of the list and a card that grows with the list
 
 namespace
 {
@@ -120,7 +120,7 @@ TEST_F(PipelineComposerUiFixture, InputPortsSitOnTheirLayerRows)
     Drag(editor->LocalToScreenPoint(grip->layout->GetWorldRect().Center()), editor->LocalToScreenPoint(Vec2F(top.Center().x, top.top - 2.0f)));
     ExpectPortsOnRows(node, "after a grip drag");
 
-    Click(Panel(node)->GetAddRow());
+    Click(Panel(node)->GetAddRow(PipelineLayerPlace::Back));
     EXPECT_EQ(node->inputs.Count(), 5);
     ExpectPortsOnRows(node, "after adding an input");
 
@@ -166,29 +166,99 @@ TEST_F(PipelineComposerUiFixture, TheGripReordersTheLayers)
     EXPECT_EQ(LayerOrder(node), before);
 }
 
-// "+ input" adds an input on a click and creates and connects one when a link is dropped on it
-TEST_F(PipelineComposerUiFixture, AddInputRowTakesAClickAndALink)
+// The list starts with "+ layer on top" and ends with "+ layer below": a click adds an image input in front of every layer
+// or behind them, a link dropped on a row creates and connects one; the new layer is the selected one, in one undo step
+TEST_F(PipelineComposerUiFixture, AddRowsPlaceAndSelectTheNewLayer)
 {
     Ref<PipelineNode> source;
     auto node = OpenComposer(1, &source);
-    Click(Panel(node)->GetAddRow());
+    String nodeId = node->id;
+    auto undo = mmake<ActionsList>();
+    editor->actionsListDelegate = undo;
+
+    RectF first = Panel(node)->FindRow("in0")->layout->GetWorldRect();
+    EXPECT_GT(Panel(node)->GetAddRow(PipelineLayerPlace::Front)->layout->GetWorldRect().bottom, first.top - 0.5f) << "above the rows";
+    EXPECT_LT(Panel(node)->GetAddRow(PipelineLayerPlace::Back)->layout->GetWorldRect().top, first.bottom + 0.5f) << "under the rows";
+
+    Click(Panel(node)->GetAddRow(PipelineLayerPlace::Front));
     ASSERT_EQ(node->inputs.Count(), 2);
-    auto added = Panel(node)->FindRow(node->inputs[1].id);
-    ASSERT_TRUE(added);
-    EXPECT_GT(added->layout->GetWorldRect().top, Panel(node)->FindRow("in0")->layout->GetWorldRect().top) << "the new layer is the front one";
+    String front = node->inputs[1].id;
+    EXPECT_EQ(LayerOrder(node), (Vector<String>{ "in0", front }));
+    EXPECT_EQ(node->GetConfigString("selectedLayer", ""), front);
+    EXPECT_GT(Panel(node)->FindRow(front)->layout->GetWorldRect().top, Panel(node)->FindRow("in0")->layout->GetWorldRect().top)
+        << "the new layer is the front one, the first row";
+
+    Click(Panel(node)->GetAddRow(PipelineLayerPlace::Back));
+    ASSERT_EQ(node->inputs.Count(), 3);
+    String back = node->inputs[2].id;
+    EXPECT_EQ(LayerOrder(node), (Vector<String>{ back, "in0", front }));
+    EXPECT_EQ(node->GetConfigString("selectedLayer", ""), back);
+    EXPECT_LT(Panel(node)->FindRow(back)->layout->GetWorldRect().top, Panel(node)->FindRow("in0")->layout->GetWorldRect().top)
+        << "the new layer is behind every other, the last row";
+    ExpectPortsOnRows(node, "after the clicks");
 
     editor->SetView((Card(node)->GetCardRect().Center() + editor->GetNodeWidget(source->id)->GetCardRect().Center())*0.5f, 1.5f);
     Step(3);
     Vec2F out = editor->GetNodeWidget(source->id)->GetPortPosition(source->outputs[0].id, false);
-    Vec2F add = Panel(node)->GetAddRow()->layout->GetWorldRect().Center();
+    Vec2F add = Panel(node)->GetAddRow(PipelineLayerPlace::Back)->layout->GetWorldRect().Center();
     Drag(editor->LocalToScreenPoint(out), editor->LocalToScreenPoint(add), 12);
-    ASSERT_EQ(node->inputs.Count(), 3) << "a link dropped on + input makes an input";
-    String newPort = node->inputs[2].id;
+    ASSERT_EQ(node->inputs.Count(), 4) << "a link dropped on an add row makes an input";
+    String linked = node->inputs[3].id;
     EXPECT_TRUE(editor->GetGraph()->edges.Any([&](const Ref<PipelineEdge>& e)
     {
-        return e->fromNodeId == source->id && e->toNodeId == node->id && e->toPortId == newPort;
+        return e->fromNodeId == source->id && e->toNodeId == node->id && e->toPortId == linked;
     })) << "and connects it";
+    EXPECT_EQ(LayerOrder(node), (Vector<String>{ linked, back, "in0", front }));
+    EXPECT_EQ(node->GetConfigString("selectedLayer", ""), linked);
     ExpectPortsOnRows(node, "after the link");
+    ShotCard(node, "composer_add_rows");
+
+    // The input, its place, the selection and the link come back in one step
+    undo->UndoAction();
+    Step(3);
+    auto undone = editor->GetGraph()->FindNode(nodeId);
+    ASSERT_TRUE(undone);
+    EXPECT_EQ(undone->inputs.Count(), 3);
+    EXPECT_TRUE(editor->GetGraph()->edges.IsEmpty());
+    EXPECT_EQ(LayerOrder(undone), (Vector<String>{ back, "in0", front }));
+    EXPECT_EQ(undone->GetConfigString("selectedLayer", ""), back);
+}
+
+// The open settings carry the export size right under the size: typing one side fills the other from the layer's
+// proportions, "auto" shows only while a size is set and clears it
+TEST_F(PipelineComposerUiFixture, ExportSizeRowSetsAndClearsTheLayerExportSize)
+{
+    auto node = OpenComposer(2);
+    Click(Panel(node)->FindRow("in0")->FindChildByTypeAndName<Button>("settings"));
+    ExpectPortsOnRows(node, "settings open");
+
+    auto row = Panel(node)->FindChildByTypeAndName<Widget>("export size");
+    ASSERT_TRUE(row);
+    auto width = row->FindChildByTypeAndName<EditBox>("export width");
+    ASSERT_TRUE(width);
+    EXPECT_TRUE(width->GetText().IsEmpty()) << "empty until a size is set";
+    EXPECT_FALSE(row->FindChildByTypeAndName<Button>("export auto"));
+
+    auto stage = Card(node)->FindChildByType<PipelineComposerStage>();
+    auto layer = stage->GetLayers().FindOrDefault([](const ComposerLayerRef& l) { return l.id == "in0"; });
+    auto placement = stage->GetPlacement(layer);
+    width->SetText("512");
+    width->onChangeCompleted(WString("512"));
+    Step(3);
+    auto sized = stage->GetPlacement(layer);
+    EXPECT_FLOAT_EQ(sized.exportW, 512.0f);
+    EXPECT_FLOAT_EQ(sized.exportH, Math::Max(1.0f, Math::Round(512.0f*placement.h/placement.w)));
+    EXPECT_FLOAT_EQ(sized.w, placement.w) << "the layer itself keeps its size";
+
+    auto autoButton = Panel(node)->FindChildByTypeAndName<Button>("export auto");
+    ASSERT_TRUE(autoButton);
+    ShotCard(node, "composer_export_size");
+    Click(autoButton);
+    EXPECT_FLOAT_EQ(stage->GetPlacement(layer).exportW, 0.0f);
+    EXPECT_FALSE(Panel(node)->FindChildByTypeAndName<Button>("export auto"));
+    auto stored = node->GetConfigValue("layers")->FindMember("in0");
+    ASSERT_TRUE(stored);
+    EXPECT_FALSE(stored->FindMember("exportW")) << "a cleared size leaves no field behind";
 }
 
 // A hand-sized card grows when the list outgrows it and comes back to its height when the list shrinks

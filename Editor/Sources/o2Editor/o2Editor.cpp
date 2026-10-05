@@ -1,4 +1,5 @@
 extern void __RegisterEnum__Editor__ColorPickerDlg__ParameterType();
+extern void __RegisterEnum__Editor__PipelineLayerPlace();
 extern void __RegisterEnum__Editor__PipelineExecEvent__Type();
 extern void __RegisterEnum__Editor__PipelinePortType();
 extern void __RegisterEnum__Editor__PipelineImageOps__ContentMode();
@@ -245,6 +246,7 @@ extern void __RegisterClass__Editor__WindowsLayout__WindowDockPlaceInfo();
 extern void InitializeTypeso2Editor()
 {
     __RegisterEnum__Editor__ColorPickerDlg__ParameterType();
+    __RegisterEnum__Editor__PipelineLayerPlace();
     __RegisterEnum__Editor__PipelineExecEvent__Type();
     __RegisterEnum__Editor__PipelinePortType();
     __RegisterEnum__Editor__PipelineImageOps__ContentMode();

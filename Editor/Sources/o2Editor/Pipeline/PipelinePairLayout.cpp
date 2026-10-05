@@ -40,22 +40,44 @@ namespace Editor::PipelinePairLayout
         PipelineExtractGrid g;
         g.paneW = PaneWidth(rowWidth);
         g.labelH = n == 1 ? 0.0f : gridLabel;
-        g.cols = Math::Max(1, Math::Min(n, (int)Math::Floor((g.paneW + gridGap)/(minPaneCell + gridGap))));
-        g.cellW = (g.paneW - gridGap*(g.cols - 1))/g.cols;
-        g.rows = Math::Max(1, (n + g.cols - 1)/g.cols);
-
-        float cellNatural = Math::Min(resultHeight, Math::Round(g.cellW));
-        float gridNatural = g.rows*(cellNatural + g.labelH) + (g.rows - 1)*gridGap;
+        int natCols = Math::Max(1, Math::Min(n, (int)Math::Floor((g.paneW + gridGap)/(minPaneCell + gridGap))));
+        int natRows = Math::Max(1, (n + natCols - 1)/natCols);
+        float cellNatural = Math::Min(resultHeight, Math::Round((g.paneW - gridGap*(natCols - 1))/natCols));
+        float gridNatural = natRows*(cellNatural + g.labelH) + (natRows - 1)*gridGap;
         g.rowNatural = Math::Max(resultHeight, gridNatural);
         g.rowH = Math::Max(g.rowNatural, rowHeight);
-        g.cellH = (g.rowH - g.rows*g.labelH - (g.rows - 1)*gridGap)/g.rows;
+
+        if (n == 1)
+        {
+            g.cellW = g.paneW;
+            g.cellH = g.rowH;
+            return g;
+        }
+
+        float side = -1.0f;
+        for (int c = 1; c <= n; c++)
+        {
+            int r = (n + c - 1)/c;
+            float s = Math::Floor(Math::Min((g.paneW - gridGap*(c - 1))/c, (g.rowH - r*g.labelH - gridGap*(r - 1))/r));
+            if (s > side)
+            {
+                g.cols = c;
+                g.rows = r;
+                side = s;
+            }
+        }
+        side = Math::Max(1.0f, side);
+        g.cellW = g.cellH = side;
+        g.offX = Math::Max(0.0f, Math::Floor((g.paneW - (g.cols*side + (g.cols - 1)*gridGap))*0.5f));
+        g.offY = Math::Max(0.0f, Math::Floor((g.rowH - (g.rows*(side + g.labelH) + (g.rows - 1)*gridGap))*0.5f));
         return g;
     }
 
     Vec2F ExtractCellCorner(const PipelineExtractGrid& g, int index)
     {
         int col = index % g.cols, row = index / g.cols;
-        return Vec2F(g.paneW + paneGap + col*(g.cellW + gridGap) + g.cellW, row*(g.cellH + g.labelH + gridGap) + g.cellH);
+        return Vec2F(g.paneW + paneGap + g.offX + col*(g.cellW + gridGap) + g.cellW,
+                     g.offY + row*(g.cellH + g.labelH + gridGap));
     }
 
     bool IsAutoHeight(const Vec2F& size)

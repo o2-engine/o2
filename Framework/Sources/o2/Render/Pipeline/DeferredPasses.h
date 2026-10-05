@@ -17,6 +17,12 @@ namespace o2
     class ShadowMapPass: public RenderPass
     {
     public:
+        // Default constructor
+        ShadowMapPass();
+
+        // Copy constructor. Copies settings only, the clone creates its own shadow map and material
+        ShadowMapPass(const ShadowMapPass& other);
+
         // Renders scene depth from the light's point of view
         void Execute(RenderPassContext& context) override;
 
@@ -65,6 +71,12 @@ namespace o2
     class GBufferPass: public RenderPass
     {
     public:
+        // Default constructor
+        GBufferPass();
+
+        // Copy constructor. Copies settings only, the clone creates its own targets and material
+        GBufferPass(const GBufferPass& other);
+
         // Renders 3D content into the G-buffer targets
         void Execute(RenderPassContext& context) override;
 
@@ -104,6 +116,12 @@ namespace o2
     class DeferredLightingPass: public RenderPass
     {
     public:
+        // Default constructor
+        DeferredLightingPass();
+
+        // Copy constructor. Copies settings only, the clone creates its own material and quad
+        DeferredLightingPass(const DeferredLightingPass& other);
+
         // Composites lit 3D scene into the current camera target
         void Execute(RenderPassContext& context) override;
 
@@ -155,6 +173,8 @@ END_META;
 CLASS_METHODS_META(o2::ShadowMapPass)
 {
 
+    FUNCTION().PUBLIC().CONSTRUCTOR();
+    FUNCTION().PUBLIC().CONSTRUCTOR(const ShadowMapPass&);
     FUNCTION().PUBLIC().SIGNATURE(void, Execute, RenderPassContext&);
     FUNCTION().PUBLIC().SIGNATURE(void, SetShadowMapSize, int);
     FUNCTION().PUBLIC().SIGNATURE(int, GetShadowMapSize);
@@ -183,6 +203,8 @@ END_META;
 CLASS_METHODS_META(o2::GBufferPass)
 {
 
+    FUNCTION().PUBLIC().CONSTRUCTOR();
+    FUNCTION().PUBLIC().CONSTRUCTOR(const GBufferPass&);
     FUNCTION().PUBLIC().SIGNATURE(void, Execute, RenderPassContext&);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(Ref<Material>, CreateSceneMaterial, const String&);
     FUNCTION().PUBLIC().SIGNATURE(const TextureRef&, GetAlbedoTarget);
@@ -208,6 +230,8 @@ END_META;
 CLASS_METHODS_META(o2::DeferredLightingPass)
 {
 
+    FUNCTION().PUBLIC().CONSTRUCTOR();
+    FUNCTION().PUBLIC().CONSTRUCTOR(const DeferredLightingPass&);
     FUNCTION().PUBLIC().SIGNATURE(void, Execute, RenderPassContext&);
     FUNCTION().PUBLIC().SIGNATURE(void, SetAmbient, float);
     FUNCTION().PUBLIC().SIGNATURE(float, GetAmbient);

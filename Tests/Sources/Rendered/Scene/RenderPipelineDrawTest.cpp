@@ -491,6 +491,81 @@ TEST(RenderPipelineDraw, ForwardAndDeferredOrientationMatchInNestedRT)
     EXPECT_EQ(forwardBoxOnTop, deferredBoxOnTop) << "deferred orientation must match forward in a nested RT"
         << " ft=" << forwardTop << " fb=" << forwardBottom << " dt=" << deferredTop << " db=" << deferredBottom;
 }
+
+// The editor Scene window draws a clone of the Game camera pipeline in the same frame as the Game window.
+// Recorded draws read the material state at replay, so a clone sharing the source passes' materials
+// composites the source G-buffer lighting
+TEST(RenderPipelineDraw, DeferredPipelineCloneIsNotAffectedBySourceInSameFrame)
+{
+    SceneCleanGuard guard;
+
+    struct MultithreadedRenderGuard
+    {
+        bool wasEnabled = o2Render.IsMultithreadedRenderEnabled();
+        MultithreadedRenderGuard() { o2Render.SetMultithreadedRenderEnabled(true); }
+        ~MultithreadedRenderGuard() { o2Render.SetMultithreadedRenderEnabled(wasEnabled); }
+    } multithreadedGuard;
+
+    auto sourceCamera = BuildUpperHalfBoxScene();
+    auto sourcePipeline = mmake<DeferredPipeline>();
+    sourceCamera->SetRenderPipeline(sourcePipeline);
+
+    auto cloneCamera = mmake<CameraActor>();
+    cloneCamera->SetPerspective(Math::Deg2rad(60.0f), 0.1f, 2000.0f);
+    cloneCamera->transform->SetPosition(Vec3F(0, 320, 500));
+    cloneCamera->fillColor = Color4::Black();
+
+    TickFrame();
+
+    TextureRef sourceTarget(Vec2I(256, 256), TextureFormat::R8G8B8A8, Texture::Usage::RenderTarget);
+    TextureRef cloneTarget(Vec2I(192, 128), TextureFormat::R8G8B8A8, Texture::Usage::RenderTarget);
+
+    auto drawInto = [](const Ref<CameraActor>& camera, const TextureRef& target)
+    {
+        o2Render.BindRenderTexture(target);
+        camera->SetupAndDraw();
+        o2Render.UnbindRenderTexture();
+    };
+
+    // The source pipeline has its resources by the time it is cloned
+    o2Render.Begin();
+    drawInto(sourceCamera, sourceTarget);
+    o2Render.End();
+
+    cloneCamera->SetRenderPipeline(sourcePipeline->CloneAsRef<RenderPipeline>());
+
+    o2Render.Begin();
+    drawInto(cloneCamera, cloneTarget);
+    o2Render.End();
+
+    auto cloneAlone = cloneTarget->GetData();
+    ASSERT_TRUE(cloneAlone);
+
+    o2Render.Begin();
+    drawInto(cloneCamera, cloneTarget);
+    drawInto(sourceCamera, sourceTarget);
+    o2Render.End();
+
+    auto cloneWithSource = cloneTarget->GetData();
+    ASSERT_TRUE(cloneWithSource);
+
+    float aloneTop, aloneBottom;
+    GetHalvesBrightness(cloneAlone, aloneTop, aloneBottom);
+    ASSERT_GT(Math::Abs(aloneTop - aloneBottom), 10.0f) << "the clone camera must see the box in one half";
+
+    Vec2I size = cloneAlone->GetSize();
+    ASSERT_EQ(size, cloneWithSource->GetSize());
+
+    const UInt8* aloneData = cloneAlone->GetData();
+    const UInt8* withSourceData = cloneWithSource->GetData();
+    int bytesCount = size.x*size.y*4;
+
+    double differenceSum = 0.0;
+    for (int i = 0; i < bytesCount; i++)
+        differenceSum += Math::Abs((int)aloneData[i] - (int)withSourceData[i]);
+
+    EXPECT_LT(differenceSum/bytesCount, 1.0) << "the source pipeline drawn in the same frame changed the clone image";
+}
 // --- META ---
 
 CLASS_BASES_META(o2::PolygonDrawerComponent)

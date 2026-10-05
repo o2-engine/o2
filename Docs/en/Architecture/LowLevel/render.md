@@ -32,7 +32,7 @@ Geometry that its owner keeps between frames is drawn without that copying. `o2:
 Drawing goes through materials `o2::Material`: a shader `o2::Shader` plus a set of uniform parameters (`o2::IShaderParam`). The default material can be overridden on any `IDrawable` via `SetMaterial`. Materials and shaders are stored in the `o2::MaterialAsset` and `o2::ShaderAsset` assets. A material without its own shaders draws with the default ones: a material asset holding only a blend mode (e.g. `BlendMode::Add`) is an additive version of the default material.
 
 ### Render pipeline
-A scene frame is assembled by the `o2::RenderPipeline` pipeline from `o2::RenderPass` passes. There is a forward pipeline (3D with depth test, then 2D layers) and a deferred pipeline (G-buffer, lighting from `o2::LightComponent` sources, then 2D; falls back to forward when MRT is not supported).
+A scene frame is assembled by the `o2::RenderPipeline` pipeline from `o2::RenderPass` passes. There is a forward pipeline (3D with depth test, then 2D layers) and a deferred pipeline (G-buffer, lighting from `o2::LightComponent` sources, then 2D; falls back to forward when MRT is not supported). A pass owns its GPU resources (targets, materials): a cloned pipeline copies only the pass settings, so the clone and the source can render in the same frame — the editor Scene window draws a clone of the scene camera pipeline next to the Game window.
 
 Besides 2D primitives, the renderer supports 3D meshes (`o2::Mesh3DFill`), skinned meshes (`o2::SkinningMesh`) and Spine skeletons (`o2::Spine`).
 

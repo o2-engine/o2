@@ -5,6 +5,7 @@
 #include "o2Editor/Actions/ActionsList.h"
 #include "o2Editor/Actions/IAction.h"
 #include "o2/Assets/Types/PipelineAsset.h"
+#include "o2Editor/Pipeline/PipelineComposerLayout.h"
 #include "o2Editor/Pipeline/PipelineExecutor.h"
 #include "o2Editor/UI/FrameScrollView.h"
 #include "o2Editor/Windows/PipelineWindow/PipelineModelPicker.h"
@@ -111,8 +112,9 @@ namespace Editor
         // Called when node card is resized, records an undo step when completed
         void OnNodeResized(const Ref<PipelineNodeWidget>& node, bool completed);
 
-        // Adds custom input to node, asks for the type when the schema allows several
-        void AddCustomInput(const Ref<PipelineNodeWidget>& node);
+        // Adds custom input to node, asks for the type when the schema allows several; on a composer the new image layer
+        // goes to the place and becomes the selected one, in the same undo step
+        void AddCustomInput(const Ref<PipelineNodeWidget>& node, PipelineLayerPlace place = PipelineLayerPlace::Front);
 
         // Renames custom input port and schedules auto-apply
         void RenameCustomInput(const Ref<PipelineNodeWidget>& node, const String& portId, const String& name);
@@ -396,8 +398,10 @@ namespace Editor
         // Drops the pending link at canvas point: connects a port, adds an input or offers compatible nodes
         void FinishEdgeDrag(const Vec2F& canvasPoint);
 
-        // Connects output to input when types match and no cycle appears, replacing the input link
-        bool ConnectPorts(const String& fromNodeId, const String& fromPortId, const String& toNodeId, const String& toPortId);
+        // Connects output to input when types match and no cycle appears, replacing the input link. undoBefore is the graph
+        // an earlier change of the same undo step started from; empty records the link as a step of its own
+        bool ConnectPorts(const String& fromNodeId, const String& fromPortId, const String& toNodeId, const String& toPortId,
+                          const String& undoBefore = "", const String& undoName = "Connect");
 
         // Creates node of type at canvas point snapped to grid and its card
         Ref<PipelineNode> CreateNodeAt(const String& type, const Vec2F& canvasPos);
@@ -557,7 +561,7 @@ CLASS_METHODS_META(Editor::PipelineEditor)
     FUNCTION().PUBLIC().SIGNATURE(void, OnNodeDragged, const Ref<PipelineNodeWidget>&, const Vec2F&);
     FUNCTION().PUBLIC().SIGNATURE(void, OnNodeDragCompleted, const Ref<PipelineNodeWidget>&);
     FUNCTION().PUBLIC().SIGNATURE(void, OnNodeResized, const Ref<PipelineNodeWidget>&, bool);
-    FUNCTION().PUBLIC().SIGNATURE(void, AddCustomInput, const Ref<PipelineNodeWidget>&);
+    FUNCTION().PUBLIC().SIGNATURE(void, AddCustomInput, const Ref<PipelineNodeWidget>&, PipelineLayerPlace);
     FUNCTION().PUBLIC().SIGNATURE(void, RenameCustomInput, const Ref<PipelineNodeWidget>&, const String&, const String&);
     FUNCTION().PUBLIC().SIGNATURE(void, RemoveCustomInput, const Ref<PipelineNodeWidget>&, const String&);
     FUNCTION().PUBLIC().SIGNATURE(void, OpenNodeContextMenu, const Ref<PipelineNodeWidget>&);
@@ -629,7 +633,7 @@ CLASS_METHODS_META(Editor::PipelineEditor)
     FUNCTION().PROTECTED().SIGNATURE(bool, GetEdgeEnds, const PipelineEdge&, Vec2F&, Vec2F&);
     FUNCTION().PROTECTED().SIGNATURE(void, BeginEdgeDrag, const Ref<PipelineNodeWidget>&, const PipelineNodeWidget::PortView&);
     FUNCTION().PROTECTED().SIGNATURE(void, FinishEdgeDrag, const Vec2F&);
-    FUNCTION().PROTECTED().SIGNATURE(bool, ConnectPorts, const String&, const String&, const String&, const String&);
+    FUNCTION().PROTECTED().SIGNATURE(bool, ConnectPorts, const String&, const String&, const String&, const String&, const String&, const String&);
     FUNCTION().PROTECTED().SIGNATURE(Ref<PipelineNode>, CreateNodeAt, const String&, const Vec2F&);
     FUNCTION().PROTECTED().SIGNATURE(void, CreateNodeFromPendingEdge, const String&, const Vec2F&);
     FUNCTION().PROTECTED().SIGNATURE(void, RecordAction, const String&, const String&, const String&);

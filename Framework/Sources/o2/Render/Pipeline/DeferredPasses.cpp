@@ -54,6 +54,13 @@ namespace o2
         }
     }
 
+    ShadowMapPass::ShadowMapPass()
+    {}
+
+    ShadowMapPass::ShadowMapPass(const ShadowMapPass& other):
+        RenderPass(other), mShadowMapSize(other.mShadowMapSize)
+    {}
+
     void ShadowMapPass::Execute(RenderPassContext& context)
     {
         mShadowAvailable = false;
@@ -194,6 +201,13 @@ namespace o2
         return hasBounds;
     }
 
+    GBufferPass::GBufferPass()
+    {}
+
+    GBufferPass::GBufferPass(const GBufferPass& other):
+        RenderPass(other)
+    {}
+
     void GBufferPass::Execute(RenderPassContext& context)
     {
         if (!Render::IsSingletonInitialzed() || !o2Render.IsMRTSupported())
@@ -286,6 +300,13 @@ namespace o2
 
         return mAlbedoTarget && mNormalsTarget && mPositionsTarget && mMaterial && mMaterial->IsReady();
     }
+
+    DeferredLightingPass::DeferredLightingPass()
+    {}
+
+    DeferredLightingPass::DeferredLightingPass(const DeferredLightingPass& other):
+        RenderPass(other), mAmbient(other.mAmbient)
+    {}
 
     void DeferredLightingPass::Execute(RenderPassContext& context)
     {

@@ -225,7 +225,7 @@ namespace Editor
         mAutoApplyTimer = 0.0f;
     }
 
-    void PipelineEditor::AddCustomInput(const Ref<PipelineNodeWidget>& node)
+    void PipelineEditor::AddCustomInput(const Ref<PipelineNodeWidget>& node, PipelineLayerPlace place /*= PipelineLayerPlace::Front*/)
     {
         auto schema = node->GetSchema();
         if (!schema || schema->addableInputs.IsEmpty())
@@ -235,9 +235,11 @@ namespace Editor
         {
             String before = SerializeGraph();
             auto customs = node->GetNode()->GetCustomInputs();
-            customs.Add(PipelinePort(PipelineNode::GenerateId(), "", schema->addableInputs[0], true));
+            PipelinePort port(PipelineNode::GenerateId(), "", schema->addableInputs[0], true);
+            customs.Add(port);
             node->GetNode()->SetCustomInputs(customs);
             PipelineNodeRegistry::SyncNodeWithSchema(node->GetNode());
+            PipelineComposerLayout::PlaceNewLayer(*node->GetNode(), port.id, port.portType, place);
             RefreshNodeWidget(node);
             RecordAction("Add input", before, SerializeGraph());
             return;
@@ -247,14 +249,16 @@ namespace Editor
         mNodeContextMenu->RemoveAllItems();
         for (auto type : schema->addableInputs)
         {
-            mNodeContextMenu->AddItem(PipelinePortTypeToString(type), [this, type]()
+            mNodeContextMenu->AddItem(PipelinePortTypeToString(type), [this, type, place]()
             {
                 if (!mContextNode) return;
                 String before = SerializeGraph();
                 auto customs = mContextNode->GetNode()->GetCustomInputs();
-                customs.Add(PipelinePort(PipelineNode::GenerateId(), "", type, true));
+                PipelinePort port(PipelineNode::GenerateId(), "", type, true);
+                customs.Add(port);
                 mContextNode->GetNode()->SetCustomInputs(customs);
                 PipelineNodeRegistry::SyncNodeWithSchema(mContextNode->GetNode());
+                PipelineComposerLayout::PlaceNewLayer(*mContextNode->GetNode(), port.id, type, place);
                 RefreshNodeWidget(mContextNode);
                 RecordAction("Add input", before, SerializeGraph());
             });
@@ -318,7 +322,8 @@ namespace Editor
         mNeedRedraw = true;
     }
 
-    bool PipelineEditor::ConnectPorts(const String& fromNodeId, const String& fromPortId, const String& toNodeId, const String& toPortId)
+    bool PipelineEditor::ConnectPorts(const String& fromNodeId, const String& fromPortId, const String& toNodeId, const String& toPortId,
+                                      const String& undoBefore /*= ""*/, const String& undoName /*= "Connect"*/)
     {
         auto graph = GetGraph();
         if (!graph || fromNodeId == toNodeId)
@@ -340,7 +345,7 @@ namespace Editor
             return false;
         }
 
-        String before = SerializeGraph();
+        String before = undoBefore.IsEmpty() ? SerializeGraph() : undoBefore;
         if (auto existing = graph->FindEdgeToPort(toNodeId, toPortId))
             graph->RemoveEdge(existing->id);
 
@@ -351,7 +356,7 @@ namespace Editor
         edge->toNodeId = toNodeId;
         edge->toPortId = toPortId;
         graph->edges.Add(edge);
-        RecordAction("Connect", before, SerializeGraph());
+        RecordAction(undoName, before, SerializeGraph());
 
         auto toSchema = PipelineNodeRegistry::GetSchema(to->nodeType);
         if (toSchema && toSchema->instant)
@@ -392,9 +397,12 @@ namespace Editor
                 customs.Add(newPort);
                 widget->GetNode()->SetCustomInputs(customs);
                 PipelineNodeRegistry::SyncNodeWithSchema(widget->GetNode());
+                auto place = widget->GetBody() ? widget->GetBody()->GetAddInputPlace(p) : PipelineLayerPlace::Front;
+                PipelineComposerLayout::PlaceNewLayer(*widget->GetNode(), newPort.id, newPort.portType, place);
                 RefreshNodeWidget(widget);
-                RecordAction("Add input", before, SerializeGraph());
-                ConnectPorts(mPendingEdge.nodeId, mPendingEdge.portId, widget->GetNode()->id, newPort.id);
+                // The input, its place among the layers and the link are one undo step
+                if (!ConnectPorts(mPendingEdge.nodeId, mPendingEdge.portId, widget->GetNode()->id, newPort.id, before, "Add input"))
+                    RecordAction("Add input", before, SerializeGraph());
                 return;
             }
 

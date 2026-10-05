@@ -224,7 +224,7 @@ namespace Editor
             if (!GetRowPlacement(mMain, owner->GetCardWidth(), owner->GetBodyAreaHeight(), top, height))
                 return false;
 
-            // An input without a layer row sits by "+ input"
+            // An input without a layer row sits by "+ layer below"
             float y = 0.0f;
             if (!mLayers->GetPortCenter(portId, y))
                 y = mLayers->GetAddRowCenter();
@@ -235,7 +235,12 @@ namespace Editor
 
         bool IsAddInputAt(const Vec2F& point) const override
         {
-            return mLayers && mLayers->GetAddRow() && mLayers->GetAddRow()->layout->IsPointInside(point);
+            return IsOnAddRow(PipelineLayerPlace::Front, point) || IsOnAddRow(PipelineLayerPlace::Back, point);
+        }
+
+        PipelineLayerPlace GetAddInputPlace(const Vec2F& point) const override
+        {
+            return IsOnAddRow(PipelineLayerPlace::Back, point) ? PipelineLayerPlace::Back : PipelineLayerPlace::Front;
         }
 
         void DrawFarContent() override
@@ -283,6 +288,11 @@ namespace Editor
         Ref<EditBox> mFolderEdit; // Folder inside Assets the layers are written to
         Ref<EditBox> mNameEdit;   // File name prefix of the layer assets
         Ref<Label> mSaveInfo;     // Target pattern or the outcome of the last save
+
+        bool IsOnAddRow(PipelineLayerPlace place, const Vec2F& point) const
+        {
+            return mLayers && mLayers->GetAddRow(place) && mLayers->GetAddRow(place)->layout->IsPointInside(point);
+        }
 
         float GetPanelWidth() const
         {
@@ -517,13 +527,13 @@ namespace Editor
                     self->AfterStructureChange("layerOrder");
                 }
             };
-            mLayers->onAddInput = [weakThis]()
+            mLayers->onAddInput = [weakThis](PipelineLayerPlace place)
             {
                 auto self = weakThis.Lock();
                 auto editor = self ? self->mEditor.Lock() : nullptr;
                 auto owner = self ? self->mOwner.Lock() : nullptr;
                 if (editor && owner)
-                    editor->AddCustomInput(owner);
+                    editor->AddCustomInput(owner, place);
             };
             mMain->AddChild(mLayers);
 
@@ -865,7 +875,8 @@ namespace Editor
             return SaveLayersToAssets() > 0;
         }
 
-        // Writes every layer as its own PNG asset, the way a finish node writes its result; returns how many were written
+        // Writes every layer as its own PNG asset at its export size, the way a finish node writes its result; returns how
+        // many were written
         int SaveLayersToAssets()
         {
             String folder = LayersFolder();

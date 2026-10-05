@@ -1282,14 +1282,13 @@ TEST_F(PipelineUiFixture, ExtractPartsGridSelectsAndRenames)
     EXPECT_LT(cells[2]->layout->GetWorldRect().top, cells[0]->layout->GetWorldRect().bottom + 1.0f);
     EXPECT_NEAR(cells[2]->layout->GetWorldRect().left, cells[0]->layout->GetWorldRect().left, 0.5f);
 
-    // The parts' output ports leave the cells' corners, not the port column; the input keeps its row
+    // The parts' output ports leave the cells' top-right corners, not the port column; the input keeps its row
     RectF cardRect = card->GetCardRect();
     for (int i = 0; i < 3; i++)
     {
         Vec2F port = card->GetPortPosition(Live(extract)->outputs[i].id, false);
         EXPECT_NEAR(port.x, cells[i]->layout->GetWorldRect().right, 1.0f) << i;
-        EXPECT_GT(port.y, cells[i]->layout->GetWorldRect().bottom) << i;
-        EXPECT_LT(port.y, cells[i]->layout->GetWorldRect().top) << i;
+        EXPECT_NEAR(port.y, cells[i]->layout->GetWorldRect().top, 1.0f) << i;
     }
     EXPECT_NEAR(card->GetPortPosition(Live(extract)->inputs[0].id, true).x, cardRect.left, 0.5f);
     // The grid fills the right pane of the row under the drawing tools, beside the source stage

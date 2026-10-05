@@ -2,6 +2,7 @@
 
 #include "o2/Scene/UI/Widget.h"
 #include "o2/Utils/Function/Function.h"
+#include "o2Editor/Pipeline/PipelineComposerLayout.h"
 #include "o2Editor/Windows/PipelineWindow/PipelineComposerStage.h"
 
 using namespace o2;
@@ -14,22 +15,19 @@ namespace o2
 namespace Editor
 {
     // -------------------------------------------------------------------------------------------------------------------
-    // Layers list of the composer card, left of its work area: a row per layer, the front one first, each with its open
-    // settings under it, then a "+ input" row. Heights are pinned, so the card places the input ports on the rows without
-    // measuring them; a grip at the right end of a row drags it to another place in the stack
+    // Layers list of the composer card, left of its work area: "+ layer on top", a row per layer, the front one first, each
+    // with its open settings under it, then "+ layer below". Heights are pinned (PipelineComposerLayout), so the card places
+    // the input ports on the rows without measuring them; a grip at the right end of a row drags it to another place
     // -------------------------------------------------------------------------------------------------------------------
     class PipelineComposerLayersPanel : public Widget
     {
     public:
-        static constexpr float border = 1.0f;         // Frame of the panel
-        static constexpr float headHeight = 22.0f;    // "Layers · N"
-        static constexpr float listPadding = 4.0f;    // Above the first row and under the "+ input" row
-        static constexpr float rowHeight = 28.0f;     // One layer row
-        static constexpr float rowGap = 3.0f;         // Between the rows
-        static constexpr float addRowHeight = 24.0f;  // The "+ input" row
-        static constexpr float settingsHeight = 76.0f; // Open settings: size, opacity, 9-slice
-        static constexpr float nineHeight = 69.0f;     // More open settings with 9-slice on: insets, corners, hint
-        static constexpr float selectedTint = 0.16f;   // Accent strength behind the selected row
+        static constexpr float border = PipelineComposerLayout::border;             // Frame of the panel
+        static constexpr float headHeight = PipelineComposerLayout::headHeight;     // "Layers · N"
+        static constexpr float rowHeight = PipelineComposerLayout::rowHeight;       // One layer row
+        static constexpr float rowGap = PipelineComposerLayout::rowGap;             // Between the rows
+        static constexpr float addRowHeight = PipelineComposerLayout::addRowHeight; // An add row
+        static constexpr float selectedTint = 0.16f;                                // Accent strength behind the selected row
 
         Function<void(const String&, bool)>                            onConfigChanged; // A config key the panel wrote
         Function<void()>                                               onLayoutChanged; // The rows changed their heights
@@ -38,7 +36,7 @@ namespace Editor
         Function<void(const String&, const String&, bool)>             onRemove;        // Remove the layer: id, port, copy
         Function<void(const String&, const String&, bool, const String&)> onRename;     // Rename the layer: id, port, copy, name
         Function<void(const Vector<String>&)>                          onReorder;       // New stack order of the layer ids, back first
-        Function<void()>                                               onAddInput;      // Add an image input
+        Function<void(PipelineLayerPlace)>                             onAddInput;      // Add an image input, the front or the back layer
 
     public:
         // Default constructor
@@ -56,11 +54,11 @@ namespace Editor
         // Returns the middle of the row of the input port from the panel top, y down; false for a port without a row
         bool GetPortCenter(const String& portId, float& y) const;
 
-        // Returns the middle of the "+ input" row from the panel top, y down
+        // Returns the middle of the "+ layer below" row from the panel top, y down: where a port without a row sits
         float GetAddRowCenter() const { return mAddTop + addRowHeight*0.5f; }
 
-        // Returns the "+ input" row
-        const Ref<Button>& GetAddRow() const { return mAddRow; }
+        // Returns the add row: "+ layer on top" or "+ layer below"
+        const Ref<Button>& GetAddRow(PipelineLayerPlace place) const { return place == PipelineLayerPlace::Front ? mAddTopRow : mAddRow; }
 
         // Moves the highlight to the selected layer's row without rebuilding the rows
         void UpdateSelection();
@@ -96,21 +94,25 @@ namespace Editor
         Vector<float>              mRowTops;       // Top of each displayed row from the panel top
         Vector<Ref<Widget>>        mRows;          // Displayed row widgets
         Vector<Ref<Widget>>        mGrips;         // Grip of each displayed row
-        Ref<Button>                mAddRow;        // "+ input"
-        float                      mAddTop = 0.0f; // Top of the "+ input" row
+        Ref<Button>                mAddTopRow;     // "+ layer on top"
+        Ref<Button>                mAddRow;        // "+ layer below"
+        float                      mAddTop = 0.0f; // Top of the "+ layer below" row
         float                      mContentHeight = 0.0f; // Height of the panel
         String                     mDragging;      // Layer whose row is dragged, empty when none
         int                        mDropIndex = 0; // Display index the dragged row lands before
 
     protected:
-        // Returns the height of the settings opened under a row
-        static float SettingsHeight(bool nine);
+        // Creates an add row at the top
+        Ref<Button> MakeAddRow(PipelineLayerPlace place, float top);
 
         // Creates the row of a layer
         Ref<Widget> MakeRow(const ComposerLayerRef& layer, int stackIndex, int count, bool selected, bool open);
 
         // Adds the open settings of the layer at the top
         void AddSettings(const ComposerLayerRef& layer, float top);
+
+        // Adds the export size line of the open settings: width x height and "auto" while a size is set
+        void AddExportRow(const Ref<Widget>& settings, const ComposerLayerRef& layer, const ComposerLayerPlacement& placement);
     };
 }
 // --- META ---
@@ -137,6 +139,7 @@ CLASS_FIELDS_META(Editor::PipelineComposerLayersPanel)
     FIELD().PROTECTED().NAME(mRowTops);
     FIELD().PROTECTED().NAME(mRows);
     FIELD().PROTECTED().NAME(mGrips);
+    FIELD().PROTECTED().NAME(mAddTopRow);
     FIELD().PROTECTED().NAME(mAddRow);
     FIELD().PROTECTED().DEFAULT_VALUE(0.0f).NAME(mAddTop);
     FIELD().PROTECTED().DEFAULT_VALUE(0.0f).NAME(mContentHeight);
@@ -153,7 +156,7 @@ CLASS_METHODS_META(Editor::PipelineComposerLayersPanel)
     FUNCTION().PUBLIC().SIGNATURE(float, GetContentHeight);
     FUNCTION().PUBLIC().SIGNATURE(bool, GetPortCenter, const String&, float&);
     FUNCTION().PUBLIC().SIGNATURE(float, GetAddRowCenter);
-    FUNCTION().PUBLIC().SIGNATURE(const Ref<Button>&, GetAddRow);
+    FUNCTION().PUBLIC().SIGNATURE(const Ref<Button>&, GetAddRow, PipelineLayerPlace);
     FUNCTION().PUBLIC().SIGNATURE(void, UpdateSelection);
     FUNCTION().PUBLIC().SIGNATURE(Ref<Widget>, FindRow, const String&);
     FUNCTION().PUBLIC().SIGNATURE(Ref<Widget>, FindGrip, const String&);
@@ -162,9 +165,10 @@ CLASS_METHODS_META(Editor::PipelineComposerLayersPanel)
     FUNCTION().PUBLIC().SIGNATURE(void, EndRowDrag, bool);
     FUNCTION().PUBLIC().SIGNATURE(int, GetDropIndex);
     FUNCTION().PUBLIC().SIGNATURE(void, Draw);
-    FUNCTION().PROTECTED().SIGNATURE_STATIC(float, SettingsHeight, bool);
+    FUNCTION().PROTECTED().SIGNATURE(Ref<Button>, MakeAddRow, PipelineLayerPlace, float);
     FUNCTION().PROTECTED().SIGNATURE(Ref<Widget>, MakeRow, const ComposerLayerRef&, int, int, bool, bool);
     FUNCTION().PROTECTED().SIGNATURE(void, AddSettings, const ComposerLayerRef&, float);
+    FUNCTION().PROTECTED().SIGNATURE(void, AddExportRow, const Ref<Widget>&, const ComposerLayerRef&, const ComposerLayerPlacement&);
 }
 END_META;
 // --- END META ---

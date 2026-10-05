@@ -43,6 +43,7 @@ namespace
         return PipelinePairLayout::ExtractGrid(cardWidth - 20.0f, parts, rowHeight);
     }
 
+    // The output port of a part: the top-right corner of its cell's image
     void ExpectCorner(const PipelineExtractGrid& grid, int index, float x, float y)
     {
         Vec2F corner = PipelinePairLayout::ExtractCellCorner(grid, index);
@@ -74,28 +75,31 @@ TEST(PipelinePairLayout, ExtractGridAtWidth480)
     EXPECT_FLOAT_EQ(one.paneW, 227.0f);
     EXPECT_EQ(one.cols, 1);
     EXPECT_EQ(one.rows, 1);
-    EXPECT_FLOAT_EQ(one.cellW, 227.0f);
+    EXPECT_FLOAT_EQ(one.cellW, 227.0f) << "a single part fills the pane";
     EXPECT_FLOAT_EQ(one.labelH, 0.0f) << "a single part has no caption";
     EXPECT_FLOAT_EQ(one.rowNatural, 176.0f);
     EXPECT_FLOAT_EQ(one.cellH, 176.0f);
-    ExpectCorner(one, 0, 460.0f, 176.0f);
+    ExpectCorner(one, 0, 460.0f, 0.0f);
 
+    // Three square cells across are the largest in the standard stage row; the grid is centred
     auto three = GridOfCard(480.0f, 3);
     EXPECT_EQ(three.cols, 3);
     EXPECT_EQ(three.rows, 1);
-    EXPECT_NEAR(three.cellW, 71.667f, 0.01f);
+    EXPECT_FLOAT_EQ(three.cellW, 71.0f);
+    EXPECT_FLOAT_EQ(three.cellH, 71.0f) << "square";
     EXPECT_FLOAT_EQ(three.labelH, 20.0f);
     EXPECT_FLOAT_EQ(three.rowNatural, 176.0f) << "never lower than the stage";
-    EXPECT_FLOAT_EQ(three.cellH, 156.0f) << "the cells stretch to the row";
-    ExpectCorner(three, 0, 304.667f, 156.0f);
-    ExpectCorner(three, 2, 460.0f, 156.0f);
+    EXPECT_FLOAT_EQ(three.offX, 1.0f);
+    EXPECT_FLOAT_EQ(three.offY, 42.0f);
+    ExpectCorner(three, 0, 305.0f, 42.0f);
+    ExpectCorner(three, 2, 459.0f, 42.0f);
 
     auto eight = GridOfCard(480.0f, 8);
     EXPECT_EQ(eight.cols, 3);
     EXPECT_EQ(eight.rows, 3);
     EXPECT_FLOAT_EQ(eight.rowNatural, 288.0f);
-    EXPECT_FLOAT_EQ(eight.cellH, 72.0f);
-    ExpectCorner(eight, 7, 382.333f, 268.0f);
+    EXPECT_FLOAT_EQ(eight.cellH, 71.0f);
+    ExpectCorner(eight, 7, 382.0f, 195.0f);
 }
 
 TEST(PipelinePairLayout, ExtractGridAtWidth312)
@@ -105,33 +109,61 @@ TEST(PipelinePairLayout, ExtractGridAtWidth312)
     EXPECT_EQ(one.cols, 1);
     EXPECT_FLOAT_EQ(one.rowNatural, 176.0f);
     EXPECT_FLOAT_EQ(one.cellH, 176.0f);
-    ExpectCorner(one, 0, 292.0f, 176.0f);
+    ExpectCorner(one, 0, 292.0f, 0.0f);
 
     auto three = GridOfCard(312.0f, 3);
-    EXPECT_EQ(three.cols, 2) << "cells no narrower than 64 px";
+    EXPECT_EQ(three.cols, 2);
     EXPECT_EQ(three.rows, 2);
-    EXPECT_FLOAT_EQ(three.cellW, 68.5f);
-    EXPECT_FLOAT_EQ(three.rowNatural, 184.0f) << "two rows of 69 px cells with captions";
-    EXPECT_FLOAT_EQ(three.cellH, 69.0f);
-    ExpectCorner(three, 1, 292.0f, 69.0f);
-    ExpectCorner(three, 2, 217.5f, 164.0f);
+    EXPECT_FLOAT_EQ(three.rowNatural, 184.0f) << "two rows of 69 px natural cells with captions";
+    EXPECT_FLOAT_EQ(three.cellW, 68.0f);
+    EXPECT_FLOAT_EQ(three.cellH, 68.0f);
+    ExpectCorner(three, 1, 291.0f, 1.0f);
+    ExpectCorner(three, 2, 217.0f, 95.0f);
 
     auto eight = GridOfCard(312.0f, 8);
     EXPECT_EQ(eight.cols, 2);
     EXPECT_EQ(eight.rows, 4);
     EXPECT_FLOAT_EQ(eight.rowNatural, 374.0f);
-    EXPECT_FLOAT_EQ(eight.cellH, 69.0f);
-    ExpectCorner(eight, 7, 292.0f, 354.0f);
+    EXPECT_FLOAT_EQ(eight.cellH, 68.0f);
+    ExpectCorner(eight, 7, 291.0f, 284.0f);
 }
 
-// A hand-sized card gives the row its extra height; the cells take all of it
-TEST(PipelinePairLayout, ExtractGridStretchesToATallerRow)
+// A part's output port is on the TOP-right corner of its cell's image: the row's top, not the cell's bottom
+TEST(PipelinePairLayout, ExtractPortsSitOnTheTopCorners)
+{
+    auto grid = GridOfCard(312.0f, 3);
+    for (int i = 0; i < 3; i++)
+    {
+        int col = i % grid.cols, row = i / grid.cols;
+        Vec2F corner = PipelinePairLayout::ExtractCellCorner(grid, i);
+        EXPECT_FLOAT_EQ(corner.y, grid.offY + row*(grid.cellH + grid.labelH + PipelinePairLayout::gridGap)) << "part " << i;
+        EXPECT_FLOAT_EQ(corner.x, grid.paneW + PipelinePairLayout::paneGap + grid.offX + col*(grid.cellW + PipelinePairLayout::gridGap) + grid.cellW);
+    }
+
+    // A single part fills the pane: its port is on the pane's top-right corner
+    auto one = GridOfCard(480.0f, 1, 300.0f);
+    EXPECT_EQ(PipelinePairLayout::ExtractCellCorner(one, 0), Vec2F(460.0f, 0.0f));
+}
+
+// A hand-sized card makes the row taller; the parts take the column count whose square cells are the largest in it
+TEST(PipelinePairLayout, ExtractGridFitsSquaresInATallerRow)
 {
     auto tall = GridOfCard(480.0f, 3, 300.0f);
     EXPECT_FLOAT_EQ(tall.rowNatural, 176.0f);
     EXPECT_FLOAT_EQ(tall.rowH, 300.0f);
-    EXPECT_FLOAT_EQ(tall.cellH, 280.0f);
-    ExpectCorner(tall, 1, 382.333f, 280.0f);
+    EXPECT_EQ(tall.cols, 2) << "two by two beats three thin columns";
+    EXPECT_EQ(tall.rows, 2);
+    EXPECT_FLOAT_EQ(tall.cellH, 110.0f);
+    EXPECT_FLOAT_EQ(tall.offY, 17.0f);
+    ExpectCorner(tall, 1, 459.0f, 17.0f);
+
+    // Six parts in a 1440 x 1000 row: two columns of three 309 px squares, not six columns stretched to the row
+    auto big = GridOfCard(1440.0f, 6, 1000.0f);
+    EXPECT_EQ(big.cols, 2);
+    EXPECT_EQ(big.rows, 3);
+    EXPECT_FLOAT_EQ(big.cellW, 309.0f);
+    EXPECT_FLOAT_EQ(big.offX, 41.0f);
+    ExpectCorner(big, 5, 1378.0f, 670.0f);
 
     auto low = GridOfCard(480.0f, 8, 100.0f);
     EXPECT_FLOAT_EQ(low.rowH, 288.0f) << "never lower than the natural height";
