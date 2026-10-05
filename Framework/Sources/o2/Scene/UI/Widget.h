@@ -154,6 +154,17 @@ namespace o2
         template<typename _type>
         Ref<_type> GetLayerDrawable(const String& path) const;
 
+        // Returns layer drawable by path, when it is of the type or based on it
+        template<typename _type>
+        Ref<_type> GetLayerDrawableBasedOn(const String& path) const;
+
+        // Returns the first layer drawable of the type or based on it, layers are checked before their children
+        template<typename _type>
+        Ref<_type> GetLayerDrawableByBaseType();
+
+        // Shows image in the drawable of layer by path, Sprite and VectorSprite are swapped by the kind of image. Returns the drawable
+        Ref<IRectDrawable> SetLayerImage(const String& path, const String& imagePath);
+
         // Returns all layers @SCRIPTABLE
         const Vector<Ref<WidgetLayer>>& GetLayers() const;
 
@@ -431,6 +442,9 @@ namespace o2
         // Sets new target for all states animations
         void RetargetStatesAnimations();
 
+        // Binds states animations to the fields again when an animated object was replaced; values are not applied
+        void RebindStatesAnimations();
+
         // Sets parent widget, used for property
         void SetParentWidget(const Ref<Widget>& widget);
 
@@ -699,6 +713,33 @@ namespace o2
     }
 
     template<typename _type>
+    Ref<_type> Widget::GetLayerDrawableBasedOn(const String& path) const
+    {
+        if (auto layer = GetLayer(path))
+            return DynamicCast<_type>(layer->GetDrawable());
+
+        return nullptr;
+    }
+
+    template<typename _type>
+    Ref<_type> Widget::GetLayerDrawableByBaseType()
+    {
+        for (auto& layer : mLayers)
+        {
+            if (auto res = DynamicCast<_type>(layer->GetDrawable()))
+                return res;
+        }
+
+        for (auto& layer : mLayers)
+        {
+            if (auto res = layer->template FindChildBasedOn<_type>())
+                return res;
+        }
+
+        return nullptr;
+    }
+
+    template<typename _type>
     Ref<_type> Widget::GetInternalWidgetByType(const String& path) const
     {
         return DynamicCast<_type>(GetInternalWidget(path));
@@ -830,6 +871,7 @@ CLASS_METHODS_META(o2::Widget)
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, RemoveAllLayers);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(Ref<WidgetLayer>, GetLayer, const String&);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(Ref<WidgetLayer>, FindLayer, const String&);
+    FUNCTION().PUBLIC().SIGNATURE(Ref<IRectDrawable>, SetLayerImage, const String&, const String&);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(const Vector<Ref<WidgetLayer>>&, GetLayers);
     FUNCTION().PUBLIC().SCRIPTABLE_NAME_ATTRIBUTE(AddStateNew).SIGNATURE(Ref<WidgetState>, AddState, const String&);
     FUNCTION().PUBLIC().SCRIPTABLE_NAME_ATTRIBUTE(AddStateWithClip).SIGNATURE(Ref<WidgetState>, AddState, const String&, const Ref<AnimationClip>&);
@@ -908,6 +950,7 @@ CLASS_METHODS_META(o2::Widget)
     FUNCTION().PROTECTED().SIGNATURE(void, DrawDebugFrame);
     FUNCTION().PROTECTED().SIGNATURE(void, UpdateLayersDrawingSequence);
     FUNCTION().PROTECTED().SIGNATURE(void, RetargetStatesAnimations);
+    FUNCTION().PROTECTED().SIGNATURE(void, RebindStatesAnimations);
     FUNCTION().PROTECTED().SIGNATURE(void, SetParentWidget, const Ref<Widget>&);
     FUNCTION().PROTECTED().SIGNATURE(Vector<Ref<Widget>>&, GetChildrenNonConst);
     FUNCTION().PROTECTED().SIGNATURE(Vector<Ref<WidgetLayer>>&, GetLayersNonConst);

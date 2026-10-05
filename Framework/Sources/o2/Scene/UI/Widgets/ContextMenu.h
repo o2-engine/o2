@@ -38,7 +38,7 @@ namespace o2
         public:
             WString              text;  // Item text @SERIALIZABLE
             WString              group; // Item group id @SERIALIZABLE
-            AssetRef<ImageAsset> icon;  // Icon image @SERIALIZABLE
+            AssetRef<Asset> icon;  // Icon image @SERIALIZABLE
 
             Vector<Ref<Item>> subItems; // Children items @SERIALIZABLE
 
@@ -60,15 +60,15 @@ namespace o2
 
             // Constructor from text
             Item(RefCounter* refCounter, const WString& text, const Vector<Ref<Item>>& subItems, const WString& group = "",
-                 const AssetRef<ImageAsset>& icon = AssetRef<ImageAsset>());
+                 const AssetRef<Asset>& icon = AssetRef<Asset>());
 
             // Constructor from text and click event
             Item(RefCounter* refCounter, const WString& text, const Function<void()> onClick, const WString& group = "",
-                 const AssetRef<ImageAsset>& icon = AssetRef<ImageAsset>(), const ShortcutKeys& shortcut = ShortcutKeys());
+                 const AssetRef<Asset>& icon = AssetRef<Asset>(), const ShortcutKeys& shortcut = ShortcutKeys());
 
             // Constructor from text and checked event
             Item(RefCounter* refCounter, const WString& text, bool checked, Function<void(bool)> onChecked = Function<void(bool)>(),
-                 const WString& group = "", const AssetRef<ImageAsset>& icon = AssetRef<ImageAsset>(),
+                 const WString& group = "", const AssetRef<Asset>& icon = AssetRef<Asset>(),
                  const ShortcutKeys& shortcut = ShortcutKeys());
 
             // Destructor
@@ -143,12 +143,12 @@ namespace o2
 
         // Adds item by path ("node/sub node/target")
         Ref<Item> AddItem(const WString& path, const Function<void()>& clickFunc = Function<void()>(),
-                          const AssetRef<ImageAsset>& icon = AssetRef<ImageAsset>(), const ShortcutKeys& shortcut = ShortcutKeys());
+                          const AssetRef<Asset>& icon = AssetRef<Asset>(), const ShortcutKeys& shortcut = ShortcutKeys());
 
         // Adds item by path ("node/sub node/target")
         Ref<Item> AddToggleItem(const WString& path, bool value,
                                 const Function<void(bool)>& clickFunc = Function<void(bool)>(),
-                                const AssetRef<ImageAsset>& icon = AssetRef<ImageAsset>(),
+                                const AssetRef<Asset>& icon = AssetRef<Asset>(),
                                 const ShortcutKeys& shortcut = ShortcutKeys());
 
         // Inserts item at position
@@ -199,8 +199,14 @@ namespace o2
         // Returns items separator sample
         const Ref<Widget>& GetSeparatorSample() const;
 
+        // Sets selection drawable
+        void SetSelectionDrawable(const Ref<IRectDrawable>& drawable);
+
+        // Returns selection drawable as sprite, null when it is a drawable of another type
+        Ref<Sprite> GetSelectionDrawable() const;
+
         // Returns selection drawable
-        const Ref<Sprite>& GetSelectionDrawable() const;
+        const Ref<IRectDrawable>& GetSelectionRectDrawable() const;
 
         // Sets selection drawable layout
         void SetSelectionDrawableLayout(const Layout& layout);
@@ -240,7 +246,7 @@ namespace o2
         Ref<ContextMenuItem> mItemSample;      // Item sample @SERIALIZABLE
         Ref<Widget>          mSeparatorSample; // Items separator sample @SERIALIZABLE
 
-        Ref<Sprite> mSelectionDrawable; // Selection sprite @SERIALIZABLE
+        Ref<IRectDrawable> mSelectionDrawable; // Selection drawable @SERIALIZABLE
         Layout      mSelectionLayout;   // Selection layout, result selection area depends on selected item @SERIALIZABLE
 
         RectF mCurrentSelectionRect;  // Current selection rectangle (for smoothing)
@@ -422,8 +428,8 @@ CLASS_METHODS_META(o2::ContextMenu)
     FUNCTION().PUBLIC().SIGNATURE(void, SetSearchEnabled, bool);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsSearchEnabled);
     FUNCTION().PUBLIC().SIGNATURE(void, AddItem, const Ref<Item>&);
-    FUNCTION().PUBLIC().SIGNATURE(Ref<Item>, AddItem, const WString&, const Function<void()>&, const AssetRef<ImageAsset>&, const ShortcutKeys&);
-    FUNCTION().PUBLIC().SIGNATURE(Ref<Item>, AddToggleItem, const WString&, bool, const Function<void(bool)>&, const AssetRef<ImageAsset>&, const ShortcutKeys&);
+    FUNCTION().PUBLIC().SIGNATURE(Ref<Item>, AddItem, const WString&, const Function<void()>&, const AssetRef<Asset>&, const ShortcutKeys&);
+    FUNCTION().PUBLIC().SIGNATURE(Ref<Item>, AddToggleItem, const WString&, bool, const Function<void(bool)>&, const AssetRef<Asset>&, const ShortcutKeys&);
     FUNCTION().PUBLIC().SIGNATURE(void, InsertItem, const Ref<Item>&, int);
     FUNCTION().PUBLIC().SIGNATURE(void, AddItems, const Vector<Ref<Item>>&);
     FUNCTION().PUBLIC().SIGNATURE(void, InsertItems, const Vector<Ref<Item>>&, int);
@@ -440,7 +446,9 @@ CLASS_METHODS_META(o2::ContextMenu)
     FUNCTION().PUBLIC().SIGNATURE(const Ref<VerticalLayout>&, GetItemsLayout);
     FUNCTION().PUBLIC().SIGNATURE(const Ref<ContextMenuItem>&, GetItemSample);
     FUNCTION().PUBLIC().SIGNATURE(const Ref<Widget>&, GetSeparatorSample);
-    FUNCTION().PUBLIC().SIGNATURE(const Ref<Sprite>&, GetSelectionDrawable);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetSelectionDrawable, const Ref<IRectDrawable>&);
+    FUNCTION().PUBLIC().SIGNATURE(Ref<Sprite>, GetSelectionDrawable);
+    FUNCTION().PUBLIC().SIGNATURE(const Ref<IRectDrawable>&, GetSelectionRectDrawable);
     FUNCTION().PUBLIC().SIGNATURE(void, SetSelectionDrawableLayout, const Layout&);
     FUNCTION().PUBLIC().SIGNATURE(Layout, GetSelectionDrawableLayout);
     FUNCTION().PUBLIC().SIGNATURE(void, SetMaxItemsVisible, int);
@@ -529,9 +537,9 @@ CLASS_METHODS_META(o2::ContextMenu::Item)
 
     FUNCTION().PUBLIC().CONSTRUCTOR(RefCounter*);
     FUNCTION().PUBLIC().CONSTRUCTOR(RefCounter*, const Item&);
-    FUNCTION().PUBLIC().CONSTRUCTOR(RefCounter*, const WString&, const Vector<Ref<Item>>&, const WString&, const AssetRef<ImageAsset>&);
-    FUNCTION().PUBLIC().CONSTRUCTOR(RefCounter*, const WString&, const Function<void()>, const WString&, const AssetRef<ImageAsset>&, const ShortcutKeys&);
-    FUNCTION().PUBLIC().CONSTRUCTOR(RefCounter*, const WString&, bool, Function<void(bool)>, const WString&, const AssetRef<ImageAsset>&, const ShortcutKeys&);
+    FUNCTION().PUBLIC().CONSTRUCTOR(RefCounter*, const WString&, const Vector<Ref<Item>>&, const WString&, const AssetRef<Asset>&);
+    FUNCTION().PUBLIC().CONSTRUCTOR(RefCounter*, const WString&, const Function<void()>, const WString&, const AssetRef<Asset>&, const ShortcutKeys&);
+    FUNCTION().PUBLIC().CONSTRUCTOR(RefCounter*, const WString&, bool, Function<void(bool)>, const WString&, const AssetRef<Asset>&, const ShortcutKeys&);
     FUNCTION().PUBLIC().SIGNATURE(void, SetShortcut, const ShortcutKeys&);
     FUNCTION().PUBLIC().SIGNATURE(const ShortcutKeys&, GetShortcut);
     FUNCTION().PUBLIC().SIGNATURE(void, SetMaxPriority);

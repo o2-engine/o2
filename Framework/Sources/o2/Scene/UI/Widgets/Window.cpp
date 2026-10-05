@@ -110,7 +110,7 @@ namespace o2
         SetModal(true);
     }
 
-    void Window::SetIcon(const Ref<Sprite>& icon)
+    void Window::SetIcon(const Ref<IRectDrawable>& icon)
     {
         if (auto iconLayer = GetLayer(mIconLayerPath))
             iconLayer->SetDrawable(icon);
@@ -118,9 +118,13 @@ namespace o2
 
     Ref<Sprite> Window::GetIcon() const
     {
-        auto iconLayer = GetLayer(mIconLayerPath);
-        if (iconLayer)
-            return DynamicCast<Sprite>(iconLayer->GetDrawable());
+        return DynamicCast<Sprite>(GetIconDrawable());
+    }
+
+    Ref<IRectDrawable> Window::GetIconDrawable() const
+    {
+        if (auto iconLayer = GetLayer(mIconLayerPath))
+            return iconLayer->GetDrawable();
 
         return nullptr;
     }

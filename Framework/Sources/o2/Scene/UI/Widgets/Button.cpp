@@ -16,7 +16,7 @@ namespace o2
         Widget(refCounter, other)
     {
         mCaptionText = GetLayerDrawable<Text>("caption");
-        mIconSprite = GetLayerDrawable<Sprite>("icon");
+        mIconDrawable = GetLayerDrawableBasedOn<IRectDrawable>("icon");
 
         RetargetStatesAnimations();
 
@@ -31,7 +31,7 @@ namespace o2
         Widget::operator=(other);
 
         mCaptionText = GetLayerDrawable<Text>("caption");
-        mIconSprite = GetLayerDrawable<Sprite>("icon");
+        mIconDrawable = GetLayerDrawableBasedOn<IRectDrawable>("icon");
         RetargetStatesAnimations();
 
         return *this;
@@ -57,18 +57,29 @@ namespace o2
         return WString();
     }
 
-    void Button::SetIcon(const Ref<Sprite>& sprite)
+    void Button::SetIcon(const Ref<IRectDrawable>& drawable)
     {
-        if (mIconSprite)
-            mIconSprite = sprite;
+        if (auto layer = GetLayer("icon"))
+        {
+            layer->SetDrawable(drawable);
+            mIconDrawable = drawable;
+        }
     }
 
     Ref<Sprite> Button::GetIcon() const
     {
-        if (mIconSprite)
-            return mIconSprite.Lock();
+        return DynamicCast<Sprite>(GetIconDrawable());
+    }
 
-        return nullptr;
+    Ref<IRectDrawable> Button::GetIconDrawable() const
+    {
+        return GetLayerDrawableBasedOn<IRectDrawable>("icon");
+    }
+
+    void Button::SetIconImage(const String& imagePath)
+    {
+        if (auto layer = GetLayer("icon"))
+            mIconDrawable = layer->SetImage(imagePath);
     }
 
     bool Button::IsFocusable() const
@@ -167,8 +178,8 @@ namespace o2
         if (layer->name == "caption" && layer->GetDrawable() && layer->GetDrawable()->GetType() == TypeOf(Text))
             mCaptionText = DynamicCast<Text>(layer->GetDrawable());
 
-        if (layer->name == "icon" && layer->GetDrawable() && layer->GetDrawable()->GetType() == TypeOf(Sprite))
-            mIconSprite = DynamicCast<Sprite>(layer->GetDrawable());
+        if (layer->name == "icon" && layer->GetDrawable())
+            mIconDrawable = layer->GetDrawable();
     }
 
     void Button::OnEnabled()

@@ -47,8 +47,8 @@ namespace o2
 		mItemSample->UpdateSelfTransform();
 		mItemSample->UpdateChildrenTransforms();
 
-		mSelectionDrawable = other.mSelectionDrawable->CloneAsRef<Sprite>();
-		mHoverDrawable = other.mHoverDrawable->CloneAsRef<Sprite>();
+		mSelectionDrawable = other.mSelectionDrawable->CloneAsRef<IRectDrawable>();
+		mHoverDrawable = other.mHoverDrawable->CloneAsRef<IRectDrawable>();
 
 		RetargetStatesAnimations();
 		SetLayoutDirty();
@@ -62,8 +62,8 @@ namespace o2
 	{
 		mVerLayout = nullptr;
 
-		mSelectionDrawable = other.mSelectionDrawable->CloneAsRef<Sprite>();
-		mHoverDrawable = other.mHoverDrawable->CloneAsRef<Sprite>();
+		mSelectionDrawable = other.mSelectionDrawable->CloneAsRef<IRectDrawable>();
+		mHoverDrawable = other.mHoverDrawable->CloneAsRef<IRectDrawable>();
 
 		mSelectionLayout = other.mSelectionLayout;
 		mHoverLayout = other.mHoverLayout;
@@ -350,12 +350,41 @@ namespace o2
 		return mMultiSelection;
 	}
 
-	const Ref<Sprite>& CustomList::GetSelectionDrawable() const
+	void CustomList::SetSelectionDrawable(const Ref<IRectDrawable>& drawable)
+	{
+		mSelectionDrawable = drawable;
+		RetargetStatesAnimations();
+		mSelectionSpritesPool.Clear();
+
+		for (auto& sel : mSelectedItems)
+			sel.selection = GetSelectionSprite();
+
+		SetLayoutDirty();
+	}
+
+	Ref<Sprite> CustomList::GetSelectionDrawable() const
+	{
+		return DynamicCast<Sprite>(mSelectionDrawable);
+	}
+
+	const Ref<IRectDrawable>& CustomList::GetSelectionRectDrawable() const
 	{
 		return mSelectionDrawable;
 	}
 
-	const Ref<Sprite>& CustomList::GetHoverDrawable() const
+	void CustomList::SetHoverDrawable(const Ref<IRectDrawable>& drawable)
+	{
+		mHoverDrawable = drawable;
+		RetargetStatesAnimations();
+		SetLayoutDirty();
+	}
+
+	Ref<Sprite> CustomList::GetHoverDrawable() const
+	{
+		return DynamicCast<Sprite>(mHoverDrawable);
+	}
+
+	const Ref<IRectDrawable>& CustomList::GetHoverRectDrawable() const
 	{
 		return mHoverDrawable;
 	}
@@ -565,13 +594,13 @@ namespace o2
 		}
 	}
 
-	Ref<Sprite> CustomList::GetSelectionSprite()
+	Ref<IRectDrawable> CustomList::GetSelectionSprite()
 	{
 		if (mSelectionSpritesPool.IsEmpty())
 		{
 			const int poolStep = 5;
 			for (int i = 0; i < poolStep; i++)
-				mSelectionSpritesPool.Add(mSelectionDrawable->CloneAsRef<Sprite>());
+				mSelectionSpritesPool.Add(mSelectionDrawable->CloneAsRef<IRectDrawable>());
 		}
 
 		auto sprite = mSelectionSpritesPool.PopBack();

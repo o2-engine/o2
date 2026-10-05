@@ -1,6 +1,11 @@
 #include "o2/stdafx.h"
 #include "WidgetLayer.h"
 
+#include "o2/Assets/Assets.h"
+#include "o2/Assets/Types/ImageAsset.h"
+#include "o2/Assets/Types/VectorImageAsset.h"
+#include "o2/Render/Sprite.h"
+#include "o2/Render/VectorSprite.h"
 #include "o2/Scene/UI/Widget.h"
 #include "o2/Scene/UI/WidgetLayout.h"
 #include "o2/Scene/Scene.h"
@@ -92,13 +97,82 @@ namespace o2
         mDrawable = drawable;
 
         if (mDrawable)
+        {
             mDrawable->SetSerializeEnabled(false);
+            mDrawable->SetTransparency(mResTransparency);
+        }
 
         if (auto ownerWidget = mOwnerWidget.Lock())
         {
             ownerWidget->UpdateLayersDrawingSequence();
             ownerWidget->UpdateTransform();
+
+            // States of the parents may animate the replaced drawable too
+            for (Ref<Widget> widget = ownerWidget; widget; widget = widget->GetParentWidget().Lock())
+                widget->RebindStatesAnimations();
         }
+    }
+
+    Ref<IRectDrawable> WidgetLayer::SetImage(const String& imagePath)
+    {
+        if (imagePath.IsEmpty())
+            return SetImage(AssetRef<Asset>());
+
+        return SetImage(o2Assets.GetAssetRef(imagePath));
+    }
+
+    Ref<IRectDrawable> WidgetLayer::SetImage(const AssetRef<Asset>& image)
+    {
+        if (mDrawable && image && GetImage() == image)
+            return mDrawable;
+
+        AssetRef<VectorImageAsset> vectorImage = DynamicCast<VectorImageAsset>(image.GetRef());
+        AssetRef<ImageAsset> rasterImage = DynamicCast<ImageAsset>(image.GetRef());
+
+        auto vectorSprite = DynamicCast<VectorSprite>(mDrawable);
+        auto sprite = DynamicCast<Sprite>(mDrawable);
+
+        if (vectorSprite && (vectorImage || !rasterImage))
+            vectorSprite->LoadFromImage(vectorImage);
+        else if (sprite && !vectorImage)
+            sprite->LoadFromImage(rasterImage);
+        else if (mDrawable && !vectorSprite && !sprite)
+            return nullptr;
+        else
+        {
+            Ref<IRectDrawable> drawable;
+            if (vectorImage)
+                drawable = mmake<VectorSprite>(vectorImage);
+            else
+                drawable = mmake<Sprite>(rasterImage);
+
+            if (mDrawable)
+            {
+                drawable->SetColor(mDrawable->GetColor());
+                drawable->SetOverrideColor(mDrawable->GetOverrideColor());
+                drawable->SetEnabled(mDrawable->IsEnabled());
+                drawable->SetMaterialAsset(mDrawable->GetMaterialAsset());
+            }
+
+            SetDrawable(drawable);
+            return mDrawable;
+        }
+
+        if (mOwnerWidget)
+            UpdateLayout();
+
+        return mDrawable;
+    }
+
+    AssetRef<Asset> WidgetLayer::GetImage() const
+    {
+        if (auto vectorSprite = DynamicCast<VectorSprite>(mDrawable))
+            return vectorSprite->GetImageAsset();
+
+        if (auto sprite = DynamicCast<Sprite>(mDrawable))
+            return sprite->GetImageAsset();
+
+        return AssetRef<Asset>();
     }
 
     const Ref<IRectDrawable>& WidgetLayer::GetDrawable() const

@@ -17,7 +17,7 @@ namespace o2
     public:
         PROPERTIES(Window);
         PROPERTY(WString, caption, SetCaption, GetCaption); // Window caption property
-        PROPERTY(Ref<Sprite>, icon, SetIcon, GetIcon);      // Window icon sprite property
+        PROPERTY(Ref<IRectDrawable>, icon, SetIcon, GetIconDrawable); // Window icon drawable property
 
         Function<void()> onOpened; // On window opened delegate
         Function<void()> onClosed; // On window closed delegate
@@ -41,11 +41,14 @@ namespace o2
         // Shows window as modal
         void ShowModal();
 
-        // Sets icon sprite
-        virtual void SetIcon(const Ref<Sprite>& icon);
+        // Sets icon drawable
+        virtual void SetIcon(const Ref<IRectDrawable>& icon);
 
-        // Returns icon sprite
+        // Returns icon as sprite, null when it is a drawable of another type
         virtual Ref<Sprite> GetIcon() const;
+
+        // Returns icon drawable
+        virtual Ref<IRectDrawable> GetIconDrawable() const;
 
         // Sets icon layer layout
         virtual void SetIconLayout(const Layout& layout);
@@ -225,8 +228,9 @@ CLASS_METHODS_META(o2::Window)
     FUNCTION().PUBLIC().CONSTRUCTOR(RefCounter*, const Window&);
     FUNCTION().PUBLIC().SIGNATURE(void, Draw);
     FUNCTION().PUBLIC().SIGNATURE(void, ShowModal);
-    FUNCTION().PUBLIC().SIGNATURE(void, SetIcon, const Ref<Sprite>&);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetIcon, const Ref<IRectDrawable>&);
     FUNCTION().PUBLIC().SIGNATURE(Ref<Sprite>, GetIcon);
+    FUNCTION().PUBLIC().SIGNATURE(Ref<IRectDrawable>, GetIconDrawable);
     FUNCTION().PUBLIC().SIGNATURE(void, SetIconLayout, const Layout&);
     FUNCTION().PUBLIC().SIGNATURE(Layout, GetIconLayout);
     FUNCTION().PUBLIC().SIGNATURE(void, SetCaption, const WString&);

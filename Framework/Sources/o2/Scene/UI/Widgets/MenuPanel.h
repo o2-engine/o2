@@ -68,13 +68,13 @@ namespace o2
 
         // Adds item by path ("node/sub node/target")
         void AddItem(const WString& path, const Function<void()>& clickFunc = Function<void()>(),
-                     const AssetRef<ImageAsset>& icon = AssetRef<ImageAsset>(),
+                     const AssetRef<Asset>& icon = AssetRef<Asset>(),
                      const ShortcutKeys& shortcut = ShortcutKeys());
 
         // Adds toggle item by path ("node/sub node/target")
         void AddToggleItem(const WString& path, bool value,
                            const Function<void(bool)>& clickFunc = Function<void(bool)>(),
-                           const AssetRef<ImageAsset>& icon = AssetRef<ImageAsset>(),
+                           const AssetRef<Asset>& icon = AssetRef<Asset>(),
                            const ShortcutKeys& shortcut = ShortcutKeys());
 
         // Inserts item at position
@@ -110,8 +110,14 @@ namespace o2
         // Sets item sample
         void SetItemSample(const Ref<Widget>& sample);
 
+        // Sets selection drawable
+        void SetSelectionDrawable(const Ref<IRectDrawable>& drawable);
+
+        // Returns selection drawable as sprite, null when it is a drawable of another type
+        Ref<Sprite> GetSelectionDrawable() const;
+
         // Returns selection drawable
-        const Ref<Sprite>& GetSelectionDrawable() const;
+        const Ref<IRectDrawable>& GetSelectionRectDrawable() const;
 
         // Sets selection drawable layout
         void SetSelectionDrawableLayout(const Layout& layout);
@@ -132,7 +138,7 @@ namespace o2
 
         Vector<Function<void()>> mClickFunctions; // Items click functions
 
-        Ref<Sprite> mSelectionDrawable; // Selection sprite @SERIALIZABLE
+        Ref<IRectDrawable> mSelectionDrawable; // Selection drawable @SERIALIZABLE
         Layout      mSelectionLayout;   // Selection layout, result selection area depends on selected item @SERIALIZABLE
 
         RectF mCurrentSelectionRect;  // Current selection rectangle (for smoothing)
@@ -218,8 +224,8 @@ CLASS_METHODS_META(o2::MenuPanel)
     FUNCTION().PUBLIC().SIGNATURE(void, Update, float);
     FUNCTION().PUBLIC().SIGNATURE(void, Draw);
     FUNCTION().PUBLIC().SIGNATURE(Ref<Widget>, AddItem, const Item&);
-    FUNCTION().PUBLIC().SIGNATURE(void, AddItem, const WString&, const Function<void()>&, const AssetRef<ImageAsset>&, const ShortcutKeys&);
-    FUNCTION().PUBLIC().SIGNATURE(void, AddToggleItem, const WString&, bool, const Function<void(bool)>&, const AssetRef<ImageAsset>&, const ShortcutKeys&);
+    FUNCTION().PUBLIC().SIGNATURE(void, AddItem, const WString&, const Function<void()>&, const AssetRef<Asset>&, const ShortcutKeys&);
+    FUNCTION().PUBLIC().SIGNATURE(void, AddToggleItem, const WString&, bool, const Function<void(bool)>&, const AssetRef<Asset>&, const ShortcutKeys&);
     FUNCTION().PUBLIC().SIGNATURE(void, InsertItem, const Item&, int);
     FUNCTION().PUBLIC().SIGNATURE(void, AddItems, Vector<Item>);
     FUNCTION().PUBLIC().SIGNATURE(void, InsertItems, Vector<Item>, int);
@@ -231,7 +237,9 @@ CLASS_METHODS_META(o2::MenuPanel)
     FUNCTION().PUBLIC().SIGNATURE(const Ref<HorizontalLayout>&, GetItemsLayout);
     FUNCTION().PUBLIC().SIGNATURE(const Ref<Widget>&, GetItemSample);
     FUNCTION().PUBLIC().SIGNATURE(void, SetItemSample, const Ref<Widget>&);
-    FUNCTION().PUBLIC().SIGNATURE(const Ref<Sprite>&, GetSelectionDrawable);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetSelectionDrawable, const Ref<IRectDrawable>&);
+    FUNCTION().PUBLIC().SIGNATURE(Ref<Sprite>, GetSelectionDrawable);
+    FUNCTION().PUBLIC().SIGNATURE(const Ref<IRectDrawable>&, GetSelectionRectDrawable);
     FUNCTION().PUBLIC().SIGNATURE(void, SetSelectionDrawableLayout, const Layout&);
     FUNCTION().PUBLIC().SIGNATURE(Layout, GetSelectionDrawableLayout);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetCreateMenuGroup);

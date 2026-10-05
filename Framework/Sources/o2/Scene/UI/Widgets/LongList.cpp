@@ -26,8 +26,8 @@ namespace o2
         mInheritedDrawablesManualOrder = true;
 
         mItemSample = other.mItemSample->CloneAsRef<Widget>();
-        mSelectionDrawable = other.mSelectionDrawable->CloneAsRef<Sprite>();
-        mHoverDrawable = other.mHoverDrawable->CloneAsRef<Sprite>();
+        mSelectionDrawable = other.mSelectionDrawable->CloneAsRef<IRectDrawable>();
+        mHoverDrawable = other.mHoverDrawable->CloneAsRef<IRectDrawable>();
 
         mItemSample->UpdateTransform();
 
@@ -40,8 +40,8 @@ namespace o2
 
     LongList& LongList::operator=(const LongList& other)
     {
-        mSelectionDrawable = other.mSelectionDrawable->CloneAsRef<Sprite>();
-        mHoverDrawable = other.mHoverDrawable->CloneAsRef<Sprite>();
+        mSelectionDrawable = other.mSelectionDrawable->CloneAsRef<IRectDrawable>();
+        mHoverDrawable = other.mHoverDrawable->CloneAsRef<IRectDrawable>();
 
         mSelectionLayout = other.mSelectionLayout;
         mHoverLayout = other.mHoverLayout;
@@ -155,12 +155,36 @@ namespace o2
         return mSelectedItem;
     }
 
-    const Ref<Sprite>& LongList::GetSelectionDrawable() const
+    void LongList::SetSelectionDrawable(const Ref<IRectDrawable>& drawable)
+    {
+        mSelectionDrawable = drawable;
+        RetargetStatesAnimations();
+        SetLayoutDirty();
+    }
+
+    Ref<Sprite> LongList::GetSelectionDrawable() const
+    {
+        return DynamicCast<Sprite>(mSelectionDrawable);
+    }
+
+    const Ref<IRectDrawable>& LongList::GetSelectionRectDrawable() const
     {
         return mSelectionDrawable;
     }
 
-    const Ref<Sprite>& LongList::GetHoverDrawable() const
+    void LongList::SetHoverDrawable(const Ref<IRectDrawable>& drawable)
+    {
+        mHoverDrawable = drawable;
+        RetargetStatesAnimations();
+        SetLayoutDirty();
+    }
+
+    Ref<Sprite> LongList::GetHoverDrawable() const
+    {
+        return DynamicCast<Sprite>(mHoverDrawable);
+    }
+
+    const Ref<IRectDrawable>& LongList::GetHoverRectDrawable() const
     {
         return mHoverDrawable;
     }

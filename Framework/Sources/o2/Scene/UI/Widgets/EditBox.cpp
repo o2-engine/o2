@@ -47,7 +47,7 @@ namespace o2
     {
         mSelectionMesh = mmake<Mesh>();
         mTextDrawable  = other.mTextDrawable->CloneAsRef<Text>();
-        mCaretDrawable = other.mCaretDrawable->CloneAsRef<Sprite>();
+        mCaretDrawable = other.mCaretDrawable->CloneAsRef<IRectDrawable>();
 
         mTextDrawable->SetText(mText);
 
@@ -76,7 +76,7 @@ namespace o2
         mSelectionColor = other.mSelectionColor;
         mCaretBlinkDelay = other.mCaretBlinkDelay;
         mTextDrawable = other.mTextDrawable->CloneAsRef<Text>();
-        mCaretDrawable = other.mCaretDrawable->CloneAsRef<Sprite>();
+        mCaretDrawable = other.mCaretDrawable->CloneAsRef<IRectDrawable>();
 
         mTextDrawable->SetText(mText);
 
@@ -218,7 +218,18 @@ namespace o2
         return mTextDrawable;
     }
 
-    const Ref<Sprite>& EditBox::GetCaretDrawable()
+    void EditBox::SetCaretDrawable(const Ref<IRectDrawable>& drawable)
+    {
+        mCaretDrawable = drawable;
+        RetargetStatesAnimations();
+    }
+
+    Ref<Sprite> EditBox::GetCaretDrawable()
+    {
+        return DynamicCast<Sprite>(mCaretDrawable);
+    }
+
+    const Ref<IRectDrawable>& EditBox::GetCaretRectDrawable() const
     {
         return mCaretDrawable;
     }

@@ -115,6 +115,20 @@ namespace o2
         template<typename _type>
         Ref<_type> FindChild() const;
 
+        // Returns the first child drawable of the type or based on it
+        template<typename _type>
+        Ref<_type> FindChildBasedOn() const;
+
+        // Shows image in the drawable, Sprite and VectorSprite are swapped by the kind of image. Returns the drawable,
+        // null when the layer holds a drawable of another type
+        Ref<IRectDrawable> SetImage(const AssetRef<Asset>& image);
+
+        // Shows image by path in the drawable, see SetImage by asset
+        Ref<IRectDrawable> SetImage(const String& imagePath);
+
+        // Returns image asset of the Sprite or VectorSprite drawable, empty for other drawables
+        AssetRef<Asset> GetImage() const;
+
         // Returns all child layers @SCRIPTABLE
         Vector<Ref<WidgetLayer>> GetAllChilds() const;
 
@@ -344,6 +358,24 @@ namespace o2
     };
 
     template<typename _type>
+    Ref<_type> WidgetLayer::FindChildBasedOn() const
+    {
+        for (auto& child : mChildren)
+        {
+            if (auto res = DynamicCast<_type>(child->mDrawable))
+                return res;
+        }
+
+        for (auto& child : mChildren)
+        {
+            if (auto res = child->template FindChildBasedOn<_type>())
+                return res;
+        }
+
+        return nullptr;
+    }
+
+    template<typename _type>
     Ref<_type> WidgetLayer::FindChild() const
     {
         for (auto& child : mChildren)
@@ -422,6 +454,9 @@ CLASS_METHODS_META(o2::WidgetLayer)
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(Ref<WidgetLayer>, AddChildLayer, const String&, const Ref<IRectDrawable>&, const Layout&, float);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(Ref<WidgetLayer>, GetChild, const String&);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(Ref<WidgetLayer>, FindChild, const String&);
+    FUNCTION().PUBLIC().SIGNATURE(Ref<IRectDrawable>, SetImage, const AssetRef<Asset>&);
+    FUNCTION().PUBLIC().SIGNATURE(Ref<IRectDrawable>, SetImage, const String&);
+    FUNCTION().PUBLIC().SIGNATURE(AssetRef<Asset>, GetImage);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(Vector<Ref<WidgetLayer>>, GetAllChilds);
     FUNCTION().PUBLIC().SIGNATURE(void, SetDepth, float);
     FUNCTION().PUBLIC().SIGNATURE(float, GetDepth);

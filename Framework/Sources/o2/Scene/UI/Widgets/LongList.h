@@ -54,11 +54,23 @@ namespace o2
         // Returns selected item position
         int GetSelectedItemPosition() const;
 
+        // Sets selection drawable
+        void SetSelectionDrawable(const Ref<IRectDrawable>& drawable);
+
+        // Returns selection drawable as sprite, null when it is a drawable of another type
+        Ref<Sprite> GetSelectionDrawable() const;
+
         // Returns selection drawable
-        const Ref<Sprite>& GetSelectionDrawable() const;
+        const Ref<IRectDrawable>& GetSelectionRectDrawable() const;
+
+        // Sets hover drawable
+        void SetHoverDrawable(const Ref<IRectDrawable>& drawable);
+
+        // Returns hover drawable as sprite, null when it is a drawable of another type
+        Ref<Sprite> GetHoverDrawable() const;
 
         // Returns hover drawable
-        const Ref<Sprite>& GetHoverDrawable() const;
+        const Ref<IRectDrawable>& GetHoverRectDrawable() const;
 
         // Sets selection drawable layout (result rectangle will be calculated by item widget absolute rectangle)
         void SetSelectionDrawableLayout(const Layout& layout);
@@ -87,8 +99,8 @@ namespace o2
     protected:
         Ref<Widget> mItemSample; // Item sample widget @SERIALIZABLE
 
-        Ref<Sprite> mSelectionDrawable;                   // Selection sprite @SERIALIZABLE
-        Ref<Sprite> mHoverDrawable;                       // Item hover drawable @SERIALIZABLE
+        Ref<IRectDrawable> mSelectionDrawable;            // Selection drawable @SERIALIZABLE
+        Ref<IRectDrawable> mHoverDrawable;                // Item hover drawable @SERIALIZABLE
         Layout  mSelectionLayout = Layout::BothStretch(); // Selection layout, result selection area depends on selected item @SERIALIZABLE
         Layout  mHoverLayout = Layout::BothStretch();     // Hover layout, result selection area depends on selected item @SERIALIZABLE
                                                  
@@ -204,8 +216,12 @@ CLASS_METHODS_META(o2::LongList)
     FUNCTION().PUBLIC().SIGNATURE(const Ref<Widget>&, GetItemSample);
     FUNCTION().PUBLIC().SIGNATURE(void, SelectItemAt, int);
     FUNCTION().PUBLIC().SIGNATURE(int, GetSelectedItemPosition);
-    FUNCTION().PUBLIC().SIGNATURE(const Ref<Sprite>&, GetSelectionDrawable);
-    FUNCTION().PUBLIC().SIGNATURE(const Ref<Sprite>&, GetHoverDrawable);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetSelectionDrawable, const Ref<IRectDrawable>&);
+    FUNCTION().PUBLIC().SIGNATURE(Ref<Sprite>, GetSelectionDrawable);
+    FUNCTION().PUBLIC().SIGNATURE(const Ref<IRectDrawable>&, GetSelectionRectDrawable);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetHoverDrawable, const Ref<IRectDrawable>&);
+    FUNCTION().PUBLIC().SIGNATURE(Ref<Sprite>, GetHoverDrawable);
+    FUNCTION().PUBLIC().SIGNATURE(const Ref<IRectDrawable>&, GetHoverRectDrawable);
     FUNCTION().PUBLIC().SIGNATURE(void, SetSelectionDrawableLayout, const Layout&);
     FUNCTION().PUBLIC().SIGNATURE(Layout, GetSelectionDrawableLayout);
     FUNCTION().PUBLIC().SIGNATURE(void, SetHoverDrawableLayout, const Layout&);

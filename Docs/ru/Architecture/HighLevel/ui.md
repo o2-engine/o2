@@ -18,6 +18,29 @@ Pivot виджета (`SetPivot2D`) — единственное поле баз
 
 Слои могут отключаться и у них есть настраиваемая прозрачность, которая влияет и на дочерние слои
 
+Картинка слоя - растровый `Sprite` или векторный `VectorSprite` (см. [рендер](/Docs/ru/Architecture/LowLevel/render.md)), создаётся как `mmake<Sprite>(path)` или `mmake<VectorSprite>(path)`. `WidgetLayer::SetImage(path | asset)` и `Widget::SetLayerImage(layerPath, imagePath)` меняют картинку существующего слоя и подменяют drawable, если вид картинки другой; цвет и enabled сохраняются; `WidgetLayer::GetImage()` возвращает ассет картинки drawable.
+
+`GetLayerDrawable<T>(path)` и `GetLayerDrawableByType<T>()` сравнивают точный тип. `GetLayerDrawableBasedOn<T>(path)` и `GetLayerDrawableByBaseType<T>()` находят и наследников, поэтому `GetLayerDrawableBasedOn<IRectDrawable>("icon")` вернёт любой drawable.
+
+#### Drawable виджетов
+Часть виджетов рисует не слоями, а drawable из собственных полей. Все они `Ref<IRectDrawable>`, поэтому `VectorSprite` работает там так же, как `Sprite`:
+
+| Виджет | Drawable | Сеттер | Геттер |
+|---|---|---|---|
+| `CustomList`, `LongList` | выделение, ховер | `SetSelectionDrawable`, `SetHoverDrawable` | `GetSelectionRectDrawable`, `GetHoverRectDrawable` |
+| `Tree` | ховер, подсветка, линия зебры | `SetHoverDrawable`, `SetHighlightDrawable`, `SetZebraBackLine` | `GetHoverRectDrawable`, `GetHighlightRectDrawable`, `GetZebraBackLineDrawable` |
+| `ContextMenu`, `MenuPanel` | выделение | `SetSelectionDrawable` | `GetSelectionRectDrawable` |
+| `EditBox` | каретка | `SetCaretDrawable` | `GetCaretRectDrawable` |
+| `Button` | слой `icon` | `SetIcon`, `SetIconImage(path)` | `GetIconDrawable` |
+| `Window` | слой иконки | `SetIcon` | `GetIconDrawable` |
+| `Image` | слой `image` | `SetImageDrawable`, `SetImageSource(asset)`, `SetImageName(path)` | `GetImageDrawable`, `GetImageSource`, `GetImageName` |
+
+- Прежние геттеры (`GetSelectionDrawable`, `GetHoverDrawable`, `GetHighlightDrawable`, `GetZebraBackLine`, `GetCaretDrawable`, `GetIcon`, `Image::GetImage`, `Image::GetImageAsset`) возвращают `Ref<Sprite>` и дают null, если drawable не `Sprite`.
+- `CustomList` рисует каждый выделенный элемент клоном drawable выделения из пула; `SetSelectionDrawable` сбрасывает пул и выдаёт выделенным элементам клоны нового.
+- Сеттеры перепривязывают анимации состояний, поэтому состояние вида `mHoverDrawable/transparency` работает с новым drawable.
+- Сериализованные данные не изменились: в поле лежит `{"Type": "o2::Sprite", "Value": {...}}`, как раньше, либо имя другого типа для другого drawable.
+- `ContextMenu::Item::icon` имеет тип `AssetRef<Asset>`: растровая или векторная картинка; виджет пункта показывает её через `WidgetLayer::SetImage`. Слой `check` пункта может быть любым drawable.
+
 #### Состояния
 Это элементарная анимационная стейт-машина, где задается список состояний, и каждое состояние может быть включено либо выключено. Переход состояния из вкл в выкл и наоборот происходит через анимацию, которая задается через анимационный клип.
 
@@ -38,7 +61,7 @@ Pivot виджета (`SetPivot2D`) — единственное поле баз
 - `Grid/Horizontal/VerticalLayout` - динамическое расположение дочерних элементов по сетке/по горизонтали/по вертикали
 - `Button` - кнопка; каждое нажатие вызывает `onClick`, включая быстрое повторное в пределах времени двойного клика
 - `EditBox` - поле ввода текста
-- `Image` - спрайт
+- `Image` - картинка, растровая или векторная
 - `Label` - текст
 - `Toggle` - флаг, чекбокс
 - `Horizontal/VerticalScrollBar` - горизонтальный/вертикальный скролл-бар

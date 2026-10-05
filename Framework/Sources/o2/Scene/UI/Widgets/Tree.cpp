@@ -197,11 +197,11 @@ namespace o2
         mMultiSelectAvailable = other.mMultiSelectAvailable;
         mNodeWidgetSample = other.mNodeWidgetSample->CloneAsRef<TreeNode>();
         mFakeDragNode = other.mNodeWidgetSample->CloneAsRef<TreeNode>();
-        mHoverDrawable = other.mHoverDrawable->CloneAsRef<Sprite>();
-        mHighlightSprite = other.mHighlightSprite->CloneAsRef<Sprite>();
+        mHoverDrawable = other.mHoverDrawable->CloneAsRef<IRectDrawable>();
+        mHighlightSprite = other.mHighlightSprite->CloneAsRef<IRectDrawable>();
 
         if (other.mZebraBackLine)
-            mZebraBackLine = other.mZebraBackLine->CloneAsRef<Sprite>();
+            mZebraBackLine = other.mZebraBackLine->CloneAsRef<IRectDrawable>();
 
         if (other.mHighlighClip)
             mHighlighClip = other.mHighlighClip->CloneAsRef<AnimationClip>();
@@ -238,8 +238,8 @@ namespace o2
         mMultiSelectAvailable = other.mMultiSelectAvailable;
         mNodeWidgetSample = other.mNodeWidgetSample->CloneAsRef<TreeNode>();
         mFakeDragNode = other.mNodeWidgetSample->CloneAsRef<TreeNode>();
-        mHoverDrawable = other.mHoverDrawable->CloneAsRef<Sprite>();
-        mHighlightSprite = other.mHighlightSprite->CloneAsRef<Sprite>();
+        mHoverDrawable = other.mHoverDrawable->CloneAsRef<IRectDrawable>();
+        mHighlightSprite = other.mHighlightSprite->CloneAsRef<IRectDrawable>();
 
         mHighlighClip = other.mHighlighClip->CloneAsRef<AnimationClip>();
         mHighlightAnim->SetTarget(mHighlightSprite.Get());
@@ -1807,12 +1807,35 @@ namespace o2
         mNodeWidgetSample = sample;
     }
 
-    const Ref<Sprite>& Tree::GetHoverDrawable() const
+    void Tree::SetHoverDrawable(const Ref<IRectDrawable>& drawable)
+    {
+        mHoverDrawable = drawable;
+        RetargetStatesAnimations();
+    }
+
+    Ref<Sprite> Tree::GetHoverDrawable() const
+    {
+        return DynamicCast<Sprite>(mHoverDrawable);
+    }
+
+    const Ref<IRectDrawable>& Tree::GetHoverRectDrawable() const
     {
         return mHoverDrawable;
     }
 
-    const Ref<Sprite>& Tree::GetHighlightDrawable() const
+    void Tree::SetHighlightDrawable(const Ref<IRectDrawable>& drawable)
+    {
+        mHighlightSprite = drawable;
+        mHighlightAnim->SetTarget(mHighlightSprite.Get());
+        RetargetStatesAnimations();
+    }
+
+    Ref<Sprite> Tree::GetHighlightDrawable() const
+    {
+        return DynamicCast<Sprite>(mHighlightSprite);
+    }
+
+    const Ref<IRectDrawable>& Tree::GetHighlightRectDrawable() const
     {
         return mHighlightSprite;
     }
@@ -1829,12 +1852,18 @@ namespace o2
         mHighlightLayout = layout;
     }
 
-    void Tree::SetZebraBackLine(const Ref<Sprite>& sprite)
+    void Tree::SetZebraBackLine(const Ref<IRectDrawable>& drawable)
     {
-        mZebraBackLine = sprite;
+        mZebraBackLine = drawable;
+        RetargetStatesAnimations();
     }
 
-    const Ref<Sprite>& Tree::GetZebraBackLine() const
+    Ref<Sprite> Tree::GetZebraBackLine() const
+    {
+        return DynamicCast<Sprite>(mZebraBackLine);
+    }
+
+    const Ref<IRectDrawable>& Tree::GetZebraBackLineDrawable() const
     {
         return mZebraBackLine;
     }

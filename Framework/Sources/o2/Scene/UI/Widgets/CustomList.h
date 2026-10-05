@@ -111,11 +111,23 @@ namespace o2
         // Returns is multi selection available
         bool IsMultiselectionAvailable() const;
 
+        // Sets selection drawable, a sample for drawables of selected items
+        void SetSelectionDrawable(const Ref<IRectDrawable>& drawable);
+
+        // Returns selection drawable as sprite, null when it is a drawable of another type
+        Ref<Sprite> GetSelectionDrawable() const;
+
         // Returns selection drawable
-        const Ref<Sprite>& GetSelectionDrawable() const;
+        const Ref<IRectDrawable>& GetSelectionRectDrawable() const;
+
+        // Sets hover drawable
+        void SetHoverDrawable(const Ref<IRectDrawable>& drawable);
+
+        // Returns hover drawable as sprite, null when it is a drawable of another type
+        Ref<Sprite> GetHoverDrawable() const;
 
         // Returns hover drawable
-        const Ref<Sprite>& GetHoverDrawable() const;
+        const Ref<IRectDrawable>& GetHoverRectDrawable() const;
 
         // Sets selection drawable layout (result rectangle will be calculated by item widget absolute rectangle)
         void SetSelectionDrawableLayout(const Layout& layout);
@@ -150,8 +162,8 @@ namespace o2
         // ------------------
         struct Selection
         {
-            int         idx;       // Item index
-            Ref<Sprite> selection; // Selection sprite
+            int                idx;       // Item index
+            Ref<IRectDrawable> selection; // Selection drawable
 
             // Check equals operator
             bool operator==(const Selection& other) const;
@@ -164,8 +176,8 @@ namespace o2
         bool              mMultiSelection = true; // Is multi selection available @SERIALIZABLE
         Vector<Selection> mSelectedItems;         // Current selected items
 
-        Ref<Sprite> mSelectionDrawable; // Selection sprite @SERIALIZABLE
-        Ref<Sprite> mHoverDrawable;     // Item hover drawable @SERIALIZABLE
+        Ref<IRectDrawable> mSelectionDrawable; // Selection drawable @SERIALIZABLE
+        Ref<IRectDrawable> mHoverDrawable;     // Item hover drawable @SERIALIZABLE
 
         Layout mSelectionLayout = Layout::BothStretch(); // Selection layout, result selection area depends on selected item @SERIALIZABLE
         Layout mHoverLayout = Layout::BothStretch();     // Hover layout, result selection area depends on selected item @SERIALIZABLE
@@ -176,7 +188,7 @@ namespace o2
         Vec2F mLastHoverCheckCursor;  // Last cursor position on hover check
         Vec2F mLastSelectCheckCursor; // Last cursor position on selection check
 
-        Vector<Ref<Sprite>> mSelectionSpritesPool; // Selection sprites pool
+        Vector<Ref<IRectDrawable>> mSelectionSpritesPool; // Selection drawables pool
 
     protected:
         // Called when object was deserialized and trying to reattach states animations target
@@ -230,8 +242,8 @@ namespace o2
         // Updates hover
         void UpdateHover(const Vec2F& point);
 
-        // Returns selection sprite
-		Ref<Sprite> GetSelectionSprite();
+        // Returns selection drawable from pool
+		Ref<IRectDrawable> GetSelectionSprite();
 
 		REF_COUNTERABLE_IMPL(ScrollArea);
 
@@ -302,8 +314,12 @@ CLASS_METHODS_META(o2::CustomList)
     FUNCTION().PUBLIC().SIGNATURE(Ref<Widget>, GetSelectedItem);
     FUNCTION().PUBLIC().SIGNATURE(void, SetMultiselectionAvailable, bool);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsMultiselectionAvailable);
-    FUNCTION().PUBLIC().SIGNATURE(const Ref<Sprite>&, GetSelectionDrawable);
-    FUNCTION().PUBLIC().SIGNATURE(const Ref<Sprite>&, GetHoverDrawable);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetSelectionDrawable, const Ref<IRectDrawable>&);
+    FUNCTION().PUBLIC().SIGNATURE(Ref<Sprite>, GetSelectionDrawable);
+    FUNCTION().PUBLIC().SIGNATURE(const Ref<IRectDrawable>&, GetSelectionRectDrawable);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetHoverDrawable, const Ref<IRectDrawable>&);
+    FUNCTION().PUBLIC().SIGNATURE(Ref<Sprite>, GetHoverDrawable);
+    FUNCTION().PUBLIC().SIGNATURE(const Ref<IRectDrawable>&, GetHoverRectDrawable);
     FUNCTION().PUBLIC().SIGNATURE(void, SetSelectionDrawableLayout, const Layout&);
     FUNCTION().PUBLIC().SIGNATURE(Layout, GetSelectionDrawableLayout);
     FUNCTION().PUBLIC().SIGNATURE(void, SetHoverDrawableLayout, const Layout&);
@@ -329,7 +345,7 @@ CLASS_METHODS_META(o2::CustomList)
     FUNCTION().PROTECTED().SIGNATURE(void, OnKeyPressed, const Input::Key&);
     FUNCTION().PROTECTED().SIGNATURE(Ref<Widget>, GetItemUnderPoint, const Vec2F&, int*);
     FUNCTION().PROTECTED().SIGNATURE(void, UpdateHover, const Vec2F&);
-    FUNCTION().PROTECTED().SIGNATURE(Ref<Sprite>, GetSelectionSprite);
+    FUNCTION().PROTECTED().SIGNATURE(Ref<IRectDrawable>, GetSelectionSprite);
 }
 END_META;
 // --- END META ---

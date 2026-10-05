@@ -28,7 +28,7 @@ namespace o2
     {}
 
     ContextMenu::Item::Item(RefCounter* refCounter, const WString& text, const Function<void()> onClick,
-                            const WString& group /*= ""*/, const AssetRef<ImageAsset>& icon /*= AssetRef<ImageAsset>()*/,
+                            const WString& group /*= ""*/, const AssetRef<Asset>& icon /*= AssetRef<Asset>()*/,
                             const ShortcutKeys& shortcut /*= ShortcutKeys()*/) :
         RefCounterable(refCounter), text(text), group(group), onClick(onClick), mShortcut(shortcut), icon(icon), checked(false), checkable(false)
     {
@@ -36,13 +36,13 @@ namespace o2
     }
 
     ContextMenu::Item::Item(RefCounter* refCounter, const WString& text, const Vector<Ref<Item>>& subItems,
-                            const WString& group /*= ""*/, const AssetRef<ImageAsset>& icon /*= AssetRef<ImageAsset>()*/) :
+                            const WString& group /*= ""*/, const AssetRef<Asset>& icon /*= AssetRef<Asset>()*/) :
         RefCounterable(refCounter), text(text), group(group), subItems(subItems), icon(icon), checked(false), checkable(false)
     {}
 
     ContextMenu::Item::Item(RefCounter* refCounter, const WString& text, bool checked,
                             Function<void(bool)> onChecked /*= Function<void(bool)>()*/,
-                            const WString& group /*= ""*/, const AssetRef<ImageAsset>& icon /*= AssetRef<ImageAsset>()*/,
+                            const WString& group /*= ""*/, const AssetRef<Asset>& icon /*= AssetRef<Asset>()*/,
                             const ShortcutKeys& shortcut /*= ShortcutKeys()*/) :
         RefCounterable(refCounter), text(text), group(group), checked(checked), onChecked(onChecked), checkable(true), mShortcut(shortcut), icon(icon)
     {
@@ -157,7 +157,7 @@ namespace o2
         mSeparatorSample = other.mSeparatorSample->CloneAsRef<Widget>();
         mSeparatorSample->RemoveFromScene();
 
-        mSelectionDrawable = other.mSelectionDrawable->CloneAsRef<Sprite>();
+        mSelectionDrawable = other.mSelectionDrawable->CloneAsRef<IRectDrawable>();
         mSelectionLayout = other.mSelectionLayout;
         mItemsLayout = FindChildByType<VerticalLayout>();
 
@@ -181,7 +181,7 @@ namespace o2
 
         mItemSample = other.mItemSample->CloneAsRef<ContextMenuItem>();
         mSeparatorSample = other.mSeparatorSample->CloneAsRef<Widget>();
-        mSelectionDrawable = other.mSelectionDrawable->CloneAsRef<Sprite>();
+        mSelectionDrawable = other.mSelectionDrawable->CloneAsRef<IRectDrawable>();
         mSelectionLayout = other.mSelectionLayout;
 
         PopupWidget::operator=(other);
@@ -287,7 +287,7 @@ namespace o2
 
     Ref<ContextMenu::Item>  ContextMenu::AddItem(const WString& path,
                               const Function<void()>& clickFunc /*= Function<void()>()*/,
-                              const AssetRef<ImageAsset>& icon /*= AssetRef<ImageAsset>()*/,
+                              const AssetRef<Asset>& icon /*= AssetRef<Asset>()*/,
                               const ShortcutKeys& shortcut /*= ShortcutKeys()*/)
     {
         WString targetPath = path;
@@ -306,7 +306,7 @@ namespace o2
 
     Ref<ContextMenu::Item>  ContextMenu::AddToggleItem(const WString& path, bool value,
                                     const Function<void(bool)>& clickFunc /*= Function<void(bool)>()*/,
-                                    const AssetRef<ImageAsset>& icon /*= AssetRef<ImageAsset>()*/,
+                                    const AssetRef<Asset>& icon /*= AssetRef<Asset>()*/,
                                     const ShortcutKeys& shortcut /*= ShortcutKeys()*/)
     {
         WString targetPath = path;
@@ -590,7 +590,18 @@ namespace o2
         return mSeparatorSample;
     }
 
-    const Ref<Sprite>& ContextMenu::GetSelectionDrawable() const
+    void ContextMenu::SetSelectionDrawable(const Ref<IRectDrawable>& drawable)
+    {
+        mSelectionDrawable = drawable;
+        RetargetStatesAnimations();
+    }
+
+    Ref<Sprite> ContextMenu::GetSelectionDrawable() const
+    {
+        return DynamicCast<Sprite>(mSelectionDrawable);
+    }
+
+    const Ref<IRectDrawable>& ContextMenu::GetSelectionRectDrawable() const
     {
         return mSelectionDrawable;
     }
@@ -847,7 +858,8 @@ namespace o2
             }
 
             if (item->icon) {
-                Vec2F size = item->icon->GetAtlasRect().Size();
+                auto spriteLayer = iconLayer->AddChildLayer("sprite", nullptr);
+                Vec2F size = spriteLayer->SetImage(item->icon)->GetSize2D();
 
                 if (size.x > size.y) {
                     size.y *= size.x / layout->height;
@@ -858,10 +870,9 @@ namespace o2
                     size.y = layout->height;
                 }
 
-                iconLayer->AddChildLayer("sprite", mmake<Sprite>(item->icon),
-                                         Layout(Vec2F(), Vec2F(),
-                                                Vec2F(-Math::Floor(size.x * 0.5f), Math::Floor(size.y * 0.5f)),
-                                                Vec2F(Math::Floor(size.x * 0.5f), -Math::Floor(size.y * 0.5f))));
+                spriteLayer->layout = Layout(Vec2F(), Vec2F(),
+                                             Vec2F(-Math::Floor(size.x * 0.5f), Math::Floor(size.y * 0.5f)),
+                                             Vec2F(Math::Floor(size.x * 0.5f), -Math::Floor(size.y * 0.5f)));
 
                 UpdateLayersDrawingSequence();
             }
@@ -876,8 +887,8 @@ namespace o2
         if (auto subIconLayer = FindLayer("subIcon"))
             subIconLayer->transparency = item->subItems.Count() > 0 ? 1.0f : 0.0f;
 
-        if (auto checkLayer = GetLayerDrawable<Sprite>("check"))
-            checkLayer->enabled = item->checked;
+        if (auto checkDrawable = GetLayerDrawableBasedOn<IRectDrawable>("check"))
+            checkDrawable->enabled = item->checked;
 
         SetChecked(item->checked);
         SetCheckable(item->checkable);
@@ -930,8 +941,8 @@ namespace o2
 
     void ContextMenuItem::SetChecked(bool checked)
     {
-        if (auto checkLayer = GetLayerDrawable<Sprite>("check"))
-            checkLayer->enabled = checked;
+        if (auto checkDrawable = GetLayerDrawableBasedOn<IRectDrawable>("check"))
+            checkDrawable->enabled = checked;
 
         mChecked = checked;
     }

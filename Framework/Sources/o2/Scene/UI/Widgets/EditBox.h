@@ -81,8 +81,14 @@ namespace o2
         // Returns text drawable
         const Ref<Text>& GetTextDrawable();
 
+        // Sets caret drawable
+        void SetCaretDrawable(const Ref<IRectDrawable>& drawable);
+
+        // Returns caret drawable as sprite, null when it is a drawable of another type
+        Ref<Sprite> GetCaretDrawable();
+
         // Returns caret drawable
-        const Ref<Sprite>& GetCaretDrawable();
+        const Ref<IRectDrawable>& GetCaretRectDrawable() const;
 
         // Sets selection color
         void SetSelectionColor(const Color4& color);
@@ -165,7 +171,7 @@ namespace o2
 
         Ref<Text>   mTextDrawable;  // Text drawable @SERIALIZABLE
         Ref<Mesh>   mSelectionMesh; // Selection mesh
-        Ref<Sprite> mCaretDrawable; // Caret drawable @SERIALIZABLE
+        Ref<IRectDrawable> mCaretDrawable; // Caret drawable @SERIALIZABLE
 
         float mCaretBlinkDelay = 1.0f; // Caret blinking delay @SERIALIZABLE
         float mCaretBlinkTime = 0.0f;  // Caret blinking timer
@@ -349,7 +355,9 @@ CLASS_METHODS_META(o2::EditBox)
     FUNCTION().PUBLIC().SIGNATURE(void, Deselect);
     FUNCTION().PUBLIC().SIGNATURE(void, SelectAll);
     FUNCTION().PUBLIC().SIGNATURE(const Ref<Text>&, GetTextDrawable);
-    FUNCTION().PUBLIC().SIGNATURE(const Ref<Sprite>&, GetCaretDrawable);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetCaretDrawable, const Ref<IRectDrawable>&);
+    FUNCTION().PUBLIC().SIGNATURE(Ref<Sprite>, GetCaretDrawable);
+    FUNCTION().PUBLIC().SIGNATURE(const Ref<IRectDrawable>&, GetCaretRectDrawable);
     FUNCTION().PUBLIC().SIGNATURE(void, SetSelectionColor, const Color4&);
     FUNCTION().PUBLIC().SIGNATURE(Color4, GetSelectionColor);
     FUNCTION().PUBLIC().SIGNATURE(void, SetFilterInteger);

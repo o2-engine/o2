@@ -19,7 +19,7 @@ namespace o2
     public:
         PROPERTIES(Button);
         PROPERTY(WString, caption, SetCaption, GetCaption); // Caption property. Searches "caption" layer and sets text
-        PROPERTY(Ref<Sprite>, icon, SetIcon, GetIcon);      // Icon image asset setter. Searches sprite layer with name "icon" and sets image
+        PROPERTY(Ref<IRectDrawable>, icon, SetIcon, GetIconDrawable); // Icon drawable of the layer with name "icon"
 
     public:
         SerializableFunction<void()> onClick;       // Click event @SERIALIZABLE @SCRIPTABLE
@@ -47,11 +47,17 @@ namespace o2
         // Returns caption text from text layer "caption". Returns no data if layer isn't exist @SCRIPTABLE
         WString GetCaption() const;
 
-        // Sets icon sprite. Searches sprite layer "icon". Creates a new icon if isn't exist
-        void SetIcon(const Ref<Sprite>& sprite);
+        // Sets drawable of the layer "icon", does nothing when there is no such layer
+        void SetIcon(const Ref<IRectDrawable>& drawable);
 
-        // Returns icon sprite
+        // Returns icon as sprite, null when it is a drawable of another type
         Ref<Sprite> GetIcon() const;
+
+        // Returns icon drawable
+        Ref<IRectDrawable> GetIconDrawable() const;
+
+        // Shows image by path in the icon layer, Sprite and VectorSprite are swapped by the kind of image
+        void SetIconImage(const String& imagePath);
 
         // Returns is this widget can be selected
         bool IsFocusable() const override;
@@ -67,7 +73,7 @@ namespace o2
 
     protected:
         WeakRef<Text>   mCaptionText; // Caption layer text
-        WeakRef<Sprite> mIconSprite;  // Icon layer sprite
+        WeakRef<IRectDrawable> mIconDrawable; // Icon layer drawable
 
     protected:
         // Called when cursor pressed on this. Sets state "pressed" to true
@@ -130,7 +136,7 @@ CLASS_FIELDS_META(o2::Button)
     FIELD().PUBLIC().EDITOR_IGNORE_ATTRIBUTE().NAME(isPointInside);
     FIELD().PUBLIC().NAME(shortcut);
     FIELD().PROTECTED().NAME(mCaptionText);
-    FIELD().PROTECTED().NAME(mIconSprite);
+    FIELD().PROTECTED().NAME(mIconDrawable);
 }
 END_META;
 CLASS_METHODS_META(o2::Button)
@@ -141,8 +147,10 @@ CLASS_METHODS_META(o2::Button)
     FUNCTION().PUBLIC().SIGNATURE(void, Draw);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetCaption, const WString&);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(WString, GetCaption);
-    FUNCTION().PUBLIC().SIGNATURE(void, SetIcon, const Ref<Sprite>&);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetIcon, const Ref<IRectDrawable>&);
     FUNCTION().PUBLIC().SIGNATURE(Ref<Sprite>, GetIcon);
+    FUNCTION().PUBLIC().SIGNATURE(Ref<IRectDrawable>, GetIconDrawable);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetIconImage, const String&);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsFocusable);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsUnderPoint, const Vec2F&);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetCreateMenuGroup);

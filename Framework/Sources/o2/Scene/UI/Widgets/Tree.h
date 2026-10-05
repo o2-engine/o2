@@ -141,14 +141,26 @@ namespace o2
         // Sets item sample
         void SetNodeSample(const Ref<TreeNode>& sample);
 
+        // Sets hover drawable
+        void SetHoverDrawable(const Ref<IRectDrawable>& drawable);
+
+        // Returns hover drawable as sprite, null when it is a drawable of another type
+        Ref<Sprite> GetHoverDrawable() const;
+
         // Returns hover drawable
-        const Ref<Sprite>& GetHoverDrawable() const;
+        const Ref<IRectDrawable>& GetHoverRectDrawable() const;
 
         // Sets hover layout
         void SetHoverLayout(const Layout& layout);
 
+        // Sets node highlight drawable
+        void SetHighlightDrawable(const Ref<IRectDrawable>& drawable);
+
+        // Returns node highlight drawable as sprite, null when it is a drawable of another type
+        Ref<Sprite> GetHighlightDrawable() const;
+
         // Returns node highlight drawable
-        const Ref<Sprite>& GetHighlightDrawable() const;
+        const Ref<IRectDrawable>& GetHighlightRectDrawable() const;
 
         // Sets highlight animation
         void SetHighlightAnimation(const Ref<AnimationClip>& animation);
@@ -156,11 +168,14 @@ namespace o2
         // Sets highlight layout
         void SetHighlightLayout(const Layout& layout);
 
-        // Sets zebra back line sprite drawable. When it is null no zebra back isn't drawing
-        void SetZebraBackLine(const Ref<Sprite>& sprite);
+        // Sets zebra back line drawable. When it is null no zebra back isn't drawing
+        void SetZebraBackLine(const Ref<IRectDrawable>& drawable);
 
-        // Return zebra back line sprite
-        const Ref<Sprite>& GetZebraBackLine() const;
+        // Returns zebra back line as sprite, null when it is a drawable of another type
+        Ref<Sprite> GetZebraBackLine() const;
+
+        // Returns zebra back line drawable
+        const Ref<IRectDrawable>& GetZebraBackLineDrawable() const;
 
         // Sets node pressing and expanding time
         void SetNodeExpandTimer(float time);
@@ -270,7 +285,7 @@ namespace o2
         Vec2F mLastClickPos; // Last click position in scroll space (depends on scroll position)
 
         WeakRef<TreeNode> mHoveredItem;      // Current hovered tree node item
-        Ref<Sprite>       mHoverDrawable;    // Selection sprite @SERIALIZABLE
+        Ref<IRectDrawable> mHoverDrawable;   // Hover drawable @SERIALIZABLE
         Layout            mHoverLayout;      // Selection layout, result selection area depends on selected item @SERIALIZABLE                                                                     
         RectF             mCurrentHoverRect; // Current selection rectangle (for smoothing)
         RectF             mTargetHoverRect;  // Target selection rectangle (over selected item)    
@@ -304,12 +319,12 @@ namespace o2
 
         Ref<AnimationClip>   mHighlighClip;                             // Node highlight animation clip @SERIALIZABLE 
         Ref<AnimationPlayer> mHighlightAnim = mmake<AnimationPlayer>(); // Node highlight animation
-        Ref<Sprite>          mHighlightSprite;                          // Node highlight sprite @SERIALIZABLE
+        Ref<IRectDrawable>   mHighlightSprite;                          // Node highlight drawable @SERIALIZABLE
         Layout               mHighlightLayout;                          // Node highlight sprite layout @SERIALIZABLE
         WeakRef<Node>        mHighlighNode = nullptr;                   // Hightlighing node
         void*                mHighlightObject;                          // Highlight object
         
-        Ref<Sprite> mZebraBackLine; // Dark zebra line sprite. When it is null, no zebra back doesn't draw @SERIALIZABLE
+        Ref<IRectDrawable> mZebraBackLine; // Dark zebra line drawable. When it is null, no zebra back doesn't draw @SERIALIZABLE
 
         Vector<VisibleWidgetDef> mVisibleWidgetsCache; // Visible widgets cache
 
@@ -719,13 +734,18 @@ CLASS_METHODS_META(o2::Tree)
     FUNCTION().PUBLIC().SIGNATURE(bool, IsMultiSelectionAvailable);
     FUNCTION().PUBLIC().SIGNATURE(const Ref<TreeNode>&, GetNodeSample);
     FUNCTION().PUBLIC().SIGNATURE(void, SetNodeSample, const Ref<TreeNode>&);
-    FUNCTION().PUBLIC().SIGNATURE(const Ref<Sprite>&, GetHoverDrawable);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetHoverDrawable, const Ref<IRectDrawable>&);
+    FUNCTION().PUBLIC().SIGNATURE(Ref<Sprite>, GetHoverDrawable);
+    FUNCTION().PUBLIC().SIGNATURE(const Ref<IRectDrawable>&, GetHoverRectDrawable);
     FUNCTION().PUBLIC().SIGNATURE(void, SetHoverLayout, const Layout&);
-    FUNCTION().PUBLIC().SIGNATURE(const Ref<Sprite>&, GetHighlightDrawable);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetHighlightDrawable, const Ref<IRectDrawable>&);
+    FUNCTION().PUBLIC().SIGNATURE(Ref<Sprite>, GetHighlightDrawable);
+    FUNCTION().PUBLIC().SIGNATURE(const Ref<IRectDrawable>&, GetHighlightRectDrawable);
     FUNCTION().PUBLIC().SIGNATURE(void, SetHighlightAnimation, const Ref<AnimationClip>&);
     FUNCTION().PUBLIC().SIGNATURE(void, SetHighlightLayout, const Layout&);
-    FUNCTION().PUBLIC().SIGNATURE(void, SetZebraBackLine, const Ref<Sprite>&);
-    FUNCTION().PUBLIC().SIGNATURE(const Ref<Sprite>&, GetZebraBackLine);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetZebraBackLine, const Ref<IRectDrawable>&);
+    FUNCTION().PUBLIC().SIGNATURE(Ref<Sprite>, GetZebraBackLine);
+    FUNCTION().PUBLIC().SIGNATURE(const Ref<IRectDrawable>&, GetZebraBackLineDrawable);
     FUNCTION().PUBLIC().SIGNATURE(void, SetNodeExpandTimer, float);
     FUNCTION().PUBLIC().SIGNATURE(float, GetNodeExpandTimer);
     FUNCTION().PUBLIC().SIGNATURE(void, SetChildsNodesOffset, float);

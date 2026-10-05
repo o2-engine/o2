@@ -697,6 +697,14 @@ namespace o2
         return nullptr;
     }
 
+    Ref<IRectDrawable> Widget::SetLayerImage(const String& path, const String& imagePath)
+    {
+        if (auto layer = GetLayer(path))
+            return layer->SetImage(imagePath);
+
+        return nullptr;
+    }
+
     Ref<WidgetLayer> Widget::FindLayer(const String& name) const
     {
         for (auto& childLayer : mLayers)
@@ -1031,6 +1039,12 @@ namespace o2
     {
         if (mParentWidget)
             mParentWidget.Lock()->OnChildFocused(child);
+    }
+
+    void Widget::RebindStatesAnimations()
+    {
+        for (auto& state : mStates)
+            state->mPlayer->SetTarget(static_cast<IObject*>(static_cast<ActorBase*>(this)), false);
     }
 
     void Widget::RetargetStatesAnimations()

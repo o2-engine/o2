@@ -33,7 +33,7 @@ namespace o2
         Widget(refCounter, other), DrawableCursorEventsListener(this)
     {
         mItemSample = other.mItemSample->CloneAsRef<Widget>();
-        mSelectionDrawable = other.mSelectionDrawable->CloneAsRef<Sprite>();
+        mSelectionDrawable = other.mSelectionDrawable->CloneAsRef<IRectDrawable>();
         mSelectionLayout = other.mSelectionLayout;
         mLayout = FindChildByType<HorizontalLayout>();
 
@@ -48,7 +48,7 @@ namespace o2
         Widget::operator=(other);
 
         mItemSample = other.mItemSample->CloneAsRef<Widget>();
-        mSelectionDrawable = other.mSelectionDrawable->CloneAsRef<Sprite>();
+        mSelectionDrawable = other.mSelectionDrawable->CloneAsRef<IRectDrawable>();
         mSelectionLayout = other.mSelectionLayout;
         mLayout = FindChildByType<HorizontalLayout>();
 
@@ -161,7 +161,7 @@ namespace o2
 
     void MenuPanel::AddItem(const WString& path,
                             const Function<void()>& clickFunc /*= Function<void()>()*/,
-                            const AssetRef<ImageAsset>& icon /*= AssetRef<ImageAsset>()*/,
+                            const AssetRef<Asset>& icon /*= AssetRef<Asset>()*/,
                             const ShortcutKeys& shortcut /*= ShortcutKeys()*/)
     {
         WString itemPath = path;
@@ -177,7 +177,7 @@ namespace o2
 
     void MenuPanel::AddToggleItem(const WString& path, bool value,
                                   const Function<void(bool)>& clickFunc /*= Function<void(bool)>()*/,
-                                  const AssetRef<ImageAsset>& icon /*= AssetRef<ImageAsset>()*/,
+                                  const AssetRef<Asset>& icon /*= AssetRef<Asset>()*/,
                                   const ShortcutKeys& shortcut /*= ShortcutKeys()*/)
     {
         WString itemPath = path;
@@ -310,7 +310,18 @@ namespace o2
         mItemSample = sample;
     }
 
-    const Ref<Sprite>& MenuPanel::GetSelectionDrawable() const
+    void MenuPanel::SetSelectionDrawable(const Ref<IRectDrawable>& drawable)
+    {
+        mSelectionDrawable = drawable;
+        RetargetStatesAnimations();
+    }
+
+    Ref<Sprite> MenuPanel::GetSelectionDrawable() const
+    {
+        return DynamicCast<Sprite>(mSelectionDrawable);
+    }
+
+    const Ref<IRectDrawable>& MenuPanel::GetSelectionRectDrawable() const
     {
         return mSelectionDrawable;
     }

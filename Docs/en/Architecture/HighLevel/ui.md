@@ -18,6 +18,29 @@ UI graphics are drawn with layers, which are a simplified version of an actor. L
 
 Layers can be disabled and have configurable transparency, which also affects child layers.
 
+A layer image is a raster `Sprite` or a vector `VectorSprite` (see [render](/Docs/en/Architecture/LowLevel/render.md)), created as `mmake<Sprite>(path)` or `mmake<VectorSprite>(path)`. `WidgetLayer::SetImage(path | asset)` and `Widget::SetLayerImage(layerPath, imagePath)` change the image of an existing layer and swap the drawable when the kind of image differs, keeping color and enabled; `WidgetLayer::GetImage()` returns the image asset of the drawable.
+
+`GetLayerDrawable<T>(path)` and `GetLayerDrawableByType<T>()` match the exact type. `GetLayerDrawableBasedOn<T>(path)` and `GetLayerDrawableByBaseType<T>()` also match descendants, so `GetLayerDrawableBasedOn<IRectDrawable>("icon")` returns any drawable.
+
+#### Drawables of widgets
+Some widgets draw with drawables kept in their own fields, not in layers. All of them are `Ref<IRectDrawable>`, so a `VectorSprite` works there as well as a `Sprite`:
+
+| Widget | Drawable | Setter | Getter |
+|---|---|---|---|
+| `CustomList`, `LongList` | selection, hover | `SetSelectionDrawable`, `SetHoverDrawable` | `GetSelectionRectDrawable`, `GetHoverRectDrawable` |
+| `Tree` | hover, highlight, zebra line | `SetHoverDrawable`, `SetHighlightDrawable`, `SetZebraBackLine` | `GetHoverRectDrawable`, `GetHighlightRectDrawable`, `GetZebraBackLineDrawable` |
+| `ContextMenu`, `MenuPanel` | selection | `SetSelectionDrawable` | `GetSelectionRectDrawable` |
+| `EditBox` | caret | `SetCaretDrawable` | `GetCaretRectDrawable` |
+| `Button` | layer `icon` | `SetIcon`, `SetIconImage(path)` | `GetIconDrawable` |
+| `Window` | icon layer | `SetIcon` | `GetIconDrawable` |
+| `Image` | layer `image` | `SetImageDrawable`, `SetImageSource(asset)`, `SetImageName(path)` | `GetImageDrawable`, `GetImageSource`, `GetImageName` |
+
+- The older getters (`GetSelectionDrawable`, `GetHoverDrawable`, `GetHighlightDrawable`, `GetZebraBackLine`, `GetCaretDrawable`, `GetIcon`, `Image::GetImage`, `Image::GetImageAsset`) return `Ref<Sprite>` and give null when the drawable is not a `Sprite`.
+- `CustomList` draws every selected item with a clone of the selection drawable taken from a pool; `SetSelectionDrawable` drops the pool and gives the selected items clones of the new one.
+- Setters retarget the state animations, so a state like `mHoverDrawable/transparency` follows the new drawable.
+- Serialized data did not change: a field holds `{"Type": "o2::Sprite", "Value": {...}}` as before, or another type name for another drawable.
+- `ContextMenu::Item::icon` is `AssetRef<Asset>`: a raster or a vector image; the item widget shows it through `WidgetLayer::SetImage`. The `check` layer of an item may be any drawable.
+
 #### States
 An elementary animation state machine: a list of states is defined, and each state can be on or off. The transition between on and off happens through an animation defined by an animation clip.
 
@@ -38,7 +61,7 @@ Widgets allow making such elements internal: they behave like children, but enum
 - `Grid/Horizontal/VerticalLayout` - dynamic arrangement of children in a grid / horizontally / vertically
 - `Button` - button; every tap fires `onClick`, a quick second tap within the double click time included
 - `EditBox` - text input field
-- `Image` - sprite
+- `Image` - image, raster or vector
 - `Label` - text
 - `Toggle` - flag, checkbox
 - `Horizontal/VerticalScrollBar` - horizontal/vertical scroll bar

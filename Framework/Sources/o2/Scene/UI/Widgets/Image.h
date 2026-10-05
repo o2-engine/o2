@@ -31,16 +31,28 @@ namespace o2
         // Sets image @SCRIPTABLE
         void SetImage(const Ref<Sprite>& sprite);
 
-        // Returns image sprite @SCRIPTABLE
+        // Returns image sprite, null when the image is a drawable of another type @SCRIPTABLE
         Ref<Sprite> GetImage();
+
+        // Sets image drawable
+        void SetImageDrawable(const Ref<IRectDrawable>& drawable);
+
+        // Returns image drawable: Sprite or VectorSprite
+        Ref<IRectDrawable> GetImageDrawable();
+
+        // Sets image asset of any kind, Sprite and VectorSprite are swapped by the kind of image
+        void SetImageSource(const AssetRef<Asset>& asset);
+
+        // Returns image asset of any kind
+        AssetRef<Asset> GetImageSource() const;
 
         // Sets image asset @SCRIPTABLE
         void SetImageAsset(const AssetRef<ImageAsset>& asset);
 
-        // Returns image asset @SCRIPTABLE
+        // Returns raster image asset, empty for a vector image @SCRIPTABLE
         AssetRef<ImageAsset> GetImageAsset() const;
 
-        // Sets image asset name @SCRIPTABLE
+        // Sets image asset name, raster or vector one @SCRIPTABLE
         void SetImageName(const String& name);
 
         // Returns asset image name @SCRIPTABLE
@@ -53,7 +65,7 @@ namespace o2
         CLONEABLE_REF(Image);
 
     protected:
-        WeakRef<Sprite> mImage; // Image layer drawable
+        WeakRef<IRectDrawable> mImage; // Image layer drawable
 
         friend class UIButtonGroup;
     };
@@ -80,6 +92,10 @@ CLASS_METHODS_META(o2::Image)
     FUNCTION().PUBLIC().CONSTRUCTOR(RefCounter*, const Image&);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetImage, const Ref<Sprite>&);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(Ref<Sprite>, GetImage);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetImageDrawable, const Ref<IRectDrawable>&);
+    FUNCTION().PUBLIC().SIGNATURE(Ref<IRectDrawable>, GetImageDrawable);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetImageSource, const AssetRef<Asset>&);
+    FUNCTION().PUBLIC().SIGNATURE(AssetRef<Asset>, GetImageSource);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetImageAsset, const AssetRef<ImageAsset>&);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(AssetRef<ImageAsset>, GetImageAsset);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetImageName, const String&);
