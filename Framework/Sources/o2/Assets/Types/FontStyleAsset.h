@@ -38,7 +38,7 @@ namespace o2
         static int GetEditorSorting() { return 91; }
 
         // Returns editor icon
-        static String GetEditorIcon() { return "ui/UI4_big_font_style_icon.png"; }
+        static String GetEditorIcon() { return "ui/UI4_big_font_style_icon.svg"; }
 
         // Returns true because font styles can be created from the editor
         static bool IsAvailableToCreateFromEditor() { return true; }

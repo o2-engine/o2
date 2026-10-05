@@ -41,7 +41,7 @@ namespace Editor
     {
         Tree::operator=(other);
 
-        mZebraBackLine = other.mZebraBackLine->CloneAsRef<Sprite>();
+        mZebraBackLine = other.mZebraBackLine->CloneAsRef<IRectDrawable>();
         InitializeContext();
 
         return *this;

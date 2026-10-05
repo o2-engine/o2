@@ -1,5 +1,6 @@
 #pragma once
 
+#include "o2/Render/VectorSprite.h"
 #include "o2/Scene/UI/Widgets/Tree.h"
 
 namespace o2
@@ -205,8 +206,8 @@ namespace Editor
         Ref<WidgetLayer> mNameLayer;     // Object name layer
         Ref<Text>        mNameDrawable;  // Object name drawable
         Ref<Text>        mOrderDrawable; // Object order value drawable
-        Ref<Sprite>      mBackSprite;    // Object back drawable
-        Ref<Sprite>      mIconSprite;    // Object icon drawable
+        Ref<IRectDrawable> mBackSprite;  // Object back drawable
+        Ref<VectorSprite>   mIconSprite;  // Object icon sprite
         Ref<EditBox>     mNameEditBox;   // Object's name edit box
         Ref<WidgetState> mEditState;     // Object's name edit state
 

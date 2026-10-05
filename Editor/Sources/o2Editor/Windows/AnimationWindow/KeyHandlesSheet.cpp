@@ -14,6 +14,7 @@
 #include "o2Editor/Windows/AnimationWindow/Timeline.h"
 #include "o2Editor/Windows/AnimationWindow/TrackControls/ITrackControl.h"
 #include "o2Editor/Windows/AnimationWindow/Tree.h"
+#include "o2/Render/VectorSprite.h"
 
 namespace Editor
 {
@@ -21,7 +22,7 @@ namespace Editor
     KeyHandlesSheet::KeyHandlesSheet(RefCounter* refCounter) :
         Widget(refCounter), SelectableDragHandlesGroup(refCounter)
     {
-        mSelectionFrame = mmake<Sprite>("ui/UI4_keys_select.png");
+        mSelectionFrame = mmake<VectorSprite>("ui/UI4_keys_select.svg");
         mSelectionFrame->enabled = false;
 
         InitializeHandles();
@@ -29,7 +30,7 @@ namespace Editor
     }
 
     KeyHandlesSheet::KeyHandlesSheet(RefCounter* refCounter, const KeyHandlesSheet& other) :
-        Widget(refCounter, other), SelectableDragHandlesGroup(refCounter), mSelectionFrame(other.mSelectionFrame->CloneAs<Sprite>())
+        Widget(refCounter, other), SelectableDragHandlesGroup(refCounter), mSelectionFrame(other.mSelectionFrame->CloneAsRef<IRectDrawable>())
     {
         InitializeHandles();
         InitializeContextMenu();
@@ -42,7 +43,7 @@ namespace Editor
     {
         Widget::operator=(other);
 
-        mSelectionFrame = other.mSelectionFrame->CloneAsRef<Sprite>();
+        mSelectionFrame = other.mSelectionFrame->CloneAsRef<IRectDrawable>();
 
         return *this;
     }

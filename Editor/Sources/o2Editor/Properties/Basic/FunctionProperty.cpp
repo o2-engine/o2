@@ -11,6 +11,7 @@
 #include "o2Editor/Properties/IObjectPropertiesViewer.h"
 #include "o2Editor/Properties/Properties.h"
 #include <o2/Scene/Components/ScriptableComponent.h>
+#include "o2/Render/VectorSprite.h"
 
 using namespace o2;
 
@@ -54,7 +55,7 @@ namespace Editor
             mSpoiler->onExpand = THIS_FUNC(OnExpand);
 
         mSpoiler->borderTop = 5;
-        mSpoiler->AddLayer("func icon", mmake<Sprite>("ui/function_icon.png"), Layout::Based(BaseCorner::LeftTop, Vec2F(20, 20), Vec2F(6, 0)));
+        mSpoiler->AddLayer("func icon", mmake<VectorSprite>("ui/function_icon.svg"), Layout::Based(BaseCorner::LeftTop, Vec2F(20, 20), Vec2F(6, 0)));
         mSpoiler->GetLayer("caption")->layout.offsetLeft = 24;
 
         mHeaderContainer = mmake<HorizontalLayout>();
@@ -338,7 +339,7 @@ namespace Editor
 
             auto icon = o2UI.CreateImage(iconName);
             *icon->layout = WidgetLayout::Based(BaseCorner::Left, Vec2F(20, 20));
-            icon->GetImage()->color = Color4(0, 156, 141, 255);
+            icon->GetImageDrawable()->color = Color4(0, 156, 141, 255);
             typeItem->AddChild(icon);
 
             auto text = o2UI.CreateLabel(typeName);
@@ -393,7 +394,7 @@ namespace Editor
         {
             String iconName = type.InvokeStatic<String>("GetIcon");
             if (iconName.IsEmpty())
-                iconName = "ui/UI4_component_icon.png";
+                iconName = "ui/UI4_component_icon.svg";
 
             return iconName;
         };

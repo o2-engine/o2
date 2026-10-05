@@ -12,6 +12,7 @@
 #include "o2/Utils/Editor/SceneEditableObject.h"
 #include "o2/Utils/Editor/EditorScope.h"
 #include "o2Editor/EditorConfig.h"
+#include "o2/Render/VectorSprite.h"
 
 DECLARE_SINGLETON(Editor::SceneWindow);
 
@@ -43,7 +44,7 @@ namespace Editor
 
         mWindow->caption = "Scene";
         mWindow->name = "scene window";
-        mWindow->SetIcon(mmake<Sprite>("ui/UI4_scene_icon.png"));
+        mWindow->SetIcon(mmake<VectorSprite>("ui/UI4_scene_icon.svg"));
         mWindow->SetIconLayout(Layout::Based(BaseCorner::LeftTop, Vec2F(20, 20), Vec2F(-2, 2)));
 
         mEditWidget = mmake<SceneEditScreen>();

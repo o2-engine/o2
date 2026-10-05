@@ -23,7 +23,7 @@ namespace o2
         Vector<AssetRef<Asset>> GetChildrenAssets() const;
 
         // Returns editor icon
-        static String GetEditorIcon() { return "ui/UI4_big_folder_icon.png"; }
+        static String GetEditorIcon() { return "ui/UI4_big_folder_icon.svg"; }
 
         // Returns editor sorting weight
         static int GetEditorSorting() { return 100; }

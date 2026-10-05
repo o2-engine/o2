@@ -23,6 +23,7 @@
 #include "o2Editor/UIRoot.h"
 #include "o2Editor/Windows/WindowsManager.h"
 #include "o2Editor/Windows/SceneWindow/SceneEditScreen.h"
+#include "o2/Render/VectorSprite.h"
 
 
 namespace Editor
@@ -75,7 +76,7 @@ namespace Editor
     {
         mPanelRoot = mmake<Widget>();
         mPanelRoot->name = "tools panel";
-        mPanelRoot->AddLayer("back", mmake<Sprite>("ui/UI4_ToolsPanel_bk.png"), Layout::BothStretch(-2, 0, -2, -8));
+        mPanelRoot->AddLayer("back", mmake<VectorSprite>("ui/UI4_ToolsPanel_bk.svg"), Layout::BothStretch(-2, 0, -2, -8));
 
         mPanelRoot->layout->anchorMin = Vec2F(0, 1);
         mPanelRoot->layout->anchorMax = Vec2F(1, 1);
@@ -96,7 +97,7 @@ namespace Editor
     {
         mPlayPanel = mmake<Widget>();
         mPlayPanel->name = "play panel";
-        mPlayPanel->AddLayer("back", mmake<Sprite>("ui/UI4_play_panel_bk.png"), Layout::BothStretch(-7, -5, -5, -5));
+        mPlayPanel->AddLayer("back", mmake<VectorSprite>("ui/UI4_play_panel_bk.svg"), Layout::BothStretch(-7, -5, -5, -5));
         *mPlayPanel->layout = WidgetLayout::VerStretch(HorAlign::Left, 3, 2, 200, 10);
         mPanelRoot->AddChild(mPlayPanel);
 
@@ -168,7 +169,7 @@ namespace Editor
     {
         mToolsPanel = mmake<HorizontalLayout>();
         mToolsPanel->name = "edit tools";
-        mToolsPanel->AddLayer("back", mmake<Sprite>("ui/UI4_panel_subpanel_bk.png"), Layout::BothStretch(-7, -5, -10, -5));
+        mToolsPanel->AddLayer("back", mmake<VectorSprite>("ui/UI4_panel_subpanel_bk.svg"), Layout::BothStretch(-7, -5, -10, -5));
         *mToolsPanel->layout = WidgetLayout::VerStretch(HorAlign::Middle, 3, 2, 200, 10);
         mToolsPanel->expandHeight = true;
         mToolsPanel->expandWidth = false;

@@ -102,7 +102,7 @@ namespace Editor
         DragHandle              mHandleSample; // Point handle sample
         Vector<Ref<DragHandle>> mHandles;      // List of all handles
 
-        Sprite mSelectionSprite;       // Selection sprite
+        Ref<IRectDrawable> mSelectionSprite; // Selection drawable
         Vec2F  mSelectingPressedPoint; // Point, where cursor was pressed, selection starts here, in local space
 
         Vector<Ref<DragHandle>> mSelectingHandlesBuf; // Potentially selecting handles while selecting

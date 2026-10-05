@@ -16,6 +16,7 @@
 #include "o2/Utils/Bitmap/Bitmap.h"
 #include "o2/Utils/Editor/EditorScope.h"
 #include "o2Editor/Windows/PipelineWindow/PipelineControls.h"
+#include "o2/Render/VectorSprite.h"
 
 namespace Editor
 {
@@ -65,7 +66,7 @@ namespace Editor
     PipelineComposerLayersPanel::PipelineComposerLayersPanel(RefCounter* refCounter):
         Widget(refCounter)
     {
-        AddLayer("frame", mmake<Sprite>("ui/UI4_Editbox_regular.png"), Layout::BothStretch(-9, -9, -9, -9), -1.0f);
+        AddLayer("frame", mmake<VectorSprite>("ui/UI4_Editbox_regular.svg"), Layout::BothStretch(-9, -9, -9, -9), -1.0f);
     }
 
     void PipelineComposerLayersPanel::Setup(const Ref<PipelineNode>& node, const Ref<PipelineComposerStage>& stage)
@@ -197,7 +198,7 @@ namespace Editor
             auto button = MakeIconButton(icon, textColor, Color4(0, 0, 0, 0));
             button->name = actionName;
             button->layout->minWidth = 18; button->layout->maxWidth = 18;
-            if (auto ic = button->GetLayerDrawable<Sprite>("icon"))
+            if (auto ic = button->GetLayerDrawableBasedOn<IRectDrawable>("icon"))
             {
                 ic->angleDegree = angle;
                 if (auto iconLayer = button->GetLayer("icon")) iconLayer->layout = Layout::Based(BaseCorner::Center, Vec2F(13, 13));
@@ -229,7 +230,7 @@ namespace Editor
         row->AddChild(expand);
 
         auto layerRef = layer;
-        action("visibility", p.hidden ? "ui/UI4_eye_closed_icon.png" : "ui/UI4_eye_opened_icon.png", 0, true, [weakThis, layerRef]()
+        action("visibility", p.hidden ? "ui/UI4_eye_closed_icon.svg" : "ui/UI4_eye_opened_icon.svg", 0, true, [weakThis, layerRef]()
         {
             if (auto self = weakThis.Lock())
             {
@@ -265,10 +266,10 @@ namespace Editor
             row->AddChild(tag);
         }
 
-        action("duplicate", "ui/pipeline/btn_copy.png", 0, true, [weakThis, id]() { if (auto self = weakThis.Lock()) if (self->onDuplicate) self->onDuplicate(id); });
-        action("forward", "ui/UI4_Down_icn.png", 180, stackIndex < count - 1, [weakThis, stackIndex]() { if (auto self = weakThis.Lock()) if (self->onMove) self->onMove(stackIndex, 1); });
-        action("backward", "ui/UI4_Down_icn.png", 0, stackIndex > 0, [weakThis, stackIndex]() { if (auto self = weakThis.Lock()) if (self->onMove) self->onMove(stackIndex, -1); });
-        action("reset", "ui/UI4_revert.png", 0, true, [weakThis, layerRef]()
+        action("duplicate", "ui/pipeline/btn_copy.svg", 0, true, [weakThis, id]() { if (auto self = weakThis.Lock()) if (self->onDuplicate) self->onDuplicate(id); });
+        action("forward", "ui/UI4_Down_icn.svg", 180, stackIndex < count - 1, [weakThis, stackIndex]() { if (auto self = weakThis.Lock()) if (self->onMove) self->onMove(stackIndex, 1); });
+        action("backward", "ui/UI4_Down_icn.svg", 0, stackIndex > 0, [weakThis, stackIndex]() { if (auto self = weakThis.Lock()) if (self->onMove) self->onMove(stackIndex, -1); });
+        action("reset", "ui/UI4_revert.svg", 0, true, [weakThis, layerRef]()
         {
             if (auto self = weakThis.Lock())
             {
@@ -277,7 +278,7 @@ namespace Editor
                 self->mStage->WritePlacement(layerRef.id, np, true);
             }
         });
-        action("remove", "ui/UI4_small_trash_icon.png", 0, true, [weakThis, id, portId, dup]()
+        action("remove", "ui/UI4_small_trash_icon.svg", 0, true, [weakThis, id, portId, dup]()
         {
             if (auto self = weakThis.Lock()) if (self->onRemove) self->onRemove(id, portId, dup);
         });
@@ -360,7 +361,7 @@ namespace Editor
         }));
         auto lockToggle = MakeSegment("", p.lockAspect);
         lockToggle->layout->minWidth = 22; lockToggle->layout->maxWidth = 22;
-        auto lockIcon = mmake<Sprite>("ui/pipeline/btn_link.png");
+        auto lockIcon = mmake<VectorSprite>("ui/pipeline/btn_link.svg");
         lockIcon->color = textColor;
         lockToggle->AddLayer("icon", lockIcon, Layout::Based(BaseCorner::Center, Vec2F(14, 14)));
         lockToggle->onToggleByUser = [patch, rebuild](bool v) { patch([v](ComposerLayerPlacement& np) { np.lockAspect = v; }, true); rebuild(false); };

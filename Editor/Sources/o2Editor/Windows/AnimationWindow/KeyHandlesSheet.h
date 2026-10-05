@@ -114,7 +114,7 @@ namespace Editor
 
         bool mHandleHasMoved = false; // it is true when some handle was selected and moved, resets on handle pressing
 
-        Ref<Sprite> mSelectionFrame; // Selected handles frame drawing sprite
+        Ref<IRectDrawable> mSelectionFrame; // Selected handles frame drawable
         RectF       mSelectionRect;  // Current selected handles rectangle. The right and left is minimum and maximum handles positions, top and bottom is minimum and maximum handles lines
 
         Vec2F   mBeginSelectPoint;         // Begin frame selection point, where x is position on timeline, y is line number

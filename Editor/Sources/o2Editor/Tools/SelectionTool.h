@@ -27,7 +27,7 @@ namespace Editor
         IOBJECT(SelectionTool);
 
     protected:
-        Ref<Sprite> mSelectionSprite; // Selection frame sprite
+        Ref<IRectDrawable> mSelectionSprite; // Selection frame drawable
 
         Vector<Ref<SceneEditableObject>> mCurrentSelectingObjects; // Current selecting objects (when cursor pressed, but not released yet)
         Vector<Ref<SceneEditableObject>> mBeforeSelectingObjects;  // Before selection objects array

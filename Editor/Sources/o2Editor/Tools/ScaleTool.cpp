@@ -15,22 +15,23 @@
 #include "o2Editor/Windows/SceneWindow/SceneEditScreen.h"
 #include "o2Editor/Windows/TreeWindow/SceneHierarchyTree.h"
 #include "o2Editor/Windows/TreeWindow/TreeWindow.h"
+#include "o2/Render/VectorSprite.h"
 
 namespace Editor
 {
     ScaleTool::ScaleTool()
     {
-        mHorDragHandle = mmake<SceneDragHandle>(mmake<Sprite>("ui/UI2_right_scale_arrow.png"),
-                                                mmake<Sprite>("ui/UI2_right_scale_arrow_select.png"),
-                                                mmake<Sprite>("ui/UI2_right_scale_arrow_pressed.png"));
+        mHorDragHandle = mmake<SceneDragHandle>(mmake<VectorSprite>("ui/UI2_right_scale_arrow.svg"),
+                                                mmake<VectorSprite>("ui/UI2_right_scale_arrow_select.svg"),
+                                                mmake<VectorSprite>("ui/UI2_right_scale_arrow_pressed.svg"));
 
-        mVerDragHandle = mmake<SceneDragHandle>(mmake<Sprite>("ui/UI2_up_scale_arrow.png"),
-                                                mmake<Sprite>("ui/UI2_up_scale_arrow_select.png"),
-                                                mmake<Sprite>("ui/UI2_up_scale_arrow_pressed.png"));
+        mVerDragHandle = mmake<SceneDragHandle>(mmake<VectorSprite>("ui/UI2_up_scale_arrow.svg"),
+                                                mmake<VectorSprite>("ui/UI2_up_scale_arrow_select.svg"),
+                                                mmake<VectorSprite>("ui/UI2_up_scale_arrow_pressed.svg"));
 
-        mBothDragHandle = mmake<SceneDragHandle>(mmake<Sprite>("ui/UI2_scale_both.png"),
-                                                 mmake<Sprite>("ui/UI2_scale_both_select.png"),
-                                                 mmake<Sprite>("ui/UI2_scale_both_pressed.png"));
+        mBothDragHandle = mmake<SceneDragHandle>(mmake<VectorSprite>("ui/UI2_scale_both.svg"),
+                                                 mmake<VectorSprite>("ui/UI2_scale_both_select.svg"),
+                                                 mmake<VectorSprite>("ui/UI2_scale_both_pressed.svg"));
 
         mHorDragHandle->enabled = false;
         mVerDragHandle->enabled = false;
@@ -113,7 +114,7 @@ namespace Editor
 
     String ScaleTool::GetPanelIcon() const
     {
-        return "ui/UI4_scale_tool.png";
+        return "ui/UI4_scale_tool.svg";
     }
 
     ShortcutKeys ScaleTool::GetShortcut() const

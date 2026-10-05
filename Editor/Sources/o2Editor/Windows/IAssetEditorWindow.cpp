@@ -8,6 +8,7 @@
 #include "o2/Utils/FileSystem/FileSystem.h"
 #include "o2Editor/Dialogs/System/OpenSaveDialog.h"
 #include "o2Editor/Dialogs/YesNoCancelDlg.h"
+#include "o2/Render/VectorSprite.h"
 
 namespace Editor
 {
@@ -314,7 +315,7 @@ namespace Editor
 		mUpPanel->baseCorner = BaseCorner::Left;
 		mUpPanel->expandHeight = true;
 		mUpPanel->expandWidth = true;
-		mUpPanel->AddLayer("back", mmake<Sprite>("ui/UI4_small_panel_back.png"), Layout::BothStretch(-5, -5, -4, -5));
+		mUpPanel->AddLayer("back", mmake<VectorSprite>("ui/UI4_small_panel_back.svg"), Layout::BothStretch(-5, -5, -4, -5));
 		mWindow->AddChild(mUpPanel);
 
 		mButtonsPanel = mmake<HorizontalLayout>();

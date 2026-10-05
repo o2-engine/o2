@@ -144,7 +144,7 @@ namespace o2
 
     String MeshPrimitiveComponent::GetIcon()
     {
-        return "ui/UI4_image_component.png";
+        return "ui/UI4_image_component.svg";
     }
 
     SceneDrawableCategory MeshPrimitiveComponent::GetSceneDrawableCategory() const

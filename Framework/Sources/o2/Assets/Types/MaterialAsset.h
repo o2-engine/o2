@@ -54,7 +54,7 @@ namespace o2
         static Vector<String> GetFileExtensions();
 
         // Returns editor icon for material asset
-        static String GetEditorIcon() { return "ui/UI4_big_material_icon.png"; }
+        static String GetEditorIcon() { return "ui/UI4_big_material_icon.svg"; }
 
         // Returns editor sorting weight
         static int GetEditorSorting() { return 89; }

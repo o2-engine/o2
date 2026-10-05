@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="25" height="25" viewBox="0 0 25 25">
+<defs>
+<linearGradient id="g0" gradientUnits="userSpaceOnUse" x1="0" y1="11" x2="0" y2="-1">
+<stop offset="0" stop-color="#000000" stop-opacity="0.15"/>
+<stop offset="0.219" stop-color="#000000" stop-opacity="0.148"/>
+<stop offset="0.365" stop-color="#000000" stop-opacity="0.135"/>
+<stop offset="0.51" stop-color="#000000" stop-opacity="0.099"/>
+<stop offset="0.656" stop-color="#000000" stop-opacity="0.046"/>
+<stop offset="0.76" stop-color="#000000" stop-opacity="0.018"/>
+<stop offset="1" stop-color="#000000" stop-opacity="0"/>
+</linearGradient>
+<linearGradient id="g1" gradientUnits="userSpaceOnUse" x1="0" y1="13" x2="0" y2="25">
+<stop offset="0" stop-color="#000000" stop-opacity="0.15"/>
+<stop offset="0.219" stop-color="#000000" stop-opacity="0.148"/>
+<stop offset="0.365" stop-color="#000000" stop-opacity="0.135"/>
+<stop offset="0.51" stop-color="#000000" stop-opacity="0.099"/>
+<stop offset="0.656" stop-color="#000000" stop-opacity="0.046"/>
+<stop offset="0.76" stop-color="#000000" stop-opacity="0.018"/>
+<stop offset="1" stop-color="#000000" stop-opacity="0"/>
+</linearGradient>
+<linearGradient id="g2" gradientUnits="userSpaceOnUse" x1="12" y1="0" x2="0" y2="0">
+<stop offset="0" stop-color="#000000" stop-opacity="0.15"/>
+<stop offset="0.219" stop-color="#000000" stop-opacity="0.148"/>
+<stop offset="0.365" stop-color="#000000" stop-opacity="0.135"/>
+<stop offset="0.51" stop-color="#000000" stop-opacity="0.099"/>
+<stop offset="0.656" stop-color="#000000" stop-opacity="0.046"/>
+<stop offset="0.76" stop-color="#000000" stop-opacity="0.018"/>
+<stop offset="1" stop-color="#000000" stop-opacity="0"/>
+</linearGradient>
+<linearGradient id="g3" gradientUnits="userSpaceOnUse" x1="13" y1="0" x2="25" y2="0">
+<stop offset="0" stop-color="#000000" stop-opacity="0.15"/>
+<stop offset="0.219" stop-color="#000000" stop-opacity="0.148"/>
+<stop offset="0.365" stop-color="#000000" stop-opacity="0.135"/>
+<stop offset="0.51" stop-color="#000000" stop-opacity="0.099"/>
+<stop offset="0.656" stop-color="#000000" stop-opacity="0.046"/>
+<stop offset="0.76" stop-color="#000000" stop-opacity="0.018"/>
+<stop offset="1" stop-color="#000000" stop-opacity="0"/>
+</linearGradient>
+<radialGradient id="g4" gradientUnits="userSpaceOnUse" cx="12" cy="11" r="12">
+<stop offset="0" stop-color="#000000" stop-opacity="0.15"/>
+<stop offset="0.219" stop-color="#000000" stop-opacity="0.148"/>
+<stop offset="0.365" stop-color="#000000" stop-opacity="0.135"/>
+<stop offset="0.51" stop-color="#000000" stop-opacity="0.099"/>
+<stop offset="0.656" stop-color="#000000" stop-opacity="0.046"/>
+<stop offset="0.76" stop-color="#000000" stop-opacity="0.018"/>
+<stop offset="1" stop-color="#000000" stop-opacity="0"/>
+</radialGradient>
+<radialGradient id="g5" gradientUnits="userSpaceOnUse" cx="12" cy="13" r="12">
+<stop offset="0" stop-color="#000000" stop-opacity="0.15"/>
+<stop offset="0.219" stop-color="#000000" stop-opacity="0.148"/>
+<stop offset="0.365" stop-color="#000000" stop-opacity="0.135"/>
+<stop offset="0.51" stop-color="#000000" stop-opacity="0.099"/>
+<stop offset="0.656" stop-color="#000000" stop-opacity="0.046"/>
+<stop offset="0.76" stop-color="#000000" stop-opacity="0.018"/>
+<stop offset="1" stop-color="#000000" stop-opacity="0"/>
+</radialGradient>
+<radialGradient id="g6" gradientUnits="userSpaceOnUse" cx="13" cy="11" r="12">
+<stop offset="0" stop-color="#000000" stop-opacity="0.15"/>
+<stop offset="0.219" stop-color="#000000" stop-opacity="0.148"/>
+<stop offset="0.365" stop-color="#000000" stop-opacity="0.135"/>
+<stop offset="0.51" stop-color="#000000" stop-opacity="0.099"/>
+<stop offset="0.656" stop-color="#000000" stop-opacity="0.046"/>
+<stop offset="0.76" stop-color="#000000" stop-opacity="0.018"/>
+<stop offset="1" stop-color="#000000" stop-opacity="0"/>
+</radialGradient>
+<radialGradient id="g7" gradientUnits="userSpaceOnUse" cx="13" cy="13" r="12">
+<stop offset="0" stop-color="#000000" stop-opacity="0.15"/>
+<stop offset="0.219" stop-color="#000000" stop-opacity="0.148"/>
+<stop offset="0.365" stop-color="#000000" stop-opacity="0.135"/>
+<stop offset="0.51" stop-color="#000000" stop-opacity="0.099"/>
+<stop offset="0.656" stop-color="#000000" stop-opacity="0.046"/>
+<stop offset="0.76" stop-color="#000000" stop-opacity="0.018"/>
+<stop offset="1" stop-color="#000000" stop-opacity="0"/>
+</radialGradient>
+</defs>
+<rect x="12" y="11" width="1" height="2" fill="#000000" fill-opacity="0.15"/>
+<rect x="12" y="0" width="1" height="11" fill="url(#g0)"/>
+<rect x="12" y="13" width="1" height="12" fill="url(#g1)"/>
+<rect x="0" y="11" width="12" height="2" fill="url(#g2)"/>
+<rect x="13" y="11" width="12" height="2" fill="url(#g3)"/>
+<rect x="0" y="0" width="12" height="11" fill="url(#g4)"/>
+<rect x="0" y="13" width="12" height="12" fill="url(#g5)"/>
+<rect x="13" y="0" width="12" height="11" fill="url(#g6)"/>
+<rect x="13" y="13" width="12" height="12" fill="url(#g7)"/>
+<path d="M20 13.495 C19.438 16.538 17.038 18.938 13.995 19.5 L11.005 19.5 C7.962 18.938 5.562 16.538 5 13.495 L5 10.505 C5.562 7.462 7.962 5.062 11.005 4.5 L13.995 4.5 C17.038 5.062 19.438 7.462 20 10.505 Z" fill="#70ccc0"/>
+<path d="M12.715 7.719 C15.355 7.719 16.977 9.633 16.977 11.984 C16.977 14.625 15.195 16.281 12.715 16.281 C10.125 16.281 8.488 14.176 8.488 12 L9.859 11.984 L8.488 10.223 L7.184 12 L8.488 12" fill="none" stroke="#fbfbfb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

@@ -6,7 +6,9 @@
 #include "o2/Animation/AnimationClip.h"
 #include "o2/Animation/AnimationPlayer.h"
 #include "o2/Animation/Tracks/AnimationVec3FTrack.h"
+#include "o2/Assets/Types/VectorImageAsset.h"
 #include "o2/Render/Render.h"
+#include "o2/Render/VectorSprite.h"
 #include "o2/Scene/Actor.h"
 #include "o2/Scene/UI/WidgetLayout.h"
 #include "o2Editor/UIRoot.h"
@@ -180,6 +182,8 @@ TEST(AnimationWindowCharacterClipUI, PreviewFramesAreFastAndStable)
         ASSERT_GT(drawCalls, 10) << "window must actually be drawn for a realistic measure";
 
         const int framesCount = 20;
+        UInt tessellations = VectorImageAsset::GetTessellationsCount();
+        VectorSprite::Statistics vectorBefore = VectorSprite::GetStatistics();
         auto start = std::chrono::steady_clock::now();
 
         for (int i = 0; i < framesCount; i++)
@@ -188,8 +192,16 @@ TEST(AnimationWindowCharacterClipUI, PreviewFramesAreFastAndStable)
         double frameMs = std::chrono::duration<double, std::milli>(
             std::chrono::steady_clock::now() - start).count()/framesCount;
 
-        printf("realistic preview frame time: %.2f ms, %i draw calls\n", frameMs, drawCalls);
+        VectorSprite::Statistics vectorAfter = VectorSprite::GetStatistics();
+        printf("realistic preview frame time: %.2f ms, %i draw calls; vector sprites per frame: %llu draws, "
+               "%llu vertices, %llu rebuilt, %llu shifted\n", frameMs, drawCalls,
+               (unsigned long long)(vectorAfter.draws - vectorBefore.draws)/framesCount,
+               (unsigned long long)(vectorAfter.drawnVertices - vectorBefore.drawnVertices)/framesCount,
+               (unsigned long long)(vectorAfter.rebuiltVertices - vectorBefore.rebuiltVertices)/framesCount,
+               (unsigned long long)(vectorAfter.shiftedVertices - vectorBefore.shiftedVertices)/framesCount);
+
         EXPECT_LT(frameMs, 50.0) << "frame took " << frameMs << " ms";
+        EXPECT_EQ(VectorImageAsset::GetTessellationsCount(), tessellations) << "a steady frame tessellates vector images";
 
         // Static scene: consecutive frames must be pixel-identical, differences mean flickering.
         // The first captured frame is skipped: switching to a capture render target

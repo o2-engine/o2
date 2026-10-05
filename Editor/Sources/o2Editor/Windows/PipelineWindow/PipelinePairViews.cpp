@@ -8,6 +8,7 @@
 #include "o2/Scene/UI/WidgetLayout.h"
 #include "o2/Utils/Bitmap/Bitmap.h"
 #include "o2Editor/Windows/PipelineWindow/PipelineControls.h"
+#include "o2/Render/VectorSprite.h"
 
 namespace Editor
 {
@@ -140,7 +141,7 @@ namespace Editor
         mInputSprite = mmake<Sprite>();
         mResultSprite = mmake<Sprite>();
         mChecker = PipelinePairDraw::MakeChecker();
-        AddLayer("frame", mmake<Sprite>("ui/UI4_Editbox_regular.png"), Layout::BothStretch(-9, -9, -9, -9), -1.0f);
+        AddLayer("frame", mmake<VectorSprite>("ui/UI4_Editbox_regular.svg"), Layout::BothStretch(-9, -9, -9, -9), -1.0f);
     }
 
     void PipelineCompareView::SetNode(const String& nodeId)

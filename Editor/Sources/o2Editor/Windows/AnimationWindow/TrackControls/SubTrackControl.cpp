@@ -4,6 +4,7 @@
 #include "o2/Scene/ActorTransform.h"
 #include "o2/Scene/UI/WidgetLayout.h"
 #include "o2Editor/Windows/AnimationWindow/KeyHandlesSheet.h"
+#include "o2/Render/VectorSprite.h"
 
 namespace Editor
 {
@@ -219,7 +220,7 @@ namespace Editor
             mRightBorderHandle = mmake<KeyHandle>(1, handle);
         }
 
-        mTrackSprite = mmake<Sprite>("ui/UI4_sub_track.png");
+        mTrackSprite = mmake<VectorSprite>("ui/UI4_sub_track.svg");
     }
 
     void SubTrackControl::SetupTrackHandles()

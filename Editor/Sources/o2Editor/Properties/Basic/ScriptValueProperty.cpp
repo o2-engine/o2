@@ -9,6 +9,7 @@
 #include "o2Editor/Properties/Basic/IntegerProperty.h"
 #include "o2Editor/Properties/IObjectPropertiesViewer.h"
 #include "o2Editor/Properties/Properties.h"
+#include "o2/Render/VectorSprite.h"
 
 using namespace o2;
 
@@ -331,7 +332,7 @@ namespace Editor
         if (mIsArray)
         {
             prop->GetRemoveButton()->onClick = [=]() { Remove(idx); };
-            prop->AddLayer("drag", mmake<Sprite>("ui/UI4_drag_handle.png"),
+            prop->AddLayer("drag", mmake<VectorSprite>("ui/UI4_drag_handle.svg"),
                            Layout::Based(BaseCorner::LeftTop, Vec2F(20, 20), Vec2F(-18, 0)));
         }
 

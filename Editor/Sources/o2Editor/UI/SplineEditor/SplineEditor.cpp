@@ -1,41 +1,42 @@
 #include "o2Editor/stdafx.h"
 #include "SplineEditor.h"
+#include "o2/Render/VectorSprite.h"
 
 namespace Editor
 {
     SplineEditor::SplineEditor()
     {
-        mSelectionSprite = mmake<Sprite>("ui/UI_Window_place.png");
+        mSelectionSprite = mmake<VectorSprite>("ui/UI_Window_place.svg");
 
-        mHandlesSample.position = mmake<DragHandle>(mmake<Sprite>("ui/CurveHandle.png"),
-                                                    mmake<Sprite>("ui/CurveHandleHover.png"),
-                                                    mmake<Sprite>("ui/CurveHandlePressed.png"),
-                                                    mmake<Sprite>("ui/CurveHandleSelected.png"));
+        mHandlesSample.position = mmake<DragHandle>(mmake<VectorSprite>("ui/CurveHandle.svg"),
+                                                    mmake<VectorSprite>("ui/CurveHandleHover.svg"),
+                                                    mmake<VectorSprite>("ui/CurveHandlePressed.svg"),
+                                                    mmake<VectorSprite>("ui/CurveHandleSelected.svg"));
 
-        mHandlesSample.prevSupport = mmake<DragHandle>(mmake<Sprite>("ui/CurveSupportHandle.png"),
-                                                       mmake<Sprite>("ui/CurveSupportHandleHover.png"),
-                                                       mmake<Sprite>("ui/CurveSupportHandlePressed.png"),
-                                                       mmake<Sprite>("ui/CurveSupportHandleSelected.png"));
+        mHandlesSample.prevSupport = mmake<DragHandle>(mmake<VectorSprite>("ui/CurveSupportHandle.svg"),
+                                                       mmake<VectorSprite>("ui/CurveSupportHandleHover.svg"),
+                                                       mmake<VectorSprite>("ui/CurveSupportHandlePressed.svg"),
+                                                       mmake<VectorSprite>("ui/CurveSupportHandleSelected.svg"));
 
-        mHandlesSample.nextSupport = mmake<DragHandle>(mmake<Sprite>("ui/CurveSupportHandle.png"),
-                                                       mmake<Sprite>("ui/CurveSupportHandleHover.png"),
-                                                       mmake<Sprite>("ui/CurveSupportHandlePressed.png"),
-                                                       mmake<Sprite>("ui/CurveSupportHandleSelected.png"));
+        mHandlesSample.nextSupport = mmake<DragHandle>(mmake<VectorSprite>("ui/CurveSupportHandle.svg"),
+                                                       mmake<VectorSprite>("ui/CurveSupportHandleHover.svg"),
+                                                       mmake<VectorSprite>("ui/CurveSupportHandlePressed.svg"),
+                                                       mmake<VectorSprite>("ui/CurveSupportHandleSelected.svg"));
 
-        mHandlesSample.leftRangeHandle = mmake<DragHandle>(mmake<Sprite>("ui/UI2_handle_side_regular.png"),
-                                                           mmake<Sprite>("ui/UI2_handle_side_select.png"),
-                                                           mmake<Sprite>("ui/UI2_handle_side_pressed.png"),
-                                                           mmake<Sprite>("ui/UI2_handle_side_select.png"));
+        mHandlesSample.leftRangeHandle = mmake<DragHandle>(mmake<VectorSprite>("ui/UI2_handle_side_regular.svg"),
+                                                           mmake<VectorSprite>("ui/UI2_handle_side_select.svg"),
+                                                           mmake<VectorSprite>("ui/UI2_handle_side_pressed.svg"),
+                                                           mmake<VectorSprite>("ui/UI2_handle_side_select.svg"));
 
-        mHandlesSample.rightRangeHandle = mmake<DragHandle>(mmake<Sprite>("ui/UI2_handle_side_regular.png"),
-                                                            mmake<Sprite>("ui/UI2_handle_side_select.png"),
-                                                            mmake<Sprite>("ui/UI2_handle_side_pressed.png"),
-                                                            mmake<Sprite>("ui/UI2_handle_side_select.png"));
+        mHandlesSample.rightRangeHandle = mmake<DragHandle>(mmake<VectorSprite>("ui/UI2_handle_side_regular.svg"),
+                                                            mmake<VectorSprite>("ui/UI2_handle_side_select.svg"),
+                                                            mmake<VectorSprite>("ui/UI2_handle_side_pressed.svg"),
+                                                            mmake<VectorSprite>("ui/UI2_handle_side_select.svg"));
 
-        mHandlesSample.rounding = mmake<DragHandle>(mmake<Sprite>("ui/UI2_handle_side_regular.png"),
-                                                    mmake<Sprite>("ui/UI2_handle_side_select.png"),
-                                                    mmake<Sprite>("ui/UI2_handle_side_pressed.png"),
-                                                    mmake<Sprite>("ui/UI2_handle_side_select.png"));
+        mHandlesSample.rounding = mmake<DragHandle>(mmake<VectorSprite>("ui/UI2_handle_side_regular.svg"),
+                                                    mmake<VectorSprite>("ui/UI2_handle_side_select.svg"),
+                                                    mmake<VectorSprite>("ui/UI2_handle_side_pressed.svg"),
+                                                    mmake<VectorSprite>("ui/UI2_handle_side_select.svg"));
 
         mSplineColor = Color4(44, 62, 80, 255);
         mSplineSupportColor = Color4(190, 190, 190, 255);

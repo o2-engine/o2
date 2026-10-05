@@ -7,6 +7,7 @@
 #include "o2/Utils/Editor/EditorScope.h"
 #include "o2/Utils/Reflection/Type.h"
 #include "o2Editor/Windows/SceneWindow/SceneEditScreen.h"
+#include "o2/Render/VectorSprite.h"
 
 namespace Editor
 {
@@ -61,7 +62,7 @@ namespace Editor
     {
         PushEditorScopeOnStack scope;
 
-        AddLayer("back", mmake<Sprite>("ui/UI4_Context_menu.png"), Layout::BothStretch(-20, -19, -20, -19));
+        AddLayer("back", mmake<VectorSprite>("ui/UI4_Context_menu.svg"), Layout::BothStretch(-20, -19, -20, -19));
 
         mEnableToggle = o2UI.CreateWidget<Toggle>();
         mEnableToggle->name = "gizmos enable";
@@ -71,7 +72,7 @@ namespace Editor
         mSelectionToggle = o2UI.CreateWidget<Toggle>();
         mSelectionToggle->name = "selection enable";
         mSelectionToggle->caption = "Selection";
-        mSelectionToggle->AddLayer("line", mmake<Sprite>("ui/UI4_Separator.png"),
+        mSelectionToggle->AddLayer("line", mmake<VectorSprite>("ui/UI4_Separator.svg"),
                                    Layout::HorStretch(VerAlign::Top, 0, 0, 5, -2));
 
         mSelectionToggle->onToggleByUser = [](bool visible) { o2EditorSceneScreen.SetSelectionVisible(visible); };

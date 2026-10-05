@@ -14,6 +14,7 @@
 #include "o2Editor/Windows/PipelineWindow/PipelineControls.h"
 #include "o2Editor/Windows/PipelineWindow/PipelineEditor.h"
 #include "o2Editor/Windows/PipelineWindow/PipelineNodeBody.h"
+#include "o2/Render/VectorSprite.h"
 
 namespace Editor
 {
@@ -117,23 +118,23 @@ namespace Editor
 
     String PipelineNodeWidget::IconForType(const String& t)
     {
-        if (t.StartsWith("finish")) return "ui/pipeline/node_finish.png";
-        if (t == "sourceText" || t == "textCompose" || t == "textConcat") return "ui/pipeline/node_text.png";
-        if (t == "sourceImage") return "ui/pipeline/node_image.png";
-        if (t == "removeBackground" || t == "aiRemoveBg") return "ui/pipeline/node_removebg.png";
-        if (t == "sourceAudio" || t == "sfxGen") return "ui/pipeline/node_audio.png";
-        if (t == "audioProcess") return "ui/pipeline/node_process.png";
-        if (t == "ttsSpeech") return "ui/pipeline/node_voice.png";
-        if (t == "musicGen") return "ui/pipeline/node_music.png";
-        if (t == "videoGen") return "ui/pipeline/node_video.png";
-        if (t == "composer") return "ui/pipeline/node_composer.png";
-        if (t == "drawImage") return "ui/pipeline/node_draw.png";
-        if (t == "imageExtract") return "ui/pipeline/node_extract.png";
-        if (t == "imageEdit") return "ui/pipeline/node_edit.png";
-        if (t == "promptGen") return "ui/pipeline/node_prompt.png";
-        if (t == "aiUpscale") return "ui/pipeline/node_upscale.png";
-        if (t == "imageOutline" || t == "imageShadow" || t == "imageGradient" || t == "imageColor") return "ui/pipeline/node_effect.png";
-        return "ui/pipeline/node_ai.png";
+        if (t.StartsWith("finish")) return "ui/pipeline/node_finish.svg";
+        if (t == "sourceText" || t == "textCompose" || t == "textConcat") return "ui/pipeline/node_text.svg";
+        if (t == "sourceImage") return "ui/pipeline/node_image.svg";
+        if (t == "removeBackground" || t == "aiRemoveBg") return "ui/pipeline/node_removebg.svg";
+        if (t == "sourceAudio" || t == "sfxGen") return "ui/pipeline/node_audio.svg";
+        if (t == "audioProcess") return "ui/pipeline/node_process.svg";
+        if (t == "ttsSpeech") return "ui/pipeline/node_voice.svg";
+        if (t == "musicGen") return "ui/pipeline/node_music.svg";
+        if (t == "videoGen") return "ui/pipeline/node_video.svg";
+        if (t == "composer") return "ui/pipeline/node_composer.svg";
+        if (t == "drawImage") return "ui/pipeline/node_draw.svg";
+        if (t == "imageExtract") return "ui/pipeline/node_extract.svg";
+        if (t == "imageEdit") return "ui/pipeline/node_edit.svg";
+        if (t == "promptGen") return "ui/pipeline/node_prompt.svg";
+        if (t == "aiUpscale") return "ui/pipeline/node_upscale.svg";
+        if (t == "imageOutline" || t == "imageShadow" || t == "imageGradient" || t == "imageColor") return "ui/pipeline/node_effect.svg";
+        return "ui/pipeline/node_ai.svg";
     }
 
     String PipelineNodeWidget::MenuIconForType(const String& nodeType)
@@ -143,7 +144,7 @@ namespace Editor
 
     void PipelineNodeWidget::BuildHeader()
     {
-        auto icon = mmake<Sprite>(IconForType());
+        auto icon = mmake<VectorSprite>(IconForType());
         icon->color = Color4(96, 125, 139, 255);
         mIconLayer = AddLayer("icon", icon, Layout(Vec2F(0, 1), Vec2F(0, 1), Vec2F(6, -23), Vec2F(24, -5)));
 
@@ -182,7 +183,7 @@ namespace Editor
         mErrorButton = o2UI.CreateWidget<Button>("pipeline icon");
         mErrorButton->name = "error";
         *mErrorButton->layout = WidgetLayout(Vec2F(1, 1), Vec2F(1, 1), Vec2F(-60, -24), Vec2F(-40, -4));
-        if (auto ic = mErrorButton->GetLayerDrawable<Sprite>("icon")) { ic->imageName = "ui/pipeline/btn_error.png"; ic->color = Color4(229, 83, 61, 255); }
+        if (auto ic = mErrorButton->SetLayerImage("icon", "ui/pipeline/btn_error.svg")) ic->color = Color4(229, 83, 61, 255);
         mErrorButton->onClick = [this]() { if (auto e = mEditor.Lock()) e->ShowNodeError(Ref(this)); };
         mErrorButton->enabled = false;
         AddChild(mErrorButton);
@@ -191,7 +192,7 @@ namespace Editor
         mRetryLabel->name = "retry";
         *mRetryLabel->layout = WidgetLayout(Vec2F(1, 1), Vec2F(1, 1), Vec2F(-100, -24), Vec2F(-62, -4));
         mRetryLabel->horAlign = HorAlign::Middle;
-        auto retryBack = mmake<Sprite>("ui/UI4_button_regular.png");
+        auto retryBack = mmake<VectorSprite>("ui/UI4_button_regular.svg");
         retryBack->color = Color4(255, 213, 79, 255);
         mRetryLabel->AddLayer("back", retryBack, Layout::BothStretch(-9, -9, -10, -10), -1.0f);
         mRetryLabel->enabled = false;
@@ -317,11 +318,8 @@ namespace Editor
         mPlayButton->enabled = runnable && !selfApplying;
 
         bool busy = mRuntime.state == "running" || mRuntime.state == "queued";
-        if (auto icon = mPlayButton->GetLayerDrawable<Sprite>("icon"))
-        {
-            icon->imageName = busy ? "ui/pipeline/btn_stop.png" : "ui/pipeline/btn_play.png";
+        if (auto icon = mPlayButton->SetLayerImage("icon", busy ? "ui/pipeline/btn_stop.svg" : "ui/pipeline/btn_play.svg"))
             icon->color = busy ? Color4(229, 83, 61, 255) : Color4(0, 150, 136, 255);
-        }
 
         bool hasError = mRuntime.state == "error" && !mRuntime.error.IsEmpty();
         mErrorButton->enabled = hasError;

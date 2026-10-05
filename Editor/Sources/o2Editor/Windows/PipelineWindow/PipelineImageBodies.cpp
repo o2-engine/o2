@@ -38,6 +38,7 @@
 #include "o2Editor/Windows/PipelineWindow/PipelineMediaViews.h"
 #include "o2Editor/Windows/PipelineWindow/PipelineNodeWidget.h"
 #include "o2Editor/Windows/PipelineWindow/PipelinePaintEditor.h"
+#include "o2/Render/VectorSprite.h"
 
 namespace Editor
 {
@@ -372,7 +373,7 @@ namespace Editor
                 auto swatch = MakeButton("");
                 swatch->layout->minWidth = 18;
                 swatch->layout->maxWidth = 18;
-                if (auto regular = swatch->GetLayerDrawable<Sprite>("regular")) regular->color = pc;
+                if (auto regular = swatch->GetLayerDrawableBasedOn<IRectDrawable>("regular")) regular->color = pc;
                 String value = preset;
                 Ref<PipelineColorField> fieldRef = field;
                 swatch->onClick = [weakThis, value, fieldRef]()
@@ -503,7 +504,7 @@ namespace Editor
                 lock->name = "lock aspect";
                 lock->layout->minWidth = 22;
                 lock->layout->maxWidth = 22;
-                auto lockIcon = mmake<Sprite>("ui/pipeline/btn_link.png");
+                auto lockIcon = mmake<VectorSprite>("ui/pipeline/btn_link.svg");
                 lockIcon->color = PipelineControls::textColor;
                 lock->AddLayer("icon", lockIcon, Layout::Based(BaseCorner::Center, Vec2F(14, 14)));
                 lock->onToggleByUser = [weakThis](bool)

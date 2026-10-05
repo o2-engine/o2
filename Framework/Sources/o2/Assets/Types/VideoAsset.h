@@ -55,7 +55,7 @@ namespace o2
         static int GetEditorSorting() { return 94; }
 
         // Returns editor icon
-        static String GetEditorIcon() { return "ui/UI4_video_icon.png"; }
+        static String GetEditorIcon() { return "ui/UI4_video_icon.svg"; }
 
         SERIALIZABLE(VideoAsset);
         CLONEABLE_REF(VideoAsset);

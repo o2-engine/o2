@@ -21,7 +21,7 @@ namespace Editor
         mSaveButton->onClick = THIS_FUNC(OnSavePressed);
         mAssetHeader->AddChild(mSaveButton);
 
-        auto separatorImg = o2UI.CreateImage("ui/UI4_Separator.png");
+        auto separatorImg = o2UI.CreateImage("ui/UI4_Separator.svg");
         *separatorImg->layout = WidgetLayout::HorStretch(VerAlign::Bottom, -6, -15, 5, -4);
         mAssetHeader->AddChild(separatorImg);
 

@@ -12,6 +12,7 @@
 #include "o2Editor/Windows/AnimationWindow/TrackControls/ITrackControl.h"
 #include "o2Editor/Actions/ActionsList.h"
 #include "o2Editor/Properties/Properties.h"
+#include "o2/Render/VectorSprite.h"
 
 using namespace o2;
 
@@ -260,7 +261,7 @@ namespace Editor
     template<typename AnimationTrackType>
     void KeyFramesTrackControl<AnimationTrackType>::SetCurveViewColor(const Color4& color)
     {
-        mAddKeyDotButton->GetLayerDrawable<Sprite>("basic/regularBack")->SetColor(color);
+        mAddKeyDotButton->GetLayerDrawableBasedOn<IRectDrawable>("basic/regularBack")->SetColor(color);
     }
 
     template<typename AnimationTrackType>
@@ -285,7 +286,7 @@ namespace Editor
 
         mAddKeyDotButton = o2UI.CreateWidget<Button>("add dot key");
         *mAddKeyDotButton->layout = WidgetLayout::Based(BaseCorner::Right, Vec2F(20, 20), Vec2F(0, 0));
-        mAddKeyDotButton->GetLayerDrawable<Sprite>("basic/regularBack")->SetColor(Color4::Black());
+        mAddKeyDotButton->GetLayerDrawableBasedOn<IRectDrawable>("basic/regularBack")->SetColor(Color4::Black());
         mAddKeyDotButton->onClick = [&]() { InsertNewKey(mTimeline.Lock()->GetTimeCursor()); };
         mAddKeyDotButton->enabled = false;
 
@@ -434,12 +435,12 @@ namespace Editor
     template<typename AnimationTrackType>
     Ref<AnimationKeyDragHandle> KeyFramesTrackControl<AnimationTrackType>::CreateHandle()
     {
-        auto handle = mmake<AnimationKeyDragHandle>(mmake<Sprite>("ui/UI4_key.png"),
-                                                    mmake<Sprite>("ui/UI4_key_hover.png"),
-                                                    mmake<Sprite>("ui/UI4_key_pressed.png"),
-                                                    mmake<Sprite>("ui/UI4_selected_key.png"),
-                                                    mmake<Sprite>("ui/UI4_selected_key_hover.png"),
-                                                    mmake<Sprite>("ui/UI4_selected_key_pressed.png"));
+        auto handle = mmake<AnimationKeyDragHandle>(mmake<VectorSprite>("ui/UI4_key.svg"),
+                                                    mmake<VectorSprite>("ui/UI4_key_hover.svg"),
+                                                    mmake<VectorSprite>("ui/UI4_key_pressed.svg"),
+                                                    mmake<VectorSprite>("ui/UI4_selected_key.svg"),
+                                                    mmake<VectorSprite>("ui/UI4_selected_key_hover.svg"),
+                                                    mmake<VectorSprite>("ui/UI4_selected_key_pressed.svg"));
 
         handle->cursorType = CursorType::SizeWE;
         handle->pixelPerfect = true;

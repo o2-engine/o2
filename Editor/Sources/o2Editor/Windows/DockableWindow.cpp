@@ -35,7 +35,7 @@ namespace Editor
 
         InitializeDragHandles();
         SetDocked(false);
-        mDockingFrameSample = other.mDockingFrameSample->CloneAsRef<Sprite>();
+        mDockingFrameSample = other.mDockingFrameSample->CloneAsRef<IRectDrawable>();
         InitializeDockFrameAppearanceAnim();
 
         if (mVisibleState)
@@ -51,7 +51,7 @@ namespace Editor
     {
         Window::operator=(other);
 
-        mDockingFrameSample = other.mDockingFrameSample->CloneAsRef<Sprite>();
+        mDockingFrameSample = other.mDockingFrameSample->CloneAsRef<IRectDrawable>();
 
         if (mVisibleState)
             mVisibleState->onStateFullyFalse += THIS_FUNC(Undock);
@@ -162,12 +162,20 @@ namespace Editor
         return mDocked;
     }
 
-    const Ref<Sprite>& DockableWindow::GetDockingFrameSample() const
+    void DockableWindow::SetDockingFrameSample(const Ref<IRectDrawable>& drawable)
+    {
+        mDockingFrameSample = drawable;
+
+        if (mDockingFrameAppearance->GetClip())
+            mDockingFrameAppearance->SetTarget(this);
+    }
+
+    const Ref<IRectDrawable>& DockableWindow::GetDockingFrameSample() const
     {
         return mDockingFrameSample;
     }
 
-    void DockableWindow::SetIcon(const Ref<Sprite>& icon)
+    void DockableWindow::SetIcon(const Ref<IRectDrawable>& icon)
     {
         auto iconLayer = GetLayer(mIconLayerPath);
         if (iconLayer)
@@ -178,20 +186,8 @@ namespace Editor
         auto tabIconLayer = GetLayer(mTabIconLayerPath);
         if (tabIconLayer)
         {
-            tabIconLayer->SetDrawable(icon->CloneAsRef<Sprite>());
+            tabIconLayer->SetDrawable(icon->CloneAsRef<IRectDrawable>());
         }
-    }
-
-    Ref<Sprite> DockableWindow::GetIcon() const
-    {
-        auto iconLayer = GetLayer(mIconLayerPath);
-        if (iconLayer)
-        {
-            if (iconLayer->GetDrawable())
-                return DynamicCast<Sprite>(iconLayer->GetDrawable());
-        }
-
-        return nullptr;
     }
 
     void DockableWindow::SetIconLayout(const Layout& layout)

@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 30 30">
+<defs>
+<linearGradient id="e">
+<stop offset="0" stop-color="#000000" stop-opacity="0.165"/>
+<stop offset="0.125" stop-color="#000000" stop-opacity="0.165"/>
+<stop offset="0.25" stop-color="#000000" stop-opacity="0.08"/>
+<stop offset="0.5" stop-color="#000000" stop-opacity="0.02"/>
+<stop offset="0.75" stop-color="#000000" stop-opacity="0.005"/>
+<stop offset="1" stop-color="#000000" stop-opacity="0"/>
+</linearGradient>
+<radialGradient id="c">
+<stop offset="0.2" stop-color="#000000" stop-opacity="0.165"/>
+<stop offset="0.3" stop-color="#000000" stop-opacity="0.165"/>
+<stop offset="0.4" stop-color="#000000" stop-opacity="0.08"/>
+<stop offset="0.6" stop-color="#000000" stop-opacity="0.02"/>
+<stop offset="0.8" stop-color="#000000" stop-opacity="0.005"/>
+<stop offset="1" stop-color="#000000" stop-opacity="0"/>
+</radialGradient>
+<linearGradient id="e0" href="#e" gradientUnits="userSpaceOnUse" x1="16.548" y1="6.633" x2="20.086" y2="4.767"/>
+<linearGradient id="e1" href="#e" gradientUnits="userSpaceOnUse" x1="21.996" y1="20.1" x2="21.996" y2="24.1"/>
+<linearGradient id="e2" href="#e" gradientUnits="userSpaceOnUse" x1="8.448" y1="18.633" x2="4.91" y2="16.767"/>
+<radialGradient id="c0" href="#c" gradientUnits="userSpaceOnUse" cx="15.664" cy="7.1" r="5"/>
+<radialGradient id="c1" href="#c" gradientUnits="userSpaceOnUse" cx="21.996" cy="19.1" r="5"/>
+<radialGradient id="c2" href="#c" gradientUnits="userSpaceOnUse" cx="9.332" cy="19.1" r="5"/>
+</defs>
+<path d="M16.548 6.633 L22.88 18.633 L26.418 16.767 L20.086 4.767 Z" fill="url(#e0)"/>
+<path d="M21.996 20.1 L9.332 20.1 L9.332 24.1 L21.996 24.1 Z" fill="url(#e1)"/>
+<path d="M8.448 18.633 L14.78 6.633 L11.242 4.767 L4.91 16.767 Z" fill="url(#e2)"/>
+<path d="M15.664 7.1 L11.242 4.767 L15.664 -3.614 L20.086 4.767 Z" fill="url(#c0)"/>
+<path d="M21.996 19.1 L26.418 16.767 L30.288 24.1 L21.996 24.1 Z" fill="url(#c1)"/>
+<path d="M9.332 19.1 L9.332 24.1 L1.04 24.1 L4.91 16.767 Z" fill="url(#c2)"/>
+<polygon points="15.647,7.504 9.739,18.7 21.555,18.7" fill="#808d8e" stroke="#808d8e" stroke-width="3.65" stroke-linejoin="round"/>
+<polygon points="15.65,7.348 9.541,18.925 21.759,18.925" fill="#bdc1c8" stroke="#bdc1c8" stroke-width="1.15" stroke-linejoin="round"/>
+<rect x="14.38" y="8.7" width="2.5" height="6.801" rx="1.25" fill="#2c3e50"/>
+<circle cx="15.667" cy="17.312" r="1.05" fill="#2c3e50"/>
+</svg>

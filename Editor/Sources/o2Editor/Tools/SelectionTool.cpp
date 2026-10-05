@@ -13,12 +13,13 @@
 #include "o2Editor/Windows/SceneWindow/SceneWindow.h"
 #include "o2Editor/Windows/TreeWindow/TreeWindow.h"
 #include "o2Editor/Windows/WindowsManager.h"
+#include "o2/Render/VectorSprite.h"
 
 namespace Editor
 {
     SelectionTool::SelectionTool()
     {
-        mSelectionSprite = mmake<Sprite>("ui/UI_Window_place.png");
+        mSelectionSprite = mmake<VectorSprite>("ui/UI_Window_place.svg");
     }
 
     SelectionTool::~SelectionTool()
@@ -26,7 +27,7 @@ namespace Editor
 
     String SelectionTool::GetPanelIcon() const
     {
-        return "ui/UI4_select_tool.png";
+        return "ui/UI4_select_tool.svg";
     }
 
     ShortcutKeys SelectionTool::GetShortcut() const

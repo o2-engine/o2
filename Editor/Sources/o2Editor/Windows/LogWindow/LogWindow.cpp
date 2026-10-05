@@ -11,6 +11,7 @@
 #include "o2/Scene/UI/Widgets/LongList.h"
 #include "o2/Scene/UI/Widgets/Toggle.h"
 #include "o2/Utils/System/Time/Time.h"
+#include "o2/Render/VectorSprite.h"
 
 namespace Editor
 {
@@ -38,7 +39,7 @@ namespace Editor
     {
         mWindow->caption = "Log";
         mWindow->name = "log window";
-        mWindow->SetIcon(mmake<Sprite>("ui/UI4_log_wnd_icon.png"));
+        mWindow->SetIcon(mmake<VectorSprite>("ui/UI4_log_wnd_icon.svg"));
         mWindow->SetIconLayout(Layout::Based(BaseCorner::LeftTop, Vec2F(20, 20), Vec2F(-1, 1)));
         mWindow->SetViewLayout(Layout::BothStretch(-2, 0, 0, 18));
         mWindow->SetClippingLayout(Layout::BothStretch(-1, 0, 0, 18));
@@ -71,7 +72,7 @@ namespace Editor
         mWindow->AddChild(mList);
 
         auto downPanel = mmake<Widget>();
-        downPanel->AddLayer("back", mmake<Sprite>("ui/UI4_small_panel_down_back.png"),
+        downPanel->AddLayer("back", mmake<VectorSprite>("ui/UI4_small_panel_down_back.svg"),
                             Layout::BothStretch(-4, -5, -4, -5));
         *downPanel->layout = WidgetLayout::HorStretch(VerAlign::Bottom, 0, 0, 20, 0);
         mWindow->AddChild(downPanel);

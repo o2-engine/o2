@@ -63,6 +63,12 @@ namespace Editor
 		// Returns asset editor by type
 		Ref<IAssetEditorWindow> GetAssetEditor(const Type* type) const;
 
+        // Updates windows
+        void Update(float dt);
+
+        // Draws windows
+        void Draw();
+
     protected:
 		Vector<Ref<IEditorWindow>>                mEditorWindows; // Editors windows list
 		Map<const Type*, Ref<IAssetEditorWindow>> mAssetEditors;  // Asset editors by type
@@ -82,12 +88,6 @@ namespace Editor
 
         // Initializes docking 
         void InitializeDock();
-
-        // Updates windows
-        void Update(float dt);
-
-        // Draws windows
-        void Draw();
 
         friend class EditorConfig;
         friend class EditorApplication;

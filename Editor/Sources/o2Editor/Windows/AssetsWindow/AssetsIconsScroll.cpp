@@ -6,8 +6,10 @@
 #include "o2/Assets/Assets.h"
 #include "o2/Assets/Types/AtlasAsset.h"
 #include "o2/Assets/Types/FolderAsset.h"
+#include "o2/Assets/Types/VectorImageAsset.h"
 #include "o2/Render/Render.h"
 #include "o2/Render/Sprite.h"
+#include "o2/Render/VectorSprite.h"
 #include "o2/Scene/Actor.h"
 #include "o2/Scene/Components/ImageComponent.h"
 #include "o2/Scene/UI/UIManager.h"
@@ -45,9 +47,9 @@ namespace Editor
     }
 
     AssetsIconsScrollArea::AssetsIconsScrollArea(RefCounter* refCounter, const AssetsIconsScrollArea& other) :
-        GridLayoutScrollArea(refCounter, other), mHighlightSprite(other.mHighlightSprite->CloneAsRef<Sprite>()),
+        GridLayoutScrollArea(refCounter, other), mHighlightSprite(other.mHighlightSprite->CloneAsRef<IRectDrawable>()),
         mHighlightLayout(other.mHighlightLayout), mHighlightAnim(other.mHighlightAnim),
-        mSelectionSprite(other.mSelectionSprite->CloneAsRef<Sprite>())
+        mSelectionSprite(other.mSelectionSprite->CloneAsRef<IRectDrawable>())
     {
         PushEditorScopeOnStack scope;
 
@@ -82,12 +84,12 @@ namespace Editor
         mContextMenu = FindChildByType<ContextMenu>();
 
         mHighlightLayout = other.mHighlightLayout;
-        mHighlightSprite = other.mHighlightSprite->CloneAsRef<Sprite>();
+        mHighlightSprite = other.mHighlightSprite->CloneAsRef<IRectDrawable>();
         mHighlighClip = other.mHighlighClip->CloneAsRef<AnimationClip>();
         mHighlightAnim->SetTarget(mHighlightSprite.Get());
         mHighlightAnim->SetClip(mHighlighClip);
 
-        mSelectionSprite = other.mSelectionSprite->CloneAsRef<Sprite>();
+        mSelectionSprite = other.mSelectionSprite->CloneAsRef<IRectDrawable>();
 
         RetargetStatesAnimations();
         SetLayoutDirty();
@@ -414,7 +416,20 @@ namespace Editor
         assetIcon->Show();
 
         auto iconLayer = assetIcon->layer["icon"];
-        auto iconSprite = DynamicCast<Sprite>(iconLayer->GetDrawable());
+        auto rasterIcon = [&]()
+        {
+            auto sprite = DynamicCast<Sprite>(iconLayer->GetDrawable());
+            if (!sprite)
+            {
+                sprite = mmake<Sprite>();
+                if (auto drawable = iconLayer->GetDrawable())
+                    sprite->SetColor(drawable->GetColor());
+
+                iconLayer->SetDrawable(sprite);
+            }
+
+            return sprite;
+        };
 
         // Texture previews lay on the checked background, like the image viewers do; the
         // layer is created lazily and sits right below the icon layer
@@ -451,24 +466,55 @@ namespace Editor
                 Vec2I pageSize = pages[0].GetTexture()->GetSize();
                 setPreviewLayout((float)pageSize.x, (float)pageSize.y);
 
+                auto iconSprite = rasterIcon();
                 iconSprite->SetTexture(pages[0].GetTexture());
                 iconSprite->SetTextureSrcRect(RectI(Vec2I(), pageSize));
                 iconSprite->mode = SpriteMode::Default;
             }
         }
 
+        AssetRef<VectorImageAsset> previewVectorAsset;
+        if (asset->meta->GetAssetType() == &TypeOf(VectorImageAsset))
+            previewVectorAsset = AssetRef<VectorImageAsset>(asset->path);
+
+        bool isVectorImage = previewVectorAsset && previewVectorAsset->IsValid();
+        auto vectorPreviewLayer = assetIcon->FindLayer("vectorPreview");
+        if (isVectorImage && !vectorPreviewLayer)
+        {
+            vectorPreviewLayer = assetIcon->AddLayer("vectorPreview", mmake<VectorSprite>(), iconLayer->layout,
+                                                     iconLayer->GetDepth() + 0.05f);
+        }
+
+        if (vectorPreviewLayer)
+            vectorPreviewLayer->SetEnabled(isVectorImage);
+
+        iconLayer->SetEnabled(!isVectorImage);
+
         if (asset->meta->GetAssetType() == &TypeOf(ImageAsset))
         {
             AssetRef<ImageAsset> previewSpriteAsset(asset->path);
             setPreviewLayout(previewSpriteAsset->width, previewSpriteAsset->height);
 
+            auto iconSprite = rasterIcon();
             iconSprite->image = previewSpriteAsset;
             iconSprite->mode = SpriteMode::Default;
         }
+        else if (isVectorImage)
+        {
+            setPreviewLayout(previewVectorAsset->width, previewVectorAsset->height);
+            vectorPreviewLayer->layout = iconLayer->layout;
+
+            auto vectorSprite = DynamicCast<VectorSprite>(vectorPreviewLayer->GetDrawable());
+            vectorSprite->SetImageAsset(previewVectorAsset);
+            vectorSprite->SetMode(SpriteMode::Default);
+        }
         else if (!isAtlasWithPages)
         {
-            iconSprite->imageName = asset->meta->GetAssetType()->InvokeStatic<String>("GetEditorIcon");
-            iconSprite->mode = SpriteMode::FixedAspect;
+            auto icon = iconLayer->SetImage(asset->meta->GetAssetType()->InvokeStatic<String>("GetEditorIcon"));
+            if (auto vectorIcon = DynamicCast<VectorSprite>(icon))
+                vectorIcon->SetMode(SpriteMode::FixedAspect);
+            else if (auto rasterIcon = DynamicCast<Sprite>(icon))
+                rasterIcon->SetMode(SpriteMode::FixedAspect);
             iconLayer->layout = Layout::Based(BaseCorner::Center, Vec2F(40, 40), Vec2F(0, 10));
             previewBackLayer->SetEnabled(false);
         }
@@ -909,7 +955,13 @@ namespace Editor
         return nullptr;
     }
 
-    const Ref<Sprite>& AssetsIconsScrollArea::GetHighlightDrawable() const
+    void AssetsIconsScrollArea::SetHighlightDrawable(const Ref<IRectDrawable>& drawable)
+    {
+        mHighlightSprite = drawable;
+        mHighlightAnim->SetTarget(mHighlightSprite.Get());
+    }
+
+    const Ref<IRectDrawable>& AssetsIconsScrollArea::GetHighlightDrawable() const
     {
         return mHighlightSprite;
     }
@@ -926,7 +978,12 @@ namespace Editor
         mHighlightLayout = layout;
     }
 
-    const Ref<Sprite>& AssetsIconsScrollArea::GetSelectingDrawable() const
+    void AssetsIconsScrollArea::SetSelectingDrawable(const Ref<IRectDrawable>& drawable)
+    {
+        mSelectionSprite = drawable;
+    }
+
+    const Ref<IRectDrawable>& AssetsIconsScrollArea::GetSelectingDrawable() const
     {
         return mSelectionSprite;
     }

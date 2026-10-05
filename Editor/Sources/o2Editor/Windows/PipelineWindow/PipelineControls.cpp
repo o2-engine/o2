@@ -17,6 +17,7 @@
 #include "o2/Scene/UI/Widgets/Toggle.h"
 #include "o2Editor/Dialogs/ColorPickerDlg.h"
 #include "o2Editor/Pipeline/PipelineUtils.h"
+#include "o2/Render/VectorSprite.h"
 
 namespace Editor
 {
@@ -217,10 +218,10 @@ namespace Editor
         Ref<Button> MakeIconButton(const String& icon, const Color4& iconColor, const Color4& backColor)
         {
             auto button = o2UI.CreateWidget<Button>("pipeline icon");
-            if (auto ic = button->GetLayerDrawable<Sprite>("icon")) { ic->imageName = icon; ic->color = iconColor; }
+            if (auto ic = button->SetLayerImage("icon", icon)) ic->color = iconColor;
             if (backColor.a > 0)
             {
-                auto back = mmake<Sprite>("ui/UI4_button_regular.png");
+                auto back = mmake<VectorSprite>("ui/UI4_button_regular.svg");
                 back->color = backColor;
                 button->AddLayer("back", back, Layout::BothStretch(-9, -9, -10, -10), -1.0f);
             }
@@ -482,7 +483,7 @@ namespace Editor
     {
         layout->minHeight = 60;
 
-        mFrameLayer = AddLayer("frame", mmake<Sprite>("ui/UI4_Editbox_regular.png"), Layout::BothStretch(-9, -9, -9, -9), -1.0f);
+        mFrameLayer = AddLayer("frame", mmake<VectorSprite>("ui/UI4_Editbox_regular.svg"), Layout::BothStretch(-9, -9, -9, -9), -1.0f);
 
         auto checker = mmake<Sprite>("ui/pipeline/checker.png");
         checker->mode = SpriteMode::Tiled;
@@ -656,7 +657,7 @@ namespace Editor
 
     void PipelineColorField::UpdateVisuals()
     {
-        if (auto regular = mSwatch->GetLayerDrawable<Sprite>("regular"))
+        if (auto regular = mSwatch->GetLayerDrawableBasedOn<IRectDrawable>("regular"))
             regular->color = Color4(mColor.r, mColor.g, mColor.b, 255);
         mHexEdit->SetText(PipelineUtils::ColorToHex(mColor));
     }

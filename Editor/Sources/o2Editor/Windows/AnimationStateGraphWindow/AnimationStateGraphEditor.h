@@ -1,6 +1,7 @@
 #pragma once
 
 #include "o2/Assets/Types/AnimationStateGraphAsset.h"
+#include "o2/Render/VectorSprite.h"
 #include "o2/Scene/Components/AnimationStateGraphComponent.h"
 #include "o2/Scene/UI/Widgets/EditBoxDropDown.h"
 #include "o2/Utils/Editor/DragHandle.h"
@@ -50,7 +51,7 @@ namespace Editor
         void Update(float dt) override;
 
         // Sets selection sprite image
-        void SetSelectionSpriteImage(const AssetRef<ImageAsset>& image);
+        void SetSelectionSpriteImage(const AssetRef<VectorImageAsset>& image);
 
 		// Turns on or off updating for component
         void SetPreviewEnabled(bool enabled);
@@ -233,7 +234,7 @@ namespace Editor
 		Map<WeakRef<AnimationGraphState>, Ref<StateWidget>> mStatesWidgetsMap;      // States widgets map by state
 		Map<WeakRef<DragHandle>, Ref<StateWidget>>          mStateHandlesMap;       // States widgets map by drag handle
 
-		Ref<Sprite> mSelectionSprite;       // Selection sprite @SERIALIZABLE
+		Ref<VectorSprite> mSelectionSprite; // Selection sprite @SERIALIZABLE
 		Vec2F       mSelectingPressedPoint; // Point, where cursor was pressed, selection starts here, in local space
 
 		Vec2F            mContextMenuPos;   // Context menu position when right mouse button was pressed
@@ -408,7 +409,7 @@ CLASS_METHODS_META(Editor::AnimationStateGraphEditor)
     FUNCTION().PUBLIC().SIGNATURE(void, SetGraph, const Ref<AnimationStateGraphAsset>&, const Ref<AnimationStateGraphComponent>&);
     FUNCTION().PUBLIC().SIGNATURE(void, Draw);
     FUNCTION().PUBLIC().SIGNATURE(void, Update, float);
-    FUNCTION().PUBLIC().SIGNATURE(void, SetSelectionSpriteImage, const AssetRef<ImageAsset>&);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetSelectionSpriteImage, const AssetRef<VectorImageAsset>&);
     FUNCTION().PUBLIC().SIGNATURE(void, SetPreviewEnabled, bool);
     FUNCTION().PUBLIC().SIGNATURE(void, UpdateSelfTransform);
     FUNCTION().PUBLIC().SIGNATURE(const Ref<ContextMenu>&, GetContextMenu);

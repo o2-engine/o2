@@ -90,7 +90,7 @@ namespace Editor
 
             String name;
             String path;
-            String icon = "ui/UI4_component_icon.png";
+            String icon = "ui/UI4_component_icon.svg";
 
             const Type* type = nullptr;
 
@@ -183,7 +183,7 @@ namespace Editor
 
     private:
         Ref<Text>   mName;
-        Ref<Sprite> mIcon;
+        Ref<IRectDrawable> mIcon;
 
         WeakRef<ComponentsTree> mTree;
 

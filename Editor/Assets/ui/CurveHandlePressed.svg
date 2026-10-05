@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="9" height="9" viewBox="0 0 9 9">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="9" y2="9" gradientUnits="userSpaceOnUse">
+      <stop offset="0.299" stop-color="#191919" stop-opacity="0"/>
+      <stop offset="0.444" stop-color="#191919" stop-opacity="0.93"/>
+      <stop offset="0.522" stop-color="#191919" stop-opacity="1"/>
+      <stop offset="0.589" stop-color="#191919" stop-opacity="1"/>
+      <stop offset="0.667" stop-color="#191919" stop-opacity="0.93"/>
+      <stop offset="0.778" stop-color="#191919" stop-opacity="0.7"/>
+    </linearGradient>
+  </defs>
+  <polygon points="2.07,2.07 5,2.07 6.07,3.1 7.25,3.88 7.25,6.2 6.2,7.25 3.88,7.25 3.1,6.07 2.07,5" fill="url(#g)"/>
+</svg>

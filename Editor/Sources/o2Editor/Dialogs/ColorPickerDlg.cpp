@@ -15,6 +15,7 @@
 #include "o2/Scene/UI/Widgets/Window.h"
 #include "o2Editor/UIRoot.h"
 #include "o2Editor/Utils/CommonTextures.h"
+#include "o2/Render/VectorSprite.h"
 
 DECLARE_SINGLETON(Editor::ColorPickerDlg);
 
@@ -108,7 +109,7 @@ namespace Editor
         auto pickArea = mmake<Widget>();
         *pickArea->layout = WidgetLayout::BothStretch(5, 5, 5, 5);
 
-        pickArea->AddLayer("back", mmake<Sprite>("ui/UI4_Editbox_regular.png"),
+        pickArea->AddLayer("back", mmake<VectorSprite>("ui/UI4_Editbox_regular.svg"),
                            Layout::BothStretch(-9, -9, -9, -9));
 
         mColorPickAreaBitmap = mmake<Bitmap>(PixelFormat::R8G8B8A8, Vec2I(80, 80));
@@ -117,7 +118,7 @@ namespace Editor
         mColorPickAreaColor = pickArea->AddLayer("color", mmake<Sprite>(mColorPickAreaTexture, RectI(0, 0, 80, 80)),
                                                  Layout::BothStretch(1, 1, 1, 1));
 
-        mColorPickAreaHandle = o2UI.CreateImage("ui/circle_hole_handle.png");
+        mColorPickAreaHandle = o2UI.CreateImage("ui/circle_hole_handle.svg");
         *mColorPickAreaHandle->layout = WidgetLayout::Based(BaseCorner::Center, Vec2F(15, 15));
         pickArea->AddChild(mColorPickAreaHandle);
 

@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="25" height="25" viewBox="0 0 25 25">
+<defs>
+<linearGradient id="s">
+<stop offset="0" stop-color="#000000" stop-opacity="0.15"/>
+<stop offset="0.32" stop-color="#000000" stop-opacity="0.133"/>
+<stop offset="0.726" stop-color="#000000" stop-opacity="0.019"/>
+<stop offset="1" stop-color="#000000" stop-opacity="0"/>
+</linearGradient>
+<linearGradient id="t" href="#s" gradientUnits="userSpaceOnUse" x1="0" y1="11" x2="0" y2="0"/>
+<linearGradient id="b" href="#s" gradientUnits="userSpaceOnUse" x1="0" y1="14" x2="0" y2="25"/>
+<linearGradient id="l" href="#s" gradientUnits="userSpaceOnUse" x1="11" y1="0" x2="0" y2="0"/>
+<linearGradient id="r" href="#s" gradientUnits="userSpaceOnUse" x1="14" y1="0" x2="25" y2="0"/>
+<radialGradient id="tl" href="#s" gradientUnits="userSpaceOnUse" cx="11" cy="11" r="11"/>
+<radialGradient id="tr" href="#s" gradientUnits="userSpaceOnUse" cx="14" cy="11" r="11"/>
+<radialGradient id="bl" href="#s" gradientUnits="userSpaceOnUse" cx="11" cy="14" r="11"/>
+<radialGradient id="br" href="#s" gradientUnits="userSpaceOnUse" cx="14" cy="14" r="11"/>
+</defs>
+<rect x="11" y="11" width="3" height="3" fill="#000000" fill-opacity="0.15"/>
+<rect x="11" y="0" width="3" height="11" fill="url(#t)"/>
+<rect x="11" y="14" width="3" height="11" fill="url(#b)"/>
+<rect x="0" y="11" width="11" height="3" fill="url(#l)"/>
+<rect x="14" y="11" width="11" height="3" fill="url(#r)"/>
+<rect x="0" y="0" width="11" height="11" fill="url(#tl)"/>
+<rect x="14" y="0" width="11" height="11" fill="url(#tr)"/>
+<rect x="0" y="14" width="11" height="11" fill="url(#bl)"/>
+<rect x="14" y="14" width="11" height="11" fill="url(#br)"/>
+<path d="M20 11.7 L20 13.3 C20 16.684 16.684 20 13.3 20 L11.7 20 C8.316 20 5 16.684 5 13.3 L5 11.7 C5 8.316 8.316 5 11.7 5 L13.3 5 C16.684 5 20 8.316 20 11.7 Z" fill="#009688"/>
+<path d="M7.5 12 L9.625 12 L11.5 13.875 L15.375 10 L17.5 10 L17.5 12.125 L12.625 17 L10.375 17 L7.5 14.125 Z" fill="#fbfbfb"/>
+</svg>

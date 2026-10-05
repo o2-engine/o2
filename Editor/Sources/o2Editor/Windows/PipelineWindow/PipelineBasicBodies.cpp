@@ -111,7 +111,7 @@ namespace Editor
             mPathLabel->SetColor(dimTextColor);
             mPathLabel->horOverflow = Label::HorOverflow::Dots;
             pathRow->AddChild(mPathLabel);
-            mShowButton = MakeIconButton("ui/pipeline/btn_locate.png", accentColor, Color4(0, 0, 0, 0));
+            mShowButton = MakeIconButton("ui/pipeline/btn_locate.svg", accentColor, Color4(0, 0, 0, 0));
             mShowButton->name = "show in assets";
             mShowButton->layout->minWidth = 22;
             mShowButton->layout->maxWidth = 22;
@@ -165,7 +165,7 @@ namespace Editor
                 mResizeW->onChangeCompleted = [weakThis](const WString& t) { if (auto self = weakThis.Lock()) self->OnResizeEdited(true, atoi(((String)t).Data())); };
                 resizeRow->AddChild(mResizeW);
 
-                mLockButton = MakeIconButton("ui/pipeline/btn_link.png", accentColor, Color4(0, 0, 0, 0));
+                mLockButton = MakeIconButton("ui/pipeline/btn_link.svg", accentColor, Color4(0, 0, 0, 0));
                 mLockButton->name = "lock aspect";
                 mLockButton->layout->minWidth = 22; mLockButton->layout->maxWidth = 22;
                 mLockButton->onClick = [weakThis]()

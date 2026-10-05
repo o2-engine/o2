@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40">
+<defs>
+<linearGradient id="s">
+<stop offset="0" stop-color="#000000" stop-opacity="0.159"/>
+<stop offset="0.111" stop-color="#000000" stop-opacity="0.142"/>
+<stop offset="0.222" stop-color="#000000" stop-opacity="0.127"/>
+<stop offset="0.333" stop-color="#000000" stop-opacity="0.11"/>
+<stop offset="0.444" stop-color="#000000" stop-opacity="0.082"/>
+<stop offset="0.556" stop-color="#000000" stop-opacity="0.06"/>
+<stop offset="0.667" stop-color="#000000" stop-opacity="0.029"/>
+<stop offset="0.778" stop-color="#000000" stop-opacity="0.013"/>
+<stop offset="0.889" stop-color="#000000" stop-opacity="0.004"/>
+<stop offset="1" stop-color="#000000" stop-opacity="0"/>
+</linearGradient>
+<linearGradient id="sl" href="#s" gradientUnits="userSpaceOnUse" x1="20.5" y1="0" x2="2.5" y2="0"/>
+<linearGradient id="sr" href="#s" gradientUnits="userSpaceOnUse" x1="23" y1="0" x2="41" y2="0"/>
+<linearGradient id="st" href="#s" gradientUnits="userSpaceOnUse" x1="0" y1="17.5" x2="0" y2="-0.5"/>
+<linearGradient id="sb" href="#s" gradientUnits="userSpaceOnUse" x1="0" y1="25.5" x2="0" y2="43.5"/>
+<radialGradient id="stl" href="#s" gradientUnits="userSpaceOnUse" cx="20.5" cy="17.5" r="18"/>
+<radialGradient id="str" href="#s" gradientUnits="userSpaceOnUse" cx="23" cy="17.5" r="18"/>
+<radialGradient id="sbl" href="#s" gradientUnits="userSpaceOnUse" cx="20.5" cy="25.5" r="18"/>
+<radialGradient id="sbr" href="#s" gradientUnits="userSpaceOnUse" cx="23" cy="25.5" r="18"/>
+</defs>
+<rect x="20.5" y="17.5" width="2.5" height="8" fill="#000000" fill-opacity="0.159"/>
+<rect x="0" y="17.5" width="20.5" height="8" fill="url(#sl)"/>
+<rect x="23" y="17.5" width="17" height="8" fill="url(#sr)"/>
+<rect x="20.5" y="0" width="2.5" height="17.5" fill="url(#st)"/>
+<rect x="20.5" y="25.5" width="2.5" height="14.5" fill="url(#sb)"/>
+<rect x="0" y="0" width="20.5" height="17.5" fill="url(#stl)"/>
+<rect x="23" y="0" width="17" height="17.5" fill="url(#str)"/>
+<rect x="0" y="25.5" width="20.5" height="14.5" fill="url(#sbl)"/>
+<rect x="23" y="25.5" width="17" height="14.5" fill="url(#sbr)"/>
+<path d="M11.25 7 L24.53 7 L30 12.47 L30 30.75 L28.75 32 L11.25 32 L10 30.75 L10 8.25 Z" fill="#f0f2f4"/>
+<path d="M11 8 L25 8 L29 12 L29 31 L11 31 Z" fill="#f7f9fa"/>
+<path d="M12 9 L25 9 L25 12 L28 12 L28 30 L12 30 Z" fill="#ebeff2"/>
+<path d="M25 8.92 L25 12 L28.08 12 Z" fill="#ffffff"/>
+<rect x="15" y="14.43" width="10" height="10.57" fill="#abb9b9"/>
+<rect x="15" y="15" width="5.4" height="4" fill="#879b99"/>
+<rect x="20.47" y="15.67" width="3.19" height="3.33" fill="#f1f5f9"/>
+<rect x="15" y="19" width="9" height="1" fill="#98a9a8"/>
+<rect x="16" y="20" width="3.5" height="4" fill="#eff3f6"/>
+<rect x="19.98" y="20" width="4.02" height="4.55" fill="#879b99"/>
+</svg>

@@ -18,6 +18,7 @@
 #include "o2Editor/Dialogs/System/OpenSaveDialog.h"
 #include "o2Editor/EditorConfig.h"
 #include "o2Editor/Pipeline/PipelineImport.h"
+#include "o2/Render/VectorSprite.h"
 
 DECLARE_SINGLETON(Editor::PipelineWindow);
 
@@ -50,7 +51,7 @@ namespace Editor
 
         mWindow->caption = "Pipeline";
         mWindow->name = "pipeline window";
-        mWindow->SetIcon(mmake<Sprite>("ui/pipeline/window_icon.png"));
+        mWindow->SetIcon(mmake<VectorSprite>("ui/pipeline/window_icon.svg"));
         mWindow->SetIconLayout(Layout::Based(BaseCorner::LeftTop, Vec2F(20, 20), Vec2F(-1, 1)));
 
         mRunAllButton = o2UI.CreateWidget<Button>("menu pipeline run");

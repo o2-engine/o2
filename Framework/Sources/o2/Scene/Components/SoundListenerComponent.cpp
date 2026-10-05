@@ -43,7 +43,7 @@ namespace o2
 
     String SoundListenerComponent::GetIcon()
     {
-        return "ui/UI4_animation_component.png";
+        return "ui/UI4_animation_component.svg";
     }
 
     Ref<o2::RefCounterable> SoundListenerComponent::CastToRefCounterable(const Ref<SoundListenerComponent>& ref)

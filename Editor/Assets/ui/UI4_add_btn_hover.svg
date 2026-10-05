@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40">
+<defs>
+<radialGradient id="g0" gradientUnits="userSpaceOnUse" cx="21" cy="20" r="17">
+<stop offset="0" stop-color="#000000" stop-opacity="0.15"/>
+<stop offset="0.551" stop-color="#000000" stop-opacity="0.141"/>
+<stop offset="0.654" stop-color="#000000" stop-opacity="0.111"/>
+<stop offset="0.816" stop-color="#000000" stop-opacity="0.029"/>
+<stop offset="1" stop-color="#000000" stop-opacity="0"/>
+</radialGradient>
+</defs>
+<rect x="4" y="3" width="34" height="34" fill="url(#g0)"/>
+<path d="M33 21.864 C32.24 27.101 28.101 31.24 22.864 32 L19.136 32 C13.899 31.24 9.76 27.101 9 21.864 L9 18.136 C9.76 12.899 13.899 8.76 19.136 8 L22.864 8 C28.101 8.76 32.24 12.899 33 18.136 Z" fill="#70ccc0"/>
+<path d="M21.662 12.75 C22.298 12.93 22.803 13.422 23 14.051 L23 18 L26.949 18 C27.578 18.197 28.07 18.702 28.25 19.338 L28.25 20.662 C28.07 21.298 27.578 21.803 26.949 22 L23 22 L23 25.949 C22.803 26.578 22.298 27.07 21.662 27.25 L20.338 27.25 C19.702 27.07 19.197 26.578 19 25.949 L19 22 L15.051 22 C14.422 21.803 13.93 21.298 13.75 20.662 L13.75 19.338 C13.93 18.702 14.422 18.197 15.051 18 L19 18 L19 14.051 C19.197 13.422 19.702 12.93 20.338 12.75 Z" fill="#fbfbfb"/>
+</svg>

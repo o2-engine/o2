@@ -44,6 +44,7 @@
 #include "o2Editor/Windows/SceneWindow/SceneWindow.h"
 #include "o2Editor/Windows/TreeWindow/TreeWindow.h"
 #include "o2Editor/Windows/WindowsManager.h"
+#include "o2/Render/VectorSprite.h"
 
 namespace Editor
 {
@@ -178,8 +179,8 @@ namespace Editor
 
         mUIRoot = mmake<UIRoot>();
 
-        mBackground = mmake<Sprite>("ui/UI4_Background.png");
-        mBackSign = mmake<Sprite>("ui/UI4_o2_sign.png");
+        mBackground = mmake<VectorSprite>("ui/UI4_Background.svg");
+        mBackSign = mmake<VectorSprite>("ui/UI4_o2_sign.svg");
 
         CommonTextures::Initialize();
 

@@ -20,6 +20,7 @@
 #include "o2Editor/Pipeline/PipelineNodeType.h"
 #include "o2Editor/Pipeline/PipelineUtils.h"
 #include "o2Editor/Windows/PipelineWindow/PipelineNodeBody.h"
+#include "o2/Render/VectorSprite.h"
 
 namespace Editor
 {
@@ -704,9 +705,9 @@ namespace Editor
 
         for (int i = 0; i < edge->points.Count(); i++)
         {
-            auto regular = mmake<Sprite>("ui/pipeline/port_fill.png");
+            auto regular = mmake<VectorSprite>("ui/pipeline/port_fill.svg");
             regular->color = Color4(96, 125, 139, 255);
-            auto hover = mmake<Sprite>("ui/pipeline/port_fill.png");
+            auto hover = mmake<VectorSprite>("ui/pipeline/port_fill.svg");
             hover->color = Color4(0, 150, 136, 255);
             auto handle = mmake<DragHandle>(regular, hover, hover);
             handle->SetDrawablesSize(Vec2F(bendHandleRadius * 2, bendHandleRadius * 2));

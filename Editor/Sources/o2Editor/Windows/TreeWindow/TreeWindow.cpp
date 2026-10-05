@@ -34,6 +34,7 @@
 #include "o2Editor/Windows/TreeWindow/SceneSearchFilter.h"
 #include "o2Editor/Windows/WindowsManager.h"
 #include "o2Editor/Windows/SceneWindow/SceneWindow.h"
+#include "o2/Render/VectorSprite.h"
 
 DECLARE_SINGLETON(Editor::TreeWindow);
 
@@ -131,7 +132,7 @@ namespace Editor
     {
         mWindow->caption = "Tree";
         mWindow->name = "tree window";
-        mWindow->SetIcon(mmake<Sprite>("ui/UI4_tree_wnd_icon.png"));
+        mWindow->SetIcon(mmake<VectorSprite>("ui/UI4_tree_wnd_icon.svg"));
         mWindow->SetIconLayout(Layout::Based(BaseCorner::LeftTop, Vec2F(20, 20), Vec2F(0, 1)));
         mWindow->SetViewLayout(Layout::BothStretch(0, -2, 0, 18));
 
@@ -594,7 +595,7 @@ namespace Editor
         auto upPanel = mmake<Widget>();
         upPanel->name = "up panel";
         *upPanel->layout = WidgetLayout::HorStretch(VerAlign::Top, 0, 0, 20, 0);
-        upPanel->AddLayer("back", mmake<Sprite>("ui/UI4_square_field.png"), Layout::BothStretch(-4, -4, -5, -5));
+        upPanel->AddLayer("back", mmake<VectorSprite>("ui/UI4_square_field.svg"), Layout::BothStretch(-4, -4, -5, -5));
 
         auto searchButton = o2UI.CreateWidget<Button>("search");
         *searchButton->layout = WidgetLayout::Based(BaseCorner::Left, Vec2F(20, 20), Vec2F(-1, 1));

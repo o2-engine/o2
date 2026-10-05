@@ -11,12 +11,12 @@ namespace Editor
     {}
 
     AnimationKeyDragHandle::AnimationKeyDragHandle(RefCounter* refCounter,
-                                                   const Ref<Sprite>& regular,
-                                                   const Ref<Sprite>& hover /*= nullptr*/,
-                                                   const Ref<Sprite>& pressed /*= nullptr*/,
-                                                   const Ref<Sprite>& selected /*= nullptr*/,
-                                                   const Ref<Sprite>& selectedHovered /*= nullptr*/,
-                                                   const Ref<Sprite>& selectedPressed /*= nullptr*/):
+                                                   const Ref<IRectDrawable>& regular,
+                                                   const Ref<IRectDrawable>& hover /*= nullptr*/,
+                                                   const Ref<IRectDrawable>& pressed /*= nullptr*/,
+                                                   const Ref<IRectDrawable>& selected /*= nullptr*/,
+                                                   const Ref<IRectDrawable>& selectedHovered /*= nullptr*/,
+                                                   const Ref<IRectDrawable>& selectedPressed /*= nullptr*/):
         DragHandle(refCounter, regular, hover, pressed, selected, selectedHovered, selectedPressed)
     {}
 

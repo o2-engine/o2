@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20">
+<defs>
+<linearGradient id="g0" gradientUnits="userSpaceOnUse" x1="0" y1="10" x2="0" y2="0">
+<stop offset="0" stop-color="#000000" stop-opacity="0.144"/>
+<stop offset="0.263" stop-color="#000000" stop-opacity="0.125"/>
+<stop offset="0.463" stop-color="#000000" stop-opacity="0.064"/>
+<stop offset="0.487" stop-color="#000000" stop-opacity="0.046"/>
+<stop offset="0.613" stop-color="#000000" stop-opacity="0.039"/>
+<stop offset="0.637" stop-color="#000000" stop-opacity="0.019"/>
+<stop offset="1" stop-color="#000000" stop-opacity="0"/>
+</linearGradient>
+<linearGradient id="g1" gradientUnits="userSpaceOnUse" x1="0" y1="10" x2="0" y2="20">
+<stop offset="0" stop-color="#000000" stop-opacity="0.144"/>
+<stop offset="0.263" stop-color="#000000" stop-opacity="0.125"/>
+<stop offset="0.463" stop-color="#000000" stop-opacity="0.064"/>
+<stop offset="0.487" stop-color="#000000" stop-opacity="0.046"/>
+<stop offset="0.613" stop-color="#000000" stop-opacity="0.039"/>
+<stop offset="0.637" stop-color="#000000" stop-opacity="0.019"/>
+<stop offset="1" stop-color="#000000" stop-opacity="0"/>
+</linearGradient>
+<radialGradient id="g2" gradientUnits="userSpaceOnUse" cx="9" cy="10" r="10">
+<stop offset="0" stop-color="#000000" stop-opacity="0.144"/>
+<stop offset="0.263" stop-color="#000000" stop-opacity="0.125"/>
+<stop offset="0.463" stop-color="#000000" stop-opacity="0.064"/>
+<stop offset="0.487" stop-color="#000000" stop-opacity="0.046"/>
+<stop offset="0.613" stop-color="#000000" stop-opacity="0.039"/>
+<stop offset="0.637" stop-color="#000000" stop-opacity="0.019"/>
+<stop offset="1" stop-color="#000000" stop-opacity="0"/>
+</radialGradient>
+<radialGradient id="g3" gradientUnits="userSpaceOnUse" cx="11" cy="10" r="10">
+<stop offset="0" stop-color="#000000" stop-opacity="0.144"/>
+<stop offset="0.263" stop-color="#000000" stop-opacity="0.125"/>
+<stop offset="0.463" stop-color="#000000" stop-opacity="0.064"/>
+<stop offset="0.487" stop-color="#000000" stop-opacity="0.046"/>
+<stop offset="0.613" stop-color="#000000" stop-opacity="0.039"/>
+<stop offset="0.637" stop-color="#000000" stop-opacity="0.019"/>
+<stop offset="1" stop-color="#000000" stop-opacity="0"/>
+</radialGradient>
+</defs>
+<rect x="9" y="0" width="2" height="10" fill="url(#g0)"/>
+<rect x="9" y="10" width="2" height="10" fill="url(#g1)"/>
+<rect x="0" y="0" width="9" height="20" fill="url(#g2)"/>
+<rect x="11" y="0" width="9" height="20" fill="url(#g3)"/>
+<rect x="7" y="8" width="9" height="7" fill="#35495e"/>
+<rect x="4" y="5" width="9" height="7" fill="#607d8b"/>
+</svg>

@@ -35,14 +35,14 @@ namespace Editor
         // Returns is window docked
         bool IsDocked() const;
 
-        // Return pointer to docking sample sprite
-        const Ref<Sprite>& GetDockingFrameSample() const; 
+        // Sets docking frame sample drawable
+        void SetDockingFrameSample(const Ref<IRectDrawable>& drawable);
 
-        // Sets icon sprite
-        void SetIcon(const Ref<Sprite>& icon) override;
+        // Returns docking frame sample drawable
+        const Ref<IRectDrawable>& GetDockingFrameSample() const;
 
-        // Returns icon sprite
-        Ref<Sprite> GetIcon() const override;
+        // Sets icon drawable
+        void SetIcon(const Ref<IRectDrawable>& icon) override;
 
         // Sets icon layer layout
         void SetIconLayout(const Layout& layout) override;
@@ -106,7 +106,7 @@ namespace Editor
         const float mDockBorder = 1.5f;
 
         bool        mDocked = false;      // Is window docked
-        Ref<Sprite> mDockingFrameSample;  // Docking frame sample @SERIALIZABLE
+        Ref<IRectDrawable> mDockingFrameSample;  // Docking frame sample @SERIALIZABLE
         RectF       mDockingFrameCurrent; // Docking sample current frame
         RectF       mDockingFrameTarget;  // Docking sample target  frame
 
@@ -218,9 +218,9 @@ CLASS_METHODS_META(Editor::DockableWindow)
     FUNCTION().PUBLIC().SIGNATURE(void, Update, float);
     FUNCTION().PUBLIC().SIGNATURE(void, Draw);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsDocked);
-    FUNCTION().PUBLIC().SIGNATURE(const Ref<Sprite>&, GetDockingFrameSample);
-    FUNCTION().PUBLIC().SIGNATURE(void, SetIcon, const Ref<Sprite>&);
-    FUNCTION().PUBLIC().SIGNATURE(Ref<Sprite>, GetIcon);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetDockingFrameSample, const Ref<IRectDrawable>&);
+    FUNCTION().PUBLIC().SIGNATURE(const Ref<IRectDrawable>&, GetDockingFrameSample);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetIcon, const Ref<IRectDrawable>&);
     FUNCTION().PUBLIC().SIGNATURE(void, SetIconLayout, const Layout&);
     FUNCTION().PUBLIC().SIGNATURE(Layout, GetIconLayout);
     FUNCTION().PUBLIC().SIGNATURE(void, SetCaption, const WString&);

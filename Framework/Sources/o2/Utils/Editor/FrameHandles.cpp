@@ -3,6 +3,7 @@
 
 #include "o2/Render/Render.h"
 #include "o2/Render/Sprite.h"
+#include "o2/Render/VectorSprite.h"
 
 namespace o2
 {
@@ -27,27 +28,27 @@ namespace o2
         mRightBottomRotateHandle = mLeftTopRotateHandle->CloneAsRef<DragHandle>();
 
         mLeftTopHandle = mmake<DragHandle>();
-        mLeftTopHandle->SetRegularDrawable(mmake<Sprite>("ui/UI2_handle_regular.png"));
-        mLeftTopHandle->SetHoverDrawable(mmake<Sprite>("ui/UI2_handle_select.png"));
-        mLeftTopHandle->SetPressedDrawable(mmake<Sprite>("ui/UI2_handle_pressed.png"));
+        mLeftTopHandle->SetRegularDrawable(mmake<VectorSprite>("ui/UI2_handle_regular.svg"));
+        mLeftTopHandle->SetHoverDrawable(mmake<VectorSprite>("ui/UI2_handle_select.svg"));
+        mLeftTopHandle->SetPressedDrawable(mmake<VectorSprite>("ui/UI2_handle_pressed.svg"));
 
         mLeftBottomHandle = mLeftTopHandle->CloneAsRef<DragHandle>();
         mRightTopHandle = mLeftTopHandle->CloneAsRef<DragHandle>();
         mRightBottomHandle = mLeftTopHandle->CloneAsRef<DragHandle>();
 
         mLeftHandle = mmake<DragHandle>();
-        mLeftHandle->SetRegularDrawable(mmake<Sprite>("ui/UI2_handle_side_regular.png"));
-        mLeftHandle->SetHoverDrawable(mmake<Sprite>("ui/UI2_handle_side_select.png"));
-        mLeftHandle->SetPressedDrawable(mmake<Sprite>("ui/UI2_handle_side_pressed.png"));
+        mLeftHandle->SetRegularDrawable(mmake<VectorSprite>("ui/UI2_handle_side_regular.svg"));
+        mLeftHandle->SetHoverDrawable(mmake<VectorSprite>("ui/UI2_handle_side_select.svg"));
+        mLeftHandle->SetPressedDrawable(mmake<VectorSprite>("ui/UI2_handle_side_pressed.svg"));
 
         mTopHandle = mLeftHandle->CloneAsRef<DragHandle>();
         mBottomHandle = mLeftHandle->CloneAsRef<DragHandle>();
         mRightHandle = mLeftHandle->CloneAsRef<DragHandle>();
 
         mPivotHandle = mmake<DragHandle>();
-        mPivotHandle->SetRegularDrawable(mmake<Sprite>("ui/UI2_pivot.png"));
-        mPivotHandle->SetHoverDrawable(mmake<Sprite>("ui/UI2_pivot_select.png"));
-        mPivotHandle->SetPressedDrawable(mmake<Sprite>("ui/UI2_pivot_pressed.png"));
+        mPivotHandle->SetRegularDrawable(mmake<VectorSprite>("ui/UI2_pivot.svg"));
+        mPivotHandle->SetHoverDrawable(mmake<VectorSprite>("ui/UI2_pivot_select.svg"));
+        mPivotHandle->SetPressedDrawable(mmake<VectorSprite>("ui/UI2_pivot_pressed.svg"));
 
         mLeftTopHandle->onChangedPos = MakeFunction(this, &FrameHandles::OnLeftTopHandle);
         mLeftHandle->onChangedPos = MakeFunction(this, &FrameHandles::OnLeftHandle);

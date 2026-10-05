@@ -269,7 +269,7 @@ namespace o2
 
     String SkinnedMeshComponent::GetIcon()
     {
-        return "ui/UI4_image_component.png";
+        return "ui/UI4_image_component.svg";
     }
 
     SceneDrawableCategory SkinnedMeshComponent::GetSceneDrawableCategory() const

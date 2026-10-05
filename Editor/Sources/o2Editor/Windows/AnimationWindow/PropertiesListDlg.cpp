@@ -11,6 +11,7 @@
 #include "o2/Utils/Editor/Attributes/AnimatableAttribute.h"
 #include "o2/Utils/Editor/EditorScope.h"
 #include "o2Editor/UIRoot.h"
+#include "o2/Render/VectorSprite.h"
 
 DECLARE_SINGLETON(Editor::PropertiesListDlg);
 
@@ -37,13 +38,13 @@ namespace Editor
         mWindow = DynamicCast<o2::Window>(EditorUIRoot.AddWidget(o2UI.CreateWindow("Animation properties")));
         mWindow->SetClippingLayout(Layout::BothStretch(-1, -2, 0, 17));
         mWindow->SetViewLayout(Layout::BothStretch(-2, -2, 0, 20));
-        mWindow->SetIcon(mmake<Sprite>("ui/UI4_tree_wnd_icon.png"));
+        mWindow->SetIcon(mmake<VectorSprite>("ui/UI4_tree_wnd_icon.svg"));
         mWindow->SetIconLayout(Layout::Based(BaseCorner::LeftTop, Vec2F(20, 20), Vec2F(0, 1)));
 
         auto upPanel = mmake<Widget>();
         upPanel->name = "up panel";
         *upPanel->layout = WidgetLayout::HorStretch(VerAlign::Top, 0, 0, 20, -1);
-        upPanel->AddLayer("back", mmake<Sprite>("ui/UI4_square_field.png"), Layout::BothStretch(-4, -4, -5, -5));
+        upPanel->AddLayer("back", mmake<VectorSprite>("ui/UI4_square_field.svg"), Layout::BothStretch(-4, -4, -5, -5));
 
         auto searchButton = o2UI.CreateWidget<Button>("search");
         *searchButton->layout = WidgetLayout::Based(BaseCorner::Left, Vec2F(20, 20), Vec2F(-1, 1));
@@ -312,15 +313,15 @@ namespace Editor
     {
         static Map<const Type*, String> icons = 
         { 
-            { (const Type*)&TypeOf(float), "ui/UI4_float_type.png" },
-            { (const Type*)&TypeOf(Vec2F), "ui/UI4_vector_type.png" },
-            { (const Type*)&TypeOf(Vec3F), "ui/UI4_vector_type.png" },
-            { (const Type*)&TypeOf(Color4), "ui/UI4_color_type.png" },
-            { (const Type*)&TypeOf(bool), "ui/UI4_bool_type.png" }
+            { (const Type*)&TypeOf(float), "ui/UI4_float_type.svg" },
+            { (const Type*)&TypeOf(Vec2F), "ui/UI4_vector_type.svg" },
+            { (const Type*)&TypeOf(Vec3F), "ui/UI4_vector_type.svg" },
+            { (const Type*)&TypeOf(Color4), "ui/UI4_color_type.svg" },
+            { (const Type*)&TypeOf(bool), "ui/UI4_bool_type.svg" }
         };
 
-        static String otherIcon = "ui/UI4_other_type.png";
-        static String animIcon = "ui/UI4_anim_type.png";
+        static String otherIcon = "ui/UI4_other_type.svg";
+        static String animIcon = "ui/UI4_anim_type.svg";
 
         mName->text = data->name;
 
@@ -336,7 +337,7 @@ namespace Editor
             iconPath = animIcon;
         }
 
-        *mIcon = Sprite(iconPath);
+        mIcon = SetLayerImage("icon", iconPath);
 
         mData = data;
         mTree = tree;
@@ -359,7 +360,7 @@ namespace Editor
     void AnimationPropertiesTreeNode::InitializeControls()
     {
         mName = GetLayerDrawable<Text>("name");
-        mIcon = GetLayerDrawable<Sprite>("icon");
+        mIcon = GetLayerDrawableBasedOn<IRectDrawable>("icon");
 
 
         mAddButton = GetChildByType<Button>("addButton");

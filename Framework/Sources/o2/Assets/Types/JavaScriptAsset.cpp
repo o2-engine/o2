@@ -47,7 +47,7 @@ namespace o2
 
     String JavaScriptAsset::GetEditorIcon()
     {
-        return "ui/UI4_big_js_file_icon.png";
+        return "ui/UI4_big_js_file_icon.svg";
     }
 
     int JavaScriptAsset::GetEditorSorting()

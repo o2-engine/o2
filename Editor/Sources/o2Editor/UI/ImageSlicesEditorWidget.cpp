@@ -3,6 +3,7 @@
 
 #include "o2/Utils/Editor/DragHandle.h"
 #include "o2Editor/Properties/Basic/BorderIntProperty.h"
+#include "o2/Render/VectorSprite.h"
 
 namespace Editor
 {
@@ -44,7 +45,7 @@ namespace Editor
     {
         layout->minHeight = 200;
 
-        auto separatorImg = o2UI.CreateImage("ui/UI4_Separator.png");
+        auto separatorImg = o2UI.CreateImage("ui/UI4_Separator.svg");
         *separatorImg->layout = WidgetLayout::HorStretch(VerAlign::Bottom, -6, -15, 5, -4);
         AddChild(separatorImg);
 
@@ -63,7 +64,7 @@ namespace Editor
     void ImageSlicesEditorWidget::InitializeSliceHandles()
     {
         // Left handle
-        mBorderLeftHandle = mmake<WidgetDragHandle>(mmake<Sprite>("ui/ver_slice_line.png"));
+        mBorderLeftHandle = mmake<WidgetDragHandle>(mmake<VectorSprite>("ui/ver_slice_line.svg"));
 
         mBorderLeftHandle->localToWidgetOffsetTransformFunc = [&](const Vec2F& point) {
             return point / mPreviewImage->GetImage()->GetOriginalSize() * mPreviewImage->layout->GetSize2D();
@@ -96,7 +97,7 @@ namespace Editor
         mPreviewImage->AddChild(mBorderRightHandle);
 
         // Top handle
-        mBorderTopHandle = mmake<WidgetDragHandle>(mmake<Sprite>("ui/hor_slice_line.png"));
+        mBorderTopHandle = mmake<WidgetDragHandle>(mmake<VectorSprite>("ui/hor_slice_line.svg"));
 
         mBorderTopHandle->localToWidgetOffsetTransformFunc = [&](const Vec2F& point) {
             return point / mPreviewImage->GetImage()->GetOriginalSize() * mPreviewImage->layout->GetSize2D();
@@ -214,7 +215,7 @@ namespace Editor
     void ImageSlicesEditorWidget::PreviewImage::Draw()
     {
         mIsClipped = false;
-        if (auto texture = mImage.Lock()->GetTexture())
+        if (auto texture = GetImage()->GetTexture())
         {
             auto prevFilter = texture->GetFilter();
             texture->SetFilter(Texture::Filter::Nearest);

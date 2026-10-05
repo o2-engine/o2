@@ -27,9 +27,9 @@ namespace Editor
         AnimationKeyDragHandle(RefCounter* refCounter);
 
         // Constructor with views
-        AnimationKeyDragHandle(RefCounter* refCounter, const Ref<Sprite>& regular, const Ref<Sprite>& hover = nullptr, const Ref<Sprite>& pressed = nullptr,
-                               const Ref<Sprite>& selected = nullptr, const Ref<Sprite>& selectedHovered = nullptr,
-                               const Ref<Sprite>& selectedPressed = nullptr);
+        AnimationKeyDragHandle(RefCounter* refCounter, const Ref<IRectDrawable>& regular, const Ref<IRectDrawable>& hover = nullptr, const Ref<IRectDrawable>& pressed = nullptr,
+                               const Ref<IRectDrawable>& selected = nullptr, const Ref<IRectDrawable>& selectedHovered = nullptr,
+                               const Ref<IRectDrawable>& selectedPressed = nullptr);
 
         // Copy-constructor
         AnimationKeyDragHandle(RefCounter* refCounter, const AnimationKeyDragHandle& other);
@@ -69,7 +69,7 @@ CLASS_METHODS_META(Editor::AnimationKeyDragHandle)
 {
 
     FUNCTION().PUBLIC().CONSTRUCTOR(RefCounter*);
-    FUNCTION().PUBLIC().CONSTRUCTOR(RefCounter*, const Ref<Sprite>&, const Ref<Sprite>&, const Ref<Sprite>&, const Ref<Sprite>&, const Ref<Sprite>&, const Ref<Sprite>&);
+    FUNCTION().PUBLIC().CONSTRUCTOR(RefCounter*, const Ref<IRectDrawable>&, const Ref<IRectDrawable>&, const Ref<IRectDrawable>&, const Ref<IRectDrawable>&, const Ref<IRectDrawable>&, const Ref<IRectDrawable>&);
     FUNCTION().PUBLIC().CONSTRUCTOR(RefCounter*, const AnimationKeyDragHandle&);
     FUNCTION().PUBLIC().CONSTRUCTOR(const AnimationKeyDragHandle&);
     FUNCTION().PUBLIC().SIGNATURE(void, Draw);

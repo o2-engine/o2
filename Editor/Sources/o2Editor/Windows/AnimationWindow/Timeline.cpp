@@ -6,6 +6,7 @@
 #include "o2/Scene/UI/Widgets/HorizontalScrollBar.h"
 #include "o2Editor/Windows/AnimationWindow/AnimationWindow.h"
 #include "o2Editor/Windows/SceneWindow/SceneEditScreen.h"
+#include "o2/Render/VectorSprite.h"
 
 namespace Editor
 {
@@ -21,13 +22,13 @@ namespace Editor
         mText->height = 8;
         mText->color = Color4(44, 62, 80);
 
-        AddLayer("back", mmake<Sprite>("ui/UI4_dopesheet_back.png"), Layout::BothStretch(-3, -3, -3, -14))->transparency = 0.5f;
+        AddLayer("back", mmake<VectorSprite>("ui/UI4_dopesheet_back.svg"), Layout::BothStretch(-3, -3, -3, -14))->transparency = 0.5f;
 
-        mBeginMark = mmake<Sprite>("ui/UI4_time_line_left.png");
-        mEndMark = mmake<Sprite>("ui/UI4_time_line_right.png");
+        mBeginMark = mmake<VectorSprite>("ui/UI4_time_line_left.svg");
+        mEndMark = mmake<VectorSprite>("ui/UI4_time_line_right.svg");
 
         mTimeLineEventsArea = mmake<CursorEventsArea>();
-        mTimeLine = mmake<Sprite>("ui/UI4_time_line.png");
+        mTimeLine = mmake<VectorSprite>("ui/UI4_time_line.svg");
 
         mTimeLineEventsArea->isUnderPoint = [&](const Vec2F& pos) {
             auto rect = layout->GetWorldRect();
@@ -42,8 +43,8 @@ namespace Editor
 
     AnimationTimeline::AnimationTimeline(RefCounter* refCounter, const AnimationTimeline& other) :
         Widget(refCounter, other), mTextFont(other.mTextFont), mText(other.mText->CloneAs<Text>()),
-        mBeginMark(other.mBeginMark->CloneAs<Sprite>()), mEndMark(other.mEndMark->CloneAs<Sprite>()),
-        mTimeLine(other.mTimeLine->CloneAs<Sprite>())
+        mBeginMark(other.mBeginMark->CloneAsRef<IRectDrawable>()), mEndMark(other.mEndMark->CloneAsRef<IRectDrawable>()),
+        mTimeLine(other.mTimeLine->CloneAsRef<IRectDrawable>())
     { }
 
     AnimationTimeline::~AnimationTimeline()
@@ -56,10 +57,10 @@ namespace Editor
         mTextFont = other.mTextFont;
         mText = other.mText->CloneAsRef<Text>();
 
-        mBeginMark = other.mBeginMark->CloneAsRef<Sprite>();
-        mEndMark = other.mEndMark->CloneAsRef<Sprite>();
+        mBeginMark = other.mBeginMark->CloneAsRef<IRectDrawable>();
+        mEndMark = other.mEndMark->CloneAsRef<IRectDrawable>();
 
-        mTimeLine = other.mTimeLine->CloneAsRef<Sprite>();
+        mTimeLine = other.mTimeLine->CloneAsRef<IRectDrawable>();
 
         return *this;
     }

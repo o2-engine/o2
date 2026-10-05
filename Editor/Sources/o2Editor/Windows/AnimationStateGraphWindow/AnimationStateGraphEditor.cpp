@@ -27,13 +27,14 @@
 #include "o2Editor/UIRoot.h"
 #include "o2Editor/Windows/PropertiesWindow/PropertiesWindow.h"
 #include "o2Editor/Windows/SceneWindow/SceneEditScreen.h"
+#include "o2/Render/VectorSprite.h"
 
 namespace Editor
 {
     AnimationStateGraphEditor::AnimationStateGraphEditor(RefCounter* refCounter):
         FrameScrollView(refCounter), SelectableDragHandlesGroup(refCounter)
     {
-        mSelectionSprite = mmake<Sprite>();
+        mSelectionSprite = mmake<VectorSprite>();
 		mStateWidgetsContainer = mmake<Widget>();
         mBackColor = Color4(225, 232, 232, 255);
         mViewCameraMinScale = 1.0f;
@@ -289,7 +290,7 @@ namespace Editor
         return DynamicCast<FrameScrollView>(ref);
     }
 
-    void AnimationStateGraphEditor::SetSelectionSpriteImage(const AssetRef<ImageAsset>& image)
+    void AnimationStateGraphEditor::SetSelectionSpriteImage(const AssetRef<VectorImageAsset>& image)
     {
         mSelectionSprite->LoadFromImage(image);
     }

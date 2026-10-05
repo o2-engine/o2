@@ -19,6 +19,7 @@
 #include "o2Editor/Pipeline/Sync/AssetsLineSync.h"
 #include "o2Editor/UIRoot.h"
 #include "o2Editor/Windows/PipelineWindow/PipelineControls.h"
+#include "o2/Render/VectorSprite.h"
 
 DECLARE_SINGLETON(Editor::AssetsLineDlg);
 
@@ -85,7 +86,7 @@ namespace Editor
     {
         mWindow = o2UI.CreateWindow("Pipeline settings");
         mWindow->name = "assetsline dialog";
-        mWindow->SetIcon(mmake<Sprite>("ui/pipeline/window_icon.png"));
+        mWindow->SetIcon(mmake<VectorSprite>("ui/pipeline/window_icon.svg"));
         mWindow->SetIconLayout(Layout::Based(BaseCorner::LeftTop, Vec2F(20, 20), Vec2F(-1, 1)));
         *mWindow->layout = WidgetLayout::Based(BaseCorner::Center, Vec2F(kWidth, 400));
         mWindow->SetClippingLayout(Layout::BothStretch(-1, 0, 0, 17));
@@ -94,7 +95,7 @@ namespace Editor
         mHeader = mmake<Widget>();
         mHeader->name = "header";
         *mHeader->layout = WidgetLayout::HorStretch(VerAlign::Top, 0, 0, kHeaderHeight, 0);
-        mHeader->AddLayer("back", mmake<Sprite>("ui/UI4_small_panel_back.png"), Layout::BothStretch(-5, -5, -4, -5));
+        mHeader->AddLayer("back", mmake<VectorSprite>("ui/UI4_small_panel_back.svg"), Layout::BothStretch(-5, -5, -4, -5));
         mStatusDot.Attach(mHeader, Vec2F(0.0f, 0.5f), Vec2F(22.0f, 0.0f));
         mWindow->AddChild(mHeader);
 
@@ -190,7 +191,7 @@ namespace Editor
         {
             auto separator = mmake<Widget>();
             separator->layout->minHeight = 9;
-            separator->AddLayer("line", mmake<Sprite>("ui/UI4_Separator.png"), Layout::HorStretch(VerAlign::Middle, 0, 0, 5, 0));
+            separator->AddLayer("line", mmake<VectorSprite>("ui/UI4_Separator.svg"), Layout::HorStretch(VerAlign::Middle, 0, 0, 5, 0));
             content->AddChild(separator);
         };
 

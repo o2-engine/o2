@@ -170,7 +170,7 @@ namespace Editor
 
     private:
         Ref<Text>   mName;         // Name of property
-        Ref<Sprite> mIcon;         // Property icon. Used only for finite properties
+        Ref<IRectDrawable> mIcon;  // Property icon. Used only for finite properties
         Ref<Button> mAddButton;    // Add button, it is enabled when animation track isn't added to animation, adds this value to animation
         Ref<Button> mRemoveButton; // Remove button, it is enabled when animation track is added to animation, removes this value to animation
 

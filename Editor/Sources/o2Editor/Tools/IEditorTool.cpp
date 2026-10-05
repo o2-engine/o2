@@ -4,6 +4,7 @@
 #include "o2/Utils/Reflection/Reflection.h"
 #include "o2/Utils/Serialization/DataValue.h"
 #include "o2Editor/Windows/SceneWindow/SceneEditScreen.h"
+#include "o2/Render/VectorSprite.h"
 
 namespace Editor
 {
@@ -22,11 +23,11 @@ namespace Editor
         toggle->shortcut = GetShortcut();
         auto rootLayer = toggle->AddLayer("root", nullptr);
         auto selectLayer = rootLayer->AddChildLayer("hover", nullptr);
-        selectLayer->AddChildLayer("regular", mmake<Sprite>(GetPanelIcon()),
-                                   Layout::Based(BaseCorner::Center, Vec2F(20, 20)));
-        
-        selectLayer->AddChildLayer("pressed", mmake<Sprite>(GetPanelIcon()),
-                                   Layout::Based(BaseCorner::Center, Vec2F(20, 20)));
+        selectLayer->AddChildLayer("regular", nullptr, Layout::Based(BaseCorner::Center, Vec2F(20, 20)))
+            ->SetImage(GetPanelIcon());
+
+        selectLayer->AddChildLayer("pressed", nullptr, Layout::Based(BaseCorner::Center, Vec2F(20, 20)))
+            ->SetImage(GetPanelIcon());
 
         toggle->AddState("hover", AnimationClip::EaseInOut("layer/root/child/hover/transparency", 1.0f, 0.5f, 0.1f))
             ->offStateAnimationSpeed = 0.25f;
@@ -45,7 +46,7 @@ namespace Editor
 
     String IEditTool::GetPanelIcon() const
     {
-        return "ui/UI4_select_tool.png";
+        return "ui/UI4_select_tool.svg";
     }
 
     ShortcutKeys IEditTool::GetShortcut() const

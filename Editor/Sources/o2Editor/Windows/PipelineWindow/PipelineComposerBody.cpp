@@ -35,6 +35,7 @@
 #include "o2Editor/Windows/PipelineWindow/PipelineMediaViews.h"
 #include "o2Editor/Windows/PipelineWindow/PipelineNodeWidget.h"
 #include "o2Editor/Windows/PipelineWindow/PipelinePaintEditor.h"
+#include "o2/Render/VectorSprite.h"
 
 namespace Editor
 {
@@ -370,7 +371,7 @@ namespace Editor
             auto makeFlip = [&](bool vertical)
             {
                 auto toggle = MakeSegment("", false);
-                auto icon = mmake<Sprite>(vertical ? "ui/pipeline/btn_flip_v.png" : "ui/pipeline/btn_flip_h.png");
+                auto icon = mmake<VectorSprite>(vertical ? "ui/pipeline/btn_flip_v.svg" : "ui/pipeline/btn_flip_h.svg");
                 icon->color = PipelineControls::textColor;
                 toggle->AddLayer("icon", icon, Layout::Based(BaseCorner::Center, Vec2F(14, 14)));
                 toggle->onToggleByUser = [weakThis, vertical](bool) { if (auto self = weakThis.Lock()) self->FlipSelected(vertical); };
@@ -412,7 +413,7 @@ namespace Editor
                 PipelineUtils::ParseHexColor(def, color);
             auto swatch = MakeButton("");
             swatch->layout->minWidth = 26; swatch->layout->maxWidth = 26;
-            if (auto regular = swatch->GetLayerDrawable<Sprite>("regular")) regular->color = Color4(color.r, color.g, color.b, 255);
+            if (auto regular = swatch->GetLayerDrawableBasedOn<IRectDrawable>("regular")) regular->color = Color4(color.r, color.g, color.b, 255);
             WeakRef<ComposerBody> weakThis(this);
             String k = key;
             swatch->onClick = [weakThis, k]()
@@ -526,8 +527,8 @@ namespace Editor
             };
             mMain->AddChild(mLayers);
 
-            auto bar = mmake<Sprite>("ui/UI4_Ver_separator.png");
-            auto barHover = mmake<Sprite>("ui/UI4_Ver_separator.png");
+            auto bar = mmake<VectorSprite>("ui/UI4_Ver_separator.svg");
+            auto barHover = mmake<VectorSprite>("ui/UI4_Ver_separator.svg");
             barHover->color = PipelineControls::accentColor;
             mSplitter = mmake<DragHandle>(bar, barHover, barHover);
             mSplitter->SetDrawablesSize(Vec2F(8, 40));

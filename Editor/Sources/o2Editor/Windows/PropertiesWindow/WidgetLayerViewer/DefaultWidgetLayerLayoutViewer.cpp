@@ -30,7 +30,7 @@ namespace Editor
         positionPropertyContainer->layout->minHeight = 20;
         mSpoiler->AddChild(positionPropertyContainer);
 
-        auto positionIcon = o2UI.CreateImage("ui/UI4_position_icon.png");
+        auto positionIcon = o2UI.CreateImage("ui/UI4_position_icon.svg");
         *positionIcon->layout = WidgetLayout::Based(BaseCorner::LeftTop, Vec2F(20, 20), Vec2F(0, 0));
         positionPropertyContainer->AddChild(positionIcon);
 
@@ -47,7 +47,7 @@ namespace Editor
         sizePropertyContainer->layout->minHeight = 20;
         mSpoiler->AddChild(sizePropertyContainer);
 
-        auto sizeIcon = o2UI.CreateImage("ui/UI4_icon_size.png");
+        auto sizeIcon = o2UI.CreateImage("ui/UI4_icon_size.svg");
         *sizeIcon->layout = WidgetLayout::Based(BaseCorner::LeftTop, Vec2F(20, 20), Vec2F(-1, 0));
         sizePropertyContainer->AddChild(sizeIcon);
 
@@ -65,7 +65,7 @@ namespace Editor
         rightTopAnchorPropertyContainer->layout->minHeight = 20;
         mSpoiler->AddChild(rightTopAnchorPropertyContainer);
 
-        auto anchorIcon = o2UI.CreateImage("ui/UI4_icon_anchor.png");
+        auto anchorIcon = o2UI.CreateImage("ui/UI4_icon_anchor.svg");
         *anchorIcon->layout = WidgetLayout::Based(BaseCorner::LeftTop, Vec2F(20, 20), Vec2F(0, 0));
         rightTopAnchorPropertyContainer->AddChild(anchorIcon);
 
@@ -100,7 +100,7 @@ namespace Editor
         rightTopOffsetPropertyContainer->layout->minHeight = 20;
         mSpoiler->AddChild(rightTopOffsetPropertyContainer);
 
-        auto offsetIcon = o2UI.CreateImage("ui/UI4_icon_offsets.png");
+        auto offsetIcon = o2UI.CreateImage("ui/UI4_icon_offsets.svg");
         *offsetIcon->layout = WidgetLayout::Based(BaseCorner::LeftTop, Vec2F(20, 20), Vec2F(0, 0));
         rightTopOffsetPropertyContainer->AddChild(offsetIcon);
 

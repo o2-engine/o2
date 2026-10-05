@@ -4,18 +4,19 @@
 #include "o2Editor/Actions/MeshPoints.h"
 #include "o2Editor/Windows/SceneWindow/SceneEditScreen.h"
 #include "o2Editor/Windows/SceneWindow/SceneWindow.h"
+#include "o2/Render/VectorSprite.h"
 
 namespace Editor
 {
     MeshTopologyTool::MeshTopologyTool(RefCounter* refCounter):
-        IEditTool(refCounter), SelectableDragHandlesGroup(refCounter), mSelectionSprite("ui/UI_Window_place.png")
+        IEditTool(refCounter), SelectableDragHandlesGroup(refCounter), mSelectionSprite(mmake<VectorSprite>("ui/UI_Window_place.svg"))
     {
         sceneLayer->tool = Ref(this);
 
-        mHandleSample = DragHandle(mmake<Sprite>("ui/CurveHandle.png"),
-                                   mmake<Sprite>("ui/CurveHandleHover.png"),
-                                   mmake<Sprite>("ui/CurveHandlePressed.png"),
-                                   mmake<Sprite>("ui/CurveHandleSelected.png"));
+        mHandleSample = DragHandle(mmake<VectorSprite>("ui/CurveHandle.svg"),
+                                   mmake<VectorSprite>("ui/CurveHandleHover.svg"),
+                                   mmake<VectorSprite>("ui/CurveHandlePressed.svg"),
+                                   mmake<VectorSprite>("ui/CurveHandleSelected.svg"));
 
         typedef MeshTopologyTool thisclass;
 
@@ -61,7 +62,7 @@ namespace Editor
 
     String MeshTopologyTool::GetPanelIcon() const
     {
-        return "ui/TopologyTool.png";
+        return "ui/TopologyTool.svg";
     }
 
     void MeshTopologyTool::OnEnabled()
@@ -170,8 +171,8 @@ namespace Editor
     {
         if (mIsPressed)
         {
-            mSelectionSprite.rect = RectF(LocalToWorld(mSelectingPressedPoint), o2Input.cursorPos);
-            mSelectionSprite.Draw();
+            mSelectionSprite->rect = RectF(LocalToWorld(mSelectingPressedPoint), o2Input.cursorPos);
+            mSelectionSprite->Draw();
         }
     }
 

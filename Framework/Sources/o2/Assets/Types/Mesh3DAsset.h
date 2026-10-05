@@ -41,7 +41,7 @@ namespace o2
         static Vector<String> GetFileExtensions();
 
         // Returns editor icon
-        static String GetEditorIcon() { return "ui/UI4_big_text_file_icon.png"; }
+        static String GetEditorIcon() { return "ui/UI4_big_text_file_icon.svg"; }
 
         // Returns editor sorting weight
         static int GetEditorSorting() { return 93; }

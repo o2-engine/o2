@@ -33,7 +33,7 @@ namespace Editor
         positionPropertyContainer->layout->minHeight = 20;
         mSpoiler->AddChild(positionPropertyContainer);
 
-        auto positionIcon = o2UI.CreateImage("ui/UI4_position_icon.png");
+        auto positionIcon = o2UI.CreateImage("ui/UI4_position_icon.svg");
         *positionIcon->layout = WidgetLayout::Based(BaseCorner::LeftTop, Vec2F(20, 20), Vec2F(0, 0));
         positionPropertyContainer->AddChild(positionIcon);
 
@@ -57,7 +57,7 @@ namespace Editor
         pivotPropertyContainer->layout->minHeight = 20;
         mSpoiler->AddChild(pivotPropertyContainer);
 
-        auto pivotIcon = o2UI.CreateImage("ui/UI4_pivot_icon.png");
+        auto pivotIcon = o2UI.CreateImage("ui/UI4_pivot_icon.svg");
         *pivotIcon->layout = WidgetLayout::Based(BaseCorner::LeftTop, Vec2F(20, 20), Vec2F(0, 0));
         pivotPropertyContainer->AddChild(pivotIcon);
 
@@ -81,7 +81,7 @@ namespace Editor
         sizePropertyContainer->layout->minHeight = 20;
         mSpoiler->AddChild(sizePropertyContainer);
 
-        auto sizeIcon = o2UI.CreateImage("ui/UI4_icon_size.png");
+        auto sizeIcon = o2UI.CreateImage("ui/UI4_icon_size.svg");
         *sizeIcon->layout = WidgetLayout::Based(BaseCorner::LeftTop, Vec2F(20, 20), Vec2F(-1, 0));
         sizePropertyContainer->AddChild(sizeIcon);
 
@@ -105,7 +105,7 @@ namespace Editor
         scalePropertyContainer->layout->minHeight = 20;
         mSpoiler->AddChild(scalePropertyContainer);
 
-        auto scaleIcon = o2UI.CreateImage("ui/UI4_scale_icon.png");
+        auto scaleIcon = o2UI.CreateImage("ui/UI4_scale_icon.svg");
         *scaleIcon->layout = WidgetLayout::Based(BaseCorner::LeftTop, Vec2F(20, 20), Vec2F(0, 0));
         scalePropertyContainer->AddChild(scaleIcon);
 
@@ -129,7 +129,7 @@ namespace Editor
         rotationPropertyContainer->layout->minHeight = 20;
         mSpoiler->AddChild(rotationPropertyContainer);
 
-        auto rotateIcon = o2UI.CreateImage("ui/UI4_rotate_icon.png");
+        auto rotateIcon = o2UI.CreateImage("ui/UI4_rotate_icon.svg");
         *rotateIcon->layout = WidgetLayout::Based(BaseCorner::LeftTop, Vec2F(20, 20), Vec2F(0, 0));
         rotationPropertyContainer->AddChild(rotateIcon);
 
@@ -147,7 +147,7 @@ namespace Editor
         shearPropertyContainer->layout->minHeight = 20;
         mSpoiler->AddChild(shearPropertyContainer);
 
-        auto shearIcon = o2UI.CreateImage("ui/UI4_shear_icon.png");
+        auto shearIcon = o2UI.CreateImage("ui/UI4_shear_icon.svg");
         *shearIcon->layout = WidgetLayout::Based(BaseCorner::LeftTop, Vec2F(20, 20), Vec2F(0, 0));
         shearPropertyContainer->AddChild(shearIcon);
 
@@ -176,7 +176,7 @@ namespace Editor
         rightTopAnchorPropertyContainer->layout->minHeight = 20;
         mLayoutSpoiler->AddChild(rightTopAnchorPropertyContainer);
 
-        auto anchorIcon = o2UI.CreateImage("ui/UI4_icon_anchor.png");
+        auto anchorIcon = o2UI.CreateImage("ui/UI4_icon_anchor.svg");
         *anchorIcon->layout = WidgetLayout::Based(BaseCorner::LeftTop, Vec2F(20, 20), Vec2F(0, 0));
         rightTopAnchorPropertyContainer->AddChild(anchorIcon);
 
@@ -217,7 +217,7 @@ namespace Editor
         rightTopOffsetPropertyContainer->layout->minHeight = 20;
         mLayoutSpoiler->AddChild(rightTopOffsetPropertyContainer);
 
-        auto offsetIcon = o2UI.CreateImage("ui/UI4_icon_offsets.png");
+        auto offsetIcon = o2UI.CreateImage("ui/UI4_icon_offsets.svg");
         *offsetIcon->layout = WidgetLayout::Based(BaseCorner::LeftTop, Vec2F(20, 20), Vec2F(0, 0));
         rightTopOffsetPropertyContainer->AddChild(offsetIcon);
 
@@ -257,7 +257,7 @@ namespace Editor
         minSizePropertyContainer->layout->minHeight = 20;
         mLayoutSpoiler->AddChild(minSizePropertyContainer);
 
-        auto minSizeIcon = o2UI.CreateImage("ui/UI4_icon_min_size.png");
+        auto minSizeIcon = o2UI.CreateImage("ui/UI4_icon_min_size.svg");
         *minSizeIcon->layout = WidgetLayout::Based(BaseCorner::LeftTop, Vec2F(20, 20), Vec2F(0, 0));
         minSizePropertyContainer->AddChild(minSizeIcon);
 
@@ -277,7 +277,7 @@ namespace Editor
         maxSizePropertyContainer->layout->minHeight = 20;
         mLayoutSpoiler->AddChild(maxSizePropertyContainer);
 
-        auto maxSizeIcon = o2UI.CreateImage("ui/UI4_icon_max_size.png");
+        auto maxSizeIcon = o2UI.CreateImage("ui/UI4_icon_max_size.svg");
         *maxSizeIcon->layout = WidgetLayout::Based(BaseCorner::LeftTop, Vec2F(20, 20), Vec2F(0, 0));
         maxSizePropertyContainer->AddChild(maxSizeIcon);
 
@@ -297,7 +297,7 @@ namespace Editor
         weightPropertyContainer->layout->minHeight = 20;
         mLayoutSpoiler->AddChild(weightPropertyContainer);
 
-        auto weightIcon = o2UI.CreateImage("ui/UI4_icon_weight.png");
+        auto weightIcon = o2UI.CreateImage("ui/UI4_icon_weight.svg");
         *weightIcon->layout = WidgetLayout::Based(BaseCorner::LeftTop, Vec2F(20, 20), Vec2F(0, 0));
         weightPropertyContainer->AddChild(weightIcon);
 

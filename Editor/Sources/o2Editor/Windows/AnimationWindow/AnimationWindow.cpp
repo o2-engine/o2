@@ -18,6 +18,7 @@
 #include "o2Editor/Windows/AnimationWindow/Tree.h"
 #include "o2Editor/Windows/PropertiesWindow/PropertiesWindow.h"
 #include "o2Editor/Windows/SceneWindow/SceneEditScreen.h"
+#include "o2/Render/VectorSprite.h"
 
 DECLARE_SINGLETON(Editor::AnimationWindow);
 
@@ -81,7 +82,7 @@ namespace Editor
 
         mWindow->caption = "Animation";
         mWindow->name = "animation window";
-        mWindow->SetIcon(mmake<Sprite>("ui/UI4_animation_icon.png"));
+        mWindow->SetIcon(mmake<VectorSprite>("ui/UI4_animation_icon.svg"));
         mWindow->SetIconLayout(Layout::Based(BaseCorner::LeftTop, Vec2F(20, 20), Vec2F(-1, 1)));
         mWindow->SetViewLayout(Layout::BothStretch(-2, 0, 0, 19));
         mWindow->SetClippingLayout(Layout::BothStretch(-1, 0, 0, 18));
@@ -203,7 +204,7 @@ namespace Editor
 
     void AnimationWindow::InitializeSeparatorHandle()
     {
-        mTreeSeparatorHandle = mmake<WidgetDragHandle>(mmake<Sprite>("ui/UI4_Ver_separator.png"));
+        mTreeSeparatorHandle = mmake<WidgetDragHandle>(mmake<VectorSprite>("ui/UI4_Ver_separator.svg"));
         mTreeSeparatorHandle->GetRegularDrawable()->pivot = Vec2F(0.5f, 0.5f);
         mTreeSeparatorHandle->GetRegularDrawable()->szPivot = Vec2F(4, mTreeSeparatorHandle->GetRegularDrawable()->szPivot.Get().y);
 

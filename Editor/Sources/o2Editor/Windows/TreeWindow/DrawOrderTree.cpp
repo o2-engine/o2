@@ -27,6 +27,7 @@
 #include "o2Editor/Actions/Reparent.h"
 #include "o2Editor/EditorApplication.h"
 #include "o2Editor/UIRoot.h"
+#include "o2/Render/VectorSprite.h"
 
 namespace Editor
 {
@@ -393,8 +394,8 @@ namespace Editor
         mNameLayer = GetLayer("name");
         mNameDrawable = GetLayerDrawable<Text>("name");
         mOrderDrawable = GetLayerDrawable<Text>("batch");
-        mIconSprite = GetLayerDrawable<Sprite>("icon");
-        mBackSprite = GetLayerDrawable<Sprite>("back");
+        mIconSprite = GetLayerDrawable<VectorSprite>("icon");
+        mBackSprite = GetLayerDrawableBasedOn<IRectDrawable>("back");
         mLockToggle = DynamicCast<Toggle>(GetChild("lockToggle"));
         mEnableToggle = DynamicCast<Toggle>(GetChild("enableToggle"));
         mLinkBtn = DynamicCast<Button>(GetChild("linkBtn"));
@@ -432,12 +433,12 @@ namespace Editor
 
         Map<DrawOrderTree::OrderTreeNode::Type, String> icons =
         {
-            { DrawOrderTree::OrderTreeNode::Type::Camera, "ui/UI4_camera_icn.png" },
-            { DrawOrderTree::OrderTreeNode::Type::Layer, "ui/UI4_layer_big.png" },
-            { DrawOrderTree::OrderTreeNode::Type::Drawable, "ui/UI4_image_icn.png" },
-            { DrawOrderTree::OrderTreeNode::Type::Actor, "ui/UI4_image_icn.png" },
-            { DrawOrderTree::OrderTreeNode::Type::Root, "ui/UI4_folder_icn.png" },
-            { DrawOrderTree::OrderTreeNode::Type::EndOfBatch, "ui/UI4_color_type.png" },
+            { DrawOrderTree::OrderTreeNode::Type::Camera, "ui/UI4_camera_icn.svg" },
+            { DrawOrderTree::OrderTreeNode::Type::Layer, "ui/UI4_layer_big.svg" },
+            { DrawOrderTree::OrderTreeNode::Type::Drawable, "ui/UI4_image_icn.svg" },
+            { DrawOrderTree::OrderTreeNode::Type::Actor, "ui/UI4_image_icn.svg" },
+            { DrawOrderTree::OrderTreeNode::Type::Root, "ui/UI4_folder_icn.svg" },
+            { DrawOrderTree::OrderTreeNode::Type::EndOfBatch, "ui/UI4_color_type.svg" },
         };
 
         String name = mTarget->name;
@@ -458,8 +459,8 @@ namespace Editor
             mOrderDrawable->SetText(orderText);
 
         String icon = icons[mTarget->type];
-        if (mIconSprite->GetImageName() != icon)
-            mIconSprite->SetImageAsset(AssetRef<ImageAsset>(icon));
+        if (mIconSprite && mIconSprite->GetImageName() != icon)
+            mIconSprite->SetImageAsset(AssetRef<VectorImageAsset>(icon));
         
         mBackSprite->color = Color4::SomeColor(mTarget->batchIdx, mBackSprite->GetColor().a);
         mBackSprite->enabled = mTarget->type != DrawOrderTree::OrderTreeNode::Type::Camera &&

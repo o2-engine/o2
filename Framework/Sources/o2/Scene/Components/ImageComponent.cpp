@@ -93,7 +93,7 @@ namespace o2
 
     String ImageComponent::GetIcon()
     {
-        return "ui/UI4_image_component.png";
+        return "ui/UI4_image_component.svg";
     }
 
     Ref<o2::RefCounterable> ImageComponent::CastToRefCounterable(const Ref<ImageComponent>& ref)

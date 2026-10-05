@@ -19,7 +19,7 @@ namespace Editor
         mSpoiler->fitByChildren = true;
         mSpoiler->borderBottom = 5;
         mSpoiler->SetCaption("Transform");
-        mSpoiler->GetIcon()->SetImageName("ui/UI4_transform_icon_white.png");
+        mSpoiler->GetIcon()->SetImageName("ui/UI4_transform_icon_white.svg");
 
         mSpoiler->SetExpanded(true);
     }

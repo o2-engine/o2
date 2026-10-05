@@ -198,7 +198,7 @@ namespace Editor
                 tools->expandHeight = true;
                 tools->baseCorner = BaseCorner::Right;
                 cell.tools = tools;
-                auto regen = MakeIconButton("ui/pipeline/btn_loop.png", textColor, Color4(255, 255, 255, 220));
+                auto regen = MakeIconButton("ui/pipeline/btn_loop.svg", textColor, Color4(255, 255, 255, 220));
                 regen->name = "regen part";
                 regen->layout->minWidth = 20;
                 regen->layout->maxWidth = 20;
@@ -206,7 +206,7 @@ namespace Editor
                 tools->AddChild(regen);
                 if (regions.Count() > 1)
                 {
-                    auto remove = MakeIconButton("ui/UI4_small_trash_icon.png", textColor, Color4(255, 255, 255, 220));
+                    auto remove = MakeIconButton("ui/UI4_small_trash_icon.svg", textColor, Color4(255, 255, 255, 220));
                     remove->name = "remove part";
                     remove->layout->minWidth = 20;
                     remove->layout->maxWidth = 20;

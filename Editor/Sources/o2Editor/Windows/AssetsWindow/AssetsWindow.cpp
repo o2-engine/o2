@@ -31,6 +31,7 @@
 #include "o2Editor/Windows/AssetsWindow/FoldersTree.h"
 #include "o2Editor/Windows/SceneWindow/SceneWindow.h"
 #include "o2Editor/EditorConfig.h"
+#include "o2/Render/VectorSprite.h"
 
 #if defined PLATFORM_WASM
 #include <emscripten.h>
@@ -56,7 +57,7 @@ namespace Editor
 
         mWindow->caption = "Assets";
         mWindow->name = "assets window";
-        mWindow->SetIcon(mmake<Sprite>("ui/UI4_folder_icon.png"));
+        mWindow->SetIcon(mmake<VectorSprite>("ui/UI4_folder_icon.svg"));
         mWindow->SetIconLayout(Layout::Based(BaseCorner::LeftTop, Vec2F(20, 20), Vec2F(0, 1)));
         mWindow->SetViewLayout(Layout::BothStretch(-2, 0, 0, 18));
         mWindow->SetClippingLayout(Layout::BothStretch(-1, 0, 0, 18));
@@ -130,7 +131,7 @@ namespace Editor
         mFoldersTree = mmake<AssetsFoldersTree>();
         *mFoldersTree->layout = WidgetLayout(0.0f, 1.0f, 0.5f, 0.0f, 5.0f, -18.0f, 0.0f, 18.0f);
 
-        mFoldersTree->AddLayer("separator", mmake<Sprite>("ui/UI4_Ver_separator.png"),
+        mFoldersTree->AddLayer("separator", mmake<VectorSprite>("ui/UI4_Ver_separator.svg"),
                                Layout::VerStretch(HorAlign::Right, -2, 0, 5, 0));
         
         mFoldersTree->UpdateView();
@@ -153,7 +154,7 @@ namespace Editor
     void AssetsWindow::InitializeDownPanel()
     {
         auto downPanel = mmake<Widget>();
-        downPanel->AddLayer("back", mmake<Sprite>("ui/UI4_small_panel_down_back.png"),
+        downPanel->AddLayer("back", mmake<VectorSprite>("ui/UI4_small_panel_down_back.svg"),
                             Layout::BothStretch(-4, -5, -4, -5));
         *downPanel->layout = WidgetLayout::HorStretch(VerAlign::Bottom, 0, 0, 20, 0);
 
@@ -177,7 +178,7 @@ namespace Editor
         auto upPanel = mmake<Widget>();
         upPanel->name = "up panel";
         *upPanel->layout = WidgetLayout::HorStretch(VerAlign::Top, 0, 0, 20, 0);
-        upPanel->AddLayer("back", mmake<Sprite>("ui/UI4_square_field.png"), Layout::BothStretch(-4, -4, -5, -5));
+        upPanel->AddLayer("back", mmake<VectorSprite>("ui/UI4_square_field.svg"), Layout::BothStretch(-4, -4, -5, -5));
 
         auto searchButton = o2UI.CreateWidget<Button>("search");
         *searchButton->layout = WidgetLayout::Based(BaseCorner::Left, Vec2F(20, 20), Vec2F(1, 1));
@@ -468,22 +469,22 @@ namespace Editor
         o2EditorSceneWindow.DoneAction(action);
     }
 
-    Ref<Sprite> AssetsWindow::GetAssetIconSprite(const AssetRef<Asset>& asset)
+    Ref<IRectDrawable> AssetsWindow::GetAssetIconSprite(const AssetRef<Asset>& asset)
     {
         const Type& type = asset->GetType();
 
         if (type == TypeOf(ImageAsset))
             return mmake<Sprite>(asset->GetPath());
         else if (type == TypeOf(ActorAsset))
-            return mmake<Sprite>("ui/UI4_actor_icon.png");
+            return mmake<VectorSprite>("ui/UI4_actor_icon.svg");
         else if (type == TypeOf(FolderAsset))
-            return mmake<Sprite>("ui/UI4_big_folder_icon.png");
+            return mmake<VectorSprite>("ui/UI4_big_folder_icon.svg");
         else if (type == TypeOf(DataAsset))
-            return mmake<Sprite>("ui/UI4_big_text_file_icon.png");
+            return mmake<VectorSprite>("ui/UI4_big_text_file_icon.svg");
         else if (type == TypeOf(AnimationAsset))
-            return mmake<Sprite>("ui/UI4_anim_file_icon.png"); 
+            return mmake<VectorSprite>("ui/UI4_anim_file_icon.svg"); 
 
-        return mmake<Sprite>("ui/UI4_big_file_icon.png"); 
+        return mmake<VectorSprite>("ui/UI4_big_file_icon.svg"); 
     }
 
     Ref<RefCounterable> AssetsWindow::CastToRefCounterable(const Ref<AssetsWindow>& ref)

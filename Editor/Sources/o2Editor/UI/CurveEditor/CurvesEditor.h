@@ -1,9 +1,10 @@
 #pragma once
 
-#include "o2/Assets/Types/ImageAsset.h"
+#include "o2/Assets/Types/VectorImageAsset.h"
 #include "o2/Render/Camera.h"
 #include "o2/Render/Font.h"
 #include "o2/Render/Mesh.h"
+#include "o2/Render/VectorSprite.h"
 #include "o2/Utils/Editor/DragHandle.h"
 #include "o2/Utils/Editor/FrameHandles.h"
 #include "o2/Utils/Math/Curve.h"
@@ -68,7 +69,7 @@ namespace Editor
         void SetCurveColor(const Ref<Curve>& curve, const Color4& color);
 
         // Sets selection rectangle sprite image
-        void SetSelectionSpriteImage(const AssetRef<ImageAsset>& image);
+        void SetSelectionSpriteImage(const AssetRef<VectorImageAsset>& image);
 
         // Sets captions text font
         void SetTextFont(const Ref<Font>& font);
@@ -77,16 +78,16 @@ namespace Editor
         void SetTextBorder(const BorderF& border);
 
         // Sets main key handle images
-        void SetMainHandleImages(const AssetRef<ImageAsset>& regular, const AssetRef<ImageAsset>& hover, const AssetRef<ImageAsset>& pressed,
-                                 const AssetRef<ImageAsset>& selected);
+        void SetMainHandleImages(const AssetRef<VectorImageAsset>& regular, const AssetRef<VectorImageAsset>& hover, const AssetRef<VectorImageAsset>& pressed,
+                                 const AssetRef<VectorImageAsset>& selected);
 
         // Sets support key handle images
-        void SetSupportHandleImages(const AssetRef<ImageAsset>& regular, const AssetRef<ImageAsset>& hover, const AssetRef<ImageAsset>& pressed,
-                                    const AssetRef<ImageAsset>& selected);
+        void SetSupportHandleImages(const AssetRef<VectorImageAsset>& regular, const AssetRef<VectorImageAsset>& hover, const AssetRef<VectorImageAsset>& pressed,
+                                    const AssetRef<VectorImageAsset>& selected);
 
         // Sets range key handle images
-        void SetRangeHandleImages(const AssetRef<ImageAsset>& regular, const AssetRef<ImageAsset>& hover, const AssetRef<ImageAsset>& pressed,
-                                  const AssetRef<ImageAsset>& selected);
+        void SetRangeHandleImages(const AssetRef<VectorImageAsset>& regular, const AssetRef<VectorImageAsset>& hover, const AssetRef<VectorImageAsset>& pressed,
+                                  const AssetRef<VectorImageAsset>& selected);
 
         // Enables curves scale adjusting. When it is true, all curves adopts their size to be in the same view range
         void SetAdjustCurvesScale(bool enable);
@@ -124,8 +125,8 @@ namespace Editor
             CurveHandle();
 
             // Constructor with views
-            CurveHandle(const Ref<Sprite>& regular, const Ref<Sprite>& hover = nullptr, const Ref<Sprite>& pressed = nullptr,
-                        const Ref<Sprite>& selected = nullptr, const Ref<Sprite>& selectedHovered = nullptr, const Ref<Sprite>& selectedPressed = nullptr);
+            CurveHandle(const Ref<IRectDrawable>& regular, const Ref<IRectDrawable>& hover = nullptr, const Ref<IRectDrawable>& pressed = nullptr,
+                        const Ref<IRectDrawable>& selected = nullptr, const Ref<IRectDrawable>& selectedHovered = nullptr, const Ref<IRectDrawable>& selectedPressed = nullptr);
 
             // Copy-constructor
             CurveHandle(const CurveHandle& other);
@@ -285,7 +286,7 @@ namespace Editor
 
         Vector<Ref<CurveHandle>> mSelectingHandlesBuf; // Potentially selecting handles while selecting
 
-        Ref<Sprite> mSelectionSprite; // Selection sprite @SERIALIZABLE
+        Ref<VectorSprite> mSelectionSprite; // Selection sprite @SERIALIZABLE
 
         bool mAdjustCurvesScale = true; // When it is true, all curves adopts their size to be in the same view range
 
@@ -534,12 +535,12 @@ CLASS_METHODS_META(Editor::CurvesEditor)
     FUNCTION().PUBLIC().SIGNATURE(void, RemoveCurve, const String&);
     FUNCTION().PUBLIC().SIGNATURE(void, RemoveAllCurves);
     FUNCTION().PUBLIC().SIGNATURE(void, SetCurveColor, const Ref<Curve>&, const Color4&);
-    FUNCTION().PUBLIC().SIGNATURE(void, SetSelectionSpriteImage, const AssetRef<ImageAsset>&);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetSelectionSpriteImage, const AssetRef<VectorImageAsset>&);
     FUNCTION().PUBLIC().SIGNATURE(void, SetTextFont, const Ref<Font>&);
     FUNCTION().PUBLIC().SIGNATURE(void, SetTextBorder, const BorderF&);
-    FUNCTION().PUBLIC().SIGNATURE(void, SetMainHandleImages, const AssetRef<ImageAsset>&, const AssetRef<ImageAsset>&, const AssetRef<ImageAsset>&, const AssetRef<ImageAsset>&);
-    FUNCTION().PUBLIC().SIGNATURE(void, SetSupportHandleImages, const AssetRef<ImageAsset>&, const AssetRef<ImageAsset>&, const AssetRef<ImageAsset>&, const AssetRef<ImageAsset>&);
-    FUNCTION().PUBLIC().SIGNATURE(void, SetRangeHandleImages, const AssetRef<ImageAsset>&, const AssetRef<ImageAsset>&, const AssetRef<ImageAsset>&, const AssetRef<ImageAsset>&);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetMainHandleImages, const AssetRef<VectorImageAsset>&, const AssetRef<VectorImageAsset>&, const AssetRef<VectorImageAsset>&, const AssetRef<VectorImageAsset>&);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetSupportHandleImages, const AssetRef<VectorImageAsset>&, const AssetRef<VectorImageAsset>&, const AssetRef<VectorImageAsset>&, const AssetRef<VectorImageAsset>&);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetRangeHandleImages, const AssetRef<VectorImageAsset>&, const AssetRef<VectorImageAsset>&, const AssetRef<VectorImageAsset>&, const AssetRef<VectorImageAsset>&);
     FUNCTION().PUBLIC().SIGNATURE(void, SetAdjustCurvesScale, bool);
     FUNCTION().PUBLIC().SIGNATURE(void, OnFocusedByRoot);
     FUNCTION().PUBLIC().SIGNATURE(void, OnUnfocusedByRoot);
@@ -617,7 +618,7 @@ CLASS_METHODS_META(Editor::CurvesEditor::CurveHandle)
 {
 
     FUNCTION().PUBLIC().CONSTRUCTOR();
-    FUNCTION().PUBLIC().CONSTRUCTOR(const Ref<Sprite>&, const Ref<Sprite>&, const Ref<Sprite>&, const Ref<Sprite>&, const Ref<Sprite>&, const Ref<Sprite>&);
+    FUNCTION().PUBLIC().CONSTRUCTOR(const Ref<IRectDrawable>&, const Ref<IRectDrawable>&, const Ref<IRectDrawable>&, const Ref<IRectDrawable>&, const Ref<IRectDrawable>&, const Ref<IRectDrawable>&);
     FUNCTION().PUBLIC().CONSTRUCTOR(const CurveHandle&);
     FUNCTION().PUBLIC().SIGNATURE(Vec2F, GetLocalPosition);
     FUNCTION().PUBLIC().SIGNATURE(Vec2F, LocalToCurveView, const Vec2F&);

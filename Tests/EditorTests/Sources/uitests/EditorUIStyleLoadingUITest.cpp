@@ -1,6 +1,8 @@
 #include "o2/stdafx.h"
 #include <gtest/gtest.h>
 
+#include "o2/Render/Sprite.h"
+#include "o2/Render/VectorSprite.h"
 #include "o2/Scene/UI/UIManager.h"
 #include "o2/Scene/UI/Widgets/Button.h"
 #include "o2/Scene/UI/Widgets/Label.h"

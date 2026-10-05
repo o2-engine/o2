@@ -20,14 +20,15 @@
 #include "o2Editor/Windows/SceneWindow/SceneEditScreen.h"
 #include "o2Editor/Windows/TreeWindow/SceneHierarchyTree.h"
 #include "o2Editor/Windows/TreeWindow/TreeWindow.h"
+#include "o2/Render/VectorSprite.h"
 
 namespace Editor
 {
     RotateTool::RotateTool()
     {
-        mPivotDragHandle = mmake<SceneDragHandle>(mmake<Sprite>("ui/UI2_pivot.png"),
-                                                  mmake<Sprite>("ui/UI2_pivot_select.png"),
-                                                  mmake<Sprite>("ui/UI2_pivot_pressed.png"));
+        mPivotDragHandle = mmake<SceneDragHandle>(mmake<VectorSprite>("ui/UI2_pivot.svg"),
+                                                  mmake<VectorSprite>("ui/UI2_pivot_select.svg"),
+                                                  mmake<VectorSprite>("ui/UI2_pivot_pressed.svg"));
 
         mRotateRingFillMesh = mmake<Mesh>(TextureRef::Null(), mRotateRingSegs * 4, mRotateRingSegs * 2);
         mAngleMesh = mmake<Mesh>(TextureRef::Null(), mRotateRingSegs * 4, mRotateRingSegs * 2);
@@ -47,7 +48,7 @@ namespace Editor
 
     String RotateTool::GetPanelIcon() const
     {
-        return "ui/UI4_rotate_tool.png";
+        return "ui/UI4_rotate_tool.svg";
     }
 
     ShortcutKeys RotateTool::GetShortcut() const

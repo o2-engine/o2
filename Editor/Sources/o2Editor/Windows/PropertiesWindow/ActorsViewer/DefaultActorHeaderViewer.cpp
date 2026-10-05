@@ -66,7 +66,7 @@ namespace Editor
 
         prototypeRoot->AddState("visible", AnimationClip::EaseInOut("transparency", 0.0f, 1.0f, 0.1f));
 
-        auto linkImg = o2UI.CreateImage("ui/UI4_prefab_link_big.png");
+        auto linkImg = o2UI.CreateImage("ui/UI4_prefab_link_big.svg");
         *linkImg->layout = WidgetLayout::Based(BaseCorner::LeftTop, Vec2F(20, 20), Vec2F(1, -20));
         prototypeRoot->AddChild(linkImg);
 
@@ -89,7 +89,7 @@ namespace Editor
         mPrototypeBreakBtn->onClick = THIS_FUNC(OnBreakPrototypePressed);
         prototypeRoot->AddChild(mPrototypeBreakBtn);
 
-        auto tagsImg = o2UI.CreateImage("ui/UI4_tag_big.png");
+        auto tagsImg = o2UI.CreateImage("ui/UI4_tag_big.svg");
         *tagsImg->layout = WidgetLayout::Based(BaseCorner::LeftBottom, Vec2F(20, 20), Vec2F(1, 21));
         mDataView->AddChild(tagsImg);
 
@@ -100,7 +100,7 @@ namespace Editor
         mTagsProperty->onChangeCompleted = THIS_FUNC(OnPropertyChangeCompleted);
         mDataView->AddChild(mTagsProperty);
 
-        auto layerImg = o2UI.CreateImage("ui/UI4_layer_big.png");
+        auto layerImg = o2UI.CreateImage("ui/UI4_layer_big.svg");
         *layerImg->layout = WidgetLayout::Based(BaseCorner::LeftBottom, Vec2F(20, 20), Vec2F(1, 0));
         mDataView->AddChild(layerImg);
 

@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20">
+<rect x="3.5" y="3.5" width="13" height="12" fill="none" stroke="#ffffff" stroke-width="1"/>
+<path d="M8 6.36 L8 6.64 L6.64 8 L6.36 8 L5 6.64 L5 6.36 L6.36 5 L6.64 5 Z M6.2 6.5 C6.2 6.334 6.334 6.2 6.5 6.2 C6.666 6.2 6.8 6.334 6.8 6.5 C6.8 6.666 6.666 6.8 6.5 6.8 C6.334 6.8 6.2 6.666 6.2 6.5 Z" fill="#ffffff" fill-rule="evenodd"/>
+<polyline points="3.5,12.628 7.55,9.538 9.475,11.48 13.5,8.523 16.5,10.452" fill="none" stroke="#ffffff" stroke-width="1.15" stroke-linejoin="round"/>
+</svg>

@@ -190,7 +190,7 @@ namespace Editor
         Color4 mSplineColor;        // Color of spline line
         Color4 mSplineSupportColor; // Color of support handles lines
 
-        Ref<Sprite> mSelectionSprite;       // Selection sprite @SERIALIZABLE
+        Ref<IRectDrawable> mSelectionSprite; // Selection drawable @SERIALIZABLE
         Vec2F       mSelectingPressedPoint; // Point, where cursor was pressed, selection starts here, in local space
 
         Vector<Ref<DragHandle>> mSelectingHandlesBuf; // Potentially selecting handles while selecting

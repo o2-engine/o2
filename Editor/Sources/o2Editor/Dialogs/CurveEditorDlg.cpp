@@ -7,6 +7,7 @@
 #include "o2/Scene/UI/Widgets/Window.h"
 #include "o2Editor/UI/CurveEditor/CurvesEditor.h"
 #include "o2Editor/UIRoot.h"
+#include "o2/Assets/Types/VectorImageAsset.h"
 
 DECLARE_SINGLETON(Editor::CurveEditorDlg);
 
@@ -48,22 +49,22 @@ namespace Editor
         *verScroll->layout = WidgetLayout::VerStretch(HorAlign::Right, 0, 0, 10, -10);
         mEditorWidget->SetVerScrollbar(verScroll);
 
-        mEditorWidget->SetMainHandleImages(AssetRef<ImageAsset>("ui/CurveHandle.png"),
-                                           AssetRef<ImageAsset>("ui/CurveHandleHover.png"),
-                                           AssetRef<ImageAsset>("ui/CurveHandlePressed.png"),
-                                           AssetRef<ImageAsset>("ui/CurveHandleSelected.png"));
+        mEditorWidget->SetMainHandleImages(AssetRef<VectorImageAsset>("ui/CurveHandle.svg"),
+                                           AssetRef<VectorImageAsset>("ui/CurveHandleHover.svg"),
+                                           AssetRef<VectorImageAsset>("ui/CurveHandlePressed.svg"),
+                                           AssetRef<VectorImageAsset>("ui/CurveHandleSelected.svg"));
 
-        mEditorWidget->SetSupportHandleImages(AssetRef<ImageAsset>("ui/CurveSupportHandle.png"),
-                                              AssetRef<ImageAsset>("ui/CurveSupportHandleHover.png"),
-                                              AssetRef<ImageAsset>("ui/CurveSupportHandlePressed.png"),
-                                              AssetRef<ImageAsset>("ui/CurveSupportHandleSelected.png"));
+        mEditorWidget->SetSupportHandleImages(AssetRef<VectorImageAsset>("ui/CurveSupportHandle.svg"),
+                                              AssetRef<VectorImageAsset>("ui/CurveSupportHandleHover.svg"),
+                                              AssetRef<VectorImageAsset>("ui/CurveSupportHandlePressed.svg"),
+                                              AssetRef<VectorImageAsset>("ui/CurveSupportHandleSelected.svg"));
 
-        mEditorWidget->SetRangeHandleImages(AssetRef<ImageAsset>("ui/UI2_handle_side_regular.png"),
-                                              AssetRef<ImageAsset>("ui/UI2_handle_side_select.png"),
-                                              AssetRef<ImageAsset>("ui/UI2_handle_side_pressed.png"),
-                                              AssetRef<ImageAsset>("ui/UI2_handle_side_select.png"));
+        mEditorWidget->SetRangeHandleImages(AssetRef<VectorImageAsset>("ui/UI2_handle_side_regular.svg"),
+                                              AssetRef<VectorImageAsset>("ui/UI2_handle_side_select.svg"),
+                                              AssetRef<VectorImageAsset>("ui/UI2_handle_side_pressed.svg"),
+                                              AssetRef<VectorImageAsset>("ui/UI2_handle_side_select.svg"));
 
-        mEditorWidget->SetSelectionSpriteImage(AssetRef<ImageAsset>("ui/UI_Window_place.png"));
+        mEditorWidget->SetSelectionSpriteImage(AssetRef<VectorImageAsset>("ui/UI_Window_place.svg"));
 
 		mWindow->onFocused += [&]() { mEditorWidget->OnFocusedByRoot(); };
 		mWindow->onUnfocused += [&]() { mEditorWidget->OnUnfocusedByRoot(); };

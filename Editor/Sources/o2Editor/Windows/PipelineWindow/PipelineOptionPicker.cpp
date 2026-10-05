@@ -13,6 +13,7 @@
 #include "o2/Utils/Editor/EditorScope.h"
 #include "o2/Utils/System/Time/Time.h"
 #include "o2Editor/Windows/PipelineWindow/PipelineControls.h"
+#include "o2/Render/VectorSprite.h"
 
 namespace Editor
 {
@@ -45,7 +46,7 @@ namespace Editor
     {
         PushEditorScopeOnStack scope;
         fitByChildren = false;
-        AddLayer("back", mmake<Sprite>("ui/UI4_Context_menu.png"), Layout::BothStretch(-20, -19, -20, -19));
+        AddLayer("back", mmake<VectorSprite>("ui/UI4_Context_menu.svg"), Layout::BothStretch(-20, -19, -20, -19));
         SetViewLayout(Layout::BothStretch(0, 0, 0, 0));
         SetClippingLayout(Layout::BothStretch(0, 0, 0, 0));
         mMeasure = mmake<Text>("stdFont.ttf");
@@ -265,9 +266,9 @@ namespace Editor
         bool current = option.value == mRequest.current;
         auto row = mmake<Button>();
         row->name = option.value;
-        row->AddLayer("select", mmake<Sprite>("ui/UI4_Context_menu_select.png"), Layout::BothStretch(-10, -16, -10, -16))->transparency = 0.0f;
+        row->AddLayer("select", mmake<VectorSprite>("ui/UI4_Context_menu_select.svg"), Layout::BothStretch(-10, -16, -10, -16))->transparency = 0.0f;
 
-        auto icon = mmake<Sprite>(option.icon);
+        auto icon = mmake<VectorSprite>(option.icon);
         icon->color = current ? PipelineControls::accentColor : PipelineControls::dimTextColor;
         float iconTop = -rowPadding - (labelHeight - 16.0f)*0.5f;
         row->AddLayer("icon", icon, Layout(Vec2F(0, 1), Vec2F(0, 1), Vec2F(6, iconTop - 16.0f), Vec2F(22, iconTop)));
@@ -283,7 +284,7 @@ namespace Editor
                                            Vec2F(-checkColumn, -rowPadding - labelHeight)));
 
         float checkTop = -rowPadding - (labelHeight - 20.0f)*0.5f;
-        row->AddLayer("check", mmake<Sprite>("ui/UI4_Ckeck.png"), Layout(Vec2F(1, 1), Vec2F(1, 1), Vec2F(-24, checkTop - 20.0f), Vec2F(-4, checkTop)))
+        row->AddLayer("check", mmake<VectorSprite>("ui/UI4_Ckeck.svg"), Layout(Vec2F(1, 1), Vec2F(1, 1), Vec2F(-24, checkTop - 20.0f), Vec2F(-4, checkTop)))
             ->transparency = current ? 1.0f : 0.0f;
 
         String value = option.value;
@@ -325,10 +326,10 @@ namespace Editor
             auto field = mmake<Button>();
             field->name = "option";
             field->layout->minSize = Vec2F(20, 20);
-            field->AddLayer("back", mmake<Sprite>("ui/UI4_Editbox_regular.png"), Layout::BothStretch(-9, -9, -9, -9));
-            field->AddLayer("hover", mmake<Sprite>("ui/UI4_Editbox_select.png"), Layout::BothStretch(-9, -9, -9, -9))->transparency = 0.0f;
-            field->AddLayer("pressed", mmake<Sprite>("ui/UI4_Editbox_pressed.png"), Layout::BothStretch(-9, -9, -9, -9))->transparency = 0.0f;
-            field->AddLayer("arrow", mmake<Sprite>("ui/UI4_Down_icn.png"), Layout(Vec2F(1.0f, 0.5f), Vec2F(1.0f, 0.5f), Vec2F(-20, -10), Vec2F(0, 10)));
+            field->AddLayer("back", mmake<VectorSprite>("ui/UI4_Editbox_regular.svg"), Layout::BothStretch(-9, -9, -9, -9));
+            field->AddLayer("hover", mmake<VectorSprite>("ui/UI4_Editbox_select.svg"), Layout::BothStretch(-9, -9, -9, -9))->transparency = 0.0f;
+            field->AddLayer("pressed", mmake<VectorSprite>("ui/UI4_Editbox_pressed.svg"), Layout::BothStretch(-9, -9, -9, -9))->transparency = 0.0f;
+            field->AddLayer("arrow", mmake<VectorSprite>("ui/UI4_Down_icn.svg"), Layout(Vec2F(1.0f, 0.5f), Vec2F(1.0f, 0.5f), Vec2F(-20, -10), Vec2F(0, 10)));
             auto icon = mmake<Sprite>();
             icon->color = accentColor;
             field->AddLayer("icon", icon, Layout(Vec2F(0.0f, 0.5f), Vec2F(0.0f, 0.5f), Vec2F(5, -7), Vec2F(19, 7)));
@@ -346,11 +347,8 @@ namespace Editor
 
             if (auto caption = field->GetLayerDrawable<Text>("caption"))
                 caption->text = option.label;
-            if (auto icon = field->GetLayerDrawable<Sprite>("icon"))
-            {
-                icon->imageName = option.icon;
+            if (auto icon = field->SetLayerImage("icon", option.icon))
                 icon->color = accentColor;
-            }
             field->SetLayoutDirty();
         }
     }

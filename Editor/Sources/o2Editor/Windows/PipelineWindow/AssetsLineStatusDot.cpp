@@ -4,6 +4,7 @@
 #include "o2/Render/Sprite.h"
 #include "o2/Scene/UI/Widget.h"
 #include "o2/Scene/UI/WidgetLayer.h"
+#include "o2/Render/VectorSprite.h"
 
 namespace Editor
 {
@@ -34,8 +35,8 @@ namespace Editor
         mAnchor = anchor;
         mOffset = offset;
         mSize = size;
-        mPulse = widget->AddLayer("status pulse", mmake<Sprite>("ui/pipeline/status_dot.png"));
-        mDot = widget->AddLayer("status dot", mmake<Sprite>("ui/pipeline/status_dot.png"));
+        mPulse = widget->AddLayer("status pulse", mmake<VectorSprite>("ui/pipeline/status_dot.svg"));
+        mDot = widget->AddLayer("status dot", mmake<VectorSprite>("ui/pipeline/status_dot.svg"));
         Place(mPulse, mSize);
         Place(mDot, mSize);
         Update(0.0f, mStatus);

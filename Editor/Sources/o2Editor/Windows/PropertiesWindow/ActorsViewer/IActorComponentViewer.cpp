@@ -35,9 +35,9 @@ namespace Editor
         mSpoiler->fitByChildren = true;
         mSpoiler->borderBottom = 5;
         mSpoiler->SetCaption("Component");
-        mSpoiler->GetIcon()->SetImageName("ui/UI4_component_icon.png");
+        mSpoiler->GetIcon()->SetImageName("ui/UI4_component_icon.svg");
         mSpoiler->GetIcon()->layout->center -= Vec2F(2, 0);
-        mSpoiler->GetIcon()->GetImage()->SetColor(Color4(235, 255, 253));
+        mSpoiler->GetIcon()->GetImageDrawable()->SetColor(Color4(235, 255, 253));
 
         mRemoveButton = o2UI.CreateButton("", THIS_FUNC(RemoveTargetComponents), "close");
         *mRemoveButton->layout = WidgetLayout::Based(BaseCorner::RightTop, Vec2F(20, 20), Vec2F(1, 0));

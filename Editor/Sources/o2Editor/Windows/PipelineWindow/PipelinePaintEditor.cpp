@@ -20,6 +20,7 @@
 #include "o2Editor/Windows/PipelineWindow/PipelinePairViews.h"
 
 #include <cstring>
+#include "o2/Render/VectorSprite.h"
 
 namespace Editor
 {
@@ -37,8 +38,7 @@ namespace Editor
         layout->minHeight = 180;
 
         mBackgroundSprite = mmake<Sprite>();
-        mFrameSprite = mmake<Sprite>("ui/UI4_Editbox_regular.png");
-        mFrameSprite->mode = SpriteMode::Sliced;
+        mFrameSprite = mmake<VectorSprite>("ui/UI4_Editbox_regular.svg");
         mSprite = mmake<Sprite>();
 
         mHintText = mmake<Text>("stdFont.ttf");
@@ -64,7 +64,7 @@ namespace Editor
         BuildToolbar();
 
         WeakRef<PipelinePaintEditor> weakThis(this);
-        mRemoveButton = PipelineControls::MakeIconButton("ui/UI4_small_trash_icon.png", PipelineControls::textColor, Color4(255, 255, 255, 230));
+        mRemoveButton = PipelineControls::MakeIconButton("ui/UI4_small_trash_icon.svg", PipelineControls::textColor, Color4(255, 255, 255, 230));
         mRemoveButton->name = "remove region";
         mRemoveButton->enabled = false;
         mRemoveButton->onClick = [weakThis]()

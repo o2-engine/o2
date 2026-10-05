@@ -81,8 +81,8 @@ namespace Editor
         REF_COUNTERABLE_IMPL(Application);
 
     protected:
-        Ref<Sprite> mBackground; // Background sprite
-        Ref<Sprite> mBackSign;   // Background o2 signature
+        Ref<IRectDrawable> mBackground; // Background drawable
+        Ref<IRectDrawable> mBackSign;   // Background o2 signature
 
         Ref<UIRoot>         mUIRoot;         // Root editor UI
         Ref<WindowsManager> mWindowsManager; // Windows manager

@@ -266,7 +266,7 @@ namespace o2
 
     String AnimationComponent::GetIcon()
     {
-        return "ui/UI4_animation_component.png";
+        return "ui/UI4_animation_component.svg";
     }
 
     void AnimationComponent::OnStart()

@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20">
+<defs>
+<radialGradient id="g0" gradientUnits="userSpaceOnUse" cx="10" cy="10" r="4.94">
+<stop offset="0" stop-color="#eef2f5"/>
+<stop offset="0.25" stop-color="#edf1f5"/>
+<stop offset="0.434" stop-color="#ebeff2"/>
+<stop offset="0.512" stop-color="#e7ecef"/>
+<stop offset="0.562" stop-color="#e3e8ec"/>
+<stop offset="0.617" stop-color="#dde2e7"/>
+<stop offset="0.668" stop-color="#d5dbe0"/>
+<stop offset="0.715" stop-color="#cbd2d8"/>
+<stop offset="0.762" stop-color="#bec6ce"/>
+<stop offset="0.805" stop-color="#afb8c1"/>
+<stop offset="0.848" stop-color="#9ca7b2"/>
+<stop offset="0.887" stop-color="#8794a1"/>
+<stop offset="0.922" stop-color="#71808f"/>
+<stop offset="0.953" stop-color="#5b6c7d"/>
+<stop offset="0.977" stop-color="#485a6d"/>
+<stop offset="0.996" stop-color="#374b5f"/>
+<stop offset="1" stop-color="#35495e"/>
+</radialGradient>
+</defs>
+<path d="M15 10.936 C14.656 13.014 13.014 14.656 10.936 15 L9.064 15 C6.986 14.656 5.344 13.014 5 10.936 L5 9.064 C5.344 6.986 6.986 5.344 9.064 5 L10.936 5 C13.014 5.344 14.656 6.986 15 9.064 Z" fill="#f85d48"/>
+<path d="M15 10.936 C14.656 13.014 13.014 14.656 10.936 15 L9.064 15 C6.986 14.656 5.344 13.014 5 10.936 L5 9.064 C5.344 6.986 6.986 5.344 9.064 5 L10.936 5 C13.014 5.344 14.656 6.986 15 9.064 Z" fill="url(#g0)" fill-opacity="0.11"/>
+</svg>

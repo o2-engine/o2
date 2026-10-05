@@ -7,6 +7,7 @@
 #include "o2/Scene/ActorTransform.h"
 #include "o2/Scene/UI/WidgetLayout.h"
 #include "o2Editor/Windows/AnimationWindow/KeyHandlesSheet.h"
+#include "o2/Render/VectorSprite.h"
 
 namespace Editor
 {
@@ -192,12 +193,12 @@ namespace Editor
 
     Ref<AnimationKeyDragHandle> MapKeyFramesTrackControl::CreateHandle()
     {
-        auto handle = mmake<AnimationKeyDragHandle>(mmake<Sprite>("ui/UI4_map_key.png"),
-                                                    mmake<Sprite>("ui/UI4_map_key_hover.png"),
-                                                    mmake<Sprite>("ui/UI4_map_key_pressed.png"),
-                                                    mmake<Sprite>("ui/UI4_selected_map_key.png"),
-                                                    mmake<Sprite>("ui/UI4_selected_map_key_hover.png"),
-                                                    mmake<Sprite>("ui/UI4_selected_map_key_pressed.png"));
+        auto handle = mmake<AnimationKeyDragHandle>(mmake<VectorSprite>("ui/UI4_map_key.svg"),
+                                                    mmake<VectorSprite>("ui/UI4_map_key_hover.svg"),
+                                                    mmake<VectorSprite>("ui/UI4_map_key_pressed.svg"),
+                                                    mmake<VectorSprite>("ui/UI4_selected_map_key.svg"),
+                                                    mmake<VectorSprite>("ui/UI4_selected_map_key_hover.svg"),
+                                                    mmake<VectorSprite>("ui/UI4_selected_map_key_pressed.svg"));
 
         handle->cursorType = CursorType::SizeWE;
         handle->pixelPerfect = true;

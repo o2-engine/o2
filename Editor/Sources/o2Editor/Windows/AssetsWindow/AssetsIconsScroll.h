@@ -93,8 +93,11 @@ namespace Editor
         // Return asset icon under point
         Ref<AssetIcon> GetIconUnderPoint(const Vec2F& point) const;
 
-        // Returns node highlight drawable
-        const Ref<Sprite>& GetHighlightDrawable() const;
+        // Sets icon highlight drawable
+        void SetHighlightDrawable(const Ref<IRectDrawable>& drawable);
+
+        // Returns icon highlight drawable
+        const Ref<IRectDrawable>& GetHighlightDrawable() const;
 
         // Sets highlight animation
         void SetHighlightAnimation(const Ref<AnimationClip>& animation);
@@ -102,8 +105,11 @@ namespace Editor
         // Sets highlight layout
         void SetHighlightLayout(const Layout& layout);
 
+        // Sets selecting rectangle drawable
+        void SetSelectingDrawable(const Ref<IRectDrawable>& drawable);
+
         // Returns selecting rectangle drawable
-        const Ref<Sprite>& GetSelectingDrawable() const;
+        const Ref<IRectDrawable>& GetSelectingDrawable() const;
 
         // Returns is this widget can be selected
         bool IsFocusable() const override;
@@ -144,12 +150,12 @@ namespace Editor
         Ref<AssetIcon>       mHighlightIcon;                            // Current highlighting asset icon
         Ref<AnimationClip>   mHighlighClip;                             // Node highlight animation clip @SERIALIZABLE 
         Ref<AnimationPlayer> mHighlightAnim = mmake<AnimationPlayer>(); // Icon highlight animation
-        Ref<Sprite>          mHighlightSprite;                          // Icon highlight sprite @SERIALIZABLE
+        Ref<IRectDrawable>   mHighlightSprite;                          // Icon highlight drawable @SERIALIZABLE
         Layout               mHighlightLayout;                          // Icon highlight sprite layout @SERIALIZABLE
                                 
         Map<String, Vector<Ref<AssetIcon>>> mIconsPool; // Assets icons pool
                                 
-        Ref<Sprite>            mSelectionSprite;       // Icons selection rectangle sprite @SERIALIZABLE
+        Ref<IRectDrawable>     mSelectionSprite;       // Icons selection rectangle drawable @SERIALIZABLE
         bool                   mSelecting = false;     // Is selecting icons 
         Vec2F                  mPressedPoint;          // Pressed point
         Vector<Ref<AssetInfo>> mCurrentSelectingInfos; // Selecting icons at current selection @IGNORE
@@ -418,10 +424,12 @@ CLASS_METHODS_META(Editor::AssetsIconsScrollArea)
     FUNCTION().PUBLIC().SIGNATURE(void, InstantiateAssetIntoScene, const AssetInfo&);
     FUNCTION().PUBLIC().SIGNATURE(const Vector<Ref<AssetInfo>>&, GetSelectedAssets);
     FUNCTION().PUBLIC().SIGNATURE(Ref<AssetIcon>, GetIconUnderPoint, const Vec2F&);
-    FUNCTION().PUBLIC().SIGNATURE(const Ref<Sprite>&, GetHighlightDrawable);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetHighlightDrawable, const Ref<IRectDrawable>&);
+    FUNCTION().PUBLIC().SIGNATURE(const Ref<IRectDrawable>&, GetHighlightDrawable);
     FUNCTION().PUBLIC().SIGNATURE(void, SetHighlightAnimation, const Ref<AnimationClip>&);
     FUNCTION().PUBLIC().SIGNATURE(void, SetHighlightLayout, const Layout&);
-    FUNCTION().PUBLIC().SIGNATURE(const Ref<Sprite>&, GetSelectingDrawable);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetSelectingDrawable, const Ref<IRectDrawable>&);
+    FUNCTION().PUBLIC().SIGNATURE(const Ref<IRectDrawable>&, GetSelectingDrawable);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsFocusable);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsUnderPoint, const Vec2F&);
     FUNCTION().PUBLIC().SIGNATURE(void, UpdateSelfTransform);

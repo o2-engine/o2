@@ -14,22 +14,23 @@
 #include "o2Editor/Windows/SceneWindow/SceneEditScreen.h"
 #include "o2Editor/Windows/TreeWindow/SceneHierarchyTree.h"
 #include "o2Editor/Windows/TreeWindow/TreeWindow.h"
+#include "o2/Render/VectorSprite.h"
 
 namespace Editor
 {
     MoveTool::MoveTool()
     {
-        mHorDragHandle = mmake<SceneDragHandle>(mmake<Sprite>("ui/UI2_right_move_arrow.png"),
-                                         mmake<Sprite>("ui/UI2_right_move_arrow_select.png"),
-                                         mmake<Sprite>("ui/UI2_right_move_arrow_pressed.png"));
+        mHorDragHandle = mmake<SceneDragHandle>(mmake<VectorSprite>("ui/UI2_right_move_arrow.svg"),
+                                         mmake<VectorSprite>("ui/UI2_right_move_arrow_select.svg"),
+                                         mmake<VectorSprite>("ui/UI2_right_move_arrow_pressed.svg"));
 
-        mVerDragHandle = mmake<SceneDragHandle>(mmake<Sprite>("ui/UI2_up_move_arrow.png"),
-                                         mmake<Sprite>("ui/UI2_up_move_arrow_select.png"),
-                                         mmake<Sprite>("ui/UI2_up_move_arrow_pressed.png"));
+        mVerDragHandle = mmake<SceneDragHandle>(mmake<VectorSprite>("ui/UI2_up_move_arrow.svg"),
+                                         mmake<VectorSprite>("ui/UI2_up_move_arrow_select.svg"),
+                                         mmake<VectorSprite>("ui/UI2_up_move_arrow_pressed.svg"));
 
-        mBothDragHandle = mmake<SceneDragHandle>(mmake<Sprite>("ui/UI2_move_tool_center.png"),
-                                          mmake<Sprite>("ui/UI2_move_tool_center_select.png"),
-                                          mmake<Sprite>("ui/UI2_move_tool_center_pressed.png"));
+        mBothDragHandle = mmake<SceneDragHandle>(mmake<VectorSprite>("ui/UI2_move_tool_center.svg"),
+                                          mmake<VectorSprite>("ui/UI2_move_tool_center_select.svg"),
+                                          mmake<VectorSprite>("ui/UI2_move_tool_center_pressed.svg"));
 
         mHorDragHandle->enabled = false;
         mVerDragHandle->enabled = false;
@@ -528,7 +529,7 @@ namespace Editor
 
     String MoveTool::GetPanelIcon() const
     {
-        return "ui/UI4_move_tool.png";
+        return "ui/UI4_move_tool.svg";
     }
 
     ShortcutKeys MoveTool::GetShortcut() const

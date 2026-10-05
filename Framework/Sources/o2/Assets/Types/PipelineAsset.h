@@ -32,7 +32,7 @@ namespace o2
         static int GetEditorSorting() { return 96; }
 
         // Returns editor icon
-        static String GetEditorIcon() { return "ui/UI4_graph_icon.png"; }
+        static String GetEditorIcon() { return "ui/UI4_graph_icon.svg"; }
 
         // Is this asset type is available to create from editor's assets window
         static bool IsAvailableToCreateFromEditor() { return true; }

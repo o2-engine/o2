@@ -13,15 +13,16 @@
 #include "o2Editor/Windows/SceneWindow/SceneEditScreen.h"
 #include "o2Editor/Windows/TreeWindow/SceneHierarchyTree.h"
 #include "o2Editor/Windows/TreeWindow/TreeWindow.h"
+#include "o2/Render/VectorSprite.h"
 
 namespace Editor
 {
     FrameTool::FrameTool()
     {
         mLeftTopRotateHandle = mmake<SceneDragHandle>();
-        mLeftTopRotateHandle->SetRegularDrawable(mmake<Sprite>("ui/UI3_rotate_regular.png"));
-        mLeftTopRotateHandle->SetHoverDrawable(mmake<Sprite>("ui/UI3_rotate_hover.png"));
-        mLeftTopRotateHandle->SetPressedDrawable(mmake<Sprite>("ui/UI3_rotate_pressed.png"));
+        mLeftTopRotateHandle->SetRegularDrawable(mmake<VectorSprite>("ui/UI3_rotate_regular.svg"));
+        mLeftTopRotateHandle->SetHoverDrawable(mmake<VectorSprite>("ui/UI3_rotate_hover.svg"));
+        mLeftTopRotateHandle->SetPressedDrawable(mmake<VectorSprite>("ui/UI3_rotate_pressed.svg"));
         mLeftTopRotateHandle->GetRegularDrawable()->pivot = Vec2F(0, 0);
         mLeftTopRotateHandle->GetHoverDrawable()->pivot = Vec2F(0, 0);
         mLeftTopRotateHandle->GetPressedDrawable()->pivot = Vec2F(0, 0);
@@ -32,9 +33,9 @@ namespace Editor
         mRightBottomRotateHandle = mLeftTopRotateHandle->CloneAsRef<SceneDragHandle>();
 
         mLeftTopHandle = mmake<SceneDragHandle>();
-        mLeftTopHandle->SetRegularDrawable(mmake<Sprite>("ui/UI2_handle_regular.png"));
-        mLeftTopHandle->SetHoverDrawable(mmake<Sprite>("ui/UI2_handle_select.png"));
-        mLeftTopHandle->SetPressedDrawable(mmake<Sprite>("ui/UI2_handle_pressed.png"));
+        mLeftTopHandle->SetRegularDrawable(mmake<VectorSprite>("ui/UI2_handle_regular.svg"));
+        mLeftTopHandle->SetHoverDrawable(mmake<VectorSprite>("ui/UI2_handle_select.svg"));
+        mLeftTopHandle->SetPressedDrawable(mmake<VectorSprite>("ui/UI2_handle_pressed.svg"));
         mLeftTopHandle->pixelPerfect = false;
 
         mLeftBottomHandle = mLeftTopHandle->CloneAsRef<SceneDragHandle>();
@@ -42,9 +43,9 @@ namespace Editor
         mRightBottomHandle = mLeftTopHandle->CloneAsRef<SceneDragHandle>();
 
         mLeftHandle = mmake<SceneDragHandle>();
-        mLeftHandle->SetRegularDrawable(mmake<Sprite>("ui/UI2_handle_side_regular.png"));
-        mLeftHandle->SetHoverDrawable(mmake<Sprite>("ui/UI2_handle_side_select.png"));
-        mLeftHandle->SetPressedDrawable(mmake<Sprite>("ui/UI2_handle_side_pressed.png"));
+        mLeftHandle->SetRegularDrawable(mmake<VectorSprite>("ui/UI2_handle_side_regular.svg"));
+        mLeftHandle->SetHoverDrawable(mmake<VectorSprite>("ui/UI2_handle_side_select.svg"));
+        mLeftHandle->SetPressedDrawable(mmake<VectorSprite>("ui/UI2_handle_side_pressed.svg"));
         mLeftHandle->pixelPerfect = false;
 
         mTopHandle = mLeftHandle->CloneAsRef<SceneDragHandle>();
@@ -52,15 +53,15 @@ namespace Editor
         mRightHandle = mLeftHandle->CloneAsRef<SceneDragHandle>();
 
         mPivotHandle = mmake<SceneDragHandle>();
-        mPivotHandle->SetRegularDrawable(mmake<Sprite>("ui/UI2_pivot.png"));
-        mPivotHandle->SetHoverDrawable(mmake<Sprite>("ui/UI2_pivot_select.png"));
-        mPivotHandle->SetPressedDrawable(mmake<Sprite>("ui/UI2_pivot_pressed.png"));
+        mPivotHandle->SetRegularDrawable(mmake<VectorSprite>("ui/UI2_pivot.svg"));
+        mPivotHandle->SetHoverDrawable(mmake<VectorSprite>("ui/UI2_pivot_select.svg"));
+        mPivotHandle->SetPressedDrawable(mmake<VectorSprite>("ui/UI2_pivot_pressed.svg"));
         mPivotHandle->checkSnappingFunc = THIS_FUNC(CheckPivotSnapping);
 
         mAnchorsLeftTopHandle = mmake<SceneDragHandle>();
-        mAnchorsLeftTopHandle->SetRegularDrawable(mmake<Sprite>("ui/UI3_anchor_pressed.png"));
-        mAnchorsLeftTopHandle->SetHoverDrawable(mmake<Sprite>("ui/UI3_anchor_hover.png"));
-        mAnchorsLeftTopHandle->SetPressedDrawable(mmake<Sprite>("ui/UI3_anchor_regular.png"));
+        mAnchorsLeftTopHandle->SetRegularDrawable(mmake<VectorSprite>("ui/UI3_anchor_pressed.svg"));
+        mAnchorsLeftTopHandle->SetHoverDrawable(mmake<VectorSprite>("ui/UI3_anchor_hover.svg"));
+        mAnchorsLeftTopHandle->SetPressedDrawable(mmake<VectorSprite>("ui/UI3_anchor_regular.svg"));
         mAnchorsLeftTopHandle->GetRegularDrawable()->pivot = Vec2F(1, 0);
         mAnchorsLeftTopHandle->GetHoverDrawable()->pivot = Vec2F(1, 0);
         mAnchorsLeftTopHandle->GetPressedDrawable()->pivot = Vec2F(1, 0);
@@ -73,8 +74,8 @@ namespace Editor
         centerAnchorsRegularSprite->SetSize(Vec2F(0, 0));
         mAnchorsCenter = mmake<SceneDragHandle>();
         mAnchorsCenter->SetRegularDrawable(centerAnchorsRegularSprite);
-        mAnchorsCenter->SetHoverDrawable(mmake<Sprite>("ui/UI3_anchors_hover.png"));
-        mAnchorsCenter->SetPressedDrawable(mmake<Sprite>("ui/UI3_anchors_pressed.png"));
+        mAnchorsCenter->SetHoverDrawable(mmake<VectorSprite>("ui/UI3_anchors_hover.svg"));
+        mAnchorsCenter->SetPressedDrawable(mmake<VectorSprite>("ui/UI3_anchors_pressed.svg"));
 
         mLeftTopHandle->onChangedPos = THIS_FUNC(OnLeftTopHandle);
         mLeftHandle->onChangedPos = THIS_FUNC(OnLeftHandle);
@@ -178,7 +179,7 @@ namespace Editor
 
     String FrameTool::GetPanelIcon() const
     {
-        return "ui/UI4_frame_tool.png";
+        return "ui/UI4_frame_tool.svg";
     }
 
     ShortcutKeys FrameTool::GetShortcut() const

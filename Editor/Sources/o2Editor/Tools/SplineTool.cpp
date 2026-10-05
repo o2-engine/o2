@@ -188,7 +188,7 @@ namespace Editor
 
     String SplineTool::SplineTool::GetPanelIcon() const
     {
-        return "ui/UI4_path_tool.png";
+        return "ui/UI4_path_tool.svg";
     }
 
     void SplineTool::SplineTool::OnEnabled()

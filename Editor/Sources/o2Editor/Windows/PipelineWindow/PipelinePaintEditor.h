@@ -174,7 +174,7 @@ namespace Editor
         TextureRef  mBackgroundTexture; // Background texture
         TextureRef  mTexture;           // Texture of the composed drawing
         Ref<Sprite> mBackgroundSprite;  // Background sprite
-        Ref<Sprite> mFrameSprite;       // Frame and soft shadow round the picture area, as the result cards have
+        Ref<IRectDrawable> mFrameSprite;      // Frame and soft shadow round the picture area, as the result cards have
         Ref<Sprite> mSprite;            // Composed drawing sprite
         Ref<Text>   mHintText;          // Hint text drawable
 

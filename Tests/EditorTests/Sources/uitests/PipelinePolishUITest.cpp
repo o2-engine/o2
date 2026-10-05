@@ -1,3 +1,4 @@
+#include "o2/Render/VectorSprite.h"
 #include "o2Editor/stdafx.h"
 #include <gtest/gtest.h>
 
@@ -367,7 +368,7 @@ TEST_F(PipelinePolishUiFixture, PromptTargetIsAMenuWithIcons)
     auto caption = [&]() { return String(field()->GetLayerDrawable<Text>("caption")->GetText()); };
     ASSERT_TRUE(field());
     EXPECT_EQ(caption(), "Image prompt");
-    EXPECT_EQ(field()->GetLayerDrawable<Sprite>("icon")->GetImageName(), PipelineNodeWidget::IconForType("nanoBananaGen"));
+    EXPECT_EQ(field()->GetLayerDrawable<VectorSprite>("icon")->GetImageName(), PipelineNodeWidget::IconForType("nanoBananaGen"));
 
     ClickWidget(field());
     auto picker = editor->GetOptionPicker();
@@ -377,7 +378,7 @@ TEST_F(PipelinePolishUiFixture, PromptTargetIsAMenuWithIcons)
     for (int i = 0; i < rows.Count(); i++)
     {
         EXPECT_EQ(rows[i]->name, targets[i].first);
-        EXPECT_EQ(rows[i]->GetLayerDrawable<Sprite>("icon")->GetImageName(), PipelineNodeWidget::IconForType(targets[i].second)) << i;
+        EXPECT_EQ(rows[i]->GetLayerDrawable<VectorSprite>("icon")->GetImageName(), PipelineNodeWidget::IconForType(targets[i].second)) << i;
         EXPECT_FALSE(String(rows[i]->GetLayerDrawable<Text>("hint")->GetText()).IsEmpty()) << i;
         EXPECT_FLOAT_EQ(rows[i]->FindLayer("check")->transparency, i == 0 ? 1.0f : 0.0f) << "the current target is checked";
     }

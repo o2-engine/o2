@@ -8,6 +8,7 @@
 #include "o2Editor/Windows/AnimationWindow/CurvesSheet.h"
 #include "o2Editor/Windows/AnimationWindow/Timeline.h"
 #include "o2Editor/Windows/AnimationWindow/Tree.h"
+#include "o2/Assets/Types/VectorImageAsset.h"
 
 namespace Editor
 {
@@ -160,17 +161,17 @@ namespace Editor
 
         mCurvesEditor->SetTextBorder(BorderF(0, 10, 10, 0));
 
-        mCurvesEditor->SetMainHandleImages(AssetRef<ImageAsset>("ui/CurveHandle.png"),
-                                           AssetRef<ImageAsset>("ui/CurveHandleHover.png"),
-                                           AssetRef<ImageAsset>("ui/CurveHandlePressed.png"),
-                                           AssetRef<ImageAsset>("ui/CurveHandleSelected.png"));
+        mCurvesEditor->SetMainHandleImages(AssetRef<VectorImageAsset>("ui/CurveHandle.svg"),
+                                           AssetRef<VectorImageAsset>("ui/CurveHandleHover.svg"),
+                                           AssetRef<VectorImageAsset>("ui/CurveHandlePressed.svg"),
+                                           AssetRef<VectorImageAsset>("ui/CurveHandleSelected.svg"));
 
-        mCurvesEditor->SetSupportHandleImages(AssetRef<ImageAsset>("ui/CurveSupportHandle.png"),
-                                              AssetRef<ImageAsset>("ui/CurveSupportHandleHover.png"),
-                                              AssetRef<ImageAsset>("ui/CurveSupportHandlePressed.png"),
-                                              AssetRef<ImageAsset>("ui/CurveSupportHandleSelected.png"));
+        mCurvesEditor->SetSupportHandleImages(AssetRef<VectorImageAsset>("ui/CurveSupportHandle.svg"),
+                                              AssetRef<VectorImageAsset>("ui/CurveSupportHandleHover.svg"),
+                                              AssetRef<VectorImageAsset>("ui/CurveSupportHandlePressed.svg"),
+                                              AssetRef<VectorImageAsset>("ui/CurveSupportHandleSelected.svg"));
 
-        mCurvesEditor->SetSelectionSpriteImage(AssetRef<ImageAsset>("ui/UI_Window_place.png"));
+        mCurvesEditor->SetSelectionSpriteImage(AssetRef<VectorImageAsset>("ui/UI_Window_place.svg"));
 
         mCurvesEditor->verGridEnabled = false;
         mCurvesEditor->onViewChanged += THIS_FUNC(OnEditorViewChanged);

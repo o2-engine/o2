@@ -71,7 +71,7 @@ namespace o2
 
     String VideoComponent::GetIcon()
     {
-        return "ui/UI4_image_component.png";
+        return "ui/UI4_image_component.svg";
     }
 
     Ref<o2::RefCounterable> VideoComponent::CastToRefCounterable(const Ref<VideoComponent>& ref)

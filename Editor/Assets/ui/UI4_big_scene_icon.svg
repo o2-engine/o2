@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40">
+<defs>
+<linearGradient id="s">
+<stop offset="0" stop-color="#000000" stop-opacity="0.171"/>
+<stop offset="0.111" stop-color="#000000" stop-opacity="0.155"/>
+<stop offset="0.222" stop-color="#000000" stop-opacity="0.141"/>
+<stop offset="0.333" stop-color="#000000" stop-opacity="0.091"/>
+<stop offset="0.444" stop-color="#000000" stop-opacity="0.073"/>
+<stop offset="0.556" stop-color="#000000" stop-opacity="0.038"/>
+<stop offset="0.667" stop-color="#000000" stop-opacity="0.018"/>
+<stop offset="0.778" stop-color="#000000" stop-opacity="0.007"/>
+<stop offset="0.889" stop-color="#000000" stop-opacity="0.001"/>
+<stop offset="1" stop-color="#000000" stop-opacity="0"/>
+</linearGradient>
+<linearGradient id="sl" href="#s" gradientUnits="userSpaceOnUse" x1="19.5" y1="0" x2="1.5" y2="0"/>
+<linearGradient id="sr" href="#s" gradientUnits="userSpaceOnUse" x1="23" y1="0" x2="41" y2="0"/>
+<linearGradient id="st" href="#s" gradientUnits="userSpaceOnUse" x1="0" y1="16.5" x2="0" y2="-1.5"/>
+<linearGradient id="sb" href="#s" gradientUnits="userSpaceOnUse" x1="0" y1="26" x2="0" y2="44"/>
+<radialGradient id="stl" href="#s" gradientUnits="userSpaceOnUse" cx="19.5" cy="16.5" r="18"/>
+<radialGradient id="str" href="#s" gradientUnits="userSpaceOnUse" cx="23" cy="16.5" r="18"/>
+<radialGradient id="sbl" href="#s" gradientUnits="userSpaceOnUse" cx="19.5" cy="26" r="18"/>
+<radialGradient id="sbr" href="#s" gradientUnits="userSpaceOnUse" cx="23" cy="26" r="18"/>
+<linearGradient id="f" gradientUnits="userSpaceOnUse" x1="26.5" y1="9.5" x2="24.5" y2="11.5">
+<stop offset="0" stop-color="#ffffff"/>
+<stop offset="1" stop-color="#e9ebf0"/>
+</linearGradient>
+</defs>
+<rect x="19.5" y="16.5" width="3.5" height="9.5" fill="#000000" fill-opacity="0.171"/>
+<rect x="0" y="16.5" width="19.5" height="9.5" fill="url(#sl)"/>
+<rect x="23" y="16.5" width="17" height="9.5" fill="url(#sr)"/>
+<rect x="19.5" y="0" width="3.5" height="16.5" fill="url(#st)"/>
+<rect x="19.5" y="26" width="3.5" height="14" fill="url(#sb)"/>
+<rect x="0" y="0" width="19.5" height="16.5" fill="url(#stl)"/>
+<rect x="23" y="0" width="17" height="16.5" fill="url(#str)"/>
+<rect x="0" y="26" width="19.5" height="14" fill="url(#sbl)"/>
+<rect x="23" y="26" width="17" height="14" fill="url(#sbr)"/>
+<path d="M11.01 7 L23.38 7 L29 12.62 L29 30.99 L27.99 32 L11.01 32 L10 30.99 L10 8.01 Z" fill="#e3e5eb"/>
+<path d="M11 8 L24 8 L28 12 L28 31 L11 31 Z" fill="#f5f6f5"/>
+<path d="M12 9 L23 9 L23 13 L27 13 L27 30 L12 30 Z" fill="#edeef0"/>
+<path d="M23.5 8.83 L23.5 12.5 L27.17 12.5" fill="none" stroke="#dfe2e9" stroke-width="1"/>
+<path d="M24 8.83 L24 12 L27.17 12 Z" fill="url(#f)"/>
+<rect x="12.85" y="23.32" width="12.3" height="1.16" fill="#607283"/>
+<path d="M13.39 23.9 L17.16 17.65 L20.54 23.18" fill="none" stroke="#607283" stroke-width="1.1"/>
+<path d="M20.59 21.43 L22.3 18.96 L25.8 24.14" fill="none" stroke="#607283" stroke-width="1.1"/>
+<circle cx="20.36" cy="15.99" r="1.14" fill="none" stroke="#607283" stroke-width="0.91"/>
+</svg>

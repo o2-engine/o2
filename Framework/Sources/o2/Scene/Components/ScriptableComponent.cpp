@@ -81,7 +81,7 @@ namespace o2
 
     String ScriptableComponent::GetIcon()
     {
-        return "ui/UI4_component_icon.png";
+        return "ui/UI4_component_icon.svg";
     }
 
     void ScriptableComponent::LoadScriptAndCreateObject()

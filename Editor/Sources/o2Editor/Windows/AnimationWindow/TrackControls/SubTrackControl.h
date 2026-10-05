@@ -78,7 +78,7 @@ namespace Editor
         WeakRef<AnimationTimeline> mTimeline;     // Time line used for calculating handles positions
         WeakRef<KeyHandlesSheet>   mHandlesSheet; // Handles sheet, used for drawing and managing drag handles
 
-        Ref<Sprite> mTrackSprite; // Track sprite
+        Ref<IRectDrawable> mTrackSprite; // Track drawable
 
     private:
         // Initializes handles

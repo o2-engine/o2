@@ -314,7 +314,7 @@ namespace o2
 
     String SkinningMeshComponent::GetIcon()
     {
-        return "ui/UI4_image_component.png";
+        return "ui/UI4_image_component.svg";
     }
 
     void SkinningMeshComponent::SetOwnerActor(const Ref<Actor>& actor)

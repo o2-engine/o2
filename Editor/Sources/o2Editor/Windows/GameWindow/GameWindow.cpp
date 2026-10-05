@@ -7,6 +7,7 @@
 #include "o2/Utils/Editor/EditorScope.h"
 #include "o2Editor/EditorApplication.h"
 #include "o2Editor/Properties/Basic/Vector2IntProperty.h"
+#include "o2/Render/VectorSprite.h"
 
 namespace Editor
 {
@@ -29,7 +30,7 @@ namespace Editor
     {
         mWindow->caption = "Game";
         mWindow->name = "game window";
-        mWindow->SetIcon(mmake<Sprite>("ui/UI4_game_icon.png"));
+        mWindow->SetIcon(mmake<VectorSprite>("ui/UI4_game_icon.svg"));
         mWindow->SetIconLayout(Layout::Based(BaseCorner::LeftTop, Vec2F(20, 20), Vec2F(-1, 2)));
         mWindow->SetViewLayout(Layout::BothStretch(-1, 0, 0, 18));
 
@@ -45,7 +46,7 @@ namespace Editor
         upPanel->expandWidth = false;
         upPanel->spacing = 0; // The buttons' backs are meant to sit flush, a gap breaks the strip
         *upPanel->layout = WidgetLayout::HorStretch(VerAlign::Top, 0, 0, 20, 0);
-        upPanel->AddLayer("back", mmake<Sprite>("ui/UI4_small_panel_back.png"), Layout::BothStretch(-5, -4, -4, -5));
+        upPanel->AddLayer("back", mmake<VectorSprite>("ui/UI4_small_panel_back.svg"), Layout::BothStretch(-5, -4, -4, -5));
         mWindow->AddChild(upPanel);
 
         // The panel arranges its children from the right, so the first one added sits rightmost

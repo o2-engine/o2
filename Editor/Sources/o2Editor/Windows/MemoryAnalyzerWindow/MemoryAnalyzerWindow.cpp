@@ -12,6 +12,7 @@
 #include "o2/Utils/Editor/EditorScope.h"
 #include "o2Editor/Properties/Properties.h"
 #include "o2Editor/UIRoot.h"
+#include "o2/Render/VectorSprite.h"
 
 DECLARE_SINGLETON(Editor::MemoryAnalyzerWindow);
 
@@ -43,7 +44,7 @@ namespace Editor
         mWindow = DynamicCast<o2::Window>(EditorUIRoot.AddWidget(o2UI.CreateWindow("Memory analyzer")));
         mWindow->SetClippingLayout(Layout::BothStretch(-1, -2, 0, 19));
         mWindow->SetViewLayout(Layout::BothStretch(-2, -2, 0, 20));
-        mWindow->SetIcon(mmake<Sprite>("ui/UI4_tree_wnd_icon.png"));
+        mWindow->SetIcon(mmake<VectorSprite>("ui/UI4_tree_wnd_icon.svg"));
         mWindow->SetIconLayout(Layout::Based(BaseCorner::LeftTop, Vec2F(20, 20), Vec2F(0, 1)));
 
         InitializeTree();
@@ -64,7 +65,7 @@ namespace Editor
         auto upPanel = mmake<Widget>();
         upPanel->name = "up panel";
         *upPanel->layout = WidgetLayout::HorStretch(VerAlign::Top, 0, 0, 20, -1);
-        upPanel->AddLayer("back", mmake<Sprite>("ui/UI4_square_field.png"), Layout::BothStretch(-4, -4, -5, -5));
+        upPanel->AddLayer("back", mmake<VectorSprite>("ui/UI4_square_field.svg"), Layout::BothStretch(-4, -4, -5, -5));
 
         auto searchButton = o2UI.CreateWidget<Button>("search");
         *searchButton->layout = WidgetLayout::Based(BaseCorner::Left, Vec2F(20, 20), Vec2F(-1, 1));
@@ -162,7 +163,7 @@ namespace Editor
 
     void MemoryAnalyzerWindow::InitializeSeparatorHandle()
     {
-        mTreeSeparatorHandle = mmake<WidgetDragHandle>(mmake<Sprite>("ui/UI4_Ver_separator.png"));
+        mTreeSeparatorHandle = mmake<WidgetDragHandle>(mmake<VectorSprite>("ui/UI4_Ver_separator.svg"));
         mTreeSeparatorHandle->GetRegularDrawable()->pivot = Vec2F(0.5f, 0.5f);
         mTreeSeparatorHandle->GetRegularDrawable()->szPivot = Vec2F(4, mTreeSeparatorHandle->GetRegularDrawable()->szPivot.Get().y);
 

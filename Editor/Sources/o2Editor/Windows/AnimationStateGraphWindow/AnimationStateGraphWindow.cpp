@@ -11,6 +11,8 @@
 #include "o2/Scene/UI/Widgets/LongList.h"
 #include "o2/Scene/UI/Widgets/Toggle.h"
 #include "o2/Utils/System/Time/Time.h"
+#include "o2/Render/VectorSprite.h"
+#include "o2/Assets/Types/VectorImageAsset.h"
 
 DECLARE_SINGLETON(Editor::AnimationStateGraphWindow);
 
@@ -41,7 +43,7 @@ namespace Editor
 
         mWindow->caption = "State Graph";
         mWindow->name = "animation state graph window";
-        mWindow->SetIcon(mmake<Sprite>("ui/UI4_log_wnd_icon.png"));
+        mWindow->SetIcon(mmake<VectorSprite>("ui/UI4_log_wnd_icon.svg"));
         mWindow->SetIconLayout(Layout::Based(BaseCorner::LeftTop, Vec2F(20, 20), Vec2F(-1, 1)));
 
 		mEditor = mmake<AnimationStateGraphEditor>();
@@ -56,7 +58,7 @@ namespace Editor
 		*verScroll->layout = WidgetLayout::VerStretch(HorAlign::Right, 5, 15, 10);
 		mEditor->SetVerScrollbar(verScroll);
 
-        mEditor->SetSelectionSpriteImage(AssetRef<ImageAsset>("ui/UI_Window_place.png"));
+        mEditor->SetSelectionSpriteImage(AssetRef<VectorImageAsset>("ui/UI_Window_place.svg"));
     }
 
     String AnimationStateGraphWindow::GetWindowTitle() const

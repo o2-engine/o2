@@ -19,6 +19,7 @@
 #include "o2Editor/Windows/PipelineWindow/PipelineControls.h"
 
 #include <cstring>
+#include "o2/Render/VectorSprite.h"
 
 namespace Editor
 {
@@ -47,7 +48,7 @@ namespace Editor
             auto toggle = o2UI.CreateWidget<Toggle>("pipeline segment");
             toggle->name = name;
             toggle->caption = "";
-            auto sprite = mmake<Sprite>(icon);
+            auto sprite = mmake<VectorSprite>(icon);
             sprite->color = PipelineControls::textColor;
             toggle->AddLayer("icon", sprite, Layout::Based(BaseCorner::Center, Vec2F(14, 14)));
             toggle->layout->minWidth = 24;
@@ -57,9 +58,9 @@ namespace Editor
             return toggle;
         };
 
-        mBrushToggle = makeTool("ui/pipeline/btn_brush.png", "brush", "brush");
-        mEraserToggle = makeTool("ui/pipeline/btn_eraser.png", "eraser", "eraser");
-        mRegionToggle = makeTool("ui/pipeline/btn_region.png", "roi", "region");
+        mBrushToggle = makeTool("ui/pipeline/btn_brush.svg", "brush", "brush");
+        mEraserToggle = makeTool("ui/pipeline/btn_eraser.svg", "eraser", "eraser");
+        mRegionToggle = makeTool("ui/pipeline/btn_region.svg", "roi", "region");
 
         mColorButton = o2UI.CreateButton("");
         mColorButton->name = "color";
@@ -104,9 +105,9 @@ namespace Editor
             toolbar->AddChild(button);
             return button;
         };
-        mUndoButton = makeAction("ui/pipeline/btn_undo.png", "undo", [weakThis]() { if (auto self = weakThis.Lock()) self->OnUndo(); });
-        mRedoButton = makeAction("ui/pipeline/btn_redo.png", "redo", [weakThis]() { if (auto self = weakThis.Lock()) self->OnRedo(); });
-        mClearButton = makeAction("ui/UI4_small_trash_icon.png", "clear", [weakThis]() { if (auto self = weakThis.Lock()) self->OnClear(); });
+        mUndoButton = makeAction("ui/pipeline/btn_undo.svg", "undo", [weakThis]() { if (auto self = weakThis.Lock()) self->OnUndo(); });
+        mRedoButton = makeAction("ui/pipeline/btn_redo.svg", "redo", [weakThis]() { if (auto self = weakThis.Lock()) self->OnRedo(); });
+        mClearButton = makeAction("ui/UI4_small_trash_icon.svg", "clear", [weakThis]() { if (auto self = weakThis.Lock()) self->OnClear(); });
 
         mPaletteRow = mmake<PipelineWrapRow>();
         mPaletteRow->name = "palette";
@@ -123,7 +124,7 @@ namespace Editor
             auto swatch = o2UI.CreateButton("");
             swatch->layout->minWidth = 20;
             swatch->layout->maxWidth = 20;
-            if (auto regular = swatch->GetLayerDrawable<Sprite>("regular"))
+            if (auto regular = swatch->GetLayerDrawableBasedOn<IRectDrawable>("regular"))
                 regular->color = color;
             String value = hex;
             swatch->onClick = [weakThis, value]()
@@ -171,7 +172,7 @@ namespace Editor
         mEraserToggle->SetValue(tool == "eraser");
         mRegionToggle->SetValue(tool == "roi");
 
-        if (auto regular = mColorButton->GetLayerDrawable<Sprite>("regular"))
+        if (auto regular = mColorButton->GetLayerDrawableBasedOn<IRectDrawable>("regular"))
             regular->color = GetBrushColor();
 
         mSizeSlider->Setup("Size", 1, 80, 1, GetBrushSize());

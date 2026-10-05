@@ -18,6 +18,7 @@
 
 #include <cstring>
 #include <thread>
+#include "o2/Render/VectorSprite.h"
 
 namespace Editor
 {
@@ -35,7 +36,7 @@ namespace Editor
     {
         layout->minHeight = height;
 
-        mPlayButton = PipelineControls::MakeIconButton("ui/pipeline/btn_play.png", PipelineControls::accentColor, Color4(0, 0, 0, 0));
+        mPlayButton = PipelineControls::MakeIconButton("ui/pipeline/btn_play.svg", PipelineControls::accentColor, Color4(0, 0, 0, 0));
         mPlayButton->name = "play";
         *mPlayButton->layout = WidgetLayout(Vec2F(0, 0), Vec2F(0, 1), Vec2F(0, 0), Vec2F(22, 0));
         mPlayButton->onClick = [this]() { if (onPlayPause) onPlayPause(); };
@@ -62,13 +63,13 @@ namespace Editor
         mLoopToggle = PipelineControls::MakeSegment("", false);
         mLoopToggle->name = "loop";
         *mLoopToggle->layout = WidgetLayout(Vec2F(1, 0), Vec2F(1, 1), Vec2F(-78, 1), Vec2F(-58, -1));
-        auto loopIcon = mmake<Sprite>("ui/pipeline/btn_loop.png");
+        auto loopIcon = mmake<VectorSprite>("ui/pipeline/btn_loop.svg");
         loopIcon->color = PipelineControls::textColor;
         mLoopToggle->AddLayer("icon", loopIcon, Layout::Based(BaseCorner::Center, Vec2F(14, 14)), 5.0f);
         mLoopToggle->onToggleByUser = [this](bool value) { if (onLoopChanged) onLoopChanged(value); };
         AddChild(mLoopToggle);
 
-        auto volumeIcon = mmake<Sprite>("ui/pipeline/btn_volume.png");
+        auto volumeIcon = mmake<VectorSprite>("ui/pipeline/btn_volume.svg");
         volumeIcon->color = PipelineControls::dimTextColor;
         mVolumeIcon = AddLayer("volume", volumeIcon, Layout(Vec2F(1, 0.5f), Vec2F(1, 0.5f), Vec2F(-54, -7), Vec2F(-40, 7)));
 
@@ -86,11 +87,8 @@ namespace Editor
     void PipelineMediaControls::SetPlaying(bool playing)
     {
         mPlaying = playing;
-        if (auto icon = mPlayButton->GetLayerDrawable<Sprite>("icon"))
-        {
-            icon->imageName = playing ? "ui/pipeline/btn_pause.png" : "ui/pipeline/btn_play.png";
+        if (auto icon = mPlayButton->SetLayerImage("icon", playing ? "ui/pipeline/btn_pause.svg" : "ui/pipeline/btn_play.svg"))
             icon->color = PipelineControls::accentColor;
-        }
     }
 
     void PipelineMediaControls::SetTime(float time, float duration)
@@ -147,7 +145,7 @@ namespace Editor
     {
         layout->minHeight = height;
 
-        AddLayer("back", mmake<Sprite>("ui/UI4_Editbox_regular.png"), Layout::BothStretch(-9, -9, -9, -9));
+        AddLayer("back", mmake<VectorSprite>("ui/UI4_Editbox_regular.svg"), Layout::BothStretch(-9, -9, -9, -9));
 
         mTitleLabel = PipelineControls::MakeLabel("", false);
         mTitleLabel->name = "title";
@@ -305,7 +303,7 @@ namespace Editor
     {
         layout->minHeight = 120;
 
-        mFrameLayer = AddLayer("frame", mmake<Sprite>("ui/UI4_Editbox_regular.png"), Layout::BothStretch(-9, -9, -9, -9), -1.0f);
+        mFrameLayer = AddLayer("frame", mmake<VectorSprite>("ui/UI4_Editbox_regular.svg"), Layout::BothStretch(-9, -9, -9, -9), -1.0f);
         mBackLayer = AddLayer("back", mmake<Sprite>(Color4(38, 46, 52, 255)),
                               Layout(Vec2F(0, 0), Vec2F(1, 1), Vec2F(1, PipelineMediaControls::height + 5), Vec2F(-1, -1)));
 

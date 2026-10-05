@@ -11,13 +11,14 @@
 #include "o2Editor/Actions/AddComponent.h"
 #include "o2Editor/Windows/PropertiesWindow/ActorsViewer/ActorViewer.h"
 #include "o2Editor/Windows/SceneWindow/SceneWindow.h"
+#include "o2/Render/VectorSprite.h"
 
 namespace Editor
 {
     AddComponentPanel::AddComponentPanel(RefCounter* refCounter, const Ref<ActorViewer>& viewer) :
         Widget(refCounter), mViewer(viewer)
     {
-        AddLayer("border", mmake<Sprite>("ui/UI4_shadow_separator.png"), Layout::HorStretch(VerAlign::Top, -2, -2, 5, -4));
+        AddLayer("border", mmake<VectorSprite>("ui/UI4_shadow_separator.svg"), Layout::HorStretch(VerAlign::Top, -2, -2, 5, -4));
 
         mFilterBox = o2UI.CreateEditBox("actor head name");
         mAddButton = o2UI.CreateWidget<Button>("add component");
@@ -304,7 +305,7 @@ namespace Editor
     {
         mName->text = data->name;
 
-        *mIcon = Sprite(data->icon);
+        mIcon = SetLayerImage("icon", data->icon);
         mIcon->enabled = data->type != nullptr;
         mIcon->color = Color4(44, 62, 80);
 
@@ -326,7 +327,7 @@ namespace Editor
     void ComponentsTreeNode::InitializeControls()
     {
         mName = GetLayerDrawable<Text>("name");
-        mIcon = GetLayerDrawable<Sprite>("icon");
+        mIcon = GetLayerDrawableBasedOn<IRectDrawable>("icon");
     }
 
     ComponentsTree::NodeData::~NodeData()

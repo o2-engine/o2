@@ -34,7 +34,7 @@ namespace o2
         static Vector<String> GetFileExtensions();
 
         // Returns editor icon for fragment shader asset
-        static String GetEditorIcon() { return "ui/UI4_big_fragment_shader_icon.png"; }
+        static String GetEditorIcon() { return "ui/UI4_big_fragment_shader_icon.svg"; }
 
         // Returns editor sorting weight
         static int GetEditorSorting() { return 91; }

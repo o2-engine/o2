@@ -8,6 +8,7 @@
 #include "o2/Scene/UI/Widgets/Spoiler.h"
 #include "o2/Utils/Editor/DragHandle.h"
 #include "o2/Utils/Editor/EditorScope.h"
+#include "o2/Render/VectorSprite.h"
 
 namespace Editor
 {
@@ -39,9 +40,9 @@ namespace Editor
 
 		// Create begin time range handle
 		mBeginTimeRangeHandle = mmake<DragHandle>();
-		mBeginTimeRangeHandle->SetRegularDrawable(mmake<Sprite>("ui/UI4_Right_icn.png"));
-		mBeginTimeRangeHandle->SetHoverDrawable(mmake<Sprite>("ui/UI4_Right_icn_select.png"));
-		mBeginTimeRangeHandle->SetPressedDrawable(mmake<Sprite>("ui/UI4_Right_icn_pressed.png"));
+		mBeginTimeRangeHandle->SetRegularDrawable(mmake<VectorSprite>("ui/UI4_Right_icn.svg"));
+		mBeginTimeRangeHandle->SetHoverDrawable(mmake<VectorSprite>("ui/UI4_Right_icn_select.svg"));
+		mBeginTimeRangeHandle->SetPressedDrawable(mmake<VectorSprite>("ui/UI4_Right_icn_pressed.svg"));
 		mBeginTimeRangeHandle->angle = -Math::PI() / 2.0f;
 
 		mBeginTimeRangeHandle->onChangedPos = [this](const Vec2F& pos) { 
@@ -61,9 +62,9 @@ namespace Editor
 
 		// Create end time range handle
 		mEndTimeRangeHandle = mmake<DragHandle>();
-		mEndTimeRangeHandle->SetRegularDrawable(mmake<Sprite>("ui/UI4_Right_icn.png"));
-		mEndTimeRangeHandle->SetHoverDrawable(mmake<Sprite>("ui/UI4_Right_icn_select.png"));
-		mEndTimeRangeHandle->SetPressedDrawable(mmake<Sprite>("ui/UI4_Right_icn_pressed.png"));
+		mEndTimeRangeHandle->SetRegularDrawable(mmake<VectorSprite>("ui/UI4_Right_icn.svg"));
+		mEndTimeRangeHandle->SetHoverDrawable(mmake<VectorSprite>("ui/UI4_Right_icn_select.svg"));
+		mEndTimeRangeHandle->SetPressedDrawable(mmake<VectorSprite>("ui/UI4_Right_icn_pressed.svg"));
 		mEndTimeRangeHandle->angle = -Math::PI() / 2.0f;
 
 		mEndTimeRangeHandle->onChangedPos = [this](const Vec2F& pos) { 
@@ -78,9 +79,9 @@ namespace Editor
 
 		// Create duration handle
 		mDurationHandle = mmake<DragHandle>();
-		mDurationHandle->SetRegularDrawable(mmake<Sprite>("ui/UI4_Right_icn.png"));
-		mDurationHandle->SetHoverDrawable(mmake<Sprite>("ui/UI4_Right_icn_select.png"));
-		mDurationHandle->SetPressedDrawable(mmake<Sprite>("ui/UI4_Right_icn_pressed.png"));
+		mDurationHandle->SetRegularDrawable(mmake<VectorSprite>("ui/UI4_Right_icn.svg"));
+		mDurationHandle->SetHoverDrawable(mmake<VectorSprite>("ui/UI4_Right_icn_select.svg"));
+		mDurationHandle->SetPressedDrawable(mmake<VectorSprite>("ui/UI4_Right_icn_pressed.svg"));
 		mDurationHandle->angle = Math::PI() / 2.0f;
 
 		mDurationHandle->onChangedPos = [this](const Vec2F& pos) { 

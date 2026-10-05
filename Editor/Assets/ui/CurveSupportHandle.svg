@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="6" height="6" viewBox="0 0 6 6">
+  <defs>
+    <radialGradient id="s" cx="3" cy="3" r="3.52" gradientUnits="userSpaceOnUse">
+      <stop offset="0.6" stop-color="#000000" stop-opacity="0.23"/>
+      <stop offset="0.81" stop-color="#000000" stop-opacity="0.066"/>
+      <stop offset="1" stop-color="#000000" stop-opacity="0.013"/>
+    </radialGradient>
+  </defs>
+  <rect width="6" height="6" fill="url(#s)"/>
+  <polygon points="2.22,1.03 3.78,1.03 4.97,2.22 4.97,3.78 3.78,4.97 2.22,4.97 1.03,3.78 1.03,2.22" fill="#f6f6f6"/>
+</svg>

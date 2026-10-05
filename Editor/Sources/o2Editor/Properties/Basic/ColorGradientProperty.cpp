@@ -6,6 +6,7 @@
 #include "o2Editor/Dialogs/CurveEditorDlg.h"
 #include "o2Editor/UI/CurvePreview.h"
 #include "o2Editor/Dialogs/ColorPickerDlg.h"
+#include "o2/Render/VectorSprite.h"
 
 namespace Editor
 {
@@ -77,12 +78,12 @@ namespace Editor
 
 	Ref<WidgetDragHandle> ColorGradientProperty::CreateHandle(HandleType type)
 	{
-		auto handle = mmake<WidgetDragHandle>(mmake<Sprite>("ui/UI4_map_key.png"),
-											  mmake<Sprite>("ui/UI4_map_key_hover.png"),
-											  mmake<Sprite>("ui/UI4_map_key_pressed.png"),
-											  mmake<Sprite>("ui/UI4_selected_map_key.png"),
-											  mmake<Sprite>("ui/UI4_selected_map_key_hover.png"),
-											  mmake<Sprite>("ui/UI4_selected_map_key_pressed.png"));
+		auto handle = mmake<WidgetDragHandle>(mmake<VectorSprite>("ui/UI4_map_key.svg"),
+											  mmake<VectorSprite>("ui/UI4_map_key_hover.svg"),
+											  mmake<VectorSprite>("ui/UI4_map_key_pressed.svg"),
+											  mmake<VectorSprite>("ui/UI4_selected_map_key.svg"),
+											  mmake<VectorSprite>("ui/UI4_selected_map_key_hover.svg"),
+											  mmake<VectorSprite>("ui/UI4_selected_map_key_pressed.svg"));
 
 		handle->cursorType = CursorType::SizeWE;
 		handle->pixelPerfect = true;

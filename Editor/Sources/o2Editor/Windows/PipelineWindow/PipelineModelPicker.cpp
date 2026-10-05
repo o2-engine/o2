@@ -19,6 +19,7 @@
 #include "o2/Utils/System/Time/Time.h"
 #include "o2Editor/Pipeline/PipelineUtils.h"
 #include "o2Editor/Windows/PipelineWindow/PipelineControls.h"
+#include "o2/Render/VectorSprite.h"
 
 namespace Editor
 {
@@ -61,7 +62,7 @@ namespace Editor
     {
         PushEditorScopeOnStack scope;
 
-        AddLayer("back", mmake<Sprite>("ui/UI4_Context_menu.png"), Layout::BothStretch(-20, -19, -20, -19));
+        AddLayer("back", mmake<VectorSprite>("ui/UI4_Context_menu.svg"), Layout::BothStretch(-20, -19, -20, -19));
         SetViewLayout(Layout::BothStretch(0, 0, 0, 0));
         SetClippingLayout(Layout::BothStretch(0, 0, 0, 0));
 
@@ -69,7 +70,7 @@ namespace Editor
 
         mSearchPanel = mmake<Widget>();
         mSearchPanel->name = "search panel";
-        mSearchPanel->AddLayer("icon", mmake<Sprite>("ui/UI4_search_regular.png"), Layout::Based(BaseCorner::Left, Vec2F(20, 20)));
+        mSearchPanel->AddLayer("icon", mmake<VectorSprite>("ui/UI4_search_regular.svg"), Layout::Based(BaseCorner::Left, Vec2F(20, 20)));
         *mSearchPanel->layout = WidgetLayout::HorStretch(VerAlign::Top, padding, padding, searchHeight, padding);
         AddChild(mSearchPanel);
 
@@ -95,7 +96,7 @@ namespace Editor
 
         mSeparator = mmake<Widget>();
         mSeparator->name = "separator";
-        mSeparator->AddLayer("line", mmake<Sprite>("ui/UI4_Separator.png"), Layout::HorStretch(VerAlign::Middle, 0, 0, 5, 0));
+        mSeparator->AddLayer("line", mmake<VectorSprite>("ui/UI4_Separator.svg"), Layout::HorStretch(VerAlign::Middle, 0, 0, 5, 0));
         AddChild(mSeparator);
 
         mList = mmake<ScrollArea>();
@@ -600,8 +601,8 @@ namespace Editor
     {
         auto row = mmake<Button>();
         row->name = model.id;
-        row->AddLayer("select", mmake<Sprite>("ui/UI4_Context_menu_select.png"), Layout::BothStretch(-10, -16, -10, -16))->transparency = 0.0f;
-        row->AddLayer("check", mmake<Sprite>("ui/UI4_Ckeck.png"), Layout::Based(BaseCorner::Left, Vec2F(20, 20)))->transparency =
+        row->AddLayer("select", mmake<VectorSprite>("ui/UI4_Context_menu_select.svg"), Layout::BothStretch(-10, -16, -10, -16))->transparency = 0.0f;
+        row->AddLayer("check", mmake<VectorSprite>("ui/UI4_Ckeck.svg"), Layout::Based(BaseCorner::Left, Vec2F(20, 20)))->transparency =
             model.id == mRequest.current ? 1.0f : 0.0f;
 
         // Fixed columns: the name, the transparency badge, the id; a text too long for its column ends with dots
@@ -667,7 +668,7 @@ namespace Editor
     {
         auto row = mmake<Button>();
         row->name = "custom id";
-        row->AddLayer("select", mmake<Sprite>("ui/UI4_Context_menu_select.png"), Layout::BothStretch(-10, -16, -10, -16))->transparency = 0.0f;
+        row->AddLayer("select", mmake<VectorSprite>("ui/UI4_Context_menu_select.svg"), Layout::BothStretch(-10, -16, -10, -16))->transparency = 0.0f;
         row->AddLayer("plus", MakeText("+", PipelineControls::accentColor, HorAlign::Middle, 13), Layout::Based(BaseCorner::Left, Vec2F(20, rowHeight)));
         row->AddLayer("name", MakeText("Use \"" + id + "\" as model id", PipelineControls::textColor, HorAlign::Left),
                       Layout::BothStretch(22, 0, 6, 0));
@@ -683,10 +684,10 @@ namespace Editor
             auto field = mmake<Button>();
             field->name = "model";
             field->layout->minSize = Vec2F(20, 20);
-            field->AddLayer("back", mmake<Sprite>("ui/UI4_Editbox_regular.png"), Layout::BothStretch(-9, -9, -9, -9));
-            field->AddLayer("hover", mmake<Sprite>("ui/UI4_Editbox_select.png"), Layout::BothStretch(-9, -9, -9, -9))->transparency = 0.0f;
-            field->AddLayer("pressed", mmake<Sprite>("ui/UI4_Editbox_pressed.png"), Layout::BothStretch(-9, -9, -9, -9))->transparency = 0.0f;
-            field->AddLayer("arrow", mmake<Sprite>("ui/UI4_Down_icn.png"), Layout(Vec2F(1.0f, 0.5f), Vec2F(1.0f, 0.5f), Vec2F(-20, -10), Vec2F(0, 10)));
+            field->AddLayer("back", mmake<VectorSprite>("ui/UI4_Editbox_regular.svg"), Layout::BothStretch(-9, -9, -9, -9));
+            field->AddLayer("hover", mmake<VectorSprite>("ui/UI4_Editbox_select.svg"), Layout::BothStretch(-9, -9, -9, -9))->transparency = 0.0f;
+            field->AddLayer("pressed", mmake<VectorSprite>("ui/UI4_Editbox_pressed.svg"), Layout::BothStretch(-9, -9, -9, -9))->transparency = 0.0f;
+            field->AddLayer("arrow", mmake<VectorSprite>("ui/UI4_Down_icn.svg"), Layout(Vec2F(1.0f, 0.5f), Vec2F(1.0f, 0.5f), Vec2F(-20, -10), Vec2F(0, 10)));
             field->AddLayer("caption", MakeText("", textColor, HorAlign::Left), Layout::BothStretch(6, 0, 20, 0));
             auto badge = MakeText("\xCE\xB1", accentColor, HorAlign::Middle, 12);
             badge->dotsEngings = false;

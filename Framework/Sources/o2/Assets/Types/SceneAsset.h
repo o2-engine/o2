@@ -33,7 +33,7 @@ namespace o2
         static int GetEditorSorting() { return 96; }
 
         // Returns editor icon
-        static String GetEditorIcon() { return "ui/UI4_big_scene_icon.png"; }
+        static String GetEditorIcon() { return "ui/UI4_big_scene_icon.svg"; }
 
         SERIALIZABLE(SceneAsset);
         CLONEABLE_REF(SceneAsset);

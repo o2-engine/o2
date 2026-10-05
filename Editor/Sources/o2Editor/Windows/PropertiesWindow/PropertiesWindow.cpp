@@ -10,6 +10,7 @@
 #include "o2Editor/Windows/PropertiesWindow/IPropertiesViewer.h"
 #include "o2Editor/Windows/SceneWindow/SceneWindow.h"
 #include "o2Editor/Windows/TreeWindow/TreeWindow.h"
+#include "o2/Render/VectorSprite.h"
 
 DECLARE_SINGLETON(Editor::PropertiesWindow);
 
@@ -37,7 +38,7 @@ namespace Editor
     {
         mWindow->caption = "Properties";
         mWindow->name = "properties window";
-        mWindow->SetIcon(mmake<Sprite>("ui/UI4_gear_icon.png"));
+        mWindow->SetIcon(mmake<VectorSprite>("ui/UI4_gear_icon.svg"));
         mWindow->SetIconLayout(Layout::Based(BaseCorner::LeftTop, Vec2F(20, 20), Vec2F(-1, 2)));
         mWindow->SetViewLayout(Layout::BothStretch(-2, 0, 0, 18));
         mWindow->SetClippingLayout(Layout::BothStretch(-1, -2, 0, 15));

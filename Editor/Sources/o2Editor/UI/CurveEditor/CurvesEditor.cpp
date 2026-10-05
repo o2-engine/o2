@@ -22,6 +22,7 @@
 #include "o2Editor/Dialogs/KeyEditDlg.h"
 #include "o2Editor/UI/CurveEditor/CurveActions.h"
 #include "o2Editor/UIRoot.h"
+#include "o2/Render/VectorSprite.h"
 
 namespace Editor
 {
@@ -30,7 +31,7 @@ namespace Editor
     {
         mReady = false;
 
-        mSelectionSprite = mmake<Sprite>();
+        mSelectionSprite = mmake<VectorSprite>();
         mTextFont = AssetRef<VectorFontAsset>("stdFont.ttf")->GetFont();
         mTextFont->CheckCharacters("0123456789.,+-", 10);
 
@@ -57,7 +58,7 @@ namespace Editor
     }
 
     CurvesEditor::CurvesEditor(RefCounter* refCounter, const CurvesEditor& other):
-        FrameScrollView(refCounter, other), SelectableDragHandlesGroup(refCounter), mSelectionSprite(other.mSelectionSprite->CloneAs<Sprite>()), mTextFont(other.mTextFont)
+        FrameScrollView(refCounter, other), SelectableDragHandlesGroup(refCounter), mSelectionSprite(other.mSelectionSprite->CloneAsRef<VectorSprite>()), mTextFont(other.mTextFont)
     {
         mReady = false;
 
@@ -82,7 +83,7 @@ namespace Editor
 
         mReady = false;
 
-        mSelectionSprite = other.mSelectionSprite->CloneAsRef<Sprite>();
+        mSelectionSprite = other.mSelectionSprite->CloneAsRef<VectorSprite>();
         mTextFont = other.mTextFont;
 
         mMainHandleSample = other.mMainHandleSample;
@@ -234,7 +235,7 @@ namespace Editor
         return DynamicCast<FrameScrollView>(ref);
     }
 
-    void CurvesEditor::SetSelectionSpriteImage(const AssetRef<ImageAsset>& image)
+    void CurvesEditor::SetSelectionSpriteImage(const AssetRef<VectorImageAsset>& image)
     {
         mSelectionSprite->LoadFromImage(image);
     }
@@ -253,28 +254,28 @@ namespace Editor
         mTextBorder = border;
     }
 
-    void CurvesEditor::SetMainHandleImages(const AssetRef<ImageAsset>& regular, const AssetRef<ImageAsset>& hover,
-                                           const AssetRef<ImageAsset>& pressed, const AssetRef<ImageAsset>& selected)
+    void CurvesEditor::SetMainHandleImages(const AssetRef<VectorImageAsset>& regular, const AssetRef<VectorImageAsset>& hover,
+                                           const AssetRef<VectorImageAsset>& pressed, const AssetRef<VectorImageAsset>& selected)
     {
         mMainHandleSample.curveInfo = mHandleSamplesStubInfo;
-        mMainHandleSample = CurveHandle(mmake<Sprite>(regular), mmake<Sprite>(hover),
-                                        mmake<Sprite>(pressed), mmake<Sprite>(selected));
+        mMainHandleSample = CurveHandle(mmake<VectorSprite>(regular), mmake<VectorSprite>(hover),
+                                        mmake<VectorSprite>(pressed), mmake<VectorSprite>(selected));
     }
 
-    void CurvesEditor::SetSupportHandleImages(const AssetRef<ImageAsset>& regular, const AssetRef<ImageAsset>& hover, 
-                                              const AssetRef<ImageAsset>& pressed, const AssetRef<ImageAsset>& selected)
+    void CurvesEditor::SetSupportHandleImages(const AssetRef<VectorImageAsset>& regular, const AssetRef<VectorImageAsset>& hover, 
+                                              const AssetRef<VectorImageAsset>& pressed, const AssetRef<VectorImageAsset>& selected)
     {
         mSupportHandleSample.curveInfo = mHandleSamplesStubInfo;
-        mSupportHandleSample = CurveHandle(mmake<Sprite>(regular), mmake<Sprite>(hover),
-                                           mmake<Sprite>(pressed), mmake<Sprite>(selected));
+        mSupportHandleSample = CurveHandle(mmake<VectorSprite>(regular), mmake<VectorSprite>(hover),
+                                           mmake<VectorSprite>(pressed), mmake<VectorSprite>(selected));
     }
 
-    void CurvesEditor::SetRangeHandleImages(const AssetRef<ImageAsset>& regular, const AssetRef<ImageAsset>& hover, 
-                                            const AssetRef<ImageAsset>& pressed, const AssetRef<ImageAsset>& selected)
+    void CurvesEditor::SetRangeHandleImages(const AssetRef<VectorImageAsset>& regular, const AssetRef<VectorImageAsset>& hover, 
+                                            const AssetRef<VectorImageAsset>& pressed, const AssetRef<VectorImageAsset>& selected)
     {
         mRangeHandleSample.curveInfo = mHandleSamplesStubInfo;
-        mRangeHandleSample = CurveHandle(mmake<Sprite>(regular), mmake<Sprite>(hover),
-                                         mmake<Sprite>(pressed), mmake<Sprite>(selected));
+        mRangeHandleSample = CurveHandle(mmake<VectorSprite>(regular), mmake<VectorSprite>(hover),
+                                         mmake<VectorSprite>(pressed), mmake<VectorSprite>(selected));
     }
 
     void CurvesEditor::SetAdjustCurvesScale(bool enable)
@@ -2288,12 +2289,12 @@ namespace Editor
     CurvesEditor::CurveHandle::CurveHandle()
     { }
 
-    CurvesEditor::CurveHandle::CurveHandle(const Ref<Sprite>& regular, 
-                                           const Ref<Sprite>& hover /*= nullptr*/, 
-                                           const Ref<Sprite>& pressed /*= nullptr*/, 
-                                           const Ref<Sprite>& selected /*= nullptr*/, 
-                                           const Ref<Sprite>& selectedHovered /*= nullptr*/, 
-                                           const Ref<Sprite>& selectedPressed /*= nullptr*/):
+    CurvesEditor::CurveHandle::CurveHandle(const Ref<IRectDrawable>& regular, 
+                                           const Ref<IRectDrawable>& hover /*= nullptr*/, 
+                                           const Ref<IRectDrawable>& pressed /*= nullptr*/, 
+                                           const Ref<IRectDrawable>& selected /*= nullptr*/, 
+                                           const Ref<IRectDrawable>& selectedHovered /*= nullptr*/, 
+                                           const Ref<IRectDrawable>& selectedPressed /*= nullptr*/):
         DragHandle(regular, hover, pressed, selected, selectedHovered, selectedPressed)
     { }
 

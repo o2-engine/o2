@@ -101,7 +101,7 @@ namespace o2
 
     String FlightTrajectoryComponent::GetIcon()
     {
-        return "ui/UI4_trajectory_component.png";
+        return "ui/UI4_trajectory_component.svg";
     }
 
     void FlightTrajectoryComponent::UpdateBasis()

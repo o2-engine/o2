@@ -1,0 +1,13 @@
+{
+    "Type": "o2::VectorImageAsset::Meta",
+    "Value": {
+        "mId": "7f3ac09c0055e9b64fa2023f4e6bebc3",
+        "sliceBorder": {
+            "left": 7,
+            "bottom": 9,
+            "right": 8,
+            "top": 7
+        },
+        "defaultMode": "Sliced"
+    }
+}

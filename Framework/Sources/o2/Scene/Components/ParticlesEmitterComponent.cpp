@@ -51,7 +51,7 @@ namespace o2
 
     String ParticlesEmitterComponent::GetIcon()
     {
-        return "ui/UI4_emitter_component.png";
+        return "ui/UI4_emitter_component.svg";
     }
 
     Ref<o2::RefCounterable> ParticlesEmitterComponent::CastToRefCounterable(const Ref<ParticlesEmitterComponent>& ref)

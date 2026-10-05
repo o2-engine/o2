@@ -428,7 +428,7 @@ namespace o2
 
     String AnimationStateGraphComponent::GetIcon()
     {
-        return "ui/UI4_graph_component.png";
+        return "ui/UI4_graph_component.svg";
     }
 
     DECLARE_TEMPLATE_CLASS(LinkRef<AnimationStateGraphComponent>);

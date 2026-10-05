@@ -149,15 +149,15 @@ namespace Editor
         Ref<Font> mTextFont; // Captions font
         Ref<Text> mText;     // Captions text
 
-        Ref<Sprite> mBeginMark; // Begin animation mark sprite. Begin is always at zero
-        Ref<Sprite> mEndMark;   // End animation mark sprite, at duration
+        Ref<IRectDrawable> mBeginMark; // Begin animation mark drawable. Begin is always at zero
+        Ref<IRectDrawable> mEndMark;   // End animation mark drawable, at duration
 
         Layout mBeginMarkLayout = Layout(Vec2F(0, 1), Vec2F(0, 1), Vec2F(-6.0f, 3.0f), Vec2F(6.0f, -21.0f));
         Layout mEndMarkLayout = Layout(Vec2F(0, 1), Vec2F(1, 1), Vec2F(-4.0f, 3.0f), Vec2F(6.0f, -21.0f));
 
         Ref<HorizontalScrollBar> mScrollBar; // Scroll bar. Limited by animation duration
 
-        Ref<Sprite>           mTimeLine;           // Red time line
+        Ref<IRectDrawable>    mTimeLine;           // Red time line
         Ref<CursorEventsArea> mTimeLineEventsArea; // Top area events listeners, used for moving red line of time
 
     private:

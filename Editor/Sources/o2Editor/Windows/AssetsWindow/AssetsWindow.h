@@ -104,7 +104,7 @@ namespace Editor
         void DeleteAssets(const Vector<String>& assetsPaths);
 
         // Creates and returns an icon sprite for the asset
-        static Ref<Sprite> GetAssetIconSprite(const AssetRef<Asset>& asset);
+        static Ref<IRectDrawable> GetAssetIconSprite(const AssetRef<Asset>& asset);
 
         // Dynamic cast to RefCounterable via Singleton<AssetsWindow>
         static Ref<RefCounterable> CastToRefCounterable(const Ref<AssetsWindow>& ref);
@@ -225,7 +225,7 @@ CLASS_METHODS_META(Editor::AssetsWindow)
     FUNCTION().PUBLIC().SIGNATURE(void, CutAssets, const Vector<String>&);
     FUNCTION().PUBLIC().SIGNATURE(void, PasteAssets, const String&);
     FUNCTION().PUBLIC().SIGNATURE(void, DeleteAssets, const Vector<String>&);
-    FUNCTION().PUBLIC().SIGNATURE_STATIC(Ref<Sprite>, GetAssetIconSprite, const AssetRef<Asset>&);
+    FUNCTION().PUBLIC().SIGNATURE_STATIC(Ref<IRectDrawable>, GetAssetIconSprite, const AssetRef<Asset>&);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(Ref<RefCounterable>, CastToRefCounterable, const Ref<AssetsWindow>&);
     FUNCTION().PROTECTED().SIGNATURE(void, InitializeWindow);
     FUNCTION().PROTECTED().SIGNATURE(void, InitializeFoldersTreeSeparator);

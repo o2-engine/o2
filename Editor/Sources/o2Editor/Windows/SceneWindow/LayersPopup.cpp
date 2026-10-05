@@ -16,6 +16,7 @@
 #include "o2Editor/Actions/LayerReorder.h"
 #include "o2Editor/Actions/LayerVisibility.h"
 #include "o2Editor/Windows/SceneWindow/SceneWindow.h"
+#include "o2/Render/VectorSprite.h"
 
 namespace Editor
 {
@@ -65,14 +66,14 @@ namespace Editor
 
     void LayersPopup::InitializeControls()
     {
-        AddLayer("back", mmake<Sprite>("ui/UI4_Context_menu.png"), Layout::BothStretch(-20, -19, -20, -19));
+        AddLayer("back", mmake<VectorSprite>("ui/UI4_Context_menu.svg"), Layout::BothStretch(-20, -19, -20, -19));
 
         mItemSample = mmake<LayerPopupItem>();
 
         mAddButtonLayout = mmake<HorizontalLayout>();
         *mAddButtonLayout->layout = WidgetLayout::HorStretch(VerAlign::Bottom, 0, 0, 20);
         mAddButtonLayout->layout->minHeight = 20;
-        mAddButtonLayout->AddLayer("line", mmake<Sprite>("ui/UI4_Separator.png"),
+        mAddButtonLayout->AddLayer("line", mmake<VectorSprite>("ui/UI4_Separator.svg"),
                                    Layout::HorStretch(VerAlign::Top, 0, 0, 5, -2));
         mAddButtonLayout->AddChild(mmake<Widget>());
 
@@ -259,7 +260,7 @@ namespace Editor
         Widget(refCounter)
     {
         layout->minSize = Vec2F(200, 20);
-        AddLayer("drag handle", mmake<Sprite>("ui/UI4_drag_handle.png"), Layout::Based(BaseCorner::Left, Vec2F(20, 20), Vec2F(0, 0)));
+        AddLayer("drag handle", mmake<VectorSprite>("ui/UI4_drag_handle.svg"), Layout::Based(BaseCorner::Left, Vec2F(20, 20), Vec2F(0, 0)));
 
         mVisibleToggle = o2UI.CreateWidget<Toggle>();
         *mVisibleToggle->layout = WidgetLayout::Based(BaseCorner::Left, Vec2F(20, 20), Vec2F(20, 0));
