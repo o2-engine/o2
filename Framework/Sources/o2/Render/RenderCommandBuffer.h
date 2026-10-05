@@ -53,6 +53,14 @@ namespace o2
         bool                clearOnly = false;      // Pass carries only the clear, no geometry (deferred clear
                                                     // materialized before a render target switch)
 
+        Vector<UInt64>      retainedGeometries;     // Versions of the retained geometries the vertex and index data
+                                                    // are built from, in the batch order; empty for copied data
+        size_t              retainedMaterialHash = 0; // Hash of the material the geometries were laid out for
+        UInt64              retainedDataId = 0;     // Identifier of the data built from retained geometries: a new
+                                                    // one for every rebuilt data, 0 for copied data
+        bool                retainedDataReused = false; // The data is left from the previous frame: the platform may
+                                                    // keep its copy on GPU instead of uploading it again
+
         // Drops the held asset references, keeping the geometry storage for the next frame
         void ReleaseReferences()
         {
@@ -85,6 +93,9 @@ namespace o2
 
         // Returns the recorded command by index
         const RenderDrawCommand& Get(int idx) const { return mCommands[idx]; }
+
+        // Returns the pooled command the next Emplace returns, with what it has recorded before; null when none
+        RenderDrawCommand* PeekNext() { return mCount < mCommands.Count() ? &mCommands[mCount] : nullptr; }
 
         // Returns number of recorded commands
         int Count() const { return mCount; }

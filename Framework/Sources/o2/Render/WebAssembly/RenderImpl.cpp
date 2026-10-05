@@ -2,6 +2,7 @@
 
 #ifdef PLATFORM_WASM
 #include "o2/Render/Render.h"
+#include "o2/Render/RetainedBatchesGL.h"
 
 #include "o2/Application/Application.h"
 #include "o2/Application/Input.h"
@@ -24,6 +25,8 @@
 
 namespace o2
 {
+    static RetainedBatchesGL gRetainedBatches;
+
     namespace
     {
         EMSCRIPTEN_WEBGL_CONTEXT_HANDLE gWebGLContext = 0;
@@ -102,6 +105,8 @@ namespace o2
 
     void Render::DeinitializePlatform()
     {
+        gRetainedBatches.ReleaseUnused(true);
+
         if (gWebGLContext > 0)
         {
             emscripten_webgl_destroy_context(gWebGLContext);
@@ -216,7 +221,26 @@ namespace o2
 
     void Render::PlatformBegin()
     {
+        gRetainedBatches.ReleaseUnused(false);
         PlatformBindNextPoolBuffers();
+    }
+
+    bool Render::PlatformHasRetainedBatch(UInt64 dataId) const
+    {
+        return gRetainedBatches.Has(dataId);
+    }
+
+    void Render::PlatformRetainBatch(UInt64 dataId)
+    {
+        // The batch was drawn just now: drawing has made its indexes relative to its own store
+        gRetainedBatches.Create(dataId, mVertexData, mLastDrawVertex*mCurrentBatchVertexType.GetStride(), mVertexIndexData,
+                                mLastDrawIdx, 0);
+
+        glBindBuffer(GL_ARRAY_BUFFER, mVertexBuffersPool[mCurrentBufferIdx]);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mIndexBuffersPool[mCurrentBufferIdx]);
+        GL_CHECK_ERROR();
+
+        mBoundAttributesVertexType = VertexType();
     }
 
     void Render::PlatformDrawPrimitives()
@@ -225,6 +249,11 @@ namespace o2
 
         if (mRenderTargetAttachmentsDirty)
             PlatformSyncRenderTargetAttachments();
+
+        // The attributes are pointed to the buffers of the batch copy, and back to the pool ones at the next batch
+        bool retained = mRetainedDrawDataId != 0 && gRetainedBatches.Bind(mRetainedDrawDataId);
+        if (retained)
+            mBoundAttributesVertexType = VertexType();
 
         if (mCurrentBatchVertexType != mBoundAttributesVertexType)
         {
@@ -259,13 +288,16 @@ namespace o2
         // Orphaned per-batch stores: glBufferSubData into a buffer with pending draws forces
         // a sync copy in ANGLE/Metal per call, collapsing FPS. Fresh stores avoid it; indexes
         // come from the batcher pool-buffer-absolute, rebase them to this store
-        for (UInt i = 0; i < mLastDrawIdx; i++)
-            mVertexIndexData[i] -= mVertexBufferIdx;
+        if (!retained)
+        {
+            for (UInt i = 0; i < mLastDrawIdx; i++)
+                mVertexIndexData[i] -= mVertexBufferIdx;
 
-        glBufferData(GL_ARRAY_BUFFER, mLastDrawVertex * stride, mVertexData, GL_STREAM_DRAW);
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER, mLastDrawIdx * sizeof(VertexIndex),
-                     mVertexIndexData, GL_STREAM_DRAW);
-        GL_CHECK_ERROR();
+            glBufferData(GL_ARRAY_BUFFER, mLastDrawVertex * stride, mVertexData, GL_STREAM_DRAW);
+            glBufferData(GL_ELEMENT_ARRAY_BUFFER, mLastDrawIdx * sizeof(VertexIndex),
+                         mVertexIndexData, GL_STREAM_DRAW);
+            GL_CHECK_ERROR();
+        }
 
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, mCurrentDrawTexture ? mCurrentDrawTexture->mHandle : mWhiteTexture->mHandle);
@@ -275,6 +307,14 @@ namespace o2
         glDrawElements(primitiveType[(int)mCurrentPrimitiveType], mLastDrawIdx,
                        GL_UNSIGNED_INT, (void*)0);
         GL_CHECK_ERROR();
+
+        if (retained)
+        {
+            glBindBuffer(GL_ARRAY_BUFFER, mVertexBuffersPool[mCurrentBufferIdx]);
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mIndexBuffersPool[mCurrentBufferIdx]);
+            mBoundAttributesVertexType = VertexType();
+            return;
+        }
 
         mVertexBufferIdx += mLastDrawVertex;
         mIndexBufferIdx += mLastDrawIdx;

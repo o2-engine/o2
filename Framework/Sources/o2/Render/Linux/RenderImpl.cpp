@@ -2,6 +2,7 @@
 
 #if defined(PLATFORM_LINUX) && !defined(O2_RENDER_GLES2)
 #include "o2/Render/Render.h"
+#include "o2/Render/RetainedBatchesGL.h"
 
 #include "o2/Application/Application.h"
 #include "o2/Application/Input.h"
@@ -21,6 +22,8 @@
 
 namespace o2
 {
+    static RetainedBatchesGL gRetainedBatches;
+
     void Render::InitializePlatform()
     {
         mLog->Out("Initializing OpenGL render..");
@@ -67,6 +70,8 @@ namespace o2
 
     void Render::DeinitializePlatform()
     {
+        gRetainedBatches.ReleaseUnused(true);
+
         if (mGLContext && o2Application.mDisplay)
         {
             glXMakeCurrent(o2Application.mDisplay, 0, NULL);
@@ -115,6 +120,36 @@ namespace o2
         }
     }
 
+    // Points the batch attributes to the vertex buffer that is bound now
+    static void BindBufferAttributes(const VertexType& vertexType, GLint position, GLint color, GLint uv, GLint normal)
+    {
+        size_t stride = vertexType.GetStride();
+        if (stride == 0) stride = sizeof(Vertex);
+
+        glVertexAttribPointer((GLuint)position, 3, GL_FLOAT, GL_FALSE, (GLsizei)stride,
+                              (void*)vertexType.GetParamOffset(VertexParam::Position));
+        glEnableVertexAttribArray((GLuint)position);
+        GL_CHECK_ERROR();
+
+        glVertexAttribPointer((GLuint)color, 4, GL_UNSIGNED_BYTE, GL_TRUE, (GLsizei)stride,
+                              (void*)vertexType.GetParamOffset(VertexParam::Color));
+        glEnableVertexAttribArray((GLuint)color);
+        GL_CHECK_ERROR();
+
+        glVertexAttribPointer((GLuint)uv, 2, GL_FLOAT, GL_FALSE, (GLsizei)stride,
+                              (void*)vertexType.GetParamOffset(VertexParam::TexCoord0));
+        glEnableVertexAttribArray((GLuint)uv);
+        GL_CHECK_ERROR();
+
+        if (normal >= 0 && vertexType.HasParam(VertexParam::Normal))
+        {
+            glVertexAttribPointer((GLuint)normal, 3, GL_FLOAT, GL_FALSE, (GLsizei)stride,
+                                  (void*)vertexType.GetParamOffset(VertexParam::Normal));
+            glEnableVertexAttribArray((GLuint)normal);
+            GL_CHECK_ERROR();
+        }
+    }
+
     void Render::PlatformBindNextPoolBuffers()
     {
         mCurrentBufferIdx++;
@@ -125,31 +160,8 @@ namespace o2
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mIndexBuffersPool[mCurrentBufferIdx]);
         GL_CHECK_ERROR();
 
-        size_t stride = mCurrentBatchVertexType.GetStride();
-        if (stride == 0) stride = sizeof(Vertex);
-
-        glVertexAttribPointer((GLuint)mActivePosAttribute, 3, GL_FLOAT, GL_FALSE, (GLsizei)stride,
-                              (void*)mCurrentBatchVertexType.GetParamOffset(VertexParam::Position));
-        glEnableVertexAttribArray((GLuint)mActivePosAttribute);
-        GL_CHECK_ERROR();
-
-        glVertexAttribPointer((GLuint)mActiveColorAttribute, 4, GL_UNSIGNED_BYTE, GL_TRUE, (GLsizei)stride,
-                              (void*)mCurrentBatchVertexType.GetParamOffset(VertexParam::Color));
-        glEnableVertexAttribArray((GLuint)mActiveColorAttribute);
-        GL_CHECK_ERROR();
-
-        glVertexAttribPointer((GLuint)mActiveUVAttribute, 2, GL_FLOAT, GL_FALSE, (GLsizei)stride,
-                              (void*)mCurrentBatchVertexType.GetParamOffset(VertexParam::TexCoord0));
-        glEnableVertexAttribArray((GLuint)mActiveUVAttribute);
-        GL_CHECK_ERROR();
-
-        if (mActiveNormalAttribute >= 0 && mCurrentBatchVertexType.HasParam(VertexParam::Normal))
-        {
-            glVertexAttribPointer((GLuint)mActiveNormalAttribute, 3, GL_FLOAT, GL_FALSE, (GLsizei)stride,
-                                  (void*)mCurrentBatchVertexType.GetParamOffset(VertexParam::Normal));
-            glEnableVertexAttribArray((GLuint)mActiveNormalAttribute);
-            GL_CHECK_ERROR();
-        }
+        BindBufferAttributes(mCurrentBatchVertexType, mActivePosAttribute, mActiveColorAttribute, mActiveUVAttribute,
+                             mActiveNormalAttribute);
 
         mVertexBufferIdx = 0;
         mIndexBufferIdx = 0;
@@ -157,12 +169,48 @@ namespace o2
 
     void Render::PlatformBegin()
     {
+        gRetainedBatches.ReleaseUnused(false);
         PlatformBindNextPoolBuffers();
+    }
+
+    bool Render::PlatformHasRetainedBatch(UInt64 dataId) const
+    {
+        return gRetainedBatches.Has(dataId);
+    }
+
+    void Render::PlatformRetainBatch(UInt64 dataId)
+    {
+        // The batch was drawn just now: its vertices start where the pool buffer offset was before it
+        gRetainedBatches.Create(dataId, mVertexData, mLastDrawVertex*mCurrentBatchVertexType.GetStride(), mVertexIndexData,
+                                mLastDrawIdx, (VertexIndex)(mVertexBufferIdx - mLastDrawVertex));
+
+        glBindBuffer(GL_ARRAY_BUFFER, mVertexBuffersPool[mCurrentBufferIdx]);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mIndexBuffersPool[mCurrentBufferIdx]);
+        GL_CHECK_ERROR();
     }
 
     void Render::PlatformDrawPrimitives()
     {
         static const GLenum primitiveType[3]{ GL_TRIANGLES, GL_TRIANGLES, GL_LINES };
+
+        if (mRetainedDrawDataId != 0 && gRetainedBatches.Bind(mRetainedDrawDataId))
+        {
+            BindBufferAttributes(mCurrentBatchVertexType, mActivePosAttribute, mActiveColorAttribute, mActiveUVAttribute,
+                                 mActiveNormalAttribute);
+
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, mCurrentDrawTexture ? mCurrentDrawTexture->mHandle : mWhiteTexture->mHandle);
+            glUniform1i(mActiveTextureSample, 0);
+
+            glDrawElements(primitiveType[(int)mCurrentPrimitiveType], mLastDrawIdx, GL_UNSIGNED_INT, (void*)0);
+            GL_CHECK_ERROR();
+
+            glBindBuffer(GL_ARRAY_BUFFER, mVertexBuffersPool[mCurrentBufferIdx]);
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mIndexBuffersPool[mCurrentBufferIdx]);
+            BindBufferAttributes(mCurrentBatchVertexType, mActivePosAttribute, mActiveColorAttribute, mActiveUVAttribute,
+                                 mActiveNormalAttribute);
+            return;
+        }
 
         size_t stride = mCurrentBatchVertexType.GetStride();
 

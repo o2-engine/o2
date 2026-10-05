@@ -42,6 +42,11 @@ if(NOT EXISTS "${_o2_tests_file}"
                 string(APPEND _o2_script
                     "set_tests_properties([=[${_o2_name}]=] PROPERTIES DISABLED TRUE)\n")
             endif()
+            # Timing suites measure fractions of a millisecond: neighbours running in parallel skew them
+            if(_o2_suite MATCHES "Perf$")
+                string(APPEND _o2_script
+                    "set_tests_properties([=[${_o2_name}]=] PROPERTIES RUN_SERIAL TRUE)\n")
+            endif()
         endif()
     endforeach()
 

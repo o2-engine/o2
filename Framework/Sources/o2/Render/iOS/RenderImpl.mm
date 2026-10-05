@@ -2,6 +2,7 @@
 
 #ifdef PLATFORM_IOS
 #include <simd/matrix.h>
+#include <unordered_map>
 
 #include "o2/Application/Application.h"
 #include "o2/Application/iOS/ApplicationPlatformWrapper.h"
@@ -134,6 +135,40 @@ namespace o2
         [buffer release];
     }
 
+    // GPU copies of the batches of retained geometries that came from the previous frame unchanged: such a batch
+    // is uploaded once, not every frame. Used by the render thread only
+    struct RetainedBatchBuffers
+    {
+        id<MTLBuffer> vertexBuffer = nil;
+        id<MTLBuffer> indexBuffer = nil;
+        UInt64        usedFrame = 0;
+        int           reusedFrames = 0;
+    };
+
+    // Frames a batch comes unchanged before it gets the GPU copy: creating a buffer costs more than copying the batch
+    static const int retainedBatchStableFrames = 4;
+
+    static std::unordered_map<UInt64, RetainedBatchBuffers> gRetainedBatches;
+    static UInt64 gRetainedBatchesFrame = 0;
+
+    // Releases the copies the last frame has not drawn; the frames in flight keep theirs till the GPU is done
+    static void ReleaseUnusedRetainedBatches(bool all)
+    {
+        for (auto it = gRetainedBatches.begin(); it != gRetainedBatches.end();)
+        {
+            if (all || it->second.usedFrame != gRetainedBatchesFrame)
+            {
+                [it->second.vertexBuffer release];
+                [it->second.indexBuffer release];
+                it = gRetainedBatches.erase(it);
+            }
+            else
+                ++it;
+        }
+
+        gRetainedBatchesFrame++;
+    }
+
     // Per-frame autorelease pools: the frame allocates autoreleased Metal objects (command
     // buffer, encoders, drawables), and the render thread has no pool of its own — without
     // draining one per frame every command buffer stays retained forever
@@ -168,6 +203,8 @@ namespace o2
 
     void Render::DeinitializePlatform()
     {
+        ReleaseUnusedRetainedBatches(true);
+
         delete[] mVertexData;
         delete[] mVertexIndexData;
         mVertexData = nullptr;
@@ -269,6 +306,15 @@ namespace o2
         for (int i = 0; i < 3; i++)
             RenderDevice::encoderExtraTextures[i] = nil;
     }
+
+    // GPU copies of batches are kept by the render thread, see PlatformReplayDrawCommand
+    bool Render::PlatformHasRetainedBatch(UInt64 dataId) const
+    {
+        return false;
+    }
+
+    void Render::PlatformRetainBatch(UInt64 dataId)
+    {}
 
     void Render::PlatformDrawPrimitives()
     {
@@ -554,6 +600,8 @@ namespace o2
         RenderDevice::currentBufferIndex = (RenderDevice::currentBufferIndex + 1) % 2;
         RenderDevice::vertexBuffer = RenderDevice::vertexBuffers[RenderDevice::currentBufferIndex];
         RenderDevice::indexBuffer = RenderDevice::indexBuffers[RenderDevice::currentBufferIndex];
+
+        ReleaseUnusedRetainedBatches(false);
         [RenderDevice::retiredBuffers[RenderDevice::currentBufferIndex] removeAllObjects];
 
         RenderDevice::commandBuffer = [RenderDevice::commandQueue commandBuffer];
@@ -585,6 +633,9 @@ namespace o2
         const Ref<Material>& material = command.material;
         if (!command.clearOnly && (!material || !material->mImpl || !material->mImpl->pipelineState))
             return;
+
+        id<MTLBuffer> retainedVertexBuffer = nil;
+        id<MTLBuffer> retainedIndexBuffer = nil;
 
         MTLRenderPassDescriptor* renderPassDescriptor = RenderDevice::threadRenderPassDescriptor;
         if (renderPassDescriptor != nil)
@@ -685,8 +736,27 @@ namespace o2
             NSUInteger vertexDataSize = (NSUInteger)command.vertexCount * command.vertexStride;
             NSUInteger indexDataSize = (NSUInteger)command.indexCount * sizeof(VertexIndex);
 
-            if (mVertexBufferOffset + vertexDataSize > [RenderDevice::vertexBuffer length] ||
-                mIndexBufferOffset + indexDataSize > [RenderDevice::indexBuffer length])
+            if (command.retainedDataReused && command.retainedDataId != 0 && vertexDataSize > 0 && indexDataSize > 0)
+            {
+                RetainedBatchBuffers& buffers = gRetainedBatches[command.retainedDataId];
+                if (!buffers.vertexBuffer && ++buffers.reusedFrames >= retainedBatchStableFrames)
+                {
+                    buffers.vertexBuffer = [RenderDevice::device newBufferWithBytes:command.vertexData.data()
+                                                                             length:vertexDataSize
+                                                                            options:MTLResourceStorageModeShared];
+                    buffers.indexBuffer = [RenderDevice::device newBufferWithBytes:command.indexData.data()
+                                                                            length:indexDataSize
+                                                                           options:MTLResourceStorageModeShared];
+                }
+
+                buffers.usedFrame = gRetainedBatchesFrame;
+                retainedVertexBuffer = buffers.vertexBuffer;
+                retainedIndexBuffer = buffers.indexBuffer;
+            }
+
+            if (!retainedVertexBuffer &&
+                (mVertexBufferOffset + vertexDataSize > [RenderDevice::vertexBuffer length] ||
+                 mIndexBufferOffset + indexDataSize > [RenderDevice::indexBuffer length]))
             {
                 int frameIndex = RenderDevice::currentBufferIndex;
                 RetireOverflowBuffer(RenderDevice::vertexBuffer, RenderDevice::vertexBuffers[frameIndex], frameIndex);
@@ -701,8 +771,11 @@ namespace o2
                 mIndexBufferOffset = 0;
             }
 
-            memcpy((Byte*)[RenderDevice::vertexBuffer contents] + mVertexBufferOffset, command.vertexData.data(), vertexDataSize);
-            memcpy((Byte*)[RenderDevice::indexBuffer contents] + mIndexBufferOffset, command.indexData.data(), indexDataSize);
+            if (!retainedVertexBuffer)
+            {
+                memcpy((Byte*)[RenderDevice::vertexBuffer contents] + mVertexBufferOffset, command.vertexData.data(), vertexDataSize);
+                memcpy((Byte*)[RenderDevice::indexBuffer contents] + mIndexBufferOffset, command.indexData.data(), indexDataSize);
+            }
 
             id<MTLRenderCommandEncoder> renderEncoder = RenderDevice::threadEncoder;
 
@@ -744,7 +817,10 @@ namespace o2
                 depthState = command.depthWriteEnabled ? RenderDevice::depthStateEnabled : RenderDevice::depthStateEnabledNoWrite;
             [renderEncoder setDepthStencilState:depthState];
 
-            [renderEncoder setVertexBuffer:RenderDevice::vertexBuffer offset:mVertexBufferOffset atIndex:0];
+            if (retainedVertexBuffer)
+                [renderEncoder setVertexBuffer:retainedVertexBuffer offset:0 atIndex:0];
+            else
+                [renderEncoder setVertexBuffer:RenderDevice::vertexBuffer offset:mVertexBufferOffset atIndex:0];
 
             TextureRef primaryTexture = command.drawTexture ? command.drawTexture : mWhiteTexture;
             if (primaryTexture && material->GetTextureUniform() >= 0)
@@ -792,9 +868,20 @@ namespace o2
 
             static const MTLPrimitiveType primitiveType[3]{ MTLPrimitiveTypeTriangle, MTLPrimitiveTypeTriangle, MTLPrimitiveTypeLine };
 
-            [renderEncoder drawIndexedPrimitives:primitiveType[command.primitiveType] indexCount:command.indexCount
-                indexType:MTLIndexTypeUInt32 indexBuffer:RenderDevice::indexBuffer indexBufferOffset:mIndexBufferOffset];
+            if (retainedVertexBuffer)
+            {
+                [renderEncoder drawIndexedPrimitives:primitiveType[command.primitiveType] indexCount:command.indexCount
+                    indexType:MTLIndexTypeUInt32 indexBuffer:retainedIndexBuffer indexBufferOffset:0];
+            }
+            else
+            {
+                [renderEncoder drawIndexedPrimitives:primitiveType[command.primitiveType] indexCount:command.indexCount
+                    indexType:MTLIndexTypeUInt32 indexBuffer:RenderDevice::indexBuffer indexBufferOffset:mIndexBufferOffset];
+            }
         }
+
+        if (retainedVertexBuffer)
+            return;
 
         mVertexBufferOffset = AlignBufferOffset(mVertexBufferOffset + (NSUInteger)command.vertexCount * command.vertexStride);
         mIndexBufferOffset = AlignBufferOffset(mIndexBufferOffset + (NSUInteger)command.indexCount * sizeof(VertexIndex));

@@ -28,6 +28,9 @@ add_subdirectory(Sources/Util)
 add_subdirectory(Sources/Systems)
 add_subdirectory(Sources/Rendered)
 
+# SVG to PNG rasterizer and PNG comparer for vector graphics tooling
+add_subdirectory(Sources/SvgRasterizer)
+
 if(O2_EDITOR)
     add_subdirectory(EditorTests)
 endif()

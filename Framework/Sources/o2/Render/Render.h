@@ -24,6 +24,7 @@
 #include "o2/Render/Camera.h"
 #include "o2/Render/Material.h"
 #include "o2/Render/RenderCommandBuffer.h"
+#include "o2/Render/RenderGeometry.h"
 #include "o2/Render/RenderThread.h"
 #include "o2/Render/TextureRef.h"
 #include "o2/Utils/Math/Vertex.h"
@@ -67,6 +68,22 @@ namespace o2
 			bool operator==(const ScissorInfo& other) const;
 		};
 
+		// ---------------------------------------------------------------------------
+		// Counters of what a frame has sent to the batch and why batches were closed
+		// ---------------------------------------------------------------------------
+		struct BatchStatistics
+		{
+			UInt drawBuffers = 0;        // DrawBuffer and DrawGeometry calls that have put geometry into a batch
+			UInt vertices = 0;           // Vertices put into batches
+			UInt retainedVertices = 0;   // Of them not copied: their batch is taken from the previous frame
+			UInt textureBreaks = 0;      // Batches closed by another texture
+			UInt materialBreaks = 0;     // Batches closed by another material
+			UInt primitiveBreaks = 0;    // Batches closed by another primitive type
+			UInt vertexTypeBreaks = 0;   // Batches closed by another vertex layout
+			UInt capacityBreaks = 0;     // Batches closed by full buffers
+			UInt geometryBreaks = 0;     // Batches closed between copied buffers and retained geometries
+		};
+
 		// --------------------------------
 		// Scissor clipping stack info item
 		// --------------------------------
@@ -74,6 +91,7 @@ namespace o2
 		{
 			RectI scissorRect;          // Clipping scissor rectangle
 			RectI summaryScissorRect;   // Real clipping rectangle: summary of top clipping rectangles
+			RectI screenScissorRect;    // Real clipping rectangle on the target, by the camera of its enabling
 			bool  renderTarget = false; // Is render target turned on this step
 
 		public:
@@ -147,8 +165,14 @@ namespace o2
 		// Returns current draw calls count 
 		int GetDrawCallsCount() const;
 
+		// Returns index of the frame being drawn, the count of Begin calls
+		UInt64 GetFrameIndex() const;
+
 		// Returns current drawn primitives
 		int GetDrawnPrimitives() const;
+
+		// Returns batching counters of this frame; draw calls beyond the listed breaks are state changes
+		const BatchStatistics& GetBatchStatistics() const;
 
 		// Returns the draw calls of this frame that were made outside of an editor scope. In the editor
 		// that is the scene drawn into the Game window; outside of it, it equals GetDrawCallsCount()
@@ -162,6 +186,12 @@ namespace o2
 
 		// Returns current camera
 		Camera GetCamera() const;
+
+		// Returns how many pixels of the current target one camera space unit covers, with the screen graphics scale
+		Vec2F GetViewPixelScale() const;
+
+		// Returns pixels of the current target per resolution unit: the screen graphics scale, 1 in a render texture
+		float GetTargetPixelDensity() const;
 
 		// Draws polygon
 		void DrawFilledPolygon(const Vector<Vec2F>& points, const Color4& color = Color4::White());
@@ -298,6 +328,14 @@ namespace o2
 						const Ref<Material>& material, const TextureRef& overrideTexture, const RectI& texSrcRect = RectI(),
 						bool allowVertexConversion = false);
 
+		// Draws triangles of the geometry retained by its owner. Vertices are copied into the batch only when the batch
+		// differs from the one the previous frame has recorded: steady geometry costs no copying
+		void DrawGeometry(const Ref<RenderGeometry>& geometry, const Ref<Material>& material);
+
+		// Returns true when nothing of the rectangle in the camera space gets to the target: it is out of the
+		// target bounds or of the scissor clipping. Always false with a 3D camera
+		bool IsClipped(const RectF& rect) const;
+
 		// Fills the CPU-side batch buffer with vertex/index data, applying UV remapping if needed
 		void UploadBuffers(const UInt8* vertices, UInt verticesCount, const VertexType& srcVertexType,
 						   VertexIndex* indexes, UInt indexesCount, const RectI& texSrcRect,
@@ -386,7 +424,30 @@ namespace o2
 		UInt       mLastDrawIdx = 0;              // Last vertex index for next DIP
 		UInt       mTrianglesCount = 0;           // Triangles count for next DIP
 		UInt       mFrameTrianglesCount = 0;      // Total triangles at current frame
+		UInt64     mFrameIndex = 0;               // Index of the frame being drawn
 		UInt       mDrawCallsCount = 0;           // DrawIndexedPrimitives calls count
+
+		BatchStatistics mBatchStatistics;         // Batching counters of current frame
+
+		Vector<Ref<RenderGeometry>> mBatchGeometries; // Retained geometries of the batch being filled, not copied yet
+		UInt64                      mLastRetainedDataId = 0; // Identifier of the last data built from retained geometries
+
+		// What a batch of retained geometries was made of at the previous frames, for the render without a render thread
+		struct RetainedBatchSlot
+		{
+			Vector<UInt64> geometries;       // Versions of the geometries, in the batch order
+			size_t         materialHash = 0; // Hash of the material the batch was drawn with
+			UInt           vertexCount = 0;  // Number of vertices
+			UInt           indexCount = 0;   // Number of indices
+			UInt64         dataId = 0;       // Identifier of the batch data
+			int            stableFrames = 0; // Frames in a row the batch came the same
+		};
+
+		static const int mRetainedBatchStableFrames = 4; // Frames a batch comes unchanged before the platform copies it to GPU
+
+		Vector<RetainedBatchSlot> mRetainedBatchSlots;       // Batches of retained geometries by their order in a frame
+		int                       mRetainedBatchSlotIdx = 0; // Index of the slot of the next batch of retained geometries
+		UInt64                    mRetainedDrawDataId = 0;   // Batch data the platform draws from its GPU copy, 0 for the batch buffers
 
 		UInt       mSceneDrawCallsCount = 0;      // Draw calls made outside of an editor scope
 		UInt       mSceneTrianglesCount = 0;      // Triangles drawn outside of an editor scope
@@ -517,7 +578,29 @@ namespace o2
 		// Checks whether a batch break is needed for the given draw state
 		bool CheckBatchBreak(const TextureRef& texture, PrimitiveType primitiveType,
 							 const Ref<Material>& material, const VertexType& batchVertexType,
-							 UInt verticesCount, UInt indexesCount) const;
+							 UInt verticesCount, UInt indexesCount, bool retainedGeometry);
+
+		// Puts buffer into the batch, or retained geometry instead of it
+		void DrawBuffer(PrimitiveType primitiveType, const UInt8* vertices, UInt verticesCount, const VertexType& vertexType,
+						VertexIndex* indexes, UInt elementsCount,
+						const Ref<Material>& material, const TextureRef& overrideTexture, const RectI& texSrcRect,
+						bool allowVertexConversion, const Ref<RenderGeometry>* geometry);
+
+		// Returns true when the command the batch of retained geometries is recorded to holds its data: reused from
+		// the previous frame or built right in the command; otherwise the geometries are copied into the batch buffers
+		bool PrepareGeometriesBatch(bool& reused);
+
+		// Returns the slot of the batch of retained geometries being closed, updated by what the batch is made of
+		RetainedBatchSlot& TakeRetainedBatchSlot();
+
+		// Returns has the platform the GPU copy of the batch data; only for the render without a render thread
+		bool PlatformHasRetainedBatch(UInt64 dataId) const;
+
+		// Copies the batch that was just drawn from the batch buffers to GPU, to draw it by mRetainedDrawDataId
+		void PlatformRetainBatch(UInt64 dataId);
+
+		// Forgets the retained geometries of the batch
+		void ReleaseBatchGeometries();
 
 		// Resolves a batch vertex layout using the default material-driven texcoord expansion rules
 		VertexType ResolveBatchVertexTypeByMaterial(const VertexType& sourceVertexType,
@@ -547,8 +630,9 @@ namespace o2
 		// so the whole frame can be replayed on another thread
 		static bool PlatformSupportsMultithreadedRender();
 
-		// Records the current batch (geometry + full GPU-state snapshot) into the frame command buffer
-		void RecordDrawCommand();
+		// Records the current batch (geometry + full GPU-state snapshot) into the frame command buffer;
+		// the batch buffers are not copied when the command already holds the data
+		void RecordDrawCommand(bool holdsData, bool reusedData);
 
 		// Runs on the render thread: replays the recorded command buffer, submitting the whole frame
 		void SubmitRecordedFrame();

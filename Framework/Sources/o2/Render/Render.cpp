@@ -147,12 +147,17 @@ namespace o2
 			mCommandBuffer.Reset();
 		}
 
+		ReleaseBatchGeometries();
+
 		mCurrentDrawTexture = nullptr;
 		mLastDrawVertex = 0;
 		mLastDrawIdx = 0;
 		mTrianglesCount = 0;
 		mFrameTrianglesCount = 0;
+		mFrameIndex++;
+		mRetainedBatchSlotIdx = 0;
 		mDrawCallsCount = 0;
+		mBatchStatistics = BatchStatistics();
 		mSceneDrawCallsCount = 0;
 		mSceneTrianglesCount = 0;
 		mCurrentPrimitiveType = PrimitiveType::Polygon;
@@ -203,6 +208,25 @@ namespace o2
 							VertexIndex* indexes, UInt elementsCount,
 							const Ref<Material>& material, const TextureRef& overrideTexture, const RectI& texSrcRect /*= RectI()*/,
 							bool allowVertexConversion /*= false*/)
+	{
+		DrawBuffer(primitiveType, vertices, verticesCount, vertexType, indexes, elementsCount, material, overrideTexture,
+				   texSrcRect, allowVertexConversion, nullptr);
+	}
+
+	void Render::DrawGeometry(const Ref<RenderGeometry>& geometry, const Ref<Material>& material)
+	{
+		if (!geometry || geometry->vertices.IsEmpty() || geometry->trianglesCount == 0 || !geometry->indexes)
+			return;
+
+		DrawBuffer(PrimitiveType::Polygon, reinterpret_cast<const UInt8*>(geometry->vertices.Data()),
+				   (UInt)geometry->vertices.Count(), Vertex::Type(), const_cast<VertexIndex*>(geometry->indexes),
+				   geometry->trianglesCount, material, TextureRef(), RectI(), true, &geometry);
+	}
+
+	void Render::DrawBuffer(PrimitiveType primitiveType, const UInt8* vertices, UInt verticesCount, const VertexType& vertexType,
+							VertexIndex* indexes, UInt elementsCount,
+							const Ref<Material>& material, const TextureRef& overrideTexture, const RectI& texSrcRect,
+							bool allowVertexConversion, const Ref<RenderGeometry>* geometry)
 	{
 		if (!mReady)
 			return;
@@ -260,7 +284,8 @@ namespace o2
 			return;
 		}
 
-		if (CheckBatchBreak(texture, primitiveType, drawMaterial, batchVertexType, verticesCount, indexesCount))
+		if (CheckBatchBreak(texture, primitiveType, drawMaterial, batchVertexType, verticesCount, indexesCount,
+							geometry != nullptr))
 		{
 			DrawPrimitives();
 
@@ -278,10 +303,20 @@ namespace o2
 			return;
 		}
 
-		UploadBuffers(vertices, verticesCount, vertexType, indexes, indexesCount, texSrcRect, texture, allowVertexConversion);
+		// Retained geometry is copied when the batch is closed, if the previous frame has not recorded the same one
+		if (geometry)
+		{
+			mBatchGeometries.Add(*geometry);
+			(*geometry)->mQueuedCount++;
+		}
+		else
+			UploadBuffers(vertices, verticesCount, vertexType, indexes, indexesCount, texSrcRect, texture, allowVertexConversion);
 
 		mLastDrawVertex += verticesCount;
 		mLastDrawIdx += indexesCount;
+
+		mBatchStatistics.drawBuffers++;
+		mBatchStatistics.vertices += verticesCount;
 
 		if (primitiveType != PrimitiveType::Line)
 			mTrianglesCount += elementsCount;
@@ -355,7 +390,7 @@ namespace o2
 
 	bool Render::CheckBatchBreak(const TextureRef& texture, PrimitiveType primitiveType,
 								 const Ref<Material>& material, const VertexType& batchVertexType,
-								 UInt verticesCount, UInt indexesCount) const
+								 UInt verticesCount, UInt indexesCount, bool retainedGeometry)
 	{
 		size_t materialHash = material ? material->GetHash() : 0;
 		size_t currentBatchMaterialHash = mCurrentMaterial ? mCurrentMaterial->GetHash() : 0;
@@ -363,12 +398,28 @@ namespace o2
 		size_t batchStride = batchVertexType.GetStride();
 		UInt effectiveVertexCapacity = (UInt)(mVertexBufferByteSize / batchStride);
 
-		return mCurrentDrawTexture != texture ||
-			mCurrentPrimitiveType != primitiveType ||
-			mCurrentBatchVertexType != batchVertexType ||
-			currentBatchMaterialHash != materialHash ||
-			mLastDrawVertex + verticesCount >= effectiveVertexCapacity ||
-			mLastDrawIdx + indexesCount >= mIndexBufferSize;
+		UInt* reason = nullptr;
+		if (mCurrentDrawTexture != texture)
+			reason = &mBatchStatistics.textureBreaks;
+		else if (currentBatchMaterialHash != materialHash)
+			reason = &mBatchStatistics.materialBreaks;
+		else if (mCurrentPrimitiveType != primitiveType)
+			reason = &mBatchStatistics.primitiveBreaks;
+		else if (mCurrentBatchVertexType != batchVertexType)
+			reason = &mBatchStatistics.vertexTypeBreaks;
+		else if (mLastDrawVertex + verticesCount >= effectiveVertexCapacity || mLastDrawIdx + indexesCount >= mIndexBufferSize)
+			reason = &mBatchStatistics.capacityBreaks;
+		else if (mLastDrawVertex > 0 && retainedGeometry == mBatchGeometries.IsEmpty())
+			reason = &mBatchStatistics.geometryBreaks;
+
+		if (!reason)
+			return false;
+
+		// An empty batch is not closed, only retargeted
+		if (mLastDrawVertex > 0)
+			(*reason)++;
+
+		return true;
 	}
 
 	VertexType Render::ResolveBatchVertexTypeByMaterial(const VertexType& sourceVertexType,
@@ -556,8 +607,11 @@ namespace o2
 			}
 		}
 
-		for (UInt i = mLastDrawIdx, j = 0; j < indexesCount; i++, j++)
-			mVertexIndexData[i] = mVertexBufferIdx + mLastDrawVertex + indexes[j];
+		// Locals: the stores through the index pointer would make the members reload at every index
+		VertexIndex* dstIndexes = mVertexIndexData + mLastDrawIdx;
+		VertexIndex firstVertex = (VertexIndex)(mVertexBufferIdx + mLastDrawVertex);
+		for (UInt i = 0; i < indexesCount; i++)
+			dstIndexes[i] = firstVertex + indexes[i];
 	}
 
 	void Render::RemapUV(float srcU, float srcV, const RectI& srcRect,
@@ -579,12 +633,50 @@ namespace o2
 		if (mLastDrawVertex < 1)
 			return;
 
-		CheckVertexBufferTexCoordFlipByTextureFormat();
+		bool reusedData = false;
+		bool commandHoldsData = false;
+		RetainedBatchSlot* slot = nullptr;
+
+		if (!mBatchGeometries.IsEmpty())
+		{
+			if (mMultithreadedRender)
+				commandHoldsData = PrepareGeometriesBatch(reusedData);
+			else
+			{
+				// Without a render thread the platform draws a batch that stays the same from its own GPU copy
+				if (mCurrentMaterial == mDefaultMaterial)
+				{
+					slot = &TakeRetainedBatchSlot();
+					reusedData = slot->stableFrames >= mRetainedBatchStableFrames && PlatformHasRetainedBatch(slot->dataId);
+				}
+
+				if (!reusedData)
+				{
+					bool reusedByCommand = false;
+					PrepareGeometriesBatch(reusedByCommand);
+				}
+			}
+		}
+
+		if (reusedData)
+			mBatchStatistics.retainedVertices += mLastDrawVertex;
+
+		if (!commandHoldsData && !reusedData)
+			CheckVertexBufferTexCoordFlipByTextureFormat();
 
 		if (mMultithreadedRender)
-			RecordDrawCommand();
+			RecordDrawCommand(commandHoldsData, reusedData);
 		else
+		{
+			mRetainedDrawDataId = reusedData ? slot->dataId : 0;
 			PlatformDrawPrimitives();
+			mRetainedDrawDataId = 0;
+
+			if (slot && !reusedData && slot->stableFrames >= mRetainedBatchStableFrames)
+				PlatformRetainBatch(slot->dataId);
+		}
+
+		ReleaseBatchGeometries();
 
 		mFrameTrianglesCount += mTrianglesCount;
 
@@ -673,26 +765,147 @@ namespace o2
 		return mMultithreadedRender;
 	}
 
-	void Render::RecordDrawCommand()
+	bool Render::PrepareGeometriesBatch(bool& reused)
+	{
+		size_t materialHash = mCurrentMaterial ? mCurrentMaterial->GetHash() : 0;
+		UInt stride = (UInt)mCurrentBatchVertexType.GetStride();
+		UInt verticesCount = mLastDrawVertex, indexesCount = mLastDrawIdx;
+
+		// The pooled command keeps the data it has recorded before: the same geometries of the same versions,
+		// laid out for the same material, are the same bytes
+		RenderDrawCommand* command = mMultithreadedRender ? mCommandBuffer.PeekNext() : nullptr;
+		if (command && command->retainedGeometries.Count() == mBatchGeometries.Count() &&
+			command->retainedMaterialHash == materialHash && command->vertexCount == verticesCount &&
+			command->indexCount == indexesCount && command->vertexStride == (int)stride)
+		{
+			reused = true;
+			for (int i = 0; i < mBatchGeometries.Count() && reused; i++)
+				reused = command->retainedGeometries[i] == mBatchGeometries[i]->GetVersion();
+
+			if (reused)
+				return true;
+		}
+
+		// Block-compressed textures mirror the texture coordinates in the batch buffers before they are recorded
+		bool inCommand = command && !(mCurrentDrawTexture && Texture::IsFormatCompressed(mCurrentDrawTexture->GetFormat()));
+
+		UInt8* batchVertexData = mVertexData;
+		VertexIndex* batchIndexData = mVertexIndexData;
+
+		if (inCommand)
+		{
+			if (command->vertexData.Count() < (int)(verticesCount*stride))
+				command->vertexData.Resize(verticesCount*stride);
+
+			if (command->indexData.Count() < (int)indexesCount)
+				command->indexData.Resize(indexesCount);
+
+			mVertexData = command->vertexData.data();
+			mVertexIndexData = command->indexData.data();
+
+			command->retainedGeometries.Clear();
+			for (auto& geometry : mBatchGeometries)
+				command->retainedGeometries.Add(geometry->GetVersion());
+
+			command->retainedMaterialHash = materialHash;
+			command->retainedDataId = ++mLastRetainedDataId;
+		}
+
+		mLastDrawVertex = 0;
+		mLastDrawIdx = 0;
+
+		for (auto& geometry : mBatchGeometries)
+		{
+			UInt geometryVertices = (UInt)geometry->vertices.Count(), geometryIndexes = geometry->trianglesCount*3;
+			UploadBuffers(reinterpret_cast<const UInt8*>(geometry->vertices.Data()), geometryVertices, Vertex::Type(),
+						  const_cast<VertexIndex*>(geometry->indexes), geometryIndexes, RectI(), mCurrentDrawTexture, true);
+
+			mLastDrawVertex += geometryVertices;
+			mLastDrawIdx += geometryIndexes;
+		}
+
+		mVertexData = batchVertexData;
+		mVertexIndexData = batchIndexData;
+
+		Assert(mLastDrawVertex == verticesCount && mLastDrawIdx == indexesCount,
+			   "Retained geometry was changed after it was drawn: its owner must check RenderGeometry::IsQueued");
+
+		return inCommand;
+	}
+
+	Render::RetainedBatchSlot& Render::TakeRetainedBatchSlot()
+	{
+		if (mRetainedBatchSlotIdx == mRetainedBatchSlots.Count())
+			mRetainedBatchSlots.Add(RetainedBatchSlot());
+
+		RetainedBatchSlot& slot = mRetainedBatchSlots[mRetainedBatchSlotIdx++];
+		size_t materialHash = mCurrentMaterial ? mCurrentMaterial->GetHash() : 0;
+
+		bool same = slot.dataId != 0 && slot.geometries.Count() == mBatchGeometries.Count() &&
+			slot.materialHash == materialHash && slot.vertexCount == mLastDrawVertex && slot.indexCount == mLastDrawIdx;
+
+		for (int i = 0; i < mBatchGeometries.Count() && same; i++)
+			same = slot.geometries[i] == mBatchGeometries[i]->GetVersion();
+
+		if (same)
+		{
+			slot.stableFrames++;
+			return slot;
+		}
+
+		slot.geometries.Clear();
+		for (auto& geometry : mBatchGeometries)
+			slot.geometries.Add(geometry->GetVersion());
+
+		slot.materialHash = materialHash;
+		slot.vertexCount = mLastDrawVertex;
+		slot.indexCount = mLastDrawIdx;
+		slot.dataId = ++mLastRetainedDataId;
+		slot.stableFrames = 0;
+
+		return slot;
+	}
+
+	void Render::ReleaseBatchGeometries()
+	{
+		for (auto& geometry : mBatchGeometries)
+			geometry->mQueuedCount--;
+
+		mBatchGeometries.Clear();
+	}
+
+	void Render::RecordDrawCommand(bool holdsData, bool reusedData)
 	{
 		RenderDrawCommand& command = mCommandBuffer.Emplace();
 
 		UInt stride = mCurrentBatchVertexType.GetStride();
 		UInt vertexBytes = mLastDrawVertex * stride;
 
-		// Grow-only: the used length is carried by vertexCount/indexCount, so the pooled storage is kept
-		// at its high-water mark instead of being re-sized (and re-zeroed) every frame
-		if (command.vertexData.Count() < (int)vertexBytes)
-			command.vertexData.Resize(vertexBytes);
+		if (!holdsData)
+		{
+			// Grow-only: the used length is carried by vertexCount/indexCount, so the pooled storage is kept
+			// at its high-water mark instead of being re-sized (and re-zeroed) every frame
+			if (command.vertexData.Count() < (int)vertexBytes)
+				command.vertexData.Resize(vertexBytes);
 
-		if (vertexBytes > 0)
-			memcpy(command.vertexData.data(), mVertexData, vertexBytes);
+			if (vertexBytes > 0)
+				memcpy(command.vertexData.data(), mVertexData, vertexBytes);
 
-		if (command.indexData.Count() < (int)mLastDrawIdx)
-			command.indexData.Resize(mLastDrawIdx);
+			if (command.indexData.Count() < (int)mLastDrawIdx)
+				command.indexData.Resize(mLastDrawIdx);
 
-		if (mLastDrawIdx > 0)
-			memcpy(command.indexData.data(), mVertexIndexData, mLastDrawIdx * sizeof(VertexIndex));
+			if (mLastDrawIdx > 0)
+				memcpy(command.indexData.data(), mVertexIndexData, mLastDrawIdx * sizeof(VertexIndex));
+
+			command.retainedGeometries.Clear();
+			for (auto& geometry : mBatchGeometries)
+				command.retainedGeometries.Add(geometry->GetVersion());
+
+			command.retainedMaterialHash = mCurrentMaterial ? mCurrentMaterial->GetHash() : 0;
+			command.retainedDataId = mBatchGeometries.IsEmpty() ? 0 : ++mLastRetainedDataId;
+		}
+
+		command.retainedDataReused = reusedData;
 
 		command.vertexCount = mLastDrawVertex;
 		command.indexCount = mLastDrawIdx;
@@ -992,6 +1205,7 @@ namespace o2
 		mStackScissors.Add(ScissorStackEntry(rect, summaryScissorRect));
 
 		RectI screenScissorRect = CalculateScreenSpaceScissorRect(summaryScissorRect);
+		mStackScissors.Last().screenScissorRect = screenScissorRect;
 		PlatformSetScissorRect(screenScissorRect);
 	}
 
@@ -1212,6 +1426,11 @@ namespace o2
 		return mFrameTrianglesCount;
 	}
 
+	const Render::BatchStatistics& Render::GetBatchStatistics() const
+	{
+		return mBatchStatistics;
+	}
+
 	int Render::GetSceneDrawCallsCount() const
 	{
 		return mSceneDrawCallsCount;
@@ -1232,6 +1451,21 @@ namespace o2
 	Camera Render::GetCamera() const
 	{
 		return mCamera;
+	}
+
+	UInt64 Render::GetFrameIndex() const
+	{
+		return mFrameIndex;
+	}
+
+	Vec2F Render::GetViewPixelScale() const
+	{
+		return mViewScale*GetTargetPixelDensity();
+	}
+
+	float Render::GetTargetPixelDensity() const
+	{
+		return mCurrentRenderTarget ? 1.0f : o2Integration.GetGraphicsScale();
 	}
 
 	void Render::DrawFilledPolygon(const Vertex* verticies, int vertexCount)
@@ -1732,6 +1966,35 @@ namespace o2
 	bool Render::IsClippedByScissor(const RectF& rect) const
 	{
 		return !GetScissorRect().IsIntersects(rect);
+	}
+
+	bool Render::IsClipped(const RectF& rect) const
+	{
+		if (mClippingEverything)
+			return true;
+
+		// A plane of the 3D space has no rectangle on the target
+		if (mCamera.projection != Camera::Projection::Orthographic)
+			return false;
+
+		// The scissor rectangles are in the space of the camera that was set when they were enabled
+		RectI screenRect = CalculateScreenSpaceScissorRect(rect);
+		screenRect.left -= 1;
+		screenRect.bottom -= 1;
+		screenRect.right += 1;
+		screenRect.top += 1;
+
+		Vec2I halfResolution = mCurrentResolution/2;
+		if (!screenRect.IsIntersects(RectI(-halfResolution.x - 1, halfResolution.y + 1, halfResolution.x + 1,
+										   -halfResolution.y - 1)))
+		{
+			return true;
+		}
+
+		if (mStackScissors.IsEmpty() || mStackScissors.Last().renderTarget)
+			return false;
+
+		return !screenRect.IsIntersects(mStackScissors.Last().screenScissorRect);
 	}
 
 	bool Render::IsClippedByScissor(const Vec2F& point) const

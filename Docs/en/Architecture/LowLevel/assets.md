@@ -24,6 +24,7 @@ Asset subtypes inherit from the base `o2::Asset`:
 - AnimationStateGraphAsset: animation state graph
 - AtlasAsset: atlas
 - ImageAsset: image, references an atlas
+- VectorImageAsset: vector image, an `.svg` file drawn as triangles by `o2::VectorSprite`
 - BinaryAsset: binary file
 - DataAsset: serialized data, configs
 - VectorFontAsset/BitmapFontAsset: vector/bitmap font (base FontAsset), FontStyleAsset: font style
@@ -32,6 +33,15 @@ Asset subtypes inherit from the base `o2::Asset`:
 - SoundAsset: sound (wav, ogg, mp3, flac)
 - SpineAsset, SpineAtlasAsset: Spine skeleton and atlas
 - JavaScriptAsset: JS script
+
+### Vector image, VectorImageAsset
+`o2::VectorImageAsset` is bound to the `svg` extension. The builder copies the file as is; on load it is parsed by `o2::SvgParser` into `o2::VectorImage` (see [Vector graphics](/Docs/en/Architecture/LowLevel/render.md)). Loading needs no render and no textures, the asset is not placed into an atlas.
+
+- Meta (`VectorImageAsset::Meta`): `sliceBorder` (`BorderI`, in image units: left, bottom, right, top; top is the top side of the image) and `defaultMode` (`SpriteMode`) — the same meaning as in `ImageAsset::Meta`, `o2::VectorSprite` takes them when the image is assigned.
+- `GetSize`, `GetImage`, `IsValid`, `GetError`, `GetWarnings`. A file that is not a valid SVG gives an asset with `IsValid() == false`, an empty image and no meshes; the error and the warnings about unsupported elements are written to the assets log once per load.
+- `GetMesh(pixelScale)` and `GetSlicedMesh(pixelScale, borders)` return the tessellated triangles (`o2::VectorImageMesh`) from a cache shared by all drawables of the asset. The key is the pixel scale quantized by `QuantizePixelScale` (powers of two, range 1/16..64) and, for the sliced variant, the borders; a sliced mesh is split from the cached whole mesh of the same scale, without tessellating again. The cache holds up to 32 meshes and is dropped when the image changes; meshes in use stay alive.
+- `SetSource(svg)` replaces the image from text, `GetSource` returns it, `Save` writes it back to the file.
+- `GetVersion` changes on every load and is never equal for two loaded assets, so a drawable also notices another asset by it. After `Assets::RebuildAssets` the asset reloads itself when its id is in the changed list; drawables compare the version at drawing and rebuild their vertices.
 
 ### Asset references
 An asset reference is the template class `o2::AssetRef<AssetType>`, a descendant of the non-template base `o2::BaseAssetRef`. It functions like a typical smart pointer.
