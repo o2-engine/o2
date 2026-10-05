@@ -127,7 +127,8 @@ namespace o2
         return mLineHeight;
     }
 
-    const Font::Character& BitmapFont::GetCharacter(UInt16 id, int height, const Ref<FontStyle>& style)
+    const Font::Character& BitmapFont::GetCharacter(UInt16 id, int height, const Ref<FontStyle>& style,
+                                                    float pixelDensity /*= 1.0f*/)
     {
         return Font::GetCharacter(id, 0, nullptr);
     }

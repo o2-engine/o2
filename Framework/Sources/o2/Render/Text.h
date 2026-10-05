@@ -237,7 +237,7 @@ namespace o2
             void Initialize(const Ref<Font>& font, const Ref<FontStyle>& style, const WString& text, int height,
                             const Vec2F& position, const Vec2F& areaSize,
                             HorAlign horAlign, VerAlign verAlign, bool wordWrap, bool dotsEngings, float charsDistCoef,
-                            float linesDistCoef);
+                            float linesDistCoef, float pixelDensity = 1.0f);
 
             // Moves symbols 
             void Move(const Vec2F& offs);
@@ -266,6 +266,8 @@ namespace o2
 
         SymbolsSet mSymbolsSet; // Symbols set definition
 
+        float mPixelDensity = 0.0f; // Pixels per unit the glyphs of the mesh are rendered for, 0 until the first draw
+
         bool mUpdatingMesh; // True, when mesh is already updating
 
     protected:
@@ -277,6 +279,12 @@ namespace o2
 
         // Transforming meshes by basis
         void TransformMesh(const Basis& bas);
+
+        // Returns pixel density rounded to the steps the glyphs are rendered for
+        static float QuantizePixelDensity(float pixelDensity);
+
+        // Returns pixel density of the mesh glyphs: the screen one until the text is drawn
+        float GetPixelDensity() const;
 
         // Preparing meshes for characters count
         void PrepareMesh(int charactersCount);
@@ -334,6 +342,7 @@ CLASS_FIELDS_META(o2::Text)
     FIELD().PROTECTED().NAME(mMeshes);
     FIELD().PROTECTED().NAME(mLastTransform);
     FIELD().PROTECTED().NAME(mSymbolsSet);
+    FIELD().PROTECTED().DEFAULT_VALUE(0.0f).NAME(mPixelDensity);
     FIELD().PROTECTED().NAME(mUpdatingMesh);
 }
 END_META;
@@ -379,6 +388,8 @@ CLASS_METHODS_META(o2::Text)
     FUNCTION().PROTECTED().SIGNATURE(void, UpdateMesh);
     FUNCTION().PROTECTED().SIGNATURE(void, CheckCharactersAndRebuildMesh);
     FUNCTION().PROTECTED().SIGNATURE(void, TransformMesh, const Basis&);
+    FUNCTION().PROTECTED().SIGNATURE_STATIC(float, QuantizePixelDensity, float);
+    FUNCTION().PROTECTED().SIGNATURE(float, GetPixelDensity);
     FUNCTION().PROTECTED().SIGNATURE(void, PrepareMesh, int);
     FUNCTION().PROTECTED().SIGNATURE(Basis, CalculateTextBasis);
     FUNCTION().PROTECTED().SIGNATURE(void, BasisChanged);

@@ -48,14 +48,17 @@ namespace o2
         // Returns character constant reference by id
         const Character& GetCharacter(UInt16 id, int height);
 
-        // Returns character constant reference by id, rendered with style
-        virtual const Character& GetCharacter(UInt16 id, int height, const Ref<FontStyle>& style);
+        // Returns character constant reference by id, rendered with style for the pixel density of the screen; styled
+        // glyphs have the single density
+        virtual const Character& GetCharacter(UInt16 id, int height, const Ref<FontStyle>& style,
+                                              float pixelDensity = 1.0f);
 
         // Checks characters for preloading
         void CheckCharacters(const WString& needChararacters, int height);
 
-        // Checks characters for preloading, rendered with style
-        virtual void CheckCharacters(const WString& needChararacters, int height, const Ref<FontStyle>& style);
+        // Checks characters for preloading, rendered with style for the pixel density of the screen
+        virtual void CheckCharacters(const WString& needChararacters, int height, const Ref<FontStyle>& style,
+                                     float pixelDensity = 1.0f);
 
         // Returns font file name
         virtual String GetFileName() const;
@@ -79,6 +82,7 @@ namespace o2
             UInt16 mId;          // Character id
             int    mHeight;      // Character height
             int    mStyleId = 0; // Rendered style id, 0 - no style
+            float  mPixelDensity = 1.0f; // Screen pixels per unit the glyph is rendered for
 
             bool operator==(const Character& other) const;
         };
@@ -101,8 +105,8 @@ namespace o2
         // Returns font-local style id for characters caching. 0 for empty style
         virtual int GetStyleId(const Ref<FontStyle>& style);
 
-        // Returns characters map key, combined from style id and height
-        static UInt64 GetStyleHeightKey(int styleId, int height);
+        // Returns characters map key, combined from style id, height and pixel density
+        static UInt64 GetStyleHeightKey(int styleId, int height, float pixelDensity = 1.0f);
 
         friend class Text;
         friend class Ref<Font>;

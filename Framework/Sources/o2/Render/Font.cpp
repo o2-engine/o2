@@ -41,9 +41,11 @@ namespace o2
         return GetCharacter(id, height, nullptr);
     }
 
-    const Font::Character& Font::GetCharacter(UInt16 id, int height, const Ref<FontStyle>& style)
+    const Font::Character& Font::GetCharacter(UInt16 id, int height, const Ref<FontStyle>& style,
+                                              float pixelDensity /*= 1.0f*/)
     {
-        auto fndStyleHeight = mCharacters.find(GetStyleHeightKey(GetStyleId(style), height));
+        int styleId = GetStyleId(style);
+        auto fndStyleHeight = mCharacters.find(GetStyleHeightKey(styleId, height, styleId != 0 ? 1.0f : pixelDensity));
         if (fndStyleHeight != mCharacters.End())
         {
             auto fndChar = fndStyleHeight->second.find(id);
@@ -60,7 +62,8 @@ namespace o2
         CheckCharacters(needChararacters, height, nullptr);
     }
 
-    void Font::CheckCharacters(const WString& needChararacters, int height, const Ref<FontStyle>& style)
+    void Font::CheckCharacters(const WString& needChararacters, int height, const Ref<FontStyle>& style,
+                               float pixelDensity /*= 1.0f*/)
     {}
 
     int Font::GetStyleId(const Ref<FontStyle>& style)
@@ -68,9 +71,10 @@ namespace o2
         return 0;
     }
 
-    UInt64 Font::GetStyleHeightKey(int styleId, int height)
+    UInt64 Font::GetStyleHeightKey(int styleId, int height, float pixelDensity /*= 1.0f*/)
     {
-        return ((UInt64)(UInt32)styleId << 32) | (UInt64)(UInt32)height;
+        UInt64 densityStep = (UInt64)Math::RoundToInt(pixelDensity*4.0f) & 0xFF;
+        return ((UInt64)(UInt32)styleId << 32) | (densityStep << 24) | ((UInt64)(UInt32)height & 0xFFFFFF);
     }
 
     String Font::GetFileName() const
@@ -90,7 +94,8 @@ namespace o2
 
     void Font::AddCharacter(const Character& character)
     {
-        mCharacters[GetStyleHeightKey(character.mStyleId, character.mHeight)][character.mId] = character;
+        mCharacters[GetStyleHeightKey(character.mStyleId, character.mHeight, character.mPixelDensity)][character.mId] =
+            character;
     }
 
     bool Font::Character::operator==(const Character& other) const

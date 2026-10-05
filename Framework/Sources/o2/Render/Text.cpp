@@ -3,6 +3,7 @@
 
 #include "o2/Application/Input.h"
 #include "o2/Assets/Assets.h"
+#include "o2/Integration.h"
 #include "o2/Render/Mesh.h"
 #include "o2/Render/Render.h"
 
@@ -117,6 +118,13 @@ namespace o2
     {
         if (!mEnabled)
             return;
+
+        float pixelDensity = QuantizePixelDensity(o2Render.GetTargetPixelDensity());
+        if (pixelDensity != GetPixelDensity())
+        {
+            mPixelDensity = pixelDensity;
+            CheckCharactersAndRebuildMesh();
+        }
 
         for (auto& mesh : mMeshes)
         {
@@ -373,7 +381,7 @@ namespace o2
         Ref<Mesh> currentMesh = mMeshes[0];
 
         mSymbolsSet.Initialize(mFont, mFontStyle, mText, mHeight, mTransform.origin.XY(), mSize.XY(), mHorAlign, mVerAlign,
-                               mWordWrap, mDotsEndings, mSymbolsDistCoef, mLinesDistanceCoef);
+                               mWordWrap, mDotsEndings, mSymbolsDistCoef, mLinesDistanceCoef, GetPixelDensity());
 
         Basis transf = CalculateTextBasis();
         mLastTransform = transf;
@@ -436,11 +444,24 @@ namespace o2
     {
         if (mFont)
         {
-            mFont->CheckCharacters(mText, height, mFontStyle);
-            mFont->CheckCharacters(".", height, mFontStyle);
+            mFont->CheckCharacters(mText, height, mFontStyle, GetPixelDensity());
+            mFont->CheckCharacters(".", height, mFontStyle, GetPixelDensity());
         }
 
         UpdateMesh();
+    }
+
+    float Text::QuantizePixelDensity(float pixelDensity)
+    {
+        return Math::Clamp(Math::Round(pixelDensity*4.0f)/4.0f, 1.0f, 4.0f);
+    }
+
+    float Text::GetPixelDensity() const
+    {
+        if (mPixelDensity > 0.0f)
+            return mPixelDensity;
+
+        return Integration::IsSingletonInitialzed() ? QuantizePixelDensity(o2Integration.GetGraphicsScale()) : 1.0f;
     }
 
     void Text::PrepareMesh(int charactersCount)
@@ -558,7 +579,7 @@ namespace o2
     void Text::SymbolsSet::Initialize(const Ref<Font>& font, const Ref<FontStyle>& style, const WString& text, int height,
                                       const Vec2F& position, const Vec2F& areaSize,
                                       HorAlign horAlign, VerAlign verAlign, bool wordWrap, bool dotsEngings,
-                                      float charsDistCoef, float linesDistCoef)
+                                      float charsDistCoef, float linesDistCoef, float pixelDensity /*= 1.0f*/)
     {
         mFont = font;
         mStyle = style;
@@ -580,6 +601,9 @@ namespace o2
         if (textLen == 0)
             return;
 
+        mFont->CheckCharacters(mText, mHeight, mStyle, pixelDensity);
+        mFont->CheckCharacters(".", mHeight, mStyle, pixelDensity);
+
         float linesDist = mFont->GetLineHeightPx(mHeight)*mLinesDistCoef;
         float fontHeight = mFont->GetHeightPx(mHeight);
 
@@ -587,20 +611,20 @@ namespace o2
         Line* curLine = &mLines.Last();
         curLine->mSize.y = fontHeight;
 
-        float dotsSize = mFont->GetCharacter('.', mHeight, mStyle).mAdvance*3.0f;
+        float dotsSize = mFont->GetCharacter('.', mHeight, mStyle, pixelDensity).mAdvance*3.0f;
 
         Vec2F fullSize(0, fontHeight);
         bool checkAreaBounds = mWordWrap && mAreaSize.x > FLT_EPSILON;
         int wrapCharIdx = -1;
         for (int i = 0; i < textLen; i++)
         {
-            const Font::Character& ch = mFont->GetCharacter(mText[i], mHeight, mStyle);
+            const Font::Character& ch = mFont->GetCharacter(mText[i], mHeight, mStyle, pixelDensity);
             Vec2F chSize = ch.mSize;
             Vec2F chPos = Vec2F(curLine->mSize.x - ch.mOrigin.x, -ch.mOrigin.y);
 
             if (mDotsEndings && mText[i] != '\n' && curLine->mSize.x + ch.mAdvance*mSymbolsDistCoef > mAreaSize.x - dotsSize)
             {
-                const Font::Character& dotCh = mFont->GetCharacter('.', mHeight, mStyle);
+                const Font::Character& dotCh = mFont->GetCharacter('.', mHeight, mStyle, pixelDensity);
                 Vec2F dotChSize = dotCh.mSize;
 
                 for (int j = 0; j < 3; j++)

@@ -67,8 +67,9 @@ namespace o2
 
         using Font::CheckCharacters;
 
-        // Checks characters for preloading, rendered with style
-        void CheckCharacters(const WString& needChararacters, int height, const Ref<FontStyle>& style) override;
+        // Checks characters for preloading, rendered with style for the pixel density of the screen
+        void CheckCharacters(const WString& needChararacters, int height, const Ref<FontStyle>& style,
+                             float pixelDensity = 1.0f) override;
 
         // Removes all cached characters
         void Reset();
@@ -127,9 +128,9 @@ namespace o2
         // Returns font-local style id, registers new styles by content cache key
         int GetStyleId(const Ref<FontStyle>& style) override;
 
-        // Renders new characters with style effects
+        // Renders new characters with style effects, with pixelDensity times more pixels
         void RenderNewCharacters(Vector<wchar_t>& newCharacters, int height, int styleId,
-                                 const Vector<Ref<Effect>>& effects);
+                                 const Vector<Ref<Effect>>& effects, float pixelDensity);
 
         // Packs character in line
         void PackCharacter(CharDef& character, int height);

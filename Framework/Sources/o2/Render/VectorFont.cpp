@@ -136,10 +136,16 @@ namespace o2
         return GetHeightPx(height)*2.0f;
     }
 
-    void VectorFont::CheckCharacters(const WString& needChararacters, int height, const Ref<FontStyle>& style)
+    void VectorFont::CheckCharacters(const WString& needChararacters, int height, const Ref<FontStyle>& style,
+                                     float pixelDensity /*= 1.0f*/)
     {
         int styleId = GetStyleId(style);
-        UInt64 charactersKey = GetStyleHeightKey(styleId, height);
+
+        // Effects work in pixels of the glyph bitmap
+        if (styleId != 0)
+            pixelDensity = 1.0f;
+
+        UInt64 charactersKey = GetStyleHeightKey(styleId, height, pixelDensity);
 
         int len = needChararacters.Length();
         Vector<wchar_t> needToRenderChars;
@@ -165,7 +171,8 @@ namespace o2
         if (needToRenderChars.Count() > 0)
         {
             static const Vector<Ref<Effect>> emptyEffects;
-            RenderNewCharacters(needToRenderChars, height, styleId, styleId != 0 ? style->GetEffects() : emptyEffects);
+            RenderNewCharacters(needToRenderChars, height, styleId, styleId != 0 ? style->GetEffects() : emptyEffects,
+                                pixelDensity);
         }
     }
 
@@ -193,12 +200,24 @@ namespace o2
     }
 
     void VectorFont::RenderNewCharacters(Vector<wchar_t>& newCharacters, int height, int styleId,
-                                         const Vector<Ref<Effect>>& effects)
+                                         const Vector<Ref<Effect>>& effects, float pixelDensity)
     {
         if (!mFreeTypeFace)
             return;
 
-        FT_Set_Char_Size(mFreeTypeFace, 0, height * 64, mResolution, mResolution);
+        // Advances stay the ones of the single density: text layout does not depend on the screen
+        Vector<float> advances;
+        FT_Set_Char_Size(mFreeTypeFace, 0, height*64, mResolution, mResolution);
+        if (pixelDensity != 1.0f)
+        {
+            for (auto& ch : newCharacters)
+            {
+                FT_Load_Char(mFreeTypeFace, ch, kGlyphLoadFlags & ~FT_LOAD_RENDER);
+                advances.Add(mFreeTypeFace->glyph->advance.x/64.0f);
+            }
+
+            FT_Set_Char_Size(mFreeTypeFace, 0, Math::RoundToInt(height*64*pixelDensity), mResolution, mResolution);
+        }
 
         Vec2I border;
         for (auto& effect : effects)
@@ -213,8 +232,9 @@ namespace o2
         FT_Load_Char(mFreeTypeFace, 'A', kGlyphLoadFlags);
         int symbolsHeight = Math::CeilToInt((mFreeTypeFace->glyph->bitmap.rows + border.y*2)*1.25f);
 
-        for (auto& ch : newCharacters)
+        for (int i = 0; i < newCharacters.Count(); i++)
         {
+            wchar_t ch = newCharacters[i];
             CharDef newCharDef;
 
             FT_Load_Char(mFreeTypeFace, ch, kGlyphLoadFlags);
@@ -244,10 +264,12 @@ namespace o2
             newCharDef.character.mId = ch;
             newCharDef.character.mHeight = height;
             newCharDef.character.mStyleId = styleId;
-            newCharDef.character.mSize = newBitmapSize;
-            newCharDef.character.mAdvance = glyph->advance.x/64.0f;
-            newCharDef.character.mOrigin.x = -glyph->metrics.horiBearingX/64.0f + border.x;
-            newCharDef.character.mOrigin.y = (glyph->metrics.height - glyph->metrics.horiBearingY)/64.0f + border.y;
+            newCharDef.character.mPixelDensity = pixelDensity;
+            newCharDef.character.mSize = (Vec2F)newBitmapSize/pixelDensity;
+            newCharDef.character.mAdvance = advances.IsEmpty() ? glyph->advance.x/64.0f : advances[i];
+            newCharDef.character.mOrigin.x = (-glyph->metrics.horiBearingX/64.0f + border.x)/pixelDensity;
+            newCharDef.character.mOrigin.y =
+                ((glyph->metrics.height - glyph->metrics.horiBearingY)/64.0f + border.y)/pixelDensity;
 
             PackCharacter(newCharDef, symbolsHeight);
 

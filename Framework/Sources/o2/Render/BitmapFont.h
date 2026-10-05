@@ -31,7 +31,8 @@ namespace o2
         using Font::GetCharacter;
 
         // Returns character constant reference by id. Bitmap font ignores height and style
-        const Character& GetCharacter(UInt16 id, int height, const Ref<FontStyle>& style) override;
+        const Character& GetCharacter(UInt16 id, int height, const Ref<FontStyle>& style,
+                                      float pixelDensity = 1.0f) override;
 
     protected:
         String mFileName;   // Source file name
