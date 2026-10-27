@@ -68,6 +68,24 @@ namespace o2
         ReleaseCursor();
     }
 
+    void AppTestDriver::RightClick(const Vec2F& screenPos)
+    {
+        o2Input.OnCursorMoved(screenPos, 0, false);
+        PumpFrames(1);
+        o2Input.OnAltCursorPressed(screenPos);
+        PumpFrames(1);
+        o2Input.OnAltCursorReleased();
+        PumpFrames(1);
+    }
+
+    void AppTestDriver::Scroll(const Vec2F& screenPos, float delta)
+    {
+        o2Input.OnCursorMoved(screenPos, 0, false);
+        PumpFrames(1);
+        o2Input.OnMouseWheel(delta);
+        PumpFrames(1);
+    }
+
     Ref<Bitmap> AppTestDriver::TakeScreenshot()
     {
         Ref<Bitmap> result;

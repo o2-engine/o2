@@ -6,6 +6,7 @@
 #include "o2/Scene/Components/ParticlesEmitterComponent.h"
 #include "o2/Scene/Scene.h"
 #include "o2/Scene/UI/Widgets/Button.h"
+#include "o2/Scene/UI/Widgets/VerticalScrollBar.h"
 #include "o2/Scripts/ScriptEngine.h"
 #include "o2/Scripts/ScriptsCastUtils.h"
 #include "o2/Scripts/ScriptValue.h"
@@ -94,6 +95,48 @@ TEST(ScriptSceneApi, ButtonOnClickAssignableWithJsFunction)
 	button->onClick();
 
 	EXPECT_EQ(o2Scripts.GetGlobal().GetProperty("sceneApi_clicks").GetValue<int>(), 2);
+}
+
+TEST(ScriptSceneApi, ButtonRightClickAndWheelAssignableWithJsFunctions)
+{
+	auto res = EvalChecked(
+		"var sceneApi_wheelBtn = new o2.Button(1);"
+		"var sceneApi_right = 0, sceneApi_wheel = 0;"
+		"sceneApi_wheelBtn.onRightClick = function() { sceneApi_right++; };"
+		"sceneApi_wheelBtn.onScrolled = function(delta) { sceneApi_wheel += delta; };"
+		"sceneApi_wheelBtn");
+
+	auto button = res.GetValue<Ref<Button>>();
+	ASSERT_TRUE(button);
+	EXPECT_TRUE(button->IsScrollable()) << "a wheel handler makes the button take the wheel";
+
+	button->onRightClick();
+	button->onScrolled(2.5f);
+	button->onScrolled(-1.0f);
+
+	EXPECT_EQ(o2Scripts.GetGlobal().GetProperty("sceneApi_right").GetValue<int>(), 1);
+	EXPECT_FLOAT_EQ(o2Scripts.GetGlobal().GetProperty("sceneApi_wheel").GetValue<float>(), 1.5f);
+}
+
+TEST(ScriptSceneApi, ScrollBarDrivenFromScript)
+{
+	auto bar = mmake<VerticalScrollBar>();
+	o2Scripts.GetGlobal().SetProperty("sceneApi_bar", ScriptValue(bar));
+	EvalChecked(
+		"var sceneApi_userValue = -1;"
+		"sceneApi_bar.SetValueRange(0, 120);"
+		"sceneApi_bar.SetScrollHandleSize(10);"
+		"sceneApi_bar.SetValueForcible(40);"
+		"sceneApi_bar.onChangeByUser = function(value) { sceneApi_userValue = value; };");
+
+	EXPECT_FLOAT_EQ(bar->GetValue(), 40.0f);
+	EXPECT_FLOAT_EQ(bar->GetMaxValue(), 120.0f);
+	EXPECT_FLOAT_EQ(bar->GetScrollHandleSize(), 10.0f);
+	EXPECT_FLOAT_EQ(EvalChecked("sceneApi_bar.GetValue()").GetValue<float>(), 40.0f);
+
+	bar->onChangeByUser(75.0f);
+	EXPECT_FLOAT_EQ(o2Scripts.GetGlobal().GetProperty("sceneApi_userValue").GetValue<float>(), 75.0f);
+	o2Scripts.GetGlobal().RemoveProperty(ScriptValue("sceneApi_bar"));
 }
 
 TEST(ScriptSceneApi, MaterialParamsBuildFromScript)

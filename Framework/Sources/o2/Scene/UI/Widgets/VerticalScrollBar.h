@@ -21,8 +21,8 @@ namespace o2
         PROPERTY(float, scrollSize, SetScrollHandleSize, GetScrollHandleSize); // Scroll handle size
 
     public:
-        Function<void(float)> onChange;       // On value changing event
-        Function<void(float)> onChangeByUser; // On Value changing from user event
+        Function<void(float)> onChange;       // On value changing event @SCRIPTABLE
+        Function<void(float)> onChangeByUser; // On Value changing from user event @SCRIPTABLE
         Function<void(float)> onSmoothChange; // On smooth value changing event
 
     public:
@@ -41,13 +41,13 @@ namespace o2
         // Updates widget and smooth value changing
         void Update(float dt) override;
 
-        // Sets value
+        // Sets value @SCRIPTABLE
         void SetValue(float value);
 
-        // Sets value forcible, without smoothing
+        // Sets value forcible, without smoothing @SCRIPTABLE
         void SetValueForcible(float value);
 
-        // Returns value
+        // Returns value @SCRIPTABLE
         float GetValue() const;
 
         // Returns smooth value
@@ -56,16 +56,16 @@ namespace o2
         // Sets minimal value
         void SetMinValue(float minValue);
 
-        // Returns minimal value
+        // Returns minimal value @SCRIPTABLE
         float GetMinValue() const;
 
         // Sets maximal value
         void SetMaxValue(float maxValue);
 
-        // Returns maximal value
+        // Returns maximal value @SCRIPTABLE
         float GetMaxValue() const;
 
-        // Sets value range
+        // Sets value range @SCRIPTABLE
         void SetValueRange(float minValue, float maxValue);
 
         // Sets scroll sense
@@ -74,13 +74,13 @@ namespace o2
         // Returns scroll sense
         float GetScrollSense() const;
 
-        // Sets scroll handle size
+        // Sets scroll handle size @SCRIPTABLE
         void SetScrollHandleSize(float size);
 
-        // Returns scroll handle size
+        // Returns scroll handle size @SCRIPTABLE
         float GetScrollHandleSize() const;
 
-        // Sets scroll handle minimum size in pixels
+        // Sets scroll handle minimum size in pixels @SCRIPTABLE
         void SetMinimalScrollHandleSize(float pixelSize);
 
         // Returns true if point is in this object
@@ -186,8 +186,8 @@ CLASS_FIELDS_META(o2::VerticalScrollBar)
     FIELD().PUBLIC().NAME(maxValue);
     FIELD().PUBLIC().NAME(scrollSense);
     FIELD().PUBLIC().NAME(scrollSize);
-    FIELD().PUBLIC().NAME(onChange);
-    FIELD().PUBLIC().NAME(onChangeByUser);
+    FIELD().PUBLIC().SCRIPTABLE_ATTRIBUTE().NAME(onChange);
+    FIELD().PUBLIC().SCRIPTABLE_ATTRIBUTE().NAME(onChangeByUser);
     FIELD().PUBLIC().NAME(onSmoothChange);
     FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(0.0f).NAME(mValue);
     FIELD().PROTECTED().DEFAULT_VALUE(0.0f).NAME(mSmoothValue);
@@ -208,20 +208,20 @@ CLASS_METHODS_META(o2::VerticalScrollBar)
     FUNCTION().PUBLIC().CONSTRUCTOR(RefCounter*);
     FUNCTION().PUBLIC().CONSTRUCTOR(RefCounter*, const VerticalScrollBar&);
     FUNCTION().PUBLIC().SIGNATURE(void, Update, float);
-    FUNCTION().PUBLIC().SIGNATURE(void, SetValue, float);
-    FUNCTION().PUBLIC().SIGNATURE(void, SetValueForcible, float);
-    FUNCTION().PUBLIC().SIGNATURE(float, GetValue);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetValue, float);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetValueForcible, float);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(float, GetValue);
     FUNCTION().PUBLIC().SIGNATURE(float, GetSmoothValue);
     FUNCTION().PUBLIC().SIGNATURE(void, SetMinValue, float);
-    FUNCTION().PUBLIC().SIGNATURE(float, GetMinValue);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(float, GetMinValue);
     FUNCTION().PUBLIC().SIGNATURE(void, SetMaxValue, float);
-    FUNCTION().PUBLIC().SIGNATURE(float, GetMaxValue);
-    FUNCTION().PUBLIC().SIGNATURE(void, SetValueRange, float, float);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(float, GetMaxValue);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetValueRange, float, float);
     FUNCTION().PUBLIC().SIGNATURE(void, SetScrollSense, float);
     FUNCTION().PUBLIC().SIGNATURE(float, GetScrollSense);
-    FUNCTION().PUBLIC().SIGNATURE(void, SetScrollHandleSize, float);
-    FUNCTION().PUBLIC().SIGNATURE(float, GetScrollHandleSize);
-    FUNCTION().PUBLIC().SIGNATURE(void, SetMinimalScrollHandleSize, float);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetScrollHandleSize, float);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(float, GetScrollHandleSize);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetMinimalScrollHandleSize, float);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsUnderPoint, const Vec2F&);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsScrollable);
     FUNCTION().PUBLIC().SIGNATURE(void, UpdateSelfTransform);

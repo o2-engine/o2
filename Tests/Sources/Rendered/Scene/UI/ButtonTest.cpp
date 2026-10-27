@@ -71,6 +71,8 @@ namespace
         ClickableButton(RefCounter* refCounter): Button(refCounter) {}
 
         using Button::OnCursorDblClicked;
+        using Button::OnCursorRightMouseReleased;
+        using Button::OnScrolled;
 
         void CoverScreen() { mDrawingScissorRect = RectF(-10000, -10000, 10000, 10000); }
     };
@@ -95,4 +97,42 @@ TEST(Button, QuickSecondPressReportedAsDoubleClickCountsAsClick)
 
     button->OnCursorDblClicked(Input::Cursor(Vec2F(500, 20)));
     EXPECT_EQ(clicks, 1) << "double click outside the button is not a click";
+}
+
+TEST(Button, RightClickFiresOnlyAboveTheButton)
+{
+    SceneCleanGuard guard;
+    auto button = mmake<ClickableButton>();
+    button->layout->anchorMin = Vec2F(0, 0);
+    button->layout->anchorMax = Vec2F(0, 0);
+    button->layout->offsetMin = Vec2F(0, 0);
+    button->layout->offsetMax = Vec2F(100, 40);
+    button->CoverScreen();
+    TickFrames(2);
+
+    int clicks = 0, rightClicks = 0;
+    button->onClick = [&]() { clicks++; };
+    button->onRightClick = [&]() { rightClicks++; };
+
+    button->OnCursorRightMouseReleased(Input::Cursor(Vec2F(50, 20)));
+    EXPECT_EQ(rightClicks, 1);
+    EXPECT_EQ(clicks, 0) << "the right button is not a click";
+
+    button->OnCursorRightMouseReleased(Input::Cursor(Vec2F(500, 20)));
+    EXPECT_EQ(rightClicks, 1) << "released outside the button";
+}
+
+TEST(Button, TakesTheWheelOnlyWithAHandler)
+{
+    SceneCleanGuard guard;
+    auto button = mmake<ClickableButton>();
+    EXPECT_FALSE(button->IsScrollable()) << "without a handler the wheel goes to the scroll areas below";
+
+    float wheel = 0.0f;
+    button->onScrolled = [&](float delta) { wheel += delta; };
+    EXPECT_TRUE(button->IsScrollable());
+
+    button->OnScrolled(3.0f);
+    button->OnScrolled(-1.0f);
+    EXPECT_FLOAT_EQ(wheel, 2.0f);
 }

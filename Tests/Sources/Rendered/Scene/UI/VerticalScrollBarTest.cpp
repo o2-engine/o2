@@ -100,3 +100,29 @@ TEST(VerticalScrollBar, OnChangeFiresOnSetValue)
     sb->SetValue(0.25f);
     EXPECT_EQ(count, 1);
 }
+
+// ===== Enabling =====
+
+// Re-enabling goes through Widget::OnEnabled like any widget: the layout is refreshed and onShow fires,
+// so a bar inside an overlay that is shown later is drawn and takes the cursor
+TEST(VerticalScrollBar, ReenablingRunsTheWidgetEnableSteps)
+{
+    SceneCleanGuard guard;
+    auto overlay = mmake<Widget>(ActorCreateMode::InScene);
+    auto sb = mmake<VerticalScrollBar>();
+    overlay->AddChildWidget(sb);
+    TickFrames(1);
+    int shown = 0, hidden = 0;
+    sb->onShow = [&]() { shown++; };
+    sb->onHide = [&]() { hidden++; };
+
+    overlay->SetEnabled(false);
+    TickFrames(1);
+    EXPECT_EQ(hidden, 1);
+    EXPECT_FALSE(sb->IsInteractable());
+
+    overlay->SetEnabled(true);
+    TickFrames(1);
+    EXPECT_EQ(shown, 1);
+    EXPECT_TRUE(sb->IsInteractable());
+}

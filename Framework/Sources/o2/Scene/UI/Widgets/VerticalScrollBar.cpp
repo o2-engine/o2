@@ -281,11 +281,15 @@ namespace o2
 
     void VerticalScrollBar::OnEnabled()
     {
+        Widget::OnEnabled();
+
         interactable = true;
     }
 
     void VerticalScrollBar::OnDisabled()
     {
+        Widget::OnDisabled();
+
         interactable = false;
     }
 

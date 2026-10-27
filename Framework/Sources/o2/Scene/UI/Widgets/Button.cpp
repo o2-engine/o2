@@ -95,6 +95,11 @@ namespace o2
         return mDrawingScissorRect.IsInside(point) && isPointInside(point);
     }
 
+    bool Button::IsScrollable() const
+    {
+        return !onScrolled.IsEmpty();
+    }
+
     String Button::GetCreateMenuGroup()
     {
         return "Basic";
@@ -146,6 +151,17 @@ namespace o2
         auto selectState = state["hover"];
         if (selectState)
             *selectState = false;
+    }
+
+    void Button::OnCursorRightMouseReleased(const Input::Cursor& cursor)
+    {
+        if (IsUnderPoint(cursor.position))
+            onRightClick();
+    }
+
+    void Button::OnScrolled(float scroll)
+    {
+        onScrolled(scroll);
     }
 
     void Button::OnKeyPressed(const Input::Key& key)

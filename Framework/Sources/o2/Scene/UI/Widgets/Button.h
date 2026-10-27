@@ -23,6 +23,8 @@ namespace o2
 
     public:
         SerializableFunction<void()> onClick;       // Click event @SERIALIZABLE @SCRIPTABLE
+        Function<void()>             onRightClick;  // Right mouse button click event @SCRIPTABLE @EDITOR_IGNORE
+        Function<void(float)>        onScrolled;    // Mouse wheel over the button, parameter - wheel delta; the button takes the wheel only while it is set @SCRIPTABLE @EDITOR_IGNORE
         Function<bool(const Vec2F&)> isPointInside; // Checking pointer function. When this empty using default widget pointer check @EDITOR_IGNORE
 
     public:
@@ -65,6 +67,9 @@ namespace o2
         // Returns true if point is in this object
         bool IsUnderPoint(const Vec2F& point) override;
 
+        // Returns true when onScrolled is set
+        bool IsScrollable() const override;
+
         // Returns create menu group in editor
         static String GetCreateMenuGroup();
 
@@ -94,6 +99,12 @@ namespace o2
 
         // Called when cursor exits this object. Sets state "select" to false
         void OnCursorExit(const Input::Cursor& cursor) override;
+
+        // Called when right mouse button was released; calls onRightClick if cursor is still above this
+        void OnCursorRightMouseReleased(const Input::Cursor& cursor) override;
+
+        // Called when the mouse wheel scrolls over this; calls onScrolled
+        void OnScrolled(float scroll) override;
 
         // Called when key was pressed
         void OnKeyPressed(const Input::Key& key) override;
@@ -133,6 +144,8 @@ CLASS_FIELDS_META(o2::Button)
     FIELD().PUBLIC().NAME(caption);
     FIELD().PUBLIC().NAME(icon);
     FIELD().PUBLIC().SCRIPTABLE_ATTRIBUTE().SERIALIZABLE_ATTRIBUTE().NAME(onClick);
+    FIELD().PUBLIC().EDITOR_IGNORE_ATTRIBUTE().SCRIPTABLE_ATTRIBUTE().NAME(onRightClick);
+    FIELD().PUBLIC().EDITOR_IGNORE_ATTRIBUTE().SCRIPTABLE_ATTRIBUTE().NAME(onScrolled);
     FIELD().PUBLIC().EDITOR_IGNORE_ATTRIBUTE().NAME(isPointInside);
     FIELD().PUBLIC().NAME(shortcut);
     FIELD().PROTECTED().NAME(mCaptionText);
@@ -153,6 +166,7 @@ CLASS_METHODS_META(o2::Button)
     FUNCTION().PUBLIC().SIGNATURE(void, SetIconImage, const String&);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsFocusable);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsUnderPoint, const Vec2F&);
+    FUNCTION().PUBLIC().SIGNATURE(bool, IsScrollable);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetCreateMenuGroup);
     FUNCTION().PROTECTED().SIGNATURE(void, OnCursorPressed, const Input::Cursor&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnCursorReleased, const Input::Cursor&);
@@ -160,6 +174,8 @@ CLASS_METHODS_META(o2::Button)
     FUNCTION().PROTECTED().SIGNATURE(void, OnCursorDblClicked, const Input::Cursor&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnCursorEnter, const Input::Cursor&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnCursorExit, const Input::Cursor&);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnCursorRightMouseReleased, const Input::Cursor&);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnScrolled, float);
     FUNCTION().PROTECTED().SIGNATURE(void, OnKeyPressed, const Input::Key&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnKeyReleased, const Input::Key&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnLayerAdded, const Ref<WidgetLayer>&);

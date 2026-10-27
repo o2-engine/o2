@@ -39,6 +39,12 @@ namespace o2
         // Press at `from`, drag to `to` over several frames, release
         static void Drag(const Vec2F& from, const Vec2F& to, int steps = 12);
 
+        // Clicks the right mouse button at the position (press + release, a frame each)
+        static void RightClick(const Vec2F& screenPos);
+
+        // Moves the cursor to the position and turns the mouse wheel by delta there
+        static void Scroll(const Vec2F& screenPos, float delta);
+
         // Captures the next rendered frame and returns its pixels
         static Ref<Bitmap> TakeScreenshot();
 

@@ -59,12 +59,12 @@ Widgets allow making such elements internal: they behave like children, but enum
 
 ## Built-in widget types
 - `Grid/Horizontal/VerticalLayout` - dynamic arrangement of children in a grid / horizontally / vertically
-- `Button` - button; every tap fires `onClick`, a quick second tap within the double click time included
+- `Button` - button; every tap fires `onClick`, a quick second tap within the double click time included; the right mouse button fires `onRightClick`, the wheel over the button - `onScrolled(delta)` (the button takes the wheel only while `onScrolled` is set, otherwise it goes on to the scroll areas below); all three are assignable from scripts
 - `EditBox` - text input field
 - `Image` - image, raster or vector
 - `Label` - text
 - `Toggle` - flag, checkbox
-- `Horizontal/VerticalScrollBar` - horizontal/vertical scroll bar
+- `Horizontal/VerticalScrollBar` - horizontal/vertical scroll bar (layers `back` and `handle`); the vertical one is driven from scripts: `SetValueRange`, `SetValueForcible`, `GetValue`, `SetScrollHandleSize`, the `onChange`/`onChangeByUser` events
 - `Horizontal/VerticalProgress` - progress bars
 - `ScrollArea` - scrolling area with content clipping
 - `List/LongList` - lists, `CustomList` - list with arbitrary item widgets
