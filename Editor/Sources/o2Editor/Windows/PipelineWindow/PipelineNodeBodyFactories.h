@@ -13,8 +13,14 @@ namespace Editor
     // Creates the body of the AI extract node; null for other types
     Ref<PipelineNodeBody> CreateExtractNodeBody(const String& type);
 
+    // Creates the body of the AI image to UI node; null for other types
+    Ref<PipelineNodeBody> CreateImageToUiNodeBody(const String& type);
+
     // Model presets of the image generating nodes
     const Vector<String>& PipelineImageModelPresets();
+
+    // Model presets of the text and vision nodes
+    const Vector<String>& PipelineTextModelPresets();
 
     // Creates the composer body; null for other types
     Ref<PipelineNodeBody> CreateComposerNodeBody(const String& type);

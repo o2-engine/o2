@@ -142,6 +142,10 @@ namespace Editor
         o2FileSystem.FileDelete(GetSourcePreviewPath(pipelineId, node.id));
         if (!sig.IsEmpty())
             o2FileSystem.FileDelete(GetRanMarkerPath(pipelineId, sig));
+
+        auto schema = PipelineNodeRegistry::GetSchema(node.nodeType);
+        if (schema && schema->dynamicOutputs)
+            RemoveStalePortPreviews(pipelineId, node.id, {});
     }
 
     Vector<String> PipelineExecutor::ComputeFreshNodes(const String& pipelineId, const PipelineGraph& graph)
@@ -253,6 +257,7 @@ namespace Editor
         auto ctx = mmake<PipelineExecContext>();
         ctx->settings = PipelineSettings::Load();
         ctx->pipelineId = run->pipelineId;
+        ctx->nodeId = nodeId;
         ctx->cachedOnly = run->cachedOnly;
         ctx->assetsPath = assetsPathOverride.IsEmpty() ? o2Assets.GetAssetsPath() : assetsPathOverride;
 
@@ -327,15 +332,17 @@ namespace Editor
 
     void PipelineExecutor::FinishRun(const Ref<Run>& run, const String& fatal)
     {
+        PipelineExecEvent ev;
 #if IS_EDITOR
-        if (run->assetsChanged)
+        if (run->assetsChanged && deferAssetsRebuild)
+            ev.assetsChanged = true;
+        else if (run->assetsChanged)
         {
             EmitLog("Rebuilding assets");
             o2Assets.RebuildAssets();
         }
 #endif
 
-        PipelineExecEvent ev;
         if (fatal.IsEmpty())
             ev.type = PipelineExecEvent::Type::Done;
         else
@@ -354,33 +361,36 @@ namespace Editor
     {
         Ref<PipelineExecutor> self(this);
 
+        // The run's own graph copy is walked on a worker; only finishing the run touches the editor's state
+        String fatal = co_await ExecuteWork(run);
+        FinishRun(run, fatal);
+    }
+
+    Coroutine<String> PipelineExecutor::ExecuteWork(Ref<Run> run)
+    {
         auto errors = run->graph.Validate();
         if (!errors.IsEmpty())
         {
             String joined;
             for (auto& e : errors) joined += (joined.IsEmpty() ? "" : "; ") + e;
-            FinishRun(run, joined);
-            co_return;
+            co_return joined;
         }
 
         if (!run->graph.FindNode(run->targetNodeId))
-        {
-            FinishRun(run, "Target node not found");
-            co_return;
-        }
+            co_return String("Target node not found");
 
         run->seeds = run->graph.ResolveSeeds();
         CollectNeededPorts(run);
 
         bool ok = co_await Evaluate(run, run->targetNodeId);
         if (run->cancelled)
-            FinishRun(run, "Cancelled");
-        else if (run->notCached)
-            FinishRun(run, "Not cached");
-        else if (!ok)
-            FinishRun(run, "Pipeline failed");
-        else
-            FinishRun(run, "");
+            co_return String("Cancelled");
+        if (run->notCached)
+            co_return String("Not cached");
+        if (!ok)
+            co_return String("Pipeline failed");
+
+        co_return String();
     }
 
     void PipelineExecutor::CollectNeededPorts(const Ref<Run>& run)
@@ -489,8 +499,9 @@ namespace Editor
 
         // A node that computes its outputs one at a time is cached and previewed per port, a single
         // part included: its port is named after that part, so it can only be run by port id
-        bool perPort = impl->GetSchema().perPortRun && !node->outputs.IsEmpty();
-        bool cacheable = !isFinish && (node->outputs.Count() == 1 || perPort);
+        bool dynamic = impl->GetSchema().dynamicOutputs;
+        bool perPort = !dynamic && impl->GetSchema().perPortRun && !node->outputs.IsEmpty();
+        bool cacheable = !isFinish && !dynamic && (node->outputs.Count() == 1 || perPort);
 
         auto ctx = MakeContext(run, nodeId);
         ctx->inputsById = inputsById;
@@ -501,10 +512,20 @@ namespace Editor
         PipelineValue finishValue;
         PipelineValue srcValue;
         PipelineValue lastResult;
+        PipelineValue dynamicPreview;
         bool produced = true;
         String error;
 
-        if (perPort)
+        if (dynamic)
+        {
+            bool ok = co_await EvaluateDynamic(run, node, ctx, inputs, sig, &byPortId, &dynamicPreview, &produced, &error);
+            if (!ok && (run->notCached || run->cancelled))
+            {
+                run->visiting.Remove(nodeId);
+                co_return false;
+            }
+        }
+        else if (perPort)
         {
             // Only the outputs this run consumes are produced; the target itself is computed in full
             Vector<String> wanted;
@@ -741,6 +762,8 @@ namespace Editor
         PipelineValue preview;
         if (isFinish)
             preview = finishValue.IsValid() ? finishValue : (inputs.empty() ? PipelineValue() : inputs.begin()->second);
+        else if (dynamic)
+            preview = dynamicPreview;
         else if (!byPortId.empty())
             preview = byPortId.begin()->second;
 
@@ -760,12 +783,16 @@ namespace Editor
     {
         Ref<PipelineExecutor> self(this);
 
+        // Reading the inputs, the run, its previews and its cache entry happen on a worker
+        String fatal = co_await ExecuteSingleWork(run);
+        FinishRun(run, fatal);
+    }
+
+    Coroutine<String> PipelineExecutor::ExecuteSingleWork(Ref<Run> run)
+    {
         auto node = run->graph.FindNode(run->targetNodeId);
         if (!node)
-        {
-            FinishRun(run, "Node not found");
-            co_return;
-        }
+            co_return String("Node not found");
 
         run->seeds = run->graph.ResolveSeeds();
 
@@ -796,8 +823,7 @@ namespace Editor
             {
                 String err = "Cached output of upstream node " + source->nodeType + " not found - run the full pipeline first";
                 EmitState(node->id, "error", err);
-                FinishRun(run, err);
-                co_return;
+                co_return String(err);
             }
             inputs[targetPort->name] = value;
             inputsById[targetPort->id] = value;
@@ -806,8 +832,7 @@ namespace Editor
         auto impl = PipelineNodeRegistry::Get(node->nodeType);
         if (!impl)
         {
-            FinishRun(run, "Unknown node type: " + node->nodeType);
-            co_return;
+            co_return String("Unknown node type: " + node->nodeType);
         }
 
         auto ctx = MakeContext(run, node->id);
@@ -816,16 +841,12 @@ namespace Editor
 
         PipelineRunResult result = co_await impl->Run(ctx, inputs, node);
         if (run->cancelled)
-        {
-            FinishRun(run, "Cancelled");
-            co_return;
-        }
+            co_return String("Cancelled");
 
         if (!result.ok)
         {
             EmitState(node->id, "error", result.error);
-            FinishRun(run, result.error);
-            co_return;
+            co_return String(result.error);
         }
 
         if (ctx->assetsChanged)
@@ -871,7 +892,7 @@ namespace Editor
         }
 
         EmitState(node->id, "done");
-        FinishRun(run, "");
+        co_return String();
     }
 }
 // --- META ---
@@ -882,6 +903,7 @@ ENUM_META(Editor::PipelineExecEvent::Type, Editor__PipelineExecEvent__Type)
     ENUM_ENTRY(Fatal);
     ENUM_ENTRY(Log);
     ENUM_ENTRY(NodeOutput);
+    ENUM_ENTRY(NodePorts);
     ENUM_ENTRY(NodeState);
     ENUM_ENTRY(Retry);
 }

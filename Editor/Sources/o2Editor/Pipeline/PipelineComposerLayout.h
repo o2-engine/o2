@@ -32,9 +32,9 @@ namespace Editor
         constexpr float border = 1.0f;          // Frame of the panel
         constexpr float headHeight = 22.0f;     // "Layers · N"
         constexpr float listPadding = 4.0f;     // Above the first add row and under the last one
-        constexpr float rowHeight = 28.0f;      // One layer row
+        constexpr float rowHeight = 32.0f;      // One layer row
         constexpr float rowGap = 3.0f;          // Between the rows
-        constexpr float addRowHeight = 24.0f;   // An add row
+        constexpr float addRowHeight = 26.0f;   // An add row
         constexpr float settingsLine = 25.0f;   // Step of the lines in the open settings
         constexpr float settingsHeight = 101.0f; // Open settings: size, export size, opacity, 9-slice
         constexpr float nineHeight = 69.0f;     // More open settings with 9-slice on: insets, corners, hint

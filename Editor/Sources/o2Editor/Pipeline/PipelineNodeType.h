@@ -33,6 +33,7 @@ namespace Editor
         bool hasPlay = false;    // Terminal node: has the play button that pulls the whole branch
         bool instant = false;    // Local and free: re-applied automatically on every parameter change
         bool perPortRun = false; // Computes its outputs one at a time: each is run, cached and previewed on its own
+        bool dynamicOutputs = false; // Decides its outputs while it runs: one run returns all of them, cached together, ports follow
 
         Vector<PipelinePortType> addableInputs; // Input kinds the user may add with "+"
 
@@ -54,6 +55,7 @@ namespace Editor
         bool                       ok = true; // False when the node failed
         String                     error;     // Failure message when not ok
         Map<String, PipelineValue> outputs;   // Produced values by output port NAME
+        Vector<String>             order;     // Output names in the order the node made them, for a dynamicOutputs node
 
     public:
         // Returns a failed result with the error message
@@ -87,6 +89,13 @@ namespace Editor
         String outputPort;   // Name of that output
 
         bool assetsChanged = false; // Set by finish nodes when the assets folder got new files
+
+        String nodeId;        // Node being run
+        String workDir;       // A folder of the node's own (its debug trace), dynamicOutputs nodes only
+        bool   fresh = false; // The node is regenerated (↻): memoised model answers are skipped
+
+        Function<bool(const String& key, const String& ext, String& data)>       memoGet; // Memoised model answers of the pipeline
+        Function<void(const String& key, const String& ext, const String& data)> memoPut; // Stores a model answer
 
     public:
         // Passes the message to the log callback when it is set
@@ -127,6 +136,9 @@ namespace Editor
 
         // Rebuilds the outputs a per-port node takes from its own config; the schema outputs are left alone when it does
         virtual bool SyncPorts(const Ref<PipelineNode>& node) const { return false; }
+
+        // Config keys that do not change what the node produces, besides the UI-only ones every node has
+        virtual Vector<String> SignatureExcludedKeys() const { return {}; }
     };
 
     // -------------------------------------------

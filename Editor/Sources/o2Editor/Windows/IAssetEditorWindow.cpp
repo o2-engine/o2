@@ -167,7 +167,7 @@ namespace Editor
 		{
 			editingAsset->Save();
 			OnAssetSaved();
-			o2Assets.RebuildAssets();
+			o2Assets.RebuildAssetsInBackground();
 		}
 
 		UpdateWindowTitle();
@@ -238,7 +238,7 @@ namespace Editor
 				SetComponentAndPropertyAsset(asset);
 
 				OnAssetSaved();
-				o2Assets.RebuildAssets();
+				o2Assets.RebuildAssetsInBackground();
 
 				UpdateWindowTitle();
 			}

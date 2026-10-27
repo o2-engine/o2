@@ -168,6 +168,8 @@ namespace Editor
     bool ReadNodeCrop(const PipelineNode& node, const char* key, PipelineImageOps::CropRect& crop);
 
     // Value of a source node (text, image, audio) straight from its config; false with the reason when it has none.
-    // assetsPath is the folder asset paths of the config are relative to
-    bool ResolveSourceValue(const PipelineNode& node, const String& assetsPath, PipelineValue& value, String& error);
+    // assetsPath is the folder asset paths of the config are relative to. Without decodeImage a picture keeps the file's own
+    // bytes and is neither checked nor converted to PNG (what the editor shows, decoded in the background)
+    bool ResolveSourceValue(const PipelineNode& node, const String& assetsPath, PipelineValue& value, String& error,
+                            bool decodeImage = true);
 }

@@ -120,8 +120,9 @@ namespace Editor
 
         Ref<PipelineNode> mNode;          // Composer node
         Vector<LayerView> mLayers;        // Layer views in draw order
-        Ref<Sprite>       mCheckerSprite; // Tiled checkerboard background
-        Ref<Text>         mNameText;      // Text used for layer names, the size badge and the hint
+        Ref<Text>         mHintText;      // Hint at the bottom of the work area
+        Ref<Text>         mNameText;      // Text used for the names of layers without a picture
+        Ref<Text>         mBadgeText;     // Size badge of the selected layer
 
         Ref<PipelineComposerFrame> mFrame;        // Transform frame of the selected layer
         bool              mFrameSyncing = false;  // True while the frame is set from the placement
@@ -195,8 +196,9 @@ CLASS_FIELDS_META(Editor::PipelineComposerStage)
     FIELD().PUBLIC().NAME(imageOfPort);
     FIELD().PROTECTED().NAME(mNode);
     FIELD().PROTECTED().NAME(mLayers);
-    FIELD().PROTECTED().NAME(mCheckerSprite);
+    FIELD().PROTECTED().NAME(mHintText);
     FIELD().PROTECTED().NAME(mNameText);
+    FIELD().PROTECTED().NAME(mBadgeText);
     FIELD().PROTECTED().NAME(mFrame);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mFrameSyncing);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mFrameDragging);

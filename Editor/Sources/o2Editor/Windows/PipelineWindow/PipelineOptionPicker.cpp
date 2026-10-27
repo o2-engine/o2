@@ -1,4 +1,5 @@
 #include "o2Editor/stdafx.h"
+#include "o2Editor/Windows/PipelineWindow/PipelineTheme.h"
 #include "PipelineOptionPicker.h"
 
 #include "o2/Animation/AnimationClip.h"
@@ -30,14 +31,15 @@ namespace Editor
 
     static Ref<Text> MakeText(const String& text, const Color4& color, int height = 11)
     {
-        auto drawable = mmake<Text>("stdFont.ttf");
+        auto drawable = mmake<Text>(PipelineTheme::Font(400));
         drawable->text = text;
         drawable->color = color;
         drawable->horAlign = HorAlign::Left;
         drawable->verAlign = VerAlign::Middle;
         drawable->wordWrap = false;
         drawable->dotsEngings = true;
-        drawable->height = height;
+        // The callers ask for the old o2 font units; the theme font takes pixels: 11 reads as 12 px
+        drawable->height = PipelineTheme::Size(height + 1.0f);
         return drawable;
     }
 
@@ -46,10 +48,10 @@ namespace Editor
     {
         PushEditorScopeOnStack scope;
         fitByChildren = false;
-        AddLayer("back", mmake<VectorSprite>("ui/UI4_Context_menu.svg"), Layout::BothStretch(-20, -19, -20, -19));
+        AddLayer("back", mmake<PipelineMenuBack>(), Layout::BothStretch(-2, -2, -2, -2));
         SetViewLayout(Layout::BothStretch(0, 0, 0, 0));
         SetClippingLayout(Layout::BothStretch(0, 0, 0, 0));
-        mMeasure = mmake<Text>("stdFont.ttf");
+        mMeasure = mmake<Text>(PipelineTheme::Font(400));
     }
 
     void PipelineOptionPicker::Open(const PipelineOptionPickerRequest& request)
@@ -266,17 +268,17 @@ namespace Editor
         bool current = option.value == mRequest.current;
         auto row = mmake<Button>();
         row->name = option.value;
-        row->AddLayer("select", mmake<VectorSprite>("ui/UI4_Context_menu_select.svg"), Layout::BothStretch(-10, -16, -10, -16))->transparency = 0.0f;
+        row->AddLayer("select", PipelineControls::MakeMenuHover(), Layout::BothStretch(2, 0, 2, 0))->transparency = 0.0f;
 
         auto icon = mmake<VectorSprite>(option.icon);
-        icon->color = current ? PipelineControls::accentColor : PipelineControls::dimTextColor;
+        icon->color = current ? PipelineControls::AccentColor() : PipelineControls::DimTextColor();
         float iconTop = -rowPadding - (labelHeight - 16.0f)*0.5f;
         row->AddLayer("icon", icon, Layout(Vec2F(0, 1), Vec2F(0, 1), Vec2F(6, iconTop - 16.0f), Vec2F(22, iconTop)));
 
-        row->AddLayer("label", MakeText(option.label, current ? PipelineControls::accentColor : PipelineControls::textColor),
+        row->AddLayer("label", MakeText(option.label, current ? PipelineControls::AccentColor() : PipelineControls::TextColor()),
                       Layout(Vec2F(0, 1), Vec2F(1, 1), Vec2F(iconColumn, -rowPadding - labelHeight), Vec2F(-checkColumn, -rowPadding)));
 
-        auto hint = MakeText(option.hint, PipelineControls::dimTextColor, hintFontHeight);
+        auto hint = MakeText(option.hint, PipelineControls::DimTextColor(), hintFontHeight);
         hint->wordWrap = true;
         hint->dotsEngings = false;
         hint->verAlign = VerAlign::Top;
@@ -284,7 +286,7 @@ namespace Editor
                                            Vec2F(-checkColumn, -rowPadding - labelHeight)));
 
         float checkTop = -rowPadding - (labelHeight - 20.0f)*0.5f;
-        row->AddLayer("check", mmake<VectorSprite>("ui/UI4_Ckeck.svg"), Layout(Vec2F(1, 1), Vec2F(1, 1), Vec2F(-24, checkTop - 20.0f), Vec2F(-4, checkTop)))
+        row->AddLayer("check", PipelineControls::MakeMenuCheck(), Layout(Vec2F(1, 1), Vec2F(1, 1), Vec2F(-24, checkTop - 20.0f), Vec2F(-4, checkTop)))
             ->transparency = current ? 1.0f : 0.0f;
 
         String value = option.value;
@@ -314,7 +316,7 @@ namespace Editor
         for (int i = 0; i < mRows.Count(); i++)
         {
             if (auto select = mRows[i]->FindLayer("select"))
-                select->transparency = i == mHighlight ? 1.0f : 0.0f;
+                select->transparency = i == mHighlight ? (PipelineTheme::Get().dark ? 0.09f : 0.12f) : 0.0f;
         }
     }
 
@@ -326,14 +328,19 @@ namespace Editor
             auto field = mmake<Button>();
             field->name = "option";
             field->layout->minSize = Vec2F(20, 20);
-            field->AddLayer("back", mmake<VectorSprite>("ui/UI4_Editbox_regular.svg"), Layout::BothStretch(-9, -9, -9, -9));
-            field->AddLayer("hover", mmake<VectorSprite>("ui/UI4_Editbox_select.svg"), Layout::BothStretch(-9, -9, -9, -9))->transparency = 0.0f;
-            field->AddLayer("pressed", mmake<VectorSprite>("ui/UI4_Editbox_pressed.svg"), Layout::BothStretch(-9, -9, -9, -9))->transparency = 0.0f;
-            field->AddLayer("arrow", mmake<VectorSprite>("ui/UI4_Down_icn.svg"), Layout(Vec2F(1.0f, 0.5f), Vec2F(1.0f, 0.5f), Vec2F(-20, -10), Vec2F(0, 10)));
+            // .model-pick: the field look of a select, r 9, the chevron 5 px from the right edge
+            auto& theme = PipelineTheme::Get();
+            AddFillLayer(*field, "back", theme.field, fieldRadius, Layout::BothStretch(), -2.0f);
+            AddBorderLayer(*field, "border", theme.line, fieldRadius, 1.0f, Layout::BothStretch(), -1.5f);
+            AddBorderLayer(*field, "hover", theme.accent, fieldRadius, 1.0f, Layout::BothStretch(), -1.0f)->transparency = 0.0f;
+            AddBorderLayer(*field, "pressed", theme.accent, fieldRadius, 1.0f, Layout::BothStretch(), -0.9f)->transparency = 0.0f;
+            auto chevron = mmake<VectorSprite>("ui/pipeline/chevron_down.svg");
+            chevron->color = theme.fgDim;
+            field->AddLayer("arrow", chevron, Layout(Vec2F(1.0f, 0.5f), Vec2F(1.0f, 0.5f), Vec2F(-15, -5), Vec2F(-5, 5)));
             auto icon = mmake<Sprite>();
-            icon->color = accentColor;
+            icon->color = AccentColor();
             field->AddLayer("icon", icon, Layout(Vec2F(0.0f, 0.5f), Vec2F(0.0f, 0.5f), Vec2F(5, -7), Vec2F(19, 7)));
-            field->AddLayer("caption", MakeText("", textColor), Layout::BothStretch(24, 0, 20, 0));
+            field->AddLayer("caption", MakeText("", TextColor()), Layout::BothStretch(24, 0, 20, 0));
 
             field->AddState("hover", AnimationClip::EaseInOut("layer/hover/transparency", 0.0f, 1.0f, 0.05f))->offStateAnimationSpeed = 0.5f;
             field->AddState("pressed", AnimationClip::EaseInOut("layer/pressed/transparency", 0.0f, 1.0f, 0.05f))->offStateAnimationSpeed = 0.5f;
@@ -348,7 +355,7 @@ namespace Editor
             if (auto caption = field->GetLayerDrawable<Text>("caption"))
                 caption->text = option.label;
             if (auto icon = field->SetLayerImage("icon", option.icon))
-                icon->color = accentColor;
+                icon->color = AccentColor();
             field->SetLayoutDirty();
         }
     }

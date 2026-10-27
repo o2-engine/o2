@@ -1,6 +1,14 @@
 #include "o2Editor/stdafx.h"
 #include "PipelineMediaViews.h"
 
+#include "miniaudio.h"
+#include "o2Editor/Windows/PipelineWindow/PipelineDraw.h"
+#include "o2Editor/Windows/PipelineWindow/PipelineTheme.h"
+#include <map>
+#include <mutex>
+#include <string>
+#include <thread>
+
 #include "o2/Assets/Types/SoundAsset.h"
 #include "o2/Render/Render.h"
 #include "o2/Render/Sprite.h"
@@ -17,13 +25,14 @@
 #include "o2Editor/Pipeline/PipelineUtils.h"
 
 #include <cstring>
+#include <map>
 #include <thread>
 #include "o2/Render/VectorSprite.h"
 
 namespace Editor
 {
     const float PipelineMediaControls::height = 22.0f;
-    const float PipelineAudioView::height = 46.0f;
+    const float PipelineAudioView::height = 38.0f;
 
     static String FormatTime(float seconds)
     {
@@ -31,20 +40,107 @@ namespace Editor
         return String::Format("%d:%02d", total / 60, total % 60);
     }
 
+    // Peaks of the clip for the waveform: 320 buckets of the loudest sample, normalised; decoded once per clip off the
+    // main thread (AudioPlayer.tsx BUCKETS, peaksCache)
+    namespace
+    {
+        struct PeaksCache
+        {
+            std::mutex                         mutex;
+            std::map<std::string, Vector<float>> done;
+            std::map<std::string, bool>        running;
+        };
+
+        PeaksCache& Peaks()
+        {
+            static PeaksCache* cache = new PeaksCache();
+            return *cache;
+        }
+
+        std::string PeaksKey(const String& data)
+        {
+            // Length and a sparse sample of the bytes tell clips apart without hashing megabytes
+            std::string key = std::to_string(data.Length()) + ":";
+            int step = Math::Max(1, data.Length() / 256);
+            for (int i = 0; i < data.Length(); i += step)
+                key += (char)('a' + ((unsigned char)data[i] % 26));
+            return key;
+        }
+
+        Vector<float> DecodePeaks(const String& data)
+        {
+            const int buckets = 320;
+            Vector<float> peaks;
+            ma_decoder_config config = ma_decoder_config_init(ma_format_f32, 0, 0);
+            ma_decoder decoder;
+            if (ma_decoder_init_memory(data.Data(), (size_t)data.Length(), &config, &decoder) != MA_SUCCESS)
+                return peaks;
+
+            ma_uint64 frames = 0;
+            ma_decoder_get_length_in_pcm_frames(&decoder, &frames);
+            int channels = Math::Max(1, (int)decoder.outputChannels);
+            if (frames == 0)
+            {
+                ma_decoder_uninit(&decoder);
+                return peaks;
+            }
+
+            peaks.Resize(buckets);
+            for (auto& p : peaks)
+                p = 0.0f;
+            ma_uint64 per = Math::Max<ma_uint64>(1, frames / buckets);
+            std::vector<float> chunk(4096 * channels);
+            ma_uint64 index = 0;
+            while (true)
+            {
+                ma_uint64 read = 0;
+                if (ma_decoder_read_pcm_frames(&decoder, chunk.data(), 4096, &read) != MA_SUCCESS || read == 0)
+                    break;
+                for (ma_uint64 f = 0; f < read; f++, index++)
+                {
+                    int bucket = (int)Math::Min<ma_uint64>(buckets - 1, index / per);
+                    for (int c = 0; c < channels; c++)
+                        peaks[bucket] = Math::Max(peaks[bucket], Math::Abs(chunk[f * channels + c]));
+                }
+            }
+            ma_decoder_uninit(&decoder);
+
+            float max = 0.0f;
+            for (float p : peaks)
+                max = Math::Max(max, p);
+            if (max > 1e-4f)
+            {
+                for (auto& p : peaks)
+                    p /= max;
+            }
+            return peaks;
+        }
+    }
+
     PipelineMediaControls::PipelineMediaControls(RefCounter* refCounter):
         Widget(refCounter)
     {
+        auto& theme = PipelineTheme::Get();
         layout->minHeight = height;
 
-        mPlayButton = PipelineControls::MakeIconButton("ui/pipeline/btn_play.svg", PipelineControls::accentColor, Color4(0, 0, 0, 0));
+        // Play: an accent circle with the ink glyph (.ap-play 24 / .tp-play 22)
+        mPlayButton = mmake<Button>();
         mPlayButton->name = "play";
-        *mPlayButton->layout = WidgetLayout(Vec2F(0, 0), Vec2F(0, 1), Vec2F(0, 0), Vec2F(22, 0));
+        PipelineControls::AddFillLayer(*mPlayButton, "back", theme.accent, 12.0f, Layout::BothStretch(), -2.0f);
+        auto hover = PipelineControls::AddFillLayer(*mPlayButton, "hover", theme.accentHover, 12.0f, Layout::BothStretch(), -1.0f);
+        hover->transparency = 0.0f;
+        mPlayButton->AddState("hover", AnimationClip::EaseInOut("layer/hover/transparency", 0.0f, 1.0f, 0.12f))->offStateAnimationSpeed = 0.5f;
+        auto glyph = mmake<VectorSprite>("ui/pipeline/al_play.svg");
+        glyph->color = theme.accentInk;
+        mPlayButton->AddLayer("icon", glyph, Layout::Based(BaseCorner::Center, Vec2F(10, 10), Vec2F(0.5f, 0)));
         mPlayButton->onClick = [this]() { if (onPlayPause) onPlayPause(); };
         AddChild(mPlayButton);
 
-        mSeek = o2UI.CreateHorProgress();
+        // Seek: the waveform or the 3 px bar, clicked or dragged
+        mSeek = mmake<HorizontalProgress>();
         mSeek->name = "seek";
-        *mSeek->layout = WidgetLayout(Vec2F(0, 0), Vec2F(1, 1), Vec2F(26, 2), Vec2F(-154, -2));
+        PipelineControls::AddFillLayer(*mSeek, "back", Color4(0, 0, 0, 1), 2.0f);
+        PipelineControls::AddFillLayer(*mSeek, "bar", Color4(0, 0, 0, 1), 2.0f);
         mSeek->SetValueRange(0.0f, 1.0f);
         mSeek->onChangeByUser = [this](float value)
         {
@@ -54,45 +150,139 @@ namespace Editor
         };
         AddChild(mSeek);
 
-        auto time = mmake<Text>("stdFont.ttf");
+        auto time = mmake<Text>(PipelineTheme::MonoFont());
+        time->height = PipelineTheme::Size(10.5f);
         time->horAlign = HorAlign::Right;
         time->verAlign = VerAlign::Middle;
-        time->color = PipelineControls::dimTextColor;
-        mTimeLayer = AddLayer("time", time, Layout(Vec2F(1, 0), Vec2F(1, 1), Vec2F(-150, 0), Vec2F(-82, 0)));
+        time->color = theme.fg3;
+        mTimeLayer = AddLayer("time", time, Layout::BothStretch());
 
-        mLoopToggle = PipelineControls::MakeSegment("", false);
+        // Loop: a 12 px glyph, the accent while on (.ap-loop)
+        mLoopToggle = mmake<Toggle>();
         mLoopToggle->name = "loop";
-        *mLoopToggle->layout = WidgetLayout(Vec2F(1, 0), Vec2F(1, 1), Vec2F(-78, 1), Vec2F(-58, -1));
         auto loopIcon = mmake<VectorSprite>("ui/pipeline/btn_loop.svg");
-        loopIcon->color = PipelineControls::textColor;
-        mLoopToggle->AddLayer("icon", loopIcon, Layout::Based(BaseCorner::Center, Vec2F(14, 14)), 5.0f);
+        loopIcon->color = theme.fg3;
+        mLoopToggle->AddLayer("icon", loopIcon, Layout::BothStretch(-1, -1, -1, -1));
+        auto loopOn = mmake<VectorSprite>("ui/pipeline/btn_loop.svg");
+        loopOn->color = theme.accent;
+        mLoopToggle->AddLayer("iconOn", loopOn, Layout::BothStretch(-1, -1, -1, -1))->transparency = 0.0f;
+        mLoopToggle->AddState("value", AnimationClip::EaseInOut("layer/iconOn/transparency", 0.0f, 1.0f, 0.12f))->offStateAnimationSpeed = 1.0f;
         mLoopToggle->onToggleByUser = [this](bool value) { if (onLoopChanged) onLoopChanged(value); };
         AddChild(mLoopToggle);
 
-        auto volumeIcon = mmake<VectorSprite>("ui/pipeline/btn_volume.svg");
-        volumeIcon->color = PipelineControls::dimTextColor;
-        mVolumeIcon = AddLayer("volume", volumeIcon, Layout(Vec2F(1, 0.5f), Vec2F(1, 0.5f), Vec2F(-54, -7), Vec2F(-40, 7)));
-
-        mVolume = o2UI.CreateHorProgress();
-        mVolume->name = "volume";
-        *mVolume->layout = WidgetLayout(Vec2F(1, 0), Vec2F(1, 1), Vec2F(-38, 4), Vec2F(0, -4));
-        mVolume->SetValueRange(0.0f, 1.0f);
-        mVolume->SetValue(1.0f);
-        mVolume->onChangeByUser = [this](float value) { if (onVolumeChanged) onVolumeChanged(value); };
-        AddChild(mVolume);
-
+        SetMode(Mode::Transport);
         SetPlaying(false);
+    }
+
+    void PipelineMediaControls::SetMode(Mode mode)
+    {
+        mMode = mode;
+        LayoutParts();
+    }
+
+    void PipelineMediaControls::SetFormat(const String& format)
+    {
+        mFormat = format;
+        SetTime(mTime, mDuration);
+    }
+
+    void PipelineMediaControls::SetPeaks(const Vector<float>& peaks)
+    {
+        mPeaks = peaks;
+    }
+
+    void PipelineMediaControls::LayoutParts()
+    {
+        bool audio = mMode == Mode::Audio;
+        float play = audio ? 24.0f : 22.0f;
+        *mPlayButton->layout = WidgetLayout(Vec2F(0, 0.5f), Vec2F(0, 0.5f), Vec2F(0, -play * 0.5f), Vec2F(play, play * 0.5f));
+        for (auto name : { "back", "hover" })
+        {
+            if (auto layer = mPlayButton->GetLayer(name))
+                if (auto rect = DynamicCast<PipelineRoundedRect>(layer->GetDrawable()))
+                    rect->radius = play * 0.5f;
+        }
+
+        // Time "0:00 / 0:02 · WAV" takes its text width; the loop glyph ends the audio row
+        float timeWidth = Math::Ceil(PipelineControls::TextWidth("0:00 / 0:00" + (mFormat.IsEmpty() ? String() : " · " + mFormat), 10.5f)) + 2.0f;
+        if (auto text = DynamicCast<Text>(mTimeLayer->GetDrawable()))
+        {
+            if (auto font = text->GetFont())
+                timeWidth = Math::Ceil(Text::GetTextSize("0:00 / 0:00" + (mFormat.IsEmpty() ? String() : " · " + mFormat), font, text->height, Vec2F(), HorAlign::Left, VerAlign::Top, false).x) + 2.0f;
+        }
+        float loop = audio ? 12.0f + 8.0f : 0.0f;
+        mTimeLayer->layout = Layout(Vec2F(1, 0), Vec2F(1, 1), Vec2F(-loop - timeWidth, 0), Vec2F(-loop, 0));
+        mLoopToggle->enabled = audio;
+        *mLoopToggle->layout = WidgetLayout(Vec2F(1, 0.5f), Vec2F(1, 0.5f), Vec2F(-12, -6), Vec2F(0, 6));
+
+        float seekHeight = audio ? 22.0f : 3.0f;
+        *mSeek->layout = WidgetLayout(Vec2F(0, 0.5f), Vec2F(1, 0.5f), Vec2F(play + 8.0f, -seekHeight * 0.5f),
+                                      Vec2F(-loop - timeWidth - 8.0f, seekHeight * 0.5f));
+        auto& theme = PipelineTheme::Get();
+        if (auto back = mSeek->GetLayer("back"))
+        {
+            back->GetDrawable()->color = audio ? Color4(0, 0, 0, 255) : Color4(theme.border.r, theme.border.g, theme.border.b, 255);
+            back->transparency = audio ? 0.004f : (theme.dark ? 0.14f : 1.0f);
+        }
+        if (auto bar = mSeek->GetLayer("bar"))
+        {
+            bar->GetDrawable()->color = Color4(theme.accent.r, theme.accent.g, theme.accent.b, 255);
+            bar->transparency = audio ? 0.0f : 1.0f;
+        }
+    }
+
+    void PipelineMediaControls::Draw()
+    {
+        Widget::Draw();
+        if (mMode != Mode::Audio || PipelineControls::IsFarView() || !mResEnabledInHierarchy)
+            return;
+
+        // 2 px bars 1 px apart, the played ones in the audio colour; a 2 px line without peaks
+        auto& theme = PipelineTheme::Get();
+        RectF area = mSeek->layout->GetWorldRect();
+        float w = area.Width(), h = area.Height(), mid = area.Center().y;
+        float progress = mDuration > 0.0f ? Math::Clamp01(mTime / mDuration) : 0.0f;
+        Color4 played = theme.portAudio, idle = theme.border;
+        if (mPeaks.IsEmpty())
+        {
+            o2Render.DrawFilledPolygon({ Vec2F(area.left, mid - 1), Vec2F(area.left, mid + 1), Vec2F(area.right, mid + 1), Vec2F(area.right, mid - 1) }, idle);
+            float x = area.left + w * progress;
+            o2Render.DrawFilledPolygon({ Vec2F(area.left, mid - 1), Vec2F(area.left, mid + 1), Vec2F(x, mid + 1), Vec2F(x, mid - 1) }, played);
+            return;
+        }
+
+        int bars = Math::Max(1, (int)(w / 3.0f));
+        float playedBars = progress * bars;
+        Vector<Vertex> vertices;
+        Vector<VertexIndex> indices;
+        for (int i = 0; i < bars; i++)
+        {
+            float peak = mPeaks[Math::Min(mPeaks.Count() - 1, (int)((float)i / bars * mPeaks.Count()))];
+            float barH = Math::Max(1.0f, peak * (h - 2.0f));
+            ULong color = (i < playedBars ? played : idle).ABGR();
+            float x = area.left + i * 3.0f;
+            VertexIndex base = (VertexIndex)vertices.Count();
+            vertices.Add(Vertex(Vec2F(x, mid - barH * 0.5f), color, 0, 0));
+            vertices.Add(Vertex(Vec2F(x + 2.0f, mid - barH * 0.5f), color, 0, 0));
+            vertices.Add(Vertex(Vec2F(x + 2.0f, mid + barH * 0.5f), color, 0, 0));
+            vertices.Add(Vertex(Vec2F(x, mid + barH * 0.5f), color, 0, 0));
+            indices.Add(base); indices.Add(base + 1); indices.Add(base + 2);
+            indices.Add(base); indices.Add(base + 2); indices.Add(base + 3);
+        }
+        o2Render.DrawBuffer(PrimitiveType::Polygon, vertices.Data(), vertices.Count(), indices.Data(), indices.Count() / 3,
+                            o2Render.GetDefaultMaterial(), TextureRef());
     }
 
     void PipelineMediaControls::SetPlaying(bool playing)
     {
         mPlaying = playing;
-        if (auto icon = mPlayButton->SetLayerImage("icon", playing ? "ui/pipeline/btn_pause.svg" : "ui/pipeline/btn_play.svg"))
-            icon->color = PipelineControls::accentColor;
+        if (auto icon = mPlayButton->SetLayerImage("icon", playing ? "ui/pipeline/btn_pause.svg" : "ui/pipeline/al_play.svg"))
+            icon->color = PipelineTheme::Get().accentInk;
     }
 
     void PipelineMediaControls::SetTime(float time, float duration)
     {
+        mTime = time;
         mDuration = duration;
         if (!mSeeking)
         {
@@ -101,7 +291,7 @@ namespace Editor
         }
 
         if (auto text = DynamicCast<Text>(mTimeLayer->GetDrawable()))
-            text->text = FormatTime(time) + " / " + FormatTime(duration);
+            text->text = FormatTime(time) + " / " + FormatTime(duration) + (mFormat.IsEmpty() ? String() : " · " + mFormat);
     }
 
     void PipelineMediaControls::SetLoop(bool loop)
@@ -116,12 +306,12 @@ namespace Editor
 
     void PipelineMediaControls::SetVolume(float volume)
     {
-        mVolume->SetValue(Math::Clamp01(volume));
+        mVolumeValue = Math::Clamp01(volume);
     }
 
     float PipelineMediaControls::GetVolume() const
     {
-        return Math::Clamp01(mVolume->GetValue());
+        return mVolumeValue;
     }
 
     void PipelineMediaControls::SetActive(bool active)
@@ -129,8 +319,7 @@ namespace Editor
         mPlayButton->interactable = active;
         mSeek->interactable = active;
         mLoopToggle->interactable = active;
-        mVolume->interactable = active;
-        mVolumeIcon->transparency = active ? 1.0f : 0.5f;
+        mPlayButton->transparency = active ? 1.0f : 0.5f;
     }
 
     void PipelineMediaControls::Update(float dt)
@@ -140,27 +329,57 @@ namespace Editor
             mSeeking = false;
     }
 
+    // Returns the sound asset of a clip. An asset stays in the assets cache for the session, so the cards share one per
+    // clip instead of making one at every build
+    static Ref<SoundAsset> SharedSoundAsset(const String& bytes)
+    {
+        static auto* sounds = new std::multimap<UInt64, Ref<SoundAsset>>();
+
+        // Sampled key: the bytes are compared on a match
+        UInt64 key = 1469598103934665603ull ^ (UInt64)bytes.Length();
+        int count = bytes.Length();
+        for (int i = 0; i < 256 && count > 0; i++)
+            key = (key ^ (UInt8)bytes[(int)(((Int64)count*i)/256)]) * 1099511628211ull;
+
+        auto range = sounds->equal_range(key);
+        for (auto it = range.first; it != range.second; ++it)
+        {
+            auto& sound = it->second;
+            if (sound->GetDataSize() == (UInt)count && std::memcmp(sound->GetData(), bytes.Data(), count) == 0)
+                return sound;
+        }
+
+        auto sound = mmake<SoundAsset>();
+        sound->SetData(const_cast<char*>(bytes.Data()), (UInt)count);
+        sounds->insert({ key, sound });
+        return sound;
+    }
+
     PipelineAudioView::PipelineAudioView(RefCounter* refCounter):
         Widget(refCounter)
     {
+        auto& theme = PipelineTheme::Get();
         layout->minHeight = height;
 
-        AddLayer("back", mmake<VectorSprite>("ui/UI4_Editbox_regular.svg"), Layout::BothStretch(-9, -9, -9, -9));
+        // .audio-player: field fill and line border, r 9, padding 6 / 8
+        PipelineControls::AddFillLayer(*this, "back", theme.field, PipelineControls::fieldRadius, Layout::BothStretch(), -2.0f);
+        PipelineControls::AddBorderLayer(*this, "border", theme.line, PipelineControls::fieldRadius, 1.0f, Layout::BothStretch(), -1.0f);
 
-        mTitleLabel = PipelineControls::MakeLabel("", false);
+        mTitleLabel = PipelineControls::MakeLabel("", true);
         mTitleLabel->name = "title";
-        *mTitleLabel->layout = WidgetLayout(Vec2F(0, 1), Vec2F(1, 1), Vec2F(6, -22), Vec2F(-80, -2));
+        mTitleLabel->horAlign = HorAlign::Middle;
+        *mTitleLabel->layout = WidgetLayout::BothStretch(8, 6, 8, 6);
         AddChild(mTitleLabel);
 
         mInfoLabel = PipelineControls::MakeLabel("", true);
         mInfoLabel->name = "info";
-        mInfoLabel->horAlign = HorAlign::Right;
-        *mInfoLabel->layout = WidgetLayout(Vec2F(1, 1), Vec2F(1, 1), Vec2F(-100, -22), Vec2F(-6, -2));
+        mInfoLabel->enabled = false;
         AddChild(mInfoLabel);
 
         mControls = mmake<PipelineMediaControls>();
         mControls->name = "controls";
-        *mControls->layout = WidgetLayout(Vec2F(0, 0), Vec2F(1, 0), Vec2F(4, 2), Vec2F(-4, 2 + PipelineMediaControls::height));
+        mControls->SetMode(PipelineMediaControls::Mode::Audio);
+        *mControls->layout = WidgetLayout::BothStretch(8, 6, 8, 6);
         auto weakThis = WeakRef(this);
         mControls->onPlayPause = [weakThis]() { if (auto self = weakThis.Lock()) self->TogglePlay(); };
         mControls->onSeek = [weakThis](float time) { if (auto self = weakThis.Lock()) self->Seek(time); };
@@ -189,18 +408,60 @@ namespace Editor
         mDuration = 0.0f;
         mValue = value;
         mHasAudio = value.IsAudio() && !value.data.IsEmpty();
-        mTitleLabel->text = mHasAudio ? title : String();
+        mTitleLabel->text = mHasAudio ? String() : mHint;
+        mTitleLabel->enabled = !mHasAudio;
+        mControls->enabled = mHasAudio;
         mInfoLabel->text = mHasAudio ? (String)(value.data.Length() / 1024) + " KB" : String();
+        String format = value.mimeType.SubStr(value.mimeType.Find("/") + 1).ToUpperCase();
+        if (format.StartsWith("X-"))
+            format = format.SubStr(2);
+        if (format == "MPEG")
+            format = "MP3";
+        mControls->SetFormat(mHasAudio ? format : String());
+        mControls->SetPeaks({});
+        mPeaksShown = false;
+        mPeaksKey = mHasAudio ? PeaksKey(value.data) : std::string();
         if (mHasAudio)
+        {
             EnsurePlayer();
+            RequestPeaks();
+        }
 
         RefreshControls();
     }
 
     void PipelineAudioView::SetHint(const String& hint)
     {
+        mHint = hint;
         if (!mHasAudio)
             mTitleLabel->text = hint;
+    }
+
+    void PipelineAudioView::RequestPeaks()
+    {
+        auto& cache = Peaks();
+        std::lock_guard<std::mutex> lock(cache.mutex);
+        auto found = cache.done.find(mPeaksKey);
+        if (found != cache.done.end())
+        {
+            mControls->SetPeaks(found->second);
+            return;
+        }
+
+        if (cache.running[mPeaksKey])
+            return;
+
+        cache.running[mPeaksKey] = true;
+        String data = mValue.data;
+        std::string key = mPeaksKey;
+        std::thread([data, key]()
+        {
+            Vector<float> peaks = DecodePeaks(data);
+            auto& cache = Peaks();
+            std::lock_guard<std::mutex> lock(cache.mutex);
+            cache.done[key] = peaks;
+            cache.running.erase(key);
+        }).detach();
     }
 
     bool PipelineAudioView::EnsurePlayer()
@@ -211,10 +472,7 @@ namespace Editor
         if (!mHasAudio)
             return false;
 
-        mSoundAsset = mmake<SoundAsset>();
-        char* data = mnew char[mValue.data.Length()];
-        std::memcpy(data, mValue.data.Data(), mValue.data.Length());
-        mSoundAsset->SetData(data, (UInt)mValue.data.Length());
+        mSoundAsset = SharedSoundAsset(mValue.data);
 
         mPlayer = mmake<SoundPlayer>();
         mPlayer->SetSound(AssetRef<SoundAsset>(mSoundAsset));
@@ -288,6 +546,17 @@ namespace Editor
     void PipelineAudioView::Update(float dt)
     {
         Widget::Update(dt);
+        if (!mPeaksKey.empty() && !mPeaksShown)
+        {
+            auto& cache = Peaks();
+            std::lock_guard<std::mutex> lock(cache.mutex);
+            auto found = cache.done.find(mPeaksKey);
+            if (found != cache.done.end())
+            {
+                mControls->SetPeaks(found->second);
+                mPeaksShown = true;
+            }
+        }
         if (mPlayer)
         {
             mPlayer->Update(dt);
@@ -303,20 +572,18 @@ namespace Editor
     {
         layout->minHeight = 120;
 
-        mFrameLayer = AddLayer("frame", mmake<VectorSprite>("ui/UI4_Editbox_regular.svg"), Layout::BothStretch(-9, -9, -9, -9), -1.0f);
-        mBackLayer = AddLayer("back", mmake<Sprite>(Color4(38, 46, 52, 255)),
-                              Layout(Vec2F(0, 0), Vec2F(1, 1), Vec2F(1, PipelineMediaControls::height + 5), Vec2F(-1, -1)));
-
+        // The picture card of the result (176) with the transport row 7 below it (VideoBlock in nodeRenderers.tsx)
         mHintLabel = PipelineControls::MakeLabel("", true);
         mHintLabel->name = "hint";
         mHintLabel->horAlign = HorAlign::Middle;
         mHintLabel->verAlign = VerAlign::Middle;
-        *mHintLabel->layout = WidgetLayout(Vec2F(0, 0), Vec2F(1, 1), Vec2F(6, PipelineMediaControls::height + 6), Vec2F(-6, -4));
+        *mHintLabel->layout = WidgetLayout(Vec2F(0, 0), Vec2F(1, 1), Vec2F(8, PipelineMediaControls::height + 7 + 8), Vec2F(-8, -8));
         AddChild(mHintLabel);
 
         mControls = mmake<PipelineMediaControls>();
         mControls->name = "controls";
-        *mControls->layout = WidgetLayout(Vec2F(0, 0), Vec2F(1, 0), Vec2F(4, 2), Vec2F(-4, 2 + PipelineMediaControls::height));
+        mControls->SetMode(PipelineMediaControls::Mode::Transport);
+        *mControls->layout = WidgetLayout(Vec2F(0, 0), Vec2F(1, 0), Vec2F(0, 0), Vec2F(0, PipelineMediaControls::height));
         auto weakThis = WeakRef(this);
         mControls->onPlayPause = [weakThis]() { if (auto self = weakThis.Lock()) self->TogglePlay(); };
         mControls->onSeek = [weakThis](float time) { if (auto self = weakThis.Lock()) self->Seek(time); };
@@ -354,11 +621,9 @@ namespace Editor
         mHasVideo = value.IsVideo() && !value.data.IsEmpty();
         if (mHasVideo)
         {
+            // A stored preview still has a big atlas to read, off the main thread as well
             auto existing = PipelineVideo::LoadPreview(cacheDir);
-            if (existing.ok)
-                ApplyPreview(existing);
-            else
-                StartExtraction();
+            StartExtraction(existing.ok ? &existing : nullptr);
         }
 
         RefreshControls();
@@ -371,23 +636,38 @@ namespace Editor
             mHintLabel->text = hint;
     }
 
-    void PipelineVideoView::StartExtraction()
+    void PipelineVideoView::StartExtraction(const PipelineVideo::PreviewInfo* existing /*= nullptr*/)
     {
         auto job = std::make_shared<ExtractJob>();
-        job->data = mValue.data;
         job->dir = mCacheDir;
+        job->load = existing != nullptr;
+        if (existing)
+            job->result = *existing;
+        else
+            job->data = mValue.data;
         mJob = job;
-        mHintLabel->text = "Preparing preview...";
+        mHintLabel->text = existing ? "loading.." : "Preparing preview...";
         mHintLabel->enabled = true;
 
         std::thread([job]()
         {
-            job->result = PipelineVideo::BuildPreview(job->data, job->dir);
+            if (!job->load)
+                job->result = PipelineVideo::BuildPreview(job->data, job->dir);
+
+            // Read from memory: a bitmap loaded from a file names its texture after it, and the render reloads every named
+            // texture on each assets rebuild
+            if (job->result.ok)
+            {
+                String bytes = PipelineUtils::ReadFileBytes(job->result.atlasPath);
+                auto atlas = mmake<Bitmap>();
+                if (!bytes.IsEmpty() && atlas->LoadFromMemory((const UInt8*)bytes.Data(), (UInt)bytes.Length(), Bitmap::ImageType::Png))
+                    job->atlas = std::move(atlas);
+            }
             job->done = true;
         }).detach();
     }
 
-    void PipelineVideoView::ApplyPreview(const PipelineVideo::PreviewInfo& info)
+    void PipelineVideoView::ApplyPreview(const PipelineVideo::PreviewInfo& info, const Ref<Bitmap>& loadedAtlas /*= nullptr*/)
     {
         mInfo = info;
         mReady = false;
@@ -398,8 +678,15 @@ namespace Editor
             return;
         }
 
-        auto atlas = mmake<Bitmap>();
-        if (!atlas->Load(info.atlasPath, Bitmap::ImageType::Png))
+        auto atlas = loadedAtlas;
+        if (!atlas)
+        {
+            String bytes = PipelineUtils::ReadFileBytes(info.atlasPath);
+            atlas = mmake<Bitmap>();
+            if (bytes.IsEmpty() || !atlas->LoadFromMemory((const UInt8*)bytes.Data(), (UInt)bytes.Length(), Bitmap::ImageType::Png))
+                atlas = nullptr;
+        }
+        if (!atlas)
         {
             mHintLabel->text = "Preview atlas is unreadable";
             mHintLabel->enabled = true;
@@ -416,10 +703,7 @@ namespace Editor
             String wav = PipelineUtils::ReadFileBytes(info.audioPath);
             if (!wav.IsEmpty())
             {
-                mSoundAsset = mmake<SoundAsset>();
-                char* data = mnew char[wav.Length()];
-                std::memcpy(data, wav.Data(), wav.Length());
-                mSoundAsset->SetData(data, (UInt)wav.Length());
+                mSoundAsset = SharedSoundAsset(wav);
 
                 mPlayer = mmake<SoundPlayer>();
                 mPlayer->SetSound(AssetRef<SoundAsset>(mSoundAsset));
@@ -515,11 +799,18 @@ namespace Editor
 
     RectF PipelineVideoView::GetFrameArea() const
     {
+        RectF area = GetCardArea();
+        area.bottom += 1.0f;
+        area.left += 1.0f;
+        area.right -= 1.0f;
+        area.top -= 1.0f;
+        return area;
+    }
+
+    RectF PipelineVideoView::GetCardArea() const
+    {
         RectF area = layout->GetWorldRect();
-        area.bottom += PipelineMediaControls::height + 6.0f;
-        area.left += 2.0f;
-        area.right -= 2.0f;
-        area.top -= 2.0f;
+        area.bottom += PipelineMediaControls::height + 7.0f;
         return area;
     }
 
@@ -559,7 +850,20 @@ namespace Editor
 
     void PipelineVideoView::DrawFrame()
     {
-        if (!mReady || !mResEnabledInHierarchy || mInfo.frameWidth <= 0 || mInfo.frameHeight <= 0)
+        if (!mResEnabledInHierarchy)
+            return;
+
+        // .result-card plate: shadow, ck1 fill, a line border
+        auto& theme = PipelineTheme::Get();
+        RectF card = GetCardArea();
+        PipelineDraw::Corners corners(PipelineControls::fieldRadius);
+        if (!PipelineControls::IsFarView())
+            PipelineDraw::Shadow(RectF(card.left, card.top - theme.pictureShadowOffset, card.right, card.bottom - theme.pictureShadowOffset), corners,
+                                 theme.pictureShadow, theme.pictureShadowBlur);
+        PipelineDraw::Fill(card, corners, theme.checkerA);
+        PipelineDraw::Stroke(card, corners, 0.0f, 1.0f, PipelineDraw::Gradient(theme.dark ? Color4(255, 255, 255, 20) : theme.line));
+
+        if (!mReady || mInfo.frameWidth <= 0 || mInfo.frameHeight <= 0)
             return;
 
         RectF area = GetFrameArea();
@@ -589,7 +893,8 @@ namespace Editor
             auto job = mJob;
             mJob = nullptr;
             if (job->dir == mCacheDir)
-                ApplyPreview(job->result);
+                ApplyPreview(job->result, job->atlas);
+            job->atlas = nullptr;
         }
 
         if (mReady && mPlaying)
@@ -619,6 +924,13 @@ namespace Editor
     }
 }
 // --- META ---
+
+ENUM_META(Editor::PipelineMediaControls::Mode, Editor__PipelineMediaControls__Mode)
+{
+    ENUM_ENTRY(Audio);
+    ENUM_ENTRY(Transport);
+}
+END_ENUM_META;
 
 DECLARE_CLASS(Editor::PipelineMediaControls, Editor__PipelineMediaControls);
 

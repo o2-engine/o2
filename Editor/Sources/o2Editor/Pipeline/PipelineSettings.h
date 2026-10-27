@@ -7,8 +7,9 @@ using namespace o2;
 namespace Editor
 {
     // ------------------------------------------------------------------
-    // Provider API keys. Stored in Work/Pipelines/PipelineSettings.json,
-    // environment variables and the ImageGen tool key file are fallbacks
+    // Provider API keys and local tools. Stored in
+    // Work/Pipelines/PipelineSettings.json, environment variables and the
+    // ImageGen tool key file are fallbacks
     // ------------------------------------------------------------------
     struct PipelineSettings
     {
@@ -18,6 +19,8 @@ namespace Editor
         String klingAccessKey;   // Kling access key
         String klingSecretKey;   // Kling secret key
         String elevenLabsApiKey; // ElevenLabs API key
+
+        String imageToUiPython; // Python 3 for AI image to UI, empty: the first python3 found
 
     public:
         // Loads settings from the settings file (missing file gives empty keys)

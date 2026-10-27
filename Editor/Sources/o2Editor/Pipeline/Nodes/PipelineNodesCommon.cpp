@@ -284,7 +284,8 @@ namespace Editor
         return ordered;
     }
 
-    bool ResolveSourceValue(const PipelineNode& node, const String& assetsPath, PipelineValue& value, String& error)
+    bool ResolveSourceValue(const PipelineNode& node, const String& assetsPath, PipelineValue& value, String& error,
+                            bool decodeImage /*= true*/)
     {
         if (node.nodeType == "sourceText")
         {
@@ -324,6 +325,13 @@ namespace Editor
         {
             String ext = path.SubStr(path.FindLast(".") + 1).ToLowerCase();
             value = PipelineValue::Bytes(PipelinePortType::Audio, bytes, PipelineUtils::MimeForExtension(ext));
+            return true;
+        }
+
+        if (!decodeImage)
+        {
+            String ext = path.SubStr(path.FindLast(".") + 1).ToLowerCase();
+            value = PipelineValue::ImageBytes(bytes, PipelineUtils::MimeForExtension(ext));
             return true;
         }
 

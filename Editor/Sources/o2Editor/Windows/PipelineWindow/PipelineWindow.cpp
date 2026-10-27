@@ -1,6 +1,8 @@
 #include "o2Editor/stdafx.h"
 #include "PipelineWindow.h"
 
+#include "o2Editor/Windows/PipelineWindow/PipelineTheme.h"
+
 #include "o2/Assets/Assets.h"
 #include "o2/Utils/Editor/EditorScope.h"
 #include "o2/Render/Sprite.h"
@@ -81,12 +83,34 @@ namespace Editor
         mStatusLabel->layout->minWidth = 200;
         mUpPanel->AddChild(mStatusLabel);
 
+        mBackgroundLabel = o2UI.CreateLabel("");
+        mBackgroundLabel->name = "background status";
+        mBackgroundLabel->horAlign = HorAlign::Right;
+        mBackgroundLabel->horOverflow = Label::HorOverflow::Dots;
+        mBackgroundLabel->layout->minWidth = 160;
+        mBackgroundLabel->layout->maxWidth = 220;
+        mUpPanel->AddChild(mBackgroundLabel);
+
         mSaveAllButton = o2UI.CreateWidget<Button>("menu pipeline save");
         mSaveAllButton->name = "save all";
         mSaveAllButton->onClick = [this]() { mEditor->SaveAllOutputs(); };
         mSaveAllButton->layout->minWidth = 24;
         mSaveAllButton->layout->maxWidth = 24;
         mUpPanel->AddChild(mSaveAllButton);
+
+        // Dark (AssetsLine) or light (o2) canvas in one click; the settings window has the same choice
+        mThemeButton = o2UI.CreateWidget<Button>("menu pipeline settings");
+        mThemeButton->name = "theme";
+        mThemeButton->onClick = [this]()
+        {
+            bool dark = PipelineTheme::GetKind() == PipelineThemeKind::Dark;
+            PipelineTheme::SetKind(dark ? PipelineThemeKind::Light : PipelineThemeKind::Dark);
+            UpdateThemeButton();
+        };
+        mThemeButton->layout->minWidth = 24;
+        mThemeButton->layout->maxWidth = 24;
+        mUpPanel->AddChild(mThemeButton);
+        UpdateThemeButton();
 
         // Provider keys and the AssetsLine link share one window; the dot on the gear is the state of the link
         mSettingsButton = o2UI.CreateWidget<Button>("menu pipeline settings");
@@ -116,6 +140,15 @@ namespace Editor
         auto verScroll = o2UI.CreateVerScrollBar();
         *verScroll->layout = WidgetLayout::VerStretch(HorAlign::Right, 5, 15, 10);
         mEditor->SetVerScrollbar(verScroll);
+    }
+
+    void PipelineWindow::UpdateThemeButton()
+    {
+        // The glyph shows the theme a click switches to
+        bool dark = PipelineTheme::GetKind() == PipelineThemeKind::Dark;
+        mThemeVersion = PipelineTheme::GetVersion();
+        if (auto icon = mThemeButton->SetLayerImage("icon", dark ? "ui/pipeline/theme_sun.svg" : "ui/pipeline/theme_moon.svg"))
+            icon->color = Color4(24, 104, 104, 255);
     }
 
     String PipelineWindow::GetWindowTitle() const
@@ -248,7 +281,13 @@ namespace Editor
 
         bool running = mEditor && mEditor->IsRunning();
         mStopButton->interactable = running;
+
+        String background = mEditor ? mEditor->GetBackgroundStatus() : String();
+        if ((String)mBackgroundLabel->GetText() != background)
+            mBackgroundLabel->text = background;
         UpdateSync(dt);
+        if (mThemeButton && mThemeVersion != PipelineTheme::GetVersion())
+            UpdateThemeButton();
 
         if (!mAutoImport.IsEmpty())
         {

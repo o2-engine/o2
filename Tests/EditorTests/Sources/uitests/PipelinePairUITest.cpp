@@ -520,7 +520,8 @@ TEST_F(PipelinePairUiFixture, ImageEditRegionIsCreatedMovedAndCleared)
         Vec2F outsideLeft(area.left + 3.0f, area.Center().y), outsideRight(area.right - 3.0f, area.Center().y);
         Color4 dimInput(inputColor.r/2, inputColor.g/2, inputColor.b/2, 255), dimResult(resultColor.r/2, resultColor.g/2, resultColor.b/2, 255);
         EXPECT_TRUE(IsNear(PixelAt(capture, outsideLeft), dimInput, 20)) << mode;
-        float insideY = box.Center().y + box.Height()*0.25f;
+        // The lower half: the frame's remove tab takes the top-right corner
+        float insideY = box.Center().y - box.Height()*0.25f;
         EXPECT_TRUE(IsNear(PixelAt(capture, Vec2F(box.left + 6.0f, insideY)), inputColor, 20)) << mode;
         if (compare)
         {

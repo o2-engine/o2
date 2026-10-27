@@ -1,5 +1,10 @@
 #include "o2Editor/stdafx.h"
 #include "PipelineComposerStage.h"
+#include "o2Editor/Windows/PipelineWindow/PipelineImageLoader.h"
+
+#include "o2Editor/Windows/PipelineWindow/PipelineComposerTheme.h"
+#include "o2Editor/Windows/PipelineWindow/PipelineDraw.h"
+#include "o2Editor/Windows/PipelineWindow/PipelineTheme.h"
 
 #include "o2/Application/Input.h"
 #include "o2/Render/Render.h"
@@ -16,25 +21,25 @@
 
 namespace Editor
 {
-    static const float stagePad = 14.0f;
+    static const float stagePad = 15.0f;
     static const float badgeGap = 6.0f;     // Between the frame and its size badge, screen pixels
 
     PipelineComposerStage::PipelineComposerStage(RefCounter* refCounter):
         Widget(refCounter)
     {
         layout->minSize = Vec2F(120, 120);
-        // The frame and soft shadow of the result cards
-        AddLayer("frame", mmake<VectorSprite>("ui/UI4_Editbox_regular.svg"), Layout::BothStretch(-9, -9, -9, -9), -1.0f);
 
-        mCheckerSprite = mmake<Sprite>("ui/pipeline/checker.png");
-        mCheckerSprite->mode = SpriteMode::Tiled;
-        mCheckerSprite->transparency = 0.45f;
-
-        mNameText = mmake<Text>("stdFont.ttf");
-        mNameText->horAlign = HorAlign::Middle;
-        mNameText->verAlign = VerAlign::Middle;
-        mNameText->color = PipelineControls::textColor;
+        mNameText = PipelineControls::MakeThemeText("", 9.5f, 400, PipelineTheme::Get().fg, HorAlign::Middle);
+        mNameText->dotsEngings = false;
         mNameText->wordWrap = true;
+
+        mHintText = PipelineControls::MakeThemeText("Select a layer to transform \xC2\xB7 Shift: keep ratio when resizing / move on one axis",
+                                                    9.0f, 400, PipelineTheme::Alpha(PipelineTheme::Get().fgDim, 0.7f), HorAlign::Middle);
+
+        // Each text keeps what it shows: setting a text or its rect rebuilds its mesh, so it is done when they change
+        mBadgeText = PipelineControls::MakeThemeText("", 9.5f, 400, PipelineTheme::Get().fg, HorAlign::Middle);
+        mBadgeText->dotsEngings = false;
+        mBadgeText->wordWrap = true;
 
         mFrame = mmake<PipelineComposerFrame>();
         mFrame->SetPivotEnabled(false);
@@ -171,10 +176,16 @@ namespace Editor
         slice["b"] = placement.slice.b;
         L["sliceScale"] = placement.sliceScale;
         L["lockAspect"] = placement.lockAspect;
+        // SetObject keeps the members an object already has: a cleared export size has to go explicitly
         if (PipelineComposerLayout::HasExportSize(placement.exportW, placement.exportH))
         {
             L["exportW"] = placement.exportW;
             L["exportH"] = placement.exportH;
+        }
+        else
+        {
+            L.RemoveMember("exportW");
+            L.RemoveMember("exportH");
         }
 
         if (onConfigChanged)
@@ -253,15 +264,21 @@ namespace Editor
 
         if (!view.sprite || view.cacheKey != key)
         {
-            Ref<Bitmap> image = view.source;
+            // A plain layer draws the card-sized texture its picture already has; a nine-slice one is laid out at its size
+            Vec2I textureSize;
             if (p.nine)
-                image = PipelineImageOps::NineSliceResize(*view.source, Math::Max(1, (int)Math::Round(p.w)), Math::Max(1, (int)Math::Round(p.h)), p.slice, p.sliceScale);
+            {
+                auto image = PipelineImageOps::NineSliceResize(*view.source, Math::Max(1, (int)Math::Round(p.w)), Math::Max(1, (int)Math::Round(p.h)), p.slice, p.sliceScale);
+                view.texture = TextureRef(*image);
+                textureSize = image->GetSize();
+            }
+            else
+                view.texture = PipelineDisplayCache::GetTexture(view.source, &textureSize);
 
-            view.texture = TextureRef(*image);
             if (!view.sprite)
                 view.sprite = mmake<Sprite>();
             view.sprite->SetTexture(view.texture);
-            view.sprite->SetTextureSrcRect(RectI(Vec2I(), image->GetSize()));
+            view.sprite->SetTextureSrcRect(RectI(Vec2I(), textureSize));
             view.cacheKey = key;
         }
     }
@@ -368,6 +385,16 @@ namespace Editor
         Widget::Update(dt);
     }
 
+    static void SetTextRect(Text& text, const RectF& rect)
+    {
+        RectF current = text.GetRect();
+        if (!Math::Equals(current.left, rect.left) || !Math::Equals(current.right, rect.right) ||
+            !Math::Equals(current.top, rect.top) || !Math::Equals(current.bottom, rect.bottom))
+        {
+            text.rect = rect;
+        }
+    }
+
     void PipelineComposerStage::Draw()
     {
         if (!mResEnabledInHierarchy || mIsClipped)
@@ -378,6 +405,21 @@ namespace Editor
         RectF area = layout->GetWorldRect();
         RectF stage = GetStageRect();
         float vs = GetViewScale();
+        auto& theme = PipelineTheme::Get();
+        bool far = PipelineControls::IsFarView();
+
+        // .cmp-viewport: field fill, --border, 9 px corners and the picture shadow
+        PipelineDraw::Corners corners(PipelineControls::fieldRadius);
+        if (!far)
+            PipelineDraw::Shadow(RectF(area.left, area.top - 6.0f, area.right, area.bottom - 6.0f), corners,
+                                 theme.dark ? Color4(0, 0, 0, 89) : Color4(38, 50, 56, 36), 16.0f);
+        PipelineDraw::Fill(area, corners, theme.field);
+        PipelineDraw::Stroke(area, corners, 0.0f, 1.0f, PipelineDraw::Gradient(theme.border));
+
+        // .cmp-stage: a --border ring and a deep shadow under the canvas
+        if (!far)
+            PipelineDraw::Shadow(RectF(stage.left, stage.top - 4.0f, stage.right, stage.bottom - 4.0f), PipelineDraw::Corners(0.0f),
+                                 theme.dark ? Color4(0, 0, 0, 115) : Color4(38, 50, 56, 46), 22.0f);
 
         o2Render.EnableScissorTest((RectI)area);
 
@@ -389,12 +431,13 @@ namespace Editor
             o2Render.DrawFilledPolygon(quad, Color4(bg.r, bg.g, bg.b, 255));
         else
         {
-            o2Render.DrawFilledPolygon(quad, Color4::White());
-            if (checker)
-            {
-                mCheckerSprite->rect = stage;
-                mCheckerSprite->Draw();
-            }
+            // The work area's own checker, 16 px squares pairs: #2A2C30 / #353841 in the dark theme, the o2 checker in the light one
+            Color4 first = theme.dark ? Color4(42, 44, 48, 255) : theme.checkerA;
+            Color4 second = theme.dark ? Color4(53, 56, 65, 255) : theme.checkerB;
+            if (checker && !far)
+                PipelineComposerTheme::Checker(stage, 8.0f, first, second);
+            else
+                o2Render.DrawFilledPolygon(quad, first);
         }
 
         String selected = GetSelectedLayer();
@@ -407,7 +450,7 @@ namespace Editor
             Basis basis = PlacementBasis(p);
             if (!view.source)
             {
-                o2Render.DrawAABasis(basis, Color4(96, 125, 139, 200), Color4(96, 125, 139, 200), Color4(96, 125, 139, 200));
+                o2Render.DrawAABasis(basis, theme.fgDim, theme.fgDim, theme.fgDim);
                 Vec2F center = basis.origin + basis.xv * 0.5f + basis.yv * 0.5f;
                 mNameText->text = (view.ref.name.IsEmpty() ? String("layer") : view.ref.name) + "\nrun to load";
                 mNameText->rect = RectF(center - Vec2F(p.w * vs * 0.5f, 20), center + Vec2F(p.w * vs * 0.5f, 20));
@@ -427,7 +470,9 @@ namespace Editor
         }
 
         o2Render.DisableScissorTest();
-        o2Render.DrawAARectFrame(stage, Color4(96, 125, 139, 120), 1.0f);
+        PipelineDraw::Stroke(stage, PipelineDraw::Corners(0.0f), -1.0f, 0.0f, PipelineDraw::Gradient(theme.border));
+        if (!far)
+            PipelineComposerTheme::DashedFrame(stage, theme.dark ? Color4(255, 255, 255, 46) : PipelineTheme::Alpha(theme.fgDim, 0.5f), 3.0f, 3.0f);
 
         CursorAreaEventsListener::OnDrawn();
         if (PipelineControls::IsFarView())
@@ -450,7 +495,7 @@ namespace Editor
                     Vec2F xu = b.xv.Normalized(), yu = b.yv.Normalized();
                     float l = p.slice.l * p.sliceScale * vs, r = p.slice.r * p.sliceScale * vs;
                     float t = p.slice.t * p.sliceScale * vs, bt = p.slice.b * p.sliceScale * vs;
-                    Color4 guide(0, 150, 136, 160);
+                    Color4 guide = PipelineTheme::Alpha(theme.yellow, 0.75f);
                     o2Render.DrawAALine(b.origin + xu * l, b.origin + xu * l + b.yv, guide, 1.0f);
                     o2Render.DrawAALine(b.origin + b.xv - xu * r, b.origin + b.xv - xu * r + b.yv, guide, 1.0f);
                     o2Render.DrawAALine(b.origin + yu * bt, b.origin + yu * bt + b.xv, guide, 1.0f);
@@ -464,18 +509,20 @@ namespace Editor
                     badge += " . " + (String)(int)Math::Round(p.rot) + " deg";
                 Vec2F center = b.origin + b.xv * 0.5f + b.yv * 0.5f;
                 float below = Math::Min(b.origin.y, Math::Min((b.origin + b.xv).y, Math::Min((b.origin + b.yv).y, (b.origin + b.xv + b.yv).y)));
-                int textHeight = mNameText->GetFontHeight();
-                mNameText->height = Math::Max(1, (int)Math::Round(textHeight*k));
-                mNameText->text = badge;
-                mNameText->rect = RectF(center.x - 80*k, below - badgeGap*k, center.x + 80*k, below - (badgeGap + textHeight + 4)*k);
-                mNameText->Draw();
-                mNameText->height = textHeight;
+                const float textPixels = 9.5f;
+                int badgeHeight = Math::Max(1, PipelineTheme::Size(textPixels*k));
+                if (mBadgeText->GetFontHeight() != badgeHeight)
+                    mBadgeText->height = badgeHeight;
+                if (mBadgeText->GetText() != (WString)badge)
+                    mBadgeText->text = badge;
+                SetTextRect(*mBadgeText, RectF(center.x - 80*k, below - badgeGap*k, center.x + 80*k, below - (badgeGap + textPixels + 4)*k));
+                mBadgeText->Draw();
             }
         }
 
-        mNameText->text = "Select a layer to transform . Shift: move on one axis";
-        mNameText->rect = RectF(area.left, area.bottom + 16, area.right, area.bottom + 2);
-        mNameText->Draw();
+        // .cmp-hint: 9 px, 6 px from the sides and 4 above the bottom border
+        SetTextRect(*mHintText, RectF(area.left + 7.0f, area.bottom + 5.0f + 11.0f, area.right - 7.0f, area.bottom + 5.0f));
+        mHintText->Draw();
     }
 
     void PipelineComposerStage::OnCursorPressed(const Input::Cursor& cursor)

@@ -60,7 +60,10 @@ namespace Editor
         Ref<Button>         mImportButton;   // Imports an AssetsLine pipeline file
 
         Ref<Label>          mStatusLabel;    // Last log line
+        Ref<Label>          mBackgroundLabel; // What runs in the background: previews loading, an effect applying
         Ref<Button>         mSaveAllButton;  // Saves what every finish and composer node shows into the assets
+        Ref<Button>         mThemeButton;    // Switches the canvas between the dark and the light theme
+        int                 mThemeVersion = -1; // Theme the theme button shows
         AssetsLineStatusDot mSyncDot;        // Link state dot on the settings button
         String              mAutoImport;     // File imported on the first update, from O2_PIPELINE_IMPORT (development aid)
 
@@ -99,6 +102,9 @@ namespace Editor
         // Called when settings button pressed, opens the settings window
         void OnSettingsPressed();
 
+        // Shows the glyph of the theme a click switches to
+        void UpdateThemeButton();
+
         // Connects the window to the AssetsLine sync: busy files, rewritten files, changed results
         void AttachSync();
 
@@ -129,7 +135,10 @@ CLASS_FIELDS_META(Editor::PipelineWindow)
     FIELD().PROTECTED().NAME(mFitButton);
     FIELD().PROTECTED().NAME(mImportButton);
     FIELD().PROTECTED().NAME(mStatusLabel);
+    FIELD().PROTECTED().NAME(mBackgroundLabel);
     FIELD().PROTECTED().NAME(mSaveAllButton);
+    FIELD().PROTECTED().NAME(mThemeButton);
+    FIELD().PROTECTED().DEFAULT_VALUE(-1).NAME(mThemeVersion);
     FIELD().PROTECTED().NAME(mSyncDot);
     FIELD().PROTECTED().NAME(mAutoImport);
     FIELD().PROTECTED().DEFAULT_VALUE(nullptr).NAME(mAttachedSync);
@@ -157,6 +166,7 @@ CLASS_METHODS_META(Editor::PipelineWindow)
     FUNCTION().PROTECTED().SIGNATURE(bool, IsCreateNewAssetAtStartupEnabled);
     FUNCTION().PROTECTED().SIGNATURE(void, OnAssetSaved);
     FUNCTION().PROTECTED().SIGNATURE(void, OnSettingsPressed);
+    FUNCTION().PROTECTED().SIGNATURE(void, UpdateThemeButton);
     FUNCTION().PROTECTED().SIGNATURE(void, AttachSync);
     FUNCTION().PROTECTED().SIGNATURE(void, UpdateSync, float);
     FUNCTION().PROTECTED().SIGNATURE(bool, IsSyncedPath, const String&);

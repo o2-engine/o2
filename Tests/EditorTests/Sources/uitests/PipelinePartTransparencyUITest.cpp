@@ -1,4 +1,5 @@
 #include "o2Editor/stdafx.h"
+#include "o2Editor/Windows/PipelineWindow/PipelineTheme.h"
 #include <gtest/gtest.h>
 
 #include "o2/Application/Application.h"
@@ -89,6 +90,8 @@ namespace
                 mmake<UIRoot>();
             }
             PipelineUtils::SetWorkPathOverride("../../Work/Pipelines/uitest-parts/");
+            // The pixel checks read the o2 light colours: the orange image link on a light card
+            PipelineTheme::SetKind(PipelineThemeKind::Light);
 
             PushEditorScopeOnStack scope;
             editor = mmake<PipelineEditor>();

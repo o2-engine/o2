@@ -4,12 +4,14 @@
 #include "o2/Utils/Function/Function.h"
 #include "o2Editor/Pipeline/PipelineComposerLayout.h"
 #include "o2Editor/Windows/PipelineWindow/PipelineComposerStage.h"
+#include "o2Editor/Windows/PipelineWindow/PipelineControls.h"
 
 using namespace o2;
 
 namespace o2
 {
     class Button;
+    class EditBox;
 }
 
 namespace Editor
@@ -26,6 +28,7 @@ namespace Editor
         static constexpr float headHeight = PipelineComposerLayout::headHeight;     // "Layers · N"
         static constexpr float rowHeight = PipelineComposerLayout::rowHeight;       // One layer row
         static constexpr float rowGap = PipelineComposerLayout::rowGap;             // Between the rows
+        static constexpr float listPadding = PipelineComposerLayout::listPadding;   // Between the frame and the rows
         static constexpr float addRowHeight = PipelineComposerLayout::addRowHeight; // An add row
         static constexpr float selectedTint = 0.16f;                                // Accent strength behind the selected row
 
@@ -47,6 +50,10 @@ namespace Editor
 
         // Rebuilds the rows from the layers
         void Rebuild();
+
+        // Rebuilds the rows when the layers or the open settings changed; otherwise gives the rows their thumbnails and names
+        // in place, so a picture arriving or a rename keeps a name field being typed into
+        void Refresh();
 
         // Returns the height of the panel: it grows with its rows and never scrolls
         float GetContentHeight() const { return mContentHeight; }
@@ -94,12 +101,16 @@ namespace Editor
         Vector<float>              mRowTops;       // Top of each displayed row from the panel top
         Vector<Ref<Widget>>        mRows;          // Displayed row widgets
         Vector<Ref<Widget>>        mGrips;         // Grip of each displayed row
+        Vector<Ref<Widget>>        mThumbs;        // Thumbnail of each displayed row
+        Vector<Ref<EditBox>>       mNameEdits;     // Name field of each displayed row
+        String                     mBuiltKey;      // What the rows were built for: the layers and the open settings
         Ref<Button>                mAddTopRow;     // "+ layer on top"
         Ref<Button>                mAddRow;        // "+ layer below"
         float                      mAddTop = 0.0f; // Top of the "+ layer below" row
         float                      mContentHeight = 0.0f; // Height of the panel
         String                     mDragging;      // Layer whose row is dragged, empty when none
         int                        mDropIndex = 0; // Display index the dragged row lands before
+        float                      mSelectStrength = 1.0f; // Strength of the selected row's fill
 
     protected:
         // Creates an add row at the top
@@ -107,6 +118,9 @@ namespace Editor
 
         // Creates the row of a layer
         Ref<Widget> MakeRow(const ComposerLayerRef& layer, int stackIndex, int count, bool selected, bool open);
+
+        // Returns what the rows depend on besides the pictures
+        String RowsKey() const;
 
         // Adds the open settings of the layer at the top
         void AddSettings(const ComposerLayerRef& layer, float top);
@@ -139,12 +153,16 @@ CLASS_FIELDS_META(Editor::PipelineComposerLayersPanel)
     FIELD().PROTECTED().NAME(mRowTops);
     FIELD().PROTECTED().NAME(mRows);
     FIELD().PROTECTED().NAME(mGrips);
+    FIELD().PROTECTED().NAME(mThumbs);
+    FIELD().PROTECTED().NAME(mNameEdits);
+    FIELD().PROTECTED().NAME(mBuiltKey);
     FIELD().PROTECTED().NAME(mAddTopRow);
     FIELD().PROTECTED().NAME(mAddRow);
     FIELD().PROTECTED().DEFAULT_VALUE(0.0f).NAME(mAddTop);
     FIELD().PROTECTED().DEFAULT_VALUE(0.0f).NAME(mContentHeight);
     FIELD().PROTECTED().NAME(mDragging);
     FIELD().PROTECTED().DEFAULT_VALUE(0).NAME(mDropIndex);
+    FIELD().PROTECTED().DEFAULT_VALUE(1.0f).NAME(mSelectStrength);
 }
 END_META;
 CLASS_METHODS_META(Editor::PipelineComposerLayersPanel)
@@ -153,6 +171,7 @@ CLASS_METHODS_META(Editor::PipelineComposerLayersPanel)
     FUNCTION().PUBLIC().CONSTRUCTOR(RefCounter*);
     FUNCTION().PUBLIC().SIGNATURE(void, Setup, const Ref<PipelineNode>&, const Ref<PipelineComposerStage>&);
     FUNCTION().PUBLIC().SIGNATURE(void, Rebuild);
+    FUNCTION().PUBLIC().SIGNATURE(void, Refresh);
     FUNCTION().PUBLIC().SIGNATURE(float, GetContentHeight);
     FUNCTION().PUBLIC().SIGNATURE(bool, GetPortCenter, const String&, float&);
     FUNCTION().PUBLIC().SIGNATURE(float, GetAddRowCenter);
@@ -167,6 +186,7 @@ CLASS_METHODS_META(Editor::PipelineComposerLayersPanel)
     FUNCTION().PUBLIC().SIGNATURE(void, Draw);
     FUNCTION().PROTECTED().SIGNATURE(Ref<Button>, MakeAddRow, PipelineLayerPlace, float);
     FUNCTION().PROTECTED().SIGNATURE(Ref<Widget>, MakeRow, const ComposerLayerRef&, int, int, bool, bool);
+    FUNCTION().PROTECTED().SIGNATURE(String, RowsKey);
     FUNCTION().PROTECTED().SIGNATURE(void, AddSettings, const ComposerLayerRef&, float);
     FUNCTION().PROTECTED().SIGNATURE(void, AddExportRow, const Ref<Widget>&, const ComposerLayerRef&, const ComposerLayerPlacement&);
 }

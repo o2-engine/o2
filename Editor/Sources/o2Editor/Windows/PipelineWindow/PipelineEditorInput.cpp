@@ -235,8 +235,15 @@ namespace Editor
         AddChild(mNodeContextMenu);
         AddChild(mEdgeContextMenu);
         AddChild(mPopupMenu);
+        SkinMenus();
 
         onFocused = [&]() { mContextMenu->SetItemsMaxPriority(); };
+    }
+
+    void PipelineEditor::SkinMenus()
+    {
+        for (auto& menu : { mContextMenu, mNodeContextMenu, mEdgeContextMenu, mPopupMenu })
+            PipelineControls::SkinMenu(menu);
     }
 
     void PipelineEditor::FillAddNodeMenu(const Ref<ContextMenu>& menu, const PendingEdge* filter)

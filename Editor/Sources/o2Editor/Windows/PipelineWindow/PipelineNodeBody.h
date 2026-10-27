@@ -104,6 +104,7 @@ namespace Editor
             float       height = 22.0f;   // Fixed height, or the minimum height when flexible
             bool        flexible = false; // True when the row takes a share of the spare height
             bool        content = false;  // True for what the node produced; it stays drawn when the view is zoomed far out
+            float       gap = -1.0f;      // Gap above the row, the body spacing when negative
 
             Function<float(float)> heightForWidth; // Height (or minimum height) for the row width, used instead of height when set
 
@@ -116,8 +117,9 @@ namespace Editor
         Ref<PipelineNode>           mNode;   // Edited node
 
         Vector<Row> mRows;            // Rows stacked top to bottom
-        float       mPadding = 10.0f; // Horizontal padding of the rows
-        float       mSpacing = 6.0f;  // Vertical spacing between the rows
+        float       mPadding = 11.0f; // Horizontal padding of the rows (AssetsLine .node-body-host)
+        float       mPadTop = 6.0f;   // Gap above the first row
+        float       mSpacing = 7.0f;  // Vertical spacing between the rows
 
         Ref<PipelineImageView>  mImageView;  // Result image view, when the body has one
         Ref<PipelineTextView>   mTextView;   // Result text view, when the body has one
@@ -140,8 +142,46 @@ namespace Editor
         };
 
         Ref<ParamsList> mParams; // Rows are added into it while a parameter list is open, null otherwise
+        bool            mFx = false;      // True while the open control block of an instant node is built: rows 6 apart, captions 44 wide
+        bool            mFxStarted = false; // True once the control block has its first row
 
     public:
+        // AssetsLine body heights (nodeRenderers.tsx RH / FX / H_* constants)
+        static constexpr float actionsHeight = 27.52f;  // Buttons row
+        static constexpr float headRowHeight = 23.84f;  // Row under the pictures: switches and the Crop button
+        static constexpr float smallButtonHeight = 22.8f; // Head-row buttons: Crop, Debug
+        static constexpr float textResultHeight = 101.0f;
+        static constexpr float resultHeight = 176.0f;
+        static constexpr float listClosedHeight = 31.84f; // Folded parameter list: 2 + 22.84 + 7
+        static constexpr float listHeadHeight = 24.84f;   // Open list head before its rows
+        static constexpr float listGap = 6.0f;            // Rows of an open list and of an instant node's controls
+        static constexpr float boxRowHeight = 26.0f;      // A captioned row with a box control (colour, text)
+        static constexpr float selectRowHeight = 27.5f;
+        static constexpr float switchRowHeight = 18.0f;
+        static constexpr float hintLineHeight = 14.7f;
+
+        // Returns the height of a field for its text or placeholder: 14 + 16.1 per estimated line, up to three
+        static float FieldHeight(const String& text, const String& placeholder);
+
+        // Returns the lines a text wraps to at the characters per line, at least one and at most the maximum
+        static int EstimateLines(const String& text, int charsPerLine, int maxLines = 3);
+
+        // Starts the open control block of an instant node: rows 6 apart, captions 44 wide, fx row heights
+        void BeginFx();
+
+        // Ends the control block
+        void EndFx();
+
+        // Creates a head-row button: 22.8 tall, the icon and caption in the dim text, a line border
+        Ref<Button> MakeSmallButton(const String& caption, const String& icon = "");
+
+    public:
+        // Returns the gap above the next row: 6 inside an instant node's control block, the body spacing otherwise
+        float NextGap();
+
+        // Returns the gap above the row
+        float GapOf(const Row& row) const;
+
         // Appends a fixed-height row and adds its widget as a child
         Ref<Widget> AddRow(const Ref<Widget>& widget, float height);
 
@@ -226,7 +266,14 @@ namespace Editor
         // Returns the current runtime output of the node
         PipelineValue GetOutput() const;
 
-        // Returns the output as a bitmap, null when the output is not an image
+        // Returns the picture of a value the card shows: decoded in the background when it is not yet, null meanwhile; the
+        // card is refreshed once it arrives
+        Ref<Bitmap> Picture(const PipelineValue& value) const;
+
+        // Returns true while the picture of the value decodes in the background
+        bool PicturePending(const PipelineValue& value) const;
+
+        // Returns the output as a bitmap, null when the output is not an image or still decodes
         Ref<Bitmap> GetOutputBitmap() const;
 
         // Returns the uncropped source preview saved by the runtime, falling back to the output bitmap
@@ -251,8 +298,9 @@ namespace Editor
         // Adds the title row of an always-open section
         void AddSectionTitle(const String& title);
 
-        // Adds the "Model" row bound to the "model" config key: a field opening the grouped, searchable model menu
-        Ref<Button> AddModelRow(const Vector<String>& presets, const String& defaultModel, PipelineModelKind kind);
+        // Adds a model row bound to a config key ("model" by default): a field opening the grouped, searchable model menu
+        Ref<Button> AddModelRow(const Vector<String>& presets, const String& defaultModel, PipelineModelKind kind,
+                                const String& key = "model", const String& label = "Model", float labelWidth = 64.0f);
 
         // Adds a labelled dropdown row bound to a config key
         Ref<DropDown> AddSelectRow(const String& label, const String& key, const Vector<String>& options, const String& def);
@@ -276,7 +324,7 @@ namespace Editor
         void AddSegmented(const String& key, const Vector<Pair<String, String>>& options, const String& def);
 
         // Adds a muted hint line, growing the row for text that wraps
-        void AddMutedLine(const String& text, float height = 18.0f);
+        void AddMutedLine(const String& text, float height = 0.0f);
 
         // Adds the "Inherit seed" toggle with the seed edit box
         void AddSeedRow();
@@ -289,13 +337,13 @@ namespace Editor
         void AddResultImage(const String& hint, float minHeight = 176.0f);
 
         // Adds the flexible result text view
-        void AddResultText(const String& hint, float minHeight = 100.0f);
+        void AddResultText(const String& hint, float minHeight = 101.0f);
 
         // Adds the result audio player row
         void AddResultAudio(const String& hint);
 
         // Adds the flexible result video player
-        void AddResultVideo(const String& hint, float minHeight = 176.0f);
+        void AddResultVideo(const String& hint, float minHeight = 205.0f);
 
         // Adds the crop editor showing the result and, under it, the row with the switches
         void AddCropSection(const String& emptyHint, bool transparentSwitch, const String& caption = "", float minHeight = 176.0f);
@@ -366,8 +414,9 @@ CLASS_FIELDS_META(Editor::PipelineNodeBody)
     FIELD().PUBLIC().NAME(mEditor);
     FIELD().PUBLIC().NAME(mNode);
     FIELD().PUBLIC().NAME(mRows);
-    FIELD().PUBLIC().DEFAULT_VALUE(10.0f).NAME(mPadding);
-    FIELD().PUBLIC().DEFAULT_VALUE(6.0f).NAME(mSpacing);
+    FIELD().PUBLIC().DEFAULT_VALUE(11.0f).NAME(mPadding);
+    FIELD().PUBLIC().DEFAULT_VALUE(6.0f).NAME(mPadTop);
+    FIELD().PUBLIC().DEFAULT_VALUE(7.0f).NAME(mSpacing);
     FIELD().PUBLIC().NAME(mImageView);
     FIELD().PUBLIC().NAME(mTextView);
     FIELD().PUBLIC().NAME(mAudioView);
@@ -375,6 +424,8 @@ CLASS_FIELDS_META(Editor::PipelineNodeBody)
     FIELD().PUBLIC().NAME(mVideoView);
     FIELD().PUBLIC().NAME(mPair);
     FIELD().PUBLIC().NAME(mParams);
+    FIELD().PUBLIC().DEFAULT_VALUE(false).NAME(mFx);
+    FIELD().PUBLIC().DEFAULT_VALUE(false).NAME(mFxStarted);
 }
 END_META;
 CLASS_METHODS_META(Editor::PipelineNodeBody)
@@ -400,6 +451,13 @@ CLASS_METHODS_META(Editor::PipelineNodeBody)
     FUNCTION().PUBLIC().SIGNATURE(void, Relayout, float, float);
     FUNCTION().PUBLIC().SIGNATURE(void, MarkContent, const Ref<Widget>&);
     FUNCTION().PUBLIC().SIGNATURE(void, Draw);
+    FUNCTION().PUBLIC().SIGNATURE_STATIC(float, FieldHeight, const String&, const String&);
+    FUNCTION().PUBLIC().SIGNATURE_STATIC(int, EstimateLines, const String&, int, int);
+    FUNCTION().PUBLIC().SIGNATURE(void, BeginFx);
+    FUNCTION().PUBLIC().SIGNATURE(void, EndFx);
+    FUNCTION().PUBLIC().SIGNATURE(Ref<Button>, MakeSmallButton, const String&, const String&);
+    FUNCTION().PUBLIC().SIGNATURE(float, NextGap);
+    FUNCTION().PUBLIC().SIGNATURE(float, GapOf, const Row&);
     FUNCTION().PUBLIC().SIGNATURE(Ref<Widget>, AddRow, const Ref<Widget>&, float);
     FUNCTION().PUBLIC().SIGNATURE(Ref<Widget>, AddRow, const Ref<Widget>&, const Function<float(float)>&);
     FUNCTION().PUBLIC().SIGNATURE(Ref<Widget>, AddFlexible, const Ref<Widget>&, float);
@@ -427,6 +485,8 @@ CLASS_METHODS_META(Editor::PipelineNodeBody)
     FUNCTION().PUBLIC().SIGNATURE(void, RebuildBody);
     FUNCTION().PUBLIC().SIGNATURE(void, RebuildBodyKeepingArea);
     FUNCTION().PUBLIC().SIGNATURE(PipelineValue, GetOutput);
+    FUNCTION().PUBLIC().SIGNATURE(Ref<Bitmap>, Picture, const PipelineValue&);
+    FUNCTION().PUBLIC().SIGNATURE(bool, PicturePending, const PipelineValue&);
     FUNCTION().PUBLIC().SIGNATURE(Ref<Bitmap>, GetOutputBitmap);
     FUNCTION().PUBLIC().SIGNATURE(Ref<Bitmap>, GetSourceOutputBitmap);
     FUNCTION().PUBLIC().SIGNATURE(PipelineValue, GetInput, const String&);
@@ -435,7 +495,7 @@ CLASS_METHODS_META(Editor::PipelineNodeBody)
     FUNCTION().PUBLIC().SIGNATURE(void, AddActions, const Vector<Ref<Widget>>&);
     FUNCTION().PUBLIC().SIGNATURE(Ref<EditBox>, AddPrimaryField, const String&, const String&);
     FUNCTION().PUBLIC().SIGNATURE(void, AddSectionTitle, const String&);
-    FUNCTION().PUBLIC().SIGNATURE(Ref<Button>, AddModelRow, const Vector<String>&, const String&, PipelineModelKind);
+    FUNCTION().PUBLIC().SIGNATURE(Ref<Button>, AddModelRow, const Vector<String>&, const String&, PipelineModelKind, const String&, const String&, float);
     FUNCTION().PUBLIC().SIGNATURE(Ref<DropDown>, AddSelectRow, const String&, const String&, const Vector<String>&, const String&);
     FUNCTION().PUBLIC().SIGNATURE(Ref<EditBox>, AddTextArea, const String&, const String&, float);
     FUNCTION().PUBLIC().SIGNATURE(Ref<EditBox>, AddTextRow, const String&, const String&, const String&);

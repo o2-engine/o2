@@ -12,6 +12,8 @@ namespace
 {
     struct PipelineComposerUiFixture : PipelinePairUiFixture
     {
+        String WorkDir() const override { return "../../Work/Pipelines/uitest-composer/"; }
+
         Ref<PipelineNodeWidget> Card(const Ref<PipelineNode>& node) { return editor->GetNodeWidget(node->id); }
 
         Ref<PipelineComposerLayersPanel> Panel(const Ref<PipelineNode>& node)

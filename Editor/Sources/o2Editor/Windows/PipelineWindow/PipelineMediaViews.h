@@ -9,6 +9,7 @@
 
 #include <atomic>
 #include <memory>
+#include <string>
 
 using namespace o2;
 
@@ -63,6 +64,21 @@ namespace Editor
         // Enables or disables every control
         void SetActive(bool active);
 
+        // Look of the transport: the audio player row with the waveform and the loop, or the bar under a video
+        enum class Mode { Audio, Transport };
+
+        // Sets the look and lays the parts out
+        void SetMode(Mode mode);
+
+        // Sets the format shown after the time, WAV / MP3 ...
+        void SetFormat(const String& format);
+
+        // Sets the waveform peaks, 0..1; empty draws a line
+        void SetPeaks(const Vector<float>& peaks);
+
+        // Draws the controls and the waveform of the audio look
+        void Draw() override;
+
         // Returns true while the seek slider is dragged
         bool IsSeeking() const { return mSeeking; }
 
@@ -82,8 +98,15 @@ namespace Editor
         Ref<HorizontalProgress> mSeek;       // Seek slider over the clip duration
         Ref<WidgetLayer>        mTimeLayer;  // Elapsed / total time text layer
         Ref<Toggle>             mLoopToggle; // Loop toggle
-        Ref<HorizontalProgress> mVolume;     // Volume slider, 0..1
-        Ref<WidgetLayer>        mVolumeIcon; // Speaker icon before the volume slider
+        Mode                    mMode = Mode::Transport; // Look of the transport
+        String                  mFormat;                 // Format shown after the time
+        Vector<float>           mPeaks;                  // Waveform peaks of the audio look
+        float                   mTime = 0.0f;            // Shown playback position
+        float                   mVolumeValue = 1.0f;     // Playback volume, 0..1
+
+    protected:
+        // Places the play button, the seek area, the time and the loop for the look
+        void LayoutParts();
 
         float mDuration = 0.0f;  // Clip duration shown by the slider
         bool  mSeeking = false;  // True while the seek slider is dragged
@@ -153,6 +176,9 @@ namespace Editor
         PipelineValue    mValue;            // Audio value
         bool             mHasAudio = false; // True when the value holds audio data
         bool             mPlaying = false;  // True while playing
+        String           mHint;             // Text shown without audio
+        std::string      mPeaksKey;         // Key of the clip in the waveform cache, empty without audio
+        bool             mPeaksShown = false; // True once the waveform of the clip is shown
         float            mDuration = 0.0f;  // Clip duration in seconds
 
     protected:
@@ -164,6 +190,9 @@ namespace Editor
 
         // Updates the transport bar from the player state
         void RefreshControls();
+
+        // Shows the cached waveform of the clip or starts decoding it in a background thread
+        void RequestPeaks();
     };
 
     // ---------------------------------------------------------------------------------------
@@ -235,11 +264,11 @@ namespace Editor
             String                      data;   // Clip bytes
             String                      dir;    // Preview folder
             PipelineVideo::PreviewInfo  result; // Extraction result, valid once done is set
+            bool                        load = false; // The preview exists: only its atlas is read
+            Ref<Bitmap>                 atlas;  // Frames atlas read by the worker thread, valid once done is set
             std::atomic<bool>           done { false }; // Set by the worker thread when result is ready
         };
 
-        Ref<WidgetLayer>           mBackLayer;  // Dark back of the frame area
-        Ref<WidgetLayer>           mFrameLayer; // Frame border
         Ref<Label>                 mHintLabel;  // Hint or status text over the frame area
         Ref<PipelineMediaControls> mControls;   // Transport bar
 
@@ -261,11 +290,11 @@ namespace Editor
         float mTime = 0.0f;      // Playback position in seconds
 
     protected:
-        // Starts the extraction thread for the current value
-        void StartExtraction();
+        // Starts the thread making the preview of the current value, or with existing only reading its atlas
+        void StartExtraction(const PipelineVideo::PreviewInfo* existing = nullptr);
 
-        // Loads the atlas and the audio track of the preview
-        void ApplyPreview(const PipelineVideo::PreviewInfo& info);
+        // Shows the preview: the atlas read by the thread (read here when null) and the audio track
+        void ApplyPreview(const PipelineVideo::PreviewInfo& info, const Ref<Bitmap>& atlas = nullptr);
 
         // Drops the atlas, the player and the extraction
         void ClearPreview();
@@ -276,6 +305,9 @@ namespace Editor
         // Returns the rectangle of the frame area above the transport bar
         RectF GetFrameArea() const;
 
+        // Returns the picture card above the transport row
+        RectF GetCardArea() const;
+
         // Draws the current frame fitted into the frame area
         void DrawFrame();
 
@@ -284,6 +316,8 @@ namespace Editor
     };
 }
 // --- META ---
+
+PRE_ENUM_META(Editor::PipelineMediaControls::Mode);
 
 CLASS_BASES_META(Editor::PipelineMediaControls)
 {
@@ -300,8 +334,11 @@ CLASS_FIELDS_META(Editor::PipelineMediaControls)
     FIELD().PROTECTED().NAME(mSeek);
     FIELD().PROTECTED().NAME(mTimeLayer);
     FIELD().PROTECTED().NAME(mLoopToggle);
-    FIELD().PROTECTED().NAME(mVolume);
-    FIELD().PROTECTED().NAME(mVolumeIcon);
+    FIELD().PROTECTED().DEFAULT_VALUE(Mode::Transport).NAME(mMode);
+    FIELD().PROTECTED().NAME(mFormat);
+    FIELD().PROTECTED().NAME(mPeaks);
+    FIELD().PROTECTED().DEFAULT_VALUE(0.0f).NAME(mTime);
+    FIELD().PROTECTED().DEFAULT_VALUE(1.0f).NAME(mVolumeValue);
     FIELD().PROTECTED().DEFAULT_VALUE(0.0f).NAME(mDuration);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mSeeking);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mPlaying);
@@ -318,10 +355,15 @@ CLASS_METHODS_META(Editor::PipelineMediaControls)
     FUNCTION().PUBLIC().SIGNATURE(void, SetVolume, float);
     FUNCTION().PUBLIC().SIGNATURE(float, GetVolume);
     FUNCTION().PUBLIC().SIGNATURE(void, SetActive, bool);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetMode, Mode);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetFormat, const String&);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetPeaks, const Vector<float>&);
+    FUNCTION().PUBLIC().SIGNATURE(void, Draw);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsSeeking);
     FUNCTION().PUBLIC().SIGNATURE(const Ref<Button>&, GetPlayButton);
     FUNCTION().PUBLIC().SIGNATURE(const Ref<HorizontalProgress>&, GetSeekSlider);
     FUNCTION().PUBLIC().SIGNATURE(void, Update, float);
+    FUNCTION().PROTECTED().SIGNATURE(void, LayoutParts);
 }
 END_META;
 
@@ -340,6 +382,9 @@ CLASS_FIELDS_META(Editor::PipelineAudioView)
     FIELD().PROTECTED().NAME(mValue);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mHasAudio);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mPlaying);
+    FIELD().PROTECTED().NAME(mHint);
+    FIELD().PROTECTED().NAME(mPeaksKey);
+    FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mPeaksShown);
     FIELD().PROTECTED().DEFAULT_VALUE(0.0f).NAME(mDuration);
 }
 END_META;
@@ -362,6 +407,7 @@ CLASS_METHODS_META(Editor::PipelineAudioView)
     FUNCTION().PROTECTED().SIGNATURE(bool, EnsurePlayer);
     FUNCTION().PROTECTED().SIGNATURE(void, ApplyPlayerSettings);
     FUNCTION().PROTECTED().SIGNATURE(void, RefreshControls);
+    FUNCTION().PROTECTED().SIGNATURE(void, RequestPeaks);
 }
 END_META;
 
@@ -372,8 +418,6 @@ CLASS_BASES_META(Editor::PipelineVideoView)
 END_META;
 CLASS_FIELDS_META(Editor::PipelineVideoView)
 {
-    FIELD().PROTECTED().NAME(mBackLayer);
-    FIELD().PROTECTED().NAME(mFrameLayer);
     FIELD().PROTECTED().NAME(mHintLabel);
     FIELD().PROTECTED().NAME(mControls);
     FIELD().PROTECTED().NAME(mValue);
@@ -410,11 +454,12 @@ CLASS_METHODS_META(Editor::PipelineVideoView)
     FUNCTION().PUBLIC().SIGNATURE(const Ref<PipelineMediaControls>&, GetControls);
     FUNCTION().PUBLIC().SIGNATURE(void, Update, float);
     FUNCTION().PUBLIC().SIGNATURE(void, Draw);
-    FUNCTION().PROTECTED().SIGNATURE(void, StartExtraction);
-    FUNCTION().PROTECTED().SIGNATURE(void, ApplyPreview, const PipelineVideo::PreviewInfo&);
+    FUNCTION().PROTECTED().SIGNATURE(void, StartExtraction, const PipelineVideo::PreviewInfo*);
+    FUNCTION().PROTECTED().SIGNATURE(void, ApplyPreview, const PipelineVideo::PreviewInfo&, const Ref<Bitmap>&);
     FUNCTION().PROTECTED().SIGNATURE(void, ClearPreview);
     FUNCTION().PROTECTED().SIGNATURE(void, SyncAudio, bool);
     FUNCTION().PROTECTED().SIGNATURE(RectF, GetFrameArea);
+    FUNCTION().PROTECTED().SIGNATURE(RectF, GetCardArea);
     FUNCTION().PROTECTED().SIGNATURE(void, DrawFrame);
     FUNCTION().PROTECTED().SIGNATURE(void, RefreshControls);
 }

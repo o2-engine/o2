@@ -787,12 +787,13 @@ namespace Editor::PipelineImageOps
         auto bmp = mmake<Bitmap>(PixelFormat::R8G8B8A8, Vec2I(Math::Max(1, width), Math::Max(1, height)));
         UInt8* data = bmp->GetData();
         int count = bmp->GetSize().x * bmp->GetSize().y;
-        for (int i = 0; i < count; i++)
+        const UInt8 pixel[4] = { Clamp255((float)color.r), Clamp255((float)color.g), Clamp255((float)color.b), Clamp255((float)color.a) };
+        if (pixel[0] == 0 && pixel[1] == 0 && pixel[2] == 0 && pixel[3] == 0)
+            std::memset(data, 0, (size_t)count*4);
+        else
         {
-            data[i * 4] = Clamp255((float)color.r);
-            data[i * 4 + 1] = Clamp255((float)color.g);
-            data[i * 4 + 2] = Clamp255((float)color.b);
-            data[i * 4 + 3] = Clamp255((float)color.a);
+            for (int i = 0; i < count; i++)
+                std::memcpy(data + (size_t)i*4, pixel, 4);
         }
         return bmp;
     }

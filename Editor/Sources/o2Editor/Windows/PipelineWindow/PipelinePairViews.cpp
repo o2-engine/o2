@@ -1,5 +1,6 @@
 #include "o2Editor/stdafx.h"
 #include "PipelinePairViews.h"
+#include "o2Editor/Windows/PipelineWindow/PipelineImageLoader.h"
 
 #include "o2/Render/Render.h"
 #include "o2/Render/Sprite.h"
@@ -154,12 +155,10 @@ namespace Editor
         auto set = [](Sprite& sprite, Vec2I& size, const Ref<Bitmap>& bitmap)
         {
             size = Vec2I();
-            auto display = PipelinePairDraw::DisplayCopy(bitmap);
-            if (!display)
+            if (!bitmap)
                 return;
 
-            size = display->GetSize();
-            sprite.SetTexture(TextureRef(*display));
+            sprite.SetTexture(PipelineDisplayCache::GetTexture(bitmap, &size));
         };
         set(*mInputSprite, mInputSize, input);
         set(*mResultSprite, mResultSize, result);

@@ -16,7 +16,8 @@ namespace Editor::PipelinePairLayout
     bool IsPairNode(const String& type)
     {
         return type == "imageEdit" || type == "imageExtract" || type == "aiRemoveBg" || type == "removeBackground" ||
-            type == "imageOutline" || type == "imageShadow" || type == "imageGradient" || type == "imageColor" || type == "aiUpscale";
+            type == "imageOutline" || type == "imageShadow" || type == "imageGradient" || type == "imageColor" || type == "aiUpscale" ||
+            type == "imageToUi";
     }
 
     String InputPortOf(const String& type)

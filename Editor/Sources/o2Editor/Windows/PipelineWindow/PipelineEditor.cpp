@@ -1,6 +1,8 @@
 #include "o2Editor/stdafx.h"
 #include "PipelineEditor.h"
 
+#include "o2Editor/Windows/PipelineWindow/PipelineTheme.h"
+
 #include "o2/Application/Application.h"
 #include "o2/Assets/Assets.h"
 #include "o2/Application/Input.h"
@@ -20,10 +22,26 @@
 #include "o2Editor/Pipeline/PipelineNodeType.h"
 #include "o2Editor/Pipeline/PipelineUtils.h"
 #include "o2Editor/Windows/PipelineWindow/PipelineNodeBody.h"
+#include "o2/Render/Texture.h"
 #include "o2/Render/VectorSprite.h"
+#include "o2/Utils/Bitmap/Bitmap.h"
+#include "o2/Utils/Jobs/JobSystem.h"
+
+#include <chrono>
+#include <map>
+#include <thread>
 
 namespace Editor
 {
+    // Editors alive by address with the number each was made with; touched on the main thread only
+    static std::map<const PipelineEditor*, int>& LiveEditors()
+    {
+        static auto* editors = new std::map<const PipelineEditor*, int>();
+        return *editors;
+    }
+
+    static int lastEditorSerial = 0;
+
     void PipelineGraphAction::Redo()
     {
         if (auto e = editor.Lock())
@@ -36,8 +54,9 @@ namespace Editor
             e->RestoreGraph(before);
     }
 
-    static const float edgeWidth = 1.5f;
+    static const float edgeWidth = 2.0f;
     static const float activeEdgeWidth = 2.5f;
+    static const float selectedEdgeWidth = 3.5f;
     static const float minEdgePixels = 1.0f;
     static const float bendHandleRadius = 5.0f;
     static const float farViewScale = 4.5f;
@@ -45,12 +64,17 @@ namespace Editor
     static const float edgeCullingMargin = 200.0f;
     static const float edgeSegmentLength = 5.0f;
     static const float gridStep = 20.0f;
-    static const int gridLevels = 5;
+    static const int gridMajorEvery = 10;
+
+    static double NowMs()
+    {
+        return std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now().time_since_epoch()).count();
+    }
 
     PipelineEditor::PipelineEditor(RefCounter* refCounter):
         FrameScrollView(refCounter), SelectableDragHandlesGroup(refCounter)
     {
-        mSelectionSprite = mmake<Sprite>(Color4(0, 150, 136, 30));
+        mSelectionSprite = mmake<Sprite>(Color4(0, 0, 0, 0));
         mNodesContainer = mmake<Widget>();
         *mNodesContainer->layout = WidgetLayout::Based(BaseCorner::LeftBottom, Vec2F(), Vec2F());
         mViewCameraMinScale = 0.25f;
@@ -67,20 +91,34 @@ namespace Editor
         mListenersLayer->onRightButtonPassReleased = [this](const Input::Cursor& cursor) { OnRightButtonClickOrPanEnd(cursor); };
 
         mExecutor = mmake<PipelineExecutor>();
-        WeakRef<PipelineEditor> weakThis(this);
-        mExecutor->onEvent = [weakThis](const PipelineExecEvent& event)
+        mExecutor->deferAssetsRebuild = true;
+        mImageLoader = mmake<PipelineImageLoader>();
+        int serial = ++lastEditorSerial;
+        LiveEditors()[this] = serial;
+        PipelineEditor* self = this;
+        mExecutor->onEvent = [self, serial](const PipelineExecEvent& event)
         {
-            if (auto self = weakThis.Lock())
-                self->OnExecutorEvent(event);
+            // The executor's coroutines resume on the job workers: the cards are touched on the main thread only, and the event
+            // carries no decoded bitmap the worker may still drop (references are not atomic)
+            PipelineExecEvent copy = event;
+            copy.value.DropDecoded();
+            o2Jobs.Schedule([self, serial, copy]()
+            {
+                auto it = LiveEditors().find(self);
+                if (it != LiveEditors().end() && it->second == serial)
+                    self->OnExecutorEvent(copy);
+            }, JobPriority::Normal, JobThread::Main);
         };
 
         InitializeContextMenus();
+        ApplyTheme();
 
         mReady = true;
     }
 
     PipelineEditor::~PipelineEditor()
     {
+        LiveEditors().erase(this);
         if (mExecutor)
             mExecutor->Cancel();
     }
@@ -92,13 +130,7 @@ namespace Editor
 
     Color4 PipelineEditor::GetPortColor(PipelinePortType type)
     {
-        switch (type)
-        {
-            case PipelinePortType::Image: return Color4(255, 152, 0, 255);
-            case PipelinePortType::Video: return Color4(156, 39, 176, 255);
-            case PipelinePortType::Audio: return Color4(0, 150, 136, 255);
-            default: return Color4(33, 150, 243, 255);
-        }
+        return PipelineTheme::Get().PortColor(type);
     }
 
     void PipelineEditor::SetAsset(const Ref<PipelineAsset>& asset)
@@ -153,16 +185,16 @@ namespace Editor
         if (!asset)
             return;
 
-        String id = mGraph.id;
-        String name = mGraph.name;
-        mGraph.LoadFromAsset(*asset);
-        if (mGraph.id.IsEmpty())
-            mGraph.id = id;
+        PipelineGraph loaded;
+        loaded.LoadFromAsset(*asset);
+        if (loaded.id.IsEmpty())
+            loaded.id = mGraph.id;
 
-        mGraph.name = name;
-        mSelectedEdgeId = "";
+        loaded.name = mGraph.name;
+        mGraph.cameraPosition = loaded.cameraPosition;
+        mGraph.cameraScale = loaded.cameraScale;
         mSelectedPointIndex = -1;
-        RebuildAll();
+        SyncGraphTo(loaded);
         LoadPreviews();
         RefreshFreshness();
         mNeedRedraw = true;
@@ -283,54 +315,198 @@ namespace Editor
         mNeedRedraw = true;
     }
 
-    void PipelineEditor::LoadPreviews()
+    // Keeps the value already shown when the file holds the same bytes, so its picture is not decoded again
+    static void KeepOrTake(PipelineValue& shown, const PipelineValue& loaded)
+    {
+        bool same = shown.IsValid() == loaded.IsValid() && shown.type == loaded.type && shown.mimeType == loaded.mimeType &&
+            shown.data == loaded.data;
+        if (!same)
+        {
+            shown = loaded;
+            shown.ShareDecoded();
+        }
+    }
+
+    void PipelineEditor::LoadPreview(const Ref<PipelineNodeWidget>& widget)
     {
         String pipelineId = GetPipelineId();
-        for (auto& widget : mNodeWidgets)
+        String path;
+        PipelineValue value = PipelineExecutor::LoadPreview(pipelineId, *widget->GetNode(), &path);
+
+        // A source is its config: the file it points at now, not what the last run read
+        PipelineValue sourceValue;
+        String error;
+        auto schema = widget->GetSchema();
+        if (schema && schema->category == PipelineNodeCategory::Source &&
+            ResolveSourceValue(*widget->GetNode(), o2Assets.GetAssetsPath(), sourceValue, error, false))
         {
-            String path;
-            PipelineValue value = PipelineExecutor::LoadPreview(pipelineId, *widget->GetNode(), &path);
-
-            // A source is its config: the file it points at now, not what the last run read
-            PipelineValue sourceValue;
-            String error;
-            auto schema = widget->GetSchema();
-            if (schema && schema->category == PipelineNodeCategory::Source &&
-                ResolveSourceValue(*widget->GetNode(), o2Assets.GetAssetsPath(), sourceValue, error))
-            {
-                value = sourceValue;
-            }
-
-            auto& runtime = widget->GetRuntime();
-            runtime.output = value;
-            runtime.previewPath = path;
-
-            // A per-port node keeps a preview per output, so its parts come back with the asset
-            runtime.portOutputs.Clear();
-            if (schema && schema->perPortRun)
-            {
-                for (auto& port : widget->GetNode()->outputs)
-                {
-                    PipelineValue portValue = PipelineExecutor::LoadPortPreview(pipelineId, widget->GetNode()->id, port.id, port.portType);
-                    if (portValue.IsValid())
-                        runtime.portOutputs[port.id] = portValue;
-                }
-
-                if (!runtime.output.IsValid() && !runtime.portOutputs.empty())
-                    runtime.output = runtime.portOutputs.begin()->second;
-
-                // AssetsLine keeps a single part only as the node's result
-                auto& outputs = widget->GetNode()->outputs;
-                if (outputs.Count() == 1 && runtime.output.IsValid() && !runtime.portOutputs.ContainsKey(outputs[0].id))
-                    runtime.portOutputs[outputs[0].id] = runtime.output;
-            }
-
-            String srcPath = PipelineExecutor::GetSourcePreviewPath(pipelineId, widget->GetNode()->id);
-            runtime.srcPreviewPath = o2FileSystem.IsFileExist(srcPath) ? srcPath : String();
+            value = sourceValue;
         }
+
+        auto& runtime = widget->GetRuntime();
+        KeepOrTake(runtime.output, value);
+        runtime.previewPath = path;
+
+        // A per-port node keeps a preview per output, so its parts come back with the asset
+        auto previous = runtime.portOutputs;
+        runtime.portOutputs.Clear();
+        auto takePort = [&](const String& portId, const PipelineValue& portValue)
+        {
+            if (!portValue.IsValid())
+                return;
+
+            PipelineValue shown;
+            previous.TryGetValue(portId, shown);
+            KeepOrTake(shown, portValue);
+            runtime.portOutputs[portId] = shown;
+        };
+
+        if (schema && schema->dynamicOutputs)
+        {
+            auto& outputs = widget->GetNode()->outputs;
+            for (int i = 1; i < outputs.Count(); i++)
+                takePort(outputs[i].id, PipelineExecutor::LoadPortPreview(pipelineId, widget->GetNode()->id, outputs[i].id, outputs[i].portType));
+        }
+        else if (schema && schema->perPortRun)
+        {
+            for (auto& port : widget->GetNode()->outputs)
+                takePort(port.id, PipelineExecutor::LoadPortPreview(pipelineId, widget->GetNode()->id, port.id, port.portType));
+
+            if (!runtime.output.IsValid() && !runtime.portOutputs.empty())
+                runtime.output = runtime.portOutputs.begin()->second;
+
+            // AssetsLine keeps a single part only as the node's result
+            auto& outputs = widget->GetNode()->outputs;
+            if (outputs.Count() == 1 && runtime.output.IsValid() && !runtime.portOutputs.ContainsKey(outputs[0].id))
+                runtime.portOutputs[outputs[0].id] = runtime.output;
+        }
+
+        String srcPath = PipelineExecutor::GetSourcePreviewPath(pipelineId, widget->GetNode()->id);
+        runtime.srcPreviewPath = o2FileSystem.IsFileExist(srcPath) ? srcPath : String();
+        runtime.srcPreviewLoaded = "";
+    }
+
+    void PipelineEditor::LoadPreviews()
+    {
+        for (auto& widget : mNodeWidgets)
+            LoadPreview(widget);
 
         for (auto& widget : mNodeWidgets)
             widget->OnOutputChanged();
+    }
+
+    Ref<PipelineNodeWidget> PipelineEditor::AddCard(const Ref<PipelineNode>& node)
+    {
+        PushEditorScopeOnStack scope;
+        PipelineNodeRegistry::SyncNodeWithSchema(node);
+        auto widget = mmake<PipelineNodeWidget>(Ref(this), node);
+        mNodesContainer->AddChild(widget);
+        mNodeWidgets.Add(widget);
+        mNodeWidgetsById[node->id] = widget;
+        mHandleToNode[widget->dragHandle] = widget;
+        return widget;
+    }
+
+    void PipelineEditor::RemoveCard(const String& nodeId)
+    {
+        Ref<PipelineNodeWidget> widget;
+        if (!mNodeWidgetsById.TryGetValue(nodeId, widget))
+            return;
+
+        // A menu writes into a field of its card
+        if (mModelPicker)
+            mModelPicker->Close();
+        if (mOptionPicker)
+            mOptionPicker->Close();
+
+        widget->dragHandle->SetSelectionGroup(nullptr);
+        mHandleToNode.Remove(widget->dragHandle);
+        mNodeWidgets.Remove(widget);
+        mNodeWidgetsById.Remove(nodeId);
+        mNodesContainer->RemoveChild(widget);
+    }
+
+    static bool SamePorts(const Vector<PipelinePort>& a, const Vector<PipelinePort>& b)
+    {
+        if (a.Count() != b.Count())
+            return false;
+
+        for (int i = 0; i < a.Count(); i++)
+        {
+            if (!(a[i] == b[i]))
+                return false;
+        }
+        return true;
+    }
+
+    void PipelineEditor::SyncGraphTo(const PipelineGraph& target)
+    {
+        PushEditorScopeOnStack scope;
+        auto graph = GetGraph();
+        if (!graph)
+            return;
+
+        Map<String, Ref<PipelineNode>> current;
+        for (auto& node : graph->nodes)
+            current[node->id] = node;
+
+        Vector<Ref<PipelineNode>> nodes;
+        Vector<Ref<PipelineNodeWidget>> added;
+        for (auto& wanted : target.nodes)
+        {
+            Ref<PipelineNode> node;
+            if (!current.TryGetValue(wanted->id, node))
+            {
+                node = mmake<PipelineNode>(*wanted);
+                nodes.Add(node);
+                added.Add(AddCard(node));
+                continue;
+            }
+
+            current.Remove(wanted->id);
+            nodes.Add(node);
+            auto widget = GetNodeWidget(node->id);
+            bool sameContent = node->nodeType == wanted->nodeType && SamePorts(node->inputs, wanted->inputs) &&
+                SamePorts(node->outputs, wanted->outputs) && node->config == wanted->config && node->extra == wanted->extra;
+            bool samePlace = node->position == wanted->position && node->size == wanted->size;
+            if (sameContent && samePlace)
+                continue;
+
+            // The card keeps its node object, so its body and the views holding the node stay valid
+            *node = *wanted;
+            if (!widget)
+                continue;
+
+            if (sameContent)
+                widget->UpdateFromNode();
+            else
+                RefreshNodeWidget(widget);
+        }
+
+        for (auto& gone : current)
+            RemoveCard(gone.first);
+
+        graph->nodes = nodes;
+        graph->edges.Clear();
+        for (auto& edge : target.edges)
+            graph->edges.Add(mmake<PipelineEdge>(*edge));
+
+        graph->id = target.id;
+        graph->name = target.name;
+        graph->extra = static_cast<const DataValue&>(target.extra);
+        graph->RemoveDanglingEdges();
+
+        for (auto& widget : added)
+            LoadPreview(widget);
+        for (auto& widget : added)
+            widget->OnOutputChanged();
+
+        if (!mSelectedEdgeId.IsEmpty() && !graph->FindEdge(mSelectedEdgeId))
+            mSelectedEdgeId = "";
+        RebuildBendHandles();
+        RefreshCardsWithChangedInputs();
+        RecalculateViewArea();
+        mNeedRedraw = true;
     }
 
     void PipelineEditor::RefreshSourceOutput(const Ref<PipelineNodeWidget>& widget)
@@ -342,10 +518,16 @@ namespace Editor
 
         PipelineValue value;
         String error;
-        if (!ResolveSourceValue(*widget->GetNode(), o2Assets.GetAssetsPath(), value, error))
+        if (!ResolveSourceValue(*widget->GetNode(), o2Assets.GetAssetsPath(), value, error, false))
             value = PipelineValue();
 
-        widget->GetRuntime().output = value;
+        // A text source typed into keeps its value object, so the cards reading it are refreshed only when it changed
+        auto& output = widget->GetRuntime().output;
+        if (output.IsValid() == value.IsValid() && output.type == value.type && output.data == value.data)
+            return;
+
+        output = value;
+        output.ShareDecoded();
         widget->OnOutputChanged();
 
         for (auto& edge : graph->GetOutgoingEdges(widget->GetNode()->id))
@@ -355,6 +537,102 @@ namespace Editor
                 downstream->OnOutputChanged();
                 if (downstream->GetSchema() && downstream->GetSchema()->instant)
                     ScheduleAutoApply(edge->toNodeId);
+            }
+        }
+    }
+
+    Ref<Bitmap> PipelineEditor::GetPicture(const PipelineValue& value, const String& nodeId)
+    {
+        return mImageLoader->Request(value, nodeId);
+    }
+
+    bool PipelineEditor::IsPicturePending(const PipelineValue& value) const
+    {
+        return mImageLoader->IsPending(value);
+    }
+
+    bool PipelineEditor::IsWaitingForPictures(const String& nodeId) const
+    {
+        return mImageLoader->IsWaiting(nodeId);
+    }
+
+    String PipelineEditor::GetBackgroundStatus() const
+    {
+        String status;
+        int pending = mImageLoader->GetPendingCount();
+        if (pending > 0)
+        {
+            int finished = mImageLoader->GetFinishedCount();
+            status = "Loading previews " + (String)finished + "/" + (String)(finished + pending);
+        }
+
+        if (mRunIsAutoApply && IsRunning())
+        {
+            String name;
+            if (auto widget = GetNodeWidget(mRunTarget))
+                name = widget->GetSchema() ? widget->GetSchema()->label : widget->GetNode()->nodeType;
+            status += (status.IsEmpty() ? "" : " · ") + String("Applying ") + name;
+        }
+
+        if (Assets::IsSingletonInitialzed() && o2Assets.IsRebuildingAssets())
+            status += (status.IsEmpty() ? "" : " · ") + String("Rebuilding assets");
+
+        return status;
+    }
+
+    void PipelineEditor::FinishBackgroundWork()
+    {
+        PushEditorScopeOnStack scope;
+        for (auto& nodeId : mImageLoader->WaitAll())
+        {
+            if (auto widget = GetNodeWidget(nodeId))
+                widget->OnOutputChanged();
+        }
+
+        // The tree of a background assets rebuild is reloaded by a main-thread job
+        for (int i = 0; i < 30000 && Assets::IsSingletonInitialzed() && o2Assets.IsRebuildingAssets(); i++)
+        {
+            o2Jobs.ExecuteMainThreadJobs(-1.0f);
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        }
+        mNeedRedraw = true;
+    }
+
+    void PipelineEditor::WarmUpCards(float dt)
+    {
+        // A couple of milliseconds a frame: enough to lay out the whole graph within a second or two after opening it
+        const double budgetMs = 2.0;
+        double start = NowMs();
+        for (auto& widget : mNodeWidgets)
+        {
+            if (widget->IsWarm())
+                continue;
+
+            widget->WarmUp(dt);
+            if (NowMs() - start > budgetMs)
+                break;
+        }
+    }
+
+    void PipelineEditor::ApplyDecodedPictures()
+    {
+        if (mImageLoader->GetPendingCount() == 0)
+            return;
+
+        // The budget, refreshing the cards included, keeps a burst of arrivals (opening a big pipeline) spread over frames
+        const double budgetMs = 6.0;
+        mNeedRedraw = true;
+        double start = NowMs();
+        while (NowMs() - start < budgetMs)
+        {
+            auto ready = mImageLoader->TakeReady(0.0f);
+            if (ready.IsEmpty())
+                break;
+
+            for (auto& nodeId : ready)
+            {
+                if (auto widget = GetNodeWidget(nodeId))
+                    widget->OnOutputChanged();
             }
         }
     }
@@ -471,42 +749,196 @@ namespace Editor
 
     void PipelineEditor::DrawGrid()
     {
-        // Lines at the snapping step, every fifth one stronger; zoomed out, the finest lines fade and the grid steps up by five
-        const float minSpacing = 4.0f;
-        const float fullSpacing = 12.0f;
-        const float strengths[] = { 0.3f, 0.65f, 1.0f };
+        DrawCanvasGradient();
+        DrawGridDots();
+    }
 
-        float unitsPerPixel = Math::Max(mViewCamera.GetScale().x, 0.0001f);
-        float step = gridStep;
-        while (step/unitsPerPixel < minSpacing)
-            step *= gridLevels;
+    void PipelineEditor::DrawCanvasGradient()
+    {
+        // AssetsLine --canvas-bg: radial-gradient(ellipse 120% 95% at 30% -20%, inner 0%, mid 42%, outer 78%) over the view;
+        // past the last stop the cleared outer colour shows
+        auto& theme = PipelineTheme::Get();
+        RectF view = GetVisibleCanvasRect();
+        float w = view.Width(), h = view.Height();
+        Vec2F center(view.left + w * 0.3f, view.top + h * 0.2f);
+        Vec2F radius(w * 1.2f, h * 0.95f);
 
-        // The coarser lines take over the strength of the finer ones as those fade, so zooming never jumps
-        float fade = Math::Clamp01((step/unitsPerPixel - minSpacing)/(fullSpacing - minSpacing));
-        auto lineColor = [&](int index)
+        const int segments = 96;
+        const float stops[] = { 0.0f, 0.42f, 0.78f };
+        const Color4 colors[] = { theme.canvasInner, theme.canvasMid, theme.canvasOuter };
+
+        Vector<Vertex> vertices;
+        Vector<VertexIndex> indices;
+        vertices.Add(Vertex(center, colors[0].ABGR(), 0, 0));
+        for (int ring = 1; ring < 3; ring++)
         {
-            int level = 0;
-            while (level < 2 && index % gridLevels == 0)
+            for (int i = 0; i < segments; i++)
             {
-                index /= gridLevels;
-                level++;
+                float a = Math::PI() * 2.0f * i / segments;
+                Vec2F p = center + Vec2F(Math::Cos(a) * radius.x, Math::Sin(a) * radius.y) * stops[ring];
+                vertices.Add(Vertex(p, colors[ring].ABGR(), 0, 0));
             }
+        }
 
-            float strength = level == 0 ? strengths[0]*fade : Math::Lerp(strengths[level - 1], strengths[level], fade);
-            return Math::Lerp(mBackColor, mGridColor, strength);
-        };
+        for (int i = 0; i < segments; i++)
+        {
+            int j = (i + 1) % segments;
+            indices.Add(0); indices.Add((VertexIndex)(1 + i)); indices.Add((VertexIndex)(1 + j));
+            int a0 = 1 + i, a1 = 1 + j, b0 = 1 + segments + i, b1 = 1 + segments + j;
+            indices.Add((VertexIndex)a0); indices.Add((VertexIndex)b0); indices.Add((VertexIndex)b1);
+            indices.Add((VertexIndex)a0); indices.Add((VertexIndex)b1); indices.Add((VertexIndex)a1);
+        }
+
+        o2Render.DrawBuffer(PrimitiveType::Polygon, vertices.Data(), vertices.Count(), indices.Data(), indices.Count() / 3,
+                            o2Render.GetDefaultMaterial(), TextureRef());
+    }
+
+    // Dot fade by its on-screen spacing: gone below 3 pixels, full from 9 (Canvas.tsx gridOpacity)
+    static float DotsOpacity(float spacing)
+    {
+        return Math::Clamp01((spacing - 3.0f) / 6.0f);
+    }
+
+    void PipelineEditor::DrawGridDots()
+    {
+        // A dot per grid point, 2 screen pixels below-right of it, fading in as the grid opens up; every tenth one brighter,
+        // drawn over it and fading by its own spacing (Canvas.tsx grid-pattern / grid-pattern-major)
+        auto& theme = PipelineTheme::Get();
+        float unitsPerPixel = Math::Max(mViewCamera.GetScale().x, 0.0001f);
+        float spacing = gridStep / unitsPerPixel;
+        float majorWorld = gridStep * gridMajorEvery;
+        if (DotsOpacity(spacing * gridMajorEvery) <= 0.0f)
+            return;
 
         RectF view = GetVisibleCanvasRect();
-        for (int i = Math::FloorToInt(view.left/step); i*step <= view.right; i++)
-            o2Render.DrawLine(Vec2F(i*step, view.bottom), Vec2F(i*step, view.top), lineColor(i));
 
-        for (int i = Math::FloorToInt(view.bottom/step); i*step <= view.top; i++)
-            o2Render.DrawLine(Vec2F(view.left, i*step), Vec2F(view.right, i*step), lineColor(i));
+        // Dense dots are one quad over the view with a repeated tile of ten by ten cells: as quads they would be hundreds
+        // of thousands per frame when zoomed out on a large screen
+        const float quadsSpacing = 32.0f;
+        if (spacing < quadsSpacing)
+        {
+            int tileSize = Math::Max(1, Math::RoundToInt(spacing * gridMajorEvery));
+            if (!mDotsTile || tileSize != mDotsTileSize || mDotsTileTheme != PipelineTheme::GetVersion())
+                BuildDotsTile(tileSize);
+
+            // The tile spans exactly ten cells of the canvas whatever its rounded pixel size; v runs down like the tile's rows
+            ULong white = Color4::White().ABGR();
+            Vertex vertices[4] = {
+                Vertex(Vec2F(view.left, view.top), white, view.left / majorWorld, -view.top / majorWorld),
+                Vertex(Vec2F(view.right, view.top), white, view.right / majorWorld, -view.top / majorWorld),
+                Vertex(Vec2F(view.right, view.bottom), white, view.right / majorWorld, -view.bottom / majorWorld),
+                Vertex(Vec2F(view.left, view.bottom), white, view.left / majorWorld, -view.bottom / majorWorld)
+            };
+            VertexIndex indices[6] = { 0, 1, 2, 0, 2, 3 };
+            o2Render.DrawBuffer(PrimitiveType::Polygon, vertices, 4, indices, 2, o2Render.GetDefaultMaterial(), mDotsTile);
+            return;
+        }
+
+        // Sparse dots, a few thousand at most: a 2 x 2 pixel quad each
+        float size = 2.0f * unitsPerPixel;
+        Vector<Vertex> vertices;
+        Vector<VertexIndex> indices;
+        auto dots = [&](float step, const Color4& dotColor)
+        {
+            float opacity = DotsOpacity(step / unitsPerPixel);
+            if (opacity <= 0.0f)
+                return;
+
+            // A pixel-wide circle covers each of its four pixels by about pi/4
+            ULong dcolor = PipelineTheme::Alpha(dotColor, opacity * 0.785f).ABGR();
+            for (int i = Math::FloorToInt(view.left / step); i * step <= view.right; i++)
+            {
+                for (int j = Math::FloorToInt(view.bottom / step); j * step <= view.top + step; j++)
+                {
+                    float x = i * step, y = j * step;
+                    VertexIndex base = (VertexIndex)vertices.Count();
+                    vertices.Add(Vertex(Vec2F(x, y - size), dcolor, 0, 0));
+                    vertices.Add(Vertex(Vec2F(x + size, y - size), dcolor, 0, 0));
+                    vertices.Add(Vertex(Vec2F(x + size, y), dcolor, 0, 0));
+                    vertices.Add(Vertex(Vec2F(x, y), dcolor, 0, 0));
+                    indices.Add(base); indices.Add(base + 1); indices.Add(base + 2);
+                    indices.Add(base); indices.Add(base + 2); indices.Add(base + 3);
+                }
+            }
+        };
+
+        dots(gridStep, theme.gridDot);
+        dots(majorWorld, theme.gridDotMajor);
+        if (!vertices.IsEmpty())
+            o2Render.DrawBuffer(PrimitiveType::Polygon, vertices.Data(), vertices.Count(), indices.Data(), indices.Count() / 3,
+                                o2Render.GetDefaultMaterial(), TextureRef());
+    }
+
+    void PipelineEditor::BuildDotsTile(int tileSize)
+    {
+        // Rows run down from the grid point at the tile's top-left corner; each dot is a 2 x 2 pixel box at its cell's corner,
+        // spread over the pixels it overlaps, wrapping around the edges so the repeats join
+        auto& theme = PipelineTheme::Get();
+        float cell = tileSize / (float)gridMajorEvery;
+        float minorOpacity = DotsOpacity(cell), majorOpacity = DotsOpacity((float)tileSize);
+
+        Vector<float> rgba;
+        rgba.Resize(tileSize * tileSize * 4);
+        for (auto& v : rgba)
+            v = 0.0f;
+
+        auto splat = [&](float x0, float y0, const Color4& color, float opacity)
+        {
+            float alpha = color.a / 255.0f * opacity * 0.785f;
+            if (alpha <= 0.0f)
+                return;
+
+            for (int py = Math::FloorToInt(y0); py < Math::CeilToInt(y0 + 2.0f); py++)
+            {
+                for (int px = Math::FloorToInt(x0); px < Math::CeilToInt(x0 + 2.0f); px++)
+                {
+                    float cover = Math::Max(0.0f, Math::Min(px + 1.0f, x0 + 2.0f) - Math::Max((float)px, x0)) *
+                                  Math::Max(0.0f, Math::Min(py + 1.0f, y0 + 2.0f) - Math::Max((float)py, y0));
+                    float a = alpha * cover;
+                    if (a <= 0.0f)
+                        continue;
+
+                    // Source over what is there (premultiplied)
+                    int wx = ((px % tileSize) + tileSize) % tileSize, wy = ((py % tileSize) + tileSize) % tileSize;
+                    float* dst = &rgba[(wy * tileSize + wx) * 4];
+                    dst[0] = color.r / 255.0f * a + dst[0] * (1.0f - a);
+                    dst[1] = color.g / 255.0f * a + dst[1] * (1.0f - a);
+                    dst[2] = color.b / 255.0f * a + dst[2] * (1.0f - a);
+                    dst[3] = a + dst[3] * (1.0f - a);
+                }
+            }
+        };
+
+        for (int j = 0; j < gridMajorEvery; j++)
+        {
+            for (int i = 0; i < gridMajorEvery; i++)
+                splat(i * cell, j * cell, theme.gridDot, minorOpacity);
+        }
+        splat(0.0f, 0.0f, theme.gridDotMajor, majorOpacity);
+
+        Bitmap bitmap(PixelFormat::R8G8B8A8, Vec2I(tileSize, tileSize));
+        UInt8* data = bitmap.GetData();
+        for (int k = 0; k < tileSize * tileSize; k++)
+        {
+            const float* src = &rgba[k * 4];
+            float a = src[3];
+            data[k * 4 + 0] = (UInt8)Math::Clamp(Math::RoundToInt(a > 0.0f ? src[0] / a * 255.0f : 0.0f), 0, 255);
+            data[k * 4 + 1] = (UInt8)Math::Clamp(Math::RoundToInt(a > 0.0f ? src[1] / a * 255.0f : 0.0f), 0, 255);
+            data[k * 4 + 2] = (UInt8)Math::Clamp(Math::RoundToInt(a > 0.0f ? src[2] / a * 255.0f : 0.0f), 0, 255);
+            data[k * 4 + 3] = (UInt8)Math::Clamp(Math::RoundToInt(a * 255.0f), 0, 255);
+        }
+
+        mDotsTile = TextureRef(bitmap);
+        mDotsTile->SetFilter(Texture::Filter::Linear);
+        mDotsTile->SetWrap(Texture::Wrap::Repeat);
+        mDotsTileSize = tileSize;
+        mDotsTileTheme = PipelineTheme::GetVersion();
     }
 
     void PipelineEditor::RedrawContent()
     {
         DrawGrid();
+        CollectEdgeDraws();
         DrawEdges(false);
         mNodesContainer->Draw();
         DrawEdges(true);
@@ -532,9 +964,11 @@ namespace Editor
     {
         if (mSelecting && mIsPressed)
         {
-            mSelectionSprite->rect = RectF(LocalToScreenPoint(mSelectingPressedPoint), o2Input.cursorPos);
-            mSelectionSprite->Draw();
-            o2Render.DrawAARectFrame(mSelectionSprite->rect, Color4(0, 150, 136, 200), 1.0f);
+            auto& theme = PipelineTheme::Get();
+            RectF rect(LocalToScreenPoint(mSelectingPressedPoint), o2Input.cursorPos);
+            o2Render.DrawFilledPolygon({ rect.LeftBottom(), Vec2F(rect.left, rect.top), rect.RightTop(), Vec2F(rect.right, rect.bottom) },
+                                       PipelineTheme::Alpha(theme.accent, 0.08f));
+            o2Render.DrawAARectFrame(rect, theme.accent, 1.0f, LineType::Dash);
         }
     }
 
@@ -611,28 +1045,38 @@ namespace Editor
         return true;
     }
 
-    void PipelineEditor::DrawEdges(bool overCards)
+    void PipelineEditor::CollectEdgeDraws()
     {
+        mEdgeDraws.Clear();
         auto graph = GetGraph();
-        if (!graph)
+        if (!graph || !drawEdges)
             return;
+
+        std::map<const PipelineNodeWidget*, RectF> rects;
+        auto rectOf = [&](const Ref<PipelineNodeWidget>& widget) -> const RectF&
+        {
+            auto it = rects.find(widget.Get());
+            if (it == rects.end())
+                it = rects.emplace(widget.Get(), widget->GetCardRect()).first;
+            return it->second;
+        };
 
         bool culling = mCullingRect.Width() > 0.0f;
         for (auto& edge : graph->edges)
         {
-            Ref<PipelineNodeWidget> fromWidget;
-            Vec2F bodyOffset;
-            bool bodyPort = mNodeWidgetsById.TryGetValue(edge->fromNodeId, fromWidget) && fromWidget->IsBodyPort(edge->fromPortId, bodyOffset);
-            if (bodyPort != overCards)
+            Ref<PipelineNodeWidget> fromWidget, toWidget;
+            if (!mNodeWidgetsById.TryGetValue(edge->fromNodeId, fromWidget) || !mNodeWidgetsById.TryGetValue(edge->toNodeId, toWidget))
                 continue;
 
-            Vec2F from, to;
-            if (!GetEdgeEnds(*edge, from, to))
-                continue;
+            EdgeDraw draw;
+            draw.edge = edge;
+            draw.from = fromWidget->GetPortPosition(edge->fromPortId, false, rectOf(fromWidget));
+            draw.to = toWidget->GetPortPosition(edge->toPortId, true, rectOf(toWidget));
 
             if (culling)
             {
-                RectF bounds(Math::Min(from.x, to.x), Math::Max(from.y, to.y), Math::Max(from.x, to.x), Math::Min(from.y, to.y));
+                RectF bounds(Math::Min(draw.from.x, draw.to.x), Math::Max(draw.from.y, draw.to.y),
+                             Math::Max(draw.from.x, draw.to.x), Math::Min(draw.from.y, draw.to.y));
                 for (auto& point : edge->points)
                 {
                     bounds.left = Math::Min(bounds.left, point.x);
@@ -649,31 +1093,44 @@ namespace Editor
                     continue;
             }
 
-            auto fromNode = graph->FindNode(edge->fromNodeId);
-            auto port = fromNode ? fromNode->FindOutput(edge->fromPortId) : nullptr;
-            Color4 color = port ? GetPortColor(port->portType) : Color4(96, 125, 139, 255);
+            Vec2F bodyOffset;
+            draw.overCards = fromWidget->IsBodyPort(edge->fromPortId, bodyOffset);
 
-            auto fromRt = GetRuntime(edge->fromNodeId);
-            auto toRt = GetRuntime(edge->toNodeId);
-            bool fromActive = fromRt && fromRt->state != "idle";
-            bool toActive = toRt && toRt->state != "idle";
+            auto port = fromWidget->GetNode()->FindOutput(edge->fromPortId);
+            auto& theme = PipelineTheme::Get();
+            Color4 color = port ? GetPortColor(port->portType) : theme.fgDim;
+
+            // AssetsLine .edge-path: the port colour at 90%, the running link in the accent, a failed one red
+            auto& fromRt = fromWidget->GetRuntime();
+            auto& toRt = toWidget->GetRuntime();
             float width = edgeWidth;
-            if (fromActive && toActive)
+            float opacity = 0.9f;
+            if (fromRt.state == "error" || toRt.state == "error") { color = theme.red; width = activeEdgeWidth; opacity = 1.0f; }
+            else if (toRt.state == "running") { color = theme.accent; width = activeEdgeWidth; opacity = 1.0f; }
+            else if (toRt.state == "queued") opacity = 0.55f;
+            else if (fromRt.state == "done" && toRt.state == "done") opacity = 1.0f;
+
+            draw.selected = edge->id == mSelectedEdgeId;
+            if (draw.selected)
             {
-                if (fromRt->state == "error" || toRt->state == "error") color = Color4(249, 93, 72, 255);
-                else if (fromRt->state == "running" || toRt->state == "running" || fromRt->state == "queued") color = Color4(33, 150, 243, 255);
-                else if (fromRt->state == "done") color = Color4(76, 175, 80, 255);
-                width = activeEdgeWidth;
+                width = selectedEdgeWidth;
+                opacity = 1.0f;
             }
 
-            bool selected = edge->id == mSelectedEdgeId;
-            if (selected)
-            {
-                DrawEdge(from, to, edge->points, Color4(0, 150, 136, 80), width + 3.0f);
-                width += 1.0f;
-            }
+            draw.color = PipelineTheme::Alpha(color, opacity);
+            draw.width = width;
+            mEdgeDraws.Add(draw);
+        }
+    }
 
-            DrawEdge(from, to, edge->points, color, width);
+    void PipelineEditor::DrawEdges(bool overCards)
+    {
+        for (auto& draw : mEdgeDraws)
+        {
+            if (draw.overCards != overCards)
+                continue;
+
+            DrawEdge(draw.from, draw.to, draw.edge->points, draw.color, draw.width);
         }
 
         if (mPendingEdge.active && !overCards)
@@ -684,9 +1141,7 @@ namespace Editor
                 Vec2F portPos = widget->GetPortPosition(mPendingEdge.portId, mPendingEdge.fromInput);
                 Vec2F from = mPendingEdge.fromInput ? mPendingEdge.cursor : portPos;
                 Vec2F to = mPendingEdge.fromInput ? portPos : mPendingEdge.cursor;
-                Color4 color = GetPortColor(mPendingEdge.type);
-                color.a = 200;
-                DrawEdge(from, to, {}, color, edgeWidth);
+                DrawEdge(from, to, {}, PipelineTheme::Alpha(GetPortColor(mPendingEdge.type), 0.7f), edgeWidth);
             }
         }
     }
@@ -706,9 +1161,9 @@ namespace Editor
         for (int i = 0; i < edge->points.Count(); i++)
         {
             auto regular = mmake<VectorSprite>("ui/pipeline/port_fill.svg");
-            regular->color = Color4(96, 125, 139, 255);
+            regular->color = PipelineTheme::Get().cardSolid;
             auto hover = mmake<VectorSprite>("ui/pipeline/port_fill.svg");
-            hover->color = Color4(0, 150, 136, 255);
+            hover->color = PipelineTheme::Get().accent;
             auto handle = mmake<DragHandle>(regular, hover, hover);
             handle->SetDrawablesSize(Vec2F(bendHandleRadius * 2, bendHandleRadius * 2));
             handle->position = NodeToCanvas(edge->points[i]);
@@ -781,8 +1236,10 @@ namespace Editor
         FrameScrollView::Update(dt);
 
         UpdateCardsVisibility();
+        ApplyDecodedPictures();
         mNodesContainer->Update(dt);
         mNodesContainer->UpdateChildren(dt);
+        WarmUpCards(dt);
 
         if (mReady && mResEnabledInHierarchy && !mIsClipped && mNeedAdjustView)
         {
@@ -800,7 +1257,8 @@ namespace Editor
             }
         }
 
-        if (mBendDragging || !mSelectedEdgeId.IsEmpty())
+        // The running bars of the cards busy in the background move every frame
+        if (mBendDragging || !mSelectedEdgeId.IsEmpty() || (mRunIsAutoApply && IsRunning()))
             mNeedRedraw = true;
 
         // Queued targets start here: the executor's Done arrives from inside its coroutine, where IsRunning() still holds
@@ -819,6 +1277,15 @@ namespace Editor
             mSaveQueue.RemoveAt(0);
             mRunIsAutoApply = false;
             StartSingleRun(next);
+        }
+
+        // The assets the finish nodes of a run all wrote are rebuilt once, after the last queued run
+        if (mAssetsRebuildPending && !IsRunning() && mRunQueue.IsEmpty() && mSaveQueue.IsEmpty())
+        {
+            mAssetsRebuildPending = false;
+            if (onLog)
+                onLog("Rebuilding assets");
+            o2Assets.RebuildAssetsInBackground();
         }
 
         // Auto-apply of local nodes, debounced
@@ -860,11 +1327,58 @@ namespace Editor
             mNeedRedraw = true;
         }
 
+        if (mThemeVersion != PipelineTheme::GetVersion())
+            ApplyTheme();
+
+        // The graph follows the camera every frame; the asset document, a write of the whole graph, once it rests
         if (mViewCameraMoved || mCameraDirty)
         {
             mCameraDirty = false;
-            SaveCameraToGraph();
+            if (auto graph = GetGraph())
+            {
+                graph->cameraPosition = mViewCamera.GetPosition2D();
+                graph->cameraScale = mViewCamera.GetScale2D().x;
+            }
+            mCameraSaveDelay = 0.25f;
         }
+        else if (mCameraSaveDelay > 0.0f)
+        {
+            mCameraSaveDelay -= dt;
+            if (mCameraSaveDelay <= 0.0f)
+                SaveCameraToGraph();
+        }
+    }
+
+    void PipelineEditor::ApplyTheme()
+    {
+        PushEditorScopeOnStack scope;
+        bool rebuild = mThemeVersion >= 0;
+        mThemeVersion = PipelineTheme::GetVersion();
+
+        auto& theme = PipelineTheme::Get();
+        mBackColor = theme.canvasOuter;
+
+        // Cards take their colours when built: built again, with the selection kept
+        if (rebuild)
+        {
+            SkinMenus();
+            Vector<String> selected;
+            for (auto& handle : GetSelectedHandles())
+            {
+                Ref<PipelineNodeWidget> widget;
+                if (mHandleToNode.TryGetValue(handle, widget))
+                    selected.Add(widget->GetNode()->id);
+            }
+
+            RebuildAll();
+            for (auto& id : selected)
+            {
+                Ref<PipelineNodeWidget> widget;
+                if (mNodeWidgetsById.TryGetValue(id, widget))
+                    SelectHandle(widget->dragHandle);
+            }
+        }
+        mNeedRedraw = true;
     }
 
     void PipelineEditor::UpdateSelfTransform()

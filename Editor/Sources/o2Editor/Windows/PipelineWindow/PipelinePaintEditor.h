@@ -2,12 +2,14 @@
 
 #include "o2/Events/CursorAreaEventsListener.h"
 #include "o2/Render/TextureRef.h"
+#include "o2/Render/VectorSprite.h"
 #include "o2/Scene/UI/Widget.h"
 #include "o2/Utils/Editor/FrameHandles.h"
 #include "o2/Utils/Function/Function.h"
 #include "o2Editor/Pipeline/PipelineGraph.h"
 #include "o2Editor/Pipeline/PipelineImageOps.h"
 #include "o2Editor/Windows/PipelineWindow/PipelineControls.h"
+#include "o2Editor/Windows/PipelineWindow/PipelineImageTheme.h"
 
 using namespace o2;
 
@@ -50,6 +52,7 @@ namespace Editor
         Function<void(const String&, bool)> onConfigChanged; // Called with the config key and the completed flag after a write
         Function<void(const String&)>       onRegionPicked;  // A box of another part was clicked with the region tool
         Function<void()>                    onRegionRemoved; // The remove tab of the selected part was pressed
+        Function<void(const String&)>       onRegionRemovedById; // The remove tab of another part's box was pressed
 
     public:
         // Default constructor
@@ -68,8 +71,9 @@ namespace Editor
         // Returns the active tool: brush, eraser or roi
         String GetTool() const;
 
-        // Sets the background image; the drawing resolution follows its size
-        void SetBackground(const Ref<Bitmap>& bitmap);
+        // Sets the background image; the drawing resolution follows its size. Pending: the picture is still decoding, so a
+        // blank canvas is not laid out meanwhile
+        void SetBackground(const Ref<Bitmap>& bitmap, bool pending = false);
 
         // Returns the background image, null for a blank canvas
         const Ref<Bitmap>& GetBackground() const { return mBackground; }
@@ -143,7 +147,7 @@ namespace Editor
         SERIALIZABLE(PipelinePaintEditor);
 
     public:
-        static constexpr float toolbarInlineWidth = 540.0f; // Row width of a 560 wide card: from it the switches share the tool line
+        static constexpr float toolbarInlineWidth = 538.0f; // Row width of a 560 wide card: from it the switches share the tool line
 
     protected:
         static const float toolbarHeight;   // Height of the tool row
@@ -163,6 +167,7 @@ namespace Editor
         Ref<Button>           mUndoButton;          // Undo button
         Ref<Button>           mRedoButton;          // Redo button
         Ref<Button>           mClearButton;         // Clears the drawing
+        Ref<Widget>           mToolGroup;           // Framed group of the tool toggles
         Ref<PipelineWrapRow>  mToolbar;             // Tools, color, sliders and actions, wrapping when the width runs out
         Ref<PipelineWrapRow>  mPaletteRow;          // Color swatches below the toolbar, wrapping when the width runs out
         bool                  mPaletteOpen = false; // True when the palette row is shown
@@ -193,6 +198,7 @@ namespace Editor
         Vec2I mResolution;           // Drawing resolution in pixels: the stored drawing size, the background size or twice the stage of a blank canvas
         Vec2F mCommittedArea;        // Stage size the resolution was last taken from, blank canvas only
         float mResizeTimer = -1.0f;  // Delay before the drawing follows a resized stage, negative when idle
+        bool  mBackgroundPending = false; // True while the background picture is decoding
         bool  mTextureDirty = false; // True when the composed bitmap must be uploaded to the texture
 
         Vector<String> mUndo;        // Previous drawings as data URLs
@@ -208,7 +214,7 @@ namespace Editor
         bool  mHovered = false;  // True while the cursor is over the stage
         Vec2F mHoverPoint;       // Cursor position of the brush outline
 
-        Ref<FrameHandles> mRegionFrame;            // Region box handles
+        Ref<PipelineRegionHandles> mRegionFrame;   // Region box handles
         bool              mRegionSyncing = false;  // True while the frame is set from the config
         bool              mRegionDragging = false; // True while the region handles are dragged
 
@@ -217,6 +223,7 @@ namespace Editor
         bool              mRegionRemovable = false; // True when the selected part may be removed
         Ref<Button>       mRemoveButton;            // Remove tab at the corner of the selected box
         Ref<Text>         mBadgeText;               // Number drawn in the badge of a box
+        Ref<VectorSprite> mTrashSprite;             // Glyph of the remove tabs
         RectF             mRemovePlaced;            // Where the remove tab was last placed
 
     protected:
@@ -244,6 +251,9 @@ namespace Editor
 
         // Updates the toggles, the color swatch, the sliders and the history buttons from the config
         void UpdateToolbar();
+
+        // Places the shown tools in their framed group and sizes the group to them
+        void LayoutToolGroup();
 
         // Shows or hides the palette row
         void TogglePalette();
@@ -360,6 +370,7 @@ CLASS_FIELDS_META(Editor::PipelinePaintEditor)
     FIELD().PUBLIC().NAME(onConfigChanged);
     FIELD().PUBLIC().NAME(onRegionPicked);
     FIELD().PUBLIC().NAME(onRegionRemoved);
+    FIELD().PUBLIC().NAME(onRegionRemovedById);
     FIELD().PROTECTED().NAME(mNode);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mWithRegion);
     FIELD().PROTECTED().DEFAULT_VALUE("roi").NAME(mRegionKey);
@@ -373,6 +384,7 @@ CLASS_FIELDS_META(Editor::PipelinePaintEditor)
     FIELD().PROTECTED().NAME(mUndoButton);
     FIELD().PROTECTED().NAME(mRedoButton);
     FIELD().PROTECTED().NAME(mClearButton);
+    FIELD().PROTECTED().NAME(mToolGroup);
     FIELD().PROTECTED().NAME(mToolbar);
     FIELD().PROTECTED().NAME(mPaletteRow);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mPaletteOpen);
@@ -400,6 +412,7 @@ CLASS_FIELDS_META(Editor::PipelinePaintEditor)
     FIELD().PROTECTED().NAME(mResolution);
     FIELD().PROTECTED().NAME(mCommittedArea);
     FIELD().PROTECTED().DEFAULT_VALUE(-1.0f).NAME(mResizeTimer);
+    FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mBackgroundPending);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mTextureDirty);
     FIELD().PROTECTED().NAME(mUndo);
     FIELD().PROTECTED().NAME(mRedo);
@@ -420,6 +433,7 @@ CLASS_FIELDS_META(Editor::PipelinePaintEditor)
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mRegionRemovable);
     FIELD().PROTECTED().NAME(mRemoveButton);
     FIELD().PROTECTED().NAME(mBadgeText);
+    FIELD().PROTECTED().NAME(mTrashSprite);
     FIELD().PROTECTED().NAME(mRemovePlaced);
 }
 END_META;
@@ -431,7 +445,7 @@ CLASS_METHODS_META(Editor::PipelinePaintEditor)
     FUNCTION().PUBLIC().SIGNATURE(bool, HasRegion);
     FUNCTION().PUBLIC().SIGNATURE(RectF, GetRegionRectangle);
     FUNCTION().PUBLIC().SIGNATURE(String, GetTool);
-    FUNCTION().PUBLIC().SIGNATURE(void, SetBackground, const Ref<Bitmap>&);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetBackground, const Ref<Bitmap>&, bool);
     FUNCTION().PUBLIC().SIGNATURE(const Ref<Bitmap>&, GetBackground);
     FUNCTION().PUBLIC().SIGNATURE(RectF, GetStageRectangle);
     FUNCTION().PUBLIC().SIGNATURE(void, RefreshFromConfig);
@@ -462,6 +476,7 @@ CLASS_METHODS_META(Editor::PipelinePaintEditor)
     FUNCTION().PROTECTED().SIGNATURE(Color4, GetBrushColor);
     FUNCTION().PROTECTED().SIGNATURE(void, BuildToolbar);
     FUNCTION().PROTECTED().SIGNATURE(void, UpdateToolbar);
+    FUNCTION().PROTECTED().SIGNATURE(void, LayoutToolGroup);
     FUNCTION().PROTECTED().SIGNATURE(void, TogglePalette);
     FUNCTION().PROTECTED().SIGNATURE(RectF, GetAreaRect);
     FUNCTION().PROTECTED().SIGNATURE(float, BarsHeight, float);

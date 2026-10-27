@@ -82,10 +82,12 @@ namespace Editor::PipelineUtils
 
     UInt64 Fnv1a64(const String& data)
     {
+        // Over the raw bytes: configs carry drawings of megabytes, and indexing the string costs a call per byte
         UInt64 h = 14695981039346656037ull;
-        for (int i = 0; i < data.Length(); i++)
+        const unsigned char* bytes = (const unsigned char*)data.Data();
+        for (int i = 0, n = data.Length(); i < n; i++)
         {
-            h ^= (unsigned char)data[i];
+            h ^= bytes[i];
             h *= 1099511628211ull;
         }
         return h;

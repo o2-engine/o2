@@ -55,7 +55,8 @@ namespace
 
 TEST(PipelinePairLayout, PairNodesAndTheirInputs)
 {
-    for (auto type : { "imageEdit", "imageExtract", "aiRemoveBg", "removeBackground", "imageOutline", "imageShadow", "imageGradient", "imageColor" })
+    for (auto type : { "imageEdit", "imageExtract", "aiRemoveBg", "removeBackground", "imageOutline", "imageShadow", "imageGradient", "imageColor",
+                       "aiUpscale", "imageToUi" })
         EXPECT_TRUE(PipelinePairLayout::IsPairNode(type)) << type;
 
     for (auto type : { "nanoBananaGen", "sourceImage", "finishImage", "imageComposer", "aiText", "drawImage" })

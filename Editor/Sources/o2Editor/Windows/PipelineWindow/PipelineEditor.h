@@ -1,6 +1,7 @@
 #pragma once
 
 #include "o2/Events/KeyboardEventsListener.h"
+#include "o2/Render/TextureRef.h"
 #include "o2/Utils/Editor/DragHandle.h"
 #include "o2Editor/Actions/ActionsList.h"
 #include "o2Editor/Actions/IAction.h"
@@ -8,6 +9,7 @@
 #include "o2Editor/Pipeline/PipelineComposerLayout.h"
 #include "o2Editor/Pipeline/PipelineExecutor.h"
 #include "o2Editor/UI/FrameScrollView.h"
+#include "o2Editor/Windows/PipelineWindow/PipelineImageLoader.h"
 #include "o2Editor/Windows/PipelineWindow/PipelineModelPicker.h"
 #include "o2Editor/Windows/PipelineWindow/PipelineOptionPicker.h"
 #include "o2Editor/Windows/PipelineWindow/PipelineNodeWidget.h"
@@ -53,6 +55,8 @@ namespace Editor
     class PipelineEditor : public FrameScrollView, public SelectableDragHandlesGroup, public KeyboardEventsListener
     {
     public:
+        bool drawEdges = true; // Draws the links; off for card shots, as the AssetsLine reference shots have none
+
         Ref<ActionsList>              actionsListDelegate; // Undo list of the owner window; local when null
         Function<void()>              onChanged;           // Graph changed (asset dirty)
         Function<void(const String&)> onLog;               // Execution log line
@@ -173,6 +177,22 @@ namespace Editor
         // Returns value connected to input port by name
         PipelineValue GetInputValue(const Ref<PipelineNode>& node, const String& portName) const;
 
+        // Returns the decoded picture of a value a card shows; a picture not decoded yet is decoded in the background and the
+        // card of nodeId gets OnOutputChanged once it arrives, null meanwhile
+        Ref<Bitmap> GetPicture(const PipelineValue& value, const String& nodeId);
+
+        // Returns true while the value's picture decodes in the background
+        bool IsPicturePending(const PipelineValue& value) const;
+
+        // Returns true while a picture the card of the node waits for is decoding
+        bool IsWaitingForPictures(const String& nodeId) const;
+
+        // Returns what runs in the background now (pictures decoding, an effect applying), empty when nothing does
+        String GetBackgroundStatus() const;
+
+        // Finishes the background decodes and hands their pictures to the cards (tests)
+        void FinishBackgroundWork();
+
         // Returns the value linked to the input port by id: what the linked output shows; for a source with several
         // outputs (extract parts) only that output's own result, nothing while it has none
         PipelineValue GetInputValueById(const Ref<PipelineNode>& node, const String& portId) const;
@@ -283,6 +303,22 @@ namespace Editor
         Vec2F       mSelectingPressedPoint; // Point where selection started, in local space
         bool        mSelecting = false;     // True while rubber-band selecting
 
+        // -------------------------------------------------------------
+        // Link as drawn this frame: its ends, colour, width and the pass
+        // -------------------------------------------------------------
+        struct EdgeDraw
+        {
+            Ref<PipelineEdge> edge;              // The link
+            Vec2F             from;              // Start, at the output port
+            Vec2F             to;                // End, at the input port
+            Color4            color;             // Line colour
+            float             width = 1.5f;      // Line width in canvas units
+            bool              selected = false;  // Drawn with the selection halo
+            bool              overCards = false; // Leaves a port inside a card, drawn after the cards
+
+            bool operator==(const EdgeDraw& other) const { return edge == other.edge; }
+        };
+
         PendingEdge             mPendingEdge;             // Link being dragged
         String                  mSelectedEdgeId;          // Selected link id
         int                     mSelectedPointIndex = -1; // Selected bend point of the selected link
@@ -294,6 +330,7 @@ namespace Editor
         Vector<String>        mSaveQueue;              // Finish nodes waiting to save what they receive
         String                mRunTarget;              // Target node of the current run
         bool                  mRunIsAutoApply = false; // True when the current run is an auto-apply
+        bool                  mAssetsRebuildPending = false; // Finish nodes wrote into the assets; rebuilt once the queued runs end
 
         Vector<String>      mAutoApplyQueue;        // Local nodes waiting for auto-apply
         float               mAutoApplyTimer = 0.0f; // Debounce timer of auto-apply
@@ -305,10 +342,19 @@ namespace Editor
 
         Map<String, String> mInputLinks; // Incoming links of every node at the last refresh, to find cards whose inputs changed
 
+        Ref<PipelineImageLoader> mImageLoader; // Background decodes of the pictures the cards show
+
         bool  mNeedAdjustView = false; // True when the view must be fitted at next update
         bool  mCameraDirty = false;    // True when the camera must be saved to the graph
+        float mCameraSaveDelay = 0.0f; // Time left until a moved camera is written into the asset document
         int   mIoViewVersion = 0;      // Version of the input | result view setting the cards were built with
+        int   mThemeVersion = -1;      // Version of the theme the canvas and the cards were built with, -1 before the first
+        TextureRef mDotsTile;             // Ten by ten grid cells of dots, repeated over the canvas while the dots are dense
+        int        mDotsTileSize = 0;     // Pixel size the tile was made for
+        int        mDotsTileTheme = -1;   // Theme version the tile was made with
         RectF mCullingRect;            // Visible canvas rectangle with a margin; cards and links outside it are skipped
+
+        Vector<EdgeDraw> mEdgeDraws; // Visible links of the frame being redrawn, collected once for both passes
 
         ActionsList mActionsList; // Local actions list, used when actionsListDelegate is null
 
@@ -346,6 +392,21 @@ namespace Editor
         // Draws the grid lines at the snapping step with every fifth one stronger, stepping up by five when zoomed out
         void DrawGrid() override;
 
+        // Applies the current theme: canvas colours, and the cards built again when it changed
+        void ApplyTheme();
+
+        // Restyles the context menus in the current theme
+        void SkinMenus();
+
+        // Draws the dark theme's radial canvas gradient over the view
+        void DrawCanvasGradient();
+
+        // Draws the dots at the grid points, every tenth one brighter
+        void DrawGridDots();
+
+        // Makes the repeated tile of ten by ten grid cells the dense dots are drawn with, for the cell size in pixels
+        void BuildDotsTile(int tileSize);
+
         // Called when handles selection changed, updates cards selection
         void OnSelectionChanged() override;
 
@@ -363,6 +424,9 @@ namespace Editor
 
         // Marks cards outside the view as culled and drops card details when zoomed far out
         void UpdateCardsVisibility();
+
+        // Collects the visible links of the frame with their ends, each card's rectangle computed once
+        void CollectEdgeDraws();
 
         // Draws the links under the cards and the pending one; overCards draws, after the cards, the links that leave
         // a port inside a card (a part of an extract node), so their start stays visible
@@ -424,6 +488,10 @@ namespace Editor
         // Called by executor: updates cards states, outputs, retries and starts the queued run
         void OnExecutorEvent(const PipelineExecEvent& event);
 
+        // Gives a node with outputs decided by its run the ports of the run: links on ports that went are dropped, the card is
+        // rebuilt and the pipeline saved, with no undo step - the ports are the run's result
+        void ApplyNodePorts(const String& nodeId, const Vector<PipelinePort>& ports);
+
         // Starts execution of target node branch, cachedOnly reuses cached inputs without marking the branch queued
         void StartRun(const String& targetId, const Vector<String>& bypass, bool cachedOnly);
 
@@ -445,12 +513,31 @@ namespace Editor
         // Loads cached previews of all nodes from disk; source nodes take their value from their config
         void LoadPreviews();
 
+        // Loads the cached previews of one card; a value whose bytes did not change is kept with its decoded picture
+        void LoadPreview(const Ref<PipelineNodeWidget>& widget);
+
+        // Creates the card of a node already in the graph
+        Ref<PipelineNodeWidget> AddCard(const Ref<PipelineNode>& node);
+
+        // Removes the card of a node
+        void RemoveCard(const String& nodeId);
+
+        // Brings the graph to the target in place: unchanged cards stay as they are, moved ones move, changed ones are rebuilt,
+        // the rest are added or removed
+        void SyncGraphTo(const PipelineGraph& target);
+
         // Gives a source node its value from the config right away and refreshes the cards reading it,
         // so nodes below show their input before anything runs
         void RefreshSourceOutput(const Ref<PipelineNodeWidget>& widget);
 
         // Refreshes the cards whose incoming links changed since the last call
         void RefreshCardsWithChangedInputs();
+
+        // Hands the pictures decoded in the background to the cards that wait for them, within a frame budget
+        void ApplyDecodedPictures();
+
+        // Lays out the cards out of view that were never laid out, a few per frame
+        void WarmUpCards(float dt);
 
         // Stores camera position and scale into the graph
         void SaveCameraToGraph();
@@ -494,6 +581,7 @@ CLASS_BASES_META(Editor::PipelineEditor)
 END_META;
 CLASS_FIELDS_META(Editor::PipelineEditor)
 {
+    FIELD().PUBLIC().DEFAULT_VALUE(true).NAME(drawEdges);
     FIELD().PUBLIC().NAME(actionsListDelegate);
     FIELD().PUBLIC().NAME(onChanged);
     FIELD().PUBLIC().NAME(onLog);
@@ -525,6 +613,7 @@ CLASS_FIELDS_META(Editor::PipelineEditor)
     FIELD().PROTECTED().NAME(mSaveQueue);
     FIELD().PROTECTED().NAME(mRunTarget);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mRunIsAutoApply);
+    FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mAssetsRebuildPending);
     FIELD().PROTECTED().NAME(mAutoApplyQueue);
     FIELD().PROTECTED().DEFAULT_VALUE(0.0f).NAME(mAutoApplyTimer);
     FIELD().PROTECTED().NAME(mAutoApplyKeys);
@@ -532,10 +621,17 @@ CLASS_FIELDS_META(Editor::PipelineEditor)
     FIELD().PROTECTED().NAME(mEditSnapshotName);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mEditSnapshotActive);
     FIELD().PROTECTED().NAME(mInputLinks);
+    FIELD().PROTECTED().NAME(mImageLoader);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mNeedAdjustView);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mCameraDirty);
+    FIELD().PROTECTED().DEFAULT_VALUE(0.0f).NAME(mCameraSaveDelay);
     FIELD().PROTECTED().DEFAULT_VALUE(0).NAME(mIoViewVersion);
+    FIELD().PROTECTED().DEFAULT_VALUE(-1).NAME(mThemeVersion);
+    FIELD().PROTECTED().NAME(mDotsTile);
+    FIELD().PROTECTED().DEFAULT_VALUE(0).NAME(mDotsTileSize);
+    FIELD().PROTECTED().DEFAULT_VALUE(-1).NAME(mDotsTileTheme);
     FIELD().PROTECTED().NAME(mCullingRect);
+    FIELD().PROTECTED().NAME(mEdgeDraws);
     FIELD().PROTECTED().NAME(mActionsList);
 }
 END_META;
@@ -581,6 +677,11 @@ CLASS_METHODS_META(Editor::PipelineEditor)
     FUNCTION().PUBLIC().SIGNATURE(Ref<PipelineNodeWidget>, GetNodeWidget, const String&);
     FUNCTION().PUBLIC().SIGNATURE(const PipelineNodeRuntime*, GetRuntime, const String&);
     FUNCTION().PUBLIC().SIGNATURE(PipelineValue, GetInputValue, const Ref<PipelineNode>&, const String&);
+    FUNCTION().PUBLIC().SIGNATURE(Ref<Bitmap>, GetPicture, const PipelineValue&, const String&);
+    FUNCTION().PUBLIC().SIGNATURE(bool, IsPicturePending, const PipelineValue&);
+    FUNCTION().PUBLIC().SIGNATURE(bool, IsWaitingForPictures, const String&);
+    FUNCTION().PUBLIC().SIGNATURE(String, GetBackgroundStatus);
+    FUNCTION().PUBLIC().SIGNATURE(void, FinishBackgroundWork);
     FUNCTION().PUBLIC().SIGNATURE(PipelineValue, GetInputValueById, const Ref<PipelineNode>&, const String&);
     FUNCTION().PUBLIC().SIGNATURE(Ref<PipelineNode>, AddNodeAtViewCenter, const String&);
     FUNCTION().PUBLIC().SIGNATURE(void, RebuildAll);
@@ -616,12 +717,18 @@ CLASS_METHODS_META(Editor::PipelineEditor)
     FUNCTION().PROTECTED().SIGNATURE(void, DrawInheritedDepthChildren);
     FUNCTION().PROTECTED().SIGNATURE(void, RedrawContent);
     FUNCTION().PROTECTED().SIGNATURE(void, DrawGrid);
+    FUNCTION().PROTECTED().SIGNATURE(void, ApplyTheme);
+    FUNCTION().PROTECTED().SIGNATURE(void, SkinMenus);
+    FUNCTION().PROTECTED().SIGNATURE(void, DrawCanvasGradient);
+    FUNCTION().PROTECTED().SIGNATURE(void, DrawGridDots);
+    FUNCTION().PROTECTED().SIGNATURE(void, BuildDotsTile, int);
     FUNCTION().PROTECTED().SIGNATURE(void, OnSelectionChanged);
     FUNCTION().PROTECTED().SIGNATURE(void, DeselectAll);
     FUNCTION().PROTECTED().SIGNATURE(void, InitializeContextMenus);
     FUNCTION().PROTECTED().SIGNATURE(void, FillAddNodeMenu, const Ref<ContextMenu>&, const PendingEdge*);
     FUNCTION().PROTECTED().SIGNATURE(void, RecalculateViewArea);
     FUNCTION().PROTECTED().SIGNATURE(void, UpdateCardsVisibility);
+    FUNCTION().PROTECTED().SIGNATURE(void, CollectEdgeDraws);
     FUNCTION().PROTECTED().SIGNATURE(void, DrawEdges, bool);
     FUNCTION().PROTECTED().SIGNATURE(void, DrawEdge, const Vec2F&, const Vec2F&, const Vector<Vec2F>&, const Color4&, float);
     FUNCTION().PROTECTED().SIGNATURE(Vector<Vec2F>, BuildEdgePolyline, const Vec2F&, const Vec2F&, const Vector<Vec2F>&);
@@ -641,6 +748,7 @@ CLASS_METHODS_META(Editor::PipelineEditor)
     FUNCTION().PROTECTED().SIGNATURE(void, RefreshFreshness);
     FUNCTION().PROTECTED().SIGNATURE(void, RefreshNodeWidget, const Ref<PipelineNodeWidget>&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnExecutorEvent, const PipelineExecEvent&);
+    FUNCTION().PROTECTED().SIGNATURE(void, ApplyNodePorts, const String&, const Vector<PipelinePort>&);
     FUNCTION().PROTECTED().SIGNATURE(void, StartRun, const String&, const Vector<String>&, bool);
     FUNCTION().PROTECTED().SIGNATURE(void, StartSingleRun, const String&);
     FUNCTION().PROTECTED().SIGNATURE(void, MarkBranchQueued, const String&);
@@ -648,8 +756,14 @@ CLASS_METHODS_META(Editor::PipelineEditor)
     FUNCTION().PROTECTED().SIGNATURE(void, ScheduleAutoApply, const String&);
     FUNCTION().PROTECTED().SIGNATURE(Vector<String>, UpstreamNodes, const String&);
     FUNCTION().PROTECTED().SIGNATURE(void, LoadPreviews);
+    FUNCTION().PROTECTED().SIGNATURE(void, LoadPreview, const Ref<PipelineNodeWidget>&);
+    FUNCTION().PROTECTED().SIGNATURE(Ref<PipelineNodeWidget>, AddCard, const Ref<PipelineNode>&);
+    FUNCTION().PROTECTED().SIGNATURE(void, RemoveCard, const String&);
+    FUNCTION().PROTECTED().SIGNATURE(void, SyncGraphTo, const PipelineGraph&);
     FUNCTION().PROTECTED().SIGNATURE(void, RefreshSourceOutput, const Ref<PipelineNodeWidget>&);
     FUNCTION().PROTECTED().SIGNATURE(void, RefreshCardsWithChangedInputs);
+    FUNCTION().PROTECTED().SIGNATURE(void, ApplyDecodedPictures);
+    FUNCTION().PROTECTED().SIGNATURE(void, WarmUpCards, float);
     FUNCTION().PROTECTED().SIGNATURE(void, SaveCameraToGraph);
 }
 END_META;

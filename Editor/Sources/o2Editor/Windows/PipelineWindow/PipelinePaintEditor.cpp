@@ -1,5 +1,6 @@
 #include "o2Editor/stdafx.h"
 #include "PipelinePaintEditor.h"
+#include "o2Editor/Windows/PipelineWindow/PipelineImageLoader.h"
 
 #include "o2/Application/Input.h"
 #include "o2/Render/Render.h"
@@ -18,16 +19,20 @@
 #include "o2Editor/Pipeline/PipelineValue.h"
 #include "o2Editor/Windows/PipelineWindow/PipelineControls.h"
 #include "o2Editor/Windows/PipelineWindow/PipelinePairViews.h"
+#include "o2Editor/Windows/PipelineWindow/PipelineImageTheme.h"
+#include "o2Editor/Windows/PipelineWindow/PipelineTheme.h"
 
 #include <cstring>
 #include "o2/Render/VectorSprite.h"
 
 namespace Editor
 {
-    const float PipelinePaintEditor::toolbarHeight = 22.0f;
-    static const float toolbarBelowGap = 6.0f;      // Between the stage and the tool row under it
+    const float PipelinePaintEditor::toolbarHeight = 28.0f;
+    static const float toolbarBelowGap = 6.0f;      // Between the stage and the tool row under it (.draw gap)
     static const float toolbarEndGap = 8.0f;        // Before the end widget on the tool line
-    static const float toolbarEndHeight = 20.0f;    // Height of the end widget
+    static const float toolbarEndHeight = 22.84f;   // Height of the end widget: the head row's switches and Crop
+    static const float endLineHeight = 7.0f + 23.84f; // Body gap plus the head row (1 px padding above the switches)
+    static const float regionPad = 6.0f;            // Room round the extract source for the handles of its boxes
     static const float compactSliderWidth = 76.0f;  // Narrowest slider sharing the line with the end widget
     static const float paletteHeight = 20.0f;
     static const float maxCanvasSide = 1536.0f;
@@ -38,16 +43,13 @@ namespace Editor
         layout->minHeight = 180;
 
         mBackgroundSprite = mmake<Sprite>();
-        mFrameSprite = mmake<VectorSprite>("ui/UI4_Editbox_regular.svg");
+        mFrameSprite = mmake<Sprite>();
         mSprite = mmake<Sprite>();
 
-        mHintText = mmake<Text>("stdFont.ttf");
-        mHintText->horAlign = HorAlign::Middle;
-        mHintText->verAlign = VerAlign::Middle;
-        mHintText->color = PipelineControls::dimTextColor;
+        mHintText = PipelineControls::MakeThemeText("", PipelineControls::smallFont, 400, PipelineTheme::Get().fg3, HorAlign::Middle);
         mHintText->wordWrap = true;
 
-        mRegionFrame = mmake<FrameHandles>();
+        mRegionFrame = mmake<PipelineRegionHandles>();
         mRegionFrame->SetPivotEnabled(false);
         mRegionFrame->SetRotationEnabled(false);
         mRegionFrame->onTransformed = THIS_FUNC(OnRegionTransformed);
@@ -55,16 +57,18 @@ namespace Editor
         mRegionFrame->onPressed = [this]() { mRegionDragging = true; };
         mRegionFrame->onReleased = [this]() { mRegionDragging = false; };
 
-        mBadgeText = mmake<Text>("stdFont.ttf");
+        mBadgeText = mmake<Text>(PipelineTheme::MonoFont());
         mBadgeText->horAlign = HorAlign::Middle;
         mBadgeText->verAlign = VerAlign::Middle;
         mBadgeText->color = Color4(255, 255, 255, 255);
-        mBadgeText->SetHeight(9);
+        mBadgeText->height = PipelineTheme::Size(11.5f);
+        mTrashSprite = mmake<VectorSprite>("ui/pipeline/al_trash.svg");
 
         BuildToolbar();
 
         WeakRef<PipelinePaintEditor> weakThis(this);
-        mRemoveButton = PipelineControls::MakeIconButton("ui/UI4_small_trash_icon.svg", PipelineControls::textColor, Color4(255, 255, 255, 230));
+        // Only the click area: the tab is drawn with the boxes (.roi-del)
+        mRemoveButton = mmake<Button>();
         mRemoveButton->name = "remove region";
         mRemoveButton->enabled = false;
         mRemoveButton->onClick = [weakThis]()
@@ -89,6 +93,7 @@ namespace Editor
         mRegionKey = regionKey;
         mOptionalRegion = withRegion && optionalRegion;
         mRegionToggle->enabled = withRegion;
+        LayoutToolGroup();
         mSelfDrawing = "\x01";
         RefreshFromConfig();
     }
@@ -173,9 +178,9 @@ namespace Editor
         float toolbar = mToolbar ? Math::Max(toolbarHeight, mToolbar->GetHeightForWidth(toolsWidth)) : toolbarHeight;
         float palette = mPaletteOpen && mPaletteRow ? Math::Max(paletteHeight, mPaletteRow->GetHeightForWidth(width)) + 2 : 0.0f;
         if (!mToolbarBelow)
-            return toolbar + 4 + palette;
+            return toolbar + toolbarBelowGap + palette;
 
-        float endLine = mToolbarEnd && !inlineEnd ? 2 + toolbarEndHeight : 0.0f;
+        float endLine = mToolbarEnd && !inlineEnd ? endLineHeight : 0.0f;
         return toolbarBelowGap + toolbar + palette + endLine;
     }
 
@@ -231,7 +236,10 @@ namespace Editor
 
     void PipelinePaintEditor::SetDrawingEnabled(bool enabled)
     {
+        bool wasDisabled = mNoDrawing;
         mNoDrawing = !enabled;
+        if (enabled && wasDisabled && !mBase && mResolution.x > 0)
+            LoadDrawing(mNode ? mNode->GetConfigString("drawing", "") : String());
         mToolbar->SetEnabledForcible(enabled);
         mPaletteRow->SetEnabledForcible(enabled && mPaletteOpen);
         SetLayoutDirty();
@@ -270,16 +278,14 @@ namespace Editor
     {
         mCompareNode = nodeId;
         mCompareSize = Vec2I();
-        auto display = PipelinePairDraw::DisplayCopy(result);
-        if (display)
+        if (result)
         {
             if (!mCompareSprite)
             {
                 mCompareSprite = mmake<Sprite>();
                 mCompareChecker = PipelinePairDraw::MakeChecker();
             }
-            mCompareSprite->SetTexture(TextureRef(*display));
-            mCompareSize = display->GetSize();
+            mCompareSprite->SetTexture(PipelineDisplayCache::GetTexture(result, &mCompareSize));
         }
 
         // The stage takes the whole row while it shows both sides
@@ -315,8 +321,8 @@ namespace Editor
     RectF PipelinePaintEditor::GetStageRect() const
     {
         RectF area = GetAreaRect();
-        // The extract source keeps room round the image for the handles of its box
-        float pad = mWithRegion && !mOptionalRegion ? 18.0f : 0.0f;
+        // Inside the 1 px border; the extract source keeps room round the image for the handles of its boxes
+        float pad = 1.0f + (mWithRegion && !mOptionalRegion ? regionPad : 0.0f);
         RectF avail(area.left + pad, area.top - pad, area.right - pad, area.bottom + pad);
         if (avail.Width() < 2 || avail.Height() < 2)
             return avail;
@@ -325,8 +331,8 @@ namespace Editor
         {
             float ar = (float)mBackground->GetSize().x / mBackground->GetSize().y;
             float w = avail.Width(), h = avail.Height();
-            if (w / h > ar) w = Math::Round(h * ar);
-            else h = Math::Round(w / ar);
+            if (w / h > ar) w = h * ar;
+            else h = w / ar;
             Vec2F center = avail.Center();
             return RectF(center.x - w * 0.5f, center.y + h * 0.5f, center.x + w * 0.5f, center.y - h * 0.5f);
         }
@@ -353,16 +359,21 @@ namespace Editor
         return GetStageRect().IsInside(point);
     }
 
-    void PipelinePaintEditor::SetBackground(const Ref<Bitmap>& bitmap)
+    void PipelinePaintEditor::SetBackground(const Ref<Bitmap>& bitmap, bool pending /*= false*/)
     {
+        mBackgroundPending = !bitmap && pending;
+        if (bitmap == mBackground)
+            return;
+
         bool changed = (bitmap != nullptr) != (mBackground != nullptr) ||
             (bitmap && mBackground && bitmap->GetSize() != mBackground->GetSize());
         mBackground = bitmap;
         if (bitmap)
         {
-            mBackgroundTexture = TextureRef(*bitmap);
+            Vec2I displaySize;
+            mBackgroundTexture = PipelineDisplayCache::GetTexture(bitmap, &displaySize);
             mBackgroundSprite->SetTexture(mBackgroundTexture);
-            mBackgroundSprite->SetTextureSrcRect(RectI(Vec2I(), bitmap->GetSize()));
+            mBackgroundSprite->SetTextureSrcRect(RectI(Vec2I(), displaySize));
             SetResolution(bitmap->GetSize(), true);
         }
         else if (changed)
@@ -379,7 +390,7 @@ namespace Editor
 
     void PipelinePaintEditor::EnsureBuffers()
     {
-        if (mResolution.x < 1 || mResolution.y < 1)
+        if (mResolution.x < 1 || mResolution.y < 1 || mNoDrawing)
             return;
 
         if (!mBase || mBase->GetSize() != mResolution)
@@ -404,6 +415,15 @@ namespace Editor
         Ref<Bitmap> previous = mBase;
         mResolution = res;
         mBase = nullptr;
+
+        // Without drawing (the extract stage) only the boxes lie over the picture: no layers to keep at its size
+        if (mNoDrawing)
+        {
+            mStroke = nullptr;
+            mComposed = nullptr;
+            return;
+        }
+
         EnsureBuffers();
 
         if (rescale && previous && previous->GetSize().x > 0 && previous->GetSize().y > 0)
@@ -591,8 +611,9 @@ namespace Editor
         if (!mBase)
             return "";
 
+        // Written after every stroke: a quick encode keeps the stroke's end within a frame
         String png;
-        if (!SavePngImageToMemory(mBase.Get(), png))
+        if (!SavePngImageToMemory(mBase.Get(), png, true))
             return "";
 
         return PipelineUtils::BytesToDataUrl(png, "image/png");
@@ -665,7 +686,7 @@ namespace Editor
         const Basis& b = mRegionFrame->GetCurrentBasis();
         RectF frame(b.origin, b.origin + b.xv + b.yv);
         RectF box(Math::Min(frame.left, frame.right), Math::Max(frame.top, frame.bottom), Math::Max(frame.left, frame.right), Math::Min(frame.top, frame.bottom));
-        RectF want(box.right - 18.0f, box.top, box.right, box.top - 18.0f);
+        RectF want = PipelineImageTheme::RemoveTabRect(box);
 
         // Without the region tool the divider stays on top: a tab over its strip gives way
         float grab = PipelinePairLayout::dividerGrab*PipelinePairDraw::BadgeScale(mPixelSize);
@@ -685,7 +706,7 @@ namespace Editor
             }
         }
 
-        if (!mBackground)
+        if (!mBackground && !mBackgroundPending)
         {
             RectF stage = GetStageRect();
             Vec2F area(Math::Round(stage.Width()), Math::Round(stage.Height()));
@@ -733,14 +754,15 @@ namespace Editor
         }
 
         RectF area = GetAreaRect();
-        mFrameSprite->rect = RectF(area.left - 9.0f, area.top + 9.0f, area.right + 9.0f, area.bottom - 9.0f);
-        mFrameSprite->Draw();
+        PipelineImageTheme::DrawStagePlate(area, !farView);
 
         // Comparing, the input and the drawing end at the divider and the result takes the rest of the stage
         float cut = IsComparing() ? GetDividerX() : stage.right;
-        o2Render.DrawFilledPolygon({ stage.LeftBottom(), Vec2F(stage.left, stage.top), Vec2F(cut, stage.top), Vec2F(cut, stage.bottom) }, Color4(255, 255, 255, 255));
         if (mBackground)
-            PipelinePairDraw::DrawClipped(*mBackgroundSprite, mBackground->GetSize(), stage, stage.left, cut);
+        {
+            Vec2I backgroundSize = mBackgroundTexture ? mBackgroundTexture->GetSize() : mBackground->GetSize();
+            PipelinePairDraw::DrawClipped(*mBackgroundSprite, backgroundSize, stage, stage.left, cut);
+        }
 
         if (mComposed && mTexture && !mNoDrawing)
         {
@@ -753,12 +775,7 @@ namespace Editor
         }
 
         if (IsComparing())
-        {
-            PipelinePairDraw::DrawChecker(*mCompareChecker, stage, cut, stage.right);
             PipelinePairDraw::DrawClipped(*mCompareSprite, mCompareSize, PipelinePairDraw::FitRect(mCompareSize, stage), cut, stage.right);
-        }
-
-        o2Render.DrawAARectFrame(stage, Color4(96, 125, 139, 140), 1.0f);
 
         CursorAreaEventsListener::OnDrawn();
 
@@ -781,42 +798,55 @@ namespace Editor
             const Basis& b = mRegionFrame->GetCurrentBasis();
             RectF frame(b.origin, b.origin + b.xv + b.yv);
 
-            // Everything outside the box is not sent to the model, or not changed by it: shade it
+            // Everything outside the box is not sent to the model, or not changed by it: shade it over the whole plate, as the
+            // web's box-shadow clipped by the drawing area
             RectF box(Math::Clamp(Math::Min(frame.left, frame.right), stage.left, stage.right),
                       Math::Clamp(Math::Max(frame.top, frame.bottom), stage.bottom, stage.top),
                       Math::Clamp(Math::Max(frame.left, frame.right), stage.left, stage.right),
                       Math::Clamp(Math::Min(frame.top, frame.bottom), stage.bottom, stage.top));
+            RectF plate(area.left + 1.0f, area.top - 1.0f, area.right - 1.0f, area.bottom + 1.0f);
             Color4 shade(0, 0, 0, 128);
             auto fill = [&](const RectF& r)
             {
                 if (r.Width() > 0.0f && r.Height() > 0.0f)
                     o2Render.DrawFilledPolygon({ r.LeftBottom(), Vec2F(r.left, r.top), r.RightTop(), Vec2F(r.right, r.bottom) }, shade);
             };
-            fill(RectF(stage.left, stage.top, stage.right, box.top));
-            fill(RectF(stage.left, box.bottom, stage.right, stage.bottom));
-            fill(RectF(stage.left, box.top, box.left, box.bottom));
-            fill(RectF(box.right, box.top, stage.right, box.bottom));
-            o2Render.DrawAARectFrame(frame, GetTool() == "roi" ? Color4(0, 150, 136, 255) : Color4(0, 150, 136, 150), 1.5f);
+            fill(RectF(plate.left, plate.top, plate.right, box.top));
+            fill(RectF(plate.left, box.bottom, plate.right, plate.bottom));
+            fill(RectF(plate.left, box.top, box.left, box.bottom));
+            fill(RectF(box.right, box.top, plate.right, box.bottom));
 
-            // The other parts are outlined and numbered; only the selected one has handles
+            // The other parts: dashed, numbered, with their remove tabs; the selected box solid with its tag when there are
+            // several, its handles while the region tool is on
+            Vec2F cursor = mHovered ? mHoverPoint : Vec2F(-1e6f, -1e6f);
             for (auto& other : mOtherRegions)
             {
                 RectF r = BoxRect(other.x, other.y, other.w, other.h, stage);
-                o2Render.DrawAARectFrame(r, Color4(255, 255, 255, 190), 1.0f);
-                DrawBadge(r, other.index, Color4(96, 125, 139, 230));
+                PipelineImageTheme::DrawBoxOutline(r, false);
+                PipelineImageTheme::DrawRegionTag(r, other.index, false, *mBadgeText);
+                if (mRegionRemovable)
+                    PipelineImageTheme::DrawRemoveTab(r, *mTrashSprite, PipelineImageTheme::RemoveTabRect(r).IsInside(cursor));
             }
+
+            PipelineImageTheme::DrawBoxOutline(frame, true);
             if (mSelectedIndex > 0)
-                DrawBadge(box, mSelectedIndex, Color4(0, 150, 136, 255));
+                PipelineImageTheme::DrawRegionTag(box, mSelectedIndex, true, *mBadgeText);
 
             if (regionTool)
-                mRegionFrame->Draw();
+                mRegionFrame->DrawStyled();
+
+            if (mRemoveButton->IsEnabled())
+                PipelineImageTheme::DrawRemoveTab(frame, *mTrashSprite, mRemoveButton->IsUnderPoint(o2Input.GetCursorPos()) || mRemoveButton->IsPressed());
         }
 
         bool brushOff = IsComparing() && (IsOnDivider(mHoverPoint) || mHoverPoint.x > cut);
         if (mHovered && !farView && GetTool() != "roi" && !brushOff)
         {
+            // .draw-cursor: a light ring with a dark one round it; the eraser's is dashed
             bool eraser = GetTool() == "eraser";
-            o2Render.DrawAACircle(mHoverPoint, GetBrushSize() * 0.5f, eraser ? Color4(96, 125, 139, 255) : GetBrushColor(), 28, 1.0f);
+            float radius = GetBrushSize() * 0.5f;
+            o2Render.DrawAACircle(mHoverPoint, radius + mPixelSize, Color4(0, 0, 0, 140), 28, 1.0f);
+            o2Render.DrawAACircle(mHoverPoint, radius, Color4(255, 255, 255, 230), 28, 1.0f, eraser ? LineType::Dash : LineType::Solid);
         }
 
         // The toolbar and the remove tab are drawn over the stage
@@ -845,7 +875,13 @@ namespace Editor
         if (GetTool() == "roi")
         {
             if (auto box = OtherRegionAt(cursor.position))
-                if (onRegionPicked) onRegionPicked(box->id);
+            {
+                RectF r = BoxRect(box->x, box->y, box->w, box->h, GetStageRect());
+                if (mRegionRemovable && PipelineImageTheme::RemoveTabRect(r).IsInside(cursor.position) && onRegionRemovedById)
+                    onRegionRemovedById(box->id);
+                else if (onRegionPicked)
+                    onRegionPicked(box->id);
+            }
             return;
         }
 

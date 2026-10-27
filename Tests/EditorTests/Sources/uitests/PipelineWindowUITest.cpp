@@ -1,4 +1,5 @@
 #include "o2Editor/stdafx.h"
+#include "o2/Render/VectorSprite.h"
 #include <gtest/gtest.h>
 
 #include "o2/Application/Application.h"
@@ -44,6 +45,7 @@
 #include "o2Editor/Windows/PipelineWindow/PipelineComposerStage.h"
 #include "o2Editor/Windows/PipelineWindow/PipelineControls.h"
 #include "o2Editor/Windows/PipelineWindow/PipelineEditor.h"
+#include "o2Editor/Windows/PipelineWindow/PipelineTheme.h"
 #include "o2Editor/Windows/PipelineWindow/PipelineMediaViews.h"
 #include "o2Editor/Windows/PipelineWindow/PipelineNodeWidget.h"
 #include "o2Editor/Windows/PipelineWindow/PipelinePaintEditor.h"
@@ -199,6 +201,8 @@ namespace
                 mmake<UIRoot>();
             }
             PipelineUtils::SetWorkPathOverride("../../Work/Pipelines/uitest/");
+            // The pixel checks of these cards read the o2 light colours: canvas 225,232,232, the teal accent
+            PipelineTheme::SetKind(PipelineThemeKind::Light);
 
             PushEditorScopeOnStack scope;
             editor = mmake<PipelineEditor>();
@@ -262,6 +266,13 @@ namespace
         void TearDown() override
         {
             UiDriver::updateLayout = true;
+            // A menu left open stays the visible popup and would draw over the next test's cards
+            if (editor)
+            {
+                editor->GetContextMenu()->Hide(true);
+                if (auto popup = editor->GetPopupMenu())
+                    popup->Hide(true);
+            }
             editor = nullptr;
             asset = nullptr;
             PipelineUtils::SetWorkPathOverride("");
@@ -1014,6 +1025,17 @@ TEST_F(PipelineUiFixture, NodeCardGalleryScreenshots)
 }
 
 // The parameters of a runnable node fold away under one row; the row opens them and the card grows by their rows
+namespace
+{
+    // Returns the image path of the parameter fold's chevron
+    String ChevronOf(const Ref<PipelineNodeWidget>& card)
+    {
+        auto head = card ? card->FindChildByTypeAndName<Button>("params") : nullptr;
+        auto sprite = head ? head->GetLayerDrawable<VectorSprite>("icon") : nullptr;
+        return sprite && sprite->GetImageAsset() ? sprite->GetImageAsset()->GetPath() : String();
+    }
+}
+
 TEST_F(PipelineUiFixture, ParameterListFoldsAndUnfolds)
 {
     PipelineGraph graph;
@@ -1030,14 +1052,13 @@ TEST_F(PipelineUiFixture, ParameterListFoldsAndUnfolds)
 
     auto head = card->FindChildByTypeAndName<Button>("params");
     ASSERT_TRUE(head);
-    // The fold row starts at the left edge of the other rows, the arrow at its very start
+    // The fold row reaches 4 px past the other rows on each side (.plist-h), the chevron 4 px into it
     auto prompt = card->FindChildByType<EditBox>();
     ASSERT_TRUE(prompt);
-    EXPECT_NEAR(head->layout->GetWorldRect().left, prompt->layout->GetWorldRect().left, 0.5f);
-    auto arrow = head->GetLayerDrawable<PipelineFoldArrow>("icon");
+    EXPECT_NEAR(head->layout->GetWorldRect().left, prompt->layout->GetWorldRect().left - 4.0f, 0.5f);
+    auto arrow = head->GetLayerDrawableBasedOn<IRectDrawable>("icon");
     ASSERT_TRUE(arrow);
-    EXPECT_NEAR(arrow->GetRect().left, head->layout->GetWorldRect().left, 0.5f);
-    EXPECT_FLOAT_EQ(arrow->open, 0.0f);
+    EXPECT_NEAR(arrow->GetRect().left, head->layout->GetWorldRect().left + 4.0f, 0.5f);
 
     String dir = ScreenshotDir();
     o2FileSystem.FolderCreate(dir, true);
@@ -1054,7 +1075,7 @@ TEST_F(PipelineUiFixture, ParameterListFoldsAndUnfolds)
     float open = card->GetCardRect().Height();
     EXPECT_GT(open, folded + 40.0f);
     EXPECT_NEAR(open, card->GetAutoHeight(), 0.5f);
-    EXPECT_FLOAT_EQ(card->FindChildByTypeAndName<Button>("params")->GetLayerDrawable<PipelineFoldArrow>("icon")->open, 1.0f);
+    EXPECT_TRUE(ChevronOf(card).Contains("chevron_down")) << "the chevron points down while open";
     UiDriver::Step(3);
     EXPECT_NEAR(card->GetCardRect().Height(), open, 0.5f);
     EXPECT_TRUE(UiDriver::Screenshot(dir + "/pipeline_params_open.png"));
@@ -1065,7 +1086,7 @@ TEST_F(PipelineUiFixture, ParameterListFoldsAndUnfolds)
     EXPECT_FALSE(Live(gen)->GetConfigBool("paramsOpen", true));
     EXPECT_FALSE(card->FindChildByTypeAndName<Button>("model"));
     EXPECT_NEAR(card->GetCardRect().Height(), folded, 0.5f);
-    EXPECT_FLOAT_EQ(card->FindChildByTypeAndName<Button>("params")->GetLayerDrawable<PipelineFoldArrow>("icon")->open, 0.0f);
+    EXPECT_TRUE(ChevronOf(card).Contains("chevron_right")) << "the chevron points right while closed";
     EXPECT_TRUE(UiDriver::Screenshot(dir + "/pipeline_params_closed.png"));
     EXPECT_FLOAT_EQ(Live(gen)->size.y, 0.0f) << "a card without a set height keeps following its content";
 
@@ -1153,7 +1174,8 @@ TEST_F(PipelineUiFixture, FinishResizeStartsFromTheImageSize)
     auto width = card->FindChildByTypeAndName<EditBox>("resize width");
     auto height = card->FindChildByTypeAndName<EditBox>("resize height");
     ASSERT_TRUE(toggle && width && height);
-    EXPECT_GE(toggle->layout->GetWidth(), 80.0f) << "the caption is cut";
+    EXPECT_GE(toggle->layout->GetWidth(), PipelineControls::switchWidth + PipelineControls::rowGap +
+                                          PipelineControls::TextWidth("Resize", PipelineControls::bodyFont) - 0.5f) << "the caption is cut";
     EXPECT_EQ((String)width->GetText(), "64");
     EXPECT_EQ((String)height->GetText(), "32");
     EXPECT_LT(width->GetTransparency(), 1.0f) << "dimmed while resizing is off";
@@ -1290,7 +1312,7 @@ TEST_F(PipelineUiFixture, ExtractPartsGridSelectsAndRenames)
         EXPECT_NEAR(port.x, cells[i]->layout->GetWorldRect().right, 1.0f) << i;
         EXPECT_NEAR(port.y, cells[i]->layout->GetWorldRect().top, 1.0f) << i;
     }
-    EXPECT_NEAR(card->GetPortPosition(Live(extract)->inputs[0].id, true).x, cardRect.left, 0.5f);
+    EXPECT_NEAR(card->GetPortPosition(Live(extract)->inputs[0].id, true).x, cardRect.left + 1.0f, 0.5f);
     // The grid fills the right pane of the row under the drawing tools, beside the source stage
     auto stage = card->FindChildByTypeAndName<PipelinePaintEditor>("draw stage");
     ASSERT_TRUE(stage);
@@ -1541,13 +1563,11 @@ TEST_F(PipelineUiFixture, FarZoomHidesControlsButKeepsContentInPlace)
         EXPECT_GT(imagePixel.r, 200) << "scale " << scale;
         EXPECT_LT(imagePixel.g, 80) << "scale " << scale;
 
-        // The play button is a control: drawn close up, gone from afar so its pixel matches the header band
-        Vec2F playCenter = play->layout->GetWorldRect().Center();
-        int diff = distance(pixelAt(capture, playCenter), pixelAt(capture, playCenter - Vec2F(30.0f, 0.0f)));
-        if (scale < 2.0f)
-            EXPECT_GT(diff, 60);
-        else
-            EXPECT_LT(diff, 30);
+        // The play pill stays drawn from afar, as AssetsLine keeps it (only labels and prices go): its body, beside the
+        // glyph, differs from the header band at any zoom
+        Vec2F pillBody = play->layout->GetWorldRect().Center() + Vec2F(12.0f, 0.0f);
+        int diff = distance(pixelAt(capture, pillBody), pixelAt(capture, pillBody - Vec2F(42.0f, 0.0f)));
+        EXPECT_GT(diff, 60) << "scale " << scale;
     }
 }
 
@@ -1570,8 +1590,9 @@ TEST_F(PipelineUiFixture, DrawToolbarSlidersKeepAUsableTrack)
         auto size = card->FindChildByTypeAndName<PipelineSlider>("size");
         auto opacity = card->FindChildByTypeAndName<PipelineSlider>("opacity");
         ASSERT_TRUE(size && opacity) << node->nodeType;
-        EXPECT_GE(size->GetTrackWidth(), 60.0f) << node->nodeType;
-        EXPECT_GE(opacity->GetTrackWidth(), 60.0f) << node->nodeType;
+        // AssetsLine's tool row at 312: two bars sharing the spare width, 49 / 51 px tracks
+        EXPECT_GE(size->GetTrackWidth(), 45.0f) << node->nodeType;
+        EXPECT_GE(opacity->GetTrackWidth(), 45.0f) << node->nodeType;
 
         RectF cardRect = card->layout->GetWorldRect();
         EXPECT_LE(size->layout->GetWorldRect().right, cardRect.right + 1.0f) << node->nodeType;
@@ -1943,20 +1964,26 @@ TEST_F(PipelineUiFixture, SelectionOutlineFollowsTheZoomButStaysVisible)
     ASSERT_TRUE(card);
     card->SetSelected(true);
 
+    // The ring sits 4 units outside the card (NodeView .node-selection-ring)
     RectF rect = card->layout->GetWorldRect();
-    Vec2F edge(rect.left - 2.0f, rect.Center().y);
+    Vec2F edge(rect.left - 4.0f, rect.Center().y);
     auto tealNear = [&](float scale)
     {
         editor->SetView(card->GetCardRect().Center(), scale);
         UiDriver::Step(4);
         auto capture = UiDriver::Capture();
         Vec2I px = ScreenToCapture(editor->LocalToScreenPoint(edge), capture);
+        String seen;
         for (int dx = -2; dx <= 2; dx++)
         {
             const UInt8* p = PipelineImageOps::Pixel(*capture, px.x + dx, px.y);
+            seen += String::Format(" (%d,%d,%d)", (int)p[0], (int)p[1], (int)p[2]);
             if (p[0] < 70 && p[1] > 120 && p[2] > 100 && p[2] < p[1] + 20)
                 return true;
         }
+        ADD_FAILURE() << "scale " << scale << ":" << seen << " px " << px.x << "," << px.y << " capture " << capture->GetSize().x << "x"
+                      << capture->GetSize().y << " res " << o2Render.GetResolution().x << "x" << o2Render.GetResolution().y
+                      << " card " << rect.left << "," << rect.top << " cam " << editor->GetCamera().GetScale2D().x;
         return false;
     };
     EXPECT_TRUE(tealNear(1.0f));
@@ -2218,8 +2245,8 @@ TEST_F(PipelineUiFixture, CardHeaderAndOutlineShareOneEdge)
         o2FileSystem.FolderCreate(dir, true);
         capture->Save(dir + "/pipeline_card_edge_" + (String)(int)(scale * 100) + ".png", Bitmap::ImageType::Png);
 
-        // Just above the selection outline is the canvas, never a piece of the header
-        Vec2I above = ScreenToCapture(editor->LocalToScreenPoint(Vec2F(rect.left + 60.0f, rect.top + 5.0f + 3.0f * scale)), capture);
+        // Above the selection ring and its glow is the canvas, never a piece of the header
+        Vec2I above = ScreenToCapture(editor->LocalToScreenPoint(Vec2F(rect.left + 60.0f, rect.top + 11.0f + 3.0f * scale)), capture);
         const UInt8* p = PipelineImageOps::Pixel(*capture, above.x, above.y);
         EXPECT_TRUE(IsBackgroundPixel(capture, above)) << "scale " << scale << " rgb " << (int)p[0] << " " << (int)p[1] << " " << (int)p[2];
     }

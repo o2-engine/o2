@@ -42,6 +42,8 @@
 #include "o2Editor/Windows/PipelineWindow/PipelineMediaViews.h"
 #include "o2Editor/Windows/PipelineWindow/PipelineNodeWidget.h"
 #include "o2Editor/Windows/PipelineWindow/PipelinePaintEditor.h"
+#include "o2Editor/Windows/PipelineWindow/PipelineTheme.h"
+#include "o2/Render/VectorSprite.h"
 
 namespace Editor
 {
@@ -90,10 +92,8 @@ namespace Editor
 
     Ref<Toggle> PipelineNodeBody::MakeTransparentSwitch()
     {
-        auto toggle = MakeCheckbox("Transparent bg", GetBool("transparentBg", false));
+        auto toggle = MakeHeadSwitch("Transparent bg", GetBool("transparentBg", false));
         toggle->name = "transparent switch";
-        toggle->layout->minWidth = 140;
-        toggle->layout->maxWidth = 140;
         WeakRef<PipelineNodeBody> weakThis(this);
         toggle->onToggleByUser = [weakThis](bool value)
         {
@@ -124,10 +124,8 @@ namespace Editor
             switches->AddChild(toggle);
         }
 
-        auto cropButton = MakeSegment("Crop", GetBool("cropEnabled", false));
+        auto cropButton = MakeCropToggle(GetBool("cropEnabled", false));
         cropButton->name = "crop";
-        cropButton->layout->minWidth = 60;
-        cropButton->layout->maxWidth = 60;
         cropButton->onToggleByUser = [weakThis](bool)
         {
             if (auto self = weakThis.Lock())
@@ -144,7 +142,7 @@ namespace Editor
             }
         };
         switches->AddChild(cropButton);
-        width += 60.0f;
+        width += cropButton->layout->minWidth;
         return switches;
     }
 
@@ -156,9 +154,10 @@ namespace Editor
         row->expandHeight = true;
         row->baseCorner = BaseCorner::Left;
 
-        // The caption, or nothing, takes the free width so the switches keep to the right
+        // .head-row: 1 px above, a caption taking the free width (11 px, wrapping at about 37 characters), the switches at the right
         auto label = MakeLabel(caption, true);
-        label->horOverflow = caption.Length() > 26 ? Label::HorOverflow::Wrap : Label::HorOverflow::Dots;
+        StyleLabel(label, smallFont, 400, PipelineTheme::Get().fg3);
+        label->horOverflow = caption.Length() > 37 ? Label::HorOverflow::Wrap : Label::HorOverflow::Dots;
         row->AddChild(label);
 
         float width = 0.0f;
@@ -166,7 +165,13 @@ namespace Editor
         switches->layout->minWidth = width;
         switches->layout->maxWidth = width;
         row->AddChild(switches);
-        AddRow(row, caption.Length() > 26 ? 30.0f : 20.0f);
+
+        float height = 1.0f + Math::Max(smallButtonHeight, 14.85f * EstimateLines(caption, 37));
+        auto block = mmake<Widget>();
+        block->name = "head row";
+        *row->layout = WidgetLayout::BothStretch(0, 0, 0, 1);
+        block->AddChild(row);
+        AddRow(block, height);
     }
 
     PipelineCropEditor::PipelineCropEditor(RefCounter* refCounter):

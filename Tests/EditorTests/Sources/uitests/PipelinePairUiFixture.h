@@ -107,6 +107,9 @@ namespace
         Ref<PipelineAsset>  asset;
         String              uploadId;
 
+        // Work folder of the suite; suites that ctest runs side by side need their own
+        virtual String WorkDir() const { return "../../Work/Pipelines/uitest-pairs/"; }
+
         void SetUp() override
         {
             if (!UIRoot::IsSingletonInitialzed())
@@ -114,7 +117,7 @@ namespace
                 PushEditorScopeOnStack scope;
                 mmake<UIRoot>();
             }
-            PipelineUtils::SetWorkPathOverride("../../Work/Pipelines/uitest-pairs/");
+            PipelineUtils::SetWorkPathOverride(WorkDir());
             PipelinePairLayout::SetIoView(PipelineIoView::SideBySide);
 
             PushEditorScopeOnStack scope;

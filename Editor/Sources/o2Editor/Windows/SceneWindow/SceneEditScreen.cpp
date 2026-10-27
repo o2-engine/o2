@@ -58,7 +58,11 @@ namespace Editor
     {}
 
     SceneEditScreen::~SceneEditScreen()
-    {}
+    {
+        // The scene outlives a screen that is freed with its editor
+        if (Scene::IsSingletonInitialzed())
+            o2Scene.onObjectsChanged -= Function<void(Vector<Ref<SceneEditableObject>>)>(this, &SceneEditScreen::OnSceneChanged);
+    }
 
     void SceneEditScreen::Draw()
 	{

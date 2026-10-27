@@ -37,6 +37,9 @@ namespace Editor
         String        previewPath;    // Preview image file of the result
         String        srcPreviewPath; // Preview image file of the source, empty when there is none
 
+        PipelineValue srcPreview;       // The source preview's bytes, read once per run that reported it
+        String        srcPreviewLoaded; // Path srcPreview was read for
+
         Map<String, PipelineValue> portOutputs; // Last result of each output of a per-port node, by port id
         Map<String, String>        portStates;  // Run state of each part being computed: running / done / error, by port id; dropped when the node stops
     };
@@ -137,6 +140,9 @@ namespace Editor
         // Returns the port center in canvas space; the card corner when the port is missing
         Vec2F GetPortPosition(const String& portId, bool input) const;
 
+        // Returns the port center for the card rectangle already known (GetCardRect walks the body's rows)
+        Vec2F GetPortPosition(const String& portId, bool input, const RectF& cardRect) const;
+
         // Returns the port whose hit circle contains the canvas point, null when none
         const PortView* FindPortAt(const Vec2F& canvasPoint) const;
 
@@ -201,6 +207,12 @@ namespace Editor
         // Updates the card unless it is culled
         void Update(float dt) override;
 
+        // Lays a culled card out once, as a visible one is, so it comes into view without a first layout of all its widgets
+        void WarmUp(float dt);
+
+        // Returns true when the card was laid out since it was built
+        bool IsWarm() const { return mWarm; }
+
         // Updates the children unless the card is culled; without details the body updates for a few frames after a change. Then
         // the ports the body places follow its widgets as they are now laid out
         void UpdateChildren(float dt) override;
@@ -214,6 +226,14 @@ namespace Editor
         // Draws the state and selection outlines around the card art, scaled with the camera but never thinner than a pixel
         void DrawOutline();
 
+        // Draws the card shadow, body and header band under the layers and the body
+        void DrawCardBack();
+        // Returns true while the card's work runs in the background: its effect applies or its pictures decode
+        bool IsBusyInBackground() const;
+
+        // Draws the thin running bar under the header while the card is busy in the background
+        void DrawBusyBar();
+
         // Returns the icon image path of a node type
         static String IconForType(const String& nodeType);
 
@@ -223,6 +243,8 @@ namespace Editor
         SERIALIZABLE(PipelineNodeWidget);
 
     protected:
+        friend struct PipelineLayoutDump;
+
         WeakRef<PipelineEditor>   mEditor;           // Owner editor
         Ref<PipelineNode>         mNode;             // Node shown by this card
         const PipelineNodeSchema* mSchema = nullptr; // Schema of the node type, null for an unknown type
@@ -232,14 +254,17 @@ namespace Editor
         bool                      mDetailed = true;  // False when the view is zoomed too far out for the controls
         int                       mFarUpdateFrames = 0; // Frames the body still updates without details; layout and content changes reset it
         int                       mBodyPortPasses = 0;  // Updates in which the ports the body places still follow its widgets
+        bool                      mWarm = false;        // Laid out since it was built
 
         Ref<WidgetLayer>      mTitleLayer;     // Title text layer
         Ref<WidgetLayer>      mIconLayer;      // Node type icon layer
         Ref<Button>           mPlayButton;     // Run / stop button
         Ref<WidgetLayer>      mDotLayer;       // Status dot before the play button: fresh, stale, idle or running
+        Ref<WidgetLayer>      mDotRingLayer;   // Hollow status dot: never run, queued
         Ref<Button>           mErrorButton;    // Opens the last error, shown in the error state
         Ref<Label>            mRetryLabel;     // Retry counter badge, shown while retrying
         Ref<Button>           mAddInputButton; // Adds a custom input, shown when the schema allows it
+        Ref<WidgetLayer>      mAddLabelLayer;  // "+ input" caption beside the add marker
         Ref<Widget>           mBodyHost;       // Container of the type-specific body
         Ref<PipelineNodeBody> mBody;           // Type-specific body
 
@@ -328,13 +353,16 @@ CLASS_FIELDS_META(Editor::PipelineNodeWidget)
     FIELD().PROTECTED().DEFAULT_VALUE(true).NAME(mDetailed);
     FIELD().PROTECTED().DEFAULT_VALUE(0).NAME(mFarUpdateFrames);
     FIELD().PROTECTED().DEFAULT_VALUE(0).NAME(mBodyPortPasses);
+    FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mWarm);
     FIELD().PROTECTED().NAME(mTitleLayer);
     FIELD().PROTECTED().NAME(mIconLayer);
     FIELD().PROTECTED().NAME(mPlayButton);
     FIELD().PROTECTED().NAME(mDotLayer);
+    FIELD().PROTECTED().NAME(mDotRingLayer);
     FIELD().PROTECTED().NAME(mErrorButton);
     FIELD().PROTECTED().NAME(mRetryLabel);
     FIELD().PROTECTED().NAME(mAddInputButton);
+    FIELD().PROTECTED().NAME(mAddLabelLayer);
     FIELD().PROTECTED().NAME(mBodyHost);
     FIELD().PROTECTED().NAME(mBody);
     FIELD().PROTECTED().NAME(mInputs);
@@ -360,6 +388,7 @@ CLASS_METHODS_META(Editor::PipelineNodeWidget)
     FUNCTION().PUBLIC().SIGNATURE(Vec2F, GetCardSize);
     FUNCTION().PUBLIC().SIGNATURE(float, GetCardWidth);
     FUNCTION().PUBLIC().SIGNATURE(Vec2F, GetPortPosition, const String&, bool);
+    FUNCTION().PUBLIC().SIGNATURE(Vec2F, GetPortPosition, const String&, bool, const RectF&);
     FUNCTION().PUBLIC().SIGNATURE(const PortView*, FindPortAt, const Vec2F&);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsAddInputAt, const Vec2F&);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsHeaderAt, const Vec2F&);
@@ -381,10 +410,15 @@ CLASS_METHODS_META(Editor::PipelineNodeWidget)
     FUNCTION().PUBLIC().SIGNATURE(void, SetDetailed, bool);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsDetailed);
     FUNCTION().PUBLIC().SIGNATURE(void, Update, float);
+    FUNCTION().PUBLIC().SIGNATURE(void, WarmUp, float);
+    FUNCTION().PUBLIC().SIGNATURE(bool, IsWarm);
     FUNCTION().PUBLIC().SIGNATURE(void, UpdateChildren, float);
     FUNCTION().PUBLIC().SIGNATURE(void, Draw);
     FUNCTION().PUBLIC().SIGNATURE(void, DrawPorts);
     FUNCTION().PUBLIC().SIGNATURE(void, DrawOutline);
+    FUNCTION().PUBLIC().SIGNATURE(void, DrawCardBack);
+    FUNCTION().PUBLIC().SIGNATURE(bool, IsBusyInBackground);
+    FUNCTION().PUBLIC().SIGNATURE(void, DrawBusyBar);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, IconForType, const String&);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, MenuIconForType, const String&);
     FUNCTION().PROTECTED().SIGNATURE(void, BuildHeader);

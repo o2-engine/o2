@@ -9,6 +9,18 @@ using namespace o2;
 
 namespace Editor
 {
+    // -------------------------------------------------------------------------------------------------------
+    // Decoded picture of an image value, shared by the copies of the value made after it exists: a decode done
+    // through any of them is seen by all. Main-thread object for editor values; a run keeps its own
+    // -------------------------------------------------------------------------------------------------------
+    struct PipelineDecodedImage : public RefCounterable
+    {
+        Ref<Bitmap> bitmap;          // Decoded RGBA, null until decoded
+        Ref<Bitmap> display;         // Copy downscaled for the cards, made with a background decode; null when not made
+        bool        pending = false; // A background decode is on its way
+        bool        failed = false;  // The bytes are no picture
+    };
+
     // ---------------------------------------------------------------------------
     // Value travelling over a pipeline edge: text, or encoded media bytes. Images
     // are kept as PNG bytes and decoded to a bitmap on demand
@@ -20,7 +32,7 @@ namespace Editor
         String           mimeType;                      // Mime of data for media values
         bool             valid = false;                 // False for an empty or failed value
 
-        mutable Ref<Bitmap> bitmap; // Decoded image cache
+        mutable Ref<PipelineDecodedImage> decoded; // Decoded image, shared by the copies
 
     public:
         // Default constructor, makes an invalid value
@@ -55,6 +67,15 @@ namespace Editor
 
         // Decodes (once) and returns the RGBA bitmap; null for non-images or broken data
         Ref<Bitmap> GetBitmap() const;
+
+        // Returns the bitmap when it is already decoded, never decodes
+        Ref<Bitmap> PeekBitmap() const { return decoded ? decoded->bitmap : nullptr; }
+
+        // Gives an image value its decode slot now, so the copies made from here on share one decode
+        void ShareDecoded() const;
+
+        // Drops the decoded picture: the copy then decodes on its own (handing a value to another thread)
+        void DropDecoded() { decoded = nullptr; }
 
         // Returns the encoded bytes as PNG, re-encoding other image formats
         String GetPngBytes() const;

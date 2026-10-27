@@ -15,7 +15,7 @@ namespace Editor
     struct PipelineExecEvent
     {
         // Event kinds; the field comments below say which kind fills them
-        enum class Type { NodeState, NodeOutput, Retry, Log, Done, Fatal };
+        enum class Type { NodeState, NodeOutput, NodePorts, Retry, Log, Done, Fatal };
 
         Type   type = Type::Log; // Kind of event
         String nodeId;           // Node the event is about, empty for Log, Done and Fatal
@@ -29,6 +29,10 @@ namespace Editor
         String        srcPreviewPath; // NodeOutput: uncropped source preview when a crop was applied
 
         int attempt = 0, maxAttempts = 0, status = 0; // Retry: attempt number, attempts limit and HTTP status of the failure
+
+        Vector<PipelinePort> ports; // NodePorts: the outputs a dynamic outputs node produced, in order
+
+        bool assetsChanged = false; // Done, Fatal: finish nodes wrote into the assets, left to rebuild by the receiver
     };
 
     // -------------------------------------------------------------------------
@@ -42,6 +46,8 @@ namespace Editor
         Function<void(const PipelineExecEvent&)> onEvent; // Called with every progress event of a run
 
         String assetsPathOverride; // Finish nodes write here instead of the project assets folder when set
+
+        bool deferAssetsRebuild = false; // The assets a run wrote are rebuilt by the receiver of Done (assetsChanged), not by the run
 
     public:
         // Default constructor
@@ -115,6 +121,32 @@ namespace Editor
         // Stores the value in the content cache under the signature, so later runs are served from it
         static void SaveContent(const String& pipelineId, const String& sig, const PipelineValue& value);
 
+        // Returns the working folder of a node (a dynamic outputs node's debug trace): <cache>/work/<node id>/
+        static String GetWorkPath(const String& pipelineId, const String& nodeId);
+
+        // Returns the port id of a dynamic output that is not a schema output: sp-<name>, characters outside [A-Za-z0-9_-] as _
+        static String DynamicPortId(const String& name);
+
+        // Returns the ports of a dynamic outputs node's values: schema outputs first (the instance's port id kept), the
+        // others in run order with dynamic port ids
+        static Vector<PipelinePort> DynamicPorts(const PipelineNode& node, const Vector<PipelinePort>& schemaOutputs,
+                                                 const Vector<Pair<String, PipelineValue>>& values);
+
+        // Returns the content key of one output of a bundle: the first 32 hex digits of sha256("<sig>#<name>")
+        static String BundleKey(const String& sig, const String& name);
+
+        // Loads the outputs cached together under a signature (manifest <sig>-outputs.json); false when any file is missing
+        static bool LoadBundle(const String& pipelineId, const String& sig, Vector<Pair<String, PipelineValue>>& values);
+
+        // Caches a dynamic outputs node's values together under its signature
+        static void SaveBundle(const String& pipelineId, const String& sig, const Vector<Pair<String, PipelineValue>>& values);
+
+        // Drops the manifest of a bundle, so the next run computes it
+        static void DeleteBundle(const String& pipelineId, const String& sig);
+
+        // Deletes the per-port previews of a node whose port ids are not kept
+        static void RemoveStalePortPreviews(const String& pipelineId, const String& nodeId, const Vector<String>& keepPortIds);
+
     private:
         // ----------------------------------------------------------------------
         // State of one run: graph snapshot, flags and the values produced so far
@@ -145,14 +177,26 @@ namespace Editor
         // Fills run->neededPorts: the outputs each node must produce for the target branch
         void CollectNeededPorts(const Ref<Run>& run);
 
-        // Coroutine body of Execute: validates the graph, evaluates the target branch and finishes the run
+        // Coroutine body of Execute: the work on a worker, then finishes the run on the main thread
         Coroutine<void> ExecuteCoroutine(Ref<Run> run);
 
-        // Coroutine body of ExecuteSingle: runs one node on the stored previews of its inputs
+        // Validates the graph and evaluates the target branch; returns the fatal error, empty on success
+        Coroutine<String> ExecuteWork(Ref<Run> run);
+
+        // Coroutine body of ExecuteSingle: the work on a worker, then finishes the run on the main thread
         Coroutine<void> ExecuteSingleCoroutine(Ref<Run> run);
+
+        // Runs one node on the stored previews of its inputs; returns the fatal error, empty on success
+        Coroutine<String> ExecuteSingleWork(Ref<Run> run);
 
         // Evaluates the inputs of a node and then the node, serving cached content when its signature matches
         Coroutine<bool> Evaluate(Ref<Run> run, String nodeId);
+
+        // Runs a dynamic outputs node once or serves its cached bundle; fills its values by port id, emits its ports and
+        // previews and gives the run's graph node those ports
+        Coroutine<bool> EvaluateDynamic(Ref<Run> run, Ref<PipelineNode> node, Ref<PipelineExecContext> ctx,
+                                        Map<String, PipelineValue> inputs, String sig, Map<String, PipelineValue>* byPortId,
+                                        PipelineValue* preview, bool* produced, String* error);
 
         // Builds the context handed to a node: settings, paths, seed and the callbacks into this executor
         Ref<PipelineExecContext> MakeContext(const Ref<Run>& run, const String& nodeId);

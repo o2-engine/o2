@@ -1,6 +1,8 @@
 #include "o2Editor/stdafx.h"
 #include "AssetsLineDlg.h"
 
+#include "o2Editor/Windows/PipelineWindow/PipelineTheme.h"
+
 #include "o2/Render/Sprite.h"
 #include "o2/Scene/UI/UIManager.h"
 #include "o2/Scene/UI/WidgetLayer.h"
@@ -279,7 +281,9 @@ namespace Editor
         auto viewRow = addRow(content, "Image nodes");
         auto addView = [&](const String& caption, const String& name, PipelineIoView view)
         {
-            auto segment = PipelineControls::MakeSegment(caption, PipelinePairLayout::GetIoView() == view);
+            auto segment = o2UI.CreateWidget<Toggle>("pipeline segment");
+            segment->caption = caption;
+            segment->SetValue(PipelinePairLayout::GetIoView() == view);
             segment->name = name;
             segment->layout->minWidth = 100;
             segment->layout->maxWidth = 100;
@@ -294,6 +298,28 @@ namespace Editor
         };
         mSideView = addView("Side by side", "side view", PipelineIoView::SideBySide);
         mCompareView = addView("Compare", "compare view", PipelineIoView::Compare);
+
+        // The look of the pipeline canvas: AssetsLine's dark or the o2 editor's light colours; a local setting, not synced
+        auto themeRow = addRow(content, "Theme");
+        auto addTheme = [&](const String& caption, const String& name, PipelineThemeKind kind)
+        {
+            auto segment = o2UI.CreateWidget<Toggle>("pipeline segment");
+            segment->caption = caption;
+            segment->SetValue(PipelineTheme::GetKind() == kind);
+            segment->name = name;
+            segment->layout->minWidth = 100;
+            segment->layout->maxWidth = 100;
+            segment->onToggleByUser = [this, kind](bool)
+            {
+                PipelineTheme::SetKind(kind);
+                mDarkTheme->SetValue(kind == PipelineThemeKind::Dark);
+                mLightTheme->SetValue(kind == PipelineThemeKind::Light);
+            };
+            themeRow->AddChild(segment);
+            return segment;
+        };
+        mDarkTheme = addTheme("Dark", "dark theme", PipelineThemeKind::Dark);
+        mLightTheme = addTheme("Light", "light theme", PipelineThemeKind::Light);
 
         addSeparator();
 
@@ -319,6 +345,9 @@ namespace Editor
         mKlingSecretEdit = addKey("Kling secret", "kling secret");
         addHint(content, "Only for an old Kling key pair");
         addHint(content, "Used when nodes run in this editor");
+
+        mPythonEdit = addKey("Python 3", "image to ui python");
+        addHint(content, "For AI image to UI, with Pillow and numpy; empty: python3 on PATH");
 
         addSeparator();
 
@@ -365,6 +394,7 @@ namespace Editor
         settings.elevenLabsApiKey = ((String)mElevenEdit->GetText()).Trimed(" \n\r\t");
         settings.klingAccessKey = ((String)mKlingAccessEdit->GetText()).Trimed(" \n\r\t");
         settings.klingSecretKey = ((String)mKlingSecretEdit->GetText()).Trimed(" \n\r\t");
+        settings.imageToUiPython = ((String)mPythonEdit->GetText()).Trimed(" \n\r\t");
         settings.Save();
     }
 
@@ -380,6 +410,7 @@ namespace Editor
         mElevenEdit->SetText(keys.elevenLabsApiKey);
         mKlingAccessEdit->SetText(keys.klingAccessKey);
         mKlingSecretEdit->SetText(keys.klingSecretKey);
+        mPythonEdit->SetText(keys.imageToUiPython);
 
         auto& config = o2AssetsLineSync.GetConfig();
         mServerEdit->SetText(config.serverUrl.IsEmpty() ? String(kDefaultServer) : config.serverUrl);

@@ -43,6 +43,8 @@ namespace
 
     struct PipelinePolishUiFixture : PipelinePairUiFixture
     {
+        String WorkDir() const override { return "../../Work/Pipelines/uitest-polish/"; }
+
         Ref<PipelineNodeWidget> Card(const Ref<PipelineNode>& node) { return editor->GetNodeWidget(node->id); }
 
         // The row that holds the node's pictures
@@ -202,7 +204,7 @@ TEST_F(PipelinePolishUiFixture, TheTransparentSwitchSitsBesideCrop)
             EXPECT_LE(cropRect.top, stage->GetStageRectangle().bottom + 0.5f) << "under the drawing stage, in the tool row";
         else
         {
-            EXPECT_LT(pictures.bottom - cropRect.top, 8.0f) << type.Data() << ": right under the pictures";
+            EXPECT_LT(pictures.bottom - cropRect.top, 8.5f) << type.Data() << ": right under the pictures, past the gap and the head row's 1 px";
             EXPECT_GE(pictures.bottom - cropRect.top, 0.0f) << type.Data();
         }
 
@@ -240,13 +242,22 @@ TEST_F(PipelinePolishUiFixture, TheTransparentSwitchSitsBesideCrop)
         auto add = card->FindChildByTypeAndName<Button>("add part");
         auto toggle = TransparentSwitch(node);
         ASSERT_TRUE(add && toggle) << width;
+        auto autoSplit = card->FindChildByTypeAndName<Button>("auto split");
+        ASSERT_TRUE(autoSplit) << width;
         RectF addRect = add->layout->GetWorldRect(), toggleRect = toggle->layout->GetWorldRect();
+        RectF autoRect = autoSplit->layout->GetWorldRect();
         RectF row = card->FindChildByTypeAndName<Widget>("actions")->layout->GetWorldRect();
-        EXPECT_NEAR(toggleRect.right, row.right, 1.0f) << width << ": at the right";
+        // As AssetsLine lays the parts row out: the switch right after the buttons, or on a line of its own at the right
         if (width >= 400.0f)
+        {
+            EXPECT_NEAR(toggleRect.left, autoRect.right + 8.0f, 1.0f) << "right after the buttons";
             EXPECT_NEAR(toggleRect.Center().y, addRect.Center().y, 1.0f) << "in the actions row";
+        }
         else
+        {
+            EXPECT_NEAR(toggleRect.right, row.right, 1.0f) << width << ": at the right";
             EXPECT_LE(toggleRect.top, addRect.bottom + 0.5f) << "on its own line under the actions";
+        }
 
         float before = PictureArea(node)->layout->GetHeight();
         Press(toggle);
@@ -334,7 +345,7 @@ TEST_F(PipelinePolishUiFixture, ImageEditToolsSitUnderThePictures)
 
             if (width >= 560.0f)
             {
-                EXPECT_NEAR(tools.Height(), 22.0f, 0.5f) << label.Data() << ": one line, nothing wraps";
+                EXPECT_NEAR(tools.Height(), 28.0f, 0.5f) << label.Data() << ": one line, nothing wraps";
                 EXPECT_NEAR(switchRect.Center().y, tools.Center().y, 1.5f) << label.Data() << ": the switches share the tool line";
                 EXPECT_GE(switchRect.left, tools.right + 7.5f) << label.Data();
                 EXPECT_LE(clear->layout->GetWorldRect().right, switchRect.left) << label.Data();
@@ -489,7 +500,7 @@ TEST_F(PipelinePolishUiFixture, TheExtractHasNoDrawing)
         RectF imageRect = cells[i]->FindChildByType<PipelineImageView>()->layout->GetWorldRect();
         Vec2F port = card->GetPortPosition(node->outputs[i].id, false);
         EXPECT_NEAR(port.x, imageRect.right, 1.0f) << i;
-        EXPECT_NEAR(port.y, imageRect.bottom, 1.0f) << i;
+        EXPECT_NEAR(port.y, imageRect.top, 1.0f) << i;
     }
     ShotCard(node, "extract_no_drawing");
 }
@@ -603,7 +614,8 @@ TEST_F(PipelinePolishUiFixture, UpscaleCardShowsTheSizeAndTheNote)
 TEST_F(PipelinePolishUiFixture, ExtractPortsStayOnTheCellsWhenTheParamsUnfold)
 {
     struct Case { float width; int parts; int cols; bool sized; };
-    for (auto c : { Case{ 1140.0f, 30, 8, true }, Case{ 1140.0f, 30, 8, false }, Case{ 480.0f, 3, 3, true }, Case{ 480.0f, 3, 3, false } })
+    // A hand-sized card gives the grid more height: the shared fit (AssetsLine partsLayout) may then pick fewer, larger columns
+    for (auto c : { Case{ 1140.0f, 30, 8, true }, Case{ 1140.0f, 30, 8, false }, Case{ 480.0f, 3, 0, true }, Case{ 480.0f, 3, 3, false } })
     {
         String name = (String)c.parts + " parts, " + (c.sized ? "hand-sized" : "natural");
         Ref<PipelineNode> node = OpenFed("imageExtract", c.width, true, nullptr, c.parts);
@@ -635,7 +647,7 @@ TEST_F(PipelinePolishUiFixture, ExtractPortsStayOnTheCellsWhenTheParamsUnfold)
                 RectF box = image->layout->GetWorldRect();
                 Vec2F port = card->GetPortPosition(node->outputs[i].id, false);
                 EXPECT_NEAR(port.x, box.right, 0.5f) << name.Data() << ", " << step.Data() << ": part " << i;
-                EXPECT_NEAR(port.y, box.bottom, 0.5f) << name.Data() << ", " << step.Data() << ": part " << i;
+                EXPECT_NEAR(port.y, box.top, 0.5f) << name.Data() << ", " << step.Data() << ": part " << i;
             }
         };
 

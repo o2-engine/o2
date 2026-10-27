@@ -5,6 +5,7 @@
 #include "Network/NetworkTestHelpers.h"
 #include "o2/Assets/Assets.h"
 #include "o2/Utils/Bitmap/Bitmap.h"
+#include "o2/Utils/Bitmap/PngFormat.h"
 #include "o2/Utils/FileSystem/FileSystem.h"
 #include "o2/Assets/Types/PipelineAsset.h"
 #include "o2Editor/Pipeline/PipelineAudio.h"
@@ -794,4 +795,73 @@ TEST(PipelineImageOps, ChromaSpillSuppressesEveryKeyChannel)
     EXPECT_GT((int)result[3], 200) << "пиксель не должен вырезаться";
     EXPECT_LT(Math::Abs((int)result[0] - (int)result[2]), 24) << "красный и синий разошлись - осталась розовая кайма";
     EXPECT_LT((int)result[0], 200) << "красный канал ключа не погашен";
+}
+
+// An editor batching its runs leaves the assets a run wrote to it: the Done event says so and nothing is rebuilt
+TEST(PipelineExecutor, DeferredAssetsRebuildIsReportedByDone)
+{
+    WorkDirGuard work;
+    String assetsDir = work.path + "Assets/";
+    o2FileSystem.FolderCreate(assetsDir, true);
+
+    PipelineGraph graph;
+    auto text = AddNode(graph, "sourceText");
+    text->SetConfigString("text", "batched");
+    auto finish = AddNode(graph, "finishText");
+    finish->SetConfigString("assetPath", "Generated/batched");
+    Connect(graph, text, "out", finish, "in");
+
+    auto executor = mmake<PipelineExecutor>();
+    executor->assetsPathOverride = assetsDir;
+    executor->deferAssetsRebuild = true;
+    bool done = false, assetsChanged = false, rebuildLogged = false;
+    executor->onEvent = [&](const PipelineExecEvent& e)
+    {
+        if (e.type == PipelineExecEvent::Type::Done) { done = true; assetsChanged = e.assetsChanged; }
+        if (e.type == PipelineExecEvent::Type::Log && e.message.Contains("Rebuilding assets")) rebuildLogged = true;
+    };
+    executor->Execute("test", graph, finish->id);
+    EXPECT_TRUE(NetPumpUntil([&] { return done; }, 20.0f));
+    EXPECT_TRUE(assetsChanged);
+    EXPECT_FALSE(rebuildLogged);
+    EXPECT_TRUE(o2FileSystem.IsFileExist(assetsDir + "Generated/batched.txt"));
+}
+
+// The assets builder of a background rebuild runs off the main thread; the tree comes back on it, and a call meanwhile
+// makes one more pass
+TEST(PipelineExecutor, BackgroundAssetsRebuildAppliesOnTheMainThread)
+{
+    int rebuilt = 0;
+    auto counter = [&rebuilt](const Vector<UID>&) { rebuilt++; };
+    o2Assets.onAssetsRebuilt += counter;
+
+    o2Assets.RebuildAssetsInBackground();
+    EXPECT_TRUE(o2Assets.IsRebuildingAssets());
+    EXPECT_EQ(rebuilt, 0);
+    o2Assets.RebuildAssetsInBackground();
+    o2Assets.RebuildAssetsInBackground();
+
+    EXPECT_TRUE(NetPumpUntil([&] { return !o2Assets.IsRebuildingAssets(); }, 60.0f));
+    EXPECT_EQ(rebuilt, 2);
+
+    o2Assets.onAssetsRebuilt -= Function<void(const Vector<UID>&)>(counter);
+}
+
+// The quick encode of the drawings keeps every pixel
+TEST(PipelineImageOps, FastPngEncodeRoundTrips)
+{
+    auto bitmap = PipelineImageOps::Blank(300, 200, Color4(0, 0, 0, 0));
+    for (int y = 40; y < 160; y++)
+        for (int x = 30; x < 270; x += 3)
+        {
+            UInt8* p = PipelineImageOps::Pixel(*bitmap, x, y);
+            p[0] = (UInt8)x; p[1] = (UInt8)y; p[2] = 128; p[3] = (UInt8)(x + y);
+        }
+
+    String fast;
+    ASSERT_TRUE(SavePngImageToMemory(bitmap.Get(), fast, true));
+    auto decoded = DecodeImageBytes(fast);
+    ASSERT_TRUE(decoded);
+    ASSERT_EQ(decoded->GetSize(), bitmap->GetSize());
+    EXPECT_EQ(std::memcmp(decoded->GetData(), bitmap->GetData(), 300*200*4), 0);
 }

@@ -40,6 +40,7 @@ namespace Editor
         res.klingAccessKey = read("klingAccessKey");
         res.klingSecretKey = read("klingSecretKey");
         res.elevenLabsApiKey = read("elevenlabs");
+        res.imageToUiPython = read("imageToUiPython");
         return res;
     }
 
@@ -53,6 +54,7 @@ namespace Editor
         doc["klingAccessKey"] = klingAccessKey;
         doc["klingSecretKey"] = klingSecretKey;
         doc["elevenlabs"] = elevenLabsApiKey;
+        doc["imageToUiPython"] = imageToUiPython;
 
         o2FileSystem.FolderCreate(PipelineUtils::GetWorkPath(), true);
         doc.SaveToFile(GetSettingsPath());

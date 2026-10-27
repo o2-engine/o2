@@ -1,6 +1,9 @@
 #include "o2Editor/stdafx.h"
 #include "PipelineNodeBodyFactories.h"
 
+#include "o2Editor/Windows/PipelineWindow/PipelineImageTheme.h"
+#include "o2Editor/Windows/PipelineWindow/PipelineTheme.h"
+
 #include "o2/Render/Render.h"
 #include "o2/Render/Sprite.h"
 #include "o2/Scene/UI/UIManager.h"
@@ -94,6 +97,7 @@ namespace Editor
         {
             AddPairRow(MakeCropEditor("no result - press play to compute the branch"));
             AddPictureSwitches(false);
+            PipelineImageTheme::KeepWholeCaption(*mRows.Last().widget);
             AddPrimaryField("hint", "What to keep (optional), e.g. the character");
             bool native = PipelineTransparency::SupportsNativeTransparency(mNode->GetConfigString("model", GeminiProvider::defaultImageModel));
             if (BeginParams(ImageParamNames(native ? "" : "Transparent bg mode")))
@@ -136,6 +140,7 @@ namespace Editor
             // there is no transparent switch then
             float switchesWidth = 0.0f;
             auto switches = MakePictureSwitches(!mBuiltWithRegion, switchesWidth);
+            PipelineImageTheme::KeepWholeCaption(*switches);
             mPaint->SetToolbarBelow(switches, switchesWidth);
             AddFlexible(mPaint, [weakThis](float width)
             {
@@ -171,7 +176,8 @@ namespace Editor
 
             auto input = GetInput("image");
             auto result = GetOutputBitmap();
-            mPaint->SetBackground(input.IsImage() ? input.GetBitmap() : nullptr);
+            auto background = Picture(input);
+            mPaint->SetBackground(background, !background && PicturePending(input));
             mAnyImage = input.IsImage() || result;
             bool compare = PipelinePairLayout::ShowsCompare(PipelinePairLayout::GetIoView(), mNode->nodeType, input.IsImage(),
                                                              result != nullptr, GetBool("cropEnabled", false));
@@ -217,11 +223,13 @@ namespace Editor
         void Build() override
         {
             AddPairRow(MakeResultView("no result - press play to compute the branch"));
+            BeginFx();
             AddColor("Color", "color", "#000000");
             AddSlider("Width", "width", 0, 64, 1, 4, "px");
             AddSegmented("position", { { "outside", "Outside" }, { "center", "Center" }, { "inside", "Inside" } }, "outside");
             AddSlider("Soft", "softness", 0, 32, 1, 0, "px");
             AddSlider("Alpha", "opacity", 0, 1, 0.05f, 1);
+            EndFx();
             OnOutputChanged();
         }
     };
@@ -233,6 +241,7 @@ namespace Editor
         void Build() override
         {
             AddPairRow(MakeResultView("no result - press play to compute the branch"));
+            BeginFx();
             AddColor("Color", "color", "#000000");
             AddSlider("Alpha", "opacity", 0, 1, 0.05f, 0.6f);
             AddSlider("Angle", "angle", 0, 359, 1, 45, "\xC2\xB0");
@@ -240,6 +249,7 @@ namespace Editor
             AddSlider("Blur", "blur", 0, 128, 1, 8, "px");
             AddSlider("Spread", "spread", 0, 64, 1, 0, "px");
             AddCheckbox("Inner shadow", "inner", false);
+            EndFx();
             OnOutputChanged();
         }
     };
@@ -251,18 +261,20 @@ namespace Editor
         void Build() override
         {
             AddPairRow(MakeResultView("no result - press play to compute the branch"));
+            BeginFx();
             AddSegmented("kind", { { "linear", "Linear" }, { "radial", "Radial" } }, "linear");
             AddSelectRow("Blend", "blend", { "normal", "multiply", "screen", "overlay", "map" }, "normal");
             AddColor("A", "color1", "#ffffff");
-            AddSlider("A alpha", "alpha1", 0, 1, 0.05f, 1);
+            AddSlider("A α", "alpha1", 0, 1, 0.05f, 1);
             AddColor("B", "color2", "#000000");
-            AddSlider("B alpha", "alpha2", 0, 1, 0.05f, 1);
+            AddSlider("B α", "alpha2", 0, 1, 0.05f, 1);
             if (GetString("blend", "normal") != "map" && GetString("kind", "linear") != "radial")
                 AddSlider("Angle", "angle", 0, 359, 1, 90, "\xC2\xB0");
             AddSlider("Amount", "opacity", 0, 1, 0.05f, 1);
             AddCheckbox("Keep inside the artwork", "clipToAlpha", true);
             if (GetString("blend", "normal") == "map")
                 AddMutedLine("Gradient map: A -> dark tones, B -> light tones");
+            EndFx();
             OnOutputChanged();
         }
 
@@ -276,15 +288,17 @@ namespace Editor
         void Build() override
         {
             AddPairRow(MakeResultView("no result - press play to compute the branch"));
+            BeginFx();
             AddSlider("Bright", "brightness", -100, 100, 1, 0);
             AddSlider("Contr", "contrast", -100, 100, 1, 0);
             AddSlider("Sat", "saturation", -100, 100, 1, 0);
             AddSlider("Hue", "hue", -180, 180, 1, 0, "\xC2\xB0");
             AddColor("Tint", "tint", "#ff8800");
-            AddSlider("Tint a", "tintStrength", 0, 1, 0.05f, 0);
+            AddSlider("Tint α", "tintStrength", 0, 1, 0.05f, 0);
             AddCheckbox("Colorize (tint hue, keep luminance)", "colorize", false);
             AddCheckbox("Grayscale", "grayscale", false);
             AddCheckbox("Invert", "invert", false);
+            EndFx();
             OnOutputChanged();
         }
     };
@@ -299,7 +313,8 @@ namespace Editor
             WeakRef<PipelineNodeBody> weakThis(this);
             mPaint->onConfigChanged = [weakThis](const String& key, bool completed) { if (auto self = weakThis.Lock()) self->Notify(key, completed); };
             mPaint->Init(mNode, false);
-            { auto paint = mPaint; AddFlexible(mPaint, [paint](float width) { return Math::Max(240.0f, paint->GetMinHeightForWidth(width) + 90.0f); }); MarkContent(mPaint); }
+            // The tool row, then a 225 tall stage (AssetsLine drawImage bodyHeight)
+            { auto paint = mPaint; AddFlexible(mPaint, [paint](float width) { return paint->GetBarsHeight(width) + 225.0f; }); MarkContent(mPaint); }
             OnOutputChanged();
         }
 
@@ -309,7 +324,8 @@ namespace Editor
             if (mPaint)
             {
                 auto input = GetInput("background");
-                mPaint->SetBackground(input.IsImage() ? input.GetBitmap() : nullptr);
+                auto background = Picture(input);
+                mPaint->SetBackground(background, !background && PicturePending(input));
             }
         }
 
@@ -436,8 +452,7 @@ namespace Editor
     private:
         Vec2I InputSize() const
         {
-            auto input = GetInput("image");
-            auto bitmap = input.IsImage() ? input.GetBitmap() : nullptr;
+            auto bitmap = Picture(GetInput("image"));
             return bitmap ? bitmap->GetSize() : Vec2I();
         }
 
@@ -448,11 +463,26 @@ namespace Editor
             WeakRef<AiUpscaleBody> weakThis(this);
             auto row = mmake<HorizontalLayout>();
             row->name = "upscale size";
-            row->spacing = 4;
+            row->spacing = 8;
             row->expandWidth = true;
             row->expandHeight = true;
             row->baseCorner = BaseCorner::Left;
 
+            // .upscale-row: the factors as one segmented control with equal columns as wide as "Size", the info at the right
+            float column = Math::Ceil(TextWidth("Size", smallFont) * 100.0f) / 100.0f;
+            auto segBox = mmake<Widget>();
+            segBox->name = "upscale modes";
+            float boxWidth = column * 4.0f + 2.0f * 3.0f + 2.0f * 2.0f + 2.0f;
+            segBox->layout->minWidth = boxWidth;
+            segBox->layout->maxWidth = boxWidth;
+            auto segments = mmake<HorizontalLayout>();
+            segments->spacing = 2;
+            segments->expandWidth = true;
+            segments->expandHeight = true;
+            segments->baseCorner = BaseCorner::Left;
+            *segments->layout = WidgetLayout::BothStretch(3, 3, 3, 3);
+            SkinSegmentedRow(*segments);
+            segBox->AddChild(segments);
             String mode = PipelineUpscale::ModeOf(*mNode);
             static const Vector<Pair<String, String>> modes = {
                 { "x2", "\xC3\x97" "2" }, { "x3", "\xC3\x97" "3" }, { "x4", "\xC3\x97" "4" }, { "size", "Size" }
@@ -461,9 +491,9 @@ namespace Editor
             {
                 auto segment = MakeSegment(m.second, m.first == mode);
                 segment->name = "mode " + m.first;
-                float width = m.first == "size" ? 44.0f : 36.0f;
-                segment->layout->minWidth = width;
-                segment->layout->maxWidth = width;
+                segment->layout->minWidth = column;
+                segment->layout->maxWidth = column;
+                PipelineImageTheme::KeepWholeCaption(*segment);
                 String value = m.first;
                 segment->onToggleByUser = [weakThis, value](bool)
                 {
@@ -473,8 +503,9 @@ namespace Editor
                         self->RebuildBodyKeepingArea();
                     }
                 };
-                row->AddChild(segment);
+                segments->AddChild(segment);
             }
+            row->AddChild(segBox);
 
             if (mode == "size")
             {
@@ -505,7 +536,7 @@ namespace Editor
                 lock->layout->minWidth = 22;
                 lock->layout->maxWidth = 22;
                 auto lockIcon = mmake<VectorSprite>("ui/pipeline/btn_link.svg");
-                lockIcon->color = PipelineControls::textColor;
+                lockIcon->color = PipelineControls::TextColor();
                 lock->AddLayer("icon", lockIcon, Layout::Based(BaseCorner::Center, Vec2F(14, 14)));
                 lock->onToggleByUser = [weakThis](bool)
                 {
@@ -542,10 +573,16 @@ namespace Editor
 
             mInfo = MakeLabel("", true);
             mInfo->name = "upscale info";
+            StyleLabel(mInfo, smallFont, 400, PipelineTheme::Get().fg3);
             mInfo->horAlign = HorAlign::Right;
             mInfo->horOverflow = Label::HorOverflow::Dots;
             row->AddChild(mInfo);
-            AddRow(row, 22);
+
+            auto block = mmake<Widget>();
+            block->name = "upscale row";
+            *row->layout = WidgetLayout::BothStretch(0, 0, 0, 1);
+            block->AddChild(row);
+            AddRow(block, 1.0f + 26.84f);
         }
 
         // Shows the target of the current input in the fields and the info
@@ -578,6 +615,9 @@ namespace Editor
 
         if (type == "imageExtract")
             return CreateExtractNodeBody(type);
+
+        if (type == "imageToUi")
+            return CreateImageToUiNodeBody(type);
 
         if (type == "removeBackground")
             return mmake<RemoveBgBody>();

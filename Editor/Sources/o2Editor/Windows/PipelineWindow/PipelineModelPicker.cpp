@@ -1,4 +1,5 @@
 #include "o2Editor/stdafx.h"
+#include "o2Editor/Windows/PipelineWindow/PipelineTheme.h"
 #include "PipelineModelPicker.h"
 
 #include "o2/Animation/AnimationClip.h"
@@ -40,14 +41,15 @@ namespace Editor
 
     static Ref<Text> MakeText(const String& text, const Color4& color, HorAlign align, int height = 11)
     {
-        auto drawable = mmake<Text>("stdFont.ttf");
+        auto drawable = mmake<Text>(PipelineTheme::Font(400));
         drawable->text = text;
         drawable->color = color;
         drawable->horAlign = align;
         drawable->verAlign = VerAlign::Middle;
         drawable->wordWrap = false;
         drawable->dotsEngings = true;
-        drawable->height = height;
+        // The callers ask for the old o2 font units; the theme font takes pixels: 11 reads as 12 px
+        drawable->height = PipelineTheme::Size(height + 1.0f);
         return drawable;
     }
 
@@ -62,22 +64,22 @@ namespace Editor
     {
         PushEditorScopeOnStack scope;
 
-        AddLayer("back", mmake<VectorSprite>("ui/UI4_Context_menu.svg"), Layout::BothStretch(-20, -19, -20, -19));
+        AddLayer("back", mmake<PipelineMenuBack>(), Layout::BothStretch(-2, -2, -2, -2));
         SetViewLayout(Layout::BothStretch(0, 0, 0, 0));
         SetClippingLayout(Layout::BothStretch(0, 0, 0, 0));
 
-        mMeasure = mmake<Text>("stdFont.ttf");
+        mMeasure = mmake<Text>(PipelineTheme::Font(400));
 
         mSearchPanel = mmake<Widget>();
         mSearchPanel->name = "search panel";
-        mSearchPanel->AddLayer("icon", mmake<VectorSprite>("ui/UI4_search_regular.svg"), Layout::Based(BaseCorner::Left, Vec2F(20, 20)));
+        mSearchPanel->AddLayer("icon", PipelineControls::MakeMenuSearchIcon(), Layout::Based(BaseCorner::Left, Vec2F(14, 14), Vec2F(3, 0)));
         *mSearchPanel->layout = WidgetLayout::HorStretch(VerAlign::Top, padding, padding, searchHeight, padding);
         AddChild(mSearchPanel);
 
         mSearch = o2UI.CreateEditBox("singleline");
         mSearch->name = "search";
         *mSearch->layout = WidgetLayout::BothStretch(22, 0, 0, 0);
-        mPlaceholder = mSearch->AddLayer("placeholder", MakeText("Search models", PipelineControls::dimTextColor, HorAlign::Left),
+        mPlaceholder = mSearch->AddLayer("placeholder", MakeText("Search models", PipelineControls::DimTextColor(), HorAlign::Left),
                                          Layout::BothStretch(6, 0, 6, 0), 1.0f);
         mSearch->onChanged = [this](const WString& text)
         {
@@ -96,7 +98,7 @@ namespace Editor
 
         mSeparator = mmake<Widget>();
         mSeparator->name = "separator";
-        mSeparator->AddLayer("line", mmake<VectorSprite>("ui/UI4_Separator.svg"), Layout::HorStretch(VerAlign::Middle, 0, 0, 5, 0));
+        mSeparator->AddLayer("line", PipelineControls::MakeMenuLine(), Layout::HorStretch(VerAlign::Middle, 0, 0, 1, 0));
         AddChild(mSeparator);
 
         mList = mmake<ScrollArea>();
@@ -561,7 +563,7 @@ namespace Editor
         for (int i = 0; i < mRows.Count(); i++)
         {
             if (auto select = mRows[i]->FindLayer("select"))
-                select->transparency = i == mHighlight ? 1.0f : 0.0f;
+                select->transparency = i == mHighlight ? (PipelineTheme::Get().dark ? 0.09f : 0.12f) : 0.0f;
         }
     }
 
@@ -601,8 +603,8 @@ namespace Editor
     {
         auto row = mmake<Button>();
         row->name = model.id;
-        row->AddLayer("select", mmake<VectorSprite>("ui/UI4_Context_menu_select.svg"), Layout::BothStretch(-10, -16, -10, -16))->transparency = 0.0f;
-        row->AddLayer("check", mmake<VectorSprite>("ui/UI4_Ckeck.svg"), Layout::Based(BaseCorner::Left, Vec2F(20, 20)))->transparency =
+        row->AddLayer("select", PipelineControls::MakeMenuHover(), Layout::BothStretch(2, 0, 2, 0))->transparency = 0.0f;
+        row->AddLayer("check", PipelineControls::MakeMenuCheck(), Layout::Based(BaseCorner::Left, Vec2F(20, 20)))->transparency =
             model.id == mRequest.current ? 1.0f : 0.0f;
 
         // Fixed columns: the name, the transparency badge, the id; a text too long for its column ends with dots
@@ -612,17 +614,17 @@ namespace Editor
         float alphaWidth = model.alpha ? 16.0f : 0.0f;
         float nameWidth = available - idWidth - alphaWidth - gap;
 
-        row->AddLayer("name", MakeText(model.name, PipelineControls::textColor, HorAlign::Left),
+        row->AddLayer("name", MakeText(model.name, PipelineControls::TextColor(), HorAlign::Left),
                       Layout::Based(BaseCorner::Left, Vec2F(nameWidth, rowHeight), Vec2F(left, 0)));
 
         if (model.alpha)
         {
-            auto badge = MakeText("\xCE\xB1", PipelineControls::accentColor, HorAlign::Middle, 12);
+            auto badge = MakeText("\xCE\xB1", PipelineControls::AccentColor(), HorAlign::Middle, 12);
             badge->dotsEngings = false;
             row->AddLayer("alpha", badge, Layout::Based(BaseCorner::Left, Vec2F(alphaWidth, rowHeight), Vec2F(left + nameWidth, 0)));
         }
 
-        row->AddLayer("id", MakeText(model.id, PipelineControls::dimTextColor, HorAlign::Right, 10),
+        row->AddLayer("id", MakeText(model.id, PipelineControls::DimTextColor(), HorAlign::Right, 10),
                       Layout::Based(BaseCorner::Right, Vec2F(idWidth, rowHeight), Vec2F(-right, 0)));
 
         String id = model.id;
@@ -636,20 +638,20 @@ namespace Editor
         header->name = "group " + group.group.key;
 
         auto hover = mmake<PipelineRoundedRect>();
-        hover->color = PipelineControls::textColor;
+        hover->color = PipelineControls::TextColor();
         hover->radius = 3.0f;
         hover->roundBottom = true;
         header->AddLayer("hover", hover, Layout::BothStretch(0, 0, 0, 0))->transparency = 0.0f;
         header->AddState("hover", AnimationClip::EaseInOut("layer/hover/transparency", 0.0f, 0.1f, 0.1f))->offStateAnimationSpeed = 0.25f;
 
         auto arrow = mmake<PipelineFoldArrow>();
-        arrow->color = PipelineControls::dimTextColor;
+        arrow->color = PipelineControls::DimTextColor();
         arrow->open = group.folded ? 0.0f : 1.0f;
         header->AddLayer("arrow", arrow, Layout::Based(BaseCorner::Left, Vec2F(10, 10), Vec2F(6, 0)));
 
-        header->AddLayer("label", MakeText(group.group.label, PipelineControls::textColor, HorAlign::Left),
+        header->AddLayer("label", MakeText(group.group.label, PipelineControls::TextColor(), HorAlign::Left),
                          Layout::BothStretch(20, 0, 40, 0));
-        header->AddLayer("count", MakeText((String)group.shown.Count(), PipelineControls::dimTextColor, HorAlign::Right, 10),
+        header->AddLayer("count", MakeText((String)group.shown.Count(), PipelineControls::DimTextColor(), HorAlign::Right, 10),
                          Layout::Based(BaseCorner::Right, Vec2F(34, headerHeight), Vec2F(-6, 0)));
 
         // Applied on the next update: the rebuild it causes replaces this header
@@ -668,9 +670,9 @@ namespace Editor
     {
         auto row = mmake<Button>();
         row->name = "custom id";
-        row->AddLayer("select", mmake<VectorSprite>("ui/UI4_Context_menu_select.svg"), Layout::BothStretch(-10, -16, -10, -16))->transparency = 0.0f;
-        row->AddLayer("plus", MakeText("+", PipelineControls::accentColor, HorAlign::Middle, 13), Layout::Based(BaseCorner::Left, Vec2F(20, rowHeight)));
-        row->AddLayer("name", MakeText("Use \"" + id + "\" as model id", PipelineControls::textColor, HorAlign::Left),
+        row->AddLayer("select", PipelineControls::MakeMenuHover(), Layout::BothStretch(2, 0, 2, 0))->transparency = 0.0f;
+        row->AddLayer("plus", MakeText("+", PipelineControls::AccentColor(), HorAlign::Middle, 13), Layout::Based(BaseCorner::Left, Vec2F(20, rowHeight)));
+        row->AddLayer("name", MakeText("Use \"" + id + "\" as model id", PipelineControls::TextColor(), HorAlign::Left),
                       Layout::BothStretch(22, 0, 6, 0));
         row->onClick = [this, id]() { Pick(id); };
         return row;
@@ -684,12 +686,17 @@ namespace Editor
             auto field = mmake<Button>();
             field->name = "model";
             field->layout->minSize = Vec2F(20, 20);
-            field->AddLayer("back", mmake<VectorSprite>("ui/UI4_Editbox_regular.svg"), Layout::BothStretch(-9, -9, -9, -9));
-            field->AddLayer("hover", mmake<VectorSprite>("ui/UI4_Editbox_select.svg"), Layout::BothStretch(-9, -9, -9, -9))->transparency = 0.0f;
-            field->AddLayer("pressed", mmake<VectorSprite>("ui/UI4_Editbox_pressed.svg"), Layout::BothStretch(-9, -9, -9, -9))->transparency = 0.0f;
-            field->AddLayer("arrow", mmake<VectorSprite>("ui/UI4_Down_icn.svg"), Layout(Vec2F(1.0f, 0.5f), Vec2F(1.0f, 0.5f), Vec2F(-20, -10), Vec2F(0, 10)));
-            field->AddLayer("caption", MakeText("", textColor, HorAlign::Left), Layout::BothStretch(6, 0, 20, 0));
-            auto badge = MakeText("\xCE\xB1", accentColor, HorAlign::Middle, 12);
+            // .model-pick: the field look of a select, r 9, the chevron 5 px from the right edge
+            auto& theme = PipelineTheme::Get();
+            AddFillLayer(*field, "back", theme.field, fieldRadius, Layout::BothStretch(), -2.0f);
+            AddBorderLayer(*field, "border", theme.line, fieldRadius, 1.0f, Layout::BothStretch(), -1.5f);
+            AddBorderLayer(*field, "hover", theme.accent, fieldRadius, 1.0f, Layout::BothStretch(), -1.0f)->transparency = 0.0f;
+            AddBorderLayer(*field, "pressed", theme.accent, fieldRadius, 1.0f, Layout::BothStretch(), -0.9f)->transparency = 0.0f;
+            auto chevron = mmake<VectorSprite>("ui/pipeline/chevron_down.svg");
+            chevron->color = theme.fgDim;
+            field->AddLayer("arrow", chevron, Layout(Vec2F(1.0f, 0.5f), Vec2F(1.0f, 0.5f), Vec2F(-15, -5), Vec2F(-5, 5)));
+            field->AddLayer("caption", MakeText("", TextColor(), HorAlign::Left), Layout::BothStretch(6, 0, 20, 0));
+            auto badge = MakeText("\xCE\xB1", AccentColor(), HorAlign::Middle, 12);
             badge->dotsEngings = false;
             field->AddLayer("alpha", badge, Layout(Vec2F(1.0f, 0.5f), Vec2F(1.0f, 0.5f), Vec2F(-34, -10), Vec2F(-20, 10)))->transparency = 0.0f;
 

@@ -79,6 +79,18 @@ namespace Editor
                         results[node->id + "#" + port.id] = { node->id, port.id, "part", PipelineExecutor::GetPortPreviewPath(id, node->id, port.id, "png") };
                 }
 
+                // A dynamic outputs node keeps every output but the first as a part, the text one as .txt
+                if (schema && schema->dynamicOutputs)
+                {
+                    for (int i = 1; i < node->outputs.Count(); i++)
+                    {
+                        auto& port = node->outputs[i];
+                        String ext = port.portType == PipelinePortType::Text ? "txt" : "png";
+                        results[node->id + "#" + port.id] = { node->id, port.id, "part", PipelineExecutor::GetPortPreviewPath(id, node->id, port.id, ext) };
+                    }
+                    continue;
+                }
+
                 // Each part decides by its own effective settings whether it has a raw render
                 Vector<String> rawPorts;
                 if (multi)
@@ -111,6 +123,39 @@ namespace Editor
             return results;
         }
 
+        // The outputs of a dynamic outputs node as they are here (main preview and one file per other output) become the bundle
+        // a local run of it would have stored, so the editor shows the run and can export it without asking the models again
+        void SeedBundle(const String& id, const PipelineNode& node, const String& sig, bool replace)
+        {
+            Vector<Pair<String, PipelineValue>> existing;
+            if (!replace && PipelineExecutor::LoadBundle(id, sig, existing))
+                return;
+
+            if (node.outputs.IsEmpty())
+                return;
+
+            String main = ExistingMainPreview(id, node.id);
+            if (main.IsEmpty())
+                return;
+
+            Vector<Pair<String, PipelineValue>> values;
+            auto& first = node.outputs[0];
+            values.Add({ first.name, PipelineExecutor::LoadPreview(id, node) });
+            for (int i = 1; i < node.outputs.Count(); i++)
+            {
+                auto& port = node.outputs[i];
+                PipelineValue value = PipelineExecutor::LoadPortPreview(id, node.id, port.id, port.portType);
+                if (!value.IsValid())
+                    return;
+                values.Add({ port.name, value });
+            }
+
+            if (!values[0].second.IsValid())
+                return;
+
+            PipelineExecutor::SaveBundle(id, sig, values);
+        }
+
         // A local run then reuses the downloaded generation instead of asking the model again. A node generated
         // again keeps its signature, so with replace a different stored generation gives way to the downloaded one
         void SeedContent(const String& id, const PipelineGraph& graph, const PipelineNode& node,
@@ -119,8 +164,15 @@ namespace Editor
             if (PipelineNodeRegistry::IsFinishType(node.nodeType))
                 return;
 
-            // A chroma render is cached raw, before the cut the preview shows: it comes as its own ".raw" result
             auto schema = PipelineNodeRegistry::GetSchema(node.nodeType);
+            String nodeSig;
+            if (schema && schema->dynamicOutputs && sigs.TryGetValue(node.id, nodeSig))
+            {
+                SeedBundle(id, node, nodeSig, replace);
+                return;
+            }
+
+            // A chroma render is cached raw, before the cut the preview shows: it comes as its own ".raw" result
             bool perPort = schema && schema->perPortRun && !node.outputs.IsEmpty();
             if (!perPort && (node.outputs.Count() != 1 || PipelineTransparency::UsesChromaPostStep(node)))
                 return;

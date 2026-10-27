@@ -23,8 +23,9 @@ namespace Editor
         v.mimeType = "image/png";
         if (bitmap)
         {
-            v.bitmap = EnsureRgba(bitmap);
-            v.data = EncodeBitmapPng(*v.bitmap);
+            v.decoded = mmake<PipelineDecodedImage>();
+            v.decoded->bitmap = EnsureRgba(bitmap);
+            v.data = EncodeBitmapPng(*v.decoded->bitmap);
             v.valid = !v.data.IsEmpty();
         }
         return v;
@@ -55,10 +56,20 @@ namespace Editor
         if (type != PipelinePortType::Image || !valid)
             return nullptr;
 
-        if (!bitmap)
-            bitmap = DecodeImageBytes(data);
+        ShareDecoded();
+        if (!decoded->bitmap && !decoded->failed)
+        {
+            decoded->bitmap = DecodeImageBytes(data);
+            decoded->failed = !decoded->bitmap;
+        }
 
-        return bitmap;
+        return decoded->bitmap;
+    }
+
+    void PipelineValue::ShareDecoded() const
+    {
+        if (!decoded && type == PipelinePortType::Image && valid)
+            decoded = mmake<PipelineDecodedImage>();
     }
 
     String PipelineValue::GetPngBytes() const

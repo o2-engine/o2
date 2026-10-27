@@ -75,12 +75,15 @@ namespace Editor
         Ref<Button>         mSyncButton;       // Runs a pass now
         Ref<Toggle>         mSideView;         // Image nodes show the input beside the result
         Ref<Toggle>         mCompareView;      // Image nodes show input and result split by a divider
+        Ref<Toggle>         mDarkTheme;        // The pipeline canvas in AssetsLine's dark colours
+        Ref<Toggle>         mLightTheme;       // The pipeline canvas in the o2 editor's light colours
         Ref<EditBox>        mGeminiEdit;       // Gemini API key
         Ref<EditBox>        mOpenAiEdit;       // OpenAI API key
         Ref<EditBox>        mOpenRouterEdit;   // OpenRouter API key
         Ref<EditBox>        mElevenEdit;       // ElevenLabs API key
         Ref<EditBox>        mKlingAccessEdit;  // Kling API key or access key
         Ref<EditBox>        mKlingSecretEdit;  // Kling secret key of a legacy key pair
+        Ref<EditBox>        mPythonEdit;       // Python 3 of AI image to UI, empty to search
 
         String mShownStatus; // State shown last, to refresh only on change
 

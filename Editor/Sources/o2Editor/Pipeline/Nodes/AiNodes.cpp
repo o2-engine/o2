@@ -1,4 +1,5 @@
 #include "o2Editor/stdafx.h"
+#include "o2Editor/Pipeline/Nodes/ImageToUiNode.h"
 #include "o2Editor/Pipeline/Nodes/PipelineNodesCommon.h"
 #include "o2Editor/Pipeline/PipelineEditRegion.h"
 #include "o2Editor/Pipeline/PipelineRegions.h"
@@ -712,5 +713,6 @@ namespace Editor
         PipelineNodeRegistry::Register(mmake<ImageExtractNode>());
         PipelineNodeRegistry::Register(mmake<AiRemoveBgNode>());
         PipelineNodeRegistry::Register(mmake<AiUpscaleNode>());
+        RegisterImageToUiNode();
     }
 }

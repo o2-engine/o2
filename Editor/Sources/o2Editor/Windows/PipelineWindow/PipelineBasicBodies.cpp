@@ -38,6 +38,8 @@
 #include "o2Editor/Windows/PipelineWindow/PipelineMediaViews.h"
 #include "o2Editor/Windows/PipelineWindow/PipelineNodeWidget.h"
 #include "o2Editor/Windows/PipelineWindow/PipelinePaintEditor.h"
+#include "o2Editor/Windows/PipelineWindow/PipelineTheme.h"
+#include "o2/Assets/Types/FontAsset.h"
 
 namespace Editor
 {
@@ -52,6 +54,11 @@ namespace Editor
         "qwen/qwen3.7-plus"
     };
 
+    const Vector<String>& PipelineTextModelPresets()
+    {
+        return textModelPresets;
+    }
+
     static const Vector<String> videoModelPresets = {
         "veo-3.1-fast-generate-preview", "veo-3.1-generate-preview", "veo-3.0-fast-generate-001", "veo-3.0-generate-001",
         "veo-2.0-generate-001", "kling-v2-1-master", "kling-v2-1", "kling-v2-master", "kling-v1-6"
@@ -65,78 +72,59 @@ namespace Editor
 
         void Build() override
         {
+            auto& theme = PipelineTheme::Get();
             mExtension = kind == PipelinePortType::Image ? "png" : kind == PipelinePortType::Text ? "txt" : kind == PipelinePortType::Video ? "mp4" : "mp3";
             String assetPath = PipelineNodeRegistry::GetFinishAssetPath(*mNode);
             WeakRef<FinishBody> weakThis(this);
 
-            // The result comes first: a finish node shows what reaches it before anything runs
+            // AssetsLine's finish card: result, the file field, the accent button, and for images the resize row with Crop;
+            // o2 writes into the project, so the field is the path inside Assets and the button saves there
             if (kind == PipelinePortType::Image)
-                AddCropSection("nothing connected - link a source to save it", false, "Result");
+            {
+                AddFlexible(MakeCropEditor("nothing connected - link a source to save it"), resultHeight);
+                MarkContent(mCropEditor);
+            }
             else if (kind == PipelinePortType::Text)
-                AddResultText("nothing connected - link a source to save it", 100);
+                AddResultText("nothing connected - link a source to save it");
             else if (kind == PipelinePortType::Audio)
                 AddResultAudio("nothing connected - link a source to save it");
             else
                 AddResultVideo("nothing connected - link a source to save it");
 
-            auto folderRow = MakeRow("Folder", nullptr, 56);
-            mFolderEdit = MakeEditBox(FolderOf(assetPath), false, "folder inside Assets");
-            mFolderEdit->onChangeCompleted = [weakThis](const WString&) { if (auto self = weakThis.Lock()) self->OnPathEdited(); };
-            folderRow->AddChild(mFolderEdit);
-            auto browse = MakeButton("...");
+            auto pathBox = mmake<Widget>();
+            pathBox->name = "path";
+            mPathEdit = MakeEditBox(PathOf(assetPath), false, "output");
+            mPathEdit->name = "path field";
+            *mPathEdit->layout = WidgetLayout::BothStretch(0, 0, 0, 0);
+            mPathEdit->onChangeCompleted = [weakThis](const WString&) { if (auto self = weakThis.Lock()) self->OnPathEdited(); };
+            pathBox->AddChild(mPathEdit);
+            auto ext = MakeLabel("." + mExtension, true);
+            ext->name = "extension";
+            ext->horAlign = HorAlign::Right;
+            StyleLabel(ext, bodyFont, 400, theme.fg3);
+            *ext->layout = WidgetLayout(Vec2F(1, 0), Vec2F(1, 1), Vec2F(-90, 0), Vec2F(-30, 0));
+            pathBox->AddChild(ext);
+            auto browse = MakeIconButton("ui/pipeline/btn_import.svg", theme.fgDim, Color4(0, 0, 0, 0));
             browse->name = "browse";
-            browse->layout->minWidth = 28;
-            browse->layout->maxWidth = 28;
+            *browse->layout = WidgetLayout(Vec2F(1, 0.5f), Vec2F(1, 0.5f), Vec2F(-26, -10), Vec2F(-6, 10));
             browse->onClick = [weakThis]() { if (auto self = weakThis.Lock()) self->ShowFolderMenu(); };
-            folderRow->AddChild(browse);
-            AddRow(folderRow, 22);
-
-            auto nameRow = MakeRow("Name", nullptr, 56);
-            mNameEdit = MakeEditBox(NameOf(assetPath), false, "file name");
-            mNameEdit->onChangeCompleted = [weakThis](const WString&) { if (auto self = weakThis.Lock()) self->OnPathEdited(); };
-            nameRow->AddChild(mNameEdit);
-            auto extLabel = MakeLabel("." + mExtension, true);
-            extLabel->horOverflow = Label::HorOverflow::None;
-            extLabel->layout->minWidth = 34;
-            extLabel->layout->maxWidth = 34;
-            nameRow->AddChild(extLabel);
-            AddRow(nameRow, 22);
-
-            auto pathRow = mmake<HorizontalLayout>();
-            pathRow->spacing = 4;
-            pathRow->expandWidth = true;
-            pathRow->expandHeight = true;
-            pathRow->baseCorner = BaseCorner::Left;
-            mPathLabel = MakeLabel("", false);
-            mPathLabel->SetColor(dimTextColor);
-            mPathLabel->horOverflow = Label::HorOverflow::Dots;
-            pathRow->AddChild(mPathLabel);
-            mShowButton = MakeIconButton("ui/pipeline/btn_locate.svg", accentColor, Color4(0, 0, 0, 0));
-            mShowButton->name = "show in assets";
-            mShowButton->layout->minWidth = 22;
-            mShowButton->layout->maxWidth = 22;
-            mShowButton->onClick = [weakThis]() { if (auto self = weakThis.Lock()) self->ShowInAssets(); };
-            pathRow->AddChild(mShowButton);
-            AddRow(pathRow, 20);
-
-            mStatusLabel = MakeLabel("", true);
-            mStatusLabel->horOverflow = Label::HorOverflow::Dots;
-            AddRow(mStatusLabel, 18);
+            pathBox->AddChild(browse);
+            AddRow(pathBox, FieldHeight("", "output"));
 
             auto row = mmake<HorizontalLayout>();
             row->spacing = 6; row->expandWidth = true; row->expandHeight = true; row->baseCorner = BaseCorner::Left;
-            auto save = MakeButton("Save to Assets");
-            save->name = "save";
-            save->onClick = [weakThis]()
+            mSaveButton = MakePrimaryButton("Save to Assets");
+            mSaveButton->name = "save";
+            mSaveButton->onClick = [weakThis]()
             {
                 if (auto self = weakThis.Lock())
                     if (auto editor = self->mEditor.Lock()) editor->RunNode(self->mNode->id, false);
             };
-            row->AddChild(save);
+            row->AddChild(mSaveButton);
             if (kind == PipelinePortType::Text)
             {
                 auto copy = MakeButton("Copy");
-                copy->layout->minWidth = 60;
+                copy->name = "copy";
                 copy->onClick = [weakThis]()
                 {
                     if (auto self = weakThis.Lock())
@@ -147,26 +135,48 @@ namespace Editor
                 };
                 row->AddChild(copy);
             }
-            AddRow(row, 24);
+            mShowButton = MakeIconButton("ui/pipeline/btn_locate.svg", theme.fgDim, Color4(0, 0, 0, 0));
+            mShowButton->name = "show in assets";
+            AddBorderLayer(*mShowButton, "border", theme.line, fieldRadius, 1.0f, Layout::BothStretch(), -1.0f);
+            mShowButton->layout->minWidth = actionsHeight;
+            mShowButton->layout->maxWidth = actionsHeight;
+            mShowButton->onClick = [weakThis]() { if (auto self = weakThis.Lock()) self->ShowInAssets(); };
+            row->AddChild(mShowButton);
+            AddRow(row, actionsHeight);
 
             if (kind == PipelinePortType::Image)
             {
+                // .resize-row: the Resize switch, W x H in mono fields with the aspect lock between, Crop at the right
                 auto resizeRow = mmake<HorizontalLayout>();
                 resizeRow->spacing = 6; resizeRow->expandWidth = true; resizeRow->expandHeight = true; resizeRow->baseCorner = BaseCorner::Left;
                 mResizeToggle = MakeCheckbox("Resize", GetBool("resize", false));
                 mResizeToggle->name = "resize";
-                mResizeToggle->layout->minWidth = 80; mResizeToggle->layout->maxWidth = 80;
+                float toggleWidth = switchWidth + rowGap + Math::Ceil(TextWidth("Resize", bodyFont));
+                mResizeToggle->layout->minWidth = toggleWidth; mResizeToggle->layout->maxWidth = toggleWidth;
                 mResizeToggle->onToggleByUser = [weakThis](bool value) { if (auto self = weakThis.Lock()) self->OnResizeToggled(value); };
                 resizeRow->AddChild(mResizeToggle);
 
-                mResizeW = MakeEditBox("", false, "width");
-                mResizeW->name = "resize width";
-                mResizeW->SetFilterInteger();
+                auto sizeField = [&](const String& name)
+                {
+                    auto edit = MakeEditBox("", false, "");
+                    edit->name = name;
+                    edit->SetFilterInteger();
+                    if (auto text = edit->GetTextDrawable())
+                    {
+                        text->SetFontAsset(AssetRef<FontAsset>(PipelineTheme::MonoFont()));
+                        text->height = PipelineTheme::Size(monoFont);
+                    }
+                    edit->SetViewLayout(Layout::BothStretch(6, 0, 6, 0));
+                    edit->layout->minWidth = 32.55f; edit->layout->maxWidth = 32.55f;
+                    return edit;
+                };
+                mResizeW = sizeField("resize width");
                 mResizeW->onChangeCompleted = [weakThis](const WString& t) { if (auto self = weakThis.Lock()) self->OnResizeEdited(true, atoi(((String)t).Data())); };
                 resizeRow->AddChild(mResizeW);
 
-                mLockButton = MakeIconButton("ui/pipeline/btn_link.svg", accentColor, Color4(0, 0, 0, 0));
+                mLockButton = MakeIconButton("ui/pipeline/btn_link.svg", theme.accent, Color4(0, 0, 0, 0));
                 mLockButton->name = "lock aspect";
+                AddBorderLayer(*mLockButton, "border", PipelineTheme::Alpha(theme.accent, 0.5f), 6.0f, 1.0f, Layout::BothStretch(), -1.0f);
                 mLockButton->layout->minWidth = 22; mLockButton->layout->maxWidth = 22;
                 mLockButton->onClick = [weakThis]()
                 {
@@ -178,12 +188,16 @@ namespace Editor
                 };
                 resizeRow->AddChild(mLockButton);
 
-                mResizeH = MakeEditBox("", false, "height");
-                mResizeH->name = "resize height";
-                mResizeH->SetFilterInteger();
+                mResizeH = sizeField("resize height");
                 mResizeH->onChangeCompleted = [weakThis](const WString& t) { if (auto self = weakThis.Lock()) self->OnResizeEdited(false, atoi(((String)t).Data())); };
                 resizeRow->AddChild(mResizeH);
-                AddRow(resizeRow, 22);
+
+                resizeRow->AddChild(mmake<Widget>());
+                float width = 0.0f;
+                auto crop = MakePictureSwitches(false, width);
+                crop->layout->minWidth = width; crop->layout->maxWidth = width;
+                resizeRow->AddChild(crop);
+                AddRow(resizeRow, smallButtonHeight);
             }
 
             OnOutputChanged();
@@ -208,8 +222,7 @@ namespace Editor
         void OnConfigChanged() override
         {
             String assetPath = PipelineNodeRegistry::GetFinishAssetPath(*mNode);
-            if (mFolderEdit) mFolderEdit->SetText(FolderOf(assetPath));
-            if (mNameEdit) mNameEdit->SetText(NameOf(assetPath));
+            if (mPathEdit) mPathEdit->SetText(PathOf(assetPath));
             if (mResizeToggle) mResizeToggle->SetValue(GetBool("resize", false));
             UpdateAssetInfo();
         }
@@ -300,12 +313,16 @@ namespace Editor
             mLockButton->transparency = !on ? 0.3f : lock ? 1.0f : 0.5f;
         }
 
-        String       mExtension;   // File extension of the result kind
-        Ref<EditBox> mFolderEdit;  // Folder inside Assets
-        Ref<EditBox> mNameEdit;    // File name without the extension
-        Ref<Label>   mPathLabel;   // Full asset path the node writes to
-        Ref<Button>  mShowButton;  // Reveals the saved asset in the assets window
-        Ref<Label>   mStatusLabel; // Saved state and the size of the result
+        String       mExtension;  // File extension of the result kind
+        Ref<EditBox> mPathEdit;   // Folder and name inside Assets, without the extension
+        Ref<Button>  mSaveButton; // Saves into the project; its caption tells whether the file is there and its size
+        Ref<Button>  mShowButton; // Reveals the saved asset in the assets window
+
+        static String PathOf(const String& assetPath)
+        {
+            String folder = FolderOf(assetPath), name = NameOf(assetPath);
+            return folder.IsEmpty() ? name : folder + "/" + name;
+        }
 
         static String FolderOf(const String& assetPath)
         {
@@ -339,29 +356,28 @@ namespace Editor
         // Full path of the written file relative to the assets folder
         String GetFullAssetPath() const
         {
-            String folder = Clean((String)mFolderEdit->GetText());
-            String name = Clean((String)mNameEdit->GetText());
-            if (name.IsEmpty())
-                name = "output";
-            return (folder.IsEmpty() ? name : folder + "/" + name) + "." + mExtension;
+            String path = Clean((String)mPathEdit->GetText());
+            if (path.EndsWith("." + mExtension))
+                path = path.SubStr(0, path.Length() - mExtension.Length() - 1);
+            if (path.IsEmpty() || path.EndsWith("/"))
+                path += "output";
+            return path + "." + mExtension;
         }
 
         void OnPathEdited()
         {
-            String folder = Clean((String)mFolderEdit->GetText());
-            String name = Clean((String)mNameEdit->GetText());
-            SetString("assetPath", folder.IsEmpty() ? name : folder + "/" + name, true);
+            String full = GetFullAssetPath();
+            SetString("assetPath", full.SubStr(0, full.Length() - mExtension.Length() - 1), true);
             UpdateAssetInfo();
         }
 
         void UpdateAssetInfo()
         {
-            if (!mPathLabel)
+            if (!mPathEdit)
                 return;
 
             String full = GetFullAssetPath();
             bool exists = o2FileSystem.IsFileExist(o2Assets.GetAssetsPath() + full);
-            mPathLabel->text = "Assets/" + full;
             mShowButton->interactable = exists;
             mShowButton->transparency = exists ? 1.0f : 0.4f;
 
@@ -390,8 +406,8 @@ namespace Editor
 
             UpdateResizeFields();
 
-            String state = exists ? "Saved" : "Not saved yet";
-            mStatusLabel->text = size.IsEmpty() ? state : state + " - " + size;
+            String state = exists ? "Saved" : "Save to Assets";
+            mSaveButton->caption = exists && !size.IsEmpty() ? state + " · " + size : state;
         }
 
         void ShowFolderMenu()
@@ -401,7 +417,8 @@ namespace Editor
             {
                 if (auto self = weakThis.Lock())
                 {
-                    self->mFolderEdit->SetText(folder);
+                    String name = NameOf(self->GetFullAssetPath());
+                    self->mPathEdit->SetText(folder.IsEmpty() ? name : folder + "/" + name);
                     self->OnPathEdited();
                 }
             });
@@ -451,16 +468,12 @@ namespace Editor
 
         void OnOutputChanged() override
         {
-            // The source shows the chosen file even before the first run
-            Ref<Bitmap> bitmap = GetOutputBitmap();
-            if (!bitmap)
-            {
-                String path = !GetString("assetPath").IsEmpty() ? o2Assets.GetAssetsPath() + GetString("assetPath") : PipelineUtils::GetUploadPath(GetString("uploadId"));
-                if (!path.IsEmpty() && o2FileSystem.IsFileExist(path))
-                    bitmap = DecodeImageBytes(PipelineUtils::ReadFileBytes(path));
-            }
+            // The source shows the chosen file even before the first run: the editor gives it its value from the config
             if (mImageView)
-                mImageView->SetBitmap(bitmap);
+            {
+                mImageView->SetBitmap(GetOutputBitmap());
+                mImageView->SetLoading(PicturePending(GetOutput()));
+            }
         }
     };
 
@@ -705,7 +718,7 @@ namespace Editor
             String provider = GetString("provider", "gemini");
             AddResultAudio("no result - press play to compute the branch");
             if (provider != "elevenlabs")
-                AddTextRow("Delivery", "styleInstructions", "Say cheerfully / whisper / shout");
+                AddPrimaryField("styleInstructions", "Delivery: say cheerfully / whisper / shout");
 
             if (BeginParams({ "Provider", "Model", "Voice" }))
             {
@@ -753,6 +766,7 @@ namespace Editor
         void Build() override
         {
             AddResultAudio("no audio - connect the input");
+            BeginFx();
             AddSegmented("format", { { "keep", "keep" }, { "wav", "wav" }, { "ogg", "ogg" }, { "mp3", "mp3" } }, "keep");
             AddSegmented("channels", { { "keep", "keep" }, { "mono", "mono" }, { "stereo", "stereo" } }, "keep");
             AddCheckbox("Trim silence", "trimSilence", false);
@@ -766,6 +780,7 @@ namespace Editor
             if (GetBool("seamlessLoop", false))
                 AddSlider("Fade", "crossfadeMs", 20, 5000, 10, 250, " ms");
             AddSelectRow("Rate", "sampleRate", { "keep", "48000", "44100", "22050" }, "keep");
+            EndFx();
             OnOutputChanged();
         }
     };

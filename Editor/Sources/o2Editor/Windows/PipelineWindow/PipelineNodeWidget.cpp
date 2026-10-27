@@ -3,6 +3,7 @@
 
 #include "o2/Render/Render.h"
 #include "o2/Render/Sprite.h"
+#include "o2/Assets/Types/FontAsset.h"
 #include "o2/Render/Text.h"
 #include "o2/Scene/UI/UIManager.h"
 #include "o2/Scene/UI/WidgetLayer.h"
@@ -11,26 +12,31 @@
 #include "o2/Scene/UI/Widgets/EditBox.h"
 #include "o2/Scene/UI/Widgets/Label.h"
 #include "o2/Utils/Editor/EditorScope.h"
+#include "o2/Utils/System/Time/Time.h"
 #include "o2Editor/Windows/PipelineWindow/PipelineControls.h"
+#include "o2Editor/Windows/PipelineWindow/PipelineDraw.h"
+#include "o2Editor/Windows/PipelineWindow/PipelineTheme.h"
 #include "o2Editor/Windows/PipelineWindow/PipelineEditor.h"
 #include "o2Editor/Windows/PipelineWindow/PipelineNodeBody.h"
 #include "o2/Render/VectorSprite.h"
 
 namespace Editor
 {
-    const float PipelineNodeWidget::headerHeight = 28.0f;
+    // AssetsLine card metrics (frontend constants.ts, NodeView.tsx)
+    const float PipelineNodeWidget::headerHeight = 36.0f;
     const float PipelineNodeWidget::padTop = 8.0f;
-    const float PipelineNodeWidget::portRow = 22.0f;
-    const float PipelineNodeWidget::padBottom = 10.0f;
-    const float PipelineNodeWidget::portRadius = 8.0f;
+    const float PipelineNodeWidget::portRow = 20.0f;
+    const float PipelineNodeWidget::padBottom = 11.0f;
+    const float PipelineNodeWidget::portRadius = 6.0f;
     const float PipelineNodeWidget::portHitRadius = 14.0f;
-    const float PipelineNodeWidget::defaultWidth = 260.0f;
-    const float PipelineNodeWidget::minWidth = 180.0f;
+    const float PipelineNodeWidget::defaultWidth = 312.0f;
+    const float PipelineNodeWidget::minWidth = 200.0f;
     const float PipelineNodeWidget::minHeight = 80.0f;
     static const int farUpdateFrames = 3;
-    static const float cornerRadius = 6.0f;
-    static const float outlineWidth = 2.0f;
-    static const float selectionWidth = 2.5f;
+    static const float cornerRadius = 13.0f;
+    static const float runWidth = 40.0f;
+    static const float runHeight = 22.0f;
+    static const float headerInset = 8.0f;
 
     static const Widget& PipelineNodeStyle()
     {
@@ -53,6 +59,13 @@ namespace Editor
     {
         PushEditorScopeOnStack scope;
         mSchema = PipelineNodeRegistry::GetSchema(node->nodeType);
+
+        // The card art is drawn from the theme palette; the style's art layers of older builds go
+        for (auto name : { "shadow", "back", "header", "kindTint", "headerLine" })
+        {
+            if (GetLayer(name))
+                RemoveLayer(String(name));
+        }
 
         BuildHeader();
 
@@ -86,10 +99,14 @@ namespace Editor
 
         BuildResizeHandles(editor);
 
-        // Handles drawn later take the cursor first, so the edges win over the card drag
+        // Handles drawn later take the cursor first, so the edges win over the card drag. Zoomed far out the edges are
+        // a pixel wide: their handles are not drawn, so the cursor does not test eight of them per card every frame
         onDraw = [this]()
         {
             dragHandle->Draw();
+            if (!mDetailed)
+                return;
+
             for (auto& resize : mResizeHandles)
                 resize.handle->Draw();
         };
@@ -133,6 +150,7 @@ namespace Editor
         if (t == "imageEdit") return "ui/pipeline/node_edit.svg";
         if (t == "promptGen") return "ui/pipeline/node_prompt.svg";
         if (t == "aiUpscale") return "ui/pipeline/node_upscale.svg";
+        if (t == "imageToUi") return "ui/pipeline/node_ui.svg";
         if (t == "imageOutline" || t == "imageShadow" || t == "imageGradient" || t == "imageColor") return "ui/pipeline/node_effect.svg";
         return "ui/pipeline/node_ai.svg";
     }
@@ -144,33 +162,45 @@ namespace Editor
 
     void PipelineNodeWidget::BuildHeader()
     {
-        auto icon = mmake<VectorSprite>(IconForType());
-        icon->color = Color4(96, 125, 139, 255);
-        mIconLayer = AddLayer("icon", icon, Layout(Vec2F(0, 1), Vec2F(0, 1), Vec2F(6, -23), Vec2F(24, -5)));
+        auto& theme = PipelineTheme::Get();
 
-        auto title = mmake<Text>("stdFont.ttf");
+        auto icon = mmake<VectorSprite>(IconForType());
+        icon->color = theme.fgDim;
+        mIconLayer = AddLayer("icon", icon, Layout(Vec2F(0, 1), Vec2F(0, 1), Vec2F(11, -25.5f), Vec2F(25, -11.5f)));
+
+        auto title = mmake<Text>(PipelineTheme::Font(600));
         title->text = mSchema ? mSchema->label : mNode->nodeType;
+        title->height = PipelineTheme::Size(12.0f);
         title->horAlign = HorAlign::Left;
         title->verAlign = VerAlign::Middle;
         title->dotsEngings = true;
-        title->color = Color4(96, 125, 139, 255);
-        mTitleLayer = AddLayer("title", title, Layout(Vec2F(0, 1), Vec2F(1, 1), Vec2F(28, -headerHeight), Vec2F(-80, 0)));
+        title->color = theme.fg;
+        mTitleLayer = AddLayer("title", title, Layout(Vec2F(0, 1), Vec2F(1, 1), Vec2F(32, -headerHeight), Vec2F(-headerInset, 0)));
 
-        // Category tint of the header: sources bluish, finish nodes greenish
-        if (auto tint = GetLayer("kindTint"))
-        {
-            if (auto drawable = tint->GetDrawable())
-            {
-                if (mNode->nodeType.StartsWith("source")) { drawable->color = Color4(33, 150, 243, 255); tint->transparency = 0.12f; }
-                else if (mNode->nodeType.StartsWith("finish")) { drawable->color = Color4(76, 175, 80, 255); tint->transparency = 0.14f; }
-                else tint->transparency = 0.0f;
-            }
-            tint->layout = Layout::HorStretch(VerAlign::Top, 0, 0, headerHeight + 4, -4);
-        }
-
-        mPlayButton = o2UI.CreateWidget<Button>("pipeline icon");
+        // ▶ pill: accent fill and ink glyph; while running an outlined stop
+        mPlayButton = mmake<Button>();
         mPlayButton->name = "play";
-        *mPlayButton->layout = WidgetLayout(Vec2F(1, 1), Vec2F(1, 1), Vec2F(-36, -24), Vec2F(-4, -4));
+        *mPlayButton->layout = WidgetLayout(Vec2F(1, 1), Vec2F(1, 1), Vec2F(-headerInset - runWidth, -7.5f - runHeight), Vec2F(-headerInset, -7.5f));
+        auto pill = [&](const Color4& color)
+        {
+            auto rect = mmake<PipelineRoundedRect>();
+            rect->radius = runHeight * 0.5f;
+            rect->roundBottom = true;
+            rect->color = color;
+            return rect;
+        };
+        mPlayButton->AddLayer("back", pill(theme.accent), Layout::BothStretch());
+        mPlayButton->AddLayer("hover", pill(theme.accentHover), Layout::BothStretch())->transparency = 0.0f;
+        mPlayButton->AddLayer("stopHover", pill(theme.accentSoft), Layout::BothStretch())->transparency = 0.0f;
+        auto stopFrame = mmake<PipelineRoundedFrame>();
+        stopFrame->radius = runHeight * 0.5f;
+        stopFrame->width = 1.5f;
+        stopFrame->color = theme.accent;
+        mPlayButton->AddLayer("stopFrame", stopFrame, Layout::BothStretch(-0.75f, -0.75f, -0.75f, -0.75f));
+        auto glyph = mmake<VectorSprite>("ui/pipeline/al_play.svg");
+        glyph->color = theme.accentInk;
+        mPlayButton->AddLayer("icon", glyph, Layout(Vec2F(0.5f, 0.5f), Vec2F(0.5f, 0.5f), Vec2F(-4.5f, -5.5f), Vec2F(6.5f, 5.5f)));
+        mPlayButton->AddState("hover", AnimationClip::EaseInOut("layer/hover/transparency", 0.0f, 1.0f, 0.12f))->offStateAnimationSpeed = 0.5f;
         mPlayButton->onClick = THIS_FUNC(OnPlayPressed);
         AddChild(mPlayButton);
 
@@ -178,23 +208,42 @@ namespace Editor
         auto dot = mmake<PipelineRoundedRect>();
         dot->radius = 3.5f;
         dot->roundBottom = true;
-        mDotLayer = AddLayer("dot", dot, Layout(Vec2F(1, 1), Vec2F(1, 1), Vec2F(-48, -17.5f), Vec2F(-41, -10.5f)), 1.0f);
+        mDotLayer = AddLayer("dot", dot, Layout(Vec2F(1, 1), Vec2F(1, 1), Vec2F(-62.0f, -22.0f), Vec2F(-55.0f, -15.0f)), 1.0f);
+        auto ring = mmake<PipelineRoundedFrame>();
+        ring->radius = 4.25f;
+        ring->width = 1.5f;
+        mDotRingLayer = AddLayer("dotRing", ring, Layout(Vec2F(1, 1), Vec2F(1, 1), Vec2F(-62.75f, -22.75f), Vec2F(-54.25f, -14.25f)), 1.0f);
 
-        mErrorButton = o2UI.CreateWidget<Button>("pipeline icon");
+        mErrorButton = mmake<Button>();
         mErrorButton->name = "error";
-        *mErrorButton->layout = WidgetLayout(Vec2F(1, 1), Vec2F(1, 1), Vec2F(-60, -24), Vec2F(-40, -4));
-        if (auto ic = mErrorButton->SetLayerImage("icon", "ui/pipeline/btn_error.svg")) ic->color = Color4(229, 83, 61, 255);
+        *mErrorButton->layout = WidgetLayout(Vec2F(1, 1), Vec2F(1, 1), Vec2F(-76, -28), Vec2F(-56, -8));
+        auto errorBack = mmake<PipelineRoundedRect>();
+        errorBack->radius = 10.0f;
+        errorBack->roundBottom = true;
+        errorBack->color = theme.red;
+        mErrorButton->AddLayer("back", errorBack, Layout::BothStretch());
+        auto errorIcon = mmake<VectorSprite>("ui/pipeline/btn_error.svg");
+        errorIcon->color = Color4::White();
+        mErrorButton->AddLayer("icon", errorIcon, Layout::BothStretch(3, 3, 3, 3));
         mErrorButton->onClick = [this]() { if (auto e = mEditor.Lock()) e->ShowNodeError(Ref(this)); };
         mErrorButton->enabled = false;
         AddChild(mErrorButton);
 
-        mRetryLabel = o2UI.CreateLabel("");
+        mRetryLabel = mmake<Label>();
         mRetryLabel->name = "retry";
-        *mRetryLabel->layout = WidgetLayout(Vec2F(1, 1), Vec2F(1, 1), Vec2F(-100, -24), Vec2F(-62, -4));
-        mRetryLabel->horAlign = HorAlign::Middle;
-        auto retryBack = mmake<VectorSprite>("ui/UI4_button_regular.svg");
-        retryBack->color = Color4(255, 213, 79, 255);
-        mRetryLabel->AddLayer("back", retryBack, Layout::BothStretch(-9, -9, -10, -10), -1.0f);
+        mRetryLabel->SetFontAsset(AssetRef<FontAsset>(PipelineTheme::Font(600)));
+        mRetryLabel->height = PipelineTheme::Size(10.0f);
+        mRetryLabel->color = Color4(26, 26, 26, 255);
+        mRetryLabel->horAlign = HorAlign::Right;
+        mRetryLabel->verAlign = VerAlign::Middle;
+        auto retryBack = mmake<PipelineRoundedRect>();
+        retryBack->radius = 3.0f;
+        retryBack->roundBottom = true;
+        retryBack->color = theme.yellow;
+        mRetryLabel->AddLayer("back", retryBack, Layout::BothStretch(), -1.0f);
+        auto retryIcon = mmake<VectorSprite>("ui/pipeline/btn_loop.svg");
+        retryIcon->color = Color4(0, 0, 0, 255);
+        mRetryLabel->AddLayer("icon", retryIcon, Layout(Vec2F(0, 0.5f), Vec2F(0, 0.5f), Vec2F(4, -6), Vec2F(16, 6)));
         mRetryLabel->enabled = false;
         AddChild(mRetryLabel);
 
@@ -300,6 +349,7 @@ namespace Editor
     void PipelineNodeWidget::Rebuild()
     {
         PushEditorScopeOnStack scope;
+        mWarm = false;
         mFarUpdateFrames = farUpdateFrames;
         mSchema = PipelineNodeRegistry::GetSchema(mNode->nodeType);
         BuildPorts();
@@ -311,6 +361,8 @@ namespace Editor
 
     void PipelineNodeWidget::UpdateHeaderButtons()
     {
+        auto& theme = PipelineTheme::Get();
+
         // A finish node writes what reaches it: it is run from its own Save button or from Run all, not from a header play
         bool runnable = mSchema && mSchema->category != PipelineNodeCategory::Source &&
             !PipelineNodeRegistry::IsFinishType(mNode->nodeType) && (!mSchema->inputs.IsEmpty() || !mSchema->outputs.IsEmpty());
@@ -318,31 +370,69 @@ namespace Editor
         mPlayButton->enabled = runnable && !selfApplying;
 
         bool busy = mRuntime.state == "running" || mRuntime.state == "queued";
-        if (auto icon = mPlayButton->SetLayerImage("icon", busy ? "ui/pipeline/btn_stop.svg" : "ui/pipeline/btn_play.svg"))
-            icon->color = busy ? Color4(229, 83, 61, 255) : Color4(0, 150, 136, 255);
+        mPlayButton->GetLayer("back")->enabled = !busy;
+        mPlayButton->GetLayer("hover")->enabled = !busy;
+        mPlayButton->GetLayer("stopFrame")->enabled = busy;
+        mPlayButton->GetLayer("stopHover")->enabled = busy;
+        if (auto icon = mPlayButton->SetLayerImage("icon", busy ? "ui/pipeline/al_stop.svg" : "ui/pipeline/al_play.svg"))
+            icon->color = busy ? theme.accent : theme.accentInk;
+        if (auto iconLayer = mPlayButton->GetLayer("icon"))
+            iconLayer->layout = busy ? Layout(Vec2F(0.5f, 0.5f), Vec2F(0.5f, 0.5f), Vec2F(-5, -5), Vec2F(5, 5))
+                                     : Layout(Vec2F(0.5f, 0.5f), Vec2F(0.5f, 0.5f), Vec2F(-4.5f, -5.5f), Vec2F(6.5f, 5.5f));
 
         bool hasError = mRuntime.state == "error" && !mRuntime.error.IsEmpty();
-        mErrorButton->enabled = hasError;
-
         bool retry = mRuntime.retryAttempt > 0 && busy;
+
+        // Header controls right to left, each slot taken only when its control is shown (NodeView.tsx)
+        float cursor = -headerInset;
+        if (mPlayButton->enabled)
+            cursor -= runWidth + 8.0f;
+
+        bool showDot = mPlayButton->enabled && !hasError && !retry;
+        float dotCx = cursor - 2.5f;
+        if (showDot)
+            cursor -= 15.0f;
+
         if (mDotLayer)
         {
-            mDotLayer->enabled = mPlayButton->enabled && !hasError && !retry;
-            if (auto drawable = mDotLayer->GetDrawable())
+            mDotLayer->enabled = false;
+            mDotRingLayer->enabled = false;
+            const String& state = mRuntime.state;
+            bool hollow = state == "queued" || (state != "running" && !mRuntime.fresh && !mRuntime.output.IsValid() && state != "error");
+            Color4 color = state == "running" ? theme.accent
+                : state == "queued" ? theme.accent
+                : state == "error" ? theme.red
+                : mRuntime.fresh ? theme.green
+                : mRuntime.output.IsValid() ? theme.yellow : theme.fg3;
+            if (showDot)
             {
-                const String& state = mRuntime.state;
-                if (state == "running") drawable->color = Color4(0, 150, 136, 255);
-                else if (state == "queued") drawable->color = Color4(0, 150, 136, 120);
-                else if (mRuntime.fresh) drawable->color = Color4(76, 175, 80, 255);
-                else if (mRuntime.output.IsValid()) drawable->color = Color4(255, 179, 0, 255);
-                else drawable->color = Color4(96, 125, 139, 70);
+                auto& layer = hollow ? mDotRingLayer : mDotLayer;
+                layer->enabled = true;
+                layer->GetDrawable()->color = color;
+                float half = hollow ? 4.25f : 3.5f;
+                layer->layout = Layout(Vec2F(1, 1), Vec2F(1, 1), Vec2F(dotCx - half, -18.5f - half), Vec2F(dotCx + half, -18.5f + half));
             }
         }
+
+        mErrorButton->enabled = hasError;
+        float errorX = cursor - 20.0f;
+        if (hasError)
+        {
+            *mErrorButton->layout = WidgetLayout(Vec2F(1, 1), Vec2F(1, 1), Vec2F(errorX, -28), Vec2F(errorX + 20, -8));
+            cursor -= 26.0f;
+        }
+
         mRetryLabel->enabled = retry;
+        float retryX = cursor - 32.0f;
         if (retry)
+        {
             mRetryLabel->text = (String)mRuntime.retryAttempt + "/" + (String)mRuntime.retryMax;
-        float retryX = hasError ? -100.0f : -76.0f;
-        *mRetryLabel->layout = WidgetLayout(Vec2F(1, 1), Vec2F(1, 1), Vec2F(retryX, -24), Vec2F(retryX + 36, -4));
+            *mRetryLabel->layout = WidgetLayout(Vec2F(1, 1), Vec2F(1, 1), Vec2F(retryX, -28), Vec2F(retryX + 32, -8));
+            cursor -= 38.0f;
+        }
+
+        if (mTitleLayer)
+            mTitleLayer->layout = Layout(Vec2F(0, 1), Vec2F(1, 1), Vec2F(32, -headerHeight), Vec2F(cursor - 4.0f, 0));
     }
 
     void PipelineNodeWidget::BuildPorts()
@@ -371,12 +461,13 @@ namespace Editor
 
         auto makeLabel = [&](const PipelinePort& port, bool input)
         {
-            auto text = mmake<Text>("stdFont.ttf");
+            auto text = mmake<Text>(PipelineTheme::Font(400));
             text->text = port.name;
+            text->height = PipelineTheme::Size(11.0f);
             text->horAlign = input ? HorAlign::Left : HorAlign::Right;
             text->verAlign = VerAlign::Middle;
             text->dotsEngings = true;
-            text->color = ColorOfPortType(port.portType);
+            text->color = PipelineTheme::Get().fgDim;
             return AddLayer("portLabel_" + port.id, text, Layout::Based(BaseCorner::LeftTop, Vec2F(100, portRow)), 2.0f);
         };
 
@@ -388,21 +479,37 @@ namespace Editor
             view.circle = makeCircle(port);
             if (port.custom)
             {
-                view.nameEdit = o2UI.CreateEditBox("singleline");
+                // .port-name-input: 11 px dim text, a border only while hovered or edited; the remove button shows on hover
+                auto& theme = PipelineTheme::Get();
+                view.nameEdit = PipelineControls::MakeEditBox(port.name, false);
                 view.nameEdit->name = "portName_" + port.id;
-                view.nameEdit->SetText(port.name);
-                view.nameEdit->layout->minSize = Vec2F(20, 18);
+                view.nameEdit->layout->minSize = Vec2F(20, 16);
+                for (auto layerName : { "back", "border" })
+                {
+                    if (auto layer = view.nameEdit->GetLayer(layerName))
+                        layer->transparency = 0.0f;
+                }
+                if (auto focus = view.nameEdit->GetLayer("focus"))
+                    if (auto frame = DynamicCast<PipelineRoundedFrame>(focus->GetDrawable()))
+                        frame->radius = 3.0f;
+                PipelineControls::AddBorderLayer(*view.nameEdit, "hover", theme.border, 3.0f, 1.0f, Layout::BothStretch(), -0.6f)->transparency = 0.0f;
+                view.nameEdit->AddState("hover", AnimationClip::EaseInOut("layer/hover/transparency", 0.0f, theme.border.a / 255.0f, 0.12f))
+                    ->offStateAnimationSpeed = 0.5f;
+                view.nameEdit->SetViewLayout(Layout::BothStretch(3, 0, 3, 0));
+                if (auto textDrawable = view.nameEdit->GetTextDrawable())
+                {
+                    textDrawable->height = PipelineTheme::Size(11.0f);
+                    textDrawable->color = theme.fgDim;
+                }
                 String portId = port.id;
                 auto weakThis = WeakRef(this);
                 view.nameEdit->onChangeCompleted = [weakThis, portId](const WString& text)
                 {
                     if (auto self = weakThis.Lock()) self->OnCustomInputRenamed(portId, (String)text);
                 };
-                if (auto textDrawable = view.nameEdit->GetTextDrawable())
-                    textDrawable->color = ColorOfPortType(port.portType);
                 AddChild(view.nameEdit);
 
-                view.deleteButton = o2UI.CreateWidget<Button>("remove small");
+                view.deleteButton = PipelineControls::MakeIconButton("ui/pipeline/al_cmp_trash.svg", theme.fg3, Color4(0, 0, 0, 0));
                 view.deleteButton->name = "portDelete_" + port.id;
                 view.deleteButton->onClick = [weakThis, portId]() { if (auto self = weakThis.Lock()) self->OnCustomInputDeleted(portId); };
                 AddChild(view.deleteButton);
@@ -424,6 +531,22 @@ namespace Editor
         }
 
         mAddInputButton->enabled = mSchema && !mSchema->addableInputs.IsEmpty();
+
+        if (mAddLabelLayer)
+        {
+            RemoveLayer(mAddLabelLayer);
+            mAddLabelLayer = nullptr;
+        }
+        if (mAddInputButton->enabled)
+        {
+            auto text = mmake<Text>(PipelineTheme::Font(400));
+            text->text = "+ input";
+            text->height = PipelineTheme::Size(10.0f);
+            text->horAlign = HorAlign::Left;
+            text->verAlign = VerAlign::Middle;
+            text->color = PipelineTheme::Get().fg3;
+            mAddLabelLayer = AddLayer("addLabel", text, Layout::Based(BaseCorner::LeftTop, Vec2F(80, portRow)), 2.0f);
+        }
     }
 
     void PipelineNodeWidget::BuildBody()
@@ -548,16 +671,16 @@ namespace Editor
             }
 
             float cy = headerHeight + padTop + (i + 0.5f) * portRow;
-            view.localPos = Vec2F(0, cy);
+            view.localPos = Vec2F(1, cy);
             float rightReserve = i < mOutputs.Count() ? 60.0f : 16.0f;
             if (view.label)
-                view.label->layout = Layout(Vec2F(0, 1), Vec2F(1, 1), Vec2F(14, -cy - portRow / 2), Vec2F(-rightReserve, -cy + portRow / 2));
+                view.label->layout = Layout(Vec2F(0, 1), Vec2F(1, 1), Vec2F(13, -cy - 1 - portRow / 2), Vec2F(-rightReserve, -cy - 1 + portRow / 2));
             if (view.nameEdit)
             {
                 float avail = Math::Max(40.0f, size.x - 14 - rightReserve);
-                float inputW = Math::Clamp((view.port.name.Length() + 2) * 7.0f + 12.0f, 40.0f, avail - 24.0f);
-                *view.nameEdit->layout = WidgetLayout(Vec2F(0, 1), Vec2F(0, 1), Vec2F(14, -cy - 9), Vec2F(14 + inputW, -cy + 9));
-                *view.deleteButton->layout = WidgetLayout(Vec2F(0, 1), Vec2F(0, 1), Vec2F(16 + inputW, -cy - 9), Vec2F(34 + inputW, -cy + 9));
+                float inputW = Math::Clamp(view.port.name.Length() * 7.0f + 12.0f, 34.0f, avail - 24.0f);
+                *view.nameEdit->layout = WidgetLayout(Vec2F(0, 1), Vec2F(0, 1), Vec2F(9, -cy - 8), Vec2F(9 + inputW, -cy + 8));
+                *view.deleteButton->layout = WidgetLayout(Vec2F(0, 1), Vec2F(0, 1), Vec2F(11 + inputW, -cy - 8), Vec2F(27 + inputW, -cy + 8));
             }
         }
 
@@ -577,18 +700,24 @@ namespace Editor
 
             float cy = headerHeight + padTop + (row + 0.5f) * portRow;
             row++;
-            view.localPos = Vec2F(size.x, cy);
+            view.localPos = Vec2F(size.x - 1, cy);
             if (view.label)
             {
                 view.label->enabled = true;
-                view.label->layout = Layout(Vec2F(0, 1), Vec2F(1, 1), Vec2F(14, -cy - portRow / 2), Vec2F(-14, -cy + portRow / 2));
+                view.label->layout = Layout(Vec2F(0, 1), Vec2F(1, 1), Vec2F(13, -cy - 1 - portRow / 2), Vec2F(-13, -cy - 1 + portRow / 2));
             }
         }
 
         if (mAddInputButton->enabled)
         {
             float cy = headerHeight + padTop + (mInputs.Count() + 0.5f) * portRow;
-            *mAddInputButton->layout = WidgetLayout(Vec2F(0, 1), Vec2F(0, 1), Vec2F(-8, -cy - 8), Vec2F(8, -cy + 8));
+            *mAddInputButton->layout = WidgetLayout(Vec2F(0, 1), Vec2F(0, 1), Vec2F(-8, -cy - 8), Vec2F(80, -cy + 8));
+        }
+        if (mAddLabelLayer)
+        {
+            float cy = headerHeight + padTop + (mInputs.Count() + 0.5f) * portRow;
+            mAddLabelLayer->enabled = mAddInputButton->enabled;
+            mAddLabelLayer->layout = Layout(Vec2F(0, 1), Vec2F(0, 1), Vec2F(13, -cy - portRow / 2), Vec2F(93, -cy + portRow / 2));
         }
     }
 
@@ -603,7 +732,11 @@ namespace Editor
 
     Vec2F PipelineNodeWidget::GetPortPosition(const String& portId, bool input) const
     {
-        RectF rect = GetCardRect();
+        return GetPortPosition(portId, input, GetCardRect());
+    }
+
+    Vec2F PipelineNodeWidget::GetPortPosition(const String& portId, bool input, const RectF& rect) const
+    {
         auto& views = input ? mInputs : mOutputs;
         for (auto& view : views)
         {
@@ -674,11 +807,13 @@ namespace Editor
         if (!mBody)
             return;
 
-        // A pair row grows once an image arrives on either side
+        // A pair row grows once an image arrives on either side; the ports the body places follow what moved inside it
         float before = GetAutoHeight();
         mBody->OnOutputChanged();
         if (!Math::Equals(before, GetAutoHeight()))
             UpdateFromNode();
+        else
+            LayoutPorts();
     }
 
     void PipelineNodeWidget::OnConfigChanged()
@@ -694,7 +829,35 @@ namespace Editor
         if (mCulled)
             return;
 
+        mWarm = true;
         Widget::Update(dt);
+
+        // A custom input's remove button shows while the cursor is on its row (opacity 0 until hover in AssetsLine)
+        auto editor = mEditor.Lock();
+        if (!editor)
+            return;
+
+        Vec2F cursor = editor->ScreenToLocalPoint(o2Input.GetCursorPos());
+        for (auto& view : mInputs)
+        {
+            if (!view.deleteButton || !view.nameEdit)
+                continue;
+
+            RectF row = view.nameEdit->layout->GetWorldRect();
+            row.right = view.deleteButton->layout->GetWorldRect().right;
+            bool hovered = row.IsInside(cursor) || view.deleteButton->IsPressed();
+            float target = hovered ? 1.0f : 0.0f;
+            if (!Math::Equals(view.deleteButton->transparency, target))
+                view.deleteButton->transparency = target;
+        }
+    }
+
+    void PipelineNodeWidget::WarmUp(float dt)
+    {
+        PushEditorScopeOnStack scope;
+        mWarm = true;
+        Widget::Update(dt);
+        Widget::UpdateChildren(dt);
     }
 
     void PipelineNodeWidget::SetParamsOpen(bool open)
@@ -756,6 +919,8 @@ namespace Editor
         if (mCulled || !mResEnabledInHierarchy)
             return;
 
+        DrawCardBack();
+
         if (!mDetailed)
         {
             DrawLayers();
@@ -763,6 +928,9 @@ namespace Editor
             PipelineControls::SetFarView(true);
             mBodyHost->Draw();
             PipelineControls::SetFarView(false);
+            // AssetsLine keeps ▶ on screen at any zoom
+            if (mPlayButton->IsEnabled())
+                mPlayButton->Draw();
             DrawTopLayers();
             DrawOutline();
             return;
@@ -770,28 +938,111 @@ namespace Editor
 
         Widget::Draw();
         DrawOutline();
+        DrawBusyBar();
+    }
+
+    bool PipelineNodeWidget::IsBusyInBackground() const
+    {
+        if (mRuntime.applying)
+            return true;
+
+        auto editor = mEditor.Lock();
+        return editor && editor->IsWaitingForPictures(mNode->id);
+    }
+
+    void PipelineNodeWidget::DrawBusyBar()
+    {
+        if (!IsBusyInBackground())
+            return;
+
+        // A segment sweeping along the header's bottom edge, two pixels tall on screen
+        auto editor = mEditor.Lock();
+        float scale = editor ? editor->GetCamera().GetScale2D().x : 1.0f;
+        RectF rect = layout->GetWorldRect();
+        float height = Math::Max(1.0f, 2.0f*scale);
+        float y = rect.top - headerHeight;
+        float width = rect.Width();
+        float phase = Math::Mod((float)o2Time.GetApplicationTime()*0.8f, 1.0f);
+        float from = rect.left + width*Math::Max(0.0f, phase*1.4f - 0.4f);
+        float to = rect.left + width*Math::Min(1.0f, phase*1.4f);
+        Color4 color = PipelineTheme::Get().accent;
+        o2Render.DrawFilledPolygon({ Vec2F(from, y - height), Vec2F(from, y), Vec2F(to, y), Vec2F(to, y - height) }, color);
+    }
+
+    void PipelineNodeWidget::DrawCardBack()
+    {
+        auto& theme = PipelineTheme::Get();
+        RectF rect = layout->GetWorldRect();
+        PipelineDraw::Corners corners(cornerRadius);
+
+        // Zoomed far out the shadow goes, as AssetsLine drops the filter under .lod-far
+        if (mDetailed && theme.cardShadow.a > 0)
+        {
+            RectF shadow(rect.left, rect.top - theme.shadowOffset, rect.right, rect.bottom - theme.shadowOffset);
+            PipelineDraw::Shadow(shadow, corners, PipelineTheme::Alpha(theme.cardShadow, theme.card.a / 255.0f), theme.shadowBlur);
+        }
+
+        PipelineDraw::Fill(rect, corners, theme.card);
+
+        if (theme.headerBand.a > 0)
+        {
+            RectF band(rect.left, rect.top, rect.right, rect.top - headerHeight);
+            PipelineDraw::Fill(band, PipelineDraw::Corners(cornerRadius, 0.0f), theme.headerBand);
+            float px = PipelineDraw::Pixel();
+            RectF line(rect.left, rect.top - headerHeight + px, rect.right, rect.top - headerHeight);
+            PipelineDraw::Fill(line, PipelineDraw::Corners(0.0f), theme.headerLine);
+        }
     }
 
     void PipelineNodeWidget::DrawOutline()
     {
+        auto& theme = PipelineTheme::Get();
         auto editor = mEditor.Lock();
         float scale = editor ? editor->GetCamera().GetScale2D().x : 1.0f;
-        auto pixels = [&](float units) { return Math::Max(1.0f, units / scale); };
+        float line = Math::Max(1.0f, scale);
 
         RectF rect = layout->GetWorldRect();
+        PipelineDraw::Corners corners(cornerRadius);
 
+        // At rest a glassy edge in the dark theme (white 22% -> 8% -> 6%, node-stroke in Canvas.tsx), a flat border in the light one
         const String& s = mRuntime.state;
-        Color4 color(96, 125, 139, 110);
-        float width = 1.0f;
-        if (s == "error") { color = Color4(249, 93, 72, 255); width = outlineWidth; }
-        else if (s == "running") { color = Color4(33, 150, 243, 255); width = outlineWidth; }
-        else if (s == "queued") { color = Color4(159, 190, 254, 255); width = outlineWidth; }
-        PipelineControls::DrawRoundedFrame(rect, cornerRadius, color, pixels(width));
+        if (theme.dark)
+        {
+            PipelineDraw::Gradient stroke(theme.cardStrokeTop, 0.45f, theme.cardStrokeMid, theme.cardStrokeBottom);
+            PipelineDraw::Stroke(rect, corners, 1.5f - line * 0.5f, 1.5f + line * 0.5f, stroke);
+            PipelineDraw::Line(Vec2F(rect.left + cornerRadius + 2.0f, rect.top - 1.5f), Vec2F(rect.right - cornerRadius - 2.0f, rect.top - 1.5f),
+                               line, theme.cardHighlight);
+        }
+        else
+            PipelineDraw::Stroke(rect, corners, 1.5f - line * 0.5f, 1.5f + line * 0.5f, PipelineDraw::Gradient(theme.cardStrokeTop));
+
+        // Running pulses the accent, queued is a quiet accent, an error is red (NodeView .node-outline states)
+        Color4 state(0, 0, 0, 0);
+        float width = Math::Max(1.5f, scale);
+        if (s == "error")
+            state = theme.red;
+        else if (s == "running")
+        {
+            float t = (float)o2Time.GetApplicationTime();
+            float pulse = 0.55f + 0.45f * (0.5f - 0.5f * Math::Cos(t * Math::PI() * 2.0f / 1.4f));
+            state = PipelineTheme::Alpha(theme.accent, pulse);
+        }
+        else if (s == "queued")
+        {
+            state = PipelineTheme::Alpha(theme.accent, 0.6f);
+            width = line;
+        }
+        if (state.a > 0)
+            PipelineDraw::Stroke(rect, corners, 1.5f - width * 0.5f, 1.5f + width * 0.5f, PipelineDraw::Gradient(state));
 
         if (mSelected)
         {
-            RectF outer(rect.left - 2.0f, rect.top + 2.0f, rect.right + 2.0f, rect.bottom - 2.0f);
-            PipelineControls::DrawRoundedFrame(outer, cornerRadius + 2.0f, PipelineEditor::GetPortColor(PipelinePortType::Audio), pixels(selectionWidth));
+            RectF ring(rect.left - 4.0f, rect.top + 4.0f, rect.right + 4.0f, rect.bottom - 4.0f);
+            PipelineDraw::Corners ringCorners(cornerRadius + 3.0f);
+            float w = 1.5f * scale;
+            PipelineDraw::Stroke(ring, ringCorners, -5.0f * scale, 5.0f * scale, PipelineDraw::Gradient(PipelineTheme::Alpha(theme.accent, 0.08f)));
+            PipelineDraw::Stroke(ring, ringCorners, -2.0f * scale, 2.0f * scale, PipelineDraw::Gradient(PipelineTheme::Alpha(theme.accent, 0.12f)));
+            PipelineDraw::Stroke(ring, ringCorners, -w * 0.5f, w * 0.5f, PipelineDraw::Gradient(theme.accent));
         }
     }
 
@@ -818,16 +1069,12 @@ namespace Editor
 
         if (mAddInputButton->enabled)
         {
+            auto& theme = PipelineTheme::Get();
             float cy = headerHeight + padTop + (mInputs.Count() + 0.5f)*portRow;
-            Vec2F center(rect.left, rect.top - cy);
-            float r = portRadius;
-            Color4 color = mAddInputButton->IsPressed() ? Color4(0, 121, 107, 255) : Color4(0, 150, 136, 255);
-            o2Render.DrawFilledCircle(center, r, color, 24);
-            o2Render.DrawAACircle(center, r, color, 24, 1.0f, LineType::Solid, false);
-            float arm = r*0.55f;
-            float thickness = Math::Max(r*0.28f, 1.0f);
-            o2Render.DrawAALine(center - Vec2F(arm, 0), center + Vec2F(arm, 0), Color4::White(), thickness, LineType::Solid, false);
-            o2Render.DrawAALine(center - Vec2F(0, arm), center + Vec2F(0, arm), Color4::White(), thickness, LineType::Solid, false);
+            Vec2F center(rect.left + 1.0f, rect.top - cy);
+            bool hover = mAddInputButton->IsPressed() || mAddInputButton->IsUnderPoint(o2Input.GetCursorPos());
+            PipelineDraw::Circle(center, 5.5f, theme.cardSolid);
+            PipelineDraw::Ring(center, 5.0f, 1.0f, hover ? theme.accent : theme.fg3);
         }
     }
 

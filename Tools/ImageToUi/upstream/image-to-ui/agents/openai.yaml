@@ -1,0 +1,4 @@
+interface:
+  display_name: "Image to UI"
+  short_description: "Extract UI JSON with traced rendering and review gates"
+  default_prompt: "Use $image-to-ui to inventory the supplied sprites, reconstruct this design as structured UI JSON, audit render details, and finalize reviewed outputs."

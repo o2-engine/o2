@@ -860,14 +860,14 @@ namespace Editor
         static Vector<String> keys = {
             "drawOver", "drawTool", "brushSize", "brushColor", "brushOpacity", "paramsOpen", "selectedRegion",
             "splitRatio", "fieldH", "selectedLayer", "layersPanelW", "openLayerSettings",
-            "viewZoom", "viewPanX", "viewPanY", "cmpBg", "cmpBgEnabled", "checker", "layersFolder", "layersName"
+            "viewZoom", "viewPanX", "viewPanY", "cmpBg", "cmpBgEnabled", "checker", "layersFolder", "layersName", "debugView", "debugStep"
         };
         return keys;
     }
 
     bool PipelineGraph::IsSeededType(const String& type)
     {
-        return type == "nanoBananaGen" || type == "imageEdit" || type == "imageExtract" || type == "aiUpscale";
+        return type == "nanoBananaGen" || type == "imageEdit" || type == "imageExtract" || type == "aiUpscale" || type == "imageToUi";
     }
 
     // AssetsLine's implicit seed (32-bit FNV-1a over UTF-16 code units), so both editors render alike
@@ -993,6 +993,8 @@ namespace Editor
         exclude.Add("seed");
         exclude.Add("inheritSeed");
         exclude.Add(extraExcludeKeys);
+        if (auto impl = PipelineNodeRegistry::Get(node.nodeType))
+            exclude.Add(impl->SignatureExcludedKeys());
 
         String payload = "type=" + node.nodeType + "|config=" + PipelineUtils::CanonicalJson(node.config, exclude) + "|inputs=";
         for (auto& kv : upstreamByPortKey)
@@ -1016,7 +1018,12 @@ namespace Editor
     String PipelineGraph::OutputSigKey(const PipelineNode& fromNode, const String& fromPortId)
     {
         auto schema = PipelineNodeRegistry::GetSchema(fromNode.nodeType);
-        return schema && schema->perPortRun ? fromNode.id + "#" + fromPortId : fromNode.id;
+        return schema && (schema->perPortRun || schema->dynamicOutputs) ? fromNode.id + "#" + fromPortId : fromNode.id;
+    }
+
+    String PipelineGraph::DynamicPortSignature(const String& nodeSignature, const String& portName)
+    {
+        return PipelineUtils::Fnv1a64Hex(nodeSignature + "#" + portName);
     }
 
     String PipelineGraph::ComputePortSignature(const PipelineNode& node, const Map<String, String>& upstreamByPortKey,
@@ -1101,6 +1108,11 @@ namespace Editor
             {
                 for (auto& output : node->outputs)
                     result[id + "#" + output.id] = ComputePortSignature(*node, upstream, seed, output.id, false);
+            }
+            else if (schema && schema->dynamicOutputs)
+            {
+                for (auto& output : node->outputs)
+                    result[id + "#" + output.id] = DynamicPortSignature(sig, output.name);
             }
 
             visiting.Remove(id);

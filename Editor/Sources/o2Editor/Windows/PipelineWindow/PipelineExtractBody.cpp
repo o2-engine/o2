@@ -1,6 +1,12 @@
 #include "o2Editor/stdafx.h"
 #include "PipelineNodeBodyFactories.h"
 
+#include "o2Editor/Windows/PipelineWindow/PipelineDraw.h"
+#include "o2Editor/Windows/PipelineWindow/PipelineImageTheme.h"
+#include "o2Editor/Windows/PipelineWindow/PipelineTheme.h"
+#include "o2/Render/VectorSprite.h"
+#include "o2/Scene/UI/WidgetState.h"
+
 #include "o2/Render/Render.h"
 #include "o2/Render/Text.h"
 #include "o2/Scene/UI/UIManager.h"
@@ -34,25 +40,28 @@ namespace Editor
     class PipelineExtractActions : public Widget
     {
     public:
-        static constexpr float buttonsHeight = 24.0f;  // Line of the part buttons
+        static constexpr float buttonsHeight = 27.52f; // Line of the part buttons (.actions)
         static constexpr float switchLine = 19.0f;     // Line of the switch when it does not fit beside them
-        static constexpr float inlineWidth = 380.0f;   // Row width of a 400 wide card
-        static constexpr float switchWidth = 140.0f;   // Width of the switch
+        static constexpr float switchGap = 8.0f;       // Between the buttons and the switch: the gap and its 2 px margin
 
     public:
         explicit PipelineExtractActions(RefCounter* refCounter): Widget(refCounter) {}
 
-        // Sets the line of buttons and the switch
-        void Setup(const Ref<Widget>& buttons, const Ref<Widget>& toggle)
+        // Sets the line of buttons, their width, and the switch
+        void Setup(const Ref<Widget>& buttons, float buttonsWidth, const Ref<Widget>& toggle)
         {
             mButtons = buttons;
+            mButtonsWidth = buttonsWidth;
             mSwitch = toggle;
             AddChild(mButtons);
             AddChild(mSwitch);
         }
 
+        // Returns true when the switch shares the line of the buttons at the width
+        bool IsInline(float width) const { return !mSwitch || mButtonsWidth + switchGap + mSwitch->layout->minWidth <= width + 0.5f; }
+
         // Returns the height of the row at the width
-        static float HeightForWidth(float width) { return width >= inlineWidth ? buttonsHeight : buttonsHeight + switchLine; }
+        float HeightForWidth(float width) const { return IsInline(width) ? buttonsHeight : buttonsHeight + switchLine; }
 
         void UpdateSelfTransform() override
         {
@@ -60,22 +69,41 @@ namespace Editor
             if (!mButtons || !mSwitch)
                 return;
 
-            if (layout->GetWidth() >= inlineWidth)
+            float switchWidth = mSwitch->layout->minWidth;
+            *mButtons->layout = WidgetLayout(Vec2F(0, 1), Vec2F(0, 1), Vec2F(0, -buttonsHeight), Vec2F(mButtonsWidth, 0));
+            if (IsInline(layout->GetWidth()))
             {
-                *mButtons->layout = WidgetLayout(Vec2F(0, 1), Vec2F(1, 1), Vec2F(0, -buttonsHeight), Vec2F(-switchWidth - 6.0f, 0));
-                *mSwitch->layout = WidgetLayout(Vec2F(1, 1), Vec2F(1, 1), Vec2F(-switchWidth, -buttonsHeight + 3.0f), Vec2F(0, -3.0f));
+                float x = mButtonsWidth + switchGap, middle = buttonsHeight * 0.5f;
+                *mSwitch->layout = WidgetLayout(Vec2F(0, 1), Vec2F(0, 1), Vec2F(x, -middle - 9.0f), Vec2F(x + switchWidth, -middle + 9.0f));
             }
             else
-            {
-                *mButtons->layout = WidgetLayout(Vec2F(0, 1), Vec2F(1, 1), Vec2F(0, -buttonsHeight), Vec2F(0, 0));
                 *mSwitch->layout = WidgetLayout(Vec2F(1, 1), Vec2F(1, 1), Vec2F(-switchWidth, -buttonsHeight - switchLine), Vec2F(0, -buttonsHeight - 1.0f));
-            }
+            mSwitch->layout->minWidth = switchWidth;
+            mSwitch->layout->maxWidth = switchWidth;
         }
 
     private:
-        Ref<Widget> mButtons; // Add part and auto split
-        Ref<Widget> mSwitch;  // Transparent background switch
+        Ref<Widget> mButtons;            // Add part and auto split
+        float       mButtonsWidth = 0.0f; // Width of the buttons with the gap between them
+        Ref<Widget> mSwitch;             // Transparent background switch
     };
+
+    // A 20 x 18 button of a cell's tool strip: the glyph in white, a light wash or the red when hovered
+    static Ref<Button> MakeCellTool(const String& icon, const String& name, bool danger)
+    {
+        auto button = mmake<Button>();
+        button->name = name;
+        auto hover = AddFillLayer(*button, "hover", danger ? PipelineTheme::Get().red : Color4(255, 255, 255, 46), 0.0f, Layout::BothStretch(), -1.0f);
+        float strength = hover->transparency;
+        hover->transparency = 0.0f;
+        button->AddState("hover", AnimationClip::EaseInOut("layer/hover/transparency", 0.0f, strength, 0.12f))->offStateAnimationSpeed = 0.5f;
+        auto sprite = mmake<VectorSprite>(icon);
+        sprite->color = Color4::White();
+        button->AddLayer("icon", sprite, Layout::Based(BaseCorner::Center, Vec2F(10, 10)));
+        button->layout->minWidth = 20;
+        button->layout->maxWidth = 20;
+        return button;
+    }
 
     // ---------------------------------------------------------------------------------
     // Progress of a part being computed: its cell dimmed and a ring with a turning arc
@@ -114,7 +142,7 @@ namespace Editor
                 float angle = start + Math::PI()*0.5f*(float)i/8.0f;
                 arc.Add(center + Vec2F(Math::Cos(angle), Math::Sin(angle))*radius);
             }
-            o2Render.DrawAALine(arc, accentColor, width);
+            o2Render.DrawAALine(arc, AccentColor(), width);
         }
 
     private:
@@ -155,19 +183,15 @@ namespace Editor
                 cell.id = id;
                 cell.name = regions[i].name;
                 cell.root = mmake<Widget>();
-                auto frame = mmake<PipelineRoundedRect>();
-                frame->color = accentColor;
-                frame->radius = 5.0f;
-                frame->roundBottom = true;
-                cell.frame = cell.root->AddLayer("selected", frame, Layout::BothStretch(-2, -2, -2, -2));
-                auto errorFrame = mmake<PipelineRoundedRect>();
-                errorFrame->color = errorColor;
-                errorFrame->radius = 5.0f;
-                errorFrame->roundBottom = true;
-                cell.errorFrame = cell.root->AddLayer("error", errorFrame, Layout::BothStretch(-2, -2, -2, -2));
+                // Red frame round a part that failed in this run, over the picture
+                auto errorFrame = mmake<PipelineRoundedFrame>();
+                errorFrame->color = PipelineTheme::Get().red;
+                errorFrame->radius = 7.0f;
+                errorFrame->width = 1.0f;
+                cell.errorFrame = cell.root->AddLayer("error", errorFrame, Layout::BothStretch(), 10.0f);
                 cell.errorFrame->enabled = false;
 
-                cell.image = mmake<PipelineImageView>();
+                cell.image = mmake<PipelineCellImage>();
                 cell.image->SetHint((String)(i + 1));
                 cell.root->AddChild(cell.image);
 
@@ -176,10 +200,8 @@ namespace Editor
                 cell.root->AddChild(cell.spinner);
                 cell.spinner->SetEnabledForcible(false);
 
-                cell.pick = o2UI.CreateWidget<Button>("pipeline icon");
+                cell.pick = mmake<Button>();
                 cell.pick->name = "select part";
-                if (auto icon = cell.pick->GetLayer("icon"))
-                    icon->enabled = false;
                 cell.pick->onClick = [weakThis, id]() { if (auto self = weakThis.Lock()) self->onSelect(id); };
                 // The part's output port sits on the top-right corner of the image: that corner is the port's
                 WeakRef<Button> weakPick(cell.pick);
@@ -193,23 +215,17 @@ namespace Editor
                 cell.root->AddChild(cell.pick);
 
                 auto tools = mmake<HorizontalLayout>();
-                tools->spacing = 2;
+                tools->spacing = 0;
                 tools->expandWidth = false;
                 tools->expandHeight = true;
                 tools->baseCorner = BaseCorner::Left;
                 cell.tools = tools;
-                auto regen = MakeIconButton("ui/pipeline/btn_loop.svg", textColor, Color4(255, 255, 255, 220));
-                regen->name = "regen part";
-                regen->layout->minWidth = 20;
-                regen->layout->maxWidth = 20;
+                auto regen = MakeCellTool("ui/pipeline/al_refresh.svg", "regen part", false);
                 regen->onClick = [weakThis, id]() { if (auto self = weakThis.Lock()) self->onRegen(id); };
                 tools->AddChild(regen);
                 if (regions.Count() > 1)
                 {
-                    auto remove = MakeIconButton("ui/UI4_small_trash_icon.svg", textColor, Color4(255, 255, 255, 220));
-                    remove->name = "remove part";
-                    remove->layout->minWidth = 20;
-                    remove->layout->maxWidth = 20;
+                    auto remove = MakeCellTool("ui/pipeline/al_trash.svg", "remove part", true);
                     remove->onClick = [weakThis, id]() { if (auto self = weakThis.Lock()) self->onRemove(id); };
                     tools->AddChild(remove);
                 }
@@ -221,16 +237,19 @@ namespace Editor
                     String fallback = "part " + (String)(i + 1);
                     cell.edit = MakeEditBox(regions[i].name, false, fallback);
                     cell.edit->name = "part name";
+                    PipelineImageTheme::SkinCellNameField(cell.edit);
                     cell.edit->onChangeCompleted = [weakThis, id](const WString& text) { if (auto self = weakThis.Lock()) self->onRename(id, (String)text); };
                     cell.root->AddChild(cell.edit);
 
                     cell.label = MakeLabel(regions[i].name.IsEmpty() ? fallback : regions[i].name, true);
+                    StyleLabel(cell.label, 10.5f, 400, PipelineTheme::Get().fgDim);
                     cell.label->horOverflow = Label::HorOverflow::Dots;
                     cell.label->horAlign = HorAlign::Middle;
+                    cell.label->verAlign = VerAlign::Middle;
                     cell.root->AddChild(cell.label);
 
                     auto dot = mmake<PipelineRoundedRect>();
-                    dot->color = accentColor;
+                    dot->color = AccentColor();
                     dot->radius = dotSize*0.5f;
                     dot->roundBottom = true;
                     cell.dot = mmake<Widget>();
@@ -250,6 +269,27 @@ namespace Editor
             LayoutCells();
         }
 
+        // Gives a part's cell its new name in place; false when the grid has no such captioned cell
+        bool RenamePart(const String& id, const String& name)
+        {
+            for (auto& cell : mCells)
+            {
+                if (cell.id != id || !cell.label)
+                    continue;
+
+                cell.name = name;
+                String caption = name.IsEmpty() ? "part " + (String)(mCells.IndexOf(cell) + 1) : name;
+                cell.label->text = caption;
+                cell.captionWidth = Text::GetTextSize(cell.label->GetText(), cell.label->GetFont(), cell.label->GetHeight(), Vec2F(),
+                                                      HorAlign::Left, VerAlign::Top, false).x;
+                if (cell.edit && !cell.edit->IsFocused() && (String)cell.edit->GetText() != name)
+                    cell.edit->SetText(name);
+                LayoutCells();
+                return true;
+            }
+            return false;
+        }
+
         // Moves the outline and the name field to the selected part without rebuilding the cells
         void SetSelected(const String& id)
         {
@@ -257,8 +297,9 @@ namespace Editor
             {
                 bool on = cell.id == id;
                 cell.root->name = on ? "part cell selected" : "part cell";
-                if (cell.frame)
-                    cell.frame->enabled = on;
+                cell.image->selected = on;
+                cell.image->tools = on;
+                cell.tools->SetEnabledForcible(on);
                 // Forcible: a widget disabled before its first update would otherwise keep drawing through its fade state
                 if (cell.edit)
                 {
@@ -346,9 +387,8 @@ namespace Editor
             String                 id;
             String                 name;  // Part name, put into the field when the cell is selected
             Ref<Widget>            root;
-            Ref<WidgetLayer>       frame; // Outline shown on the selected cell
+            Ref<PipelineCellImage> image; // Picture, outlined while selected
             Ref<WidgetLayer>       errorFrame; // Red outline of a part that failed in this run
-            Ref<PipelineImageView> image;
             Ref<PipelinePartSpinner> spinner; // Progress over a part being computed
             Ref<Button>            pick;
             Ref<Widget>            tools;
@@ -398,11 +438,9 @@ namespace Editor
                 *cell.image->layout = WidgetLayout::HorStretch(VerAlign::Top, 0, 0, g.cellH, 0);
                 *cell.spinner->layout = WidgetLayout::HorStretch(VerAlign::Top, 0, 0, g.cellH, 0);
                 *cell.pick->layout = WidgetLayout::HorStretch(VerAlign::Top, 0, 0, g.cellH, 0);
-                if (cell.frame)
-                    cell.frame->layout = Layout(Vec2F(0, 1), Vec2F(1, 1), Vec2F(-2, -g.cellH - 2), Vec2F(2, 2));
-                cell.errorFrame->layout = Layout(Vec2F(0, 1), Vec2F(1, 1), Vec2F(-2, -g.cellH - 2), Vec2F(2, 2));
+                cell.errorFrame->layout = Layout(Vec2F(0, 1), Vec2F(1, 1), Vec2F(0, -g.cellH), Vec2F(0, 0));
                 // Top left: the part's output port sits on the top-right corner
-                *cell.tools->layout = WidgetLayout(Vec2F(0, 1), Vec2F(0, 1), Vec2F(3, -24), Vec2F(46, -3));
+                *cell.tools->layout = WidgetLayout(Vec2F(0, 1), Vec2F(0, 1), Vec2F(1, -19), Vec2F(41, -1));
                 // The name field of the selected part makes room for the dot; a centred caption has it right before its text
                 float fieldLeft = cell.own ? dotSize + 4.0f : 0.0f, nameMiddle = (g.labelH - 2.0f)*0.5f;
                 float captionArea = g.cellW - 16.0f;
@@ -414,9 +452,9 @@ namespace Editor
                                                      Vec2F(dotLeft + dotSize, nameMiddle + dotSize*0.5f));
                 }
                 if (cell.edit)
-                    *cell.edit->layout = WidgetLayout::HorStretch(VerAlign::Bottom, fieldLeft, 16, g.labelH - 2.0f, 0);
+                    *cell.edit->layout = WidgetLayout::HorStretch(VerAlign::Bottom, fieldLeft, 0, g.labelH - 2.0f, 0);
                 if (cell.label)
-                    *cell.label->layout = WidgetLayout::HorStretch(VerAlign::Bottom, 0, 16, g.labelH - 2.0f, 0);
+                    *cell.label->layout = WidgetLayout::HorStretch(VerAlign::Bottom, 0, 0, g.labelH - 2.0f, 0);
             }
         }
     };
@@ -460,6 +498,7 @@ namespace Editor
             };
             mPaint->onRegionPicked = [weakThis](const String& id) { if (auto self = weakThis.Lock()) self->SelectRegion(id); };
             mPaint->onRegionRemoved = [weakThis]() { if (auto self = weakThis.Lock()) self->RemoveRegion(self->SelectedId()); };
+            mPaint->onRegionRemovedById = [weakThis](const String& id) { if (auto self = weakThis.Lock()) self->RemoveRegion(id); };
             mPaint->Init(mNode, true);
             mPaint->SetDrawingEnabled(false);
             // The stage edits the "roi" box, which a pipeline saved elsewhere may not keep in step with the selected part
@@ -473,12 +512,19 @@ namespace Editor
             });
             MarkContent(mPaint);
 
-            auto add = MakeButton("+ Add part");
+            // Content-wide quiet buttons: "+ Add part", and "✦ Auto-split" in the accent (.grid-actions button.auto)
+            auto add = MakeGhostButton("+ Add part");
             add->name = "add part";
             add->onClick = [weakThis]() { if (auto self = weakThis.Lock()) self->AddRegion(); };
-            mAutoButton = MakeButton("Auto split");
+            mAutoButton = MakeGhostButton("Auto-split");
             mAutoButton->name = "auto split";
+            PipelineImageTheme::MakeAccentGhost(mAutoButton);
+            PipelineImageTheme::KeepWholeCaption(*add);
             mAutoButton->onClick = [weakThis]() { if (auto self = weakThis.Lock()) self->AutoSplit(); };
+            float addWidth = Math::Ceil(TextWidth("+ Add part", bodyFont)) + 18.0f;
+            float autoWidth = 22.0f + Math::Ceil(TextWidth("Auto-split", bodyFont)) + 9.0f;
+            add->layout->minWidth = add->layout->maxWidth = addWidth;
+            mAutoButton->layout->minWidth = mAutoButton->layout->maxWidth = autoWidth;
             auto buttons = mmake<HorizontalLayout>();
             buttons->name = "part actions";
             buttons->spacing = 6;
@@ -488,17 +534,19 @@ namespace Editor
             buttons->AddChild(add);
             buttons->AddChild(mAutoButton);
             mTransparentSwitch = MakeTransparentSwitch();
+            PipelineImageTheme::KeepWholeCaption(*mTransparentSwitch);
             auto actions = mmake<PipelineExtractActions>();
             actions->name = "actions";
-            actions->Setup(buttons, mTransparentSwitch);
-            AddRow(actions, [](float width) { return PipelineExtractActions::HeightForWidth(width); });
+            actions->Setup(buttons, addWidth + 6.0f + autoWidth, mTransparentSwitch);
+            Ref<PipelineExtractActions> actionsRef = actions;
+            AddRow(actions, [actionsRef](float width) { return actionsRef->HeightForWidth(width); });
 
             // The name of the selected part is what the model is asked to keep
             mPromptRegion = SelectedId();
             mPrompt = MakeEditBox(NameOf(mPromptRegion), true, "What to keep, e.g. the green chip");
             mPrompt->name = "part prompt";
             mPrompt->onChangeCompleted = [weakThis](const WString& text) { if (auto self = weakThis.Lock()) self->RenameRegion(self->mPromptRegion, (String)text); };
-            AddRow(mPrompt, 46);
+            AddRow(mPrompt, FieldHeight(NameOf(mPromptRegion), "What to keep, e.g. the green chip"));
 
             if (BeginParams(GetBool("transparentBg", false) ? Vector<String>{ "Model", "Seed", "Transparency" } : Vector<String>{ "Model", "Seed" }))
             {
@@ -516,8 +564,7 @@ namespace Editor
             PipelineNodeBody::OnOutputChanged();
             if (mPaint)
             {
-                auto input = GetInput("image");
-                mPaint->SetBackground(input.IsImage() ? input.GetBitmap() : nullptr);
+                mPaint->SetBackground(Picture(GetInput("image")));
             }
 
             RefreshPartResults();
@@ -587,8 +634,6 @@ namespace Editor
         String                   mPromptRegion; // Part the prompt field edits
         bool mWritingRoi = false; // True while the selected box is pushed into the paint editor
 
-        Map<String, String>      mPartData;    // Encoded result of each part the bitmap below was decoded from
-        Map<String, Ref<Bitmap>> mPartBitmaps; // Decoded result of each part, kept so a selection change decodes nothing
 
         Ref<ParamsList> mParamsList; // The open parameter list, refilled in place when the edited part changes
 
@@ -862,6 +907,24 @@ namespace Editor
                     region.name = name;
             }
 
+            // One of several parts renamed keeps the card: the ports keep their ids, the cell and the field take the name
+            if (regions.Count() > 1 && mGrid && mGrid->GetCellCount() == regions.Count())
+            {
+                PipelineRegions::Write(*mNode, regions);
+                PipelineRegions::SyncPorts(*mNode);
+                mNode->SetConfigString("selectedRegion", id);
+                if (mGrid->RenamePart(id, name))
+                {
+                    if (mPrompt && mPromptRegion == id && !mPrompt->IsFocused() && (String)mPrompt->GetText() != name)
+                        mPrompt->SetText(name);
+                    mGrid->SetSelected(id);
+                    SyncPaintRegions();
+                    if (auto editor = mEditor.Lock())
+                        editor->OnNodeConfigChanged(mOwner.Lock(), "regions", true);
+                    return;
+                }
+            }
+
             WriteRegions(regions, id);
         }
 
@@ -908,16 +971,7 @@ namespace Editor
             {
                 PipelineValue value;
                 runtime.portOutputs.TryGetValue(region.id, value);
-                String data = value.IsImage() ? value.data : String();
-                String known;
-                if (!mPartData.TryGetValue(region.id, known) || known != data)
-                {
-                    mPartData[region.id] = data;
-                    mPartBitmaps[region.id] = value.IsImage() ? value.GetBitmap() : nullptr;
-                }
-                Ref<Bitmap> bitmap;
-                mPartBitmaps.TryGetValue(region.id, bitmap);
-                mGrid->SetPartImage(region.id, bitmap);
+                mGrid->SetPartImage(region.id, Picture(value));
             }
         }
 

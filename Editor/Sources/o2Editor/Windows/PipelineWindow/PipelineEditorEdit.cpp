@@ -118,13 +118,12 @@ namespace Editor
         if (!graph)
             return;
 
-        graph->LoadFromJsonString(serialized);
+        PipelineGraph restored;
+        if (!restored.LoadFromJsonString(serialized))
+            return;
 
-        mSelectedEdgeId = "";
         mSelectedPointIndex = -1;
-        RebuildAll();
-        LoadPreviews();
-        RefreshFreshness();
+        SyncGraphTo(restored);
         MarkChanged();
     }
 
@@ -151,6 +150,7 @@ namespace Editor
     {
         if (auto asset = mAsset.Lock())
         {
+            mCameraSaveDelay = 0.0f;
             mGraph.SaveToAsset(*asset);
             asset->SetDirty();
         }
@@ -277,7 +277,11 @@ namespace Editor
         }
         node->GetNode()->SetCustomInputs(customs);
         PipelineNodeRegistry::SyncNodeWithSchema(node->GetNode());
-        RefreshNodeWidget(node);
+        // A body holding the inputs (the composer's layer rows) shows the name itself; the rest of the card stays
+        if (node->GetBody() && node->GetBody()->InputsInBody())
+            node->OnConfigChanged();
+        else
+            RefreshNodeWidget(node);
         RecordAction("Rename input", before, SerializeGraph());
         ScheduleAutoApply(node->GetNode()->id);
     }
@@ -436,11 +440,7 @@ namespace Editor
         node->position = SnapToGrid(node->position);
         graph->nodes.Add(node);
 
-        auto widget = mmake<PipelineNodeWidget>(Ref(this), node);
-        mNodesContainer->AddChild(widget);
-        mNodeWidgets.Add(widget);
-        mNodeWidgetsById[node->id] = widget;
-        mHandleToNode[widget->dragHandle] = widget;
+        AddCard(node);
         RecalculateViewArea();
         mNeedRedraw = true;
         return node;
@@ -516,7 +516,10 @@ namespace Editor
             }
         }
 
-        RebuildAll();
+        // The node may have got an input for the link
+        if (auto widget = GetNodeWidget(node->id))
+            RefreshNodeWidget(widget);
+        RecalculateViewArea();
         RecordAction("Add node", before, SerializeGraph());
         if (!toNodeId.IsEmpty())
             ConnectPorts(fromNodeId, fromPortId, toNodeId, toPortId);
@@ -556,11 +559,16 @@ namespace Editor
         }
 
         String before = SerializeGraph();
-        for (auto& widget : selected)
-            graph->RemoveNode(widget->GetNode()->id);
-
         DeselectAll();
-        RebuildAll();
+        for (auto& widget : selected)
+        {
+            graph->RemoveNode(widget->GetNode()->id);
+            RemoveCard(widget->GetNode()->id);
+        }
+
+        RefreshCardsWithChangedInputs();
+        RecalculateViewArea();
+        mNeedRedraw = true;
         RecordAction("Delete nodes", before, SerializeGraph());
     }
 
@@ -644,7 +652,12 @@ namespace Editor
         for (auto& edge : clip.edges)
             graph->edges.Add(edge);
 
-        RebuildAll();
+        for (auto& node : clip.nodes)
+            AddCard(node);
+
+        RefreshCardsWithChangedInputs();
+        RecalculateViewArea();
+        mNeedRedraw = true;
         RecordAction("Paste", before, SerializeGraph());
         SelectNodes(newIds);
     }

@@ -137,27 +137,27 @@ TEST(PipelineComposerLayout, RowsStartUnderTheTopAddRow)
     EXPECT_FLOAT_EQ(rows.addTopRow, listTop);
     ASSERT_EQ(rows.rowTops.Count(), 3);
     EXPECT_FLOAT_EQ(rows.rowTops[0], listTop + addRowHeight + rowGap) << "the first row comes after the top add row";
-    EXPECT_FLOAT_EQ(rows.rowTops[0], 54.0f);
-    EXPECT_FLOAT_EQ(rows.rowTops[1], 85.0f);
-    EXPECT_FLOAT_EQ(rows.rowTops[2], 116.0f);
-    EXPECT_FLOAT_EQ(rows.addBottomRow, 147.0f);
-    EXPECT_FLOAT_EQ(rows.height, 147.0f + addRowHeight + listPadding + border);
+    EXPECT_FLOAT_EQ(rows.rowTops[0], 56.0f);
+    EXPECT_FLOAT_EQ(rows.rowTops[1], 91.0f);
+    EXPECT_FLOAT_EQ(rows.rowTops[2], 126.0f);
+    EXPECT_FLOAT_EQ(rows.addBottomRow, 161.0f);
+    EXPECT_FLOAT_EQ(rows.height, 161.0f + addRowHeight + listPadding + border);
 
     // Open settings push the rows below them: one line more than before the export size
     EXPECT_FLOAT_EQ(SettingsHeight(false), 101.0f);
     EXPECT_FLOAT_EQ(SettingsHeight(true), 170.0f);
     auto open = Rows(3, 1, false);
-    EXPECT_FLOAT_EQ(open.rowTops[1], 85.0f);
-    EXPECT_FLOAT_EQ(open.settingsTop, 113.0f);
-    EXPECT_FLOAT_EQ(open.rowTops[2], 116.0f + 101.0f);
-    EXPECT_FLOAT_EQ(open.addBottomRow, 147.0f + 101.0f);
-    EXPECT_FLOAT_EQ(Rows(3, 1, true).addBottomRow, 147.0f + 170.0f);
+    EXPECT_FLOAT_EQ(open.rowTops[1], 91.0f);
+    EXPECT_FLOAT_EQ(open.settingsTop, 123.0f);
+    EXPECT_FLOAT_EQ(open.rowTops[2], 126.0f + 101.0f);
+    EXPECT_FLOAT_EQ(open.addBottomRow, 161.0f + 101.0f);
+    EXPECT_FLOAT_EQ(Rows(3, 1, true).addBottomRow, 161.0f + 170.0f);
 
     // No layers: the hint stands between the two add rows
     auto empty = Rows(0);
     EXPECT_TRUE(empty.rowTops.IsEmpty());
-    EXPECT_FLOAT_EQ(empty.emptyTop, 54.0f);
-    EXPECT_FLOAT_EQ(empty.addBottomRow, 54.0f + rowHeight + rowGap);
+    EXPECT_FLOAT_EQ(empty.emptyTop, 56.0f);
+    EXPECT_FLOAT_EQ(empty.addBottomRow, 56.0f + rowHeight + rowGap);
 }
 
 // k = clamp(1 / camera zoom, 0.5, 4): the frame keeps its size on screen between zoom 1/4 and 2

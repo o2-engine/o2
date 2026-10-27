@@ -58,10 +58,15 @@ namespace Editor
         if (rt->portOutputs.TryGetValue(edge->fromPortId, portValue) && portValue.IsValid())
             return portValue;
 
-        // The node result of a source with several outputs is whichever part came last: a part not produced has nothing
+        // The node result of a source with several outputs is whichever part came last: a part not produced has nothing.
+        // A node with outputs decided by its run keeps its first output as the node result
         auto from = graph->FindNode(edge->fromNodeId);
         if (from && from->outputs.Count() > 1)
-            return PipelineValue();
+        {
+            auto schema = PipelineNodeRegistry::GetSchema(from->nodeType);
+            if (!schema || !schema->dynamicOutputs || from->outputs[0].id != edge->fromPortId)
+                return PipelineValue();
+        }
 
         return rt->output;
     }
@@ -250,6 +255,8 @@ namespace Editor
         widget->GetRuntime().output = PipelineValue();
         widget->GetRuntime().previewPath = "";
         widget->GetRuntime().srcPreviewPath = "";
+        widget->GetRuntime().srcPreview = PipelineValue();
+        widget->GetRuntime().srcPreviewLoaded = "";
         widget->GetRuntime().state = "idle";
         widget->OnOutputChanged();
         if (auto graph = GetGraph())
@@ -261,6 +268,40 @@ namespace Editor
             }
         }
         RefreshFreshness();
+    }
+
+    void PipelineEditor::ApplyNodePorts(const String& nodeId, const Vector<PipelinePort>& ports)
+    {
+        auto graph = GetGraph();
+        auto widget = GetNodeWidget(nodeId);
+        auto node = graph ? graph->FindNode(nodeId) : nullptr;
+        if (!node || !widget)
+            return;
+
+        bool same = node->outputs.Count() == ports.Count();
+        for (int i = 0; same && i < ports.Count(); i++)
+        {
+            same = node->outputs[i].id == ports[i].id && node->outputs[i].name == ports[i].name &&
+                node->outputs[i].portType == ports[i].portType;
+        }
+        if (same)
+            return;
+
+        node->outputs = ports;
+        graph->RemoveDanglingEdges();
+
+        auto& rt = widget->GetRuntime();
+        Vector<String> gone;
+        for (auto& kv : rt.portOutputs)
+        {
+            if (!ports.Any([&](const PipelinePort& p) { return p.id == kv.first; }))
+                gone.Add(kv.first);
+        }
+        for (auto& id : gone)
+            rt.portOutputs.Remove(id);
+
+        RefreshNodeWidget(widget);
+        MarkChanged();
     }
 
     void PipelineEditor::OnExecutorEvent(const PipelineExecEvent& event)
@@ -308,10 +349,12 @@ namespace Editor
                     if (!event.portId.IsEmpty())
                     {
                         // One part of a per-port node: the card shows each of them on its own
-                        rt.portOutputs[event.portId] = event.value;
+                        auto& part = rt.portOutputs[event.portId];
+                        part = event.value;
+                        part.ShareDecoded();
                         if (!rt.output.IsValid())
                         {
-                            rt.output = event.value;
+                            rt.output = part;
                             rt.previewPath = event.previewPath;
                         }
                         widget->OnOutputChanged();
@@ -319,8 +362,10 @@ namespace Editor
                     }
 
                     rt.output = event.value;
+                    rt.output.ShareDecoded();
                     rt.previewPath = event.previewPath;
                     rt.srcPreviewPath = event.srcPreviewPath;
+                    rt.srcPreviewLoaded = "";
                     widget->OnOutputChanged();
 
                     // Downstream local nodes follow a new upstream result
@@ -340,6 +385,9 @@ namespace Editor
                 }
                 break;
             }
+            case Type::NodePorts:
+                ApplyNodePorts(event.nodeId, event.ports);
+                break;
             case Type::Retry:
             {
                 if (auto widget = GetNodeWidget(event.nodeId))
@@ -359,6 +407,9 @@ namespace Editor
             case Type::Done:
             case Type::Fatal:
             {
+                if (event.assetsChanged)
+                    mAssetsRebuildPending = true;
+
                 bool wasAutoApply = mRunIsAutoApply;
                 mRunIsAutoApply = false;
                 if (event.type == Type::Fatal && !wasAutoApply && onLog)

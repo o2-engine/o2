@@ -302,8 +302,13 @@ namespace Editor
         static String ComputePortSignature(const PipelineNode& node, const Map<String, String>& upstreamByPortKey,
                                            int seed, const String& portId, bool rawRender = true);
 
-        // Returns the signature key an edge from this output reads: the port entry of a per-port node, the node otherwise
+        // Returns the signature key an edge from this output reads: the port entry of a per-port or dynamic outputs node,
+        // the node otherwise
         static String OutputSigKey(const PipelineNode& fromNode, const String& fromPortId);
+
+        // Returns the signature of one output of a dynamic outputs node: its outputs are cached together under the node
+        // signature, but two consumers of two outputs must not share a cache slot
+        static String DynamicPortSignature(const String& nodeSignature, const String& portName);
 
         // Returns config keys that never take part in signatures
         static const Vector<String>& GetUiOnlyConfigKeys();
@@ -476,6 +481,7 @@ CLASS_METHODS_META(Editor::PipelineGraph)
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, UpstreamSigKey, const PipelineNode&, const PipelinePort&);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, ComputePortSignature, const PipelineNode&, _tmp6, int, const String&, bool);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, OutputSigKey, const PipelineNode&, const String&);
+    FUNCTION().PUBLIC().SIGNATURE_STATIC(String, DynamicPortSignature, const String&, const String&);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(const Vector<String>&, GetUiOnlyConfigKeys);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(bool, IsSeededType, const String&);
 }
