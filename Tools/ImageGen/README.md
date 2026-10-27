@@ -6,6 +6,13 @@ and animation clips for the engine. Requires `python3` with `Pillow` and `numpy`
 
 API key: put it into `api_key.txt` next to the scripts (gitignored), or export `GEMINI_API_KEY`.
 
+OpenRouter: with an OpenRouter key the image calls go through OpenRouter's chat completions instead
+(image modality, the same prompts; a bare Gemini id gets the `google/` prefix, any `vendor/model` id is
+used as is). The key comes from `OPENROUTER_API_KEY`, else from the `openrouter` field of the project's
+`Work/Pipelines/PipelineSettings.json` (the o2 editor's pipeline settings), searched upwards from the
+working folder and from this tool. `IMAGEGEN_PROVIDER=gemini` or `openrouter` forces the route. Video
+(Veo) stays on the Gemini API. A running MCP server picks the change up after a restart.
+
 ## MCP server
 
 `mcp_server.py` — stdio MCP server (no extra dependencies), registered in the repo root

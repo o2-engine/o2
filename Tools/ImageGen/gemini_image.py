@@ -14,6 +14,7 @@ from PIL import Image
 
 DEFAULT_MODEL = "gemini-3.1-flash-image"  # Nano Banana 2
 API_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={key}"
+OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 ASPECT_RATIOS = ["1:1", "2:3", "3:2", "3:4", "4:3", "4:5", "5:4", "9:16", "16:9", "21:9"]
 IMAGE_SIZES = ["1K", "2K", "4K"]
 
@@ -77,6 +78,40 @@ def load_api_key():
     raise GeminiError("no API key - set GEMINI_API_KEY or put the key into " + path)
 
 
+def load_openrouter_key():
+    """OPENROUTER_API_KEY, else the "openrouter" key of the project's Work/Pipelines/PipelineSettings.json
+    (the o2 editor's pipeline settings, found upwards from the working folder or this tool)."""
+    key = os.environ.get("OPENROUTER_API_KEY", "").strip()
+    if key:
+        return key
+    starts = [os.getcwd(), os.path.dirname(os.path.abspath(__file__))]
+    for start in starts:
+        folder = start
+        while True:
+            path = os.path.join(folder, "Work", "Pipelines", "PipelineSettings.json")
+            if os.path.isfile(path):
+                try:
+                    with open(path) as f:
+                        key = (json.load(f).get("openrouter") or "").strip()
+                except (OSError, ValueError):
+                    key = ""
+                if key:
+                    return key
+            parent = os.path.dirname(folder)
+            if parent == folder:
+                break
+            folder = parent
+    return ""
+
+
+def provider():
+    """openrouter when its key is set (IMAGEGEN_PROVIDER=gemini forces the direct Gemini API)."""
+    forced = os.environ.get("IMAGEGEN_PROVIDER", "").strip().lower()
+    if forced in ("gemini", "openrouter"):
+        return forced
+    return "openrouter" if load_openrouter_key() else "gemini"
+
+
 def _image_part(image):
     buf = io.BytesIO()
     image.save(buf, format="PNG")
@@ -84,9 +119,76 @@ def _image_part(image):
                            "data": base64.b64encode(buf.getvalue()).decode()}}
 
 
+def _data_url(image):
+    buf = io.BytesIO()
+    image.save(buf, format="PNG")
+    return "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode()
+
+
+def _generate_openrouter(system_prompt, user_prompt, images, aspect, size, model, retries, verbose):
+    """The same call through OpenRouter's chat completions (image modality); a bare Gemini id gets google/."""
+    model_id = model if "/" in model else "google/" + model
+    content = [{"type": "image_url", "image_url": {"url": _data_url(img)}} for img in images]
+    content.append({"type": "text", "text": user_prompt})
+    body = {
+        "model": model_id,
+        "messages": [{"role": "system", "content": system_prompt}, {"role": "user", "content": content}],
+        "modalities": ["image", "text"],
+    }
+    image_config = {}
+    if aspect:
+        image_config["aspect_ratio"] = aspect
+    if size:
+        image_config["image_size"] = size
+    if image_config:
+        body["image_config"] = image_config
+    if verbose:
+        print(f"--- openrouter {model_id} ---", file=sys.stderr)
+        print("--- system prompt ---\n" + system_prompt, file=sys.stderr)
+        print("--- user prompt ---\n" + user_prompt, file=sys.stderr)
+
+    headers = {"Content-Type": "application/json", "Authorization": "Bearer " + load_openrouter_key(),
+               "X-Title": "o2 ImageGen"}
+    data = json.dumps(body).encode()
+    last_error = None
+    for attempt in range(retries):
+        if attempt:
+            time.sleep(2 ** attempt)
+        req = urllib.request.Request(OPENROUTER_URL, data=data, headers=headers)
+        try:
+            with urllib.request.urlopen(req, timeout=300) as resp:
+                result = json.load(resp)
+        except urllib.error.HTTPError as e:
+            last_error = f"OpenRouter HTTP {e.code}: {e.read().decode(errors='replace')[:500]}"
+            if e.code in (429, 500, 502, 503, 504):
+                continue
+            raise GeminiError(last_error)
+        except urllib.error.URLError as e:
+            last_error = str(e)
+            continue
+
+        if "error" in result:
+            last_error = "OpenRouter: " + json.dumps(result["error"])[:500]
+            continue
+        choices = result.get("choices") or []
+        message = choices[0].get("message", {}) if choices else {}
+        urls = [item.get("image_url", {}).get("url", "") for item in message.get("images") or []]
+        urls = [url for url in urls if url.startswith("data:")]
+        text = message.get("content") if isinstance(message.get("content"), str) else ""
+        if not urls:
+            last_error = ("no image in response, finish_reason="
+                          + str(choices[0].get("finish_reason") if choices else None) + " " + (text or "")[:300])
+            continue
+        image = Image.open(io.BytesIO(base64.b64decode(urls[0].split(",", 1)[1])))
+        return image, text or ""
+    raise GeminiError(last_error or "request failed")
+
+
 def generate(system_prompt, user_prompt, images=(), aspect=None, size=None,
              model=DEFAULT_MODEL, retries=3, verbose=False):
     """Calls generateContent, returns (PIL.Image, model_text). Input images go before the prompt."""
+    if provider() == "openrouter":
+        return _generate_openrouter(system_prompt, user_prompt, images, aspect, size, model, retries, verbose)
     parts = [_image_part(img) for img in images]
     parts.append({"text": user_prompt})
     config = {"responseModalities": ["IMAGE"]}
