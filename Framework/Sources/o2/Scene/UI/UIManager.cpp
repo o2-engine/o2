@@ -64,7 +64,7 @@ namespace o2
         if (!IsSingletonInitialzed())
             return;
 
-        Instance().mFocusableWidgets.Add(Ref(widget));
+        Instance().mFocusableWidgets.Add(WeakRef<Widget>(widget));
     }
 
     void UIManager::UnregisterFocusableWidget(Widget* widget)
@@ -72,7 +72,7 @@ namespace o2
         if (!IsSingletonInitialzed())
             return;
 
-        Instance().mFocusableWidgets.RemoveFirst([&](auto& x) { return x == widget; });
+        Instance().mFocusableWidgets.RemoveAll([&](auto& x) { return x == widget || !x; });
     }
 
     UIManager::UIManager(RefCounter* refCounter):
@@ -138,8 +138,12 @@ namespace o2
     {
         bool fnd = mFocusedWidget == nullptr;
         Ref<Widget> nextFocusingWidget;
-        for (auto& widget : mFocusableWidgets)
+        for (auto& weakWidget : mFocusableWidgets)
         {
+            auto widget = weakWidget.Lock();
+            if (!widget)
+                continue;
+
             if (!fnd)
             {
                 if (widget == mFocusedWidget)

@@ -469,7 +469,8 @@ namespace o2
 
 		TextureRef mWhiteTexture; // Default white texture
 
-		Vector<TextureRef> mTextures; // Loaded textures
+		Vector<TextureRef>       mTextures;     // Textures of files and atlas pages, kept for reuse by name and for reloading
+		Vector<WeakRef<Texture>> mDataTextures; // Textures made from data in memory, only tracked: they go with their owners
 		Vector<Ref<Font>>  mFonts;    // Loaded fonts
 
 		Camera mCamera;     // Camera transformation

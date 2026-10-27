@@ -1570,12 +1570,16 @@ namespace o2
 
 	void Render::OnTextureCreated(Texture* texture)
 	{
-		mTextures.Add(Ref(texture));
+		if (!texture->GetFileName().IsEmpty() || texture->GetAtlasAssetId() != UID::empty)
+			mTextures.Add(Ref(texture));
+		else
+			mDataTextures.Add(WeakRef<Texture>(texture));
 	}
 
 	void Render::OnTextureDestroyed(Texture* texture)
 	{
 		mTextures.RemoveFirst([=](const TextureRef& x) { return x == texture; });
+		mDataTextures.RemoveAll([=](const WeakRef<Texture>& x) { return x == texture || !x; });
 	}
 
 	void Render::OnAtlasCreated(AtlasAsset* atlas)

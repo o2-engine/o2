@@ -12,6 +12,8 @@ It is important to know that textures and ImageAssets are separate entities. Tex
 
 A texture can be created on its own, a bitmap can be loaded into it, and it can be loaded from disk in a specific format.
 
+The render keeps the textures of files and atlas pages: `TextureRef(fileName)` finds a loaded one by its name, and an assets rebuild reloads them. Textures made from data (`TextureRef(bitmap)` of a bitmap without a file name, an empty texture, a render target) are only tracked and go with their last reference. The Metal backend (`Render/Mac`) is built without ARC: the objects its `new...` calls make are released by hand (`Texture::PlatformDestroy`, a replaced sampler or depth texture).
+
 A texture can be a render target; for that it is created with the corresponding flag. A render target has a pixel density (`Texture::SetPixelDensity`, 1 by default): pixels of the texture per resolution unit. Drawing into it goes in the resolution `GetTargetResolution()` = size / density, as drawing to a retina screen does, so a target shown on such a screen can have all its pixels while line widths, clipping and layout inside stay the same. The scroll views of the editor (pipeline canvas, curves) create their targets with the density of the screen.
 
 ### Camera, o2::Camera
@@ -120,14 +122,16 @@ Additionally to the font, a font style can be set — the `o2::FontStyleAsset` a
 
 Text is formatted relative to the rectangular area defined by `o2::IRectDrawable`. The following formatting parameters are available:
 - hor/verAlign horizontal/vertical alignment
-- wrapping words to the next line on horizontal overflow
+- wrapping words to the next line on horizontal overflow: the line breaks at the last space, which stays at the end of that line, so the next one starts with a word; a space never breaks a line by itself (it may hang past the edge), as browsers lay text out
 - ending the line with an ellipsis (...) on horizontal overflow
 - letter and line spacing coefficients
+
+`Text::GetTextSize` measures with the font's rendered characters and renders the missing ones first, so a text that was never drawn measures right.
 
 ### Bitmap and vector fonts
 A bitmap font is defined by pre-made, pre-rendered characters in an atlas and their description.
 
-A vector font is generated at runtime, rendering and packing the needed glyphs into a special atlas.
+A vector font is generated at runtime, rendering and packing the needed glyphs into a special atlas. A text height is in points at the font's resolution, 92 by default (12 points ≈ 15.3 px); `VectorFont::SetResolution(dpi)` changes it per font (72 makes a height pixels, 36 half-pixels), `SetHinting(false)` draws the outlines unhinted. Both drop the rendered characters, so set them before the font is used.
 
 Glyphs are rendered for the pixels they cover: the view scale of the camera times the pixel density of the target (the screen graphics scale, 2 on retina, or the density of a render texture), rounded up to a step of half an octave between 0.5 and 4. So text stays sharp when a view is zoomed in and is not shimmering when zoomed out. Sizes, origins and advances stay in resolution units and the advances are the ones of density 1, so text layout does not depend on the screen. `Text` rebuilds its mesh when the step changes. Glyphs with style effects are always rendered at density 1: effects work in pixels of the glyph bitmap.
 

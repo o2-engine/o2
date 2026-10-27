@@ -375,6 +375,15 @@ namespace o2
                             bool wordWrap /*= true*/, bool dotsEngings /*= false*/, float charsDistCoef /*= 1.0f*/,
                             float linesDistCoef /*= 1.0f*/, const Ref<FontStyle>& style /*= nullptr*/)
     {
+        // The metrics come from the rendered characters: a text not drawn yet at this height would measure short
+        if (font)
+        {
+            if (style)
+                font->CheckCharacters(text, height, style);
+            else
+                font->CheckCharacters(text, height);
+        }
+
         SymbolsSet textSet;
         textSet.Initialize(font, style, text, height, Vec2F(), areaSize, horAlign, verAlign, wordWrap, dotsEngings,
                            charsDistCoef, linesDistCoef);
@@ -878,29 +887,34 @@ namespace o2
 
             curLine->mString += mText[i];
 
-            bool outOfBounds = checkAreaBounds ? curLine->mSize.x > mAreaSize.x && i > curLine->mLineBegSymbol : false;
+            // A space may hang past the edge: the break comes at the next word
+            bool outOfBounds = checkAreaBounds ? curLine->mSize.x > mAreaSize.x && i > curLine->mLineBegSymbol && mText[i] != ' ' : false;
 
             if (mText[i] == '\n' || outOfBounds)
             {
                 if (outOfBounds)
                 {
-                    if (wrapCharIdx < 0 || wrapCharIdx == curLine->mLineBegSymbol)
+                    // A line broken at a space keeps the space at its end, as the following line starts with the next word
+                    bool atSpace = wrapCharIdx >= 0 && wrapCharIdx != curLine->mLineBegSymbol;
+                    if (!atSpace)
                         wrapCharIdx = i;
                     else
                         curLine->mSpacesCount--;
 
-                    int cutLen = wrapCharIdx - curLine->mLineBegSymbol;
+                    int cutLen = wrapCharIdx - curLine->mLineBegSymbol + (atSpace ? 1 : 0);
+                    float width = atSpace && cutLen > 1 ? curLine->mSymbols[cutLen - 2].mFrame.right : 0.0f;
 
                     curLine->mSymbols.RemoveRange(cutLen, curLine->mSymbols.Count());
                     curLine->mString.Erase(cutLen);
 
-
-                    if (curLine->mSymbols.Count() > 0)
+                    if (atSpace)
+                        curLine->mSize.x = width;
+                    else if (curLine->mSymbols.Count() > 0)
                         curLine->mSize.x = curLine->mSymbols.Last().mFrame.right;
                     else
                         curLine->mSize.x = 0;
 
-                    i = wrapCharIdx - 1;
+                    i = atSpace ? wrapCharIdx : wrapCharIdx - 1;
                     wrapCharIdx = -1;
                 }
                 else

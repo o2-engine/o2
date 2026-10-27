@@ -148,6 +148,13 @@ namespace o2
         // Rebuilds assets
         void RebuildAssets(bool resetCache = false);
 
+        // Rebuilds assets with the builder process on a job worker; the tree is reloaded and onAssetsRebuilt called on the
+        // main thread after it. A call while one runs is merged into one more pass
+        void RebuildAssetsInBackground(bool resetCache = false);
+
+        // Returns true while a background rebuild runs
+        bool IsRebuildingAssets() const;
+
         // Refreshes cached assets' mInfo from tree by UID; called after tree reload
         void RefreshCachedAssetsInfo(const Ref<AssetsTree>& tree);
 #endif

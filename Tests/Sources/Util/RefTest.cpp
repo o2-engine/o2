@@ -219,3 +219,47 @@ TEST(WeakRef, MultipleWeakRefsTrackedCorrectly) {
     EXPECT_TRUE(w2.IsExpired());
     EXPECT_TRUE(w3.IsExpired());
 }
+
+// A weak reference made from a temporary or moved strong one takes a weak count and releases the strong one
+TEST(WeakRef, FromMovedRefReleasesTheStrongReference) {
+    RefTrackedBase::sAliveCount = 0;
+
+    Ref<RefTrackedBase> strong = mmake<RefTrackedBase>(7);
+    Ref<RefTrackedBase> moved = strong;
+    WeakRef<RefTrackedBase> weak(std::move(moved));
+    EXPECT_FALSE(moved);
+    EXPECT_EQ(strong->GetStrongReferencesCount(), 1);
+    EXPECT_EQ(strong->GetWeakReferencesCount(), 1);
+
+    strong = nullptr;
+    EXPECT_TRUE(weak.IsExpired());
+    EXPECT_EQ(RefTrackedBase::sAliveCount, 0);
+}
+
+TEST(WeakRef, AssignedFromTemporaryRefDoesNotKeepObjectAlive) {
+    RefTrackedBase::sAliveCount = 0;
+
+    WeakRef<RefTrackedBase> weak;
+    weak = mmake<RefTrackedBase>(8);
+    EXPECT_TRUE(weak.IsExpired());
+    EXPECT_EQ(RefTrackedBase::sAliveCount, 0);
+
+    Ref<RefTrackedBase> strong = mmake<RefTrackedBase>(9);
+    weak = Ref<RefTrackedBase>(strong);
+    EXPECT_EQ(strong->GetStrongReferencesCount(), 1);
+    EXPECT_EQ(strong->GetWeakReferencesCount(), 1);
+    EXPECT_EQ(weak.Lock()->value, 9);
+}
+
+TEST(WeakRef, VectorOfWeakRefsFromTemporariesKeepsNothingAlive) {
+    RefTrackedBase::sAliveCount = 0;
+
+    Vector<WeakRef<RefTrackedBase>> weak;
+    {
+        Ref<RefTrackedBase> strong = mmake<RefTrackedBase>();
+        weak.Add(Ref<RefTrackedBase>(strong));
+        EXPECT_EQ(strong->GetStrongReferencesCount(), 1);
+    }
+    EXPECT_EQ(RefTrackedBase::sAliveCount, 0);
+    EXPECT_TRUE(weak[0].IsExpired());
+}

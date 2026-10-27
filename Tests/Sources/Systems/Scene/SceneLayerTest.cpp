@@ -130,3 +130,37 @@ TEST(SceneLayer, SetLayerByNameAssignsToActor)
 
     EXPECT_EQ(a->GetLayer(), layer);
 }
+
+// ===== Rename =====
+
+TEST(SceneLayer, RenamingALayerKeepsItFoundByTheNewName)
+{
+    SceneCleanGuard guard;
+    auto layer = o2Scene.AddLayer("layer_rename_old_42");
+    layer->SetName("layer_rename_new_42");
+
+    EXPECT_FALSE(o2Scene.HasLayer("layer_rename_old_42"));
+    EXPECT_EQ(o2Scene.GetLayer("layer_rename_new_42"), layer);
+    EXPECT_TRUE(o2Scene.GetLayers().Contains(layer));
+}
+
+// A layer the scene doesn't hold (a prototype's own, built off-scene) named like a scene layer, or like no layer, leaves the
+// scene's layers as they are: an actor bound by that name lands on a layer the scene draws
+TEST(SceneLayer, NamingALayerOutsideTheSceneLeavesTheScenesLayers)
+{
+    SceneCleanGuard guard;
+    auto real = o2Scene.AddLayer("layer_detached_real_42");
+    auto shadow = mmake<SceneLayer>();
+    shadow->SetName("layer_detached_real_42");
+    auto stray = mmake<SceneLayer>();
+    stray->SetName("layer_detached_stray_42");
+
+    EXPECT_EQ(o2Scene.GetLayer("layer_detached_real_42"), real);
+    EXPECT_FALSE(o2Scene.HasLayer("layer_detached_stray_42"));
+
+    auto a = mmake<Actor>(ActorCreateMode::InScene);
+    a->SetLayer(String("layer_detached_stray_42"));
+    ASSERT_TRUE(a->GetLayer());
+    EXPECT_NE(a->GetLayer(), stray);
+    EXPECT_TRUE(o2Scene.GetLayers().Contains(a->GetLayer()));
+}

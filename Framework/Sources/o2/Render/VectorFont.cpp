@@ -189,7 +189,7 @@ namespace o2
 
         FT_Set_Char_Size(mFreeTypeFace, 0, height*64, mResolution, mResolution);
 
-        FT_Load_Char(mFreeTypeFace, 'A', kGlyphLoadFlags);
+        FT_Load_Char(mFreeTypeFace, 'A', LoadFlags());
 
         result = mFreeTypeFace->glyph->metrics.horiBearingY/64.0f;
         mHeights.Add(height, result);
@@ -297,6 +297,37 @@ namespace o2
         onCharactersRebuilt();
     }
 
+    void VectorFont::SetResolution(int dpi)
+    {
+        if (dpi == mResolution || dpi <= 0)
+            return;
+
+        mResolution = dpi;
+        mHeights.Clear();
+        mGlyphMeshes.clear();
+        Reset();
+    }
+
+    int VectorFont::LoadFlags() const
+    {
+        return mHinting ? kGlyphLoadFlags : (kGlyphLoadFlags | FT_LOAD_NO_HINTING);
+    }
+
+    int VectorFont::GetResolution() const
+    {
+        return mResolution;
+    }
+
+    void VectorFont::SetHinting(bool enabled)
+    {
+        if (enabled == mHinting)
+            return;
+
+        mHinting = enabled;
+        mHeights.Clear();
+        Reset();
+    }
+
     void VectorFont::RenderNewCharacters(Vector<wchar_t>& newCharacters, int height, int styleId,
                                          const Vector<Ref<Effect>>& effects, float pixelDensity)
     {
@@ -310,7 +341,7 @@ namespace o2
         {
             for (auto& ch : newCharacters)
             {
-                FT_Load_Char(mFreeTypeFace, ch, kGlyphLoadFlags & ~FT_LOAD_RENDER);
+                FT_Load_Char(mFreeTypeFace, ch, LoadFlags() & ~FT_LOAD_RENDER);
                 advances.Add(mFreeTypeFace->glyph->advance.x/64.0f);
             }
 
@@ -327,7 +358,7 @@ namespace o2
 
         border += Vec2I(2, 2);
 
-        FT_Load_Char(mFreeTypeFace, 'A', kGlyphLoadFlags);
+        FT_Load_Char(mFreeTypeFace, 'A', LoadFlags());
         int symbolsHeight = Math::CeilToInt((mFreeTypeFace->glyph->bitmap.rows + border.y*2)*1.25f);
 
         for (int i = 0; i < newCharacters.Count(); i++)
@@ -335,7 +366,7 @@ namespace o2
             wchar_t ch = newCharacters[i];
             CharDef newCharDef;
 
-            FT_Load_Char(mFreeTypeFace, ch, kGlyphLoadFlags);
+            FT_Load_Char(mFreeTypeFace, ch, LoadFlags());
             auto glyph = mFreeTypeFace->glyph;
 
             Vec2I glyphSize(glyph->bitmap.width, glyph->bitmap.rows);

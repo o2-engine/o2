@@ -1,5 +1,7 @@
 #include "o2/stdafx.h"
 #include <gtest/gtest.h>
+#include <thread>
+#include <vector>
 
 #include "Network/NetworkTestHelpers.h"
 #include "Network/TestHttpServer.h"
@@ -8,6 +10,7 @@
 #include "o2/Network/Http/HttpRequest.h"
 #include "o2/Network/Http/HttpResponse.h"
 #include "o2/Network/NetworkSystem.h"
+#include "o2/Utils/Jobs/JobSystem.h"
 #include "o2/Utils/Bitmap/Bitmap.h"
 
 using namespace o2;
@@ -533,4 +536,39 @@ TEST(Http, CachePreferCachedPolicy)
     ASSERT_TRUE(response);
     EXPECT_TRUE(response->fromCache);
     EXPECT_EQ(server->cacheHits, 1);
+}
+
+// Coroutines resume on the job workers: requests sent from there reach the server once each and answer on the main thread
+TEST(Http, RequestsFromWorkerThreadsAreSentByThePump)
+{
+    auto server = mmake<TestHttpServer>();
+    ASSERT_TRUE(server->Start());
+    HttpEnvGuard guard(HttpBackendType::Generic);
+
+    const int count = 8;
+    String base = server->GetBaseUrl();
+    std::vector<String> bodies(count);
+    int answered = 0;
+    bool onMain = true;
+    std::thread::id mainThread = std::this_thread::get_id();
+    for (int i = 0; i < count; i++)
+    {
+        o2Jobs.Schedule([base, i, &bodies, &answered, &onMain, mainThread]()
+        {
+            auto request = mmake<HttpRequest>(base + "/echo", HttpMethod::Post);
+            request->body = "worker " + (String)i;
+            o2Network.SendRequest(request, [i, &bodies, &answered, &onMain, mainThread](const Ref<HttpResponse>& response)
+            {
+                onMain = onMain && std::this_thread::get_id() == mainThread;
+                bodies[i] = response ? response->body : String();
+                answered++;
+            });
+        }, JobPriority::Normal, JobThread::Any);
+    }
+
+    ASSERT_TRUE(NetPumpUntil([&] { return answered == count; }, 20.0f));
+    EXPECT_TRUE(onMain);
+    EXPECT_EQ(server->echoHits, count);
+    for (int i = 0; i < count; i++)
+        EXPECT_EQ(bodies[i], "POST|worker " + (String)i) << i;
 }

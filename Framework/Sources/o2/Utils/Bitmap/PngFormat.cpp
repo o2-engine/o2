@@ -320,7 +320,7 @@ namespace o2
         void PngMemoryFlushFn(png_structp png_ptr) {}
     }
 
-    bool SavePngImageToMemory(const Bitmap* image, String& out)
+    bool SavePngImageToMemory(const Bitmap* image, String& out, bool fast /*= false*/)
     {
         if (!image || !image->GetData())
             return false;
@@ -346,6 +346,13 @@ namespace o2
 
         PngMemoryWriter writer;
         png_set_write_fn(png_ptr, &writer, PngMemoryWriteFn, PngMemoryFlushFn);
+
+        // Fast: no search for the best row filter and a light deflate, several times quicker for a bigger file
+        if (fast)
+        {
+            png_set_filter(png_ptr, PNG_FILTER_TYPE_BASE, PNG_FILTER_NONE);
+            png_set_compression_level(png_ptr, 1);
+        }
 
         int width = image->GetSize().x;
         int height = image->GetSize().y;

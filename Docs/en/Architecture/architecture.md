@@ -186,7 +186,7 @@ The engine treats various resources (textures, sounds, text configs, etc.) as as
 
 Each asset has a unique `id` stored in a `.meta` file alongside the asset itself. That file may also contain compression info and other data not suitable for the original file. In addition, a tree of assets is built for efficient metadata loading.
 
-Assets are processed by the **AssetsBuilder** tool, which detects changed resources and updates their built versions. It runs before the editor starts, during its operation, and when building the final release.
+Assets are processed by the **AssetsBuilder** tool, which detects changed resources and updates their built versions. It runs before the editor starts, during its operation, and when building the final release. In the editor `Assets::RebuildAssets` runs it and waits; `Assets::RebuildAssetsInBackground` runs it on a job worker, reloads the tree and calls `onAssetsRebuilt` on the main thread after it, and merges calls made meanwhile into one more pass (`IsRebuildingAssets`). One builder runs at a time.
 
 The engine provides the `o2::Assets` subsystem (a singleton) accessed from anywhere via the `o2Assets` macro. It loads the asset tree on startup and offers an easy interface to retrieve assets. Smart pointers `o2::AssetRef<>` are used; they serialize, cache the loading process, and automatically unload the asset when no references remain.
 

@@ -159,7 +159,7 @@ namespace o2
         Ref<Widget>         mFocusedWidget;        // Current selected widget
         Vector<Ref<Widget>> mLastUnfocusedWidgets; // Widget that was unfocused on last frame
         Vector<Ref<Widget>> mLastFocusedWidgets;   // Widget that was focused on last frame
-        Vector<Ref<Widget>> mFocusableWidgets;     // List of selectable widgets
+        Vector<WeakRef<Widget>> mFocusableWidgets; // List of selectable widgets; weak, a widget unregisters in its destructor
 
         Map<WeakRef<CursorAreaEventListenersLayer>, Vector<Ref<Widget>>> mTopWidgets; // Top widgets, drawing after mScreenWidget 
 

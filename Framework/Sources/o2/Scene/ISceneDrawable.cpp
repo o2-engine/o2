@@ -195,10 +195,11 @@ namespace o2
 
     void ISceneDrawable::Unregister()
     {
-        if (mParentRegistry)
-            mParentRegistry.Lock()->mChildrenInheritedDepth.Remove(Ref(this));
-        else
-            mLayerRegistry.Lock()->UnregisterDrawable(this);
+        // Runs from the destructor too, where Ref(this) is not allowed, and the registry may be gone already
+        if (auto parentRegistry = mParentRegistry.Lock())
+            parentRegistry->mChildrenInheritedDepth.RemoveFirst([this](const Ref<ISceneDrawable>& x) { return x == this; });
+        else if (auto layerRegistry = mLayerRegistry.Lock())
+            layerRegistry->UnregisterDrawable(this);
 
         mParentRegistry = nullptr;
         mLayerRegistry = nullptr;

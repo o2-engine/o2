@@ -174,7 +174,7 @@ namespace o2
         Ref(const Ref<_type>& other);
 
         // Move constructor
-        Ref(Ref<_type>&& other);
+        Ref(Ref<_type>&& other) noexcept;
 
         // Copy constructor from other type
         template<typename _other_type, typename _enable = std::enable_if<std::is_convertible<_other_type*, _type*>::value>::type>
@@ -459,7 +459,7 @@ namespace o2
     }
 
     template<typename _type>
-    Ref<_type>::Ref(Ref<_type>&& other) :
+    Ref<_type>::Ref(Ref<_type>&& other) noexcept :
         mPtr(other.mPtr)
     {
 		other.mPtr = nullptr;

@@ -3,7 +3,12 @@
 
 #include "o2/Render/Texture.h"
 #include "o2/Render/TextureRef.h"
+#include "o2/Utils/Types/WeakRef.h"
 #include "o2/Utils/Bitmap/Bitmap.h"
+
+#if defined(__APPLE__)
+#include <mach/mach.h>
+#endif
 
 using namespace o2;
 
@@ -41,3 +46,50 @@ TEST(TextureCopy, KeepsSourceContentInGrownTexture)
 			ASSERT_EQ(pixel(*result, x, y), pixel(sourceBitmap, x, y)) << "at " << x << ", " << y;
 	}
 }
+
+// A texture made from data goes with its last reference: the render only tracks it, so it is not kept forever
+TEST(TextureRegistry, DataTexturesAreFreedWithTheirOwners)
+{
+	Bitmap bitmap(PixelFormat::R8G8B8A8, Vec2I(8, 8));
+	bitmap.Fill(Color4(10, 20, 30, 255));
+
+	WeakRef<Texture> weak;
+	{
+		TextureRef texture(bitmap);
+		ASSERT_TRUE(texture);
+		weak = WeakRef<Texture>(texture.Get());
+		EXPECT_FALSE(weak.IsExpired());
+	}
+	EXPECT_TRUE(weak.IsExpired());
+}
+
+#if defined(__APPLE__)
+static double FootprintMb()
+{
+	task_vm_info_data_t info;
+	mach_msg_type_number_t count = TASK_VM_INFO_COUNT;
+	if (task_info(mach_task_self(), TASK_VM_INFO, (task_info_t)&info, &count) != KERN_SUCCESS)
+		return 0.0;
+	return info.phys_footprint/(1024.0*1024.0);
+}
+
+// A freed texture gives its GPU memory back: 64 MB of textures made and dropped over and over stay 64 MB
+TEST(TextureRegistry, FreedTexturesReleaseTheirMemory)
+{
+	Bitmap bitmap(PixelFormat::R8G8B8A8, Vec2I(1024, 1024));
+	bitmap.Fill(Color4(10, 20, 30, 255));
+
+	auto round = [&]()
+	{
+		Vector<TextureRef> textures;
+		for (int i = 0; i < 16; i++)
+			textures.Add(TextureRef(bitmap));
+	};
+
+	round();
+	double start = FootprintMb();
+	for (int i = 0; i < 8; i++)
+		round();
+	EXPECT_LT(FootprintMb() - start, 100.0);
+}
+#endif

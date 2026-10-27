@@ -37,14 +37,14 @@ namespace o2
         // Copy-constructor
         Vector(const Vector& arr);
 
-        // Move-constructor
-        Vector(Vector&& arr);
+        // Move-constructor; noexcept, so containers of vectors move them when they grow instead of copying
+        Vector(Vector&& arr) noexcept;
 
         // Assign operator
         Vector& operator=(const Vector& arr);
 
         // Move operator
-        Vector& operator=(Vector&& arr);
+        Vector& operator=(Vector&& arr) noexcept;
 
         // Plus operator - returns sum of this array and other elements
         Vector operator+(const Vector& arr) const;
@@ -311,7 +311,7 @@ namespace o2
     {}
 
     template<typename _type>
-    Vector<_type>::Vector(Vector&& arr):
+    Vector<_type>::Vector(Vector&& arr) noexcept:
         std::vector<_type>((std::vector<_type>&&)arr)
     {}
 
@@ -341,7 +341,7 @@ namespace o2
     }
 
     template<typename _type>
-    Vector<_type>& Vector<_type>::operator=(Vector&& arr)
+    Vector<_type>& Vector<_type>::operator=(Vector&& arr) noexcept
     {
         std::vector<_type>::operator=(arr);
         return *this;

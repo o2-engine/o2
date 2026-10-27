@@ -24,7 +24,7 @@ namespace o2
         WeakRef(const WeakRef<_type>& other);
 
         // Move constructor
-        WeakRef(WeakRef<_type>&& other);
+        WeakRef(WeakRef<_type>&& other) noexcept;
 
         // Copy constructor from strong reference
         WeakRef(const Ref<_type>& other);
@@ -123,7 +123,7 @@ namespace o2
     }
 
     template<typename _type>
-    WeakRef<_type>::WeakRef(WeakRef<_type>&& other) :
+    WeakRef<_type>::WeakRef(WeakRef<_type>&& other) noexcept :
         mPtr(other.mPtr), mRefCounter(other.mRefCounter)
     {
         other.mPtr = nullptr;
@@ -142,8 +142,10 @@ namespace o2
     WeakRef<_type>::WeakRef(Ref<_type>&& other) :
         mPtr(other.mPtr)
     {
+        // The moved-from strong reference is released, not kept: a weak reference never owns
         CheckRefCounter();
-        other.mPtr = nullptr;
+        IncrementWeakRef();
+        other = nullptr;
     }
 
     template<typename _type>
@@ -233,7 +235,8 @@ namespace o2
 
         mPtr = other.mPtr;
         CheckRefCounter();
-        other.mPtr = nullptr;
+        IncrementWeakRef();
+        other = nullptr;
 
         return *this;
     }

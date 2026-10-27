@@ -78,6 +78,17 @@ namespace o2
         // Removes all cached characters
         void Reset();
 
+        // Sets the resolution the point sizes turn into pixels at (92 by default): 72 makes a size pixels, 36 half-pixels.
+        // Drops the rendered characters
+        void SetResolution(int dpi);
+
+        // Returns the resolution the point sizes turn into pixels at
+        int GetResolution() const;
+
+        // Turns the font's own hinting on or off; unhinted glyphs keep their outline, as browsers draw them on macOS.
+        // Drops the rendered characters
+        void SetHinting(bool enabled);
+
     protected:
         struct PackLine;
 
@@ -112,7 +123,9 @@ namespace o2
 
     protected:
         static const int mInitialTextureSize = 1024;
-        static const int mResolution = 92;
+
+        int  mResolution = 92; // Resolution the point sizes turn into pixels at
+        bool mHinting = true;  // Uses the font's own hinting
 
         String  mFileName;     // Source file name
         FT_Face mFreeTypeFace; // Free Type font face
@@ -126,6 +139,10 @@ namespace o2
         mutable Map<int, float> mHeights; // Cached line heights
 
         Map<UInt16, VectorMesh> mGlyphMeshes; // Meshes of the glyph outlines by character id
+
+    protected:
+        // Returns the FreeType load flags: rendered, the font's own hinting unless it is off
+        int LoadFlags() const;
 
     protected:
         // Initializes glyphs texture

@@ -8,8 +8,13 @@
 #include "o2/Utils/Debug/Debug.h"
 #include "o2/Utils/Debug/Log/LogStream.h"
 #include "o2/Utils/FileSystem/FileSystem.h"
+#include "o2/Utils/Jobs/JobSystem.h"
 #include "o2/Utils/Serialization/DataValue.h"
 #include "o2/EngineSettings.h"
+
+#include <atomic>
+#include <chrono>
+#include <thread>
 
 namespace o2
 {
@@ -553,14 +558,9 @@ namespace o2
     }
 
 #if IS_EDITOR
-    void Assets::RebuildAssets(bool resetCache /*= false*/)
+#if !PLATFORM_WASM
+    static String AssetsBuilderCommand(const Assets& assets, bool resetCache)
     {
-#if PLATFORM_WASM
-        // The builder runs in-process over MEMFS (implemented next to the web
-        // editor entry point, so the framework doesn't depend on AssetsBuildTool)
-        extern void o2_WasmRebuildAssets(bool forcible);
-        o2_WasmRebuildAssets(resetCache);
-#else
 #if PLATFORM_WINDOWS
         String assetsBuilderPath = "AssetsBuilder.exe";
         String platform = "Windows";
@@ -576,15 +576,36 @@ namespace o2
 
         String command = assetsBuilderPath +
             " -platform " + platform +
-            " -source " + quote(GetAssetsPath()) +
-            " -target " + quote(GetBuiltAssetsPath()) +
-            " -target-tree " + quote(GetBuiltAssetsTreePath()) +
+            " -source " + quote(assets.GetAssetsPath()) +
+            " -target " + quote(assets.GetBuiltAssetsPath()) +
+            " -target-tree " + quote(::GetBuiltAssetsTreePath()) +
             " -compressor-config " + quote(String(GetEditorAssetsPath()) + "../../CompressToolsConfig.json");
 
         if (resetCache)
             command += " -forcible true";
 
-        int res = system(command.Data());
+        return command;
+    }
+
+    static std::atomic<bool> gBuilderRunning { false }; // A background builder process runs
+    static bool gBackgroundRebuild = false;             // A background rebuild is not applied yet (main thread)
+    static bool gBackgroundRebuildAgain = false;        // Asked again meanwhile
+    static bool gBackgroundRebuildReset = false;        // The next pass resets the cache
+#endif
+
+    void Assets::RebuildAssets(bool resetCache /*= false*/)
+    {
+#if PLATFORM_WASM
+        // The builder runs in-process over MEMFS (implemented next to the web
+        // editor entry point, so the framework doesn't depend on AssetsBuildTool)
+        extern void o2_WasmRebuildAssets(bool forcible);
+        o2_WasmRebuildAssets(resetCache);
+#else
+        // One builder at a time over the same folders
+        while (gBuilderRunning.load())
+            std::this_thread::sleep_for(std::chrono::milliseconds(2));
+
+        int res = system(AssetsBuilderCommand(*this, resetCache).Data());
         if (res != 0)
             o2Debug.LogError("AssetsBuilder failed with exit code " + (String)res);
 #endif
@@ -592,6 +613,59 @@ namespace o2
         auto changedAssetsUIDs = ReloadAssetsTree();
 
         onAssetsRebuilt(changedAssetsUIDs);
+    }
+
+    void Assets::RebuildAssetsInBackground(bool resetCache /*= false*/)
+    {
+#if PLATFORM_WASM
+        RebuildAssets(resetCache);
+#else
+        if (gBackgroundRebuild)
+        {
+            gBackgroundRebuildAgain = true;
+            gBackgroundRebuildReset |= resetCache;
+            return;
+        }
+
+        gBackgroundRebuild = true;
+        gBuilderRunning = true;
+        String command = AssetsBuilderCommand(*this, resetCache);
+        o2Jobs.Schedule([command]()
+        {
+            int res = system(command.Data());
+            gBuilderRunning = false;
+
+            o2Jobs.Schedule([res]()
+            {
+                gBackgroundRebuild = false;
+                if (!Assets::IsSingletonInitialzed())
+                    return;
+
+                if (res != 0)
+                    o2Debug.LogError("AssetsBuilder failed with exit code " + (String)res);
+
+                auto changedAssetsUIDs = o2Assets.ReloadAssetsTree();
+                o2Assets.onAssetsRebuilt(changedAssetsUIDs);
+
+                if (gBackgroundRebuildAgain)
+                {
+                    gBackgroundRebuildAgain = false;
+                    bool reset = gBackgroundRebuildReset;
+                    gBackgroundRebuildReset = false;
+                    o2Assets.RebuildAssetsInBackground(reset);
+                }
+            }, JobPriority::Normal, JobThread::Main);
+        }, JobPriority::Low, JobThread::Any);
+#endif
+    }
+
+    bool Assets::IsRebuildingAssets() const
+    {
+#if PLATFORM_WASM
+        return false;
+#else
+        return gBackgroundRebuild;
+#endif
     }
 
     void Assets::RefreshCachedAssetsInfo(const Ref<AssetsTree>& tree)
@@ -686,7 +760,16 @@ namespace o2
                 }
 
                 if (newAssetInfo->meta->GetAssetType() == &TypeOf(FolderAsset))
-                    processFolder(oldAssetInfo, oldAssetInfo->mChildren, newAssetInfo, newAssetInfo->mChildren);
+                {
+                    // A new folder taken over as it is would be both lists at once, and clearing one would drop its children
+                    if (oldAssetInfo == newAssetInfo)
+                    {
+                        auto newChildren = newAssetInfo->mChildren;
+                        processFolder(oldAssetInfo, oldAssetInfo->mChildren, newAssetInfo, newChildren);
+                    }
+                    else
+                        processFolder(oldAssetInfo, oldAssetInfo->mChildren, newAssetInfo, newAssetInfo->mChildren);
+                }
             }
         };
 

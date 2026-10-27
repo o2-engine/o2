@@ -21,7 +21,7 @@ Ref<MyObject> obj2 = Ref(raw);
 </details>
 
 - `Ref<>` — strong reference, owns the object. When no strong references remain, the object is destroyed.
-- `WeakRef<>` — weak reference, does not affect lifetime. Has `IsExpired()`/`IsValid()` methods and `Lock()` to obtain a `Ref<>`.
+- `WeakRef<>` — weak reference, does not affect lifetime. Has `IsExpired()`/`IsValid()` methods and `Lock()` to obtain a `Ref<>`. One made from a temporary or moved `Ref<>` (`weak = mmake<T>()`, `list.Add(Ref(this))` into a list of weak references) takes a weak count and releases the strong one.
 - Casts between reference types: `DynamicCast<T>(ref)` and `StaticCast<T>(ref)`.
 - For forward-declared types, use the `FORWARD_CLASS_REF`/`FORWARD_REF_IMPL` macros.
 

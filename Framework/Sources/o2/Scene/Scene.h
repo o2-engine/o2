@@ -327,7 +327,7 @@ namespace o2
         const Vector<WeakRef<SceneEditableObject>>& GetAllEditableObjects();
 
         // Returns current changed actors
-        const Vector<Ref<SceneEditableObject>>& GetChangedObjects() const;
+        Vector<Ref<SceneEditableObject>> GetChangedObjects() const;
 
         // Returns drawn on last frame editable objects
         const Vector<WeakRef<SceneEditableObject>>& GetDrawnEditableObjects() const;
@@ -378,7 +378,7 @@ namespace o2
     protected:
         Map<AssetRef<ActorAsset>, Vector<WeakRef<Actor>>> mPrototypeLinksCache; // Cache of linked to prototypes actors
 
-        Vector<Ref<SceneEditableObject>> mChangedObjects;    // Changed actors array
+        Vector<WeakRef<SceneEditableObject>> mChangedObjects; // Changed actors array; weak, an object dying meanwhile is skipped
 
         bool mIsCheckingChangedObjects = false; // Reentrancy guard: a changed widget's Update can call CheckChangedObjects again
 
@@ -568,7 +568,7 @@ CLASS_METHODS_META(o2::Scene)
     FUNCTION().PUBLIC().SIGNATURE(void, AddEditableObjectToScene, const Ref<SceneEditableObject>&);
     FUNCTION().PUBLIC().SIGNATURE(void, RemoveEditableObjectFromScene, const Ref<SceneEditableObject>&);
     FUNCTION().PUBLIC().SIGNATURE(const Vector<WeakRef<SceneEditableObject>>&, GetAllEditableObjects);
-    FUNCTION().PUBLIC().SIGNATURE(const Vector<Ref<SceneEditableObject>>&, GetChangedObjects);
+    FUNCTION().PUBLIC().SIGNATURE(Vector<Ref<SceneEditableObject>>, GetChangedObjects);
     FUNCTION().PUBLIC().SIGNATURE(const Vector<WeakRef<SceneEditableObject>>&, GetDrawnEditableObjects);
     FUNCTION().PUBLIC().SIGNATURE(Ref<SceneEditableObject>, GetEditableObjectByID, SceneUID);
     FUNCTION().PUBLIC().SIGNATURE(int, GetObjectHierarchyIdx, const Ref<SceneEditableObject>&);

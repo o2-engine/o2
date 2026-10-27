@@ -376,6 +376,7 @@ namespace o2
                                                                        mipmapped:NO];
                     depthDescriptor.usage = MTLTextureUsageRenderTarget;
                     depthDescriptor.storageMode = MTLStorageModePrivate;
+                    [targetImpl->depthTexture release];
                     targetImpl->depthTexture = [RenderDevice::device newTextureWithDescriptor:depthDescriptor];
                 }
 
@@ -698,6 +699,7 @@ namespace o2
                                                                        mipmapped:NO];
                     depthDescriptor.usage = MTLTextureUsageRenderTarget;
                     depthDescriptor.storageMode = MTLStorageModePrivate;
+                    [targetImpl->depthTexture release];
                     targetImpl->depthTexture = [RenderDevice::device newTextureWithDescriptor:depthDescriptor];
                 }
 
@@ -1097,6 +1099,7 @@ namespace o2
                                                                    mipmapped:NO];
                 depthDescriptor.usage = MTLTextureUsageRenderTarget;
                 depthDescriptor.storageMode = MTLStorageModePrivate;
+                [targetImpl->depthTexture release];
                 targetImpl->depthTexture = [RenderDevice::device newTextureWithDescriptor:depthDescriptor];
             }
 

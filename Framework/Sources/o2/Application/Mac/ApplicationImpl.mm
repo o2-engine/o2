@@ -58,6 +58,16 @@ namespace o2
         
         [ApplicationPlatformWrapper::window setTitle: [[NSProcessInfo processInfo] processName]];
 
+        // Test runs that capture frames from the render target need no visible window at all:
+        // a transparent one that lets the mouse through never gets in the user's way
+        if (background && getenv("O2_INVISIBLE_WINDOW"))
+        {
+            [ApplicationPlatformWrapper::window setAlphaValue:0.0];
+            [ApplicationPlatformWrapper::window setIgnoresMouseEvents:YES];
+            [ApplicationPlatformWrapper::window setHasShadow:NO];
+            [ApplicationPlatformWrapper::window setCollectionBehavior:NSWindowCollectionBehaviorTransient | NSWindowCollectionBehaviorIgnoresCycle];
+        }
+
         // Ordering front without making the window key: it keeps drawing, but the keyboard stays
         // where it was
         if (background)

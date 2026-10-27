@@ -11,6 +11,6 @@ namespace o2
     bool LoadPngImageFromMemory(const UInt8* data, UInt size, Bitmap* image, bool errors = true);
     bool SavePngImage(const String& fileName, const Bitmap* image);
 
-    // Encodes the bitmap as PNG into memory (binary-safe string)
-    bool SavePngImageToMemory(const Bitmap* image, String& out);
+    // Encodes the bitmap as PNG into memory (binary-safe string); fast trades the file size for the encoding time
+    bool SavePngImageToMemory(const Bitmap* image, String& out, bool fast = false);
 }

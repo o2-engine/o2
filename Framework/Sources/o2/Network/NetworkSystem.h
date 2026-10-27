@@ -1,10 +1,13 @@
 #pragma once
 
+#include <thread>
+
 #include "o2/Network/Http/HttpTypes.h"
 #include "o2/Network/Url.h"
 #include "o2/Utils/Coroutines/Coroutines.h"
 #include "o2/Utils/Function/Function.h"
 #include "o2/Utils/Singleton.h"
+#include "o2/Utils/Threading/Mutex.h"
 #include "o2/Utils/Types/Containers/Vector.h"
 #include "o2/Utils/Types/Ref.h"
 
@@ -51,7 +54,8 @@ namespace o2
         // every frame; test runners without a frame loop call it manually
         void Update(float dt);
 
-        // Sends the HTTP request; the callback is invoked on the main thread with the response
+        // Sends the HTTP request; the callback is invoked on the main thread with the response. A request sent from another
+        // thread is dispatched by the next pump
         void SendRequest(const Ref<HttpRequest>& request, const Function<void(const Ref<HttpResponse>&)>& onCompleted);
 
         // Coroutine HTTP request: completes with the response
@@ -118,6 +122,17 @@ namespace o2
 
         Vector<PendingHttp> mPendingHttp; // Requests in flight
         Vector<ReadyHttp>   mReadyHttp;   // Responses to deliver on the next pump
+
+        // A request sent from another thread, dispatched by the next pump
+        struct QueuedHttp
+        {
+            Ref<HttpRequest>                         request;  // The request
+            Function<void(const Ref<HttpResponse>&)> callback; // Completion callback
+        };
+
+        std::thread::id    mMainThread;  // Thread the system was made on: the transfers, the cache and the cookies are its
+        Mutex              mQueuedMutex; // Guards the queued requests
+        Vector<QueuedHttp> mQueuedHttp;  // Requests sent from other threads (coroutines resumed on the job workers)
 
     protected:
         // Pumps every alive entry of the list over a copy, so callbacks can register and remove

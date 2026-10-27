@@ -8,6 +8,7 @@
 #include "o2/Network/Http/HttpResponse.h"
 #include "o2/Network/Http/SocketHttpBackend.h"
 #include "o2/Network/Sockets/SocketPlatform.h"
+#include "o2/Utils/Threading/ScopeLock.h"
 #include "o2/Network/Sockets/TcpListener.h"
 #include "o2/Network/Sockets/TcpSocket.h"
 #include "o2/Network/Sockets/UdpSocket.h"
@@ -98,6 +99,7 @@ namespace o2
 
         mCookies = mmake<HttpCookieJar>();
         mCache = mmake<HttpCache>();
+        mMainThread = std::this_thread::get_id();
     }
 
     NetworkSystem::~NetworkSystem()
@@ -136,6 +138,13 @@ namespace o2
     void NetworkSystem::SendRequest(const Ref<HttpRequest>& request,
                                     const Function<void(const Ref<HttpResponse>&)>& onCompleted)
     {
+        if (std::this_thread::get_id() != mMainThread)
+        {
+            ScopeLock<Mutex> lock(mQueuedMutex);
+            mQueuedHttp.Add({ request, onCompleted });
+            return;
+        }
+
         Url url = Url::Parse(request->url);
         if (!url.isValid)
         {
@@ -240,6 +249,15 @@ namespace o2
 
     void NetworkSystem::UpdateHttp(float dt)
     {
+        Vector<QueuedHttp> queued;
+        {
+            ScopeLock<Mutex> lock(mQueuedMutex);
+            queued = mQueuedHttp;
+            mQueuedHttp.Clear();
+        }
+        for (auto& item : queued)
+            SendRequest(item.request, item.callback);
+
         if (mHttpBackend)
             mHttpBackend->Update(dt);
 

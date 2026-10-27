@@ -64,20 +64,29 @@ namespace o2
         {
             if (cursor.pressedTime < FLT_EPSILON && cursor.isPressed)
             {
-                for (auto& listener : mCursorListeners)
-                    listener.Lock()->OnCursorPressed(cursor);
+                for (auto& listener : Vector<WeakRef<CursorEventsListener>>(mCursorListeners))
+                {
+                    if (auto locked = listener.Lock())
+                        locked->OnCursorPressed(cursor);
+                }
             }
             else
             {
-                for (auto& listener : mCursorListeners)
-                    listener.Lock()->OnCursorStillDown(cursor);
+                for (auto& listener : Vector<WeakRef<CursorEventsListener>>(mCursorListeners))
+                {
+                    if (auto locked = listener.Lock())
+                        locked->OnCursorStillDown(cursor);
+                }
             }
         }
 
         for (const Input::Cursor& cursor : o2Input.GetReleasedCursors())
         {
-            for (auto& listener : mCursorListeners)
-                listener.Lock()->OnCursorReleased(cursor);
+            for (auto& listener : Vector<WeakRef<CursorEventsListener>>(mCursorListeners))
+            {
+                if (auto locked = listener.Lock())
+                    locked->OnCursorReleased(cursor);
+            }
         }
 
         const Input::Cursor& cursor = *o2Input.GetCursor(0);
@@ -86,13 +95,19 @@ namespace o2
         {
             if (key.keyCode == -1)
             {
-                for (auto& listener : mCursorListeners)
-                    listener.Lock()->OnCursorRightMousePressed(cursor);
+                for (auto& listener : Vector<WeakRef<CursorEventsListener>>(mCursorListeners))
+                {
+                    if (auto locked = listener.Lock())
+                        locked->OnCursorRightMousePressed(cursor);
+                }
             }
             else if (key.keyCode == -2)
             {
-                for (auto& listener : mCursorListeners)
-                    listener.Lock()->OnCursorMiddleMousePressed(cursor);
+                for (auto& listener : Vector<WeakRef<CursorEventsListener>>(mCursorListeners))
+                {
+                    if (auto locked = listener.Lock())
+                        locked->OnCursorMiddleMousePressed(cursor);
+                }
             }
             else
             {
@@ -104,13 +119,19 @@ namespace o2
         {
             if (key.keyCode == -1)
             {
-                for (auto& listener : mCursorListeners)
-                    listener.Lock()->OnCursorRightMouseStillDown(cursor);
+                for (auto& listener : Vector<WeakRef<CursorEventsListener>>(mCursorListeners))
+                {
+                    if (auto locked = listener.Lock())
+                        locked->OnCursorRightMouseStillDown(cursor);
+                }
             }
             else if (key.keyCode == -2)
             {
-                for (auto& listener : mCursorListeners)
-                    listener.Lock()->OnCursorMiddleMouseStillDown(cursor);
+                for (auto& listener : Vector<WeakRef<CursorEventsListener>>(mCursorListeners))
+                {
+                    if (auto locked = listener.Lock())
+                        locked->OnCursorMiddleMouseStillDown(cursor);
+                }
             }
             else
                 ProcessKeyDown(key);
@@ -120,13 +141,19 @@ namespace o2
         {
             if (key.keyCode == -1)
             {
-                for (auto& listener : mCursorListeners)
-                    listener.Lock()->OnCursorRightMouseReleased(cursor);
+                for (auto& listener : Vector<WeakRef<CursorEventsListener>>(mCursorListeners))
+                {
+                    if (auto locked = listener.Lock())
+                        locked->OnCursorRightMouseReleased(cursor);
+                }
             }
             else if (key.keyCode == -2)
             {
-                for (auto& listener : mCursorListeners)
-                    listener.Lock()->OnCursorMiddleMouseReleased(cursor);
+                for (auto& listener : Vector<WeakRef<CursorEventsListener>>(mCursorListeners))
+                {
+                    if (auto locked = listener.Lock())
+                        locked->OnCursorMiddleMouseReleased(cursor);
+                }
             }
             else
                 ProcessKeyReleased(key);
@@ -135,8 +162,11 @@ namespace o2
         float scroll = o2Input.GetMouseWheelDelta();
         if (!Math::Equals(scroll, 0.0f))
         {
-            for (auto& listener : mCursorListeners)
-                listener.Lock()->OnScrolled(scroll);
+            for (auto& listener : Vector<WeakRef<CursorEventsListener>>(mCursorListeners))
+            {
+                if (auto locked = listener.Lock())
+                    locked->OnScrolled(scroll);
+            }
         }
 
         if (o2Input.IsKeyDown(VK_F1))
@@ -180,8 +210,12 @@ namespace o2
 
     void EventSystem::PostUpdate()
     {
-        for (auto& layer : mCursorAreaEventsListenersLayers)
-            layer.Lock()->PostUpdate();
+        auto layers = mCursorAreaEventsListenersLayers;
+        for (auto& layer : layers)
+        {
+            if (auto locked = layer.Lock())
+                locked->PostUpdate();
+        }
 
         mCursorAreaEventsListenersLayers.Clear();
         mCursorAreaEventsListenersLayers.Add(mCursorAreaListenersBasicLayer);
@@ -189,46 +223,56 @@ namespace o2
 
     void EventSystem::OnApplicationStarted()
     {
-        for (auto& listener : mApplicationListeners)
+        auto listeners = mApplicationListeners;
+        for (auto& listener : listeners)
         {
-            if (listener.Lock()->IsListeningEvents())
-                listener.Lock()->OnApplicationStarted();
+            auto locked = listener.Lock();
+            if (locked && locked->IsListeningEvents())
+                locked->OnApplicationStarted();
         }
     }
 
     void EventSystem::OnApplicationClosing()
     {
-        for (auto& listener : mApplicationListeners)
+        auto listeners = mApplicationListeners;
+        for (auto& listener : listeners)
         {
-            if (listener.Lock()->IsListeningEvents())
-                listener.Lock()->OnApplicationClosing();
+            auto locked = listener.Lock();
+            if (locked && locked->IsListeningEvents())
+                locked->OnApplicationClosing();
         }
     }
 
     void EventSystem::OnApplicationActivated()
     {
-        for (auto& listener : mApplicationListeners)
+        auto listeners = mApplicationListeners;
+        for (auto& listener : listeners)
         {
-            if (listener.Lock()->IsListeningEvents())
-                listener.Lock()->OnApplicationActivated();
+            auto locked = listener.Lock();
+            if (locked && locked->IsListeningEvents())
+                locked->OnApplicationActivated();
         }
     }
 
     void EventSystem::OnApplicationDeactivated()
     {
-        for (auto& listener : mApplicationListeners)
+        auto listeners = mApplicationListeners;
+        for (auto& listener : listeners)
         {
-            if (listener.Lock()->IsListeningEvents())
-                listener.Lock()->OnApplicationDeactivated();
+            auto locked = listener.Lock();
+            if (locked && locked->IsListeningEvents())
+                locked->OnApplicationDeactivated();
         }
     }
 
     void EventSystem::OnApplicationSized()
     {
-        for (auto& listener : mApplicationListeners)
+        auto listeners = mApplicationListeners;
+        for (auto& listener : listeners)
         {
-            if (listener.Lock()->IsListeningEvents())
-                listener.Lock()->OnApplicationSized();
+            auto locked = listener.Lock();
+            if (locked && locked->IsListeningEvents())
+                locked->OnApplicationSized();
         }
     }
 
@@ -246,8 +290,12 @@ namespace o2
 
 	void EventSystem::BreakCursorEvent()
     {
-        for (auto& layer : mCursorAreaEventsListenersLayers)
-            layer.Lock()->BreakCursorEvent();
+        auto layers = mCursorAreaEventsListenersLayers;
+        for (auto& layer : layers)
+        {
+            if (auto locked = layer.Lock())
+                locked->BreakCursorEvent();
+        }
     }
 
     void EventSystem::ProcessKeyPressed(const Input::Key& key)
@@ -255,8 +303,10 @@ namespace o2
         auto listeners = mKeyboardListeners;
         for (auto& listener : listeners)
         {
-            if (listener.Lock()->mEnabledListeningEvents)
-                listener.Lock()->OnKeyPressed(key);
+            // A listener the ones before it destroyed is gone
+            auto locked = listener.Lock();
+            if (locked && locked->mEnabledListeningEvents)
+                locked->OnKeyPressed(key);
         }
     }
 
@@ -265,8 +315,10 @@ namespace o2
         auto listeners = mKeyboardListeners;
         for (auto& listener : listeners)
         {
-            if (listener.Lock()->mEnabledListeningEvents)
-                listener.Lock()->OnKeyStayDown(key);
+            // A listener the ones before it destroyed is gone
+            auto locked = listener.Lock();
+            if (locked && locked->mEnabledListeningEvents)
+                locked->OnKeyStayDown(key);
         }
     }
 
@@ -275,8 +327,10 @@ namespace o2
         auto listeners = mKeyboardListeners;
         for (auto& listener : listeners)
         {
-            if (listener.Lock()->mEnabledListeningEvents)
-                listener.Lock()->OnKeyReleased(key);
+            // A listener the ones before it destroyed is gone
+            auto locked = listener.Lock();
+            if (locked && locked->mEnabledListeningEvents)
+                locked->OnKeyReleased(key);
         }
     }
 
@@ -319,11 +373,13 @@ namespace o2
 
     void EventSystem::UnregCursorAreaListener(CursorAreaEventsListener* listener)
     {
+        // A layer being destroyed is expired already, the listener's own one included
         auto listenerLayer = dynamic_cast<CursorAreaEventListenersLayer*>(listener);
         for (auto& layer : mInstance->mCursorAreaEventsListenersLayers)
         {
-            if (layer != listenerLayer)
-                layer.Lock()->UnregCursorAreaListener(listener);
+            auto locked = layer.Lock();
+            if (locked && locked.Get() != listenerLayer)
+                locked->UnregCursorAreaListener(listener);
         }
     }
 
@@ -359,7 +415,10 @@ namespace o2
         if (mInstance)
         {
             for (auto& layer : mInstance->mCursorAreaEventsListenersLayers)
-                layer.Lock()->UnregDragListener(listener);
+            {
+                if (auto locked = layer.Lock())
+                    locked->UnregDragListener(listener);
+            }
         }
     }
 

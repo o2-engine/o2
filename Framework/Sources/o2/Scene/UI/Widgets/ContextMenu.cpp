@@ -900,6 +900,21 @@ namespace o2
 
         if (item->subItems.Count() > 0) {
             auto subMenu = o2UI.CreateWidget<ContextMenu>();
+
+            // A menu restyled by its owner restyles its sub menus too
+            for (auto parent = GetParentWidget().Lock(); parent; parent = parent->GetParentWidget().Lock())
+            {
+                if (auto owner = DynamicCast<ContextMenu>(parent))
+                {
+                    if (owner->onSubMenuCreated)
+                    {
+                        subMenu->onSubMenuCreated = owner->onSubMenuCreated;
+                        owner->onSubMenuCreated(subMenu);
+                    }
+                    break;
+                }
+            }
+
             subMenu->RemoveAllItems();
             subMenu->AddItems(item->subItems);
 

@@ -91,7 +91,7 @@ namespace o2
 
     void SceneLayer::UnregisterDrawable(ISceneDrawable* drawable)
     {
-        mDrawables.Remove(Ref(drawable));
+        mDrawables.RemoveFirst([drawable](const Ref<ISceneDrawable>& x) { return x == drawable; });
     }
 
     void SceneLayer::SetLastByDepth(const Ref<ISceneDrawable>& drawable)

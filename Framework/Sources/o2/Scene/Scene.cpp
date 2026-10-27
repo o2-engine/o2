@@ -174,7 +174,7 @@ namespace o2
             mDestroyActors.Add(actor);
 
 #if IS_EDITOR
-            mChangedObjects.Remove(actor);
+            mChangedObjects.RemoveAll([&](const WeakRef<SceneEditableObject>& x) { return x == actor.Get() || !x; });
 #endif
         }
     }
@@ -364,7 +364,7 @@ namespace o2
         actor->OnAddToScene();
 
 #if IS_EDITOR
-        mChangedObjects.Add(actor);
+        mChangedObjects.Add(WeakRef<SceneEditableObject>(actor));
         AddEditableObjectToScene(actor);
         onAddedToScene(actor);
 #endif
@@ -403,6 +403,9 @@ namespace o2
 
     void Scene::OnLayerRenamed(SceneLayer* layer, const String& oldName)
     {
+        if (!mLayers.Contains([&](auto& x) { return x.Get() == layer; }))
+            return;
+
         mLayersMap.Remove(oldName);
         mLayersMap[layer->GetName()] = Ref(layer);
 
@@ -785,7 +788,7 @@ namespace o2
 
     void Scene::RemoveEditableObjectFromScene(const Ref<SceneEditableObject>& object)
     {
-        mChangedObjects.RemoveAll([&](const auto& x) { return x == object; });
+        mChangedObjects.RemoveAll([&](const WeakRef<SceneEditableObject>& x) { return x == object.Get() || !x; });
         mEditableObjects.RemoveAll([&](const auto& x) { return x == object; });
         mEditableObjectsByUID.Remove(object->GetID());
     }
@@ -888,21 +891,19 @@ namespace o2
 
         mIsCheckingChangedObjects = true;
 
-        mChangedObjects.RemoveAll([](auto x) { return x == nullptr; });
+        auto changedObjects = GetChangedObjects();
 
-        if (mChangedObjects.Count() > 0)
+        if (changedObjects.Count() > 0)
         {
-            onObjectsChanged(mChangedObjects);
+            onObjectsChanged(changedObjects);
 
-            auto changedObjectsCopy = mChangedObjects;
-            for (auto& obj : changedObjectsCopy)
+            for (auto& obj : changedObjects)
                 obj->Update(0.0f);
 
             // Reset per-frame guard set in OnObjectChanged so a later change in
             // the same frame (e.g. Undo right after a drag) is not silently dropped.
-            for (auto& obj : mChangedObjects)
-                if (obj)
-                    obj->changedFrame = 0;
+            for (auto& obj : changedObjects)
+                obj->changedFrame = 0;
 
             mChangedObjects.Clear();
 
@@ -913,9 +914,16 @@ namespace o2
         mIsCheckingChangedObjects = false;
     }
 
-    const Vector<Ref<SceneEditableObject>>& Scene::GetChangedObjects() const
+    Vector<Ref<SceneEditableObject>> Scene::GetChangedObjects() const
     {
-        return mChangedObjects;
+        Vector<Ref<SceneEditableObject>> res;
+        res.Reserve(mChangedObjects.Count());
+        for (auto& obj : mChangedObjects)
+        {
+            if (auto locked = obj.Lock())
+                res.Add(locked);
+        }
+        return res;
     }
 
     const Vector<WeakRef<SceneEditableObject>>& Scene::GetDrawnEditableObjects() const
@@ -965,7 +973,7 @@ namespace o2
         if (object)
             object->changedFrame = o2Time.GetCurrentFrame();
 
-        mChangedObjects.Add(object);
+        mChangedObjects.Add(WeakRef<SceneEditableObject>(object));
     }
 
     void Scene::OnObjectDrawn(const Ref<SceneEditableObject>& object)

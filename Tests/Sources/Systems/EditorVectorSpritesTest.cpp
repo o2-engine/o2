@@ -109,7 +109,7 @@ namespace
         "CurveHandle", "CurveHandleHover", "CurveHandlePressed", "CurveHandleSelected", "CurveSupportHandle",
         "UI4_keys_select border", "UI4_keys_select border_hover", "UI4_keys_select border_pressed", "UI4_map_key",
         "UI4_map_key_hover", "UI4_save_gray", "UI4_scene_icon", "UI4_shadow_separator", "pipeline/btn_region",
-        "pipeline/menu_node_effect", "pipeline/menu_node_video",
+        "pipeline/menu_node_effect", "pipeline/menu_node_video", "pipeline/al_cmp_grip",
     };
 
     const Limits scalableDeviationLimits = { 0.8f, 9.0f };

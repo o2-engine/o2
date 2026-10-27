@@ -29,7 +29,9 @@ namespace o2
             desc.minFilter = minMag;
             desc.magFilter = minMag;
 
-            return [RenderDevice::device newSamplerStateWithDescriptor:desc];
+            id<MTLSamplerState> state = [RenderDevice::device newSamplerStateWithDescriptor:desc];
+            [desc release];
+            return state;
         }
     }
 
@@ -65,8 +67,12 @@ namespace o2
         if (mUsage == Usage::RenderTarget)
             textureDescriptor.usage = MTLTextureUsageRenderTarget|MTLTextureUsageShaderRead;
 
+        // Built without ARC: what a new.. call made is released by hand, here and in PlatformDestroy
+        [mImpl->texture release];
+        [mImpl->samplerState release];
         mImpl->texture = [RenderDevice::device newTextureWithDescriptor:textureDescriptor];
         mImpl->samplerState = BuildSamplerState(mWrap, mFilter);
+        [textureDescriptor release];
 
         return mImpl->texture != nil;
     }
@@ -75,6 +81,9 @@ namespace o2
     {
         if (mImpl)
         {
+            [mImpl->texture release];
+            [mImpl->samplerState release];
+            [mImpl->depthTexture release];
             mImpl->texture = nil;
             mImpl->samplerState = nil;
             mImpl->depthTexture = nil;
@@ -184,13 +193,19 @@ namespace o2
     void Texture::PlatformSetFilter()
     {
         if (mImpl)
+        {
+            [mImpl->samplerState release];
             mImpl->samplerState = BuildSamplerState(mWrap, mFilter);
+        }
     }
 
     void Texture::PlatformSetWrap()
     {
         if (mImpl)
+        {
+            [mImpl->samplerState release];
             mImpl->samplerState = BuildSamplerState(mWrap, mFilter);
+        }
     }
 }
 

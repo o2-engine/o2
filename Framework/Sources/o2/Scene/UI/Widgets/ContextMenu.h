@@ -108,6 +108,9 @@ namespace o2
         };
 
     public:
+        Function<void(const Ref<ContextMenu>&)> onSubMenuCreated; // Called with every sub menu the items open, before it is filled; sub menus inherit it @EDITOR_IGNORE
+
+    public:
         // Default constructor
         explicit ContextMenu(RefCounter* refCounter);
 
@@ -396,6 +399,7 @@ CLASS_BASES_META(o2::ContextMenu)
 END_META;
 CLASS_FIELDS_META(o2::ContextMenu)
 {
+    FIELD().PUBLIC().EDITOR_IGNORE_ATTRIBUTE().NAME(onSubMenuCreated);
     FIELD().PROTECTED().DEFAULT_VALUE(0.4f).NAME(mOpenSubMenuDelay);
     FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(100).NAME(mMaxVisibleItems);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mSearchEnabled);
