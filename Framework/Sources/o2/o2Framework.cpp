@@ -189,6 +189,7 @@ extern void __RegisterClass__o2__FontStrokeEffect();
 extern void __RegisterClass__o2__FontGradientEffect();
 extern void __RegisterClass__o2__FontColorEffect();
 extern void __RegisterClass__o2__FontShadowEffect();
+extern void __RegisterClass__o2__FontSharpenEffect();
 extern void __RegisterClass__o2__VectorSprite();
 extern void __RegisterClass__o2__Video();
 extern void __RegisterClass__o2__Actor();
@@ -497,6 +498,7 @@ extern void InitializeTypeso2Framework()
     __RegisterClass__o2__FontGradientEffect();
     __RegisterClass__o2__FontColorEffect();
     __RegisterClass__o2__FontShadowEffect();
+    __RegisterClass__o2__FontSharpenEffect();
     __RegisterClass__o2__VectorSprite();
     __RegisterClass__o2__Video();
     __RegisterClass__o2__Actor();

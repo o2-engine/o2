@@ -108,6 +108,31 @@ namespace o2
 		SERIALIZABLE(FontShadowEffect);
 		CLONEABLE_REF(FontShadowEffect);
     };
+    // ------------------------------------------------------------------
+    // Alpha contrast effect: hardens the anti-aliased edge of the glyph
+    // ------------------------------------------------------------------
+    class FontSharpenEffect: public VectorFont::Effect
+    {
+    public:
+        float contrast = 3.0f; // Alpha contrast around the threshold; 1 leaves the glyph as rendered @SERIALIZABLE
+        int   threshold = 128; // Alpha that stays in place @SERIALIZABLE
+
+    public:
+        // Default constructor
+        FontSharpenEffect(float contrast = 3.0f, int threshold = 128);
+
+        // Process bitmap with glyph
+        void Process(Bitmap& bitmap) override;
+
+        // Returns size extend (none)
+        Vec2I GetSizeExtend() const override;
+
+        // Returns true when the effect is the same as other
+        bool IsEqual(VectorFont::Effect* other) const override;
+
+        SERIALIZABLE(FontSharpenEffect);
+        CLONEABLE_REF(FontSharpenEffect);
+    };
 }
 // --- META ---
 
@@ -193,6 +218,27 @@ CLASS_METHODS_META(o2::FontShadowEffect)
 {
 
     FUNCTION().PUBLIC().CONSTRUCTOR(float, const Vec2I, const Color4&);
+    FUNCTION().PUBLIC().SIGNATURE(void, Process, Bitmap&);
+    FUNCTION().PUBLIC().SIGNATURE(Vec2I, GetSizeExtend);
+    FUNCTION().PUBLIC().SIGNATURE(bool, IsEqual, VectorFont::Effect*);
+}
+END_META;
+
+CLASS_BASES_META(o2::FontSharpenEffect)
+{
+    BASE_CLASS(o2::VectorFont::Effect);
+}
+END_META;
+CLASS_FIELDS_META(o2::FontSharpenEffect)
+{
+    FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(3.0f).NAME(contrast);
+    FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(128).NAME(threshold);
+}
+END_META;
+CLASS_METHODS_META(o2::FontSharpenEffect)
+{
+
+    FUNCTION().PUBLIC().CONSTRUCTOR(float, int);
     FUNCTION().PUBLIC().SIGNATURE(void, Process, Bitmap&);
     FUNCTION().PUBLIC().SIGNATURE(Vec2I, GetSizeExtend);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsEqual, VectorFont::Effect*);

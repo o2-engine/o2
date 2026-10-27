@@ -209,3 +209,42 @@ TEST(TextFontStyle, SetFontStyleWithAssetFillsAssetRef)
     EXPECT_FALSE(text->GetFontStyleAsset().IsValid());
     EXPECT_EQ(text->GetFontStyle(), rawStyle);
 }
+
+TEST(VectorFontStyle, SharpenEffectHardensEdge)
+{
+    Bitmap bitmap(PixelFormat::R8G8B8A8, Vec2I(3, 1));
+    UInt8* data = bitmap.GetData();
+    for (int i = 0; i < 3; i++)
+        data[i*4] = data[i*4 + 1] = data[i*4 + 2] = 255;
+    data[3] = 60; data[7] = 128; data[11] = 200;
+
+    FontSharpenEffect effect(3.0f, 128);
+    effect.Process(bitmap);
+
+    EXPECT_EQ(data[3], 0);
+    EXPECT_EQ(data[7], 128);
+    EXPECT_EQ(data[11], 255);
+    EXPECT_EQ(effect.GetSizeExtend(), Vec2I());
+
+    FontSharpenEffect same(3.0f, 128), other(2.0f, 128);
+    EXPECT_TRUE(effect.IsEqual(&same));
+    EXPECT_FALSE(effect.IsEqual(&other));
+}
+
+TEST(VectorFontStyle, SharpenEffectSerializesWithStyle)
+{
+    auto style = mmake<FontStyle>();
+    style->AddEffect<FontSharpenEffect>(2.5f, 100);
+
+    DataDocument doc;
+    doc.Set(*style);
+
+    auto loaded = mmake<FontStyle>();
+    doc.Get(*loaded);
+
+    ASSERT_EQ(loaded->GetEffects().Count(), 1);
+    auto effect = DynamicCast<FontSharpenEffect>(loaded->GetEffects()[0]);
+    ASSERT_TRUE(effect);
+    EXPECT_FLOAT_EQ(effect->contrast, 2.5f);
+    EXPECT_EQ(effect->threshold, 100);
+}

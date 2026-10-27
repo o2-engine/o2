@@ -106,6 +106,39 @@ namespace o2
         return Math::Equals(blurRadius, otherEff->blurRadius) && offset == otherEff->offset && 
             color == otherEff->color;
     }
+
+    FontSharpenEffect::FontSharpenEffect(float contrast /*= 3.0f*/, int threshold /*= 128*/):
+        contrast(contrast), threshold(threshold)
+    {}
+
+    void FontSharpenEffect::Process(Bitmap& bitmap)
+    {
+        UInt8* data = bitmap.GetData();
+        Vec2I size = bitmap.GetSize();
+        int bpp = bitmap.GetFormat() == PixelFormat::R8G8B8A8 ? 4 : 3;
+        if (bpp != 4)
+            return;
+
+        for (int i = 0; i < size.x*size.y; i++)
+        {
+            float alpha = (float)data[i*4 + 3];
+            data[i*4 + 3] = (UInt8)Math::Clamp(threshold + (alpha - threshold)*contrast, 0.0f, 255.0f);
+        }
+    }
+
+    Vec2I FontSharpenEffect::GetSizeExtend() const
+    {
+        return Vec2I();
+    }
+
+    bool FontSharpenEffect::IsEqual(VectorFont::Effect* other) const
+    {
+        if (!VectorFont::Effect::IsEqual(other))
+            return false;
+
+        FontSharpenEffect* otherEff = (FontSharpenEffect*)other;
+        return Math::Equals(contrast, otherEff->contrast) && threshold == otherEff->threshold;
+    }
 }
 // --- META ---
 
@@ -116,4 +149,6 @@ DECLARE_CLASS(o2::FontGradientEffect, o2__FontGradientEffect);
 DECLARE_CLASS(o2::FontColorEffect, o2__FontColorEffect);
 
 DECLARE_CLASS(o2::FontShadowEffect, o2__FontShadowEffect);
+
+DECLARE_CLASS(o2::FontSharpenEffect, o2__FontSharpenEffect);
 // --- END META ---
