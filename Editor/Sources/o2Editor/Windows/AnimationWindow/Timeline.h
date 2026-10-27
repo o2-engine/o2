@@ -4,6 +4,7 @@
 #include "o2/Render/Font.h"
 #include "o2/Scene/UI/Widget.h"
 #include "o2/Utils/Editor/DragHandle.h"
+#include "o2Editor/UI/Style/EditorTheme.h"
 
 using namespace o2;
 
@@ -111,8 +112,8 @@ namespace Editor
         const float mPerfectScaleSegmentSize = 10.0f; // The perfect size of scale segment in pixels. Scale period and segment size will be chosen more suitable
         const float mScaleOffset = 10.0f;             // First scale line offset from left border
 
-        const Color4 mBigLineColor = Color4(16, 20, 23, 64);   // Big scale line color
-        const Color4 mSmallLineColor = Color4(16, 20, 23, 38); // Small scale line color
+        const Color4 mBigLineColor = EditorTheme::Get().scaleLine;       // Big scale line color
+        const Color4 mSmallLineColor = EditorTheme::Get().scaleLineSoft; // Small scale line color
 
         const float mScaleSmoothLerpCoef = 10.0f; // Scale smooth animation coefficient. More is faster
         const float mMinScale = 0.1f;             // Minimal view zoom 
@@ -222,8 +223,8 @@ CLASS_FIELDS_META(Editor::AnimationTimeline)
     FIELD().PRIVATE().DEFAULT_VALUE(100.0f).NAME(mOneSecondDefaultSize);
     FIELD().PRIVATE().DEFAULT_VALUE(10.0f).NAME(mPerfectScaleSegmentSize);
     FIELD().PRIVATE().DEFAULT_VALUE(10.0f).NAME(mScaleOffset);
-    FIELD().PRIVATE().DEFAULT_VALUE(Color4(16, 20, 23, 64)).NAME(mBigLineColor);
-    FIELD().PRIVATE().DEFAULT_VALUE(Color4(16, 20, 23, 38)).NAME(mSmallLineColor);
+    FIELD().PRIVATE().DEFAULT_VALUE(EditorTheme::Get().scaleLine).NAME(mBigLineColor);
+    FIELD().PRIVATE().DEFAULT_VALUE(EditorTheme::Get().scaleLineSoft).NAME(mSmallLineColor);
     FIELD().PRIVATE().DEFAULT_VALUE(10.0f).NAME(mScaleSmoothLerpCoef);
     FIELD().PRIVATE().DEFAULT_VALUE(0.1f).NAME(mMinScale);
     FIELD().PRIVATE().DEFAULT_VALUE(30.0f).NAME(mMaxScale);

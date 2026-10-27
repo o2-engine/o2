@@ -5,6 +5,7 @@
 #include "o2Editor/Windows/SceneWindow/SceneDragHandle3D.h"
 #include "o2/Utils/Math/AABB.h"
 #include "o2/Utils/Math/Basis.h"
+#include "o2Editor/UI/Style/EditorTheme.h"
 
 using namespace o2;
 
@@ -51,9 +52,9 @@ namespace Editor
         };
 
     protected:
-        const Color4 mFrameColor = Color4(44, 62, 80, 255);           // Objects frame color
-        const Color4 mObjectColor = Color4(44, 62, 80, 150);          // Object color
-        const Color4 mParentColor = Color4(44, 62, 80, 100);          // Object parent color
+        const Color4 mFrameColor = EditorTheme::Get().frame;        // Objects frame color
+        const Color4 mObjectColor = EditorTheme::Get().frameObject; // Object color
+        const Color4 mParentColor = EditorTheme::Get().frameParent; // Object parent color
         const Color4 mAnchorsFrameColor = Color4(20, 100, 255, 255);  // Widgets anchors frame color
         const Color4 mSnapLinesColor = Color4(40, 255, 100, 255);     // Widgets anchors frame color
 
@@ -410,9 +411,9 @@ CLASS_BASES_META(Editor::FrameTool)
 END_META;
 CLASS_FIELDS_META(Editor::FrameTool)
 {
-    FIELD().PROTECTED().DEFAULT_VALUE(Color4(44, 62, 80, 255)).NAME(mFrameColor);
-    FIELD().PROTECTED().DEFAULT_VALUE(Color4(44, 62, 80, 150)).NAME(mObjectColor);
-    FIELD().PROTECTED().DEFAULT_VALUE(Color4(44, 62, 80, 100)).NAME(mParentColor);
+    FIELD().PROTECTED().DEFAULT_VALUE(EditorTheme::Get().frame).NAME(mFrameColor);
+    FIELD().PROTECTED().DEFAULT_VALUE(EditorTheme::Get().frameObject).NAME(mObjectColor);
+    FIELD().PROTECTED().DEFAULT_VALUE(EditorTheme::Get().frameParent).NAME(mParentColor);
     FIELD().PROTECTED().DEFAULT_VALUE(Color4(20, 100, 255, 255)).NAME(mAnchorsFrameColor);
     FIELD().PROTECTED().DEFAULT_VALUE(Color4(40, 255, 100, 255)).NAME(mSnapLinesColor);
     FIELD().PROTECTED().DEFAULT_VALUE(0.001f).NAME(mFrameMinimalSize);

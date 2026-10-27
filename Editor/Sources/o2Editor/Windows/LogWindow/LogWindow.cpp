@@ -12,6 +12,7 @@
 #include "o2/Scene/UI/Widgets/Toggle.h"
 #include "o2/Utils/System/Time/Time.h"
 #include "o2/Render/VectorSprite.h"
+#include "o2Editor/UI/Style/EditorTheme.h"
 
 namespace Editor
 {
@@ -53,10 +54,11 @@ namespace Editor
 
         auto listItemSample = mmake<Widget>();
         listItemSample->layout->minHeight = 25;
-        listItemSample->AddLayer("back", mmake<Sprite>(Color4(0, 0, 0, 255)));
-        listItemSample->AddLayer("warning", mmake<Sprite>(Color4(226, 198, 83, 255)),
+        auto& palette = EditorTheme::Get();
+        listItemSample->AddLayer("back", mmake<Sprite>(palette.dark ? Color4(255, 255, 255, 255) : Color4(0, 0, 0, 255)));
+        listItemSample->AddLayer("warning", mmake<Sprite>(palette.warning),
                                  Layout::VerStretch(HorAlign::Left, 0, 0, 10, 0));
-        listItemSample->AddLayer("error", mmake<Sprite>(Color4(248, 94, 72, 255)),
+        listItemSample->AddLayer("error", mmake<Sprite>(palette.error),
                                  Layout::VerStretch(HorAlign::Left, 0, 0, 10, 0));
 
         auto captionText = mmake<Text>("stdFont.ttf");
@@ -64,7 +66,7 @@ namespace Editor
         captionText->horAlign = HorAlign::Left;
         captionText->verAlign = VerAlign::Middle;
         captionText->dotsEngings = true;
-        captionText->color = Color4(96, 125, 139);
+        captionText->color = palette.text;
         listItemSample->AddLayer("caption", captionText, Layout::BothStretch(15, 0, 0, 0));
 
         mList->SetItemSample(listItemSample);

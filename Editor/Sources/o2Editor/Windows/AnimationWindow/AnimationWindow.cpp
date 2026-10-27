@@ -31,7 +31,13 @@ namespace Editor
     }
 
     AnimationWindow::~AnimationWindow()
-    {}
+    {
+        if (mPreviewPlayer)
+            mPreviewPlayer->onUpdate -= THIS_FUNC(OnAnimationUpdate);
+
+        if (auto animation = mAnimation.Lock())
+            animation->onChanged -= THIS_FUNC(OnAnimationChanged);
+    }
 
     void AnimationWindow::Update(float dt)
     {

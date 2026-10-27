@@ -23,6 +23,8 @@ Editor/Assets/Editor UI styles/rebuildDate.json
 CodeTool/Bin
 Framework/Platforms/__pycache__
 Editor/Assets/Editor UI styles
+Editor/Assets/Editor UI styles dark
+Editor/Assets/Editor UI styles dark.meta
 .cache
 build
 Tests/Sources/CodeToolCache.xml

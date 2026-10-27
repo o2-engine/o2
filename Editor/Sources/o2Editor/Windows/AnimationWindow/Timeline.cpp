@@ -7,6 +7,7 @@
 #include "o2Editor/Windows/AnimationWindow/AnimationWindow.h"
 #include "o2Editor/Windows/SceneWindow/SceneEditScreen.h"
 #include "o2/Render/VectorSprite.h"
+#include "o2Editor/UI/Style/EditorTheme.h"
 
 namespace Editor
 {
@@ -20,7 +21,7 @@ namespace Editor
         mText->horAlign = HorAlign::Middle;
         mText->verAlign = VerAlign::Bottom;
         mText->height = 8;
-        mText->color = Color4(44, 62, 80);
+        mText->color = EditorTheme::Get().ink;
 
         AddLayer("back", mmake<VectorSprite>("ui/UI4_dopesheet_back.svg"), Layout::BothStretch(-3, -3, -3, -14))->transparency = 0.5f;
 

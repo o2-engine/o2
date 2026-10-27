@@ -78,6 +78,16 @@ namespace Editor
         }
     }
 
+    String EditorConfig::GlobalConfig::GetTheme() const
+    {
+        return mTheme;
+    }
+
+    void EditorConfig::GlobalConfig::SetTheme(const String& value)
+    {
+        mTheme = value;
+    }
+
     void EditorConfig::LoadGlobalConfig()
     {
         DataDocument data;

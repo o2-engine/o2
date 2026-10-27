@@ -98,20 +98,6 @@ namespace Editor
         mSaveAllButton->layout->maxWidth = 24;
         mUpPanel->AddChild(mSaveAllButton);
 
-        // Dark (AssetsLine) or light (o2) canvas in one click; the settings window has the same choice
-        mThemeButton = o2UI.CreateWidget<Button>("menu pipeline settings");
-        mThemeButton->name = "theme";
-        mThemeButton->onClick = [this]()
-        {
-            bool dark = PipelineTheme::GetKind() == PipelineThemeKind::Dark;
-            PipelineTheme::SetKind(dark ? PipelineThemeKind::Light : PipelineThemeKind::Dark);
-            UpdateThemeButton();
-        };
-        mThemeButton->layout->minWidth = 24;
-        mThemeButton->layout->maxWidth = 24;
-        mUpPanel->AddChild(mThemeButton);
-        UpdateThemeButton();
-
         // Provider keys and the AssetsLine link share one window; the dot on the gear is the state of the link
         mSettingsButton = o2UI.CreateWidget<Button>("menu pipeline settings");
         mSettingsButton->name = "settings";
@@ -140,15 +126,6 @@ namespace Editor
         auto verScroll = o2UI.CreateVerScrollBar();
         *verScroll->layout = WidgetLayout::VerStretch(HorAlign::Right, 5, 15, 10);
         mEditor->SetVerScrollbar(verScroll);
-    }
-
-    void PipelineWindow::UpdateThemeButton()
-    {
-        // The glyph shows the theme a click switches to
-        bool dark = PipelineTheme::GetKind() == PipelineThemeKind::Dark;
-        mThemeVersion = PipelineTheme::GetVersion();
-        if (auto icon = mThemeButton->SetLayerImage("icon", dark ? "ui/pipeline/theme_sun.svg" : "ui/pipeline/theme_moon.svg"))
-            icon->color = Color4(24, 104, 104, 255);
     }
 
     String PipelineWindow::GetWindowTitle() const
@@ -286,8 +263,6 @@ namespace Editor
         if ((String)mBackgroundLabel->GetText() != background)
             mBackgroundLabel->text = background;
         UpdateSync(dt);
-        if (mThemeButton && mThemeVersion != PipelineTheme::GetVersion())
-            UpdateThemeButton();
 
         if (!mAutoImport.IsEmpty())
         {

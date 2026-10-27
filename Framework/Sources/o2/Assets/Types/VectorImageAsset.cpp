@@ -210,6 +210,17 @@ namespace o2
         return mTessellationTime;
     }
 
+    Function<void(VectorImage&, const String&)>& VectorImageAsset::ImageRemap()
+    {
+        static Function<void(VectorImage&, const String&)> remap;
+        return remap;
+    }
+
+    void VectorImageAsset::SetImageRemap(const Function<void(VectorImage&, const String&)>& remap)
+    {
+        ImageRemap() = remap;
+    }
+
     void VectorImageAsset::SetScalableMeshes(bool scalable)
     {
         mScalableMeshes = scalable;
@@ -238,6 +249,15 @@ namespace o2
     void VectorImageAsset::LoadData(const String& path)
     {
         SetSource(o2FileSystem.ReadFile(path));
+
+        auto& remap = ImageRemap();
+        if (remap && mValid)
+        {
+            remap(mImage, path);
+
+            mVersion = NextVersion();
+            mMeshes.Clear();
+        }
 
         if (!mValid)
             GetAssetsLogStream()->ErrorStr("Failed to load vector image " + mInfo.path + ": " + mError);

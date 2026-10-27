@@ -13,6 +13,7 @@
 #include "o2Editor/Properties/Properties.h"
 #include "o2Editor/UIRoot.h"
 #include "o2/Render/VectorSprite.h"
+#include "o2Editor/UI/Style/EditorTheme.h"
 
 DECLARE_SINGLETON(Editor::MemoryAnalyzerWindow);
 
@@ -235,7 +236,7 @@ namespace Editor
         if (node->leakedSize > 0)
             return Color4(235, 125, 139);
         else
-            return Color4(96, 125, 139);
+            return EditorTheme::Get().text;
     }
 
     void MemoryAnalyzerWindow::UpdateInspector(MemoryAnalyzer::MemoryNode* node)

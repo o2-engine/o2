@@ -1,6 +1,7 @@
 #include "o2Editor/stdafx.h"
 #include "SplineEditor.h"
 #include "o2/Render/VectorSprite.h"
+#include "o2Editor/UI/Style/EditorTheme.h"
 
 namespace Editor
 {
@@ -38,8 +39,8 @@ namespace Editor
                                                     mmake<VectorSprite>("ui/UI2_handle_side_pressed.svg"),
                                                     mmake<VectorSprite>("ui/UI2_handle_side_select.svg"));
 
-        mSplineColor = Color4(44, 62, 80, 255);
-        mSplineSupportColor = Color4(190, 190, 190, 255);
+        mSplineColor = EditorTheme::Get().ink;
+        mSplineSupportColor = EditorTheme::Get().viewGrid;
 
         typedef SplineEditor thisclass;
 

@@ -299,28 +299,6 @@ namespace Editor
         mSideView = addView("Side by side", "side view", PipelineIoView::SideBySide);
         mCompareView = addView("Compare", "compare view", PipelineIoView::Compare);
 
-        // The look of the pipeline canvas: AssetsLine's dark or the o2 editor's light colours; a local setting, not synced
-        auto themeRow = addRow(content, "Theme");
-        auto addTheme = [&](const String& caption, const String& name, PipelineThemeKind kind)
-        {
-            auto segment = o2UI.CreateWidget<Toggle>("pipeline segment");
-            segment->caption = caption;
-            segment->SetValue(PipelineTheme::GetKind() == kind);
-            segment->name = name;
-            segment->layout->minWidth = 100;
-            segment->layout->maxWidth = 100;
-            segment->onToggleByUser = [this, kind](bool)
-            {
-                PipelineTheme::SetKind(kind);
-                mDarkTheme->SetValue(kind == PipelineThemeKind::Dark);
-                mLightTheme->SetValue(kind == PipelineThemeKind::Light);
-            };
-            themeRow->AddChild(segment);
-            return segment;
-        };
-        mDarkTheme = addTheme("Dark", "dark theme", PipelineThemeKind::Dark);
-        mLightTheme = addTheme("Light", "light theme", PipelineThemeKind::Light);
-
         addSeparator();
 
         // Keys of the providers the nodes call when they run in this editor

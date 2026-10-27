@@ -3,10 +3,7 @@
 
 #include "o2/Assets/Types/FontAsset.h"
 #include "o2/Render/VectorFont.h"
-#include "o2/Utils/FileSystem/FileSystem.h"
-#include "o2/Utils/Serialization/DataValue.h"
-#include "o2Editor/Pipeline/PipelinePairLayout.h"
-#include "o2Editor/Pipeline/PipelineUtils.h"
+#include "o2Editor/UI/Style/EditorTheme.h"
 
 namespace Editor
 {
@@ -137,27 +134,15 @@ namespace Editor
 
     namespace PipelineTheme
     {
-        static String cachedPath;
-        static PipelineThemeKind cachedKind = PipelineThemeKind::Dark;
-        static int version = 0;
+        static bool overridden = false;
+        static PipelineThemeKind overrideKind = PipelineThemeKind::Dark;
 
         static PipelineThemeKind ReadKind()
         {
-            // Read once per work folder: every control asks
-            String path = PipelinePairLayout::GetViewPrefsPath();
-            if (path == cachedPath)
-                return cachedKind;
+            if (overridden)
+                return overrideKind;
 
-            cachedPath = path;
-            cachedKind = PipelineThemeKind::Dark;
-            DataDocument doc;
-            if (o2FileSystem.IsFileExist(path) && doc.LoadFromFile(path) && doc.IsObject())
-            {
-                auto value = doc.FindMember("theme");
-                if (value && value->IsString() && String(value->GetString()) == "light")
-                    cachedKind = PipelineThemeKind::Light;
-            }
-            return cachedKind;
+            return EditorTheme::IsDark() ? PipelineThemeKind::Dark : PipelineThemeKind::Light;
         }
 
         const PipelinePalette& Of(PipelineThemeKind kind)
@@ -179,33 +164,24 @@ namespace Editor
 
         void SetKind(PipelineThemeKind kind)
         {
-            String path = PipelinePairLayout::GetViewPrefsPath();
-            DataDocument doc;
-            if (!o2FileSystem.IsFileExist(path) || !doc.LoadFromFile(path) || !doc.IsObject())
-                doc.SetObject();
+            overridden = true;
+            overrideKind = kind;
+        }
 
-            doc["theme"] = String(kind == PipelineThemeKind::Light ? "light" : "dark");
-            o2FileSystem.FolderCreate(PipelineUtils::GetWorkPath(), true);
-            doc.SaveToFile(path);
-
-            bool changed = ReadKind() != kind;
-            cachedPath = path;
-            cachedKind = kind;
-            if (changed)
-                version++;
+        void FollowEditor()
+        {
+            overridden = false;
         }
 
         int GetVersion()
         {
-            // A work folder switch (tests, another project) may bring another stored theme
-            static String versionPath;
-            static PipelineThemeKind versionKind = PipelineThemeKind::Dark;
+            static int version = 0;
+            static PipelineThemeKind versionKind = ReadKind();
+
             PipelineThemeKind kind = ReadKind();
-            if (versionPath != cachedPath || versionKind != kind)
+            if (versionKind != kind)
             {
-                if (!versionPath.IsEmpty())
-                    version++;
-                versionPath = cachedPath;
+                version++;
                 versionKind = kind;
             }
             return version;

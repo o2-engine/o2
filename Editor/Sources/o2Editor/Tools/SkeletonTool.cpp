@@ -5,6 +5,7 @@
 #include "o2Editor/Windows/SceneWindow/SceneEditScreen.h"
 #include "o2Editor/Windows/SceneWindow/SceneDragHandle.h"
 #include "o2Editor/Windows/SceneWindow/SceneWindow.h"
+#include "o2Editor/UI/Style/EditorTheme.h"
 
 namespace Editor
 {
@@ -120,9 +121,10 @@ namespace Editor
 
     SkeletonTool::BoneHandle::BoneHandle()
     {
-        Color4 handleRegularColor = Color4(126, 149, 160);
-        Color4 handleHoverColor = Color4(147+30, 166+30, 174+30);
-        Color4 handlePressedColor = Color4(44, 62, 80);
+        auto& palette = EditorTheme::Get();
+        Color4 handleRegularColor = palette.inkSoft;
+        Color4 handleHoverColor = palette.dark ? palette.text : Color4(147+30, 166+30, 174+30);
+        Color4 handlePressedColor = palette.dark ? palette.accent : Color4(44, 62, 80);
 
         auto getHandleVertices = [=](const Basis& transform, const Color4& color) {
             Vec2F scale = transform.GetScale();

@@ -12,6 +12,7 @@
 #include "o2Editor/Windows/PropertiesWindow/ActorsViewer/ActorViewer.h"
 #include "o2Editor/Windows/SceneWindow/SceneWindow.h"
 #include "o2/Render/VectorSprite.h"
+#include "o2Editor/UI/Style/EditorTheme.h"
 
 namespace Editor
 {
@@ -307,7 +308,7 @@ namespace Editor
 
         mIcon = SetLayerImage("icon", data->icon);
         mIcon->enabled = data->type != nullptr;
-        mIcon->color = Color4(44, 62, 80);
+        mIcon->color = EditorTheme::Get().ink;
 
         this->data = data;
         mTree = tree;

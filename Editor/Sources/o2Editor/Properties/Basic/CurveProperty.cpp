@@ -5,6 +5,7 @@
 #include "o2/Scene/UI/WidgetLayout.h"
 #include "o2Editor/Dialogs/CurveEditorDlg.h"
 #include "o2Editor/UI/CurvePreview.h"
+#include "o2Editor/UI/Style/EditorTheme.h"
 
 namespace Editor
 {

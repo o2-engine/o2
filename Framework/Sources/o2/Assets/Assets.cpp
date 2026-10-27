@@ -366,6 +366,11 @@ namespace o2
         return *mMainAssetsTree;
     }
 
+    const Vector<AssetRef<Asset>>& Assets::GetCachedAssets() const
+    {
+        return mCachedAssets;
+    }
+
     String Assets::MakeUniqueAssetName(const String& path)
     {
         if (!IsAssetExist(path))

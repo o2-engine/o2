@@ -47,8 +47,8 @@ namespace o2
         // Destructor
         ~UIManager();
 
-        // Loads widgets style
-        void LoadStyle(const String& stylesPath);
+        // Loads widgets style; returns false when a style sample could not be loaded, the others are loaded
+        bool LoadStyle(const String& stylesPath);
 
         // Saves style
         void SaveStyle(const String& stylesPath);

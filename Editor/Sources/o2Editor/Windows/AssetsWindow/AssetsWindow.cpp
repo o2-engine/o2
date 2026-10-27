@@ -49,7 +49,10 @@ namespace Editor
     }
 
     AssetsWindow::~AssetsWindow()
-    {}
+    {
+        if (Assets::IsSingletonInitialzed())
+            o2Assets.onAssetsRebuilt -= THIS_FUNC(OnAssetsRebuilt);
+    }
 
     void AssetsWindow::InitializeWindow()
     {

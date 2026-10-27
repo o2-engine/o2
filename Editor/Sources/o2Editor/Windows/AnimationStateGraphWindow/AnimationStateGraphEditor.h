@@ -254,6 +254,9 @@ namespace Editor
         ActionsList mActionsList; // Local actions list. It uses when actionFallDown is null
 
     protected:
+        // Unsubscribes from the events of the graph and of the component
+        void DetachFromGraph();
+
         // Called when scrolling
 		void OnScrolled(float scroll) override;
 
@@ -414,6 +417,7 @@ CLASS_METHODS_META(Editor::AnimationStateGraphEditor)
     FUNCTION().PUBLIC().SIGNATURE(void, UpdateSelfTransform);
     FUNCTION().PUBLIC().SIGNATURE(const Ref<ContextMenu>&, GetContextMenu);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(Ref<RefCounterable>, CastToRefCounterable, const Ref<AnimationStateGraphEditor>&);
+    FUNCTION().PROTECTED().SIGNATURE(void, DetachFromGraph);
     FUNCTION().PROTECTED().SIGNATURE(void, OnScrolled, float);
     FUNCTION().PROTECTED().SIGNATURE(void, OnCursorPressed, const Input::Cursor&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnCursorReleased, const Input::Cursor&);

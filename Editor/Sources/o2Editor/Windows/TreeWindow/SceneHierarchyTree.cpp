@@ -28,6 +28,7 @@
 #include "o2Editor/Windows/SceneWindow/SceneWindow.h"
 #include "o2Editor/Windows/TreeWindow/TreeWindow.h"
 #include "o2Editor/UIRoot.h"
+#include "o2Editor/UI/Style/EditorTheme.h"
 
 namespace Editor
 {
@@ -191,15 +192,8 @@ namespace Editor
     Color4 SceneHierarchyTree::GetPrototypeLevelColor(int level)
     {
         // bright and distinguishable over the tree background, cycled when prototypes nest deeper
-        static const Color4 colors[] = {
-            Color4(0, 130, 220),
-            Color4(225, 105, 0),
-            Color4(140, 60, 200),
-            Color4(0, 150, 70),
-            Color4(210, 30, 110)
-        };
-
-        const int count = sizeof(colors)/sizeof(colors[0]);
+        const Color4* colors = EditorTheme::Get().prototypes;
+        const int count = 5;
         return colors[Math::Max(level - 1, 0)%count];
     }
 

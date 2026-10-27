@@ -1,4 +1,5 @@
 #include "o2Editor/stdafx.h"
+#include "o2Editor/UI/Style/EditorTheme.h"
 #include "o2Editor/Windows/PipelineWindow/PipelineControls.h"
 #include "EditorUIStyle.h"
 
@@ -5521,14 +5522,26 @@ namespace Editor
         }
     }
 
-    static bool IsStyleGeneratedAt(const String& stylesPath, const TimeStamp& date)
+    // A saved style is valid for the date of this source and, for the dark theme, of the theme rules that recoloured it
+    static bool IsStyleGeneratedAt(const String& stylesPath, const TimeStamp& date, const TimeStamp* themeDate)
     {
         DataDocument data;
         if (!data.LoadFromFile(stylesPath + "/rebuildDate.json"))
             return false;
 
         TimeStamp generatedDate = data["generatedDate"];
-        return generatedDate == date;
+        if (!(generatedDate == date))
+            return false;
+
+        if (!themeDate)
+            return true;
+
+        auto savedThemeDate = data.FindMember("themeDate");
+        if (!savedThemeDate)
+            return false;
+
+        TimeStamp saved = *savedThemeDate;
+        return saved == *themeDate;
     }
 
     void EditorUIStyleBuilder::RebuildEditorUIManager(const String& stylesFolder, bool saveStyle /*= true*/, bool checkEditedDate /*= true*/)
@@ -5537,12 +5550,17 @@ namespace Editor
 
         String thisSourcePath = "../../o2/Editor/Sources/o2Editor/UI/Style/EditorUIStyle.cpp";
         TimeStamp thisSourceEditedDate = o2FileSystem.GetFileInfo(thisSourcePath).editDate;
+        TimeStamp themeRulesDate = EditorTheme::RulesDate();
+        const TimeStamp* themeDate = EditorTheme::IsDark() ? &themeRulesDate : nullptr;
 
-        // The style loads from the built copy, which lags behind the saved one until editor assets are rebuilt
-        if (checkEditedDate && IsStyleGeneratedAt(GetEditorBuiltAssetsPath() + stylesFolder, thisSourceEditedDate))
+        // The style loads from the built copy, which lags behind the saved one until editor assets are rebuilt; a copy
+        // that does not load whole is built anew
+        if (checkEditedDate && IsStyleGeneratedAt(GetEditorBuiltAssetsPath() + stylesFolder, thisSourceEditedDate, themeDate))
         {
-            o2UI.LoadStyle(stylesFolder);
-            return;
+            if (o2UI.LoadStyle(stylesFolder))
+                return;
+
+            o2Debug.LogWarning("UI style " + stylesFolder + " is broken, building it anew");
         }
 
         o2UI.ClearStyle();
@@ -5565,12 +5583,17 @@ namespace Editor
             o2Debug.Log(func->GetName() + " for " + (String)time + " sec");
         }
 
-        if (saveStyle && (!checkEditedDate || !IsStyleGeneratedAt(GetEditorAssetsPath() + stylesFolder, thisSourceEditedDate)))
+        // The dark theme recolours what the builders made in the light colours
+        EditorTheme::RecolorStyles();
+
+        if (saveStyle && (!checkEditedDate || !IsStyleGeneratedAt(GetEditorAssetsPath() + stylesFolder, thisSourceEditedDate, themeDate)))
         {
             o2UI.SaveStyle(stylesFolder);
 
             DataDocument newStylesRebuildDateData;
             newStylesRebuildDateData["generatedDate"] = thisSourceEditedDate;
+            if (themeDate)
+                newStylesRebuildDateData["themeDate"] = *themeDate;
             newStylesRebuildDateData.SaveToFile(GetEditorAssetsPath() + stylesFolder + "/rebuildDate.json");
         }
     }

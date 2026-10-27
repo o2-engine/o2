@@ -122,6 +122,14 @@ namespace o2
         // Returns are the meshes tessellated once for any scale
         static bool IsScalableMeshes();
 
+        // Sets a restyling of every image loaded from now on: each image is given to it with its file path and may get
+        // other paints (colours, gradients) and shapes; empty for none. The editor themes use it
+        static void SetImageRemap(const Function<void(VectorImage&, const String&)>& remap);
+
+        // Returns the restyling of the loaded images, empty for none; a function's static, so it may be set at any
+        // static initialization
+        static Function<void(VectorImage&, const String&)>& ImageRemap();
+
         // Returns image version: changes on every load of the image, never equal for two loaded assets
         UInt GetVersion() const;
 
@@ -220,6 +228,9 @@ END_META;
 CLASS_METHODS_META(o2::VectorImageAsset)
 {
 
+    typedef const Function<void(VectorImage&, const String&)>& _tmp1;
+    typedef Function<void(VectorImage&, const String&)>& _tmp2;
+
     FUNCTION().PUBLIC().CONSTRUCTOR();
     FUNCTION().PUBLIC().CONSTRUCTOR(const VectorImageAsset&);
     FUNCTION().PUBLIC().SIGNATURE(bool, SetSource, const String&);
@@ -245,6 +256,8 @@ CLASS_METHODS_META(o2::VectorImageAsset)
     FUNCTION().PUBLIC().SIGNATURE_STATIC(double, GetTessellationTime);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(void, SetScalableMeshes, bool);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(bool, IsScalableMeshes);
+    FUNCTION().PUBLIC().SIGNATURE_STATIC(void, SetImageRemap, _tmp1);
+    FUNCTION().PUBLIC().SIGNATURE_STATIC(_tmp2, ImageRemap);
     FUNCTION().PUBLIC().SIGNATURE(UInt, GetVersion);
     FUNCTION().PUBLIC().SIGNATURE(Ref<Meta>, GetMeta);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(Vector<String>, GetFileExtensions);

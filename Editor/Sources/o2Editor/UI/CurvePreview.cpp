@@ -7,11 +7,12 @@
 #include "o2/Scene/UI/WidgetLayer.h"
 #include "o2/Scene/UI/WidgetLayout.h"
 #include "o2/Utils/Math/Curve.h"
+#include "o2Editor/UI/Style/EditorTheme.h"
 
 namespace Editor
 {
     CurvePreview::CurvePreview(RefCounter* refCounter):
-        Widget(refCounter)
+        Widget(refCounter), mBackColor(EditorTheme::Get().viewBack), mCurveColor(EditorTheme::Get().ink)
     {
         mSprite = mmake<Sprite>();
         AddLayer("image", mSprite);

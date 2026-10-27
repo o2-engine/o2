@@ -38,6 +38,7 @@ namespace Editor
             PROPERTIES(GlobalConfig);
             PROPERTY(WindowsLayout, defaultLayout, SetDefaultLayout, GetDefaultLayout);             // Default windows layout, used on reset
             PROPERTY(EditorLayoutsMap, availableLayouts, SetAvailableLayouts, GetAvailableLayouts); // Available windows layouts
+            PROPERTY(String, theme, SetTheme, GetTheme);                                            // Editor theme: "light" or "dark"
 
         public:
             // Returns default windows layout
@@ -52,11 +53,18 @@ namespace Editor
             // Sets available windows layouts
             void SetAvailableLayouts(const EditorLayoutsMap& value);
 
+            // Returns the editor theme name: "light" or "dark"
+            String GetTheme() const;
+
+            // Sets the editor theme name
+            void SetTheme(const String& value);
+
             SERIALIZABLE(GlobalConfig);
 
         private:
             WindowsLayout              mDefaultLayout;     // @SERIALIZABLE
             Map<String, WindowsLayout> mAvailableLayouts;  // @SERIALIZABLE
+            String                     mTheme = String("light"); // @SERIALIZABLE
 
             friend class EditorConfig;
         };
@@ -217,8 +225,10 @@ CLASS_FIELDS_META(Editor::EditorConfig::GlobalConfig)
 {
     FIELD().PUBLIC().NAME(defaultLayout);
     FIELD().PUBLIC().NAME(availableLayouts);
+    FIELD().PUBLIC().NAME(theme);
     FIELD().PRIVATE().SERIALIZABLE_ATTRIBUTE().NAME(mDefaultLayout);
     FIELD().PRIVATE().SERIALIZABLE_ATTRIBUTE().NAME(mAvailableLayouts);
+    FIELD().PRIVATE().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(String("light")).NAME(mTheme);
 }
 END_META;
 CLASS_METHODS_META(Editor::EditorConfig::GlobalConfig)
@@ -228,6 +238,8 @@ CLASS_METHODS_META(Editor::EditorConfig::GlobalConfig)
     FUNCTION().PUBLIC().SIGNATURE(void, SetDefaultLayout, const WindowsLayout&);
     FUNCTION().PUBLIC().SIGNATURE(EditorLayoutsMap, GetAvailableLayouts);
     FUNCTION().PUBLIC().SIGNATURE(void, SetAvailableLayouts, const EditorLayoutsMap&);
+    FUNCTION().PUBLIC().SIGNATURE(String, GetTheme);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetTheme, const String&);
 }
 END_META;
 

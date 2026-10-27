@@ -28,6 +28,7 @@
 #include "o2Editor/Windows/PropertiesWindow/PropertiesWindow.h"
 #include "o2Editor/Windows/SceneWindow/SceneEditScreen.h"
 #include "o2/Render/VectorSprite.h"
+#include "o2Editor/UI/Style/EditorTheme.h"
 
 namespace Editor
 {
@@ -36,7 +37,7 @@ namespace Editor
     {
         mSelectionSprite = mmake<VectorSprite>();
 		mStateWidgetsContainer = mmake<Widget>();
-        mBackColor = Color4(225, 232, 232, 255);
+        mBackColor = EditorTheme::Get().viewBack;
         mViewCameraMinScale = 1.0f;
 
 		InitializeContextMenus();
@@ -45,10 +46,11 @@ namespace Editor
     }
 
     AnimationStateGraphEditor::~AnimationStateGraphEditor()
-    {}
+    {
+        DetachFromGraph();
+    }
 
-	void AnimationStateGraphEditor::SetGraph(const Ref<AnimationStateGraphAsset>& graph, 
-                                             const Ref<AnimationStateGraphComponent>& component)
+	void AnimationStateGraphEditor::DetachFromGraph()
 	{
 		if (auto lastComponent = mComponent.Lock())
 		{
@@ -66,6 +68,12 @@ namespace Editor
 			graph->onStateAdded -= THIS_FUNC(OnStateGraphStateAdded);
 			graph->onStateRemoved -= THIS_FUNC(OnStateGraphStateRemoved);
 		}
+	}
+
+	void AnimationStateGraphEditor::SetGraph(const Ref<AnimationStateGraphAsset>& graph, 
+                                             const Ref<AnimationStateGraphComponent>& component)
+	{
+		DetachFromGraph();
 
 		mGraph = graph;
 		mComponent = component;

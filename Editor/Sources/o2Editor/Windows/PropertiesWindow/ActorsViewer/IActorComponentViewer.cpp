@@ -21,6 +21,7 @@
 #include "o2Editor/UI/SpoilerWithHead.h"
 #include "o2Editor/Windows/PropertiesWindow/PropertiesWindow.h"
 #include "o2Editor/Windows/SceneWindow/SceneWindow.h"
+#include "o2Editor/UI/Style/EditorTheme.h"
 
 namespace Editor
 {
@@ -37,7 +38,7 @@ namespace Editor
         mSpoiler->SetCaption("Component");
         mSpoiler->GetIcon()->SetImageName("ui/UI4_component_icon.svg");
         mSpoiler->GetIcon()->layout->center -= Vec2F(2, 0);
-        mSpoiler->GetIcon()->GetImageDrawable()->SetColor(Color4(235, 255, 253));
+        mSpoiler->GetIcon()->GetImageDrawable()->SetColor(EditorTheme::Get().textOnHeader);
 
         mRemoveButton = o2UI.CreateButton("", THIS_FUNC(RemoveTargetComponents), "close");
         *mRemoveButton->layout = WidgetLayout::Based(BaseCorner::RightTop, Vec2F(20, 20), Vec2F(1, 0));

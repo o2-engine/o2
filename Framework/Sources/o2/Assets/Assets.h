@@ -144,6 +144,9 @@ namespace o2
         // Makes unique asset name from first path variant
         String MakeUniqueAssetName(const String& path);
 
+        // Returns the assets loaded and cached now
+        const Vector<AssetRef<Asset>>& GetCachedAssets() const;
+
 #if IS_EDITOR
         // Rebuilds assets
         void RebuildAssets(bool resetCache = false);

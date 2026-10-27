@@ -4,6 +4,7 @@
 #include "o2/Events/CursorAreaEventsListenersLayer.h"
 #include "o2/Render/Sprite.h"
 #include "o2Editor/EditorConfig.h"
+#include "o2Editor/UI/Style/EditorTheme.h"
 #include "o2/Assets/Types/SceneAsset.h"
 
 using namespace o2;
@@ -74,6 +75,15 @@ namespace Editor
         // Returns game update time scale
         float GetGameTimeScale() const;
 
+        // Asks to change the theme: it takes effect after a restart, and the choice is saved once confirmed
+        void RequestTheme(EditorThemeKind kind);
+
+        // Returns the theme the editor starts with next time
+        EditorThemeKind GetNextTheme() const;
+
+        // Returns the editor preferences, shown by Edit/Preferences
+        EditorPreferences& GetPreferences();
+
         // Dynamic cast to RefCounterable via Application
         static Ref<RefCounterable> CastToRefCounterable(const Ref<EditorApplication>& ref);
 
@@ -103,6 +113,8 @@ namespace Editor
 
         float mGameTimeScale = 1.0f; // Game update time scale; scales scene dt only, not editor
         float mCaptionUpdateTime = 0.0f; // Native title refresh timer
+
+        EditorThemeChoice mThemeChoice; // The theme for the next start and the preferences that pick it
 
         int mDrawCalls = 0;       // Draw calls count, stored before beginning rendering
         int mDrawnPrimitives = 0; // DRaw promitives at frame
@@ -191,6 +203,9 @@ namespace Editor
 
         // Checks that required to switch playing mode
         void CheckPlayingSwitch();
+
+        // Creates the background, the styles, the properties, the windows, the menu and the tools panel
+        void CreateShell();
     };
 }
 // --- META ---
@@ -220,6 +235,7 @@ CLASS_FIELDS_META(Editor::EditorApplication)
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mUpdateStep);
     FIELD().PROTECTED().DEFAULT_VALUE(1.0f).NAME(mGameTimeScale);
     FIELD().PROTECTED().DEFAULT_VALUE(0.0f).NAME(mCaptionUpdateTime);
+    FIELD().PROTECTED().NAME(mThemeChoice);
     FIELD().PROTECTED().DEFAULT_VALUE(0).NAME(mDrawCalls);
     FIELD().PROTECTED().DEFAULT_VALUE(0).NAME(mDrawnPrimitives);
 }
@@ -238,6 +254,9 @@ CLASS_METHODS_META(Editor::EditorApplication)
     FUNCTION().PUBLIC().SIGNATURE(bool, IsPlaying);
     FUNCTION().PUBLIC().SIGNATURE(void, SetGameTimeScale, float);
     FUNCTION().PUBLIC().SIGNATURE(float, GetGameTimeScale);
+    FUNCTION().PUBLIC().SIGNATURE(void, RequestTheme, EditorThemeKind);
+    FUNCTION().PUBLIC().SIGNATURE(EditorThemeKind, GetNextTheme);
+    FUNCTION().PUBLIC().SIGNATURE(EditorPreferences&, GetPreferences);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(Ref<RefCounterable>, CastToRefCounterable, const Ref<EditorApplication>&);
     FUNCTION().PROTECTED().SIGNATURE(void, InitalizeSystems);
     FUNCTION().PROTECTED().SIGNATURE(void, Deinitialize);
@@ -267,6 +286,7 @@ CLASS_METHODS_META(Editor::EditorApplication)
     FUNCTION().PROTECTED().SIGNATURE(void, OnMoved);
     FUNCTION().PROTECTED().SIGNATURE(void, ProcessFrame);
     FUNCTION().PROTECTED().SIGNATURE(void, CheckPlayingSwitch);
+    FUNCTION().PROTECTED().SIGNATURE(void, CreateShell);
 }
 END_META;
 // --- END META ---

@@ -162,16 +162,27 @@ namespace o2
         FocusWidget(nextFocusingWidget);
     }
 
-    void UIManager::LoadStyle(const String& stylesPath)
+    bool UIManager::LoadStyle(const String& stylesPath)
     {
         ClearStyle();
 
+        bool loaded = true;
         AssetRef<FolderAsset> folder(stylesPath);
         for (auto& subAsset : folder->GetChildrenAssets())
         {
             if (auto actorAsset = DynamicCast<ActorAsset>(subAsset.GetRef()))
-                mStyleSamples.Add(actorAsset);
+            {
+                if (actorAsset->GetActor())
+                    mStyleSamples.Add(actorAsset);
+                else
+                {
+                    o2Debug.LogError("UI style " + actorAsset->GetPath() + " has no widget, not loaded");
+                    loaded = false;
+                }
+            }
         }
+
+        return loaded;
     }
 
     void UIManager::SaveStyle(const String& stylesPath)

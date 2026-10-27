@@ -23,6 +23,7 @@
 #include "o2Editor/UI/CurveEditor/CurveActions.h"
 #include "o2Editor/UIRoot.h"
 #include "o2/Render/VectorSprite.h"
+#include "o2Editor/UI/Style/EditorTheme.h"
 
 namespace Editor
 {
@@ -49,7 +50,7 @@ namespace Editor
         mTransformFrame->onChangeCompleted = THIS_FUNC(OnTransformCompleted);
         mTransformFrame->messageFallDownListener = this;
 
-        mBackColor = Color4(225, 232, 232, 255);
+        mBackColor = EditorTheme::Get().viewBack;
 
         mHandleSamplesStubInfo = mmake<CurveInfo>();
         mHandleSamplesStubInfo->editor = Ref(this);
@@ -151,6 +152,8 @@ namespace Editor
 
         if (color == Color4(44, 62, 80) && !mCurves.IsEmpty())
             info->color = Color4::SomeColor(mCurves.Count());
+        else if (color == Color4(44, 62, 80))
+            info->color = EditorTheme::Get().ink;
         else
             info->color = color;
 
@@ -368,13 +371,13 @@ namespace Editor
         mTextLeft->SetHeight(10);
         mTextLeft->SetHorAlign(HorAlign::Left);
         mTextLeft->SetVerAlign(VerAlign::Bottom);
-        mTextLeft->color = Color4(96, 125, 139);
+        mTextLeft->color = EditorTheme::Get().text;
 
         mTextRight = mmake<Text>(mTextFont);
         mTextRight->SetHeight(10);
         mTextRight->SetHorAlign(HorAlign::Right);
         mTextRight->SetVerAlign(VerAlign::Bottom);
-        mTextRight->color = Color4(96, 125, 139);
+        mTextRight->color = EditorTheme::Get().text;
 
 
         mTextTop = mmake<Text>(mTextFont);
@@ -382,7 +385,7 @@ namespace Editor
         mTextTop->SetHorAlign(HorAlign::Left);
         mTextTop->SetVerAlign(VerAlign::Bottom);
         mTextTop->SetAngleDegrees(-90.0f);
-        mTextTop->color = Color4(96, 125, 139);
+        mTextTop->color = EditorTheme::Get().text;
 
 
         mTextBottom = mmake<Text>(mTextFont);
@@ -390,7 +393,7 @@ namespace Editor
         mTextBottom->SetHorAlign(HorAlign::Right);
         mTextBottom->SetVerAlign(VerAlign::Bottom);
         mTextBottom->SetAngleDegrees(-90.0f);
-        mTextBottom->color = Color4(96, 125, 139);
+        mTextBottom->color = EditorTheme::Get().text;
     }
 
     void CurvesEditor::RecalculateViewArea()

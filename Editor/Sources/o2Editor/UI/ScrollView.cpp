@@ -5,6 +5,7 @@
 #include "o2/Render/Render.h"
 #include "o2/Render/Sprite.h"
 #include "o2/Scene/UI/WidgetLayout.h"
+#include "o2Editor/UI/Style/EditorTheme.h"
 
 namespace Editor
 {
@@ -14,8 +15,8 @@ namespace Editor
         mRenderTarget = TextureRef(Vec2I(256, 256), TextureFormat::R8G8B8A8, Texture::Usage::RenderTarget);
         mRenderTargetSprite = mmake<Sprite>(mRenderTarget, RectI(0, 0, 256, 256));
 
-        mBackColor = Color4(225, 232, 232, 255);
-        mGridColor = Color4(190, 190, 190, 255);
+        mBackColor = EditorTheme::Get().viewBack;
+        mGridColor = EditorTheme::Get().viewGrid;
 
         mReady = true;
     }

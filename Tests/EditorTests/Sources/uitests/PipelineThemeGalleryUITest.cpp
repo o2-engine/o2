@@ -158,7 +158,7 @@ TEST(PipelineThemeGallery, ShootsEveryCard)
         EditorUIRoot.RemoveAllWidgets();
     }
     editor = nullptr;
-    PipelineTheme::SetKind(PipelineThemeKind::Dark);
+    PipelineTheme::FollowEditor();
     o2FileSystem.FolderRemove(PipelineUtils::GetWorkPath(), true);
     PipelineUtils::SetWorkPathOverride("");
 }

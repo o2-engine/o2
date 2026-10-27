@@ -2,6 +2,7 @@
 #include "KeyFramesTrackControl.h"
 
 #include "o2/Animation/Tracks/AnimationVec3FTrack.h"
+#include "o2Editor/UI/Style/EditorTheme.h"
 
 DECLARE_TEMPLATE_CLASS_MANUAL_ID(Editor::KeyFramesTrackControl<AnimationTrack<float>>, Editor__KeyFramesTrackControl_AnimationTrack_float__);
 DECLARE_TEMPLATE_CLASS_MANUAL_ID(Editor::KeyFramesTrackControl<AnimationTrack<bool>>, Editor__KeyFramesTrackControl_AnimationTrack_bool__);
@@ -91,7 +92,7 @@ namespace Editor
                                    layout->GetWorldBottom() + 5));
 
             DrawCurveInCoords(key.GetTopApproximatedPoints(), key.GetApproximatedPointsCount(),
-                              key.GetGetApproximatedPointsBounds(), drawCoords, Color4(44, 62, 80));
+                              key.GetGetApproximatedPointsBounds(), drawCoords, EditorTheme::Get().ink);
         }
 
         for (auto& handle : mHandles)

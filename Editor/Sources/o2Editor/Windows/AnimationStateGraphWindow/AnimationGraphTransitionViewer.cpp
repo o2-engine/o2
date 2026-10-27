@@ -9,6 +9,7 @@
 #include "o2/Utils/Editor/DragHandle.h"
 #include "o2/Utils/Editor/EditorScope.h"
 #include "o2/Render/VectorSprite.h"
+#include "o2Editor/UI/Style/EditorTheme.h"
 
 namespace Editor
 {
@@ -287,7 +288,7 @@ namespace Editor
 		//  [2]--------[3] [4]--------[5] 
 		//                \ |          |
 		//                 [6]--------[7]
-		auto transitionColor = Color4(0, 156, 141, 255).ABGR();
+		auto transitionColor = EditorTheme::Get().accent.ABGR();
 		Vertex* verts = mTransitionMesh->GetVertices<Vertex>();
 		verts[0] = Vertex(sourceRangeBeginPosition + 2, sourceRect.top - 1, transitionColor, 0, 0);
 		verts[2] = Vertex(sourceRangeBeginPosition + 2, sourceRect.bottom + 1, transitionColor, 0, 0);

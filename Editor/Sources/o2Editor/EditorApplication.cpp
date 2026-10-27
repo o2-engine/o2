@@ -143,6 +143,21 @@ namespace Editor
         return mGameTimeScale;
     }
 
+    void EditorApplication::RequestTheme(EditorThemeKind kind)
+    {
+        mThemeChoice.Request(kind);
+    }
+
+    EditorThemeKind EditorApplication::GetNextTheme() const
+    {
+        return mThemeChoice.GetNext();
+    }
+
+    EditorPreferences& EditorApplication::GetPreferences()
+    {
+        return mThemeChoice.preferences;
+    }
+
     Ref<RefCounterable> EditorApplication::CastToRefCounterable(const Ref<EditorApplication>& ref)
     {
         return DynamicCast<Application>(ref);
@@ -179,29 +194,26 @@ namespace Editor
 
         mUIRoot = mmake<UIRoot>();
 
-        mBackground = mmake<VectorSprite>("ui/UI4_Background.svg");
-        mBackSign = mmake<VectorSprite>("ui/UI4_o2_sign.svg");
-
-        CommonTextures::Initialize();
-
         AssetsTrash::ClearAllOnStartup();
 
         mConfig = mmake<EditorConfig>();
         mConfig->LoadConfigs();
+
+        EditorTheme::SetKind(EditorTheme::KindByName(mConfig->globalConfig.theme));
+        mThemeChoice.Reset(EditorTheme::GetKind());
+        mThemeChoice.onConfirmed = [this](EditorThemeKind kind)
+        {
+            mConfig->globalConfig.theme = EditorTheme::NameOf(kind);
+            mConfig->SaveGlobalConfigs();
+            o2Debug.Log("Theme: " + EditorTheme::NameOf(kind) + " from the next start");
+        };
 
         mAssetsLineSync = mmake<AssetsLineSync>();
 
         String lastLoadedScene = o2EditorConfig.projectConfig.lastLoadedScene;
         String lastPipeline = o2EditorConfig.projectConfig.lastPipelineAsset;
 
-        LoadUIStyle();
-
-        mProperties = mmake<Properties>();
-        mWindowsManager = mmake<WindowsManager>();
-        mMenuPanel = mmake<MenuPanel>();
-        mToolsPanel = mmake<ToolsPanel>();
-
-        mSceneWindow = mWindowsManager->GetWindow<SceneWindow>();
+        CreateShell();
 
         if (mConfig->projectConfig.maximized)
             o2Application.Maximize();
@@ -481,10 +493,29 @@ namespace Editor
         // Always regenerate the style in memory: the saved-style fast path
         // (load from built EditorData) produces broken widget clones in the
         // web build, and saving would mirror ~350 files to the server per boot
-        builder.RebuildEditorUIManager("Editor UI styles", false, false);
+        builder.RebuildEditorUIManager(EditorTheme::StylesFolder(), false, false);
 #else
-        builder.RebuildEditorUIManager("Editor UI styles", true, true);
+        builder.RebuildEditorUIManager(EditorTheme::StylesFolder(), true, true);
 #endif
+    }
+
+    void EditorApplication::CreateShell()
+    {
+        PushEditorScopeOnStack scope;
+
+        mBackground = mmake<VectorSprite>("ui/UI4_Background.svg");
+        mBackSign = mmake<VectorSprite>("ui/UI4_o2_sign.svg");
+
+        CommonTextures::Initialize();
+
+        LoadUIStyle();
+
+        mProperties = mmake<Properties>();
+        mWindowsManager = mmake<WindowsManager>();
+        mMenuPanel = mmake<MenuPanel>();
+        mToolsPanel = mmake<ToolsPanel>();
+
+        mSceneWindow = mWindowsManager->GetWindow<SceneWindow>();
     }
 
     void EditorApplication::PreUpdatePhysics()
@@ -630,6 +661,8 @@ namespace Editor
     void EditorApplication::OnUpdate(float dt)
     {
         PROFILE_SAMPLE_FUNC();
+
+        mThemeChoice.Update();
 
         mWindowsManager->Update(dt);
         mUIRoot->Update(dt);

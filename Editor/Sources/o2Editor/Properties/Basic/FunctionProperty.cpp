@@ -12,6 +12,7 @@
 #include "o2Editor/Properties/Properties.h"
 #include <o2/Scene/Components/ScriptableComponent.h>
 #include "o2/Render/VectorSprite.h"
+#include "o2Editor/UI/Style/EditorTheme.h"
 
 using namespace o2;
 
@@ -339,7 +340,7 @@ namespace Editor
 
             auto icon = o2UI.CreateImage(iconName);
             *icon->layout = WidgetLayout::Based(BaseCorner::Left, Vec2F(20, 20));
-            icon->GetImageDrawable()->color = Color4(0, 156, 141, 255);
+            icon->GetImageDrawable()->color = EditorTheme::Get().accent;
             typeItem->AddChild(icon);
 
             auto text = o2UI.CreateLabel(typeName);

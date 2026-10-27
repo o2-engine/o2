@@ -81,6 +81,13 @@ namespace Editor
 
         mMenuPanel->AddItem("Edit/Project/AssetsLine", [&]() { AssetsLineDlg::Show(); });
 
+        mMenuPanel->AddItem("Edit/---");
+
+        mMenuPanel->AddItem("Edit/Preferences", [&]() {
+            o2EditorPropertiesWindow.SetTarget(&o2EditorApplication.GetPreferences());
+            o2EditorPropertiesWindow.Show();
+        });
+
         // VIEW
         mMenuPanel->AddItem("View/Show Tree", [&]() { OnShowTreePressed(); });
         mMenuPanel->AddItem("View/Show Scene", [&]() { OnShowScenePressed(); });
@@ -98,6 +105,10 @@ namespace Editor
 
         mMenuPanel->AddItem("View/---");
         mMenuPanel->AddItem("View/Reset layout", [&]() { OnResetLayoutPressed(); });
+
+        mMenuPanel->AddItem("View/---");
+        mMenuPanel->AddItem("View/Theme/Light", [&]() { o2EditorApplication.RequestTheme(EditorThemeKind::Light); });
+        mMenuPanel->AddItem("View/Theme/Dark", [&]() { o2EditorApplication.RequestTheme(EditorThemeKind::Dark); });
 
         // RUN
         mMenuPanel->AddItem("Run/Play - stop", [&]() {

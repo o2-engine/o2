@@ -10,7 +10,7 @@ Entities in the engine can reference an asset both by path and by identifier. Th
 ### The asset system
 For basic work with assets, the engine has a separate subsystem `o2::Assets`, with quick access via the `o2Assets` macro.
 
-It contains the resource cache, the tree of available assets, and has functionality for working with assets: creating an instance, moving, deleting, etc.
+It contains the resource cache, the tree of available assets, and has functionality for working with assets: creating an instance, moving, deleting, etc. `GetCachedAssets` returns the loaded assets of the cache.
 
 ### The base asset class, Asset
 It contains basic information about the asset: identifier, asset path. As well as basic functionality — loading, saving.
@@ -42,6 +42,7 @@ Asset subtypes inherit from the base `o2::Asset`:
 - `GetMesh(pixelScale)` and `GetSlicedMesh(pixelScale, borders)` return the tessellated triangles (`o2::VectorImageMesh`) from a cache shared by all drawables of the asset. The key is the pixel scale quantized by `QuantizePixelScale` (powers of two, range 1/16..64) and, for the sliced variant, the borders; a sliced mesh is split from the cached whole mesh of the same scale, without tessellating again. The cache holds up to 32 meshes and is dropped when the image changes; meshes in use stay alive.
 - `SetSource(svg)` replaces the image from text, `GetSource` returns it, `Save` writes it back to the file.
 - `GetVersion` changes on every load and is never equal for two loaded assets, so a drawable also notices another asset by it. After `Assets::RebuildAssets` the asset reloads itself when its id is in the changed list; drawables compare the version at drawing and rebuild their vertices.
+- `SetImageRemap(remap)` (static) restyles every image loaded from then on: the image goes to the function with the built file path and may get other paints and shapes; empty for none, `ImageRemap` returns it. An image already loaded takes it on `Reload`. The editor themes restyle the editor art this way ([themes](/Docs/en/Editor/editor.md)).
 
 ### Asset references
 An asset reference is the template class `o2::AssetRef<AssetType>`, a descendant of the non-template base `o2::BaseAssetRef`. It functions like a typical smart pointer.

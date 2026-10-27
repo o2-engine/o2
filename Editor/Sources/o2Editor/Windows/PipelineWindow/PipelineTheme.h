@@ -73,10 +73,9 @@ namespace Editor
         Color4 PortColor(PipelinePortType type) const;
     };
 
-    // ---------------------------------------------------------------------------------
-    // Current theme of the Pipeline window: a per-user view setting kept in the pipeline
-    // work folder's ViewPrefs.json, never in a .pipeline file
-    // ---------------------------------------------------------------------------------
+    // -------------------------------------------------------------------------------------
+    // Current theme of the Pipeline window: the theme of the editor, never kept in a .pipeline
+    // -------------------------------------------------------------------------------------
     namespace PipelineTheme
     {
         // Returns the palette of the current theme
@@ -88,8 +87,11 @@ namespace Editor
         // Returns the current theme
         PipelineThemeKind GetKind();
 
-        // Switches the theme, stores it and tells the open editors to restyle
+        // Sets a theme over the editor one, for tests and galleries; the open editors restyle
         void SetKind(PipelineThemeKind kind);
+
+        // Drops the theme set by SetKind: the window follows the editor theme again
+        void FollowEditor();
 
         // Returns a number that changes whenever the theme changes
         int GetVersion();
