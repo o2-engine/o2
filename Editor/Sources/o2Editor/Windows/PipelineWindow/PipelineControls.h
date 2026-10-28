@@ -35,6 +35,7 @@ namespace Editor
         float radius = 8.0f;       // Corner radius in pixels @SERIALIZABLE
         bool  roundTop = true;     // Rounds the top corners @SERIALIZABLE
         bool  roundBottom = false; // Rounds the bottom corners @SERIALIZABLE
+        float opacity = 1.0f;      // Opacity of the fill under the transparency, which states animate @SERIALIZABLE
 
     public:
         // Default constructor
@@ -500,6 +501,7 @@ CLASS_FIELDS_META(Editor::PipelineRoundedRect)
     FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(8.0f).NAME(radius);
     FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(true).NAME(roundTop);
     FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(false).NAME(roundBottom);
+    FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(1.0f).NAME(opacity);
 }
 END_META;
 CLASS_METHODS_META(Editor::PipelineRoundedRect)

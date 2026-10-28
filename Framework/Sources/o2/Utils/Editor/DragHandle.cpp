@@ -11,6 +11,13 @@
 
 namespace o2
 {
+    // A look of a state fades in when the state comes, so it starts hidden
+    static void HideStateLook(const Ref<IRectDrawable>& drawable)
+    {
+        if (drawable)
+            drawable->SetTransparency(0.0f);
+    }
+
     DragHandle::DragHandle(RefCounter* refCounter):
         RefCounterable(refCounter)
     {
@@ -26,6 +33,9 @@ namespace o2
         RefCounterable(refCounter), mRegularDrawable(regular), mHoverDrawable(hover), mPressedDrawable(pressed), mSelectedDrawable(selected),
         mSelectedHoverDrawable(selectedHovered), mSelectedPressedDrawable(selectedPressed)
     {
+        for (auto& look : { hover, pressed, selected, selectedHovered, selectedPressed })
+            HideStateLook(look);
+
         screenToLocalTransformFunc = [](const Vec2F& point) { return point; };
         localToScreenTransformFunc = [](const Vec2F& point) { return point; };
         checkPositionFunc = [](const Vec2F& point) { return point; };
@@ -502,6 +512,7 @@ namespace o2
     void DragHandle::SetHoverDrawable(const Ref<IRectDrawable>& IRectDrawable)
     {
         mHoverDrawable = IRectDrawable;
+        HideStateLook(mHoverDrawable);
     }
 
     const Ref<IRectDrawable>& DragHandle::GetHoverDrawable() const
@@ -512,6 +523,7 @@ namespace o2
     void DragHandle::SetPressedDrawable(const Ref<IRectDrawable>& IRectDrawable)
     {
         mPressedDrawable = IRectDrawable;
+        HideStateLook(mPressedDrawable);
     }
 
     const Ref<IRectDrawable>& DragHandle::GetPressedDrawable() const
@@ -522,6 +534,7 @@ namespace o2
     void DragHandle::SetSelectedDrawable(const Ref<IRectDrawable>& IRectDrawable)
     {
         mSelectedDrawable = IRectDrawable;
+        HideStateLook(mSelectedDrawable);
     }
 
     const Ref<IRectDrawable>& DragHandle::GetSelectedDrawable() const
@@ -532,6 +545,7 @@ namespace o2
     void DragHandle::SetSelectedHoveredDrawable(const Ref<IRectDrawable>& IRectDrawable)
     {
         mSelectedHoverDrawable = IRectDrawable;
+        HideStateLook(mSelectedHoverDrawable);
     }
 
     const Ref<IRectDrawable>& DragHandle::GetSelectedHoveredDrawable() const
@@ -542,6 +556,7 @@ namespace o2
     void DragHandle::SetSelectedPressedDrawable(const Ref<IRectDrawable>& IRectDrawable)
     {
         mSelectedPressedDrawable = IRectDrawable;
+        HideStateLook(mSelectedPressedDrawable);
     }
 
     const Ref<IRectDrawable>& DragHandle::GetSelectedPressedDrawable() const

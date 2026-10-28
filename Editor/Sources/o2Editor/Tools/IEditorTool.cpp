@@ -3,6 +3,7 @@
 
 #include "o2/Utils/Reflection/Reflection.h"
 #include "o2/Utils/Serialization/DataValue.h"
+#include "o2Editor/UI/Style/EditorTheme.h"
 #include "o2Editor/Windows/SceneWindow/SceneEditScreen.h"
 #include "o2/Render/VectorSprite.h"
 
@@ -37,7 +38,7 @@ namespace Editor
 
         toggle->AddState("visible", AnimationClip::EaseInOut("transparency", 0.0f, 1.0f, 0.2f));
 
-        toggle->AddState("value", AnimationClip::EaseInOut("layer/root/transparency", 0.3f, 1.0f, 0.1f));
+        toggle->AddState("value", AnimationClip::EaseInOut("layer/root/transparency", EditorTheme::Get().iconOff, 1.0f, 0.1f));
 
         toggle->onToggle = [&](bool v) { if (v) o2EditorSceneScreen.SelectTool(Ref(const_cast<IEditTool*>(this))); };
 

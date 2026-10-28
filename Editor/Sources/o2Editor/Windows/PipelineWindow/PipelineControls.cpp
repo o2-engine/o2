@@ -29,7 +29,8 @@
 namespace Editor
 {
     PipelineRoundedRect::PipelineRoundedRect(const PipelineRoundedRect& other):
-        IRectDrawable(other), radius(other.radius), roundTop(other.roundTop), roundBottom(other.roundBottom)
+        IRectDrawable(other), radius(other.radius), roundTop(other.roundTop), roundBottom(other.roundBottom),
+        opacity(other.opacity)
     {}
 
     void PipelineRoundedRect::Draw()
@@ -40,7 +41,9 @@ namespace Editor
         Basis basis = GetBasis();
         RectF rect(basis.origin, basis.origin + basis.xv + basis.yv);
         float r = Math::Clamp(radius, 0.0f, Math::Min(rect.Width(), rect.Height()) * 0.5f);
-        PipelineDraw::Fill(rect, PipelineDraw::Corners(roundTop ? r : 0.0f, roundBottom ? r : 0.0f), mColor);
+        Color4 color = mColor;
+        color.a = (int)(color.a*opacity);
+        PipelineDraw::Fill(rect, PipelineDraw::Corners(roundTop ? r : 0.0f, roundBottom ? r : 0.0f), color);
     }
 
     PipelineMenuBack::PipelineMenuBack(const PipelineMenuBack& other):

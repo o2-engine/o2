@@ -519,6 +519,29 @@ namespace Editor
                 }
             }
 
+            // Selected points of the curve and the spline editors: the light theme's green turns accent, paler where it was
+            // paler, each stop keeping its opacity
+            void RestyleSelectedHandle(VectorImage& image)
+            {
+                auto recolor = [](const Color4& c) {
+                    if (!IsSemantic(c))
+                        return c;
+
+                    float pale = Math::Min(c.r, Math::Min(c.g, c.b))/255.0f;
+                    return WithAlphaOf(Math::Lerp(accent, Color4::White(), pale*0.8f), c);
+                };
+
+                for (auto& shape : image.shapes)
+                {
+                    for (auto* paint : { &shape.fill, &shape.stroke })
+                    {
+                        paint->color = recolor(paint->color);
+                        for (auto& stop : paint->stops)
+                            stop.color = recolor(stop.color);
+                    }
+                }
+            }
+
             // ---------------------------------------------------------------------------------------------------------
             // Kinds of the art by file
             // ---------------------------------------------------------------------------------------------------------
@@ -538,7 +561,7 @@ namespace Editor
                     StartsWith(file, { "UI4_actor_icon", "UI4_add_asset_icon", "UI4_anim_file_icon", "UI4_graph_icon",
                                        "UI4_video_icon", "UI4_image_asset_back", "UI4_Record_icon",
                                        "UI4_log_errors_icon", "UI4_log_warnings_icon", "UI4_log_info_icon",
-                                       "UI4_dopesheet_back", "UI4_tag_big", "UI4_layer_big",
+                                       "UI4_dopesheet_back",
                                        "UI2_move_tool_center", "UI2_right_", "UI2_up_", "UI2_scale_both", "CurveHandle",
                                        "CurveSupportHandle", "hor_slice_line", "ver_slice_line", "circle_hole_handle",
                                        "hor_hole_handle", "ver_hole_handle", "UI4_time_line" }) &&
@@ -548,6 +571,10 @@ namespace Editor
 
         void RestyleImage(VectorImage& image, const String& path)
         {
+            // The Pipeline window colours its own art by its palette, in both themes
+            if (path.Contains("/ui/pipeline/"))
+                return;
+
             String file = FileOf(path);
             ArtState state = StateOf(file);
 
@@ -639,6 +666,8 @@ namespace Editor
                 RestyleAll(image, accent);
             else if (IsRoundButton(file))
                 RestyleRoundButton(image, state);
+            else if (StartsWith(file, { "CurveHandleSelected", "CurveSupportHandleSelected" }))
+                RestyleSelectedHandle(image);
             else if (IsPicture(file))
                 return;
             else

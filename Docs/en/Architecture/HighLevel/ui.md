@@ -39,7 +39,8 @@ Some widgets draw with drawables kept in their own fields, not in layers. All of
 - `CustomList` draws every selected item with a clone of the selection drawable taken from a pool; `SetSelectionDrawable` drops the pool and gives the selected items clones of the new one.
 - Setters retarget the state animations, so a state like `mHoverDrawable/transparency` follows the new drawable.
 - Serialized data did not change: a field holds `{"Type": "o2::Sprite", "Value": {...}}` as before, or another type name for another drawable.
-- `ContextMenu::Item::icon` is `AssetRef<Asset>`: a raster or a vector image; the item widget shows it through `WidgetLayer::SetImage`. The `check` layer of an item may be any drawable.
+- `ContextMenu::Item::icon` is `AssetRef<Asset>`: a raster or a vector image; the item widget shows it through `WidgetLayer::SetImage`, fitted into the icon layer. The `check` layer of an item may be any drawable. `ContextMenu::SetIconsColor` tints the icons; a sub menu is styled by its owner (`onSubMenuCreated`).
+- `DragHandle`: the hover, pressed and selected drawables start hidden and fade in while their state is on. `FrameHandles::SetFrameColor` sets the colour of the frame lines.
 
 #### States
 An elementary animation state machine: a list of states is defined, and each state can be on or off. The transition between on and off happens through an animation defined by an animation clip.

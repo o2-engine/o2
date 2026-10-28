@@ -13,6 +13,7 @@
 #include "o2Editor/UI/ScrollView.h"
 #include "o2Editor/Windows/SceneWindow/SceneGizmos.h"
 #include "o2Editor/Windows/SceneWindow/SceneView3DState.h"
+#include "o2Editor/UI/Style/EditorTheme.h"
 
 using namespace o2;
 
@@ -232,7 +233,7 @@ namespace Editor
         Color4 mSelectedObjectColor = Color4(220, 220, 220, 255);      // Selected object color
         Color4 mMultiSelectedObjectColor = Color4(220, 220, 220, 100); // Selected object color
 
-        Color4 mSelectionOutlineColor = Color4(10, 165, 150, 255); // Silhouette outline color of selected objects
+        Color4 mSelectionOutlineColor = EditorTheme::Get().selectionOutline; // Silhouette outline color of selected objects
 
         TextureRef    mSelectionMaskTarget;      // Offscreen silhouette mask of selected objects
         Ref<Material> mSelectionOutlineMaterial; // Outline composite material (Shaders/SelectionOutline)
@@ -480,7 +481,7 @@ CLASS_FIELDS_META(Editor::SceneEditScreen)
     FIELD().PUBLIC().NAME(onStableCameraModeChanged);
     FIELD().PROTECTED().DEFAULT_VALUE(Color4(220, 220, 220, 255)).NAME(mSelectedObjectColor);
     FIELD().PROTECTED().DEFAULT_VALUE(Color4(220, 220, 220, 100)).NAME(mMultiSelectedObjectColor);
-    FIELD().PROTECTED().DEFAULT_VALUE(Color4(10, 165, 150, 255)).NAME(mSelectionOutlineColor);
+    FIELD().PROTECTED().DEFAULT_VALUE(EditorTheme::Get().selectionOutline).NAME(mSelectionOutlineColor);
     FIELD().PROTECTED().NAME(mSelectionMaskTarget);
     FIELD().PROTECTED().NAME(mSelectionOutlineMaterial);
     FIELD().PROTECTED().NAME(mSelectionOutlineQuad);

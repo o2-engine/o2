@@ -1,6 +1,7 @@
 #include "o2Editor/stdafx.h"
 #include "CustomFrameTool.h"
 
+#include "o2Editor/UI/Style/EditorTheme.h"
 #include "o2Editor/Windows/SceneWindow/SceneEditScreen.h"
 
 namespace Editor
@@ -11,6 +12,7 @@ namespace Editor
         sceneLayer->tool = Ref(this);
 
         frameHandles = mmake<FrameHandles>();
+        frameHandles->SetFrameColor(EditorTheme::Get().frame);
         frameHandles->isInputTransparent = true;
         frameHandles->onTransformed = [&](const Basis& x) {
             auto b = x*o2EditorSceneScreen.GetScreenToLocalTransform();

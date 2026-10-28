@@ -109,3 +109,86 @@ TEST(ContextMenuRebuild, ReusedItemsDoNotStackIcons)
     menu->Hide(true);
     EditorUIRoot.RemoveWidget(menu);
 }
+
+// An item's icon fits the item's height with its proportions kept, also on the first show, before any layout pass
+TEST(ContextMenuRebuild, IconsFitTheItem)
+{
+    MenuRoot root;
+    PushEditorScopeOnStack scope;
+    auto menu = o2UI.CreateWidget<ContextMenu>();
+    EditorUIRoot.AddWidget(menu);
+
+    menu->AddItem("vector", Function<void()>(), o2Assets.GetAssetRef("ui/UI4_small_trash_icon.svg"));
+    menu->AddItem("raster", Function<void()>(), o2Assets.GetAssetRef("ui/UI4_small_trash_icon.png"));
+    menu->Show(Vec2F());
+    root.Frame();
+
+    for (auto name : { "vector", "raster" })
+    {
+        auto item = menu->FindChildByTypeAndName<ContextMenuItem>((String)"Context Item " + name);
+        ASSERT_TRUE(item) << name;
+        auto iconLayer = item->FindLayer("icon");
+        ASSERT_TRUE(iconLayer && iconLayer->GetChildren().Count() == 1) << name;
+        auto icon = iconLayer->GetChildren()[0]->GetDrawable();
+        ASSERT_TRUE(icon) << name;
+
+        RectF rect = icon->GetRect();
+        EXPECT_GT(rect.Width(), 4.0f) << name;
+        EXPECT_GT(rect.Height(), 4.0f) << name;
+        EXPECT_LE(rect.Height(), item->layout->GetHeight() + 0.5f) << name;
+        EXPECT_NEAR(rect.Width()/rect.Height(), 1.0f, 0.15f) << name;
+    }
+
+    menu->Hide(true);
+    EditorUIRoot.RemoveWidget(menu);
+}
+
+// A sub menu is restyled by its owner's onSubMenuCreated, as the items of the owner are
+TEST(ContextMenuRebuild, SubMenusAreRestyledByTheirOwner)
+{
+    MenuRoot root;
+    PushEditorScopeOnStack scope;
+    auto menu = o2UI.CreateWidget<ContextMenu>();
+    EditorUIRoot.AddWidget(menu);
+
+    int restyled = 0;
+    menu->onSubMenuCreated = [&](const Ref<ContextMenu>& subMenu) { restyled++; subMenu->SetIconsColor(Color4(10, 20, 30)); };
+    menu->AddItem("First/a");
+    menu->AddItem("Second/b");
+    menu->Show(Vec2F());
+    root.Frame();
+
+    EXPECT_EQ(restyled, 2);
+    auto sub = SubMenuOf(menu, "First");
+    ASSERT_TRUE(sub);
+    EXPECT_EQ(sub->GetIconsColor(), Color4(10, 20, 30));
+
+    menu->Hide(true);
+    EditorUIRoot.RemoveWidget(menu);
+}
+
+// The icons of the items take the menu's icons colour
+TEST(ContextMenuRebuild, IconsTakeTheMenuColor)
+{
+    MenuRoot root;
+    PushEditorScopeOnStack scope;
+    auto menu = o2UI.CreateWidget<ContextMenu>();
+    EditorUIRoot.AddWidget(menu);
+
+    menu->SetIconsColor(Color4(150, 160, 170));
+    menu->AddItem("item", Function<void()>(), o2Assets.GetAssetRef("ui/UI4_small_trash_icon.svg"));
+    menu->Show(Vec2F());
+    root.Frame();
+
+    auto item = menu->FindChildByTypeAndName<ContextMenuItem>("Context Item item");
+    ASSERT_TRUE(item);
+    auto iconLayer = item->FindLayer("icon");
+    ASSERT_TRUE(iconLayer && iconLayer->GetChildren().Count() == 1);
+    auto icon = iconLayer->GetChildren()[0]->GetDrawable();
+    ASSERT_TRUE(icon);
+    Color4 color = icon->GetColor();
+    EXPECT_EQ(Color4(color.r, color.g, color.b), Color4(150, 160, 170));
+
+    menu->Hide(true);
+    EditorUIRoot.RemoveWidget(menu);
+}

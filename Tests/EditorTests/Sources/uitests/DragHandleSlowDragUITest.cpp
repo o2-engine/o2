@@ -2,6 +2,7 @@
 #include <gtest/gtest.h>
 
 #include "o2/Application/Input.h"
+#include "o2/Render/Sprite.h"
 #include "o2/Utils/Editor/DragHandle.h"
 
 using namespace o2;
@@ -54,4 +55,27 @@ TEST(DragHandleSlowDragUI, SubPixelFrameDeltasAccumulate)
         handle->StillDown(cursor, Vec2F());
 
     EXPECT_EQ(changes, changesBefore);
+}
+
+// A new handle shows its regular look: the hover, pressed and selected looks fade in only when their state comes
+TEST(DragHandleLooksUI, StateLooksStartHidden)
+{
+    auto make = []() { return mmake<Sprite>(); };
+    auto handle = mmake<DragHandle>(make(), make(), make(), make(), make(), make());
+    EXPECT_FLOAT_EQ(handle->GetRegularDrawable()->GetTransparency(), 1.0f);
+    EXPECT_FLOAT_EQ(handle->GetHoverDrawable()->GetTransparency(), 0.0f);
+    EXPECT_FLOAT_EQ(handle->GetPressedDrawable()->GetTransparency(), 0.0f);
+    EXPECT_FLOAT_EQ(handle->GetSelectedDrawable()->GetTransparency(), 0.0f);
+    EXPECT_FLOAT_EQ(handle->GetSelectedHoveredDrawable()->GetTransparency(), 0.0f);
+    EXPECT_FLOAT_EQ(handle->GetSelectedPressedDrawable()->GetTransparency(), 0.0f);
+
+    auto other = mmake<DragHandle>();
+    other->SetRegularDrawable(make());
+    other->SetHoverDrawable(make());
+    other->SetPressedDrawable(make());
+    other->SetSelectedDrawable(make());
+    EXPECT_FLOAT_EQ(other->GetRegularDrawable()->GetTransparency(), 1.0f);
+    EXPECT_FLOAT_EQ(other->GetHoverDrawable()->GetTransparency(), 0.0f);
+    EXPECT_FLOAT_EQ(other->GetPressedDrawable()->GetTransparency(), 0.0f);
+    EXPECT_FLOAT_EQ(other->GetSelectedDrawable()->GetTransparency(), 0.0f);
 }

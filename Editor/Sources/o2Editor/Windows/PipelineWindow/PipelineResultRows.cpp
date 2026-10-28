@@ -180,6 +180,9 @@ namespace Editor
         mFrame = mmake<FrameHandles>();
         mFrame->SetPivotEnabled(false);
         mFrame->SetRotationEnabled(false);
+        // White over the shaded image, as the web crop frame, in the dark theme
+        if (PipelineTheme::Get().dark)
+            mFrame->SetFrameColor(Color4(255, 255, 255, 230));
         mFrame->onTransformed = THIS_FUNC(OnFrameTransformed);
         mFrame->onChangeCompleted = THIS_FUNC(OnFrameCompleted);
         mFrame->onPressed = [this]() { mFrameDragging = true; };

@@ -53,6 +53,9 @@ namespace o2
         // Returns is rotation available
         bool IsRotationEnabled() const; 
 
+        // Sets frame drawing color
+        void SetFrameColor(const Color4& color);
+
         // Returns frame drawing color
         const Color4& GetFrameColor() const;
 
@@ -60,7 +63,7 @@ namespace o2
         bool IsInputTransparent() const override;
 
     protected:
-        const Color4 mFrameColor = Color4(44, 62, 80, 255); // Regular handle color
+        Color4       mFrameColor = Color4(44, 62, 80, 255); // Frame color
         const float  mFrameHandlesSize = 9.0f;              // Frame corners handles size
         const float  mHandlesRotateSize = 17.0f;            // Rotation frame handles size
 

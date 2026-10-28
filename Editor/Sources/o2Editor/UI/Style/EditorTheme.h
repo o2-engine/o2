@@ -31,7 +31,9 @@ namespace Editor
         Color4 viewGrid;      // Their grid
         Color4 scaleLine;     // Timeline's big scale lines
         Color4 scaleLineSoft; // Timeline's small scale lines
-        Color4 frame;         // Scene frame tool: selected objects frame
+        Color4 frame;         // Selection frames: the scene frame tool, the curve and the spline editors
+        Color4 guide;         // Guide lines from curve and spline points to their handles
+        Color4 selectionOutline; // Outline of the objects selected in the scene
         Color4 frameObject;   // Its object marks
         Color4 frameParent;   // Its parent marks
         Color4 warning;       // Log warning mark
@@ -39,6 +41,8 @@ namespace Editor
         Color4 checkerA;      // Transparency checker squares
         Color4 checkerB;
         Color4 prototypes[5]; // Names of prototype instances in the scene tree, one per depth of linking
+
+        float iconOff = 0.3f; // Opacity of the icon of a toggle that is off: the scene tools, the pause
     };
 
     // ------------------------------------------------------------------------------------------------------------------

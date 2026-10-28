@@ -470,12 +470,16 @@ namespace Editor
                 back->layout = Layout::BothStretch(-2, -2, -2, -2);
             }
 
+            // The menu fades its selection in by the transparency, which is the colour's alpha: the wash keeps its
+            // own opacity
             auto hover = mmake<PipelineRoundedRect>();
             hover->radius = 6.0f;
             hover->roundBottom = true;
-            hover->color = theme.dark ? Color4(255, 255, 255, 23) : Color4(96, 125, 139, 31);
+            hover->color = theme.dark ? Color4(255, 255, 255) : Color4(96, 125, 139);
+            hover->opacity = theme.dark ? 0.09f : 0.12f;
             menu->SetSelectionDrawable(hover);
             menu->SetSelectionDrawableLayout(Layout::BothStretch(2, 0, 2, 0));
+            menu->SetIconsColor(theme.dark ? theme.fgDim : Color4::White());
 
             if (auto separator = menu->GetSeparatorSample())
             {

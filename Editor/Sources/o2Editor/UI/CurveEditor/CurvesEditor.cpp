@@ -45,6 +45,7 @@ namespace Editor
         mTransformFrame = mmake<FrameHandles>();
         mTransformFrame->SetPivotEnabled(false);
         mTransformFrame->SetRotationEnabled(false);
+        mTransformFrame->SetFrameColor(EditorTheme::Get().frame);
         mTransformFrame->onTransformed = THIS_FUNC(OnTransformFrameTransformed);
         mTransformFrame->onPressed = THIS_FUNC(OnTransformBegin);
         mTransformFrame->onChangeCompleted = THIS_FUNC(OnTransformCompleted);
@@ -1617,6 +1618,7 @@ namespace Editor
     void CurvesEditor::OnSelectionChanged()
     {
         mNeedRedraw = true;
+        UpdateTransformFrame();
     }
 
     void CurvesEditor::SetSelectedKeysSupportsType(Curve::Key::Type type)
@@ -2257,13 +2259,13 @@ namespace Editor
         if (leftSupportHandle->enabled)
         {
             leftSupportHandle->UpdateScreenPosition();
-            o2Render.DrawAALine(mainHandle->GetScreenPosition(), leftSupportHandle->GetScreenPosition(), curveEditor.Lock()->mGridColor);
+            o2Render.DrawAALine(mainHandle->GetScreenPosition(), leftSupportHandle->GetScreenPosition(), EditorTheme::Get().guide);
         }
 
         if (rightSupportHandle->enabled)
         {
             rightSupportHandle->UpdateScreenPosition();
-            o2Render.DrawAALine(mainHandle->GetScreenPosition(), rightSupportHandle->GetScreenPosition(), curveEditor.Lock()->mGridColor);
+            o2Render.DrawAALine(mainHandle->GetScreenPosition(), rightSupportHandle->GetScreenPosition(), EditorTheme::Get().guide);
         }
 
         mainHandle->Draw(camRect);

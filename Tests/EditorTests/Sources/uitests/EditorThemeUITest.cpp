@@ -4,6 +4,12 @@
 #include "EditorVectorUIFixture.h"
 
 #include "o2Editor/UI/Style/EditorTheme.h"
+#include "o2/Utils/Math/Spline.h"
+#include "o2Editor/Pipeline/PipelineNodeType.h"
+#include "o2Editor/UI/CurveEditor/CurvesEditor.h"
+#include "o2Editor/UI/SplineEditor/SplineEditor.h"
+#include "o2Editor/Windows/PipelineWindow/PipelineControls.h"
+#include "o2Editor/Windows/PipelineWindow/PipelineNodeWidget.h"
 #include "o2Editor/Windows/PipelineWindow/PipelineTheme.h"
 
 // The two editor themes as the editor starts with them, and a gallery of both for the report (O2_EDITOR_THEME_OUT=<folder>)
@@ -182,6 +188,44 @@ TEST_F(EditorThemeSwitch, StyleColorsTakeTheirDarkRoles)
     EXPECT_EQ(EditorTheme::StyleColor(Color4(225, 232, 232)), dark.viewBack);
     EXPECT_EQ(EditorTheme::StyleColor(Color4(12, 34, 56)), Color4(12, 34, 56));
     EXPECT_EQ(EditorTheme::StyleColor(Color4(0, 0, 0, 20)), Color4(255, 255, 255, 10));
+    EXPECT_EQ(EditorTheme::StyleColor(Color4::Black()), dark.text);
+}
+
+// What the styles draw in plain colours reads on the dark panels: the carets of the fields, the track of the state bar
+TEST_F(EditorThemeSwitch, DarkStylesKeepCaretsAndTracksVisible)
+{
+    LightAfter lightAfter;
+    EditorTheme::SetKind(EditorThemeKind::Dark);
+    BuildStyle(false);
+
+    auto luminance = [](const Color4& c) { return 0.2126f*c.r + 0.7152f*c.g + 0.0722f*c.b; };
+
+    int carets = 0;
+    for (auto& style : o2UI.GetWidgetStyles())
+    {
+        auto actor = style->GetActor();
+        if (!actor)
+            continue;
+
+        Vector<Ref<Actor>> actors = { actor };
+        actor->GetAllChildrenActors(actors);
+        for (auto& child : actors)
+        {
+            auto box = DynamicCast<EditBox>(child);
+            if (!box || !box->GetCaretDrawable())
+                continue;
+
+            carets++;
+            EXPECT_GT(luminance(box->GetCaretDrawable()->GetColor()), 150.0f) << style->GetActor()->GetName();
+        }
+    }
+    EXPECT_GT(carets, 0);
+
+    auto bar = DynamicCast<Widget>(o2UI.GetWidgetStyle<HorizontalProgress>("animation state bar"));
+    ASSERT_TRUE(bar);
+    auto track = bar->GetLayer("back/sprite");
+    ASSERT_TRUE(track && track->GetDrawable());
+    EXPECT_LT(luminance(track->GetDrawable()->GetColor()), 110.0f);
 }
 
 // --- Gallery for the report ------------------------------------------------------------------------------------------
@@ -262,6 +306,31 @@ namespace
         EditorUIRoot.RemoveWidget(page);
         return res;
     }
+
+    // A spline edited in screen space: its local space is the screen's
+    struct ScreenSplineWrapper : SplineEditor::ISplineWrapper
+    {
+        Ref<Spline> spline;
+
+        int GetPointsCount() const override { return spline->GetKeys().Count(); }
+        bool IsClosed() const override { return spline->IsClosed(); }
+        void AddPoint(int idx, const Vec2F& position, const Vec2F& prevSupport, const Vec2F& nextSupport) override
+        {
+            spline->InsertKey(idx, position, 0.0f, prevSupport, nextSupport);
+        }
+        void RemovePoint(int idx) override { spline->RemoveKey(idx); }
+        Vec2F GetPointPos(int idx) const override { return spline->GetKey(idx).value; }
+        void SetPointPos(int idx, const Vec2F& pos) override { auto key = spline->GetKey(idx); key.value = pos; spline->SetKey(key, idx); }
+        void SetPointRangeValue(int idx, float value) override { auto key = spline->GetKey(idx); key.valueRange = value; spline->SetKey(key, idx); }
+        float GetPointRangeValue(int idx) const override { return spline->GetKey(idx).valueRange; }
+        Vec2F GetPointPrevSupportPos(int idx) const override { auto key = spline->GetKey(idx); return key.prevSupport + key.value; }
+        void SetPointPrevSupportPos(int idx, const Vec2F& pos) override { auto key = spline->GetKey(idx); key.prevSupport = pos - key.value; spline->SetKey(key, idx); }
+        Vec2F GetPointNextSupportPos(int idx) const override { auto key = spline->GetKey(idx); return key.nextSupport + key.value; }
+        void SetPointNextSupportPos(int idx, const Vec2F& pos) override { auto key = spline->GetKey(idx); key.nextSupport = pos - key.value; spline->SetKey(key, idx); }
+        const ApproximationVec2F* GetPointApproximationLeft(int idx) const override { return spline->GetKeys()[idx].GetApproximatedPointsLeft(); }
+        const ApproximationVec2F* GetPointApproximationRight(int idx) const override { return spline->GetKeys()[idx].GetApproximatedPointsRight(); }
+        int GetPointApproximationCount(int idx) const override { return spline->GetKeys()[idx].GetApproximatedPointsCount(); }
+    };
 
     class EditorThemeGallery : public EditorThemeSwitch
     {
@@ -510,5 +579,150 @@ TEST_F(EditorThemeGallery, ArtSheet)
             frame.bitmap->Save(outDir + String::Format("art_%02i", page) + (kind == EditorThemeKind::Dark ? "_dark.png" : "_light.png"),
                                Bitmap::ImageType::Png);
         }
+    }
+}
+
+// The add node menu of the Pipeline window as its editor fills it, hovered over a category with its sub menu open
+TEST_F(EditorThemeGallery, PipelineMenu)
+{
+    Shoot(MakeLayout("pipeline window", "assets window", "properties window"), [&](EditorShell& shell, Vector<Frame>& frames)
+    {
+        PushEditorScopeOnStack scope;
+
+        auto menu = o2UI.CreateWidget<ContextMenu>();
+        EditorUIRoot.AddWidget(menu);
+        PipelineControls::SkinMenu(menu);
+
+        static const Vector<Pair<PipelineNodeCategory, String>> categories = {
+            { PipelineNodeCategory::Source, "Source" }, { PipelineNodeCategory::Transform, "Transform" },
+            { PipelineNodeCategory::AI, "AI" }, { PipelineNodeCategory::Output, "Output" } };
+
+        for (auto& category : categories)
+        {
+            for (auto schema : PipelineNodeRegistry::AllSchemas())
+            {
+                if (schema->category == category.first)
+                {
+                    menu->AddItem("Add " + category.second + "/" + schema->label, []() {},
+                                  o2Assets.GetAssetRef(PipelineNodeWidget::MenuIconForType(schema->type)));
+                }
+            }
+        }
+        menu->AddItem("---");
+        menu->AddItem("Paste", []() {}, AssetRef<Asset>(), ShortcutKeys({ VK_V, VK_CTRL_CMD }));
+        menu->AddItem("Fit view", []() {});
+
+        menu->Show(Vec2F(-300.0f, 200.0f));
+        shell.Settle();
+
+        // The cursor over the first category: it is hovered and opens its sub menu. The shell runs no input events, so
+        // the menu is told where the cursor is
+        struct HoverAccess : public ContextMenu { using ContextMenu::UpdateHover; };
+        Ref<ContextMenuItem> category;
+        for (auto& child : menu->GetItemsLayout()->GetChildWidgets())
+        {
+            auto item = DynamicCast<ContextMenuItem>(child);
+            if (item && item->GetSubMenu() && (!category || item->layout->GetWorldRect().top > category->layout->GetWorldRect().top))
+                category = item;
+        }
+
+        if (category)
+        {
+            Vec2F point = category->layout->GetWorldRect().Center();
+            o2Input.OnCursorMoved(point, 0, false);
+            for (int i = 0; i < 60; i++)
+            {
+                static_cast<HoverAccess*>(menu.Get())->UpdateHover(point);
+                shell.Update(1.0f/60.0f);
+            }
+
+            category->GetSubMenu()->Show(menu, category->layout->worldRightTop);
+            for (int i = 0; i < 30; i++)
+                shell.Update(1.0f/60.0f);
+        }
+
+        frames.Add(Capture([&]() { shell.Draw(); }));
+        menu->Hide(true);
+        EditorUIRoot.RemoveWidget(menu);
+    }, { "pipeline_menu" });
+}
+
+// The curve and the spline editors with every point selected: their curves, guides to the handles and the selection frames
+TEST_F(EditorThemeGallery, FramesAndGuides)
+{
+    LightAfter lightAfter;
+    for (auto kind : { EditorThemeKind::Light, EditorThemeKind::Dark })
+    {
+        EditorTheme::SetKind(kind);
+        BuildStyle(false);
+        EditorShell shell(MakeLayout("scene window", "assets window", "properties window"));
+        PushEditorScopeOnStack scope;
+
+        auto page = mmake<Widget>();
+        *page->layout = WidgetLayout::BothStretch();
+        EditorUIRoot.AddWidget(page);
+
+        auto curve = mmake<Curve>(Vector<Vec2F>({ Vec2F(0.0f, 0.0f), Vec2F(0.3f, 0.8f), Vec2F(0.7f, 0.2f), Vec2F(1.0f, 1.0f) }));
+        auto curves = mmake<CurvesEditor>();
+        *curves->layout = WidgetLayout(Vec2F(0.0f, 0.0f), Vec2F(0.5f, 1.0f), Vec2F(10.0f, 10.0f), Vec2F(-10.0f, -10.0f));
+        curves->SetMainHandleImages(AssetRef<VectorImageAsset>("ui/CurveHandle.svg"), AssetRef<VectorImageAsset>("ui/CurveHandleHover.svg"),
+                                    AssetRef<VectorImageAsset>("ui/CurveHandlePressed.svg"), AssetRef<VectorImageAsset>("ui/CurveHandleSelected.svg"));
+        curves->SetSupportHandleImages(AssetRef<VectorImageAsset>("ui/CurveSupportHandle.svg"),
+                                       AssetRef<VectorImageAsset>("ui/CurveSupportHandleHover.svg"),
+                                       AssetRef<VectorImageAsset>("ui/CurveSupportHandlePressed.svg"),
+                                       AssetRef<VectorImageAsset>("ui/CurveSupportHandleSelected.svg"));
+        page->AddChild(curves);
+        curves->AddCurve("curve", curve);
+
+        auto spline = mmake<Spline>();
+        spline->BeginKeysBatchChange();
+        spline->AppendKey(Vec2F(140.0f, -200.0f), 0.0f, Vec2F(-60.0f, -40.0f), Vec2F(60.0f, 40.0f));
+        spline->AppendKey(Vec2F(560.0f, -120.0f), 0.0f, Vec2F(-40.0f, -80.0f), Vec2F(40.0f, 80.0f));
+        spline->AppendKey(Vec2F(480.0f, 220.0f), 0.0f, Vec2F(80.0f, -20.0f), Vec2F(-80.0f, 20.0f));
+        spline->AppendKey(Vec2F(180.0f, 160.0f), 0.0f, Vec2F(40.0f, 60.0f), Vec2F(-40.0f, -60.0f));
+        spline->CompleteKeysBatchingChange();
+        spline->SetClosed(true);
+
+        auto wrapper = mmake<ScreenSplineWrapper>();
+        wrapper->spline = spline;
+        auto splineEditor = mmake<SplineEditor>();
+        splineEditor->SetSpline(wrapper);
+
+        page->SetEnabledForcible(false);
+        page->SetEnabledForcible(true);
+        ParkCursor();
+        for (int i = 0; i < settleSteps; i++)
+            UpdateRoot(settleStep);
+
+        curves->SelectAll();
+        splineEditor->SelectAll();
+        for (int i = 0; i < settleSteps/2; i++)
+        {
+            UpdateRoot(settleStep);
+            splineEditor->Update(settleStep);
+        }
+
+        // The handles fade their looks in by the frame time
+        Color4 background = EditorTheme::Get().viewBack;
+        for (int i = 0; i < 20; i++)
+        {
+            o2Time.Update(0.05f);
+            o2Render.Begin();
+            o2Render.Clear(background);
+            page->Draw();
+            splineEditor->Draw();
+            o2Render.End();
+        }
+
+        Frame frame = Capture([&]() {
+            o2Render.Clear(background);
+            page->Draw();
+            splineEditor->Draw();
+        });
+        frame.bitmap->Save(outDir + "frames_guides" + (kind == EditorThemeKind::Dark ? "_dark.png" : "_light.png"),
+                           Bitmap::ImageType::Png);
+
+        splineEditor->Reset();
+        EditorUIRoot.RemoveWidget(page);
     }
 }

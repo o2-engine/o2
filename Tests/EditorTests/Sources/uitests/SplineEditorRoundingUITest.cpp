@@ -93,6 +93,7 @@ namespace
     struct SplineEditorProbe: SplineEditor
     {
         using SplineEditor::mSplineHandles;
+        using SplineEditor::mTransformFrameVisible;
     };
 
     struct RoundingFixture
@@ -279,4 +280,17 @@ TEST(SplineEditorRoundingUI, RoundingIsClampedByAdjacentEdges)
 
     EXPECT_NEAR(value, maxValue, 1.5f);
     EXPECT_LT(key.prevSupport.Length(), 120.0f);
+}
+
+// A selection made by code, not by the cursor, shows the frame around the points too
+TEST(SplineEditorRoundingUI, SelectAllShowsTheFrame)
+{
+    RoundingFixture fx;
+    EXPECT_FALSE(fx.editor->mTransformFrameVisible);
+
+    fx.editor->SelectAll();
+    EXPECT_TRUE(fx.editor->mTransformFrameVisible);
+
+    fx.editor->DeselectAll();
+    EXPECT_FALSE(fx.editor->mTransformFrameVisible);
 }

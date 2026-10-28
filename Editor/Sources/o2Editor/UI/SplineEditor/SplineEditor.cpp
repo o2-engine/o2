@@ -40,13 +40,14 @@ namespace Editor
                                                     mmake<VectorSprite>("ui/UI2_handle_side_select.svg"));
 
         mSplineColor = EditorTheme::Get().ink;
-        mSplineSupportColor = EditorTheme::Get().viewGrid;
+        mSplineSupportColor = EditorTheme::Get().guide;
 
         typedef SplineEditor thisclass;
 
         mTransformFrame = mmake<FrameHandles>();
         mTransformFrame->SetPivotEnabled(false);
         mTransformFrame->SetRotationEnabled(false);
+        mTransformFrame->SetFrameColor(EditorTheme::Get().frame);
         mTransformFrame->onTransformed = THIS_FUNC(OnTransformFrameTransformed);
         mTransformFrame->onPressed = THIS_FUNC(OnTransformBegin);
         mTransformFrame->onChangeCompleted = THIS_FUNC(OnTransformCompleted);
@@ -607,6 +608,7 @@ namespace Editor
 
     void SplineEditor::OnSelectionChanged()
     {
+        UpdateTransformFrame();
     }
 
     void SplineEditor::OnKeyReleased(const Input::Key& key)

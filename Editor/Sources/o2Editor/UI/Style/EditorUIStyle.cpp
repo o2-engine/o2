@@ -277,7 +277,7 @@ namespace Editor
 
         sample->AddState("visible", AnimationClip::EaseInOut("transparency", 0.0f, 1.0f, 0.1f));
 
-        sample->AddState("value", AnimationClip::EaseInOut("layer/regular/transparency", 0.3f, 1.0f, 0.1f));
+        sample->AddState("value", AnimationClip::EaseInOut("layer/regular/transparency", EditorTheme::Get().iconOff, 1.0f, 0.1f));
 
         o2UI.AddWidgetStyle(sample, "pause");
     }

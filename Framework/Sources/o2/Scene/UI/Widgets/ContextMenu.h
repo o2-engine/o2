@@ -214,6 +214,12 @@ namespace o2
         // Sets selection drawable layout
         void SetSelectionDrawableLayout(const Layout& layout);
 
+        // Sets the colour the items' icons are tinted with
+        void SetIconsColor(const Color4& color);
+
+        // Returns the colour the items' icons are tinted with
+        const Color4& GetIconsColor() const;
+
         // Returns selection drawable layout
         Layout GetSelectionDrawableLayout() const;
 
@@ -247,6 +253,7 @@ namespace o2
         bool                mItemsBuilt = false; // Is items layout is actual and built
 
         Ref<ContextMenuItem> mItemSample;      // Item sample @SERIALIZABLE
+        Color4               mIconsColor = Color4::White(); // Tint of the items' icons @SERIALIZABLE
         Ref<Widget>          mSeparatorSample; // Items separator sample @SERIALIZABLE
 
         Ref<IRectDrawable> mSelectionDrawable; // Selection drawable @SERIALIZABLE
@@ -292,6 +299,9 @@ namespace o2
 
         // Updates hover
         void UpdateHover(const Vec2F& point);
+
+        // Tints the icon of an item with the icons colour
+        void TintIcon(const Ref<ContextMenuItem>& item);
 
         // Called when cursor pressed on this
         void OnCursorPressed(const Input::Cursor& cursor) override;
@@ -410,6 +420,7 @@ CLASS_FIELDS_META(o2::ContextMenu)
     FIELD().PROTECTED().NAME(mItemsLayout);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mItemsBuilt);
     FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().NAME(mItemSample);
+    FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(Color4::White()).NAME(mIconsColor);
     FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().NAME(mSeparatorSample);
     FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().NAME(mSelectionDrawable);
     FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().NAME(mSelectionLayout);
@@ -454,6 +465,8 @@ CLASS_METHODS_META(o2::ContextMenu)
     FUNCTION().PUBLIC().SIGNATURE(Ref<Sprite>, GetSelectionDrawable);
     FUNCTION().PUBLIC().SIGNATURE(const Ref<IRectDrawable>&, GetSelectionRectDrawable);
     FUNCTION().PUBLIC().SIGNATURE(void, SetSelectionDrawableLayout, const Layout&);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetIconsColor, const Color4&);
+    FUNCTION().PUBLIC().SIGNATURE(const Color4&, GetIconsColor);
     FUNCTION().PUBLIC().SIGNATURE(Layout, GetSelectionDrawableLayout);
     FUNCTION().PUBLIC().SIGNATURE(void, SetMaxItemsVisible, int);
     FUNCTION().PUBLIC().SIGNATURE(void, SetItemsMaxPriority);
@@ -470,6 +483,7 @@ CLASS_METHODS_META(o2::ContextMenu)
     FUNCTION().PROTECTED().SIGNATURE(Ref<Item>, GetItem, int);
     FUNCTION().PROTECTED().SIGNATURE(Ref<ContextMenuItem>, GetItemUnderPoint, const Vec2F&);
     FUNCTION().PROTECTED().SIGNATURE(void, UpdateHover, const Vec2F&);
+    FUNCTION().PROTECTED().SIGNATURE(void, TintIcon, const Ref<ContextMenuItem>&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnCursorPressed, const Input::Cursor&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnCursorStillDown, const Input::Cursor&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnCursorReleased, const Input::Cursor&);

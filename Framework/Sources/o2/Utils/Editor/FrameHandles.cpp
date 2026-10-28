@@ -179,6 +179,11 @@ namespace o2
         return mIsRotationAvailable;
     }
 
+    void FrameHandles::SetFrameColor(const Color4& color)
+    {
+        mFrameColor = color;
+    }
+
     const Color4& FrameHandles::GetFrameColor() const
     {
         return mFrameColor;

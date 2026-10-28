@@ -2,6 +2,7 @@
 #include "ContextMenu.h"
 
 #include "o2/Assets/Types/ImageAsset.h"
+#include "o2/Assets/Types/VectorImageAsset.h"
 #include "o2/Render/Render.h"
 #include "o2/Render/Sprite.h"
 #include "o2/Render/Text.h"
@@ -159,6 +160,7 @@ namespace o2
 
         mSelectionDrawable = other.mSelectionDrawable->CloneAsRef<IRectDrawable>();
         mSelectionLayout = other.mSelectionLayout;
+        mIconsColor = other.mIconsColor;
         mItemsLayout = FindChildByType<VerticalLayout>();
 
         mSearchPanel = mItemsLayout->GetChildByType<Widget>("search panel");
@@ -183,6 +185,7 @@ namespace o2
         mSeparatorSample = other.mSeparatorSample->CloneAsRef<Widget>();
         mSelectionDrawable = other.mSelectionDrawable->CloneAsRef<IRectDrawable>();
         mSelectionLayout = other.mSelectionLayout;
+        mIconsColor = other.mIconsColor;
 
         PopupWidget::operator=(other);
 
@@ -606,6 +609,28 @@ namespace o2
         return mSelectionDrawable;
     }
 
+    void ContextMenu::SetIconsColor(const Color4& color)
+    {
+        mIconsColor = color;
+    }
+
+    const Color4& ContextMenu::GetIconsColor() const
+    {
+        return mIconsColor;
+    }
+
+    void ContextMenu::TintIcon(const Ref<ContextMenuItem>& item)
+    {
+        if (auto iconLayer = item->FindLayer("icon"))
+        {
+            for (auto& sprite : iconLayer->GetChildren())
+            {
+                if (auto drawable = sprite->GetDrawable())
+                    drawable->SetColor(mIconsColor);
+            }
+        }
+    }
+
     void ContextMenu::SetSelectionDrawableLayout(const Layout& layout)
     {
         mSelectionLayout = layout;
@@ -791,9 +816,11 @@ namespace o2
                 {
                     // A kept widget is set up again: its sub menu was built from the sub items it had then,
                     // and a menu refilled while open would otherwise keep only the first one
+                    // added before the set up: an item with sub items finds its menu for the sub menu's style
                     auto widget = item->widget.Lock();
-                    widget->Setup(item);
                     mItemsLayout->AddChild(widget);
+                    widget->Setup(item);
+                    TintIcon(widget);
                 }
                 else {
                     if (item->text == Item::separatorText) {
@@ -803,8 +830,9 @@ namespace o2
                     }
                     else {
                         auto newItem = cache.IsEmpty() ? mItemSample->CloneAsRef<ContextMenuItem>() : cache.PopBack();
-                        newItem->Setup(item);
                         mItemsLayout->AddChild(newItem);
+                        newItem->Setup(item);
+                        TintIcon(newItem);
                     }
                 }
             }
@@ -858,23 +886,29 @@ namespace o2
             }
 
             if (item->icon) {
-                auto spriteLayer = iconLayer->AddChildLayer("sprite", nullptr);
-                Vec2F size = spriteLayer->SetImage(item->icon)->GetSize2D();
+                // The size the image is drawn at: a drawable set to the new layer takes the layer's empty rectangle
+                Vec2F size;
+                if (auto vectorImage = DynamicCast<VectorImageAsset>(item->icon.GetRef()))
+                    size = vectorImage->GetSize();
+                else if (auto rasterImage = DynamicCast<ImageAsset>(item->icon.GetRef()))
+                    size = rasterImage->GetSize();
 
-                if (size.x > size.y) {
-                    size.y *= size.x / layout->height;
-                    size.x = layout->height;
-                }
-                else {
-                    size.x *= size.y / layout->height;
-                    size.y = layout->height;
-                }
+                auto spriteLayer = iconLayer->AddChildLayer("sprite", nullptr);
+                spriteLayer->SetImage(item->icon);
+
+                // An item set up before its first layout pass has no height yet: its minimal one is the height it gets.
+                // The icon fits it with its proportions, never larger than it is drawn
+                float height = layout->GetHeight() > 0.0f ? layout->GetHeight() : layout->GetMinHeight();
+                float longest = Math::Max(size.x, size.y);
+                if (longest > 0.0f && height > 0.0f)
+                    size *= Math::Min(1.0f, height/longest);
 
                 spriteLayer->layout = Layout(Vec2F(), Vec2F(),
-                                             Vec2F(-Math::Floor(size.x * 0.5f), Math::Floor(size.y * 0.5f)),
-                                             Vec2F(Math::Floor(size.x * 0.5f), -Math::Floor(size.y * 0.5f)));
+                                             Vec2F(-Math::Floor(size.x * 0.5f), -Math::Floor(size.y * 0.5f)),
+                                             Vec2F(Math::Floor(size.x * 0.5f), Math::Floor(size.y * 0.5f)));
 
                 UpdateLayersDrawingSequence();
+                UpdateTransparency();
             }
         }
 

@@ -157,6 +157,10 @@ namespace Editor
 
     String PipelineNodeWidget::MenuIconForType(const String& nodeType)
     {
+        // The dark menu tints the white card icons; the light one has its own teal ones
+        if (PipelineTheme::Get().dark)
+            return IconForType(nodeType);
+
         return IconForType(nodeType).ReplacedAll("/node_", "/menu_node_");
     }
 

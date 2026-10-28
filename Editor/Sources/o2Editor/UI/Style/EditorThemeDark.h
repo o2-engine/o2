@@ -39,8 +39,8 @@ namespace Editor
         inline const Color4 borderStrong = Hex(0x4C505D);     // Hovered edge of fields
         inline const Color4 line = Hex(0x25272F);             // --line: rules of the frames and the tabs
         inline const Color4 track = Hex(0x22242C);            // Scroll bar track
-        inline const Color4 handle = Hex(0x4A4D5A);           // Scroll bar handle
-        inline const Color4 handleHover = Hex(0x626674);
+        inline const Color4 handle = Hex(0x686D7C);           // Scroll bar handle and progress bar: a mid tone, as the light one
+        inline const Color4 handleHover = Hex(0x8A8F9E);
         inline const Color4 knob = Hex(0x3A3E4B);             // Pills and toggled squares standing on the panel
         inline const Color4 knobHover = Hex(0x4D5263);
         inline const Color4 disc = Hex(0x575C6C);             // Disc of a round button: clear on every header and panel

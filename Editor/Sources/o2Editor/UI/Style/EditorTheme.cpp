@@ -42,6 +42,8 @@ namespace Editor
             p.scaleLine = Color4(16, 20, 23, 64);
             p.scaleLineSoft = Color4(16, 20, 23, 38);
             p.frame = Color4(44, 62, 80);
+            p.guide = Color4(190, 190, 190);
+            p.selectionOutline = Color4(10, 165, 150);
             p.frameObject = Color4(44, 62, 80, 150);
             p.frameParent = Color4(44, 62, 80, 100);
             p.warning = Color4(226, 198, 83);
@@ -70,6 +72,9 @@ namespace Editor
             p.scaleLine = Color4(255, 255, 255, 46);
             p.scaleLineSoft = Color4(255, 255, 255, 24);
             p.frame = Dark::text;
+            p.guide = Hex(0x5A5F6E);
+            p.selectionOutline = Dark::accent;
+            p.iconOff = 0.55f;
             p.frameObject = Color4(Dark::text.r, Dark::text.g, Dark::text.b, 150);
             p.frameParent = Color4(Dark::text.r, Dark::text.g, Dark::text.b, 100);
             p.warning = Dark::yellow;
@@ -227,8 +232,14 @@ namespace Editor
             case 0xDCDCDC: return keep(border);
             case 0xF85E48: return keep(red);
             case 0xF85D48: return keep(red);
+            case 0xF95D48: return keep(red);     // finished state frame
             case 0xE2C653: return keep(yellow);
-            case 0x000000: return c.a > 0 && c.a < 40 ? Color4(255, 255, 255, c.a/2) : c; // zebra and hover washes
+            case 0xB5CBCC: return keep(knob);    // track of the state progress bar
+            case 0x000000:
+                if (c.a == 255)
+                    return text;                 // carets of the fields
+
+                return c.a > 0 && c.a < 40 ? Color4(255, 255, 255, c.a/2) : c; // zebra and hover washes
             default: return c;
             }
         }
