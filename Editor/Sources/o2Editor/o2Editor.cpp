@@ -107,6 +107,7 @@ extern void __RegisterClass__Editor__CameraActorViewer();
 extern void __RegisterClass__Editor__AtlasAssetViewer();
 extern void __RegisterClass__Editor__ImageAssetViewer();
 extern void __RegisterClass__Editor__VectorFontAssetViewer();
+extern void __RegisterClass__Editor__VectorImageAssetViewer();
 extern void __RegisterClass__Editor__AnimationStateViewer();
 extern void __RegisterClass__Editor__FlightTrajectoryViewer();
 extern void __RegisterClass__Editor__MeshComponentViewer();
@@ -364,6 +365,7 @@ extern void InitializeTypeso2Editor()
     __RegisterClass__Editor__AtlasAssetViewer();
     __RegisterClass__Editor__ImageAssetViewer();
     __RegisterClass__Editor__VectorFontAssetViewer();
+    __RegisterClass__Editor__VectorImageAssetViewer();
     __RegisterClass__Editor__AnimationStateViewer();
     __RegisterClass__Editor__FlightTrajectoryViewer();
     __RegisterClass__Editor__MeshComponentViewer();

@@ -1,6 +1,7 @@
 #include "o2Editor/stdafx.h"
 #include "ImageSlicesEditorWidget.h"
 
+#include "o2/Assets/Types/VectorImageAsset.h"
 #include "o2/Utils/Editor/DragHandle.h"
 #include "o2Editor/Properties/Basic/BorderIntProperty.h"
 #include "o2/Render/VectorSprite.h"
@@ -36,6 +37,34 @@ namespace Editor
         FitImage();
     }
 
+    void ImageSlicesEditorWidget::Setup(const AssetRef<VectorImageAsset>& image, const Ref<BorderIProperty>& borderProperty)
+    {
+        mBorderProperty = borderProperty;
+
+        mPreviewImage->SetImageSource(AssetRef<Asset>(image ? image->GetUID() : UID::empty));
+        if (auto sprite = DynamicCast<VectorSprite>(mPreviewImage->GetImageDrawable()))
+            sprite->SetMode(SpriteMode::Default);
+
+        FitImage();
+    }
+
+    Vec2F ImageSlicesEditorWidget::GetImageSize() const
+    {
+        auto drawable = mPreviewImage->GetImageDrawable();
+        if (auto vector = DynamicCast<VectorSprite>(drawable))
+            return vector->GetOriginalSize();
+
+        if (auto sprite = DynamicCast<Sprite>(drawable))
+            return sprite->GetOriginalSize();
+
+        return Vec2F(1, 1);
+    }
+
+    Ref<IRectDrawable> ImageSlicesEditorWidget::GetPreviewDrawable() const
+    {
+        return mPreviewImage->GetImageDrawable();
+    }
+
     String ImageSlicesEditorWidget::GetCreateMenuCategory()
     {
         return "UI/Editor";
@@ -67,15 +96,15 @@ namespace Editor
         mBorderLeftHandle = mmake<WidgetDragHandle>(mmake<VectorSprite>("ui/ver_slice_line.svg"));
 
         mBorderLeftHandle->localToWidgetOffsetTransformFunc = [&](const Vec2F& point) {
-            return point / mPreviewImage->GetImage()->GetOriginalSize() * mPreviewImage->layout->GetSize2D();
+            return point / GetImageSize() * mPreviewImage->layout->GetSize2D();
         };
 
         mBorderLeftHandle->widgetOffsetToLocalTransformFunc = [&](const Vec2F& point) {
-            return point / mPreviewImage->layout->GetSize2D() * mPreviewImage->GetImage()->GetOriginalSize();
+            return point / mPreviewImage->layout->GetSize2D() * GetImageSize();
         };
 
         mBorderLeftHandle->checkPositionFunc = [&](const Vec2F& point) {
-            return Vec2F(Math::Clamp(point.x, 0.0f, (float)mPreviewImage->GetImage()->GetOriginalSize().x), mPreviewImage->GetImage()->GetOriginalSize().y*0.5f);
+            return Vec2F(Math::Clamp(point.x, 0.0f, (float)GetImageSize().x), GetImageSize().y*0.5f);
         };
 
         mBorderLeftHandle->onChangedPos = [&](const Vec2F& point) {
@@ -89,7 +118,7 @@ namespace Editor
         mBorderRightHandle = mmake<WidgetDragHandle>(*mBorderLeftHandle);
 
         mBorderRightHandle->onChangedPos = [&](const Vec2F& point) {
-            mBordersSmoothValue.right = (float)mPreviewImage->GetImage()->GetOriginalSize().x - point.x;
+            mBordersSmoothValue.right = (float)GetImageSize().x - point.x;
             UpdateBordersValue();
         };
 
@@ -100,19 +129,19 @@ namespace Editor
         mBorderTopHandle = mmake<WidgetDragHandle>(mmake<VectorSprite>("ui/hor_slice_line.svg"));
 
         mBorderTopHandle->localToWidgetOffsetTransformFunc = [&](const Vec2F& point) {
-            return point / mPreviewImage->GetImage()->GetOriginalSize() * mPreviewImage->layout->GetSize2D();
+            return point / GetImageSize() * mPreviewImage->layout->GetSize2D();
         };
 
         mBorderTopHandle->widgetOffsetToLocalTransformFunc = [&](const Vec2F& point) {
-            return point / mPreviewImage->layout->GetSize2D() * mPreviewImage->GetImage()->GetOriginalSize();
+            return point / mPreviewImage->layout->GetSize2D() * GetImageSize();
         };
 
         mBorderTopHandle->checkPositionFunc = [&](const Vec2F& point) {
-            return Vec2F(mPreviewImage->GetImage()->GetOriginalSize().x*0.5f, Math::Clamp(point.y, 0.0f, (float)mPreviewImage->GetImage()->GetOriginalSize().y));
+            return Vec2F(GetImageSize().x*0.5f, Math::Clamp(point.y, 0.0f, (float)GetImageSize().y));
         };
 
         mBorderTopHandle->onChangedPos = [&](const Vec2F& point) {
-            mBordersSmoothValue.top = (float)mPreviewImage->GetImage()->GetOriginalSize().y - point.y;
+            mBordersSmoothValue.top = (float)GetImageSize().y - point.y;
             UpdateBordersValue();
         };
 
@@ -136,7 +165,9 @@ namespace Editor
             UpdateTransform();
 
         Vec2F maxSize = layout->size2D;
-        Vec2F imageSize = mPreviewImage->GetImage()->GetOriginalSize();
+        Vec2F imageSize = GetImageSize();
+        if (imageSize.x <= 0.0f || imageSize.y <= 0.0f || maxSize.x <= 0.0f || maxSize.y <= 0.0f)
+            return;
 
         float heightFitScale = maxSize.y/imageSize.y;
         float widthFitDifference = maxSize.x - imageSize.x*heightFitScale;
@@ -175,7 +206,7 @@ namespace Editor
     void ImageSlicesEditorWidget::UpdateBordersAnchors()
     {
         BorderI borders = mBorderProperty->GetCommonValue();
-        Vec2F imageSize = mPreviewImage->GetImage()->GetOriginalSize();
+        Vec2F imageSize = GetImageSize();
 
         mPreviewImage->UpdateTransform();
         mBorderLeftHandle->GetRegularDrawable()->SetSize(Vec2F(10.0f, mPreviewImage->layout->GetHeight()));
@@ -215,7 +246,18 @@ namespace Editor
     void ImageSlicesEditorWidget::PreviewImage::Draw()
     {
         mIsClipped = false;
-        if (auto texture = GetImage()->GetTexture())
+
+        // A vector image is drawn at the preview scale; a raster one shows its pixels
+        auto sprite = GetImage();
+        if (!sprite)
+        {
+            if (GetImageDrawable())
+                Image::Draw();
+
+            return;
+        }
+
+        if (auto texture = sprite->GetTexture())
         {
             auto prevFilter = texture->GetFilter();
             texture->SetFilter(Texture::Filter::Nearest);

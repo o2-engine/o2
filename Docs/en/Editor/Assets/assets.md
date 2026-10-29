@@ -34,6 +34,8 @@ The Atlas field references the atlas the texture is packed into. To set the atla
 
 <img src="atlas.png" width="50%">
 
+When a vector image (`.svg`) is selected, the Properties window shows it drawn over the checker with the 9-slice margins to drag, its size, the shapes and triangles count, how it is drawn (the rasters in the atlas, the baked mesh, the mesh for any scale or for each scale) and the parsing error or warnings. The fields Slice Border, Default Mode, Scalable Mesh and Rasterized are the ones of its meta.
+
 When an atlas is selected, its parameters are shown in the Properties window as well.
 
 It has common atlas settings (Common) and platform-specific ones (you likely don't need those). The common settings define the maximum atlas page size (an atlas may be packed into several pages), the compression format and the padding between textures when packing.

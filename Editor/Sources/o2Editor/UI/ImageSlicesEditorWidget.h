@@ -1,5 +1,6 @@
 #pragma once
 
+#include "o2/Assets/Types/VectorImageAsset.h"
 #include "o2/Scene/UI/Widget.h"
 #include "o2/Scene/UI/Widgets/Image.h"
 
@@ -31,6 +32,15 @@ namespace Editor
 
         // Sets image and property
         void Setup(const AssetRef<ImageAsset>& image, const Ref<BorderIProperty>& borderProperty);
+
+        // Sets vector image and property
+        void Setup(const AssetRef<VectorImageAsset>& image, const Ref<BorderIProperty>& borderProperty);
+
+        // Returns size of the image in its units
+        Vec2F GetImageSize() const;
+
+        // Returns drawable of the preview: a sprite or a vector sprite
+        Ref<IRectDrawable> GetPreviewDrawable() const;
 
         // Returns create menu category in editor
         static String GetCreateMenuCategory();
@@ -116,6 +126,9 @@ CLASS_METHODS_META(Editor::ImageSlicesEditorWidget)
     FUNCTION().PUBLIC().CONSTRUCTOR(RefCounter*);
     FUNCTION().PUBLIC().CONSTRUCTOR(RefCounter*, const ImageSlicesEditorWidget&);
     FUNCTION().PUBLIC().SIGNATURE(void, Setup, const AssetRef<ImageAsset>&, const Ref<BorderIProperty>&);
+    FUNCTION().PUBLIC().SIGNATURE(void, Setup, const AssetRef<VectorImageAsset>&, const Ref<BorderIProperty>&);
+    FUNCTION().PUBLIC().SIGNATURE(Vec2F, GetImageSize);
+    FUNCTION().PUBLIC().SIGNATURE(Ref<IRectDrawable>, GetPreviewDrawable);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetCreateMenuCategory);
     FUNCTION().PROTECTED().SIGNATURE(void, InitializeImagePreview);
     FUNCTION().PROTECTED().SIGNATURE(void, InitializeSliceHandles);
