@@ -31,6 +31,7 @@ namespace o2
     FORWARD_CLASS_REF(CoroutineScheduler);
     FORWARD_CLASS_REF(Time);
     FORWARD_CLASS_REF(UIManager);
+    FORWARD_CLASS_REF(VectorRasterCache);
 
 #if defined(O2_PROFILER_ENABLED)
     FORWARD_CLASS_REF(ProfilerOverlay);
@@ -147,6 +148,7 @@ namespace o2
         Ref<PhysicsWorld3D> mPhysics3D;     // 3D physics
         Ref<ProjectConfig> mProjectConfig; // Project config
         Ref<Render>        mRender;        // Graphics render
+        Ref<VectorRasterCache> mVectorRasters; // Rasters of the vector images in the atlas
         Ref<Scene>         mScene;         // Scene
         Ref<SoundSystem>   mSounds;        // Sound system
         Ref<TaskManager>   mTaskManager;   // Tasks manager
@@ -328,6 +330,7 @@ CLASS_FIELDS_META(o2::Integration)
     FIELD().PROTECTED().NAME(mPhysics3D);
     FIELD().PROTECTED().NAME(mProjectConfig);
     FIELD().PROTECTED().NAME(mRender);
+    FIELD().PROTECTED().NAME(mVectorRasters);
     FIELD().PROTECTED().NAME(mScene);
     FIELD().PROTECTED().NAME(mSounds);
     FIELD().PROTECTED().NAME(mTaskManager);

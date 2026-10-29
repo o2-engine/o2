@@ -25,6 +25,7 @@ namespace
         float       curveTolerance = VectorTessellationParams().curveTolerance;
         float       simplification = VectorTessellationParams().simplification;
         bool        antialiasing = true;
+        bool        scalable = false;
         int         tolerance = 8;
         Color4      background = Color4(255, 255, 255, 255);
         bool        hasBackground = false;
@@ -40,7 +41,8 @@ namespace
                "  o2SvgRasterizer --batch <listfile> [options]\n"
                "  o2SvgRasterizer --compare <listfile> [--tolerance T] [--out-dir D] [options]\n"
                "options: --scale N, --no-aa, --bg RRGGBB, --curve-tolerance PX, --simplification LEVELS, --units-as-px,\n"
-               "--quiet, --stats\n"
+               "--scalable, --quiet, --stats\n"
+               "--scalable draws the mesh for any scale, as the assets builder bakes it, put for the scale\n"
                "--simplification 0 keeps all vertices of the mesh\n"
                "--units-as-px reads pt, pc, mm, cm and in of the svg as pixels\n"
                "--stats prints triangles and vertices count of each converted svg\n"
@@ -90,11 +92,16 @@ namespace
     void Tessellate(const VectorImage& image, const Options& options, float scale, VectorMesh& mesh)
     {
         VectorTessellationParams params;
-        params.pixelScale = Vec2F(scale, scale);
+        params.pixelScale = options.scalable ? Vec2F(1, 1) : Vec2F(scale, scale);
         params.antialiasing = options.antialiasing;
         params.curveTolerance = options.curveTolerance;
         params.simplification = options.simplification;
+        params.scalable = options.scalable;
+        params.pixelSnapped = !options.scalable;
         VectorTessellator::Tessellate(image, mesh, params);
+
+        if (options.scalable)
+            mesh.Rescale(Vec2F(scale, scale));
     }
 
     Ref<Bitmap> RenderStraight(const VectorMesh& mesh, float scale)
@@ -241,6 +248,8 @@ int main(int argc, char** argv)
             options.antialiasing = false;
         else if (argument == "--quiet")
             options.quiet = true;
+        else if (argument == "--scalable")
+            options.scalable = true;
         else if (argument == "--stats")
             options.stats = true;
         else if (argument == "--units-as-px")

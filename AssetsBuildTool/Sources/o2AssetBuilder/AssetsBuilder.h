@@ -82,5 +82,6 @@ namespace o2
         IAssetConverter* GetAssetConverter(const Type* assetType);
 
         friend class AtlasAssetConverter;
+        friend class VectorImageAssetConverter;
     };
 }

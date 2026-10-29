@@ -18,6 +18,14 @@ namespace o2
         BorderF    slices;         // Slice lines the triangles are split by
         bool       sliced = false; // Are triangles split by slice lines
         bool       pixelSnapped = true; // Are edges on pixel bounds left hard, for drawing from a whole screen pixel
+
+        // Returns bounds of the positions, computed once: the mesh does not change after it is built; false for no
+        // triangles
+        bool GetBounds(Vec2F& min, Vec2F& max);
+
+    protected:
+        int   mBoundsState = 0; // Are the bounds computed: 0 not yet, 1 computed, -1 no positions
+        Vec2F mBoundsMin, mBoundsMax;
     };
 
     // -----------------------------------------------------------------
@@ -32,6 +40,8 @@ namespace o2
         PROPERTIES(VectorImageAsset);
         PROPERTY(BorderI, sliceBorder, SetSliceBorder, GetSliceBorder);    // Slice border property
         PROPERTY(SpriteMode, defaultMode, SetDefaultMode, GetDefaultMode); // Sprite default mode property
+        PROPERTY(bool, scalableMesh, SetScalableMesh, IsScalableMesh);     // One mesh for any scale, baked by the assets builder
+        PROPERTY(bool, rasterized, SetRasterized, IsRasterized);           // Drawn from rasters in the atlas of the vector rasters
 
         GETTER(Vec2F, size, GetSize);     // Image size getter
         GETTER(float, width, GetWidth);   // Image width getter
@@ -91,6 +101,19 @@ namespace o2
         // Returns default sprite mode
         SpriteMode GetDefaultMode() const;
 
+        // Sets is the image drawn by one mesh for any scale, baked by the assets builder; takes effect after a rebuild
+        void SetScalableMesh(bool scalable);
+
+        // Returns is the meta asking one mesh for any scale
+        bool IsScalableMesh() const;
+
+        // Sets are the sprites of the image drawn from its rasters in the atlas of the vector rasters, one for each
+        // pixel scale, instead of the triangles
+        void SetRasterized(bool rasterized);
+
+        // Returns are the sprites of the image drawn from its rasters
+        bool IsRasterized() const;
+
         // Returns cached triangles for the pixel scale: screen pixels per image unit by axes. Null for invalid image.
         // Not pixel snapped mesh has the fringe along every edge, for drawing between screen pixels
         Ref<VectorImageMesh> GetMesh(const Vec2F& pixelScale, bool pixelSnapped = true);
@@ -103,6 +126,22 @@ namespace o2
 
         // Returns the scale the mesh is actually built for: nearest power of two, axes differ 4 times at most
         static Vec2F QuantizePixelScale(const Vec2F& pixelScale);
+
+        // Returns is the image drawn by one mesh for any scale: set in the meta, or for all images by SetScalableMeshes
+        bool IsMeshScalable() const;
+
+        // Returns is the mesh for any scale taken from the file the assets builder has baked, without tessellation
+        bool IsMeshBaked() const;
+
+        // Tessellates the image of the SVG once for any scale and writes the mesh to the file, for loading it without
+        // tessellation; false for an invalid SVG
+        static bool BakeMesh(const String& svg, const String& meshPath);
+
+        // Returns path of the baked mesh file of the built image file
+        static String GetBakedMeshPath(const String& builtPath);
+
+        // Returns is the baked mesh file of the current format and tessellation; false when there is no file
+        static bool IsBakedMeshCurrent(const String& meshPath);
 
         // Returns count of cached meshes
         int GetCachedMeshesCount() const;
@@ -123,12 +162,12 @@ namespace o2
         static bool IsScalableMeshes();
 
         // Sets a restyling of every image loaded from now on: each image is given to it with its file path and may get
-        // other paints (colours, gradients) and shapes; empty for none. The editor themes use it
-        static void SetImageRemap(const Function<void(VectorImage&, const String&)>& remap);
+        // other paints (colours, gradients) and shapes, returning true then; empty for none. The editor themes use it
+        static void SetImageRemap(const Function<bool(VectorImage&, const String&)>& remap);
 
         // Returns the restyling of the loaded images, empty for none; a function's static, so it may be set at any
         // static initialization
-        static Function<void(VectorImage&, const String&)>& ImageRemap();
+        static Function<bool(VectorImage&, const String&)>& ImageRemap();
 
         // Returns image version: changes on every load of the image, never equal for two loaded assets
         UInt GetVersion() const;
@@ -154,8 +193,10 @@ namespace o2
         class Meta: public DefaultAssetMeta<VectorImageAsset>
         {
         public:
-            BorderI    sliceBorder;                        // Default slice border, in image units @SERIALIZABLE
-            SpriteMode defaultMode = SpriteMode::Default;  // Default sprite mode @SERIALIZABLE
+            BorderI    sliceBorder;                        // Default slice border, in image units @SERIALIZABLE @EDITOR_IGNORE
+            SpriteMode defaultMode = SpriteMode::Default;  // Default sprite mode @SERIALIZABLE @EDITOR_IGNORE
+            bool       scalableMesh = false;               // One mesh for any scale, baked by the assets builder @SERIALIZABLE @EDITOR_IGNORE
+            bool       rasterized = false;                 // Drawn from rasters in the vector rasters atlas @SERIALIZABLE @EDITOR_IGNORE
 
         public:
             // Returns true if other meta is equal to this
@@ -176,6 +217,8 @@ namespace o2
 
         UInt mVersion = 0; // Image version, new on every load, 0 for a never loaded image
 
+        bool mMeshBaked = false; // Is the mesh for any scale loaded from the baked file
+
         Vector<Ref<VectorImageMesh>> mMeshes; // Cached meshes by pixel scale and slices
 
         bool mSubscribedOnRebuild = false; // Is subscribed on assets rebuilding
@@ -194,6 +237,9 @@ namespace o2
         // Returns cached or builds new mesh
         Ref<VectorImageMesh> GetMesh(const Vec2F& pixelScale, const BorderF& slices, bool sliced, bool pixelSnapped);
 
+        // Puts the mesh for any scale from the baked file to the cache; false when there is none for this source
+        bool LoadBakedMesh(const String& meshPath);
+
         // Reloads image when its file was rebuilt
         void OnAssetsRebuilt(const Vector<UID>& changedAssets);
 
@@ -211,6 +257,8 @@ CLASS_FIELDS_META(o2::VectorImageAsset)
 {
     FIELD().PUBLIC().NAME(sliceBorder);
     FIELD().PUBLIC().NAME(defaultMode);
+    FIELD().PUBLIC().NAME(scalableMesh);
+    FIELD().PUBLIC().NAME(rasterized);
     FIELD().PUBLIC().NAME(size);
     FIELD().PUBLIC().NAME(width);
     FIELD().PUBLIC().NAME(height);
@@ -221,6 +269,7 @@ CLASS_FIELDS_META(o2::VectorImageAsset)
     FIELD().PROTECTED().NAME(mError);
     FIELD().PROTECTED().NAME(mWarnings);
     FIELD().PROTECTED().DEFAULT_VALUE(0).NAME(mVersion);
+    FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mMeshBaked);
     FIELD().PROTECTED().NAME(mMeshes);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mSubscribedOnRebuild);
 }
@@ -228,8 +277,8 @@ END_META;
 CLASS_METHODS_META(o2::VectorImageAsset)
 {
 
-    typedef const Function<void(VectorImage&, const String&)>& _tmp1;
-    typedef Function<void(VectorImage&, const String&)>& _tmp2;
+    typedef const Function<bool(VectorImage&, const String&)>& _tmp1;
+    typedef Function<bool(VectorImage&, const String&)>& _tmp2;
 
     FUNCTION().PUBLIC().CONSTRUCTOR();
     FUNCTION().PUBLIC().CONSTRUCTOR(const VectorImageAsset&);
@@ -246,10 +295,19 @@ CLASS_METHODS_META(o2::VectorImageAsset)
     FUNCTION().PUBLIC().SIGNATURE(BorderI, GetSliceBorder);
     FUNCTION().PUBLIC().SIGNATURE(void, SetDefaultMode, SpriteMode);
     FUNCTION().PUBLIC().SIGNATURE(SpriteMode, GetDefaultMode);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetScalableMesh, bool);
+    FUNCTION().PUBLIC().SIGNATURE(bool, IsScalableMesh);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetRasterized, bool);
+    FUNCTION().PUBLIC().SIGNATURE(bool, IsRasterized);
     FUNCTION().PUBLIC().SIGNATURE(Ref<VectorImageMesh>, GetMesh, const Vec2F&, bool);
     FUNCTION().PUBLIC().SIGNATURE(Ref<VectorImageMesh>, GetSlicedMesh, const Vec2F&, const BorderF&, bool);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsMeshBuilt, const Vec2F&, const BorderF&, bool);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(Vec2F, QuantizePixelScale, const Vec2F&);
+    FUNCTION().PUBLIC().SIGNATURE(bool, IsMeshScalable);
+    FUNCTION().PUBLIC().SIGNATURE(bool, IsMeshBaked);
+    FUNCTION().PUBLIC().SIGNATURE_STATIC(bool, BakeMesh, const String&, const String&);
+    FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetBakedMeshPath, const String&);
+    FUNCTION().PUBLIC().SIGNATURE_STATIC(bool, IsBakedMeshCurrent, const String&);
     FUNCTION().PUBLIC().SIGNATURE(int, GetCachedMeshesCount);
     FUNCTION().PUBLIC().SIGNATURE(void, ClearMeshCache);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(UInt, GetTessellationsCount);
@@ -266,6 +324,7 @@ CLASS_METHODS_META(o2::VectorImageAsset)
     FUNCTION().PROTECTED().SIGNATURE(void, LoadData, const String&);
     FUNCTION().PROTECTED().SIGNATURE(void, SaveData, const String&);
     FUNCTION().PROTECTED().SIGNATURE(Ref<VectorImageMesh>, GetMesh, const Vec2F&, const BorderF&, bool, bool);
+    FUNCTION().PROTECTED().SIGNATURE(bool, LoadBakedMesh, const String&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnAssetsRebuilt, const Vector<UID>&);
 }
 END_META;
@@ -277,8 +336,10 @@ CLASS_BASES_META(o2::VectorImageAsset::Meta)
 END_META;
 CLASS_FIELDS_META(o2::VectorImageAsset::Meta)
 {
-    FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().NAME(sliceBorder);
-    FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(SpriteMode::Default).NAME(defaultMode);
+    FIELD().PUBLIC().EDITOR_IGNORE_ATTRIBUTE().SERIALIZABLE_ATTRIBUTE().NAME(sliceBorder);
+    FIELD().PUBLIC().EDITOR_IGNORE_ATTRIBUTE().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(SpriteMode::Default).NAME(defaultMode);
+    FIELD().PUBLIC().EDITOR_IGNORE_ATTRIBUTE().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(false).NAME(scalableMesh);
+    FIELD().PUBLIC().EDITOR_IGNORE_ATTRIBUTE().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(false).NAME(rasterized);
 }
 END_META;
 CLASS_METHODS_META(o2::VectorImageAsset::Meta)

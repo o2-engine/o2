@@ -179,12 +179,15 @@ namespace Editor
                 // The images of the project keep their colours: only the editor art is restyled
                 String editorArt = EditorArtPath();
                 VectorImageAsset::SetImageRemap([editorArt](VectorImage& image, const String& path) {
-                    if (!editorArt.IsEmpty() && path.StartsWith(editorArt))
-                        EditorThemeDark::RestyleImage(image, path);
+                    if (editorArt.IsEmpty() || !path.StartsWith(editorArt))
+                        return false;
+
+                    EditorThemeDark::RestyleImage(image, path);
+                    return true;
                 });
             }
             else
-                VectorImageAsset::SetImageRemap(Function<void(VectorImage&, const String&)>());
+                VectorImageAsset::SetImageRemap(Function<bool(VectorImage&, const String&)>());
 
             if (changed)
             {

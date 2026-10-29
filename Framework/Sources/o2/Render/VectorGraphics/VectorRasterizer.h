@@ -12,6 +12,10 @@ namespace o2
         // Draws mesh over the bitmap content; mesh positions are multiplied by scale and shifted by offset pixels
         void Rasterize(const VectorMesh& mesh, Bitmap& bitmap, float scale = 1.0f, const Vec2F& offset = Vec2F());
 
+        // Same for triangles by their arrays and scales by axes; allocates nothing, so a job thread may draw
+        void Rasterize(const Vec2F* positions, const Color32Bit* colors, const VertexIndex* indexes, UInt indexesCount,
+                       Bitmap& bitmap, const Vec2F& scale, const Vec2F& offset);
+
         // Returns bitmap of mesh size multiplied by scale, cleared with background, with mesh drawn over
         Ref<Bitmap> Rasterize(const VectorMesh& mesh, float scale = 1.0f,
                               const Color4& background = Color4(0, 0, 0, 0));

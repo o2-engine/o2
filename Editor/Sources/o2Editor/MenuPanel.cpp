@@ -4,6 +4,7 @@
 #include "o2/Application/Application.h"
 #include "o2/Assets/Assets.h"
 #include "o2/Assets/Types/VectorImageAsset.h"
+#include "o2/Render/VectorSprite.h"
 #include "o2/Render/Text.h"
 #include "o2/Scene/Scene.h"
 #include "o2/Scene/UI/UIManager.h"
@@ -165,6 +166,9 @@ namespace Editor
                                   [](bool x) { VectorImageAsset::SetScalableMeshes(x); });
         mMenuPanel->AddToggleItem("Debug/Text glyph meshes", Text::IsGlyphMeshesEnabled(),
                                   [](bool x) { Text::SetGlyphMeshesEnabled(x); });
+
+        mMenuPanel->AddToggleItem("Debug/Vector raster cache", VectorSprite::IsRasterCacheEnabled(),
+                                  [](bool x) { VectorSprite::SetRasterCacheEnabled(x); });
 
         mMenuPanel->AddItem("Debug/Dump memory", [&]() { o2Memory.DumpInfo(); });
 

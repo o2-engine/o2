@@ -2,6 +2,7 @@
 #include <gtest/gtest.h>
 
 #include <cmath>
+#include <fstream>
 
 #include "o2/Assets/Assets.h"
 #include "o2/Application/Application.h"
@@ -9,6 +10,7 @@
 #include "o2/Render/Camera.h"
 #include "o2/Render/Render.h"
 #include "o2/Render/VectorGraphics/VectorRasterizer.h"
+#include "o2/Render/VectorRasterCache.h"
 #include "o2/Render/VectorSprite.h"
 #include "o2/Scene/UI/Widget.h"
 #include "o2/Scene/UI/WidgetLayer.h"
@@ -187,6 +189,8 @@ namespace
                 assets.WriteSvg("shapes", Svg(64, 40, shapesBody));
                 assets.WriteSvg("frame", Svg(24, 24, frameBody));
                 assets.WriteMeta("frame", BorderI(8, 9, 10, 7), SpriteMode::Sliced);
+                assets.WriteSvg("baked", Svg(64, 40, shapesBody));
+                assets.WriteMeta("baked", BorderI(), SpriteMode::Default, true);
             });
         }
 
@@ -225,6 +229,18 @@ namespace
 
                 assets.WriteSvg("bar", Svg(20, 24, barBody));
                 assets.WriteMeta("bar", BorderI(0, 6, 0, 6), SpriteMode::Sliced);
+
+                assets.WriteSvg("bakedCircle", Svg(20, 20, circleBody));
+                assets.WriteMeta("bakedCircle", BorderI(), SpriteMode::Default, true);
+
+                assets.WriteSvg("rasterShapes", Svg(64, 40, shapesBody));
+                assets.WriteMeta("rasterShapes", BorderI(), SpriteMode::Default, false, true);
+
+                assets.WriteSvg("rasterBakedShapes", Svg(64, 40, shapesBody));
+                assets.WriteMeta("rasterBakedShapes", BorderI(), SpriteMode::Default, true, true);
+
+                assets.WriteSvg("rasterFrame", Svg(24, 24, frameBody));
+                assets.WriteMeta("rasterFrame", BorderI(8, 9, 10, 7), SpriteMode::Sliced, false, true);
             });
         }
 
@@ -264,6 +280,88 @@ TEST_F(VectorImageBuild, AssetsBuilderGivesSvgTheVectorImageMeta)
     EXPECT_TRUE(asset->IsValid());
     EXPECT_EQ(asset->GetSize(), Vec2F(64, 40));
     EXPECT_EQ(asset->GetDefaultMode(), SpriteMode::Default);
+}
+
+TEST_F(VectorImageBuild, AssetsBuilderBakesTheMeshOfScalableImages)
+{
+    String built = assets->GetRootPath() + "Built/";
+    EXPECT_TRUE(o2FileSystem.IsFileExist(VectorImageAsset::GetBakedMeshPath(built + assets->GetPath("baked"))));
+    EXPECT_FALSE(o2FileSystem.IsFileExist(VectorImageAsset::GetBakedMeshPath(built + assets->GetPath("shapes"))))
+        << "only the images with the flag in the meta are baked";
+    EXPECT_EQ(o2FileSystem.ReadFile(built + assets->GetPath("baked")), Svg(64, 40, shapesBody));
+
+    UInt before = VectorImageAsset::GetTessellationsCount();
+    auto asset = GetAsset("baked");
+    ASSERT_TRUE(asset);
+    EXPECT_TRUE(asset->IsMeshBaked());
+
+    for (float scale : { 1.0f, 1.63f, 4.0f })
+    {
+        auto mesh = asset->GetMesh(Vec2F(scale, scale));
+        ASSERT_TRUE(mesh);
+        EXPECT_TRUE(mesh->mesh.IsScalable());
+    }
+
+    EXPECT_EQ(VectorImageAsset::GetTessellationsCount(), before);
+}
+
+TEST_F(VectorImageBuild, AssetsBuilderDropsTheMeshWhenTheFlagIsOff)
+{
+    TempVectorAssets local;
+    local.WriteSvg("toggled", Svg(64, 40, shapesBody));
+    local.WriteMeta("toggled", BorderI(), SpriteMode::Default, true);
+
+    String builtPath = local.GetRootPath() + "Built/";
+    String treePath = local.GetRootPath() + "Built.json";
+    String meshPath = VectorImageAsset::GetBakedMeshPath(builtPath + local.GetPath("toggled"));
+    auto build = [&]()
+    {
+        AssetsBuilder builder;
+        builder.BuildAssets(GetEnginePlatform(), local.GetSourcePath(), builtPath, treePath,
+                            String(GetEditorAssetsPath()) + "../../CompressToolsConfig.json");
+    };
+
+    build();
+    EXPECT_TRUE(o2FileSystem.IsFileExist(meshPath));
+
+    local.WriteMeta("toggled", BorderI(), SpriteMode::Default, false);
+    build();
+    EXPECT_FALSE(o2FileSystem.IsFileExist(meshPath));
+    EXPECT_TRUE(o2FileSystem.IsFileExist(builtPath + local.GetPath("toggled")));
+}
+
+TEST_F(VectorImageBuild, AssetsBuilderBakesAnewTheMeshOfAnotherVersion)
+{
+    TempVectorAssets local;
+    local.WriteSvg("outdated", Svg(64, 40, shapesBody));
+    local.WriteMeta("outdated", BorderI(), SpriteMode::Default, true);
+
+    String builtPath = local.GetRootPath() + "Built/";
+    String treePath = local.GetRootPath() + "Built.json";
+    String meshPath = VectorImageAsset::GetBakedMeshPath(builtPath + local.GetPath("outdated"));
+    auto build = [&]()
+    {
+        AssetsBuilder builder;
+        return builder.BuildAssets(GetEnginePlatform(), local.GetSourcePath(), builtPath, treePath,
+                                   String(GetEditorAssetsPath()) + "../../CompressToolsConfig.json");
+    };
+
+    build();
+    ASSERT_TRUE(VectorImageAsset::IsBakedMeshCurrent(meshPath));
+
+    // A mesh of an older engine: the version after the magic
+    {
+        std::fstream file(meshPath.Data(), std::ios::in | std::ios::out | std::ios::binary);
+        file.seekp(4);
+        UInt32 version = 1;
+        file.write((const char*)&version, sizeof(version));
+    }
+
+    ASSERT_FALSE(VectorImageAsset::IsBakedMeshCurrent(meshPath));
+
+    Vector<UID> modified = build();
+    EXPECT_TRUE(VectorImageAsset::IsBakedMeshCurrent(meshPath)) << "the source has not changed, the mesh is baked anew";
+    EXPECT_EQ(modified.Count(), 1) << "the image reloads with the new mesh";
 }
 
 TEST_F(VectorImageBuild, AssetKeepsSliceBordersFromMeta)
@@ -1109,6 +1207,181 @@ TEST_F(VectorSpriteRender, SmoothZoomBuildsFewMeshesAndSpreadsThemByFrames)
         EXPECT_EQ(sprite->GetMeshPixelScale(), viewScale) << "the mesh of the final zoom is built when it stops";
 }
 
+TEST_F(VectorSpriteRender, ZoomStepBuildsTheMeshesOfAllSpritesAfterItStops)
+{
+    Vector<Ref<VectorSprite>> sprites;
+    for (const char* name : { "shapes", "red", "blue", "circle", "wide" })
+    {
+        auto sprite = mmake<VectorSprite>(GetAsset(name));
+        sprite->SetPosition(Vec2F((float)sprites.Count()*3.0f - 6.0f, 0.5f));
+        sprites.Add(sprite);
+    }
+
+    Vec2F viewScale;
+    auto drawFrame = [&](float zoom)
+    {
+        o2Render.Begin();
+
+        Camera camera;
+        camera.SetScale(Vec2F(1.0f/zoom, 1.0f/zoom));
+        o2Render.SetCamera(camera);
+        viewScale = o2Render.GetViewPixelScale();
+
+        for (auto& sprite : sprites)
+            sprite->Draw();
+
+        o2Render.SetCamera(Camera());
+        o2Render.End();
+    };
+
+    drawFrame(1.0f);
+    for (int i = 0; i < 10; i++)
+        drawFrame(4.0f);
+
+    for (auto& sprite : sprites)
+        EXPECT_EQ(sprite->GetMeshPixelScale(), viewScale) << "a sprite left for the next frames gets its mesh there";
+}
+
+namespace
+{
+    // Draws the sprites with the rasters of their images ready: the first drawing asks them, the jobs draw them
+    Ref<Bitmap> DrawRasterized(const Vector<VectorSprite*>& sprites, float cameraScale = 1.0f)
+    {
+        DrawAndCapture([&]() { for (auto sprite : sprites) sprite->Draw(); }, cameraScale);
+        o2VectorRasters.Flush();
+        return DrawAndCapture([&]() { for (auto sprite : sprites) sprite->Draw(); }, cameraScale);
+    }
+
+    // Draws the sprites by their triangles
+    Ref<Bitmap> DrawTriangles(const Vector<VectorSprite*>& sprites, float cameraScale = 1.0f)
+    {
+        VectorSprite::SetRasterCacheEnabled(false);
+        auto frame = DrawAndCapture([&]() { for (auto sprite : sprites) sprite->Draw(); }, cameraScale);
+        VectorSprite::SetRasterCacheEnabled(true);
+        return frame;
+    }
+}
+
+TEST_F(VectorSpriteRender, RasterizedSpriteIsDrawnAsItsTriangles)
+{
+    for (const char* name : { "rasterShapes", "rasterBakedShapes" })
+    {
+        for (float cameraScale : { 1.0f, 0.5f })
+        {
+            VectorSprite sprite(GetAsset(name));
+            sprite.SetRect(RectF(-100, -20, -36, 20));
+
+            auto rasterized = DrawRasterized({ &sprite }, cameraScale);
+            ASSERT_TRUE(rasterized);
+            EXPECT_TRUE(sprite.IsDrawnFromRaster()) << name;
+            EXPECT_EQ(sprite.GetTrianglesCount(), 2u) << "a quad of the raster instead of the triangles of the image";
+
+            auto triangles = DrawTriangles({ &sprite }, cameraScale);
+            ASSERT_TRUE(triangles);
+            EXPECT_FALSE(sprite.IsDrawnFromRaster());
+
+            ExpectSame(rasterized, triangles, name, 3, 0.998f);
+        }
+    }
+}
+
+TEST_F(VectorSpriteRender, NotRasterizedImageIsDrawnByTriangles)
+{
+    VectorSprite sprite(GetAsset("shapes"));
+    sprite.SetRect(RectF(-100, -20, -36, 20));
+    DrawRasterized({ &sprite });
+    EXPECT_FALSE(sprite.IsDrawnFromRaster());
+    EXPECT_GT(sprite.GetTrianglesCount(), 0u);
+}
+
+TEST_F(VectorSpriteRender, SpritesOfOneSizeShareTheRaster)
+{
+    o2VectorRasters.Clear();
+    o2VectorRasters.Flush();
+    int before = o2VectorRasters.GetRastersCount();
+
+    Vector<Ref<VectorSprite>> sprites;
+    Vector<VectorSprite*> drawn;
+    for (int i = 0; i < 6; i++)
+    {
+        auto sprite = mmake<VectorSprite>(GetAsset("rasterShapes"));
+        sprite->SetRect(RectF(-150.0f + i*50.0f, -20, -86.0f + i*50.0f, 20));
+        sprites.Add(sprite);
+        drawn.Add(sprite.Get());
+    }
+
+    UInt64 rasterDraws = VectorSprite::GetStatistics().rasterDraws;
+    DrawRasterized(drawn);
+
+    EXPECT_EQ(o2VectorRasters.GetRastersCount() - before, 1);
+    for (auto& sprite : sprites)
+        EXPECT_TRUE(sprite->IsDrawnFromRaster());
+
+    EXPECT_GE(VectorSprite::GetStatistics().rasterDraws - rasterDraws, (UInt64)sprites.Count());
+}
+
+TEST_F(VectorSpriteRender, SlicedRasterIsSharedBySizes)
+{
+    o2VectorRasters.Clear();
+    o2VectorRasters.Flush();
+    int before = o2VectorRasters.GetRastersCount();
+
+    VectorSprite narrow(GetAsset("rasterFrame")), wide(GetAsset("rasterFrame"));
+    narrow.SetRect(RectF(-120, -30, -90, 30));
+    wide.SetRect(RectF(-60, -20, 60, 20));
+
+    auto rasterized = DrawRasterized({ &narrow, &wide });
+    ASSERT_TRUE(rasterized);
+    EXPECT_TRUE(narrow.IsDrawnFromRaster());
+    EXPECT_TRUE(wide.IsDrawnFromRaster());
+    EXPECT_EQ(o2VectorRasters.GetRastersCount() - before, 1) << "the corners keep the view scale, the middle stretches";
+
+    auto triangles = DrawTriangles({ &narrow, &wide });
+    ASSERT_TRUE(triangles);
+    ExpectSame(rasterized, triangles, "sliced", 3, 0.998f);
+}
+
+TEST_F(VectorSpriteRender, UnusedRastersGiveTheirCellsToNewOnes)
+{
+    o2VectorRasters.Clear();
+    o2VectorRasters.Flush();
+
+    int maxPages = VectorRasterCache::GetMaxPagesCount();
+    VectorRasterCache::SetMaxPagesCount(1);
+
+    auto asset = GetAsset("rasterShapes");
+    int pages = o2VectorRasters.GetPagesCount();
+    UInt64 evictions = VectorRasterCache::GetStatistics().evictions;
+
+    // Every scale is a raster of its own, a page takes some of them: the ones drawn long ago leave
+    int drawn = 0;
+    for (int i = 0; i < 40; i++)
+    {
+        float scale = 6.0f + (float)i*0.25f;
+        o2Render.Begin();
+        auto raster = o2VectorRasters.GetRaster(asset, Vec2F(scale, scale), false);
+        o2Render.End();
+
+        if (raster)
+            drawn++;
+
+        o2VectorRasters.Flush();
+        for (int frame = 0; frame < 4; frame++)
+        {
+            o2Render.Begin();
+            o2Render.End();
+        }
+    }
+
+    EXPECT_EQ(drawn, 40) << "a new raster always finds a cell";
+    EXPECT_LE(o2VectorRasters.GetPagesCount(), Math::Max(pages, 1));
+    EXPECT_GT(VectorRasterCache::GetStatistics().evictions, evictions);
+    EXPECT_LE(o2VectorRasters.GetUsage(), 1.0f);
+
+    VectorRasterCache::SetMaxPagesCount(maxPages);
+    o2VectorRasters.Clear();
+}
+
 TEST_F(VectorSpriteRender, StillSpriteIsDrawnFromGpuCopyWithoutRenderThread)
 {
     if (o2Render.IsMultithreadedRenderSupported())
@@ -1175,6 +1448,104 @@ TEST_F(VectorSpriteRender, ScalableMeshIsDrawnAsTheMeshOfTheScale)
         EXPECT_GE(result.similarity, 0.999f) << "scale " << scale << ": max difference " << result.maxDifference;
         EXPECT_LE(result.meanDifference, 1.0f) << "scale " << scale;
     }
+}
+
+TEST_F(VectorSpriteRender, BakedMeshIsDrawnAsTessellatedWithoutTessellationAtAnyZoom)
+{
+    auto baked = GetAsset("bakedCircle");
+    ASSERT_TRUE(baked);
+    ASSERT_TRUE(baked->IsMeshBaked());
+
+    UInt before = VectorImageAsset::GetTessellationsCount();
+    Vector<Ref<Bitmap>> bakedFrames;
+    {
+        VectorSprite sprite(baked);
+        sprite.SetRect(RectF(-10, -10, 10, 10));
+        for (float cameraScale : { 1.0f, 0.75f, 0.5f, 0.25f, 2.0f })
+            bakedFrames.Add(DrawAndCapture([&]() { sprite.Draw(); }, cameraScale));
+    }
+
+    EXPECT_EQ(VectorImageAsset::GetTessellationsCount(), before) << "the baked mesh is drawn at any zoom as it is";
+
+    ScalableMeshesGuard scalable;
+    VectorSprite runtime(GetAsset("circle"));
+    runtime.SetRect(RectF(-10, -10, 10, 10));
+
+    int i = 0;
+    for (float cameraScale : { 1.0f, 0.75f, 0.5f, 0.25f, 2.0f })
+    {
+        auto expected = DrawAndCapture([&]() { runtime.Draw(); }, cameraScale);
+        ASSERT_TRUE(expected && bakedFrames[i]);
+
+        BitmapCompareResult result = BitmapCompare::Compare(*bakedFrames[i], *expected, 0, background);
+        ASSERT_TRUE(result.comparable);
+        EXPECT_EQ(result.maxDifference, 0) << "camera scale " << cameraScale;
+        i++;
+    }
+}
+
+TEST_F(VectorSpriteRender, ZoomPutsTheFringeOfScalableSpritesByTurns)
+{
+    ScalableMeshesGuard scalable;
+
+    Vector<Ref<VectorSprite>> sprites;
+    auto drawFrame = [&](float zoom)
+    {
+        o2Render.Begin();
+
+        Camera camera;
+        camera.SetScale(Vec2F(1.0f/zoom, 1.0f/zoom));
+        o2Render.SetCamera(camera);
+
+        for (auto& sprite : sprites)
+            sprite->Draw();
+
+        o2Render.SetCamera(Camera());
+        o2Render.End();
+    };
+
+    sprites.Add(mmake<VectorSprite>(GetAsset("many")));
+    drawFrame(1.0f);
+    UInt spriteVertices = sprites[0]->GetVerticesCount();
+    ASSERT_GT(spriteVertices, 0u);
+
+    // Many frames of the vertices a frame put for the new scale
+    while ((UInt64)sprites.Count()*spriteVertices < 8*65536)
+    {
+        auto sprite = mmake<VectorSprite>(GetAsset("many"));
+        sprite->SetPosition(Vec2F((float)(sprites.Count()%10)*4.0f - 20.0f, (float)(sprites.Count()/10)*4.0f - 20.0f));
+        sprites.Add(sprite);
+    }
+
+    drawFrame(1.0f);
+    UInt64 total = (UInt64)sprites.Count()*spriteVertices;
+
+    Vector<UInt64> rebuilt;
+    for (int frame = 0; frame < 30; frame++)
+    {
+        UInt64 start = VectorSprite::GetStatistics().rebuiltVertices;
+        drawFrame(2.0f);
+        rebuilt.Add(VectorSprite::GetStatistics().rebuiltVertices - start);
+    }
+
+    UInt64 sum = 0, most = 0;
+    int busyFrames = 0;
+    for (auto count : rebuilt)
+    {
+        sum += count;
+        most = Math::Max(most, count);
+        busyFrames += count > 0 ? 1 : 0;
+    }
+
+    EXPECT_LT(most, total/4) << "a frame puts the fringe of a part of the sprites";
+    EXPECT_GE(busyFrames, 4) << "the rest of them take their turns at the next frames";
+    EXPECT_EQ(sum, total) << "each sprite puts its fringe once";
+    EXPECT_EQ(rebuilt.Last(), 0u) << "all the sprites are done when the zoom stops";
+
+    // A zoom within the tolerance of the fringe keeps the vertices
+    UInt64 start = VectorSprite::GetStatistics().rebuiltVertices;
+    drawFrame(2.04f);
+    EXPECT_EQ(VectorSprite::GetStatistics().rebuiltVertices, start);
 }
 
 TEST_F(VectorSpriteRender, ScalableMeshIsTessellatedOnceForAnyZoom)

@@ -96,6 +96,32 @@ TEST(VectorScalableMesh, ThinLineKeepsItsCoverage)
                                    "<rect x=\"12.3\" y=\"15\" width=\"0.5\" height=\"20\" fill=\"#000\"/>"), 0.97f);
 }
 
+// No pixel is off the mesh of the scale more than an antialiasing difference
+void ExpectNoArtifactsAtScales(const String& svg)
+{
+    for (float scale : { 2.0f, 4.0f, 10.0f })
+    {
+        BitmapCompareResult result = CompareAtScale(svg, scale);
+        ASSERT_TRUE(result.comparable) << scale;
+        EXPECT_LE(result.maxDifference, 48) << "scale " << scale;
+    }
+}
+
+// A band between two rounded rectangles ends in a spike of almost zero angle, as the inset bands of the WordFall tiles
+TEST(VectorScalableMesh, SpikeOfABandStaysInside)
+{
+    ExpectNoArtifactsAtScales(Svg(40, 40,
+        "<path fill=\"#000\" d=\"M8 1A7 7 0 0 0 1 8L1 24A7 7 0 0 0 8 31L9 31A7 7 0 0 1 2 24L2 8A7 7 0 0 1 9 1Z\"/>"));
+}
+
+// Skins of a corner rounder than they are deep would overlap, a translucent fill shows it
+TEST(VectorScalableMesh, TightCornerOfTranslucentFillHasNoOverlaps)
+{
+    ExpectNoArtifactsAtScales(Svg(40, 40,
+        "<rect x=\"4\" y=\"4\" width=\"30\" height=\"30\" rx=\"0.4\" fill=\"#000\" fill-opacity=\"0.4\"/>"
+        "<path fill=\"#000\" fill-opacity=\"0.4\" d=\"M20 36L10 18Q9.6 17.2 10.4 17L29.6 17Q30.4 17.2 30 18Z\"/>"));
+}
+
 TEST(VectorScalableMesh, RescaleChangesNoTriangles)
 {
     VectorMesh mesh = ScalableMesh(Parse(Svg(40, 40, "<circle cx=\"20\" cy=\"20\" r=\"15\" fill=\"#135\"/>")));

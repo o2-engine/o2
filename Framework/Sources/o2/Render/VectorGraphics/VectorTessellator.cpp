@@ -2900,7 +2900,8 @@ namespace o2
             struct RailPoint
             {
                 Point  anchor, innerShift, outerShift, core;
-                double depth;
+                double depth, coreDepth;
+                bool   rounding; // Is the vertex a gentle turn of a curve, not a corner
             };
 
             struct Edge
@@ -2945,8 +2946,17 @@ namespace o2
                     Point miter = cosine > -0.98 ? (first + second)*(1.0/(1.0 + cosine)) : first;
                     bool convex = Cross(directionIn, directionOut)*side > 0;
 
+                    // The tip of a spike, its edges come back along each other: across one of them is out of the other
+                    Point tip = directionIn - directionOut;
+                    if (cosine <= -0.98 && Dot(directionOut, first) <= 0.0 && Length(tip) > 1e-9)
+                    {
+                        miter = Normalized(tip)*maxMiter;
+                        convex = true;
+                    }
+
                     RailPoint& rail = rails[l][i];
                     rail.anchor = point;
+                    rail.rounding = cosine > 0.5;
                     rail.innerShift = ClampLength(miter, convex ? maxMiter : maxSpike)*-1.0;
                     rail.outerShift = ClampLength(miter, convex ? maxSpike : maxMiter);
 
@@ -2971,7 +2981,58 @@ namespace o2
                     }
 
                     rail.depth = Math::Min(skinDepth, nearest*0.5/innerLength);
-                    rail.core = Snap(point + rail.innerShift*rail.depth);
+                    rail.coreDepth = rail.depth;
+                }
+
+                // The core points of an edge's ends meet at the depth of its collapse: past it the skins of a rounding
+                // thicker than them overlap; the skins of a thin part meet at its middle already, a corner keeps its
+                // skins as they are
+                std::vector<double> collapses(count);
+                for (size_t i = 0; i < count; i++)
+                {
+                    RailPoint& a = rails[l][i];
+                    RailPoint& b = rails[l][(i + 1)%count];
+
+                    Point along = b.anchor - a.anchor;
+                    double length = Length(along);
+                    collapses[i] = DBL_MAX;
+                    if (length < 1e-12)
+                        continue;
+
+                    double closing = -Dot(b.innerShift - a.innerShift, along)/length;
+                    collapses[i] = closing > 1e-12 ? length/closing : DBL_MAX;
+                    if (!a.rounding || !b.rounding || collapses[i] < skinDepth*0.25)
+                        continue;
+
+                    if (a.depth >= skinDepth)
+                        a.coreDepth = Math::Min(a.coreDepth, collapses[i]);
+
+                    if (b.depth >= skinDepth)
+                        b.coreDepth = Math::Min(b.coreDepth, collapses[i]);
+                }
+
+                // The end of a rounding meets its neighbour's point past the centre of the rounding: no deeper than it
+                std::vector<double> depths(count);
+                for (size_t i = 0; i < count; i++)
+                    depths[i] = rails[l][i].coreDepth;
+
+                for (size_t i = 0; i < count; i++)
+                {
+                    size_t previous = (i + count - 1)%count, next = (i + 1)%count;
+                    if (rails[l][i].depth < skinDepth || !rails[l][i].rounding)
+                        continue;
+
+                    if (collapses[previous] < skinDepth && collapses[previous] >= skinDepth*0.25)
+                        rails[l][i].coreDepth = Math::Min(rails[l][i].coreDepth, depths[previous]);
+
+                    if (collapses[i] < skinDepth && collapses[i] >= skinDepth*0.25)
+                        rails[l][i].coreDepth = Math::Min(rails[l][i].coreDepth, depths[next]);
+                }
+
+                for (size_t i = 0; i < count; i++)
+                {
+                    RailPoint& rail = rails[l][i];
+                    rail.core = Snap(rail.anchor + rail.innerShift*rail.coreDepth);
                     coreLoop[i] = rail.core;
                 }
 
@@ -3034,7 +3095,8 @@ namespace o2
                     {
                         Point anchor = a.anchor + (b.anchor - a.anchor)*coef;
                         double depth = a.depth + (b.depth - a.depth)*coef;
-                        Point innerShift = depth > 1e-9 ? (core - anchor)*(1.0/depth) :
+                        double coreDepth = a.coreDepth + (b.coreDepth - a.coreDepth)*coef;
+                        Point innerShift = coreDepth > 1e-9 ? (core - anchor)*(1.0/coreDepth) :
                             a.innerShift + (b.innerShift - a.innerShift)*coef;
                         Point outerShift = a.outerShift + (b.outerShift - a.outerShift)*coef;
                         Point inner = anchor + innerShift*Math::Min(referenceWidth, depth);

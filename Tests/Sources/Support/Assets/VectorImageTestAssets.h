@@ -57,11 +57,14 @@ namespace o2::VectorImageTest
             o2FileSystem.WriteFile(mSourcePath + GetPath(name), svg);
         }
 
-        void WriteMeta(const String& name, const BorderI& sliceBorder, SpriteMode defaultMode)
+        void WriteMeta(const String& name, const BorderI& sliceBorder, SpriteMode defaultMode, bool scalableMesh = false,
+                       bool rasterized = false)
         {
             auto meta = mmake<VectorImageAsset::Meta>();
             meta->sliceBorder = sliceBorder;
             meta->defaultMode = defaultMode;
+            meta->scalableMesh = scalableMesh;
+            meta->rasterized = rasterized;
 
             UID id;
             id.Randomize();

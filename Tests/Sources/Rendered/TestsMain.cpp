@@ -19,6 +19,7 @@
 
 extern void InitializeTypeso2TestsSupport();
 extern void InitializeTypeso2RenderTests();
+extern void InitializeTypesAssetsBuildTool();
 
 using namespace o2;
 
@@ -103,6 +104,7 @@ int main(int argc, char** argv)
     InitializeTypeso2TestsSupport();
     InitializeTypeso2RenderTests();
     INITIALIZE_O2;
+    InitializeTypesAssetsBuildTool();
 
     ::testing::InitGoogleTest(&argc, argv);
 

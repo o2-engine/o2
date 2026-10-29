@@ -26,17 +26,43 @@ namespace o2
             return count++ < maxFrameMeshBuildings;
         }
 
+        // Zoom changes the scale of all the sprites at once: the fringe of scalable meshes is put for it by this count of
+        // vertices a frame, and as many again for the sprites that have waited this count of frames
+        const int maxFrameFringeVertices = 32768;
+        const int maxFringeDelayFrames = 4;
+
+        // Counts vertices the sprites put the fringe of at the frame; false when the frame has taken its share
+        bool TakeFringeRefill(int vertices, bool waited)
+        {
+            static UInt64 frame = 0;
+            static int counts[2] = { 0, 0 };
+
+            if (frame != o2Render.GetFrameIndex())
+            {
+                frame = o2Render.GetFrameIndex();
+                counts[0] = counts[1] = 0;
+            }
+
+            int& count = counts[waited ? 1 : 0];
+            if (count > 0 && count + vertices > maxFrameFringeVertices)
+                return false;
+
+            count += vertices;
+            return true;
+        }
+
         // Shifts add up the rounding of float positions, the vertices are rebuilt from the image after this count
         const int maxMeshShifts = 32;
 
         // Part of the scale the fringe of a scalable mesh is kept within
-        const float fringeScaleTolerance = 0.01f;
+        const float fringeScaleTolerance = 0.05f;
 
         // Positions of a scalable mesh at the fringe scale, for the vertices being built
         Vector<Vec2F> scaledPositions;
     }
 
     VectorSprite::Statistics VectorSprite::mStatistics;
+    bool VectorSprite::mRasterCacheEnabled = true;
 
     VectorSprite::VectorSprite()
     {
@@ -138,9 +164,27 @@ namespace o2
                 return;
             }
 
+            // The meta is read once for a version of the image
+            if (mAssetFlagsVersion != mImageAsset->GetVersion())
+            {
+                mAssetFlagsVersion = mImageAsset->GetVersion();
+                mAssetRasterized = mImageAsset->IsRasterized();
+                mAssetScalableMesh = mImageAsset->IsScalableMesh();
+            }
+
+            bool rasterized = mRasterCacheEnabled && mAssetRasterized && !GetMaterial() &&
+                VectorRasterCache::IsSingletonInitialzed();
+
+            mDrawnFromRaster = rasterized && DrawRaster(viewPixelScale);
+            if (mDrawnFromRaster)
+            {
+                OnDrawn();
+                return;
+            }
+
             if (mMeshDirty || mBasisDirty || mMeshPostponed || mMeshImageVersion != mImageAsset->GetVersion() ||
                 viewPixelScale.x != mMeshViewScale.x || viewPixelScale.y != mMeshViewScale.y ||
-                (mSourceMesh && mSourceMesh->mesh.IsScalable() != VectorImageAsset::IsScalableMeshes()))
+                (mSourceMesh && mSourceMesh->mesh.IsScalable() != IsImageMeshScalable()))
             {
                 UpdateMesh(viewPixelScale);
             }
@@ -249,11 +293,17 @@ namespace o2
 
     UInt VectorSprite::GetTrianglesCount() const
     {
+        if (mDrawnFromRaster)
+            return mRasterMesh->polyCount;
+
         return mSourceMesh && mGeometry ? mGeometry->trianglesCount : 0;
     }
 
     UInt VectorSprite::GetVerticesCount() const
     {
+        if (mDrawnFromRaster)
+            return mRasterMesh->vertexCount;
+
         return mGeometry ? (UInt)mGeometry->vertices.Count() : 0;
     }
 
@@ -277,9 +327,24 @@ namespace o2
         return mColorUpdatesCount;
     }
 
+    bool VectorSprite::IsDrawnFromRaster() const
+    {
+        return mDrawnFromRaster;
+    }
+
     UInt64 VectorSprite::GetTotalDrawnTriangles()
     {
         return mStatistics.drawnTriangles;
+    }
+
+    void VectorSprite::SetRasterCacheEnabled(bool enabled)
+    {
+        mRasterCacheEnabled = enabled;
+    }
+
+    bool VectorSprite::IsRasterCacheEnabled()
+    {
+        return mRasterCacheEnabled;
     }
 
     const VectorSprite::Statistics& VectorSprite::GetStatistics()
@@ -315,6 +380,7 @@ namespace o2
 
     void VectorSprite::UpdateMesh(const Vec2F& viewPixelScale)
     {
+        bool meshDirty = mMeshDirty;
         bool sameImage = mMeshImageVersion == mImageAsset->GetVersion();
         bool sameView = viewPixelScale == mMeshViewScale;
 
@@ -326,10 +392,10 @@ namespace o2
         Basis basis = GetImageBasis(slicedSize);
         float z = mTransform.origin.z;
 
-        bool sameKind = !mSourceMesh || mSourceMesh->mesh.IsScalable() == VectorImageAsset::IsScalableMeshes();
+        bool sameKind = !mSourceMesh || mSourceMesh->mesh.IsScalable() == IsImageMeshScalable();
 
         // A layout update sets the same basis again: nothing to rebuild
-        if (!mMeshDirty && sameImage && sameView && sameKind && mGeometry && basis == mMeshBasis &&
+        if (!mMeshDirty && !mMeshPostponed && sameImage && sameView && sameKind && mGeometry && basis == mMeshBasis &&
             slicedSize == mMeshSlicedSize && z == mMeshDepth)
         {
             mBasisDirty = false;
@@ -353,40 +419,11 @@ namespace o2
         }
 
         bool sliced = mMode == SpriteMode::Sliced;
-        Vec2F drawSize = imageSize;
-        BorderF slices;
-
-        if (sliced)
-        {
-            slices = mSlices;
-
-            // An axis without borders is stretched as a whole, with borders only the view scales the corners
-            if (mSlices.left != 0 || mSlices.right != 0)
-                drawSize.x = slicedSize.x;
-
-            if (mSlices.top != 0 || mSlices.bottom != 0)
-                drawSize.y = slicedSize.y;
-
-            // Cutting the mesh by the reduced borders drops the middle instead of squeezing the corners into it
-            float excessX = slices.left + slices.right - slicedSize.x;
-            if (excessX > 0.0f)
-            {
-                slices.left -= excessX*0.5f;
-                slices.right -= excessX*0.5f;
-            }
-
-            float excessY = slices.top + slices.bottom - slicedSize.y;
-            if (excessY > 0.0f)
-            {
-                slices.top -= excessY*0.5f;
-                slices.bottom -= excessY*0.5f;
-            }
-        }
-
-        Vec2F pixelScale(basis.xv.Length()/drawSize.x*viewPixelScale.x, basis.yv.Length()/drawSize.y*viewPixelScale.y);
+        BorderF slices = sliced ? GetDrawSlices(slicedSize) : BorderF();
+        Vec2F pixelScale = GetPixelScale(basis, slicedSize, viewPixelScale);
 
         // The view scale changes continuously when zooming, the cached mesh changes by steps
-        bool scalable = VectorImageAsset::IsScalableMeshes();
+        bool scalable = IsImageMeshScalable();
         Vec2F meshScale = scalable ? Vec2F(1, 1) : VectorImageAsset::QuantizePixelScale(pixelScale);
         bool pixelSnapped = !scalable && IsOnWholePixels(basis, viewPixelScale);
 
@@ -400,15 +437,33 @@ namespace o2
             (Math::Abs(pixelScale.x - mMeshFringeScale.x) <= mMeshFringeScale.x*fringeScaleTolerance &&
              Math::Abs(pixelScale.y - mMeshFringeScale.y) <= mMeshFringeScale.y*fringeScaleTolerance);
 
+        // Only the view scale has changed: the previous fringe is drawn till the sprite's turn
+        bool fringePostponed = false;
         if (!sameFringe)
-            mMeshDirty = true;
+        {
+            bool onlyFringe = !meshDirty && sameImage && sameMesh && mGeometry && basis == mMeshBasis &&
+                slicedSize == mMeshSlicedSize && z == mMeshDepth;
+
+            if (onlyFringe && !TakeFringeRefill(mGeometry->vertices.Count(), mFringeDelayFrames >= maxFringeDelayFrames))
+            {
+                fringePostponed = true;
+                mFringeDelayFrames++;
+                mMeshDirty = false;
+            }
+            else
+                mMeshDirty = true;
+        }
+
+        if (!fringePostponed)
+            mFringeDelayFrames = 0;
 
         // Zoom asks new meshes for all sprites at once: they are built by few a frame, the previous ones are drawn so far
         bool sameSlices = mSourceMesh && mSourceMesh->sliced == (sliced && slices != BorderF()) &&
             (!mSourceMesh->sliced || mSourceMesh->slices == slices);
 
-        mMeshPostponed = !sameMesh && !mImageAsset->IsMeshBuilt(pixelScale, sliced ? slices : BorderF(), pixelSnapped) &&
-            !TakeMeshBuilding() && sameImage && sameSlices && mGeometry;
+        mMeshPostponed = fringePostponed ||
+            (!sameMesh && !mImageAsset->IsMeshBuilt(pixelScale, sliced ? slices : BorderF(), pixelSnapped) &&
+             !TakeMeshBuilding() && sameImage && sameSlices && mGeometry);
 
         if (mMeshPostponed)
             sameMesh = true;
@@ -623,6 +678,164 @@ namespace o2
                 ((((color >> 16) & 0xFF)*multipliers[2]/255) << 16) |
                 ((((color >> 24) & 0xFF)*multipliers[3]/255) << 24);
         }
+    }
+
+    bool VectorSprite::IsImageMeshScalable() const
+    {
+        if (mAssetFlagsVersion != mImageAsset->GetVersion())
+            return mImageAsset->IsMeshScalable();
+
+        return mAssetScalableMesh || VectorImageAsset::IsScalableMeshes();
+    }
+
+    Vec2F VectorSprite::GetPixelScale(const Basis& basis, const Vec2F& slicedSize, const Vec2F& viewPixelScale) const
+    {
+        Vec2F drawSize = mImageAsset->GetSize();
+
+        // An axis without borders is stretched as a whole, with borders only the view scales the corners
+        if (mMode == SpriteMode::Sliced)
+        {
+            if (mSlices.left != 0 || mSlices.right != 0)
+                drawSize.x = slicedSize.x;
+
+            if (mSlices.top != 0 || mSlices.bottom != 0)
+                drawSize.y = slicedSize.y;
+        }
+
+        return Vec2F(basis.xv.Length()/drawSize.x*viewPixelScale.x, basis.yv.Length()/drawSize.y*viewPixelScale.y);
+    }
+
+    BorderF VectorSprite::GetDrawSlices(const Vec2F& slicedSize) const
+    {
+        BorderF slices = mSlices;
+
+        // Cutting by the reduced borders drops the middle instead of squeezing the corners into it
+        float excessX = slices.left + slices.right - slicedSize.x;
+        if (excessX > 0.0f)
+        {
+            slices.left -= excessX*0.5f;
+            slices.right -= excessX*0.5f;
+        }
+
+        float excessY = slices.top + slices.bottom - slicedSize.y;
+        if (excessY > 0.0f)
+        {
+            slices.top -= excessY*0.5f;
+            slices.bottom -= excessY*0.5f;
+        }
+
+        return slices;
+    }
+
+    bool VectorSprite::DrawRaster(const Vec2F& viewPixelScale)
+    {
+        Vec2F imageSize = mImageAsset->GetSize();
+        Vec2F slicedSize;
+        Basis basis = GetImageBasis(slicedSize);
+
+        if (imageSize.x <= 0.0f || imageSize.y <= 0.0f || slicedSize.x <= 0.0f || slicedSize.y <= 0.0f)
+            return false;
+
+        bool sliced = mMode == SpriteMode::Sliced;
+        BorderF slices = sliced ? GetDrawSlices(slicedSize) : BorderF();
+        Vec2F targetSize = sliced ? slicedSize : imageSize;
+        Vec2F scale = GetPixelScale(basis, slicedSize, viewPixelScale);
+
+        // A not rotated image is put on whole pixels, as the raster is
+        Vec2F origin = basis.origin + basis.yv;
+        const float threshold = 0.01f;
+        bool aligned = Math::Abs(basis.xv.y) < threshold && Math::Abs(basis.yv.x) < threshold && basis.xv.x > 0.0f &&
+            basis.yv.y > 0.0f;
+
+        Vec2F shift;
+        if (aligned)
+        {
+            Vec2F pixel(origin.x*viewPixelScale.x, origin.y*viewPixelScale.y);
+            shift = Vec2F((Math::Round(pixel.x) - pixel.x)/viewPixelScale.x, (Math::Round(pixel.y) - pixel.y)/viewPixelScale.y);
+        }
+
+        bool pixelSnapped = aligned && IsOnWholePixels(Basis(basis.origin + shift, basis.xv, basis.yv), viewPixelScale);
+
+        // Till the raster of a new scale is drawn, the one of the previous scale is stretched over the image
+        auto raster = o2VectorRasters.GetRaster(mImageAsset, scale, pixelSnapped);
+        if (raster && raster->IsReady())
+            mRaster = raster;
+        else
+        {
+            bool near = mRaster && mRaster->IsReady() && mRaster->GetImageVersion() == mImageAsset->GetVersion() &&
+                mRaster->GetScale().x > scale.x*0.5f && mRaster->GetScale().x < scale.x*2.0f &&
+                mRaster->GetScale().y > scale.y*0.5f && mRaster->GetScale().y < scale.y*2.0f;
+
+            if (!near)
+                return false;
+
+            shift = Vec2F();
+        }
+
+        Vec2F leftTop, rightBottom;
+        mRaster->GetImageArea(leftTop, rightBottom);
+
+        float xs[4] = { leftTop.x, slices.left, imageSize.x - slices.right, rightBottom.x };
+        float ys[4] = { leftTop.y, slices.top, imageSize.y - slices.bottom, rightBottom.y };
+        int count = sliced ? 4 : 2;
+        if (!sliced)
+        {
+            xs[1] = rightBottom.x;
+            ys[1] = rightBottom.y;
+        }
+
+        for (int i = 1; i < count; i++)
+        {
+            xs[i] = Math::Max(xs[i], xs[i - 1]);
+            ys[i] = Math::Max(ys[i], ys[i - 1]);
+        }
+
+        if (!mRasterMesh)
+            mRasterMesh = mmake<Mesh>(TextureRef(), 16, 18);
+
+        Vec2F xv = basis.xv/targetSize.x, yv = basis.yv/targetSize.y;
+        Color32Bit color = mResultColor.ABGR();
+        float z = mTransform.origin.z;
+
+        Vertex* vertices = mRasterMesh->GetVertices<Vertex>();
+        for (int row = 0; row < count; row++)
+        {
+            for (int column = 0; column < count; column++)
+            {
+                Vec2F point(xs[column], ys[row]);
+                Vec2F mapped = sliced ? VectorMesh::MapSlicedPoint(point, imageSize, slices, slicedSize) : point;
+                Vec2F uv = mRaster->GetUV(point);
+
+                Vertex& vertex = vertices[row*count + column];
+                vertex.Set(origin + shift + xv*mapped.x - yv*mapped.y, color, uv.x, uv.y);
+                vertex.z = z;
+            }
+        }
+
+        VertexIndex* indexes = mRasterMesh->GetIndexes();
+        int index = 0;
+        for (int row = 0; row + 1 < count; row++)
+        {
+            for (int column = 0; column + 1 < count; column++)
+            {
+                VertexIndex a = (VertexIndex)(row*count + column), b = a + 1;
+                VertexIndex c = (VertexIndex)(a + count), d = c + 1;
+                for (VertexIndex i : { a, b, d, a, d, c })
+                    indexes[index++] = i;
+            }
+        }
+
+        mRasterMesh->vertexCount = count*count;
+        mRasterMesh->polyCount = index/3;
+        mRasterMesh->SetTexture(mRaster->GetTexture());
+        mRasterMesh->Draw();
+
+        mStatistics.draws++;
+        mStatistics.rasterDraws++;
+        mStatistics.drawnTriangles += mRasterMesh->polyCount;
+        mStatistics.drawnVertices += mRasterMesh->vertexCount;
+
+        return true;
     }
 
     Basis VectorSprite::GetImageBasis(Vec2F& slicedSize) const

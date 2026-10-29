@@ -8,6 +8,7 @@
 #include "o2/Render/VectorGraphics/SvgParser.h"
 #include "o2/Render/VectorGraphics/VectorTessellator.h"
 #include "o2/Utils/Debug/Log/LogStream.h"
+#include "o2/Utils/FileSystem/File.h"
 #include "o2/Utils/FileSystem/FileSystem.h"
 
 namespace o2
@@ -37,11 +38,80 @@ namespace o2
             static std::atomic<UInt> lastVersion{ 0 };
             return ++lastVersion;
         }
+
+        VectorTessellationParams GetTessellationParams(const Vec2F& scale, bool pixelSnapped, bool scalable)
+        {
+            VectorTessellationParams params;
+            params.pixelScale = scale;
+            params.pixelSnapped = pixelSnapped;
+            params.scalable = scalable;
+            return params;
+        }
+
+        // Header of the baked mesh file; the version goes up with every change of the tessellation or of the format
+        struct BakedMeshHeader
+        {
+            char   magic[4] = { 'o', '2', 'v', 'm' };
+            UInt32 version = 3;
+            UInt64 sourceHash = 0;
+            float  size[2] = { 0, 0 };
+            float  pixelScale[2] = { 1, 1 };
+            UInt32 verticesCount = 0;
+            UInt32 indexesCount = 0;
+        };
+
+        const BakedMeshHeader bakedMeshFormat;
+        const UInt bakedVertexBytes = sizeof(Vec2F)*2 + sizeof(float) + sizeof(Color32Bit);
+
+        static_assert(sizeof(Vec2F) == sizeof(float)*2, "positions are written as float pairs");
+
+        // Reads the header of the baked mesh file; false for another format or a size that does not fit the header
+        bool ReadBakedMeshHeader(InFile& file, BakedMeshHeader& header)
+        {
+            if (!file.IsOpened())
+                return false;
+
+            UInt size = file.GetDataSize();
+            if (size < sizeof(header))
+                return false;
+
+            file.ReadData(&header, sizeof(header));
+
+            UInt64 expectedSize = sizeof(header) + (UInt64)header.verticesCount*bakedVertexBytes +
+                (UInt64)header.indexesCount*sizeof(VertexIndex);
+
+            return memcmp(header.magic, bakedMeshFormat.magic, sizeof(header.magic)) == 0 &&
+                header.version == bakedMeshFormat.version && expectedSize == size;
+        }
+
+        // FNV-1a of the SVG text: the baked mesh belongs to the source it is built from
+        UInt64 HashSource(const String& source)
+        {
+            UInt64 hash = 14695981039346656037ull;
+            const char* data = source.Data();
+            for (int i = 0, count = source.Length(); i < count; i++)
+            {
+                hash ^= (UInt8)data[i];
+                hash *= 1099511628211ull;
+            }
+
+            return hash;
+        }
     }
 
     UInt VectorImageAsset::mTessellationsCount = 0;
     double VectorImageAsset::mTessellationTime = 0.0;
     bool VectorImageAsset::mScalableMeshes = false;
+
+    bool VectorImageMesh::GetBounds(Vec2F& min, Vec2F& max)
+    {
+        if (mBoundsState == 0)
+            mBoundsState = mesh.GetBounds(mBoundsMin, mBoundsMax) ? 1 : -1;
+
+        min = mBoundsMin;
+        max = mBoundsMax;
+        return mBoundsState > 0;
+    }
 
     VectorImageAsset::VectorImageAsset():
         Asset(mmake<Meta>())
@@ -70,6 +140,7 @@ namespace o2
 
         mVersion = NextVersion();
         mMeshes.Clear();
+        mMeshBaked = false;
 
         return *this;
     }
@@ -87,6 +158,7 @@ namespace o2
 
         mVersion = NextVersion();
         mMeshes.Clear();
+        mMeshBaked = false;
 
         return mValid;
     }
@@ -151,6 +223,26 @@ namespace o2
         return GetMeta()->defaultMode;
     }
 
+    void VectorImageAsset::SetScalableMesh(bool scalable)
+    {
+        GetMeta()->scalableMesh = scalable;
+    }
+
+    bool VectorImageAsset::IsScalableMesh() const
+    {
+        return GetMeta()->scalableMesh;
+    }
+
+    void VectorImageAsset::SetRasterized(bool rasterized)
+    {
+        GetMeta()->rasterized = rasterized;
+    }
+
+    bool VectorImageAsset::IsRasterized() const
+    {
+        return GetMeta()->rasterized;
+    }
+
     Ref<VectorImageMesh> VectorImageAsset::GetMesh(const Vec2F& pixelScale, bool pixelSnapped /*= true*/)
     {
         return GetMesh(pixelScale, BorderF(), false, pixelSnapped);
@@ -165,15 +257,16 @@ namespace o2
     bool VectorImageAsset::IsMeshBuilt(const Vec2F& pixelScale, const BorderF& slices /*= BorderF()*/,
                                        bool pixelSnapped /*= true*/) const
     {
-        Vec2F scale = mScalableMeshes ? Vec2F(1, 1) : QuantizePixelScale(pixelScale);
+        bool scalable = IsMeshScalable();
+        Vec2F scale = scalable ? Vec2F(1, 1) : QuantizePixelScale(pixelScale);
         bool sliced = slices != BorderF();
-        pixelSnapped = pixelSnapped && !mScalableMeshes;
+        pixelSnapped = pixelSnapped && !scalable;
 
         for (auto& cached : mMeshes)
         {
             if (cached->mesh.pixelScale.x == scale.x && cached->mesh.pixelScale.y == scale.y &&
                 cached->sliced == sliced && (!sliced || cached->slices == slices) &&
-                cached->pixelSnapped == pixelSnapped && cached->mesh.IsScalable() == mScalableMeshes)
+                cached->pixelSnapped == pixelSnapped && cached->mesh.IsScalable() == scalable)
             {
                 return true;
             }
@@ -190,6 +283,121 @@ namespace o2
         return Vec2F(Math::Max(scale.x, maxScale/maxPixelScaleRatio), Math::Max(scale.y, maxScale/maxPixelScaleRatio));
     }
 
+    bool VectorImageAsset::IsMeshScalable() const
+    {
+        if (mScalableMeshes)
+            return true;
+
+        auto meta = GetMeta();
+        return meta && meta->scalableMesh;
+    }
+
+    bool VectorImageAsset::IsMeshBaked() const
+    {
+        return mMeshBaked;
+    }
+
+    String VectorImageAsset::GetBakedMeshPath(const String& builtPath)
+    {
+        return builtPath + ".mesh";
+    }
+
+    bool VectorImageAsset::IsBakedMeshCurrent(const String& meshPath)
+    {
+        if (!o2FileSystem.IsFileExist(meshPath))
+            return false;
+
+        InFile file(meshPath);
+        BakedMeshHeader header;
+        return ReadBakedMeshHeader(file, header);
+    }
+
+    bool VectorImageAsset::BakeMesh(const String& svg, const String& meshPath)
+    {
+        VectorImage image;
+        String error;
+        Vector<String> warnings;
+        if (!SvgParser::Parse(svg, image, error, warnings) || image.shapes.IsEmpty())
+            return false;
+
+        VectorMesh mesh;
+        VectorTessellator::Tessellate(image, mesh, GetTessellationParams(Vec2F(1, 1), false, true));
+        if (!mesh.IsScalable())
+            return false;
+
+        BakedMeshHeader header;
+        header.sourceHash = HashSource(svg);
+        header.size[0] = mesh.size.x;
+        header.size[1] = mesh.size.y;
+        header.pixelScale[0] = mesh.pixelScale.x;
+        header.pixelScale[1] = mesh.pixelScale.y;
+        header.verticesCount = (UInt32)mesh.anchors.Count();
+        header.indexesCount = (UInt32)mesh.indexes.Count();
+
+        OutFile file(meshPath);
+        if (!file.IsOpened())
+            return false;
+
+        file.WriteData(&header, sizeof(header));
+        file.WriteData(mesh.anchors.Data(), header.verticesCount*sizeof(Vec2F));
+        file.WriteData(mesh.normals.Data(), header.verticesCount*sizeof(Vec2F));
+        file.WriteData(mesh.limits.Data(), header.verticesCount*sizeof(float));
+        file.WriteData(mesh.baseColors.Data(), header.verticesCount*sizeof(Color32Bit));
+        file.WriteData(mesh.indexes.Data(), header.indexesCount*sizeof(VertexIndex));
+
+        return true;
+    }
+
+    bool VectorImageAsset::LoadBakedMesh(const String& meshPath)
+    {
+        if (!o2FileSystem.IsFileExist(meshPath))
+            return false;
+
+        InFile file(meshPath);
+        BakedMeshHeader header;
+        if (!ReadBakedMeshHeader(file, header) || header.sourceHash != HashSource(mSource))
+        {
+            GetAssetsLogStream()->WarningStr("Vector image " + mInfo.path +
+                                             ": the baked mesh is of another source or engine version, rebuild the assets");
+            return false;
+        }
+
+        if (header.indexesCount%3 != 0 || header.verticesCount == 0)
+            return false;
+
+        auto res = mmake<VectorImageMesh>();
+        res->pixelSnapped = false;
+
+        VectorMesh& mesh = res->mesh;
+        mesh.size = Vec2F(header.size[0], header.size[1]);
+        mesh.anchors.resize(header.verticesCount);
+        mesh.normals.resize(header.verticesCount);
+        mesh.limits.resize(header.verticesCount);
+        mesh.baseColors.resize(header.verticesCount);
+        mesh.indexes.resize(header.indexesCount);
+
+        file.ReadData(mesh.anchors.Data(), header.verticesCount*sizeof(Vec2F));
+        file.ReadData(mesh.normals.Data(), header.verticesCount*sizeof(Vec2F));
+        file.ReadData(mesh.limits.Data(), header.verticesCount*sizeof(float));
+        file.ReadData(mesh.baseColors.Data(), header.verticesCount*sizeof(Color32Bit));
+        file.ReadData(mesh.indexes.Data(), header.indexesCount*sizeof(VertexIndex));
+
+        for (VertexIndex index : mesh.indexes)
+        {
+            if (index >= header.verticesCount)
+                return false;
+        }
+
+        mesh.positions.resize(header.verticesCount);
+        mesh.colors.resize(header.verticesCount);
+        mesh.Rescale(Vec2F(header.pixelScale[0], header.pixelScale[1]));
+
+        mMeshes.Add(res);
+        mMeshBaked = true;
+
+        return true;
+    }
+
     int VectorImageAsset::GetCachedMeshesCount() const
     {
         return mMeshes.Count();
@@ -198,6 +406,7 @@ namespace o2
     void VectorImageAsset::ClearMeshCache()
     {
         mMeshes.Clear();
+        mMeshBaked = false;
     }
 
     UInt VectorImageAsset::GetTessellationsCount()
@@ -210,13 +419,13 @@ namespace o2
         return mTessellationTime;
     }
 
-    Function<void(VectorImage&, const String&)>& VectorImageAsset::ImageRemap()
+    Function<bool(VectorImage&, const String&)>& VectorImageAsset::ImageRemap()
     {
-        static Function<void(VectorImage&, const String&)> remap;
+        static Function<bool(VectorImage&, const String&)> remap;
         return remap;
     }
 
-    void VectorImageAsset::SetImageRemap(const Function<void(VectorImage&, const String&)>& remap)
+    void VectorImageAsset::SetImageRemap(const Function<bool(VectorImage&, const String&)>& remap)
     {
         ImageRemap() = remap;
     }
@@ -250,14 +459,18 @@ namespace o2
     {
         SetSource(o2FileSystem.ReadFile(path));
 
+        bool remapped = false;
         auto& remap = ImageRemap();
-        if (remap && mValid)
+        if (remap && mValid && remap(mImage, path))
         {
-            remap(mImage, path);
-
+            remapped = true;
             mVersion = NextVersion();
             mMeshes.Clear();
         }
+
+        // The baked mesh is of the image as the file has it
+        if (mValid && !remapped && !mImage.shapes.IsEmpty() && IsMeshScalable())
+            LoadBakedMesh(GetBakedMeshPath(path));
 
         if (!mValid)
             GetAssetsLogStream()->ErrorStr("Failed to load vector image " + mInfo.path + ": " + mError);
@@ -284,14 +497,15 @@ namespace o2
             return nullptr;
 
         // A scalable mesh is one for all the scales, it is kept for the scale 1
-        Vec2F scale = mScalableMeshes ? Vec2F(1, 1) : QuantizePixelScale(pixelScale);
-        pixelSnapped = pixelSnapped && !mScalableMeshes;
+        bool scalable = IsMeshScalable();
+        Vec2F scale = scalable ? Vec2F(1, 1) : QuantizePixelScale(pixelScale);
+        pixelSnapped = pixelSnapped && !scalable;
 
         for (auto& cached : mMeshes)
         {
             if (cached->mesh.pixelScale.x == scale.x && cached->mesh.pixelScale.y == scale.y &&
                 cached->sliced == sliced && (!sliced || cached->slices == slices) &&
-                cached->pixelSnapped == pixelSnapped && cached->mesh.IsScalable() == mScalableMeshes)
+                cached->pixelSnapped == pixelSnapped && cached->mesh.IsScalable() == scalable)
             {
                 return cached;
             }
@@ -319,13 +533,8 @@ namespace o2
         }
         else
         {
-            VectorTessellationParams params;
-            params.pixelScale = scale;
-            params.pixelSnapped = pixelSnapped;
-            params.scalable = mScalableMeshes;
-
             auto start = std::chrono::steady_clock::now();
-            VectorTessellator::Tessellate(mImage, res->mesh, params);
+            VectorTessellator::Tessellate(mImage, res->mesh, GetTessellationParams(scale, pixelSnapped, scalable));
 
             double time = std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count();
             mTessellationsCount++;
@@ -356,7 +565,8 @@ namespace o2
             return false;
 
         Meta* otherMeta = (Meta*)other;
-        return sliceBorder == otherMeta->sliceBorder && defaultMode == otherMeta->defaultMode;
+        return sliceBorder == otherMeta->sliceBorder && defaultMode == otherMeta->defaultMode &&
+            scalableMesh == otherMeta->scalableMesh && rasterized == otherMeta->rasterized;
     }
 }
 

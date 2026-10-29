@@ -161,7 +161,8 @@ TEST_F(EditorThemeSwitch, ProjectArtKeepsItsColors)
     image.shapes[0].fill = VectorPaint::Solid(Color4(0, 156, 141));
 
     VectorImage projectImage = image;
-    VectorImageAsset::ImageRemap()(projectImage, o2Assets.GetAssetsTree().builtAssetsPath + "ui/UI4_Background.svg");
+    EXPECT_FALSE(VectorImageAsset::ImageRemap()(projectImage, o2Assets.GetAssetsTree().builtAssetsPath + "ui/UI4_Background.svg"))
+        << "an image left as it is keeps its baked mesh";
     EXPECT_EQ(projectImage.shapes[0].fill.color, Color4(0, 156, 141));
 
     auto editorAsset = AssetRef<VectorImageAsset>("ui/UI4_Background.svg");
@@ -169,7 +170,7 @@ TEST_F(EditorThemeSwitch, ProjectArtKeepsItsColors)
     ASSERT_TRUE(editorAsset->IsEditorAsset());
 
     VectorImage editorImage = image;
-    VectorImageAsset::ImageRemap()(editorImage, editorAsset->GetBuiltFullPath());
+    EXPECT_TRUE(VectorImageAsset::ImageRemap()(editorImage, editorAsset->GetBuiltFullPath()));
     EXPECT_NE(editorImage.shapes[0].fill.color, Color4(0, 156, 141));
 }
 

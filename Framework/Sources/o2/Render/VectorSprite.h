@@ -2,7 +2,9 @@
 
 #include "o2/Assets/Types/VectorImageAsset.h"
 #include "o2/Render/IRectDrawable.h"
+#include "o2/Render/Mesh.h"
 #include "o2/Render/RenderGeometry.h"
+#include "o2/Render/VectorRasterCache.h"
 #include "o2/Utils/Editor/Attributes/ScriptableAttribute.h"
 #include "o2/Utils/Math/Border.h"
 #include "o2/Utils/Math/Vertex.h"
@@ -27,6 +29,7 @@ namespace o2
             UInt64 rebuiltVertices = 0;   // Vertices whose positions were rebuilt from the image
             UInt64 shiftedVertices = 0;   // Vertices whose positions were only moved with the sprite
             UInt64 recoloredVertices = 0; // Vertices whose colors were written
+            UInt64 rasterDraws = 0;       // Draw calls of rasters from the atlas instead of the triangles
         };
 
     public:
@@ -106,7 +109,7 @@ namespace o2
         // Sets size with equal aspect as image by nearest value @SCRIPTABLE
         void NormalizeAspect();
 
-        // Returns count of triangles built at the last drawing
+        // Returns count of triangles built at the last drawing: of the raster quads when it was from the raster
         UInt GetTrianglesCount() const;
 
         // Returns count of vertices built at the last drawing
@@ -124,8 +127,17 @@ namespace o2
         // Returns how many times colors of vertices were written, with a rebuild or alone
         UInt GetColorUpdatesCount() const;
 
+        // Returns true when the last drawing took the raster of the image from the atlas instead of its triangles
+        bool IsDrawnFromRaster() const;
+
         // Returns how many triangles all vector sprites have sent to render since the start
         static UInt64 GetTotalDrawnTriangles();
+
+        // Sets are the sprites of the rasterized images drawn from their rasters in the atlas; on by default
+        static void SetRasterCacheEnabled(bool enabled);
+
+        // Returns are the sprites of the rasterized images drawn from their rasters
+        static bool IsRasterCacheEnabled();
 
         // Returns counters of all vector sprites since the start
         static const Statistics& GetStatistics();
@@ -150,7 +162,7 @@ namespace o2
         RectF                mBounds;     // Bounds of the vertices
 
         bool  mMeshDirty = true;      // Are vertices required to rebuild before drawing
-        bool  mMeshPostponed = false; // Is the mesh of the current scale left to be built at one of the next frames
+        bool  mMeshPostponed = false; // Is the mesh or the fringe of the current scale left to be built at one of the next frames
         bool  mBasisDirty = false;    // Was the basis set since the last drawing: vertices are rebuilt if it has changed
         bool  mColorDirty = false;    // Are only colors of vertices required to update before drawing
         Vec2F mMeshViewScale;         // Render view pixel scale the vertices are built for
@@ -161,11 +173,21 @@ namespace o2
         Vec2F mMeshSlicedSize;        // Size of the sliced image the vertices are built for
         float mMeshDepth = 0.0f;      // Depth the vertices are built for
         int   mMeshShiftsCount = 0;   // Count of the shifts of the vertices since they were built from the image
+        int   mFringeDelayFrames = 0; // Frames the fringe of a scalable mesh waits to be put for the new view scale
+
+        Ref<VectorRasterCache::Raster> mRaster;     // Raster drawn at the last drawing from the atlas
+        Ref<Mesh>                      mRasterMesh; // Quads of the raster
+        bool                           mDrawnFromRaster = false; // Was the last drawing from the raster
+
+        UInt mAssetFlagsVersion = 0;     // Image version the flags of its meta are read for
+        bool mAssetRasterized = false;   // Is the image drawn from its rasters, by its meta
+        bool mAssetScalableMesh = false; // Is the image drawn by one mesh for any scale, by its meta
         UInt  mMeshImageVersion = 0;  // Image version the vertices are built for
         UInt  mMeshRebuildsCount = 0; // Count of vertices positions rebuilds and shifts
         UInt  mColorUpdatesCount = 0; // Count of vertices colors updates
 
-        static Statistics mStatistics; // Counters of all vector sprites
+        static Statistics mStatistics;         // Counters of all vector sprites
+        static bool       mRasterCacheEnabled; // Are the rasterized images drawn from their rasters
 
     protected:
         // Called when basis was changed
@@ -191,6 +213,18 @@ namespace o2
 
         // Returns basis of the image rectangle for the mode and the size the sliced image is stretched to
         Basis GetImageBasis(Vec2F& slicedSize) const;
+
+        // Returns is the image drawn by one mesh for any scale, by its meta read once for its version
+        bool IsImageMeshScalable() const;
+
+        // Returns screen pixels per image unit by axes: in Sliced an axis with borders keeps the view scale alone
+        Vec2F GetPixelScale(const Basis& basis, const Vec2F& slicedSize, const Vec2F& viewPixelScale) const;
+
+        // Returns slice borders reduced by the half of their excess over the sliced size by axes
+        BorderF GetDrawSlices(const Vec2F& slicedSize) const;
+
+        // Draws the raster of the image from the atlas; false when there is no ready raster
+        bool DrawRaster(const Vec2F& viewPixelScale);
     };
 }
 // --- META ---
@@ -223,6 +257,13 @@ CLASS_FIELDS_META(o2::VectorSprite)
     FIELD().PROTECTED().NAME(mMeshSlicedSize);
     FIELD().PROTECTED().DEFAULT_VALUE(0.0f).NAME(mMeshDepth);
     FIELD().PROTECTED().DEFAULT_VALUE(0).NAME(mMeshShiftsCount);
+    FIELD().PROTECTED().DEFAULT_VALUE(0).NAME(mFringeDelayFrames);
+    FIELD().PROTECTED().NAME(mRaster);
+    FIELD().PROTECTED().NAME(mRasterMesh);
+    FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mDrawnFromRaster);
+    FIELD().PROTECTED().DEFAULT_VALUE(0).NAME(mAssetFlagsVersion);
+    FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mAssetRasterized);
+    FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mAssetScalableMesh);
     FIELD().PROTECTED().DEFAULT_VALUE(0).NAME(mMeshImageVersion);
     FIELD().PROTECTED().DEFAULT_VALUE(0).NAME(mMeshRebuildsCount);
     FIELD().PROTECTED().DEFAULT_VALUE(0).NAME(mColorUpdatesCount);
@@ -257,7 +298,10 @@ CLASS_METHODS_META(o2::VectorSprite)
     FUNCTION().PUBLIC().SIGNATURE(bool, IsMeshPixelSnapped);
     FUNCTION().PUBLIC().SIGNATURE(UInt, GetMeshRebuildsCount);
     FUNCTION().PUBLIC().SIGNATURE(UInt, GetColorUpdatesCount);
+    FUNCTION().PUBLIC().SIGNATURE(bool, IsDrawnFromRaster);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(UInt64, GetTotalDrawnTriangles);
+    FUNCTION().PUBLIC().SIGNATURE_STATIC(void, SetRasterCacheEnabled, bool);
+    FUNCTION().PUBLIC().SIGNATURE_STATIC(bool, IsRasterCacheEnabled);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(const Statistics&, GetStatistics);
     FUNCTION().PUBLIC().SIGNATURE(void, OnDeserialized, const DataValue&);
     FUNCTION().PUBLIC().SIGNATURE(void, OnDeserializedDelta, const DataValue&, const IObject&);
@@ -269,6 +313,10 @@ CLASS_METHODS_META(o2::VectorSprite)
     FUNCTION().PROTECTED().SIGNATURE(RenderGeometry&, GetChangingGeometry);
     FUNCTION().PROTECTED().SIGNATURE_STATIC(bool, IsOnWholePixels, const Basis&, const Vec2F&);
     FUNCTION().PROTECTED().SIGNATURE(Basis, GetImageBasis, Vec2F&);
+    FUNCTION().PROTECTED().SIGNATURE(bool, IsImageMeshScalable);
+    FUNCTION().PROTECTED().SIGNATURE(Vec2F, GetPixelScale, const Basis&, const Vec2F&, const Vec2F&);
+    FUNCTION().PROTECTED().SIGNATURE(BorderF, GetDrawSlices, const Vec2F&);
+    FUNCTION().PROTECTED().SIGNATURE(bool, DrawRaster, const Vec2F&);
 }
 END_META;
 // --- END META ---

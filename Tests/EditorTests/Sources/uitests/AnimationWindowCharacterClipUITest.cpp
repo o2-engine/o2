@@ -204,9 +204,14 @@ TEST(AnimationWindowCharacterClipUI, PreviewFramesAreFastAndStable)
         EXPECT_EQ(VectorImageAsset::GetTessellationsCount(), tessellations) << "a steady frame tessellates vector images";
 
         // Static scene: consecutive frames must be pixel-identical, differences mean flickering.
-        // The first captured frame is skipped: switching to a capture render target
-        // takes a frame to settle
-        tickFrame(true);
+        // A capture render target has another pixel scale: the sprites build its meshes one a frame first
+        for (int i = 0; i < 300; i++)
+        {
+            UInt64 rebuilt = VectorSprite::GetStatistics().rebuiltVertices;
+            tickFrame(true);
+            if (i > 0 && VectorSprite::GetStatistics().rebuiltVertices == rebuilt)
+                break;
+        }
 
         auto frameA = tickFrame(true);
         auto frameB = tickFrame(true);

@@ -9,6 +9,7 @@
 #include "o2/Physics/PhysicsWorld.h"
 #include "o2/Physics/PhysicsWorld3D.h"
 #include "o2/Render/Render.h"
+#include "o2/Render/VectorRasterCache.h"
 #include "o2/Scene/Scene.h"
 #include "o2/Scene/UI/UIManager.h"
 #include "o2/Sound/SoundSystem.h"
@@ -267,6 +268,8 @@ namespace o2
 		// draw commands and the render thread submits them, synchronizing each frame
 		mRender->SetMultithreadedRenderEnabled(true);
 
+		mVectorRasters = mmake<VectorRasterCache>();
+
 		o2Debug.InitializeFont();
 
 #if defined(O2_PROFILER_ENABLED)
@@ -316,6 +319,9 @@ namespace o2
         Assets::DestroySingleton(mAssets);
 
         SoundSystem::DestroySingleton(mSounds);
+
+        if (mVectorRasters)
+            VectorRasterCache::DestroySingleton(mVectorRasters);
 
         if (mRender)
             Render::DestroySingleton(mRender);

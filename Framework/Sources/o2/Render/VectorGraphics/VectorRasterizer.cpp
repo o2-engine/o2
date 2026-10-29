@@ -40,22 +40,29 @@ namespace o2
     void VectorRasterizer::Rasterize(const VectorMesh& mesh, Bitmap& bitmap, float scale /*= 1.0f*/,
                                      const Vec2F& offset /*= Vec2F()*/)
     {
+        Rasterize(mesh.positions.Data(), mesh.colors.Data(), mesh.indexes.Data(), (UInt)mesh.indexes.Count(), bitmap,
+                  Vec2F(scale, scale), offset);
+    }
+
+    void VectorRasterizer::Rasterize(const Vec2F* positions, const Color32Bit* colors, const VertexIndex* indexes,
+                                     UInt indexesCount, Bitmap& bitmap, const Vec2F& scale, const Vec2F& offset)
+    {
         if (bitmap.GetFormat() != PixelFormat::R8G8B8A8 || !bitmap.GetData())
             return;
 
         Vec2I size = bitmap.GetSize();
         UInt8* data = bitmap.GetData();
 
-        for (size_t i = 0; i + 2 < (size_t)mesh.indexes.Count(); i += 3)
+        for (size_t i = 0; i + 2 < (size_t)indexesCount; i += 3)
         {
             RasterVertex v[3];
             for (int k = 0; k < 3; k++)
             {
-                VertexIndex idx = mesh.indexes[i + k];
-                Color32Bit color = mesh.colors[idx];
+                VertexIndex idx = indexes[i + k];
+                Color32Bit color = colors[idx];
 
-                v[k].x = (double)mesh.positions[idx].x*scale + offset.x;
-                v[k].y = (double)mesh.positions[idx].y*scale + offset.y;
+                v[k].x = (double)positions[idx].x*scale.x + offset.x;
+                v[k].y = (double)positions[idx].y*scale.y + offset.y;
                 for (int channel = 0; channel < 4; channel++)
                     v[k].channels[channel] = (double)((color >> (channel*8)) & 0xFF)/255.0;
             }

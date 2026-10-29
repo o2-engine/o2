@@ -5,6 +5,7 @@
 #include "o2/Assets/Assets.h"
 #include "o2/Assets/Types/VectorImageAsset.h"
 #include "o2/Render/Render.h"
+#include "o2/Utils/FileSystem/File.h"
 #include "o2/Render/VectorSprite.h"
 #include "o2/Scene/UI/Widget.h"
 #include "o2/Scene/UI/WidgetLayer.h"
@@ -57,6 +58,156 @@ TEST(VectorImageAsset, MetaSerializationRoundTrip)
 
     loadedMeta->sliceBorder.left = 9;
     EXPECT_FALSE(meta->IsEqual(loadedMeta.Get())) << "the builder detects changed borders by IsEqual";
+}
+
+TEST(VectorImageAsset, ScalableMeshFlagIsSerializedAndRebuildsTheAsset)
+{
+    auto meta = mmake<VectorImageAsset::Meta>();
+    meta->scalableMesh = true;
+
+    DataDocument data;
+    data = Ref<AssetMeta>(meta);
+
+    Ref<AssetMeta> loaded;
+    data.Get(loaded);
+
+    auto loadedMeta = DynamicCast<VectorImageAsset::Meta>(loaded);
+    ASSERT_TRUE(loadedMeta);
+    EXPECT_TRUE(loadedMeta->scalableMesh);
+    EXPECT_TRUE(meta->IsEqual(loadedMeta.Get()));
+
+    loadedMeta->scalableMesh = false;
+    EXPECT_FALSE(meta->IsEqual(loadedMeta.Get())) << "the builder bakes or drops the mesh when the flag changes";
+}
+
+TEST(VectorImageAsset, ScalableMeshFromMetaIsOneForAnyScale)
+{
+    auto asset = mmake<VectorImageAsset>();
+    asset->GetMeta()->scalableMesh = true;
+    ASSERT_TRUE(asset->SetSource(Svg(20, 12, "<circle cx=\"10\" cy=\"6\" r=\"5\" fill=\"#00ff00\"/>")));
+    EXPECT_TRUE(asset->IsMeshScalable());
+    EXPECT_FALSE(VectorImageAsset::IsScalableMeshes()) << "the flag of one image, not of all";
+
+    UInt before = VectorImageAsset::GetTessellationsCount();
+    auto mesh = asset->GetMesh(Vec2F(1, 1), true);
+    ASSERT_TRUE(mesh);
+    EXPECT_TRUE(mesh->mesh.IsScalable());
+    EXPECT_FALSE(mesh->pixelSnapped) << "the fringe of a scalable mesh is put along every edge";
+
+    for (float scale : { 0.5f, 1.63f, 3.26f, 8.0f })
+        EXPECT_EQ(asset->GetMesh(Vec2F(scale, scale)), mesh) << "scale " << scale;
+
+    EXPECT_EQ(VectorImageAsset::GetTessellationsCount() - before, 1u);
+}
+
+TEST(VectorImageAsset, BakedMeshIsLoadedWithoutTessellation)
+{
+    const String svg = Svg(20, 12, String("<circle cx=\"10\" cy=\"6\" r=\"5\" fill=\"#00ff00\"/>") + rectBody);
+
+    TempVectorAssets assets;
+    assets.WriteSvg("baked", svg);
+    assets.WriteMeta("baked", BorderI(), SpriteMode::Default, true);
+    ASSERT_TRUE(VectorImageAsset::BakeMesh(svg, VectorImageAsset::GetBakedMeshPath(assets.GetSourcePath() +
+                                                                                    assets.GetPath("baked"))));
+    assets.AttachSources();
+
+    UInt before = VectorImageAsset::GetTessellationsCount();
+    AssetRef<VectorImageAsset> asset(assets.GetPath("baked"));
+    ASSERT_TRUE(asset);
+    EXPECT_TRUE(asset->IsMeshBaked());
+
+    auto mesh = asset->GetMesh(Vec2F(2, 2));
+    ASSERT_TRUE(mesh);
+    EXPECT_TRUE(asset->GetSlicedMesh(Vec2F(4, 4), BorderF(3, 3, 3, 3)));
+    EXPECT_EQ(VectorImageAsset::GetTessellationsCount(), before) << "neither loading nor any scale tessellates";
+
+    auto runtime = mmake<VectorImageAsset>();
+    runtime->GetMeta()->scalableMesh = true;
+    ASSERT_TRUE(runtime->SetSource(svg));
+    auto expected = runtime->GetMesh(Vec2F(1, 1));
+    ASSERT_TRUE(expected);
+    EXPECT_FALSE(runtime->IsMeshBaked());
+
+    const VectorMesh& a = mesh->mesh;
+    const VectorMesh& b = expected->mesh;
+    EXPECT_EQ(a.size, b.size);
+    EXPECT_EQ(a.pixelScale, b.pixelScale);
+    EXPECT_TRUE(a.indexes == b.indexes);
+    EXPECT_TRUE(a.anchors == b.anchors);
+    EXPECT_TRUE(a.normals == b.normals);
+    EXPECT_TRUE(a.limits == b.limits);
+    EXPECT_TRUE(a.baseColors == b.baseColors);
+    EXPECT_TRUE(a.positions == b.positions) << "the positions are put for the scale of the mesh on loading";
+    EXPECT_TRUE(a.colors == b.colors);
+}
+
+TEST(VectorImageAsset, BakedMeshOfAnotherSourceIsTessellatedAnew)
+{
+    const String baked = Svg(20, 12, rectBody);
+    const String changed = Svg(20, 12, "<circle cx=\"10\" cy=\"6\" r=\"5\" fill=\"#00ff00\"/>");
+
+    TempVectorAssets assets;
+    assets.WriteSvg("stale", changed);
+    assets.WriteMeta("stale", BorderI(), SpriteMode::Default, true);
+    ASSERT_TRUE(VectorImageAsset::BakeMesh(baked, VectorImageAsset::GetBakedMeshPath(assets.GetSourcePath() +
+                                                                                      assets.GetPath("stale"))));
+    assets.AttachSources();
+
+    AssetRef<VectorImageAsset> asset(assets.GetPath("stale"));
+    ASSERT_TRUE(asset);
+    EXPECT_FALSE(asset->IsMeshBaked());
+
+    UInt before = VectorImageAsset::GetTessellationsCount();
+    auto mesh = asset->GetMesh(Vec2F(2, 2));
+    ASSERT_TRUE(mesh);
+    EXPECT_TRUE(mesh->mesh.IsScalable());
+    EXPECT_EQ(VectorImageAsset::GetTessellationsCount() - before, 1u) << "the image of the file is tessellated once";
+}
+
+TEST(VectorImageAsset, BakedMeshOfAnotherLayoutIsNotCurrent)
+{
+    const String svg = Svg(20, 12, rectBody);
+
+    TempVectorAssets assets;
+    assets.WriteSvg("cut", svg);
+    assets.WriteMeta("cut", BorderI(), SpriteMode::Default, true);
+    String meshPath = VectorImageAsset::GetBakedMeshPath(assets.GetSourcePath() + assets.GetPath("cut"));
+    ASSERT_TRUE(VectorImageAsset::BakeMesh(svg, meshPath));
+    EXPECT_TRUE(VectorImageAsset::IsBakedMeshCurrent(meshPath));
+
+    InFile file(meshPath);
+    std::vector<char> data(file.GetDataSize());
+    file.ReadData(data.data(), (UInt)data.size());
+    file.Close();
+
+    OutFile cut(meshPath);
+    cut.WriteData(data.data(), (UInt)data.size() - 4);
+    cut.Close();
+
+    EXPECT_FALSE(VectorImageAsset::IsBakedMeshCurrent(meshPath)) << "the builder bakes it anew";
+
+    assets.AttachSources();
+    AssetRef<VectorImageAsset> asset(assets.GetPath("cut"));
+    ASSERT_TRUE(asset);
+    EXPECT_FALSE(asset->IsMeshBaked());
+    EXPECT_TRUE(asset->GetMesh(Vec2F(2, 2)));
+}
+
+TEST(VectorImageAsset, NotScalableImageIgnoresTheBakedMesh)
+{
+    const String svg = Svg(20, 12, rectBody);
+
+    TempVectorAssets assets;
+    assets.WriteSvg("plain", svg);
+    assets.WriteMeta("plain", BorderI(), SpriteMode::Default);
+    ASSERT_TRUE(VectorImageAsset::BakeMesh(svg, VectorImageAsset::GetBakedMeshPath(assets.GetSourcePath() +
+                                                                                    assets.GetPath("plain"))));
+    assets.AttachSources();
+
+    AssetRef<VectorImageAsset> asset(assets.GetPath("plain"));
+    ASSERT_TRUE(asset);
+    EXPECT_FALSE(asset->IsMeshBaked());
+    EXPECT_FALSE(asset->GetMesh(Vec2F(2, 2))->mesh.IsScalable());
 }
 
 TEST(VectorImageAsset, SetSourceParsesImage)
