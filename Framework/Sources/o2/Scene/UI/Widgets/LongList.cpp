@@ -233,10 +233,11 @@ namespace o2
     }
 
     void LongList::UpdateSelfTransform()
-{
-        UpdateVisibleItems();
-
+    {
+        // The items are laid out in the view area of the list, so it goes first
         ScrollArea::UpdateSelfTransform();
+
+        UpdateVisibleItems();
 
         if (Input::IsSingletonInitialzed())
             UpdateHover(o2Input.cursorPos);
@@ -331,6 +332,9 @@ namespace o2
 
             newItem->mParent = thisRef;
             newItem->mParentWidget = thisRef;
+
+            // A clone keeps the enabled state of the sample, out of any hierarchy, not the one of the list
+            newItem->UpdateResEnabled();
 
             itemsWidgets[i - mMinVisibleItemIdx] = newItem;
         }
