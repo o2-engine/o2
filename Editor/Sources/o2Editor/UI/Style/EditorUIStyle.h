@@ -28,6 +28,7 @@ namespace Editor
         void RebuildPanelDownButton();
         void RebuildTrashDownPanelButton();
         void RebuildMessagesDownPanelToggle();
+        void RebuildPreviewToolbarToggle();
         void RebuildWarningsDownPanelToggle();
         void RebuildErrorsDownPanelToggle();
         void RebuildFilterMenuButton();
@@ -214,6 +215,7 @@ CLASS_METHODS_META(Editor::EditorUIStyleBuilder)
     FUNCTION().PUBLIC().SIGNATURE(void, RebuildPanelDownButton);
     FUNCTION().PUBLIC().SIGNATURE(void, RebuildTrashDownPanelButton);
     FUNCTION().PUBLIC().SIGNATURE(void, RebuildMessagesDownPanelToggle);
+    FUNCTION().PUBLIC().SIGNATURE(void, RebuildPreviewToolbarToggle);
     FUNCTION().PUBLIC().SIGNATURE(void, RebuildWarningsDownPanelToggle);
     FUNCTION().PUBLIC().SIGNATURE(void, RebuildErrorsDownPanelToggle);
     FUNCTION().PUBLIC().SIGNATURE(void, RebuildFilterMenuButton);

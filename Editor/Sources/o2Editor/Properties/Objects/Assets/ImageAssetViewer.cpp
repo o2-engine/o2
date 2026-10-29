@@ -13,6 +13,7 @@
 #include "o2Editor/Properties/Properties.h"
 #include "o2Editor/UI/ImageSlicesEditorWidget.h"
 #include "o2Editor/Windows/SceneWindow/SceneEditScreen.h"
+#include "o2Editor/Windows/AssetPreviewWindow/AssetPreviewWindow.h"
 
 namespace Editor
 {
@@ -37,6 +38,11 @@ namespace Editor
         mSlicesEditor = mmake<ImageSlicesEditorWidget>();
         mSpoiler->AddChild(mSlicesEditor);
 
+        mSpoiler->AddChild(AssetPreviewWindow::CreateOpenButton([this]() {
+            auto asset = mAsset.Lock();
+            return asset ? AssetRef<Asset>(asset) : AssetRef<Asset>();
+        }));
+
         mAtlasProperty = DynamicCast<AssetProperty>(o2EditorProperties.CreateRegularField(
             &TypeOf(AssetRef<AtlasAsset>), "Atlas", mOnPropertyChangeCompleted, mOnPropertyChanged));
 
@@ -48,6 +54,7 @@ namespace Editor
         if (!targetObjets.IsEmpty())
         {
             auto image = dynamic_cast<ImageAsset*>(targetObjets.Last().first);
+            mAsset = WeakRef<Asset>(image);
             mSizeLabel->SetText("Size: " + String(image->GetSize().x) + "x" + String(image->GetSize().y));
 
             mSlicesEditor->Setup(AssetRef<ImageAsset>(dynamic_cast<ImageAsset*>(targetObjets.Last().first)->GetUID()),

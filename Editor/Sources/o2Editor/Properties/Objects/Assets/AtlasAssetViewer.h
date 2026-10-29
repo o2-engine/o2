@@ -31,6 +31,8 @@ namespace Editor
         Ref<Label>          mPagesLabel;     // Pages and images count label
         Ref<TexturePreview> mTexturePreview; // First page texture preview widget
 
+        WeakRef<Asset> mAsset; // Shown asset, for the preview window
+
     private:
         // Called when the viewer is refreshed, builds properties, and places them in mPropertiesContext
         void RebuildProperties(const Vector<Pair<IObject*, IObject*>>& targetObjets) override;
@@ -50,6 +52,7 @@ CLASS_FIELDS_META(Editor::AtlasAssetViewer)
 {
     FIELD().PRIVATE().NAME(mPagesLabel);
     FIELD().PRIVATE().NAME(mTexturePreview);
+    FIELD().PRIVATE().NAME(mAsset);
 }
 END_META;
 CLASS_METHODS_META(Editor::AtlasAssetViewer)

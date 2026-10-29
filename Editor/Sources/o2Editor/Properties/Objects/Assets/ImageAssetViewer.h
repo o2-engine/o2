@@ -39,6 +39,8 @@ namespace Editor
         Vector<Ref<IAbstractValueProxy>> mAtlasProxies;  // Atlas proxies for property, converts UID to AssetRef<AtlasAsset> and back
         Ref<AssetProperty>               mAtlasProperty; // Atlas property
 
+        WeakRef<Asset> mAsset; // Shown asset, for the preview window
+
     private:
         // Called when the viewer is refreshed, builds properties, and places them in mPropertiesContext
         void RebuildProperties(const Vector<Pair<IObject*, IObject*>>& targetObjets) override;
@@ -60,6 +62,7 @@ CLASS_FIELDS_META(Editor::ImageAssetViewer)
     FIELD().PRIVATE().NAME(mSlicesEditor);
     FIELD().PRIVATE().NAME(mAtlasProxies);
     FIELD().PRIVATE().NAME(mAtlasProperty);
+    FIELD().PRIVATE().NAME(mAsset);
 }
 END_META;
 CLASS_METHODS_META(Editor::ImageAssetViewer)

@@ -31,6 +31,8 @@ namespace Editor
 
         Ref<ImageSlicesEditorWidget> mSlicesEditor; // Preview with the slices editor
 
+        WeakRef<Asset> mAsset; // Shown asset, for the preview window
+
     private:
         // Called when the viewer is refreshed, builds properties, and places them in mPropertiesContext
         void RebuildProperties(const Vector<Pair<IObject*, IObject*>>& targetObjets) override;
@@ -52,6 +54,7 @@ CLASS_FIELDS_META(Editor::VectorImageAssetViewer)
     FIELD().PRIVATE().NAME(mMeshLabel);
     FIELD().PRIVATE().NAME(mErrorLabel);
     FIELD().PRIVATE().NAME(mSlicesEditor);
+    FIELD().PRIVATE().NAME(mAsset);
 }
 END_META;
 CLASS_METHODS_META(Editor::VectorImageAssetViewer)

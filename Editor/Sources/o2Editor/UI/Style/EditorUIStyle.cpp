@@ -1075,6 +1075,42 @@ namespace Editor
         o2UI.AddWidgetStyle(sample, "log messages");
     }
 
+    void EditorUIStyleBuilder::RebuildPreviewToolbarToggle()
+    {
+        Ref<Toggle> sample = mmake<Toggle>();
+        sample->layout->minSize = Vec2F(20, 20);
+
+        sample->AddLayer("regularBack", mmake<VectorSprite>("ui/UI4_panel_button.svg"), Layout::BothStretch(-4, -3, -5, -4));
+        sample->AddLayer("hover", mmake<VectorSprite>("ui/UI4_panel_button_select.svg"), Layout::BothStretch(-4, -3, -5, -4));
+        sample->AddLayer("pressed", mmake<VectorSprite>("ui/UI4_panel_button_pressed.svg"), Layout::BothStretch(-4, -3, -5, -4));
+
+        auto valueLayer = sample->AddLayer("value", mmake<VectorSprite>("ui/UI4_panel_button_pressed.svg"), Layout::BothStretch(-4, -3, -5, -4));
+        auto mark = mmake<Sprite>();
+        mark->SetColor(Color4(0, 150, 136, 255));
+        valueLayer->AddChildLayer("mark", mark, Layout::HorStretch(VerAlign::Bottom, 7, 8, 2, 5));
+
+        Ref<Text> captionText = mmake<Text>("stdFont.ttf");
+        captionText->text = "Toggle";
+        captionText->horAlign = HorAlign::Middle;
+        captionText->verAlign = VerAlign::Middle;
+        captionText->wordWrap = false;
+        captionText->color = Color4(96, 125, 139);
+        sample->AddLayer("caption", captionText, Layout::BothStretch(2, 0, 2, 0));
+
+        sample->AddState("hover", AnimationClip::EaseInOut("layer/hover/transparency", 0.0f, 1.0f, 0.1f))
+            ->offStateAnimationSpeed = 1.0f / 4.0f;
+
+        sample->AddState("pressed", AnimationClip::EaseInOut("layer/pressed/transparency", 0.0f, 1.0f, 0.05f))
+            ->offStateAnimationSpeed = 0.5f;
+
+        sample->AddState("value", AnimationClip::EaseInOut("layer/value/transparency", 0.0f, 1.0f, 0.1f));
+
+        sample->AddState("visible", AnimationClip::EaseInOut("transparency", 0.0f, 1.0f, 0.2f))
+            ->offStateAnimationSpeed = 0.5f;
+
+        o2UI.AddWidgetStyle(sample, "preview toolbar toggle");
+    }
+
     void EditorUIStyleBuilder::RebuildWarningsDownPanelToggle()
     {
         Ref<Toggle> sample = mmake<Toggle>();

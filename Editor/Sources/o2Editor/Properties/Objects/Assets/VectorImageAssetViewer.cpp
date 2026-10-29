@@ -6,6 +6,7 @@
 #include "o2/Utils/Editor/EditorScope.h"
 #include "o2Editor/Properties/Basic/BorderIntProperty.h"
 #include "o2Editor/UI/ImageSlicesEditorWidget.h"
+#include "o2Editor/Windows/AssetPreviewWindow/AssetPreviewWindow.h"
 
 namespace Editor
 {
@@ -38,6 +39,11 @@ namespace Editor
 
         mSlicesEditor = mmake<ImageSlicesEditorWidget>();
         mSpoiler->AddChild(mSlicesEditor);
+
+        mSpoiler->AddChild(AssetPreviewWindow::CreateOpenButton([this]() {
+            auto asset = mAsset.Lock();
+            return asset ? AssetRef<Asset>(asset) : AssetRef<Asset>();
+        }));
     }
 
     void VectorImageAssetViewer::OnRefreshed(const Vector<Pair<IObject*, IObject*>>& targetObjets)
@@ -49,6 +55,8 @@ namespace Editor
         auto image = dynamic_cast<VectorImageAsset*>(targetObjets.Last().first);
         if (!image)
             return;
+
+        mAsset = WeakRef<Asset>(image);
 
         Vec2F size = image->GetSize();
         mSizeLabel->SetText("Size: " + String(size.x) + "x" + String(size.y));

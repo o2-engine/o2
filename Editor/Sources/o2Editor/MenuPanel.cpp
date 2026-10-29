@@ -39,6 +39,7 @@
 #include "o2Editor/Windows/PropertiesWindow/PropertiesWindow.h"
 #include "o2Editor/Windows/SceneWindow/SceneWindow.h"
 #include "o2Editor/Windows/TreeWindow/SceneHierarchyTree.h"
+#include "o2Editor/Windows/TexturesWindow/TexturesWindow.h"
 #include "o2Editor/Windows/TreeWindow/TreeWindow.h"
 #include "o2Editor/Windows/WindowsManager.h"
 
@@ -90,18 +91,20 @@ namespace Editor
         });
 
         // VIEW
-        mMenuPanel->AddItem("View/Show Tree", [&]() { OnShowTreePressed(); });
-        mMenuPanel->AddItem("View/Show Scene", [&]() { OnShowScenePressed(); });
-        mMenuPanel->AddItem("View/Show Assets", [&]() { OnShowAssetsPressed(); });
-		mMenuPanel->AddItem("View/Show Properties", [&]() { OnShowPropertiesPressed(); });
-		mMenuPanel->AddItem("View/Show Animation", [&]() { OnShowAnimationPressed(); });
-		mMenuPanel->AddItem("View/Show Animation State graph", [&]() { OnShowAnimationStateGraphPressed(); });
-        mMenuPanel->AddItem("View/Show Pipeline", [&]() { OnShowPipelinePressed(); });
-        mMenuPanel->AddItem("View/Show Log", [&]() { OnShowLogPressed(); });
-        mMenuPanel->AddItem("View/Show Game", [&]() { OnShowGamePressed(); });
+        auto windowIcon = [](const char* path) { return AssetRef<Asset>(String(path)); };
+        mMenuPanel->AddItem("View/Show Tree", [&]() { OnShowTreePressed(); }, windowIcon("ui/UI4_tree_wnd_icon.svg"));
+        mMenuPanel->AddItem("View/Show Scene", [&]() { OnShowScenePressed(); }, windowIcon("ui/UI4_scene_icon.svg"));
+        mMenuPanel->AddItem("View/Show Assets", [&]() { OnShowAssetsPressed(); }, windowIcon("ui/UI4_folder_icon.svg"));
+        mMenuPanel->AddItem("View/Show Properties", [&]() { OnShowPropertiesPressed(); }, windowIcon("ui/UI4_gear_icon.svg"));
+        mMenuPanel->AddItem("View/Show Animation", [&]() { OnShowAnimationPressed(); }, windowIcon("ui/UI4_animation_icon.svg"));
+        mMenuPanel->AddItem("View/Show Animation State graph", [&]() { OnShowAnimationStateGraphPressed(); },
+                            windowIcon("ui/UI4_log_wnd_icon.svg"));
+        mMenuPanel->AddItem("View/Show Pipeline", [&]() { OnShowPipelinePressed(); }, windowIcon("ui/pipeline/window_icon.svg"));
+        mMenuPanel->AddItem("View/Show Log", [&]() { OnShowLogPressed(); }, windowIcon("ui/UI4_log_wnd_icon.svg"));
+        mMenuPanel->AddItem("View/Show Game", [&]() { OnShowGamePressed(); }, windowIcon("ui/UI4_game_icon.svg"));
 
 #if ENABLE_MEMORY_ANALYZE
-        mMenuPanel->AddItem("View/Show memory analyzer", [&]() { OnShowMemoryAnalyzerPressed(); });
+        mMenuPanel->AddItem("View/Show memory analyzer", [&]() { OnShowMemoryAnalyzerPressed(); }, windowIcon("ui/UI4_tree_wnd_icon.svg"));
 #endif
 
         mMenuPanel->AddItem("View/---");
@@ -136,21 +139,34 @@ namespace Editor
         mMenuPanel->AddItem("Run/Build & Run", [&]() { OnBuildAndRunPressed(); }, AssetRef<ImageAsset>(), ShortcutKeys({VK_R, VK_CTRL_CMD}));
         mMenuPanel->AddItem("Run/Build", [&]() { OnBuildPressed(); }, AssetRef<ImageAsset>(), ShortcutKeys({VK_R, VK_CTRL_CMD, VK_SHIFT}));
 
-        // HELP
-        mMenuPanel->AddItem("Help/About", [&]() { OnAboutPressed(); });
-        mMenuPanel->AddItem("Help/Documentation", [&]() { OnDocumentationPressed(); });
-
         // DEBUG
-        mMenuPanel->AddItem("Debug/Curve editor test", [&]() { OnCurveEditorTestPressed(); });
-        mMenuPanel->AddItem("Debug/Save layout as default", [&]() { OnSaveDefaultLayoutPressed(); });
-        mMenuPanel->AddItem("Debug/Add property", [&]() {
+        mMenuPanel->AddItem("Debug/Textures", [&]() { TexturesWindow::Show(); }, windowIcon("ui/UI4_image_component.svg"));
+
+        mMenuPanel->AddItem("Debug/---");
+
+        mMenuPanel->AddItem("Debug/Rebuild assets", [&]() { o2Assets.RebuildAssets(); });
+        mMenuPanel->AddItem("Debug/Rebuild assets forcible", [&]() { o2Assets.RebuildAssets(true); });
+
+        mMenuPanel->AddItem("Debug/---");
+
+        mMenuPanel->AddToggleItem("Debug/Vector raster cache", VectorSprite::IsRasterCacheEnabled(),
+                                  [](bool x) { VectorSprite::SetRasterCacheEnabled(x); });
+
+        mMenuPanel->AddItem("Debug/Dump memory", [&]() { o2Memory.DumpInfo(); });
+        mMenuPanel->AddItem("Debug/JS collect garbage", [&]() { o2Scripts.CollectGarbage(); });
+
+        mMenuPanel->AddItem("Debug/---");
+
+        mMenuPanel->AddItem("Debug/Engine development/Curve editor test", [&]() { OnCurveEditorTestPressed(); });
+        mMenuPanel->AddItem("Debug/Engine development/Save layout as default", [&]() { OnSaveDefaultLayoutPressed(); });
+        mMenuPanel->AddItem("Debug/Engine development/Add property", [&]() {
             static float xx = 0, yy = 1;
             ForcePopEditorScopeOnStack scope;
             auto prop = o2UI.CreateWidget<FloatProperty>("with caption");
             prop->SetValueAndPrototypeProxy({ { mmake<PointerValueProxy<float>>(&xx), mmake<PointerValueProxy<float>>(&yy) } });
-                            });
+        });
 
-        mMenuPanel->AddItem("Debug/Randomize IDs", [&]() {
+        mMenuPanel->AddItem("Debug/Engine development/Randomize IDs", [&]() {
             Function<void(const Ref<Actor>&)> fixActor = [&fixActor](const Ref<Actor>& actor) {
                 actor->GenerateNewID();
                 actor->GetComponents().ForEach([](auto comp) { comp->GenerateNewID(); });
@@ -161,21 +177,12 @@ namespace Editor
                 fixActor(actor);
         });
 
-        mMenuPanel->AddToggleItem("Debug/View editor UI tree", false, [&](bool x) { o2EditorTree.GetSceneTree()->SetEditorWatching(x); });
-        mMenuPanel->AddToggleItem("Debug/Scalable vector meshes", VectorImageAsset::IsScalableMeshes(),
+        mMenuPanel->AddToggleItem("Debug/Engine development/View editor UI tree", false,
+                                  [&](bool x) { o2EditorTree.GetSceneTree()->SetEditorWatching(x); });
+        mMenuPanel->AddToggleItem("Debug/Engine development/Scalable vector meshes", VectorImageAsset::IsScalableMeshes(),
                                   [](bool x) { VectorImageAsset::SetScalableMeshes(x); });
-        mMenuPanel->AddToggleItem("Debug/Text glyph meshes", Text::IsGlyphMeshesEnabled(),
+        mMenuPanel->AddToggleItem("Debug/Engine development/Text glyph meshes", Text::IsGlyphMeshesEnabled(),
                                   [](bool x) { Text::SetGlyphMeshesEnabled(x); });
-
-        mMenuPanel->AddToggleItem("Debug/Vector raster cache", VectorSprite::IsRasterCacheEnabled(),
-                                  [](bool x) { VectorSprite::SetRasterCacheEnabled(x); });
-
-        mMenuPanel->AddItem("Debug/Dump memory", [&]() { o2Memory.DumpInfo(); });
-
-        mMenuPanel->AddItem("Debug/JS collect garbage", [&]() { o2Scripts.CollectGarbage(); });
-
-        mMenuPanel->AddItem("Debug/Rebuild assets", [&]() { o2Assets.RebuildAssets(); });
-        mMenuPanel->AddItem("Debug/Rebuild assets forcible", [&]() { o2Assets.RebuildAssets(true); });
     }
 
     MenuPanel::~MenuPanel()
@@ -188,7 +195,7 @@ namespace Editor
     }
 
     void MenuPanel::AddItem(const WString& path, const Function<void()>& clickFunc /*= Function<void()>()*/,
-                            const AssetRef<ImageAsset>& icon /*= AssetRef<ImageAsset>()*/,
+                            const AssetRef<Asset>& icon /*= AssetRef<Asset>()*/,
                             const ShortcutKeys& shortcut /*= ShortcutKeys()*/)
     {
         mMenuPanel->AddItem(path, clickFunc, icon, shortcut);
@@ -397,16 +404,6 @@ namespace Editor
     }
 
     void MenuPanel::OnBuildPressed()
-    {
-
-    }
-
-    void MenuPanel::OnAboutPressed()
-    {
-
-    }
-
-    void MenuPanel::OnDocumentationPressed()
     {
 
     }

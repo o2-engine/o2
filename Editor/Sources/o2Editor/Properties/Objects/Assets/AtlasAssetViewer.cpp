@@ -1,6 +1,8 @@
 #include "o2Editor/stdafx.h"
 #include "AtlasAssetViewer.h"
 
+#include "o2Editor/Windows/AssetPreviewWindow/AssetPreviewWindow.h"
+
 #include "o2/Assets/Types/AtlasAsset.h"
 #include "o2/Scene/UI/UIManager.h"
 #include "o2/Scene/UI/Widgets/Label.h"
@@ -32,6 +34,11 @@ namespace Editor
         mTexturePreview->layout->minHeight = 300;
 
         mSpoiler->AddChild(mTexturePreview);
+
+        mSpoiler->AddChild(AssetPreviewWindow::CreateOpenButton([this]() {
+            auto asset = mAsset.Lock();
+            return asset ? AssetRef<Asset>(asset) : AssetRef<Asset>();
+        }));
     }
 
     void AtlasAssetViewer::OnRefreshed(const Vector<Pair<IObject*, IObject*>>& targetObjets)
@@ -47,6 +54,8 @@ namespace Editor
         auto atlas = dynamic_cast<AtlasAsset*>(targetObjets.Last().first);
         if (!atlas)
             return;
+
+        mAsset = WeakRef<Asset>(atlas);
 
         auto& pages = atlas->GetPages();
         mPagesLabel->SetText("Pages: " + (String)pages.Count() +

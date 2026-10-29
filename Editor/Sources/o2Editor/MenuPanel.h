@@ -27,7 +27,7 @@ namespace Editor
 
         // Adds item by path ("node/sub node/target")
         void AddItem(const WString& path, const Function<void()>& clickFunc = Function<void()>(),
-                     const AssetRef<ImageAsset>& icon = AssetRef<ImageAsset>(), const ShortcutKeys& shortcut = ShortcutKeys());
+                     const AssetRef<Asset>& icon = AssetRef<Asset>(), const ShortcutKeys& shortcut = ShortcutKeys());
 
         // Inserts item at position
         void InsertItem(const o2::MenuPanel::Item& item, int position);
@@ -121,12 +121,6 @@ namespace Editor
 
         // On Build/Build pressed in menu
         void OnBuildPressed();
-
-        // On Help/About pressed in menu
-        void OnAboutPressed();
-
-        // On Help/Documentation pressed in menu
-        void OnDocumentationPressed();
 
         // On Debug/Save layout as default pressed in menu
         void OnSaveDefaultLayoutPressed();
