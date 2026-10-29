@@ -153,6 +153,7 @@ namespace o2
         }
 
         mFileName = fileName;
+        mTexture->SetName("Font atlas " + fileName);
 
         return true;
     }
@@ -431,6 +432,7 @@ namespace o2
                 {
                     TextureRef lastTexture = mTexture;
                     mTexture = TextureRef(lastTexture->GetSize()*2, TextureFormat::R8G8B8A8, Texture::Usage::Default);
+                    mTexture->SetName(lastTexture->GetName());
                     mTexture->Copy(*lastTexture.Get(), RectI(Vec2I(0, 0), lastTexture->GetSize()));
 
                     for (auto& heightKV : mCharacters)

@@ -62,6 +62,11 @@ namespace o2
         return mImageVersion;
     }
 
+    int VectorRasterCache::Raster::GetPageIndex() const
+    {
+        return mPageIndex;
+    }
+
     bool VectorRasterCache::Key::operator<(const Key& other) const
     {
         if (version != other.version)
@@ -275,6 +280,23 @@ namespace o2
         return (float)(used/total);
     }
 
+    TextureRef VectorRasterCache::GetPageTexture(int index) const
+    {
+        if (index < 0 || index >= (int)mPages.size())
+            return TextureRef();
+
+        return mPages[index].texture;
+    }
+
+    Vector<Ref<VectorRasterCache::Raster>> VectorRasterCache::GetRasters() const
+    {
+        Vector<Ref<Raster>> rasters;
+        for (auto& kv : mRasters)
+            rasters.Add(kv.second);
+
+        return rasters;
+    }
+
     const VectorRasterCache::Statistics& VectorRasterCache::GetStatistics()
     {
         return mStatistics;
@@ -328,6 +350,7 @@ namespace o2
 
         Page page;
         page.texture = TextureRef(Vec2I(pageSize, pageSize), TextureFormat::R8G8B8A8, Texture::Usage::Default);
+        page.texture->SetName("Vector rasters page " + (String)(int)mPages.size());
         mPages.push_back(page);
 
         if (TakeCellOnPage(mPages.back(), size, cell))

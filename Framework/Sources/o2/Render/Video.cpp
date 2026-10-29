@@ -355,6 +355,7 @@ namespace o2
         mFrameBitmap->Fill(Color4::Black());
 
         mTexture = TextureRef(mVideoSize, TextureFormat::R8G8B8A8, Texture::Usage::Default);
+        mTexture->SetName("Video " + (mVideoAsset ? mVideoAsset->GetPath() : String()));
         mMesh.SetTexture(mTexture);
 
         mTextureSrcRect = RectI(Vec2I(), mVideoSize);

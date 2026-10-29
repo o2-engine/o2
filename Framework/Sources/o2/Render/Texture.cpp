@@ -374,6 +374,16 @@ namespace o2
         return mFileName;
     }
 
+    void Texture::SetName(const String& name)
+    {
+        mName = name;
+    }
+
+    const String& Texture::GetName() const
+    {
+        return mName;
+    }
+
     bool Texture::IsReady() const
     {
         return mReady;

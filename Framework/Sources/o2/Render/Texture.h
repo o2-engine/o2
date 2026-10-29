@@ -137,6 +137,12 @@ namespace o2
         // Returns texture file name
         String GetFileName() const;
 
+        // Sets name of the texture for debugging: a texture made from data has no file name
+        void SetName(const String& name);
+
+        // Returns name of the texture for debugging, empty when it is not set
+        const String& GetName() const;
+
         // Sets texture filter
         void SetFilter(Filter filter);
 
@@ -180,6 +186,7 @@ namespace o2
         Usage         mUsage;                        // Texture usage
 
         String mFileName; // Source file name
+        String mName;     // Name for debugging
 
         UID mAtlasAssetId; // Atlas asset id. Equals 0 if it isn't atlas texture
         int mAtlasPage;    // Atlas page

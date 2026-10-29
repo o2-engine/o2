@@ -40,6 +40,8 @@ Besides 2D primitives, the renderer supports 3D meshes (`o2::Mesh3DFill`), skinn
 
 Debug draw modes (`Render::SetDebugDrawMode(mode, color)`) change the triangles of the next draw calls: `Wireframe` draws their edges in lines of the color without textures, `Overdraw` fills them with the color added up (`BlendMode::Add`) without textures, so the brightness counts the layers; `Normal` draws them as they are. Line draw calls are drawn as they are in every mode. The editor Scene window turns them on while it draws the scene content.
 
+Textures for debugging: `Render::GetTextures()` returns every alive texture, the ones of files and atlas pages first, then the ones made from data; `Texture::SetName` gives a texture made from data a name (the pages of the vector rasters, the glyph atlases of the vector fonts and the video frames have theirs), `GetName` returns it. `VectorRasterCache::GetPageTexture(index)` and `GetRasters()` show the pages and the alive rasters, `Raster::GetPageIndex` the page of a cell. The editor window Debug/Textures lists them ([editor](/Docs/en/Editor/editor.md)).
+
 ### Frame counters
 `o2Render.GetDrawCallsCount()` and `GetDrawnPrimitives()` report what the whole frame cost.
 `GetSceneDrawCallsCount()` and `GetSceneDrawnPrimitives()` report only the part drawn outside of an

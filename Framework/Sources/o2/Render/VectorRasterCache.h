@@ -54,6 +54,9 @@ namespace o2
             // Returns version of the image rasterized
             UInt GetImageVersion() const;
 
+            // Returns index of the page of the cell
+            int GetPageIndex() const;
+
         protected:
             enum class State { Rasterizing, Ready, Freed };
 
@@ -119,6 +122,12 @@ namespace o2
 
         // Returns part of the pages area the cells take
         float GetUsage() const;
+
+        // Returns texture of the page by index
+        TextureRef GetPageTexture(int index) const;
+
+        // Returns the alive rasters, the ones being rasterized too
+        Vector<Ref<Raster>> GetRasters() const;
 
         // Returns counters since the start
         static const Statistics& GetStatistics();

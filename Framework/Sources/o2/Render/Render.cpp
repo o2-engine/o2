@@ -2171,6 +2171,18 @@ namespace o2
 		return mCurrentRenderTarget;
 	}
 
+	Vector<TextureRef> Render::GetTextures() const
+	{
+		Vector<TextureRef> textures = mTextures;
+		for (auto& texture : mDataTextures)
+		{
+			if (auto alive = texture.Lock())
+				textures.Add(TextureRef(alive));
+		}
+
+		return textures;
+	}
+
 	Vec2I Render::GetMaxTextureSize() const
 	{
 		return mMaxTextureSize;

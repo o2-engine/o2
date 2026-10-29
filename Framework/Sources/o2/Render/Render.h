@@ -390,6 +390,9 @@ namespace o2
 		// Returns current render target. Returns NULL if no render target
 		TextureRef GetRenderTexture() const;
 
+		// Returns every alive texture: of files and atlas pages, then the ones made from data
+		Vector<TextureRef> GetTextures() const;
+
 		// Returns maximum texture size
 		Vec2I GetMaxTextureSize() const;
 
