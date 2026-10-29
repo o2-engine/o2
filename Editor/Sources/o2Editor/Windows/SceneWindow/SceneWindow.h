@@ -3,6 +3,8 @@
 #include "o2/Utils/Singleton.h"
 #include "o2Editor/Windows/IAssetEditorWindow.h"
 #include "o2/Assets/Types/SceneAsset.h"
+#include "o2/Scene/UI/Widgets/ContextMenu.h"
+#include "o2Editor/Windows/SceneWindow/SceneEditScreen.h"
 
 namespace o2
 {
@@ -38,7 +40,8 @@ namespace Editor
 
         Ref<Button> mView3DButton; // 3D view mode toggle button
 
-        Ref<Button> mCameraModeButton; // Stable/scene camera pipeline toggle button
+        Ref<Button>      mRenderModeButton; // Render mode button, its caption is the mode
+        Ref<ContextMenu> mRenderModeMenu;   // Render modes menu
 
         Ref<Button>      mGizmosButton; // Gizmos view button
         Ref<GizmosPopup> mGizmosPopup;  // Gizmos view settings popup
@@ -59,6 +62,9 @@ namespace Editor
     protected:
         // Initializes window and controls
         void InitializeWindow() override;
+
+        // Puts the mode to the caption of the render mode button and checks its menu item alone
+        void OnRenderModeChanged(SceneRenderMode mode);
 
         // Returns window title
         String GetWindowTitle() const override;
@@ -102,7 +108,8 @@ CLASS_FIELDS_META(Editor::SceneWindow)
     FIELD().PROTECTED().NAME(mLayersButton);
     FIELD().PROTECTED().NAME(mLayersPopup);
     FIELD().PROTECTED().NAME(mView3DButton);
-    FIELD().PROTECTED().NAME(mCameraModeButton);
+    FIELD().PROTECTED().NAME(mRenderModeButton);
+    FIELD().PROTECTED().NAME(mRenderModeMenu);
     FIELD().PROTECTED().NAME(mGizmosButton);
     FIELD().PROTECTED().NAME(mGizmosPopup);
 }
@@ -115,6 +122,7 @@ CLASS_METHODS_META(Editor::SceneWindow)
     FUNCTION().PUBLIC().CONSTRUCTOR(RefCounter*, const SceneWindow&);
     FUNCTION().PUBLIC().SIGNATURE(const Type&, GetAssetType);
     FUNCTION().PROTECTED().SIGNATURE(void, InitializeWindow);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnRenderModeChanged, SceneRenderMode);
     FUNCTION().PROTECTED().SIGNATURE(String, GetWindowTitle);
     FUNCTION().PROTECTED().SIGNATURE(void, PostInitializeWindow);
     FUNCTION().PROTECTED().SIGNATURE(bool, IsCreateNewAssetAtStartupEnabled);

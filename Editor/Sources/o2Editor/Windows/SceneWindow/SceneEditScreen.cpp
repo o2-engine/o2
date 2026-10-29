@@ -36,6 +36,8 @@
 #include "o2Editor/Windows/TreeWindow/TreeWindow.h"
 #include "o2Editor/Windows/WindowsManager.h"
 #include "o2Editor/Windows/SceneWindow/SceneWindow.h"
+#include "o2/Scene/SceneDrawableCategory.h"
+#include "o2Editor/UI/Style/EditorTheme.h"
 
 DECLARE_SINGLETON(Editor::SceneEditScreen);
 
@@ -544,17 +546,47 @@ namespace Editor
 
     void SceneEditScreen::SetStableCameraMode(bool stable)
     {
-        if (mStableCameraMode == stable)
-            return;
-
-        mStableCameraMode = stable;
-        NeedRedraw();
-        onStableCameraModeChanged(stable);
+        if (IsStableCameraMode() != stable)
+            SetRenderMode(stable ? SceneRenderMode::Stable : SceneRenderMode::Camera);
     }
 
     bool SceneEditScreen::IsStableCameraMode() const
     {
-        return mStableCameraMode;
+        return mRenderMode != SceneRenderMode::Camera;
+    }
+
+    void SceneEditScreen::SetRenderMode(SceneRenderMode mode)
+    {
+        if (mRenderMode == mode)
+            return;
+
+        bool wasStable = IsStableCameraMode();
+        mRenderMode = mode;
+        NeedRedraw();
+
+        onRenderModeChanged(mode);
+        if (wasStable != IsStableCameraMode())
+            onStableCameraModeChanged(IsStableCameraMode());
+    }
+
+    SceneRenderMode SceneEditScreen::GetRenderMode() const
+    {
+        return mRenderMode;
+    }
+
+    String SceneEditScreen::GetRenderModeName(SceneRenderMode mode)
+    {
+        switch (mode)
+        {
+            case SceneRenderMode::Camera:          return "Scene camera";
+            case SceneRenderMode::Stable:          return "Stable camera";
+            case SceneRenderMode::Unlit:           return "Unlit";
+            case SceneRenderMode::Wireframe:       return "Wireframe";
+            case SceneRenderMode::ShadedWireframe: return "Shaded wireframe";
+            case SceneRenderMode::Overdraw:        return "Overdraw";
+        }
+
+        return "";
     }
 
     const Ref<RenderPipeline>& SceneEditScreen::GetEditRenderPipeline() const
@@ -564,7 +596,7 @@ namespace Editor
 
     Ref<RenderPipeline> SceneEditScreen::ResolveScenePipeline() const
     {
-        if (!mStableCameraMode && !o2Scene.GetCameras().IsEmpty())
+        if (mRenderMode == SceneRenderMode::Camera && !o2Scene.GetCameras().IsEmpty())
         {
             if (auto sceneCamera = o2Scene.GetCameras()[0].Lock())
             {
@@ -603,7 +635,39 @@ namespace Editor
                 context.layers.Add(layer);
         }
 
+        bool rawAlbedo = ScenePassFilters::IsRawAlbedoMode();
+        if (mRenderMode == SceneRenderMode::Unlit)
+            ScenePassFilters::SetRawAlbedoMode(true);
+
+        if (mRenderMode == SceneRenderMode::Overdraw)
+        {
+            // The overdraw heat adds up over a dark background
+            Camera sceneCamera = o2Render.GetCamera();
+            o2Render.SetCamera(Camera());
+
+            Vec2F half = Vec2F(o2Render.GetCurrentResolution())*0.5f;
+            o2Render.DrawFilledPolygon({ Vec2F(-half.x, -half.y), Vec2F(half.x, -half.y), Vec2F(half.x, half.y),
+                                         Vec2F(-half.x, half.y) }, Color4(14, 14, 18));
+
+            o2Render.SetCamera(sceneCamera);
+            o2Render.SetDebugDrawMode(Render::DebugDrawMode::Overdraw, Color4(30, 12, 4));
+        }
+        else if (mRenderMode == SceneRenderMode::Wireframe)
+        {
+            o2Render.SetDebugDrawMode(Render::DebugDrawMode::Wireframe,
+                                      EditorTheme::IsDark() ? Color4(190, 196, 204) : Color4(40, 44, 52));
+        }
+
         pipeline->Execute(context);
+
+        if (mRenderMode == SceneRenderMode::ShadedWireframe)
+        {
+            o2Render.SetDebugDrawMode(Render::DebugDrawMode::Wireframe, Color4(0, 0, 0, 150));
+            pipeline->Execute(context);
+        }
+
+        o2Render.SetDebugDrawMode(Render::DebugDrawMode::Normal);
+        ScenePassFilters::SetRawAlbedoMode(rawAlbedo);
 
         o2Scene.EndDrawingScene();
 
@@ -1394,6 +1458,17 @@ namespace Editor
 
 DECLARE_TEMPLATE_CLASS(o2::LinkRef<Editor::SceneEditScreen>);
 // --- META ---
+
+ENUM_META(Editor::SceneRenderMode, Editor__SceneRenderMode)
+{
+    ENUM_ENTRY(Camera);
+    ENUM_ENTRY(Overdraw);
+    ENUM_ENTRY(ShadedWireframe);
+    ENUM_ENTRY(Stable);
+    ENUM_ENTRY(Unlit);
+    ENUM_ENTRY(Wireframe);
+}
+END_ENUM_META;
 
 DECLARE_CLASS(Editor::SceneEditScreen, Editor__SceneEditScreen);
 // --- END META ---

@@ -236,6 +236,12 @@ namespace o2
 		if (mClippingEverything)
 			return;
 
+		if (mDebugDrawMode != DebugDrawMode::Normal && !mDrawingDebugBuffer && primitiveType != PrimitiveType::Line)
+		{
+			DrawBufferInDebugMode(vertices, verticesCount, vertexType, indexes, elementsCount);
+			return;
+		}
+
 		UInt indexesCount;
 		if (primitiveType == PrimitiveType::Line)
 			indexesCount = elementsCount * 2;
@@ -320,6 +326,65 @@ namespace o2
 
 		if (primitiveType != PrimitiveType::Line)
 			mTrianglesCount += elementsCount;
+	}
+
+	void Render::SetDebugDrawMode(DebugDrawMode mode, const Color4& color /*= Color4::White()*/)
+	{
+		mDebugDrawMode = mode;
+		mDebugDrawColor = color;
+	}
+
+	Render::DebugDrawMode Render::GetDebugDrawMode() const
+	{
+		return mDebugDrawMode;
+	}
+
+	void Render::DrawBufferInDebugMode(const UInt8* vertices, UInt verticesCount, const VertexType& vertexType,
+									   VertexIndex* indexes, UInt trianglesCount)
+	{
+		if (!vertexType.HasParam(VertexParam::Position))
+			return;
+
+		size_t stride = vertexType.GetStride();
+		size_t positionOffset = vertexType.GetParamOffset(VertexParam::Position);
+		Color32Bit color = mDebugDrawColor.ABGR();
+
+		mDebugVertices.resize(verticesCount);
+		for (UInt i = 0; i < verticesCount; i++)
+		{
+			const float* position = reinterpret_cast<const float*>(vertices + i*stride + positionOffset);
+			mDebugVertices[i] = Vertex(position[0], position[1], position[2], color, 0.0f, 0.0f);
+		}
+
+		mDrawingDebugBuffer = true;
+
+		if (mDebugDrawMode == DebugDrawMode::Wireframe)
+		{
+			mDebugIndexes.resize((size_t)trianglesCount*6);
+			for (UInt i = 0; i < trianglesCount; i++)
+			{
+				VertexIndex a = indexes[i*3], b = indexes[i*3 + 1], c = indexes[i*3 + 2];
+				VertexIndex* line = mDebugIndexes.data() + (size_t)i*6;
+				line[0] = a; line[1] = b; line[2] = b; line[3] = c; line[4] = c; line[5] = a;
+			}
+
+			DrawBuffer(PrimitiveType::Line, reinterpret_cast<const UInt8*>(mDebugVertices.data()), verticesCount,
+					   Vertex::Type(), mDebugIndexes.data(), trianglesCount*3, mDefaultMaterial, TextureRef(), RectI(),
+					   false, nullptr);
+		}
+		else
+		{
+			if (!mOverdrawMaterial)
+			{
+				mOverdrawMaterial = mmake<Material>();
+				mOverdrawMaterial->SetBlendMode(BlendMode::Add);
+			}
+
+			DrawBuffer(PrimitiveType::Polygon, reinterpret_cast<const UInt8*>(mDebugVertices.data()), verticesCount,
+					   Vertex::Type(), indexes, trianglesCount, mOverdrawMaterial, TextureRef(), RectI(), false, nullptr);
+		}
+
+		mDrawingDebugBuffer = false;
 	}
 
 	void Render::DrawBufferChunked(PrimitiveType primitiveType, const UInt8* vertices, UInt verticesCount,
@@ -2227,3 +2292,13 @@ namespace o2
 	}
 #endif
 }
+// --- META ---
+
+ENUM_META(o2::Render::DebugDrawMode, o2__Render__DebugDrawMode)
+{
+    ENUM_ENTRY(Normal);
+    ENUM_ENTRY(Overdraw);
+    ENUM_ENTRY(Wireframe);
+}
+END_ENUM_META;
+// --- END META ---

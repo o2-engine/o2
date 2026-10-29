@@ -3,6 +3,7 @@ extern void __RegisterEnum__o2__HttpError();
 extern void __RegisterEnum__o2__HttpCachePolicy();
 extern void __RegisterEnum__o2__HttpBackendType();
 extern void __RegisterEnum__o2__Camera__Projection();
+extern void __RegisterEnum__o2__Render__DebugDrawMode();
 extern void __RegisterEnum__o2__Shader__Type();
 extern void __RegisterEnum__o2__SkinnedModelData__AnimationChannel__Path();
 extern void __RegisterEnum__o2__Texture__Usage();
@@ -312,6 +313,7 @@ extern void InitializeTypeso2Framework()
     __RegisterEnum__o2__HttpCachePolicy();
     __RegisterEnum__o2__HttpBackendType();
     __RegisterEnum__o2__Camera__Projection();
+    __RegisterEnum__o2__Render__DebugDrawMode();
     __RegisterEnum__o2__Shader__Type();
     __RegisterEnum__o2__SkinnedModelData__AnimationChannel__Path();
     __RegisterEnum__o2__Texture__Usage();

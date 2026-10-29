@@ -38,6 +38,8 @@ A scene frame is assembled by the `o2::RenderPipeline` pipeline from `o2::Render
 
 Besides 2D primitives, the renderer supports 3D meshes (`o2::Mesh3DFill`), skinned meshes (`o2::SkinningMesh`) and Spine skeletons (`o2::Spine`).
 
+Debug draw modes (`Render::SetDebugDrawMode(mode, color)`) change the triangles of the next draw calls: `Wireframe` draws their edges in lines of the color without textures, `Overdraw` fills them with the color added up (`BlendMode::Add`) without textures, so the brightness counts the layers; `Normal` draws them as they are. Line draw calls are drawn as they are in every mode. The editor Scene window turns them on while it draws the scene content.
+
 ### Frame counters
 `o2Render.GetDrawCallsCount()` and `GetDrawnPrimitives()` report what the whole frame cost.
 `GetSceneDrawCallsCount()` and `GetSceneDrawnPrimitives()` report only the part drawn outside of an

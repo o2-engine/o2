@@ -36,6 +36,10 @@ namespace Editor
     FORWARD_CLASS_REF(SceneEditorLayer);
     FORWARD_CLASS_REF(SceneHierarchyTree);
 
+    // How the scene window draws the scene: through the scene camera pipeline or the default one, without the
+    // lighting, by the edges of the triangles, the edges over the filled triangles, or the overdraw heat
+    enum class SceneRenderMode { Camera, Stable, Unlit, Wireframe, ShadedWireframe, Overdraw };
+
     // --------------------
     // Scene editing screen
     // --------------------
@@ -47,6 +51,8 @@ namespace Editor
         Function<void(bool)> onView3DModeChanged; // 3D view mode toggle event
 
         Function<void(bool)> onStableCameraModeChanged; // Stable camera mode toggle event
+
+        Function<void(SceneRenderMode)> onRenderModeChanged; // Render mode change event
 
         // Default constructor
         SceneEditScreen(RefCounter* refCounter);
@@ -92,8 +98,17 @@ namespace Editor
         // pipelines (offscreen passes, screen shaders) can't distort the editing view
         void SetStableCameraMode(bool stable);
 
-        // Returns is the stable camera mode enabled
+        // Returns is the stable camera mode enabled: any render mode but the scene camera one
         bool IsStableCameraMode() const;
+
+        // Sets how the scene is drawn; every mode but Camera draws through the default forward 3D/2D pipeline
+        void SetRenderMode(SceneRenderMode mode);
+
+        // Returns how the scene is drawn
+        SceneRenderMode GetRenderMode() const;
+
+        // Returns name of the render mode for the menus
+        static String GetRenderModeName(SceneRenderMode mode);
 
         // Returns the pipeline the edit view renders with: the first scene camera one, or the
         // default forward pipeline in stable camera mode or when the scene has no cameras
@@ -275,7 +290,7 @@ namespace Editor
         Ref<RenderPipeline> mEditPipeline;                 // Edit-view-owned clone of the scene camera's pipeline
         RenderPipeline*     mEditPipelineSource = nullptr; // Source pipeline the clone was made from (identity only, never dereferenced)
 
-        bool mStableCameraMode = false; // Ignore the scene camera pipeline, draw with the default one
+        SceneRenderMode mRenderMode = SceneRenderMode::Camera; // How the scene is drawn
 
         bool mFlyNavigation3D = false; // Is fly navigation active: right mouse held in 3D mode, WASD/QE moves camera
         bool mAltOrbit3D = false;      // Is alt+left mouse orbit navigation active in 3D mode
@@ -466,6 +481,8 @@ namespace Editor
 }
 // --- META ---
 
+PRE_ENUM_META(Editor::SceneRenderMode);
+
 CLASS_BASES_META(Editor::SceneEditScreen)
 {
     BASE_CLASS(o2::Singleton<SceneEditScreen>);
@@ -479,6 +496,7 @@ CLASS_FIELDS_META(Editor::SceneEditScreen)
     FIELD().PUBLIC().NAME(onSelectionChanged);
     FIELD().PUBLIC().NAME(onView3DModeChanged);
     FIELD().PUBLIC().NAME(onStableCameraModeChanged);
+    FIELD().PUBLIC().NAME(onRenderModeChanged);
     FIELD().PROTECTED().DEFAULT_VALUE(Color4(220, 220, 220, 255)).NAME(mSelectedObjectColor);
     FIELD().PROTECTED().DEFAULT_VALUE(Color4(220, 220, 220, 100)).NAME(mMultiSelectedObjectColor);
     FIELD().PROTECTED().DEFAULT_VALUE(EditorTheme::Get().selectionOutline).NAME(mSelectionOutlineColor);
@@ -506,7 +524,7 @@ CLASS_FIELDS_META(Editor::SceneEditScreen)
     FIELD().PROTECTED().DEFAULT_VALUE(true).NAME(mSelectionVisible);
     FIELD().PROTECTED().NAME(mEditPipeline);
     FIELD().PROTECTED().DEFAULT_VALUE(nullptr).NAME(mEditPipelineSource);
-    FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mStableCameraMode);
+    FIELD().PROTECTED().DEFAULT_VALUE(SceneRenderMode::Camera).NAME(mRenderMode);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mFlyNavigation3D);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mAltOrbit3D);
 }
@@ -528,6 +546,9 @@ CLASS_METHODS_META(Editor::SceneEditScreen)
     FUNCTION().PUBLIC().SIGNATURE(bool, IsView3DMode);
     FUNCTION().PUBLIC().SIGNATURE(void, SetStableCameraMode, bool);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsStableCameraMode);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetRenderMode, SceneRenderMode);
+    FUNCTION().PUBLIC().SIGNATURE(SceneRenderMode, GetRenderMode);
+    FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetRenderModeName, SceneRenderMode);
     FUNCTION().PUBLIC().SIGNATURE(Ref<RenderPipeline>, ResolveScenePipeline);
     FUNCTION().PUBLIC().SIGNATURE(const Ref<RenderPipeline>&, GetEditRenderPipeline);
     FUNCTION().PUBLIC().SIGNATURE(SceneView3DState&, GetView3DState);

@@ -18,6 +18,7 @@ extern void __RegisterEnum__Editor__LogWindow__LogMessage__Type();
 extern void __RegisterEnum__Editor__PipelineMediaControls__Mode();
 extern void __RegisterEnum__Editor__PipelineThemeKind();
 extern void __RegisterEnum__Editor__SceneDragHandle3D__PickShape__Type();
+extern void __RegisterEnum__Editor__SceneRenderMode();
 extern void __RegisterEnum__Editor__DrawOrderTree__OrderTreeNode__Type();
 extern void __RegisterTemplateClass__Editor__KeyFramesTrackControl_AnimationTrack_float__();
 extern void __RegisterTemplateClass__Editor__KeyFramesTrackControl_AnimationTrack_bool__();
@@ -274,6 +275,7 @@ extern void InitializeTypeso2Editor()
     __RegisterEnum__Editor__PipelineMediaControls__Mode();
     __RegisterEnum__Editor__PipelineThemeKind();
     __RegisterEnum__Editor__SceneDragHandle3D__PickShape__Type();
+    __RegisterEnum__Editor__SceneRenderMode();
     __RegisterEnum__Editor__DrawOrderTree__OrderTreeNode__Type();
     __RegisterTemplateClass__Editor__KeyFramesTrackControl_AnimationTrack_float__();
     __RegisterTemplateClass__Editor__KeyFramesTrackControl_AnimationTrack_bool__();

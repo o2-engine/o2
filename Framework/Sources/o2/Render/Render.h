@@ -52,6 +52,9 @@ namespace o2
 	class Render: public RenderBase, public Singleton<Render>
 	{
 	public:
+		// Ways the triangles of the draw calls are drawn, for debug views of a scene
+		enum class DebugDrawMode { Normal, Wireframe, Overdraw };
+
 		// ---------------------
 		// Scissor clipping info
 		// ---------------------
@@ -342,6 +345,10 @@ namespace o2
 						   const TextureRef& texture, bool allowVertexConversion);
 
 		// Draws geometry that exceeds batch buffers capacity by splitting it into re-indexed chunks
+		// Draws the triangles as the debug mode asks: their edges by lines or the fill added up
+		void DrawBufferInDebugMode(const UInt8* vertices, UInt verticesCount, const VertexType& vertexType,
+								   VertexIndex* indexes, UInt trianglesCount);
+
 		void DrawBufferChunked(PrimitiveType primitiveType, const UInt8* vertices, UInt verticesCount,
 							   const VertexType& vertexType, VertexIndex* indexes, UInt elementsCount,
 							   const Ref<Material>& material, const TextureRef& overrideTexture,
@@ -406,6 +413,13 @@ namespace o2
 
 		// Returns current override material
 		const Ref<Material>& GetOverrideMaterial() const;
+
+		// Sets how the triangles of the next draw calls are drawn: as they are, by their edges in lines of the color,
+		// or filled with the color added up over each other without textures. Lines are drawn as they are
+		void SetDebugDrawMode(DebugDrawMode mode, const Color4& color = Color4::White());
+
+		// Returns how the triangles of the draw calls are drawn
+		DebugDrawMode GetDebugDrawMode() const;
 
 		// Returns true when material's color attachment formats match the currently bound render targets
 		bool IsMaterialCompatibleWithCurrentTargets(const Ref<Material>& material) const;
@@ -497,6 +511,13 @@ namespace o2
 		Vector<TextureRef> mRenderTargetsStack; // Saved render targets for Push/PopRenderTargets pairs
 
 		Ref<Material> mOverrideMaterial; // Material that overrides all draw call materials when set
+
+		DebugDrawMode             mDebugDrawMode = DebugDrawMode::Normal; // How the triangles of the draw calls are drawn
+		Color4                    mDebugDrawColor;           // Color of the lines or of the added up fill
+		Ref<Material>             mOverdrawMaterial;         // Material adding the fill up, built at the first use
+		std::vector<Vertex>       mDebugVertices;            // Vertices of a draw call in the debug mode
+		std::vector<VertexIndex>  mDebugIndexes;             // Lines of the triangles of a draw call
+		bool                      mDrawingDebugBuffer = false; // Is a draw call of the debug mode being drawn
 
 		bool mMRTUnsupportedWarned = false; // One-time warning flag for MRT fallback
 
@@ -771,3 +792,7 @@ namespace o2
 		friend struct ApplicationPlatformWrapper;
 	};
 }
+// --- META ---
+
+PRE_ENUM_META(o2::Render::DebugDrawMode);
+// --- END META ---

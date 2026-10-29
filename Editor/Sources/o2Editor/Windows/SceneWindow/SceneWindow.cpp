@@ -4,6 +4,7 @@
 #include "o2/Scene/UI/UIManager.h"
 #include "o2/Scene/UI/WidgetLayout.h"
 #include "o2/Scene/UI/Widgets/Button.h"
+#include "o2/Scene/UI/Widgets/ContextMenu.h"
 #include "o2/Scene/UI/Widgets/CustomDropDown.h"
 #include "o2Editor/Windows/SceneWindow/GizmosPopup.h"
 #include "o2Editor/Windows/SceneWindow/LayersPopup.h"
@@ -81,18 +82,45 @@ namespace Editor
             mView3DButton->caption = enabled ? WString("2D") : WString("3D");
         };
 
-        // like the 3D button, the caption shows the mode the click switches to: a custom scene
-        // camera pipeline (offscreen passes, screen shaders) can distort the edit view, the
-        // stable camera falls back to the default forward 3D/2D pipeline
-        mCameraModeButton = o2UI.CreateWidget<Button>("panel down");
-        mCameraModeButton->caption = "Stable cam";
-        *mCameraModeButton->layout = WidgetLayout::VerStretch(HorAlign::Right, 0, 0, 90, 150);
-        mUpPanel->AddChild(mCameraModeButton);
+        // A custom scene camera pipeline (offscreen passes, screen shaders) can distort the edit view: every mode
+        // but the scene camera one draws through the default forward 3D/2D pipeline
+        mRenderModeButton = o2UI.CreateWidget<Button>("panel down");
+        mRenderModeButton->name = "render mode";
+        mRenderModeButton->caption = SceneEditScreen::GetRenderModeName(mEditWidget->GetRenderMode());
+        mRenderModeButton->layout->minWidth = 130;
+        mUpPanel->AddChild(mRenderModeButton);
 
-        mCameraModeButton->onClick = [&]() { mEditWidget->SetStableCameraMode(!mEditWidget->IsStableCameraMode()); };
-        mEditWidget->onStableCameraModeChanged = [&](bool stable) {
-            mCameraModeButton->caption = stable ? WString("Scene cam") : WString("Stable cam");
-        };
+        mRenderModeMenu = o2UI.CreateWidget<ContextMenu>();
+        mRenderModeMenu->name = "render modes";
+        for (auto mode : { SceneRenderMode::Camera, SceneRenderMode::Stable, SceneRenderMode::Unlit,
+                           SceneRenderMode::Wireframe, SceneRenderMode::ShadedWireframe, SceneRenderMode::Overdraw })
+        {
+            auto item = mRenderModeMenu->AddToggleItem(SceneEditScreen::GetRenderModeName(mode),
+                                                       mEditWidget->GetRenderMode() == mode, [](bool) {});
+            item->onChecked = [this, mode](bool) { mEditWidget->SetRenderMode(mode); };
+        }
+
+        mWindow->AddChild(mRenderModeMenu);
+
+        mRenderModeButton->onClick = [&]() { mRenderModeMenu->Show(mRenderModeButton->layout->GetWorldLeftBottom()); };
+        mEditWidget->onRenderModeChanged = [&](SceneRenderMode mode) { OnRenderModeChanged(mode); };
+    }
+
+    void SceneWindow::OnRenderModeChanged(SceneRenderMode mode)
+    {
+        WString name = SceneEditScreen::GetRenderModeName(mode);
+        mRenderModeButton->caption = name;
+
+        // The item widgets are built when the menu shows: the items keep the checks till then
+        for (auto& item : mRenderModeMenu->GetItems())
+        {
+            if (!item->checkable)
+                continue;
+
+            item->checked = item->text == name;
+            if (auto widget = item->widget.Lock())
+                widget->SetChecked(item->checked);
+        }
     }
 
     String SceneWindow::GetWindowTitle() const

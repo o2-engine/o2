@@ -35,5 +35,13 @@ drawn in both modes: in 3D over the 3D components content, in 2D over the 2D gra
 covers the whole enabled hierarchy of the selected actor — its drawing components and the components
 of all its children; disabled objects and components are skipped, widget layers are not included.
 
-### Camera mode
-By default the edit view renders the scene through the render pipeline of the first scene camera, so the picture matches the game. A custom pipeline (offscreen passes, screen shaders) can distort the editing view; the camera mode button at the top switches to a stable camera that draws through the default forward 3D/2D pipeline. The caption shows the mode the click switches to: `Stable cam` / `Scene cam`.
+### Render mode
+The render mode button at the top shows the mode and opens the menu of the modes (`SceneEditScreen::SetRenderMode`, `SceneRenderMode`):
+- **Scene camera** (default) — through the render pipeline of the first scene camera, so the picture matches the game.
+- **Stable camera** — through the default forward 3D/2D pipeline: a custom pipeline (offscreen passes, screen shaders) can distort the editing view.
+- **Unlit** — the default pipeline without the baked shading of the 3D meshes (`ScenePassFilters::SetRawAlbedoMode`); 2D has no lighting.
+- **Wireframe** — the edges of the triangles in lines, without the fill and the textures.
+- **Shaded wireframe** — the edges over the filled triangles.
+- **Overdraw** — the triangles add a constant color up over a dark background, without textures: the brighter, the more layers are drawn there.
+
+Every mode but Scene camera draws through the default pipeline. The debug modes apply to the scene content only: the grid, the selection, the gizmos and the other windows are drawn as they are (`Render::SetDebugDrawMode`, see [render](/Docs/en/Architecture/LowLevel/render.md)). A raster of a vector sprite from the atlas is two triangles in Wireframe and Overdraw.
