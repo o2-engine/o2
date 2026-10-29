@@ -2,8 +2,12 @@
 #include <gtest/gtest.h>
 
 #include "EditorVectorUIFixture.h"
+#include "o2/Assets/Types/VectorImageAsset.h"
 #include "o2/Render/Pipeline/RenderPipeline.h"
 #include "o2/Render/Render.h"
+#include "o2/Render/VectorSprite.h"
+#include "o2/Utils/Editor/EditorScope.h"
+#include "o2Editor/Windows/GameWindow/GameWindow.h"
 #include "o2/Scene/CameraActor.h"
 #include "o2/Scene/Components/ImageComponent.h"
 #include "o2/Scene/Scene.h"
@@ -109,6 +113,7 @@ TEST(SceneRenderMode, DrawingLeavesTheRenderAsItWas)
 
         EXPECT_EQ(o2Render.GetDebugDrawMode(), Render::DebugDrawMode::Normal) << SceneEditScreen::GetRenderModeName(mode);
         EXPECT_FALSE(ScenePassFilters::IsRawAlbedoMode()) << SceneEditScreen::GetRenderModeName(mode);
+        EXPECT_EQ(VectorSprite::GetDetailView(), VectorSprite::DetailView::Own) << SceneEditScreen::GetRenderModeName(mode);
 
         if (mode == SceneRenderMode::Wireframe)
             EXPECT_LT(triangles, filled) << "the triangles of the scene are drawn by their edges";
@@ -116,6 +121,56 @@ TEST(SceneRenderMode, DrawingLeavesTheRenderAsItWas)
         if (mode == SceneRenderMode::ShadedWireframe)
             EXPECT_GE(triangles, filled) << "the filled triangles stay under the edges";
     }
+}
+
+// The scene window is a look at the game: its zoom magnifies vector sprites as the Game window details them
+TEST(SceneRenderMode, VectorSpritesKeepTheDetailOfTheGameWindow)
+{
+    SceneCleanGuard guard;
+    RenderModeGuard modeGuard;
+    auto& screen = o2EditorSceneScreen;
+
+    *screen.layout = WidgetLayout::Based(BaseCorner::LeftBottom, Vec2F(800.0f, 600.0f));
+    screen.UpdateSelfTransform();
+    screen.SetView3DMode(false);
+
+    // The game camera shows 25x18.75 units in 400x300 pixels: 16 pixels a unit, unlike the scene window at any density
+    auto camera = mmake<CameraActor>();
+    camera->SetFixedSize(Vec2F(25.0f, 18.75f));
+
+    auto widget = mmake<Widget>();
+    auto sprite = mmake<VectorSprite>(AssetRef<VectorImageAsset>("ui/UI4_Background.svg"));
+    widget->AddLayer("image", sprite);
+    *widget->layout = WidgetLayout::Based(BaseCorner::Center, Vec2F(8.0f, 5.0f));
+    TickScene();
+
+    Ref<GameWindow::GameView> gameView;
+    {
+        PushEditorScopeOnStack scope;
+        gameView = mmake<GameWindow::GameView>();
+    }
+
+    gameView->resolution = Vec2I(400, 300);
+    *gameView->layout = WidgetLayout::Based(BaseCorner::LeftBottom, Vec2F(400.0f, 300.0f));
+    gameView->UpdateSelfTransform();
+    gameView->UpdateRenderTargetSize();
+
+    o2Render.Begin();
+    gameView->Draw();
+    o2Render.End();
+
+    Vec2F gameMeshScale = sprite->GetMeshPixelScale();
+    ASSERT_NE(gameMeshScale, Vec2F()) << "the Game window draws the sprite";
+
+    Camera zoomed;
+    zoomed.SetScale(Vec2F(0.5f, 0.5f));
+    screen.SetCamera(zoomed);
+    DrawScreen();
+
+    EXPECT_EQ(sprite->GetMeshPixelScale(), gameMeshScale) << "the zoom of the scene window does not detail the sprite";
+    EXPECT_EQ(VectorSprite::GetDetailView(), VectorSprite::DetailView::Own);
+
+    screen.SetCamera(Camera());
 }
 
 class SceneRenderModeToolbar: public EditorVectorUIFixture

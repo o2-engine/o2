@@ -13,6 +13,7 @@ extern void __RegisterEnum__o2__VectorFillRule();
 extern void __RegisterEnum__o2__VectorLineCap();
 extern void __RegisterEnum__o2__VectorLineJoin();
 extern void __RegisterEnum__o2__VectorPaintType();
+extern void __RegisterEnum__o2__VectorSprite__DetailView();
 extern void __RegisterEnum__o2__Actor__State();
 extern void __RegisterEnum__o2__ActorCreateMode();
 extern void __RegisterEnum__o2__CameraActor__Type();
@@ -323,6 +324,7 @@ extern void InitializeTypeso2Framework()
     __RegisterEnum__o2__VectorLineCap();
     __RegisterEnum__o2__VectorLineJoin();
     __RegisterEnum__o2__VectorPaintType();
+    __RegisterEnum__o2__VectorSprite__DetailView();
     __RegisterEnum__o2__Actor__State();
     __RegisterEnum__o2__ActorCreateMode();
     __RegisterEnum__o2__CameraActor__Type();

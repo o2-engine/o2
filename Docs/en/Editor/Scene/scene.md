@@ -45,3 +45,5 @@ The render mode button at the top shows the mode and opens the menu of the modes
 - **Overdraw** — the triangles add a constant color up over a dark background, without textures: the brighter, the more layers are drawn there.
 
 Every mode but Scene camera draws through the default pipeline. The debug modes apply to the scene content only: the grid, the selection, the gizmos and the other windows are drawn as they are (`Render::SetDebugDrawMode`, see [render](/Docs/en/Architecture/LowLevel/render.md)). A raster of a vector sprite from the atlas is two triangles in Wireframe and Overdraw.
+
+The Scene window is a look at the game: vector sprites are drawn with the detail of the Game window (the raster and the mesh it takes), and the zoom magnifies them as they are instead of rasterizing them anew; a sprite the Game window has not drawn yet is detailed as at 100% zoom (`VectorSprite::DetailView`, see [render](/Docs/en/Architecture/LowLevel/render.md)).

@@ -1382,6 +1382,94 @@ TEST_F(VectorSpriteRender, UnusedRastersGiveTheirCellsToNewOnes)
     o2VectorRasters.Clear();
 }
 
+namespace
+{
+    struct DetailViewGuard
+    {
+        ~DetailViewGuard() { VectorSprite::SetDetailView(VectorSprite::DetailView::Own); }
+    };
+}
+
+// The editor's scene window: its zoom magnifies the raster the game window draws, it asks no rasters of its own
+TEST_F(VectorSpriteRender, DeveloperViewMagnifiesTheRasterOfTheGame)
+{
+    DetailViewGuard guard;
+    o2VectorRasters.Clear();
+    o2VectorRasters.Flush();
+
+    VectorSprite sprite(GetAsset("rasterShapes"));
+    sprite.SetRect(RectF(-100, -20, -36, 20));
+
+    VectorSprite::SetDetailView(VectorSprite::DetailView::Game);
+    DrawRasterized({ &sprite });
+    ASSERT_TRUE(sprite.IsDrawnFromRaster());
+    Vec2F gameScale = sprite.GetRasterScale();
+    int rasters = o2VectorRasters.GetRastersCount();
+
+    VectorSprite::SetDetailView(VectorSprite::DetailView::Developer);
+    for (float cameraScale : { 0.5f, 0.25f, 2.0f })
+    {
+        DrawRasterized({ &sprite }, cameraScale);
+        EXPECT_TRUE(sprite.IsDrawnFromRaster()) << cameraScale;
+        EXPECT_EQ(sprite.GetRasterScale(), gameScale) << cameraScale;
+    }
+
+    EXPECT_EQ(o2VectorRasters.GetRastersCount(), rasters) << "the zoom of the developer view asks no rasters";
+
+    VectorSprite::SetDetailView(VectorSprite::DetailView::Own);
+    DrawRasterized({ &sprite }, 0.25f);
+    EXPECT_NEAR(sprite.GetRasterScale().x, gameScale.x*4.0f, 0.01f) << "its own view details the raster for the zoom";
+}
+
+// A sprite the game has not drawn yet is detailed for the developer view without its zoom
+TEST_F(VectorSpriteRender, DeveloperViewOfSpriteNotInTheGameTakesTheViewWithoutZoom)
+{
+    DetailViewGuard guard;
+
+    VectorSprite reference(GetAsset("rasterShapes")), sprite(GetAsset("rasterShapes"));
+    reference.SetRect(RectF(-100, -20, -36, 20));
+    sprite.SetRect(RectF(-100, -20, -36, 20));
+
+    DrawRasterized({ &reference });
+    ASSERT_TRUE(reference.IsDrawnFromRaster());
+
+    VectorSprite::SetDetailView(VectorSprite::DetailView::Developer);
+    DrawRasterized({ &sprite }, 0.25f);
+    EXPECT_TRUE(sprite.IsDrawnFromRaster());
+    EXPECT_EQ(sprite.GetRasterScale(), reference.GetRasterScale());
+}
+
+// The game and the developer views of one frame take the same mesh: the vertices are not rebuilt for each
+TEST_F(VectorSpriteRender, GameAndDeveloperViewsShareTheMeshOfTheGame)
+{
+    DetailViewGuard guard;
+
+    VectorSprite sprite(GetAsset("shapes"));
+    sprite.SetRect(RectF(-100, -20, -36, 20));
+
+    auto drawBothViews = [&]()
+    {
+        VectorSprite::SetDetailView(VectorSprite::DetailView::Game);
+        DrawAndCapture([&]() { sprite.Draw(); });
+        VectorSprite::SetDetailView(VectorSprite::DetailView::Developer);
+        DrawAndCapture([&]() { sprite.Draw(); }, 0.25f);
+    };
+
+    drawBothViews();
+    Vec2F gameMeshScale = sprite.GetMeshPixelScale();
+    UInt rebuilds = sprite.GetMeshRebuildsCount();
+
+    for (int i = 0; i < 3; i++)
+        drawBothViews();
+
+    EXPECT_EQ(sprite.GetMeshPixelScale(), gameMeshScale);
+    EXPECT_EQ(sprite.GetMeshRebuildsCount(), rebuilds) << "one mesh for both views";
+
+    VectorSprite::SetDetailView(VectorSprite::DetailView::Own);
+    DrawAndCapture([&]() { sprite.Draw(); }, 0.25f);
+    EXPECT_EQ(sprite.GetMeshPixelScale(), gameMeshScale*4.0f) << "its own view takes the mesh of the zoom";
+}
+
 TEST_F(VectorSpriteRender, StillSpriteIsDrawnFromGpuCopyWithoutRenderThread)
 {
     if (o2Render.IsMultithreadedRenderSupported())

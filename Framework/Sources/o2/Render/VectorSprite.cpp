@@ -63,6 +63,7 @@ namespace o2
 
     VectorSprite::Statistics VectorSprite::mStatistics;
     bool VectorSprite::mRasterCacheEnabled = true;
+    VectorSprite::DetailView VectorSprite::mDetailView = VectorSprite::DetailView::Own;
 
     VectorSprite::VectorSprite()
     {
@@ -175,7 +176,9 @@ namespace o2
             bool rasterized = mRasterCacheEnabled && mAssetRasterized && !GetMaterial() &&
                 VectorRasterCache::IsSingletonInitialzed();
 
-            mDrawnFromRaster = rasterized && DrawRaster(viewPixelScale);
+            Vec2F detailScale = GetDetailViewScale(viewPixelScale);
+
+            mDrawnFromRaster = rasterized && DrawRaster(detailScale);
             if (mDrawnFromRaster)
             {
                 OnDrawn();
@@ -183,10 +186,10 @@ namespace o2
             }
 
             if (mMeshDirty || mBasisDirty || mMeshPostponed || mMeshImageVersion != mImageAsset->GetVersion() ||
-                viewPixelScale.x != mMeshViewScale.x || viewPixelScale.y != mMeshViewScale.y ||
+                detailScale.x != mMeshViewScale.x || detailScale.y != mMeshViewScale.y ||
                 (mSourceMesh && mSourceMesh->mesh.IsScalable() != IsImageMeshScalable()))
             {
-                UpdateMesh(viewPixelScale);
+                UpdateMesh(detailScale);
             }
             else if (mColorDirty)
                 UpdateColors();
@@ -345,6 +348,36 @@ namespace o2
     bool VectorSprite::IsRasterCacheEnabled()
     {
         return mRasterCacheEnabled;
+    }
+
+    Vec2F VectorSprite::GetRasterScale() const
+    {
+        return mDrawnFromRaster && mRaster ? mRaster->GetScale() : Vec2F();
+    }
+
+    void VectorSprite::SetDetailView(DetailView view)
+    {
+        mDetailView = view;
+    }
+
+    VectorSprite::DetailView VectorSprite::GetDetailView()
+    {
+        return mDetailView;
+    }
+
+    Vec2F VectorSprite::GetDetailViewScale(const Vec2F& viewPixelScale)
+    {
+        if (mDetailView == DetailView::Game)
+            mGameViewScale = viewPixelScale;
+
+        if (mDetailView != DetailView::Developer)
+            return viewPixelScale;
+
+        if (mGameViewScale != Vec2F())
+            return mGameViewScale;
+
+        float density = o2Render.GetTargetPixelDensity();
+        return Vec2F(density, density);
     }
 
     const VectorSprite::Statistics& VectorSprite::GetStatistics()
@@ -865,6 +898,14 @@ namespace o2
     }
 }
 // --- META ---
+
+ENUM_META(o2::VectorSprite::DetailView, o2__VectorSprite__DetailView)
+{
+    ENUM_ENTRY(Developer);
+    ENUM_ENTRY(Game);
+    ENUM_ENTRY(Own);
+}
+END_ENUM_META;
 
 DECLARE_CLASS(o2::VectorSprite, o2__VectorSprite);
 // --- END META ---

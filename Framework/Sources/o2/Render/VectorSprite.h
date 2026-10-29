@@ -32,6 +32,14 @@ namespace o2
             UInt64 rasterDraws = 0;       // Draw calls of rasters from the atlas instead of the triangles
         };
 
+        // ---------------------------------------------------------------------------------------------
+        // View the detail of the sprites is taken for: the raster scale, the mesh scale step and the fringe.
+        // Own - the target they are drawn into. Game - the same, and the sprite remembers it as the game's.
+        // Developer - the game's remembered one, so the view zoom magnifies the sprite as the game draws it;
+        // a sprite not drawn in the game yet takes the view without its zoom
+        // ---------------------------------------------------------------------------------------------
+        enum class DetailView { Own, Game, Developer };
+
     public:
         PROPERTIES(VectorSprite);
         PROPERTY(AssetRef<VectorImageAsset>, image, SetImageAsset, GetImageAsset); // Sets image asset @SCRIPTABLE
@@ -130,6 +138,15 @@ namespace o2
         // Returns true when the last drawing took the raster of the image from the atlas instead of its triangles
         bool IsDrawnFromRaster() const;
 
+        // Returns pixels per image unit of the raster of the last drawing, zero when it was by the triangles
+        Vec2F GetRasterScale() const;
+
+        // Sets the view the detail of the sprites drawn from now on is taken for; Own by default
+        static void SetDetailView(DetailView view);
+
+        // Returns the view the detail of the sprites is taken for
+        static DetailView GetDetailView();
+
         // Returns how many triangles all vector sprites have sent to render since the start
         static UInt64 GetTotalDrawnTriangles();
 
@@ -165,7 +182,8 @@ namespace o2
         bool  mMeshPostponed = false; // Is the mesh or the fringe of the current scale left to be built at one of the next frames
         bool  mBasisDirty = false;    // Was the basis set since the last drawing: vertices are rebuilt if it has changed
         bool  mColorDirty = false;    // Are only colors of vertices required to update before drawing
-        Vec2F mMeshViewScale;         // Render view pixel scale the vertices are built for
+        Vec2F mMeshViewScale;         // View pixel scale of the detail the vertices are built for
+        Vec2F mGameViewScale;         // View pixel scale of the last drawing in the game view, zero before it
         Vec2F mMeshFringeScale;       // Screen pixels per image unit the fringe of a scalable mesh is put for
 
         Vector<Color32Bit> mScaledColors; // Colors of a scalable mesh at the fringe scale, empty for the other meshes
@@ -188,6 +206,7 @@ namespace o2
 
         static Statistics mStatistics;         // Counters of all vector sprites
         static bool       mRasterCacheEnabled; // Are the rasterized images drawn from their rasters
+        static DetailView mDetailView;         // View the detail of the sprites is taken for
 
     protected:
         // Called when basis was changed
@@ -225,9 +244,14 @@ namespace o2
 
         // Draws the raster of the image from the atlas; false when there is no ready raster
         bool DrawRaster(const Vec2F& viewPixelScale);
+
+        // Returns the view pixel scale the detail is taken for in the current detail view
+        Vec2F GetDetailViewScale(const Vec2F& viewPixelScale);
     };
 }
 // --- META ---
+
+PRE_ENUM_META(o2::VectorSprite::DetailView);
 
 CLASS_BASES_META(o2::VectorSprite)
 {
@@ -251,6 +275,7 @@ CLASS_FIELDS_META(o2::VectorSprite)
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mBasisDirty);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mColorDirty);
     FIELD().PROTECTED().NAME(mMeshViewScale);
+    FIELD().PROTECTED().NAME(mGameViewScale);
     FIELD().PROTECTED().NAME(mMeshFringeScale);
     FIELD().PROTECTED().NAME(mScaledColors);
     FIELD().PROTECTED().NAME(mMeshBasis);
@@ -299,6 +324,9 @@ CLASS_METHODS_META(o2::VectorSprite)
     FUNCTION().PUBLIC().SIGNATURE(UInt, GetMeshRebuildsCount);
     FUNCTION().PUBLIC().SIGNATURE(UInt, GetColorUpdatesCount);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsDrawnFromRaster);
+    FUNCTION().PUBLIC().SIGNATURE(Vec2F, GetRasterScale);
+    FUNCTION().PUBLIC().SIGNATURE_STATIC(void, SetDetailView, DetailView);
+    FUNCTION().PUBLIC().SIGNATURE_STATIC(DetailView, GetDetailView);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(UInt64, GetTotalDrawnTriangles);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(void, SetRasterCacheEnabled, bool);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(bool, IsRasterCacheEnabled);
@@ -317,6 +345,7 @@ CLASS_METHODS_META(o2::VectorSprite)
     FUNCTION().PROTECTED().SIGNATURE(Vec2F, GetPixelScale, const Basis&, const Vec2F&, const Vec2F&);
     FUNCTION().PROTECTED().SIGNATURE(BorderF, GetDrawSlices, const Vec2F&);
     FUNCTION().PROTECTED().SIGNATURE(bool, DrawRaster, const Vec2F&);
+    FUNCTION().PROTECTED().SIGNATURE(Vec2F, GetDetailViewScale, const Vec2F&);
 }
 END_META;
 // --- END META ---

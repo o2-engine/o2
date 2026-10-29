@@ -192,7 +192,10 @@ namespace Editor
         int editorDepth = EditorScope::GetDepth();
         EditorScope::Exit(editorDepth);
 
+        auto detailView = VectorSprite::GetDetailView();
+        VectorSprite::SetDetailView(VectorSprite::DetailView::Game);
         o2Scene.Draw();
+        VectorSprite::SetDetailView(detailView);
 
         if (!o2Scene.GetCameras().IsEmpty())
         {

@@ -8,6 +8,7 @@
 #include "o2/Render/Mesh.h"
 #include "o2/Render/Render.h"
 #include "o2/Render/Sprite.h"
+#include "o2/Render/VectorSprite.h"
 #include "o2/Scene/Actor.h"
 #include "o2/Scene/CameraActor.h"
 #include "o2/Scene/Component.h"
@@ -639,6 +640,10 @@ namespace Editor
         if (mRenderMode == SceneRenderMode::Unlit)
             ScenePassFilters::SetRawAlbedoMode(true);
 
+        // The scene window looks at the game: vector sprites keep the detail of the game window under the zoom
+        auto detailView = VectorSprite::GetDetailView();
+        VectorSprite::SetDetailView(VectorSprite::DetailView::Developer);
+
         if (mRenderMode == SceneRenderMode::Overdraw)
         {
             // The overdraw heat adds up over a dark background
@@ -668,6 +673,7 @@ namespace Editor
 
         o2Render.SetDebugDrawMode(Render::DebugDrawMode::Normal);
         ScenePassFilters::SetRawAlbedoMode(rawAlbedo);
+        VectorSprite::SetDetailView(detailView);
 
         o2Scene.EndDrawingScene();
 
