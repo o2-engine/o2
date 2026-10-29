@@ -849,16 +849,35 @@ namespace o2
 
         float dotsSize = mFont->GetCharacter('.', mHeight, mStyle, pixelDensity).mAdvance*3.0f;
 
+        // The dots end a line that doesn't fit: the room for them is kept only then
+        auto restOfLineFits = [&](int from) {
+            float width = curLine->mSize.x;
+            for (int j = from; j < textLen && mText[j] != '\n'; j++)
+                width += mFont->GetCharacter(mText[j], mHeight, mStyle, pixelDensity).mAdvance*mSymbolsDistCoef;
+
+            return width <= mAreaSize.x;
+        };
+
         Vec2F fullSize(0, fontHeight);
         bool checkAreaBounds = mWordWrap && mAreaSize.x > FLT_EPSILON;
         int wrapCharIdx = -1;
+        int fittingLine = -1;
         for (int i = 0; i < textLen; i++)
         {
             const Font::Character& ch = mFont->GetCharacter(mText[i], mHeight, mStyle, pixelDensity);
             Vec2F chSize = ch.mSize;
             Vec2F chPos = Vec2F(curLine->mSize.x - ch.mOrigin.x, -ch.mOrigin.y);
 
-            if (mDotsEndings && mText[i] != '\n' && curLine->mSize.x + ch.mAdvance*mSymbolsDistCoef > mAreaSize.x - dotsSize)
+            bool dotsRoomTaken = mDotsEndings && mText[i] != '\n' && fittingLine != mLines.Count() - 1 &&
+                curLine->mSize.x + ch.mAdvance*mSymbolsDistCoef > mAreaSize.x - dotsSize;
+
+            if (dotsRoomTaken && restOfLineFits(i))
+            {
+                fittingLine = mLines.Count() - 1;
+                dotsRoomTaken = false;
+            }
+
+            if (dotsRoomTaken)
             {
                 const Font::Character& dotCh = mFont->GetCharacter('.', mHeight, mStyle, pixelDensity);
                 Vec2F dotChSize = dotCh.mSize;

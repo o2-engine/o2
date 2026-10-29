@@ -125,7 +125,7 @@ Additionally to the font, a font style can be set — the `o2::FontStyleAsset` a
 Text is formatted relative to the rectangular area defined by `o2::IRectDrawable`. The following formatting parameters are available:
 - hor/verAlign horizontal/vertical alignment
 - wrapping words to the next line on horizontal overflow: the line breaks at the last space, which stays at the end of that line, so the next one starts with a word; a space never breaks a line by itself (it may hang past the edge), as browsers lay text out
-- ending the line with an ellipsis (...) on horizontal overflow
+- ending the line with an ellipsis (...) on horizontal overflow; a line that fits stays whole, the room for the dots is kept only in a line that does not
 - letter and line spacing coefficients
 
 `Text::GetTextSize` measures with the font's rendered characters and renders the missing ones first, so a text that was never drawn measures right.

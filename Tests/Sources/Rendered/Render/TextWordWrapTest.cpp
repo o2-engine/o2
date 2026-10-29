@@ -61,3 +61,32 @@ TEST(TextWordWrap, WrapAtSpaceStartsTheNextLineWithTheWord)
     EXPECT_EQ((String)symbols.mLines[0].mString, String("alpha beta "));
     EXPECT_EQ((String)joined, (String)text);
 }
+
+// Dots end only a line that doesn't fit: a line a bit narrower than the area stays whole
+TEST(TextWordWrap, DotsEndOnlyTheLineThatDoesNotFit)
+{
+    auto font = mmake<VectorFont>(o2Assets.GetBuiltAssetsPath() + "debugFont.ttf");
+    ASSERT_FALSE(font->GetFileName().IsEmpty());
+
+    for (WString text : { WString("R"), WString("RGBA"), WString("Checker") })
+    {
+        font->CheckCharacters(text, 20, nullptr);
+        float width = Text::GetTextSize(text, font, 20, Vec2F(), HorAlign::Left, VerAlign::Top, false).x;
+
+        for (bool wordWrap : { false, true })
+        {
+            Text::SymbolsSet fits;
+            fits.Initialize(font, nullptr, text, 20, Vec2F(), Vec2F(width + 1.0f, 40), HorAlign::Middle, VerAlign::Middle,
+                            wordWrap, true, 1.0f, 1.0f);
+            ASSERT_EQ(fits.mLines.Count(), 1);
+            EXPECT_EQ((String)fits.mLines[0].mString, (String)text) << "wrap " << wordWrap;
+
+            Text::SymbolsSet cut;
+            cut.Initialize(font, nullptr, text + "WWWW", 20, Vec2F(), Vec2F(width + 1.0f, 40), HorAlign::Middle, VerAlign::Middle,
+                           wordWrap, true, 1.0f, 1.0f);
+            ASSERT_FALSE(cut.mLines.IsEmpty());
+            EXPECT_TRUE(cut.mLines[0].mString.EndsWith(WString("..."))) << (String)cut.mLines[0].mString;
+            EXPECT_LE(cut.mLines[0].mSize.x, width + 1.0f);
+        }
+    }
+}
