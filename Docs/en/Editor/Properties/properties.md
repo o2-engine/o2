@@ -11,7 +11,7 @@ The editor can show many field types, including custom ones:
 - nested objects by value
 - nested objects by pointer. Deletion and creation with type selection are available
 - references to other actors. Assigned via drag'n'drop from the hierarchy
-- references to assets. Assigned via drag'n'drop from the assets window, or created in place. In that case the asset is saved together with the actor.
+- references to assets. Assigned via drag'n'drop from the assets window, or created in place. In that case the asset is saved together with the actor. The field shows a small preview before the name: the picture of an image, a vector image or an atlas, a sample of a font, the model, the icon of the type for the other assets. A click on it opens the asset in the Preview window; a sound plays and stops instead.
 
 ### (1) Header
 Shows the main actor info — enabled state (circle at the top left), name, tags, layer, lock. All these controls are editable.

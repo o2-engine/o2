@@ -106,6 +106,21 @@ namespace Editor
         // Creates and returns an icon sprite for the asset
         static Ref<IRectDrawable> GetAssetIconSprite(const AssetRef<Asset>& asset);
 
+        // Shows the assets as icons of a grid (0), rows of a list (1) or of a table (2), keeps it in the project config
+        void SetViewMode(int mode);
+
+        // Returns the view of the assets: 0 for the grid, 1 for the list, 2 for the table
+        int GetViewMode() const;
+
+        // Returns the button of the view: it shows the icon of the view, a click turns to the next one
+        const Ref<Button>& GetViewButton() const;
+
+        // Returns the button of the filter menu
+        const Ref<Button>& GetFilterButton() const;
+
+        // Returns the area of the assets icons
+        const Ref<AssetsIconsScrollArea>& GetAssetsScroll() const;
+
         // Dynamic cast to RefCounterable via Singleton<AssetsWindow>
         static Ref<RefCounterable> CastToRefCounterable(const Ref<AssetsWindow>& ref);
          
@@ -118,6 +133,8 @@ namespace Editor
         Ref<Button>  mFilterButton;           // Search filter button
         Ref<EditBox> mSearchEditBox;          // Search edit box
         Ref<Label>   mSelectedAssetPathLabel; // Selected asset path label
+
+        Ref<Button> mViewButton; // Button of the view, cycles the grid, the list and the table
 
         Ref<AssetsFoldersTree> mFoldersTree;                                    // Folders tree            
         Ref<AnimationPlayer>   mFoldersTreeShowAnim = mmake<AnimationPlayer>(); // Folders tree visible animation
@@ -150,6 +167,9 @@ namespace Editor
 
         // Initializes up search panel
         void InitializeUpPanel();
+
+        // Shows the view kept in the project config
+        void ApplyConfigViewMode();
 
         // Called when search edit box text was changed
         void OnSearchEdited(const WString& search);
@@ -191,6 +211,7 @@ CLASS_FIELDS_META(Editor::AssetsWindow)
     FIELD().PROTECTED().NAME(mFilterButton);
     FIELD().PROTECTED().NAME(mSearchEditBox);
     FIELD().PROTECTED().NAME(mSelectedAssetPathLabel);
+    FIELD().PROTECTED().NAME(mViewButton);
     FIELD().PROTECTED().NAME(mFoldersTree);
     FIELD().PROTECTED().DEFAULT_VALUE(mmake<AnimationPlayer>()).NAME(mFoldersTreeShowAnim);
     FIELD().PROTECTED().NAME(mFoldersTreeVisible);
@@ -226,6 +247,11 @@ CLASS_METHODS_META(Editor::AssetsWindow)
     FUNCTION().PUBLIC().SIGNATURE(void, PasteAssets, const String&);
     FUNCTION().PUBLIC().SIGNATURE(void, DeleteAssets, const Vector<String>&);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(Ref<IRectDrawable>, GetAssetIconSprite, const AssetRef<Asset>&);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetViewMode, int);
+    FUNCTION().PUBLIC().SIGNATURE(int, GetViewMode);
+    FUNCTION().PUBLIC().SIGNATURE(const Ref<Button>&, GetViewButton);
+    FUNCTION().PUBLIC().SIGNATURE(const Ref<Button>&, GetFilterButton);
+    FUNCTION().PUBLIC().SIGNATURE(const Ref<AssetsIconsScrollArea>&, GetAssetsScroll);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(Ref<RefCounterable>, CastToRefCounterable, const Ref<AssetsWindow>&);
     FUNCTION().PROTECTED().SIGNATURE(void, InitializeWindow);
     FUNCTION().PROTECTED().SIGNATURE(void, InitializeFoldersTreeSeparator);
@@ -233,6 +259,7 @@ CLASS_METHODS_META(Editor::AssetsWindow)
     FUNCTION().PROTECTED().SIGNATURE(void, InitializeFoldersTree);
     FUNCTION().PROTECTED().SIGNATURE(void, InitializeDownPanel);
     FUNCTION().PROTECTED().SIGNATURE(void, InitializeUpPanel);
+    FUNCTION().PROTECTED().SIGNATURE(void, ApplyConfigViewMode);
     FUNCTION().PROTECTED().SIGNATURE(void, OnSearchEdited, const WString&);
     FUNCTION().PROTECTED().SIGNATURE(void, SearchAssetsRecursive, const Ref<AssetInfo>&, const String&, Vector<Ref<AssetInfo>>&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnMenuFilterPressed);

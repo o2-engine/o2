@@ -173,6 +173,21 @@ namespace o2
         return mDuration;
     }
 
+    void SoundPlayer::SetScrubPreview(bool enabled)
+    {
+        mScrubPreview = enabled;
+        if (!enabled && mScrubPlaying)
+        {
+            mScrubPlaying = false;
+            StopBackend();
+        }
+    }
+
+    bool SoundPlayer::IsScrubPreview() const
+    {
+        return mScrubPreview;
+    }
+
     bool SoundPlayer::IsBackendPlaying() const
     {
         return mBackendSound && ma_sound_is_playing(mBackendSound);
@@ -207,7 +222,7 @@ namespace o2
 
             // Driven externally (editor scrub or parent animation sub track) - start preview
             // playback, stopped by watchdog when time sets stop coming
-            if (!mPlaying)
+            if (!mPlaying && mScrubPreview)
             {
                 StartBackend();
 

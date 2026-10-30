@@ -42,6 +42,12 @@ namespace o2
         // Returns spacing between cell widgets
         const Vec2F& GetItemsSpacing() const;
 
+        // Sets are the items stretched to the view width, one in a line
+        void SetItemsFitWidth(bool fit);
+
+        // Returns are the items stretched to the view width, one in a line
+        bool IsItemsFitWidth() const;
+
         // Updates items
         void OnItemsUpdated(bool itemsRearranged = false);
 
@@ -62,6 +68,9 @@ namespace o2
         Vector<Ref<Widget>> mItemsPool;  // Items pool
 
         Vec2F mItemsSpacing; // Spacing between cell widgets @SERIALIZABLE
+
+        bool  mItemsFitWidth = false; // Are the items stretched to the view width, one in a line @SERIALIZABLE
+        float mPrevItemsWidth = 0.0f; // Width of the items at the previous update
         
         int mMinVisibleItemIdx = -1; // Visible item with minimal index
         int mMaxVisibleItemIdx = -1; // Visible item with maximal index
@@ -102,6 +111,9 @@ namespace o2
         // Returns count of items in one line
         int GetItemsInLine() const;
 
+        // Puts the item into the pool: it leaves this, so it can't register in the drawables of this while pooled
+        void FreeItemToPool(const Ref<Widget>& item);
+
         friend class DropDown;
         friend class CustomDropDown;
     };
@@ -121,6 +133,8 @@ CLASS_FIELDS_META(o2::GridLayoutScrollArea)
     FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().NAME(mItemSample);
     FIELD().PROTECTED().NAME(mItemsPool);
     FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().NAME(mItemsSpacing);
+    FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(false).NAME(mItemsFitWidth);
+    FIELD().PROTECTED().DEFAULT_VALUE(0.0f).NAME(mPrevItemsWidth);
     FIELD().PROTECTED().DEFAULT_VALUE(-1).NAME(mMinVisibleItemIdx);
     FIELD().PROTECTED().DEFAULT_VALUE(-1).NAME(mMaxVisibleItemIdx);
     FIELD().PROTECTED().DEFAULT_VALUE(0).NAME(mPrevItemsInLine);
@@ -135,6 +149,8 @@ CLASS_METHODS_META(o2::GridLayoutScrollArea)
     FUNCTION().PUBLIC().SIGNATURE(const Ref<Widget>&, GetItemSample);
     FUNCTION().PUBLIC().SIGNATURE(void, SetItemsSpacing, const Vec2F&);
     FUNCTION().PUBLIC().SIGNATURE(const Vec2F&, GetItemsSpacing);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetItemsFitWidth, bool);
+    FUNCTION().PUBLIC().SIGNATURE(bool, IsItemsFitWidth);
     FUNCTION().PUBLIC().SIGNATURE(void, OnItemsUpdated, bool);
     FUNCTION().PUBLIC().SIGNATURE(void, ScrollTo, void*);
     FUNCTION().PUBLIC().SIGNATURE(void, UpdateSelfTransform);
@@ -150,6 +166,7 @@ CLASS_METHODS_META(o2::GridLayoutScrollArea)
     FUNCTION().PROTECTED().SIGNATURE(void, UpdateVisibleItems);
     FUNCTION().PROTECTED().SIGNATURE(Ref<Widget>, GetItemUnderPoint, const Vec2F&, int*);
     FUNCTION().PROTECTED().SIGNATURE(int, GetItemsInLine);
+    FUNCTION().PROTECTED().SIGNATURE(void, FreeItemToPool, const Ref<Widget>&);
 }
 END_META;
 // --- END META ---

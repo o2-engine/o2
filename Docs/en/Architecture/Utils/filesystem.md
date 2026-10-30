@@ -16,7 +16,7 @@
 
 ## Main methods
 - **GetFolderInfo(path)** — returns information about a folder and the files inside it.
-- **GetFileInfo(path)** — returns information about a file.
+- **GetFileInfo(path)** — returns information about a file: its size and modification date; a folder has its date and zero size, a missing path is `invalid_file` with zero size.
 - **SetFileEditDate(path, time)** — sets the file modification time.
 - **FileCopy(source, dest)** — copies a file.
 - **FileDelete(file)** — deletes a file.

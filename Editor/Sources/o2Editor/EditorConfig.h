@@ -82,6 +82,7 @@ namespace Editor
             PROPERTY(WindowsLayout, layout, SetLayout, GetLayout);                     // Windows layout
             PROPERTY(String, lastLoadedScene, SetLastLoadedScene, GetLastLoadedScene); // Last loaded scene
             PROPERTY(String, lastPipelineAsset, SetLastPipelineAsset, GetLastPipelineAsset); // Last pipeline asset opened in the Pipeline window
+            PROPERTY(String, assetsView, SetAssetsView, GetAssetsView);                      // View of the Assets window: grid, list or table
 
         public:
             // Returns application window size
@@ -120,6 +121,12 @@ namespace Editor
             // Sets last pipeline asset path
             void SetLastPipelineAsset(const String& value);
 
+            // Returns view of the Assets window: grid, list or table
+            String GetAssetsView() const;
+
+            // Sets view of the Assets window
+            void SetAssetsView(const String& value);
+
             SERIALIZABLE(ProjectConfig);
 
         private:
@@ -129,6 +136,7 @@ namespace Editor
             WindowsLayout mLayout;                       // @SERIALIZABLE
             String        mLastLoadedScene;              // @SERIALIZABLE
             String        mLastPipelineAsset;            // @SERIALIZABLE
+            String        mAssetsView;                   // @SERIALIZABLE
 
             friend class EditorConfig;
         };
@@ -256,12 +264,14 @@ CLASS_FIELDS_META(Editor::EditorConfig::ProjectConfig)
     FIELD().PUBLIC().NAME(layout);
     FIELD().PUBLIC().NAME(lastLoadedScene);
     FIELD().PUBLIC().NAME(lastPipelineAsset);
+    FIELD().PUBLIC().NAME(assetsView);
     FIELD().PRIVATE().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(Vec2I(800, 600)).NAME(mWindowSize);
     FIELD().PRIVATE().SERIALIZABLE_ATTRIBUTE().NAME(mWindowPosition);
     FIELD().PRIVATE().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(true).NAME(mMaximized);
     FIELD().PRIVATE().SERIALIZABLE_ATTRIBUTE().NAME(mLayout);
     FIELD().PRIVATE().SERIALIZABLE_ATTRIBUTE().NAME(mLastLoadedScene);
     FIELD().PRIVATE().SERIALIZABLE_ATTRIBUTE().NAME(mLastPipelineAsset);
+    FIELD().PRIVATE().SERIALIZABLE_ATTRIBUTE().NAME(mAssetsView);
 }
 END_META;
 CLASS_METHODS_META(Editor::EditorConfig::ProjectConfig)
@@ -279,6 +289,8 @@ CLASS_METHODS_META(Editor::EditorConfig::ProjectConfig)
     FUNCTION().PUBLIC().SIGNATURE(void, SetLastLoadedScene, const String&);
     FUNCTION().PUBLIC().SIGNATURE(String, GetLastPipelineAsset);
     FUNCTION().PUBLIC().SIGNATURE(void, SetLastPipelineAsset, const String&);
+    FUNCTION().PUBLIC().SIGNATURE(String, GetAssetsView);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetAssetsView, const String&);
 }
 END_META;
 // --- END META ---

@@ -100,6 +100,12 @@ namespace o2
         // Returns true if backend sound is actually audible now
         bool IsBackendPlaying() const;
 
+        // Sets is a time set on a stopped player heard as a short preview, as the animation editor scrubs; on by default
+        void SetScrubPreview(bool enabled);
+
+        // Returns is a time set on a stopped player heard
+        bool IsScrubPreview() const;
+
         // Returns sound duration
         float GetDuration() const override;
 
@@ -124,6 +130,7 @@ namespace o2
 
         bool mIsUpdating = false; // True inside Update, to distinguish playback from scrubbing in Evaluate
 
+        bool  mScrubPreview = true;  // Is a time set on a stopped player heard as a short preview
         bool  mScrubPlaying = false; // True when backend is playing driven by external time sets
         float mScrubTimer = 0.0f;    // Time since last external time set, stops scrub playback on timeout
 
@@ -198,6 +205,7 @@ CLASS_FIELDS_META(o2::SoundPlayer)
     FIELD().PROTECTED().DEFAULT_VALUE(nullptr).NAME(mBackendDecoder);
     FIELD().PROTECTED().DEFAULT_VALUE(nullptr).NAME(mBackendSound);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mIsUpdating);
+    FIELD().PROTECTED().DEFAULT_VALUE(true).NAME(mScrubPreview);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mScrubPlaying);
     FIELD().PROTECTED().DEFAULT_VALUE(0.0f).NAME(mScrubTimer);
 }
@@ -228,6 +236,8 @@ CLASS_METHODS_META(o2::SoundPlayer)
     FUNCTION().PUBLIC().SIGNATURE(float, GetRolloff);
     FUNCTION().PUBLIC().SIGNATURE(void, Update, float);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsBackendPlaying);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetScrubPreview, bool);
+    FUNCTION().PUBLIC().SIGNATURE(bool, IsScrubPreview);
     FUNCTION().PUBLIC().SIGNATURE(float, GetDuration);
     FUNCTION().PROTECTED().SIGNATURE(void, Evaluate);
     FUNCTION().PROTECTED().SIGNATURE(void, OnPlay);

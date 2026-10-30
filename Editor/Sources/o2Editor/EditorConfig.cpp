@@ -208,6 +208,16 @@ namespace Editor
         mLastPipelineAsset = value;
     }
 
+    String EditorConfig::ProjectConfig::GetAssetsView() const
+    {
+        return mAssetsView;
+    }
+
+    void EditorConfig::ProjectConfig::SetAssetsView(const String& value)
+    {
+        mAssetsView = value;
+    }
+
     void EditorConfig::ProjectConfig::SetLastLoadedScene(const String& value)
     {
         if (mLastLoadedScene == value)

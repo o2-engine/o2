@@ -22,6 +22,8 @@
 #include "o2/Scene/UI/Widgets/Toggle.h"
 #include "o2/Sound/SoundPlayer.h"
 #include "o2/Utils/Bitmap/Bitmap.h"
+#include "o2Editor/Pipeline/PipelineAudio.h"
+#include "o2Editor/UI/Preview/MediaPreview.h"
 #include "o2Editor/Pipeline/PipelineUtils.h"
 
 #include <cstring>
@@ -69,51 +71,7 @@ namespace Editor
 
         Vector<float> DecodePeaks(const String& data)
         {
-            const int buckets = 320;
-            Vector<float> peaks;
-            ma_decoder_config config = ma_decoder_config_init(ma_format_f32, 0, 0);
-            ma_decoder decoder;
-            if (ma_decoder_init_memory(data.Data(), (size_t)data.Length(), &config, &decoder) != MA_SUCCESS)
-                return peaks;
-
-            ma_uint64 frames = 0;
-            ma_decoder_get_length_in_pcm_frames(&decoder, &frames);
-            int channels = Math::Max(1, (int)decoder.outputChannels);
-            if (frames == 0)
-            {
-                ma_decoder_uninit(&decoder);
-                return peaks;
-            }
-
-            peaks.Resize(buckets);
-            for (auto& p : peaks)
-                p = 0.0f;
-            ma_uint64 per = Math::Max<ma_uint64>(1, frames / buckets);
-            std::vector<float> chunk(4096 * channels);
-            ma_uint64 index = 0;
-            while (true)
-            {
-                ma_uint64 read = 0;
-                if (ma_decoder_read_pcm_frames(&decoder, chunk.data(), 4096, &read) != MA_SUCCESS || read == 0)
-                    break;
-                for (ma_uint64 f = 0; f < read; f++, index++)
-                {
-                    int bucket = (int)Math::Min<ma_uint64>(buckets - 1, index / per);
-                    for (int c = 0; c < channels; c++)
-                        peaks[bucket] = Math::Max(peaks[bucket], Math::Abs(chunk[f * channels + c]));
-                }
-            }
-            ma_decoder_uninit(&decoder);
-
-            float max = 0.0f;
-            for (float p : peaks)
-                max = Math::Max(max, p);
-            if (max > 1e-4f)
-            {
-                for (auto& p : peaks)
-                    p /= max;
-            }
-            return peaks;
+            return PipelineAudio::DecodePeaks(data);
         }
     }
 
@@ -186,6 +144,27 @@ namespace Editor
         SetTime(mTime, mDuration);
     }
 
+    void PipelineMediaControls::SetLoopVisible(bool visible)
+    {
+        mLoopVisible = visible;
+        LayoutParts();
+    }
+
+    void PipelineMediaControls::SetTimeFormatter(const Function<String(float, float)>& formatter)
+    {
+        mTimeFormatter = formatter;
+        LayoutParts();
+        SetTime(mTime, mDuration);
+    }
+
+    String PipelineMediaControls::GetTimeText() const
+    {
+        if (auto text = DynamicCast<Text>(mTimeLayer->GetDrawable()))
+            return text->GetText();
+
+        return String();
+    }
+
     void PipelineMediaControls::SetPeaks(const Vector<float>& peaks)
     {
         mPeaks = peaks;
@@ -204,15 +183,18 @@ namespace Editor
         }
 
         // Time "0:00 / 0:02 · WAV" takes its text width; the loop glyph ends the audio row
-        float timeWidth = Math::Ceil(PipelineControls::TextWidth("0:00 / 0:00" + (mFormat.IsEmpty() ? String() : " · " + mFormat), 10.5f)) + 2.0f;
+        String timeSample = (mTimeFormatter ? mTimeFormatter(mDuration, mDuration) : String("0:00 / 0:00")) +
+            (mFormat.IsEmpty() ? String() : " · " + mFormat);
+        float timeWidth = Math::Ceil(PipelineControls::TextWidth(timeSample, 10.5f)) + 2.0f;
         if (auto text = DynamicCast<Text>(mTimeLayer->GetDrawable()))
         {
             if (auto font = text->GetFont())
-                timeWidth = Math::Ceil(Text::GetTextSize("0:00 / 0:00" + (mFormat.IsEmpty() ? String() : " · " + mFormat), font, text->height, Vec2F(), HorAlign::Left, VerAlign::Top, false).x) + 2.0f;
+                timeWidth = Math::Ceil(Text::GetTextSize(timeSample, font, text->height, Vec2F(), HorAlign::Left, VerAlign::Top, false).x) + 2.0f;
         }
-        float loop = audio ? 12.0f + 8.0f : 0.0f;
+        bool loopShown = audio || mLoopVisible;
+        float loop = loopShown ? 12.0f + 8.0f : 0.0f;
         mTimeLayer->layout = Layout(Vec2F(1, 0), Vec2F(1, 1), Vec2F(-loop - timeWidth, 0), Vec2F(-loop, 0));
-        mLoopToggle->enabled = audio;
+        mLoopToggle->enabled = loopShown;
         *mLoopToggle->layout = WidgetLayout(Vec2F(1, 0.5f), Vec2F(1, 0.5f), Vec2F(-12, -6), Vec2F(0, 6));
 
         float seekHeight = audio ? 22.0f : 3.0f;
@@ -239,38 +221,8 @@ namespace Editor
 
         // 2 px bars 1 px apart, the played ones in the audio colour; a 2 px line without peaks
         auto& theme = PipelineTheme::Get();
-        RectF area = mSeek->layout->GetWorldRect();
-        float w = area.Width(), h = area.Height(), mid = area.Center().y;
         float progress = mDuration > 0.0f ? Math::Clamp01(mTime / mDuration) : 0.0f;
-        Color4 played = theme.portAudio, idle = theme.border;
-        if (mPeaks.IsEmpty())
-        {
-            o2Render.DrawFilledPolygon({ Vec2F(area.left, mid - 1), Vec2F(area.left, mid + 1), Vec2F(area.right, mid + 1), Vec2F(area.right, mid - 1) }, idle);
-            float x = area.left + w * progress;
-            o2Render.DrawFilledPolygon({ Vec2F(area.left, mid - 1), Vec2F(area.left, mid + 1), Vec2F(x, mid + 1), Vec2F(x, mid - 1) }, played);
-            return;
-        }
-
-        int bars = Math::Max(1, (int)(w / 3.0f));
-        float playedBars = progress * bars;
-        Vector<Vertex> vertices;
-        Vector<VertexIndex> indices;
-        for (int i = 0; i < bars; i++)
-        {
-            float peak = mPeaks[Math::Min(mPeaks.Count() - 1, (int)((float)i / bars * mPeaks.Count()))];
-            float barH = Math::Max(1.0f, peak * (h - 2.0f));
-            ULong color = (i < playedBars ? played : idle).ABGR();
-            float x = area.left + i * 3.0f;
-            VertexIndex base = (VertexIndex)vertices.Count();
-            vertices.Add(Vertex(Vec2F(x, mid - barH * 0.5f), color, 0, 0));
-            vertices.Add(Vertex(Vec2F(x + 2.0f, mid - barH * 0.5f), color, 0, 0));
-            vertices.Add(Vertex(Vec2F(x + 2.0f, mid + barH * 0.5f), color, 0, 0));
-            vertices.Add(Vertex(Vec2F(x, mid + barH * 0.5f), color, 0, 0));
-            indices.Add(base); indices.Add(base + 1); indices.Add(base + 2);
-            indices.Add(base); indices.Add(base + 2); indices.Add(base + 3);
-        }
-        o2Render.DrawBuffer(PrimitiveType::Polygon, vertices.Data(), vertices.Count(), indices.Data(), indices.Count() / 3,
-                            o2Render.GetDefaultMaterial(), TextureRef());
+        MediaPreview::DrawWaveform(mSeek->layout->GetWorldRect(), mPeaks, progress, theme.portAudio, theme.border);
     }
 
     void PipelineMediaControls::SetPlaying(bool playing)
@@ -282,8 +234,12 @@ namespace Editor
 
     void PipelineMediaControls::SetTime(float time, float duration)
     {
+        bool durationChanged = mTimeFormatter && duration != mDuration;
         mTime = time;
         mDuration = duration;
+        if (durationChanged)
+            LayoutParts();
+
         if (!mSeeking)
         {
             mSeek->SetValueRange(0.0f, Math::Max(duration, 0.001f));
@@ -291,7 +247,8 @@ namespace Editor
         }
 
         if (auto text = DynamicCast<Text>(mTimeLayer->GetDrawable()))
-            text->text = FormatTime(time) + " / " + FormatTime(duration) + (mFormat.IsEmpty() ? String() : " · " + mFormat);
+            text->text = (mTimeFormatter ? mTimeFormatter(time, duration) : FormatTime(time) + " / " + FormatTime(duration)) +
+                (mFormat.IsEmpty() ? String() : " · " + mFormat);
     }
 
     void PipelineMediaControls::SetLoop(bool loop)

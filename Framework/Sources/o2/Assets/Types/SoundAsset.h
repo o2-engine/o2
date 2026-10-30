@@ -53,6 +53,9 @@ namespace o2
         // Returns editor sorting weight
         static int GetEditorSorting() { return 95; }
 
+        // Returns editor icon
+        static String GetEditorIcon() { return "ui/UI4_big_sound_file_icon.svg"; }
+
         SERIALIZABLE(SoundAsset);
         CLONEABLE_REF(SoundAsset);
 
@@ -109,6 +112,7 @@ CLASS_METHODS_META(o2::SoundAsset)
     FUNCTION().PUBLIC().SIGNATURE(int, GetSampleRate);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(Vector<String>, GetFileExtensions);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(int, GetEditorSorting);
+    FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetEditorIcon);
     FUNCTION().PROTECTED().SIGNATURE(void, LoadData, const String&);
     FUNCTION().PROTECTED().SIGNATURE(void, SaveData, const String&);
     FUNCTION().PROTECTED().SIGNATURE(void, ParseFormatInfo);

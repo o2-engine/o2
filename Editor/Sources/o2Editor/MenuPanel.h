@@ -5,6 +5,11 @@
 
 using namespace o2;
 
+namespace o2
+{
+    class ContextMenu;
+}
+
 // Editors menu panel accessor macros
 #define o2EditorMenu MenuPanel::Instance()
 
@@ -50,10 +55,16 @@ namespace Editor
         // Removes item by path
         void RemoveItem(const WString& path);
 
+        // Returns the menu the top item opens, null when it has none
+        Ref<ContextMenu> GetMenu(const WString& item) const;
+
     protected:
         Ref<o2::MenuPanel> mMenuPanel; // Menu panel
 
     protected:
+        // Tints the icons of the menus with the ink of the theme: the window icons are light, made for the teal heads
+        void TintIcons();
+
         // Checks is scene was changed and shows confirm dialog
         void CheckSceneSaving(const Function<void()>& onCompleted);
 

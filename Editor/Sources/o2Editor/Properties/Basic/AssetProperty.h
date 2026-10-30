@@ -15,6 +15,7 @@ using namespace o2;
 namespace Editor
 {
     FORWARD_CLASS_REF(ObjectViewer);
+    FORWARD_CLASS_REF(AssetPreviewIcon);
 
     // -------------------------
     // Editor asset property box
@@ -74,6 +75,7 @@ namespace Editor
 
         Ref<Widget>  mBox;               // Property edit box
         Ref<Text>    mNameText;          // Asset name text
+        Ref<AssetPreviewIcon> mPreview;  // Small preview of the asset in the box
         Ref<Spoiler> mSpoiler;           // Spoiler
         Ref<Label>   mCaption;           // Property name caption
         Ref<Button>  mCreateInstanceBtn; // Create instance button
@@ -126,6 +128,9 @@ namespace Editor
 		// Updates asset name text
         void UpdateAssetName();
 
+        // Shows the preview of the common asset, moves the name aside of it
+        void UpdatePreview();
+
         // Collects instance targets from value proxies. Returns targets and whether all values are instances
         InstanceTargetsInfo CollectInstanceTargets() const;
 
@@ -172,6 +177,7 @@ CLASS_FIELDS_META(Editor::AssetProperty)
 {
     FIELD().PROTECTED().NAME(mBox);
     FIELD().PROTECTED().NAME(mNameText);
+    FIELD().PROTECTED().NAME(mPreview);
     FIELD().PROTECTED().NAME(mSpoiler);
     FIELD().PROTECTED().NAME(mCaption);
     FIELD().PROTECTED().NAME(mCreateInstanceBtn);
@@ -210,6 +216,7 @@ CLASS_METHODS_META(Editor::AssetProperty)
     FUNCTION().PROTECTED().SIGNATURE(void, SetProxy, const Ref<IAbstractValueProxy>&, const AssetRef<Asset>&);
     FUNCTION().PROTECTED().SIGNATURE(void, UpdateValueView);
     FUNCTION().PROTECTED().SIGNATURE(void, UpdateAssetName);
+    FUNCTION().PROTECTED().SIGNATURE(void, UpdatePreview);
     FUNCTION().PROTECTED().SIGNATURE(InstanceTargetsInfo, CollectInstanceTargets);
     FUNCTION().PROTECTED().SIGNATURE(bool, IsAlwaysRefresh);
     FUNCTION().PROTECTED().SIGNATURE(void, OnCursorEnter, const Input::Cursor&);

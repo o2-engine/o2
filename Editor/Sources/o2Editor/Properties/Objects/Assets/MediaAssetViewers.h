@@ -34,6 +34,7 @@ namespace Editor
     protected:
         Ref<Label>           mInfoLabel; // Duration and channels
         Ref<SoundPlayerView> mPlayer;    // Playback
+        WeakRef<Asset>       mAsset;     // Viewed sound, opened in the preview window
 
     protected:
         // Called when the viewer is refreshed, builds properties, and places them in mPropertiesContext
@@ -90,6 +91,7 @@ CLASS_FIELDS_META(Editor::SoundAssetViewer)
 {
     FIELD().PROTECTED().NAME(mInfoLabel);
     FIELD().PROTECTED().NAME(mPlayer);
+    FIELD().PROTECTED().NAME(mAsset);
 }
 END_META;
 CLASS_METHODS_META(Editor::SoundAssetViewer)

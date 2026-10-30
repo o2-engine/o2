@@ -1,5 +1,6 @@
 #pragma once
 
+#include "o2/Utils/Types/Containers/Vector.h"
 #include "o2/Utils/Types/String.h"
 
 using namespace o2;
@@ -47,6 +48,9 @@ namespace Editor
 
         // Clip duration in seconds through ffprobe, 0 when unavailable
         float DurationSeconds(const String& data, const String& mimeType);
+
+        // Peaks of the clip for a waveform: the buckets of the loudest sample, normalised; empty when it doesn't decode
+        Vector<float> DecodePeaks(const String& data, int buckets = 320);
 
         // Returns the path of an ffmpeg tool ("ffmpeg", "ffprobe"): a known install folder or the bare name
         String ToolPath(const char* name);

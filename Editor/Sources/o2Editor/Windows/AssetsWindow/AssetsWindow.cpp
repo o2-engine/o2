@@ -72,6 +72,56 @@ namespace Editor
         InitializeFoldersTreeSeparator();
 
         OpenFolder("");
+        ApplyConfigViewMode();
+    }
+
+    namespace
+    {
+        const char* viewModeNames[] = { "grid", "list", "table" };
+        const char* viewModeIcons[] = { "ui/UI4_grid_view_icon.svg", "ui/UI4_list_icon.svg", "ui/UI4_table_view_icon.svg" };
+    }
+
+    void AssetsWindow::SetViewMode(int mode)
+    {
+        mode = Math::Clamp(mode, 0, 2);
+        mAssetsGridScroll->SetViewMode((AssetsIconsScrollArea::ViewMode)mode);
+        mViewButton->SetIcon(mmake<VectorSprite>(viewModeIcons[mode]));
+
+        if (EditorConfig::IsSingletonInitialzed())
+            o2EditorConfig.projectConfig.assetsView = viewModeNames[mode];
+    }
+
+    int AssetsWindow::GetViewMode() const
+    {
+        return (int)mAssetsGridScroll->GetViewMode();
+    }
+
+    const Ref<Button>& AssetsWindow::GetViewButton() const
+    {
+        return mViewButton;
+    }
+
+    const Ref<Button>& AssetsWindow::GetFilterButton() const
+    {
+        return mFilterButton;
+    }
+
+    const Ref<AssetsIconsScrollArea>& AssetsWindow::GetAssetsScroll() const
+    {
+        return mAssetsGridScroll;
+    }
+
+    void AssetsWindow::ApplyConfigViewMode()
+    {
+        if (!EditorConfig::IsSingletonInitialzed())
+            return;
+
+        String view = o2EditorConfig.projectConfig.assetsView;
+        for (int i = 0; i < 3; i++)
+        {
+            if (view == viewModeNames[i] && i != GetViewMode())
+                SetViewMode(i);
+        }
     }
 
     void AssetsWindow::InitializeFoldersTreeSeparator()
@@ -192,8 +242,15 @@ namespace Editor
         mFilterButton->onClick += THIS_FUNC(OnMenuFilterPressed);
         upPanel->AddChild(mFilterButton);
 
+        // The edge line of the button lies on the one of the filter button
+        mViewButton = o2UI.CreateWidget<Button>("assets view mode");
+        mViewButton->name = "view mode";
+        *mViewButton->layout = WidgetLayout::Based(BaseCorner::Right, Vec2F(20, 20), Vec2F(-19, 0));
+        mViewButton->onClick += [&]() { SetViewMode((GetViewMode() + 1)%3); };
+        upPanel->AddChild(mViewButton);
+
         mSearchEditBox = o2UI.CreateWidget<EditBox>("backless");
-        *mSearchEditBox->layout = WidgetLayout::BothStretch(19, 2, 21, -2);
+        *mSearchEditBox->layout = WidgetLayout::BothStretch(19, 2, 41, -2);
         mSearchEditBox->onChanged += THIS_FUNC(OnSearchEdited);
         upPanel->AddChild(mSearchEditBox);
 

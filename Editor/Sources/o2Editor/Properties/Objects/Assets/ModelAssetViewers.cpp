@@ -52,8 +52,11 @@ namespace Editor
         if (!mesh)
             return;
 
+        // The properties refresh their viewers all the time: the view keeps its camera until the mesh changes
+        if (mAsset.Lock().Get() != mesh)
+            mModelView->SetMesh(mesh->GetMeshData());
+
         mAsset = WeakRef<Asset>(mesh);
-        mModelView->SetMesh(mesh->GetMeshData());
         mInfoLabel->SetText((String)(int)mModelView->GetVerticesCount() + " vertices, " +
                             (String)(int)mModelView->GetTrianglesCount() + " triangles");
     }
@@ -77,8 +80,10 @@ namespace Editor
         if (!model)
             return;
 
+        if (mAsset.Lock().Get() != model)
+            mModelView->SetSkinnedModel(AssetRef<SkinnedModelAsset>(Ref<SkinnedModelAsset>(model)));
+
         mAsset = WeakRef<Asset>(model);
-        mModelView->SetSkinnedModel(AssetRef<SkinnedModelAsset>(Ref<SkinnedModelAsset>(model)));
 
         auto& data = model->GetModelData();
         String clips;

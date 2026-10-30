@@ -2,6 +2,7 @@
 
 #include "o2/Assets/AssetInfo.h"
 #include "o2/Scene/UI/Widget.h"
+#include "o2/Scene/UI/WidgetLayout.h"
 #include "o2/Utils/Editor/DragAndDrop.h"
 
 using namespace o2;
@@ -23,6 +24,11 @@ namespace Editor
     public:
         PROPERTIES(AssetIcon);
         PROPERTY(WString, assetName, SetAssetName, GetAssetName); // Asset name label text property
+
+    public:
+        static constexpr float tableTypeWidth = 100.0f; // Width of the type column of the table
+        static constexpr float tableSizeWidth = 70.0f;  // Width of the size column of the table
+        static constexpr float tableDateWidth = 120.0f; // Width of the modification date column of the table
 
     public:
         // Default constructor
@@ -49,6 +55,21 @@ namespace Editor
         // Returns name label text
         WString GetAssetName() const;
 
+        // Sets the texts of the type, size and modification date columns of the table
+        void SetColumns(const WString& type, const WString& size, const WString& date);
+
+        // Sets the layouts of the type icon and of the area the previews fit into
+        void SetIconLayouts(const Layout& icon, const Layout& preview);
+
+        // Returns layout of the type icon
+        const Layout& GetIconLayout() const;
+
+        // Returns layout of the area the previews fit into
+        const Layout& GetPreviewLayout() const;
+
+        // Returns layout of the table column: the name, the type, the size or the modification date, in a row of the width
+        static WidgetLayout GetTableColumnLayout(int column, float leftIndent = 0.0f);
+
         // Returns true if point is in this object
         bool IsUnderPoint(const Vec2F& point) override;
 
@@ -66,12 +87,21 @@ namespace Editor
 
     protected:
         Ref<Label>       mNameText;      // Asset name text
+        Ref<Label>       mTypeText;      // Type column text of the table
+        Ref<Label>       mSizeText;      // Size column text of the table
+        Ref<Label>       mDateText;      // Modification date column text of the table
         Ref<AssetInfo>   mAssetInfo;     // Asset information
         Ref<WidgetState> mSelectedState; // Node selected state
+
+        Layout mIconLayout;    // Layout of the type icon @SERIALIZABLE
+        Layout mPreviewLayout; // Layout of the area the previews fit into @SERIALIZABLE
 
         WeakRef<AssetsIconsScrollArea> mOwner; // Owner assets scroll area
 
     protected:
+        // Finds the labels of the name and the columns
+        void InitializeLabels();
+
         using SelectableDragableObject::OnDrawn;
         using SelectableDragableObject::OnCursorPressed;
         using SelectableDragableObject::OnCursorReleased;
@@ -142,8 +172,13 @@ CLASS_FIELDS_META(Editor::AssetIcon)
 {
     FIELD().PUBLIC().NAME(assetName);
     FIELD().PROTECTED().NAME(mNameText);
+    FIELD().PROTECTED().NAME(mTypeText);
+    FIELD().PROTECTED().NAME(mSizeText);
+    FIELD().PROTECTED().NAME(mDateText);
     FIELD().PROTECTED().NAME(mAssetInfo);
     FIELD().PROTECTED().NAME(mSelectedState);
+    FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().NAME(mIconLayout);
+    FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().NAME(mPreviewLayout);
     FIELD().PROTECTED().NAME(mOwner);
 }
 END_META;
@@ -156,10 +191,16 @@ CLASS_METHODS_META(Editor::AssetIcon)
     FUNCTION().PUBLIC().SIGNATURE(const Ref<AssetInfo>&, GetAssetInfo);
     FUNCTION().PUBLIC().SIGNATURE(void, SetAssetName, const WString&);
     FUNCTION().PUBLIC().SIGNATURE(WString, GetAssetName);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetColumns, const WString&, const WString&, const WString&);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetIconLayouts, const Layout&, const Layout&);
+    FUNCTION().PUBLIC().SIGNATURE(const Layout&, GetIconLayout);
+    FUNCTION().PUBLIC().SIGNATURE(const Layout&, GetPreviewLayout);
+    FUNCTION().PUBLIC().SIGNATURE_STATIC(WidgetLayout, GetTableColumnLayout, int, float);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsUnderPoint, const Vec2F&);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsInputTransparent);
     FUNCTION().PUBLIC().SIGNATURE(void, OnDrawn);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetCreateMenuCategory);
+    FUNCTION().PROTECTED().SIGNATURE(void, InitializeLabels);
     FUNCTION().PROTECTED().SIGNATURE(void, SetSelected, bool);
     FUNCTION().PROTECTED().SIGNATURE(void, OnCursorDblClicked, const Input::Cursor&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnCursorRightMouseReleased, const Input::Cursor&);

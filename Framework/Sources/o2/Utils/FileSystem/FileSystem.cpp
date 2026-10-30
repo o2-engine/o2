@@ -160,6 +160,7 @@ namespace o2
 
         FileInfo res;
         res.path = "invalid_file";
+        res.size = 0;
 
         fs::path fullPath(path.Data());
 
@@ -177,7 +178,7 @@ namespace o2
         }
 
         res.path = path;
-        res.size = fs::file_size(fullPath);
+        res.size = fs::is_regular_file(fullPath) ? (Int64)fs::file_size(fullPath) : 0;
 
         return res;
     }

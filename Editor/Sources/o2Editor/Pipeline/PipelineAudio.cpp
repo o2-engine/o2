@@ -5,6 +5,9 @@
 #include "o2/Utils/Types/UID.h"
 #include "o2Editor/Pipeline/PipelineUtils.h"
 
+#include "miniaudio.h"
+#include <vector>
+
 #include <cstdio>
 #include <cstdlib>
 
@@ -180,5 +183,53 @@ namespace Editor::PipelineAudio
         o2FileSystem.FileDelete(inPath);
         o2FileSystem.FileDelete(outPath);
         return (float)atof(text.Data());
+    }
+
+    Vector<float> DecodePeaks(const String& data, int buckets /*= 320*/)
+    {
+        Vector<float> peaks;
+        ma_decoder_config config = ma_decoder_config_init(ma_format_f32, 0, 0);
+        ma_decoder decoder;
+        if (ma_decoder_init_memory(data.Data(), (size_t)data.Length(), &config, &decoder) != MA_SUCCESS)
+            return peaks;
+
+        ma_uint64 frames = 0;
+        ma_decoder_get_length_in_pcm_frames(&decoder, &frames);
+        int channels = Math::Max(1, (int)decoder.outputChannels);
+        if (frames == 0)
+        {
+            ma_decoder_uninit(&decoder);
+            return peaks;
+        }
+
+        peaks.Resize(buckets);
+        for (auto& p : peaks)
+            p = 0.0f;
+        ma_uint64 per = Math::Max<ma_uint64>(1, frames / buckets);
+        std::vector<float> chunk(4096 * channels);
+        ma_uint64 index = 0;
+        while (true)
+        {
+            ma_uint64 read = 0;
+            if (ma_decoder_read_pcm_frames(&decoder, chunk.data(), 4096, &read) != MA_SUCCESS || read == 0)
+                break;
+            for (ma_uint64 f = 0; f < read; f++, index++)
+            {
+                int bucket = (int)Math::Min<ma_uint64>(buckets - 1, index / per);
+                for (int c = 0; c < channels; c++)
+                    peaks[bucket] = Math::Max(peaks[bucket], Math::Abs(chunk[f * channels + c]));
+            }
+        }
+        ma_decoder_uninit(&decoder);
+
+        float max = 0.0f;
+        for (float p : peaks)
+            max = Math::Max(max, p);
+        if (max > 1e-4f)
+        {
+            for (auto& p : peaks)
+                p /= max;
+        }
+        return peaks;
     }
 }

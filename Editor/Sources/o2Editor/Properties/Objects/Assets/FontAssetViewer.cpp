@@ -54,8 +54,10 @@ namespace Editor
         if (!font)
             return;
 
+        if (mAsset.Lock().Get() != font)
+            mSample->SetFont(font->GetFont());
+
         mAsset = WeakRef<Asset>(font);
-        mSample->SetFont(font->GetFont());
         mSample->layout->minHeight = mSample->GetContentHeight();
     }
 }

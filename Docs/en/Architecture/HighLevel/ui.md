@@ -67,7 +67,7 @@ Widgets allow making such elements internal: they behave like children, but enum
 - `Toggle` - flag, checkbox
 - `Horizontal/VerticalScrollBar` - horizontal/vertical scroll bar (layers `back` and `handle`); the vertical one is driven from scripts: `SetValueRange`, `SetValueForcible`, `GetValue`, `SetScrollHandleSize`, the `onChange`/`onChangeByUser` events
 - `Horizontal/VerticalProgress` - progress bars
-- `ScrollArea` - scrolling area with content clipping
+- `ScrollArea` - scrolling area with content clipping; `GridLayoutScrollArea` - a grid of item widgets made only for the visible items, `SetItemsFitWidth(true)` stretches them to the view width, one in a line; an item made after the area is shown takes its enabled state
 - `List/LongList` - lists, `CustomList` - list with arbitrary item widgets
 - `DropDown` - drop-down list, `CustomDropDown` - with arbitrary item widgets
 - `Tree` - tree

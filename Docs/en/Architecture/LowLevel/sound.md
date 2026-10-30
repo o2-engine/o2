@@ -5,7 +5,7 @@ The sound subsystem is built on miniaudio. It is managed by `o2::SoundSystem`, w
 Stores the encoded audio file data. Supported formats: wav, ogg, mp3, flac. Provides access to the data, duration, channel count and sample rate. Decoding happens in the player.
 
 ### Playback, o2::SoundPlayer
-The sound player. Inherits from `o2::IAnimation`, so it is controlled like any animation (`Play`/`Stop`, looping, setting the time) and can be sequenced and scrubbed in the animation editor.
+The sound player. Inherits from `o2::IAnimation`, so it is controlled like any animation (`Play`/`Stop`, looping, setting the time) and can be sequenced and scrubbed in the animation editor: a time set on a stopped player is heard as a short preview, `SetScrubPreview(false)` keeps it silent (the editor previews of sounds do).
 
 Parameters: sound asset, volume, pitch. There is a spatial mode (`spatial`): the source has a position, minimum/maximum audibility distances and an attenuation rolloff factor.
 

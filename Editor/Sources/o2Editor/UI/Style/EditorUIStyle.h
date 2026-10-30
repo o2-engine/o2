@@ -35,6 +35,10 @@ namespace Editor
         void RebuildTreeMenuButton();
         void RebuildFoldersTree();
         void RebuildRegularAssetIcon();
+        void RebuildListAssetIcon();
+        void RebuildTableAssetIcon();
+        void RebuildAssetsViewModeButton();
+        void RebuildAssetTableColumnButton();
         void RebuildAssetsGridScroll();
         void RebuildLinkBtn();
         void RebuildSinglelineEditboxProperty();
@@ -222,6 +226,10 @@ CLASS_METHODS_META(Editor::EditorUIStyleBuilder)
     FUNCTION().PUBLIC().SIGNATURE(void, RebuildTreeMenuButton);
     FUNCTION().PUBLIC().SIGNATURE(void, RebuildFoldersTree);
     FUNCTION().PUBLIC().SIGNATURE(void, RebuildRegularAssetIcon);
+    FUNCTION().PUBLIC().SIGNATURE(void, RebuildListAssetIcon);
+    FUNCTION().PUBLIC().SIGNATURE(void, RebuildTableAssetIcon);
+    FUNCTION().PUBLIC().SIGNATURE(void, RebuildAssetsViewModeButton);
+    FUNCTION().PUBLIC().SIGNATURE(void, RebuildAssetTableColumnButton);
     FUNCTION().PUBLIC().SIGNATURE(void, RebuildAssetsGridScroll);
     FUNCTION().PUBLIC().SIGNATURE(void, RebuildLinkBtn);
     FUNCTION().PUBLIC().SIGNATURE(void, RebuildSinglelineEditboxProperty);

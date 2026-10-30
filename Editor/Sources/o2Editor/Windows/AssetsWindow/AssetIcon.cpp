@@ -17,9 +17,9 @@ namespace Editor
     }
 
     AssetIcon::AssetIcon(RefCounter* refCounter, const AssetIcon& other):
-        Widget(refCounter, other)
+        Widget(refCounter, other), mIconLayout(other.mIconLayout), mPreviewLayout(other.mPreviewLayout)
     {
-        mNameText = FindChildByType<Label>();
+        InitializeLabels();
 
         onDraw += [&]() { CursorAreaEventsListener::OnDrawn(); };
         RetargetStatesAnimations();
@@ -32,8 +32,21 @@ namespace Editor
     AssetIcon& AssetIcon::operator=(const AssetIcon& other)
     {
         Widget::operator=(other);
-        mNameText = FindChildByType<Label>();
+        mIconLayout = other.mIconLayout;
+        mPreviewLayout = other.mPreviewLayout;
+        InitializeLabels();
         return *this;
+    }
+
+    void AssetIcon::InitializeLabels()
+    {
+        mNameText = GetChildByType<Label>("nameLabel");
+        if (!mNameText)
+            mNameText = FindChildByType<Label>();
+
+        mTypeText = GetChildByType<Label>("typeLabel");
+        mSizeText = GetChildByType<Label>("sizeLabel");
+        mDateText = GetChildByType<Label>("dateLabel");
     }
 
     void AssetIcon::SetAssetInfo(const Ref<AssetInfo>& info)
@@ -61,6 +74,50 @@ namespace Editor
             return mNameText->GetText();
 
         return WString();
+    }
+
+    void AssetIcon::SetColumns(const WString& type, const WString& size, const WString& date)
+    {
+        if (mTypeText)
+            mTypeText->SetText(type);
+
+        if (mSizeText)
+            mSizeText->SetText(size);
+
+        if (mDateText)
+            mDateText->SetText(date);
+    }
+
+    void AssetIcon::SetIconLayouts(const Layout& icon, const Layout& preview)
+    {
+        mIconLayout = icon;
+        mPreviewLayout = preview;
+    }
+
+    const Layout& AssetIcon::GetIconLayout() const
+    {
+        return mIconLayout;
+    }
+
+    const Layout& AssetIcon::GetPreviewLayout() const
+    {
+        return mPreviewLayout;
+    }
+
+    WidgetLayout AssetIcon::GetTableColumnLayout(int column, float leftIndent /*= 0.0f*/)
+    {
+        const float padding = 4.0f;
+        float right = 0.0f;
+        float widths[] = { tableDateWidth, tableSizeWidth, tableTypeWidth };
+
+        if (column == 0)
+            return WidgetLayout::BothStretch(leftIndent, 0, tableTypeWidth + tableSizeWidth + tableDateWidth + padding, 0);
+
+        for (int i = 3; i > column; i--)
+            right += widths[3 - i];
+
+        float width = widths[3 - column];
+        return WidgetLayout(Vec2F(1.0f, 0.0f), Vec2F(1.0f, 1.0f), Vec2F(-right - width + padding, 0.0f), Vec2F(-right - padding, 0.0f));
     }
 
     bool AssetIcon::IsUnderPoint(const Vec2F& point)
@@ -113,12 +170,14 @@ namespace Editor
 
     void AssetIcon::OnCursorEnter(const Input::Cursor& cursor)
     {
-        SetState("hover", true);
+        if (mOwner && !mOwner.Lock()->mIsDraggingIcons)
+            mOwner.Lock()->UpdateHover(Ref(this));
     }
 
     void AssetIcon::OnCursorExit(const Input::Cursor& cursor)
     {
-        SetState("hover", false);
+        if (mOwner)
+            mOwner.Lock()->UpdateHover(nullptr);
     }
 
     void AssetIcon::OnCursorPressed(const Input::Cursor& cursor)

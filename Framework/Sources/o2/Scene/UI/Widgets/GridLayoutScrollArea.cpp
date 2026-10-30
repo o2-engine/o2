@@ -17,7 +17,7 @@ namespace o2
     }
 
     GridLayoutScrollArea::GridLayoutScrollArea(RefCounter* refCounter, const GridLayoutScrollArea& other):
-        ScrollArea(refCounter, other), mItemsSpacing(other.mItemsSpacing)
+        ScrollArea(refCounter, other), mItemsSpacing(other.mItemsSpacing), mItemsFitWidth(other.mItemsFitWidth)
     {
         mInheritedDrawablesManualOrder = true;
 
@@ -35,6 +35,7 @@ namespace o2
     {
         ScrollArea::operator=(other);
         mItemsSpacing = other.mItemsSpacing;
+        mItemsFitWidth = other.mItemsFitWidth;
 
         mItemSample = other.mItemSample->CloneAsRef<Widget>();
         mItemSample->UpdateSelfTransform();
@@ -69,6 +70,17 @@ namespace o2
         return mItemsSpacing;
     }
 
+    void GridLayoutScrollArea::SetItemsFitWidth(bool fit)
+    {
+        mItemsFitWidth = fit;
+        OnItemsUpdated(true);
+    }
+
+    bool GridLayoutScrollArea::IsItemsFitWidth() const
+    {
+        return mItemsFitWidth;
+    }
+
     void GridLayoutScrollArea::OnItemsUpdated(bool itemsRearranged /*= false*/)
     {
         if (itemsRearranged)
@@ -83,7 +95,10 @@ namespace o2
             }
 
             for (auto item : removingItems)
-                mItemsPool.Add(item);
+                FreeItemToPool(item);
+
+            // An item released here unregisters from the drawables of this: it must not be released while they are cleared
+            Vector<Ref<ISceneDrawable>> previousDrawables = mChildrenInheritedDepth;
 
             mChildren.Clear();
             mChildWidgets.Clear();
@@ -156,10 +171,11 @@ namespace o2
         int lastMaxItemIdx = mMaxVisibleItemIdx;
 
         float itemHeight = mItemSample->layout->minHeight;
-        float itemWidth = mItemSample->layout->minWidth;
+        float itemWidth = mItemsFitWidth ? mAbsoluteViewArea.Width() : mItemSample->layout->minWidth;
         int itemsInLine = GetItemsInLine();
 
         bool rebuild = itemsInLine != mPrevItemsInLine;
+        bool widthChanged = !Math::Equals(itemWidth, mPrevItemsWidth);
 
         if (itemHeight < FLT_EPSILON)
             return;
@@ -189,7 +205,10 @@ namespace o2
         }
 
         for (auto item : removingItems)
-            mItemsPool.Add(item);
+            FreeItemToPool(item);
+
+        // An item released here unregisters from the drawables of this: it must not be released while they are cleared
+        Vector<Ref<ISceneDrawable>> previousDrawables = mChildrenInheritedDepth;
 
         mChildren.Clear();
         mChildWidgets.Clear();
@@ -197,13 +216,31 @@ namespace o2
 
         auto thisRef = Ref(this);
 
+        auto placeItem = [&](const Ref<Widget>& item, int idx)
+        {
+            Vec2F size = mItemsFitWidth ? Vec2F(itemWidth, itemHeight) : item->layout->GetMinimalSize();
+            *item->layout = WidgetLayout::Based(BaseCorner::LeftTop, size,
+                                                Vec2F((itemWidth + mItemsSpacing.x)*(float)(idx % itemsInLine),
+                                                      -(itemHeight + mItemsSpacing.y)*(float)(idx/itemsInLine)));
+
+            item->layout->minSize = Vec2F(itemWidth, itemHeight);
+
+            item->UpdateSelfTransform();
+            item->UpdateChildrenTransforms();
+        };
+
         for (int i = mMinVisibleItemIdx; i <= mMaxVisibleItemIdx; i++)
         {
             if (i < 0)
                 continue;
 
             if (i >= lastMinItemIdx && i <= lastMaxItemIdx && !rebuild)
+            {
+                if (widthChanged)
+                    placeItem(itemsWidgets[i - mMinVisibleItemIdx], i);
+
                 continue;
+            }
 
             if (mItemsPool.IsEmpty())
                 mItemsPool.Add(mItemSample->CloneAsRef<Widget>());
@@ -212,27 +249,25 @@ namespace o2
 
             SetupItemWidget(newItem, itemsInRange[i - mMinVisibleItemIdx]);
 
-            *newItem->layout = WidgetLayout::Based(BaseCorner::LeftTop, newItem->layout->GetMinimalSize(),
-                                                   Vec2F((itemWidth + mItemsSpacing.x)*(float)(i % itemsInLine),
-                                                         -(itemHeight + mItemsSpacing.y)*(float)(i/itemsInLine)));
-
-            newItem->layout->minSize = Vec2F(itemWidth, itemHeight);
-
             newItem->mParent = thisRef;
             newItem->mParentWidget = thisRef;
+            newItem->UpdateResEnabledInHierarchy();
 
             itemsWidgets[i - mMinVisibleItemIdx] = newItem;
 
-            newItem->UpdateSelfTransform();
-            newItem->UpdateChildrenTransforms();
+            placeItem(newItem, i);
             newItem->mIsClipped = false;
         }
 
         mChildren.Add(DynamicCastVector<Actor>(itemsWidgets));
         mChildWidgets.Add(itemsWidgets);
+
+        // The new items have registered themselves when they were enabled: the drawables are the visible items once
+        mChildrenInheritedDepth.Clear();
         mChildrenInheritedDepth.Add(DynamicCastVector< ISceneDrawable>(itemsWidgets));
 
         mPrevItemsInLine = itemsInLine;
+        mPrevItemsWidth = itemWidth;
     }
 
     Ref<Widget> GridLayoutScrollArea::GetItemUnderPoint(const Vec2F& point, int* idxPtr)
@@ -257,8 +292,18 @@ namespace o2
         return nullptr;
     }
 
+    void GridLayoutScrollArea::FreeItemToPool(const Ref<Widget>& item)
+    {
+        item->mParent = nullptr;
+        item->mParentWidget = nullptr;
+        mItemsPool.Add(item);
+    }
+
     int GridLayoutScrollArea::GetItemsInLine() const
     {
+        if (mItemsFitWidth)
+            return 1;
+
         float itemWidth = mItemSample->layout->GetMinWidth();
         return Math::Max(1, Math::FloorToInt((mAbsoluteViewArea.Width() - itemWidth)/
             (itemWidth + mItemsSpacing.x) + 1.0f));

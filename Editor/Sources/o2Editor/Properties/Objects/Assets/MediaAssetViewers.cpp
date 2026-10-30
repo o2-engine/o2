@@ -8,10 +8,12 @@
 #include "o2/Scene/UI/Widgets/Label.h"
 #include "o2/Utils/Editor/EditorScope.h"
 #include "o2Editor/UI/Preview/MediaPlayerView.h"
+#include "o2Editor/UI/Preview/MediaPreview.h"
 #include "o2Editor/Windows/AssetPreviewWindow/AssetPreviewWindow.h"
 
 namespace Editor
 {
+
     const Type* SoundAssetViewer::GetViewingObjectType() const
     {
         return GetViewingObjectTypeStatic();
@@ -39,8 +41,13 @@ namespace Editor
 
         mPlayer = mmake<SoundPlayerView>();
         mPlayer->name = "sound player";
-        mPlayer->layout->minHeight = 22;
+        mPlayer->layout->minHeight = 28;
         mSpoiler->AddChild(mPlayer);
+
+        mSpoiler->AddChild(AssetPreviewWindow::CreateOpenButton([this]() {
+            auto asset = mAsset.Lock();
+            return asset ? AssetRef<Asset>(asset) : AssetRef<Asset>();
+        }));
     }
 
     void SoundAssetViewer::OnRefreshed(const Vector<Pair<IObject*, IObject*>>& targetObjets)
@@ -52,9 +59,12 @@ namespace Editor
         if (!sound)
             return;
 
-        mPlayer->SetSound(AssetRef<SoundAsset>(Ref<SoundAsset>(sound)));
-        mInfoLabel->SetText(String::Format("%.2f s, %i channels, ", sound->GetDuration(), sound->GetChannelsCount()) +
-                            (String)(int)(sound->GetDataSize()/1024) + " KB");
+        // The properties refresh their viewers all the time: the playback goes on until the sound changes
+        if (mAsset.Lock().Get() != sound)
+            mPlayer->SetSound(AssetRef<SoundAsset>(Ref<SoundAsset>(sound)));
+
+        mAsset = WeakRef<Asset>(sound);
+        mInfoLabel->SetText(MediaPreview::GetSoundInfo(*sound));
     }
 
     void SoundAssetViewer::OnFree()
@@ -108,11 +118,12 @@ namespace Editor
         if (!video)
             return;
 
-        mAsset = WeakRef<Asset>(video);
-        mPlayer->SetVideo(AssetRef<VideoAsset>(Ref<VideoAsset>(video)));
+        if (mAsset.Lock().Get() != video)
+            mPlayer->SetVideo(AssetRef<VideoAsset>(Ref<VideoAsset>(video)));
 
-        Vec2I size = video->GetImageSize();
-        mInfoLabel->SetText(String::Format("%ix%i, %.1f fps, %.2f s", size.x, size.y, video->GetFrameRate(), video->GetDuration()));
+        mAsset = WeakRef<Asset>(video);
+
+        mInfoLabel->SetText(MediaPreview::GetVideoInfo(*video));
     }
 
     void VideoAssetViewer::OnFree()

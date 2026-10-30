@@ -45,6 +45,7 @@
 #include "o2Editor/Windows/AssetsWindow/AssetsIconsScroll.h"
 #include "o2Editor/Properties/Basic/ActorProperty.h"
 #include "o2Editor/Properties/Basic/AssetProperty.h"
+#include "o2Editor/UI/Preview/AssetPreviewIcon.h"
 #include "o2Editor/Properties/Basic/BooleanProperty.h"
 #include "o2Editor/Properties/Basic/BorderFloatProperty.h"
 #include "o2Editor/Properties/Basic/BorderIntProperty.h"
@@ -1403,78 +1404,178 @@ namespace Editor
         o2UI.AddWidgetStyle(sample, "folders");
     }
 
+    namespace
+    {
+        // Adds the selection and hover layers, the renaming edit box and the states of an asset icon
+        void AddAssetIconCommons(const Ref<AssetIcon>& sample, const WidgetLayout& editBoxLayout, bool backlessEditBox)
+        {
+            auto itemSelectionLayer = sample->AddLayer("select", nullptr);
+            itemSelectionLayer->AddChildLayer("focused", mmake<VectorSprite>("ui/UI4_Context_menu_select.svg"),
+                                              Layout::BothStretch(-10, -16, -10, -16));
+            itemSelectionLayer->AddChildLayer("unfocused", mmake<VectorSprite>("ui/UI4_Context_menu_white.svg"),
+                                              Layout::BothStretch(-10, -16, -10, -16));
+
+            Ref<EditBox> nameEditBox;
+            if (backlessEditBox)
+                nameEditBox = o2UI.CreateWidget<EditBox>("backless");
+            else
+            {
+                nameEditBox = mmake<EditBox>();
+                nameEditBox->SetClippingLayout(Layout::BothStretch(0, 0, 0, 0));
+                nameEditBox->SetViewLayout(Layout::BothStretch(0, 0, 2, 0));
+                nameEditBox->SetCaretBlinkingDelay(1.15f);
+                nameEditBox->SetSelectionColor(Color4(0, 156, 141, 120));
+                nameEditBox->SetMultiLine(false);
+
+                Ref<Text> textDrawable = nameEditBox->GetTextDrawable();
+                textDrawable->SetFontAsset(AssetRef<FontAsset>("stdFont.ttf"));
+                textDrawable->height = 8;
+                textDrawable->color = Color4(96, 125, 139);
+
+                Ref<Sprite> caretDrawable = nameEditBox->GetCaretDrawable();
+                *caretDrawable = Sprite();
+                caretDrawable->size = Vec2F(1, textDrawable->GetFont()->GetHeightPx(textDrawable->GetFontHeight())*1.7f);
+                caretDrawable->pivot = Vec2F(0, 0.26f);
+                caretDrawable->color = Color4::Black();
+            }
+
+            nameEditBox->name = "nameEditBox";
+            *nameEditBox->layout = editBoxLayout;
+            sample->AddChild(nameEditBox);
+
+            auto itemEditStateAnim = AnimationClip::EaseInOut("child/nameLabel/enabled", true, false, 0.15f);
+            *itemEditStateAnim->AddTrack<bool>("child/nameEditBox/enabled") = AnimationTrack<bool>::Linear(false, true, 0.15f);
+            sample->AddState("edit", itemEditStateAnim);
+
+            auto focusedItemAnim = AnimationClip::EaseInOut("layer/select/child/focused/transparency", 0.0f, 1.0f, 0.2f);
+            *focusedItemAnim->AddTrack<float>("layer/select/child/unfocused/transparency") = AnimationTrack<float>::EaseInOut(0.3f, 0.0f, 0.2f);
+            sample->AddState("focused", focusedItemAnim);
+
+            sample->AddState("halfHide", AnimationClip::EaseInOut("transparency", 1.0f, 0.5f, 0.1f));
+            sample->AddState("selected", AnimationClip::EaseInOut("layer/select/transparency", 0.0f, 1.0f, 0.2f));
+        }
+
+        // Builds a row of the list or of the table: the icon and the name in one line
+        Ref<AssetIcon> BuildAssetRow()
+        {
+            Ref<AssetIcon> sample = mmake<AssetIcon>();
+            sample->layout->minSize = Vec2F(100, 20);
+
+            Layout iconLayout = Layout::Based(BaseCorner::Left, Vec2F(20, 20), Vec2F(2, 0));
+            sample->SetIconLayouts(iconLayout, Layout::Based(BaseCorner::Left, Vec2F(16, 16), Vec2F(4, 0)));
+            sample->AddLayer("icon", mmake<VectorSprite>("ui/UI4_big_file_icon.svg"), iconLayout);
+
+            Ref<Label> nameLabel = o2UI.CreateLabel("file name");
+            nameLabel->name = "nameLabel";
+            *nameLabel->layout = WidgetLayout::BothStretch(24, 0, 4, 0);
+            nameLabel->horAlign = HorAlign::Left;
+            nameLabel->verAlign = VerAlign::Middle;
+            nameLabel->horOverflow = Label::HorOverflow::Dots;
+            sample->AddChild(nameLabel);
+
+            return sample;
+        }
+    }
+
     void EditorUIStyleBuilder::RebuildRegularAssetIcon()
     {
+        // The preview area takes the top of the cell, the name the bottom: three lines whole, a fourth one out. The icons
+        // of the types are larger than the area, their transparent margins go over its edges
+        const float iconArea = 40.0f, nameHeight = 30.0f, iconAreaTransparentMargin = 5.0f, iconSize = 48.0f;
+
         Ref<AssetIcon> sample = mmake<AssetIcon>();
-        sample->layout->minSize = Vec2F(50, 60);
+        sample->layout->minSize = Vec2F(50, iconArea + nameHeight - iconAreaTransparentMargin);
 
-        // selection layer
-        auto itemSelectionLayer = sample->AddLayer("select", nullptr);
+        Layout iconLayout = Layout::Based(BaseCorner::Top, Vec2F(iconSize, iconSize), Vec2F(0, (iconSize - iconArea)*0.5f));
+        sample->SetIconLayouts(iconLayout, Layout::Based(BaseCorner::Top, Vec2F(30, 30), Vec2F(0, -5)));
+        sample->AddLayer("icon", mmake<VectorSprite>("ui/UI4_big_file_icon.svg"), iconLayout);
 
-        auto itemFocusedLayer = itemSelectionLayer->AddChildLayer("focused", mmake<VectorSprite>("ui/UI4_Context_menu_select.svg"),
-                                                                  Layout::BothStretch(-10, -16, -10, -16));
-
-        auto itemUnfocusedLayer = itemSelectionLayer->AddChildLayer("unfocused", mmake<VectorSprite>("ui/UI4_Context_menu_white.svg"),
-                                                                    Layout::BothStretch(-10, -16, -10, -16));
-
-        // icon
-        sample->AddLayer("icon", mmake<VectorSprite>("ui/UI4_big_file_icon.svg"),
-                         Layout::Based(BaseCorner::Center, Vec2F(40, 40), Vec2F(0, 10)));
-
-        // hover
-        auto hoverLayer = sample->AddLayer("hover", mmake<VectorSprite>("ui/UI4_Context_menu_white.svg"),
-                                           Layout::BothStretch(-10, -16, -10, -16));
-
-        // name label
         Ref<Label> nameLabel = o2UI.CreateLabel("file name");
         nameLabel->name = "nameLabel";
-        *nameLabel->layout = WidgetLayout::HorStretch(VerAlign::Bottom, 0, 0, 25, 0);
+        *nameLabel->layout = WidgetLayout::HorStretch(VerAlign::Bottom, 0, 0, nameHeight, 0);
         nameLabel->height = 8;
         nameLabel->linesDistanceCoef = 0.7f;
         nameLabel->horAlign = HorAlign::Middle;
         nameLabel->verAlign = VerAlign::Top;
         nameLabel->horOverflow = Label::HorOverflow::Wrap;
         nameLabel->verOverflow = Label::VerOverflow::Cut;
+
+        // The lines are aligned by the capitals, the ascenders go a point higher
+        if (auto textLayer = nameLabel->FindLayer("text"))
+            textLayer->layout = Layout::BothStretch(0, 0, 0, 1);
+
         sample->AddChild(nameLabel);
 
-        // edit box
-        Ref<EditBox> nameEditBox = mmake<EditBox>();
-        nameEditBox->SetClippingLayout(Layout::BothStretch(0, 0, 0, 0));
-        nameEditBox->SetViewLayout(Layout::BothStretch(0, 0, 2, 0));
-        nameEditBox->SetCaretBlinkingDelay(1.15f);
-        nameEditBox->SetSelectionColor(Color4(0, 156, 141, 120));
-        nameEditBox->SetMultiLine(false);
-
-        Ref<Text> textDrawable = nameEditBox->GetTextDrawable();
-        textDrawable->SetFontAsset(AssetRef<FontAsset>("stdFont.ttf"));
-        textDrawable->height = 8;
-        textDrawable->color = Color4(96, 125, 139);
-
-        Ref<Sprite> caretDrawable = nameEditBox->GetCaretDrawable();
-        *caretDrawable = Sprite();
-        caretDrawable->size = Vec2F(1, textDrawable->GetFont()->GetHeightPx(textDrawable->GetFontHeight()) * 1.7f);
-        caretDrawable->pivot = Vec2F(0, 0.26f);
-        caretDrawable->color = Color4::Black();
-
-        nameEditBox->name = "nameEditBox";
-        *nameEditBox->layout = WidgetLayout::HorStretch(VerAlign::Bottom, 0, 0, 22, 0);
-        sample->AddChild(nameEditBox);
-
-        // edit state
-        auto itemEditStateAnim = AnimationClip::EaseInOut("child/nameLabel/enabled", true, false, 0.15f);
-        *itemEditStateAnim->AddTrack<bool>("child/nameEditBox/enabled") = AnimationTrack<bool>::Linear(false, true, 0.15f);
-        sample->AddState("edit", itemEditStateAnim);
-
-        // focused state
-        auto focusedItemAnim = AnimationClip::EaseInOut("layer/select/child/focused/transparency", 0.0f, 1.0f, 0.2f);
-        *focusedItemAnim->AddTrack<float>("layer/select/child/unfocused/transparency") = AnimationTrack<float>::EaseInOut(0.3f, 0.0f, 0.2f);
-        sample->AddState("focused", focusedItemAnim);
-
-        sample->AddState("halfHide", AnimationClip::EaseInOut("transparency", 1.0f, 0.5f, 0.1f));
-        sample->AddState("selected", AnimationClip::EaseInOut("layer/select/transparency", 0.0f, 1.0f, 0.2f));
-        sample->AddState("hover", AnimationClip::EaseInOut("layer/hover/transparency", 0.0f, 1.0f, 0.1f));
+        AddAssetIconCommons(sample, WidgetLayout::HorStretch(VerAlign::Bottom, 0, 0, 22, nameHeight - 22), false);
 
         o2UI.AddWidgetStyle(sample, "standard");
+    }
+
+    void EditorUIStyleBuilder::RebuildListAssetIcon()
+    {
+        auto sample = BuildAssetRow();
+        AddAssetIconCommons(sample, WidgetLayout::BothStretch(22, 0, 4, 0), true);
+        o2UI.AddWidgetStyle(sample, "list");
+    }
+
+    void EditorUIStyleBuilder::RebuildTableAssetIcon()
+    {
+        auto sample = BuildAssetRow();
+        *sample->GetChildWidget("nameLabel")->layout = AssetIcon::GetTableColumnLayout(0, 24);
+
+        const char* columns[] = { "typeLabel", "sizeLabel", "dateLabel" };
+        for (int i = 0; i < 3; i++)
+        {
+            Ref<Label> label = o2UI.CreateLabel("");
+            label->name = columns[i];
+            *label->layout = AssetIcon::GetTableColumnLayout(i + 1);
+            label->horAlign = i == 1 ? HorAlign::Right : HorAlign::Left;
+            label->verAlign = VerAlign::Middle;
+            label->horOverflow = Label::HorOverflow::Dots;
+            label->transparency = 0.7f;
+            sample->AddChild(label);
+        }
+
+        AddAssetIconCommons(sample, AssetIcon::GetTableColumnLayout(0, 22), true);
+        o2UI.AddWidgetStyle(sample, "table");
+    }
+
+    void EditorUIStyleBuilder::RebuildAssetsViewModeButton()
+    {
+        Ref<Button> sample = mmake<Button>();
+        sample->AddLayer("regularBack", mmake<VectorSprite>("ui/UI4_panel_button.svg"), Layout::BothStretch(-4, -4, -5, -5));
+        sample->AddLayer("hover", mmake<VectorSprite>("ui/UI4_panel_button_select.svg"), Layout::BothStretch(-4, -4, -5, -5));
+        sample->AddLayer("pressed", mmake<VectorSprite>("ui/UI4_panel_button_pressed.svg"), Layout::BothStretch(-4, -4, -5, -5));
+        // The edge lines of the panel button take the top 19 points of its 20
+        sample->AddLayer("icon", mmake<VectorSprite>("ui/UI4_grid_view_icon.svg"),
+                         Layout::Based(BaseCorner::Center, Vec2F(20, 20), Vec2F(0, 0.5f)));
+
+        sample->AddState("hover", AnimationClip::EaseInOut("layer/hover/transparency", 0.0f, 1.0f, 0.1f))
+            ->offStateAnimationSpeed = 1.0f/4.0f;
+
+        sample->AddState("pressed", AnimationClip::EaseInOut("layer/pressed/transparency", 0.0f, 1.0f, 0.05f))
+            ->offStateAnimationSpeed = 0.5f;
+
+        o2UI.AddWidgetStyle(sample, "assets view mode");
+    }
+
+    void EditorUIStyleBuilder::RebuildAssetTableColumnButton()
+    {
+        Ref<Button> sample = mmake<Button>();
+        sample->layout->minSize = Vec2F(20, 20);
+
+        Ref<Text> caption = mmake<Text>("stdFont.ttf");
+        caption->horAlign = HorAlign::Left;
+        caption->verAlign = VerAlign::Middle;
+        caption->color = Color4(96, 125, 139);
+        sample->AddLayer("caption", caption, Layout::BothStretch(4, 0, 16, 0))->transparency = 0.8f;
+
+        sample->AddLayer("sortArrow", mmake<VectorSprite>("ui/UI4_Down_icn.svg"), Layout::Based(BaseCorner::Right, Vec2F(16, 16), Vec2F(-1, 0)));
+
+        sample->AddState("hover", AnimationClip::EaseInOut("layer/caption/transparency", 0.8f, 1.0f, 0.1f))
+            ->offStateAnimationSpeed = 1.0f/4.0f;
+
+        o2UI.AddWidgetStyle(sample, "asset table column");
     }
 
     void EditorUIStyleBuilder::RebuildAssetsGridScroll()
@@ -1486,6 +1587,13 @@ namespace Editor
         sample->SetEnableScrollsHiding(true);
         sample->SetItemSample(o2UI.CreateWidget<AssetIcon>());
         sample->SetItemsSpacing(Vec2F(5, 5));
+
+        // hover, as the folders tree has it
+        sample->SetHoverDrawable(mmake<VectorSprite>("ui/UI4_Context_menu_white.svg"));
+        sample->SetHoverLayout(Layout::BothStretch(-10, -16, -10, -16));
+        sample->AddState("hover", AnimationClip::EaseInOut("mHoverDrawable/transparency", 0.0f, 1.0f, 0.2f))
+            ->offStateAnimationSpeed = 0.5f;
+        sample->SetStateForcible("hover", false);
 
         // highlight
         sample->SetHighlightDrawable(mmake<VectorSprite>("ui/UI4_selection_frame.svg"));
@@ -4425,6 +4533,12 @@ namespace Editor
         nameText->dotsEngings = true;
         nameText->color = Color4(96, 125, 139);;
         box->AddLayer("caption", nameText, Layout::BothStretch(2, 2, 2, 2));
+
+        auto preview = mmake<AssetPreviewIcon>();
+        preview->name = "preview";
+        *preview->layout = WidgetLayout::Based(BaseCorner::Left, Vec2F(15, 15), Vec2F(2, 0));
+        preview->SetEnabledForcible(false);
+        box->AddChild(preview);
 
         box->SetFocusable(true);
 

@@ -612,6 +612,16 @@ namespace o2
     void ContextMenu::SetIconsColor(const Color4& color)
     {
         mIconsColor = color;
+
+        for (auto& child : mItemsLayout->GetChildWidgets())
+        {
+            if (auto item = DynamicCast<ContextMenuItem>(child))
+            {
+                TintIcon(item);
+                if (auto subMenu = item->GetSubMenu())
+                    subMenu->SetIconsColor(color);
+            }
+        }
     }
 
     const Color4& ContextMenu::GetIconsColor() const
@@ -940,6 +950,8 @@ namespace o2
             {
                 if (auto owner = DynamicCast<ContextMenu>(parent))
                 {
+                    subMenu->SetIconsColor(owner->GetIconsColor());
+
                     if (owner->onSubMenuCreated)
                     {
                         subMenu->onSubMenuCreated = owner->onSubMenuCreated;

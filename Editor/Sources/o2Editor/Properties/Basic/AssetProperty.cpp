@@ -5,6 +5,7 @@
 #include "o2Editor/Dialogs/System/OpenSaveDialog.h"
 #include "o2Editor/Properties/ObjectViewer.h"
 #include "o2Editor/Properties/Properties.h"
+#include "o2Editor/UI/Preview/AssetPreviewIcon.h"
 #include "o2Editor/Windows/AssetsWindow/AssetIcon.h"
 #include "o2Editor/Windows/WindowsManager.h"
 
@@ -58,6 +59,8 @@ namespace Editor
             mNameText = mBox->GetLayerDrawable<Text>("caption");
             if (mNameText)
                 mNameText->text = "--";
+
+            mPreview = mBox->GetChildByType<AssetPreviewIcon>("preview");
         }
 
         mCreateInstanceBtn = mSpoiler->GetInternalWidgetByType<Button>("mainLayout/container/layout/create");
@@ -137,7 +140,21 @@ namespace Editor
             mBox->layer["caption"]->transparency = 1.0f;
         }
 
+        UpdatePreview();
         SetState("instance", mAvailableToHaveInstance && allAreInstance && !mValuesDifferent);
+    }
+
+    void AssetProperty::UpdatePreview()
+    {
+        if (!mPreview)
+            return;
+
+        bool show = !mValuesDifferent && mCommonValue;
+        mPreview->SetAsset(show ? mCommonValue : AssetRef<Asset>());
+        mPreview->SetEnabledForcible(show);
+
+        if (auto caption = mBox->GetLayer("caption"))
+            caption->layout = Layout::BothStretch(show ? 20.0f : 2.0f, 2, 2, 2);
     }
 
 	void AssetProperty::UpdateAssetName()

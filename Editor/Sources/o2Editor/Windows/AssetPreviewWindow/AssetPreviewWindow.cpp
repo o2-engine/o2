@@ -10,6 +10,7 @@
 #include "o2/Assets/Types/SoundAsset.h"
 #include "o2/Assets/Types/VectorImageAsset.h"
 #include "o2/Assets/Types/VideoAsset.h"
+#include "o2Editor/UI/Preview/MediaPreview.h"
 #include "o2/Render/Sprite.h"
 #include "o2/Render/VectorRasterCache.h"
 #include "o2/Render/VectorSprite.h"
@@ -46,8 +47,7 @@ namespace Editor
 
     AssetPreviewWindow::~AssetPreviewWindow()
     {
-        StopPlayback();
-
+        // The window goes after the assets when the editor closes: the players stop themselves, the transport bars stay
         if (mInstance == this)
             mInstance = nullptr;
     }
@@ -160,7 +160,9 @@ namespace Editor
         addContent(mVideoView, "video");
 
         mSoundPlayerView = mmake<SoundPlayerView>();
+        mSoundPlayerView->SetLarge(true);
         addContent(mSoundPlayerView, "sound");
+        *mSoundPlayerView->layout = WidgetLayout(Vec2F(0, 0.5f), Vec2F(1, 0.5f), Vec2F(24, -130), Vec2F(-24, 130));
 
         mNoPreview = o2UI.CreateLabel("No preview for this asset");
         addContent(mNoPreview, "no preview");
@@ -347,14 +349,13 @@ namespace Editor
         else if (auto video = DynamicCast<VideoAsset>(ref))
         {
             mVideoView->SetVideo(AssetRef<VideoAsset>(video));
-            Vec2I size = video->GetImageSize();
-            mInfo->SetText(String::Format("%ix%i, %.1f fps, %.2f s", size.x, size.y, video->GetFrameRate(), video->GetDuration()));
+            mInfo->SetText(MediaPreview::GetVideoInfo(*video));
             ShowContent(mVideoView);
         }
         else if (auto sound = DynamicCast<SoundAsset>(ref))
         {
             mSoundPlayerView->SetSound(AssetRef<SoundAsset>(sound));
-            mInfo->SetText(String::Format("%.2f s, %i channels", sound->GetDuration(), sound->GetChannelsCount()));
+            mInfo->SetText(MediaPreview::GetSoundInfo(*sound));
             ShowContent(mSoundPlayerView);
         }
         else

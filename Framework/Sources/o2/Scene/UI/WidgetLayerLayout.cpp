@@ -59,6 +59,9 @@ namespace o2
         mOffsetMin = other.offsetMin;
         mOffsetMax = other.offsetMax;
 
+        if (mWidgetLayer)
+            mWidgetLayer.Lock()->OnLayoutChanged();
+
         return *this;
     }
 

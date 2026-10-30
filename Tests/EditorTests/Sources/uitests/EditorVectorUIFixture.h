@@ -322,7 +322,8 @@ namespace EditorVectorUITest
         Ref<Editor::MenuPanel> menu;
         Ref<ToolsPanel>        tools;
 
-        EditorShell(const WindowsLayout& layout)
+        // setupConfig changes the config before the windows are made, as the config of the developer does at the start
+        EditorShell(const WindowsLayout& layout, const Function<void(EditorConfig&)>& setupConfig = Function<void(EditorConfig&)>())
         {
             PushEditorScopeOnStack scope;
 
@@ -345,6 +346,8 @@ namespace EditorVectorUITest
 
             config = mmake<EditorConfig>();
             config->projectConfig.layout = layout;
+            if (setupConfig)
+                setupConfig(*config);
 
             windows = mmake<WindowsManager>();
             menu = mmake<Editor::MenuPanel>();

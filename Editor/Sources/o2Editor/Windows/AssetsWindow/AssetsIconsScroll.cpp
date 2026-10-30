@@ -7,6 +7,10 @@
 #include "o2/Assets/Types/AtlasAsset.h"
 #include "o2/Assets/Types/FolderAsset.h"
 #include "o2/Assets/Types/VectorImageAsset.h"
+#include "o2/Assets/Types/VideoAsset.h"
+#include "o2Editor/UI/Preview/MediaPreview.h"
+#include "o2Editor/Windows/PipelineWindow/PipelineControls.h"
+#include "o2Editor/Windows/PipelineWindow/PipelineTheme.h"
 #include "o2/Render/Render.h"
 #include "o2/Render/Sprite.h"
 #include "o2/Render/VectorSprite.h"
@@ -14,8 +18,11 @@
 #include "o2/Scene/Components/ImageComponent.h"
 #include "o2/Scene/UI/UIManager.h"
 #include "o2/Scene/UI/WidgetLayer.h"
+#include "o2/Scene/UI/WidgetState.h"
 #include "o2/Scene/UI/Widgets/EditBox.h"
+#include "o2/Scene/UI/Widgets/Button.h"
 #include "o2/Utils/Editor/EditorScope.h"
+#include "o2Editor/UI/Style/EditorTheme.h"
 #include "o2Editor/Utils/CommonTextures.h"
 #include "o2/Utils/FileSystem/FileSystem.h"
 #include "o2/Utils/StringUtils.h"
@@ -35,6 +42,32 @@
 
 namespace Editor
 {
+    namespace
+    {
+        // Fits the size into the area of a layout with one anchor point, keeping the aspect
+        Layout FitIntoArea(const Layout& area, float width, float height)
+        {
+            Vec2F areaSize = area.offsetMax - area.offsetMin;
+            Vec2F center = (area.offsetMin + area.offsetMax)*0.5f;
+            float scale = Math::Min(areaSize.x/Math::Max(width, 1.0f), areaSize.y/Math::Max(height, 1.0f));
+            Vec2F size(width*scale, height*scale);
+            return Layout(area.anchorMin, area.anchorMax, center - size*0.5f, center + size*0.5f);
+        }
+
+        int CompareDates(const TimeStamp& a, const TimeStamp& b)
+        {
+            int av[] = { a.mYear, a.mMonth, a.mDay, a.mHour, a.mMinute, a.mSecond };
+            int bv[] = { b.mYear, b.mMonth, b.mDay, b.mHour, b.mMinute, b.mSecond };
+            for (int i = 0; i < 6; i++)
+            {
+                if (av[i] != bv[i])
+                    return av[i] < bv[i] ? -1 : 1;
+            }
+
+            return 0;
+        }
+    }
+
     AssetsIconsScrollArea::AssetsIconsScrollArea(RefCounter* refCounter):
         GridLayoutScrollArea(refCounter)
     {
@@ -42,6 +75,7 @@ namespace Editor
 
         mHighlightSprite = mmake<Sprite>();
         mSelectionSprite = mmake<Sprite>();
+        mHoverDrawable = mmake<Sprite>();
 
         mHighlightAnim->SetTarget(mHighlightSprite.Get());
     }
@@ -49,11 +83,15 @@ namespace Editor
     AssetsIconsScrollArea::AssetsIconsScrollArea(RefCounter* refCounter, const AssetsIconsScrollArea& other) :
         GridLayoutScrollArea(refCounter, other), mHighlightSprite(other.mHighlightSprite->CloneAsRef<IRectDrawable>()),
         mHighlightLayout(other.mHighlightLayout), mHighlightAnim(other.mHighlightAnim),
-        mSelectionSprite(other.mSelectionSprite->CloneAsRef<IRectDrawable>())
+        mSelectionSprite(other.mSelectionSprite->CloneAsRef<IRectDrawable>()),
+        mHoverDrawable(other.mHoverDrawable->CloneAsRef<IRectDrawable>()), mHoverLayout(other.mHoverLayout)
     {
         PushEditorScopeOnStack scope;
 
         RemoveAllChildren();
+
+        if (auto clonedHeader = FindInternalWidget("table header"))
+            RemoveInternalWidget(clonedHeader);
 
         mDragIcon = o2UI.CreateWidget<AssetIcon>();
 
@@ -73,7 +111,8 @@ namespace Editor
     {}
 
     AssetsIconsScrollArea::~AssetsIconsScrollArea()
-    {}
+    {
+    }
 
     AssetsIconsScrollArea& AssetsIconsScrollArea::operator=(const AssetsIconsScrollArea& other)
     {
@@ -90,6 +129,8 @@ namespace Editor
         mHighlightAnim->SetClip(mHighlighClip);
 
         mSelectionSprite = other.mSelectionSprite->CloneAsRef<IRectDrawable>();
+        mHoverDrawable = other.mHoverDrawable->CloneAsRef<IRectDrawable>();
+        mHoverLayout = other.mHoverLayout;
 
         RetargetStatesAnimations();
         SetLayoutDirty();
@@ -108,7 +149,12 @@ namespace Editor
 
         o2Render.EnableScissorTest(mAbsoluteClipArea);
 
+        if (mTableHeader && mViewMode == ViewMode::Table)
+            DrawTableLines(false);
+
         DrawInheritedDepthChildren();
+
+        mHoverDrawable->Draw();
 
         if (mSelecting)
             mSelectionSprite->Draw();
@@ -117,6 +163,12 @@ namespace Editor
             mHighlightSprite->Draw();
 
         o2Render.DisableScissorTest();
+
+        if (mTableHeader && mViewMode == ViewMode::Table)
+        {
+            mTableHeader->Draw();
+            DrawTableLines(true);
+        }
 
         GridLayoutScrollArea::OnDrawn();
 
@@ -139,6 +191,13 @@ namespace Editor
     void AssetsIconsScrollArea::Update(float dt)
     {
         ScrollArea::Update(dt);
+
+        const float rectLerpCoef = 10.0f;
+        if (mCurrentHoverRect != mTargetHoverRect)
+        {
+            mCurrentHoverRect = Math::Lerp(mCurrentHoverRect, mTargetHoverRect, dt*rectLerpCoef);
+            mHoverDrawable->SetRect(mCurrentHoverRect);
+        }
 
         if (mHighlightAnim->IsPlaying())
         {
@@ -188,6 +247,7 @@ namespace Editor
         else
             mAssetInfos = o2Assets.GetAssetsTree().rootAssets;
 
+        mFileInfos.Clear();
         SortAssetInfos();
         OnItemsUpdated(true);
     }
@@ -198,6 +258,7 @@ namespace Editor
 
         DeselectAllAssets();
         mAssetInfos = matches;
+        mFileInfos.Clear();
         SortAssetInfos();
         OnItemsUpdated(true);
         ResetScroll();
@@ -205,24 +266,264 @@ namespace Editor
 
     void AssetsIconsScrollArea::SortAssetInfos()
     {
-        Map<Ref<AssetInfo>, Pair<String, int>> sortingCache;
+        struct SortKey
+        {
+            int     typeSorting = 0;
+            String  name;
+            WString type;
+            Int64   size = 0;
+            TimeStamp date;
+        };
+
+        Map<Ref<AssetInfo>, SortKey> keys;
         for (auto& assetInfo : mAssetInfos)
-            sortingCache[assetInfo] = { assetInfo->path.ToLowerCase(), assetInfo->meta->GetAssetType()->InvokeStatic<int>("GetEditorSorting") };
+        {
+            SortKey key;
+            key.typeSorting = assetInfo->meta->GetAssetType()->InvokeStatic<int>("GetEditorSorting");
+            key.name = assetInfo->path.ToLowerCase();
 
-		mAssetInfos.Sort([&](const Ref<AssetInfo>& a, const Ref<AssetInfo>& b)
-						 {
-							 int aSorting = sortingCache[a].second;
-							 int bSorting = sortingCache[b].second;
-							 if (aSorting != bSorting)
-								 return aSorting > bSorting;
+            if (mSortBy == SortBy::Type)
+                key.type = GetTypeText(*assetInfo);
+            else if (mSortBy == SortBy::Size || mSortBy == SortBy::Modified)
+            {
+                auto& file = GetFileInfo(assetInfo);
+                key.size = file.size;
+                key.date = file.editDate;
+            }
 
-							 const String& aPath = sortingCache[a].first;
-							 const String& bPath = sortingCache[b].first;
-							 if (aPath != bPath)
-								 return aPath < bPath;
+            keys[assetInfo] = key;
+        }
 
-							 return a->meta->ID() < b->meta->ID();
-						 });
+        mAssetInfos.Sort([&](const Ref<AssetInfo>& a, const Ref<AssetInfo>& b)
+        {
+            auto& ak = keys[a];
+            auto& bk = keys[b];
+            if (ak.typeSorting != bk.typeSorting)
+                return ak.typeSorting > bk.typeSorting;
+
+            int order = 0;
+            if (mSortBy == SortBy::Type && ak.type != bk.type)
+                order = ak.type < bk.type ? -1 : 1;
+            else if (mSortBy == SortBy::Size && ak.size != bk.size)
+                order = ak.size < bk.size ? -1 : 1;
+            else if (mSortBy == SortBy::Modified)
+                order = CompareDates(ak.date, bk.date);
+
+            if (order == 0 && ak.name != bk.name)
+                order = ak.name < bk.name ? -1 : 1;
+
+            if (order != 0)
+                return mSortDescending ? order > 0 : order < 0;
+
+            return a->meta->ID() < b->meta->ID();
+        });
+    }
+
+    const FileInfo& AssetsIconsScrollArea::GetFileInfo(const Ref<AssetInfo>& info)
+    {
+        UID id = info->meta->ID();
+        if (mFileInfos.ContainsKey(id))
+            return mFileInfos[id];
+
+        mFileInfos[id] = o2FileSystem.GetFileInfo(o2Assets.GetAssetsPath() + info->path);
+        return mFileInfos[id];
+    }
+
+    const Vector<Ref<AssetInfo>>& AssetsIconsScrollArea::GetAssetInfos() const
+    {
+        return mAssetInfos;
+    }
+
+    const Vector<Ref<AssetIcon>>& AssetsIconsScrollArea::GetVisibleIcons() const
+    {
+        return mVisibleAssetIcons;
+    }
+
+    void AssetsIconsScrollArea::SetViewMode(ViewMode mode)
+    {
+        PushEditorScopeOnStack scope;
+
+        if (!mBaseLayoutsStored)
+        {
+            mGridViewLayout = GetViewLayout();
+            mGridClippingLayout = GetClippingLayout();
+            mGridItemsSpacing = GetItemsSpacing();
+            mBaseLayoutsStored = true;
+        }
+
+        mViewMode = mode;
+
+        UpdateHover(nullptr);
+        OnItemsUpdated(true);
+        mItemsPool.Clear();
+        mVisibleAssetIcons.Clear();
+
+        const char* styles[] = { "standard", "list", "table" };
+        SetItemSample(o2UI.CreateWidget<AssetIcon>(styles[(int)mode]));
+        SetItemsSpacing(mode == ViewMode::Grid ? mGridItemsSpacing : Vec2F());
+
+        Layout viewLayout = mGridViewLayout;
+        Layout clippingLayout = mGridClippingLayout;
+        if (mode == ViewMode::Table)
+        {
+            if (!mTableHeader)
+                InitializeTableHeader();
+
+            viewLayout.offsetMax.y -= tableHeaderHeight;
+            clippingLayout.offsetMax.y -= tableHeaderHeight + 1.0f;
+            UpdateTableHeader();
+        }
+
+        if (mTableHeader)
+            mTableHeader->SetEnabledForcible(mode == ViewMode::Table);
+
+        SetViewLayout(viewLayout);
+        SetClippingLayout(clippingLayout);
+        SetItemsFitWidth(mode != ViewMode::Grid);
+        ResetScroll();
+    }
+
+    AssetsIconsScrollArea::ViewMode AssetsIconsScrollArea::GetViewMode() const
+    {
+        return mViewMode;
+    }
+
+    void AssetsIconsScrollArea::SetSort(SortBy sortBy, bool descending /*= false*/)
+    {
+        mSortBy = sortBy;
+        mSortDescending = descending;
+
+        SortAssetInfos();
+        OnItemsUpdated(true);
+        UpdateTableHeader();
+    }
+
+    AssetsIconsScrollArea::SortBy AssetsIconsScrollArea::GetSortBy() const
+    {
+        return mSortBy;
+    }
+
+    bool AssetsIconsScrollArea::IsSortDescending() const
+    {
+        return mSortDescending;
+    }
+
+    const Ref<Widget>& AssetsIconsScrollArea::GetTableHeader() const
+    {
+        return mTableHeader;
+    }
+
+    void AssetsIconsScrollArea::InitializeTableHeader()
+    {
+        mTableHeader = mmake<Widget>();
+        mTableHeader->name = "table header";
+        *mTableHeader->layout = WidgetLayout::HorStretch(VerAlign::Top, mGridViewLayout.offsetMin.x, -mGridViewLayout.offsetMax.x,
+                                                         tableHeaderHeight, 2.0f);
+        AddInternalWidget(mTableHeader);
+
+        const char* captions[] = { "Name", "Type", "Size", "Modified" };
+
+        mTableHeaderButtons.Clear();
+        for (int column = 0; column < 4; column++)
+        {
+            auto button = o2UI.CreateWidget<Button>("asset table column");
+            button->name = captions[column];
+            button->SetCaption(captions[column]);
+            *button->layout = AssetIcon::GetTableColumnLayout(column);
+            button->onClick = [this, column]() {
+                SortBy sortBy = (SortBy)column;
+                SetSort(sortBy, sortBy == mSortBy ? !mSortDescending : false);
+                if (onViewChanged)
+                    onViewChanged();
+            };
+
+            // The size column keeps its numbers by the right edge, the title too
+            if (column == (int)SortBy::Size)
+            {
+                button->GetLayer("caption")->layout = Layout::BothStretch(16, 0, 4, 0);
+                button->GetLayerDrawable<Text>("caption")->SetHorAlign(HorAlign::Right);
+                button->GetLayer("sortArrow")->layout = Layout::Based(BaseCorner::Left, Vec2F(16, 16), Vec2F(1, 0));
+            }
+
+            mTableHeader->AddChild(button);
+            mTableHeaderButtons.Add(button);
+        }
+    }
+
+    void AssetsIconsScrollArea::UpdateTableHeader()
+    {
+        for (int column = 0; column < mTableHeaderButtons.Count(); column++)
+        {
+            auto arrow = mTableHeaderButtons[column]->GetLayer("sortArrow");
+            arrow->SetEnabled((int)mSortBy == column);
+            arrow->GetDrawable()->SetAngle(mSortDescending ? 0.0f : Math::PI());
+        }
+    }
+
+    void AssetsIconsScrollArea::DrawTableLines(bool header)
+    {
+        if (mTableHeaderButtons.IsEmpty())
+            return;
+
+        Color4 color = EditorTheme::Get().text;
+        color.a = 45;
+
+        RectF headerRect = mTableHeader->layout->GetWorldRect();
+        float top = header ? headerRect.top : headerRect.bottom;
+        float bottom = headerRect.bottom;
+        if (!header)
+        {
+            bottom = mAbsoluteClipArea.bottom;
+            if (!mChildWidgets.IsEmpty())
+                bottom = Math::Max(bottom, mChildWidgets.Last()->layout->GetWorldRect().bottom);
+        }
+
+        for (int column = 1; column < mTableHeaderButtons.Count(); column++)
+        {
+            float x = Math::Round(mTableHeaderButtons[column]->layout->GetWorldRect().left - 4.0f);
+            o2Render.DrawLine(Vec2F(x, top), Vec2F(x, bottom), color);
+        }
+
+        if (header)
+            o2Render.DrawLine(Vec2F(headerRect.left, Math::Round(bottom)), Vec2F(headerRect.right, Math::Round(bottom)), color);
+    }
+
+    WString AssetsIconsScrollArea::GetTypeText(const AssetInfo& info)
+    {
+        auto type = info.meta->GetAssetType();
+        if (!type)
+            return WString();
+
+        String name = type->GetName();
+        int namespaceEnd = name.FindLast("::");
+        if (namespaceEnd >= 0)
+            name = name.SubStr(namespaceEnd + 2);
+
+        if (name.EndsWith("Asset") && name.Length() > 5)
+            name = name.SubStr(0, name.Length() - 5);
+
+        return GetSmartName(name);
+    }
+
+    WString AssetsIconsScrollArea::GetSizeText(const AssetInfo& info, const FileInfo& file)
+    {
+        if (info.meta->GetAssetType() == &TypeOf(FolderAsset))
+            return WString();
+
+        double size = (double)file.size;
+        if (size < 1024.0)
+            return (String)(int)file.size + " B";
+
+        if (size < 1024.0*1024.0)
+            return String::Format("%.1f KB", size/1024.0);
+
+        return String::Format("%.1f MB", size/(1024.0*1024.0));
+    }
+
+    WString AssetsIconsScrollArea::GetDateText(const FileInfo& file)
+    {
+        auto& d = file.editDate;
+        return String::Format("%04d-%02d-%02d %02d:%02d", d.mYear, d.mMonth, d.mDay, d.mHour, d.mMinute);
     }
 
     bool AssetsIconsScrollArea::IsFocusable() const
@@ -288,10 +589,9 @@ namespace Editor
         if (scroll)
         {
             int idx = mAssetInfos.IndexOf(assetInfo);
-            float itemHeight = mItemSample->layout->minHeight;
-            int itemsInLine = Math::Max(1, Math::FloorToInt(mAbsoluteViewArea.Width() / mItemSample->layout->GetMinWidth()));
+            float itemHeight = mItemSample->layout->minHeight + mItemsSpacing.y;
 
-            SetScroll(Vec2F(0.0f, idx / itemsInLine * itemHeight));
+            SetScroll(Vec2F(0.0f, idx/GetItemsInLine()*itemHeight));
         }
 
         if (selectionChanged)
@@ -444,12 +744,7 @@ namespace Editor
         }
 
         auto setPreviewLayout = [&](float width, float height) {
-            float previewMaxSize = 30;
-            Vec2F size = width > height
-                ? Vec2F(previewMaxSize, previewMaxSize*height/Math::Max(width, 1.0f))
-                : Vec2F(previewMaxSize*width/Math::Max(height, 1.0f), previewMaxSize);
-
-            iconLayer->layout = Layout::Based(BaseCorner::Center, size, Vec2F(0, 10));
+            iconLayer->layout = FitIntoArea(assetIcon->GetPreviewLayout(), width, height);
             previewBackLayer->layout = iconLayer->layout;
             previewBackLayer->SetEnabled(true);
         };
@@ -515,16 +810,94 @@ namespace Editor
                 vectorIcon->SetMode(SpriteMode::FixedAspect);
             else if (auto rasterIcon = DynamicCast<Sprite>(icon))
                 rasterIcon->SetMode(SpriteMode::FixedAspect);
-            iconLayer->layout = Layout::Based(BaseCorner::Center, Vec2F(40, 40), Vec2F(0, 10));
+            iconLayer->layout = assetIcon->GetIconLayout();
             previewBackLayer->SetEnabled(false);
         }
 
+        SetupMediaIcon(assetIcon, asset);
         assetIcon->SetAssetInfo(asset);
+
+        if (mViewMode == ViewMode::Table)
+        {
+            auto& file = GetFileInfo(asset);
+            assetIcon->SetColumns(GetTypeText(*asset), GetSizeText(*asset, file), GetDateText(file));
+        }
+
         assetIcon->SetState("halfHide", mCuttingAssets.Contains([&](auto x) { return x.first == asset->meta->ID(); }));
         assetIcon->SetSelectionGroup(Ref(this));
         assetIcon->SetSelected(mSelectedAssets.Contains(Ref(asset)));
         assetIcon->SetDragOnlySelected(true);
         assetIcon->mOwner = Ref(this);
+    }
+
+    void AssetsIconsScrollArea::SetupMediaIcon(const Ref<AssetIcon>& icon, const Ref<AssetInfo>& info)
+    {
+        auto type = info->meta->GetAssetType();
+        bool isVideo = type == &TypeOf(VideoAsset);
+        bool grid = mViewMode == ViewMode::Grid;
+        auto& theme = PipelineTheme::Get();
+        auto iconLayer = icon->layer["icon"];
+
+        Layout previewArea = icon->GetPreviewLayout();
+        Vec2F center = (previewArea.offsetMin + previewArea.offsetMax)*0.5f;
+        auto areaAround = [&](const Vec2F& size) {
+            return Layout(previewArea.anchorMin, previewArea.anchorMax, center - size*0.5f, center + size*0.5f);
+        };
+
+        // A video shows its frame, wider than the previews of the images, with a play badge in the grid
+        TextureRef frame = isVideo ? MediaPreview::GetVideoThumbnail(AssetRef<VideoAsset>(info->meta->ID())) : TextureRef();
+        auto badge = icon->FindLayer("mediaBadge");
+        if (frame)
+        {
+            Vec2I size = frame->GetSize();
+            Vec2F areaSize = previewArea.offsetMax - previewArea.offsetMin;
+            Layout frameLayout = FitIntoArea(areaAround(Vec2F(grid ? areaSize.x*1.5f : areaSize.x, areaSize.y)), (float)size.x, (float)size.y);
+            iconLayer->layout = frameLayout;
+
+            auto sprite = DynamicCast<Sprite>(iconLayer->GetDrawable());
+            if (!sprite)
+            {
+                sprite = mmake<Sprite>();
+                iconLayer->SetDrawable(sprite);
+            }
+
+            sprite->SetTexture(frame);
+            sprite->SetTextureSrcRect(RectI(Vec2I(), size));
+            sprite->SetMode(SpriteMode::Default);
+            iconLayer->SetEnabled(true);
+
+            if (auto back = icon->FindLayer("previewBack"))
+                back->SetEnabled(false);
+
+            if (grid)
+            {
+                // The badge has a light outline, seen over any frame
+                if (!badge)
+                {
+                    auto outline = mmake<PipelineRoundedRect>();
+                    outline->radius = 7.0f;
+                    outline->roundBottom = true;
+                    outline->color = Color4(255, 255, 255, 240);
+                    badge = icon->AddLayer("mediaBadge", outline, Layout(), iconLayer->GetDepth() + 0.1f);
+
+                    auto circle = mmake<PipelineRoundedRect>();
+                    circle->radius = 5.5f;
+                    circle->roundBottom = true;
+                    circle->color = theme.accent;
+                    auto fill = badge->AddChildLayer("fill", circle, Layout::BothStretch(1.5f, 1.5f, 1.5f, 1.5f));
+
+                    auto glyph = mmake<VectorSprite>("ui/pipeline/al_play.svg");
+                    glyph->color = theme.accentInk;
+                    fill->AddChildLayer("glyph", glyph, Layout::BothStretch(3.0f, 2.5f, 2.0f, 2.5f));
+                }
+
+                Vec2F corner(frameLayout.offsetMax.x, frameLayout.offsetMin.y);
+                badge->layout = Layout(frameLayout.anchorMin, frameLayout.anchorMax, corner + Vec2F(-15, 1), corner + Vec2F(-1, 15));
+            }
+        }
+
+        if (badge)
+            badge->SetEnabled(frame && grid);
     }
 
     void AssetsIconsScrollArea::UpdateVisibleItems()
@@ -559,6 +932,7 @@ namespace Editor
         {
             if (icon->IsSelected())
                 return;
+
         }
 
         mPressedPoint = cursor.position;
@@ -605,6 +979,7 @@ namespace Editor
     {
         mIsDraggingIcons = true;
         mDragEnded = false;
+        UpdateHover(nullptr);
 
         Ref<AssetIcon> dragIcon;
         for (auto& sel : mSelectedAssets)
@@ -624,6 +999,7 @@ namespace Editor
             mDragIcon->SetEnabled(true);
             mDragIcon->RemoveFromScene();
             mDragOffset = icon->layout->worldCenter - o2Input.GetCursorPos();
+            mDragIconSize = icon->layout->GetWorldRect().Size();
 
             if (mSelectedAssets.Count() > 1)
                 mDragIcon->assetName = (String)mSelectedAssets.Count() + " items";
@@ -644,8 +1020,8 @@ namespace Editor
     void AssetsIconsScrollArea::UpdateDraggingGraphics()
     {
         mDragIcon->SetEditableParent(nullptr);
-        mDragIcon->layout->SetRect(RectF(o2Input.GetCursorPos() - mAssetIconSize * 0.5f + mDragOffset,
-                                         o2Input.GetCursorPos() + mAssetIconSize * 0.5f + mDragOffset));
+        mDragIcon->layout->SetRect(RectF(o2Input.GetCursorPos() - mDragIconSize*0.5f + mDragOffset,
+                                         o2Input.GetCursorPos() + mDragIconSize*0.5f + mDragOffset));
 
         mDragIcon->UpdateSelfTransform();
         mDragIcon->UpdateChildrenTransforms();
@@ -808,7 +1184,55 @@ namespace Editor
     }
 
     void AssetsIconsScrollArea::OnCursorMoved(const Input::Cursor& cursor)
-    {}
+    {
+        if (!mIsDraggingIcons)
+            UpdateHover(GetIconUnderPoint(cursor.position));
+    }
+
+    void AssetsIconsScrollArea::OnCursorExit(const Input::Cursor& cursor)
+    {
+        UpdateHover(nullptr);
+    }
+
+    void AssetsIconsScrollArea::UpdateHover(const Ref<AssetIcon>& icon)
+    {
+        mHoveredIcon = icon;
+        if (icon)
+            mTargetHoverRect = mHoverLayout.Calculate(icon->layout->worldRect);
+
+        if (auto hoverState = state["hover"])
+            hoverState->SetState(icon != nullptr);
+        else
+            mHoverDrawable->SetEnabled(icon != nullptr);
+    }
+
+    void AssetsIconsScrollArea::MoveScrollPosition(const Vec2F& delta)
+    {
+        GridLayoutScrollArea::MoveScrollPosition(delta);
+
+        mTargetHoverRect += delta;
+        mCurrentHoverRect += delta;
+    }
+
+    void AssetsIconsScrollArea::SetHoverDrawable(const Ref<IRectDrawable>& drawable)
+    {
+        mHoverDrawable = drawable;
+    }
+
+    const Ref<IRectDrawable>& AssetsIconsScrollArea::GetHoverDrawable() const
+    {
+        return mHoverDrawable;
+    }
+
+    void AssetsIconsScrollArea::SetHoverLayout(const Layout& layout)
+    {
+        mHoverLayout = layout;
+    }
+
+    const Ref<AssetIcon>& AssetsIconsScrollArea::GetHoveredIcon() const
+    {
+        return mHoveredIcon;
+    }
 
     void AssetsIconsScrollArea::OnCursorRightMouseReleased(const Input::Cursor& cursor)
     {
@@ -858,6 +1282,7 @@ namespace Editor
         mContextMenu->AddItem("Cut", [&]() { OnContextCutPressed(); }, AssetRef<ImageAsset>(), ShortcutKeys({VK_X, VK_CTRL_CMD}));
         mContextMenu->AddItem("Paste", [&]() { OnContextPastePressed(); }, AssetRef<ImageAsset>(), ShortcutKeys({VK_V, VK_CTRL_CMD}));
         mContextMenu->AddItem("Delete", [&]() { OnContextDeletePressed(); }, AssetRef<ImageAsset>(), ShortcutKeys({VK_DELETE}));
+        mContextMenu->AddItem("Rename", [&]() { RenameSelectedAsset(); }, AssetRef<ImageAsset>(), ShortcutKeys({VK_F2}));
 
         onFocused = [&]() { mContextMenu->SetItemsMaxPriority(); };
     }
@@ -913,8 +1338,40 @@ namespace Editor
     void AssetsIconsScrollArea::OnAssetDblClick(const Ref<AssetIcon>& icon)
     {
         AssetInfo iconAssetInfo = *icon->GetAssetInfo();
+
+        // Only the icons of the grid are renamed by a double click on the name; the rows open the asset
         auto assetNameLabel = icon->GetChildWidget("nameLabel");
-        if (assetNameLabel && assetNameLabel->IsUnderPoint(o2Input.cursorPos))
+        if (mViewMode == ViewMode::Grid && assetNameLabel && assetNameLabel->IsUnderPoint(o2Input.cursorPos))
+            RenameAsset(icon);
+        else
+        {
+            if (iconAssetInfo.meta->GetAssetType() == &TypeOf(FolderAsset))
+                o2EditorAssets.OpenFolder(iconAssetInfo.path);
+            else
+                o2EditorAssets.OpenAssetInEditor(iconAssetInfo);
+        }
+    }
+
+    void AssetsIconsScrollArea::RenameSelectedAsset()
+    {
+        if (mSelectedAssets.IsEmpty())
+            return;
+
+        auto info = mSelectedAssets.Last();
+        int idx = mAssetInfos.IndexOf(info);
+        if (idx < 0)
+            return;
+
+        ScrollTo((void*)&mAssetInfos[idx]);
+        UpdateVisibleItems();
+
+        if (auto icon = FindVisibleIcon(info))
+            RenameAsset(icon);
+    }
+
+    void AssetsIconsScrollArea::RenameAsset(const Ref<AssetIcon>& icon)
+    {
+        AssetInfo iconAssetInfo = *icon->GetAssetInfo();
         {
             auto name = o2FileSystem.GetFileNameWithoutExtension(o2FileSystem.GetPathWithoutDirectories(iconAssetInfo.path));
             StartAssetRenaming(icon, name, [=](const String& name)
@@ -931,13 +1388,6 @@ namespace Editor
                                    String newPath = parentPath.IsEmpty() ? newName : parentPath + "/" + newName;
                                    o2EditorAssets.SelectAsset(newPath);
                                });
-        }
-        else
-        {
-            if (iconAssetInfo.meta->GetAssetType() == &TypeOf(FolderAsset))
-                o2EditorAssets.OpenFolder(iconAssetInfo.path);
-            else
-                o2EditorAssets.OpenAssetInEditor(iconAssetInfo);
         }
     }
 
@@ -1282,6 +1732,23 @@ namespace Editor
 
 DECLARE_TEMPLATE_CLASS(o2::LinkRef<Editor::AssetsIconsScrollArea>);
 // --- META ---
+
+ENUM_META(Editor::AssetsIconsScrollArea::ViewMode, Editor__AssetsIconsScrollArea__ViewMode)
+{
+    ENUM_ENTRY(Grid);
+    ENUM_ENTRY(List);
+    ENUM_ENTRY(Table);
+}
+END_ENUM_META;
+
+ENUM_META(Editor::AssetsIconsScrollArea::SortBy, Editor__AssetsIconsScrollArea__SortBy)
+{
+    ENUM_ENTRY(Modified);
+    ENUM_ENTRY(Name);
+    ENUM_ENTRY(Size);
+    ENUM_ENTRY(Type);
+}
+END_ENUM_META;
 
 DECLARE_CLASS(Editor::AssetsIconsScrollArea, Editor__AssetsIconsScrollArea);
 // --- END META ---

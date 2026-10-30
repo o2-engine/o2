@@ -210,6 +210,19 @@ TEST(FileSystem, GetFileInfoMissingMarkedInvalid)
 {
     FileInfo info = o2FileSystem.GetFileInfo("o2_missing_for_info.txt");
     EXPECT_EQ(info.path, "invalid_file");
+    EXPECT_EQ(info.size, 0);
+}
+
+// A folder has its modification date and no size
+TEST(FileSystem, GetFileInfoOfFolderHasDateAndZeroSize)
+{
+    TempDir dir("folder_file_info");
+
+    FileInfo info;
+    ASSERT_NO_THROW(info = o2FileSystem.GetFileInfo(dir.Path()));
+    EXPECT_EQ(info.path, dir.Path());
+    EXPECT_EQ(info.size, 0);
+    EXPECT_GT(info.editDate.mYear, 2000);
 }
 
 TEST(FileSystem, GetFolderInfoEnumeratesFiles)

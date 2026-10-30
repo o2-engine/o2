@@ -9,6 +9,7 @@
 #include "o2/Scene/Scene.h"
 #include "o2/Scene/UI/UIManager.h"
 #include "o2/Scene/UI/Widgets/Button.h"
+#include "o2/Scene/UI/Widgets/ContextMenu.h"
 #include "o2/Scene/UI/Widgets/HorizontalLayout.h"
 #include "o2/Scene/UI/Widgets/Label.h"
 #include "o2/Scene/UI/Widgets/MenuPanel.h"
@@ -27,6 +28,7 @@
 #include "o2Editor/Properties/Basic/FloatProperty.h"
 #include "o2Editor/Properties/Basic/IntegerProperty.h"
 #include "o2Editor/Properties/Basic/ObjectPtrProperty.h"
+#include "o2Editor/UI/Style/EditorTheme.h"
 #include "o2Editor/UI/Style/EditorUIStyle.h"
 #include "o2Editor/UIRoot.h"
 #include "o2Editor/Windows/AnimationStateGraphWindow/AnimationStateGraphWindow.h"
@@ -183,6 +185,31 @@ namespace Editor
                                   [](bool x) { VectorImageAsset::SetScalableMeshes(x); });
         mMenuPanel->AddToggleItem("Debug/Engine development/Text glyph meshes", Text::IsGlyphMeshesEnabled(),
                                   [](bool x) { Text::SetGlyphMeshesEnabled(x); });
+
+        TintIcons();
+    }
+
+    Ref<ContextMenu> MenuPanel::GetMenu(const WString& item) const
+    {
+        for (auto& widget : mMenuPanel->GetItemsLayout()->GetChildWidgets())
+        {
+            auto caption = widget->GetLayerDrawable<Text>("text");
+            if (caption && caption->GetText() == item)
+                return widget->FindChildByType<ContextMenu>();
+        }
+
+        return nullptr;
+    }
+
+    void MenuPanel::TintIcons()
+    {
+        // The dark theme restyles the window icons by itself
+        Color4 color = EditorTheme::IsDark() ? Color4::White() : EditorTheme::Get().text;
+        for (auto& widget : mMenuPanel->GetItemsLayout()->GetChildWidgets())
+        {
+            if (auto menu = widget->FindChildByType<ContextMenu>())
+                menu->SetIconsColor(color);
+        }
     }
 
     MenuPanel::~MenuPanel()
@@ -191,7 +218,9 @@ namespace Editor
 
     Ref<Widget> MenuPanel::AddItem(const o2::MenuPanel::Item& item)
     {
-        return mMenuPanel->AddItem(item);
+        auto widget = mMenuPanel->AddItem(item);
+        TintIcons();
+        return widget;
     }
 
     void MenuPanel::AddItem(const WString& path, const Function<void()>& clickFunc /*= Function<void()>()*/,
@@ -199,6 +228,7 @@ namespace Editor
                             const ShortcutKeys& shortcut /*= ShortcutKeys()*/)
     {
         mMenuPanel->AddItem(path, clickFunc, icon, shortcut);
+        TintIcons();
     }
 
     void MenuPanel::InsertItem(const o2::MenuPanel::Item& item, int position)

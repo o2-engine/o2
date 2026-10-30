@@ -2,7 +2,10 @@
 
 #include <gtest/gtest.h>
 
+#include "o2/Render/Sprite.h"
+#include "o2/Scene/UI/Widget.h"
 #include "o2/Scene/UI/WidgetLayer.h"
+#include "o2/Scene/UI/WidgetLayout.h"
 #include "o2/Scene/UI/WidgetLayerLayout.h"
 #include "o2/Utils/Math/Layout.h"
 
@@ -182,3 +185,16 @@ TEST(WidgetLayerLayout, CalculateWithFixedOffsetFromCorner)
 }
 
 // Position/Size getters depend on owner widget rect; not exercised in isolation.
+
+// A layout assigned to a layer of a laid out widget places the layer at once, as its setters do
+TEST(WidgetLayerLayout, AssignedLayoutPlacesTheLayerAtOnce)
+{
+    auto widget = mmake<Widget>();
+    *widget->layout = WidgetLayout::Based(BaseCorner::Center, Vec2F(100, 100));
+    auto layer = widget->AddLayer("bar", mmake<Sprite>(), Layout::Based(BaseCorner::Left, Vec2F(10, 10)));
+    widget->UpdateSelfTransform();
+    EXPECT_NEAR(layer->GetRect().Width(), 10.0f, 0.01f);
+
+    layer->layout = Layout::Based(BaseCorner::Left, Vec2F(40, 10));
+    EXPECT_NEAR(layer->GetRect().Width(), 40.0f, 0.01f) << "the layer keeps the rect of its previous layout";
+}

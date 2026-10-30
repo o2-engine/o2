@@ -73,6 +73,15 @@ namespace Editor
         // Sets the format shown after the time, WAV / MP3 ...
         void SetFormat(const String& format);
 
+        // Shows the loop toggle in the transport look too; the audio look always has it
+        void SetLoopVisible(bool visible);
+
+        // Sets the text of the time and the duration; empty shows them as m:ss
+        void SetTimeFormatter(const Function<String(float, float)>& formatter);
+
+        // Returns the shown time text
+        String GetTimeText() const;
+
         // Sets the waveform peaks, 0..1; empty draws a line
         void SetPeaks(const Vector<float>& peaks);
 
@@ -100,6 +109,8 @@ namespace Editor
         Ref<Toggle>             mLoopToggle; // Loop toggle
         Mode                    mMode = Mode::Transport; // Look of the transport
         String                  mFormat;                 // Format shown after the time
+        Function<String(float, float)> mTimeFormatter;   // Text of the time and the duration, empty for m:ss
+        bool                    mLoopVisible = false;    // Is the loop toggle shown in the transport look
         Vector<float>           mPeaks;                  // Waveform peaks of the audio look
         float                   mTime = 0.0f;            // Shown playback position
         float                   mVolumeValue = 1.0f;     // Playback volume, 0..1
@@ -336,6 +347,8 @@ CLASS_FIELDS_META(Editor::PipelineMediaControls)
     FIELD().PROTECTED().NAME(mLoopToggle);
     FIELD().PROTECTED().DEFAULT_VALUE(Mode::Transport).NAME(mMode);
     FIELD().PROTECTED().NAME(mFormat);
+    FIELD().PROTECTED().NAME(mTimeFormatter);
+    FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mLoopVisible);
     FIELD().PROTECTED().NAME(mPeaks);
     FIELD().PROTECTED().DEFAULT_VALUE(0.0f).NAME(mTime);
     FIELD().PROTECTED().DEFAULT_VALUE(1.0f).NAME(mVolumeValue);
@@ -347,6 +360,8 @@ END_META;
 CLASS_METHODS_META(Editor::PipelineMediaControls)
 {
 
+    typedef const Function<String(float, float)>& _tmp1;
+
     FUNCTION().PUBLIC().CONSTRUCTOR(RefCounter*);
     FUNCTION().PUBLIC().SIGNATURE(void, SetPlaying, bool);
     FUNCTION().PUBLIC().SIGNATURE(void, SetTime, float, float);
@@ -357,6 +372,9 @@ CLASS_METHODS_META(Editor::PipelineMediaControls)
     FUNCTION().PUBLIC().SIGNATURE(void, SetActive, bool);
     FUNCTION().PUBLIC().SIGNATURE(void, SetMode, Mode);
     FUNCTION().PUBLIC().SIGNATURE(void, SetFormat, const String&);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetLoopVisible, bool);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetTimeFormatter, _tmp1);
+    FUNCTION().PUBLIC().SIGNATURE(String, GetTimeText);
     FUNCTION().PUBLIC().SIGNATURE(void, SetPeaks, const Vector<float>&);
     FUNCTION().PUBLIC().SIGNATURE(void, Draw);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsSeeking);

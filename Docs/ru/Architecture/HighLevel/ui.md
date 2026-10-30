@@ -67,7 +67,7 @@ Pivot виджета (`SetPivot2D`) — единственное поле баз
 - `Toggle` - флаг, чекбокс
 - `Horizontal/VerticalScrollBar` - горизонтальный/вертикальный скролл-бар (слои `back` и `handle`); вертикальным управляют скрипты: `SetValueRange`, `SetValueForcible`, `GetValue`, `SetScrollHandleSize`, события `onChange`/`onChangeByUser`
 - `Horizontal/VerticalProgress` - прогресс-бары
-- `ScrollArea` - область со скроллом и отсечением содержимого
+- `ScrollArea` - область со скроллом и отсечением содержимого; `GridLayoutScrollArea` - сетка виджетов-элементов, создаваемых только для видимых элементов, `SetItemsFitWidth(true)` растягивает их на ширину вида по одному в строке; элемент, созданный после показа области, получает её состояние включённости
 - `List/LongList` - списки, `CustomList` - список с произвольными виджетами-элементами
 - `DropDown` - выпадающий список, `CustomDropDown` - с произвольными виджетами-элементами
 - `Tree` - дерево
