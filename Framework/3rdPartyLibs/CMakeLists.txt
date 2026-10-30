@@ -129,7 +129,7 @@ if (O2_TRACY)
     # ZoneScoped to capture a callstack. Each captured frame then has to be symbolized by the client
     # through dladdr, which walks the whole symbol table of the debug .so - on android that pegs a
     # core in the symbol worker and starves the game. Use ZoneScopedS(depth) where a stack is needed
-    set(TRACY_CALLSTACK OFF CACHE BOOL "Enable tracy callstack" FORCE)
+    set(TRACY_CALLSTACK "" CACHE STRING "Override the callstack collection depth for tracy zones" FORCE)
     set(TRACY_FIBERS ON CACHE BOOL "Enable tracy fibers (coroutines as fiber tracks)" FORCE)
 
     add_subdirectory(tracy)

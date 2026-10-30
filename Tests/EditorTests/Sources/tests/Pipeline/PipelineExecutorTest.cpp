@@ -16,6 +16,10 @@
 #include "o2Editor/Pipeline/PipelineUtils.h"
 #include "o2Editor/Pipeline/PipelineVideo.h"
 
+#define STBI_WRITE_NO_STDIO
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "3rdPartyLibs/stb/stb_image_write.h"
+
 using namespace o2;
 using namespace Editor;
 
@@ -542,17 +546,31 @@ TEST(PipelineExecutorLive, OpenRouterVisionAndEdit)
 // Providers may answer with JPEG: the decoder must accept it next to PNG
 TEST(PipelineImageOps, DecodesJpegBytes)
 {
-    String jpeg;
-    String relative = "o2/Framework/3rdPartyLibs/tracy/test/image.jpg";
-    for (int up = 0; up < 6 && jpeg.IsEmpty(); up++, relative = "../" + relative)
-        jpeg = PipelineUtils::ReadFileBytes(relative);
+    const int width = 16, height = 8;
+    std::vector<unsigned char> pixels;
+    for (int i = 0; i < width*height; i++)
+        pixels.insert(pixels.end(), { 200, 40, 40 });
 
-    ASSERT_FALSE(jpeg.IsEmpty());
+    std::string encoded;
+    stbi_write_jpg_to_func([](void* context, void* data, int size)
+                           { ((std::string*)context)->append((const char*)data, size); },
+                           &encoded, width, height, 3, pixels.data(), 90);
+
+    String jpeg(encoded);
+    ASSERT_GT(jpeg.Length(), 2);
+    ASSERT_EQ((unsigned char)jpeg[0], 0xFF);
+    ASSERT_EQ((unsigned char)jpeg[1], 0xD8);
+
     auto bitmap = DecodeImageBytes(jpeg);
     ASSERT_TRUE(bitmap != nullptr);
-    EXPECT_GT(bitmap->GetSize().x, 1);
-    EXPECT_GT(bitmap->GetSize().y, 1);
+    EXPECT_EQ(bitmap->GetSize(), Vec2I(width, height));
     EXPECT_EQ(bitmap->GetFormat(), PixelFormat::R8G8B8A8);
+
+    const UInt8* pixel = bitmap->GetData() + (height/2*width + width/2)*4;
+    EXPECT_NEAR(pixel[0], 200, 12);
+    EXPECT_NEAR(pixel[1], 40, 12);
+    EXPECT_NEAR(pixel[2], 40, 12);
+    EXPECT_EQ(pixel[3], 255);
 }
 
 // Showcase: every Gemini-backed node in one connected pipeline, saved as a project asset and run live.

@@ -10,6 +10,9 @@ This is the lightweight always-available profiler. For a full timeline with thre
 zones the engine also ships a [Tracy](https://github.com/wolfpld/tracy) client, enabled by `O2_TRACY`
 — the same `PROFILE_*` macros feed both.
 
+The client is the `Framework/3rdPartyLibs/tracy` submodule (0.14.1). Connect to it with the profiler
+GUI of the same version: the network protocol changes between versions.
+
 ## Macros
 Put them in the code you want measured; they cost nothing when the profiler is compiled out or not
 recording.
