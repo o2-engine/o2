@@ -27,6 +27,43 @@ EM_JS(char*, o2_web_clipboard_get, (), {
 
 namespace o2
 {
+#if defined PLATFORM_MAC
+    // The text of a pasteboard item: plain text in UTF-8 or only in UTF-16, or a link copied as a URL
+    static bool ReadMacItemText(PasteboardRef pasteboard, PasteboardItemID itemId, WString& res)
+    {
+        static const Pair<CFStringRef, CFStringEncoding> flavors[] = {
+            { CFSTR("public.utf8-plain-text"), kCFStringEncodingUTF8 },
+            { CFSTR("public.utf16-plain-text"), kCFStringEncodingUTF16 },
+            { CFSTR("public.url"), kCFStringEncodingUTF8 } };
+
+        for (auto& flavor : flavors)
+        {
+            CFDataRef data = nullptr;
+            if (PasteboardCopyItemFlavorData(pasteboard, itemId, flavor.first, &data) != noErr || !data)
+                continue;
+
+            CFStringRef text = CFStringCreateWithBytes(kCFAllocatorDefault, CFDataGetBytePtr(data), CFDataGetLength(data),
+                                                       flavor.second, false);
+            CFRelease(data);
+            if (!text)
+                continue;
+
+            CFIndex length = CFStringGetLength(text);
+            CFIndex bytes = 0;
+            CFStringGetBytes(text, CFRangeMake(0, length), kCFStringEncodingUTF8, 0, false, nullptr, 0, &bytes);
+            String utf8;
+            utf8.resize((size_t)bytes);
+            if (bytes > 0)
+                CFStringGetBytes(text, CFRangeMake(0, length), kCFStringEncodingUTF8, 0, false, (UInt8*)&utf8[0], bytes, nullptr);
+            CFRelease(text);
+
+            ConvertString(res, utf8);
+            return true;
+        }
+
+        return false;
+    }
+#endif
 
     void Clipboard::SetText(const WString& text)
     {
@@ -93,30 +130,11 @@ namespace o2
 
                 ItemCount itemCount = 0;
                 PasteboardGetItemCount(pasteboard, &itemCount);
-                for (ItemCount i = 0; i < itemCount; i++)
+                for (ItemCount i = 0; i < itemCount && res.IsEmpty(); i++)
                 {
                     PasteboardItemID itemId = 0;
                     PasteboardGetItemIdentifier(pasteboard, i + 1, &itemId);
-                    CFArrayRef flavorTypeArray = nullptr;
-                    PasteboardCopyItemFlavors(pasteboard, itemId, &flavorTypeArray);
-                    if (flavorTypeArray)
-                    {
-                        CFDataRef cfData = nullptr;
-                        if (PasteboardCopyItemFlavorData(pasteboard, itemId, CFSTR("public.utf8-plain-text"), &cfData) == noErr && cfData)
-                        {
-                            CFIndex length = CFDataGetLength(cfData);
-                            String utf8Str;
-                            utf8Str.resize((size_t)length);
-                            if (length > 0)
-                                CFDataGetBytes(cfData, CFRangeMake(0, length), (UInt8*)&utf8Str[0]);
-                            ConvertString(res, utf8Str);
-                            CFRelease(cfData);
-                            CFRelease(flavorTypeArray);
-                            CFRelease(pasteboard);
-                            return res;
-                        }
-                        CFRelease(flavorTypeArray);
-                    }
+                    ReadMacItemText(pasteboard, itemId, res);
                 }
                 CFRelease(pasteboard);
             }

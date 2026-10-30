@@ -19,6 +19,8 @@
 #include "o2Editor/Pipeline/PipelinePairLayout.h"
 #include "o2Editor/Pipeline/PipelineSettings.h"
 #include "o2Editor/Pipeline/Sync/AssetsLineSync.h"
+#include "o2Editor/UI/Style/EditorTheme.h"
+#include "o2Editor/UI/Style/EditorThemeDark.h"
 #include "o2Editor/UIRoot.h"
 #include "o2Editor/Windows/PipelineWindow/PipelineControls.h"
 #include "o2/Render/VectorSprite.h"
@@ -36,8 +38,9 @@ namespace Editor
     static const float kCaptionWidth = 92.0f;
     static const float kRowHeight = 22.0f;
 
-    static const Color4 kTitleColor(38, 50, 56, 255);
-    static const Color4 kHintColor(144, 164, 174, 255);
+    // Titles and values, and the quiet hints, in the editor theme
+    static Color4 TitleColor() { return EditorTheme::IsDark() ? EditorThemeDark::textStrong : Color4(38, 50, 56, 255); }
+    static Color4 HintColor() { return EditorTheme::IsDark() ? EditorThemeDark::ink : Color4(144, 164, 174, 255); }
 
     static String StatusTitle(AssetsLineStatus status)
     {
@@ -105,7 +108,7 @@ namespace Editor
         mStatusLabel->name = "status";
         mStatusLabel->horAlign = HorAlign::Left;
         mStatusLabel->horOverflow = Label::HorOverflow::Dots;
-        mStatusLabel->color = kTitleColor;
+        mStatusLabel->color = TitleColor();
         *mStatusLabel->layout = WidgetLayout::HorStretch(VerAlign::Top, 38, 12, 18, 6);
         mHeader->AddChild(mStatusLabel);
 
@@ -166,7 +169,7 @@ namespace Editor
             auto label = o2UI.CreateLabel(text);
             label->horAlign = HorAlign::Left;
             label->horOverflow = Label::HorOverflow::Dots;
-            label->color = kHintColor;
+            label->color = HintColor();
             row->AddChild(label);
             return label;
         };
@@ -230,7 +233,7 @@ namespace Editor
         mCodeLabel = o2UI.CreateLabel("");
         mCodeLabel->name = "code";
         mCodeLabel->horAlign = HorAlign::Left;
-        mCodeLabel->color = kTitleColor;
+        mCodeLabel->color = TitleColor();
         codeRow->AddChild(mCodeLabel);
         mApproveEdit = addEdit(addRow(approvePanel, "Page"), "approve url");
         addHint(approvePanel, "If the browser did not open, open this page by hand");
@@ -255,7 +258,7 @@ namespace Editor
         mProjectLabel->name = "project";
         mProjectLabel->horAlign = HorAlign::Left;
         mProjectLabel->horOverflow = Label::HorOverflow::Dots;
-        mProjectLabel->color = kTitleColor;
+        mProjectLabel->color = TitleColor();
         projectRow->AddChild(mProjectLabel);
         mDisconnectButton = addButton(projectRow, "Disconnect", 100, []() { o2AssetsLineSync.Disconnect(); });
 
@@ -305,7 +308,7 @@ namespace Editor
         auto keysTitle = o2UI.CreateLabel("Provider keys");
         keysTitle->name = "provider keys";
         keysTitle->horAlign = HorAlign::Left;
-        keysTitle->color = kTitleColor;
+        keysTitle->color = TitleColor();
         keysTitle->layout->minHeight = 18;
         content->AddChild(keysTitle);
 
