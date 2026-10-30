@@ -52,6 +52,9 @@ namespace Editor
         // Draws the dark divider line, one screen pixel wide, across the box at x and its grip, fainter unless active
         void DrawDivider(const RectF& box, float x, bool active);
 
+        // Draws only the divider line, as zoomed far out where the grip is gone
+        void DrawDividerLine(const RectF& box, float x);
+
         // Returns a display copy of the bitmap, downscaled to 1024 px on its longer side
         Ref<Bitmap> DisplayCopy(const Ref<Bitmap>& bitmap);
     }

@@ -229,6 +229,11 @@ namespace Editor
         return widget;
     }
 
+    bool PipelineNodeBody::IsLoadingMedia() const
+    {
+        return (mAudioView && mAudioView->IsLoading()) || (mVideoView && mVideoView->IsLoading());
+    }
+
     void PipelineNodeBody::MarkContent(const Ref<Widget>& widget)
     {
         for (auto& row : mRows)

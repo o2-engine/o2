@@ -731,6 +731,12 @@ namespace Editor
         }
     }
 
+    void PipelinePaintEditor::DrawBesideFar()
+    {
+        if (mBeside && mBeside->IsEnabled())
+            mBeside->Draw();
+    }
+
     void PipelinePaintEditor::Draw()
     {
         if (!mResEnabledInHierarchy || mIsClipped)
@@ -749,6 +755,8 @@ namespace Editor
                 DrawInheritedDepthChildren();
                 DrawInternalChildren();
             }
+            else
+                DrawBesideFar();
             DrawTopLayers();
             return;
         }
@@ -784,7 +792,9 @@ namespace Editor
         bool regionTool = GetTool() == "roi";
         auto drawDivider = [&]()
         {
-            if (IsComparing() && !farView)
+            if (IsComparing() && farView)
+                PipelinePairDraw::DrawDividerLine(stage, cut);
+            else if (IsComparing())
                 PipelinePairDraw::DrawDivider(stage, cut, mDividerDragging || (mHovered && IsOnDivider(mHoverPoint)));
         };
         if (regionTool)
@@ -855,6 +865,8 @@ namespace Editor
             DrawInheritedDepthChildren();
             DrawInternalChildren();
         }
+        else
+            DrawBesideFar();
 
         if (!regionTool)
             drawDivider();

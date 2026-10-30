@@ -899,10 +899,12 @@ namespace Editor
 
         if (!mDetailed)
         {
-            if (mFarUpdateFrames <= 0)
+            bool loading = mBody && mBody->IsLoadingMedia();
+            if (mFarUpdateFrames <= 0 && !loading)
                 return;
 
-            mFarUpdateFrames--;
+            if (mFarUpdateFrames > 0)
+                mFarUpdateFrames--;
             mBodyHost->Update(dt);
             mBodyHost->UpdateChildren(dt);
         }

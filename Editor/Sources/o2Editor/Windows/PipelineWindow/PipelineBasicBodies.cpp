@@ -445,7 +445,7 @@ namespace Editor
         using PipelineNodeBody::PipelineNodeBody;
         void Build() override
         {
-            AddTextArea("text", "Inline text...", 0);
+            MarkContent(AddTextArea("text", "Inline text...", 0));
         }
     };
 

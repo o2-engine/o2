@@ -89,6 +89,10 @@ namespace Editor
         // Marks the row of the widget as content, drawn even when the view is zoomed far out
         void MarkContent(const Ref<Widget>& widget);
 
+        // Returns true while a result player still reads its media in the background: the card keeps updating its body
+        // zoomed far out until it is shown
+        bool IsLoadingMedia() const;
+
         // Draws the body; zoomed far out only the content rows are drawn
         void Draw() override;
 
@@ -450,6 +454,7 @@ CLASS_METHODS_META(Editor::PipelineNodeBody)
     FUNCTION().PUBLIC().SIGNATURE(float, GetPreferredHeight, float);
     FUNCTION().PUBLIC().SIGNATURE(void, Relayout, float, float);
     FUNCTION().PUBLIC().SIGNATURE(void, MarkContent, const Ref<Widget>&);
+    FUNCTION().PUBLIC().SIGNATURE(bool, IsLoadingMedia);
     FUNCTION().PUBLIC().SIGNATURE(void, Draw);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(float, FieldHeight, const String&, const String&);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(int, EstimateLines, const String&, int, int);

@@ -125,6 +125,8 @@ namespace Editor
                 Piece piece;
                 piece.drawable = PipelineControls::MakeThemeText(word, mSize, isStrong ? 600 : 400, mColor);
                 piece.drawable->dotsEngings = false;
+                piece.drawable->horAlign = HorAlign::Left;
+                piece.drawable->verAlign = VerAlign::Middle;
                 piece.offset = Vec2F(x, y);
                 piece.width = w;
                 piece.strong = isStrong;
@@ -189,18 +191,21 @@ namespace Editor
         if (!mResEnabledInHierarchy || mIsClipped)
             return;
 
-        if (PipelineControls::IsFarView())
-            return;
-
+        // A text mesh is rebuilt on every change of its alignment or transparency and moved on every change of its rect: only
+        // what changed is set, as all the texts of a graph are drawn zoomed far out
         RectF rect = layout->GetWorldRect();
         float transparency = GetResTransparency();
         for (auto& piece : mPieces)
         {
             float top = rect.top - piece.offset.y;
-            piece.drawable->SetRect(RectF(rect.left + piece.offset.x, top, rect.left + piece.offset.x + piece.width + 2.0f, top - mLineHeight));
-            piece.drawable->verAlign = VerAlign::Middle;
-            piece.drawable->horAlign = HorAlign::Left;
-            piece.drawable->transparency = transparency;
+            RectF pieceRect(rect.left + piece.offset.x, top, rect.left + piece.offset.x + piece.width + 2.0f, top - mLineHeight);
+            if (piece.placed != pieceRect)
+            {
+                piece.drawable->SetRect(pieceRect);
+                piece.placed = pieceRect;
+            }
+            if (!Math::Equals(piece.drawable->GetTransparency(), transparency))
+                piece.drawable->transparency = transparency;
             piece.drawable->Draw();
         }
         OnDrawn();

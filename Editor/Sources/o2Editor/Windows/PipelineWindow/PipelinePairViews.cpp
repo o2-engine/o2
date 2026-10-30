@@ -104,13 +104,18 @@ namespace Editor
             return RectF(x - half.x, y + half.y, x + half.x, y - half.y);
         }
 
-        void DrawDivider(const RectF& box, float x, bool active)
+        void DrawDividerLine(const RectF& box, float x)
         {
-            float pixel = PixelSize(), k = BadgeScale(pixel);
             Vector<Vec2F> line = { Vec2F(x, box.bottom), Vec2F(x, box.top) };
             // A faint light halo keeps the dark line visible on a dark picture
             o2Render.DrawAALine(line, Color4(255, 255, 255, 50), 4.0f);
             o2Render.DrawAALine(line, Color4(14, 15, 20, 217), 1.0f);
+        }
+
+        void DrawDivider(const RectF& box, float x, bool active)
+        {
+            float pixel = PixelSize(), k = BadgeScale(pixel);
+            DrawDividerLine(box, x);
 
             // A light ring one screen pixel wide round the dark pill
             float opacity = active ? 1.0f : 0.6f;
@@ -186,7 +191,9 @@ namespace Editor
         if (mResultSize.x > 0)
             PipelinePairDraw::DrawClipped(*mResultSprite, mResultSize, PipelinePairDraw::FitRect(mResultSize, box), divider, box.right);
 
-        if (!PipelineControls::IsFarView())
+        if (PipelineControls::IsFarView())
+            PipelinePairDraw::DrawDividerLine(box, divider);
+        else
             PipelinePairDraw::DrawDivider(box, divider, mHovered || IsPressed());
 
         CursorAreaEventsListener::OnDrawn();

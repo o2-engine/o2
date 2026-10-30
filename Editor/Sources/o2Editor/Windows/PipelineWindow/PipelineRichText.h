@@ -49,6 +49,7 @@ namespace Editor
             Vec2F     offset; // From the widget's top-left, y down
             float     width = 0.0f;
             bool      strong = false;
+            RectF     placed;  // Rect the drawable was last set to
 
             bool operator==(const Piece& other) const { return drawable == other.drawable; }
         };

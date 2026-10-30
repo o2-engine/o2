@@ -88,6 +88,9 @@ namespace Editor
         // Draws the controls and the waveform of the audio look
         void Draw() override;
 
+        // Draws only the waveform of the audio look, as zoomed far out
+        void DrawWaveform();
+
         // Returns true while the seek slider is dragged
         bool IsSeeking() const { return mSeeking; }
 
@@ -172,8 +175,11 @@ namespace Editor
         // Updates the player and the transport bar
         void Update(float dt) override;
 
-        // Draws the player; zoomed far out only the title and info labels are drawn
+        // Draws the player; zoomed far out only the title, the info and the waveform are drawn
         void Draw() override;
+
+        // Returns true while the waveform of the clip is still being read
+        bool IsLoading() const { return !mPeaksKey.empty() && !mPeaksShown; }
 
         SERIALIZABLE(PipelineAudioView);
 
@@ -263,6 +269,9 @@ namespace Editor
 
         // Draws the player; zoomed far out only the frame is drawn
         void Draw() override;
+
+        // Returns true while the preview frames are being prepared
+        bool IsLoading() const { return mJob != nullptr; }
 
         SERIALIZABLE(PipelineVideoView);
 
@@ -377,6 +386,7 @@ CLASS_METHODS_META(Editor::PipelineMediaControls)
     FUNCTION().PUBLIC().SIGNATURE(String, GetTimeText);
     FUNCTION().PUBLIC().SIGNATURE(void, SetPeaks, const Vector<float>&);
     FUNCTION().PUBLIC().SIGNATURE(void, Draw);
+    FUNCTION().PUBLIC().SIGNATURE(void, DrawWaveform);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsSeeking);
     FUNCTION().PUBLIC().SIGNATURE(const Ref<Button>&, GetPlayButton);
     FUNCTION().PUBLIC().SIGNATURE(const Ref<HorizontalProgress>&, GetSeekSlider);
@@ -422,6 +432,7 @@ CLASS_METHODS_META(Editor::PipelineAudioView)
     FUNCTION().PUBLIC().SIGNATURE(const Ref<PipelineMediaControls>&, GetControls);
     FUNCTION().PUBLIC().SIGNATURE(void, Update, float);
     FUNCTION().PUBLIC().SIGNATURE(void, Draw);
+    FUNCTION().PUBLIC().SIGNATURE(bool, IsLoading);
     FUNCTION().PROTECTED().SIGNATURE(bool, EnsurePlayer);
     FUNCTION().PROTECTED().SIGNATURE(void, ApplyPlayerSettings);
     FUNCTION().PROTECTED().SIGNATURE(void, RefreshControls);
@@ -472,6 +483,7 @@ CLASS_METHODS_META(Editor::PipelineVideoView)
     FUNCTION().PUBLIC().SIGNATURE(const Ref<PipelineMediaControls>&, GetControls);
     FUNCTION().PUBLIC().SIGNATURE(void, Update, float);
     FUNCTION().PUBLIC().SIGNATURE(void, Draw);
+    FUNCTION().PUBLIC().SIGNATURE(bool, IsLoading);
     FUNCTION().PROTECTED().SIGNATURE(void, StartExtraction, const PipelineVideo::PreviewInfo*);
     FUNCTION().PROTECTED().SIGNATURE(void, ApplyPreview, const PipelineVideo::PreviewInfo&, const Ref<Bitmap>&);
     FUNCTION().PROTECTED().SIGNATURE(void, ClearPreview);

@@ -303,6 +303,9 @@ namespace Editor
         // Blends the stroke over the base into the composed bitmap and marks the texture dirty
         void ComposePreview();
 
+        // Draws the pane beside the stage zoomed far out, where the tool row and the tabs are not drawn
+        void DrawBesideFar();
+
         // Merges the stroke into the base, pushes the history and writes the drawing to the config
         void CommitStroke();
 
@@ -493,6 +496,7 @@ CLASS_METHODS_META(Editor::PipelinePaintEditor)
     FUNCTION().PROTECTED().SIGNATURE(void, StampDisc, const Vec2F&, float);
     FUNCTION().PROTECTED().SIGNATURE(void, PaintSegment, const Vec2F&, const Vec2F&);
     FUNCTION().PROTECTED().SIGNATURE(void, ComposePreview);
+    FUNCTION().PROTECTED().SIGNATURE(void, DrawBesideFar);
     FUNCTION().PROTECTED().SIGNATURE(void, CommitStroke);
     FUNCTION().PROTECTED().SIGNATURE(void, WriteDrawing, const String&);
     FUNCTION().PROTECTED().SIGNATURE(String, EncodeBase);

@@ -535,6 +535,97 @@ TEST_F(PipelinePolishUiFixture, DrawingsStayVisibleWhenZoomedOut)
     }
 }
 
+// Zoomed out a card keeps what it produced: the image edit's result beside the stage, the extract parts, a text result and
+// the text source's text
+TEST_F(PipelinePolishUiFixture, ResultsStayVisibleWhenZoomedOut)
+{
+    auto zoomOut = [&](const Ref<PipelineNode>& node, const Vec2F& center)
+    {
+        editor->SetView(center, 6.0f);
+        Step(4);
+        EXPECT_FALSE(Card(node)->IsDetailed()) << node->nodeType.Data();
+        return Capture();
+    };
+
+    {
+        auto node = OpenFed("imageEdit");
+        SetResult(node, PipelineImageOps::Blank(96, 64, resultColor));
+        auto result = Card(node)->FindChildByType<PipelineCropEditor>();
+        ASSERT_TRUE(result);
+        Vec2F center = result->layout->GetWorldRect().Center();
+        EXPECT_TRUE(IsNear(PixelAt(Capture(), center), resultColor)) << "image edit: the result at the detail zoom";
+        EXPECT_TRUE(IsNear(PixelAt(zoomOut(node, center), center), resultColor)) << "image edit: the result zoomed out";
+        ShotCard(node, "zoomed_out_imageEdit_result");
+    }
+
+    {
+        auto node = OpenFed("imageExtract", 480.0f, true, nullptr, 3);
+        SetResult(node, PipelineImageOps::Blank(96, 64, resultColor));
+        auto grid = Card(node)->FindChildByTypeAndName<Widget>("parts");
+        ASSERT_TRUE(grid);
+        auto cells = grid->GetChildWidgets();
+        ASSERT_EQ(cells.Count(), 3);
+        Vector<Vec2F> centers;
+        for (auto& cell : cells)
+            centers.Add(cell->FindChildByType<PipelineImageView>()->layout->GetWorldRect().Center());
+
+        auto capture = zoomOut(node, Card(node)->GetCardRect().Center());
+        for (int i = 0; i < centers.Count(); i++)
+            EXPECT_TRUE(IsNear(PixelAt(capture, centers[i]), resultColor)) << "extract: part " << i << " zoomed out";
+        ShotCard(node, "zoomed_out_imageExtract_parts");
+    }
+
+    // Lightest minus darkest channel inside the box, its frame left out: glyphs on the field, or a flat fill
+    auto contrast = [&](const Ref<Bitmap>& capture, const RectF& box)
+    {
+        Vec2I a = ScreenToCapture(editor->LocalToScreenPoint(Vec2F(box.left + 12.0f, box.top - 12.0f)), capture);
+        Vec2I b = ScreenToCapture(editor->LocalToScreenPoint(Vec2F(box.right - 12.0f, box.bottom + 12.0f)), capture);
+        int lo = 255, hi = 0;
+        for (int y = Math::Max(0, a.y); y < Math::Min(capture->GetSize().y, b.y); y++)
+        {
+            for (int x = Math::Max(0, a.x); x < Math::Min(capture->GetSize().x, b.x); x++)
+            {
+                const UInt8* c = PipelineImageOps::Pixel(*capture, x, y);
+                int value = Math::Max((int)c[0], Math::Max((int)c[1], (int)c[2]));
+                lo = Math::Min(lo, value);
+                hi = Math::Max(hi, value);
+            }
+        }
+        return hi - lo;
+    };
+
+    const String text = "A friendly orange ellipse mascot with a dark outline, centred on a transparent background.";
+    for (String type : { "aiText", "sourceText" })
+    {
+        auto node = OpenFed(type, 480.0f, false);
+        auto card = Card(node);
+        RectF box;
+        if (type == "aiText")
+        {
+            card->GetRuntime().output = PipelineValue::Text(text);
+            card->OnOutputChanged();
+            Step(3);
+            auto view = card->FindChildByType<PipelineTextView>();
+            ASSERT_TRUE(view);
+            box = view->layout->GetWorldRect();
+        }
+        else
+        {
+            node->SetConfigString("text", text);
+            card->Rebuild();
+            card->UpdateFromNode();
+            Step(3);
+            auto field = card->FindChildByType<EditBox>();
+            ASSERT_TRUE(field);
+            box = field->layout->GetWorldRect();
+        }
+
+        EXPECT_GT(contrast(Capture(), box), 60) << type.Data() << ": the text at the detail zoom";
+        EXPECT_GT(contrast(zoomOut(node, box.Center()), box), 30) << type.Data() << ": the text zoomed out";
+        ShotCard(node, "zoomed_out_" + type + "_text");
+    }
+}
+
 // AI upscale: the input beside the result, the size row with its modes, fields and "input → output" info, the details
 // prompt, and the note for a model that answers at its own size, which keeps the pictures of a hand-sized card in place
 TEST_F(PipelinePolishUiFixture, UpscaleCardShowsTheSizeAndTheNote)

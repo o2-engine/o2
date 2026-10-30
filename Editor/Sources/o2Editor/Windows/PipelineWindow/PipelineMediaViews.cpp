@@ -216,7 +216,13 @@ namespace Editor
     void PipelineMediaControls::Draw()
     {
         Widget::Draw();
-        if (mMode != Mode::Audio || PipelineControls::IsFarView() || !mResEnabledInHierarchy)
+        if (!PipelineControls::IsFarView())
+            DrawWaveform();
+    }
+
+    void PipelineMediaControls::DrawWaveform()
+    {
+        if (mMode != Mode::Audio || !mResEnabledInHierarchy)
             return;
 
         // 2 px bars 1 px apart, the played ones in the audio colour; a 2 px line without peaks
@@ -402,6 +408,7 @@ namespace Editor
         if (found != cache.done.end())
         {
             mControls->SetPeaks(found->second);
+            mPeaksShown = true;
             return;
         }
 
@@ -786,6 +793,7 @@ namespace Editor
         OnDrawn();
         mTitleLabel->Draw();
         mInfoLabel->Draw();
+        mControls->DrawWaveform();
         DrawTopLayers();
     }
 

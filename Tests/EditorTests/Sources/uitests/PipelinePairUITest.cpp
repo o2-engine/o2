@@ -256,7 +256,8 @@ TEST_F(PipelinePairUiFixture, TheDividerKeepsItsScreenSizeWhenZoomed)
         RectF image = onStage ? box : PipelinePairDraw::FitRect(Vec2I(96, 64), box);
         Vec2F center(divider, box.Center().y);
 
-        for (float cameraScale : { 1.0f, 1.0f/3.0f, 3.0f })
+        // 6: past the detail level, where the grip is gone and the line stays
+        for (float cameraScale : { 1.0f, 1.0f/3.0f, 3.0f, 6.0f })
         {
             editor->SetView(center, cameraScale);
             Vec2F corner = (Vec2F)o2Render.GetResolution()*0.5f - Vec2F(30.0f, 30.0f);

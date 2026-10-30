@@ -168,6 +168,22 @@ namespace Editor
     public:
         explicit PipelinePartsGrid(RefCounter* refCounter): Widget(refCounter) {}
 
+        // Zoomed far out only the pictures of the parts are drawn
+        void Draw() override
+        {
+            if (!PipelineControls::IsFarView())
+            {
+                Widget::Draw();
+                return;
+            }
+
+            if (!mResEnabledInHierarchy || mIsClipped)
+                return;
+
+            for (auto& cell : mCells)
+                cell.image->Draw();
+        }
+
         // Rebuilds the cells for the parts; the selected one gets the name field and the outline
         void SetParts(const Vector<PipelineExtractRegion>& regions, const String& selectedId)
         {
