@@ -10,6 +10,7 @@
 #include "o2Editor/Pipeline/PipelineValue.h"
 #include "o2Editor/Pipeline/Sync/AssetsLineClient.h"
 #include "o2Editor/Pipeline/Sync/AssetsLineSync.h"
+#include "o2Editor/Windows/PipelineWindow/AssetsLineDeleteDlg.h"
 
 using namespace o2;
 using namespace Editor;
@@ -212,6 +213,34 @@ namespace
         bool Exists(const String& file)
         {
             return o2FileSystem.IsFileExist(assets + file);
+        }
+
+        void Remove(const String& file)
+        {
+            o2FileSystem.FileDelete(assets + file);
+        }
+
+        // What an editor start does to the sync: the state is read again
+        void Restart()
+        {
+            Use();
+            sync->ReloadState();
+        }
+    };
+
+    // The editor's question about pipelines missing here: recorded, answered by the test
+    struct Questions
+    {
+        Vector<Vector<String>>       asked;
+        Vector<Function<void(bool)>> answers;
+
+        void Install(Project& project)
+        {
+            project.sync->confirmDeletes = [this](const Vector<String>& names, const Function<void(bool)>& answer)
+            {
+                asked.Add(names);
+                answers.Add(answer);
+            };
         }
     };
 
@@ -705,4 +734,224 @@ TEST_F(AssetsLineSync_, ARevokedTokenSaysSo)
     EXPECT_FALSE(project.Pass());
     EXPECT_EQ(project.sync->GetStatus(), AssetsLineStatus::Error);
     EXPECT_TRUE(project.sync->GetStatusText().Contains("token")) << project.sync->GetStatusText();
+}
+
+TEST(AssetsLineDeleteQuestion, NamesTheFolderTheProjectAndThePipelines)
+{
+    EXPECT_EQ(AssetsLineDeleteDlg::Message({ "hero" }, "Pipelines", "examples"),
+              "1 pipeline is missing in Assets/Pipelines but still exists in the AssetsLine project \"examples\": hero. "
+              "Delete it in AssetsLine too? Deleted pipelines stay in the AssetsLine trash for 30 days.");
+
+    Vector<String> names;
+    for (int i = 0; i < 12; i++)
+        names.Add("p" + (String)i);
+
+    EXPECT_EQ(AssetsLineDeleteDlg::Message(names, "/Pipelines/", "examples"),
+              "12 pipelines are missing in Assets/Pipelines but still exist in the AssetsLine project \"examples\": "
+              "p0, p1, p2, p3, p4, p5, p6, p7, and 4 more. Delete them in AssetsLine too? Deleted pipelines stay in the "
+              "AssetsLine trash for 30 days.");
+}
+
+TEST_F(AssetsLineSync_, AFileMissingAtStartIsAskedAboutAndLeftAloneUntilTheAnswer)
+{
+    Web web(url);
+    Project project(url, web);
+    String id = Uid();
+    project.Write("Pipelines/kept.pipeline", TextPipeline(id, "kept", "x"));
+    ASSERT_TRUE(project.Pass()) << project.sync->GetStatusText();
+
+    Questions questions;
+    questions.Install(project);
+    project.Remove("Pipelines/kept.pipeline");
+    project.Restart();
+    ASSERT_TRUE(project.Pass()) << project.sync->GetStatusText();
+    ASSERT_EQ(questions.asked.Count(), 1);
+    EXPECT_EQ(questions.asked[0], Vector<String>({ "kept" }));
+    EXPECT_TRUE(web.Names().Contains("kept"));
+    EXPECT_FALSE(project.Exists("Pipelines/kept.pipeline"));
+    EXPECT_TRUE(project.sync->GetPipelineState(id));
+    EXPECT_TRUE(project.sync->GetStatusText().Contains("1 pipeline missing here, waiting for your answer")) << project.sync->GetStatusText();
+
+    ASSERT_TRUE(project.Pass());
+    EXPECT_EQ(questions.asked.Count(), 1) << "asked once";
+    EXPECT_TRUE(web.Names().Contains("kept"));
+    EXPECT_FALSE(project.Exists("Pipelines/kept.pipeline"));
+
+    // Keep: downloaded again, and stays
+    questions.answers[0](false);
+    ASSERT_TRUE(project.Pass()) << project.sync->GetStatusText();
+    ASSERT_TRUE(project.Exists("Pipelines/kept.pipeline"));
+    EXPECT_EQ(project.Read("Pipelines/kept.pipeline").id, id);
+    ASSERT_TRUE(project.Pass());
+    EXPECT_TRUE(web.Names().Contains("kept"));
+    EXPECT_TRUE(project.Exists("Pipelines/kept.pipeline"));
+    EXPECT_EQ(questions.asked.Count(), 1);
+}
+
+TEST_F(AssetsLineSync_, AnsweringDeleteDeletesTheMissingPipelinesThere)
+{
+    Web web(url);
+    Project project(url, web);
+    String a = Uid(), b = Uid();
+    project.Write("Pipelines/a.pipeline", TextPipeline(a, "a", "x"));
+    project.Write("Pipelines/b.pipeline", TextPipeline(b, "b", "x"));
+    ASSERT_TRUE(project.Pass());
+
+    Questions questions;
+    questions.Install(project);
+    project.Remove("Pipelines/a.pipeline");
+    project.Remove("Pipelines/b.pipeline");
+    project.Restart();
+    ASSERT_TRUE(project.Pass()) << project.sync->GetStatusText();
+    ASSERT_EQ(questions.asked.Count(), 1);
+    EXPECT_EQ(questions.asked[0].Count(), 2);
+    EXPECT_TRUE(web.Names().Contains("a") && web.Names().Contains("b"));
+
+    questions.answers[0](true);
+    ASSERT_TRUE(project.Pass()) << project.sync->GetStatusText();
+    EXPECT_FALSE(web.Names().Contains("a"));
+    EXPECT_FALSE(web.Names().Contains("b"));
+    EXPECT_FALSE(project.sync->GetPipelineState(a));
+    EXPECT_FALSE(project.Exists("Pipelines/a.pipeline"));
+}
+
+TEST_F(AssetsLineSync_, SeveralFilesMissingInARunningEditorAreAskedAbout)
+{
+    Web web(url);
+    Project project(url, web);
+    String a = Uid(), b = Uid();
+    project.Write("Pipelines/a.pipeline", TextPipeline(a, "a", "x"));
+    project.Write("Pipelines/b.pipeline", TextPipeline(b, "b", "x"));
+    ASSERT_TRUE(project.Pass());
+
+    Questions questions;
+    questions.Install(project);
+    project.Remove("Pipelines/a.pipeline");
+    project.Remove("Pipelines/b.pipeline");
+    ASSERT_TRUE(project.Pass()) << project.sync->GetStatusText();
+    ASSERT_EQ(questions.asked.Count(), 1);
+    EXPECT_EQ(questions.asked[0].Count(), 2);
+    EXPECT_TRUE(web.Names().Contains("a") && web.Names().Contains("b"));
+    EXPECT_TRUE(project.sync->GetStatusText().Contains("2 pipelines missing here, waiting for your answer")) << project.sync->GetStatusText();
+
+    questions.answers[0](false);
+    ASSERT_TRUE(project.Pass()) << project.sync->GetStatusText();
+    EXPECT_TRUE(project.Exists("Pipelines/a.pipeline"));
+    EXPECT_TRUE(project.Exists("Pipelines/b.pipeline"));
+    EXPECT_TRUE(web.Names().Contains("a") && web.Names().Contains("b"));
+}
+
+TEST_F(AssetsLineSync_, OneFileDeletedInARunningEditorIsDeletedThereWithoutAsking)
+{
+    Web web(url);
+    Project project(url, web);
+    String solo = Uid(), other = Uid();
+    project.Write("Pipelines/solo.pipeline", TextPipeline(solo, "solo", "x"));
+    project.Write("Pipelines/other.pipeline", TextPipeline(other, "other", "x"));
+    ASSERT_TRUE(project.Pass());
+
+    Questions questions;
+    questions.Install(project);
+    project.Remove("Pipelines/solo.pipeline");
+    ASSERT_TRUE(project.Pass()) << project.sync->GetStatusText();
+    EXPECT_EQ(questions.asked.Count(), 0);
+    EXPECT_FALSE(web.Names().Contains("solo"));
+    EXPECT_TRUE(web.Names().Contains("other"));
+}
+
+TEST_F(AssetsLineSync_, WhileAQuestionIsOpenNewMissingFilesFollowTheSameRules)
+{
+    Web web(url);
+    Project project(url, web);
+    Vector<String> ids;
+    for (auto name : { "a", "b", "c", "d", "e" })
+    {
+        ids.Add(Uid());
+        project.Write(String("Pipelines/") + name + ".pipeline", TextPipeline(ids.Last(), name, "x"));
+    }
+    ASSERT_TRUE(project.Pass());
+
+    Questions questions;
+    questions.Install(project);
+    project.Remove("Pipelines/a.pipeline");
+    project.Remove("Pipelines/b.pipeline");
+    ASSERT_TRUE(project.Pass());
+    ASSERT_EQ(questions.asked.Count(), 1);
+
+    // One more gone: deleted there unasked; two more: a second question
+    project.Remove("Pipelines/c.pipeline");
+    ASSERT_TRUE(project.Pass()) << project.sync->GetStatusText();
+    EXPECT_EQ(questions.asked.Count(), 1);
+    EXPECT_FALSE(web.Names().Contains("c"));
+    EXPECT_TRUE(web.Names().Contains("a") && web.Names().Contains("b"));
+
+    project.Remove("Pipelines/d.pipeline");
+    project.Remove("Pipelines/e.pipeline");
+    ASSERT_TRUE(project.Pass()) << project.sync->GetStatusText();
+    ASSERT_EQ(questions.asked.Count(), 2);
+    EXPECT_EQ(questions.asked[1].Count(), 2);
+    EXPECT_TRUE(questions.asked[1].Contains("d") && questions.asked[1].Contains("e"));
+
+    questions.answers[1](false);
+    questions.answers[0](true);
+    ASSERT_TRUE(project.Pass()) << project.sync->GetStatusText();
+    EXPECT_FALSE(web.Names().Contains("a"));
+    EXPECT_FALSE(web.Names().Contains("b"));
+    EXPECT_TRUE(project.Exists("Pipelines/d.pipeline"));
+    EXPECT_TRUE(project.Exists("Pipelines/e.pipeline"));
+    EXPECT_TRUE(web.Names().Contains("d") && web.Names().Contains("e"));
+}
+
+TEST_F(AssetsLineSync_, AnAnswerThatNoLongerFitsIsDropped)
+{
+    Web web(url);
+    Project project(url, web);
+    String id = Uid();
+    project.Write("Pipelines/edited.pipeline", TextPipeline(id, "edited", "x"));
+    ASSERT_TRUE(project.Pass());
+
+    Questions questions;
+    questions.Install(project);
+    project.Remove("Pipelines/edited.pipeline");
+    project.Restart();
+    ASSERT_TRUE(project.Pass());
+    ASSERT_EQ(questions.asked.Count(), 1);
+
+    // Edited on the web while the question is open: left alone until the answer, then the edit wins over "delete"
+    auto storedDoc = web.Pipeline(id);
+    auto& stored = storedDoc["pipeline"];
+    stored["nodes"][0]["config"]["text"] = "web";
+    web.Save(stored, 1);
+    ASSERT_TRUE(project.Pass());
+    EXPECT_FALSE(project.Exists("Pipelines/edited.pipeline"));
+
+    questions.answers[0](true);
+    ASSERT_TRUE(project.Pass()) << project.sync->GetStatusText();
+    EXPECT_TRUE(web.Names().Contains("edited"));
+    ASSERT_TRUE(project.Exists("Pipelines/edited.pipeline"));
+    EXPECT_EQ(project.Read("Pipelines/edited.pipeline").nodes[0]->GetConfigString("text"), "web");
+}
+
+TEST_F(AssetsLineSync_, WithoutAHookMissingFilesAreDownloadedAgain)
+{
+    Web web(url);
+    Project project(url, web);
+    String a = Uid(), b = Uid();
+    project.Write("Pipelines/a.pipeline", TextPipeline(a, "a", "x"));
+    project.Write("Pipelines/b.pipeline", TextPipeline(b, "b", "x"));
+    ASSERT_TRUE(project.Pass());
+
+    // Several in a running editor
+    project.Remove("Pipelines/a.pipeline");
+    project.Remove("Pipelines/b.pipeline");
+    ASSERT_TRUE(project.Pass()) << project.sync->GetStatusText();
+    EXPECT_TRUE(project.Exists("Pipelines/a.pipeline"));
+    EXPECT_TRUE(project.Exists("Pipelines/b.pipeline"));
+
+    // One at the start
+    project.Remove("Pipelines/a.pipeline");
+    project.Restart();
+    ASSERT_TRUE(project.Pass()) << project.sync->GetStatusText();
+    EXPECT_TRUE(project.Exists("Pipelines/a.pipeline"));
+    EXPECT_TRUE(web.Names().Contains("a") && web.Names().Contains("b"));
 }

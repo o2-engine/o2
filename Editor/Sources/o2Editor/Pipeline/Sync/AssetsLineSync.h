@@ -64,6 +64,10 @@ namespace Editor
         Function<void(const String&)> onResultsChanged;      // Result files of a pipeline changed here; the pipeline id
         Function<void(const String&)> openUrl;               // Opens the approval page; the system browser by default
 
+        // Asks whether pipelines missing here are deleted in AssetsLine too: their names and the answer (true - delete
+        // there, false - download them again). Without it they are downloaded again
+        Function<void(const Vector<String>&, const Function<void(bool)>&)> confirmDeletes;
+
     public:
         // Default constructor
         AssetsLineSync(RefCounter* refCounter);
@@ -178,6 +182,12 @@ namespace Editor
         String          mConnectCode;        // Code shown on the approval page
         String          mApproveUrl;         // Approval page address
 
+        bool              mFirstPass = true;   // No pass has exchanged the documents since the link was (re)started
+        int               mLinkEpoch = 0;      // Counts (re)starts of the link; a pass of an earlier one decides nothing
+        int               mDeleteQuestion = 0; // Number of the latest question
+        Map<String, int>  mDeleteAsked;        // Pipelines missing here while the user is asked about them: id -> question
+        Map<String, bool> mDeleteAnswers;      // Answers not acted on yet: id -> delete in AssetsLine
+
     protected:
         // Returns the folder the sync state lives in
         String GetStatePath() const;
@@ -206,6 +216,9 @@ namespace Editor
         // Adds a line to the log and the editor log
         void Log(const String& message);
 
+        // Makes the next pass the first one of the link: a pipeline missing here is not deleted there without asking
+        void RestartLink();
+
         // Stores a token the server handed out and links the project it opens
         void AdoptToken(const String& serverUrl, const String& token, const String& email, const String& projectId,
                         const String& projectName);
@@ -232,6 +245,12 @@ namespace Editor
 
         // Pulls a stored document into its local file
         Coroutine<bool> PullDocument(Pass& pass, const String& id, LocalPipeline* local);
+
+        // Deletes a stored document whose local file is gone; pulls it when it was changed there meanwhile
+        Coroutine<bool> DeleteDocument(Pass& pass, const String& id);
+
+        // Decides on the pipelines missing here but untouched there: deletes them there, asks, or pulls them back
+        Coroutine<bool> SyncMissing(Pass& pass, const Vector<String>& missing);
 
         // Writes a document into a local file, renaming the file when the name changed
         bool WriteLocal(Pass& pass, const String& id, const PipelineGraph& graph, const String& currentFile, String& writtenFile);

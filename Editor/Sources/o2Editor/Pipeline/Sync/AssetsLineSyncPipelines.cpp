@@ -497,6 +497,105 @@ namespace Editor
         co_return true;
     }
 
+    Coroutine<bool> AssetsLineSync::DeleteDocument(Pass& pass, const String& id)
+    {
+        Ref<AssetsLineSync> self(this);
+        auto stateIt = mPipelines.find(id);
+        if (stateIt == mPipelines.end())
+            co_return true;
+
+        int rev = stateIt->second.rev;
+        String name = stateIt->second.name;
+        auto response = co_await pass.client.Request(
+            HttpMethod::Delete, "/api/sync/pipelines/" + AssetsLineClient::Encode(id) + "?baseRev=" + (String)rev);
+        if (response.ok)
+        {
+            Log("deleted " + name + " in AssetsLine");
+            mPipelines.Remove(id);
+            WriteBase(id, "");
+            co_return true;
+        }
+
+        if (response.code == "changed")
+            co_return co_await PullDocument(pass, id, nullptr);
+
+        Fail(pass, response, "deleting " + name);
+        co_return false;
+    }
+
+    Coroutine<bool> AssetsLineSync::SyncMissing(Pass& pass, const Vector<String>& missing)
+    {
+        Ref<AssetsLineSync> self(this);
+        if (missing.IsEmpty() || pass.epoch != mLinkEpoch)
+            co_return true;
+
+        // One file deleted in a running editor is deleted there; at the link's start, or with several gone at once,
+        // they may have vanished by accident and the user decides
+        if (!mFirstPass && missing.Count() == 1)
+            co_return co_await DeleteDocument(pass, missing[0]);
+
+        if (!confirmDeletes)
+        {
+            bool ok = true;
+            for (auto& id : missing)
+            {
+                Log(pass.remoteName[id] + " is missing here: downloaded again");
+                bool stepOk = co_await PullDocument(pass, id, nullptr);
+                ok = ok && stepOk;
+                if (pass.offline)
+                    break;
+            }
+
+            co_return ok;
+        }
+
+        Vector<String> names;
+        for (auto& id : missing)
+        {
+            auto state = mPipelines.find(id);
+            String name = pass.remoteName[id];
+            names.Add(name.IsEmpty() && state != mPipelines.end() ? state->second.name : name);
+        }
+
+        int question = ++mDeleteQuestion;
+        for (auto& id : missing)
+            mDeleteAsked[id] = question;
+
+        pass.askedIds.Add(missing);
+        Log((String)missing.Count() + (missing.Count() == 1 ? " pipeline is" : " pipelines are") +
+            " missing here: asking whether to delete in AssetsLine");
+
+        WeakRef<AssetsLineSync> weak(this);
+        confirmDeletes(names, [weak, question](bool deleteThere)
+        {
+            auto sync = weak.Lock();
+            if (!sync)
+                return;
+
+            Vector<String> ids;
+            for (auto& kv : sync->mDeleteAsked)
+            {
+                if (kv.second == question)
+                    ids.Add(kv.first);
+            }
+
+            if (ids.IsEmpty())
+                return;
+
+            for (auto& id : ids)
+            {
+                sync->mDeleteAsked.Remove(id);
+                sync->mDeleteAnswers[id] = deleteThere;
+            }
+
+            sync->Log(String(deleteThere ? "deleting " : "downloading again ") + (String)ids.Count() +
+                      " missing pipeline(s), as answered");
+            sync->SyncNow();
+        });
+
+        co_return true;
+    }
+
     Coroutine<bool> AssetsLineSync::SyncDocuments(Pass& pass)
     {
         Ref<AssetsLineSync> self(this);
@@ -508,8 +607,22 @@ namespace Editor
         for (auto& kv : mPipelines) if (!ids.Contains(kv.first)) ids.Add(kv.first);
 
         bool ok = true;
+        Vector<String> missing;
         for (auto& id : ids)
         {
+            // Left alone while the user is asked about it, whatever happens to it meanwhile
+            if (mDeleteAsked.ContainsKey(id))
+            {
+                pass.askedIds.Add(id);
+                continue;
+            }
+
+            // An answer is used once, by the pass that reaches its pipeline; one that no longer fits is dropped
+            bool deleteThere = false;
+            bool answered = mDeleteAnswers.TryGetValue(id, deleteThere);
+            if (answered)
+                mDeleteAnswers.Remove(id);
+
             if (pass.busyIds.Contains(id))
                 continue;
 
@@ -574,20 +687,17 @@ namespace Editor
                 if (state && pass.remoteRev[id] == state->rev)
                 {
                     // Deleted here, untouched there
-                    auto response = co_await pass.client.Request(
-                        HttpMethod::Delete, "/api/sync/pipelines/" + AssetsLineClient::Encode(id) + "?baseRev=" + (String)state->rev);
-                    if (response.ok)
-                    {
-                        Log("deleted " + state->name + " in AssetsLine");
-                        mPipelines.Remove(id);
-                        WriteBase(id, "");
-                    }
-                    else if (response.code == "changed")
-                        stepOk = co_await PullDocument(pass, id, nullptr);
+                    if (!answered)
+                        missing.Add(id);
                     else
                     {
-                        Fail(pass, response, "deleting " + state->name);
-                        stepOk = false;
+                        if (deleteThere)
+                            stepOk = co_await DeleteDocument(pass, id);
+                        else
+                            stepOk = co_await PullDocument(pass, id, nullptr);
+
+                        if (!stepOk)
+                            mDeleteAnswers[id] = deleteThere;
                     }
                 }
                 else
@@ -607,6 +717,14 @@ namespace Editor
             }
         }
 
-        co_return ok;
+        // An interrupted scan has not seen every pipeline: neither the count nor the first pass is settled
+        if (pass.offline)
+            co_return false;
+
+        bool missingOk = co_await SyncMissing(pass, missing);
+        if (pass.epoch == mLinkEpoch && !pass.offline)
+            mFirstPass = false;
+
+        co_return ok && missingOk;
     }
 }

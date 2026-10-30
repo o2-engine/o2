@@ -21,6 +21,7 @@
 #include "o2Editor/Pipeline/PipelineUtils.h"
 #include "o2Editor/Pipeline/Sync/AssetsLineSync.h"
 #include "o2Editor/UIRoot.h"
+#include "o2Editor/Windows/PipelineWindow/AssetsLineDeleteDlg.h"
 #include "o2Editor/Windows/PipelineWindow/AssetsLineDlg.h"
 #include "o2Editor/Windows/PipelineWindow/PipelineWindow.h"
 
@@ -374,4 +375,38 @@ TEST_F(PipelineSyncUiFixture, TheDialogShowsAndStoresTheLink)
     Shot("assetsline_dialog");
 
     dlg.GetWindow()->Hide(true);
+}
+
+TEST_F(PipelineSyncUiFixture, TheDeleteQuestionAnswersAndShowsTheNextOne)
+{
+    window->Update(0.1f);
+    EXPECT_TRUE((bool)sync->confirmDeletes) << "the window gives the sync its question";
+
+    Vector<int> answers;
+    AssetsLineDeleteDlg::Show({ "hero", "map" }, kFolder, "examples", [&](bool deleteThere) { answers.Add(deleteThere ? 1 : 0); });
+    AssetsLineDeleteDlg::Show({ "boss" }, kFolder, "examples", [&](bool deleteThere) { answers.Add(deleteThere ? 1 : 0); });
+    Step(2);
+    ASSERT_TRUE(AssetsLineDeleteDlg::IsShown());
+    EXPECT_EQ(AssetsLineDeleteDlg::GetQueuedCount(), 1);
+
+    auto dialog = DynamicCast<o2::Window>(EditorUIRoot.GetRootWidget()->FindChild("assetsline delete question"));
+    ASSERT_TRUE(dialog);
+    auto message = DynamicCast<Label>(dialog->FindChild("message"));
+    ASSERT_TRUE(message);
+    EXPECT_EQ((String)message->GetText(), AssetsLineDeleteDlg::Message({ "hero", "map" }, kFolder, "examples"));
+    Shot("assetsline_delete_question");
+
+    auto remove = DynamicCast<Button>(dialog->FindChild("delete there"));
+    ASSERT_TRUE(remove && dialog->FindChild("keep"));
+    remove->onClick();
+    Step(2);
+    EXPECT_EQ(answers, Vector<int>({ 1 }));
+    ASSERT_TRUE(AssetsLineDeleteDlg::IsShown()) << "the next question";
+    EXPECT_EQ((String)message->GetText(), AssetsLineDeleteDlg::Message({ "boss" }, kFolder, "examples"));
+
+    // Closed without an answer: kept
+    dialog->Hide();
+    Step(30);
+    EXPECT_EQ(answers, Vector<int>({ 1, 0 }));
+    EXPECT_FALSE(AssetsLineDeleteDlg::IsShown());
 }

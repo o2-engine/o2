@@ -28,6 +28,8 @@ namespace Editor
         Map<String, LocalPipeline> local;      // Local pipelines by id
         Vector<String>             changedIds; // Documents pushed or pulled in this pass
         Vector<String>             busyIds;    // Documents skipped because the editor holds unsaved edits
+        Vector<String>             askedIds;   // Documents missing here, left alone until the user answers
+        int                        epoch = 0;  // Link (re)start the pass belongs to
         bool                       assetsChanged = false; // Files under the assets folder were written
         String                     error;      // First failure
         bool                       offline = false; // The server could not be reached

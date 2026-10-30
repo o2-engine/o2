@@ -48,6 +48,11 @@ namespace Editor
         return object.IsObject() ? Str(object.FindMember(key)) : String();
     }
 
+    static bool SameLink(const AssetsLineConfig& a, const AssetsLineConfig& b)
+    {
+        return a.serverUrl == b.serverUrl && a.projectId == b.projectId && a.folder.Trimed(" /\\") == b.folder.Trimed(" /\\");
+    }
+
     static String ClockTime()
     {
         std::time_t now = std::time(nullptr);
@@ -76,6 +81,7 @@ namespace Editor
 
     void AssetsLineSync::SetConfig(const AssetsLineConfig& config)
     {
+        bool linkChanged = !SameLink(GetConfig(), config);
         if (mHasOverride || !ProjectConfig::IsSingletonInitialzed())
             mConfigOverride = config;
         else
@@ -84,18 +90,27 @@ namespace Editor
             o2Config.Save();
         }
 
+        if (linkChanged)
+            RestartLink();
+
         if (onStatusChanged)
             onStatusChanged();
     }
 
     void AssetsLineSync::SetConfigOverride(const AssetsLineConfig& config)
     {
+        bool linkChanged = !SameLink(GetConfig(), config);
         mConfigOverride = config;
         mHasOverride = true;
+        if (linkChanged)
+            RestartLink();
     }
 
     void AssetsLineSync::SetAssetsPath(const String& path)
     {
+        if (path != mAssetsPath)
+            RestartLink();
+
         mAssetsPath = path;
     }
 
@@ -141,6 +156,7 @@ namespace Editor
         mToken = mTokenServer = mTokenProject = mUserEmail = "";
         mPipelines.Clear();
         mResultsSeq = 0;
+        RestartLink();
 
         DataDocument credentials;
         if (credentials.LoadFromFile(GetStatePath() + "credentials.json") && credentials.IsObject())
@@ -298,6 +314,14 @@ namespace Editor
         o2Debug.Log("AssetsLine: " + message);
     }
 
+    void AssetsLineSync::RestartLink()
+    {
+        mFirstPass = true;
+        mLinkEpoch++;
+        mDeleteAsked.Clear();
+        mDeleteAnswers.Clear();
+    }
+
     AssetsLineStatus AssetsLineSync::GetStatus() const { return mStatus; }
     const String& AssetsLineSync::GetStatusText() const { return mStatusText; }
     const String& AssetsLineSync::GetConnectCode() const { return mConnectCode; }
@@ -336,6 +360,8 @@ namespace Editor
             mResultsSeq = 0;
             SaveState();
         }
+
+        RestartLink();
 
         Log("connected to " + serverUrl + " as " + email + ", project " + projectName);
         SetStatus(AssetsLineStatus::Syncing, "Connected, syncing...");
@@ -380,6 +406,7 @@ namespace Editor
         mTokenServer = "";
         mTokenProject = "";
         SaveCredentials();
+        RestartLink();
         Log("disconnected");
         SetStatus(AssetsLineStatus::NotConnected, "Not connected");
     }
@@ -511,6 +538,12 @@ namespace Editor
             return;
 
         auto& config = GetConfig();
+        if (!config.enabled || !IsConnected())
+        {
+            if (!mFirstPass || !mDeleteAsked.IsEmpty() || !mDeleteAnswers.IsEmpty())
+                RestartLink();
+        }
+
         if (!config.enabled)
         {
             SetStatus(AssetsLineStatus::Off, "Sync is off");
@@ -567,6 +600,7 @@ namespace Editor
             co_return false;
 
         Pass pass;
+        pass.epoch = mLinkEpoch;
         pass.config = GetConfig();
         pass.client = MakeClient();
         pass.assetsPath = GetAssetsPath();
@@ -615,7 +649,7 @@ namespace Editor
 
             for (auto& id : ids)
             {
-                if (!pass.local.ContainsKey(id) || pass.busyIds.Contains(id))
+                if (!pass.local.ContainsKey(id) || pass.busyIds.Contains(id) || pass.askedIds.Contains(id))
                     continue;
 
                 bool resultsOk = co_await SyncResults(pass, id);
@@ -639,6 +673,10 @@ namespace Editor
             String text = "Synced at " + ClockTime() + " - " + (String)mPipelines.Count() + " pipeline" + (mPipelines.Count() == 1 ? "" : "s");
             if (!pass.busyIds.IsEmpty())
                 text += ", waiting for unsaved edits";
+
+            int asked = pass.askedIds.Count();
+            if (asked > 0)
+                text += ", " + (String)asked + (asked == 1 ? " pipeline" : " pipelines") + " missing here, waiting for your answer";
 
             SetStatus(AssetsLineStatus::Synced, text);
         }

@@ -16,6 +16,7 @@
 #include "o2/Scene/UI/Widgets/VerticalScrollBar.h"
 #include "o2/Utils/Debug/Debug.h"
 #include "o2Editor/Pipeline/Sync/AssetsLineSync.h"
+#include "o2Editor/Windows/PipelineWindow/AssetsLineDeleteDlg.h"
 #include "o2Editor/Windows/PipelineWindow/AssetsLineDlg.h"
 #include "o2Editor/Dialogs/System/OpenSaveDialog.h"
 #include "o2Editor/EditorConfig.h"
@@ -185,6 +186,11 @@ namespace Editor
         {
             if (mEditor && mEditor->GetAsset() && mEditor->GetPipelineId() == pipelineId)
                 mEditor->ReloadResults();
+        };
+        sync.confirmDeletes = [owner = &sync](const Vector<String>& names, const Function<void(bool)>& answer)
+        {
+            auto& config = owner->GetConfig();
+            AssetsLineDeleteDlg::Show(names, config.folder, config.projectName, answer);
         };
     }
 
