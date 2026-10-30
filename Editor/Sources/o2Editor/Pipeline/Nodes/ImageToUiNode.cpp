@@ -12,7 +12,8 @@ namespace Editor
     using namespace UiLayout;
 
     // AI image to UI: a UI mockup in, a layout out. The node cuts the mockup's sprites, then runs XuToWei/Image-To-UI's
-    // skill unchanged with the vision model as its agent; a fresh run also writes the o2 prototype of the layout
+    // skill unchanged with the vision model as its agent; a fresh run also writes the o2 prototype of the layout. Config
+    // edits holds the user's rounds of changes after a run: each continues the skill from the layout the previous one left
     class ImageToUiNode: public PipelineNodeBase
     {
     public:
@@ -53,7 +54,6 @@ namespace Editor
 
             auto cfg = PipelineImageToUi::ReadConfig(*node);
             auto trace = mmake<Trace>(ctx->workDir + "trace", size.w, size.h);
-            trace->Reset();
 
             auto ai = mmake<AiCtx>();
             ai->exec = ctx;
@@ -64,9 +64,6 @@ namespace Editor
             ai->memo.get = ctx->memoGet;
             ai->memo.put = ctx->memoPut;
 
-            ctx->Log("imageToUi: " + (String)size.w + "\xC3\x97" + (String)size.h + ", vision " + cfg.model + ", images " + cfg.imageModel +
-                     ", at most " + (String)cfg.maxTurns + " agent turns");
-
             ImageToUiConfig runConfig;
             runConfig.maxTurns = cfg.maxTurns;
             runConfig.sprites = cfg.sprites;
@@ -74,8 +71,28 @@ namespace Editor
             runConfig.name = cfg.screenName;
             runConfig.hint = cfg.hint;
             runConfig.python = ctx->settings.imageToUiPython;
+            runConfig.edits = PipelineImageToUi::Edits(*node);
+            runConfig.editTurns = PipelineImageToUi::EditTurns(cfg.maxTurns);
 
-            ImageToUiResult res = co_await RunImageToUi(ai, designPng, runConfig, trace, ctx->workDir);
+            ctx->Log("imageToUi: " + (String)size.w + "\xC3\x97" + (String)size.h + ", vision " + cfg.model + ", images " + cfg.imageModel +
+                     ", at most " + (String)cfg.maxTurns + " agent turns" +
+                     (runConfig.edits.IsEmpty() ? String() : ", " + (String)runConfig.edits.Count() + " round(s) of edits"));
+
+            // Everything the run without edits depends on: rounds continue it only when this is unchanged
+            Json base = Json::Object();
+            base["model"] = cfg.model;
+            base["imageModel"] = cfg.imageModel;
+            base["maxTurns"] = cfg.maxTurns;
+            base["sprites"] = cfg.sprites;
+            base["background"] = cfg.background;
+            base["name"] = cfg.screenName;
+            base["hint"] = cfg.hint;
+            base["seed"] = ctx->seed >= 0 ? Json(ctx->seed) : Json();
+            ImageToUiRunOptions options;
+            options.fresh = ctx->fresh;
+            options.baseKey = ImageToUiBaseKey(designPng, base);
+
+            ImageToUiResult res = co_await RunImageToUi(ai, designPng, runConfig, trace, ctx->workDir, options);
             if (!res.ok)
                 co_return PipelineRunResult::Fail(res.error);
 

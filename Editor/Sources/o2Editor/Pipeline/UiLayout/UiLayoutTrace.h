@@ -35,6 +35,15 @@ namespace Editor::UiLayout
         // Takes over the steps and the summary another writer appended to trace.json; the design stays the host's
         void Reload();
 
+        // Takes over a kept trace document (a state of the rounds of edits) as it is; the design stays the host's
+        void Adopt(const Json& file);
+
+        // Returns the id of the last step, empty without steps
+        String LastStepId() const;
+
+        // Removes the last step
+        void PopLastStep();
+
         // Writes trace.json with the finishing time
         void Save();
 

@@ -22,7 +22,10 @@ namespace Editor
     // pictures of every step in the node's work folder) - the analysis with the model's raw answer, every sprite cut, the
     // backdrop, the asset list, then every turn of the Image-To-UI skill run by the model: its note, its action, what the
     // skill's scripts answered and their evidence at full width, design | reconstruction under one divider after each check
-    // and target. The window follows the trace while the node runs; the selected step is kept in the node's debugStep
+    // and target. A round of edits continues the list: the layout checked again, the user's request with its points
+    // drawn, then the agent's turns of that round ("Edit 2 · ..."). The trace is the one of the node's current state (the
+    // run and the rounds its edits name, PipelineImageToUi::StateTracePath). The window follows the trace while the node
+    // runs; the selected step is kept in the node's debugStep
     // -----------------------------------------------------------------------------------------------------------------
     namespace ImageToUiDebug
     {

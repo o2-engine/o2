@@ -16,6 +16,7 @@
 #include "o2/Utils/Editor/EditorScope.h"
 #include "o2/Utils/FileSystem/FileSystem.h"
 #include "o2Editor/Pipeline/PipelineExecutor.h"
+#include "o2Editor/Pipeline/PipelineImageToUi.h"
 #include "o2Editor/Pipeline/PipelineUtils.h"
 #include "o2Editor/Pipeline/PipelineValue.h"
 #include "o2Editor/Pipeline/UiLayout/UiLayoutJson.h"
@@ -37,14 +38,14 @@ namespace Editor
         const Color4 errorColor(229, 57, 53, 255);
         const Color4 selectedBack(96, 125, 139, 40);
 
-        const char* kindOrder[] = { "input", "analysis", "sprite", "background", "measure", "prepare", "view", "write", "check", "target",
-                                    "preview", "finalize", "agent", "output" };
+        const char* kindOrder[] = { "input", "analysis", "sprite", "background", "measure", "prepare", "request", "view", "write", "check",
+                                    "target", "preview", "finalize", "agent", "output" };
 
         // Steps whose pictures are evidence to read at full width, not thumbnails
         bool IsWide(const String& kind)
         {
             return kind == "prepare" || kind == "measure" || kind == "check" || kind == "target" || kind == "preview" ||
-                kind == "finalize" || kind == "view";
+                kind == "finalize" || kind == "view" || kind == "request";
         }
 
         Color4 KindColor(const String& kind)
@@ -62,6 +63,7 @@ namespace Editor
             if (kind == "finalize") return Color4(46, 125, 50, 255);
             if (kind == "agent") return Color4(94, 53, 177, 255);
             if (kind == "output") return Color4(67, 160, 71, 255);
+            if (kind == "request") return Color4(229, 57, 53, 255);
             return Color4(144, 164, 174, 255);
         }
 
@@ -183,6 +185,20 @@ namespace Editor
             return true;
         }
 
+        // An agent turn: "turn-3", or "edit2-turn-3" in a round of edits
+        bool IsAgentTurn(const String& id)
+        {
+            if (id.StartsWith("turn-"))
+                return true;
+            if (!id.StartsWith("edit"))
+                return false;
+
+            int i = 4;
+            while (i < id.Length() && id[i] >= '0' && id[i] <= '9')
+                i++;
+            return i > 4 && id.SubStr(i).StartsWith("-turn-");
+        }
+
         Ref<Text> MakeText(const String& text, const Color4& color, HorAlign align)
         {
             auto t = mmake<Text>("stdFont.ttf");
@@ -293,13 +309,18 @@ namespace Editor
             if (!e || !node)
                 return;
 
-            mDir = PipelineExecutor::GetWorkPath(e->GetPipelineId(), node->id) + "trace/";
-            String path = mDir + "trace.json";
-            String stamp;
+            // The trace of the node's current state: the run, or the run and its rounds of edits as the config names them (a
+            // result restored from the cache does not rewrite the live one); the pictures of every state are in trace/
+            String work = PipelineExecutor::GetWorkPath(e->GetPipelineId(), node->id);
+            auto graph = e->GetGraph();
+            auto live = graph ? graph->FindNode(node->id) : nullptr;
+            mDir = work + "trace/";
+            String path = PipelineImageToUi::StateTracePath(work, PipelineImageToUi::Edits(live ? *live : *node));
+            String stamp = path + ":";
             if (o2FileSystem.IsFileExist(path))
             {
                 auto info = o2FileSystem.GetFileInfo(path);
-                stamp = (String)(int)info.size + ":" + (String)info.editDate.mHour + ":" + (String)info.editDate.mMinute + ":" +
+                stamp += (String)(int)info.size + ":" + (String)info.editDate.mHour + ":" + (String)info.editDate.mMinute + ":" +
                     (String)info.editDate.mSecond;
             }
             if (!force && stamp == mStamp)
@@ -553,7 +574,7 @@ namespace Editor
                 return;
             }
 
-            bool agentTurn = step->id.StartsWith("turn-");
+            bool agentTurn = IsAgentTurn(step->id);
             AddViewLabel(step->kind + "  \xC2\xB7  " + step->title, step->status == "warn" ? warnColor : step->status == "error" ? errorColor : titleColor, true);
             if (!step->note.IsEmpty() && !agentTurn)
                 AddViewLabel(step->note, step->status == "warn" ? warnColor : DimTextColor(), true);
@@ -656,8 +677,10 @@ namespace Editor
 
             if (!step->text.IsEmpty())
             {
-                bool result = agentTurn || step->kind == "prepare";
-                String caption = step->kind == "output" ? String("ui_structure.json") : result ? String("Result") : String("Model answer");
+                bool request = step->kind == "request";
+                bool result = agentTurn || step->kind == "prepare" || request;
+                String caption = step->kind == "output" ? String("ui_structure.json") : request ? String("The request")
+                    : result ? String("Result") : String("Model answer");
                 AddTextBlock(caption, result ? step->text : Pretty(step->text), step->kind == "analysis" || result ? 360.0f : 220.0f);
             }
             if (!step->data.IsEmpty() && !agentTurn)

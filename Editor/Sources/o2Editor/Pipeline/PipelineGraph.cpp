@@ -860,7 +860,8 @@ namespace Editor
         static Vector<String> keys = {
             "drawOver", "drawTool", "brushSize", "brushColor", "brushOpacity", "paramsOpen", "selectedRegion",
             "splitRatio", "fieldH", "selectedLayer", "layersPanelW", "openLayerSettings",
-            "viewZoom", "viewPanX", "viewPanY", "cmpBg", "cmpBgEnabled", "checker", "layersFolder", "layersName", "debugView", "debugStep"
+            "viewZoom", "viewPanX", "viewPanY", "cmpBg", "cmpBgEnabled", "checker", "layersFolder", "layersName", "debugView", "debugStep",
+            "editsView", "editsDraft"
         };
         return keys;
     }

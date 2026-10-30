@@ -94,6 +94,7 @@ namespace Editor::UiLayout
         String         hint;     // Notes from the user
         String         note;     // About the sliced assets (SpritesNote)
         Vector<String> fonts;    // fontFamily values the model may use
+        String         revise;   // A round of edits: its request file (agent.py --revise), empty for a run
     };
 
     // How the agent ended
@@ -109,6 +110,17 @@ namespace Editor::UiLayout
 
     // The arguments of agent.py for a run, the Python and "-B" left out
     Vector<String> AgentArguments(const String& home, const AgentRun& run);
+
+    // How a script run to its end ended
+    struct ScriptResult
+    {
+        String failure;   // Why it did not run: not started, cancelled
+        int    code = -1; // Exit code
+        String output;    // The last 6000 bytes of stdout and stderr
+    };
+
+    // Runs a Python script to its end in the folder, polling once a frame; a cancelled run kills it
+    Coroutine<ScriptResult> RunScript(String python, Vector<String> args, String cwd, Ref<PipelineExecContext> exec);
 
     // ------------------------------------------------------------------------------------------------
     // Runs image-to-ui/agent/agent.py and answers its model calls (PORTING.md): every stdout line

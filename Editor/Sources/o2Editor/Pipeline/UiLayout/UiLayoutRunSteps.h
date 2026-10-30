@@ -3,6 +3,7 @@
 #include <set>
 #include <string>
 
+#include "o2Editor/Pipeline/UiLayout/UiLayoutAgent.h"
 #include "o2Editor/Pipeline/UiLayout/UiLayoutRun.h"
 
 namespace Editor::UiLayout
@@ -29,6 +30,40 @@ namespace Editor::UiLayout
         OrderedMap<Ref<SpriteCut>> sprites;
         UiBackdrop                 background;
     };
+
+    // The folders of a node's work folder, absolute and without a trailing slash
+    struct WorkDirs
+    {
+        String work;
+        String input;   // input/: the design and the fonts again
+        String design;  // input/design.png
+        String assets;  // sprites/
+        String fonts;   // fonts/
+        String task;    // task/: the skill's task folder
+        String scratch; // agent-view/
+    };
+
+    // Makes the work folder and returns its folders
+    WorkDirs MakeWorkDirs(const String& workDir);
+
+    // What the run without edits ended with
+    struct BaseRun
+    {
+        bool   ok = false;
+        String error;
+        Json   summary; // The agent's summary
+        String note;    // The --sprites-note it was given; the rounds pass it again
+    };
+
+    // The run without edits: the analysis, the sprites and the backdrop, the skill's inputs laid out in a fresh work folder
+    // (the kept states of earlier rounds removed), the agent from a fresh task folder. The trace is reset by the caller
+    Coroutine<BaseRun> RunBase(Ref<RunState> st, WorkDirs dirs);
+
+    // The agent's arguments every run of a work folder shares: the folders, the turns, the names, the fonts
+    AgentRun BaseAgentRun(const WorkDirs& dirs, const Ref<Trace>& trace, const ImageToUiConfig& cfg, const String& note);
+
+    // Returns the borders of a .png.meta the run wrote: "spriteBorder: {x: L, y: B, z: R, w: T}"
+    std::optional<NineSlice> ParseNineSliceMeta(const String& text);
 
     // A sprite file of the sliced-asset folder
     struct AssetFile

@@ -323,3 +323,269 @@ TEST(ImageToUiRun, AnAgentWithoutACheckedLayoutFailsTheNode)
     EXPECT_TRUE(missing.errors[0].Contains("imageToUi: Python 3.9 lacks numpy: install Pillow and numpy")) << missing.errors[0].Data();
     EXPECT_EQ(models.agent.Load(), 0);
 }
+
+namespace
+{
+    // The ids of a trace's steps
+    Vector<String> StepIds(const String& traceJson)
+    {
+        Json trace;
+        Vector<String> ids;
+        if (!Json::Parse(traceJson, trace) || !trace.Get("steps"))
+            return ids;
+        for (auto& step : trace.Get("steps")->Items())
+            ids.Add(step.Get("id") ? step.Get("id")->Str() : String());
+        return ids;
+    }
+
+    Vector<String> LayoutNames(const String& pipelineId, const Ref<PipelineNode>& node)
+    {
+        Vector<String> names;
+        auto port = node->outputs.Find([](const PipelinePort& p) { return p.name == "layout"; });
+        if (!port)
+            return names;
+        Json structure;
+        if (!Json::Parse(PipelineExecutor::LoadPortPreview(pipelineId, node->id, port->id, PipelinePortType::Text).data, structure))
+            return names;
+        for (auto& child : structure.Get("root")->Get("children")->Items())
+            names.Add(child.Get("name") ? child.Get("name")->Str() : String());
+        return names;
+    }
+
+    // Drops every cached bundle of the pipeline: the next run of the node has to make its outputs again
+    void DropBundles(const String& pipelineId)
+    {
+        String folder = PipelineExecutor::GetCachePath(pipelineId) + "content/";
+        for (auto& file : o2FileSystem.GetFolderInfo(folder).files)
+        {
+            if (UiLayout::HasSuffix(file.path, "-outputs.json"))
+                o2FileSystem.FileDelete(file.path);
+        }
+    }
+
+    PipelineImageToUiEditRound Round(const String& id, const String& text, bool point)
+    {
+        PipelineImageToUiEditItem item;
+        item.text = text;
+        if (point)
+            item.at = PipelineImageToUiEditPoint{ "result", 120, 245 };
+        return { id, { item } };
+    }
+
+    // A node fed by the mockup, run with the stubs: maxTurns 20, the sprites cut by the model, a draft that is never sent
+    struct EditsGraph
+    {
+        PipelineGraph     graph;
+        Ref<PipelineNode> source;
+        Ref<PipelineNode> ui;
+
+        EditsGraph()
+        {
+            PipelineNodeRegistry::Get("sourceImage");
+            PipelineUtils::WriteFileBytes(PipelineUtils::GetUploadPath("itu-mockup.png"), ImageToUiTestKit::MockupPng());
+            source = AddNode(graph, "sourceImage");
+            source->SetConfigString("uploadId", "itu-mockup.png");
+            ui = AddNode(graph, "imageToUi");
+            ui->SetConfigNumber("maxTurns", 20);
+            ui->SetConfigString("screenName", "Test");
+            ui->SetConfigString("sprites", "ai");
+            PipelineImageToUiEditItem draft;
+            draft.text = "not sent";
+            PipelineImageToUi::WriteDraft(*ui, { draft });
+            PipelineImageToUi::WriteEdits(*ui, {});
+            Connect(graph, source, "out", ui, "image");
+        }
+
+        Outcome Run(const Vector<PipelineImageToUiEditRound>& edits, const String& assets)
+        {
+            PipelineImageToUi::WriteEdits(*ui, edits);
+            return RunGraph(graph, ui->id, assets);
+        }
+    };
+}
+
+// A round of edits continues the finished run: no analysis, no cut, five turns of its own (rename, check, two exact edits of
+// the review, finalize); removing it is the cached result of the run without it; a lost cache is rebuilt from the kept files
+// with one check and no model call; a round whose model gives out fails the node and the round before stays the result
+TEST(ImageToUiRun, ARoundOfEditsContinuesTheRunAndUndoBringsTheResultBack)
+{
+#if defined(_WIN32)
+    GTEST_SKIP() << "the agent runs on POSIX hosts";
+#endif
+    if (ImageToUiHome().IsEmpty())
+        GTEST_SKIP() << "no o2/Tools/ImageToUi: run tools/sync-image-to-ui.sh";
+    if (ImageToUiTestKit::PythonWithDependencies().IsEmpty())
+        GTEST_SKIP() << "no Python 3 with Pillow and numpy";
+
+    RunWorkDir work;
+    String assets = work.path + "assets/";
+    o2FileSystem.FolderCreate(assets, true);
+    EditsGraph g;
+    String workDir = PipelineExecutor::GetWorkPath("itu", g.ui->id);
+    ImageToUiTestKit::StubModels models(workDir + "task/");
+    auto ok = [](const Outcome& o) { return o.done && o.errors.IsEmpty() && o.fatal.IsEmpty(); };
+
+    Outcome first = g.Run({}, assets);
+    ASSERT_TRUE(ok(first)) << first.fatal.Data() << Joined(first.errors).Data() << Joined(first.logs).Data();
+    EXPECT_EQ(models.agent.Load(), 4);
+    int cuts = models.cuts.Load();
+    int baseSteps = StepIds(PipelineUtils::ReadFileBytes(workDir + "trace/trace.json")).Count();
+
+    // A round: the agent continues the finished task folder and the layout is what it made of it
+    auto round = Round("r1", "call the red button start", true);
+    Outcome edited = g.Run({ round }, assets);
+    ASSERT_TRUE(ok(edited)) << edited.fatal.Data() << Joined(edited.errors).Data() << Joined(edited.logs).Data();
+    EXPECT_EQ(models.agent.Load(), 9) << "patch, check, two review edits, finalize";
+    EXPECT_EQ(models.analysis.Load(), 1);
+    EXPECT_EQ(models.cuts.Load(), cuts) << "no sprite is cut again";
+    EXPECT_TRUE(edited.logs.Any([](const String& l) { return l.Contains("imageToUi: edit round 1 completed"); })) << Joined(edited.logs).Data();
+    EXPECT_TRUE(LayoutNames("itu", g.ui).Contains("start"));
+    Json report;
+    ASSERT_TRUE(Json::Parse(PipelineUtils::ReadFileBytes(workDir + "task/completion_report.json"), report));
+    EXPECT_TRUE(report.Get("complete")->Bool()) << report.Get("blockers")->Dump(1).Data();
+    EXPECT_TRUE(o2FileSystem.IsFileExist(workDir + "edits/round-1.json"));
+
+    String traceText = PipelineUtils::ReadFileBytes(workDir + "trace/trace.json");
+    Json trace;
+    ASSERT_TRUE(Json::Parse(traceText, trace));
+    auto& steps = trace.Get("steps")->Items();
+    ASSERT_GT(steps.Count(), baseSteps + 3);
+    EXPECT_EQ(steps[baseSteps - 1].Get("kind")->Str(), "output") << "the run's own steps are kept";
+    EXPECT_EQ(steps[baseSteps].Get("id")->Str(), "edit1-check");
+    EXPECT_EQ(steps[baseSteps + 1].Get("id")->Str(), "edit1-request");
+    EXPECT_EQ(steps[baseSteps + 1].Get("kind")->Str(), "request");
+    EXPECT_EQ(steps[baseSteps + 2].Get("id")->Str(), "edit1-turn-1");
+    EXPECT_EQ(steps.Last().Get("id")->Str(), "edit1-output");
+    EXPECT_TRUE(steps.Last().Get("title")->Str().StartsWith("Edit 1 \xC2\xB7 Done")) << steps.Last().Get("title")->Str().Data();
+    EXPECT_EQ(trace.Get("summary")->Get("edits")->Num(), 1);
+    for (auto& image : steps[baseSteps + 1].Get("images")->Items())
+        EXPECT_TRUE(image.Get("file")->Str().StartsWith("edit1-")) << "a round's pictures are named after it";
+    Json kept;
+    ASSERT_TRUE(Json::Parse(PipelineUtils::ReadFileBytes(workDir + "rounds.json"), kept));
+    ASSERT_EQ(kept.Get("rounds")->Count(), 1);
+    EXPECT_EQ(kept.Get("rounds")->At(0)->Get("hash")->Str(), ImageToUiRoundHash(round));
+
+    // Removing the round: the cached result of the run without it, no call
+    Outcome undone = g.Run({}, assets);
+    ASSERT_TRUE(ok(undone)) << Joined(undone.errors).Data();
+    EXPECT_TRUE(LayoutNames("itu", g.ui).Contains("play"));
+    EXPECT_EQ(models.agent.Load(), 9);
+    EXPECT_TRUE(undone.logs.Any([](const String& l) { return l.Contains("imageToUi: cache hit"); })) << Joined(undone.logs).Data();
+    // The debug view reads the trace of the state its edits name: the cached result did not rewrite trace/
+    auto idsOf = [&](const Vector<PipelineImageToUiEditRound>& edits)
+    {
+        return StepIds(PipelineUtils::ReadFileBytes(PipelineImageToUi::StateTracePath(workDir, edits)));
+    };
+    EXPECT_FALSE(idsOf({}).Any([](const String& id) { return id.StartsWith("edit1-"); }));
+    EXPECT_TRUE(idsOf({ round }).Contains("edit1-request"));
+    EXPECT_TRUE(idsOf({ Round("nope", "x", false) }).Contains("edit1-request")) << "an unknown state: the live trace";
+
+    // A lost cache: the kept files of that state go back into the task folder and one check makes the reconstruction again
+    DropBundles("itu");
+    Outcome restored = g.Run({}, assets);
+    ASSERT_TRUE(ok(restored)) << Joined(restored.errors).Data() << Joined(restored.logs).Data();
+    EXPECT_TRUE(LayoutNames("itu", g.ui).Contains("play"));
+    EXPECT_TRUE(restored.logs.Any([](const String& l) { return l.Contains("continuing from the run without edits"); })) << Joined(restored.logs).Data();
+    DropBundles("itu");
+    Outcome again = g.Run({ round }, assets);
+    ASSERT_TRUE(ok(again)) << Joined(again.errors).Data() << Joined(again.logs).Data();
+    EXPECT_TRUE(LayoutNames("itu", g.ui).Contains("start"));
+    EXPECT_EQ(models.agent.Load(), 9);
+    EXPECT_EQ(models.analysis.Load(), 1);
+    EXPECT_EQ(models.cuts.Load(), cuts);
+    auto live = StepIds(PipelineUtils::ReadFileBytes(workDir + "trace/trace.json"));
+    EXPECT_EQ(live.Count([](const String& id) { return id == "edit1-request"; }), 1) << "the trace is the one of that state, not a pile-up";
+    EXPECT_EQ(live.Last(), "edit1-output");
+
+    // The task folder itself gone (a hundred megabytes of evidence, the first thing to clean up): prepared afresh around the
+    // kept files - prepare refuses a non-empty folder without its state - and still no model call
+    o2FileSystem.FolderRemove(workDir + "task", true);
+    DropBundles("itu");
+    Outcome cleaned = g.Run({ round }, assets);
+    ASSERT_TRUE(ok(cleaned)) << Joined(cleaned.errors).Data() << Joined(cleaned.logs).Data();
+    EXPECT_TRUE(LayoutNames("itu", g.ui).Contains("start"));
+    EXPECT_EQ(models.agent.Load(), 9);
+    EXPECT_EQ(models.analysis.Load(), 1);
+    EXPECT_EQ(models.cuts.Load(), cuts);
+    EXPECT_TRUE(o2FileSystem.IsFileExist(workDir + "task/workflow_state.json"));
+    EXPECT_EQ(PipelineUtils::ReadFileBytes(workDir + "task/alignment_review.md"), PipelineUtils::ReadFileBytes(workDir + "rounds/1/alignment_review.md"));
+
+    // Only its state lost: the same
+    o2FileSystem.FileDelete(workDir + "task/workflow_state.json");
+    DropBundles("itu");
+    Outcome stateless = g.Run({ round }, assets);
+    ASSERT_TRUE(ok(stateless)) << Joined(stateless.errors).Data() << Joined(stateless.logs).Data();
+    EXPECT_TRUE(LayoutNames("itu", g.ui).Contains("start"));
+    EXPECT_EQ(models.agent.Load(), 9);
+
+    // A round its model gives out on: the node fails with why, nothing of it is kept, the round before stays the result
+    models.failSecondRound.Store(1);
+    Outcome failed = g.Run({ round, Round("r2", "make the panel green", false) }, assets);
+    ASSERT_EQ(failed.errors.Count(), 1) << Joined(failed.logs).Data();
+    EXPECT_TRUE(failed.errors[0].Contains("imageToUi: edit round 2 stopped \xE2\x80\x94 the model call failed")) << failed.errors[0].Data();
+    ASSERT_TRUE(Json::Parse(PipelineUtils::ReadFileBytes(workDir + "rounds.json"), kept));
+    EXPECT_EQ(kept.Get("rounds")->Count(), 1);
+    models.failSecondRound.Store(0);
+    Outcome back = g.Run({ round }, assets);
+    ASSERT_TRUE(ok(back)) << Joined(back.errors).Data();
+    EXPECT_TRUE(LayoutNames("itu", g.ui).Contains("start"));
+
+    // The same round again after the failure, its cache lost: state 1 is restored from the files kept for it, the failed
+    // round's changes to the task folder are gone
+    DropBundles("itu");
+    Outcome rebuilt = g.Run({ round }, assets);
+    ASSERT_TRUE(ok(rebuilt)) << Joined(rebuilt.errors).Data() << Joined(rebuilt.logs).Data();
+    EXPECT_TRUE(rebuilt.logs.Any([](const String& l) { return l.Contains("continuing from edit round 1"); })) << Joined(rebuilt.logs).Data();
+    EXPECT_EQ(PipelineUtils::ReadFileBytes(workDir + "task/ui_structure.json"), PipelineUtils::ReadFileBytes(workDir + "rounds/1/ui_structure.json"));
+}
+
+// A node run before rounds existed (no rounds.json, a finished task folder made from the same design) is adopted as the run
+// without edits: its first round runs the agent only
+TEST(ImageToUiRun, ARunFromBeforeTheRoundsIsAdopted)
+{
+#if defined(_WIN32)
+    GTEST_SKIP() << "the agent runs on POSIX hosts";
+#endif
+    if (ImageToUiHome().IsEmpty())
+        GTEST_SKIP() << "no o2/Tools/ImageToUi: run tools/sync-image-to-ui.sh";
+    if (ImageToUiTestKit::PythonWithDependencies().IsEmpty())
+        GTEST_SKIP() << "no Python 3 with Pillow and numpy";
+
+    RunWorkDir work;
+    String assets = work.path + "assets/";
+    o2FileSystem.FolderCreate(assets, true);
+    EditsGraph g;
+    String workDir = PipelineExecutor::GetWorkPath("itu", g.ui->id);
+    ImageToUiTestKit::StubModels models(workDir + "task/");
+
+    Outcome first = g.Run({}, assets);
+    ASSERT_TRUE(first.done && first.errors.IsEmpty()) << Joined(first.errors).Data() << Joined(first.logs).Data();
+    o2FileSystem.FileDelete(workDir + "rounds.json");
+    o2FileSystem.FolderRemove(workDir + "rounds", true);
+    DropBundles("itu");
+
+    Outcome edited = g.Run({ Round("r1", "call the red button start", true) }, assets);
+    ASSERT_TRUE(edited.done && edited.errors.IsEmpty()) << Joined(edited.errors).Data() << Joined(edited.logs).Data();
+    EXPECT_EQ(models.analysis.Load(), 1) << "no new analysis";
+    EXPECT_EQ(models.agent.Load(), 9);
+    EXPECT_TRUE(LayoutNames("itu", g.ui).Contains("start"));
+    Json kept;
+    ASSERT_TRUE(Json::Parse(PipelineUtils::ReadFileBytes(workDir + "rounds.json"), kept));
+    EXPECT_EQ(kept.Get("rounds")->Count(), 1);
+    EXPECT_TRUE(kept.Get("note")->Str().StartsWith("About the sliced assets")) << "the sprites note is made again from the folder";
+    EXPECT_TRUE(kept.Get("note")->Str().Contains("The backdrop is a flat colour #")) << kept.Get("note")->Str().Data();
+    EXPECT_TRUE(o2FileSystem.IsFileExist(workDir + "rounds/0/ui_structure.json"));
+
+    // Another design is not adopted: the run starts over
+    o2FileSystem.FileDelete(workDir + "rounds.json");
+    o2FileSystem.FolderRemove(workDir + "rounds", true);
+    DropBundles("itu");
+    UiImage other;
+    ASSERT_TRUE(UiImage::Decode(ImageToUiTestKit::MockupPng(), other));
+    other.At(1, 1)[0] = 10;
+    PipelineUtils::WriteFileBytes(PipelineUtils::GetUploadPath("itu-mockup-2.png"), other.Png());
+    g.source->SetConfigString("uploadId", "itu-mockup-2.png");
+    Outcome fresh = g.Run({}, assets);
+    ASSERT_TRUE(fresh.done && fresh.errors.IsEmpty()) << Joined(fresh.errors).Data() << Joined(fresh.logs).Data();
+    EXPECT_EQ(models.analysis.Load(), 2);
+}

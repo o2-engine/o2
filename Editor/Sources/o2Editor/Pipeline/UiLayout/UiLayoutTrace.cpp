@@ -161,6 +161,37 @@ namespace Editor::UiLayout
             mSummary = *summary;
     }
 
+    void Trace::Adopt(const Json& file)
+    {
+        ScopeLock<Mutex> lock(mMutex);
+        for (auto& member : file.Members())
+        {
+            if (member.first == "steps")
+                mSteps = member.second.IsArray() ? member.second : Json::Array();
+            else if (member.first == "summary")
+                mSummary = member.second;
+            else if (member.first != "design")
+                mFile[member.first] = member.second;
+        }
+    }
+
+    String Trace::LastStepId() const
+    {
+        ScopeLock<Mutex> lock(mMutex);
+        if (mSteps.Items().IsEmpty())
+            return String();
+
+        const Json* id = mSteps.Items().Last().Get("id");
+        return id ? id->ToJsString() : String();
+    }
+
+    void Trace::PopLastStep()
+    {
+        ScopeLock<Mutex> lock(mMutex);
+        if (!mSteps.Items().IsEmpty())
+            mSteps.Items().RemoveAt(mSteps.Items().Count() - 1);
+    }
+
     void Trace::Save()
     {
         {

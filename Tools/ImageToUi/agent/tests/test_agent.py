@@ -199,6 +199,99 @@ class AgentRunTests(unittest.TestCase):
             self.assertEqual(len(model.images[6]), 4)  # design grid + the three check pictures
             self.assertTrue(events and events[0].startswith("turn 1/"))
 
+    def test_a_round_of_edits_continues_the_task(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            design, assets = make_fixture(root)
+            task = root / "task"
+            code, result, _ = run_agent(root, design, assets, ScriptedModel(task))
+            self.assertTrue(result["summary"]["complete"], result["summary"])
+            base_steps = json.loads((root / "trace" / "trace.json").read_text())["steps"]
+            base_files = {i["file"] for s in base_steps for i in s["images"]}
+
+            request = {"round": 1, "items": [
+                {"text": "call this gem ruby", "at": {"on": "result", "x": 160, "y": 100}},
+                {"text": "keep the colours"},
+            ]}
+            (root / "request.json").write_text(json.dumps(request))
+            prompts: list[str] = []
+            images: list[list[str]] = []
+
+            def reviser(prompt: str, imgs: list[str]) -> str:
+                prompts.append(prompt)
+                images.append(imgs)
+                turn = len(prompts)
+                if turn == 1:
+                    return action({"action": "patch", "ops": [
+                        {"op": "test", "path": "/root/children/1/children/1/name", "value": "gem"},
+                        {"op": "replace", "path": "/root/children/1/children/1/name", "value": "ruby"}]})
+                if turn == 2:
+                    return action({"action": "check"})
+                if turn == 3:
+                    return action({"action": "edit", "path": "alignment_review.md",
+                                   "old": "`root/card/gem`", "new": "`root/card/ruby`"})
+                if turn == 4:
+                    old = re.search(r"<!-- image-to-ui-review-binding:[^>]*-->", (task / "alignment_review.md").read_text()).group(0)
+                    new = re.search(r"# Latest review binding[^\n]*\n\n(<!--[^>]*-->)", prompt).group(1)
+                    return action({"action": "edit", "path": "alignment_review.md", "old": old, "new": new})
+                if turn == 5:
+                    return action({"action": "finalize"})
+                return action({"action": "stop", "reason": "script exhausted"})
+
+            # A task folder that lost its state: prepared afresh around what the model wrote.
+            (task / "workflow_state.json").unlink()
+            code, result, _ = run_agent(root, design, assets, reviser, ["--revise", str(root / "request.json")])
+            self.assertEqual(code, 0, result)
+            self.assertTrue(result["summary"]["complete"], result["summary"])
+            self.assertEqual(result["summary"]["turns"], 5)
+            structure = json.loads((task / "ui_structure.json").read_text())
+            self.assertEqual(structure["root"]["children"][1]["children"][1]["name"], "ruby")
+            self.assertIn("`root/card/ruby`", (task / "alignment_review.md").read_text())
+
+            first = prompts[0]
+            self.assertIn("# Changes the user asked for (round 1 of edits)", first)
+            self.assertIn("At (160, 100) on the reconstruction: “call this gem ruby”", first)
+            self.assertIn("Under the point, innermost first: `root/card/gem`", first)
+            self.assertIn("(no point) “keep the colours”", first)
+            self.assertIn("checked again before the changes", first)
+            # The request stays in the task; its pictures come with the first turn.
+            self.assertIn("# Changes the user asked for", prompts[4])
+            self.assertEqual(len(images[0]), 5)  # grid, design + reconstruction with the point, the point enlarged, comparison
+            self.assertIn("@request/point_1.png", first)
+            for prompt in prompts:
+                self.assertNotIn(str(root), prompt, "host paths must not reach the model")
+            # It appended to the run's trace under its own ids and file names,
+            # without touching the pictures the run left there.
+            steps = json.loads((root / "trace" / "trace.json").read_text())["steps"]
+            self.assertEqual([s["id"] for s in steps[:len(base_steps)]], [s["id"] for s in base_steps])
+            added = steps[len(base_steps):]
+            # The folder had lost its state: prepared again first, then the round as usual.
+            self.assertEqual([s["id"] for s in added[:4]], ["edit1-prepare", "edit1-check", "edit1-request", "edit1-turn-1"])
+            self.assertTrue(all(s["title"].startswith("Edit 1 · ") for s in added))
+            self.assertEqual(added[2]["kind"], "request")
+            self.assertEqual(len(added[2]["images"]), 3)
+            for s in added:
+                for img in s["images"]:
+                    self.assertTrue(img["file"].startswith("edit1-"), img)
+                    self.assertNotIn(img["file"], base_files)
+            for s in steps:
+                for img in s["images"]:
+                    self.assertTrue((root / "trace" / img["file"]).is_file(), img)
+
+    def test_edit_needs_an_exact_unique_match(self) -> None:
+        sys.path.insert(0, str(AGENT.parent))
+        from agent import Agent  # noqa: E402
+        with tempfile.TemporaryDirectory() as tmp:
+            agent = Agent.__new__(Agent)
+            agent.task = Path(tmp)
+            (agent.task / "alignment_review.md").write_text("| `a` | aligned |\n| `b` | aligned |\n")
+            self.assertEqual(agent.do_edit({"path": "alignment_review.md", "old": "aligned", "new": "adjusted"}).status, "warn")
+            self.assertEqual(agent.do_edit({"path": "alignment_review.md", "old": "`c`", "new": "`d`"}).status, "warn")
+            self.assertEqual(agent.do_edit({"path": "notes.txt", "old": "a", "new": "b"}).status, "warn")
+            self.assertEqual(agent.do_edit({"path": "alignment_review.md", "old": "`a` | aligned", "new": "`a` | adjusted"}).status, "ok")
+            self.assertEqual(agent.do_edit({"path": "alignment_review.md", "old": "|", "new": "¦", "all": True}).text,
+                             "Replaced 6 occurrence(s) in alignment_review.md.")
+
     def test_patch_operations(self) -> None:
         sys.path.insert(0, str(AGENT.parent))
         from agent import apply_patch, parse_reply  # noqa: E402

@@ -638,13 +638,6 @@ namespace Editor::UiLayout
 
     // --- the run -----------------------------------------------------------------------------------------------
 
-    static ImageToUiResult Fail(const String& error)
-    {
-        ImageToUiResult res;
-        res.error = error;
-        return res;
-    }
-
     static Json NineJson(const std::optional<NineSlice>& nine)
     {
         if (!nine)
@@ -658,23 +651,65 @@ namespace Editor::UiLayout
         return json;
     }
 
-    Coroutine<ImageToUiResult> RunImageToUi(Ref<AiCtx> ai, String designPng, ImageToUiConfig cfg, Ref<Trace> trace, String workDir)
+    WorkDirs MakeWorkDirs(const String& workDir)
     {
-        double t0 = NowMs();
-        auto st = mmake<RunState>();
-        st->ai = ai;
-        st->trace = trace;
-        st->cfg = cfg;
+        o2FileSystem.FolderCreate(workDir, true);
+        WorkDirs d;
+        d.work = AbsolutePath(workDir);
+        while (HasSuffix(d.work, "/"))
+            d.work = d.work.SubStr(0, d.work.Length() - 1);
+        d.input = d.work + "/input";
+        d.design = d.input + "/design.png";
+        d.assets = d.work + "/sprites";
+        d.fonts = d.work + "/fonts";
+        d.task = d.work + "/task";
+        d.scratch = d.work + "/agent-view";
+        return d;
+    }
 
-        if (workDir.IsEmpty())
-            co_return Fail("imageToUi: the node needs its work folder");
+    AgentRun BaseAgentRun(const WorkDirs& dirs, const Ref<Trace>& trace, const ImageToUiConfig& cfg, const String& note)
+    {
+        AgentRun run;
+        run.python = cfg.python;
+        run.workDir = dirs.work;
+        run.design = dirs.design;
+        run.assets = dirs.assets;
+        run.task = dirs.task;
+        run.scratch = dirs.scratch;
+        run.traceDir = trace->GetDir().IsEmpty() ? String() : AbsolutePath(trace->GetDir());
+        run.maxTurns = cfg.maxTurns;
+        run.name = cfg.name;
+        run.hint = cfg.hint;
+        run.note = note;
+        for (auto font : fontFiles)
+            run.fonts.Add(String("fonts/") + font);
+        return run;
+    }
 
-        UiImage decoded;
-        if (!UiImage::Decode(designPng, decoded))
-            co_return Fail("imageToUi: the input is not a decodable image");
+    std::optional<NineSlice> ParseNineSliceMeta(const String& text)
+    {
+        int at = text.Find("spriteBorder:");
+        NineSlice nine;
+        if (at < 0 || sscanf(text.SubStr(at).Data(), "spriteBorder: {x: %d, y: %d, z: %d, w: %d}", &nine.left, &nine.bottom, &nine.right,
+                             &nine.top) != 4)
+        {
+            return std::nullopt;
+        }
+        return nine;
+    }
 
-        st->design = decoded.Flatten(255, 255, 255);
-        st->designPng = st->design.Png();
+    static BaseRun BaseFail(const String& error)
+    {
+        BaseRun res;
+        res.error = error;
+        return res;
+    }
+
+    Coroutine<BaseRun> RunBase(Ref<RunState> st, WorkDirs dirs)
+    {
+        const Ref<AiCtx>& ai = st->ai;
+        const Ref<Trace>& trace = st->trace;
+        const ImageToUiConfig& cfg = st->cfg;
         int W = st->design.w, H = st->design.h;
 
         {
@@ -696,11 +731,11 @@ namespace Editor::UiLayout
         double t = NowMs();
         AiAnswer answer = co_await AiText(ai, Prompts::Analyze(W, H, cfg.hint), { st->designPng }, "analysis");
         if (!answer.ok)
-            co_return Fail(answer.error);
+            co_return BaseFail(answer.error);
 
         String parseError;
         if (!ParseAnalysis(answer.data, W, H, st->doc, &parseError) || st->doc.els.IsEmpty())
-            co_return Fail(parseError.IsEmpty() ? String("imageToUi: the model found no UI elements in the image") : "imageToUi: " + parseError);
+            co_return BaseFail(parseError.IsEmpty() ? String("imageToUi: the model found no UI elements in the image") : "imageToUi: " + parseError);
 
         UiDoc& doc = st->doc;
         {
@@ -751,41 +786,35 @@ namespace Editor::UiLayout
         // 2. The sliced sprites: one per look, and the backdrop
         Vector<LookPlan> plans = PlanLooks(doc);
         if (!co_await CutAll(st, &doc, &plans, &st->sprites))
-            co_return Fail("Cancelled");
+            co_return BaseFail("Cancelled");
 
         co_await MakeBackground(st);
         if (Cancelled(*st))
-            co_return Fail("Cancelled");
+            co_return BaseFail("Cancelled");
 
         // 3. The skill's inputs, laid out as it expects them: the design, a flat folder of sliced PNGs (Unity nine-slice borders
-        // in .png.meta), the fonts, a fresh task folder
-        o2FileSystem.FolderCreate(workDir, true);
-        String work = AbsolutePath(workDir);
-        while (HasSuffix(work, "/"))
-            work = work.SubStr(0, work.Length() - 1);
-        String inputDir = work + "/input", assetsDir = work + "/sprites", fontsDir = work + "/fonts", taskDir = work + "/task",
-            scratchDir = work + "/agent-view";
-        for (auto& d : { inputDir, assetsDir, fontsDir, taskDir, scratchDir })
+        // in .png.meta), the fonts, a fresh task folder; what earlier rounds of edits kept goes with the run they continued
+        for (auto& d : { dirs.input, dirs.assets, dirs.fonts, dirs.task, dirs.scratch, dirs.work + "/rounds", dirs.work + "/edits" })
         {
             if (o2FileSystem.IsFolderExist(d))
                 o2FileSystem.FolderRemove(d, true);
         }
-        for (auto& d : { inputDir, assetsDir, fontsDir })
+        o2FileSystem.FileDelete(dirs.work + "/rounds.json");
+        for (auto& d : { dirs.input, dirs.assets, dirs.fonts })
             o2FileSystem.FolderCreate(d, true);
 
-        String designFile = inputDir + "/design.png";
-        PipelineUtils::WriteFileBytes(designFile, st->designPng);
-        Vector<AssetFile> files = WriteAssets(assetsDir, plans, st->sprites, (double)W*H);
+        PipelineUtils::WriteFileBytes(dirs.design, st->designPng);
+        Vector<AssetFile> files = WriteAssets(dirs.assets, plans, st->sprites, (double)W*H);
 
         // The skill looks a fontFamily up next to the task, asset and design folders and their parents: fonts/Roboto-Bold.ttf
         // resolves from <work>, a bare Roboto-Bold.ttf (models write that too) from the design's folder
         String fonts = FontsFolder();
         for (auto font : fontFiles)
         {
-            o2FileSystem.FileCopy(fonts + font, fontsDir + "/" + font);
-            o2FileSystem.FileCopy(fonts + font, inputDir + "/" + font);
+            o2FileSystem.FileCopy(fonts + font, dirs.fonts + "/" + font);
+            o2FileSystem.FileCopy(fonts + font, dirs.input + "/" + font);
         }
-        o2FileSystem.FileCopy(fonts + "LICENSE-Roboto.txt", fontsDir + "/LICENSE-Roboto.txt");
+        o2FileSystem.FileCopy(fonts + "LICENSE-Roboto.txt", dirs.fonts + "/LICENSE-Roboto.txt");
 
         {
             Json list = Json::Array();
@@ -815,27 +844,14 @@ namespace Editor::UiLayout
         }
 
         // 4. The skill, with the model as its agent; it appends to the trace itself
-        t = NowMs();
         trace->Flush();
-        AgentRun run;
-        run.python = cfg.python;
-        run.workDir = work;
-        run.design = designFile;
-        run.assets = assetsDir;
-        run.task = taskDir;
-        run.scratch = scratchDir;
-        run.traceDir = trace->GetDir().IsEmpty() ? String() : AbsolutePath(trace->GetDir());
-        run.maxTurns = cfg.maxTurns;
-        run.name = cfg.name;
-        run.hint = cfg.hint;
-        run.note = SpritesNote(files, st->background);
-        for (auto font : fontFiles)
-            run.fonts.Add(String("fonts/") + font);
-
+        BaseRun res;
+        res.note = SpritesNote(files, st->background);
+        AgentRun run = BaseAgentRun(dirs, trace, cfg, res.note);
         AgentResult agent = co_await RunAgent(ai, run);
         trace->Reload();
         if (!agent.failure.IsEmpty())
-            co_return Fail(agent.failure);
+            co_return BaseFail(agent.failure);
 
         if (!agent.ok)
         {
@@ -843,60 +859,11 @@ namespace Editor::UiLayout
             const Json* status = agent.summary.Get("status");
             if (why.IsEmpty() && status && status->IsString())
                 why = status->Str();
-            co_return Fail("imageToUi: the agent ended without a checked layout (" + (why.IsEmpty() ? String("no check passed") : why) + ")");
+            co_return BaseFail("imageToUi: the agent ended without a checked layout (" + (why.IsEmpty() ? String("no check passed") : why) + ")");
         }
-
-        // 5. Outputs: the reconstruction, ui_structure.json as the skill left it, and every sprite the layout names
-        ImageToUiResult res;
-        res.layout = PipelineUtils::ReadFileBytes(taskDir + "/ui_structure.json");
-        res.preview = PipelineUtils::ReadFileBytes(taskDir + "/reconstruction.png");
-        Json structure;
-        if (res.layout.IsEmpty() || !Json::Parse(res.layout, structure))
-            co_return Fail("imageToUi: the agent left no readable ui_structure.json");
-        if (res.preview.IsEmpty())
-            co_return Fail("imageToUi: the agent left no reconstruction.png");
-
-        Vector<String> used = AssetRefs(structure);
-        for (auto& f : files)
-        {
-            if (!used.Contains(f.file))
-                continue;
-            res.sprites.Add({ f.file.SubStr(0, f.file.Length() - 4), PipelineUtils::ReadFileBytes(assetsDir + "/" + f.file), f.nine });
-        }
-
-        Json summary = agent.summary.IsObject() ? agent.summary : Json::Object();
-        summary["sprites"] = res.sprites.Count();
-        summary["textCalls"] = ai->textCalls.Load();
-        summary["imageCalls"] = ai->imageCalls.Load();
-        summary["replayed"] = ai->replayed.Load();
-        summary["ms"] = Since(t0);
-        res.complete = summary.Get("complete") && summary.Get("complete")->Bool();
-        if (const Json* blockers = summary.Get("blockers"))
-        {
-            for (auto& b : blockers->Items())
-                res.blockers.Add(b.ToJsString());
-        }
-        int checks = summary.Get("check_count") ? (int)summary.Get("check_count")->Num() : 0;
-        int turns = summary.Get("turns") ? (int)summary.Get("turns")->Num() : 0;
-
-        trace->SetSummary(summary);
-        {
-            Json step = Json::Object();
-            step["id"] = "output";
-            step["kind"] = "output";
-            step["ms"] = Since(t);
-            step["status"] = res.complete ? "ok" : "warn";
-            step["title"] = res.complete
-                ? "Done: the skill completed (" + (String)checks + " checks, " + (String)res.sprites.Count() + " sprites)"
-                : "Done, NOT completed: " + (String)res.blockers.Count() + " blocker(s) after " + (String)turns + " turns";
-            step["data"] = summary;
-            step["text"] = res.layout;
-            trace->Step(step);
-        }
-        trace->Save();
 
         res.ok = true;
-        res.summary = summary;
+        res.summary = agent.summary.IsObject() ? agent.summary : Json::Object();
         co_return res;
     }
 }

@@ -25,6 +25,7 @@
 #include "o2Editor/Pipeline/UiLayout/UiLayoutRunSteps.h"
 #include "o2Editor/Windows/AssetsWindow/AssetsWindow.h"
 #include "o2Editor/Windows/PipelineWindow/ImageToUiDebugDlg.h"
+#include "o2Editor/Windows/PipelineWindow/ImageToUiEditsDlg.h"
 #include "o2Editor/Windows/PipelineWindow/PipelineEditor.h"
 #include "o2Editor/Windows/PipelineWindow/PipelineNodeWidget.h"
 
@@ -277,6 +278,10 @@ namespace Editor
             mDebug->name = "debug view";
             mDebug->onToggleByUser = [weakThis](bool value) { if (auto self = weakThis.Lock()) self->SetDebugView(value); };
             head->AddChild(mDebug);
+            mEdits = PipelineImageTheme::MakeSmallToggle(EditsCaption(), GetBool("editsView", false));
+            mEdits->name = "edits view";
+            mEdits->onToggleByUser = [weakThis](bool value) { if (auto self = weakThis.Lock()) self->SetEditsView(value); };
+            head->AddChild(mEdits);
             mSave = MakeSmallButton("Save to Assets");
             mSave->name = "save to assets";
             PipelineImageTheme::KeepWholeCaption(*mSave);
@@ -321,6 +326,7 @@ namespace Editor
             OnOutputChanged();
             OnRunStateChanged();
             ApplyDebugView();
+            ApplyEditsView();
         }
 
         void OnOutputChanged() override
@@ -330,6 +336,7 @@ namespace Editor
             RefreshSummary();
             UpdateAssetInfo();
             ImageToUiDebug::Refresh(mNode->id);
+            ImageToUiEdits::Refresh(mNode->id);
         }
 
         void OnConfigChanged() override
@@ -341,6 +348,10 @@ namespace Editor
             if (mNameEdit)
                 mNameEdit->SetText(GetString("screenName", ""));
             ApplyDebugView();
+            UpdateEditsToggle();
+            ApplyEditsView();
+            ImageToUiEdits::Refresh(mNode->id);
+            ImageToUiDebug::Refresh(mNode->id);
             UpdateAssetInfo();
         }
 
@@ -350,6 +361,7 @@ namespace Editor
             if (mGrid)
                 mGrid->SetBusy(running);
             ImageToUiDebug::SetRunning(mNode->id, running);
+            ImageToUiEdits::SetRunning(mNode->id, running);
             RefreshSummary();
         }
 
@@ -447,6 +459,7 @@ namespace Editor
     private:
         Ref<Label>                mSummary;    // Whether the skill completed, elements and sprites of the last run
         Ref<Toggle>               mDebug;      // Shows the debug view
+        Ref<Toggle>               mEdits;      // Shows the edits dialog, "Edits · n" once rounds were applied
         Ref<Button>               mSave;       // Writes the prototype
         Ref<PipelineUiSpriteGrid> mGrid;       // Sprites of the run with their output ports
         Ref<EditBox>              mFolderEdit; // Folder of the prototype inside Assets
@@ -467,15 +480,7 @@ namespace Editor
             if (path.IsEmpty() || !o2FileSystem.IsFileExist(path))
                 return std::nullopt;
 
-            String text = PipelineUtils::ReadFileBytes(path);
-            int at = text.Find("spriteBorder:");
-            UiLayout::NineSlice nine;
-            if (at < 0 || sscanf(text.SubStr(at).Data(), "spriteBorder: {x: %d, y: %d, z: %d, w: %d}", &nine.left, &nine.bottom, &nine.right,
-                                 &nine.top) != 4)
-            {
-                return std::nullopt;
-            }
-            return nine;
+            return UiLayout::ParseNineSliceMeta(PipelineUtils::ReadFileBytes(path));
         }
 
         static Coroutine<void> SaveJob(WeakRef<ImageToUiBody> body, Ref<PipelineExecContext> ctx, PipelineImageToUiConfig cfg, String layout,
@@ -523,8 +528,9 @@ namespace Editor
             String layoutJson = LayoutText();
             String tracePath;
             if (auto editor = mEditor.Lock())
-                tracePath = PipelineExecutor::GetWorkPath(editor->GetPipelineId(), mNode->id) + "trace/trace.json";
-            String stamp = layoutJson + "|" + (String)PipelineImageToUi::SpritePorts(*mNode).Count();
+                tracePath = PipelineImageToUi::StateTracePath(PipelineExecutor::GetWorkPath(editor->GetPipelineId(), mNode->id),
+                                                              PipelineImageToUi::Edits(*mNode));
+            String stamp = layoutJson + "|" + (String)PipelineImageToUi::SpritePorts(*mNode).Count() + "|" + tracePath;
             if (!tracePath.IsEmpty() && o2FileSystem.IsFileExist(tracePath))
                 stamp += "|" + (String)(int)o2FileSystem.GetFileInfo(tracePath).size;
             if (stamp != mSummaryOf)
@@ -547,6 +553,7 @@ namespace Editor
                 mSave->interactable = can;
                 mSave->transparency = can ? 1.0f : 0.5f;
             }
+            UpdateEditsToggle();
         }
 
         void RefreshSprites()
@@ -723,6 +730,76 @@ namespace Editor
             if (mDebug)
                 mDebug->SetValue(on);
             ApplyDebugView();
+        }
+
+        String EditsCaption() const
+        {
+            int rounds = PipelineImageToUi::Edits(*mNode).Count();
+            return rounds ? "Edits \xC2\xB7 " + (String)rounds : String("Edits");
+        }
+
+        // The caption follows the rounds; without a result and without rounds there is nothing to change
+        void UpdateEditsToggle()
+        {
+            if (!mEdits)
+                return;
+
+            String caption = EditsCaption();
+            if ((String)mEdits->GetCaption() != caption)
+            {
+                mEdits->caption = caption;
+                float width = Math::Ceil(TextWidth(caption, smallFont)) + 18.0f;
+                mEdits->layout->minWidth = width;
+                mEdits->layout->maxWidth = width;
+            }
+            mEdits->SetValue(GetBool("editsView", false));
+            bool can = !mSummaryText.IsEmpty() || !PipelineImageToUi::Edits(*mNode).IsEmpty();
+            mEdits->interactable = can;
+            mEdits->transparency = can ? 1.0f : 0.5f;
+        }
+
+        void SetEditsView(bool on)
+        {
+            if (GetBool("editsView", false) != on)
+                SetBool("editsView", on, true);
+            if (mEdits)
+                mEdits->SetValue(on);
+            ApplyEditsView();
+        }
+
+        void ApplyEditsView()
+        {
+            if (!GetBool("editsView", false))
+            {
+                ImageToUiEdits::Hide(mNode->id);
+                return;
+            }
+
+            auto editor = mEditor.Lock();
+            if (!editor)
+                return;
+
+            WeakRef<ImageToUiBody> weakThis(this);
+            String nodeId = mNode->id;
+            WeakRef<PipelineEditor> weakEditor(editor);
+            ImageToUiEdits::Show(editor, mNode, [weakThis, weakEditor, nodeId]()
+            {
+                if (auto self = weakThis.Lock())
+                {
+                    self->SetEditsView(false);
+                    return;
+                }
+
+                // The card was rebuilt meanwhile: its current body takes the change
+                auto editor = weakEditor.Lock();
+                auto widget = editor ? editor->GetNodeWidget(nodeId) : nullptr;
+                if (widget && widget->GetBody())
+                {
+                    widget->GetNode()->SetConfigBool("editsView", false);
+                    widget->GetBody()->OnConfigChanged();
+                }
+            });
+            ImageToUiEdits::SetRunning(mNode->id, IsRunning());
         }
 
         void ApplyDebugView()

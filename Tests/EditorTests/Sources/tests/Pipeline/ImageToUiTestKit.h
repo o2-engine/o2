@@ -396,7 +396,73 @@ namespace ImageToUiTestKit
         return Act(stop);
     }
 
-    // Answers every model call of a run while it lives; counts them
+    // The agent in a round of edits, scripted (AssetsLine's scriptedEditor): rename the button the note points at, check, carry
+    // the rename and the new binding into the review with two exact edits, finalize
+    inline String ScriptedEditTurn(const String& prompt, const String& taskDir)
+    {
+        std::smatch m;
+        std::string text = prompt.Data();
+        int turn = std::regex_search(text, m, std::regex("# Your turn (\\d+) of")) ? std::stoi(m[1].str()) : 0;
+        if (turn == 1)
+        {
+            Json structure;
+            Json::Parse(PipelineUtils::ReadFileBytes(taskDir + "ui_structure.json"), structure);
+            int index = -1;
+            if (const Json* children = structure.Get("root") ? structure.Get("root")->Get("children") : nullptr)
+            {
+                for (int i = 0; i < children->Count() && index < 0; i++)
+                {
+                    if (children->At(i)->Get("name") && children->At(i)->Get("name")->Str() == "play")
+                        index = i;
+                }
+            }
+            Json op = Json::Object();
+            op["op"] = "replace";
+            op["path"] = "/root/children/" + (String)index + "/name";
+            op["value"] = "start";
+            Json ops = Json::Array();
+            ops.Add(op);
+            Json action = ActionOf("patch");
+            action["ops"] = ops;
+            return Act(action);
+        }
+
+        if (turn == 2)
+            return Act(ActionOf("check"));
+
+        if (turn == 3)
+        {
+            Json action = ActionOf("edit");
+            action["path"] = "alignment_review.md";
+            action["old"] = "`root/play`";
+            action["new"] = "`root/start`";
+            return Act(action);
+        }
+
+        if (turn == 4)
+        {
+            std::string review = PipelineUtils::ReadFileBytes(taskDir + "alignment_review.md").Data();
+            std::smatch old, latest;
+            std::regex_search(review, old, std::regex("<!-- image-to-ui-review-binding:[^>]*-->"));
+            std::regex_search(text, latest, std::regex("# Latest review binding[^\\n]*\\n\\n(<!--[^>]*-->)"));
+            Json action = ActionOf("edit");
+            action["path"] = "alignment_review.md";
+            action["old"] = String(old.empty() ? "" : old[0].str().c_str());
+            action["new"] = String(latest.size() < 2 ? "" : latest[1].str().c_str());
+            return Act(action);
+        }
+
+        if (turn == 5)
+            return Act(ActionOf("finalize"));
+
+        Json stop = ActionOf("stop");
+        stop["reason"] = "script exhausted";
+        return Act(stop);
+    }
+
+    // Answers every model call of a run while it lives; counts them. The turns of a round of edits (their task holds the
+    // user's request) go to the scripted editor; failSecondRound makes every turn after the first of round 2 fail, as a
+    // provider out of credits does
     struct StubModels
     {
         String      taskDir; // <work>/task/ of the node, where the scripted agent reads the skill's files
@@ -404,6 +470,7 @@ namespace ImageToUiTestKit
         Atomic<int> agent{ 0 };
         Atomic<int> cuts{ 0 };
         Atomic<int> other{ 0 };
+        Atomic<int> failSecondRound{ 0 };
 
         explicit StubModels(const String& task): taskDir(task)
         {
@@ -418,7 +485,20 @@ namespace ImageToUiTestKit
                 if (call.tag.StartsWith("agent ") && call.ext == ".txt")
                 {
                     agent.FetchAdd(1);
-                    data = ScriptedTurn(call.prompt, taskDir);
+                    if (!call.prompt.Contains("# Changes the user asked for"))
+                    {
+                        data = ScriptedTurn(call.prompt, taskDir);
+                        return true;
+                    }
+
+                    std::smatch m;
+                    std::string prompt = call.prompt.Data();
+                    if (failSecondRound.Load() && call.prompt.Contains("round 2 of edits") &&
+                        std::regex_search(prompt, m, std::regex("# Your turn ([2-9]|\\d\\d) of")))
+                    {
+                        return false;
+                    }
+                    data = ScriptedEditTurn(call.prompt, taskDir);
                     return true;
                 }
                 if (call.ext == ".png" && call.tag.StartsWith("cut "))

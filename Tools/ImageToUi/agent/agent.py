@@ -120,10 +120,15 @@ class Bridge:
 
 class Trace:
     """trace.json in the editors' format; pictures are copied next to it, so
-    every check's evidence stays visible after the next check replaces it."""
+    every check's evidence stays visible after the next check replaces it.
+    A round of edits appends to the trace of the run it continues: `prefix`
+    keeps its step ids and picture names apart ("edit2-turn-3",
+    "edit2-a001-…"), `title_prefix` labels its steps ("Edit 2 · …")."""
 
-    def __init__(self, directory: Path | None) -> None:
+    def __init__(self, directory: Path | None, prefix: str = "", title_prefix: str = "") -> None:
         self.dir = directory
+        self.prefix = prefix
+        self.title_prefix = title_prefix
         self.n = 0
         self.data: dict[str, Any] = {"version": 1, "startedAt": utc_now(), "steps": []}
         if not directory:
@@ -143,11 +148,15 @@ class Trace:
         if not self.dir or not size:
             return None
         self.n += 1
-        name = f"a{self.n:03d}-{re.sub(r'[^A-Za-z0-9._-]+', '_', path.name)}"
+        name = f"{self.prefix}a{self.n:03d}-{re.sub(r'[^A-Za-z0-9._-]+', '_', path.name)}"
         shutil.copyfile(path, self.dir / name)
         return {"title": title, "file": name, "w": size[0], "h": size[1]}
 
     def step(self, **step: Any) -> None:
+        if self.prefix:
+            step["id"] = self.prefix + str(step.get("id", ""))
+        if self.title_prefix:
+            step["title"] = self.title_prefix + str(step.get("title", ""))
         step.setdefault("images", [])
         step["images"] = [i for i in step["images"] if i]
         self.data["steps"].append(step)
@@ -324,6 +333,10 @@ Command → action:
   RFC 6902 JSON Patch operations (add / remove / replace / move / copy / test;
   paths are JSON Pointers such as "/root/children/2/position/x"). Use it for
   small edits; write the whole file for large ones.
+- Replacing a piece of a file you wrote → {"action": "edit", "path": "alignment_review.md",
+  "old": "<exact text>", "new": "<replacement>"} — "old" must be in the file
+  exactly once (add "all": true to replace every occurrence). Use it for the
+  binding line or a few review rows instead of writing the whole file again.
 - Giving up → {"action": "stop", "reason": "…"}, only when nothing more can be done.
 
 What finalize (workflow.py) parses: in alignment_review.md the element path and
@@ -356,6 +369,157 @@ def task_text(args: argparse.Namespace, default_prompt: str) -> str:
     if args.hint:
         lines += ["", "Notes from the user:", args.hint]
     return "\n".join(lines)
+
+
+# --- a round of edits ------------------------------------------------------------
+# After the task was done the user can ask for changes: notes, each with a
+# point on the design or on the reconstruction (canvas pixels, the two have the
+# same size) or with none. The host passes them as --revise <request.json>:
+# {"round": 2, "items": [{"text": "…", "at": {"on": "result", "x": 120, "y": 40}}],
+#  "earlier": [{"round": 1, "items": […]}]}. The agent then continues in the same
+# task folder: it checks the layout as it is, shows the model the request with
+# the points drawn on both pictures and enlarged, and runs the usual loop until
+# finalize passes again.
+
+PICTURE = {"design": "the design", "result": "the reconstruction"}
+
+
+def elements_at(legend: dict[str, Any] | None, x: int, y: int, limit: int = 3) -> list[str]:
+    """The innermost elements under a point, from all_elements_legend.json
+    (abs_bbox is [x, y, w, h])."""
+    hits: list[tuple[int, str, list[int]]] = []
+    for target in (legend or {}).get("targets") or []:
+        box = target.get("abs_bbox") or []
+        if len(box) != 4:
+            continue
+        bx, by, bw, bh = (int(v) for v in box)
+        if bx <= x < bx + bw and by <= y < by + bh:
+            hits.append((bw * bh, str(target.get("path")), [bx, by, bw, bh]))
+    hits.sort(key=lambda h: h[0])
+    return [f"`{path}` (x {b[0]}, y {b[1]}, w {b[2]}, h {b[3]})" for _, path, b in hits[:limit]]
+
+
+def note_lines(items: list[dict[str, Any]], legend: dict[str, Any] | None = None) -> list[str]:
+    lines: list[str] = []
+    for i, item in enumerate(items, start=1):
+        at = item.get("at")
+        if at:
+            lines.append(f"{i}. At ({at['x']}, {at['y']}) on {PICTURE.get(at.get('on'), 'the reconstruction')}: “{item['text']}”")
+            under = elements_at(legend, int(at["x"]), int(at["y"])) if legend else []
+            if under:
+                lines.append("   Under the point, innermost first: " + "; ".join(under))
+        else:
+            lines.append(f"{i}. (no point) “{item['text']}”")
+    return lines
+
+
+def request_text(request: dict[str, Any], legend: dict[str, Any] | None, pictures: list[str]) -> str:
+    n = int(request.get("round") or 1)
+    lines = [
+        f"# Changes the user asked for (round {n} of edits)",
+        "",
+        "You completed this task before: `ui_structure.json` and `alignment_review.md` in the task folder "
+        "are as you left them, and the layout has just been checked again as it is. The user has looked at "
+        "the result and asks for the changes below. A point is in canvas pixels (the design and the "
+        "reconstruction have the same size, origin top left); each note says which picture the user "
+        "pointed at.",
+        "",
+        *note_lines(request.get("items") or [], legend),
+    ]
+    if pictures:
+        lines += ["", "Pictures of the request (view them again any time): " + ", ".join(f"`{p}`" for p in pictures)
+                  + " — the design and the reconstruction with the points numbered, then both around each point, enlarged."]
+    lines += [
+        "",
+        "What to do: make the changes the notes ask for and what they imply, and keep everything else as it is. "
+        "Measure first where a position or a size is involved. Where a note asks for something the design "
+        "does not show (another colour, a bigger button), do what the note says and record it in "
+        "`metadata.approximations` ({\"path\": …, \"reason\": \"requested by the user: …\", \"accepted\": true}) "
+        "so the checks accept the difference. Then run check, bring `alignment_review.md` up to date — the rows "
+        "of the elements you changed, and the binding of your latest check (the `edit` action replaces a line) — "
+        "and finalize. The round is done when finalize reports \"complete\": true again.",
+    ]
+    earlier = [r for r in request.get("earlier") or [] if r.get("items")]
+    if earlier:
+        lines += ["", "Changes made in earlier rounds (they are in the layout already; keep them):"]
+        for r in earlier:
+            lines.append(f"Round {r.get('round')}:")
+            lines += ["  " + line for line in note_lines(r["items"])]
+    return "\n".join(lines)
+
+
+def request_pictures(design: Path, reconstruction: Path | None, items: list[dict[str, Any]], out: Path) -> list[tuple[str, Path]]:
+    """The design and the reconstruction with the points drawn and numbered,
+    and one sheet per point: both pictures around it, enlarged."""
+    from PIL import Image, ImageDraw, ImageFont
+    out.mkdir(parents=True, exist_ok=True)
+    base = Image.open(design).convert("RGB")
+    w, h = base.size
+    recon = None
+    if reconstruction and reconstruction.is_file():
+        with Image.open(reconstruction) as img:
+            layer = img.convert("RGBA").resize((w, h)) if img.size != (w, h) else img.convert("RGBA")
+        recon = Image.new("RGBA", (w, h), (255, 255, 255, 255))
+        recon.alpha_composite(layer)
+        recon = recon.convert("RGB")
+    pins = [(i, item["at"]) for i, item in enumerate(items, start=1) if item.get("at")]
+    radius = max(9, round(max(w, h) / 70))
+
+    def font(size: int):
+        try:
+            return ImageFont.load_default(size=size)
+        except TypeError:  # Pillow < 10.1
+            return ImageFont.load_default()
+
+    def marked(img: Image.Image, r: int) -> Image.Image:
+        img = img.copy()
+        d = ImageDraw.Draw(img)
+        f = font(max(10, round(r * 1.25)))
+        for i, at in pins:
+            x, y = int(at["x"]), int(at["y"])
+            d.ellipse([x - r, y - r, x + r, y + r], fill=(229, 57, 53), outline=(255, 255, 255), width=max(2, r // 4))
+            d.text((x, y), str(i), fill=(255, 255, 255), font=f, anchor="mm")
+        return img
+
+    shown: list[tuple[str, Path]] = []
+    marked(base, radius).save(out / "design.png")
+    shown.append(("@request/design.png — the design, the points numbered", out / "design.png"))
+    if recon is not None:
+        marked(recon, radius).save(out / "reconstruction.png")
+        shown.append(("@request/reconstruction.png — the reconstruction, the points numbered", out / "reconstruction.png"))
+    side = max(80, min(360, round(max(w, h) * 0.16)))
+    for i, at in pins:
+        x, y = int(at["x"]), int(at["y"])
+        x0 = max(0, min(w - side, x - side // 2)) if w > side else 0
+        y0 = max(0, min(h - side, y - side // 2)) if h > side else 0
+        box = (x0, y0, min(w, x0 + side), min(h, y0 + side))
+        zoom = max(1.0, min(4.0, 420 / side))
+        parts = [("design", base)] + ([("reconstruction", recon)] if recon is not None else [])
+        tiles = []
+        for title, img in parts:
+            tile = img.crop(box).resize((round((box[2] - box[0]) * zoom), round((box[3] - box[1]) * zoom)), Image.LANCZOS)
+            d = ImageDraw.Draw(tile)
+            px, py = (x - box[0]) * zoom, (y - box[1]) * zoom
+            # Four ticks pointing at the spot, clear of it: what is there stays visible.
+            near, far = 14 * zoom, 14 * zoom + 14
+            for c, wd in (((255, 255, 255), 5), ((229, 57, 53), 2)):
+                d.line([(px - far, py), (px - near, py)], fill=c, width=wd)
+                d.line([(px + near, py), (px + far, py)], fill=c, width=wd)
+                d.line([(px, py - far), (px, py - near)], fill=c, width=wd)
+                d.line([(px, py + near), (px, py + far)], fill=c, width=wd)
+            tiles.append((title, tile))
+        gap, cap = 12, 22
+        sheet = Image.new("RGB", (sum(t.width for _, t in tiles) + gap * (len(tiles) - 1), max(t.height for _, t in tiles) + cap),
+                          (30, 30, 40))
+        d = ImageDraw.Draw(sheet)
+        left = 0
+        for title, tile in tiles:
+            sheet.paste(tile, (left, cap))
+            d.text((left + 4, 4), f"{i} · {title} · ({x}, {y})", fill=(235, 235, 240), font=font(13))
+            left += tile.width + gap
+        sheet.save(out / f"point_{i}.png")
+        shown.append((f"@request/point_{i}.png — point {i}, design | reconstruction, enlarged", out / f"point_{i}.png"))
+    return shown
 
 
 def parse_reply(text: str) -> tuple[dict[str, Any] | None, str | None, str | None]:
@@ -533,6 +697,9 @@ class Agent:
         self.blockers: list[str] = []
         self.error = ""
         self.n_view = 0
+        # A round of edits (--revise): the user's notes, and where their pictures go.
+        self.request: dict[str, Any] | None = getattr(args, "request", None)
+        self.request_dir = self.view_dir / "request"
 
     # -- model view of a picture: big evidence sheets are scaled to fit what a
     # -- model looks at (the files themselves stay native in the task folder).
@@ -627,6 +794,8 @@ class Agent:
             base, rel = self.args.assets, value[len("@assets/"):]
         elif value.startswith("@skill/"):
             base, rel = self.skill, value[len("@skill/"):]
+        elif value.startswith("@request/"):
+            base, rel = self.request_dir, value[len("@request/"):]
         else:
             base, rel = self.task, value.lstrip("/")
         path = (base / rel).resolve()
@@ -649,6 +818,8 @@ class Agent:
             return self.do_write(str(action.get("path", "")), content)
         if name == "patch":
             return self.do_patch(action.get("ops"))
+        if name == "edit":
+            return self.do_edit(action)
         if name == "prepare":
             return self.do_prepare()
         if name == "measure":
@@ -683,6 +854,19 @@ class Agent:
                      + ", ".join(f"assets/{p.name}" for p in sorted((self.task / "assets").glob('assets_contact_sheet_usage_*.png')))
                      + ". Open assets/assets_inventory.json for exact asset paths and sizes.")
         return Observation("prepare", text, images, kind="prepare", status="ok" if code == 0 else "error")
+
+    def prepare_keeping(self) -> Observation:
+        """prepare takes an empty folder or one with its own state; a task folder
+        that lost its state keeps only the files the model wrote: set aside,
+        prepared afresh, put back (check makes everything else again)."""
+        kept = {name: (self.task / name).read_bytes() for name in WRITABLE if (self.task / name).is_file()}
+        if self.task.exists():
+            shutil.rmtree(self.task)
+        obs = self.do_prepare()
+        self.task.mkdir(parents=True, exist_ok=True)
+        for name, data in kept.items():
+            (self.task / name).write_bytes(data)
+        return obs
 
     def do_view(self, value: str, part: int | None = None) -> Observation:
         try:
@@ -736,6 +920,35 @@ class Agent:
             return Observation("patch", f"Patch not applied: {exc}", status="warn")
         path.write_text(json.dumps(doc, ensure_ascii=False, indent=2) + "\n", "utf-8")
         return Observation("patch", f"Applied {len(ops)} operation(s) to ui_structure.json.", kind="write")
+
+    def do_edit(self, a: dict[str, Any]) -> Observation:
+        rel = str(a.get("path", ""))
+        if rel not in WRITABLE:
+            return Observation(f"edit {rel}", f"You can edit only {', '.join(WRITABLE)}.", status="warn")
+        path = self.task / rel
+        if not path.is_file():
+            return Observation(f"edit {rel}", f"There is no {rel} yet: write it first.", status="warn")
+        old, new = a.get("old"), a.get("new")
+        if not isinstance(old, str) or not old or not isinstance(new, str):
+            return Observation(f"edit {rel}", '"old" (not empty) and "new" must be strings.', status="warn")
+        text = path.read_text("utf-8")
+        count = text.count(old)
+        if not count:
+            return Observation(f"edit {rel}", f'"old" is not in {rel}: it must match exactly, spaces and backticks included.',
+                               status="warn")
+        every = a.get("all") is True
+        if count > 1 and not every:
+            return Observation(f"edit {rel}", f'"old" is in {rel} {count} times: make it longer so it is unique, '
+                               'or add "all": true.', status="warn")
+        text = text.replace(old, new) if every else text.replace(old, new, 1)
+        path.write_text(text, "utf-8")
+        done = f"Replaced {count if every else 1} occurrence(s) in {rel}."
+        if rel.endswith(".json"):
+            try:
+                json.loads(text)
+            except ValueError as exc:
+                return Observation(f"edit {rel}", f"{done} The file is not valid JSON now: {exc}", kind="write", status="warn")
+        return Observation(f"edit {rel}", done, kind="write")
 
     def do_measure(self, a: dict[str, Any]) -> Observation:
         region = [str(int(v)) for v in (a.get("region") or [])][:4]
@@ -852,13 +1065,23 @@ class Agent:
     # -- the loop ---------------------------------------------------------------
     def run(self) -> int:
         t0 = time.time()
-        obs = self.do_prepare()
-        self.trace.step(id="prepare", title="Prepare: inventory + measurement grid", kind="prepare",
-                        text=obs.text, status=obs.status,
-                        images=[self.trace.image(t, p) for t, p, *_ in obs.images])
-        if obs.status == "error":
-            self.bridge.send({"type": "result", "ok": False, "error": "prepare failed", "detail": obs.text[-2000:]})
+        if self.request is not None and not (self.task / "ui_structure.json").is_file():
+            self.bridge.send({"type": "result", "ok": False, "error": "nothing to revise",
+                              "detail": "the task folder has no ui_structure.json to change"})
             return 2
+        # A round of edits continues a prepared task folder; prepare again only
+        # when it lost its state (the inventory and grid it needs) — keeping
+        # what the model wrote, which prepare's empty-folder rule would refuse.
+        if self.request is None or not (self.task / "workflow_state.json").is_file():
+            obs = self.do_prepare() if self.request is None else self.prepare_keeping()
+            self.trace.step(id="prepare", title="Prepare: inventory + measurement grid", kind="prepare",
+                            text=obs.text, status=obs.status,
+                            images=[self.trace.image(t, p) for t, p, *_ in obs.images])
+            if obs.status == "error":
+                self.bridge.send({"type": "result", "ok": False, "error": "prepare failed", "detail": obs.text[-2000:]})
+                return 2
+        if self.request is not None:
+            obs = self.begin_round()
         turn = 0
         for turn in range(1, self.args.max_turns + 1):
             self.turn = turn
@@ -906,6 +1129,25 @@ class Agent:
         self.bridge.send(result)
         return 0 if result["ok"] else 2
 
+    def begin_round(self) -> Observation:
+        """A round of edits starts from the layout as it is: check it (fresh
+        evidence and binding), then put the request in front of the model —
+        in the task for every turn, with its pictures on the first."""
+        request = self.request or {}
+        items = request.get("items") or []
+        check = self.do_check({})
+        self.trace.step(id="check", title=f"The layout to change: {check.title}", kind="check", text=check.text,
+                        status=check.status, images=[self.trace.image(t, p) for t, p, *_ in [*check.images, *check.trace_only]])
+        pictures = request_pictures(self.args.design, self.task / "reconstruction.png", items, self.request_dir)
+        names = [title.split(" — ")[0] for title, _ in pictures]
+        text = request_text(request, read_json(self.task / "all_elements_legend.json"), names)
+        self.task_md += "\n\n" + text
+        self.trace.step(id="request", title=f"The user's request: {len(items)} note(s)", kind="request",
+                        text=text, data={"request": request}, images=[self.trace.image(t, p) for t, p in pictures])
+        shown = pictures[:2 + PAGES_SHOWN] + [i for i in check.images if i[0] == "comparison.png"]
+        return Observation("the layout to change, checked again", "Your layout, checked again before the changes "
+                           f"(the request is under \"The task\"):\n{check.text}", shown, kind="check", status=check.status)
+
     def result(self, turns: int, seconds: float) -> dict[str, Any]:
         structure = self.task / "ui_structure.json"
         state = read_json(self.task / "workflow_state.json") or {}
@@ -943,7 +1185,15 @@ def main() -> int:
     p.add_argument("--name", default="")
     p.add_argument("--font", action="append", dest="fonts", default=[], help="fontFamily value available to the model")
     p.add_argument("--sprites-note", default="")
+    p.add_argument("--revise", type=Path, help="a round of edits (request JSON): continue the task folder")
     args = p.parse_args()
+    args.request = None
+    if args.revise:
+        try:
+            args.request = json.loads(args.revise.read_text("utf-8"))
+        except (OSError, ValueError) as exc:
+            Bridge().send({"type": "result", "ok": False, "error": "bad_arguments", "detail": f"--revise: {exc}"})
+            return 4
     try:
         import numpy  # noqa: F401
         from PIL import Image
@@ -962,7 +1212,9 @@ def main() -> int:
     args.asset_count = sum(1 for f in args.assets.rglob("*.png"))
     args.scratch = (args.scratch or args.output.parent / "agent-view").resolve()
     args.max_turns = max(1, args.max_turns)
-    trace = Trace(args.trace_dir.resolve() if args.trace_dir else None)
+    n = int((args.request or {}).get("round") or 1)
+    trace = Trace(args.trace_dir.resolve() if args.trace_dir else None,
+                  *((f"edit{n}-", f"Edit {n} · ") if args.request is not None else ()))
     return Agent(args, Bridge(), trace).run()
 
 

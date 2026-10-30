@@ -469,7 +469,70 @@ namespace Editor::UiLayout
             args.Add("--trace-dir");
             args.Add(run.traceDir);
         }
+        if (!run.revise.IsEmpty())
+        {
+            args.Add("--revise");
+            args.Add(run.revise);
+        }
         return args;
+    }
+
+    Coroutine<ScriptResult> RunScript(String python, Vector<String> args, String cwd, Ref<PipelineExecContext> exec)
+    {
+        ScriptResult res;
+        AgentProcess process;
+        String error;
+        if (!process.Start(python, args, cwd, error))
+        {
+            res.failure = "imageToUi: cannot start " + python + " (" + error + ")";
+            co_return res;
+        }
+
+        std::string out;
+        auto keep = [&](const std::string& more)
+        {
+            out += more;
+            if (out.size() > 6000)
+                out = out.substr(out.size() - 6000);
+        };
+        int code = -1;
+        auto exitedAt = std::chrono::steady_clock::time_point();
+        for (;;)
+        {
+            if (exec && exec->IsCancelled())
+            {
+                process.Kill();
+                res.failure = "Cancelled";
+                co_return res;
+            }
+
+            process.Pump();
+            String line;
+            while (process.PopLine(line))
+                keep(std::string(line.Data()) + "\n");
+            bool exited = process.Poll(code);
+            if (exited && process.IsOutputClosed())
+                break;
+
+            if (exited)
+            {
+                if (exitedAt == std::chrono::steady_clock::time_point())
+                    exitedAt = std::chrono::steady_clock::now();
+                else if (std::chrono::steady_clock::now() - exitedAt > std::chrono::seconds(3))
+                    break;
+            }
+
+            co_await WaitNextFrame();
+        }
+
+        process.Pump();
+        String line;
+        while (process.PopLine(line))
+            keep(std::string(line.Data()) + "\n");
+        keep(process.StderrTail().Data());
+        res.code = code;
+        res.output = String(out);
+        co_return res;
     }
 
     static String StderrLines(const String& tail, int count)

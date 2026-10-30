@@ -115,3 +115,50 @@ under one divider (the image titled `reconstruction.png`). The header shows
 `model`, `imageModel`, `maxTurns` (20 / 40 / 60 / 90 / 120, default 60 —
 replaces the old `passes`), `sprites` (auto / ai), `background`
 (auto / image / color / none), `screenName`, `hint`, `seed`.
+
+## 6. Edits after a run
+
+The node's config may hold `edits`: rounds of the user's notes, each note a
+text with an optional point `{on: "design" | "result", x, y}` in canvas pixels
+(`shared/imageToUi.ts`: `imageToUiEdits` cleans it, `imageToUiEditTurns`
+gives a round's turns = max(12, maxTurns / 2)). `editsDraft` and `editsView`
+are UI-only (not in the signature); `edits` is in it.
+
+Host behaviour (copy `run.ts runLocked` / `Rounds`):
+
+- base key = sha256(design bytes + JSON of every setting but `edits`, and the
+  seed). `<work>/rounds.json` = `{base, note, summary, rounds: [{id, hash,
+  summary}]}` with `hash` = sha256(JSON of the round's items)[0:16];
+  `<work>/rounds/<k>/` = `ui_structure.json`, `alignment_review.md`,
+  `component_review.md`, `trace.json` of state k (0 = no edits).
+- Start state = the longest prefix of `edits` that matches `rounds` (same
+  base, snapshot and inputs present); none (or ↻) → the full run, then state 0.
+  Restore: copy state k's files into `<work>/task` where they differ, the
+  trace from `rounds/<k>/trace.json`; when no round follows and something
+  changed, run `workflow.py check --output <work>/task` (prepare first when the
+  state file is gone) for a fresh reconstruction.
+- Each remaining round n: write `<work>/edits/round-<n>.json` =
+  `{"round": n, "items": [...], "earlier": [{"round": k, "items": [...]}, ...]}`,
+  run the agent with the usual arguments plus `--revise <that file>` and
+  `--max-turns <editTurns>`, screen text = screen name + hint + every note of
+  rounds 1..n; `ok` false → the node fails. Then snapshot state n (files +
+  trace) and write `rounds.json`.
+- Outputs as in section 3; the closing trace step is `edit<n>-output`
+  ("Edit n · Done …") after rounds, `output` otherwise; `summary.edits` = n.
+- A node run before this existed: no `rounds.json`, a finished task folder
+  (state completed / checked / finalize_failed) made from the same design →
+  adopt it as state 0.
+
+The agent's `--revise` mode (no host work needed beyond the arguments): it
+skips prepare when the task folder is prepared, checks the layout, writes
+`<scratch>/request/{design,reconstruction,point_<i>}.png` and a `request`
+trace step, and prefixes its trace ids / pictures `edit<n>-`. The action list
+gained `edit` (exact text replacement) for every run.
+
+Editor UI (web: `UiEditsDialog.tsx`): an **Edits** button on the card (count
+of rounds), a dialog with the source and the result side by side — a click is
+a numbered point, each point a note, "+ without a point" a note for the whole
+screen, **Apply** = append the round, clear the draft, run the node; the
+applied rounds listed (their points shown grey), **Undo the last** = drop the
+last round and run (a cache hit, or the restore above). The debug view treats
+`edit<n>-turn-<k>` as agent turns and shows the `request` step's text.
