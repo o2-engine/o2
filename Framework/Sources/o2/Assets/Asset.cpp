@@ -135,6 +135,9 @@ namespace o2
 
     void Asset::Load(const AssetInfo& info)
     {
+        PROFILE_SAMPLE_NAMED("Load asset", "Load " + (info.meta ? info.meta->GetAssetType()->GetName() : String("asset")));
+        PROFILE_INFO(info.path);
+
         auto oldPath = mInfo.path;
         auto oldUID = mInfo.meta->mId;
 
@@ -220,6 +223,8 @@ namespace o2
     {
         DataDocument data;
         data.LoadFromFile(path);
+
+        PROFILE_SAMPLE("Deserialize asset");
         Deserialize(data);
     }
 

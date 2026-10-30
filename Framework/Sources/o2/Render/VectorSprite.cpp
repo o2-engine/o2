@@ -439,6 +439,9 @@ namespace o2
             return;
         }
 
+        PROFILE_SAMPLE("Rebuild vector sprite mesh");
+        PROFILE_INFO(mImageAsset->GetPath());
+
         mMeshDirty = mMeshDirty || mBasisDirty;
         mBasisDirty = false;
 

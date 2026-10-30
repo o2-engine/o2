@@ -102,12 +102,20 @@ namespace o2
 
     void Reflection::InitializeTypes()
     {
-        InitializeTypeso2Framework();
-        InitializeFundamentalTypes();
+        PROFILE_SAMPLE_FUNC();
 
-        ReflectionInitializationTypeProcessor processor;
-        for (auto func : mInstance->mInitializingFunctions)
-            func(0, processor);
+        {
+            PROFILE_SAMPLE("Register o2Framework types");
+            InitializeTypeso2Framework();
+            InitializeFundamentalTypes();
+        }
+
+        {
+            PROFILE_SAMPLE("Initialize types members");
+            ReflectionInitializationTypeProcessor processor;
+            for (auto func : mInstance->mInitializingFunctions)
+                func(0, processor);
+        }
 
         mInstance->mInitializingFunctions.Clear();
         mInstance->mTypesInitialized = true;

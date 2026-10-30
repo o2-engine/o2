@@ -222,39 +222,63 @@ namespace o2
         mLog = mmake<LogStream>("Application");
         o2Debug.GetLog()->BindStream(mLog);
 
-        mProjectConfig = mmake<ProjectConfig>();
+        {
+            PROFILE_SAMPLE("Project config");
+            mProjectConfig = mmake<ProjectConfig>();
+        }
 
-        mAssets = mmake<Assets>();
+        {
+            PROFILE_SAMPLE("Assets");
+            mAssets = mmake<Assets>();
+        }
 
-        mInput = mmake<Input>();
-        mMainListenersLayer = mmake<CursorAreaEventListenersLayer>();
+        {
+            PROFILE_SAMPLE("Input and events");
+            mInput = mmake<Input>();
+            mMainListenersLayer = mmake<CursorAreaEventListenersLayer>();
+        }
 
         mTaskManager = mmake<TaskManager>();
 
-        mJobSystem = mmake<JobSystem>();
-        mJobSystem->Initialize();
+        {
+            PROFILE_SAMPLE("Jobs and coroutines");
+            mJobSystem = mmake<JobSystem>();
+            mJobSystem->Initialize();
 
-        mCoroutineScheduler = mmake<CoroutineScheduler>();
-        mCoroutineScheduler->Initialize();
+            mCoroutineScheduler = mmake<CoroutineScheduler>();
+            mCoroutineScheduler->Initialize();
+        }
 
-        mNetwork = mmake<NetworkSystem>();
+        {
+            PROFILE_SAMPLE("Network");
+            mNetwork = mmake<NetworkSystem>();
+        }
 
         mTimer.Reset();
 
-        mEventSystem = mmake<EventSystem>();
+        {
+            PROFILE_SAMPLE("Event system and UI and scene");
+            mEventSystem = mmake<EventSystem>();
+            mUIManager = mmake<UIManager>();
+            mScene = mmake<Scene>();
+        }
 
-        mUIManager = mmake<UIManager>();
+        {
+            PROFILE_SAMPLE("Physics");
+            mPhysics = mmake<PhysicsWorld>();
+            mPhysics3D = mmake<PhysicsWorld3D>();
+        }
 
-        mScene = mmake<Scene>();
-
-        mPhysics = mmake<PhysicsWorld>();
-
-        mPhysics3D = mmake<PhysicsWorld3D>();
-
-        mSounds = mmake<SoundSystem>();
+        {
+            PROFILE_SAMPLE("Sounds");
+            mSounds = mmake<SoundSystem>();
+        }
 
 #if IS_SCRIPTING_SUPPORTED
-        mScriptingEngine = mmake<ScriptEngine>();
+        {
+            PROFILE_SAMPLE("Script engine");
+            mScriptingEngine = mmake<ScriptEngine>();
+        }
 #endif
 
         mLog->Out("Initialized");
@@ -262,7 +286,12 @@ namespace o2
 
 	void Integration::InitiazeRender()
 	{
-		mRender = mmake<Render>();
+		PROFILE_SAMPLE_FUNC();
+
+		{
+			PROFILE_SAMPLE("Create render");
+			mRender = mmake<Render>();
+		}
 
 		// Render on a parallel thread by default where the platform supports it: the main thread records
 		// draw commands and the render thread submits them, synchronizing each frame
@@ -270,7 +299,10 @@ namespace o2
 
 		mVectorRasters = mmake<VectorRasterCache>();
 
-		o2Debug.InitializeFont();
+		{
+			PROFILE_SAMPLE("Debug font");
+			o2Debug.InitializeFont();
+		}
 
 #if defined(O2_PROFILER_ENABLED)
 		mProfilerOverlay = mmake<ProfilerOverlay>();
@@ -279,6 +311,7 @@ namespace o2
 
 	void Integration::InitilizeUIStyles()
 	{
+		PROFILE_SAMPLE_FUNC();
 		o2UI.TryLoadStyle();
 	}
 

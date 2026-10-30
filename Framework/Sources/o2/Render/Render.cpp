@@ -832,6 +832,8 @@ namespace o2
 
 	bool Render::PrepareGeometriesBatch(bool& reused)
 	{
+		PROFILE_SAMPLE_FUNC();
+
 		size_t materialHash = mCurrentMaterial ? mCurrentMaterial->GetHash() : 0;
 		UInt stride = (UInt)mCurrentBatchVertexType.GetStride();
 		UInt verticesCount = mLastDrawVertex, indexesCount = mLastDrawIdx;
@@ -941,6 +943,8 @@ namespace o2
 
 	void Render::RecordDrawCommand(bool holdsData, bool reusedData)
 	{
+		PROFILE_SAMPLE_FUNC();
+
 		RenderDrawCommand& command = mCommandBuffer.Emplace();
 
 		UInt stride = mCurrentBatchVertexType.GetStride();

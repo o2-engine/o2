@@ -131,6 +131,9 @@ namespace o2
 
     bool VectorFont::Load(const String& fileName)
     {
+        PROFILE_SAMPLE_FUNC();
+        PROFILE_INFO(fileName);
+
         InFile file(fileName);
 
         if (!file.IsOpened())

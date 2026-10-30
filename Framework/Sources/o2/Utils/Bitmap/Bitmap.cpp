@@ -79,6 +79,9 @@ namespace o2
 
     bool Bitmap::Load(const String& fileName, ImageType type)
     {
+        PROFILE_SAMPLE("Decode image");
+        PROFILE_INFO(fileName);
+
         mFilename = fileName;
 
         if (type == ImageType::Png)

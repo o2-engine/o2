@@ -8,6 +8,8 @@
 ### Библиотеки скриптов и данные
 Скрипты компонентов (`o2::ScriptableComponent`) описывают по одному классу. Общий для них код лежит в обычных скриптовых ассетах и подключается `include(path)` (путь внутри ассетов, например `"Scripts/Game/Core/Board.js"`): файл выполняется в глобальной области один раз и повторно — только после изменения собранного файла; скрипты, подключающие друг друга, не зацикливаются; при отсутствии или ошибке файла `include` возвращает `false` и пишет причину в лог.
 
+`o2.Profile(name, func)` выполняет `func` в зоне Tracy с именем `name` и возвращает её результат ([профилирование](/Docs/ru/Architecture/Utils/profiling.md)).
+
 `o2.FileSystem.ReadFile(path)` (`undefined`, если файла нет), `WriteFile(path, text)`, `IsFileExist(path)` и `FileDelete(path)` дают скриптам простые текстовые файлы, например сохранение. Data-ассет доступен скриптам как JSON-текст: `JSON.parse(new o2.AssetRefDataAsset(path).Get().GetJson())`.
 
 <details>

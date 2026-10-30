@@ -757,6 +757,9 @@ namespace o2
 
     bool DataDocument::LoadFromFile(const String& fileName, Format format /*= Format::JSON*/)
     {
+        PROFILE_SAMPLE("Load data document");
+        PROFILE_INFO(fileName);
+
         InFile file(fileName);
         if (!file.IsOpened())
             return false;
@@ -773,6 +776,8 @@ namespace o2
 
     bool DataDocument::LoadFromData(const String& data, Format format /*= Format::JSON*/)
     {
+        PROFILE_SAMPLE("Parse data document");
+
         if (format == Format::JSON)
             return ParseJson(data.Data(), *this);
 

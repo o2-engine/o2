@@ -350,6 +350,8 @@ namespace o2
 
     bool VectorImageAsset::LoadBakedMesh(const String& meshPath)
     {
+        PROFILE_SAMPLE_FUNC();
+
         if (!o2FileSystem.IsFileExist(meshPath))
             return false;
 
@@ -457,7 +459,10 @@ namespace o2
 
     void VectorImageAsset::LoadData(const String& path)
     {
-        SetSource(o2FileSystem.ReadFile(path));
+        {
+            PROFILE_SAMPLE("Parse SVG");
+            SetSource(o2FileSystem.ReadFile(path));
+        }
 
         bool remapped = false;
         auto& remap = ImageRemap();

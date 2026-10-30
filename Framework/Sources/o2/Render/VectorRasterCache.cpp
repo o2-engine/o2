@@ -114,6 +114,8 @@ namespace o2
         if ((int)mRasterizing.size() >= mMaxRasterizing)
             return nullptr;
 
+        PROFILE_SAMPLE("Request vector raster");
+
         Vec2F quantizedScale((float)key.scaleX/256.0f, (float)key.scaleY/256.0f);
         auto source = image->GetMesh(quantizedScale, pixelSnapped);
         if (!source)
@@ -157,8 +159,12 @@ namespace o2
 
         // The job reads the shared triangles and writes the buffers of the raster only, both kept until it ends
         Raster* target = raster.Get();
-        auto draw = [target]()
+        String info = image->GetPath() + " " + (String)size.x + "x" + (String)size.y;
+        auto draw = [target, info]()
         {
+            PROFILE_SAMPLE("Rasterize vector image");
+            PROFILE_INFO(info);
+
             Bitmap& bitmap = *target->mBitmap;
             memset(bitmap.GetData(), 0, (size_t)bitmap.GetSize().x*bitmap.GetSize().y*4);
 
@@ -211,6 +217,7 @@ namespace o2
 
             if (raster->mState == Raster::State::Rasterizing)
             {
+                PROFILE_SAMPLE("Upload vector raster");
                 raster->mPage->SetSubData(Vec2I(raster->mCell.left, raster->mCell.bottom), *raster->mBitmap);
                 raster->mState = Raster::State::Ready;
 

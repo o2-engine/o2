@@ -89,6 +89,8 @@ namespace o2
         if (!mScript)
             return;
 
+        PROFILE_SAMPLE_NAMED("Load script", "Load script " + mScript->GetPath());
+
         auto parseRes = mScript->Parse();
         o2Scripts.Run(parseRes);
 
@@ -176,8 +178,12 @@ namespace o2
 
     void ScriptableComponent::OnStart()
     {
-        if (mOnStartFunc.IsFunction())
-            mOnStartFunc.InvokeRaw(mInstance, {});
+        if (!mOnStartFunc.IsFunction())
+            return;
+
+        PROFILE_SAMPLE_NAMED("Script OnStart", "OnStart " + (mScript ? mScript->GetPath() : String()));
+
+        mOnStartFunc.InvokeRaw(mInstance, {});
     }
 
     void ScriptableComponent::OnUpdate(float dt)

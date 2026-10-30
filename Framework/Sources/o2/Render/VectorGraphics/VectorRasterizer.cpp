@@ -47,6 +47,8 @@ namespace o2
     void VectorRasterizer::Rasterize(const Vec2F* positions, const Color32Bit* colors, const VertexIndex* indexes,
                                      UInt indexesCount, Bitmap& bitmap, const Vec2F& scale, const Vec2F& offset)
     {
+        PROFILE_SAMPLE("Rasterize vector mesh");
+
         if (bitmap.GetFormat() != PixelFormat::R8G8B8A8 || !bitmap.GetData())
             return;
 

@@ -67,6 +67,14 @@ namespace o2
             return o2FileSystem.FileDelete(path);
         }));
         GetGlobal().GetProperty("o2").SetProperty("FileSystem", fileSystem);
+
+        auto profiler = ScriptValue::EmptyObject();
+        profiler.SetProperty("Begin", Function<void(const String&)>([](const String& name)
+        {
+            BeginProfileZone(name.Data(), name.Length());
+        }));
+        profiler.SetProperty("End", Function<void()>([]() { EndProfileZone(); }));
+        GetGlobal().GetProperty("o2").SetProperty("Profiler", profiler);
     }
 
     bool ScriptEngine::Include(const String& path)
@@ -77,6 +85,8 @@ namespace o2
 
         if (mIncludedScripts.ContainsKey(path) && mIncludedScripts[path] == editDate)
             return true;
+
+        PROFILE_SAMPLE_NAMED("include", "include " + path);
 
         InFile file(fullPath);
         if (!file.IsOpened())

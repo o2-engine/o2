@@ -54,6 +54,23 @@ TEST(ScriptEngine, EvalWithFilenameDoesNotCrash) {
     EXPECT_EQ(o2Scripts.GetGlobal().GetProperty("engineTest_named").ToString(), "ok");
 }
 
+TEST(ScriptEngine, ProfileReturnsTheResultOfTheFunction) {
+    ScriptValue out = o2Scripts.Eval("o2.Profile('engineTest zone', function() { return 6 * 7; })");
+    EXPECT_FLOAT_EQ(out.ToNumber(), 42.0f);
+    EXPECT_EQ(GetOpenProfileZonesCount(), 0);
+}
+
+TEST(ScriptEngine, ProfileClosesTheZoneWhenTheFunctionThrows) {
+    ScriptValue out = o2Scripts.Eval(
+        "(function() {"
+        "  try { o2.Profile('engineTest throwing', function() { throw new Error('profiled boom'); }); }"
+        "  catch (e) { return String(e.message); }"
+        "  return 'not thrown';"
+        "})()");
+    EXPECT_EQ(out.ToString(), "profiled boom");
+    EXPECT_EQ(GetOpenProfileZonesCount(), 0);
+}
+
 TEST(ScriptEngine, GetGlobalReturnsObject) {
     ScriptValue g = o2Scripts.GetGlobal();
     EXPECT_TRUE(g.IsObject());

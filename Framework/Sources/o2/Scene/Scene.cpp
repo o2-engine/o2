@@ -66,7 +66,11 @@ namespace o2
 		UpdateDestroyingEntities();
         UpdateAddedEntities();
         UpdateStartingEntities();
-        UpdateActors(dt);
+
+        {
+            PROFILE_SAMPLE("Update actors");
+            UpdateActors(dt);
+        }
 
         mIsUpdatingScene = false;
     }
@@ -89,6 +93,11 @@ namespace o2
         mStartActors = addedActors;
         startedActorsCache.Clear();
 
+        if (addedActors.IsEmpty())
+            return;
+
+        PROFILE_SAMPLE("Initialize added actors");
+
 		auto forEachInitializingActor = [&](const Ref<Actor>& actor, const Function<void(const Ref<Actor>&)>& func)
 			{
 				actor->ForEachActor([&](Actor& actor)
@@ -103,17 +112,26 @@ namespace o2
 									});
 			};
 
-        for (auto& actor : addedActors)
         {
-            if (actor->IsOnScene())
-				forEachInitializingActor(actor, [&](const Ref<Actor>& actor) { AddActorToScene(actor); });
+            PROFILE_SAMPLE("Add actors to scene");
+            for (auto& actor : addedActors)
+            {
+                if (actor->IsOnScene())
+                    forEachInitializingActor(actor, [&](const Ref<Actor>& actor) { AddActorToScene(actor); });
+            }
         }
 
-        for (auto& actor : addedActors)
-			forEachInitializingActor(actor, [&](const Ref<Actor>& actor) { actor->UpdateResEnabledInHierarchy(); });
+        {
+            PROFILE_SAMPLE("Update enabled in hierarchy");
+            for (auto& actor : addedActors)
+                forEachInitializingActor(actor, [&](const Ref<Actor>& actor) { actor->UpdateResEnabledInHierarchy(); });
+        }
 
-        for (auto& actor : addedActors)
-			forEachInitializingActor(actor, [&](const Ref<Actor>& actor) { actor->OnInitialized(); });
+        {
+            PROFILE_SAMPLE("Actors OnInitialized");
+            for (auto& actor : addedActors)
+                forEachInitializingActor(actor, [&](const Ref<Actor>& actor) { actor->OnInitialized(); });
+        }
     }
 
     void Scene::UpdateTransforms()
@@ -127,6 +145,11 @@ namespace o2
 
     void Scene::UpdateStartingEntities()
     {
+        if (mStartActors.IsEmpty() && mStartComponents.IsEmpty())
+            return;
+
+        PROFILE_SAMPLE("Start actors and components");
+
         auto startActors = mStartActors;
         mStartActors.Clear();
 
@@ -647,6 +670,9 @@ namespace o2
 
     void Scene::Load(const String& path, bool append /*= false*/)
     {
+        PROFILE_SAMPLE("Load scene");
+        PROFILE_INFO(path);
+
         DataDocument data;
         if (data.LoadFromFile(path))
             Load(data, append);
@@ -656,10 +682,15 @@ namespace o2
 
     void Scene::Load(const DataDocument& doc, bool append /*= false*/)
     {
+        PROFILE_SAMPLE_FUNC();
+
         ActorRefResolver::mInstance->LockResolving();
 
         if (!append)
+        {
+            PROFILE_SAMPLE("Clear scene");
             Clear(false);
+        }
 
         auto& layersNode = doc.GetMember("Layers");
         if (!layersNode.IsEmpty())
@@ -697,17 +728,29 @@ namespace o2
         auto& actorsNode = doc.GetMember("Actors");
         if (!actorsNode.IsEmpty())
         {
+            PROFILE_SAMPLE("Deserialize actors");
             mRootActors = actorsNode;
         }
 
-        ActorRefResolver::mInstance->UnlockResolving();
-        ActorRefResolver::mInstance->ResolveRefs();
+        {
+            PROFILE_SAMPLE("Resolve actor refs");
+            ActorRefResolver::mInstance->UnlockResolving();
+            ActorRefResolver::mInstance->ResolveRefs();
+        }
 
-		UpdateTransforms();
+        {
+            PROFILE_SAMPLE("Update transforms");
+            UpdateTransforms();
+        }
+
 		mRootActors.Clear();
 
 		UpdateAddedEntities();
-		UpdateTransforms();
+
+        {
+            PROFILE_SAMPLE("Update transforms");
+            UpdateTransforms();
+        }
 
         UpdateDestroyingEntities();
 

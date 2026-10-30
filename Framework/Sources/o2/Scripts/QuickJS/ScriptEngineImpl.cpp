@@ -100,6 +100,9 @@ namespace o2
 
     ScriptParseResult ScriptEngine::Parse(const String& script, const String& filename /*= ""*/)
     {
+        PROFILE_SAMPLE("Compile script");
+        PROFILE_INFO(filename);
+
         const char* name = filename.Length() > 0 ? filename.Data() : "<script>";
 
         ScriptParseResult res;
@@ -118,6 +121,8 @@ namespace o2
 
     ScriptValue ScriptEngine::Run(const ScriptParseResult& parseResult)
     {
+        PROFILE_SAMPLE("Run script");
+
         ScriptValue res;
         if (parseResult.mParseError)
         {

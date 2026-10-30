@@ -11,6 +11,18 @@
 
 namespace o2
 {
+    // Waits up to the seconds of the O2_TRACY_WAIT environment variable for Tracy to connect, so the capture
+    // starts with the application. Returns at once without the variable or without Tracy
+    void WaitForProfilerConnection();
+
+    // Opens a Tracy zone named at run time, as scripts do; EndProfileZone closes the last one this thread opened.
+    // The frame profiler doesn't see these: it needs names of static lifetime
+    void BeginProfileZone(const char* name, size_t length);
+    void EndProfileZone();
+
+    // Returns how many zones BeginProfileZone keeps open on this thread
+    int GetOpenProfileZonesCount();
+
 #if defined(O2_PROFILER_ENABLED)
     // ------------------------------------------------------------------------------------------------------------
     // Hierarchical per-frame profiler. Scopes are recorded into a flat, preallocated array as (name, parent, begin,
@@ -228,6 +240,10 @@ namespace o2
 #define TRACY_PROFILE_SAMPLE(id) ZoneScopedN(id)
 #define TRACY_PROFILE_SAMPLE_COLOR(id, color) ZoneScopedNC(id, color)
 #define TRACY_PROFILE_INFO(info) ZoneText(info, info.Length())
+#define TRACY_PROFILE_SAMPLE_NAMED(name) \
+    const o2::String& ___o2_zone_name = (name); \
+    tracy::ScopedZone ___tracy_scoped_zone(TracyLine, TracyFile, strlen(TracyFile), TracyFunction, strlen(TracyFunction), \
+                                          ___o2_zone_name.Data(), ___o2_zone_name.Length(), (uint32_t)0, -1, true)
 #define TRACY_PROFILE_FRAME() FrameMark
 #define TRACY_PROFILE_FRAME_NAMED(name) FrameMarkNamed(name)
 #define TRACY_PROFILE_THREAD(name) tracy::SetThreadName(name)
@@ -243,6 +259,7 @@ namespace o2
 #define TRACY_PROFILE_SAMPLE(id)
 #define TRACY_PROFILE_SAMPLE_COLOR(id, color)
 #define TRACY_PROFILE_INFO(info)
+#define TRACY_PROFILE_SAMPLE_NAMED(name)
 #define TRACY_PROFILE_FRAME()
 #define TRACY_PROFILE_FRAME_NAMED(name)
 #define TRACY_PROFILE_THREAD(name)
@@ -269,6 +286,10 @@ namespace o2
 
 // A named profiling zone with an explicit color (0xRRGGBB), shown as a distinct bar in the profiler
 #define PROFILE_SAMPLE_COLOR(id, color) TRACY_PROFILE_SAMPLE_COLOR(id, color); NANO_PROFILE_SAMPLE(id)
+
+// A zone named at run time (an o2::String: the asset type, the script) in Tracy, under the static id in the frame
+// profiler. The name is only built with Tracy on
+#define PROFILE_SAMPLE_NAMED(id, name) TRACY_PROFILE_SAMPLE_NAMED(name); NANO_PROFILE_SAMPLE(id)
 
 #define PROFILE_INFO(info) TRACY_PROFILE_INFO(info)
 #define PROFILE_FRAME() TRACY_PROFILE_FRAME()

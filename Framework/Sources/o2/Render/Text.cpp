@@ -396,6 +396,8 @@ namespace o2
         if (mUpdatingMesh)
             return;
 
+        PROFILE_SAMPLE("Rebuild text mesh");
+
         mUpdatingMesh = true;
 
         if (!mFont)

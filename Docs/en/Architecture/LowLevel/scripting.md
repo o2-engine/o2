@@ -8,6 +8,8 @@ It also manages connecting the debugger.
 ### Script libraries and data
 Scripts attached to components (`o2::ScriptableComponent`) define one class each. Code shared between them lives in plain script assets and is pulled in with `include(path)` (a path inside the assets, like `"Scripts/Game/Core/Board.js"`): the file runs in the global scope once and again only after its built file changes; scripts including each other do not loop; `include` returns `false` on a missing or broken file and logs why.
 
+`o2.Profile(name, func)` runs `func` in a Tracy zone named `name` and returns its result ([profiling](/Docs/en/Architecture/Utils/profiling.md)).
+
 `o2.FileSystem.ReadFile(path)` (`undefined` for a missing file), `WriteFile(path, text)`, `IsFileExist(path)` and `FileDelete(path)` give scripts plain text files, e.g. a save file. A data asset reaches scripts as JSON text: `JSON.parse(new o2.AssetRefDataAsset(path).Get().GetJson())`.
 
 <details>

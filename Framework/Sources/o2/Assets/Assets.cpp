@@ -410,6 +410,8 @@ namespace o2
 
     void Assets::LoadAssetsTree()
     {
+        PROFILE_SAMPLE_FUNC();
+
         mAssetsTrees.Clear();
 
         mMainAssetsTree = mmake<AssetsTree>();

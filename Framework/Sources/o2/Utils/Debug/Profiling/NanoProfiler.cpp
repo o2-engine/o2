@@ -3,6 +3,66 @@
 #include "o2/stdafx.h"
 #include "NanoProfiler.h"
 
+#include <chrono>
+#include <cstdio>
+#include <cstdlib>
+#include <memory>
+#include <thread>
+#include <vector>
+
+namespace o2
+{
+#if defined(TRACY_ENABLE)
+    static thread_local std::vector<std::unique_ptr<tracy::ScopedZone>> gProfileZones;
+#endif
+
+    void BeginProfileZone(const char* name, size_t length)
+    {
+#if defined(TRACY_ENABLE)
+        static const char source[] = "script";
+        gProfileZones.push_back(std::make_unique<tracy::ScopedZone>(0, source, sizeof(source) - 1, "", 0, name, length,
+                                                                    (uint32_t)0, -1, true));
+#endif
+    }
+
+    void EndProfileZone()
+    {
+#if defined(TRACY_ENABLE)
+        if (!gProfileZones.empty())
+            gProfileZones.pop_back();
+#endif
+    }
+
+    int GetOpenProfileZonesCount()
+    {
+#if defined(TRACY_ENABLE)
+        return (int)gProfileZones.size();
+#else
+        return 0;
+#endif
+    }
+
+    void WaitForProfilerConnection()
+    {
+#if defined(TRACY_ENABLE)
+        const char* value = getenv("O2_TRACY_WAIT");
+        double seconds = value ? atof(value) : 0.0;
+        if (seconds <= 0.0)
+            return;
+
+        printf("Waiting %g s for the Tracy profiler to connect\n", seconds);
+        fflush(stdout);
+
+        auto deadline = std::chrono::steady_clock::now() + std::chrono::duration<double>(seconds);
+        while (!TracyIsConnected && std::chrono::steady_clock::now() < deadline)
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+
+        if (TracyIsConnected)
+            TracyMessageL("Profiler connected, the application starts");
+#endif
+    }
+}
+
 #if defined(O2_PROFILER_ENABLED)
 
 #include "o2/Utils/Debug/Debug.h"

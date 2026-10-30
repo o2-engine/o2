@@ -12,6 +12,8 @@
 
 namespace o2
 {
+    static bool gRunLoopZoneOpened = false;
+
     NSWindow* ApplicationPlatformWrapper::window;
     MTKView* ApplicationPlatformWrapper::view;
     RendererView* ApplicationPlatformWrapper::renderer;
@@ -38,46 +40,57 @@ namespace o2
     
     void Application::InitializePlatform()
     {
+        PROFILE_SAMPLE_FUNC();
+
         const bool background = IsBackgroundWindow();
 
-        [O2Application sharedApplication];
-
-        // Accessory keeps the app out of the Dock and the task switcher, so bringing its window up
-        // doesn't pull the focus away from whatever the user is doing
-        [NSApp setActivationPolicy:background ? NSApplicationActivationPolicyAccessory
-                                              : NSApplicationActivationPolicyRegular];
-
-        if (!background)
-            [NSApp activateIgnoringOtherApps:YES];
-
-        [NSApp setDelegate:[[AppDelegate alloc] init]];
-        
-        ApplicationPlatformWrapper::window = [[NSWindow alloc] initWithContentRect:NSMakeRect(0, 0, 960, 640)
-                                                                         styleMask:NSWindowStyleMaskClosable|NSWindowStyleMaskTitled|NSWindowStyleMaskResizable
-                                                                           backing:NSBackingStoreBuffered defer:NO];
-        
-        [ApplicationPlatformWrapper::window setTitle: [[NSProcessInfo processInfo] processName]];
-
-        // Test runs that capture frames from the render target need no visible window at all:
-        // a transparent one that lets the mouse through never gets in the user's way
-        if (background && getenv("O2_INVISIBLE_WINDOW"))
         {
-            [ApplicationPlatformWrapper::window setAlphaValue:0.0];
-            [ApplicationPlatformWrapper::window setIgnoresMouseEvents:YES];
-            [ApplicationPlatformWrapper::window setHasShadow:NO];
-            [ApplicationPlatformWrapper::window setCollectionBehavior:NSWindowCollectionBehaviorTransient | NSWindowCollectionBehaviorIgnoresCycle];
+            PROFILE_SAMPLE("Create application");
+            [O2Application sharedApplication];
+
+            // Accessory keeps the app out of the Dock and the task switcher, so bringing its window up
+            // doesn't pull the focus away from whatever the user is doing
+            [NSApp setActivationPolicy:background ? NSApplicationActivationPolicyAccessory
+                                                  : NSApplicationActivationPolicyRegular];
+
+            if (!background)
+                [NSApp activateIgnoringOtherApps:YES];
+
+            [NSApp setDelegate:[[AppDelegate alloc] init]];
         }
 
-        // Ordering front without making the window key: it keeps drawing, but the keyboard stays
-        // where it was
-        if (background)
-            [ApplicationPlatformWrapper::window orderFrontRegardless];
-        else
-            [ApplicationPlatformWrapper::window makeKeyAndOrderFront:nil];
-        
-        ApplicationPlatformWrapper::view = [[ViewController alloc] init];
-        ApplicationPlatformWrapper::view.colorPixelFormat = MTLPixelFormatRGBA8Unorm;
-        ApplicationPlatformWrapper::view.device = MTLCreateSystemDefaultDevice();
+        {
+            PROFILE_SAMPLE("Create window");
+            ApplicationPlatformWrapper::window = [[NSWindow alloc] initWithContentRect:NSMakeRect(0, 0, 960, 640)
+                                                                             styleMask:NSWindowStyleMaskClosable|NSWindowStyleMaskTitled|NSWindowStyleMaskResizable
+                                                                               backing:NSBackingStoreBuffered defer:NO];
+
+            [ApplicationPlatformWrapper::window setTitle: [[NSProcessInfo processInfo] processName]];
+
+            // Test runs that capture frames from the render target need no visible window at all:
+            // a transparent one that lets the mouse through never gets in the user's way
+            if (background && getenv("O2_INVISIBLE_WINDOW"))
+            {
+                [ApplicationPlatformWrapper::window setAlphaValue:0.0];
+                [ApplicationPlatformWrapper::window setIgnoresMouseEvents:YES];
+                [ApplicationPlatformWrapper::window setHasShadow:NO];
+                [ApplicationPlatformWrapper::window setCollectionBehavior:NSWindowCollectionBehaviorTransient | NSWindowCollectionBehaviorIgnoresCycle];
+            }
+
+            // Ordering front without making the window key: it keeps drawing, but the keyboard stays
+            // where it was
+            if (background)
+                [ApplicationPlatformWrapper::window orderFrontRegardless];
+            else
+                [ApplicationPlatformWrapper::window makeKeyAndOrderFront:nil];
+        }
+
+        {
+            PROFILE_SAMPLE("Create Metal view");
+            ApplicationPlatformWrapper::view = [[ViewController alloc] init];
+            ApplicationPlatformWrapper::view.colorPixelFormat = MTLPixelFormatRGBA8Unorm;
+            ApplicationPlatformWrapper::view.device = MTLCreateSystemDefaultDevice();
+        }
         
         if(!ApplicationPlatformWrapper::view.device)
         {
@@ -110,17 +123,30 @@ namespace o2
     {
         mLog->Out("Application launched!");
 
-        OnStarted();
-        onStarted.Invoke();
-        o2Events.OnApplicationStarted();
-        
-        [(ViewController*)ApplicationPlatformWrapper::view initializeMouseTracking];
-        
+        {
+            PROFILE_SAMPLE("Application started");
+            OnStarted();
+            onStarted.Invoke();
+            o2Events.OnApplicationStarted();
+
+            [(ViewController*)ApplicationPlatformWrapper::view initializeMouseTracking];
+        }
+
+        static const char runLoopZone[] = "AppKit start until the first frame";
+        BeginProfileZone(runLoopZone, sizeof(runLoopZone) - 1);
+        gRunLoopZoneOpened = true;
+
         [NSApp run];
     }
 
     void Application::Update()
     {
+        if (gRunLoopZoneOpened)
+        {
+            EndProfileZone();
+            gRunLoopZoneOpened = false;
+        }
+
         ProcessFrame();
     }
 

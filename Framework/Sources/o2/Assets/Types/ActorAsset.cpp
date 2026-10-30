@@ -52,6 +52,9 @@ namespace o2
         if (!mActor)
             return nullptr;
 
+        PROFILE_SAMPLE("Instantiate prototype");
+        PROFILE_INFO(mInfo.path);
+
         return mActor->CloneAsRef<Actor>();
     }
 

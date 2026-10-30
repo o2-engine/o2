@@ -3352,6 +3352,8 @@ namespace o2
     void VectorTessellator::Tessellate(const VectorImage& image, VectorMesh& mesh,
                                        const VectorTessellationParams& params /*= VectorTessellationParams()*/)
     {
+        PROFILE_SAMPLE("Tessellate vector image");
+
         mesh.Clear();
         mesh.size = image.size;
         Point pixelScale = GetPixelScale(params);
@@ -3367,6 +3369,8 @@ namespace o2
     void VectorTessellator::TessellateShape(const VectorShape& shape, VectorMesh& mesh,
                                             const VectorTessellationParams& params /*= VectorTessellationParams()*/)
     {
+        PROFILE_SAMPLE("Tessellate vector shape");
+
         Point pixelScale = GetPixelScale(params);
         mesh.pixelScale = Vec2F((float)pixelScale.x, (float)pixelScale.y);
 

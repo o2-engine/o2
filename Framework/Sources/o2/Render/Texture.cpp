@@ -104,6 +104,8 @@ namespace o2
 
     void Texture::Create(const Bitmap& bitmap)
     {
+        PROFILE_SAMPLE("Create texture from bitmap");
+
         mFileName = bitmap.GetFilename();
         Create(bitmap.GetSize(), (Byte*)bitmap.GetData(), TextureFormat::R8G8B8A8);
     }
@@ -178,6 +180,9 @@ namespace o2
 
     void Texture::Create(const String& fileName)
     {
+        PROFILE_SAMPLE("Load texture");
+        PROFILE_INFO(fileName);
+
         String extension = o2FileSystem.GetFileExtension(fileName);
 
         if (extension == "png")

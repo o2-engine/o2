@@ -25,8 +25,28 @@ recording.
   `Integration::ProcessFrame`; put it only where no profiling scope is open.
 - **PROFILE_BIND_THREAD()** / **PROFILE_UNBIND_THREAD()** — makes the calling thread the recorded
   one. Called by `Integration` for the main thread.
+- **PROFILE_SAMPLE_NAMED(id, name)** — a zone named at run time: `name` (an `o2::String`, built only with
+  Tracy on) in Tracy, the static `id` in the frame profiler. Asset loads (`Load o2::ImageAsset`, the path as
+  the zone text), script starts (`OnStart Scripts/...js`) and `include` use it.
 - **PROFILE_FRAME()**, **PROFILE_THREAD(name)**, **PROFILE_FIBER_ENTER/LEAVE**, **PROFILE_INFO** —
   Tracy only.
+
+## Tracy: the start and scripts
+- **O2_TRACY_WAIT** — an environment variable with seconds: `INITIALIZE_O2` waits that long for a profiler
+  to connect (`WaitForProfilerConnection()`), so the capture starts with the application instead of the
+  frame the profiler came in. The Profile launches of the project set it.
+- **BeginProfileZone(name, length)** / **EndProfileZone()** — a zone opened and closed in different places of
+  one thread, LIFO; `GetOpenProfileZonesCount()` tells how many are open.
+- **o2.Profile(name, func)** — scripts measure a part of their code: runs `func` in a zone named `name` and
+  returns its result; the zone closes on an exception too.
+
+<details>
+<summary>Example</summary>
+
+```js
+var dictionary = o2.Profile("Game: dictionary", function() { return LoadDictionary(path); });
+```
+</details>
 
 ## `o2::NanoProfiler`
 A hierarchical per-frame profiler. Every scope is recorded into a preallocated array as

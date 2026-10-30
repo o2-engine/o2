@@ -20,6 +20,9 @@ namespace o2
 
     bool BitmapFont::Load(const String& fileName)
     {
+        PROFILE_SAMPLE_FUNC();
+        PROFILE_INFO(fileName);
+
         mFileName = fileName;
 
         DataDocument doc;

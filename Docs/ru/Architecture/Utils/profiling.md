@@ -24,8 +24,29 @@
   `Integration::ProcessFrame`; ставить только там, где не открыта ни одна область.
 - **PROFILE_BIND_THREAD()** / **PROFILE_UNBIND_THREAD()** — делает вызывающий поток записываемым.
   Вызывается `Integration` для главного потока.
+- **PROFILE_SAMPLE_NAMED(id, name)** — зона с именем, известным только во время работы: в Tracy — `name`
+  (`o2::String`, строится только при включённом Tracy), во встроенном профайлере — статический `id`. Так
+  размечены загрузки ассетов (`Load o2::ImageAsset`, путь — текст зоны), старт скриптов
+  (`OnStart Scripts/...js`) и `include`.
 - **PROFILE_FRAME()**, **PROFILE_THREAD(name)**, **PROFILE_FIBER_ENTER/LEAVE**, **PROFILE_INFO** —
   только для Tracy.
+
+## Tracy: старт и скрипты
+- **O2_TRACY_WAIT** — переменная окружения с секундами: `INITIALIZE_O2` ждёт столько подключения профайлера
+  (`WaitForProfilerConnection()`), и запись начинается вместе с приложением, а не с кадра, на котором
+  подключился профайлер. Её задают Profile-запуски проекта.
+- **BeginProfileZone(name, length)** / **EndProfileZone()** — зона, открытая и закрытая в разных местах одного
+  потока, в порядке LIFO; `GetOpenProfileZonesCount()` — сколько их открыто.
+- **o2.Profile(name, func)** — скрипты измеряют часть своего кода: выполняет `func` в зоне `name` и
+  возвращает её результат; зона закрывается и при исключении.
+
+<details>
+<summary>Пример</summary>
+
+```js
+var dictionary = o2.Profile("Game: dictionary", function() { return LoadDictionary(path); });
+```
+</details>
 
 ## `o2::NanoProfiler`
 Иерархический покадровый профайлер. Каждая область пишется в заранее выделенный массив как

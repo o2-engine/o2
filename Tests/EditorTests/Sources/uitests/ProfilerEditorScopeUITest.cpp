@@ -107,6 +107,9 @@ TEST(ProfilerEditorScope, PanelDrawnInsideTheEditorScopeAddsNothingToTheFrame)
     TickScene();
     root->UpdateTransform();
 
+    // The scene update of the setup records its zones too: the frame under test starts after it
+    NanoProfiler::NextFrame();
+
     {
         ForcePopEditorScopeOnStack gameScope;
         NanoProfiler::SampleScope gameWork("game work");
