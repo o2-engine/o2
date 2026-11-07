@@ -10,6 +10,7 @@
 #include "o2Editor/Pipeline/PipelineUtils.h"
 #include "o2Editor/Pipeline/UiLayout/UiLayoutAgent.h"
 #include "o2Editor/Pipeline/UiLayout/UiLayoutDraw.h"
+#include "o2Editor/Pipeline/UiLayout/UiLayoutGridFit.h"
 #include "o2Editor/Pipeline/UiLayout/UiLayoutMeasure.h"
 #include "o2Editor/Pipeline/UiLayout/UiLayoutParse.h"
 #include "o2Editor/Pipeline/UiLayout/UiLayoutPrompts.h"
@@ -729,15 +730,22 @@ namespace Editor::UiLayout
 
         // 1. What artwork the screen is made of
         double t = NowMs();
-        AiAnswer answer = co_await AiText(ai, Prompts::Analyze(W, H, cfg.hint), { st->designPng }, "analysis");
+        // A model other than Gemini places its boxes in pixels of a picture it does not scale itself
+        AnalysisFrame frame = AnalysisFrameOf(ai->textModel, W, H);
+        String sent = frame.scale < 1.0 ? st->design.Resize(frame.w, frame.h).Png() : st->designPng;
+        AiAnswer answer = co_await AiText(ai, Prompts::Analyze(frame.w, frame.h, cfg.hint, frame.boxes), { sent }, "analysis");
         if (!answer.ok)
             co_return BaseFail(answer.error);
 
         String parseError;
-        if (!ParseAnalysis(answer.data, W, H, st->doc, &parseError) || st->doc.els.IsEmpty())
+        if (!ParseAnalysis(answer.data, W, H, st->doc, &parseError, &frame) || st->doc.els.IsEmpty())
             co_return BaseFail(parseError.IsEmpty() ? String("imageToUi: the model found no UI elements in the image") : "imageToUi: " + parseError);
 
         UiDoc& doc = st->doc;
+
+        // Grids go onto the cells the picture shows; the answer's own boxes stay in the step when they moved
+        UiDoc answered = doc.Clone();
+        Vector<String> gridFit = FitGrids(doc, st->design);
         {
             Json looks = Json::Object();
             for (auto& look : doc.looks)
@@ -750,10 +758,31 @@ namespace Editor::UiLayout
             data["elements"] = doc.els.Count();
             data["looks"] = looks;
             data["background"] = background;
+            data["boxes"] = frame.boxes;
+            Json sentSize = Json::Object();
+            sentSize["w"] = frame.w;
+            sentSize["h"] = frame.h;
+            data["sent"] = sentSize;
+            Json fitted = Json::Array();
+            for (auto& line : gridFit)
+                fitted.Add(Json(line));
+            data["gridFit"] = fitted;
             Json images = Json::Array();
             images.Add(trace->Image("analysis boxes", OverlayKinds(st->design, doc)));
+            if (!gridFit.IsEmpty())
+                images.Add(trace->Image("boxes as the model answered", OverlayKinds(st->design, answered)));
             Json step = Json::Object();
             step["id"] = "analysis";
+            String note = frame.boxes == "pixels" ? "boxes in pixels of a " + (String)frame.w + "\xC3\x97" + (String)frame.h + " picture" : String();
+            if (!gridFit.IsEmpty())
+            {
+                String fits;
+                for (int i = 0; i < gridFit.Count(); i++)
+                    fits += (i ? "; " : "") + gridFit[i];
+                note += (note.IsEmpty() ? "" : " \xC2\xB7 ") + String("grids fitted to the picture: ") + fits;
+            }
+            if (!note.IsEmpty())
+                step["note"] = note;
             step["title"] = "Analysis: " + (String)doc.els.Count() + " elements, " + (String)doc.looks.Count() + " looks";
             step["kind"] = "analysis";
             step["ms"] = Since(t);

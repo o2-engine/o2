@@ -219,7 +219,8 @@ namespace Editor::UiLayout
 #endif
     }
 
-    bool AgentProcess::Start(const String& exe, const Vector<String>& args, const String& cwd, String& error)
+    bool AgentProcess::Start(const String& exe, const Vector<String>& args, const String& cwd, String& error,
+                             const Vector<String>& env /*= Vector<String>()*/)
     {
 #if O2_AGENT_PROCESS
         int in[2] = { -1, -1 }, out[2] = { -1, -1 }, err[2] = { -1, -1 };
@@ -270,22 +271,28 @@ namespace Editor::UiLayout
             argv.push_back(const_cast<char*>(a.c_str()));
         argv.push_back(nullptr);
 
-        static const char* overrides[] = { "PYTHONUNBUFFERED=1", "PYTHONIOENCODING=utf-8:replace", "PYTHONUTF8=1" };
+        std::vector<std::string> overrides = { "PYTHONUNBUFFERED=1", "PYTHONIOENCODING=utf-8:replace", "PYTHONUTF8=1" };
+        for (auto& entry : env)
+            overrides.push_back(entry.Data());
+        // An entry without '=' names a variable to drop
         std::vector<std::string> envStrings;
         for (char** e = environ; e && *e; e++)
         {
             std::string entry = *e;
             bool replaced = false;
-            for (auto o : overrides)
+            for (auto& o : overrides)
             {
-                std::string name = std::string(o).substr(0, std::string(o).find('=') + 1);
+                std::string name = o.find('=') == std::string::npos ? o + "=" : o.substr(0, o.find('=') + 1);
                 replaced = replaced || entry.compare(0, name.size(), name) == 0;
             }
             if (!replaced)
                 envStrings.push_back(entry);
         }
-        for (auto o : overrides)
-            envStrings.push_back(o);
+        for (auto& o : overrides)
+        {
+            if (o.find('=') != std::string::npos)
+                envStrings.push_back(o);
+        }
         std::vector<char*> envp;
         for (auto& e : envStrings)
             envp.push_back(const_cast<char*>(e.c_str()));
@@ -377,6 +384,12 @@ namespace Editor::UiLayout
                 break;
             }
         }
+
+        if (mIn >= 0 && mCloseInput && mPending.empty())
+        {
+            close(mIn);
+            mIn = -1;
+        }
 #endif
     }
 
@@ -401,6 +414,12 @@ namespace Editor::UiLayout
     void AgentProcess::Write(const String& data)
     {
         mPending.append(data.Data(), data.Length());
+        Pump();
+    }
+
+    void AgentProcess::CloseInput()
+    {
+        mCloseInput = true;
         Pump();
     }
 

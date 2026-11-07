@@ -83,7 +83,7 @@ namespace Editor
             o2EditorPropertiesWindow.SetTarget(&o2Config.physics);
         });
 
-        mMenuPanel->AddItem("Edit/Project/AssetsLine", [&]() { AssetsLineDlg::Show(); });
+        mMenuPanel->AddItem("Edit/Project/AssetsLine", [&]() { AssetsLineDlg::Show(AssetsLineDlg::Page::Sync); });
 
         mMenuPanel->AddItem("Edit/---");
 

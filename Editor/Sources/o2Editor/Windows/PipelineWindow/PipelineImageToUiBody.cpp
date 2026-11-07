@@ -329,6 +329,15 @@ namespace Editor
             ApplyEditsView();
         }
 
+        void Update(float dt) override
+        {
+            PipelineNodeBody::Update(dt);
+
+            // Toggle::OnEnabled makes the toggle interactable again
+            if (mEdits && mEdits->IsInteractable() != mEditsCan)
+                mEdits->interactable = mEditsCan;
+        }
+
         void OnOutputChanged() override
         {
             PipelineNodeBody::OnOutputChanged();
@@ -468,6 +477,7 @@ namespace Editor
         Ref<Label>                mPathLabel;  // Where the prototype goes
         Coroutine<void>           mSaveJob;    // Export started by Save to Assets
         bool                      mSaving = false;
+        bool                      mEditsCan = false; // Is there a result or a round to change
 
         String              mSummaryOf;    // Layout text and trace stamp the summary was made from
         String              mSummaryText;  // Its summary line
@@ -753,9 +763,9 @@ namespace Editor
                 mEdits->layout->maxWidth = width;
             }
             mEdits->SetValue(GetBool("editsView", false));
-            bool can = !mSummaryText.IsEmpty() || !PipelineImageToUi::Edits(*mNode).IsEmpty();
-            mEdits->interactable = can;
-            mEdits->transparency = can ? 1.0f : 0.5f;
+            mEditsCan = !mSummaryText.IsEmpty() || !PipelineImageToUi::Edits(*mNode).IsEmpty();
+            mEdits->interactable = mEditsCan;
+            mEdits->transparency = mEditsCan ? 1.0f : 0.5f;
         }
 
         void SetEditsView(bool on)

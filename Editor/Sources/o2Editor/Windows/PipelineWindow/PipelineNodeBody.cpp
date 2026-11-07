@@ -29,6 +29,7 @@
 #include "o2/Utils/System/Clipboard.h"
 #include "o2Editor/Dialogs/ColorPickerDlg.h"
 #include "o2Editor/Dialogs/System/OpenSaveDialog.h"
+#include "o2Editor/Pipeline/Providers/LocalAgentProvider.h"
 #include "o2Editor/Pipeline/PipelineUpscale.h"
 #include "o2Editor/Pipeline/Nodes/PipelineNodesCommon.h"
 #include "o2Editor/Pipeline/PipelineExecutor.h"
@@ -682,6 +683,10 @@ namespace Editor
 
             PipelineModelPickerRequest request;
             request.ids = presets;
+            if (kind == PipelineModelKind::Text)
+                request.ids.Add(LocalAgentProvider::OfferedModels(PipelineSettings::Load()));
+            else if (kind == PipelineModelKind::Image)
+                request.ids.Add(LocalAgentProvider::OfferedImageModels(PipelineSettings::Load()));
             request.kind = kind;
             request.current = self->GetString(key, defaultModel);
             request.anchor = RectF(Math::Min(a.x, b.x), Math::Max(a.y, b.y), Math::Max(a.x, b.x), Math::Min(a.y, b.y));

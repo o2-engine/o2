@@ -41,6 +41,23 @@ namespace Editor
         res.klingSecretKey = read("klingSecretKey");
         res.elevenLabsApiKey = read("elevenlabs");
         res.imageToUiPython = read("imageToUiPython");
+
+        auto flag = [&](const char* key)
+        {
+            auto v = doc.FindMember(key);
+            return v && v->IsBoolean() && (bool)*v;
+        };
+        res.localAgentEnabled = doc.FindMember("localAgentEnabled") ? flag("localAgentEnabled") : true;
+        res.localAgentPath = read("localAgentPath");
+        res.localAgentModel = read("localAgentModel");
+        res.localAgentApiKey = read("localAgentApiKey");
+        res.localAgentThinking = flag("localAgentThinking");
+        res.localCommand = read("localCommand");
+        res.localCodexPath = read("localCodexPath");
+        res.localCodexModel = read("localCodexModel");
+        if (doc.FindMember("localCodexEffort"))
+            res.localCodexEffort = read("localCodexEffort");
+        res.localCodexApiKey = read("localCodexApiKey");
         return res;
     }
 
@@ -55,6 +72,16 @@ namespace Editor
         doc["klingSecretKey"] = klingSecretKey;
         doc["elevenlabs"] = elevenLabsApiKey;
         doc["imageToUiPython"] = imageToUiPython;
+        doc["localAgentEnabled"] = localAgentEnabled;
+        doc["localAgentPath"] = localAgentPath;
+        doc["localAgentModel"] = localAgentModel;
+        doc["localAgentApiKey"] = localAgentApiKey;
+        doc["localAgentThinking"] = localAgentThinking;
+        doc["localCommand"] = localCommand;
+        doc["localCodexPath"] = localCodexPath;
+        doc["localCodexModel"] = localCodexModel;
+        doc["localCodexEffort"] = localCodexEffort;
+        doc["localCodexApiKey"] = localCodexApiKey;
 
         o2FileSystem.FolderCreate(PipelineUtils::GetWorkPath(), true);
         doc.SaveToFile(GetSettingsPath());
@@ -114,5 +141,10 @@ namespace Editor
             return klingSecretKey.Trimed();
 
         return EnvOrEmpty("KLING_SECRET_KEY");
+    }
+
+    String PipelineSettings::GetLocalAgentApiKey() const
+    {
+        return localAgentApiKey.Trimed();
     }
 }

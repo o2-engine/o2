@@ -1,6 +1,9 @@
 #include "o2Editor/stdafx.h"
+#include <map>
 #include "ImageToUiDebugDlg.h"
 
+#include "o2/Application/Input.h"
+#include "o2/Events/KeyboardEventsListener.h"
 #include "o2/Render/Render.h"
 #include "o2/Render/Text.h"
 #include "o2/Render/VectorSprite.h"
@@ -16,14 +19,19 @@
 #include "o2/Utils/Editor/EditorScope.h"
 #include "o2/Utils/FileSystem/FileSystem.h"
 #include "o2Editor/Pipeline/PipelineExecutor.h"
+#include "o2Editor/Pipeline/PipelineImageOps.h"
 #include "o2Editor/Pipeline/PipelineImageToUi.h"
 #include "o2Editor/Pipeline/PipelineUtils.h"
 #include "o2Editor/Pipeline/PipelineValue.h"
 #include "o2Editor/Pipeline/UiLayout/UiLayoutJson.h"
 #include "o2Editor/Pipeline/UiLayout/UiLayoutPixels.h"
+#include "o2Editor/UI/Style/EditorTheme.h"
+#include "o2Editor/UI/Style/EditorThemeDark.h"
 #include "o2Editor/UIRoot.h"
 #include "o2Editor/Windows/PipelineWindow/PipelineControls.h"
+#include "o2Editor/Windows/PipelineWindow/PipelineTheme.h"
 #include "o2Editor/Windows/PipelineWindow/PipelineEditor.h"
+#include "o2Editor/Windows/PipelineWindow/PipelineImageLoader.h"
 #include "o2Editor/Windows/PipelineWindow/PipelinePairViews.h"
 
 namespace Editor
@@ -33,10 +41,22 @@ namespace Editor
 
     namespace
     {
-        const Color4 titleColor(38, 50, 56, 255);
-        const Color4 warnColor(214, 128, 0, 255);
-        const Color4 errorColor(229, 57, 53, 255);
-        const Color4 selectedBack(96, 125, 139, 40);
+        // The window is an editor window: its texts take the editor theme, whatever theme the pipeline window has
+        Color4 DebugText() { return EditorTheme::IsDark() ? EditorThemeDark::text : Color4(38, 50, 56, 255); }
+        Color4 DebugDim() { return EditorTheme::IsDark() ? EditorThemeDark::ink : Color4(96, 125, 139, 255); }
+        Color4 DebugWarn() { return EditorTheme::IsDark() ? EditorThemeDark::yellow : Color4(214, 128, 0, 255); }
+        Color4 DebugError() { return EditorTheme::IsDark() ? EditorThemeDark::red : Color4(229, 57, 53, 255); }
+        // Opaque (the rounded fill does not blend), light enough for the row's marker, number and time to read on it
+        Color4 DebugSelected()
+        {
+            if (!EditorTheme::IsDark())
+                return Color4(214, 226, 232, 255);
+
+            Color4 a = EditorThemeDark::panel, b = EditorThemeDark::accentDeep;
+            return Color4((a.r*3 + b.r*2)/5, (a.g*3 + b.g*2)/5, (a.b*3 + b.b*2)/5, 255);
+        }
+        Color4 DebugZoomBack() { return EditorTheme::IsDark() ? EditorThemeDark::panel : Color4(236, 239, 241, 255); }
+        Color4 DebugStatus(const String& status) { return status == "warn" ? DebugWarn() : status == "error" ? DebugError() : DebugText(); }
 
         const char* kindOrder[] = { "input", "analysis", "sprite", "background", "measure", "prepare", "request", "view", "write", "check",
                                     "target", "preview", "finalize", "agent", "output" };
@@ -212,15 +232,60 @@ namespace Editor
     }
 
     // -----------------------------------------------------------------------------------------------
+    // A text block of the step view: one wrapped text in the mono face with its line breaks kept, as
+    // tall as it is (JSON, logs and the model's answers read as written; one drawable, so a long one is
+    // quick to build)
+    // -----------------------------------------------------------------------------------------------
+    class ImageToUiDebugText : public Widget
+    {
+    public:
+        explicit ImageToUiDebugText(RefCounter* refCounter): Widget(refCounter)
+        {
+            auto& theme = PipelineTheme::Get();
+            PipelineControls::AddFillLayer(*this, "back", theme.field, PipelineControls::fieldRadius, Layout::BothStretch(), -2.0f);
+            PipelineControls::AddBorderLayer(*this, "border", theme.line, PipelineControls::fieldRadius, 1.0f, Layout::BothStretch(), -1.0f);
+            mText = mmake<Text>(PipelineTheme::MonoFont());
+            mSize = PipelineTheme::Size(12.0f);
+            mText->height = mSize;
+            mText->wordWrap = true;
+            mText->horAlign = HorAlign::Left;
+            mText->verAlign = VerAlign::Top;
+            mText->color = DebugText();
+            AddLayer("text", mText, Layout::BothStretch(padding, padding, padding, padding));
+        }
+
+        // Sets the text
+        void SetText(const String& text) { mText->text = text; }
+
+        // Returns the text (tests)
+        String GetText() const { return (String)mText->GetText(); }
+
+        // Returns the height the text takes in the width
+        float HeightFor(float width) const
+        {
+            Vec2F size = Text::GetTextSize(mText->text, mText->GetFont(), mSize, Vec2F(width - padding*2.0f, 0.0f), HorAlign::Left,
+                                           VerAlign::Top, true);
+            return Math::Max(30.0f, size.y + padding*2.0f + 2.0f);
+        }
+
+    private:
+        static constexpr float padding = 8.0f;
+
+        Ref<Text> mText;
+        int       mSize = 0; // Text height in the pipeline fonts' units (half pixels)
+    };
+
+    // -----------------------------------------------------------------------------------------------
     // The window's content: the run summary on top, the steps on the left, the selected step on the
     // right; follows the trace file while it changes
     // -----------------------------------------------------------------------------------------------
-    class ImageToUiDebugPanel : public Widget
+    class ImageToUiDebugPanel : public Widget, public KeyboardEventsListener
     {
     public:
         WeakRef<PipelineEditor> editor;
         Ref<PipelineNode>       node;
         Function<void()>        onClose;
+        Function<void()>        onEscape; // Escape without a zoomed image: the window closes as by its close button
         bool                    running = false;
 
     public:
@@ -229,11 +294,12 @@ namespace Editor
             mHeader = MakeLabel("", false);
             mHeader->name = "debug summary";
             mHeader->horOverflow = Label::HorOverflow::Dots;
-            mHeader->SetColor(titleColor);
+            mHeader->SetColor(DebugText());
             *mHeader->layout = WidgetLayout::HorStretch(VerAlign::Top, 0, 0, 20, 0);
             AddChild(mHeader);
 
             mKinds = MakeLabel("", true);
+            mKinds->SetColor(DebugDim());
             mKinds->name = "debug kinds";
             mKinds->horOverflow = Label::HorOverflow::Dots;
             *mKinds->layout = WidgetLayout(Vec2F(0, 1), Vec2F(0, 1), Vec2F(0, -44), Vec2F(listWidth, -24));
@@ -267,7 +333,7 @@ namespace Editor
 
             mZoom = mmake<Widget>();
             mZoom->name = "debug zoom";
-            mZoom->AddLayer("back", mmake<Sprite>(Color4(236, 239, 241, 255)), Layout::BothStretch());
+            mZoom->AddLayer("back", mmake<Sprite>(DebugZoomBack()), Layout::BothStretch());
             *mZoom->layout = WidgetLayout::BothStretch();
             AddChild(mZoom);
             mZoomScroll = o2UI.CreateScrollArea();
@@ -276,6 +342,7 @@ namespace Editor
             mZoomImage = mmake<PipelineImageView>();
             mZoomScroll->AddChild(mZoomImage);
             mZoomTitle = MakeLabel("", true);
+            mZoomTitle->SetColor(DebugText());
             mZoomTitle->horOverflow = Label::HorOverflow::Dots;
             *mZoomTitle->layout = WidgetLayout::HorStretch(VerAlign::Top, 90, 0, 22, 0);
             mZoom->AddChild(mZoomTitle);
@@ -327,12 +394,20 @@ namespace Editor
                 return;
 
             mStamp = stamp;
-            mBitmaps.Clear();
             TraceFile trace;
             mHasTrace = ReadTrace(path, trace);
+            String shownBefore = StepSignature(SelectedStep());
+            bool followed = force || IsLastRowShown();
             mTrace = trace;
             RebuildSteps();
-            RebuildView();
+            if (force)
+                ScrollRowIntoView(SelectedStep());
+            else if (followed && mSelected.IsEmpty())
+                ScrollRowIntoView(mTrace.steps.IsEmpty() ? nullptr : &mTrace.steps.Last());
+
+            // The step on the right is built again only when it changed: a growing trace must not move what is read
+            if (force || StepSignature(SelectedStep()) != shownBefore)
+                RebuildView(!force && SelectedStep() && SelectedStep()->id == mShownStepId);
             RefreshHeader();
         }
 
@@ -340,25 +415,28 @@ namespace Editor
         void Select(const String& id)
         {
             mSelected = id;
+
+            // Kept with the node, silently: a pick must not save and sync the pipeline (it goes with the next save)
             if (node && node->GetConfigString("debugStep", "") != id)
-            {
                 node->SetConfigString("debugStep", id);
-                if (auto e = editor.Lock())
-                {
-                    if (auto widget = e->GetNodeWidget(node->id))
-                        e->OnNodeConfigChanged(widget, "debugStep", true);
-                }
-            }
-            RebuildSteps();
-            RebuildView();
+            MarkSelectedRow();
+            RebuildView(false);
         }
+
+        // Returns true while the zoomed image is shown
+        bool IsZoomShown() const { return mZoom->IsEnabled(); }
+
+        // Returns the list of the steps
+        const Ref<ScrollArea>& GetStepsScroll() const { return mStepsScroll; }
 
         // Opens the image of the selected step at 1:1; -1 closes it
         void ShowZoom(int index)
         {
             const TraceStep* step = SelectedStep();
+            mZoomIndex = index;
             if (index < 0 || !step || index >= step->images.Count())
             {
+                mZoomIndex = -1;
                 mZoom->SetEnabledForcible(false);
                 return;
             }
@@ -390,6 +468,17 @@ namespace Editor
                 mPendingSelect = "";
                 Select(id);
             }
+            if (mLoader->GetPendingCount() > 0 && !mLoader->TakeReady(8.0f).IsEmpty())
+            {
+                mPendingRebuild = true;
+                if (mZoomIndex >= 0 && IsZoomShown())
+                    ShowZoom(mZoomIndex);
+            }
+            if (mPendingRebuild)
+            {
+                mPendingRebuild = false;
+                RebuildView(true);
+            }
 
             mPoll += dt;
             if (mPoll > (running ? 0.75f : 2.0f))
@@ -400,7 +489,29 @@ namespace Editor
 
             float width = mViewScroll->layout->GetWidth();
             if (Math::Abs(width - mViewWidth) > 1.0f)
-                RebuildView();
+                RebuildView(true);
+
+            if (mScrollToRow > 0 && --mScrollToRow == 0)
+                ScrollRowIntoViewNow();
+
+        }
+
+        // Escape with the cursor over the shown window closes the zoomed image, then the window (no arrows: the scene tools
+        // take them wherever the cursor is)
+        void OnKeyPressed(const Input::Key& key) override
+        {
+            if (key.keyCode != VK_ESCAPE || !IsEnabledInHierarchy())
+                return;
+
+            auto parent = GetParentWidget().Lock();
+            RectF area = parent ? parent->layout->GetWorldRect() : layout->GetWorldRect();
+            if (!area.IsInside(o2Input.GetCursorPos()))
+                return;
+
+            if (IsZoomShown())
+                ShowZoom(-1);
+            else if (onEscape)
+                onEscape();
         }
 
         void RefreshHeader()
@@ -465,12 +576,27 @@ namespace Editor
         String    mStamp;
         String    mSelected;
         String    mPendingSelect;
+        bool      mPendingRebuild = false; // The step view is built again after the frame (a button of it asked)
+        float     mContentWidth = 200.0f;  // Width of the step view's blocks at the last build
         TraceFile mTrace;
         bool      mHasTrace = false;
         float     mPoll = 0.0f;
         float     mViewWidth = -1.0f;
+        String    mShownStepId;  // Step the right side shows
+        String    mScrollRowId;  // Row to bring into view once the list has its layout
+        int       mScrollToRow = 0;
 
-        Map<String, Ref<Bitmap>> mBitmaps; // Decoded pictures of the trace by file
+        Vector<Ref<Button>> mRows;   // Rows of the list, in the order of the steps
+        Vector<String>      mRowIds; // Their step ids
+        Vector<String>      mRowSignatures; // What each row shows, to fill again only a changed one
+
+        std::map<std::string, PipelineValue> mPictures; // Pictures of the trace by path and size, decoded or on their way
+        Ref<PipelineImageLoader>             mLoader = mmake<PipelineImageLoader>(); // Decodes them off the main thread
+        int                                  mZoomIndex = -1; // Picture of the selected step shown 1:1, -1 for none
+        Vector<String>                       mExpanded; // Text blocks shown whole: step id and caption
+
+        static constexpr size_t pictureBudget = 80;
+        static constexpr int    textLimit = 6000;  // A text block shows this much until it is asked for whole
 
     private:
         const TraceStep* SelectedStep() const
@@ -483,59 +609,167 @@ namespace Editor
             return mTrace.steps.IsEmpty() ? nullptr : &mTrace.steps.Last();
         }
 
+        // The decoded picture, kept by file and size (a new run writes the same names again); one not decoded yet is decoded
+        // on a worker and gives null until it arrives (the view is built again then). The kept ones go past a budget
         Ref<Bitmap> BitmapOf(const String& file)
         {
-            Ref<Bitmap> bitmap;
-            if (mBitmaps.TryGetValue(file, bitmap))
-                return bitmap;
-
             String path = mDir + file;
-            bitmap = o2FileSystem.IsFileExist(path) ? DecodeImageBytes(PipelineUtils::ReadFileBytes(path)) : nullptr;
-            mBitmaps[file] = bitmap;
-            return bitmap;
+            if (!o2FileSystem.IsFileExist(path))
+                return nullptr;
+
+            String key = path + ":" + (String)(int)o2FileSystem.GetFileInfo(path).size;
+            auto found = mPictures.find(key.Data());
+            if (found == mPictures.end())
+            {
+                if (mPictures.size() >= pictureBudget)
+                    mPictures.clear();
+                found = mPictures.emplace(key.Data(), PipelineValue::ImageBytes(PipelineUtils::ReadFileBytes(path))).first;
+            }
+
+            auto& value = found->second;
+            if (auto bitmap = value.PeekBitmap())
+                return bitmap;
+            return mLoader->Request(value, "debug");
         }
 
+        // What a step shows: a change of it builds the right side again
+        static String StepSignature(const TraceStep* step)
+        {
+            if (!step)
+                return "";
+
+            String sig = step->id + "|" + step->title + "|" + step->status + "|" + step->note + "|" + (String)step->text.Length() + "|" +
+                (String)step->data.Length() + "|" + (String)step->action.Length();
+            for (auto& image : step->images)
+                sig += "|" + image.file;
+            return sig;
+        }
+
+        // Fills a row with a step; the row keeps its place in the list
+        void FillRow(const Ref<Button>& row, int index, const TraceStep& step)
+        {
+            row->RemoveAllLayers();
+            auto back = mmake<PipelineRoundedRect>();
+            back->color = DebugSelected();
+            back->radius = 4.0f;
+            back->roundBottom = true;
+            row->AddLayer("selected", back, Layout::BothStretch())->enabled = false;
+
+            auto marker = mmake<PipelineRoundedRect>();
+            marker->color = KindColor(step.kind);
+            marker->radius = 2.0f;
+            marker->roundBottom = true;
+            row->AddLayer("kind", marker, Layout(Vec2F(0, 0), Vec2F(0, 1), Vec2F(2, 4), Vec2F(5, -4)));
+
+            row->AddLayer("number", MakeText((String)(index + 1), DebugDim(), HorAlign::Right), Layout(Vec2F(0, 0), Vec2F(0, 1), Vec2F(6, 0), Vec2F(36, 0)));
+            auto titleText = MakeText(step.title, DebugStatus(step.status), HorAlign::Left);
+            titleText->dotsEngings = true;
+            row->AddLayer("title", titleText, Layout(Vec2F(0, 0), Vec2F(1, 1), Vec2F(42, 0), Vec2F(-58, 0)));
+            row->AddLayer("ms", MakeText(Ms(step.ms), DebugDim(), HorAlign::Right), Layout(Vec2F(1, 0), Vec2F(1, 1), Vec2F(-56, 0), Vec2F(-4, 0)));
+            row->name = "step " + step.id;
+            String id = step.id;
+            row->onClick = [this, id]() { mPendingSelect = id; };
+        }
+
+        // Updates the list to the trace: the rows of the steps that are still there stay, changed ones are filled again, new
+        // ones are added; only a different list of steps is built anew, at the same scroll
         void RebuildSteps()
         {
             PushEditorScopeOnStack scope;
-            mSteps->RemoveAllChildren();
-            const TraceStep* selected = SelectedStep();
+            bool prefix = mRowIds.Count() <= mTrace.steps.Count();
+            for (int i = 0; prefix && i < mRowIds.Count(); i++)
+                prefix = mRowIds[i] == mTrace.steps[i].id;
+
+            Vec2F scroll = mStepsScroll->GetScroll();
+            if (!prefix)
+            {
+                mSteps->RemoveAllChildren();
+                mRows.Clear();
+                mRowIds.Clear();
+            }
+
             for (int i = 0; i < mTrace.steps.Count(); i++)
             {
                 auto& step = mTrace.steps[i];
+                if (i < mRows.Count())
+                {
+                    if (mRows[i]->GetLayer("title") && mRowSignatures[i] == RowSignature(step))
+                        continue;
+
+                    FillRow(mRows[i], i, step);
+                    mRowSignatures[i] = RowSignature(step);
+                    continue;
+                }
+
                 auto row = o2UI.CreateWidget<Button>("pipeline icon");
-                row->name = "step " + step.id;
-                if (auto icon = row->GetLayer("icon"))
-                    icon->enabled = false;
                 row->layout->minHeight = 22;
                 row->layout->maxHeight = 22;
-
-                auto back = mmake<PipelineRoundedRect>();
-                back->color = selectedBack;
-                back->radius = 4.0f;
-                back->roundBottom = true;
-                auto backLayer = row->AddLayer("selected", back, Layout::BothStretch());
-                backLayer->enabled = &step == selected;
-
-                auto marker = mmake<PipelineRoundedRect>();
-                marker->color = KindColor(step.kind);
-                marker->radius = 2.0f;
-                marker->roundBottom = true;
-                row->AddLayer("kind", marker, Layout(Vec2F(0, 0), Vec2F(0, 1), Vec2F(2, 4), Vec2F(5, -4)));
-
-                row->AddLayer("number", MakeText((String)(i + 1), DimTextColor(), HorAlign::Right), Layout::BothStretch(6, 0, 0, 0));
-                Color4 color = step.status == "warn" ? warnColor : step.status == "error" ? errorColor : titleColor;
-                auto titleText = MakeText(step.title, color, HorAlign::Left);
-                titleText->dotsEngings = true;
-                row->AddLayer("title", titleText, Layout(Vec2F(0, 0), Vec2F(1, 1), Vec2F(42, 0), Vec2F(-58, 0)));
-                row->AddLayer("ms", MakeText(Ms(step.ms), DimTextColor(), HorAlign::Right), Layout(Vec2F(1, 0), Vec2F(1, 1), Vec2F(-56, 0), Vec2F(-4, 0)));
-                if (auto number = row->GetLayer("number"))
-                    number->layout = Layout(Vec2F(0, 0), Vec2F(0, 1), Vec2F(6, 0), Vec2F(36, 0));
-
-                String id = step.id;
-                row->onClick = [this, id]() { mPendingSelect = id; };
+                FillRow(row, i, step);
                 mSteps->AddChild(row);
+                mRows.Add(row);
+                mRowIds.Add(step.id);
+                if (mRowSignatures.Count() < mRows.Count())
+                    mRowSignatures.Add(RowSignature(step));
+                else
+                    mRowSignatures[mRows.Count() - 1] = RowSignature(step);
             }
+            mRowSignatures.Resize(mRows.Count());
+            MarkSelectedRow();
+            if (!prefix)
+                mStepsScroll->SetScrollForcible(scroll);
+        }
+
+        static String RowSignature(const TraceStep& step)
+        {
+            return step.title + "|" + step.kind + "|" + step.status + "|" + (String)(int)step.ms;
+        }
+
+        // Highlights the row of the selected step
+        void MarkSelectedRow()
+        {
+            const TraceStep* selected = SelectedStep();
+            String id = selected ? selected->id : String();
+            for (int i = 0; i < mRows.Count(); i++)
+            {
+                if (auto layer = mRows[i]->GetLayer("selected"))
+                    layer->enabled = mRowIds[i] == id;
+            }
+        }
+
+        // Returns true when the last row is inside the visible part of the list, or there are no rows
+        bool IsLastRowShown() const
+        {
+            if (mRows.IsEmpty())
+                return true;
+
+            RectF view = mStepsScroll->layout->GetWorldRect();
+            RectF row = mRows.Last()->layout->GetWorldRect();
+            return row.bottom >= view.bottom - 2.0f;
+        }
+
+        // Brings the row of the step into view once the list is laid out (the next frames)
+        void ScrollRowIntoView(const TraceStep* step)
+        {
+            if (!step)
+                return;
+
+            mScrollRowId = step->id;
+            mScrollToRow = 2;
+        }
+
+        void ScrollRowIntoViewNow()
+        {
+            int index = mRowIds.IndexOf(mScrollRowId);
+            if (index < 0)
+                return;
+
+            RectF view = mStepsScroll->layout->GetWorldRect();
+            RectF row = mRows[index]->layout->GetWorldRect();
+            Vec2F scroll = mStepsScroll->GetScroll();
+            if (row.bottom < view.bottom)
+                mStepsScroll->SetScroll(Vec2F(scroll.x, scroll.y - (view.bottom - row.bottom) - 4.0f));
+            else if (row.top > view.top)
+                mStepsScroll->SetScroll(Vec2F(scroll.x, scroll.y + (row.top - view.top) + 4.0f));
         }
 
         void AddViewLabel(const String& text, const Color4& color, bool wrap)
@@ -550,45 +784,71 @@ namespace Editor
             mView->AddChild(label);
         }
 
-        void AddTextBlock(const String& caption, const String& text, float height)
+        void AddTextBlock(const String& caption, const String& text, float maxHeight)
         {
-            AddViewLabel(caption, titleColor, false);
-            auto view = mmake<PipelineTextView>();
-            view->SetText(Clip(text, 30000));
+            AddViewLabel(caption, DebugText(), false);
+            String key = mShownStepId + "|" + caption;
+            bool whole = mExpanded.Contains(key);
+            String shown = Clip(text, whole ? 60000 : textLimit);
+            auto view = mmake<ImageToUiDebugText>();
+            view->name = "debug text";
+            view->SetText(shown);
+            float height = view->HeightFor(mContentWidth);
             view->layout->minHeight = height;
             view->layout->maxHeight = height;
             mView->AddChild(view);
+
+            if (!whole && text.Length() > textLimit)
+            {
+                auto row = mmake<Widget>();
+                auto more = MakeButton("Show all " + (String)text.Length() + " characters");
+                more->name = "debug show all";
+                *more->layout = WidgetLayout(Vec2F(0, 0), Vec2F(0, 1), Vec2F(0, 0), Vec2F(220, 0));
+                more->onClick = [this, key]()
+                {
+                    mExpanded.Add(key);
+                    mPendingRebuild = true;
+                };
+                row->AddChild(more);
+                row->layout->minHeight = 22;
+                row->layout->maxHeight = 22;
+                mView->AddChild(row);
+            }
         }
 
-        void RebuildView()
+        // Builds the right side for the selected step: from its top for another step, at the same scroll for the same one
+        void RebuildView(bool keepScroll)
         {
             PushEditorScopeOnStack scope;
+            Vec2F scroll = mViewScroll->GetScroll();
             mViewWidth = mViewScroll->layout->GetWidth();
             float width = Math::Max(200.0f, mViewWidth - 16.0f);
+            mContentWidth = width;
             mView->RemoveAllChildren();
 
             const TraceStep* step = SelectedStep();
+            mShownStepId = step ? step->id : String();
             if (!step)
             {
-                AddViewLabel(mHasTrace ? String("The trace has no steps yet") : String("No trace yet - run the node"), DimTextColor(), false);
+                AddViewLabel(mHasTrace ? String("The trace has no steps yet") : String("No trace yet - run the node"), DebugDim(), false);
                 return;
             }
 
             bool agentTurn = IsAgentTurn(step->id);
-            AddViewLabel(step->kind + "  \xC2\xB7  " + step->title, step->status == "warn" ? warnColor : step->status == "error" ? errorColor : titleColor, true);
+            AddViewLabel(step->kind + "  \xC2\xB7  " + step->title, DebugStatus(step->status), true);
             if (!step->note.IsEmpty() && !agentTurn)
-                AddViewLabel(step->note, step->status == "warn" ? warnColor : DimTextColor(), true);
+                AddViewLabel(step->note, step->status == "warn" ? DebugWarn() : DebugDim(), true);
             if (agentTurn && !step->note.IsEmpty())
             {
-                AddViewLabel("The model's note", titleColor, false);
-                AddViewLabel(step->note, DimTextColor(), true);
+                AddViewLabel("The model's note", DebugText(), false);
+                AddViewLabel(step->note, DebugDim(), true);
             }
             if (agentTurn && !step->action.IsEmpty())
             {
-                auto action = mmake<PipelineTextView>();
+                auto action = mmake<ImageToUiDebugText>();
                 action->name = "debug action";
                 action->SetText(Clip(step->action, 4000));
-                float height = Math::Min(120.0f, 22.0f + 16.0f*(float)(step->action.Length()/Math::Max(20, (int)(mViewWidth/6.6f))));
+                float height = action->HeightFor(width);
                 action->layout->minHeight = height;
                 action->layout->maxHeight = height;
                 mView->AddChild(action);
@@ -619,7 +879,7 @@ namespace Editor
                 compare->layout->minHeight = height;
                 compare->layout->maxHeight = height;
                 mView->AddChild(compare);
-                AddViewLabel("design | reconstruction - drag the divider", DimTextColor(), false);
+                AddViewLabel("design | reconstruction - drag the divider", DebugDim(), false);
             }
 
             Vector<int> shown;
@@ -631,30 +891,59 @@ namespace Editor
 
             if (!shown.IsEmpty())
             {
-                bool small = step->kind == "sprite", wide = IsWide(step->kind);
-                float boxW = wide ? width : small ? 150.0f : 300.0f, boxH = wide ? 2000.0f : small ? 130.0f : 260.0f;
-                auto figures = mmake<PipelineWrapRow>();
+                // The run's own pictures large (two side by side), the evidence at full width, the sprite steps as thumbnails
+                const String& kind = step->kind;
+                bool hero = kind == "input" || kind == "analysis" || kind == "background" || kind == "output";
+                bool wide = IsWide(kind), small = kind == "sprite";
+                float column = hero && shown.Count() > 1 ? Math::Floor((width - 8.0f)*0.5f) : width;
+                float boxW = wide || hero ? column : small ? 150.0f : 300.0f;
+                float boxH = wide ? 2400.0f : hero ? 560.0f : small ? 130.0f : 260.0f;
+
+                auto figures = mmake<Widget>();
                 figures->name = "debug images";
-                figures->spacing = 8;
-                figures->lineSpacing = 8;
-                float lineHeight = 0.0f;
+                float x = 0.0f, y = 0.0f, lineHeight = 0.0f;
                 for (int i : shown)
                 {
                     auto& image = step->images[i];
-                    float scale = image.w > 0 && image.h > 0 ? Math::Min(wide ? 4.0f : 2.0f, Math::Min(boxW/image.w, boxH/image.h)) : 1.0f;
-                    float w = Math::Max(40.0f, image.w*scale), h = Math::Max(20.0f, image.h*scale);
-                    lineHeight = Math::Max(lineHeight, h + 20.0f);
+                    auto bitmap = BitmapOf(image.file);
+                    int iw = image.w > 0 ? image.w : bitmap ? (int)bitmap->GetSize().x : 0;
+                    int ih = image.h > 0 ? image.h : bitmap ? (int)bitmap->GetSize().y : 0;
+                    float upscale = small ? 4.0f : iw > 0 && iw*2.0f <= boxW ? 2.0f : 1.0f;
+                    float scale = iw > 0 && ih > 0 ? Math::Min(upscale, Math::Min(boxW/iw, boxH/ih)) : 1.0f;
+
+                    // Evidence much taller than the box keeps the width and shows its top; the zoom shows all of it
+                    int rows = ih;
+                    String clipped;
+                    if (wide && iw > 0 && ih > 0 && ih*Math::Min(upscale, boxW/iw) > boxH)
+                    {
+                        scale = Math::Min(upscale, boxW/iw);
+                        rows = Math::Max(1, (int)(boxH/scale));
+                        if (bitmap)
+                        {
+                            bitmap = PipelineImageOps::CropPixels(*bitmap, 0, 0, (int)bitmap->GetSize().x,
+                                                                 Math::Min(rows*(int)bitmap->GetSize().y/ih, (int)bitmap->GetSize().y));
+                        }
+                        clipped = "  (the top " + (String)rows + " px - click for all)";
+                    }
+
+                    float w = Math::Max(24.0f, iw*scale), h = Math::Max(16.0f, rows*scale);
+                    float figureW = Math::Max(w, wide || hero ? 160.0f : 120.0f);
+                    if (x > 0.0f && x + figureW > width + 0.5f)
+                    {
+                        y += lineHeight + 8.0f;
+                        x = 0.0f;
+                        lineHeight = 0.0f;
+                    }
 
                     auto figure = mmake<Widget>();
                     figure->name = "debug image";
-                    float figureW = wide ? width : Math::Max(w, 90.0f);
-                    figure->layout->minWidth = figureW;
-                    figure->layout->maxWidth = figureW;
+                    *figure->layout = WidgetLayout(Vec2F(0, 1), Vec2F(0, 1), Vec2F(x, -(y + h + 20.0f)), Vec2F(x + figureW, -y));
                     auto view = mmake<PipelineImageView>();
-                    view->SetBitmap(BitmapOf(image.file));
+                    view->SetBitmap(bitmap);
                     *view->layout = WidgetLayout(Vec2F(0, 1), Vec2F(0, 1), Vec2F(0, -h), Vec2F(w, 0));
                     figure->AddChild(view);
-                    auto caption = MakeLabel(image.title + "  " + (String)image.w + "\xC3\x97" + (String)image.h, true);
+                    auto caption = MakeLabel(image.title + "  " + (String)iw + "\xC3\x97" + (String)ih + clipped, true);
+                    caption->SetColor(DebugDim());
                     caption->horOverflow = Label::HorOverflow::Dots;
                     *caption->layout = WidgetLayout::HorStretch(VerAlign::Top, 0, 0, 18, h + 2);
                     figure->AddChild(caption);
@@ -666,10 +955,11 @@ namespace Editor
                     open->onClick = [this, i]() { ShowZoom(i); };
                     figure->AddChild(open);
                     figures->AddChild(figure);
+
+                    x += figureW + 8.0f;
+                    lineHeight = Math::Max(lineHeight, h + 20.0f);
                 }
-                // Full-width evidence: one picture a line, as tall as it is
-                figures->lineHeight = wide ? lineHeight : boxH + 20.0f;
-                float height = figures->GetHeightForWidth(width);
+                float height = y + lineHeight;
                 figures->layout->minHeight = height;
                 figures->layout->maxHeight = height;
                 mView->AddChild(figures);
@@ -681,10 +971,15 @@ namespace Editor
                 bool result = agentTurn || step->kind == "prepare" || request;
                 String caption = step->kind == "output" ? String("ui_structure.json") : request ? String("The request")
                     : result ? String("Result") : String("Model answer");
-                AddTextBlock(caption, result ? step->text : Pretty(step->text), step->kind == "analysis" || result ? 360.0f : 220.0f);
+                AddTextBlock(caption, result ? step->text : Pretty(step->text), step->kind == "analysis" || result ? 420.0f : 260.0f);
             }
             if (!step->data.IsEmpty() && !agentTurn)
-                AddTextBlock("Data", step->data, step->kind == "output" ? 260.0f : 160.0f);
+                AddTextBlock("Data", step->data, step->kind == "output" ? 320.0f : 220.0f);
+
+            if (keepScroll)
+                mViewScroll->SetScrollForcible(scroll);
+            else
+                mViewScroll->ResetScroll();
         }
     };
 
@@ -731,6 +1026,13 @@ namespace Editor
                     st.panel->onClose = Function<void()>();
                     close();
                 }
+            };
+            st.panel->onEscape = []()
+            {
+                auto& st = St();
+                st.window->Hide();
+                if (st.window->onClosed)
+                    st.window->onClosed();
             };
             EditorUIRoot.AddWidget(st.window);
             st.window->Hide(true);
@@ -809,6 +1111,27 @@ namespace Editor
         Ref<Window> GetWindow()
         {
             return St().window;
+        }
+
+        Ref<ScrollArea> GetStepsList()
+        {
+            return St().panel ? St().panel->GetStepsScroll() : Ref<ScrollArea>();
+        }
+
+        void Reset()
+        {
+            auto& st = St();
+            if (st.window)
+            {
+                st.window->Hide(true);
+                if (auto parent = st.window->GetParentWidget().Lock())
+                    parent->RemoveChild(st.window);
+                else
+                    EditorUIRoot.RemoveWidget(st.window);
+            }
+            st.window = nullptr;
+            st.panel = nullptr;
+            st.shown = false;
         }
     }
 }

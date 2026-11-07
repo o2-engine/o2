@@ -6,6 +6,9 @@
 #include "o2Editor/Pipeline/PipelineExecutor.h"
 #include "o2Editor/Pipeline/PipelineNodeType.h"
 #include "o2Editor/Pipeline/PipelineUtils.h"
+#include "o2Editor/Pipeline/PipelineZip.h"
+
+#include <filesystem>
 
 namespace Editor
 {
@@ -18,7 +21,7 @@ namespace Editor
         {
             String nodeId;
             String portId;
-            String kind;  // main, src, part or raw
+            String kind;  // main, src, part, raw or trace
             String path;  // The local file; for a node's own result without one yet, empty
         };
 
@@ -61,6 +64,62 @@ namespace Editor
         }
 
         // Result keys of the graph and their local files; chroma nodes add their raw renders in the content cache
+        // The folder of a node's debug steps
+        String TraceFolder(const String& id, const String& nodeId)
+        {
+            return PipelineExecutor::GetWorkPath(id, nodeId) + "trace/";
+        }
+
+        // The trace folder as one zip: its files, stored (the pictures are PNGs already)
+        String ZipTrace(const String& folder)
+        {
+            Vector<PipelineZip::Entry> entries;
+            std::error_code ec;
+            for (auto& item : std::filesystem::directory_iterator(folder.Data(), ec))
+            {
+                if (!item.is_regular_file(ec))
+                    continue;
+
+                String name = item.path().filename().string().c_str();
+                entries.Add({ name, PipelineUtils::ReadFileBytes(folder + name) });
+            }
+            return PipelineZip::Write(entries, false);
+        }
+
+        // Replaces the trace folder with the files of the zip, plain names only; false when the zip is not a trace
+        bool UnzipTrace(const String& folder, const String& zip)
+        {
+            Vector<PipelineZip::Entry> entries;
+            String error;
+            if (!PipelineZip::Read(zip, entries, error))
+                return false;
+
+            bool hasTrace = false;
+            for (auto& entry : entries)
+            {
+                if (entry.name.IsEmpty() || entry.name.Contains("/") || entry.name.Contains("\\") || entry.name.StartsWith("."))
+                    return false;
+                hasTrace = hasTrace || entry.name == "trace.json";
+            }
+            if (!hasTrace)
+                return false;
+
+            String dir = folder;
+            while (dir.EndsWith("/"))
+                dir = dir.SubStr(0, dir.Length() - 1);
+            String fresh = dir + ".in", old = dir + ".old";
+            std::error_code ec;
+            std::filesystem::remove_all(fresh.Data(), ec);
+            std::filesystem::create_directories(fresh.Data(), ec);
+            for (auto& entry : entries)
+                PipelineUtils::WriteFileBytes(fresh + "/" + entry.name, entry.data);
+            std::filesystem::remove_all(old.Data(), ec);
+            std::filesystem::rename(dir.Data(), old.Data(), ec);
+            std::filesystem::rename(fresh.Data(), dir.Data(), ec);
+            std::filesystem::remove_all(old.Data(), ec);
+            return o2FileSystem.IsFileExist(dir + "/trace.json");
+        }
+
         Map<String, LocalResult> CollectLocalResults(const String& id, const PipelineGraph& graph,
                                                      const Map<String, String>& sigs, const Map<String, int>& seeds)
         {
@@ -79,9 +138,11 @@ namespace Editor
                         results[node->id + "#" + port.id] = { node->id, port.id, "part", PipelineExecutor::GetPortPreviewPath(id, node->id, port.id, "png") };
                 }
 
-                // A dynamic outputs node keeps every output but the first as a part, the text one as .txt
+                // A dynamic outputs node keeps every output but the first as a part, the text one as .txt, and its
+                // debug steps (AI image to UI's trace folder) as one more key
                 if (schema && schema->dynamicOutputs)
                 {
+                    results[node->id + ".trace"] = { node->id, "", "trace", TraceFolder(id, node->id) + "trace.json" };
                     for (int i = 1; i < node->outputs.Count(); i++)
                     {
                         auto& port = node->outputs[i];
@@ -335,8 +396,10 @@ namespace Editor
         Vector<String> downloaded, uploaded, failed;
         bool ok = true;
 
+        // Debug steps first: AssetsLine reads a run's summary from them when the result arrives
         Vector<String> keys;
-        for (auto& kv : locals) keys.Add(kv.first);
+        for (auto& kv : locals) if (kv.second.kind == "trace") keys.Add(kv.first);
+        for (auto& kv : locals) if (kv.second.kind != "trace") keys.Add(kv.first);
         for (auto& kv : serverV) if (!keys.Contains(kv.first)) keys.Add(kv.first);
 
         for (auto& key : keys)
@@ -365,13 +428,27 @@ namespace Editor
                 Log(graph.name + ": both sides have a new result for " + key + ", keeping the " + (download ? "stored" : "local") + " one");
             }
 
+            // Debug steps go up once the node's run here is over and up to date, never half a run
+            if (local.kind == "trace" && !download && !localFresh.Contains(local.nodeId))
+                continue;
+
             if (download)
             {
                 auto answer = co_await pass.client.Request(HttpMethod::Get, base + "/result?key=" + AssetsLineClient::Encode(key), "", "", 300.0f);
                 if (!answer.ok)
                 {
-                    failed.Add(local.nodeId);
+                    if (local.kind != "trace")
+                        failed.Add(local.nodeId);
                     if (answer.offline) { pass.offline = true; ok = false; break; }
+                    continue;
+                }
+
+                if (local.kind == "trace")
+                {
+                    if (UnzipTrace(TraceFolder(id, local.nodeId), answer.body))
+                        state.results[key] = { v, Stamp(local.path) };
+                    else
+                        Log(graph.name + ": the debug steps of " + local.nodeId + " could not be read");
                     continue;
                 }
 
@@ -399,22 +476,31 @@ namespace Editor
             }
             else
             {
-                String ext = Extension(local.path);
+                bool trace = local.kind == "trace";
+                String ext = trace ? String("zip") : Extension(local.path);
                 String query = "/result?key=" + AssetsLineClient::Encode(key) + "&ext=." + ext + "&rev=" + (String)state.rev;
-                auto answer = co_await pass.client.Request(HttpMethod::Put, base + query, PipelineUtils::ReadFileBytes(local.path),
-                                                           "application/octet-stream", 300.0f);
+                String bytes = trace ? ZipTrace(TraceFolder(id, local.nodeId)) : PipelineUtils::ReadFileBytes(local.path);
+                auto answer = co_await pass.client.Request(HttpMethod::Put, base + query, bytes, "application/octet-stream", 300.0f);
                 if (!answer.ok)
                 {
-                    failed.Add(local.nodeId);
+                    if (!trace)
+                        failed.Add(local.nodeId);
                     if (answer.offline) { pass.offline = true; ok = false; break; }
                     if (answer.code != "stale-rev")
+                    {
                         Log(graph.name + ": could not upload " + key + ": " + answer.error);
+
+                        // A server without debug steps refuses them: not again until the next run here
+                        if (trace)
+                            state.results[key] = { known.v, stamp };
+                    }
                     continue;
                 }
 
                 auto newV = answer.json.IsObject() ? answer.json.FindMember("v") : nullptr;
                 state.results[key] = { newV ? PipelineUtils::ValueToString(*newV) : String(), stamp };
-                uploaded.Add(local.nodeId);
+                if (!trace)
+                    uploaded.Add(local.nodeId);
             }
         }
 
@@ -459,7 +545,8 @@ namespace Editor
 
             for (auto& kv : locals)
             {
-                if (kv.second.nodeId != nodeId)
+                // Debug steps never hold a node back
+                if (kv.second.nodeId != nodeId || kv.second.kind == "trace")
                     continue;
 
                 String v;

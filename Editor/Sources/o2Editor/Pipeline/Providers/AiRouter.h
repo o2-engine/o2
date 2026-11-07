@@ -8,7 +8,7 @@ using namespace o2;
 namespace Editor
 {
     // API a text or image model is called through
-    enum class AiProvider { Gemini, OpenAi, OpenRouter };
+    enum class AiProvider { Gemini, OpenAi, OpenRouter, Local };
 
     // One way to reach a model: the provider and the id the provider knows the model by
     struct AiRoute
@@ -32,9 +32,10 @@ namespace Editor
 
     // ------------------------------------------------------------------------
     // Picks the provider of a text or image call by the model id. The id names
-    // the native provider: vendor/model is OpenRouter, gpt-, o3, chatgpt- and
-    // dall-e ids are OpenAI, any other is Gemini; a leading models/ is the long
-    // Gemini id form. Some models have a second route through another provider
+    // the native provider: local: ids are the local agents (no key, no second
+    // route), vendor/model is OpenRouter, gpt-, o3, chatgpt- and dall-e ids
+    // are OpenAI, any other is Gemini; a leading models/ is the long Gemini
+    // id form. Some models have a second route through another provider
     // under a rewritten id, taken when the native provider has no key
     // ------------------------------------------------------------------------
     namespace AiRouter

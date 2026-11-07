@@ -235,7 +235,7 @@ TEST_F(ImageToUiUiFixture, RunsTheSkillThroughTheEditor)
     auto window = ImageToUiDebug::GetWindow();
     ASSERT_TRUE(window);
     EXPECT_TRUE(window->FindChildByTypeAndName<PipelineCompareView>("debug compare"));
-    EXPECT_TRUE(window->FindChildByTypeAndName<PipelineTextView>("debug action"));
+    EXPECT_TRUE(window->FindChild("debug action"));
     ImageToUiDebug::SelectStep("analysis");
     Step(5);
     EXPECT_FALSE(window->FindChildByTypeAndName<PipelineCompareView>("debug compare"));
@@ -415,7 +415,7 @@ TEST_F(ImageToUiUiFixture, EditsAfterARunGoThroughTheDialog)
     EXPECT_EQ(ids.Last(), String("edit1-output"));
     ImageToUiDebug::SelectStep("edit1-turn-1");
     Step(3);
-    EXPECT_TRUE(ImageToUiDebug::GetWindow()->FindChildByTypeAndName<PipelineTextView>("debug action")) << "a round's turn is an agent turn";
+    EXPECT_TRUE(ImageToUiDebug::GetWindow()->FindChild("debug action")) << "a round's turn is an agent turn";
     ImageToUiDebug::GetWindow()->Hide(true);
     Step(3);
 

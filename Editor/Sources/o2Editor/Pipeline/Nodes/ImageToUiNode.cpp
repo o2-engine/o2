@@ -31,6 +31,14 @@ namespace Editor
             mSchema.dynamicOutputs = true;
         }
 
+        void InitNode(const Ref<PipelineNode>& node) const override
+        {
+            // A new node keeps its models in its config, as the web and Unity editors do: a later change of the defaults
+            // never switches it to other models
+            node->SetConfigString("model", PipelineImageToUi::defaultModel);
+            node->SetConfigString("imageModel", PipelineImageToUi::defaultImageModel);
+        }
+
         Vector<String> SignatureExcludedKeys() const override
         {
             return { "assetPath" };

@@ -8,6 +8,7 @@
 #include "o2Editor/Pipeline/PipelineImageOps.h"
 #include "o2Editor/Pipeline/PipelineUtils.h"
 #include "o2Editor/Pipeline/PipelineValue.h"
+#include "o2Editor/Pipeline/PipelineZip.h"
 #include "o2Editor/Pipeline/Sync/AssetsLineClient.h"
 #include "o2Editor/Pipeline/Sync/AssetsLineSync.h"
 #include "o2Editor/Windows/PipelineWindow/AssetsLineDeleteDlg.h"
@@ -529,6 +530,111 @@ TEST_F(AssetsLineSync_, ResultsTravelBothWaysAndStayFresh)
     auto before = project.sync->GetPipelineState(id)->results;
     ASSERT_TRUE(project.Pass());
     EXPECT_EQ(project.sync->GetPipelineState(id)->results.Count(), before.Count());
+}
+
+// The debug steps of AI image to UI travel with the results: a finished run here goes up as one zip of its trace
+// folder, never a node that is not up to date; a run on the web comes down and replaces the folder here
+TEST_F(AssetsLineSync_, DebugStepsTravelBothWays)
+{
+    Web web(url);
+    Project project(url, web);
+    String id = Uid();
+    String ui = id + "-ui", stale = id + "-stale";
+    auto uiNode = [&](const String& nodeId, int x)
+    {
+        return String(R"({"id":")") + nodeId + R"(","type":"imageToUi","position":{"x":)" + (String)x + R"(,"y":0},"config":{},
+         "inputs":[{"id":")" + nodeId + R"(-in","name":"image","type":"image"}],
+         "outputs":[{"id":")" + nodeId + R"(-p","name":"preview","type":"image"},{"id":")" + nodeId + R"(-l","name":"layout","type":"text"}]})";
+    };
+    String doc = String(R"({"schemaVersion":1,"id":")") + id + R"(","name":"traces","nodes":[)" + uiNode(ui, 0) + "," + uiNode(stale, 500) +
+        R"(],"edges":[]})";
+    project.Write("Pipelines/traces.pipeline", doc);
+    ASSERT_TRUE(project.Pass());
+
+    // A run here: the result, the trace, the node up to date; another node has a trace but no finished run
+    project.Use();
+    auto graph = project.Read("Pipelines/traces.pipeline");
+    auto sigs = graph.ComputeSignatures();
+    String png = PngBytes(Color4(0, 200, 0, 255));
+    String ours = R"({"version":1,"steps":[{"id":"analysis","title":"Analysis","kind":"analysis","images":[{"file":"001.png"}]}]})";
+    for (auto& nodeId : { ui, stale })
+    {
+        String trace = PipelineExecutor::GetWorkPath(id, nodeId) + "trace/";
+        o2FileSystem.FolderCreate(trace, true);
+        PipelineUtils::WriteFileBytes(trace + "trace.json", ours);
+        PipelineUtils::WriteFileBytes(trace + "001.png", png);
+    }
+    PipelineUtils::WriteFileBytes(PipelineExecutor::GetPreviewPath(id, ui, "png"), png);
+    PipelineExecutor::MarkRan(id, sigs[ui]);
+    ASSERT_TRUE(project.Pass()) << project.sync->GetStatusText();
+
+    auto manifest = web.Call(HttpMethod::Get, "/api/sync/pipelines/" + id + "/results");
+    ASSERT_TRUE(manifest["results"].FindMember((ui + ".trace").Data())) << "the finished run's steps went up";
+    EXPECT_FALSE(manifest["results"].FindMember((stale + ".trace").Data())) << "not a node that is not up to date";
+    Vector<PipelineZip::Entry> entries;
+    String error;
+    ASSERT_TRUE(PipelineZip::Read(web.GetBytes("/api/sync/pipelines/" + id + "/result?key=" + ui + ".trace"), entries, error)) << error.Data();
+    Vector<String> names;
+    for (auto& entry : entries)
+        names.Add(entry.name);
+    names.Sort([](const String& a, const String& b) { return a < b; });
+    EXPECT_EQ(names, Vector<String>({ "001.png", "trace.json" }));
+
+    // The web ran it again: its steps replace the folder here
+    String theirs = R"({"version":1,"steps":[{"id":"input","title":"Design","kind":"input","images":[{"file":"002.png"}]}]})";
+    String zip = PipelineZip::Write({ { "trace.json", theirs }, { "002.png", png } }, true);
+    EXPECT_EQ(web.PutBytes("/api/sync/pipelines/" + id + "/result?key=" + ui + ".trace&ext=.zip", zip), 200);
+    ASSERT_TRUE(project.Pass()) << project.sync->GetStatusText();
+    project.Use();
+    String folder = PipelineExecutor::GetWorkPath(id, ui) + "trace/";
+    EXPECT_EQ(PipelineUtils::ReadFileBytes(folder + "trace.json"), theirs);
+    EXPECT_TRUE(o2FileSystem.IsFileExist(folder + "002.png"));
+    EXPECT_FALSE(o2FileSystem.IsFileExist(folder + "001.png")) << "the folder is replaced, not merged";
+
+    // Nothing changed: the next pass moves nothing
+    auto before = project.sync->GetPipelineState(id)->results;
+    ASSERT_TRUE(project.Pass());
+    AssetsLineResultState known;
+    ASSERT_TRUE(project.sync->GetPipelineState(id)->results.TryGetValue(ui + ".trace", known));
+    EXPECT_EQ(known.v, before[ui + ".trace"].v);
+}
+
+// A server that refuses the debug steps (one without them, or a file it does not take) still gets the result and the
+// node up to date, and is not asked again until the next run here
+TEST_F(AssetsLineSync_, ARefusedTraceDoesNotHoldTheResultBack)
+{
+    Web web(url);
+    Project project(url, web);
+    String id = Uid();
+    String ui = id + "-ui";
+    String doc = String(R"({"schemaVersion":1,"id":")") + id + R"(","name":"refused","nodes":[{"id":")" + ui +
+        R"(","type":"imageToUi","position":{"x":0,"y":0},"config":{},"inputs":[{"id":"in","name":"image","type":"image"}],
+         "outputs":[{"id":"p","name":"preview","type":"image"},{"id":"l","name":"layout","type":"text"}]}],"edges":[]})";
+    project.Write("Pipelines/refused.pipeline", doc);
+    ASSERT_TRUE(project.Pass());
+
+    project.Use();
+    auto graph = project.Read("Pipelines/refused.pipeline");
+    auto sigs = graph.ComputeSignatures();
+    String png = PngBytes(Color4(0, 200, 0, 255));
+    String trace = PipelineExecutor::GetWorkPath(id, ui) + "trace/";
+    o2FileSystem.FolderCreate(trace, true);
+    PipelineUtils::WriteFileBytes(trace + "trace.json", R"({"version":1,"steps":[]})");
+    PipelineUtils::WriteFileBytes(trace + "a picture.png", png);
+    PipelineUtils::WriteFileBytes(PipelineExecutor::GetPreviewPath(id, ui, "png"), png);
+    PipelineExecutor::MarkRan(id, sigs[ui]);
+    ASSERT_TRUE(project.Pass()) << project.sync->GetStatusText();
+
+    auto manifest = web.Call(HttpMethod::Get, "/api/sync/pipelines/" + id + "/results");
+    EXPECT_FALSE(manifest["results"].FindMember((ui + ".trace").Data())) << "the server refused the steps";
+    EXPECT_TRUE(manifest["results"].FindMember(ui.Data())) << "the result went up";
+    bool fresh = false;
+    for (auto& item : manifest["fresh"])
+        fresh = fresh || PipelineUtils::ValueToString(item) == ui;
+    EXPECT_TRUE(fresh) << "the node is up to date there";
+
+    AssetsLineResultState known;
+    EXPECT_TRUE(project.sync->GetPipelineState(id)->results.TryGetValue(ui + ".trace", known)) << "not sent again";
 }
 
 // A node generated again keeps its signature: the new picture must replace the generation a local run reads,

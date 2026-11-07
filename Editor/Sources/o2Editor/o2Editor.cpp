@@ -8,6 +8,8 @@ extern void __RegisterEnum__Editor__PipelineModelProvider();
 extern void __RegisterEnum__Editor__PipelineNodeCategory();
 extern void __RegisterEnum__Editor__PipelineIoView();
 extern void __RegisterEnum__Editor__AiProvider();
+extern void __RegisterEnum__Editor__LocalAgentSetup__Agent();
+extern void __RegisterEnum__Editor__LocalAgentSetup__State();
 extern void __RegisterEnum__Editor__AssetsLineStatus();
 extern void __RegisterEnum__Editor__UiLayout__Json__Kind();
 extern void __RegisterEnum__Editor__ColorGradientProperty__HandleType();
@@ -22,6 +24,7 @@ extern void __RegisterEnum__Editor__AnimationStateGraphEditor__StateWidget__Tran
 extern void __RegisterEnum__Editor__AssetsIconsScrollArea__ViewMode();
 extern void __RegisterEnum__Editor__AssetsIconsScrollArea__SortBy();
 extern void __RegisterEnum__Editor__LogWindow__LogMessage__Type();
+extern void __RegisterEnum__Editor__AssetsLineDlg__Page();
 extern void __RegisterEnum__Editor__PipelineMediaControls__Mode();
 extern void __RegisterEnum__Editor__PipelineThemeKind();
 extern void __RegisterEnum__Editor__SceneDragHandle3D__PickShape__Type();
@@ -288,6 +291,8 @@ extern void InitializeTypeso2Editor()
     __RegisterEnum__Editor__PipelineNodeCategory();
     __RegisterEnum__Editor__PipelineIoView();
     __RegisterEnum__Editor__AiProvider();
+    __RegisterEnum__Editor__LocalAgentSetup__Agent();
+    __RegisterEnum__Editor__LocalAgentSetup__State();
     __RegisterEnum__Editor__AssetsLineStatus();
     __RegisterEnum__Editor__UiLayout__Json__Kind();
     __RegisterEnum__Editor__ColorGradientProperty__HandleType();
@@ -302,6 +307,7 @@ extern void InitializeTypeso2Editor()
     __RegisterEnum__Editor__AssetsIconsScrollArea__ViewMode();
     __RegisterEnum__Editor__AssetsIconsScrollArea__SortBy();
     __RegisterEnum__Editor__LogWindow__LogMessage__Type();
+    __RegisterEnum__Editor__AssetsLineDlg__Page();
     __RegisterEnum__Editor__PipelineMediaControls__Mode();
     __RegisterEnum__Editor__PipelineThemeKind();
     __RegisterEnum__Editor__SceneDragHandle3D__PickShape__Type();

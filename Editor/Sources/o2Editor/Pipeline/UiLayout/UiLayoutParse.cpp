@@ -138,7 +138,56 @@ namespace Editor::UiLayout
         return value && value->IsString() && options.Contains(value->Str());
     }
 
-    Ref<UiEl> ElementOf(const Json& raw, double w, double h)
+    bool UsesBox2d(const String& model)
+    {
+        String id = model.Trimed(" \n\r\t").ToLowerCase();
+        if (id.StartsWith("models/"))
+            id = id.SubStr(7);
+        return id.IsEmpty() || id.StartsWith("gemini") || id.StartsWith("google/gemini");
+    }
+
+    AnalysisFrame AnalysisFrameOf(const String& model, int w, int h)
+    {
+        AnalysisFrame frame;
+        frame.w = w;
+        frame.h = h;
+        if (UsesBox2d(model))
+            return frame;
+
+        frame.boxes = "pixels";
+        frame.scale = Math::Min(1.0, Math::Min(1568.0/Math::Max(w, h), std::sqrt(1150000.0/Math::Max(1, w*h))));
+        frame.w = Math::Max(1, (int)std::floor(w*frame.scale + 0.5));
+        frame.h = Math::Max(1, (int)std::floor(h*frame.scale + 0.5));
+        return frame;
+    }
+
+    bool BoxFromPixels(const Json* value, const AnalysisFrame& frame, double w, double h, Box& out)
+    {
+        if (!value || !value->IsArray() || value->Count() != 4)
+            return false;
+
+        double v[4];
+        for (int i = 0; i < 4; i++)
+        {
+            v[i] = value->At(i)->ToJsNumber();
+            if (!std::isfinite(v[i]))
+                return false;
+        }
+
+        double x0 = v[0], y0 = v[1], x1 = v[2], y1 = v[3];
+        if (x1 < x0) std::swap(x0, x1);
+        if (y1 < y0) std::swap(y0, y1);
+
+        double k = frame.scale > 0 ? 1.0/frame.scale : 1.0;
+        Box box = ClampBox(Box(x0*k, y0*k, (x1 - x0)*k, (y1 - y0)*k), w, h);
+        if (box.w < 1 || box.h < 1)
+            return false;
+
+        out = box;
+        return true;
+    }
+
+    Ref<UiEl> ElementOf(const Json& raw, double w, double h, const AnalysisFrame* frame /*= nullptr*/)
     {
         if (!raw.IsObject())
             return nullptr;
@@ -147,13 +196,23 @@ namespace Editor::UiLayout
         if (!uiKinds.Contains(kind))
             return nullptr;
 
-        const Json* boxValue = raw.Get("box_2d");
-        if (!boxValue || boxValue->IsNull())
-            boxValue = raw.Get("box");
-
+        // Asked for pixels, a model may still answer box_2d: either is read
         Box box;
-        if (!BoxFrom2d(boxValue, w, h, box))
-            return nullptr;
+        const Json* pixels = raw.Get("box");
+        if (frame && frame->boxes == "pixels" && pixels && pixels->IsArray())
+        {
+            if (!BoxFromPixels(pixels, *frame, w, h, box))
+                return nullptr;
+        }
+        else
+        {
+            const Json* boxValue = raw.Get("box_2d");
+            if (!boxValue || boxValue->IsNull())
+                boxValue = raw.Get("box");
+
+            if (!BoxFrom2d(boxValue, w, h, box))
+                return nullptr;
+        }
 
         auto el = mmake<UiEl>();
         el->kind = kind;
@@ -260,7 +319,8 @@ namespace Editor::UiLayout
         }
     }
 
-    bool ParseAnalysis(const String& text, int w, int h, UiDoc& out, String* error /*= nullptr*/)
+    bool ParseAnalysis(const String& text, int w, int h, UiDoc& out, String* error /*= nullptr*/,
+                       const AnalysisFrame* frame /*= nullptr*/)
     {
         Json parsed;
         if (!JsonOf(text, parsed))
@@ -303,7 +363,7 @@ namespace Editor::UiLayout
         {
             for (auto& raw : items->Items())
             {
-                auto el = ElementOf(raw, w, h);
+                auto el = ElementOf(raw, w, h, frame);
                 if (!el)
                     continue;
 

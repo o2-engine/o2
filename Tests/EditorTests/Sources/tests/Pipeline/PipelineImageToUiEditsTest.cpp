@@ -76,6 +76,8 @@ TEST(ImageToUiEdits, RoundsAndDraftsAreCleanedAndARoundHasHalfTheTurns)
     String sig = PipelineGraph::ComputeNodeSignature(*node, {}, {}, 1);
     PipelineImageToUi::WriteDraft(*node, { Note("not sent", "result", 3, 4) });
     node->SetConfigBool("editsView", true);
+    node->SetConfigString("exportFor", "o2"); // the editor the web card downloads the layout for
+    EXPECT_TRUE(PipelineGraph::GetUiOnlyConfigKeys().Contains("exportFor"));
     EXPECT_EQ(PipelineGraph::ComputeNodeSignature(*node, {}, {}, 1), sig);
     PipelineImageToUi::WriteEdits(*node, { { "r1", { Note("call the red button start", "result", 120, 245) } } });
     String withRound = PipelineGraph::ComputeNodeSignature(*node, {}, {}, 1);

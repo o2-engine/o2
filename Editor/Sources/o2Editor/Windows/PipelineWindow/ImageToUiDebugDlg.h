@@ -9,6 +9,7 @@ using namespace o2;
 
 namespace o2
 {
+    class ScrollArea;
     class Window;
 }
 
@@ -55,5 +56,11 @@ namespace Editor
 
         // Returns the window, null before the first Show
         Ref<Window> GetWindow();
+
+        // Returns the list of the steps (tests)
+        Ref<ScrollArea> GetStepsList();
+
+        // Destroys the window; the next Show builds it in the theme of the moment (tests)
+        void Reset();
     }
 }

@@ -12,7 +12,7 @@ namespace Editor
     enum class PipelineModelKind { Text, Image, Video, Tts, ElevenLabs };
 
     // API a model runs on as far as its id tells; the order is the order of the provider chips
-    enum class PipelineModelProvider { Google, OpenAi, Kling, ElevenLabs, OpenRouter };
+    enum class PipelineModelProvider { Google, OpenAi, Kling, ElevenLabs, OpenRouter, Local };
 
     // Group a model id belongs to
     struct PipelineModelGroupKey

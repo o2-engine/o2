@@ -7,6 +7,7 @@
 #include "o2Editor/Pipeline/PipelineNodeType.h"
 #include "o2Editor/Pipeline/PipelineUtils.h"
 #include "o2Editor/Pipeline/UiLayout/UiLayoutAi.h"
+#include "o2Editor/Pipeline/UiLayout/UiLayoutGridFit.h"
 #include "o2Editor/Pipeline/UiLayout/UiLayoutParse.h"
 #include "o2Editor/Pipeline/UiLayout/UiLayoutPrompts.h"
 #include "o2Editor/Pipeline/UiLayout/UiLayoutRunSteps.h"
@@ -91,6 +92,213 @@ TEST(ImageToUiPrompts, AreTheReferenceStrings)
     EXPECT_EQ(Sha256Hex(Prompts::Background("")), "cbfc1e62edf0866f7b16fb5ae5664bde918bc8359d78b5244ce1f2eb8927f1b9");
     EXPECT_EQ(Sha256Hex(Prompts::Background("light beige background", true)), "098541c7b8fe77660742909abde7f43d6ed3fa66a4a4403bc9d5e72e42505032");
     EXPECT_EQ(Sha256Hex(Prompts::Background("", true)), "7e2c587825c1856d8edbbbaf6c0957f1c384097a05706e47aea10f51fa233d38");
+}
+
+// Gemini keeps its 0..1000 box_2d; any other model answers pixels of a picture it does not scale itself (the web's
+// analysisFrame, its prompt hash and its reading of the boxes)
+TEST(ImageToUiAnalysis, GeminiAnswersBox2dOtherModelsPixels)
+{
+    for (String m : { "gemini-3.1-pro-preview", "models/gemini-2.5-pro", "google/gemini-3.5-flash", "" })
+        EXPECT_TRUE(UsesBox2d(m)) << m.Data();
+    for (String m : { "local:claude-code:opus", "anthropic/claude-sonnet-5.5", "gpt-5.5", "openai/gpt-5.4-mini" })
+        EXPECT_FALSE(UsesBox2d(m)) << m.Data();
+
+    auto gemini = AnalysisFrameOf("gemini-3.1-pro-preview", 1080, 2340);
+    EXPECT_EQ(gemini.boxes, "box_2d");
+    EXPECT_EQ(gemini.w, 1080);
+    EXPECT_EQ(gemini.scale, 1.0);
+    auto small = AnalysisFrameOf("local:claude-code:opus", 674, 1408);
+    EXPECT_EQ(small.boxes, "pixels");
+    EXPECT_EQ(small.w, 674);
+    EXPECT_EQ(small.h, 1408);
+    auto big = AnalysisFrameOf("anthropic/claude-sonnet-5.5", 1080, 2340);
+    EXPECT_EQ(big.boxes, "pixels");
+    EXPECT_EQ(big.w, 724);
+    EXPECT_EQ(big.h, 1568);
+    EXPECT_NEAR(big.scale, 0.67008547008547, 1e-9);
+
+    EXPECT_EQ(Prompts::Analyze(471, 1026, ""), Prompts::Analyze(471, 1026, "", "box_2d")) << "the Gemini prompt is as it was";
+    EXPECT_EQ(Sha256Hex(Prompts::Analyze(674, 1408, "  a word game  ", "pixels")), "09731d23a14d664ca27babf0311f1209aea99b48d293825c6db4b3c7dedefed2");
+
+    String answer = "{\"elements\":[{\"id\":\"b\",\"kind\":\"button\",\"look\":\"button_green\",\"box\":[100,200,150,260]},"
+                    "{\"id\":\"p\",\"kind\":\"panel\",\"look\":\"panel\",\"box_2d\":[0,0,500,500]}]}";
+    UiDoc doc;
+    ASSERT_TRUE(ParseAnalysis(answer, 1080, 2340, doc, nullptr, &big));
+    ASSERT_EQ(doc.els.Count(), 2);
+    double k = 1.0/big.scale;
+    EXPECT_NEAR(doc.els[0]->box.x, 100*k, 0.01);
+    EXPECT_NEAR(doc.els[0]->box.y, 200*k, 0.01);
+    EXPECT_NEAR(doc.els[0]->box.w, 50*k, 0.01);
+    EXPECT_NEAR(doc.els[0]->box.h, 60*k, 0.01);
+    EXPECT_NEAR(doc.els[1]->box.w, 540, 0.01) << "a box_2d answer is still read";
+    EXPECT_NEAR(doc.els[1]->box.h, 1170, 0.01);
+}
+
+namespace
+{
+    void FillRect(UiImage& img, int x0, int y0, int x1, int y1, UInt8 r, UInt8 g, UInt8 b)
+    {
+        for (int y = std::max(0, y0); y < std::min(img.h, y1); y++)
+        {
+            for (int x = std::max(0, x0); x < std::min(img.w, x1); x++)
+            {
+                UInt8* p = img.At(x, y);
+                p[0] = r; p[1] = g; p[2] = b; p[3] = 255;
+            }
+        }
+    }
+
+    // A word board as in a word game: tiles 56x52 every 64x60 px from (18, 18) on a dark board, a letter and an index
+    // digit on each; rows of 6, 5, 5 and 7 tiles. The gutters run at x = 14 + 64k, y = 14 + 60k
+    UiImage WordBoard()
+    {
+        UiImage img = UiImage::Blank(480, 300, 230, 215, 180, 255);
+        FillRect(img, 10, 10, 460, 270, 110, 80, 60);
+        int counts[4] = { 6, 5, 5, 7 };
+        for (int r = 0; r < 4; r++)
+        {
+            for (int c = 0; c < counts[r]; c++)
+            {
+                int x = 18 + 64*c, y = 18 + 60*r;
+                FillRect(img, x, y, x + 56, y + 52, 150, 110, 70);
+                FillRect(img, x + 2, y + 2, x + 54, y + 50, 240, 225, 190);
+                FillRect(img, x + 16, y + 12, x + 28, y + 40, 60, 40, 30);
+                FillRect(img, x + 44, y + 38, x + 49, y + 45, 60, 40, 30);
+            }
+        }
+        return img;
+    }
+
+    // The board as a model answers it, in pixels: the box, the counts and the cells (an empty column or row is null)
+    String BoardAnswer(const String& box, int rows, int cols)
+    {
+        int counts[4] = { 6, 5, 5, 7 };
+        String cells;
+        for (int r = 0; r < rows; r++)
+        {
+            for (int c = 0; c < cols; c++)
+            {
+                cells += cells.IsEmpty() ? "" : ",";
+                cells += r < 4 && c < counts[r] ? "{\"look\":\"tile\",\"texts\":[\"A\",\"1\"]}" : "null";
+            }
+        }
+        return "{\"elements\":[{\"id\":\"board\",\"kind\":\"grid\",\"box\":" + box + ",\"rows\":" + (String)rows + ",\"cols\":" +
+            (String)cols + ",\"cells\":[" + cells + "]}]}";
+    }
+
+    UiDoc ParsedBoard(const String& answer, const UiImage& img)
+    {
+        auto frame = AnalysisFrameOf("local:claude-code:opus", img.w, img.h);
+        UiDoc doc;
+        EXPECT_TRUE(ParseAnalysis(answer, img.w, img.h, doc, nullptr, &frame));
+        return doc;
+    }
+}
+
+// A model's grid goes onto the cells the picture shows: an empty column too many is dropped, a box a row short takes the
+// picture's pitch, a right answer and a picture without a period stay as they are (the web's gridFit.ts)
+TEST(ImageToUiAnalysis, GridsGoOntoTheCellsOfThePicture)
+{
+    UiImage board = WordBoard();
+
+    // One column too many, empty in every row
+    UiDoc extra = ParsedBoard(BoardAnswer("[12,14,460,254]", 4, 8), board);
+    auto notes = FitGrids(extra, board);
+    ASSERT_EQ(notes.Count(), 1);
+    EXPECT_EQ(notes[0], "board: 8\xE2\x86\x92" "7 columns");
+    auto grid = extra.ById("board");
+    EXPECT_EQ(*grid->cols, 7);
+    EXPECT_EQ(*grid->rows, 4);
+    EXPECT_NEAR(grid->box.x, 14, 2);
+    EXPECT_NEAR(grid->box.w, 7*64, 3);
+    auto last = extra.ById("board_r3c6");
+    ASSERT_TRUE(last);
+    EXPECT_NEAR(last->box.x, 14 + 6*64, 2) << "the last tile's cell sits on it";
+    EXPECT_NEAR(last->box.w, 64, 0.5);
+    EXPECT_EQ(last->measured, "grid");
+    auto label = extra.ById("board_r3c6_t0");
+    ASSERT_TRUE(label);
+    EXPECT_NEAR(label->box.x, last->box.x, 0.001) << "the cell's texts follow it";
+
+    // The right counts in a box a row short
+    UiDoc shortBox = ParsedBoard(BoardAnswer("[14,14,462,230]", 4, 7), board);
+    notes = FitGrids(shortBox, board);
+    ASSERT_EQ(notes.Count(), 1);
+    EXPECT_TRUE(notes[0].StartsWith("board: rows 54.0\xE2\x86\x92")) << notes[0].Data();
+    grid = shortBox.ById("board");
+    EXPECT_EQ(*grid->rows, 4);
+    EXPECT_NEAR(grid->box.y, 14, 2);
+    EXPECT_NEAR(grid->box.h, 4*60, 3);
+    EXPECT_NEAR(shortBox.ById("board_r3c0")->box.y, 14 + 3*60, 2);
+
+    // A right answer stays
+    UiDoc right = ParsedBoard(BoardAnswer("[14,14,462,254]", 4, 7), board);
+    EXPECT_TRUE(FitGrids(right, board).IsEmpty());
+    EXPECT_EQ(right.ById("board")->box.x, 14);
+    EXPECT_EQ(right.ById("board")->measured, "analysis");
+
+    // No period in the picture: nothing moves
+    UiImage flat = UiImage::Blank(480, 300, 120, 90, 60, 255);
+    UiDoc plain = ParsedBoard(BoardAnswer("[12,14,460,254]", 4, 8), flat);
+    EXPECT_TRUE(FitGrids(plain, flat).IsEmpty());
+    EXPECT_EQ(*plain.ById("board")->cols, 8);
+}
+
+// A run's own analysis fitted again (O2_IMAGE_TO_UI_TRACE = a copy of a node's trace folder): the boxes as answered and as
+// fitted are written beside it as analysis-answered.png / analysis-fitted.png, the parsed boxes as analysis-parsed.txt
+TEST(ImageToUiAnalysis, FitsTheGridsOfARecordedRun)
+{
+    const char* dir = getenv("O2_IMAGE_TO_UI_TRACE");
+    if (!dir)
+        GTEST_SKIP() << "O2_IMAGE_TO_UI_TRACE is not set";
+
+    String folder = String(dir) + "/";
+    Json trace;
+    ASSERT_TRUE(Json::Parse(PipelineUtils::ReadFileBytes(folder + "trace.json"), trace));
+    String answer;
+    String boxes = "box_2d";
+    for (auto& step : trace.Get("steps")->Items())
+    {
+        if (step.Get("id") && step.Get("id")->Str() == "analysis")
+        {
+            answer = step.Get("text")->Str();
+            if (auto data = step.Get("data"); data && data->Get("boxes"))
+                boxes = data->Get("boxes")->Str();
+        }
+    }
+    ASSERT_FALSE(answer.IsEmpty());
+
+    UiImage design;
+    ASSERT_TRUE(UiImage::Decode(PipelineUtils::ReadFileBytes(folder + "design.png"), design));
+    auto frame = AnalysisFrameOf(boxes == "pixels" ? "local:claude-code" : "gemini-3.1-pro-preview", design.w, design.h);
+    UiDoc doc;
+    ASSERT_TRUE(ParseAnalysis(answer, design.w, design.h, doc, nullptr, &frame));
+    PipelineUtils::WriteFileBytes(folder + "analysis-answered.png", OverlayKinds(design, doc).Png());
+    String parsed;
+    for (auto& e : doc.els)
+    {
+        if (!e->cell && !e->slot)
+            parsed += e->id + " " + Json::FormatNumber(e->box.x) + " " + Json::FormatNumber(e->box.y) + " " + Json::FormatNumber(e->box.Right()) + " " +
+                Json::FormatNumber(e->box.Bottom()) + "\n";
+    }
+    PipelineUtils::WriteFileBytes(folder + "analysis-parsed.txt", parsed);
+    auto notes = FitGrids(doc, design);
+    PipelineUtils::WriteFileBytes(folder + "analysis-fitted.png", OverlayKinds(design, doc).Png());
+    for (auto& line : notes)
+        printf("grid fit: %s\n", line.Data());
+    for (auto& e : doc.els)
+    {
+        if (e->kind == "grid")
+            printf("%s %dx%d at %.1f,%.1f %.1fx%.1f\n", e->id.Data(), *e->rows, *e->cols, e->box.x, e->box.y, e->box.w, e->box.h);
+    }
+
+    if (const char* expect = getenv("O2_IMAGE_TO_UI_EXPECT_FIT"))
+    {
+        String all;
+        for (auto& line : notes)
+            all += line + "\n";
+        EXPECT_TRUE(all.Contains(expect)) << all.Data();
+    }
 }
 
 TEST(ImageToUiAi, MemoKeysAreTheReferenceOnes)
@@ -278,9 +486,16 @@ TEST(ImageToUiConfig, ReadsTheNodeLikeTheServer)
     EXPECT_TRUE(PipelineNodeRegistry::GetSchema("imageToUi")->dynamicOutputs);
     EXPECT_TRUE(PipelineGraph::IsSeededType("imageToUi"));
 
+    // A new node starts on Codex and keeps the models in its config; an empty value reads as the default
+    EXPECT_EQ(node->GetConfigString("model", ""), "local:codex:gpt-6.1-sol");
+    EXPECT_EQ(node->GetConfigString("imageModel", ""), "local:codex-image");
     auto cfg = PipelineImageToUi::ReadConfig(*node);
-    EXPECT_EQ(cfg.model, "gemini-3.1-pro-preview");
-    EXPECT_EQ(cfg.imageModel, "gemini-3.1-flash-image");
+    EXPECT_EQ(cfg.model, "local:codex:gpt-6.1-sol");
+    EXPECT_EQ(cfg.imageModel, "local:codex-image");
+    node->SetConfigString("model", " ");
+    node->SetConfigString("imageModel", "");
+    EXPECT_EQ(PipelineImageToUi::ReadConfig(*node).model, PipelineImageToUi::defaultModel);
+    EXPECT_EQ(PipelineImageToUi::ReadConfig(*node).imageModel, PipelineImageToUi::defaultImageModel);
     EXPECT_EQ(cfg.maxTurns, 60);
     EXPECT_EQ(cfg.screenName, "Screen");
     EXPECT_EQ(cfg.assetPath, "Generated/UI");

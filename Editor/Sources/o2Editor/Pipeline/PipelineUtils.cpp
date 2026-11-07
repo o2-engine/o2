@@ -1,6 +1,8 @@
 #include "o2Editor/stdafx.h"
 #include "PipelineUtils.h"
 
+#include "o2Editor/Pipeline/Providers/LocalAgentProvider.h"
+
 #include "o2/EngineSettings.h"
 #include "o2/Utils/Debug/Debug.h"
 #include "o2/Utils/FileSystem/File.h"
@@ -601,6 +603,9 @@ namespace Editor::PipelineUtils
         String id = idIn.StartsWith("models/") ? idIn.SubStr(7) : idIn;
         if (id.IsEmpty())
             return id;
+
+        if (LocalAgentProvider::IsLocalModel(id))
+            return LocalAgentProvider::PrettyName(id);
 
         String name;
         if (known.TryGetValue(id, name))

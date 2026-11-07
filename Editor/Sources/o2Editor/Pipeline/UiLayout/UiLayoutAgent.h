@@ -40,8 +40,10 @@ namespace Editor::UiLayout
         // Kills the process when it still runs
         ~AgentProcess();
 
-        // Starts exe with the arguments in the folder; false with the reason when it cannot
-        bool Start(const String& exe, const Vector<String>& args, const String& cwd, String& error);
+        // Starts exe with the arguments in the folder; env holds NAME=value entries set over the inherited environment (a
+        // bare NAME drops the variable); false with the reason when it cannot
+        bool Start(const String& exe, const Vector<String>& args, const String& cwd, String& error,
+                   const Vector<String>& env = Vector<String>());
 
         // Reads what stdout and stderr hold and writes what is queued for stdin
         void Pump();
@@ -51,6 +53,9 @@ namespace Editor::UiLayout
 
         // Queues bytes for stdin; Pump writes them
         void Write(const String& data);
+
+        // Closes stdin once what is queued is written, so the process sees the end of its input
+        void CloseInput();
 
         // Returns true once stdout reached its end
         bool IsOutputClosed() const { return mOutEof; }
@@ -68,6 +73,7 @@ namespace Editor::UiLayout
         int  mPid = -1;
         int  mIn = -1, mOut = -1, mErr = -1;
         bool mOutEof = false;
+        bool mCloseInput = false;
         bool mExited = false;
         int  mExitCode = -1;
 

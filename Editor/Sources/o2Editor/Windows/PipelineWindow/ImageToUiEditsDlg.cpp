@@ -265,7 +265,8 @@ namespace Editor
             Refresh();
         }
 
-        // Reads the rounds and the pictures again and rebuilds the side; executor events call it between frames
+        // Reads the rounds and the pictures again; the side is built again only when what it shows changed (the card calls
+        // this on every change of its config or outputs, a sync pass among them, and a note being typed must keep its field)
         void Refresh()
         {
             PushEditorScopeOnStack scope;
@@ -274,7 +275,10 @@ namespace Editor
             if (mView >= mRounds.Count())
                 mView = -1;
             RefreshPictures();
-            Rebuild();
+            if (ShownSignature() != mShown)
+                Rebuild();
+            else
+                UpdateApply();
         }
 
         void Point(const String& on, int x, int y)
@@ -308,7 +312,7 @@ namespace Editor
                 return;
 
             mDraft[index].text = text;
-            SaveDraft();
+            SaveDraft(rebuild);
             if (rebuild)
                 Rebuild();
             else
@@ -415,6 +419,7 @@ namespace Editor
         Vector<PipelineImageToUiEditRound> mRounds;
         int                                mView = -1;  // The applied round looked at, -1 for none
         int                                mFocus = -1; // The note whose field takes the focus after the rebuild
+        String                             mShown;      // What the side showed when it was built (ShownSignature)
         bool                               mHasResult = false;
         bool                               mPicturesPending = false;
         float                              mPoll = 0.0f;
@@ -429,7 +434,9 @@ namespace Editor
             return graph ? graph->FindNode(nodeId) : nullptr;
         }
 
-        void SaveDraft()
+        // Writes the draft into the node; tell lets the editor know (it saves and syncs the pipeline then), which typing does
+        // only when the field is left
+        void SaveDraft(bool tell = true)
         {
             auto e = editor.Lock();
             auto node = Node();
@@ -437,8 +444,31 @@ namespace Editor
                 return;
 
             PipelineImageToUi::WriteDraft(*node, mDraft);
+            if (!tell)
+                return;
             if (auto widget = e->GetNodeWidget(nodeId))
                 e->OnNodeConfigChanged(widget, "editsDraft", true);
+        }
+
+    public:
+        // Lets the editor know of the draft typed: the field is left, or the window closes
+        void TellDraft()
+        {
+            SaveDraft(true);
+        }
+
+    private:
+        // What the side shows, to build it again only when it changes
+        String ShownSignature() const
+        {
+            String sig = (String)mView + "|" + (String)running + "|" + (String)mHasResult + "|" + (String)mDraft.Count();
+            for (auto& round : mRounds)
+            {
+                sig += "|" + round.id + ":" + (String)round.items.Count();
+                for (auto& item : round.items)
+                    sig += ":" + item.text;
+            }
+            return sig;
         }
 
         // A change of the rounds as one undo step, then the card follows it and the node runs
@@ -614,6 +644,7 @@ namespace Editor
             edit->name = "note text";
             *edit->layout = WidgetLayout::BothStretch(8, 8, 8, 34);
             edit->onChanged = [this, index](const WString& text) { SetNoteText(index, (String)text, false); };
+            edit->onChangeCompleted = [this](const WString&) { TellDraft(); };
             SetEnabledLook(edit, !running);
             edit->interactable = !running;
             note->AddChild(edit);
@@ -628,6 +659,22 @@ namespace Editor
             auto pins = GetPins();
             for (auto& pane : mPanes)
                 pane->pins = pins;
+
+            // A note being typed keeps its field focused, at the same caret, through the rebuild
+            int typed = -1, caret = 0;
+            if (auto focused = DynamicCast<EditBox>(o2UI.GetFocusedWidget()))
+            {
+                auto note = focused->GetParentWidget().Lock();
+                if (note && focused->GetName() == "note text" && note->GetParentWidget().Lock() == mList &&
+                    note->GetName().StartsWith("note "))
+                {
+                    typed = atoi(note->GetName().SubStr(5).Data()) - 1;
+                    caret = focused->GetCaretPosition();
+                }
+            }
+            if (mFocus < 0 && typed >= 0 && typed < mDraft.Count())
+                mFocus = typed;
+            int focusIndex = mFocus;
 
             mList->RemoveAllChildren();
             if (!mRounds.IsEmpty())
@@ -648,7 +695,17 @@ namespace Editor
             for (int i = 0; i < mDraft.Count(); i++)
                 AddNote(i);
 
+            if (focusIndex >= 0 && focusIndex == typed)
+            {
+                if (auto note = mList->FindChild("note " + (String)(focusIndex + 1)))
+                {
+                    if (auto field = note->FindChildByTypeAndName<EditBox>("note text"))
+                        field->SetCaretPosition(caret);
+                }
+            }
+
             mFocus = -1;
+            mShown = ShownSignature();
             UpdateApply();
         }
     };
@@ -690,6 +747,8 @@ namespace Editor
             {
                 auto& st = St();
                 st.shown = false;
+                if (st.panel)
+                    st.panel->TellDraft();
                 if (st.panel && st.panel->onClose)
                 {
                     auto close = st.panel->onClose;
@@ -727,6 +786,7 @@ namespace Editor
                 return;
 
             auto& st = St();
+            st.panel->TellDraft();
             st.panel->onClose = Function<void()>();
             st.shown = false;
             st.window->Hide();

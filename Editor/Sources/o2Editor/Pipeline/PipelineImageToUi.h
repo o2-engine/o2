@@ -88,8 +88,8 @@ namespace Editor
     namespace PipelineImageToUi
     {
         extern const String type;              // imageToUi
-        extern const String defaultModel;      // gemini-3.1-pro-preview
-        extern const String defaultImageModel; // gemini-3.1-flash-image
+        extern const String defaultModel;      // local:codex:gpt-6.1-sol (the server: gpt-6.1-sol)
+        extern const String defaultImageModel; // local:codex-image (the server: gpt-image-2.5-sunburst)
         extern const String defaultScreenName; // Screen
         extern const String defaultAssetPath;  // Generated/UI
         constexpr int       defaultMaxTurns = 60;

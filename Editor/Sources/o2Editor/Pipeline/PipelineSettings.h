@@ -22,6 +22,17 @@ namespace Editor
 
         String imageToUiPython; // Python 3 for AI image to UI, empty: the first python3 found
 
+        bool   localAgentEnabled = true;   // The model menus offer the local agents found on this computer
+        String localAgentPath;             // Claude Code executable, empty: found on PATH and in the usual install folders
+        String localAgentModel;            // Model local:claude-code runs on (haiku, sonnet, opus or an id), empty: Claude Code's
+        String localAgentApiKey;           // Anthropic API key Claude Code runs on in --bare mode, empty: its own login
+        bool   localAgentThinking = false; // Let Claude Code think (more tokens); off sets MAX_THINKING_TOKENS=0
+        String localCommand;               // Shell command of local:command: the prompt on stdin, the answer on stdout
+        String localCodexPath;             // Codex executable, empty: found on PATH and in the usual install folders
+        String localCodexModel;            // Model local:codex runs on, empty: Codex's own
+        String localCodexEffort = "low";   // Codex reasoning effort (minimal, low, medium, high), empty: Codex's own
+        String localCodexApiKey;           // OpenAI API key Codex runs on (API prices), empty: its ChatGPT login
+
     public:
         // Loads settings from the settings file (missing file gives empty keys)
         static PipelineSettings Load();
@@ -49,5 +60,9 @@ namespace Editor
 
         // Returns effective Kling secret key: stored key or KLING_SECRET_KEY
         String GetKlingSecretKey() const;
+
+        // Returns the Anthropic key Claude Code runs on: the stored key; empty: its own login (the environment's key is not
+        // taken, so it never runs on API prices unasked)
+        String GetLocalAgentApiKey() const;
     };
 }

@@ -13,16 +13,20 @@
 #include "o2/Scene/UI/Widgets/Toggle.h"
 #include "o2/Scene/UI/Widgets/Window.h"
 #include "o2/Utils/Editor/EditorScope.h"
+#include <filesystem>
 #include "o2/Utils/FileSystem/FileSystem.h"
 #include "o2/Utils/Test/AppTestDriver.h"
 #include "o2Editor/Pipeline/PipelineNodeType.h"
 #include "o2Editor/Pipeline/PipelinePairLayout.h"
 #include "o2Editor/Pipeline/PipelineSettings.h"
+#include "o2Editor/Pipeline/Providers/LocalAgentProvider.h"
 #include "o2Editor/Pipeline/PipelineUtils.h"
 #include "o2Editor/Pipeline/Sync/AssetsLineSync.h"
 #include "o2Editor/UIRoot.h"
 #include "o2Editor/Windows/PipelineWindow/AssetsLineDeleteDlg.h"
 #include "o2Editor/Windows/PipelineWindow/AssetsLineDlg.h"
+#include "o2Editor/Pipeline/Providers/LocalAgentSetup.h"
+#include <thread>
 #include "o2Editor/Windows/PipelineWindow/PipelineWindow.h"
 
 using namespace o2;
@@ -308,6 +312,150 @@ TEST_F(PipelineSyncUiFixture, TheSettingsWindowStoresTheProviderKeys)
     ASSERT_TRUE(close);
     EXPECT_GE(close->layout->GetWorldRect().bottom, window->layout->GetWorldRect().bottom);
     Shot("pipeline_settings");
+    window->Hide(true);
+}
+
+// The local agents page: a card each, its state from the agent's own status command (fakes here), Sign in opening a terminal
+// (a stand-in here) and the agent ready once signed in; the dropdowns store the model, thinking or effort and the account,
+// the API key row shows only for the API key account; the window stays short
+TEST_F(PipelineSyncUiFixture, TheLocalAgentsPageShowsTheirStateAndSetsThemUp)
+{
+    using namespace LocalAgentSetup;
+    String dir = PipelineUtils::GetWorkPath() + "agents/";
+    o2FileSystem.FolderCreate(dir, true);
+    PipelineUtils::WriteFileBytes(dir + "claude",
+        "#!/bin/sh\necho '{\"loggedIn\":true,\"authMethod\":\"claude.ai\",\"subscriptionType\":\"pro\",\"email\":\"me@test\"}'\n");
+    PipelineUtils::WriteFileBytes(dir + "codex",
+        "#!/bin/sh\n"
+        "case \"$*\" in\n"
+        "  'login status') if [ -f \"$(dirname \"$0\")/signed-in\" ]; then echo 'Logged in using ChatGPT' >&2; else echo 'Not logged in' >&2; exit 1; fi ;;\n"
+        "  'debug models --bundled') echo '{\"models\":[{\"slug\":\"fake-1\",\"display_name\":\"Fake One\",\"visibility\":\"list\",\"priority\":1}]}' ;;\n"
+        "esac\n");
+    for (String name : { "claude", "codex" })
+        std::filesystem::permissions((dir + name).Data(), std::filesystem::perms::owner_all);
+
+    auto settings = PipelineSettings::Load();
+    settings.localAgentPath = dir + "claude";
+    settings.localCodexPath = dir + "codex";
+    settings.Save();
+
+    Vector<Agent> opened;
+    SetSetupOpener([&](Agent agent, const String&) { opened.Add(agent); return true; });
+    struct Restore { ~Restore() { SetSetupOpener(Function<bool(Agent, const String&)>()); } } restore;
+
+    AssetsLineDlg::Show(AssetsLineDlg::Page::Agents);
+    auto& dlg = AssetsLineDlg::Instance();
+    auto window = dlg.GetWindow();
+    auto label = [&](const String& name) { return (String)DynamicCast<Label>(window->FindChild(name))->GetText(); };
+    auto settle = [&]()
+    {
+        // The editor moves the dialog every frame; here the test does
+        for (int i = 0; i < 300; i++)
+        {
+            dlg.Update(0.02f);
+            Step(1);
+            if (label("claude state") != "Checking..." && label("codex state") != "Checking...")
+                break;
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        }
+        for (int i = 0; i < 20; i++)
+        {
+            dlg.Update(0.02f);
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        }
+        Step(2);
+    };
+    settle();
+
+    EXPECT_EQ(dlg.GetPage(), AssetsLineDlg::Page::Agents);
+    EXPECT_TRUE(window->FindChild("agents page")->IsEnabledInHierarchy());
+    EXPECT_FALSE(window->FindChild("sync page")->IsEnabledInHierarchy());
+    EXPECT_TRUE(DynamicCast<Toggle>(window->FindChild("tab agents"))->GetValue());
+    EXPECT_TRUE(DynamicCast<Toggle>(window->FindChild("local agent on"))->GetValue()) << "on by default";
+
+    // Claude Code is signed in; Codex is installed and signed out
+    EXPECT_EQ(label("claude state"), "Ready") << label("claude state").Data() << " / " << label("claude detail").Data();
+    EXPECT_EQ(label("claude detail"), "Signed in \xC2\xB7 Claude Pro \xC2\xB7 me@test") << label("claude detail").Data();
+    EXPECT_FALSE(window->FindChild("claude setup")->IsEnabled());
+    EXPECT_TRUE(window->FindChild("claude options")->IsEnabledInHierarchy());
+    EXPECT_EQ(label("codex state"), "Not signed in") << label("codex state").Data() << " / " << label("codex detail").Data();
+    auto codexSetup = DynamicCast<Button>(window->FindChild("codex setup"));
+    ASSERT_TRUE(codexSetup && codexSetup->IsEnabledInHierarchy());
+    EXPECT_EQ((String)codexSetup->GetCaption(), "Sign in...");
+    EXPECT_TRUE(window->FindChild("codex options")->IsEnabledInHierarchy()) << "an API key can be chosen instead";
+    auto codexModel = DynamicCast<DropDown>(window->FindChild("codex model"));
+    ASSERT_TRUE(codexModel);
+    EXPECT_TRUE(codexModel->FindItem("Fake One") >= 0) << "the models of Codex's catalog";
+
+    Shot("pipeline_settings_agents");
+
+    // Sign in: the terminal opens with Codex's setup; signed in there, the card is ready
+    codexSetup->onClick();
+    dlg.Update(0.02f);
+    Step(2);
+    ASSERT_EQ(opened.Count(), 1);
+    EXPECT_EQ(opened[0], Agent::Codex);
+    EXPECT_EQ(label("codex state"), "Setting up...");
+    EXPECT_TRUE(label("codex detail").Contains("Terminal"));
+    PipelineUtils::WriteFileBytes(dir + "signed-in", "");
+    DynamicCast<Button>(window->FindChild("codex check"))->onClick();
+    settle();
+    EXPECT_EQ(label("codex state"), "Ready");
+    EXPECT_EQ(label("codex detail"), "Signed in with ChatGPT");
+
+    // The dropdowns store what they show
+    DynamicCast<DropDown>(window->FindChild("claude model"))->SelectItemText("Sonnet \xE2\x80\x94 balanced");
+    DynamicCast<DropDown>(window->FindChild("claude thinking"))->SelectItemText("On \xE2\x80\x94 deeper answers, more tokens");
+    codexModel->SelectItemText("Fake One");
+    DynamicCast<DropDown>(window->FindChild("codex effort"))->SelectItemText("Medium");
+    settings = PipelineSettings::Load();
+    EXPECT_EQ(settings.localAgentModel, "sonnet");
+    EXPECT_TRUE(settings.localAgentThinking);
+    EXPECT_EQ(settings.localCodexModel, "fake-1");
+    EXPECT_EQ(settings.localCodexEffort, "medium");
+    EXPECT_EQ(settings.localAgentPath, dir + "claude") << "the paths stay";
+
+    // The API key account: its row shows, the key needs no sign-in; back on the subscription the key goes
+    auto account = DynamicCast<DropDown>(window->FindChild("codex account"));
+    auto keyRow = window->FindChild("codex key row");
+    EXPECT_FALSE(keyRow->IsEnabledInHierarchy());
+    account->SelectItemText("OpenAI API key");
+    dlg.Update(0.02f);
+    Step(2);
+    EXPECT_TRUE(keyRow->IsEnabledInHierarchy());
+    auto key = DynamicCast<EditBox>(window->FindChild("codex key"));
+    key->SetText("sk-test");
+    key->onChangeCompleted(key->GetText());
+    settle();
+    EXPECT_EQ(PipelineSettings::Load().localCodexApiKey, "sk-test");
+    EXPECT_TRUE(label("codex detail").Contains("API key")) << label("codex detail").Data();
+    account->SelectItemText("ChatGPT subscription");
+    dlg.Update(0.02f);
+    Step(2);
+    EXPECT_FALSE(keyRow->IsEnabledInHierarchy());
+    EXPECT_EQ(PipelineSettings::Load().localCodexApiKey, "");
+
+    // Custom paths are set here, so their fold is open; the window stays short and fits its last row
+    EXPECT_TRUE(window->FindChild("local agent custom section")->IsEnabledInHierarchy());
+    EXPECT_TRUE(label("local agent found").StartsWith("Runs /") && label("local agent found").EndsWith("/agents/claude"))
+        << label("local agent found").Data() << ": the path made whole";
+    Step(2);
+    EXPECT_LT(window->layout->GetHeight(), 760.0f);
+    auto close = window->FindChildByTypeAndName<Button>("Close");
+    ASSERT_TRUE(close);
+    EXPECT_GE(close->layout->GetWorldRect().bottom, window->layout->GetWorldRect().bottom);
+
+    // Off: no local agent in the menus
+    auto on = DynamicCast<Toggle>(window->FindChild("local agent on"));
+    on->SetValue(false);
+    on->onToggleByUser(false);
+    EXPECT_FALSE(PipelineSettings::Load().localAgentEnabled);
+
+    // Back on the AssetsLine page, the sync controls show again
+    DynamicCast<Toggle>(window->FindChild("tab sync"))->onToggleByUser(true);
+    Step(2);
+    EXPECT_TRUE(window->FindChild("sync page")->IsEnabledInHierarchy());
+    EXPECT_FALSE(window->FindChild("agents page")->IsEnabledInHierarchy());
     window->Hide(true);
 }
 

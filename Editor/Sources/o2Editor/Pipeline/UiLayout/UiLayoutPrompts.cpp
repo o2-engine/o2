@@ -17,7 +17,7 @@ namespace Editor::UiLayout::Prompts
         return out;
     }
 
-    String Analyze(int w, int h, const String& hint)
+    String Analyze(int w, int h, const String& hint, const String& boxes /*= "box_2d"*/)
     {
         Vector<String> lines = {
             "You are a senior game UI engineer. The image is a mockup of ONE game UI screen, " + (String)w + " x " + (String)h +
@@ -34,7 +34,10 @@ namespace Editor::UiLayout::Prompts
             " \"id\": \"<unique snake_case id>\",",
             " \"parent\": \"<id of the enclosing element, or empty for top level>\",",
             " \"kind\": \"panel\" | \"image\" | \"button\" | \"input\" | \"text\" | \"progress\" | \"group\" | \"grid\",",
-            " \"box_2d\": [ymin, xmin, ymax, xmax],   // integers 0..1000 of the image height and width, tight around the visible element including its outline and shadow",
+            boxes == "pixels"
+                ? " \"box\": [x0, y0, x1, y1],   // integers in pixels of this " + (String)w + " x " + (String)h +
+                      " image: x from its left edge, y from its top edge; tight around the visible element including its outline and shadow"
+                : String(" \"box_2d\": [ymin, xmin, ymax, xmax],   // integers 0..1000 of the image height and width, tight around the visible element including its outline and shadow"),
             " \"look\": \"<look key>\",                  // panel / image / button / input / progress: the artwork the element is drawn with",
             " \"text\": \"<exact text>\", \"color\": \"#RRGGBB\", \"weight\": \"regular\" | \"medium\" | \"bold\", \"align\": \"left\" | \"center\" | \"right\",  // text only; add \"stroke\": \"#RRGGBB\" when the glyphs have an outline",
             " \"value\": 0.0-1.0,                      // progress only: the visible fill ratio",

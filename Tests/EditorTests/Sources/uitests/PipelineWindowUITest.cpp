@@ -26,6 +26,7 @@
 #include "o2/Utils/Editor/DragHandle.h"
 #include "o2/Utils/Editor/EditorScope.h"
 #include "o2/Utils/FileSystem/FileSystem.h"
+#include "o2Editor/Pipeline/PipelineSettings.h"
 #include "o2/Utils/System/Clipboard.h"
 #include "o2/Utils/Test/AppTestDriver.h"
 
@@ -2395,6 +2396,87 @@ TEST_F(PipelineUiFixture, ModelListShowsReadableNamesAndStoresIds)
 }
 
 // Search by the squashed id, arrows over the rows, Enter picks: the value goes through the card's edit path
+// The text model menus offer the local agents once the settings turn them on; a pick stores the local id
+TEST_F(PipelineUiFixture, ModelMenuOffersTheLocalAgentsWhenTheyAreOn)
+{
+    PipelineGraph graph;
+    auto text = AddNode(graph, "aiText", Vec2F());
+    text->SetConfigBool("paramsOpen", true);
+    graph.SaveToAsset(*asset);
+    editor->SetAsset(asset);
+    UiDriver::Step(3);
+    text = Live(text);
+    auto card = editor->GetNodeWidget(text->id);
+    ASSERT_TRUE(card);
+    editor->SetView(card->GetCardRect().Center(), 1.0f);
+    UiDriver::Step(3);
+
+    PipelineSettings settings = PipelineSettings::Load();
+    settings.localAgentEnabled = false;
+    settings.Save();
+    auto picker = ClickModelField(card);
+    ASSERT_TRUE(picker && picker->IsOpen());
+    EXPECT_FALSE(picker->FindRow("local:claude-code")) << "off: no local rows";
+    picker->Close();
+    UiDriver::Step(2);
+
+    String fakeClaude = PipelineUtils::GetWorkPath() + "fake-claude";
+    PipelineUtils::WriteFileBytes(fakeClaude, "#!/bin/sh\n");
+    std::filesystem::permissions(fakeClaude.Data(), std::filesystem::perms::owner_all);
+    settings.localAgentEnabled = true;
+    settings.localAgentPath = fakeClaude;
+    settings.Save();
+    picker = ClickModelField(card);
+    ASSERT_TRUE(picker && picker->IsOpen());
+    for (String id : { "local:claude-code", "local:claude-code:haiku", "local:claude-code:sonnet", "local:claude-code:opus" })
+        EXPECT_TRUE(picker->FindRow(id)) << id.Data();
+    EXPECT_FALSE(picker->FindRow("local:command")) << "no command set";
+    String dir = ScreenshotDir();
+    o2FileSystem.FolderCreate(dir, true);
+    EXPECT_TRUE(UiDriver::Screenshot(dir + "/model_menu_local_agent.png"));
+
+    picker->Pick("local:claude-code:haiku");
+    UiDriver::Step(2);
+    EXPECT_EQ(Live(text)->GetConfigString("model", ""), "local:claude-code:haiku");
+
+    // Codex found: it answers in the text menus and draws in the image ones
+    String fake = PipelineUtils::GetWorkPath() + "fake-codex";
+    PipelineUtils::WriteFileBytes(fake, "#!/bin/sh\n");
+    std::filesystem::permissions(fake.Data(), std::filesystem::perms::owner_all);
+    settings.localCodexPath = fake;
+    settings.Save();
+    picker = ClickModelField(card);
+    ASSERT_TRUE(picker && picker->IsOpen());
+    EXPECT_TRUE(picker->FindRow("local:codex"));
+    EXPECT_FALSE(picker->FindRow("local:codex-image")) << "a text menu does not draw";
+    picker->Close();
+    UiDriver::Step(2);
+
+    PipelineGraph images;
+    auto gen = AddNode(images, "nanoBananaGen", Vec2F());
+    gen->SetConfigBool("paramsOpen", true);
+    images.SaveToAsset(*asset);
+    editor->SetAsset(asset);
+    UiDriver::Step(3);
+    gen = Live(gen);
+    auto genCard = editor->GetNodeWidget(gen->id);
+    ASSERT_TRUE(genCard);
+    editor->SetView(genCard->GetCardRect().Center(), 1.0f);
+    UiDriver::Step(3);
+    picker = ClickModelField(genCard);
+    ASSERT_TRUE(picker && picker->IsOpen());
+    EXPECT_TRUE(picker->FindRow("local:codex-image"));
+    EXPECT_FALSE(picker->FindRow("local:claude-code")) << "an image menu offers no text agent";
+    picker->Pick("local:codex-image");
+    UiDriver::Step(2);
+    EXPECT_EQ(Live(gen)->GetConfigString("model", ""), "local:codex-image");
+
+    settings.localAgentEnabled = false;
+    settings.localCodexPath = "";
+    settings.localAgentPath = "";
+    settings.Save();
+}
+
 TEST_F(PipelineUiFixture, ModelMenuPicksTheSearchedModelOnEnter)
 {
     o2FileSystem.FileDelete(PipelineModelMenu::GetRecentPath());

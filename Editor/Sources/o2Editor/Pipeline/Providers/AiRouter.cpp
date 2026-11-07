@@ -3,6 +3,7 @@
 
 #include "o2Editor/Pipeline/Nodes/PipelineNodesCommon.h"
 #include "o2Editor/Pipeline/PipelineUtils.h"
+#include "o2Editor/Pipeline/Providers/LocalAgentProvider.h"
 #include "o2Editor/Pipeline/Providers/OpenAiProvider.h"
 #include "o2Editor/Pipeline/Providers/OpenRouterProvider.h"
 
@@ -26,6 +27,9 @@ namespace Editor::AiRouter
     AiProvider FamilyOf(const String& model)
     {
         String id = BareModelId(model);
+        if (LocalAgentProvider::IsLocalModel(id))
+            return AiProvider::Local;
+
         if (id.Contains("/"))
             return AiProvider::OpenRouter;
 
@@ -41,7 +45,7 @@ namespace Editor::AiRouter
     static bool AlternativeOf(AiProvider family, const String& id, AiRoute& alternative)
     {
         String lower = id.ToLowerCase();
-        if (lower.Contains(":"))
+        if (family == AiProvider::Local || lower.Contains(":"))
             return false;
 
         if (family == AiProvider::Gemini)
@@ -100,7 +104,13 @@ namespace Editor::AiRouter
 
     String ProviderName(AiProvider provider)
     {
-        return provider == AiProvider::OpenAi ? "OpenAI" : provider == AiProvider::OpenRouter ? "OpenRouter" : "Gemini";
+        switch (provider)
+        {
+            case AiProvider::OpenAi: return "OpenAI";
+            case AiProvider::OpenRouter: return "OpenRouter";
+            case AiProvider::Local: return "Local agent";
+            default: return "Gemini";
+        }
     }
 
     AiRouteKeys KeysOf(const PipelineSettings& settings)
@@ -112,6 +122,9 @@ namespace Editor::AiRouter
                         bool transparentBackground /*= false*/)
     {
         AiRoute native = RoutesFor(model)[0];
+        if (native.provider == AiProvider::Local)
+            return native;
+
         for (auto& route : RoutesFor(model, transparentBackground))
         {
             if (keys.Of(route.provider).IsEmpty())
@@ -138,7 +151,9 @@ namespace Editor::AiRouter
             ctx->Log(note);
 
         AiTextResult result;
-        if (route.provider == AiProvider::OpenRouter)
+        if (route.provider == AiProvider::Local)
+            result = co_await LocalAgentProvider::GenerateText(ctx, route.model, prompt, images);
+        else if (route.provider == AiProvider::OpenRouter)
             result = co_await OpenRouterProvider::GenerateText(ctx, keys.openRouter, route.model, prompt, images);
         else if (route.provider == AiProvider::OpenAi)
             result = co_await OpenAiProvider::GenerateText(ctx, keys.openAi, route.model, prompt, images);
@@ -168,7 +183,9 @@ namespace Editor::AiRouter
             ctx->Log(note);
 
         AiBytesResult result;
-        if (route.provider == AiProvider::OpenRouter)
+        if (route.provider == AiProvider::Local)
+            result = co_await LocalAgentProvider::GenerateImage(ctx, route.model, prompt, references, transparentBackground, options);
+        else if (route.provider == AiProvider::OpenRouter)
             result = co_await OpenRouterProvider::GenerateImage(ctx, keys.openRouter, route.model, prompt, references, seed, transparentBackground, options);
         else if (route.provider == AiProvider::OpenAi)
             result = co_await OpenAiProvider::GenerateImage(ctx, keys.openAi, route.model, prompt, references, seed, transparentBackground, options);
@@ -182,6 +199,7 @@ namespace Editor::AiRouter
 ENUM_META(Editor::AiProvider, Editor__AiProvider)
 {
     ENUM_ENTRY(Gemini);
+    ENUM_ENTRY(Local);
     ENUM_ENTRY(OpenAi);
     ENUM_ENTRY(OpenRouter);
 }

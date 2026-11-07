@@ -861,7 +861,7 @@ namespace Editor
             "drawOver", "drawTool", "brushSize", "brushColor", "brushOpacity", "paramsOpen", "selectedRegion",
             "splitRatio", "fieldH", "selectedLayer", "layersPanelW", "openLayerSettings",
             "viewZoom", "viewPanX", "viewPanY", "cmpBg", "cmpBgEnabled", "checker", "layersFolder", "layersName", "debugView", "debugStep",
-            "editsView", "editsDraft"
+            "editsView", "editsDraft", "exportFor"
         };
         return keys;
     }

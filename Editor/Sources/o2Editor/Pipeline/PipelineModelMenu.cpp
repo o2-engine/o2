@@ -5,12 +5,13 @@
 #include "o2/Utils/Serialization/DataValue.h"
 #include "o2Editor/Pipeline/Nodes/PipelineNodesCommon.h"
 #include "o2Editor/Pipeline/PipelineUtils.h"
+#include "o2Editor/Pipeline/Providers/LocalAgentProvider.h"
 
 namespace Editor::PipelineModelMenu
 {
     static const Vector<PipelineModelProvider> providerOrder = {
         PipelineModelProvider::Google, PipelineModelProvider::OpenAi, PipelineModelProvider::Kling,
-        PipelineModelProvider::ElevenLabs, PipelineModelProvider::OpenRouter
+        PipelineModelProvider::ElevenLabs, PipelineModelProvider::Local, PipelineModelProvider::OpenRouter
     };
 
     // OpenRouter vendors listed first, in this order; the rest follow A to Z by label
@@ -40,6 +41,7 @@ namespace Editor::PipelineModelMenu
             case PipelineModelProvider::Kling: return "kling";
             case PipelineModelProvider::ElevenLabs: return "elevenlabs";
             case PipelineModelProvider::OpenRouter: return "openrouter";
+            case PipelineModelProvider::Local: return "local";
             default: return "google";
         }
     }
@@ -52,6 +54,7 @@ namespace Editor::PipelineModelMenu
             case PipelineModelProvider::Kling: return "Kling";
             case PipelineModelProvider::ElevenLabs: return "ElevenLabs";
             case PipelineModelProvider::OpenRouter: return "OpenRouter";
+            case PipelineModelProvider::Local: return "Local agent";
             default: return "Google Gemini";
         }
     }
@@ -109,6 +112,9 @@ namespace Editor::PipelineModelMenu
     PipelineModelGroupKey GroupOf(const String& id)
     {
         String bare = BareId(id);
+        if (LocalAgentProvider::IsLocalModel(bare))
+            return { ProviderKey(PipelineModelProvider::Local), ProviderLabel(PipelineModelProvider::Local), PipelineModelProvider::Local };
+
         if (bare.Contains("/"))
         {
             String vendor = VendorOf(bare);
@@ -136,6 +142,9 @@ namespace Editor::PipelineModelMenu
     {
         String bare = BareId(id);
         String pretty = PipelineUtils::PrettyModelName(bare);
+        if (LocalAgentProvider::IsLocalModel(bare))
+            return WithoutSuffix(pretty, " \xC2\xB7 local");
+
         if (bare.Contains("/"))
         {
             // "Anthropic: Claude Sonnet 5.5 · OpenRouter": the group header names both the API and the vendor
@@ -522,6 +531,7 @@ ENUM_META(Editor::PipelineModelProvider, Editor__PipelineModelProvider)
     ENUM_ENTRY(ElevenLabs);
     ENUM_ENTRY(Google);
     ENUM_ENTRY(Kling);
+    ENUM_ENTRY(Local);
     ENUM_ENTRY(OpenAi);
     ENUM_ENTRY(OpenRouter);
 }

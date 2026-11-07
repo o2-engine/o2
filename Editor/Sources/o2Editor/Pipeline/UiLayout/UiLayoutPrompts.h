@@ -11,7 +11,8 @@ using namespace o2;
 namespace Editor::UiLayout::Prompts
 {
     // The analysis of the mockup: background, looks and the element list
-    String Analyze(int w, int h, const String& hint);
+    // boxes: box_2d (Gemini's 0..1000 grid) or pixels (of the w x h picture the model is sent)
+    String Analyze(int w, int h, const String& hint, const String& boxes = "box_2d");
 
     // Cut one look out of its crop: the element stays, what is drawn on it goes, the rest becomes the key colour
     String Cut(const String& describe, const Vector<String>& erase, const String& keyName, const String& keyHex);
