@@ -3,8 +3,13 @@
 
 #include "o2/Application/Application.h"
 #include "o2/Application/Input.h"
+#include "o2/Assets/AssetInfo.h"
 #include "o2/Assets/Assets.h"
 #include "o2/Assets/Types/AtlasAsset.h"
+#include "o2/Assets/Types/FontAsset.h"
+#include "o2/Assets/Types/FontStyleAsset.h"
+#include "o2/Assets/Types/ImageAsset.h"
+#include "o2/Assets/Types/VectorImageAsset.h"
 #include "o2/Assets/Types/MaterialAsset.h"
 #include "o2/Assets/Types/ShaderAsset.h"
 #include "o2/Integration.h"
@@ -1609,8 +1614,38 @@ namespace o2
 	void Render::CheckFontsUnloading()
 	{}
 
+	bool Render::ChangesRenderResources(const Vector<UID>& changedAssets)
+	{
+		for (auto& uid : changedAssets)
+		{
+			if (IsRenderAsset(o2Assets.GetAssetInfo(uid)))
+				return true;
+		}
+		return false;
+	}
+
+	bool Render::IsRenderAsset(const AssetInfo& info)
+	{
+		// Gone from the tree: reload to be safe
+		if (&info == &AssetInfo::empty || info.path.IsEmpty())
+			return true;
+
+		// A meta read as the base one names no type: the file's extension does
+		const Type* type = info.meta ? info.meta->GetAssetType() : nullptr;
+		if (!type || type == &TypeOf(Asset))
+			type = Assets::GetAssetTypeByExtension(o2FileSystem.GetFileExtension(info.path));
+
+		return !type || type->IsBasedOn(TypeOf(ImageAsset)) || type->IsBasedOn(TypeOf(AtlasAsset)) ||
+			type->IsBasedOn(TypeOf(VectorImageAsset)) || type->IsBasedOn(TypeOf(FontAsset)) || type->IsBasedOn(TypeOf(FontStyleAsset));
+	}
+
 	void Render::OnAssetsRebuilt(const Vector<UID>& changedAssets)
 	{
+		// A rebuild for data assets (a pipeline, a script, a scene) leaves the textures alone: reloading them all blanks the
+		// sprites of the whole UI for a moment
+		if (!ChangesRenderResources(changedAssets))
+			return;
+
 		for (auto& tex : mTextures)
 			tex->Reload();
 

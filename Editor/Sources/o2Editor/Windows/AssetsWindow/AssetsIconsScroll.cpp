@@ -223,6 +223,7 @@ namespace Editor
             return;
 
         mCurrentPath = path;
+        Focus();
         UpdateAssetsByCurrentPath();
         ResetScroll();
     }
@@ -236,7 +237,7 @@ namespace Editor
     {
         PushEditorScopeOnStack scope;
 
-        Focus();
+        // No focus here: it runs after every assets rebuild and a cleared search, and must not take a field's focus
         DeselectAllAssets();
 
         if (mCurrentPath != "")

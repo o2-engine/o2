@@ -64,7 +64,7 @@ namespace Editor
     AssetsLineSync::AssetsLineSync(RefCounter* refCounter):
         Singleton<AssetsLineSync>(refCounter)
     {
-        rebuildAssets = []() { o2Assets.RebuildAssets(); };
+        rebuildAssets = []() { o2Assets.RebuildAssetsInBackground(); };
         openUrl = [](const String& url) { OpenInBrowser(url); };
     }
 

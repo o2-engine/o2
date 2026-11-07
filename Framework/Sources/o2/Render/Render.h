@@ -38,6 +38,7 @@ namespace o2
 {
 	FORWARD_CLASS_REF(AtlasAsset);
 
+	struct AssetInfo;
 	class Bitmap;
 	class CursorAreaEventListenersLayer;
 	class Font;
@@ -426,6 +427,13 @@ namespace o2
 
 		// Returns true when material's color attachment formats match the currently bound render targets
 		bool IsMaterialCompatibleWithCurrentTargets(const Ref<Material>& material) const;
+
+		// Returns true when a rebuild changed a picture, an atlas, a vector image, a font or an asset no longer known: only then
+		// are the textures, the atlases and the sprites reloaded
+		static bool ChangesRenderResources(const Vector<UID>& changedAssets);
+
+		// Returns true when the asset is a picture, an atlas, a vector image or a font, or is not in the tree any more
+		static bool IsRenderAsset(const AssetInfo& info);
 
 #if IS_EDITOR
 		// Reloads all shader and texture assets from disk on editor activation
