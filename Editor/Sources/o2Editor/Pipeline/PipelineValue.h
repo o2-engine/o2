@@ -41,6 +41,9 @@ namespace Editor
         // Returns a valid text value
         static PipelineValue Text(const String& text);
 
+        // Returns a valid value of a text-like type (text, uiKit, textStyle) holding the text; other types give text
+        static PipelineValue TextOf(PipelinePortType type, const String& text);
+
         // Returns an image value with the bitmap encoded into PNG bytes, invalid for null or failed encoding
         static PipelineValue Image(const Ref<Bitmap>& bitmap);
 
@@ -58,6 +61,9 @@ namespace Editor
 
         // Returns true for a valid text value
         bool IsText() const { return valid && type == PipelinePortType::Text; }
+
+        // Returns true for a valid value whose data is text: text, a UI kit or a text style
+        bool IsTextLike() const { return valid && IsTextLikePortType(type); }
 
         // Returns true for a valid audio value
         bool IsAudio() const { return valid && type == PipelinePortType::Audio; }

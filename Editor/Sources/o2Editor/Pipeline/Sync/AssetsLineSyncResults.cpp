@@ -58,7 +58,9 @@ namespace Editor
             {
                 case PipelinePortType::Image: return "png";
                 case PipelinePortType::Video: return "mp4";
-                case PipelinePortType::Text: return "txt";
+                case PipelinePortType::Text:
+                case PipelinePortType::UiKit:
+                case PipelinePortType::TextStyle: return "txt";
                 default: return mainPreview.IsEmpty() ? String() : Extension(mainPreview);
             }
         }
@@ -146,7 +148,7 @@ namespace Editor
                     for (int i = 1; i < node->outputs.Count(); i++)
                     {
                         auto& port = node->outputs[i];
-                        String ext = port.portType == PipelinePortType::Text ? "txt" : "png";
+                        String ext = IsTextLikePortType(port.portType) ? "txt" : "png";
                         results[node->id + "#" + port.id] = { node->id, port.id, "part", PipelineExecutor::GetPortPreviewPath(id, node->id, port.id, ext) };
                     }
                     continue;

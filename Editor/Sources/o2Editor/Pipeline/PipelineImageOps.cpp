@@ -266,6 +266,19 @@ namespace Editor::PipelineImageOps
         return CropPixels(src, left, top, w, h);
     }
 
+    Vec2I CropSize(const Vec2I& size, const CropRect& crop)
+    {
+        bool partial = crop.x > 0.001f || crop.y > 0.001f || crop.w < 0.999f || crop.h < 0.999f;
+        if (!partial || size.x <= 0 || size.y <= 0)
+            return size;
+
+        int left = Math::Clamp((int)std::lround(crop.x * size.x), 0, size.x - 1);
+        int top = Math::Clamp((int)std::lround(crop.y * size.y), 0, size.y - 1);
+        int w = Math::Max(1, Math::Min(size.x - left, (int)std::lround(crop.w * size.x)));
+        int h = Math::Max(1, Math::Min(size.y - top, (int)std::lround(crop.h * size.y)));
+        return Vec2I(w, h);
+    }
+
     Ref<Bitmap> CropPixels(const Bitmap& srcIn, int leftIn, int topIn, int widthIn, int heightIn)
     {
         auto src = EnsureRgba(Ref<Bitmap>(mmake<Bitmap>(srcIn)));

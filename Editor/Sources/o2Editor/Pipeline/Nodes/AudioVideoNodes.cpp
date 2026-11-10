@@ -60,7 +60,7 @@ namespace Editor
         Coroutine<PipelineRunResult> Run(const Ref<PipelineExecContext>& ctx, const Map<String, PipelineValue>& inputs,
                                          const Ref<PipelineNode>& node) override
         {
-            Vector<String> parts = TextInputs(inputs, *node);
+            Vector<String> parts = TextInputs(ctx, inputs, *node);
             parts.Add(node->GetConfigString("extraPrompt", ""));
             String joined = JoinNonEmpty(parts, "\n");
             String prompt = PipelineUtils::ClampPromptChars(joined, ElevenLabsProvider::sfxMaxPromptChars);
@@ -97,7 +97,7 @@ namespace Editor
         Coroutine<PipelineRunResult> Run(const Ref<PipelineExecContext>& ctx, const Map<String, PipelineValue>& inputs,
                                          const Ref<PipelineNode>& node) override
         {
-            String text = JoinNonEmpty(TextInputs(inputs, *node), "\n");
+            String text = JoinNonEmpty(TextInputs(ctx, inputs, *node), "\n");
             String provider = node->GetConfigString("provider", "gemini") == "elevenlabs" ? "elevenlabs" : "gemini";
             String voice = node->GetConfigString("voice", "").Trimed();
             ctx->Log("ttsSpeech: provider=" + provider + " chars=" + (String)text.Length() + " voice=" + (voice.IsEmpty() ? String("(default)") : voice));
@@ -134,7 +134,7 @@ namespace Editor
         Coroutine<PipelineRunResult> Run(const Ref<PipelineExecContext>& ctx, const Map<String, PipelineValue>& inputs,
                                          const Ref<PipelineNode>& node) override
         {
-            Vector<String> parts = TextInputs(inputs, *node);
+            Vector<String> parts = TextInputs(ctx, inputs, *node);
             parts.Add(node->GetConfigString("extraPrompt", ""));
             if (node->GetConfigBool("instrumental", true))
                 parts.Add("Instrumental only, no vocals, no lyrics.");
@@ -239,7 +239,7 @@ namespace Editor
         {
             VideoGenerateInput in;
             in.model = node->GetConfigString("model", VeoProvider::defaultModel);
-            Vector<String> parts = TextInputs(inputs, *node);
+            Vector<String> parts = TextInputs(ctx, inputs, *node);
             parts.Add(node->GetConfigString("extraPrompt", ""));
             if (node->GetConfigBool("bgColorEnabled", false))
             {
@@ -248,7 +248,7 @@ namespace Editor
                     parts.Add("The entire background must be a single solid, uniform color " + bg + ", flat and clean, filling every part of the frame behind the subject for the whole duration of the video. No gradients, patterns, shadows or scenery in the background.");
             }
             in.prompt = JoinNonEmpty(parts, "\n");
-            in.references = ImageInputs(inputs, *node);
+            in.references = ImageInputs(ctx, inputs, *node);
             in.aspectRatio = node->GetConfigString("aspectRatio", "16:9");
             in.durationSeconds = (int)node->GetConfigNumber("duration", 8);
 

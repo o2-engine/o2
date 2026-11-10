@@ -82,7 +82,7 @@ namespace Editor
 
     static String ExtensionOf(const PipelineValue& value)
     {
-        return value.type == PipelinePortType::Text ? String("txt") : value.GetExtension();
+        return IsTextLikePortType(value.type) ? String("txt") : value.GetExtension();
     }
 
     bool PipelineExecutor::LoadBundle(const String& pipelineId, const String& sig, Vector<Pair<String, PipelineValue>>& values)
@@ -110,7 +110,7 @@ namespace Editor
 
             auto type = PipelinePortTypeFromString(output.Get("type") ? output.Get("type")->Str() : String("text"));
             String bytes = PipelineUtils::ReadFileBytes(file);
-            PipelineValue value = type == PipelinePortType::Text ? PipelineValue::Text(bytes) :
+            PipelineValue value = IsTextLikePortType(type) ? PipelineValue::TextOf(type, bytes) :
                 PipelineValue::Bytes(type, bytes, PipelineUtils::MimeForExtension(ext));
             loaded.Add(Pair<String, PipelineValue>(name, value));
         }

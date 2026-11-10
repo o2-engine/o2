@@ -6,6 +6,7 @@
 #include "o2/Utils/FileSystem/FileSystem.h"
 #include "o2Editor/Pipeline/Nodes/PipelineNodesCommon.h"
 #include "o2Editor/Pipeline/PipelineImageOps.h"
+#include "o2Editor/Pipeline/PipelineRegions.h"
 #include "o2Editor/Pipeline/PipelineUtils.h"
 
 namespace Editor
@@ -102,8 +103,8 @@ namespace Editor
             if (pathOut)
                 *pathOut = path;
 
-            if (type == PipelinePortType::Text)
-                return PipelineValue::Text(bytes);
+            if (IsTextLikePortType(type))
+                return PipelineValue::TextOf(type, bytes);
 
             return PipelineValue::Bytes(type, bytes, PipelineUtils::MimeForExtension(ext));
         }
@@ -402,7 +403,7 @@ namespace Editor
         while (!stack.IsEmpty())
         {
             String id = stack.PopBack();
-            for (auto& edge : run->graph.GetIncomingEdges(id))
+            for (auto& edge : run->graph.GetRunInputEdges(id))
             {
                 run->neededPorts[edge->fromNodeId].Add(edge->fromPortId);
                 if (!seen.Contains(edge->fromNodeId))
@@ -434,7 +435,7 @@ namespace Editor
 
         run->visiting[nodeId] = true;
 
-        auto incoming = run->graph.GetIncomingEdges(nodeId);
+        auto incoming = run->graph.GetRunInputEdges(nodeId);
         for (auto& edge : incoming)
         {
             bool ok = co_await Evaluate(run, edge->fromNodeId);
@@ -508,6 +509,18 @@ namespace Editor
 
         EmitState(nodeId, "running");
 
+        // The parts of the target this run regenerates on their own ("<node id>#<port id>" in the bypass list, the node
+        // itself not): only those are computed, the other parts keep what they have
+        Vector<String> regenerated;
+        if (perPort && nodeId == run->targetNodeId && !run->bypass.Contains(nodeId))
+        {
+            for (auto& port : node->outputs)
+            {
+                if (run->bypass.Contains(nodeId + "#" + port.id))
+                    regenerated.Add(port.id);
+            }
+        }
+
         Map<String, PipelineValue> byPortId;
         PipelineValue finishValue;
         PipelineValue srcValue;
@@ -529,7 +542,9 @@ namespace Editor
         {
             // Only the outputs this run consumes are produced; the target itself is computed in full
             Vector<String> wanted;
-            if (nodeId == run->targetNodeId)
+            if (!regenerated.IsEmpty())
+                wanted = regenerated;
+            else if (nodeId == run->targetNodeId)
             {
                 for (auto& port : node->outputs)
                     wanted.Add(port.id);
@@ -611,10 +626,22 @@ namespace Editor
 
                 // Every part is cut with its own effective settings
                 PipelineValue value = stored;
-                if (PipelineTransparency::UsesChromaPostStep(*node, portId) && value.IsImage())
+                bool chromaPart = PipelineTransparency::UsesChromaPostStep(*node, portId);
+                if (chromaPart && value.IsImage())
                 {
                     if (auto raw = value.GetBitmap())
                         value = PipelineValue::Image(PipelineTransparency::ApplyChromaPostStep(*node, *raw, portId));
+                }
+
+                // An AI extract part carries its density: the source's times how much larger the model drew it
+                if (node->nodeType == "imageExtract" && value.IsImage() && stored.IsImage())
+                {
+                    auto source = inputs.find("image");
+                    String sourceBytes = source != inputs.end() && source->second.IsImage() ? source->second.GetPngBytes() : String();
+                    String tagged = PipelineRegions::TagExtractPart(*node, portId, sourceBytes, stored.GetPngBytes(),
+                                                                    value.GetPngBytes(), chromaPart);
+                    if (tagged != value.data)
+                        value = PipelineValue::ImageBytes(tagged);
                 }
 
                 byPortId[portId] = value;
@@ -759,11 +786,18 @@ namespace Editor
 
         run->outputs[nodeId] = byPortId;
 
+        // A node with several parts shows its FIRST part, and only when this run has it: a run of other parts must not
+        // put one of them there
+        bool multi = perPort && node->outputs.Count() > 1;
         PipelineValue preview;
         if (isFinish)
             preview = finishValue.IsValid() ? finishValue : (inputs.empty() ? PipelineValue() : inputs.begin()->second);
         else if (dynamic)
             preview = dynamicPreview;
+        else if (multi)
+            byPortId.TryGetValue(node->outputs[0].id, preview);
+        else if (!node->outputs.IsEmpty() && byPortId.ContainsKey(node->outputs[0].id))
+            preview = byPortId[node->outputs[0].id];
         else if (!byPortId.empty())
             preview = byPortId.begin()->second;
 
@@ -771,7 +805,20 @@ namespace Editor
         if (preview.IsValid() && writePreview)
             WritePreview(run, nodeId, preview, srcValue.IsValid() ? &srcValue : nullptr);
 
-        if (!lastResult.IsValid())
+        // A node with several parts computed only in part (some of them regenerated, or a consumer needing one) is not up
+        // to date yet: the marker waits for a run of all of them
+        bool complete = true;
+        if (multi)
+        {
+            Vector<String> covered = regenerated;
+            if (covered.IsEmpty() && nodeId != run->targetNodeId)
+                run->neededPorts.TryGetValue(nodeId, covered);
+
+            bool whole = nodeId == run->targetNodeId && regenerated.IsEmpty();
+            complete = whole || node->outputs.All([&](const PipelinePort& p) { return covered.Contains(p.id); });
+        }
+
+        if (!lastResult.IsValid() && complete)
             MarkRan(run->pipelineId, sig);
 
         EmitState(nodeId, "done");
@@ -798,7 +845,7 @@ namespace Editor
 
         Map<String, PipelineValue> inputs;
         Map<String, PipelineValue> inputsById;
-        for (auto& edge : run->graph.GetIncomingEdges(node->id))
+        for (auto& edge : run->graph.GetRunInputEdges(node->id))
         {
             auto source = run->graph.FindNode(edge->fromNodeId);
             if (!source) continue;
@@ -821,6 +868,11 @@ namespace Editor
 
             if (!value.IsValid())
             {
+                // A node that renders with what it has skips an input not produced yet
+                auto schema = PipelineNodeRegistry::GetSchema(node->nodeType);
+                if (schema && schema->partialInputs)
+                    continue;
+
                 String err = "Cached output of upstream node " + source->nodeType + " not found - run the full pipeline first";
                 EmitState(node->id, "error", err);
                 co_return String(err);
@@ -862,13 +914,25 @@ namespace Editor
         if (preview.IsValid())
             WritePreview(run, node->id, preview, nullptr);
 
+        // An instant node with several outputs (the AI UI layout: its picture and its layout) keeps a preview per output,
+        // as a full run of it does: that is what a consumer of its second output reads
+        if (!isFinish && impl->GetSchema().instant && node->outputs.Count() > 1)
+        {
+            for (auto& port : node->outputs)
+            {
+                auto it = result.outputs.find(port.name);
+                if (it != result.outputs.end() && it->second.IsValid())
+                    WritePortPreview(run, node->id, port.id, it->second);
+            }
+        }
+
         // Freshness bookkeeping: store the result under the current signature when the inputs are up to date
         if (!isFinish && node->outputs.Count() == 1 && preview.IsValid())
         {
             auto sigs = run->graph.ComputeSignatures();
             bool upstreamFresh = true;
             Map<String, String> upstream;
-            for (auto& edge : run->graph.GetIncomingEdges(node->id))
+            for (auto& edge : run->graph.GetRunInputEdges(node->id))
             {
                 String s;
                 auto from = run->graph.FindNode(edge->fromNodeId);

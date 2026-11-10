@@ -34,6 +34,8 @@ namespace Editor
         bool instant = false;    // Local and free: re-applied automatically on every parameter change
         bool perPortRun = false; // Computes its outputs one at a time: each is run, cached and previewed on its own
         bool dynamicOutputs = false; // Decides its outputs while it runs: one run returns all of them, cached together, ports follow
+        bool partialInputs = false;  // Runs with the inputs that have a result: one not produced yet is left out, not waited for
+        bool retired = false;        // No longer offered in any add menu; nodes already in pipelines still load and run
 
         Vector<PipelinePortType> addableInputs; // Input kinds the user may add with "+"
 
@@ -131,6 +133,10 @@ namespace Editor
         // Config keys the cache of a per-port node ignores, because its port variant carries them
         virtual Vector<String> PortCacheExcludedKeys() const { return {}; }
 
+        // Config keys the cache of one output of a per-port node ignores: PortCacheExcludedKeys and what that output's
+        // variant carries for itself (an extract part's own model)
+        virtual Vector<String> PortCacheExcludedKeysOf(const PipelineNode& node, const String& portId) const { return PortCacheExcludedKeys(); }
+
         // Returns what makes one output of a per-port node its own, folded into its cache signature
         virtual String PortCacheVariant(const PipelineNode& node, const String& portId) const { return portId; }
 
@@ -170,6 +176,10 @@ namespace Editor
 
         // Returns true for finish node types, which write results into the assets folder
         static bool IsFinishType(const String& type);
+
+        // Returns true for an input only the node's AI reads from its card (every input of a Text style, every input of an
+        // AI UI layout but its kit): a run neither computes it nor folds it into the node's signature
+        static bool IsReferenceInput(const PipelineNode& node, const String& portId);
 
         // Returns where a finish node writes inside the assets folder, without the extension: its
         // assetPath, or Generated/<the file name the web editor downloads it as>, or Generated/output

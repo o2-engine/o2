@@ -348,7 +348,7 @@ namespace Editor
             return;
 
         // The model renders the alpha itself: the methods and their parameters have nothing to set
-        if (PipelineTransparency::SupportsNativeTransparency(mNode->GetConfigString("model", GeminiProvider::defaultImageModel)))
+        if (PipelineTransparency::SupportsNativeTransparency(GetString("model", GeminiProvider::defaultImageModel)))
         {
             auto note = MakeLabel("Rendered by the model", true);
             note->name = "native transparency";
@@ -615,6 +615,9 @@ namespace Editor
 
         if (type == "imageExtract")
             return CreateExtractNodeBody(type);
+
+        if (type == "imageCrop")
+            return CreateCropNodeBody(type);
 
         if (type == "imageToUi")
             return CreateImageToUiNodeBody(type);

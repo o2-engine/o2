@@ -7,6 +7,7 @@ namespace Editor
     void RegisterImageNodes();
     void RegisterAiNodes();
     void RegisterAudioVideoNodes();
+    void RegisterUiNodes();
 
     // Registration order is the order of the add-node menu inside each category
     void RegisterBuiltinPipelineNodes()
@@ -15,5 +16,6 @@ namespace Editor
         RegisterTextNodes();
         RegisterAudioVideoNodes();
         RegisterAiNodes();
+        RegisterUiNodes();
     }
 }

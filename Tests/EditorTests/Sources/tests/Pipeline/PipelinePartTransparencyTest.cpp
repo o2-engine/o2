@@ -50,6 +50,8 @@ namespace
     Ref<PipelineNode> MakeExtract(bool chroma = false)
     {
         auto node = PipelineNodeRegistry::CreateNode("imageExtract", Vec2F());
+        // A new node starts on a model that draws the alpha itself: these parts are cut by the local methods
+        node->SetConfigString("model", GeminiProvider::defaultImageModel);
         Vector<PipelineExtractRegion> regions;
         for (auto id : { "a", "b", "c" })
         {

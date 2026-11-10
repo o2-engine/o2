@@ -35,27 +35,65 @@ namespace Editor
             return it == inputs.end() ? nullptr : &it->second;
         }
 
+        // Returns the value on an input port: by its id when the run gives the id map (every executor run does), else by
+        // name. Inputs added with "+ input" may have no name or the same name twice: by name only the last one arrives
+        static const PipelineValue* InputOf(const Ref<PipelineExecContext>& ctx, const Map<String, PipelineValue>& inputs,
+                                            const PipelinePort& port)
+        {
+            if (ctx && !ctx->inputsById.empty())
+            {
+                auto it = ctx->inputsById.find(port.id);
+                return it == ctx->inputsById.end() ? nullptr : &it->second;
+            }
+
+            return Input(inputs, port.name);
+        }
+
+        // Returns the name an input goes by in a prompt: its own when no other input has it, else numbered ("notes 2");
+        // an input with no name is "input 1", "input 2"... in the order of the node's inputs
+        static String InputLabel(const PipelineNode& node, const PipelinePort& port)
+        {
+            String name = port.name.Trimed(" \n\r\t");
+            int same = 0, index = 0;
+            for (auto& p : node.inputs)
+            {
+                if (p.name.Trimed(" \n\r\t") != name)
+                    continue;
+
+                same++;
+                if (p.id == port.id)
+                    index = same;
+            }
+
+            if (!name.IsEmpty() && same < 2)
+                return name;
+
+            return name.IsEmpty() ? "input " + (String)index : name + " " + (String)index;
+        }
+
         // Every connected text input of the node in port order
-        static Vector<String> TextInputs(const Map<String, PipelineValue>& inputs, const PipelineNode& node)
+        static Vector<String> TextInputs(const Ref<PipelineExecContext>& ctx, const Map<String, PipelineValue>& inputs,
+                                         const PipelineNode& node)
         {
             Vector<String> res;
             for (auto& port : node.inputs)
             {
                 if (port.portType != PipelinePortType::Text) continue;
-                auto v = Input(inputs, port.name);
+                auto v = InputOf(ctx, inputs, port);
                 if (v && v->IsText()) res.Add(v->data);
             }
             return res;
         }
 
         // Every connected image input of the node in port order, as references
-        static Vector<AiImageRef> ImageInputs(const Map<String, PipelineValue>& inputs, const PipelineNode& node, const String& skipName = "")
+        static Vector<AiImageRef> ImageInputs(const Ref<PipelineExecContext>& ctx, const Map<String, PipelineValue>& inputs,
+                                              const PipelineNode& node, const String& skipName = "")
         {
             Vector<AiImageRef> res;
             for (auto& port : node.inputs)
             {
                 if (port.portType != PipelinePortType::Image || port.name == skipName) continue;
-                auto v = Input(inputs, port.name);
+                auto v = InputOf(ctx, inputs, port);
                 if (v && v->IsImage()) res.Add({ "image/png", v->GetPngBytes() });
             }
             return res;

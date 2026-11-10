@@ -204,12 +204,15 @@ namespace Editor
         if (!node)
             return;
 
-        // Every input must have a rendered result, otherwise the run is refused anyway
-        auto incoming = graph->GetIncomingEdges(nodeId);
-        if (incoming.IsEmpty())
+        // Every input must have a rendered result, otherwise the run is refused anyway; a node that renders with what
+        // it has (the UI kit, the AI UI layout) goes without. References only the node's AI reads are no inputs here
+        auto incoming = graph->GetRunInputEdges(nodeId);
+        auto nodeSchema = PipelineNodeRegistry::GetSchema(node->nodeType);
+        bool partial = nodeSchema && nodeSchema->partialInputs;
+        if (incoming.IsEmpty() && !partial)
             return;
 
-        for (auto& edge : incoming)
+        for (auto& edge : partial ? Vector<Ref<PipelineEdge>>() : incoming)
         {
             // A part of a multi-output node has its own result; the node's main one is some other part
             auto rt = GetRuntime(edge->fromNodeId);
@@ -249,7 +252,9 @@ namespace Editor
         mNodeContextMenu->RemoveAllItems();
         for (auto type : schema->addableInputs)
         {
-            mNodeContextMenu->AddItem(PipelinePortTypeToString(type), [this, type, place]()
+            String label = type == PipelinePortType::UiKit ? String("UI kit") : type == PipelinePortType::TextStyle ? String("text style") :
+                PipelinePortTypeToString(type);
+            mNodeContextMenu->AddItem(label, [this, type, place]()
             {
                 if (!mContextNode) return;
                 String before = SerializeGraph();

@@ -240,6 +240,9 @@ namespace Editor
         // Returns the editor-green variant of the node type icon, for menus that cannot tint
         static String MenuIconForType(const String& nodeType);
 
+        // Returns the menu icon of an add-node menu group (PipelineNodeGroups)
+        static String MenuIconForGroup(const String& groupId);
+
         SERIALIZABLE(PipelineNodeWidget);
 
     protected:
@@ -421,6 +424,7 @@ CLASS_METHODS_META(Editor::PipelineNodeWidget)
     FUNCTION().PUBLIC().SIGNATURE(void, DrawBusyBar);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, IconForType, const String&);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, MenuIconForType, const String&);
+    FUNCTION().PUBLIC().SIGNATURE_STATIC(String, MenuIconForGroup, const String&);
     FUNCTION().PROTECTED().SIGNATURE(void, BuildHeader);
     FUNCTION().PROTECTED().SIGNATURE(void, BuildResizeHandles, const Ref<PipelineEditor>&);
     FUNCTION().PROTECTED().SIGNATURE(bool, IsResizeHandleAt, const ResizeHandle&, const Vec2F&);

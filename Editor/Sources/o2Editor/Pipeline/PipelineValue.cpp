@@ -16,6 +16,15 @@ namespace Editor
         return v;
     }
 
+    PipelineValue PipelineValue::TextOf(PipelinePortType type, const String& text)
+    {
+        PipelineValue v = Text(text);
+        if (type == PipelinePortType::UiKit || type == PipelinePortType::TextStyle)
+            v.type = type;
+
+        return v;
+    }
+
     PipelineValue PipelineValue::Image(const Ref<Bitmap>& bitmap)
     {
         PipelineValue v;

@@ -1,6 +1,9 @@
 #include "o2Editor/stdafx.h"
 #include "PipelineNodesCommon.h"
 
+#include "o2Editor/Pipeline/Nodes/UiNodes.h"
+#include "o2Editor/Pipeline/PipelinePngMeta.h"
+
 #include "o2Editor/Pipeline/PipelineEditRegion.h"
 #include "o2Editor/Pipeline/PipelineRegions.h"
 #include "o2Editor/Pipeline/PipelineUtils.h"
@@ -93,7 +96,7 @@ namespace Editor
             Config config;
             config.transparent = flag && PipelineUtils::ValueToBool(*flag, false) && !PipelineEditRegion::Of(node, region);
             config.storedMode = str("transparentMode", "twoPass") == "chroma" ? "chroma" : "twoPass";
-            config.mode = SupportsNativeTransparency(node.GetConfigString("model", GeminiProvider::defaultImageModel)) ?
+            config.mode = SupportsNativeTransparency(PipelineRegions::PartModel(node, portId)) ?
                 String("native") : config.storedMode;
 
             Color4 color;
@@ -293,6 +296,13 @@ namespace Editor
             return true;
         }
 
+        // A text style's config is the style
+        if (node.nodeType == "textStyle")
+        {
+            value = PipelineValue::TextOf(PipelinePortType::TextStyle, PipelineUiNodes::TextStyleOutput(node));
+            return true;
+        }
+
         bool image = node.nodeType == "sourceImage";
         if (!image && node.nodeType != "sourceAudio")
         {
@@ -340,6 +350,15 @@ namespace Editor
         {
             error = "sourceImage: unsupported image format (png expected)";
             return false;
+        }
+
+        // A PNG keeps its own bytes: what it says besides its pixels (its density) travels with it
+        if (PipelinePngMeta::IsPng(bytes))
+        {
+            value = PipelineValue::ImageBytes(bytes);
+            value.ShareDecoded();
+            value.decoded->bitmap = bitmap;
+            return true;
         }
 
         value = PipelineValue::Image(bitmap);

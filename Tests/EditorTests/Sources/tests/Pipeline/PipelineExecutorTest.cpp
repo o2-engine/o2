@@ -741,6 +741,7 @@ TEST(PipelineShowcase, GeminiAllNodesAsset)
 TEST(PipelineSignature, ChromaColourChangesTheCachedRenderWhileToleranceReusesIt)
 {
     auto node = PipelineNodeRegistry::CreateNode("imageExtract", Vec2F());
+    node->SetConfigString("model", "gemini-3.1-flash-image");
     node->SetConfigBool("transparentBg", true);
     node->SetConfigString("transparentMode", "chroma");
     node->SetConfigString("chromaColor", "#00b140");
@@ -763,6 +764,7 @@ TEST(PipelineSignature, ChromaColourChangesTheCachedRenderWhileToleranceReusesIt
 TEST(PipelineSignature, DownstreamSignatureFollowsTheChromaSettings)
 {
     auto node = PipelineNodeRegistry::CreateNode("imageExtract", Vec2F());
+    node->SetConfigString("model", "gemini-3.1-flash-image");
     node->SetConfigBool("transparentBg", true);
     node->SetConfigString("transparentMode", "chroma");
     node->SetConfigNumber("chromaTolerance", 30);

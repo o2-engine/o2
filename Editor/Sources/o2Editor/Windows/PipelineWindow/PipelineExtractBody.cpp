@@ -22,458 +22,31 @@
 #include "o2/Utils/Editor/EditorScope.h"
 #include "o2Editor/Pipeline/Nodes/PipelineNodesCommon.h"
 #include "o2Editor/Pipeline/PipelineRegions.h"
+#include "o2Editor/Windows/PipelineWindow/PipelineModelPicker.h"
+#include "o2Editor/Pipeline/UiLayout/UiLayoutParse.h"
+#include "o2Editor/Pipeline/UiDoc/UiDocDevice.h"
+#include "o2Editor/Pipeline/Providers/LocalAgentProvider.h"
+#include "o2Editor/Pipeline/PipelinePngMeta.h"
 #include "o2Editor/Pipeline/PipelineSettings.h"
 #include "o2Editor/Pipeline/Providers/AiRouter.h"
 #include "o2Editor/Pipeline/Providers/GeminiProvider.h"
 #include "o2Editor/Windows/PipelineWindow/PipelineEditor.h"
 #include "o2Editor/Windows/PipelineWindow/PipelineNodeWidget.h"
 #include "o2Editor/Windows/PipelineWindow/PipelinePaintEditor.h"
+#include "o2Editor/Windows/PipelineWindow/PipelinePartsGrid.h"
 
 namespace Editor
 {
     using namespace PipelineControls;
 
-    // -----------------------------------------------------------------------------------------------------------------
-    // Actions under the source: the part buttons, then the transparent switch at the right end of the line when the card is
-    // at least 400 wide, else on a line of its own under them, at the right
-    // -----------------------------------------------------------------------------------------------------------------
-    class PipelineExtractActions : public Widget
+    // A thin line between groups of a parameter list (.plist-div)
+    static Ref<Widget> MakeListDivider()
     {
-    public:
-        static constexpr float buttonsHeight = 27.52f; // Line of the part buttons (.actions)
-        static constexpr float switchLine = 19.0f;     // Line of the switch when it does not fit beside them
-        static constexpr float switchGap = 8.0f;       // Between the buttons and the switch: the gap and its 2 px margin
-
-    public:
-        explicit PipelineExtractActions(RefCounter* refCounter): Widget(refCounter) {}
-
-        // Sets the line of buttons, their width, and the switch
-        void Setup(const Ref<Widget>& buttons, float buttonsWidth, const Ref<Widget>& toggle)
-        {
-            mButtons = buttons;
-            mButtonsWidth = buttonsWidth;
-            mSwitch = toggle;
-            AddChild(mButtons);
-            AddChild(mSwitch);
-        }
-
-        // Returns true when the switch shares the line of the buttons at the width
-        bool IsInline(float width) const { return !mSwitch || mButtonsWidth + switchGap + mSwitch->layout->minWidth <= width + 0.5f; }
-
-        // Returns the height of the row at the width
-        float HeightForWidth(float width) const { return IsInline(width) ? buttonsHeight : buttonsHeight + switchLine; }
-
-        void UpdateSelfTransform() override
-        {
-            Widget::UpdateSelfTransform();
-            if (!mButtons || !mSwitch)
-                return;
-
-            float switchWidth = mSwitch->layout->minWidth;
-            *mButtons->layout = WidgetLayout(Vec2F(0, 1), Vec2F(0, 1), Vec2F(0, -buttonsHeight), Vec2F(mButtonsWidth, 0));
-            if (IsInline(layout->GetWidth()))
-            {
-                float x = mButtonsWidth + switchGap, middle = buttonsHeight * 0.5f;
-                *mSwitch->layout = WidgetLayout(Vec2F(0, 1), Vec2F(0, 1), Vec2F(x, -middle - 9.0f), Vec2F(x + switchWidth, -middle + 9.0f));
-            }
-            else
-                *mSwitch->layout = WidgetLayout(Vec2F(1, 1), Vec2F(1, 1), Vec2F(-switchWidth, -buttonsHeight - switchLine), Vec2F(0, -buttonsHeight - 1.0f));
-            mSwitch->layout->minWidth = switchWidth;
-            mSwitch->layout->maxWidth = switchWidth;
-        }
-
-    private:
-        Ref<Widget> mButtons;            // Add part and auto split
-        float       mButtonsWidth = 0.0f; // Width of the buttons with the gap between them
-        Ref<Widget> mSwitch;             // Transparent background switch
-    };
-
-    // A 20 x 18 button of a cell's tool strip: the glyph in white, a light wash or the red when hovered
-    static Ref<Button> MakeCellTool(const String& icon, const String& name, bool danger)
-    {
-        auto button = mmake<Button>();
-        button->name = name;
-        auto hover = AddFillLayer(*button, "hover", danger ? PipelineTheme::Get().red : Color4(255, 255, 255, 46), 0.0f, Layout::BothStretch(), -1.0f);
-        float strength = hover->transparency;
-        hover->transparency = 0.0f;
-        button->AddState("hover", AnimationClip::EaseInOut("layer/hover/transparency", 0.0f, strength, 0.12f))->offStateAnimationSpeed = 0.5f;
-        auto sprite = mmake<VectorSprite>(icon);
-        sprite->color = Color4::White();
-        button->AddLayer("icon", sprite, Layout::Based(BaseCorner::Center, Vec2F(10, 10)));
-        button->layout->minWidth = 20;
-        button->layout->maxWidth = 20;
-        return button;
+        auto divider = mmake<Widget>();
+        divider->name = "divider";
+        divider->AddLayer("line", MakeMenuLine(), Layout::HorStretch(VerAlign::Middle, 0, 0, 1, 0));
+        return divider;
     }
-
-    // ---------------------------------------------------------------------------------
-    // Progress of a part being computed: its cell dimmed and a ring with a turning arc
-    // ---------------------------------------------------------------------------------
-    class PipelinePartSpinner : public Widget
-    {
-    public:
-        explicit PipelinePartSpinner(RefCounter* refCounter): Widget(refCounter) {}
-
-        void Update(float dt) override
-        {
-            Widget::Update(dt);
-            mTime = Math::Mod(mTime + dt, turnTime);
-        }
-
-        void Draw() override
-        {
-            if (!mResEnabledInHierarchy || mIsClipped)
-                return;
-
-            RectF rect = layout->GetWorldRect();
-            o2Render.DrawFilledPolygon({ rect.LeftBottom(), Vec2F(rect.left, rect.top), rect.RightTop(), Vec2F(rect.right, rect.bottom) },
-                                       Color4(0, 0, 0, 89));
-
-            // The ring keeps its size in canvas units, like the rest of the card
-            float unitsPerPixel = Math::Max(0.0001f, o2Render.GetCamera().GetScale2D().x);
-            float width = Math::Max(1.0f, stroke/unitsPerPixel);
-            Vec2F center = rect.Center();
-            o2Render.DrawAACircle(center, radius, Color4(255, 255, 255, 64), 32, width);
-
-            // A quarter of the ring, turning clockwise once per turn time
-            float start = Math::PI()*0.25f - mTime/turnTime*Math::PI()*2.0f;
-            Vector<Vec2F> arc;
-            for (int i = 0; i <= 8; i++)
-            {
-                float angle = start + Math::PI()*0.5f*(float)i/8.0f;
-                arc.Add(center + Vec2F(Math::Cos(angle), Math::Sin(angle))*radius);
-            }
-            o2Render.DrawAALine(arc, AccentColor(), width);
-        }
-
-    private:
-        static constexpr float radius = 8.0f, stroke = 2.0f, turnTime = 0.8f;
-
-        float mTime = 0.0f; // Seconds into the current turn
-    };
-
-    // ---------------------------------------------------------------------------------
-    // Parts of an extract node as a grid of cells: the result of each part with its name
-    // under it, the selected one outlined, a dot before the name of a part with its own
-    // background settings, a spinner over a part being computed and a red frame round a
-    // part that failed; as many columns as the width fits
-    // ---------------------------------------------------------------------------------
-    class PipelinePartsGrid : public Widget
-    {
-    public:
-        Function<void(const String&)>                onSelect; // A cell was clicked
-        Function<void(const String&)>                onRegen;  // The regenerate button of a cell was pressed
-        Function<void(const String&)>                onRemove; // The remove button of a cell was pressed
-        Function<void(const String&, const String&)> onRename; // The name of the selected cell was edited
-
-    public:
-        explicit PipelinePartsGrid(RefCounter* refCounter): Widget(refCounter) {}
-
-        // Zoomed far out only the pictures of the parts are drawn
-        void Draw() override
-        {
-            if (!PipelineControls::IsFarView())
-            {
-                Widget::Draw();
-                return;
-            }
-
-            if (!mResEnabledInHierarchy || mIsClipped)
-                return;
-
-            for (auto& cell : mCells)
-                cell.image->Draw();
-        }
-
-        // Rebuilds the cells for the parts; the selected one gets the name field and the outline
-        void SetParts(const Vector<PipelineExtractRegion>& regions, const String& selectedId)
-        {
-            RemoveAllChildren();
-            mCells.Clear();
-            mSingle = regions.Count() == 1;
-
-            WeakRef<PipelinePartsGrid> weakThis(this);
-            for (int i = 0; i < regions.Count(); i++)
-            {
-                String id = regions[i].id;
-                Cell cell;
-                cell.id = id;
-                cell.name = regions[i].name;
-                cell.root = mmake<Widget>();
-                // Red frame round a part that failed in this run, over the picture
-                auto errorFrame = mmake<PipelineRoundedFrame>();
-                errorFrame->color = PipelineTheme::Get().red;
-                errorFrame->radius = 7.0f;
-                errorFrame->width = 1.0f;
-                cell.errorFrame = cell.root->AddLayer("error", errorFrame, Layout::BothStretch(), 10.0f);
-                cell.errorFrame->enabled = false;
-
-                cell.image = mmake<PipelineCellImage>();
-                cell.image->SetHint((String)(i + 1));
-                cell.root->AddChild(cell.image);
-
-                cell.spinner = mmake<PipelinePartSpinner>();
-                cell.spinner->name = "part spinner";
-                cell.root->AddChild(cell.spinner);
-                cell.spinner->SetEnabledForcible(false);
-
-                cell.pick = mmake<Button>();
-                cell.pick->name = "select part";
-                cell.pick->onClick = [weakThis, id]() { if (auto self = weakThis.Lock()) self->onSelect(id); };
-                // The part's output port sits on the top-right corner of the image: that corner is the port's
-                WeakRef<Button> weakPick(cell.pick);
-                cell.pick->isPointInside = [weakPick](const Vec2F& p)
-                {
-                    auto pick = weakPick.Lock();
-                    if (!pick) return false;
-                    RectF rect = pick->layout->GetWorldRect();
-                    return rect.IsInside(p) && (p - Vec2F(rect.right, rect.top)).Length() > 14.0f;
-                };
-                cell.root->AddChild(cell.pick);
-
-                auto tools = mmake<HorizontalLayout>();
-                tools->spacing = 0;
-                tools->expandWidth = false;
-                tools->expandHeight = true;
-                tools->baseCorner = BaseCorner::Left;
-                cell.tools = tools;
-                auto regen = MakeCellTool("ui/pipeline/al_refresh.svg", "regen part", false);
-                regen->onClick = [weakThis, id]() { if (auto self = weakThis.Lock()) self->onRegen(id); };
-                tools->AddChild(regen);
-                if (regions.Count() > 1)
-                {
-                    auto remove = MakeCellTool("ui/pipeline/al_trash.svg", "remove part", true);
-                    remove->onClick = [weakThis, id]() { if (auto self = weakThis.Lock()) self->onRemove(id); };
-                    tools->AddChild(remove);
-                }
-                cell.root->AddChild(cell.tools);
-
-                // One part needs no caption: the prompt field under the grid is its name
-                if (!mSingle)
-                {
-                    String fallback = "part " + (String)(i + 1);
-                    cell.edit = MakeEditBox(regions[i].name, false, fallback);
-                    cell.edit->name = "part name";
-                    PipelineImageTheme::SkinCellNameField(cell.edit);
-                    cell.edit->onChangeCompleted = [weakThis, id](const WString& text) { if (auto self = weakThis.Lock()) self->onRename(id, (String)text); };
-                    cell.root->AddChild(cell.edit);
-
-                    cell.label = MakeLabel(regions[i].name.IsEmpty() ? fallback : regions[i].name, true);
-                    StyleLabel(cell.label, 10.5f, 400, PipelineTheme::Get().fgDim);
-                    cell.label->horOverflow = Label::HorOverflow::Dots;
-                    cell.label->horAlign = HorAlign::Middle;
-                    cell.label->verAlign = VerAlign::Middle;
-                    cell.root->AddChild(cell.label);
-
-                    auto dot = mmake<PipelineRoundedRect>();
-                    dot->color = AccentColor();
-                    dot->radius = dotSize*0.5f;
-                    dot->roundBottom = true;
-                    cell.dot = mmake<Widget>();
-                    cell.dot->name = "own settings";
-                    cell.dot->AddLayer("dot", dot, Layout::BothStretch());
-                    cell.root->AddChild(cell.dot);
-                    cell.own = regions[i].ownTransparency;
-                    cell.dot->SetEnabledForcible(cell.own);
-                    cell.captionWidth = Text::GetTextSize(cell.label->GetText(), cell.label->GetFont(), cell.label->GetHeight(), Vec2F(),
-                                                          HorAlign::Left, VerAlign::Top, false).x;
-                }
-
-                AddChild(cell.root);
-                mCells.Add(cell);
-            }
-            SetSelected(selectedId);
-            LayoutCells();
-        }
-
-        // Gives a part's cell its new name in place; false when the grid has no such captioned cell
-        bool RenamePart(const String& id, const String& name)
-        {
-            for (auto& cell : mCells)
-            {
-                if (cell.id != id || !cell.label)
-                    continue;
-
-                cell.name = name;
-                String caption = name.IsEmpty() ? "part " + (String)(mCells.IndexOf(cell) + 1) : name;
-                cell.label->text = caption;
-                cell.captionWidth = Text::GetTextSize(cell.label->GetText(), cell.label->GetFont(), cell.label->GetHeight(), Vec2F(),
-                                                      HorAlign::Left, VerAlign::Top, false).x;
-                if (cell.edit && !cell.edit->IsFocused() && (String)cell.edit->GetText() != name)
-                    cell.edit->SetText(name);
-                LayoutCells();
-                return true;
-            }
-            return false;
-        }
-
-        // Moves the outline and the name field to the selected part without rebuilding the cells
-        void SetSelected(const String& id)
-        {
-            for (auto& cell : mCells)
-            {
-                bool on = cell.id == id;
-                cell.root->name = on ? "part cell selected" : "part cell";
-                cell.image->selected = on;
-                cell.image->tools = on;
-                cell.tools->SetEnabledForcible(on);
-                // Forcible: a widget disabled before its first update would otherwise keep drawing through its fade state
-                if (cell.edit)
-                {
-                    cell.edit->SetEnabledForcible(on);
-                    if (on)
-                        cell.edit->SetText(cell.name);
-                }
-                if (cell.label)
-                    cell.label->SetEnabledForcible(!on);
-
-                cell.selected = on;
-            }
-            LayoutCells();
-        }
-
-        // Shows or hides the dot of a part with its own background settings
-        void SetOwnSettings(const String& id, bool own)
-        {
-            for (auto& cell : mCells)
-            {
-                if (cell.id != id || !cell.dot)
-                    continue;
-
-                cell.own = own;
-                cell.dot->SetEnabledForcible(own);
-            }
-            LayoutCells();
-        }
-
-        // Shows the run state of every part in place: a spinner over the running ones, a red frame round the failed ones
-        void SetPartStates(const Map<String, String>& states)
-        {
-            for (auto& cell : mCells)
-            {
-                String state;
-                states.TryGetValue(cell.id, state);
-                cell.spinner->SetEnabledForcible(state == "running");
-                cell.errorFrame->enabled = state == "error";
-            }
-        }
-
-        // Returns the number of cells
-        int GetCellCount() const { return mCells.Count(); }
-
-        // Returns true and the drawn top-right corner of the part's image in world space, once its cell is laid out
-        bool GetImageCorner(int index, Vec2F& corner) const
-        {
-            if (index < 0 || index >= mCells.Count() || mCells[index].image->layout->GetWidth() <= 0.0f)
-                return false;
-
-            RectF rect = mCells[index].image->layout->GetWorldRect();
-            corner = Vec2F(rect.right, rect.top);
-            return true;
-        }
-
-        // Returns the index of the part's cell, -1 when there is none
-        int GetCellIndex(const String& id) const
-        {
-            return mCells.IndexOf([&](const Cell& cell) { return cell.id == id; });
-        }
-
-        // Shows the result of a part in its cell
-        void SetPartImage(const String& id, const Ref<Bitmap>& bitmap)
-        {
-            for (auto& cell : mCells)
-            {
-                if (cell.id == id)
-                    cell.image->SetBitmap(bitmap);
-            }
-        }
-
-        void UpdateSelfTransform() override
-        {
-            Widget::UpdateSelfTransform();
-            LayoutCells();
-        }
-
-    private:
-        inline static const Color4 errorColor = Color4(249, 93, 72, 255);
-
-        static constexpr float gap = PipelinePairLayout::gridGap, dotSize = 6.0f;
-
-        struct Cell
-        {
-            String                 id;
-            String                 name;  // Part name, put into the field when the cell is selected
-            Ref<Widget>            root;
-            Ref<PipelineCellImage> image; // Picture, outlined while selected
-            Ref<WidgetLayer>       errorFrame; // Red outline of a part that failed in this run
-            Ref<PipelinePartSpinner> spinner; // Progress over a part being computed
-            Ref<Button>            pick;
-            Ref<Widget>            tools;
-            Ref<EditBox>           edit;  // Name field, shown on the selected cell
-            Ref<Label>             label; // Name caption of the other cells
-            Ref<Widget>            dot;   // Mark of a part with its own background settings, before the name
-            bool                   own = false;
-            bool                   selected = false;
-            float                  captionWidth = 0.0f; // Width of the name caption, the dot goes right before it
-
-            bool operator==(const Cell& other) const { return id == other.id; }
-        };
-
-        struct Geometry { int cols = 1, rows = 1; float cellW = 0.0f, cellH = 0.0f, labelH = 0.0f, offX = 0.0f, offY = 0.0f; };
-
-        Vector<Cell> mCells;
-        bool         mSingle = true;
-
-        // Cells of the right pane: the pair geometry of the row the grid fills
-        Geometry Geom(float width, float height) const
-        {
-            auto pair = PipelinePairLayout::ExtractGrid(width*2.0f + PipelinePairLayout::paneGap, mCells.Count(), height);
-            Geometry g;
-            g.cols = pair.cols;
-            g.rows = pair.rows;
-            g.cellW = pair.cellW;
-            g.cellH = pair.cellH;
-            g.labelH = pair.labelH;
-            g.offX = pair.offX;
-            g.offY = pair.offY;
-            return g;
-        }
-
-        void LayoutCells()
-        {
-            float width = layout->GetWidth();
-            if (width <= 0.0f)
-                return;
-
-            Geometry g = Geom(width, layout->GetHeight());
-            for (int i = 0; i < mCells.Count(); i++)
-            {
-                auto& cell = mCells[i];
-                int col = i % g.cols, row = i / g.cols;
-                float x = g.offX + col * (g.cellW + gap), y = g.offY + row * (g.cellH + g.labelH + gap);
-                *cell.root->layout = WidgetLayout(Vec2F(0, 1), Vec2F(0, 1), Vec2F(x, -(y + g.cellH + g.labelH)), Vec2F(x + g.cellW, -y));
-                *cell.image->layout = WidgetLayout::HorStretch(VerAlign::Top, 0, 0, g.cellH, 0);
-                *cell.spinner->layout = WidgetLayout::HorStretch(VerAlign::Top, 0, 0, g.cellH, 0);
-                *cell.pick->layout = WidgetLayout::HorStretch(VerAlign::Top, 0, 0, g.cellH, 0);
-                cell.errorFrame->layout = Layout(Vec2F(0, 1), Vec2F(1, 1), Vec2F(0, -g.cellH), Vec2F(0, 0));
-                // Top left: the part's output port sits on the top-right corner
-                *cell.tools->layout = WidgetLayout(Vec2F(0, 1), Vec2F(0, 1), Vec2F(1, -19), Vec2F(41, -1));
-                // The name field of the selected part makes room for the dot; a centred caption has it right before its text
-                float fieldLeft = cell.own ? dotSize + 4.0f : 0.0f, nameMiddle = (g.labelH - 2.0f)*0.5f;
-                float captionArea = g.cellW - 16.0f;
-                float dotLeft = cell.selected ? 1.0f :
-                    Math::Max(1.0f, (captionArea - Math::Min(cell.captionWidth, captionArea))*0.5f - dotSize - 3.0f);
-                if (cell.dot)
-                {
-                    *cell.dot->layout = WidgetLayout(Vec2F(0, 0), Vec2F(0, 0), Vec2F(dotLeft, nameMiddle - dotSize*0.5f),
-                                                     Vec2F(dotLeft + dotSize, nameMiddle + dotSize*0.5f));
-                }
-                if (cell.edit)
-                    *cell.edit->layout = WidgetLayout::HorStretch(VerAlign::Bottom, fieldLeft, 0, g.labelH - 2.0f, 0);
-                if (cell.label)
-                    *cell.label->layout = WidgetLayout::HorStretch(VerAlign::Bottom, 0, 0, g.labelH - 2.0f, 0);
-            }
-        }
-    };
 
     class ImageExtractBody : public PipelineNodeBody
     {
@@ -541,6 +114,22 @@ namespace Editor
             float autoWidth = 22.0f + Math::Ceil(TextWidth("Auto-split", bodyFont)) + 9.0f;
             add->layout->minWidth = add->layout->maxWidth = addWidth;
             mAutoButton->layout->minWidth = mAutoButton->layout->maxWidth = autoWidth;
+
+            // Auto-split and the model it asks are one control: the model is only ever used by this button
+            mSplitModel = MakeModelField();
+            mSplitModel->name = "split model";
+            SetModelFieldValue(mSplitModel, SplitModel(), PipelineModelKind::Text);
+            mSplitModel->layout->minWidth = 96;
+            mSplitModel->onClick = [weakThis]() { if (auto self = weakThis.Lock()) self->PickSplitModel(); };
+            auto split = mmake<HorizontalLayout>();
+            split->name = "split";
+            split->spacing = 2;
+            split->expandWidth = true;
+            split->expandHeight = true;
+            split->baseCorner = BaseCorner::Left;
+            split->AddChild(mAutoButton);
+            split->AddChild(mSplitModel);
+
             auto buttons = mmake<HorizontalLayout>();
             buttons->name = "part actions";
             buttons->spacing = 6;
@@ -548,14 +137,8 @@ namespace Editor
             buttons->expandHeight = true;
             buttons->baseCorner = BaseCorner::Left;
             buttons->AddChild(add);
-            buttons->AddChild(mAutoButton);
-            mTransparentSwitch = MakeTransparentSwitch();
-            PipelineImageTheme::KeepWholeCaption(*mTransparentSwitch);
-            auto actions = mmake<PipelineExtractActions>();
-            actions->name = "actions";
-            actions->Setup(buttons, addWidth + 6.0f + autoWidth, mTransparentSwitch);
-            Ref<PipelineExtractActions> actionsRef = actions;
-            AddRow(actions, [actionsRef](float width) { return actionsRef->HeightForWidth(width); });
+            buttons->AddChild(split);
+            AddRow(buttons, 27.52f);
 
             // The name of the selected part is what the model is asked to keep
             mPromptRegion = SelectedId();
@@ -564,7 +147,7 @@ namespace Editor
             mPrompt->onChangeCompleted = [weakThis](const WString& text) { if (auto self = weakThis.Lock()) self->RenameRegion(self->mPromptRegion, (String)text); };
             AddRow(mPrompt, FieldHeight(NameOf(mPromptRegion), "What to keep, e.g. the green chip"));
 
-            if (BeginParams(GetBool("transparentBg", false) ? Vector<String>{ "Model", "Seed", "Transparency" } : Vector<String>{ "Model", "Seed" }))
+            if (BeginParams(ParamsSummary()))
             {
                 mParamsList = mParams;
                 AddParamRows();
@@ -600,10 +183,47 @@ namespace Editor
             ShowPartStates();
         }
 
-        // With several parts the transparency rows edit the selected part's own settings when it has them
-        DataValue* GetPartTransparency() const override
+        // The model and background rows read the selected part's own settings when it has them
+        const DataValue* FindPartSetting(const String& key) const override
         {
-            return PipelineRegions::FindTransparency(*mNode, SelectedId());
+            String id = SelectedId();
+            if (!IsOwnPart(id))
+                return nullptr;
+
+            if (key == "model")
+            {
+                auto part = PipelineRegions::FindPart(*mNode, id);
+                return part ? part->FindMember("model") : nullptr;
+            }
+
+            if (!PipelineTransparency::SettingKeys().Contains(key))
+                return nullptr;
+
+            auto own = PipelineRegions::FindTransparency(*mNode, id);
+            return own ? own->FindMember(key.Data()) : nullptr;
+        }
+
+        // ...and write them there; a part with only its own model gets its own background copy on the first background edit
+        DataValue* PartSettingSlot(const String& key) override
+        {
+            String id = SelectedId();
+            if (!IsOwnPart(id))
+                return nullptr;
+
+            if (key == "model")
+            {
+                auto part = PipelineRegions::FindPart(*mNode, id);
+                return part ? &(*part)["model"] : nullptr;
+            }
+
+            if (!PipelineTransparency::SettingKeys().Contains(key))
+                return nullptr;
+
+            if (!PipelineRegions::FindTransparency(*mNode, id))
+                PipelineRegions::SetOwnTransparency(*mNode, id, true);
+
+            auto own = PipelineRegions::FindTransparency(*mNode, id);
+            return own ? &(*own)[key.Data()] : nullptr;
         }
 
         // The output ports of several parts sit on the image corners of their cells, like the links leave them in AssetsLine
@@ -645,7 +265,7 @@ namespace Editor
         Ref<PipelinePaintEditor> mPaint;        // Source image with the boxes of the parts
         Ref<PipelinePartsGrid>   mGrid;         // Cells of the parts with their results
         Ref<Button>              mAutoButton;   // Asks the model to list the parts
-        Ref<Toggle>              mTransparentSwitch; // Transparent background of the node or of the selected part
+        Ref<Button>              mSplitModel;   // The model the auto-split asks
         Ref<EditBox>             mPrompt;       // Name of the selected part
         String                   mPromptRegion; // Part the prompt field edits
         bool mWritingRoi = false; // True while the selected box is pushed into the paint editor
@@ -811,22 +431,173 @@ namespace Editor
             Notify("selectedRegion", true);
         }
 
+        bool IsOwnPart(const String& id) const
+        {
+            for (auto& region : Regions())
+            {
+                if (region.id == id)
+                    return region.IsOwn();
+            }
+            return false;
+        }
+
+        String SplitModel() const
+        {
+            String model = GetString("splitModel", "").Trimed(" \n\r\t");
+            return model.IsEmpty() ? String(PipelineRegions::autoSplitDefaultModel) : model;
+        }
+
+        // What the folded list says: the node's model, its background, how many parts have their own settings
+        Vector<String> ParamsSummary() const
+        {
+            String model = mNode->GetConfigString("model", GeminiProvider::defaultImageModel);
+            String bg = !mNode->GetConfigBool("transparentBg", false) ? "Opaque" :
+                PipelineTransparency::SupportsNativeTransparency(model) ? "Bg by model" :
+                mNode->GetConfigString("transparentMode", "twoPass") == "chroma" ? "Chroma key" : "White / black";
+            Vector<String> names = { PipelineUtils::PrettyModelName(model), bg };
+            auto regions = Regions();
+            int own = regions.Count() > 1 ? regions.Sum<int>([](const PipelineExtractRegion& r) { return r.IsOwn() ? 1 : 0; }) : 0;
+            if (own > 0)
+                names.Add((String)own + " own");
+
+            return names;
+        }
+
+        // The line under the scope switch: who the rows below change
+        String ScopeNote() const
+        {
+            auto regions = Regions();
+            String id = SelectedId();
+            for (int i = 0; i < regions.Count(); i++)
+            {
+                if (regions[i].id != id || !regions[i].IsOwn())
+                    continue;
+
+                String head = regions[i].name;
+                int dash = head.Find(" - ");
+                if (dash >= 0)
+                    head = head.SubStr(0, dash);
+                head = head.Trimed(" \n\r\t");
+                if (UiDoc::JsSlice(head, 0, 40).Length() < head.Length())
+                    head = UiDoc::JsSlice(head, 0, 31) + "\xE2\x80\xA6";
+                return "Changes only \xE2\x80\x9C" + (head.IsEmpty() ? "part " + (String)(i + 1) : head) + "\xE2\x80\x9D";
+            }
+
+            int follow = regions.Sum<int>([](const PipelineExtractRegion& r) { return r.IsOwn() ? 0 : 1; });
+            return follow == regions.Count() ? String("Changes every part") :
+                "Changes " + (String)follow + " of " + (String)regions.Count() + " parts \xE2\x80\x94 the others have their own";
+        }
+
+        // Several parts: the scope switch and its note; then one set of rows for whatever it says - model, background,
+        // method; then the node's own rows: seed and the source's DPI
         void AddParamRows()
         {
-            AddModelRow(PipelineImageModelPresets(), GeminiProvider::defaultImageModel, PipelineModelKind::Image);
-            AddSeedRow();
             AddScopeRow();
+            AddModelRow(PipelineImageModelPresets(), GeminiProvider::defaultImageModel, PipelineModelKind::Image);
+            WeakRef<ImageExtractBody> weakThis(this);
+            auto transparent = AddCheckbox("Transparent background", "transparentBg", false);
+            transparent->name = "transparent background";
+            transparent->onToggleByUser = [weakThis](bool value)
+            {
+                if (auto self = weakThis.Lock())
+                {
+                    self->SetBool("transparentBg", value, true);
+                    self->RefreshParamRows();
+                }
+            };
             AddTransparencyBlock();
+            AddRow(MakeListDivider(), 9);
+            AddSeedRow();
+            AddSourceDpiRow();
+        }
+
+        // The density of the source the parts are measured against: typed, else the picture's own tag, else the base
+        void AddSourceDpiRow()
+        {
+            String typed = mNode->HasConfig("sourceDpi") ? PipelineUtils::ValueToString(*mNode->GetConfigValue("sourceDpi"), "") : String();
+            auto tagged = PipelinePngMeta::ReadDpi(GetInput("image").GetPngBytes());
+            String placeholder = (String)(int)Math::Round((float)tagged.value_or(UiDoc::UI_BASE_DPI));
+            auto field = MakeEditBox(typed, false, placeholder);
+            field->name = "source dpi";
+            field->layout->minWidth = field->layout->maxWidth = 64;
+            WeakRef<ImageExtractBody> weakThis(this);
+            field->onChangeCompleted = [weakThis](const WString& text)
+            {
+                auto self = weakThis.Lock();
+                if (!self)
+                    return;
+
+                String s = ((String)text).Trimed();
+                UiLayout::Json value(s);
+                auto dpi = s.IsEmpty() ? std::nullopt : UiDoc::CleanDpi(&value);
+                if (s.IsEmpty())
+                {
+                    self->mNode->RemoveConfig("sourceDpi");
+                    self->Notify("sourceDpi", true);
+                }
+                else if (dpi)
+                    self->SetNumber("sourceDpi", (float)*dpi, true);
+
+                self->RefreshParamRows();
+            };
+
+            auto note = MakeLabel(!typed.IsEmpty() ? "set here" : tagged ? "the picture's own" : "the base, 480", true);
+            StyleLabel(note, 10.5f, 400, PipelineTheme::Get().fg3);
+            auto line = mmake<HorizontalLayout>();
+            line->spacing = 6;
+            line->expandWidth = true;
+            line->expandHeight = true;
+            line->baseCorner = BaseCorner::Left;
+            line->AddChild(field);
+            line->AddChild(note);
+            AddRow(MakeRow("Source DPI", line, 86.0f), 22);
+        }
+
+        void PickSplitModel()
+        {
+            auto editor = mEditor.Lock();
+            if (!editor || !mSplitModel)
+                return;
+
+            if (auto picker = editor->GetModelPicker())
+            {
+                if (picker->IsOpenFor(mSplitModel))
+                {
+                    picker->Close();
+                    return;
+                }
+
+                if (picker->ConsumeClosedByField(mSplitModel))
+                    return;
+            }
+
+            RectF world = mSplitModel->layout->GetWorldRect();
+            Vec2F a = editor->LocalToScreenPoint(Vec2F(world.left, world.bottom));
+            Vec2F b = editor->LocalToScreenPoint(Vec2F(world.right, world.top));
+            PipelineModelPickerRequest request;
+            request.ids = PipelineTextModelPresets();
+            request.ids.Add(LocalAgentProvider::OfferedModels(PipelineSettings::Load()));
+            request.kind = PipelineModelKind::Text;
+            request.current = SplitModel();
+            request.anchor = RectF(Math::Min(a.x, b.x), Math::Max(a.y, b.y), Math::Max(a.x, b.x), Math::Min(a.y, b.y));
+            request.field = mSplitModel;
+            WeakRef<ImageExtractBody> weakThis(this);
+            request.onPick = [weakThis](const String& id)
+            {
+                auto self = weakThis.Lock();
+                if (!self)
+                    return;
+
+                self->SetString("splitModel", id, true);
+                SetModelFieldValue(self->mSplitModel, id, PipelineModelKind::Text);
+            };
+            editor->ShowModelPicker(request);
         }
 
         // Rebuilds the rows of the open parameter list for the selected part, leaving the rest of the card alone; for the user's
         // own change a hand-sized card follows the rows, so the pictures keep their size
         void RefreshParamRows(bool keepArea = true)
         {
-            // The switch follows the selected part, which may have settings of its own
-            if (mTransparentSwitch)
-                mTransparentSwitch->SetValue(GetBool("transparentBg", false));
-
             auto owner = mOwner.Lock();
             if (!mParamsList || !owner)
                 return;
@@ -849,13 +620,13 @@ namespace Editor
             }
         }
 
-        // "Settings for": the transparency rows below edit every part (the node) or the selected part alone
+        // "Model & bg": the model and background rows below edit every part (the node) or the selected part alone
         void AddScopeRow()
         {
             if (Regions().Count() < 2)
                 return;
 
-            bool own = GetPartTransparency() != nullptr;
+            bool own = IsOwnPart(SelectedId());
             auto segments = mmake<HorizontalLayout>();
             segments->name = "settings scope";
             segments->spacing = 4;
@@ -871,14 +642,16 @@ namespace Editor
                 segment->onToggleByUser = [weakThis, part](bool) { if (auto self = weakThis.Lock()) self->SetPartScope(part); };
                 segments->AddChild(segment);
             }
-            AddRow(MakeRow("Settings for", segments, 86.0f), 22);
+            AddRow(MakeRow("Model & bg", segments, 86.0f), 22);
+            AddMutedLine(ScopeNote());
         }
 
-        // Gives the selected part its own background settings, copied from what it uses now, or returns it to the node's
+        // Gives the selected part its own model and background settings, copied from what it uses now, or returns it to the
+        // node's
         void SetPartScope(bool own)
         {
             String id = SelectedId();
-            if (PipelineRegions::SetOwnTransparency(*mNode, id, own))
+            if (PipelineRegions::SetOwnPart(*mNode, id, own))
                 Notify("regions", true);
 
             if (mGrid)
@@ -991,7 +764,8 @@ namespace Editor
             }
         }
 
-        // Asks the vision model for the parts of the source image and turns its answer into regions
+        // Sends the selected frame of the source to the vision model (splitModel), which cuts it into the pieces of a UI kit;
+        // the pieces take the frame's place in the list (the first one keeps its port, so a link hanging off it survives)
         void AutoSplit()
         {
             auto editor = mEditor.Lock();
@@ -1009,25 +783,42 @@ namespace Editor
             WeakRef<PipelineEditor> weakEditor(editor);
             ctx->log = [weakEditor](const String& message) { if (auto e = weakEditor.Lock()) { if (e->onLog) e->onLog(message); } };
 
-            String model = GetString("splitModel", GeminiProvider::defaultTextModel);
+            String model = SplitModel();
             AiRouteKeys keys = AiRouter::KeysOf(ctx->settings);
             AiRoute route = AiRouter::ChooseRoute(model, keys);
-            if (keys.Of(route.provider).IsEmpty())
+            if (route.provider != AiProvider::Local && keys.Of(route.provider).IsEmpty())
             {
                 ctx->Log("Auto split: no " + AiRouter::ProviderName(route.provider) + " key - set it in the pipeline settings");
                 return;
             }
 
+            // The selected part is the frame: the model sees only that part of the source
+            PipelineExtractRegion frame = PipelineRegions::RegionOfPort(*mNode, SelectedId());
+            bool framed = frame.x > 0.001f || frame.y > 0.001f || frame.w < 0.999f || frame.h < 0.999f;
+            Ref<Bitmap> cropped = framed ? PipelineImageOps::Crop(*bitmap, { frame.x, frame.y, frame.w, frame.h }) : bitmap;
+
+            // Gemini places boxes on its own grid; any other model answers pixels of the picture it gets, scaled to what it reads
+            // without scaling it itself
+            Vec2I size = cropped->GetSize();
+            auto analysis = UiLayout::AnalysisFrameOf(model, size.x, size.y);
+            if (analysis.boxes == "pixels" && analysis.scale < 1.0)
+                cropped = PipelineImageOps::Resize(*cropped, Vec2I(analysis.w, analysis.h));
+
+            PipelineRegions::SplitFrame split;
+            split.boxes = analysis.boxes;
+            split.w = analysis.w;
+            split.h = analysis.h;
+
             if (mAutoButton)
                 mAutoButton->interactable = false;
 
-            ctx->Log("Auto split: asking " + model + " for the parts of the image");
+            ctx->Log("Auto split: asking " + model + " for the pieces of the image");
 
             WeakRef<ImageExtractBody> weakThis(this);
             mAutoSplitJob = [](WeakRef<ImageExtractBody> weakBody, Ref<PipelineExecContext> context, String textModel,
-                               String imageBytes) -> Coroutine<void>
+                               String imageBytes, PipelineRegions::SplitFrame frameAsked, PipelineExtractRegion box) -> Coroutine<void>
             {
-                AiTextResult answer = co_await AiRouter::GenerateText(context, textModel, PipelineRegions::autoSplitPrompt,
+                AiTextResult answer = co_await AiRouter::GenerateText(context, textModel, PipelineRegions::AutoSplitPrompt(frameAsked),
                                                                       { { "image/png", imageBytes } });
                 auto body = weakBody.Lock();
                 if (!body)
@@ -1042,18 +833,66 @@ namespace Editor
                     co_return;
                 }
 
-                auto regions = PipelineRegions::ParseAutoSplit(answer.text);
-                if (regions.IsEmpty())
+                auto found = PipelineRegions::ParseAutoSplit(answer.text, &frameAsked);
+                if (found.IsEmpty())
                 {
                     context->Log("Auto split: the model listed no parts");
                     co_return;
                 }
 
-                context->Log("Auto split: " + (String)regions.Count() + " parts");
-                body->WriteRegions(regions, regions[0].id);
-            }(weakThis, ctx, model, PipelineValue::Image(bitmap).GetPngBytes());
+                context->Log("Auto split: " + (String)found.Count() + " parts");
+                body->PlaceSplitParts(found, box);
+            }(weakThis, ctx, model, EncodeBitmapPng(*cropped), split, frame);
 
             mAutoSplitJob.Start(JobThread::Main);
+        }
+
+        // Puts the pieces the auto-split found in place of the frame they were found in; the background plate is opaque (its own
+        // setting), every other piece a transparent sprite
+        void PlaceSplitParts(Vector<PipelineExtractRegion> found, const PipelineExtractRegion& frame)
+        {
+            for (int i = 0; i < found.Count(); i++)
+            {
+                auto& r = found[i];
+                r.x = frame.x + r.x*frame.w;
+                r.y = frame.y + r.y*frame.h;
+                r.w *= frame.w;
+                r.h *= frame.h;
+                if (i == 0)
+                    r.id = frame.id;
+            }
+
+            auto regions = Regions();
+            int at = Math::Max(0, regions.IndexOf([&](const PipelineExtractRegion& r) { return r.id == frame.id; }));
+            Vector<PipelineExtractRegion> next;
+            for (int i = 0; i < at && i < regions.Count(); i++)
+                next.Add(regions[i]);
+            next.Add(found);
+            for (int i = at + 1; i < regions.Count(); i++)
+                next.Add(regions[i]);
+
+            // The cut-outs are sprites, so transparency is on
+            mNode->SetConfigBool("transparentBg", true);
+            if (mNode->GetConfigString("transparentMode", "") != "twoPass")
+                mNode->SetConfigString("transparentMode", "chroma");
+
+            PipelineRegions::Write(*mNode, next);
+            for (auto& r : found)
+            {
+                if (!r.background)
+                    continue;
+
+                if (auto part = PipelineRegions::FindPart(*mNode, r.id))
+                {
+                    DataDocument own;
+                    own.SetObject();
+                    own["transparentBg"] = false;
+                    part->RemoveMember("transparency");
+                    (*part)["transparency"] = static_cast<const DataValue&>(own);
+                }
+            }
+
+            WriteRegions(PipelineRegions::Read(*mNode), found[0].id);
         }
 
         Coroutine<void> mAutoSplitJob; // Running auto split request

@@ -141,6 +141,21 @@ namespace Editor
             case PipelinePortType::Video:
                 PipelineDraw::Polygon({ center + Vec2F(-5.0f * k, -6.0f * k), center + Vec2F(6.0f * k, 0), center + Vec2F(-5.0f * k, 6.0f * k) }, mColor);
                 break;
+            case PipelinePortType::UiKit:
+            {
+                // A hexagon: a set of pieces
+                float hx = 3.0f * k, hy = 5.2f * k;
+                PipelineDraw::Polygon({ center + Vec2F(-6.0f * k, 0), center + Vec2F(-hx, -hy), center + Vec2F(hx, -hy),
+                                        center + Vec2F(6.0f * k, 0), center + Vec2F(hx, hy), center + Vec2F(-hx, hy) }, mColor);
+                break;
+            }
+            case PipelinePortType::TextStyle:
+            {
+                // A tall pill: a letter's stem
+                RectF rect(center.x - 3.5f * k, center.y + 6.0f * k, center.x + 3.5f * k, center.y - 6.0f * k);
+                PipelineDraw::Fill(rect, PipelineDraw::Corners(3.5f * k), mColor);
+                break;
+            }
             default:
                 PipelineDraw::Circle(center, 5.5f * k, mColor);
                 break;

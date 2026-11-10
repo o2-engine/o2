@@ -91,7 +91,7 @@ namespace Editor
             if (result.Contains(id))
                 continue;
             result.Add(id);
-            for (auto& edge : graph->GetIncomingEdges(id))
+            for (auto& edge : graph->GetRunInputEdges(id))
                 stack.Add(edge->fromNodeId);
         }
         return result;

@@ -42,6 +42,8 @@ namespace o2
 
             Vector<Ref<Item>> subItems; // Children items @SERIALIZABLE
 
+            WString hint; // Dim text on the right when the item has no shortcut, e.g. how many entries a sub menu holds
+
             bool checkable = false; // Is item checkable @SERIALIZABLE
             bool checked = false;   // Is item checked @SERIALIZABLE
 
@@ -542,6 +544,7 @@ CLASS_FIELDS_META(o2::ContextMenu::Item)
     FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().NAME(group);
     FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().NAME(icon);
     FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().NAME(subItems);
+    FIELD().PUBLIC().NAME(hint);
     FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(false).NAME(checkable);
     FIELD().PUBLIC().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(false).NAME(checked);
     FIELD().PUBLIC().NAME(onClick);

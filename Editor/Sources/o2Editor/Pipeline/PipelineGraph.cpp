@@ -15,6 +15,8 @@ namespace Editor
             case PipelinePortType::Image: return "image";
             case PipelinePortType::Video: return "video";
             case PipelinePortType::Audio: return "audio";
+            case PipelinePortType::UiKit: return "uiKit";
+            case PipelinePortType::TextStyle: return "textStyle";
             default: return "text";
         }
     }
@@ -24,7 +26,14 @@ namespace Editor
         if (str == "image") return PipelinePortType::Image;
         if (str == "video") return PipelinePortType::Video;
         if (str == "audio") return PipelinePortType::Audio;
+        if (str == "uiKit") return PipelinePortType::UiKit;
+        if (str == "textStyle") return PipelinePortType::TextStyle;
         return PipelinePortType::Text;
+    }
+
+    bool IsTextLikePortType(PipelinePortType type)
+    {
+        return type == PipelinePortType::Text || type == PipelinePortType::UiKit || type == PipelinePortType::TextStyle;
     }
 
     PipelinePort::PipelinePort(const String& id, const String& name, PipelinePortType type, bool custom /*= false*/):
@@ -708,6 +717,15 @@ namespace Editor
         return edges.FindAll([&](const Ref<PipelineEdge>& e) { return e->toNodeId == nodeId; });
     }
 
+    Vector<Ref<PipelineEdge>> PipelineGraph::GetRunInputEdges(const String& nodeId) const
+    {
+        auto node = FindNode(nodeId);
+        return edges.FindAll([&](const Ref<PipelineEdge>& e)
+        {
+            return e->toNodeId == nodeId && !(node && PipelineNodeRegistry::IsReferenceInput(*node, e->toPortId));
+        });
+    }
+
     Vector<Ref<PipelineEdge>> PipelineGraph::GetOutgoingEdges(const String& nodeId) const
     {
         return edges.FindAll([&](const Ref<PipelineEdge>& e) { return e->fromNodeId == nodeId; });
@@ -860,8 +878,14 @@ namespace Editor
         static Vector<String> keys = {
             "drawOver", "drawTool", "brushSize", "brushColor", "brushOpacity", "paramsOpen", "selectedRegion",
             "splitRatio", "fieldH", "selectedLayer", "layersPanelW", "openLayerSettings",
-            "viewZoom", "viewPanX", "viewPanY", "cmpBg", "cmpBgEnabled", "checker", "layersFolder", "layersName", "debugView", "debugStep",
-            "editsView", "editsDraft", "exportFor"
+            "viewZoom", "viewPanX", "viewPanY", "cmpBg", "cmpBgEnabled", "checker", "layersFolder", "layersName", "assetPath",
+            "debugView", "debugStep", "editsView", "editsDraft", "exportFor",
+            // UI kit, Text style and AI UI layout: what the cards show, the AI models they call, the preview screen
+            "kitSelected", "kitTab", "kitRemoveBg", "kitModel", "kitImageModel", "tsSample", "tsDark", "stylePrompt", "styleModel",
+            "uiView", "uiPreview", "uiSelected", "uiWorkspace", "uiTab", "uiRedo", "uiDraft", "uiShowIds", "agentModel", "agentReview",
+            // AI extract: the model the auto-split asks (its sourceDpi is not here: it re-tags the parts)
+            "splitModel",
+            "uiDevice", "uiDeviceCustom", "uiLandscape", "uiScale"
         };
         return keys;
     }
@@ -1033,7 +1057,12 @@ namespace Editor
         auto impl = PipelineNodeRegistry::Get(node.nodeType);
         Vector<String> exclude = { "crop", "cropEnabled" };
         if (impl)
-            exclude.Add(impl->PortCacheExcludedKeys());
+            exclude.Add(impl->PortCacheExcludedKeysOf(node, portId));
+
+        // An extract's source DPI only re-tags its parts (a post-step): out of the stored generation's key, but in what
+        // the consumers hash, so a UI kit downstream takes the new tags
+        if (rawRender && node.nodeType == "imageExtract")
+            exclude.Add("sourceDpi");
 
         String variant = (impl ? impl->PortCacheVariant(node, portId) : portId) +
             PipelineTransparency::PortCacheSuffix(node, portId, rawRender, exclude);
@@ -1043,7 +1072,7 @@ namespace Editor
     Map<String, String> PipelineGraph::UpstreamSignatures(const PipelineNode& node, const Map<String, String>& nodeSignatures) const
     {
         Map<String, String> upstream;
-        for (auto& edge : GetIncomingEdges(node.id))
+        for (auto& edge : GetRunInputEdges(node.id))
         {
             auto port = node.FindInput(edge->toPortId);
             if (!port)
@@ -1082,7 +1111,7 @@ namespace Editor
 
             visiting[id] = true;
             Map<String, String> upstream;
-            for (auto& edge : GetIncomingEdges(id))
+            for (auto& edge : GetRunInputEdges(id))
             {
                 auto port = node->FindInput(edge->toPortId);
                 if (!port)
@@ -1133,6 +1162,8 @@ ENUM_META(Editor::PipelinePortType, Editor__PipelinePortType)
     ENUM_ENTRY(Audio);
     ENUM_ENTRY(Image);
     ENUM_ENTRY(Text);
+    ENUM_ENTRY(TextStyle);
+    ENUM_ENTRY(UiKit);
     ENUM_ENTRY(Video);
 }
 END_ENUM_META;

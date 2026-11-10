@@ -14,14 +14,18 @@ using namespace o2;
 
 namespace Editor
 {
-    // Data kind carried by a pipeline port
-    enum class PipelinePortType { Text, Image, Video, Audio };
+    // Data kind carried by a pipeline port. UiKit and TextStyle are JSON documents (a UI kit with its pictures, one
+    // text style): stored and synced as text, connected only to ports of their own type
+    enum class PipelinePortType { Text, Image, Video, Audio, UiKit, TextStyle };
 
-    // Returns lower-case name of the port type: "text", "image", "video" or "audio"
+    // Returns the name of the port type as AssetsLine writes it: "text", "image", "video", "audio", "uiKit" or "textStyle"
     String PipelinePortTypeToString(PipelinePortType type);
 
-    // Parses port type from its lower-case name, unknown names give Text
+    // Parses port type from its name, unknown names give Text
     PipelinePortType PipelinePortTypeFromString(const String& str);
+
+    // Returns true for the types whose values are text on disk (text, uiKit, textStyle): .txt cache and preview files
+    bool IsTextLikePortType(PipelinePortType type);
 
     // ------------------------------------------------
     // Input or output port of a node. Custom ports are
@@ -253,6 +257,9 @@ namespace Editor
         // Returns edges ending at the node
         Vector<Ref<PipelineEdge>> GetIncomingEdges(const String& nodeId) const;
 
+        // Returns the edges a run follows into the node: its incoming edges without the references only its AI reads
+        Vector<Ref<PipelineEdge>> GetRunInputEdges(const String& nodeId) const;
+
         // Returns edges starting at the node
         Vector<Ref<PipelineEdge>> GetOutgoingEdges(const String& nodeId) const;
 
@@ -466,6 +473,7 @@ CLASS_METHODS_META(Editor::PipelineGraph)
     FUNCTION().PUBLIC().SIGNATURE(Ref<PipelineNode>, FindNode, const String&);
     FUNCTION().PUBLIC().SIGNATURE(Ref<PipelineEdge>, FindEdge, const String&);
     FUNCTION().PUBLIC().SIGNATURE(Vector<Ref<PipelineEdge>>, GetIncomingEdges, const String&);
+    FUNCTION().PUBLIC().SIGNATURE(Vector<Ref<PipelineEdge>>, GetRunInputEdges, const String&);
     FUNCTION().PUBLIC().SIGNATURE(Vector<Ref<PipelineEdge>>, GetOutgoingEdges, const String&);
     FUNCTION().PUBLIC().SIGNATURE(Vector<String>, GetRunTargets);
     FUNCTION().PUBLIC().SIGNATURE(Ref<PipelineEdge>, FindEdgeToPort, const String&, const String&);

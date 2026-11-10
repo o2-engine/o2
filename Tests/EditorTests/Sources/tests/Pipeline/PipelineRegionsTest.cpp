@@ -161,7 +161,7 @@ TEST(PipelineRegions, LongNonAsciiNamesAreCutOnCharacterBoundaries)
     auto parsed = PipelineRegions::ParseAutoSplit(
         R"([{"name": "очень длинное название элемента интерфейса для проверки обрезки", "box_2d": [100, 100, 300, 300]}])");
     ASSERT_EQ(parsed.Count(), 1);
-    EXPECT_LE(parsed[0].name.Length(), 60);
+    EXPECT_LE(WString(parsed[0].name).Length(), 48);
     EXPECT_NO_THROW({ WString wide = parsed[0].name; (void)wide; });
 }
 

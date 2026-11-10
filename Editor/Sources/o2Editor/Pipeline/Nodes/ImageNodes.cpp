@@ -1,5 +1,6 @@
 #include "o2Editor/stdafx.h"
 #include "o2Editor/Pipeline/Nodes/PipelineNodesCommon.h"
+#include "o2Editor/Pipeline/PipelinePngMeta.h"
 
 #include "o2/Utils/FileSystem/FileSystem.h"
 
@@ -58,6 +59,8 @@ namespace Editor
             mSchema.label = "Remove background (two-pass)";
             mSchema.category = PipelineNodeCategory::Transform;
             mSchema.instant = true;
+            // Retired 2026-11-11: an image node's own "White / black x2" transparency does the same in one node
+            mSchema.retired = true;
             mSchema.description = "Recover alpha from two identical shots on white and black backgrounds.";
             mSchema.inputs = { In("white", PipelinePortType::Image), In("black", PipelinePortType::Image) };
             mSchema.outputs = { Out("out", PipelinePortType::Image) };
@@ -264,6 +267,58 @@ namespace Editor
         }
     };
 
+    // The part of the picture inside a frame (crop, fractions of the image) optionally scaled to a new size (resize,
+    // resizeW x resizeH), the keys the finish image node uses for its crop and rescale. A picture that says its density
+    // keeps saying it: a crop leaves it, a rescale scales it
+    class ImageCropNode : public PipelineNodeBase
+    {
+    public:
+        ImageCropNode()
+        {
+            mSchema.type = "imageCrop";
+            mSchema.label = "Image crop";
+            mSchema.category = PipelineNodeCategory::Transform;
+            mSchema.instant = true;
+            mSchema.description = "Cut the image to a frame you draw on it (or type in pixels), and optionally scale the result to a new size. Works offline - no generation, no tokens.";
+            mSchema.inputs = { In("image", PipelinePortType::Image) };
+            mSchema.outputs = { Out("out", PipelinePortType::Image) };
+            mSchema.defaultSize = Vec2F(420, 0);
+        }
+
+        Coroutine<PipelineRunResult> Run(const Ref<PipelineExecContext>& ctx, const Map<String, PipelineValue>& inputs,
+                                         const Ref<PipelineNode>& node) override
+        {
+            auto image = Input(inputs, "image");
+            if (!image || !image->IsValid()) co_return PipelineRunResult::Fail("imageCrop: input \"image\" is not connected");
+            if (!image->IsImage()) co_return PipelineRunResult::Fail("imageCrop: input must be image");
+            auto bmp = image->GetBitmap();
+            if (!bmp || bmp->GetSize().x <= 0 || bmp->GetSize().y <= 0)
+                co_return PipelineRunResult::Fail("imageCrop: the input picture has no size");
+
+            Vec2I inSize = bmp->GetSize();
+            Ref<Bitmap> out = bmp;
+            PipelineImageOps::CropRect crop;
+            if (ReadNodeCrop(*node, "crop", crop))
+                out = PipelineImageOps::Crop(*bmp, crop);
+
+            Vec2I cut = out->GetSize();
+            int rw = (int)std::lround(node->GetConfigNumber("resizeW", 0));
+            int rh = (int)std::lround(node->GetConfigNumber("resizeH", 0));
+            bool resize = node->GetConfigBool("resize", false) && rw > 0 && rh > 0 && (rw != cut.x || rh != cut.y);
+            if (resize)
+                out = PipelineImageOps::Resize(*out, Vec2I(rw, rh));
+
+            ctx->Log("imageCrop: " + (String)inSize.x + "x" + (String)inSize.y + " -> " + (String)cut.x + "x" + (String)cut.y +
+                     (resize ? " -> " + (String)rw + "x" + (String)rh : String()));
+
+            String png = EncodeBitmapPng(*out);
+            if (auto dpi = PipelinePngMeta::ReadDpi(image->GetPngBytes()))
+                png = PipelinePngMeta::WithDpi(png, resize ? *dpi * ((double)rw / cut.x) : *dpi);
+
+            co_return PipelineRunResult::Single(PipelineValue::ImageBytes(png));
+        }
+    };
+
     // Renders the arranged image layers into one image of the work area size
     class ComposerNode : public PipelineNodeBase
     {
@@ -409,6 +464,7 @@ namespace Editor
         PipelineNodeRegistry::Register(mmake<ImageShadowNode>());
         PipelineNodeRegistry::Register(mmake<ImageGradientNode>());
         PipelineNodeRegistry::Register(mmake<ImageColorNode>());
+        PipelineNodeRegistry::Register(mmake<ImageCropNode>());
         PipelineNodeRegistry::Register(mmake<ComposerNode>());
         PipelineNodeRegistry::Register(mmake<FinishImageNode>());
     }

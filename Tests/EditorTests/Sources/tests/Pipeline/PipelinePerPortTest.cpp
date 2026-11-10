@@ -303,6 +303,37 @@ TEST_F(PerPortFixture, OnePartIsRegeneratedAlone)
     EXPECT_EQ(partRuns["chest"], 2);
 }
 
+// The web's regeneratedParts: a part regenerated with the node's other parts already cached does not look the others up
+// (no output event for them), the main preview is not written from the regenerated part, and the node is not marked as run
+TEST_F(PerPortFixture, RegeneratingOnePartTouchesNothingElse)
+{
+    PipelineGraph graph;
+    auto source = AddNode(graph, "sourceText");
+    source->SetConfigString("text", "src");
+    auto parts = AddPerPortNode(graph, "coin,chest,gem");
+    Connect(graph, source, "out", parts, "text");
+    ASSERT_TRUE(RunPipeline(graph, parts->id).done);
+
+    String sig = graph.ComputeSignatures()[parts->id];
+    String marker = PipelineExecutor::GetRanMarkerPath("perport", sig);
+    o2FileSystem.FileDelete(marker);
+    o2FileSystem.FileDelete(PipelineExecutor::GetPreviewPath("perport", parts->id, "txt"));
+
+    auto result = RunPipeline(graph, parts->id, "perport", { parts->id + "#" + parts->outputs[1].id });
+    ASSERT_TRUE(result.done) << result.Errors();
+    EXPECT_EQ(partRuns["chest"], 2);
+    EXPECT_FALSE(result.PortOutput(parts->id, parts->outputs[0].id).IsValid());
+    EXPECT_FALSE(result.PortOutput(parts->id, parts->outputs[2].id).IsValid());
+    EXPECT_EQ(result.PortOutput(parts->id, parts->outputs[1].id).data, "src|chest");
+    EXPECT_FALSE(o2FileSystem.IsFileExist(PipelineExecutor::GetPreviewPath("perport", parts->id, "txt")));
+    EXPECT_FALSE(PipelineExecutor::RanExists("perport", sig));
+
+    // A whole run writes the first part as the main preview and marks the node
+    ASSERT_TRUE(RunPipeline(graph, parts->id).done);
+    EXPECT_EQ(PipelineUtils::ReadFileBytes(PipelineExecutor::GetPreviewPath("perport", parts->id, "txt")), "src|coin");
+    EXPECT_TRUE(PipelineExecutor::RanExists("perport", sig));
+}
+
 // Two identically configured consumers, each reading its own port of a per-port node, must not
 // share a cache slot: the upstream signature names the port, not just the node
 TEST_F(PerPortFixture, ConsumersOfDifferentPortsDoNotShareCache)

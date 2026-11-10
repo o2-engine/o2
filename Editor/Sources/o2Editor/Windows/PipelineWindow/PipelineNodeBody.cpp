@@ -371,25 +371,33 @@ namespace Editor
         }
     }
 
+    const DataValue* PipelineNodeBody::FindPartSetting(const String& key) const
+    {
+        if (!PipelineTransparency::SettingKeys().Contains(key))
+            return nullptr;
+
+        auto part = GetPartTransparency();
+        return part ? part->FindMember(key.Data()) : nullptr;
+    }
+
+    DataValue* PipelineNodeBody::PartSettingSlot(const String& key)
+    {
+        auto part = PipelineTransparency::SettingKeys().Contains(key) ? GetPartTransparency() : nullptr;
+        return part ? &(*part)[key.Data()] : nullptr;
+    }
+
     const DataValue* PipelineNodeBody::FindConfigValue(const String& key) const
     {
-        if (PipelineTransparency::SettingKeys().Contains(key))
-        {
-            if (auto part = GetPartTransparency())
-            {
-                if (auto value = part->FindMember(key.Data()))
-                    return value;
-            }
-        }
+        if (auto value = FindPartSetting(key))
+            return value;
 
         return mNode->GetConfigValue(key);
     }
 
     DataValue& PipelineNodeBody::ConfigSlot(const String& key)
     {
-        auto part = PipelineTransparency::SettingKeys().Contains(key) ? GetPartTransparency() : nullptr;
-        if (part)
-            return (*part)[key.Data()];
+        if (auto slot = PartSettingSlot(key))
+            return *slot;
 
         if (!mNode->config.IsObject())
             mNode->config.SetObject();

@@ -80,6 +80,13 @@ namespace Editor
         // and written to instead of the node config; null when they belong to the node
         virtual DataValue* GetPartTransparency() const { return nullptr; }
 
+        // Returns the part's own value of a config key the body reads instead of the node's; null when it reads the node's.
+        // By default the transparency keys of GetPartTransparency
+        virtual const DataValue* FindPartSetting(const String& key) const;
+
+        // Returns where the body writes a config key of the part it edits; null when it writes the node's
+        virtual DataValue* PartSettingSlot(const String& key);
+
         // Returns the summed height of the rows with spacing when the body is width wide
         float GetPreferredHeight(float width) const;
 
@@ -451,6 +458,8 @@ CLASS_METHODS_META(Editor::PipelineNodeBody)
     FUNCTION().PUBLIC().SIGNATURE(PipelineLayerPlace, GetAddInputPlace, const Vec2F&);
     FUNCTION().PUBLIC().SIGNATURE(const Ref<PipelineIoPair>&, GetPair);
     FUNCTION().PUBLIC().SIGNATURE(DataValue*, GetPartTransparency);
+    FUNCTION().PUBLIC().SIGNATURE(const DataValue*, FindPartSetting, const String&);
+    FUNCTION().PUBLIC().SIGNATURE(DataValue*, PartSettingSlot, const String&);
     FUNCTION().PUBLIC().SIGNATURE(float, GetPreferredHeight, float);
     FUNCTION().PUBLIC().SIGNATURE(void, Relayout, float, float);
     FUNCTION().PUBLIC().SIGNATURE(void, MarkContent, const Ref<Widget>&);

@@ -26,6 +26,9 @@ namespace Editor
         // Cuts the fractional rectangle out of the image, at least one pixel in each dimension
         Ref<Bitmap> Crop(const Bitmap& src, const CropRect& crop);
 
+        // Returns the pixel size Crop gives for a picture of the size; the whole size when the frame is (nearly) all of it
+        Vec2I CropSize(const Vec2I& size, const CropRect& crop);
+
         // Cuts a pixel rectangle out of the image, clamped to its bounds
         Ref<Bitmap> CropPixels(const Bitmap& src, int left, int top, int width, int height);
 

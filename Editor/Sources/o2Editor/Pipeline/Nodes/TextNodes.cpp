@@ -62,6 +62,8 @@ namespace Editor
             mSchema.label = "Text compose";
             mSchema.category = PipelineNodeCategory::Transform;
             mSchema.instant = true;
+            // Retired 2026-11-11: Text concat and AI prompt gen cover it
+            mSchema.retired = true;
             mSchema.description = "Substitute {name} placeholders in the template with text from per-variable inputs.";
             mSchema.inputs = { In("template", PipelinePortType::Text) };
             mSchema.outputs = { Out("out", PipelinePortType::Text) };
@@ -111,10 +113,13 @@ namespace Editor
             String separator = node->GetConfigBool("newlineSeparator", false) ? String("\n\n") : node->GetConfigString("separator", "");
             String result;
             bool first = true;
+            // Each part by its port: an input without a name is joined too, and two named alike no longer collide
             for (auto& custom : node->GetCustomInputs())
             {
                 if (custom.portType != PipelinePortType::Text) continue;
-                auto v = Input(inputs, custom.name);
+                auto port = node->FindInput(custom.id);
+                if (!port && !custom.name.Trimed().IsEmpty()) port = node->FindInputByName(custom.name);
+                auto v = port ? InputOf(ctx, inputs, *port) : nullptr;
                 String piece = v && v->IsText() ? v->data : String();
                 if (!first) result += separator;
                 first = false;

@@ -152,6 +152,20 @@ namespace Editor
         node->RegenerateInputs(schema->inputs);
     }
 
+    bool PipelineNodeRegistry::IsReferenceInput(const PipelineNode& node, const String& portId)
+    {
+        if (node.nodeType == "textStyle")
+            return true;
+
+        if (node.nodeType == "uiLayout")
+        {
+            auto port = node.FindInput(portId);
+            return port && port->portType != PipelinePortType::UiKit;
+        }
+
+        return false;
+    }
+
     bool PipelineNodeRegistry::IsFinishType(const String& type)
     {
         return type == "finishText" || type == "finishImage" || type == "finishVideo" || type == "finishAudio";

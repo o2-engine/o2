@@ -52,7 +52,7 @@ namespace o2
 
     ContextMenu::Item::Item(RefCounter* refCounter, const Item& other):
         RefCounterable(refCounter), text(other.text), group(other.group), icon(other.icon), checked(other.checked), 
-        checkable(other.checkable), onClick(other.onClick), onChecked(other.onChecked), mShortcut(other.mShortcut)
+        checkable(other.checkable), onClick(other.onClick), onChecked(other.onChecked), hint(other.hint), mShortcut(other.mShortcut)
     {
         SetShortcut(mShortcut);
     }
@@ -926,7 +926,10 @@ namespace o2
             textLayer->text = item->text;
 
         if (auto shortcutLayer = GetLayerDrawable<Text>("basic/shortcut"))
-            shortcutLayer->text = item->GetShortcut().AsString();
+        {
+            String shortcut = item->GetShortcut().AsString();
+            shortcutLayer->text = shortcut.IsEmpty() ? item->hint : WString(shortcut);
+        }
 
         if (auto subIconLayer = FindLayer("subIcon"))
             subIconLayer->transparency = item->subItems.Count() > 0 ? 1.0f : 0.0f;

@@ -128,6 +128,8 @@ namespace Editor
             case PipelinePortType::Image: return portImage;
             case PipelinePortType::Video: return portVideo;
             case PipelinePortType::Audio: return portAudio;
+            case PipelinePortType::UiKit: return accent;
+            case PipelinePortType::TextStyle: return yellow;
             default: return portText;
         }
     }

@@ -1,6 +1,8 @@
 #include "o2Editor/stdafx.h"
 #include "PipelineEditor.h"
 
+#include "o2Editor/Pipeline/PipelineNodeGroups.h"
+
 #include "o2/Application/Application.h"
 #include "o2/Application/Input.h"
 #include "o2/Assets/Types/ImageAsset.h"
@@ -248,31 +250,34 @@ namespace Editor
 
     void PipelineEditor::FillAddNodeMenu(const Ref<ContextMenu>& menu, const PendingEdge* filter)
     {
-        static const Vector<Pair<PipelineNodeCategory, String>> categories = {
-            { PipelineNodeCategory::Source, "Source" },
-            { PipelineNodeCategory::Transform, "Transform" },
-            { PipelineNodeCategory::AI, "AI" },
-            { PipelineNodeCategory::Output, "Output" },
-        };
-
-        for (auto& category : categories)
+        // Six groups, each a sub menu with its count; the menu of a dropped link offers only what fits the port, still by group
+        Vector<const PipelineNodeSchema*> schemas;
+        for (auto schema : PipelineNodeRegistry::AllSchemas())
         {
-            for (auto schema : PipelineNodeRegistry::AllSchemas())
+            if (filter)
             {
-                if (schema->category != category.first)
+                bool ok = filter->fromInput ? schema->ProducesOutputType(filter->type) : schema->AcceptsInputType(filter->type);
+                if (!ok)
                     continue;
+            }
+            schemas.Add(schema);
+        }
 
-                if (filter)
+        for (auto& entry : PipelineNodeGroups::Group(schemas))
+        {
+            Vector<Ref<ContextMenu::Item>> items;
+            for (int i = 0; i < entry.items.Count(); i++)
+            {
+                auto schema = entry.items[i];
+                if (entry.group->id == "io" && i > 0 && PipelineNodeGroups::IsResultNode(*schema) &&
+                    !PipelineNodeGroups::IsResultNode(*entry.items[i - 1]))
                 {
-                    bool ok = filter->fromInput ? schema->ProducesOutputType(filter->type) : schema->AcceptsInputType(filter->type);
-                    if (!ok)
-                        continue;
+                    items.Add(ContextMenu::Item::Separator());
                 }
 
                 String type = schema->type;
-                String path = (filter ? String() : "Add " + category.second + "/") + schema->label;
                 AssetRef<Asset> icon = o2Assets.GetAssetRef(PipelineNodeWidget::MenuIconForType(type));
-                menu->AddItem(path, [this, type, filter = filter != nullptr]()
+                items.Add(mmake<ContextMenu::Item>(schema->label, [this, type, filter = filter != nullptr]()
                 {
                     if (filter)
                         CreateNodeFromPendingEdge(type, mContextMenuPos);
@@ -286,8 +291,13 @@ namespace Editor
                             SelectNodes({ node->id });
                         }
                     }
-                }, icon);
+                }, "", icon));
             }
+
+            AssetRef<Asset> groupIcon = o2Assets.GetAssetRef(PipelineNodeWidget::MenuIconForGroup(entry.group->id));
+            auto groupItem = mmake<ContextMenu::Item>(entry.group->label, items, "", groupIcon);
+            groupItem->hint = (String)entry.items.Count();
+            menu->AddItem(groupItem);
         }
     }
 

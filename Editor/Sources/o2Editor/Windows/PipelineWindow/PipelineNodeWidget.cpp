@@ -151,6 +151,11 @@ namespace Editor
         if (t == "promptGen") return "ui/pipeline/node_prompt.svg";
         if (t == "aiUpscale") return "ui/pipeline/node_upscale.svg";
         if (t == "imageToUi") return "ui/pipeline/node_ui.svg";
+        if (t == "nanoBananaGen") return "ui/pipeline/node_imagegen.svg";
+        if (t == "imageCrop") return "ui/pipeline/node_crop.svg";
+        if (t == "textStyle") return "ui/pipeline/node_textstyle.svg";
+        if (t == "uiKit") return "ui/pipeline/node_uikit.svg";
+        if (t == "uiLayout") return "ui/pipeline/node_uilayout.svg";
         if (t == "imageOutline" || t == "imageShadow" || t == "imageGradient" || t == "imageColor") return "ui/pipeline/node_effect.svg";
         return "ui/pipeline/node_ai.svg";
     }
@@ -162,6 +167,19 @@ namespace Editor
             return IconForType(nodeType);
 
         return IconForType(nodeType).ReplacedAll("/node_", "/menu_node_");
+    }
+
+    String PipelineNodeWidget::MenuIconForGroup(const String& groupId)
+    {
+        String icon;
+        if (groupId == "io") icon = IconForType("sourceImage");
+        else if (groupId == "aiImage") icon = "ui/pipeline/node_aiimages.svg";
+        else if (groupId == "imageTools") icon = IconForType("imageColor");
+        else if (groupId == "text") icon = IconForType("aiText");
+        else if (groupId == "gameUi") icon = IconForType("uiLayout");
+        else icon = IconForType("musicGen");
+
+        return PipelineTheme::Get().dark ? icon : icon.ReplacedAll("/node_", "/menu_node_");
     }
 
     void PipelineNodeWidget::BuildHeader()
