@@ -8,6 +8,13 @@
 #include "o2Editor/Pipeline/UiDoc/UiDocUiml.h"
 #include "o2Editor/Pipeline/UiDoc/UiKitPrep.h"
 
+namespace Editor::UiDoc
+{
+    // Readable boxes and anchors in gtest's messages
+    inline void PrintTo(const UiRect& r, std::ostream* os) { *os << "{" << r.x << ", " << r.y << ", " << r.w << ", " << r.h << "}"; }
+    inline void PrintTo(const Anchor& a, std::ostream* os) { *os << a.h.Data() << "/" << a.v.Data(); }
+}
+
 // The UI layout port's tests: the web's own tests (backend/test/uiLayout.test.ts, uiEdit.test.ts, the pure parts of
 // dpi.test.ts) and golden checks against the web's outputs for the same inputs (UiDocGolden.inc, made by a script that
 // runs the web's TypeScript)
