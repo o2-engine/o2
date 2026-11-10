@@ -3,6 +3,7 @@
 
 #include <stdexcept>
 #include "o2/Application/Application.h"
+#include "o2/Integration.h"
 #include "o2/Scene/Actor.h"
 #include "o2/Scene/CameraActor.h"
 #include "o2/Scene/Component.h"
@@ -58,6 +59,24 @@ TEST(Lifecycle, PumpingFramesAdvancesFrameCounterThroughCoroutine)
     AppTestDriver::PumpFrames(5);
     int after = o2Time.GetCurrentFrame();
     EXPECT_EQ(after - before, 5);
+}
+
+// A forced frame step replaces the measured one for the game and for the time: slow frames of a recording
+// still advance the game by a fixed step
+TEST(Lifecycle, ForcedFrameDeltaStepsEveryFrameByIt)
+{
+    struct Restore { ~Restore() { Integration::forcedFrameDeltaTime = 0.0f; } } restore;
+
+    Integration::forcedFrameDeltaTime = 1.0f/60.0f;
+    for (int i = 0; i < 3; i++)
+    {
+        AppTestDriver::PumpFrames(1);
+        EXPECT_FLOAT_EQ(o2Time.GetDeltaTime(), 1.0f/60.0f);
+    }
+
+    Integration::forcedFrameDeltaTime = 0.0f;
+    AppTestDriver::PumpFrames(1);
+    EXPECT_NE(o2Time.GetDeltaTime(), 1.0f/60.0f) << "the measured time again";
 }
 
 TEST(Lifecycle, MainThreadJobRunsWithinFrame)

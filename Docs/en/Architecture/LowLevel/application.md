@@ -19,7 +19,7 @@ It happens in the `ProcessFrame` method, which is called cyclically from the pla
 
 The lifecycle itself is a [coroutine](/Docs/en/Architecture/Utils/coroutines.md). `ProcessFrame` advances it one frame per call: on the first call `EnsureLifecycleStarted()` starts a lifecycle coroutine that runs `OnLifecycleLoad()` once (override it to load content), then loops `ProcessFrameBody()` — the frame update and draw — yielding via `co_await WaitNextFrame()` each frame. An exception escaping the frame body is logged and the rest of that frame is skipped (an open render is closed); three abandoned frames in a row terminate the process. Any other coroutine logs an escaped exception and terminates. Every frame it also pumps queued main-thread [jobs](/Docs/en/Architecture/Utils/jobs.md) under a time budget set by `SetMainThreadJobsQuota(seconds)` (negative = unlimited).
 
-It measures the frame time for updating the internal subsystems. After that, FPS limiting happens if necessary.
+It measures the frame time for updating the internal subsystems. After that, FPS limiting happens if necessary. The measured time is clamped to `[minFrameDeltaTime, maxFrameDeltaTime]`; a positive `Integration::forcedFrameDeltaTime` replaces it with a fixed step — frame-by-frame recordings in tests play at game speed however long a frame takes to capture.
 
 Then the engine subsystems are updated and rendering starts. After that, input processing runs.
 

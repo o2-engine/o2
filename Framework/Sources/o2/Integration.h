@@ -55,6 +55,10 @@ namespace o2
         static constexpr float minFrameDeltaTime = 0.001f;
         static constexpr float maxFrameDeltaTime = 0.05f;
 
+        // When positive, every frame steps the game by this time instead of the measured one: a frame-by-frame
+        // recording plays at game speed however long a frame takes to capture
+        static float forcedFrameDeltaTime;
+
     public:
         // Default constructor
         Integration(RefCounter* refCounter);

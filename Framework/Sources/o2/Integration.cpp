@@ -44,6 +44,8 @@
 
 namespace o2
 {
+    float Integration::forcedFrameDeltaTime = 0.0f;
+
     FORWARD_REF_IMPL(Assets);
     FORWARD_REF_IMPL(EventSystem);
     FORWARD_REF_IMPL(FileSystem);
@@ -489,6 +491,9 @@ namespace o2
 		}
 
 		dt = Math::Clamp(realDt, minFrameDeltaTime, maxFrameDeltaTime);
+
+		if (forcedFrameDeltaTime > 0.0f)
+			dt = realDt = forcedFrameDeltaTime;
 	}
 
 	void Integration::PreUpdateFrame(float dt, float realDt)
