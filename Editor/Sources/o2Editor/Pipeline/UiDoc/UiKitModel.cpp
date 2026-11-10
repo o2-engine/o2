@@ -312,6 +312,11 @@ namespace Editor::UiDoc
         return out;
     }
 
+    Vector<Pair<String, UiKitItem>> KitItems(const DataValue& config)
+    {
+        return KitItems(FromDataValue(config));
+    }
+
     String KitSummary(const UiKit& kit, std::optional<double> layoutDpi /*= std::nullopt*/)
     {
         Vector<String> lines;

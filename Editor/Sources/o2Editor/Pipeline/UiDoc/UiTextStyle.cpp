@@ -168,6 +168,11 @@ namespace Editor::UiDoc
         return NormalizeTextStyle(config, CleanStyleName(JsGet(config, "name"), "body"));
     }
 
+    TextStyle TextStyleFromConfig(const DataValue& config)
+    {
+        return TextStyleFromConfig(FromDataValue(config));
+    }
+
     Json TextStyleToJson(const TextStyle& style)
     {
         Json out = Json::Object();

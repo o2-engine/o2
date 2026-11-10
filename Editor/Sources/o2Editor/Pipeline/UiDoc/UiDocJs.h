@@ -135,7 +135,10 @@ namespace Editor::UiDoc
     // The value of an o2 DataValue (a node's config) with its member order; numbers as doubles
     Json FromDataValue(const DataValue& value);
 
-    // Writes the value into an o2 DataValue keeping member order; whole numbers become integers so o2's writer
-    // prints them as JSON.stringify does (120, not 120.0)
+    // Writes the value into an o2 DataValue (replacing what it held) keeping member order; whole numbers become integers so
+    // o2's writer prints them as JSON.stringify does (120, not 120.0)
     void ToDataValue(const Json& value, DataValue& out);
+
+    // Sets a member of a node's config (an existing member keeps its place, a new one goes last)
+    void SetConfigJson(DataValue& config, const char* key, const Json& value);
 }

@@ -145,6 +145,20 @@ namespace Editor::UiDoc
         return DocAtSteps(config, StepsOf(config), count);
     }
 
+    Vector<UiStep> StepsOf(const DataValue& config) { return StepsOf(FromDataValue(config)); }
+    Vector<UiStep> RedoOf(const DataValue& config) { return RedoOf(FromDataValue(config)); }
+
+    UiApplyResult DocAt(const DataValue& config, std::optional<int> count /*= std::nullopt*/)
+    {
+        return DocAt(FromDataValue(config), count);
+    }
+
+    void WriteSteps(DataValue& config, const Vector<UiStep>& steps, const Vector<UiStep>& redo)
+    {
+        SetConfigJson(config, "steps", StepsToJson(steps));
+        SetConfigJson(config, "uiRedo", StepsToJson(redo));
+    }
+
     // --- what a step changed --------------------------------------------------------------------------------
 
     namespace

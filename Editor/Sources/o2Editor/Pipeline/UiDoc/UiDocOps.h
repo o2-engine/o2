@@ -126,6 +126,14 @@ namespace Editor::UiDoc
     // are skipped and reported
     UiApplyResult DocAt(const Json& config, std::optional<int> count = std::nullopt);
 
+    // The steps, the redo list and the layout of a node's o2 config (the same as with its JSON)
+    Vector<UiStep> StepsOf(const DataValue& config);
+    Vector<UiStep> RedoOf(const DataValue& config);
+    UiApplyResult DocAt(const DataValue& config, std::optional<int> count = std::nullopt);
+
+    // Writes the steps (config.steps) and the redo list (config.uiRedo) into a node's o2 config
+    void WriteSteps(DataValue& config, const Vector<UiStep>& steps, const Vector<UiStep>& redo);
+
     // The layout after the first `count` of the given steps on the config's base screen
     UiApplyResult DocAtSteps(const Json& config, const Vector<UiStep>& steps, std::optional<int> count = std::nullopt);
 

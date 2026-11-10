@@ -158,3 +158,37 @@ TEST(UiDocModel, JsonOfANodeKeepsTheOrderItsKeysWereSetIn)
     ToDataValue(DocToJson(res.doc), data);
     EXPECT_STR_EQ(FromDataValue(data).Dump(), DocToJson(res.doc).Dump());
 }
+
+TEST(UiDocModel, StepsKeepTheirValuesThroughANodesConfig)
+{
+    // A node's config is an o2 DataDocument written by rapidjson: the steps come back with the same members, order and numbers
+    UiDoc doc = Parse(Screen());
+    Json set = Json::Object();
+    set["x"] = 0.25;
+    set["y"] = -12.34;
+    set["w"] = 510;
+    set["opacity"] = 1e-7;
+    set["text"] = "\xD0\x9F\xD1\x80\xD0\xB8\xD0\xB2\xD0\xB5\xD1\x82 \"q\"\n";
+    UiStep step = MakeAgentStep("p", "r", { MakeDocOp(doc), MakeUpdateOp("play", set, { "kit" }) }, 1762768800000, "m");
+    Json config = Json::Object();
+    config["steps"] = StepsToJson({ step });
+
+    DataDocument data;
+    ToDataValue(config, data);
+    String text = data.SaveAsString();
+    DataDocument loaded;
+    ASSERT_TRUE(loaded.LoadFromData(text));
+    Json back = FromDataValue(loaded);
+    EXPECT_STR_EQ(back.Dump(), config.Dump());
+    EXPECT_STR_EQ(DocToJson(DocAt(back).doc).Dump(), DocToJson(DocAt(config).doc).Dump());
+    // Whole numbers stay integers in o2's text ("width": 1080, not 1080.0)
+    EXPECT_EQ(((std::string)text).find("1080.0"), std::string::npos);
+
+    // o2's writer (rapidjson's Grisu2) does not always print the shortest exact form of a 17-digit double: 0.1 + 0.2 comes
+    // back an ulp off. Numbers of up to 15 significant digits (everything the layout rounds) are exact
+    DataDocument odd;
+    ToDataValue(Json(0.1 + 0.2), odd);
+    DataDocument oddBack;
+    ASSERT_TRUE(oddBack.LoadFromData(odd.SaveAsString()));
+    EXPECT_NEAR((double)oddBack, 0.1 + 0.2, 1e-15);
+}

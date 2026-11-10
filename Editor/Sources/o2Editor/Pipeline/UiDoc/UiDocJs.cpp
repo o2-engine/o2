@@ -713,6 +713,8 @@ namespace Editor::UiDoc
 
     void ToDataValue(const Json& value, DataValue& out)
     {
+        // SetObject / SetArray keep what an object or array already holds: start from nothing
+        out.SetNull();
         switch (value.GetKind())
         {
             case Json::Kind::Object:
@@ -749,5 +751,16 @@ namespace Editor::UiDoc
             }
             default: out.SetNull(); return;
         }
+    }
+
+    void SetConfigJson(DataValue& config, const char* key, const Json& value)
+    {
+        if (!config.IsObject())
+        {
+            config.SetNull();
+            config.SetObject();
+        }
+        DataValue* member = config.FindMember(key);
+        ToDataValue(value, member ? *member : config.AddMember(key));
     }
 }

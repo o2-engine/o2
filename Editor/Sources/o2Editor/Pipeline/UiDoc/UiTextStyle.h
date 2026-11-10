@@ -100,6 +100,9 @@ namespace Editor::UiDoc
     // The style a Text style node's config describes (its config IS the style)
     TextStyle TextStyleFromConfig(const Json& config);
 
+    // The style a Text style node's o2 config describes
+    TextStyle TextStyleFromConfig(const DataValue& config);
+
     // The style as JSON, keys in the web's order (JSON.stringify(style))
     Json TextStyleToJson(const TextStyle& style);
 

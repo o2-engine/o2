@@ -117,6 +117,9 @@ namespace Editor::UiDoc
     // The per-element settings of a UI kit node's config, by input port id, in config order
     Vector<Pair<String, UiKitItem>> KitItems(const Json& config);
 
+    // The per-element settings of a UI kit node's o2 config
+    Vector<Pair<String, UiKitItem>> KitItems(const DataValue& config);
+
     // Config keys of the UI kit node that never change what it renders
     const Vector<String>& KitConfigUiOnly();
 
