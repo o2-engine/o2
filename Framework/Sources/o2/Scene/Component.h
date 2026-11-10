@@ -18,7 +18,7 @@ namespace o2
     public:
         PROPERTIES(Component);
         GETTER(Ref<Actor>, actor, GetActor);               // Owner actor getter
-        PROPERTY(bool, enabled, SetEnabled, IsEnabled);         // Enabling property @EDITOR_IGNORE
+        PROPERTY(bool, enabled, SetEnabled, IsEnabled);         // Enabling property @EDITOR_IGNORE @SCRIPTABLE
         GETTER(bool, enabledInHierarchy, IsEnabledInHierarchy); // Is enabled in hierarchy property
         
     public:
@@ -46,7 +46,7 @@ namespace o2
         // Regenerates component id
         void GenerateNewID();
         
-        // Sets component enable
+        // Sets component enable @SCRIPTABLE
         virtual void SetEnabled(bool active);
         
         // Enables component
@@ -55,7 +55,7 @@ namespace o2
         // Disables component
         void Disable();
         
-        // Returns is component enabled
+        // Returns is component enabled @SCRIPTABLE
         bool IsEnabled() const;
         
         // Returns is component enabled in hierarchy
@@ -246,7 +246,7 @@ END_META;
 CLASS_FIELDS_META(o2::Component)
 {
     FIELD().PUBLIC().NAME(actor);
-    FIELD().PUBLIC().EDITOR_IGNORE_ATTRIBUTE().NAME(enabled);
+    FIELD().PUBLIC().EDITOR_IGNORE_ATTRIBUTE().SCRIPTABLE_ATTRIBUTE().NAME(enabled);
     FIELD().PUBLIC().NAME(enabledInHierarchy);
     FIELD().PROTECTED().NAME(mOwner);
     FIELD().PROTECTED().EDITOR_IGNORE_ATTRIBUTE().NAME(mId);
@@ -264,10 +264,10 @@ CLASS_METHODS_META(o2::Component)
     FUNCTION().PUBLIC().CONSTRUCTOR(RefCounter*, const Component&);
     FUNCTION().PUBLIC().SIGNATURE(SceneUID, GetID);
     FUNCTION().PUBLIC().SIGNATURE(void, GenerateNewID);
-    FUNCTION().PUBLIC().SIGNATURE(void, SetEnabled, bool);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetEnabled, bool);
     FUNCTION().PUBLIC().SIGNATURE(void, Enable);
     FUNCTION().PUBLIC().SIGNATURE(void, Disable);
-    FUNCTION().PUBLIC().SIGNATURE(bool, IsEnabled);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(bool, IsEnabled);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsEnabledInHierarchy);
     FUNCTION().PUBLIC().SIGNATURE(const WeakRef<Component>&, GetPrototypeLink);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsLinkedToComponent, const Ref<Component>&);

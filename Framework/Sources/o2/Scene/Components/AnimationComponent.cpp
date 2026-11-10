@@ -32,6 +32,9 @@ namespace o2
 
     void AnimationComponent::OnUpdate(float dt)
     {
+        if (!IsEnabled())
+            return;
+
         for (auto& state : mStates)
             state->Update(dt);
 

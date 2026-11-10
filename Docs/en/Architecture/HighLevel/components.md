@@ -14,7 +14,7 @@ Wrapper over the engine `o2::Mesh`, with additional editor tooling for building 
 Draws a skinned 3D model from a `SkinnedModelAsset`. The pose comes from bone actors or the built-in clip player, skinning runs on the GPU
 
 - `o2::AnimationComponent`  
-Animation component. Holds a list of animations that can change the actor, its components and everything below in the hierarchy
+Animation component. Holds a list of animations that can change the actor, its components and everything below in the hierarchy. Every frame it writes the mix of its states into the animated values, a stopped state with zero weight included (its tracks then write the values' defaults); a disabled component neither advances its states nor writes anything, so the values are free to be driven by other code
 
 - `o2::AnimationStateGraphComponent`  
 Graph of animation states and transitions between them

@@ -220,6 +220,33 @@ TEST(AnimationComponent, StateNotPlayedYetHoldsTheClipValueAtItsTime)
     EXPECT_NEAR(a->transform->GetAngleDegrees(), 30.0f, 0.001f);
 }
 
+TEST(AnimationComponent, DisabledComponentStopsWritingItsTracks)
+{
+    SceneCleanGuard guard;
+    auto a = mmake<Actor>(ActorCreateMode::InScene);
+    auto comp = a->AddComponent<AnimationComponent>();
+
+    auto clip = mmake<AnimationClip>();
+    auto track = clip->AddTrack<float>("transform/angleDegrees");
+    track->AddKey(0.0f, 30.0f);
+    track->AddKey(1.0f, 100.0f);
+
+    auto state = DynamicCast<AnimationState>(comp->AddState("turn", clip, AnimationMask(), 1.0f));
+    ASSERT_TRUE(state);
+    state->autoPlay = false;
+    TickFrame();
+    ASSERT_NEAR(a->transform->GetAngleDegrees(), 30.0f, 0.001f);
+
+    comp->SetEnabled(false);
+    a->transform->SetAngleDegrees(5.0f);
+    TickFrames(3);
+    EXPECT_NEAR(a->transform->GetAngleDegrees(), 5.0f, 0.001f);
+
+    comp->SetEnabled(true);
+    TickFrame();
+    EXPECT_NEAR(a->transform->GetAngleDegrees(), 30.0f, 0.001f);
+}
+
 TEST(AnimationComponent, MismatchedTrackTypeDoesNotCrash)
 {
     SceneCleanGuard guard;

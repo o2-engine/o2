@@ -37,6 +37,8 @@ All components derive from this common interface. A component implements some lo
 
 Components, like actors, have the same events and life cycle: constructor, deserialization, start, update, etc.
 
+A component is switched on and off by itself with `SetEnabled`/`IsEnabled` (the `enabled` property), from scripts too.
+
 ### Gizmos, OnDrawGizmos
 In the editor build only (`IS_EDITOR`) actors and components can draw helper graphics in the scene
 window: override `OnDrawGizmos` and draw through the `o2::Gizmos` singleton

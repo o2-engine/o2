@@ -169,6 +169,24 @@ TEST(ScriptSceneApi, EmitterRewindsAndPlaysFromScript)
 	EXPECT_TRUE(res.GetValue<bool>());
 }
 
+TEST(ScriptSceneApi, ComponentEnabledFromScript)
+{
+	auto res = EvalChecked(
+		"var sceneApi_owner = new o2.Actor(1);"
+		"var sceneApi_switched = new o2.ParticlesEmitterComponent();"
+		"sceneApi_owner.AddComponent(sceneApi_switched);"
+		"sceneApi_switched.SetEnabled(false);"
+		"var sceneApi_off = !sceneApi_switched.IsEnabled();"
+		"sceneApi_switched.enabled = true;"
+		"sceneApi_off && sceneApi_switched.IsEnabled()");
+	EXPECT_TRUE(res.GetValue<bool>());
+
+	EvalChecked("sceneApi_switched.SetEnabled(false)");
+	auto component = o2Scripts.GetGlobal().GetProperty("sceneApi_switched").GetValue<Ref<Component>>();
+	ASSERT_TRUE(component);
+	EXPECT_FALSE(component->IsEnabled());
+}
+
 TEST(ScriptSceneApi, HeadlessFlagVisibleFromScript)
 {
 	auto res = EvalChecked("o2.Integration.IsHeadless()");
