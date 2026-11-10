@@ -32,8 +32,11 @@ children — the same hierarchy the selection outline covers — and work in bot
 The last row, under a separator, is the Selection switch — it turns off drawing of the objects
 selection: the transform frames and the silhouette outline of the selected content. The outline is
 drawn in both modes: in 3D over the 3D components content, in 2D over the 2D graphics. The silhouette
-covers the whole enabled hierarchy of the selected actor — its drawing components and the components
-of all its children; disabled objects and components are skipped, widget layers are not included.
+covers the whole enabled hierarchy of the selected actor — its drawing components and widget layers
+and those of all its children, so a selected UI panel is outlined round the images and texts inside it
+(only the layers of the widgets: a widget is not drawn whole for the mask). A widget layer selected by
+itself is outlined alone, with its sublayers. Disabled objects, components and layers are skipped, and so
+are the sublayers of a disabled layer.
 
 ### Render mode
 The render mode button at the top shows the mode and opens the menu of the modes (`SceneEditScreen::SetRenderMode`, `SceneRenderMode`):

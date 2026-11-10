@@ -128,6 +128,10 @@ namespace Editor
         static void CollectDrawableComponents(const Ref<Actor>& actor, SceneDrawableCategory category,
                                               Vector<Ref<Component>>& components);
 
+        // Collects widgets with drawing layers from the actor and its children, skipping disabled: widgets draw
+        // their layers themselves, not through components
+        static void CollectDrawableWidgets(const Ref<Actor>& actor, Vector<Ref<Widget>>& widgets);
+
         // Sets is selection of scene objects drawing
         void SetSelectionVisible(bool visible);
 
@@ -554,6 +558,7 @@ CLASS_METHODS_META(Editor::SceneEditScreen)
     FUNCTION().PUBLIC().SIGNATURE(SceneView3DState&, GetView3DState);
     FUNCTION().PUBLIC().SIGNATURE(SceneGizmos&, GetGizmos);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(void, CollectDrawableComponents, const Ref<Actor>&, SceneDrawableCategory, Vector<Ref<Component>>&);
+    FUNCTION().PUBLIC().SIGNATURE_STATIC(void, CollectDrawableWidgets, const Ref<Actor>&, Vector<Ref<Widget>>&);
     FUNCTION().PUBLIC().SIGNATURE(void, SetSelectionVisible, bool);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsSelectionVisible);
     FUNCTION().PUBLIC().SIGNATURE(bool, ScreenToZAxisPoint, const Vec2F&, const Vec2F&, float&);

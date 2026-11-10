@@ -15,6 +15,10 @@
 #include "o2/Scene/UI/WidgetLayout.h"
 #include "o2/Scene/UI/Widgets/Toggle.h"
 #include "o2/Utils/Bitmap/Bitmap.h"
+#include "o2/Render/Sprite.h"
+#include "o2/Scene/UI/Widget.h"
+#include "o2/Scene/UI/WidgetLayer.h"
+#include "o2Editor/UI/Style/EditorTheme.h"
 #include "o2Editor/Windows/SceneWindow/GizmosPopup.h"
 #include "o2Editor/Windows/SceneWindow/SceneEditScreen.h"
 #include "o2Editor/Windows/SceneWindow/SceneGizmos.h"
@@ -292,6 +296,157 @@ TEST(SceneGizmos, SelectionOutlineCollectsEachComponentOnce)
     SceneEditScreen::CollectDrawableComponents(child, SceneDrawableCategory::Scene2D, components);
 
     EXPECT_EQ(components.Count(), 1);
+}
+
+TEST(SceneGizmos, SelectionOutlineCollectsWidgetsWithChildren)
+{
+    SceneCleanGuard guard;
+    CreateModeGuard createModeGuard;
+
+    auto panel = mmake<Widget>();
+    auto image = mmake<Widget>();
+    image->SetParent(panel);
+    image->AddLayer("back", mmake<Sprite>(Color4::White()), Layout::BothStretch());
+    auto deepImage = mmake<Widget>();
+    deepImage->SetParent(image);
+    deepImage->AddLayer("icon", mmake<Sprite>(Color4::White()), Layout::BothStretch());
+    auto disabledImage = mmake<Widget>();
+    disabledImage->SetParent(panel);
+    disabledImage->AddLayer("back", mmake<Sprite>(Color4::White()), Layout::BothStretch());
+    disabledImage->SetEnabled(false);
+    TickScene();
+
+    // the panel draws nothing itself; a parent and its child selected together put the child in once
+    Vector<Ref<Widget>> widgets;
+    SceneEditScreen::CollectDrawableWidgets(panel, widgets);
+    SceneEditScreen::CollectDrawableWidgets(image, widgets);
+
+    EXPECT_TRUE(widgets.Contains(image));
+    EXPECT_TRUE(widgets.Contains(deepImage));
+    EXPECT_FALSE(widgets.Contains(panel));
+    EXPECT_FALSE(widgets.Contains(disabledImage));
+    EXPECT_EQ(widgets.Count(), 2);
+}
+
+// Draws the scene screen in a frame and counts the pixels of the selection outline colour
+static int DrawSceneAndCountOutline()
+{
+    auto& screen = o2EditorSceneScreen;
+    Ref<Bitmap> captured;
+    o2Render.CaptureNextFrame([&](const Ref<Bitmap>& bitmap) { captured = bitmap; });
+
+    o2Render.Begin();
+    screen.NeedRedraw();
+    screen.Draw();
+    o2Render.End();
+
+    if (!captured)
+        return -1;
+
+    Color4 outline = EditorTheme::Get().selectionOutline;
+    Vec2I size = captured->GetSize();
+    const UInt8* data = captured->GetData();
+    int count = 0;
+    for (int i = 0; i < size.x*size.y; i++)
+    {
+        const UInt8* pixel = data + i*4;
+        if (Math::Abs(pixel[0] - outline.r) <= 12 && Math::Abs(pixel[1] - outline.g) <= 12 && Math::Abs(pixel[2] - outline.b) <= 12)
+            count++;
+    }
+    return count;
+}
+
+// Game screens are built of widgets: the outline goes round the layers of a selected widget and of the
+// widgets down its hierarchy, a parent without layers of its own included
+TEST(SceneGizmos, SelectionOutlineGoesRoundWidgets)
+{
+    SceneCleanGuard guard;
+    CreateModeGuard createModeGuard;
+    auto& screen = o2EditorSceneScreen;
+    *screen.layout = WidgetLayout::Based(BaseCorner::LeftBottom, Vec2F(800.0f, 600.0f));
+    screen.UpdateSelfTransform();
+    screen.SetView3DMode(false);
+    screen.SetSelectionVisible(true);
+
+    auto panel = mmake<Widget>();
+    *panel->layout = WidgetLayout::Based(BaseCorner::Center, Vec2F(240.0f, 160.0f));
+    auto image = mmake<Widget>();
+    image->SetParent(panel);
+    *image->layout = WidgetLayout::Based(BaseCorner::Center, Vec2F(120.0f, 80.0f));
+    image->AddLayer("back", mmake<Sprite>(Color4::White()), Layout::BothStretch());
+    TickScene();
+
+    auto sprite = mmake<Actor>();
+    sprite->transform->SetPosition2D(Vec2F(-250.0f, 0.0f));
+    sprite->transform->SetSize2D(Vec2F(80.0f, 80.0f));
+    sprite->AddComponent<ImageComponent>();
+    TickScene();
+
+    screen.SelectObjectsByIdsWithoutAction({});
+    int none = DrawSceneAndCountOutline();
+    ASSERT_GE(none, 0);
+
+    screen.SelectObjectsByIdsWithoutAction({ sprite->GetID() });
+    EXPECT_GT(DrawSceneAndCountOutline(), none + 100) << "a sprite component is outlined";
+
+    screen.SelectObjectsByIdsWithoutAction({ image->GetID() });
+    int selectedImage = DrawSceneAndCountOutline();
+    EXPECT_GT(selectedImage, none + 100) << "the outline goes round the selected widget's sprite";
+
+    screen.SelectObjectsByIdsWithoutAction({ panel->GetID() });
+    int selectedPanel = DrawSceneAndCountOutline();
+    EXPECT_GT(selectedPanel, none + 100) << "and round the widgets in the selected hierarchy";
+
+    image->GetLayer("back")->SetEnabled(false);
+    TickScene();
+    EXPECT_LE(DrawSceneAndCountOutline(), none + 4) << "a disabled layer isn't outlined";
+
+    screen.SelectObjectsByIdsWithoutAction({});
+}
+
+// A widget layer selected by itself is outlined with its sublayers, the rest of the widget is not
+TEST(SceneGizmos, SelectionOutlineGoesRoundSelectedLayers)
+{
+    SceneCleanGuard guard;
+    CreateModeGuard createModeGuard;
+    auto& screen = o2EditorSceneScreen;
+    *screen.layout = WidgetLayout::Based(BaseCorner::LeftBottom, Vec2F(800.0f, 600.0f));
+    screen.UpdateSelfTransform();
+    screen.SetView3DMode(false);
+    screen.SetSelectionVisible(true);
+
+    auto widget = mmake<Widget>();
+    *widget->layout = WidgetLayout::Based(BaseCorner::Center, Vec2F(240.0f, 160.0f));
+    widget->AddLayer("back", mmake<Sprite>(Color4::White()), Layout::BothStretch());
+    auto icon = widget->AddLayer("icon", mmake<Sprite>(Color4::White()), Layout::Based(BaseCorner::Center, Vec2F(60.0f, 60.0f)));
+    auto badge = icon->AddChildLayer("badge", mmake<Sprite>(Color4::White()), Layout::Based(BaseCorner::Center, Vec2F(30.0f, 30.0f)));
+    TickScene();
+
+    screen.SelectObjectsByIdsWithoutAction({});
+    int none = DrawSceneAndCountOutline();
+    ASSERT_GE(none, 0);
+
+    screen.SelectObjectsByIdsWithoutAction({ widget->GetID() });
+    int wholeWidget = DrawSceneAndCountOutline();
+
+    screen.SelectObjectsByIdsWithoutAction({ icon->GetID() });
+    int iconLayer = DrawSceneAndCountOutline();
+    EXPECT_GT(iconLayer, none + 100) << "the selected layer is outlined";
+    EXPECT_LT(iconLayer, wholeWidget) << "by itself, not with the whole widget";
+
+    screen.SelectObjectsByIdsWithoutAction({ badge->GetID() });
+    int badgeLayer = DrawSceneAndCountOutline();
+    EXPECT_GT(badgeLayer, none + 50) << "a sublayer is selected by itself too";
+    EXPECT_LT(badgeLayer, iconLayer);
+
+    screen.SelectObjectsByIdsWithoutAction({ icon->GetID() });
+    icon->SetEnabled(false);
+    EXPECT_LE(DrawSceneAndCountOutline(), none + 4) << "a disabled layer isn't outlined, nor its sublayers";
+
+    screen.SelectObjectsByIdsWithoutAction({ badge->GetID() });
+    EXPECT_LE(DrawSceneAndCountOutline(), none + 4) << "nor a sublayer selected by itself";
+
+    screen.SelectObjectsByIdsWithoutAction({});
 }
 
 TEST(SceneGizmos, PopupShowsToggleForEachDrawingType)

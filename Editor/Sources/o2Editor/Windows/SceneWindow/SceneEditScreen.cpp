@@ -15,6 +15,7 @@
 #include "o2/Scene/Scene.h"
 #include "o2/Scene/SceneLayerRef.h"
 #include "o2/Scene/UI/UIManager.h"
+#include "o2/Scene/UI/WidgetLayer.h"
 #include "o2/Scene/UI/Widgets/Tree.h"
 #include "o2/Utils/Math/Math.h"
 #include "o2Editor/Windows/AssetsWindow/AssetsIconsScroll.h"
@@ -723,16 +724,70 @@ namespace Editor
             CollectDrawableComponents(child, category, components);
     }
 
+    void SceneEditScreen::CollectDrawableWidgets(const Ref<Actor>& actor, Vector<Ref<Widget>>& widgets)
+    {
+        if (!actor || !actor->IsEnabledInHierarchy())
+            return;
+
+        auto widget = DynamicCast<Widget>(actor);
+        if (widget && !widget->GetLayers().IsEmpty() && !widgets.Contains(widget))
+            widgets.Add(widget);
+
+        for (auto& child : actor->GetChildren())
+            CollectDrawableWidgets(child, widgets);
+    }
+
+    // A widget layer with its enabled sublayers, as the widget draws them
+    static void DrawLayerSelectionMask(const Ref<WidgetLayer>& layer)
+    {
+        if (!layer->IsEnabled())
+            return;
+
+        if (layer->GetDrawable())
+            layer->Draw();
+
+        for (auto& child : layer->GetChildren())
+            DrawLayerSelectionMask(child);
+    }
+
+    // A layer is seen when it, its parent layers and its widget are enabled
+    static bool IsLayerShown(const Ref<WidgetLayer>& layer)
+    {
+        auto owner = layer->GetOwnerWidget().Lock();
+        if (!owner || !owner->IsEnabledInHierarchy())
+            return false;
+
+        for (auto it = layer; it; it = it->GetParent().Lock())
+        {
+            if (!it->IsEnabled())
+                return false;
+        }
+
+        return true;
+    }
+
     void SceneEditScreen::DrawSelectionOutline(SceneDrawableCategory category)
     {
         Vector<Ref<Component>> components;
+        Vector<Ref<Widget>> widgets;
+        Vector<Ref<WidgetLayer>> layers;
         for (auto& object : mSelectedObjects)
         {
             if (auto actor = DynamicCast<Actor>(object))
+            {
                 CollectDrawableComponents(actor, category, components);
+
+                if (category == SceneDrawableCategory::Scene2D)
+                    CollectDrawableWidgets(actor, widgets);
+            }
+            else if (auto layer = DynamicCast<WidgetLayer>(object))
+            {
+                if (category == SceneDrawableCategory::Scene2D && IsLayerShown(layer) && !layers.Contains(layer))
+                    layers.Add(layer);
+            }
         }
 
-        if (components.IsEmpty())
+        if (components.IsEmpty() && widgets.IsEmpty() && layers.IsEmpty())
             return;
 
         Vec2I targetSize = o2Render.GetCurrentResolution();
@@ -771,6 +826,19 @@ namespace Editor
         {
             for (auto& component : components)
                 component->Draw();
+        }
+
+        // Only the layers: Widget::Draw also registers the widget for input and draws its children
+        for (auto& widget : widgets)
+        {
+            for (auto& layer : widget->GetLayers())
+                DrawLayerSelectionMask(layer);
+        }
+
+        for (auto& layer : layers)
+        {
+            if (!widgets.Contains(layer->GetOwnerWidget().Lock()))
+                DrawLayerSelectionMask(layer);
         }
 
         o2Render.PopRenderTargets();
