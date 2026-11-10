@@ -349,9 +349,21 @@ namespace Editor
             mSchema.type = "imageEdit";
             mSchema.label = "AI image edit";
             mSchema.category = PipelineNodeCategory::AI;
-            mSchema.description = "Edit the input image via Gemini using a text prompt and an optional hand-drawn overlay marking the change.";
-            mSchema.inputs = { In("image", PipelinePortType::Image) };
+            mSchema.description = "Edit the input image via Gemini using a text prompt and an optional hand-drawn overlay marking the change. The prompt can come from the prompt input; the node's own field adds to it.";
+            // The edit prompt from another node (AssetsLine's input since 2026-11-11); the node's own field is added after it
+            mSchema.inputs = { In("image", PipelinePortType::Image), In("prompt", PipelinePortType::Text) };
             mSchema.outputs = { Out("out", PipelinePortType::Image) };
+        }
+
+        // The edit prompt: the text on the prompt input, then the node's own field (either may be empty)
+        static String EditPrompt(const PipelineValue* input, const String& own)
+        {
+            String fromInput = input && input->IsText() ? String(input->data).Trimed(" \n\r\t") : String();
+            String mine = own.Trimed(" \n\r\t");
+            if (fromInput.IsEmpty())
+                return mine;
+
+            return mine.IsEmpty() ? fromInput : fromInput + "\n\n" + mine;
         }
 
         Coroutine<PipelineRunResult> Run(const Ref<PipelineExecContext>& ctx, const Map<String, PipelineValue>& inputs,
@@ -372,8 +384,8 @@ namespace Editor
 
             auto imageVal = Input(inputs, "image");
             if (!imageVal || !imageVal->IsImage()) co_return PipelineRunResult::Fail("imageEdit: input \"image\" is not connected");
-            String prompt = node->GetConfigString("prompt", "").Trimed(" \n\r\t");
-            if (prompt.IsEmpty()) co_return PipelineRunResult::Fail("imageEdit: no edit prompt provided");
+            String prompt = EditPrompt(Input(inputs, "prompt"), node->GetConfigString("prompt", ""));
+            if (prompt.IsEmpty()) co_return PipelineRunResult::Fail("imageEdit: no edit prompt - connect a text to the \"prompt\" input or type it on the node");
 
             String model = node->GetConfigString("model", GeminiProvider::defaultImageModel);
             auto base = imageVal->GetBitmap();
