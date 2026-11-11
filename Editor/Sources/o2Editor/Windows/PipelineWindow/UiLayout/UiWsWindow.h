@@ -1,6 +1,7 @@
 #pragma once
 
 #include "o2/Events/KeyboardEventsListener.h"
+#include "o2/Events/ShortcutKeysListener.h"
 #include "o2Editor/Windows/PipelineWindow/UiLayout/UiWsHierarchy.h"
 #include "o2Editor/Windows/PipelineWindow/UiLayout/UiWsSide.h"
 #include "o2Editor/Windows/PipelineWindow/UiLayout/UiWsStage.h"
@@ -120,6 +121,12 @@ namespace Editor
         Ref<UiWsStage>         mStage;
         Ref<UiWsSidePanel>     mSide;
         Ref<UiWsGrips>         mGrips;
+
+        // Cmd/Ctrl+Z and +Y while the window has the focus: the layout's undo and redo, not the editor's
+        Ref<FunctionalShortcutKeysListener> mUndoKeys;
+        Ref<FunctionalShortcutKeysListener> mRedoKeys;
+        bool                                mKeysActive = false;
+        int                                 mShortcutFrame = -1;
         Ref<UiWsPopup>         mCoveragePopup;
         Ref<UiWsCoveragePanel> mCoverage;
 
@@ -179,6 +186,12 @@ namespace Editor
 
         // True while the window takes the keys
         bool TakesKeys() const;
+
+        // Gives the undo / redo shortcuts to the window (over the Pipeline window's) or back
+        void SetKeysActive(bool active);
+
+        // Cmd/Ctrl+Z (Shift: redo) or +Y pressed while the window has the focus
+        void OnUndoShortcut(bool redo);
 
         // Handles a key; returns true when it was the window's
         bool HandleKey(int keyCode, bool repeat);

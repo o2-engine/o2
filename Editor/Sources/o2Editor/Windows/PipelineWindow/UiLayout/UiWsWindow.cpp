@@ -9,6 +9,8 @@
 #include "o2/Scene/UI/Widgets/EditBox.h"
 #include "o2/Utils/Editor/EditorScope.h"
 #include "o2/Utils/FileSystem/FileSystem.h"
+#include "o2/Utils/System/ShortcutKeys.h"
+#include "o2/Utils/System/Time/Time.h"
 #include "o2Editor/Pipeline/PipelinePairLayout.h"
 #include "o2Editor/Pipeline/PipelineUtils.h"
 #include "o2Editor/Windows/PipelineWindow/PipelineDraw.h"
@@ -42,6 +44,45 @@ namespace Editor
         BuildPanels();
         mClipChildren = true;
         LoadPrefs();
+
+        WeakRef<UiWsWindow> weak(this);
+        mUndoKeys = mmake<FunctionalShortcutKeysListener>();
+        mUndoKeys->onShortcutPressed = [weak]() { if (auto self = weak.Lock()) self->OnUndoShortcut(false); };
+        mUndoKeys->SetShortcut(ShortcutKeys({ VK_Z, VK_CTRL_CMD }));
+        mUndoKeys->SetEnabled(false);
+        mRedoKeys = mmake<FunctionalShortcutKeysListener>();
+        mRedoKeys->onShortcutPressed = [weak]() { if (auto self = weak.Lock()) self->OnUndoShortcut(true); };
+        mRedoKeys->SetShortcut(ShortcutKeys({ VK_Y, VK_CTRL_CMD }));
+        mRedoKeys->SetEnabled(false);
+    }
+
+    void UiWsWindow::SetKeysActive(bool active)
+    {
+        if (active == mKeysActive || !mUndoKeys)
+            return;
+
+        mKeysActive = active;
+        mUndoKeys->SetEnabled(active);
+        mRedoKeys->SetEnabled(active);
+        if (active)
+        {
+            mUndoKeys->SetMaxPriority();
+            mRedoKeys->SetMaxPriority();
+        }
+    }
+
+    void UiWsWindow::OnUndoShortcut(bool redo)
+    {
+        // A field being typed into keeps its keys; the keys of one frame act once (each key of the chord reports it)
+        if (!mShown || DynamicCast<EditBox>(o2UI.GetFocusedWidget()) || mShortcutFrame == o2Time.GetCurrentFrame())
+            return;
+
+        mShortcutFrame = o2Time.GetCurrentFrame();
+
+        if (redo || o2Input.IsKeyDown(VK_SHIFT))
+            mCtx->Redo();
+        else
+            mCtx->Undo();
     }
 
     void UiWsWindow::BuildPanels()
@@ -194,6 +235,7 @@ namespace Editor
         mHierarchy->EndRename(false);
         mShown = false;
         mHasFocus = false;
+        SetKeysActive(false);
         if (o2UI.GetFocusedWidget() == Ref(this))
             o2UI.FocusWidget(nullptr);
         SetEnabledForcible(false);
@@ -343,6 +385,12 @@ namespace Editor
         if (mPoll > 0.25f)
         {
             mPoll = 0.0f;
+            // The node deleted or its pipeline closed: the window goes too
+            if (!mCtx->Node())
+            {
+                Close();
+                return;
+            }
             mCtx->RefreshIfChanged();
         }
 
@@ -360,6 +408,7 @@ namespace Editor
                 o2UI.FocusWidget(Ref(this));
         }
 
+        SetKeysActive(mHasFocus);
         UiWsPanel::Update(dt);
         Sweep();
     }
@@ -653,6 +702,11 @@ namespace Editor
             HandleKey(VK_ESCAPE, false);
             return;
         }
+
+        // Cmd/Ctrl+Z and +Y come through the shortcut listeners
+        bool ctrl = o2Input.IsKeyDown(VK_CTRL_CMD) || o2Input.IsKeyDown(VK_CONTROL);
+        if (ctrl && (key.keyCode == VK_Z || key.keyCode == VK_Y))
+            return;
 
         if (TakesKeys())
             HandleKey(key.keyCode, false);

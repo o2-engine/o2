@@ -1,6 +1,7 @@
 #include "o2Editor/stdafx.h"
 #include "UiWsHierarchy.h"
 
+#include "o2/Application/Input.h"
 #include "o2/Render/Render.h"
 #include "o2/Scene/UI/UIManager.h"
 #include "o2/Scene/UI/WidgetLayer.h"
@@ -282,8 +283,9 @@ namespace Editor
 
     void UiWsHierarchy::OnHotDoubleClick(const String& id, const Input::Cursor& cursor)
     {
+        // The field takes the focus once the click is over (the release would take it away again)
         if (ctx && ctx->Editable() && id.StartsWith("row:"))
-            StartRename(id.SubStr(4));
+            mPendingRename = id.SubStr(4);
     }
 
     void UiWsHierarchy::OnCursorPressed(const Input::Cursor& cursor)
@@ -392,6 +394,12 @@ namespace Editor
     void UiWsHierarchy::Update(float dt)
     {
         UiWsPanel::Update(dt);
+        if (!mPendingRename.IsEmpty() && !o2Input.IsCursorDown())
+        {
+            String id = mPendingRename;
+            mPendingRename = "";
+            StartRename(id);
+        }
         if (!mDragStarted)
             return;
 

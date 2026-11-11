@@ -74,6 +74,7 @@ namespace Editor
         float          mContentHeight = 0.0f;
 
         String       mRenaming;
+        String       mPendingRename; // A double-clicked row: renamed once the click is over
         Ref<EditBox> mRenameField;
         bool         mRenameBad = false;
 

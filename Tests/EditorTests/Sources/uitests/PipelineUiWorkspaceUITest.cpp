@@ -628,3 +628,71 @@ TEST_F(UiWorkspaceUiFixture, DevicePickerStandsAlone)
     Step(2);
     EditorUIRoot.RemoveWidget(picker);
 }
+
+// Cmd+Z while the window has the focus undoes the layout's last hand action (the shortcut is the window's, not the editor's);
+// Cmd+Shift+Z redoes it
+TEST_F(UiWorkspaceUiFixture, CmdZUndoesTheLayout)
+{
+    OpenWorkspace(false);
+    Ctx()->Select("coin");
+    Step(2);
+    Window()->GetHierarchy()->ClickHot("hide:coin");
+    Step(2);
+    ASSERT_FALSE(NodeOf(DocNow(), "coin")->IsShown());
+    Click(Window()->GetStage()->DesignToWorld(-30, 300)); // the board beside the screen: the window takes the focus
+    int undoBefore = undo->GetUndoActionsCount();
+
+    auto press = [&](const Vector<int>& keys)
+    {
+        for (int key : keys)
+        {
+            o2Input.OnKeyPressed(key);
+            Step();
+        }
+        Step();
+        for (int i = keys.Count() - 1; i >= 0; i--)
+            o2Input.OnKeyReleased(keys[i]);
+        Step(2);
+    };
+#if defined(PLATFORM_MAC)
+    int cmd = VK_COMMAND;
+#else
+    int cmd = VK_CONTROL;
+#endif
+    press({ cmd, VK_Z });
+    ASSERT_TRUE(NodeOf(DocNow(), "coin"));
+    EXPECT_TRUE(NodeOf(DocNow(), "coin")->IsShown());
+    EXPECT_EQ(UiDoc::RedoOf(layoutNode->config).Count(), 1);
+    EXPECT_EQ(undo->GetUndoActionsCount(), undoBefore + 1) << "the layout's undo is itself one step of the editor";
+    press({ cmd, VK_SHIFT, VK_Z });
+    ASSERT_TRUE(NodeOf(DocNow(), "coin"));
+    EXPECT_FALSE(NodeOf(DocNow(), "coin")->IsShown());
+    EXPECT_TRUE(UiDoc::RedoOf(layoutNode->config).IsEmpty());
+}
+
+// A double-click on a row renames the block; the window closes when its node is deleted
+TEST_F(UiWorkspaceUiFixture, DoubleClickRenamesAndDeletingTheNodeCloses)
+{
+    OpenWorkspace(false);
+    auto hierarchy = Window()->GetHierarchy();
+    Vec2F row = hierarchy->RowRect("title").Center();
+    std::this_thread::sleep_for(std::chrono::milliseconds(350));
+    o2Input.OnCursorMoved(row, 0, false);
+    Step();
+    for (int i = 0; i < 2; i++)
+    {
+        o2Input.OnCursorPressed(row);
+        Step();
+        o2Input.OnCursorReleased();
+        Step();
+    }
+    Step(2);
+    EXPECT_EQ(hierarchy->GetRenaming(), String("title"));
+    EXPECT_EQ(Ctx()->selected, String("title"));
+    hierarchy->EndRename(false);
+    Step();
+
+    editor->GetGraph()->nodes.Remove(editor->GetGraph()->FindNode(layoutNode->id));
+    Step(20);
+    EXPECT_FALSE(UiWorkspace::IsOpen());
+}
