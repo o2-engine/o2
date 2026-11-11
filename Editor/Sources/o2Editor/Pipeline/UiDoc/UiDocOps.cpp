@@ -285,8 +285,12 @@ namespace Editor::UiDoc
             if (JsTruthy(set) && set->IsObject() && !SetProps(doc, *node, *set, isRoot, error))
                 return false;
 
+            // A block keeps its id, type and children (an unset of them stored by an older editor too)
             for (auto& k : JsonToStrings(JsGet(op, "unset")))
-                node->Unset(k);
+            {
+                if (k != "id" && k != "type" && k != "children")
+                    node->Unset(k);
+            }
 
             // The text form writes the anchor canonically; keep stored ones canonical too
             if (node->anchor && !node->anchor->IsEmpty())

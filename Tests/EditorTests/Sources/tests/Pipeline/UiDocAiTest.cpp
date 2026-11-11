@@ -379,26 +379,29 @@ TEST(UiDocAi, AComplexBackgroundIsRemovedByTheImageModelAndStoredAsAnUpload)
 
 TEST(UiDocAi, TheAnalysisMergesIntoTheKitsItems)
 {
+    // Inputs and the expected items: the web's merge (UiKitBody.tsx at AssetsLine 77d5b09) run over them,
+    // UiDocGolden/kit_merge.mts
     Json config;
-    ASSERT_TRUE(Json::Parse("{\"items\":{\"a\":{\"name\":\"old\",\"nineSlice\":{\"left\":7,\"top\":7,\"right\":7,\"bottom\":7}},"
-                            "\"b\":{\"bg\":\"ai\",\"prepared\":{\"uploadId\":\"u.png\",\"from\":\"h\"}},"
-                            "\"c\":{\"nineSlice\":{\"left\":1,\"top\":1,\"right\":1,\"bottom\":1},\"nineFrom\":\"ai\"}},\"kitModel\":\"m\"}", config));
+    ASSERT_TRUE(Json::Parse("{\"items\":" "{\"a\":{\"name\":\"old\",\"nineSlice\":{\"left\":7,\"top\":7,\"right\":7,\"bottom\":7}},\"b\":{\"bg\":\"ai\",\"prepared\":{\"uploadId\":\"u.png\",\"from\":\"h\"}},\"c\":{\"nineSlice\":{\"left\":1,\"top\":1,\"right\":1,\"bottom\":1},\"nineFrom\":\"ai\"},\"e\":{\"nineSlice\":{\"left\":1,\"top\":1,\"right\":1,\"bottom\":1},\"nineFrom\":\"ai\",\"name\":\"e\"},\"f\":{\"name\":\"f\",\"nineFrom\":\"ai\",\"nineSlice\":{\"left\":4,\"top\":4,\"right\":4,\"bottom\":4}},\"g\":{\"name\":\"g\",\"nineSlice\":null,\"nineFrom\":\"x\"}}" ",\"kitModel\":\"m\"}", config));
     Json items;
-    ASSERT_TRUE(Json::Parse("{\"a\":{\"name\":\"new\",\"bg\":\"keep\",\"ai\":true,\"background\":\"transparent\","
-                            "\"nineSlice\":{\"left\":2,\"top\":2,\"right\":2,\"bottom\":2},\"nineFrom\":\"ai\"},"
-                            "\"b\":{\"name\":\"b\",\"bg\":\"keep\",\"ai\":true,\"background\":\"complex\"},"
-                            "\"c\":{\"name\":\"c\",\"bg\":\"key\",\"ai\":true,\"background\":\"flat\"},"
-                            "\"d\":{\"name\":\"d\",\"bg\":\"keep\",\"ai\":true,\"background\":\"transparent\","
-                            "\"nineSlice\":{\"left\":3,\"top\":3,\"right\":3,\"bottom\":3},\"nineFrom\":\"ai\"}}", items));
+    ASSERT_TRUE(Json::Parse("{\"a\":{\"name\":\"new\",\"bg\":\"keep\",\"ai\":true,\"background\":\"transparent\",\"nineSlice\":{\"left\":2,\"top\":2,\"right\":2,\"bottom\":2},\"nineFrom\":\"ai\"},\"b\":{\"name\":\"b\",\"bg\":\"keep\",\"ai\":true,\"background\":\"complex\"},\"c\":{\"name\":\"c\",\"bg\":\"key\",\"ai\":true,\"background\":\"flat\"},\"d\":{\"name\":\"d\",\"bg\":\"keep\",\"ai\":true,\"background\":\"transparent\",\"nineSlice\":{\"left\":3,\"top\":3,\"right\":3,\"bottom\":3},\"nineFrom\":\"ai\"},\"e\":{\"name\":\"e2\",\"nineSlice\":{\"left\":5,\"top\":5,\"right\":5,\"bottom\":5}},\"f\":{\"name\":\"f2\",\"nineSlice\":null,\"nineFrom\":\"ai\"},\"g\":{\"name\":\"g2\",\"nineSlice\":{\"left\":6,\"top\":6,\"right\":6,\"bottom\":6},\"nineFrom\":\"ai\",\"prepared\":null,\"bg\":\"ai\"}}", items));
     Json merged = MergeKitAnalysis(config, items);
     const Json& m = M(merged, "items");
     // Borders set by hand stay
     EXPECT_STR_EQ(M(m, "a").Dump(), "{\"name\":\"new\",\"nineSlice\":{\"left\":7,\"top\":7,\"right\":7,\"bottom\":7},\"bg\":\"keep\",\"ai\":true}");
     // A background removed earlier stays removed
     EXPECT_STR_EQ(M(m, "b").Dump(), "{\"bg\":\"ai\",\"prepared\":{\"uploadId\":\"u.png\",\"from\":\"h\"},\"name\":\"b\",\"ai\":true,\"nineSlice\":null}");
-    // The AI's earlier borders go when this answer has none; new AI borders are taken
+    // The AI's earlier borders go when this answer has none
     EXPECT_STR_EQ(M(m, "c").Dump(), "{\"nineSlice\":null,\"name\":\"c\",\"bg\":\"key\",\"ai\":true}");
+    // A new AI measurement replaces the last one (its nineFrom as the answer gives it)
+    EXPECT_STR_EQ(M(m, "e").Dump(), "{\"nineSlice\":{\"left\":5,\"top\":5,\"right\":5,\"bottom\":5},\"name\":\"e2\"}");
+    // An answer without borders clears the AI ones
+    EXPECT_STR_EQ(M(m, "f").Dump(), "{\"name\":\"f2\",\"nineSlice\":null}");
+    // Null borders are not hand-set ones; a falsy prepared does not keep the old background
+    EXPECT_STR_EQ(M(m, "g").Dump(), "{\"name\":\"g2\",\"nineSlice\":{\"left\":6,\"top\":6,\"right\":6,\"bottom\":6},\"nineFrom\":\"ai\",\"prepared\":null,\"bg\":\"ai\"}");
+    // A new item with AI borders
     EXPECT_STR_EQ(M(m, "d").Dump(), "{\"name\":\"d\",\"bg\":\"keep\",\"ai\":true,\"nineSlice\":{\"left\":3,\"top\":3,\"right\":3,\"bottom\":3},\"nineFrom\":\"ai\"}");
+    EXPECT_STR_EQ(m.Dump(), "{\"a\":{\"name\":\"new\",\"nineSlice\":{\"left\":7,\"top\":7,\"right\":7,\"bottom\":7},\"bg\":\"keep\",\"ai\":true},\"b\":{\"bg\":\"ai\",\"prepared\":{\"uploadId\":\"u.png\",\"from\":\"h\"},\"name\":\"b\",\"ai\":true,\"nineSlice\":null},\"c\":{\"nineSlice\":null,\"name\":\"c\",\"bg\":\"key\",\"ai\":true},\"e\":{\"nineSlice\":{\"left\":5,\"top\":5,\"right\":5,\"bottom\":5},\"name\":\"e2\"},\"f\":{\"name\":\"f2\",\"nineSlice\":null},\"g\":{\"name\":\"g2\",\"nineSlice\":{\"left\":6,\"top\":6,\"right\":6,\"bottom\":6},\"nineFrom\":\"ai\",\"prepared\":null,\"bg\":\"ai\"},\"d\":{\"name\":\"d\",\"bg\":\"keep\",\"ai\":true,\"nineSlice\":{\"left\":3,\"top\":3,\"right\":3,\"bottom\":3},\"nineFrom\":\"ai\"}}");
     EXPECT_STR_EQ(S(merged, "kitModel"), "m");
 
     DataDocument doc;

@@ -122,6 +122,60 @@ TEST(UiDocOps, EditsApplyByIdReportWhatDoesNotExistAndTheDiffNamesWhatChanged)
     EXPECT_TRUE(d.screen);
 }
 
+TEST(UiDocOps, TextThatWouldBreakABlockIsIgnored)
+{
+    // Unsetting id/type, "children=", object keys as types, one-number size (AssetsLine 77d5b09)
+    UiDoc doc = Parse(Screen());
+    auto edits = ParseEdits("@update play id=- type=- children=- text=\"GO\"", doc);
+    EXPECT_TRUE(edits.errors.IsEmpty());
+    UiDoc after = ApplyOps(doc, edits.ops).doc;
+    const UiNode* play = FindNode(after, "play");
+    ASSERT_TRUE(play);
+    EXPECT_EQ(play->type, "button");
+    EXPECT_EQ(*play->text, "GO");
+
+    // A node an unset slipped through to (stored by an older editor) keeps them too
+    Json unset = Json::Array();
+    for (const char* k : { "id", "type", "children" })
+        unset.Add(Json(k));
+    Json old = Json::Object();
+    old["op"] = "update";
+    old["id"] = "play";
+    old["unset"] = unset;
+    UiDoc oldDoc = ApplyOps(doc, { old }).doc;
+    ASSERT_TRUE(FindNode(oldDoc, "play"));
+    EXPECT_EQ(FindNode(oldDoc, "play")->type, "button");
+    EXPECT_EQ(FindNode(oldDoc, "menu")->children.size(), FindNode(doc, "menu")->children.size());
+
+    // "constructor" is a key of every object, not a block type
+    String type, layout;
+    EXPECT_FALSE(ResolveType("constructor", type, layout));
+    EXPECT_FALSE(ParseUiml("screen S 100x100\n  constructor x\n").errors.IsEmpty());
+
+    // "children=" on a line with an indented child under it
+    auto nested = ParseUiml("screen S 100x100\n  group g children=x\n    button b\n");
+    EXPECT_TRUE(nested.errors.IsEmpty());
+    ASSERT_TRUE(FindNode(nested.doc, "g"));
+    ASSERT_EQ(FindNode(nested.doc, "g")->children.size(), 1u);
+    EXPECT_EQ(FindNode(nested.doc, "g")->children[0].id, "b");
+    // ... and on a line with none
+    auto bare = ParseUiml("screen S 100x100\n  group g children=x\n");
+    EXPECT_TRUE(bare.errors.IsEmpty());
+    EXPECT_TRUE(FindNode(bare.doc, "g")->children.empty());
+    EXPECT_STR_EQ(NodeToJson(*FindNode(bare.doc, "g")).Dump(), "{\"id\":\"g\",\"type\":\"group\"}");
+
+    // A one-number size sets the width only, the same before and after the step is stored
+    auto one = ParseEdits("@update play size=10", doc).ops;
+    ASSERT_EQ(one.Count(), 1);
+    EXPECT_STR_EQ(one[0].Dump(), "{\"op\":\"update\",\"id\":\"play\",\"set\":{\"w\":10}}");
+    UiDoc sized = ApplyOps(doc, one).doc;
+    EXPECT_EQ(*FindNode(sized, "play")->w, 10);
+    EXPECT_EQ(FindNode(sized, "play")->h, FindNode(doc, "play")->h);
+    auto pos = ParseEdits("@update close pos=12", doc).ops;
+    EXPECT_STR_EQ(pos[0].Dump(), "{\"op\":\"update\",\"id\":\"close\",\"set\":{\"x\":12}}");
+    EXPECT_EQ(FindNode(ApplyOps(doc, pos).doc, "close")->y, FindNode(doc, "close")->y);
+}
+
 TEST(UiDocOps, ANewBlockNeverTakesAnIdThatExists)
 {
     UiDoc doc = Parse(Screen());

@@ -156,17 +156,24 @@ namespace Editor::UiDoc
         auto add = [&](const char* name, const std::optional<Json>& v) { out.Add(Pair<String, std::optional<Json>>(name, v)); };
         auto pair = [&]() { return SplitOn(value, U"x\u00D7,*"); };
 
+        // One number sets only the first field (as it reads once the step is stored: no "h" at all)
         if (k == "size")
         {
             auto p = pair();
             add("w", NumberAt(p, 0));
-            add("h", NumberAt(p, 1));
+            if (p.Count() > 1)
+                add("h", NumberAt(p, 1));
         }
         else if (k == "pos" || k == "position" || k == "offset")
         {
             auto p = pair();
             add("x", NumberAt(p, 0));
-            add("y", NumberAt(p, 1));
+            if (p.Count() > 1)
+                add("y", NumberAt(p, 1));
+        }
+        // The tree is written by indenting, never as a property
+        else if (k == "children")
+        {
         }
         else if (k == "cell")
         {

@@ -104,6 +104,8 @@ const uimlCases: { name: string; src: string; base?: Record<string, unknown> }[]
   { name: 'screen', src: SCREEN }, { name: 'screen2', src: SCREEN2 }, { name: 'dpi', src: DPI }, { name: 'tricky', src: TRICKY },
   { name: 'noscreen', src: NOSCREEN }, { name: 'noscreen_base', src: NOSCREEN, base: { name: 'Base', width: 640, height: 480, dpi: 240 } },
   { name: 'cyr', src: CYR }, { name: 'dups', src: DUPS }, { name: 'empty', src: '' }, { name: 'crlf', src: 'screen W 300x200\r\n  button x\r\n    icon y\r  text z "t"' },
+  // Text that would break a block (AssetsLine 77d5b09): "children=" as a property, object keys as types, one-number size / pos
+  { name: 'guards', src: 'screen S 300x300\n  group g children=x size=50\n    button b pos=7 "B"\n  constructor x\n  row r children="q" size=40x\n  toString y' },
 ];
 out.uiml = uimlCases.map((c) => {
   const { doc, errors } = uiml.parseUiml(c.src, c.base as any);
@@ -185,6 +187,7 @@ const EDITS5 = '@set play hidden\n@edit play shown x=5 y=- pos=1,2 cell=3\n@upda
 const editCases = [
   { name: 'test', base: SCREEN, src: EDITS1 }, { name: 'again', base: SCREEN, src: EDITS2 }, { name: 'big', base: SCREEN, src: EDITS3 },
   { name: 'screen', base: SCREEN, src: EDITS4 }, { name: 'misc', base: SCREEN, src: EDITS5 }, { name: 'tricky', base: TRICKY, src: '@update c1 anchor=stretch margin=1\n@move l1 to=r1 index=1\n@remove b1 t' },
+  { name: 'guards', base: SCREEN, src: '@update play id=- type=- children=- rename=- text="GO" size=10\n@update close pos=12 size=-\n@update menu children=x Children=y size=700x\n@add root\n  group n children=z\n    icon i' },
 ];
 out.edits = editCases.map((c) => {
   const doc = uiml.parseUiml(c.base).doc;
@@ -213,6 +216,8 @@ const rawOps: unknown[] = [
   { op: 'doc', doc: { name: 'D', root: { children: [{ type: 'row', id: 'r', children: [{ type: 'button' }] }] } } },
   { op: 'update', id: 'r', set: { anchor: '', x: 3 } },
   { op: 'add', parent: 'r', index: -1, nodes: [] },
+  // An unset of id / type / children stored by an older editor
+  { op: 'update', id: 'r', unset: ['id', 'type', 'children', 'gap'] },
 ];
 {
   const doc = uiml.parseUiml(SCREEN).doc;

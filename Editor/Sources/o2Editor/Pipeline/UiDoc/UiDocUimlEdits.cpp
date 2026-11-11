@@ -27,6 +27,9 @@ namespace Editor::UiDoc
                 if (!tk.quoted && (tk.value == "-" || tk.value.IsEmpty() || lowerValue == "none" || lowerValue == "null"))
                 {
                     String k = AliasKey(tk.key);
+                    // A block keeps its id, type and children: those change by @update id=/type=, @remove and @move
+                    if (k == "id" || k == "type" || k == "children" || k == "rename")
+                        continue;
                     if (k == "size") { unset.Add("w"); unset.Add("h"); }
                     else if (k == "pos") { unset.Add("x"); unset.Add("y"); }
                     else if (k == "cell") { unset.Add("cellW"); unset.Add("cellH"); }

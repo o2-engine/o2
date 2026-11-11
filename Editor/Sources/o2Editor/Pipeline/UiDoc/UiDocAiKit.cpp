@@ -312,10 +312,11 @@ namespace Editor::UiDoc
             Json cur = curPtr && curPtr->IsObject() ? *curPtr : Json::Object();
 
             // A background removed earlier stays removed when this pass did not redo it
-            bool keepAi = JsStringOr(JsGet(cur, "bg")) == "ai" && JsTruthy(JsGet(cur, "prepared")) && !clean.Has("prepared");
-            // Borders someone set by hand stay; the AI's (on the axes the pixels do not decide) are taken otherwise
+            bool keepAi = JsStringOr(JsGet(cur, "bg")) == "ai" && JsTruthy(JsGet(cur, "prepared")) && !JsTruthy(clean.Get("prepared"));
+            // Borders someone set by hand stay; otherwise the AI's measurement (or none - the node finds
+            // them) replaces the last one
             const Json* curNine = JsGet(cur, "nineSlice");
-            bool handNine = !JsNullish(curNine) && JsStringOr(JsGet(cur, "nineFrom")) != "ai";
+            bool handNine = JsTruthy(curNine) && JsStringOr(JsGet(cur, "nineFrom")) != "ai";
             Json merged = cur;
             for (auto& f : clean.Members())
                 merged[f.first] = f.second;
@@ -324,10 +325,12 @@ namespace Editor::UiDoc
                 merged["nineSlice"] = *curNine;
                 merged.Remove("nineFrom");
             }
-            else if (!clean.Has("nineSlice"))
+            else
             {
-                merged["nineSlice"] = Json();
-                merged.Remove("nineFrom");
+                const Json* aiNine = clean.Get("nineSlice");
+                merged["nineSlice"] = JsNullish(aiNine) ? Json() : *aiNine;
+                if (!JsTruthy(aiNine) || !clean.Has("nineFrom"))
+                    merged.Remove("nineFrom");
             }
             if (keepAi)
             {
