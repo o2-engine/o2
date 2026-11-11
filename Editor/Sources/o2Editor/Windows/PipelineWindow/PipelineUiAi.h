@@ -31,8 +31,13 @@ namespace Editor
         // Analyses the UI kit node's pictures (portId "" = all of them) and merges the answer into its items
         void AnalyzeKit(const Ref<PipelineEditor>& editor, const String& nodeId, const String& portId);
 
-        // Exports the layout node for its exportFor target (the card's and the workspace's Download)
+        // Exports the layout node for its exportFor target (the card's and the workspace's Download): unity and json ask
+        // where to save the file, o2 writes the prototype into the project's Assets
         void Download(const Ref<PipelineEditor>& editor, const String& nodeId);
+
+        // Exports the layout node for its exportFor target without asking: unity / json into the file (the o2 target
+        // ignores it); the result and what the target does not reproduce go to the editor's log
+        void DownloadTo(const Ref<PipelineEditor>& editor, const String& nodeId, const String& outputPath);
 
         // Returns true while a call of the kind ("agent", "style", "kit", "export") runs for the node
         bool IsBusy(const String& kind, const String& nodeId);

@@ -23,7 +23,41 @@ namespace Editor::UiLayout
 {
     namespace
     {
-        void EnsureMeta(const String& fullPath, const String& type)
+        // FNV-1a over the UTF-8 bytes of seed \0 kind \0 key with the splitmix64 finalizer, as AssetsLine's o2 export
+        // (shared/uiExport/o2.ts) derives its ids
+        UInt64 SeedHash(const String& seed, const char* kind, const String& key)
+        {
+            std::string text = std::string(seed.Data()) + '\0' + kind + '\0' + key.Data();
+            UInt64 h = 0xcbf29ce484222325ull;
+            for (unsigned char c : text)
+            {
+                h ^= (UInt64)c;
+                h *= 0x100000001b3ull;
+            }
+            h = (h ^ (h >> 30))*0xbf58476d1ce4e5b9ull;
+            h = (h ^ (h >> 27))*0x94d049bb133111ebull;
+            return h ^ (h >> 31);
+        }
+
+        // The asset uid of a path inside Assets for a seed (32 hex digits), empty without a seed
+        String SeedUid(const String& seed, const String& path)
+        {
+            if (seed.IsEmpty())
+                return String();
+            char buffer[33];
+            snprintf(buffer, sizeof(buffer), "%016llx%016llx", (unsigned long long)SeedHash(seed, "asset-a", path),
+                     (unsigned long long)SeedHash(seed, "asset-b", path));
+            return String(buffer);
+        }
+
+        // The actor id of a widget path for a seed: a non-zero 64-bit integer
+        SceneUID SeedSceneUid(const String& seed, const String& key)
+        {
+            UInt64 h = SeedHash(seed, "scene", key);
+            return h == 0 ? 1 : h;
+        }
+
+        void EnsureMeta(const String& fullPath, const String& type, const String& seededUid = "")
         {
             String metaPath = fullPath + ".meta";
             if (o2FileSystem.IsFileExist(metaPath))
@@ -32,7 +66,7 @@ namespace Editor::UiLayout
             UID uid;
             uid.Randomize();
             Json value = Json::Object();
-            value["mId"] = String(uid.ToString());
+            value["mId"] = seededUid.IsEmpty() ? String(uid.ToString()) : seededUid;
             Json meta = Json::Object();
             meta["Type"] = type;
             meta["Value"] = value;
@@ -48,7 +82,7 @@ namespace Editor::UiLayout
 
         // The image meta keeps its uid; a nine-sliced sprite carries its borders as the asset's default slice, so it
         // stretches wherever it is used, not only inside the prototype
-        void EnsureImageMeta(const String& fullPath, const std::optional<NineSlice>& nine)
+        void EnsureImageMeta(const String& fullPath, const std::optional<NineSlice>& nine, const String& seededUid = "")
         {
             String metaPath = fullPath + ".meta";
             Json meta;
@@ -57,7 +91,7 @@ namespace Editor::UiLayout
                 UID uid;
                 uid.Randomize();
                 Json value = Json::Object();
-                value["mId"] = String(uid.ToString());
+                value["mId"] = seededUid.IsEmpty() ? String(uid.ToString()) : seededUid;
                 meta = Json::Object();
                 meta["Type"] = String("o2::ImageAsset::Meta");
                 meta["Value"] = value;
@@ -199,7 +233,7 @@ namespace Editor::UiLayout
         o2FileSystem.FolderCreate(root + resources + "/Sprites", true);
         o2FileSystem.FolderCreate(root + resources + "/Fonts", true);
         for (auto& f : Vector<String>{ folder, resources, resources + "/Sprites", resources + "/Fonts" })
-            EnsureMeta(root + f, "o2::DefaultAssetMeta<o2::FolderAsset>");
+            EnsureMeta(root + f, "o2::DefaultAssetMeta<o2::FolderAsset>", SeedUid(request.seed, f));
 
         // Sprites: the run's own PNGs; a sprite the layout no longer uses goes
         ExportResources exportResources;
@@ -210,7 +244,7 @@ namespace Editor::UiLayout
             String file = sprite.key + ".png";
             String rel = resources + "/Sprites/" + file;
             WriteIfChanged(root + rel, sprite.png);
-            EnsureImageMeta(root + rel, sprite.nine);
+            EnsureImageMeta(root + rel, sprite.nine, SeedUid(request.seed, rel));
             keep.insert(file.Data());
             exportResources.files[file.ToLowerCase()] = file;
             res.files.Add(rel);
@@ -224,7 +258,7 @@ namespace Editor::UiLayout
         {
             String rel = resources + "/Sprites/white.png";
             WriteIfChanged(root + rel, UiImage::Blank(8, 8, 255, 255, 255, 255).Png());
-            EnsureMeta(root + rel, "o2::ImageAsset::Meta");
+            EnsureMeta(root + rel, "o2::ImageAsset::Meta", SeedUid(request.seed, rel));
             keep.insert("white.png");
             res.files.Add(rel);
         }
@@ -262,14 +296,14 @@ namespace Editor::UiLayout
         {
             String rel = resources + "/Fonts/" + String(font);
             WriteIfChanged(root + rel, PipelineUtils::ReadFileBytes(fontSource + String(font)));
-            EnsureMeta(root + rel, "o2::VectorFontAsset::Meta");
+            EnsureMeta(root + rel, "o2::VectorFontAsset::Meta", SeedUid(request.seed, rel));
             res.files.Add(rel);
         }
         if (!fonts.empty())
         {
             String rel = resources + "/Fonts/LICENSE-Roboto.txt";
             WriteIfChanged(root + rel, PipelineUtils::ReadFileBytes(fontSource + "LICENSE-Roboto.txt"));
-            EnsureMeta(root + rel, "o2::DefaultAssetMeta<o2::BinaryAsset>");
+            EnsureMeta(root + rel, "o2::DefaultAssetMeta<o2::BinaryAsset>", SeedUid(request.seed, rel));
         }
 
         if (!SamePath(root, o2Assets.GetAssetsPath()))
@@ -294,7 +328,7 @@ namespace Editor::UiLayout
                 continue;
 
             o2FileSystem.FolderCreate(root + resources + "/FontStyles", true);
-            EnsureMeta(root + resources + "/FontStyles", "o2::DefaultAssetMeta<o2::FolderAsset>");
+            EnsureMeta(root + resources + "/FontStyles", "o2::DefaultAssetMeta<o2::FolderAsset>", SeedUid(request.seed, resources + "/FontStyles"));
             auto style = mmake<FontStyleAsset>();
             style->AddEffect<FontColorEffect>(fill);
             style->AddEffect<FontStrokeEffect>((float)stroke.second, color, 100);
@@ -313,6 +347,20 @@ namespace Editor::UiLayout
                 existing = AssetRef<ActorAsset>(protoRel);
                 if (existing && existing->GetActor())
                     options.keepIds = CollectActorIds(existing->GetActor());
+            }
+
+            // A seeded export gives the widgets it makes anew the ids AssetsLine's o2 export gives them (a path that occurs
+            // twice keeps random ones: the ids are kept by path)
+            if (!request.seed.IsEmpty())
+            {
+                Map<String, int> uses;
+                for (auto& p : plan.nodes)
+                    uses[p.widgetPath] = uses.ContainsKey(p.widgetPath) ? uses[p.widgetPath] + 1 : 1;
+                for (auto& p : plan.nodes)
+                {
+                    if (uses[p.widgetPath] == 1 && !options.keepIds.ContainsKey(p.widgetPath))
+                        options.keepIds[p.widgetPath] = SeedSceneUid(request.seed, p.widgetPath);
+                }
             }
 
             UiWidgetTree tree = BuildWidgets(plan, exportResources, options);

@@ -4,7 +4,12 @@
 #include "o2Editor/Pipeline/Nodes/PipelineNodesCommon.h"
 #include "o2Editor/Pipeline/Nodes/UiNodes.h"
 #include "o2Editor/Pipeline/PipelineSettings.h"
+#include "o2/Assets/Assets.h"
+#include "o2/Utils/FileSystem/FileSystem.h"
+#include "o2Editor/Dialogs/System/OpenSaveDialog.h"
 #include "o2Editor/Pipeline/UiDoc/UiDocAi.h"
+#include "o2Editor/Pipeline/UiDoc/UiDocExport.h"
+#include "o2Editor/Pipeline/UiLayout/UiLayoutAgent.h"
 #include "o2Editor/Pipeline/UiDoc/UiDocJs.h"
 #include "o2Editor/Windows/PipelineWindow/PipelineEditor.h"
 #include "o2Editor/Windows/PipelineWindow/PipelineNodeBody.h"
@@ -328,11 +333,90 @@ namespace Editor
         void Download(const Ref<PipelineEditor>& editor, const String& nodeId)
         {
             auto node = FindNode(editor, nodeId);
-            if (!node)
+            if (!node || IsBusy("export", nodeId))
                 return;
 
-            if (editor->onLog)
-                editor->onLog("AI UI layout: export is not available in this build yet");
+            String target = UiDoc::ExportTargetOf(UiDoc::FromDataValue(node->config));
+            if (target == UiDoc::UI_EXPORT_O2)
+            {
+                DownloadTo(editor, nodeId, "");
+                return;
+            }
+
+            // The file goes where the user says, next to the project by default
+            String assets = UiLayout::AbsolutePath(o2Assets.GetAssetsPath());
+            while (UiLayout::HasSuffix(assets, "/"))
+                assets = assets.SubStr(0, assets.Length() - 1);
+            String folder = assets.IsEmpty() ? String() : o2FileSystem.GetParentPath(assets);
+            String name = UiDoc::ExportFileName(UiDoc::DocAt(node->config).doc, target);
+            Map<String, String> extensions;
+            if (target == UiDoc::UI_EXPORT_UNITY)
+                extensions["Unity package"] = "*.unitypackage";
+            else
+                extensions["Zip archive"] = "*.zip";
+            String path = GetSaveFileNameDialog("Export the UI layout", extensions, folder.IsEmpty() ? name : folder + "/" + name);
+            if (!path.IsEmpty())
+                DownloadTo(editor, nodeId, path);
+        }
+
+        void DownloadTo(const Ref<PipelineEditor>& editor, const String& nodeId, const String& outputPath)
+        {
+            auto node = FindNode(editor, nodeId);
+            if (!node || IsBusy("export", nodeId))
+                return;
+
+            UiDoc::UiLayoutExportRequest request;
+            request.target = UiDoc::ExportTargetOf(UiDoc::FromDataValue(node->config));
+            request.doc = UiDoc::DocAt(node->config).doc;
+            UiDoc::UiKit kit;
+            if (CurrentKit(editor, *node, kit))
+                request.kit = kit;
+            request.nodeId = nodeId;
+            request.assetPath = node->GetConfigString("assetPath", "");
+            request.assetsPath = o2Assets.GetAssetsPath();
+            request.outputPath = outputPath;
+            if (request.target == UiDoc::UI_EXPORT_JSON)
+                request.picture = PipelineUiNodes::RenderLayoutPicture(request.doc, request.kit ? &*request.kit : nullptr).GetPngBytes();
+
+            SetBusy("export", nodeId, "*");
+            SetError("export", nodeId, "");
+            if (auto widget = editor->GetNodeWidget(nodeId))
+            {
+                if (auto body = widget->GetBody())
+                    body->OnConfigChanged();
+            }
+
+            WeakRef<PipelineEditor> weakEditor(editor);
+            Run("export", nodeId, [](WeakRef<PipelineEditor> weakEditor, String nodeId, Ref<PipelineExecContext> ctx,
+                                    UiDoc::UiLayoutExportRequest request) -> Coroutine<void>
+            {
+                auto res = co_await UiDoc::ExportLayout(request);
+                SetBusy("export", nodeId, "");
+                auto editor = weakEditor.Lock();
+                if (!editor)
+                    co_return;
+
+                if (!res.ok)
+                {
+                    SetError("export", nodeId, res.error);
+                    ctx->Log("AI UI layout: export failed: " + res.error);
+                }
+                else
+                {
+                    String where = request.target == UiDoc::UI_EXPORT_O2 ?
+                        (res.prototype.IsEmpty() ? String("the project's Assets") : "Assets/" + res.prototype) :
+                        request.outputPath;
+                    ctx->Log("AI UI layout: exported for " + request.target + " to " + where);
+                    for (auto& warning : res.warnings)
+                        ctx->Log("AI UI layout: " + warning);
+                }
+
+                if (auto widget = editor->GetNodeWidget(nodeId))
+                {
+                    if (auto body = widget->GetBody())
+                        body->OnConfigChanged();
+                }
+            }(weakEditor, nodeId, MakeContext(editor, nodeId), request));
         }
 
         void InstallWorkspaceHandlers()

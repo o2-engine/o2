@@ -27,7 +27,7 @@ step = 1500
 for i in range(0, len(text), step):
     lines.append('    ' + lit(text[i:i + step]) + ',')
 with open(sys.argv[2], 'w') as f:
-    f.write('// Generated from the web (AssetsLine fa16657: shared/uiDoc, shared/uiKit.ts, shared/textStyle.ts, backend/src/uiKit/prep.ts)\n')
+    f.write('// Generated from the web (AssetsLine: shared/uiDoc, shared/uiExport, shared/uiKit.ts, shared/textStyle.ts, backend/src/uiKit/prep.ts)\n')
     f.write('// by a golden script: every case\'s inputs and the web\'s outputs as one JSON document, in chunks. Do not edit by hand.\n')
     f.write('static const char* const ' + (sys.argv[3] if len(sys.argv) > 3 else 'kUiDocGoldenParts') + '[] = {\n')
     f.write('\n'.join(lines) + '\n')

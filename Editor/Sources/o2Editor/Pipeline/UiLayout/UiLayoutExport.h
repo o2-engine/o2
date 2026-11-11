@@ -13,6 +13,8 @@ namespace Editor::UiLayout
         String                  name;       // Screen name: the prototype's file name
         String                  layout;     // The skill's ui_structure.json
         Vector<ImageToUiSprite> sprites;    // Every sprite the layout names: <key>.png with its nine-slice borders
+        String                  seed;       // Uids of new metas and actor ids derived from it and the paths as AssetsLine's o2
+                                            // export derives them (stable across exports); random when empty
     };
 
     // What the export wrote
