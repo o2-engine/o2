@@ -1,6 +1,7 @@
 #include "o2Editor/stdafx.h"
 #include "UiWsStage.h"
 
+#include <chrono>
 #include <cmath>
 
 #include "o2/Application/Application.h"
@@ -646,6 +647,23 @@ namespace Editor
         mForceRender = true;
     }
 
+    void UiWsStage::Upload(const UiLayout::UiImage& image, const String& key, float scale, float ms)
+    {
+        if (image.IsEmpty())
+            return;
+
+        auto bitmap = image.ToBitmap();
+        mTexture = TextureRef(*bitmap);
+        mTexture->SetFilter(Texture::Filter::Linear);
+        mTextureSize = bitmap->GetSize();
+        mSprite->SetTexture(mTexture);
+        mSprite->SetTextureSrcRect(RectI(Vec2I(), mTextureSize));
+        mRenderedKey = key;
+        mRenderedScale = scale;
+        mLastRenderMs = ms;
+        mRenderCount++;
+    }
+
     void UiWsStage::EnsureRender(const Box& box)
     {
         const auto& doc = Shown();
@@ -663,35 +681,66 @@ namespace Editor
 
         float dpr = 1.0f/Math::Max(0.05f, PipelineDraw::Pixel());
         float longest = Math::Max(1.0f, Math::Max(frame.x, frame.y));
-        float full = Math::Min(mCam.k*dpr, 4096.0f/longest);
+        float full = Math::Max(0.01f, Math::Min(mCam.k*dpr, 4096.0f/longest));
         bool interacting = mDrag != DragKind::None || mIdle < 0.15f;
-        float want = interacting && !mForceRender ? Math::Min(full, 1600.0f/longest) : full;
+
+        // The worker's picture, when it is still the one wanted
+        if (mJob && mJob->picture.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
+        {
+            auto image = mJob->picture.get();
+            if (mJob->key == key)
+                Upload(image, mJob->key, mJob->scale, (o2Time.GetApplicationTime() - mJob->started)*1000.0f);
+            mJob = nullptr;
+        }
+
+        auto options = [&](float scale)
+        {
+            UiDoc::UiRenderOptions o;
+            o.mode = ctx->view;
+            o.width = frame.x;
+            o.height = frame.y;
+            o.showIds = ctx->showIds;
+            o.scale = scale;
+            return o;
+        };
+
         bool stale = key != mRenderedKey;
-        bool sharper = !interacting && Math::Abs(want - mRenderedScale) > want*0.01f;
-        if (!stale && !sharper && !mForceRender)
+        if (mForceRender || !mTexture || (interacting && stale))
+        {
+            // Right away: the first picture, a test's flush, a gesture's live result (smaller while it lasts)
+            float want = mForceRender || !mTexture ? full : Math::Min(full, 720.0f/longest);
+            mForceRender = false;
+            auto o = options(want);
+            o.kit = ctx->hasKit ? &ctx->kit : nullptr;
+            o.rects = &ShownRects();
+            auto started = std::chrono::steady_clock::now();
+            auto image = UiDoc::RenderLayout(doc, o);
+            Upload(image, key, want, std::chrono::duration<float, std::milli>(std::chrono::steady_clock::now() - started).count());
+            return;
+        }
+
+        if (interacting || mJob)
             return;
 
-        mForceRender = false;
-        UiDoc::UiRenderOptions options;
-        options.mode = ctx->view;
-        options.kit = ctx->hasKit ? &ctx->kit : nullptr;
-        options.width = frame.x;
-        options.height = frame.y;
-        options.rects = &ShownRects();
-        options.showIds = ctx->showIds;
-        options.scale = Math::Max(0.01f, want);
-        auto bitmap = UiDoc::RenderLayoutBitmap(doc, options);
-        if (!bitmap)
-            return;
-
-        mTexture = TextureRef(*bitmap);
-        mTexture->SetFilter(Texture::Filter::Linear);
-        mTextureSize = bitmap->GetSize();
-        mSprite->SetTexture(mTexture);
-        mSprite->SetTextureSrcRect(RectI(Vec2I(), mTextureSize));
-        mRenderedKey = key;
-        mRenderedScale = want;
-        mRenderCount++;
+        if (stale || Math::Abs(full - mRenderedScale) > full*0.01f)
+        {
+            // At rest: the full size on a worker, from copies of what it draws
+            auto job = std::make_shared<RenderJob>();
+            job->key = key;
+            job->scale = full;
+            job->started = o2Time.GetApplicationTime();
+            auto docCopy = std::make_shared<UiDoc::UiDoc>(doc);
+            auto kitCopy = ctx->hasKit ? std::make_shared<UiDoc::UiKit>(ctx->kit) : nullptr;
+            auto rectsCopy = std::make_shared<UiDoc::UiRects>(ShownRects());
+            auto o = options(full);
+            job->picture = std::async(std::launch::async, [docCopy, kitCopy, rectsCopy, o]() mutable
+            {
+                o.kit = kitCopy.get();
+                o.rects = rectsCopy.get();
+                return UiDoc::RenderLayout(*docCopy, o);
+            });
+            mJob = job;
+        }
     }
 
     void UiWsStage::DrawPanel(const Box& box)

@@ -39,13 +39,27 @@ namespace Editor
         PushEditorScopeOnStack scope;
         mCtx = mmake<UiWsContext>();
         ctx = mCtx;
+        BuildPanels();
+        mClipChildren = true;
+        LoadPrefs();
+    }
+
+    void UiWsWindow::BuildPanels()
+    {
+        PushEditorScopeOnStack scope;
+        for (Ref<Widget> old : { Ref<Widget>(mStage), Ref<Widget>(mSide), Ref<Widget>(mHierarchy), Ref<Widget>(mCoveragePopup), Ref<Widget>(mGrips) })
+        {
+            if (old)
+                RemoveChild(old);
+        }
+
         mStage = mmake<UiWsStage>();
         mStage->name = "stage";
         mSide = mmake<UiWsSidePanel>();
         mSide->name = "side";
         mHierarchy = mmake<UiWsHierarchy>();
         mHierarchy->name = "hierarchy";
-        // The hierarchy last: the row being dragged follows the pointer over the stage
+        // The hierarchy after the stage: the row being dragged follows the pointer over it
         AddChild(mStage);
         AddChild(mSide);
         AddChild(mHierarchy);
@@ -77,6 +91,8 @@ namespace Editor
             if (self && self->onSend)
                 self->onSend(prompt, selected);
         };
+
+        // The grips over the panels: the resize edges and the dividers
         mGrips = mmake<UiWsGrips>();
         mGrips->name = "grips";
         *mGrips->layout = WidgetLayout::BothStretch();
@@ -90,9 +106,7 @@ namespace Editor
             if (self && zone.StartsWith("split:"))
                 self->SetPanelWidth(zone.SubStr(6), 0.0f);
         };
-
-        mClipChildren = true;
-        LoadPrefs();
+        mThemeVersion = PipelineTheme::GetVersion();
     }
 
     // --- grips -------------------------------------------------------------------------------------
@@ -166,7 +180,6 @@ namespace Editor
         }
         mCtx->Refresh();
         mShown = true;
-        mThemeVersion = PipelineTheme::GetVersion();
         SetEnabledForcible(true);
         o2UI.FocusWidget(Ref(this));
         mHasFocus = true;
@@ -319,9 +332,12 @@ namespace Editor
         if (!mShown)
             return;
 
-        // A new theme: the panels' fields are made again in its colours
+        // A new theme: the panels and their fields are made again in its colours
         if (PipelineTheme::GetVersion() != mThemeVersion)
-            mThemeVersion = PipelineTheme::GetVersion();
+        {
+            BuildPanels();
+            mCtx->Refresh();
+        }
 
         mPoll += dt;
         if (mPoll > 0.25f)

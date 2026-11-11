@@ -193,6 +193,16 @@ namespace Editor
         mMenuPanel->picker = Ref(this);
         mMenuPanel->SyncFields();
         RectF anchor = layout->GetWorldRect();
+        // On a card the picker sits on the editor's canvas: the menu opens in screen space at the field
+        if (mOwnContext && ctx)
+        {
+            if (auto editor = ctx->editor.Lock())
+            {
+                Vec2F a = editor->LocalToScreenPoint(Vec2F(anchor.left, anchor.bottom));
+                Vec2F b = editor->LocalToScreenPoint(Vec2F(anchor.right, anchor.top));
+                anchor = RectF(Math::Min(a.x, b.x), Math::Max(a.y, b.y), Math::Max(a.x, b.x), Math::Min(a.y, b.y));
+            }
+        }
         float width = Math::Clamp(anchor.Width(), menuMinWidth, menuMaxWidth);
         mMenu->OpenAt(anchor, width, Math::Min(menuMaxHeight, mMenuPanel->GetContentHeight()));
     }

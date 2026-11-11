@@ -57,6 +57,8 @@ TEST_F(UiWorkspaceUiFixture, OpensDrawsOnceAndListsTheBlocks)
 
     int renders = window->GetStage()->GetRenderCount();
     EXPECT_GE(renders, 1);
+    printf("ui workspace: the screen drawn at %dx%d in %.1f ms\n", window->GetStage()->GetRenderedSize().x,
+           window->GetStage()->GetRenderedSize().y, window->GetStage()->GetLastRenderMs());
     Step(10);
     EXPECT_EQ(window->GetStage()->GetRenderCount(), renders) << "a frame without a change draws nothing";
 
@@ -587,4 +589,42 @@ TEST_F(UiWorkspaceUiFixture, CoverageListsBlocksWithoutAGraphic)
     Step(2);
     EXPECT_EQ(Ctx()->selected, String("hp"));
     EXPECT_EQ(Ctx()->tab, String("inspect"));
+}
+
+// The screen picker on its own (as a card places it): bound to the node, it reads the node itself, follows a change made
+// elsewhere and writes the view keys
+TEST_F(UiWorkspaceUiFixture, DevicePickerStandsAlone)
+{
+    OpenWorkspace(false);
+    UiWorkspace::Close();
+    PushEditorScopeOnStack scope;
+    auto picker = mmake<UiDevicePicker>();
+    *picker->layout = WidgetLayout::Based(BaseCorner::LeftTop, Vec2F(360, 28), Vec2F(40, -40));
+    EditorUIRoot.AddWidget(picker);
+    picker->Bind(editor, layoutNode->id);
+    Step(2);
+    EXPECT_GT(picker->GetPreferredWidth(), 100.0f);
+    EXPECT_EQ(picker->ctx->preview.kind, String("design"));
+
+    picker->Pick("pixel-8");
+    Step(2);
+    EXPECT_EQ(ConfigNow().Get("uiDevice")->Str(), String("pixel-8"));
+
+    // A change made elsewhere is noticed
+    UiDoc::SetConfigJson(layoutNode->config, "uiDevice", UiDocJson("ipad-mini"));
+    Step(30);
+    EXPECT_EQ(picker->ctx->preview.id, String("ipad-mini"));
+
+    picker->ToggleMenu();
+    Step(2);
+    EXPECT_TRUE(picker->IsMenuOpen());
+    auto field = picker->GetMenuPanel()->GetCustomField("dpi");
+    ASSERT_TRUE(field);
+    field->SetText("320");
+    Step(2);
+    EXPECT_EQ(ConfigNow().Get("uiDevice")->Str(), String("custom"));
+    EXPECT_EQ(ConfigNow().Get("uiDeviceCustom")->Get("dpi")->Num(), 320.0);
+    picker->ToggleMenu();
+    Step(2);
+    EditorUIRoot.RemoveWidget(picker);
 }

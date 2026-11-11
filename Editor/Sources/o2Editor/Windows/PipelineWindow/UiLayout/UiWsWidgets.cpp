@@ -305,6 +305,31 @@ namespace Editor
 
     // --- controls ---------------------------------------------------------------------------------
 
+    // ----------------------------------------------------------------------------------------------
+    // A number field of the workspace: its letter inside on the left, the placeholder after the letter
+    // ----------------------------------------------------------------------------------------------
+    class UiWsNumberBox : public PipelineField
+    {
+    public:
+        float     pad = 8.0f;  // Where the text starts
+        Ref<o2::Text> placeholder; // Shown while the field is empty and not focused
+
+    public:
+        explicit UiWsNumberBox(RefCounter* refCounter): PipelineField(refCounter) {}
+
+        void Draw() override
+        {
+            EditBox::Draw();
+            if (!placeholder || !mResEnabledInHierarchy || mIsClipped || !GetText().IsEmpty() || IsFocused())
+                return;
+
+            RectF rect = layout->GetWorldRect();
+            placeholder->SetRect(RectF(rect.left + pad, rect.top, rect.right - 8.0f, rect.bottom));
+            placeholder->transparency = GetResTransparency();
+            placeholder->Draw();
+        }
+    };
+
     namespace UiWsControls
     {
         String NumberText(double value)
@@ -335,7 +360,12 @@ namespace Editor
         {
             PushEditorScopeOnStack scope;
             auto& t = PipelineTheme::Get();
-            auto field = PipelineControls::MakeEditBox(value ? NumberText(*value) : String(), false, placeholder);
+            auto field = mmake<UiWsNumberBox>();
+            field->SetCaretBlinkingDelay(1.15f);
+            field->SetMultiLine(false);
+            field->layout->minSize = Vec2F(30, 20);
+            PipelineControls::SkinField(field, false);
+            field->SetText(value ? NumberText(*value) : String());
             field->layout->minHeight = 28.0f;
             if (auto text = field->GetTextDrawable())
             {
@@ -353,8 +383,12 @@ namespace Editor
                 pad = 8.0f + UiWsDraw::TextWidth(letter, 10.0f, 400, true) + 6.0f;
             }
             field->SetViewLayout(Layout::BothStretch(pad, 0, 8, 0));
-            if (auto pf = DynamicCast<PipelineField>(field))
-                pf->SetPlaceholder(placeholder);
+            field->pad = pad;
+            if (!placeholder.IsEmpty())
+            {
+                field->placeholder = PipelineControls::MakeThemeText(placeholder, 12.0f, 400, t.fg3);
+                field->placeholder->SetFontAsset(AssetRef<FontAsset>(PipelineTheme::MonoFont()));
+            }
 
             WeakRef<EditBox> weak(field);
             field->onChanged = [onValue, min](const WString& text)

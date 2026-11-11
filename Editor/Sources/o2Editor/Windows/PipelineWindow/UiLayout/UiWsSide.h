@@ -72,6 +72,9 @@ namespace Editor
         // Returns the request field
         const Ref<EditBox>& GetPromptField() const { return mPrompt; }
 
+        // Opens the model menu at the model field, as a click on it does
+        void ClickModelField() { OpenModelPicker(); }
+
         // Writes the request typed into the node (uiDraft) when it changed
         void SaveDraft();
 

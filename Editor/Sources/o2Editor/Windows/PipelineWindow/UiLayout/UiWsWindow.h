@@ -164,6 +164,9 @@ namespace Editor
         // The frame shown (the maximized one while maximized)
         UiWsFrame ShownFrame() const;
 
+        // Makes the panels (again on a theme change: their fields take the theme's colours when made)
+        void BuildPanels();
+
         // Lays the panels out in the frame
         void LayoutPanels();
 

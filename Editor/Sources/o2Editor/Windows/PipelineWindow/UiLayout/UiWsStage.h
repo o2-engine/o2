@@ -1,8 +1,11 @@
 #pragma once
 
+#include <future>
+#include <memory>
 #include <optional>
 
 #include "o2/Render/TextureRef.h"
+#include "o2Editor/Pipeline/UiLayout/UiLayoutPixels.h"
 #include "o2Editor/Windows/PipelineWindow/UiLayout/UiDevicePicker.h"
 
 namespace o2
@@ -72,8 +75,14 @@ namespace Editor
         // The size the screen was last drawn at (pixels)
         Vec2I GetRenderedSize() const { return mTextureSize; }
 
-        // Renders what is pending now instead of waiting for the gesture to end (tests)
+        // How long the last drawing of the screen took, milliseconds
+        float GetLastRenderMs() const { return mLastRenderMs; }
+
+        // Renders what is pending now, at full size, instead of waiting for the gesture to end or the worker (tests)
         void FlushRender();
+
+        // Returns true while the full-size drawing runs on the worker
+        bool IsRendering() const { return mJob != nullptr; }
 
         void Update(float dt) override;
         void OnScrolled(float scroll) override;
@@ -134,6 +143,17 @@ namespace Editor
         float       mRenderedScale = 0.0f;
         float       mIdle = 0.0f;           // Seconds since the camera or the gesture last changed
         int         mRenderCount = 0;
+        float       mLastRenderMs = 0.0f;
+
+        // The full-size drawing on a worker: what it draws, at what scale, the picture once done
+        struct RenderJob
+        {
+            String                           key;
+            float                            scale = 1.0f;
+            std::future<UiLayout::UiImage>   picture;
+            float                            started = 0.0f;
+        };
+        std::shared_ptr<RenderJob> mJob;
         bool        mForceRender = false;
 
     protected:
@@ -185,8 +205,12 @@ namespace Editor
         void DragTo(const Input::Cursor& cursor);
         void EndDrag(bool commit);
 
-        // Draws the screen again when what it shows changed
+        // Draws the screen again when what it shows changed: live (a gesture, the camera moving) at a reduced size right away,
+        // at rest at the full size on a worker
         void EnsureRender(const UiWsDraw::Box& box);
+
+        // Shows a drawn picture
+        void Upload(const UiLayout::UiImage& image, const String& key, float scale, float ms);
 
         // The island's tools and the zoom
         void DrawIsland(const UiWsDraw::Box& box);

@@ -62,6 +62,14 @@ namespace
             window->GetStage()->FlushRender();
             Step(2);
             Shot(theme + "_lines");
+
+            // The agent's model menu (the editor's) opens over the workspace
+            window->GetSide()->GetAgent()->ClickModelField();
+            Step(3);
+            Shot(theme + "_model");
+            if (auto picker = editor->GetModelPicker())
+                picker->Close();
+            Step(2);
         }
     };
 }
@@ -70,6 +78,22 @@ TEST_F(UiWorkspaceGalleryFixture, DarkTheme)
 {
     PipelineTheme::SetKind(PipelineThemeKind::Dark);
     Gallery("dark");
+}
+
+// A theme switched while the window is open: the panels are made again in the new colours
+TEST_F(UiWorkspaceGalleryFixture, ThemeSwitchedWhileOpen)
+{
+    PipelineTheme::SetKind(PipelineThemeKind::Dark);
+    OpenWorkspace(true);
+    Ctx()->Select("title");
+    Window()->GetSide()->OpenTab("inspect");
+    Step(3);
+    PipelineTheme::SetKind(PipelineThemeKind::Light);
+    Step(4);
+    Window()->GetStage()->FlushRender();
+    Step(2);
+    EXPECT_TRUE(Window()->GetSide()->GetInspector()->GetField("num:h"));
+    Shot("switched_light");
 }
 
 TEST_F(UiWorkspaceGalleryFixture, LightTheme)
