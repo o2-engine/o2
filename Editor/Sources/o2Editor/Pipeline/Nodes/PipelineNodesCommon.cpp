@@ -150,7 +150,8 @@ namespace Editor
 
         bool UsesChromaPostStep(const PipelineNode& node, const String& portId /*= ""*/)
         {
-            bool chromaType = node.nodeType == "nanoBananaGen" || node.nodeType == "imageEdit" || node.nodeType == "imageExtract";
+            bool chromaType = node.nodeType == "nanoBananaGen" || node.nodeType == "imageEdit" || node.nodeType == "imageExtract" ||
+                node.nodeType == "aiRemoveBg";
             if (!chromaType)
                 return false;
 

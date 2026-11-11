@@ -126,10 +126,8 @@ namespace Editor::UiDoc
             res.error = "the image model returned no picture";
             co_return res;
         }
-        // The web keys this node's chroma render (aiRemoveBg is one of its chroma node types); o2's UsesChromaPostStep
-        // leaves the node out, so the cut is made here from the node's own transparency settings
-        auto tr = PipelineTransparency::Read(*node);
-        if (tr.transparent && tr.mode == "chroma")
+        // The node's Run returns the raw key-colour render; the cut is the executor's post step, made here once
+        if (PipelineTransparency::UsesChromaPostStep(*node))
             bitmap = PipelineTransparency::ApplyChromaPostStep(*node, *bitmap);
         res.ok = true;
         res.data = PipelineValue::Image(bitmap).GetPngBytes();
