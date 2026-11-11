@@ -26,7 +26,7 @@ namespace Editor
         WeakRef<PipelineEditor> editor;
         String                  nodeId;
 
-        UiDoc::Json            config;    // The node's config as read last
+        UiDoc::Json            config;    // The node's config as read last, without steps and uiRedo (see timeline, redo)
         UiDoc::Ws::UiTimeline  timeline;  // The screen after each step
         Vector<UiDoc::UiStep>  redo;      // config.uiRedo
         UiDoc::UiDoc           current;   // The layout now (after every step)
@@ -116,6 +116,10 @@ namespace Editor
         Vector<bool>           mDiffReady;
         Map<int, String>       mOpsTexts;
         DataDocument mSeen;        // The config as read last, to see a change made elsewhere
+        DataDocument mStepsSeen;   // config.steps as the timeline read it
+        bool         mStepsSeenValid = false;
+        bool         mStepsPresent = false;
+        String       mScreenNameSeen;
         bool         mSeenValid = false;
     };
 

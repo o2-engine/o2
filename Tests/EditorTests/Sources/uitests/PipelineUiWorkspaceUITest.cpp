@@ -389,6 +389,16 @@ TEST_F(UiWorkspaceUiFixture, KeysNudgeDeleteRenameFrame)
     Step();
     EXPECT_EQ(window->GetHierarchy()->GetRenaming(), String());
     EXPECT_TRUE(window->IsShown()) << "Escape ends the rename first";
+
+    // Then the peek, then the window
+    Ctx()->SetPeek(0);
+    window->PressKey(VK_ESCAPE);
+    Step();
+    EXPECT_EQ(Ctx()->peek, -1);
+    EXPECT_TRUE(window->IsShown());
+    window->PressKey(VK_ESCAPE);
+    Step();
+    EXPECT_FALSE(window->IsShown());
 }
 
 // The add menu puts a block into the selected container, or after a selected leaf
@@ -560,6 +570,24 @@ TEST_F(UiWorkspaceUiFixture, WindowGeometryIsKept)
     Vec2F head(whole.left + 20 + 400, whole.top - 20 - 24);
     Drag(head, head + Vec2F(30, -10));
     EXPECT_NEAR(window->GetFrame().x, x + 30, 1.0);
+
+    // A double-click on the header maximizes, another restores
+    for (int n = 0; n < 2; n++)
+    {
+        std::this_thread::sleep_for(std::chrono::milliseconds(350));
+        Vec2F at(whole.left + window->GetFrame().x + 300, whole.top - window->GetFrame().y - 24);
+        o2Input.OnCursorMoved(at, 0, false);
+        Step();
+        for (int i = 0; i < 2; i++)
+        {
+            o2Input.OnCursorPressed(at);
+            Step();
+            o2Input.OnCursorReleased();
+            Step();
+        }
+        Step();
+        EXPECT_EQ(window->IsMaximized(), n == 0);
+    }
 
     window->SetPanelWidth("left", 200);
     EXPECT_EQ(window->GetLeftWidth(), 200.0f);

@@ -319,7 +319,7 @@ namespace Editor
             }
 
             // Peek and revert on hover, for every step but now
-            if (s && !last && hover && editable)
+            if (s && !last && hover)
             {
                 for (int b = 0; b < 2; b++)
                 {

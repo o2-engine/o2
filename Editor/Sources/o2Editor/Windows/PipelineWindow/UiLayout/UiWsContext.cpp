@@ -136,13 +136,44 @@ namespace Editor
 
         mSeen = node->config;
         mSeenValid = true;
-        config = FromDataValue(node->config);
-        timeline.Update(config);
-        mDiffs.Clear();
-        mDiffReady.Clear();
-        mOpsTexts.Clear();
+
+        // The view keys every time; the steps and the redo list only when they changed (they can be large)
+        config = Json::Object();
+        if (node->config.IsObject())
+        {
+            for (auto it = node->config.BeginMember(); it != node->config.EndMember(); ++it)
+            {
+                String name = it->name.GetString();
+                if (name != "steps" && name != "uiRedo")
+                    config[name] = FromDataValue(it->value);
+            }
+        }
+
+        const DataValue* stepsValue = node->config.FindMember("steps");
+        bool stepsChanged = !mStepsSeenValid || (stepsValue != nullptr) != mStepsPresent || (stepsValue && !(*stepsValue == mStepsSeen)) ||
+            JsStringOr(JsGet(config, "screenName")) != mScreenNameSeen;
+        if (stepsChanged)
+        {
+            Json timelineConfig = Json::Object();
+            if (const Json* screenName = JsGet(config, "screenName"))
+                timelineConfig["screenName"] = *screenName;
+            if (stepsValue)
+                timelineConfig["steps"] = FromDataValue(*stepsValue);
+            timeline.Update(timelineConfig);
+            DataValue& seenSteps = mStepsSeen;
+            if (stepsValue)
+                seenSteps = *stepsValue;
+            else
+                mStepsSeen.SetNull();
+            mStepsPresent = stepsValue != nullptr;
+            mStepsSeenValid = true;
+            mScreenNameSeen = JsStringOr(JsGet(config, "screenName"));
+            mDiffs.Clear();
+            mDiffReady.Clear();
+            mOpsTexts.Clear();
+        }
         current = timeline.DocAfter(timeline.Count() - 1);
-        redo = RedoOf(config);
+        redo = UiDoc::RedoOf(node->config);
         if (peek >= timeline.Count())
             peek = -1;
 
