@@ -598,6 +598,18 @@ namespace Editor
         // own change a hand-sized card follows the rows, so the pictures keep their size
         void RefreshParamRows(bool keepArea = true)
         {
+            // The folded header names the model and the background, which these rows change
+            if (auto head = FindChildByTypeAndName<Button>("params"))
+            {
+                if (auto caption = head->GetLayerDrawable<Text>("caption"))
+                {
+                    String text = "Parameters";
+                    for (auto& name : ParamsSummary())
+                        text += " \xC2\xB7 " + name;
+                    caption->text = text;
+                }
+            }
+
             auto owner = mOwner.Lock();
             if (!mParamsList || !owner)
                 return;
