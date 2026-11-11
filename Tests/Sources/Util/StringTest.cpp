@@ -20,3 +20,15 @@ TEST(String, PopBackRemovesAndReturnsTheLastSymbol)
     EXPECT_EQ(text, WString("cd"));
     EXPECT_EQ(text.Length(), 2);
 }
+
+// A suffix one character longer than the string used to match: rfind's npos equalled Length() - other.Length()
+TEST(String, EndsWithNeedsTheWholeSuffix)
+{
+    EXPECT_FALSE(String("").EndsWith("/"));
+    EXPECT_FALSE(String("ab").EndsWith("abc"));
+    EXPECT_FALSE(String("abc").EndsWith("b"));
+    EXPECT_TRUE(String("abc").EndsWith("bc"));
+    EXPECT_TRUE(String("abc").EndsWith(""));
+    EXPECT_TRUE(String("a/b/").EndsWith("/"));
+    EXPECT_TRUE(WString("x.png").EndsWith(L".png"));
+}

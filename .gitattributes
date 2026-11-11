@@ -20,3 +20,6 @@
 *.PDF	 diff=astextplain
 *.rtf	 diff=astextplain
 *.RTF	 diff=astextplain
+
+# Bundled UI fonts and their licences travel byte for byte (exports compare them with AssetsLine's)
+Tools/UiFonts/** -text

@@ -394,7 +394,7 @@ namespace Editor
             auto caseLine = Row("Case");
             Segments(caseLine, { { "as", "Aa" }, { "up", "AA" } }, st.uppercase ? "up" : "as",
                      [set, rebuild](const String& v) { set("uppercase", UiDoc::Json(v == "up")); rebuild(); });
-            Segments(caseLine, { { "left", "Left" }, { "center", "Centre" }, { "right", "Right" } }, st.align,
+            Segments(caseLine, { { "left", "Left" }, { "center", "Mid" }, { "right", "Right" } }, st.align,
                      [set, rebuild](const String& v) { set("align", UiDoc::Json(v)); rebuild(); });
         }
     };

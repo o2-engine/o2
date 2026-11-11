@@ -659,7 +659,8 @@ namespace o2
     template<typename T>
     bool TString<T>::EndsWith(const TString& other) const
     {
-        return std::basic_string<T>::rfind(other) == Length() - other.Length();
+        // A suffix one character longer than the string must not match: rfind's npos equals Length() - other.Length() there
+        return other.Length() <= Length() && std::basic_string<T>::compare(Length() - other.Length(), other.Length(), other) == 0;
     }
 
     template<typename T>
