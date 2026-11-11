@@ -120,6 +120,12 @@ namespace Editor
         // goes to the place and becomes the selected one, in the same undo step
         void AddCustomInput(const Ref<PipelineNodeWidget>& node, PipelineLayerPlace place = PipelineLayerPlace::Front);
 
+        // Links several outputs of one node (Shift-dragged parts) into a node: the first into the port given (if any), the
+        // rest into new inputs when the node adds inputs of their type, else into its next free ones; one undo step.
+        // Returns how many links were made
+        int ConnectOutputs(const String& fromNodeId, const Vector<String>& fromPortIds, const String& toNodeId,
+                           const String& toPortId, PipelineLayerPlace place = PipelineLayerPlace::Front);
+
         // Renames custom input port and schedules auto-apply
         void RenameCustomInput(const Ref<PipelineNodeWidget>& node, const String& portId, const String& name);
 
@@ -278,6 +284,7 @@ namespace Editor
             bool             fromInput = false;             // True when dragging from an input port
             PipelinePortType type = PipelinePortType::Text; // Port type used to filter targets
             Vec2F            cursor;                        // Free end position in canvas space
+            Vector<String>   ports;                         // Shift on an output of a node with several of its type: all of them, in order
         };
 
     protected:
@@ -658,6 +665,7 @@ CLASS_METHODS_META(Editor::PipelineEditor)
     FUNCTION().PUBLIC().SIGNATURE(void, OnNodeDragCompleted, const Ref<PipelineNodeWidget>&);
     FUNCTION().PUBLIC().SIGNATURE(void, OnNodeResized, const Ref<PipelineNodeWidget>&, bool);
     FUNCTION().PUBLIC().SIGNATURE(void, AddCustomInput, const Ref<PipelineNodeWidget>&, PipelineLayerPlace);
+    FUNCTION().PUBLIC().SIGNATURE(int, ConnectOutputs, const String&, const Vector<String>&, const String&, const String&, PipelineLayerPlace);
     FUNCTION().PUBLIC().SIGNATURE(void, RenameCustomInput, const Ref<PipelineNodeWidget>&, const String&, const String&);
     FUNCTION().PUBLIC().SIGNATURE(void, RemoveCustomInput, const Ref<PipelineNodeWidget>&, const String&);
     FUNCTION().PUBLIC().SIGNATURE(void, OpenNodeContextMenu, const Ref<PipelineNodeWidget>&);

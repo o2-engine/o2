@@ -878,8 +878,7 @@ namespace Editor
         static Vector<String> keys = {
             "drawOver", "drawTool", "brushSize", "brushColor", "brushOpacity", "paramsOpen", "selectedRegion",
             "splitRatio", "fieldH", "selectedLayer", "layersPanelW", "openLayerSettings",
-            "viewZoom", "viewPanX", "viewPanY", "cmpBg", "cmpBgEnabled", "checker", "layersFolder", "layersName", "assetPath",
-            "debugView", "debugStep", "editsView", "editsDraft", "exportFor",
+            "viewZoom", "viewPanX", "viewPanY", "cmpBg", "cmpBgEnabled", "checker", "layersFolder", "layersName", "debugView", "debugStep", "editsView", "editsDraft", "exportFor",
             // UI kit, Text style and AI UI layout: what the cards show, the AI models they call, the preview screen
             "kitSelected", "kitTab", "kitRemoveBg", "kitModel", "kitImageModel", "tsSample", "tsDark", "stylePrompt", "styleModel",
             "uiView", "uiPreview", "uiSelected", "uiWorkspace", "uiTab", "uiRedo", "uiDraft", "uiShowIds", "agentModel", "agentReview",

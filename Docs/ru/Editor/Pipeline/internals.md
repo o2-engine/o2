@@ -12,7 +12,7 @@ AI-пайплайны контента: графы нод, которые пре
 
 - **Editor::PipelineGraph** — `nodes`, `edges`, сохранённая камера. `Validate()` сообщает о несовпадении типов и циклах, `WouldMakeCycle(from, to)`, `FindEdgeToPort`, `GetOutgoingEdges`, `RemoveDanglingEdges`, `ResolveSeeds()` (ноды картинок наследуют seed ноды-картинки выше по графу при `inheritSeed`), `ComputeSignatures()` — хеш содержимого каждой ноды из её конфига (без UI-ключей, см. `GetUiOnlyConfigKeys()`), сигнатур нод выше по графу и seed.
 - **Editor::PipelineNode** — `id`, `nodeType`, `position`/`size` (ось y вниз, как в веб-редакторе), `inputs`/`outputs` (`Editor::PipelinePort`: `id`, `name`, `portType`, `custom`), `config` — `DataDocument` с `GetConfigString/Number/Bool/Value`, `SetConfig*`, `RemoveConfig`, `HasConfig`. Добавленные пользователем входы хранятся в `customInputs` (`GetCustomInputs/SetCustomInputs`); `PipelineNodeRegistry::SyncNodeWithSchema` пересобирает список портов из схемы и пользовательских входов.
-- **Editor::PipelinePortType** — `Text`, `Image`, `Video`, `Audio`; связь соединяет только порты одного типа.
+- **Editor::PipelinePortType** — `Text`, `Image`, `Video`, `Audio`, `UiKit`, `TextStyle`; связь соединяет только порты одного типа. `UiKit` и `TextStyle` (в файле `uiKit` / `textStyle`) — JSON-документы, которые хранятся и синхронизируются как текст (`IsTextLikePortType`, `PipelineValue::TextOf`, файлы `.txt` в кеше и превью); неизвестный тип по-прежнему читается как `text`.
 - **o2::PipelineAsset** (движок) — ассет `.pipeline` с документом графа; редактор читает его в `PipelineGraph` и записывает обратно при каждом изменении.
 
 ## Формат
@@ -85,6 +85,28 @@ executor->Execute("coin", graph, finish->id, {}, false);
 - **Статус.** `PipelineEditor::GetBackgroundStatus()` (`Loading previews 12/150`, `Applying Outline`, `Rebuilding assets`) показывается в панели окна; карточка, занятая фоновой работой (`PipelineNodeWidget::IsBusyInBackground`: применяется её эффект, декодируются её картинки), рисует тонкую бегущую полоску под заголовком.
 
 `PipelinePerfUiFixture.*` в `o2EditorUITests` замеряет основные действия на больших пайплайнах проекта (`O2_PIPELINE_PERF=1` или папка проекта, результаты JSON в `O2_PIPELINE_PERF_OUT`); `PipelineResponsivenessUiFixture.*` держит поведение выше.
+
+## Группы нод, выведенные ноды, входы
+
+Меню добавления нод (правый клик, связь, брошенная на холст) показывают шесть групп AssetsLine (`PipelineNodeGroups`: Input & output, AI images, Image tools, Text, Game UI, Audio & video), каждая — подменю со счётчиком (`ContextMenu::Item::hint`); брошенная связь предлагает совместимые ноды, тоже по группам. Схема с `retired` (Remove background (two-pass), Text compose) нигде не предлагается, но загружается и работает. Значения входов, добавленных через «+ input», читаются по id порта (`PipelineNodeBase::InputOf`, в промпте их называет `InputLabel`: `input 1`, `notes 2`): безымянные и одноимённые входы больше не затирают друг друга.
+
+Схема с `partialInputs` (UI kit, AI UI layout) запускается с теми входами, у которых есть результат; `PipelineNodeRegistry::IsReferenceInput` (все входы Text style, все входы AI UI layout кроме kit) отмечает входы, которые читает только ИИ ноды: `PipelineGraph::GetRunInputEdges` исключает их из запусков, сигнатур и автоприменения.
+
+## Плотность пикселей
+
+`PipelinePngMeta` (порт `shared/pngMeta.ts`) читает и пишет метки AssetsLine в PNG: tEXt-чанки `AssetsLine:dpi` / `AssetsLine:scale` и чанк pHYs, байты совпадают с вебом. Часть AI extract помечается тем, во сколько раз модель нарисовала её крупнее кропа (`PipelineRegions::PartScale`, хранится с генерацией), и после каждого запуска `DPI = DPI источника x масштаб` (`TagExtractPart`; DPI источника = `sourceDpi` ноды, иначе метка входа, иначе 480): `sourceDpi` не входит в ключ сохранённой генерации, но входит в то, что хешируют потребители. Image crop сохраняет метку (при изменении размера масштабирует её); картинка-источник сохраняет свои байты PNG. UI kit берёт DPI элемента из его настроек, иначе из метки входа.
+
+## AI extract part (2026-11-11)
+
+У региона может быть своя `model` вместе со своей `transparency` (`PipelineExtractRegion::model`, `OwnModel` / `PartModel`; `IsOwn()` = любое из двух): такая часть получает в ключ `|model:<id>` и исключает из него `model` ноды, часть без своей модели сохраняет прежний ключ. Карточка показывает один набор строк модели и фона под переключателем «Model & bg: All parts | This part» (`SetOwnPart` копирует оба, «All parts» убирает оба), затем seed и DPI источника. Auto-split (`AutoSplitPrompt`, `ParseAutoSplit` со `SplitFrame`) спрашивает у `splitModel` ноды (по умолчанию `gpt-6.1-sol`, выбирается на кнопке) куски UI-кита: Gemini отвечает `box_2d`, остальные модели — пикселями кадра (`UiLayout::AnalysisFrameOf`); подложка фона идёт первой, целиком и непрозрачной (`IsBackgroundPart`, промпт подложки); найденные части заменяют выбранную рамку. ↻ на части запускает только её (`<node>#<port>` в списке bypass): остальные не читаются из кеша, главное превью пишется только из первой части, нода не отмечается выполненной. Новые ноды начинают с `openai/gpt-5-image-mini`.
+
+## UI kit, Text style и AI UI layout
+
+Порт нод UI-кита, стиля текста и раскладки AssetsLine (дизайн — `AssetsLine/docs/ui-kit-layout.md`). Логика — `Pipeline/UiDoc/` (namespace `Editor::UiDoc`): `UiDocModel` (документ и блоки), `UiDocUiml` (текстовый формат, правки), `UiDocOps` (шаги, `DocAt`, история ручных правок `PushUserAction` / `UndoAction` / `RedoAction`), `UiDocSolve` (якоря, ряды, колонки, сетки), `UiDocEdit` (математика рамки), `UiDocDevice` (DPI, экраны превью), `UiKitModel`, `UiTextStyle`, `UiKitPrep` (вырезание фона, обрезка, поиск nine-slice, сжатие середины), `UiDocRender` (нативный рендер: линии и скин кита, текст FreeType шрифтами из `o2/Tools/UiFonts`, лист кита), `UiDocStructure` (`ui_structure.json`), `UiDocAgent` / `UiDocAi` (промпты, `AskUiAgent` с проверочным проходом, `GenerateUiTextStyle`, `AnalyzeUiKit`, запись в конфиг). Для одинаковых входных данных результаты совпадают с вебом (golden-тесты `UiDoc*`).
+
+Ноды (`Pipeline/Nodes/UiNodes.cpp`): `textStyle` (источник, его конфиг и есть стиль), `uiKit` (instant, частичные входы, элементы готовятся локально), `uiLayout` (instant, частичные входы, по портам: `image` рисуется нативно с китом и помечается DPI раскладки, `layout` — JSON; в конфиге хранятся шаги правок `steps`, а не раскладка). Карточки (`PipelineTextStyleBody.cpp`, `PipelineUiKitBody.cpp` со входами на строках и перетаскиваемыми направляющими nine-slice, `PipelineUiLayoutBody.cpp`) вызывают модели через `PipelineUiAi` (корутины на главном потоке, один шаг отмены на ответ). Workspace раскладки — `Windows/PipelineWindow/UiLayout/` (`UiWorkspace::Open`: иерархия, сцена с рамкой как в Unity, вкладки Agent / Inspector / Text / History, `UiDevicePicker`).
+
+Тесты: `UiDoc*`, `UiKitPrep*`, `PipelineUiNodes`, `PipelineUiPorts`, `PipelinePngMeta`, `PipelineExtractParts`, `PipelineInputsById` (headless); `PipelineUiCardsFixture`, `UiWorkspaceUiFixture` (с рендером).
 
 ## AI image to UI
 

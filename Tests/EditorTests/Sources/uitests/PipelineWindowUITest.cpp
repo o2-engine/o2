@@ -38,6 +38,7 @@
 #include "o2Editor/Pipeline/PipelineImageOps.h"
 #include "o2Editor/Pipeline/PipelineImport.h"
 #include "o2Editor/Pipeline/PipelineModelMenu.h"
+#include "o2Editor/Pipeline/PipelineNodeGroups.h"
 #include "o2Editor/Pipeline/PipelineNodeType.h"
 #include "o2Editor/Pipeline/PipelineRegions.h"
 #include "o2Editor/Pipeline/PipelineUtils.h"
@@ -2208,15 +2209,16 @@ TEST_F(PipelineUiFixture, AddMenuRefilledWhileOpenKeepsEverySubMenuItem)
     rightClick();
     UiDriver::Step(3);
 
+    // The menu's groups (AssetsLine's six): "AI images" holds the image models' nodes
     int aiNodes = 0;
-    for (auto schema : PipelineNodeRegistry::AllSchemas())
+    for (auto& entry : PipelineNodeGroups::Group(PipelineNodeRegistry::AllSchemas()))
     {
-        if (schema->category == PipelineNodeCategory::AI)
-            aiNodes++;
+        if (entry.group->id == "aiImage")
+            aiNodes = entry.items.Count();
     }
     ASSERT_GT(aiNodes, 1);
 
-    auto item = menu->FindChildByTypeAndName<ContextMenuItem>("Context Item Add AI");
+    auto item = menu->FindChildByTypeAndName<ContextMenuItem>("Context Item AI images");
     ASSERT_TRUE(item);
     ASSERT_TRUE(item->GetSubMenu());
     EXPECT_EQ(item->GetSubMenu()->GetItems().Count(), aiNodes);

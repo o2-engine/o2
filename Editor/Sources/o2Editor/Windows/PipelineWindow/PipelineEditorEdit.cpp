@@ -312,6 +312,17 @@ namespace Editor
         mPendingEdge.fromInput = port.input;
         mPendingEdge.type = port.port.portType;
         mPendingEdge.cursor = node->GetPortPosition(port.port.id, port.input);
+        mPendingEdge.ports.Clear();
+        if (!port.input && o2Input.IsKeyDown(VK_SHIFT))
+        {
+            for (auto& output : node->GetNode()->outputs)
+            {
+                if (output.portType == port.port.portType)
+                    mPendingEdge.ports.Add(output.id);
+            }
+            if (mPendingEdge.ports.Count() < 2)
+                mPendingEdge.ports.Clear();
+        }
 
         // Dragging from a connected input detaches its link and continues from the source
         if (port.input)
@@ -374,6 +385,93 @@ namespace Editor
         return true;
     }
 
+    int PipelineEditor::ConnectOutputs(const String& fromNodeId, const Vector<String>& fromPortIds, const String& toNodeId,
+                                       const String& toPortId, PipelineLayerPlace place /*= PipelineLayerPlace::Front*/)
+    {
+        auto graph = GetGraph();
+        auto from = graph ? graph->FindNode(fromNodeId) : nullptr;
+        auto to = graph ? graph->FindNode(toNodeId) : nullptr;
+        if (!from || !to || fromNodeId == toNodeId || fromPortIds.IsEmpty() || graph->WouldMakeCycle(fromNodeId, toNodeId))
+            return 0;
+
+        auto first = from->FindOutput(fromPortIds[0]);
+        if (!first)
+            return 0;
+
+        PipelinePortType type = first->portType;
+        Vector<String> ports = fromPortIds.FindAll([&](const String& id) { auto p = from->FindOutput(id); return p && p->portType == type; });
+        auto schema = PipelineNodeRegistry::GetSchema(to->nodeType);
+        bool addable = schema && schema->addableInputs.Contains(type);
+        if (!toPortId.IsEmpty())
+        {
+            auto target = to->FindInput(toPortId);
+            if (!target || target->portType != type)
+                return 0;
+        }
+
+        String before = SerializeGraph();
+        Vector<Pair<String, String>> pairs;
+        Vector<String> rest = ports;
+        if (!toPortId.IsEmpty())
+        {
+            pairs.Add({ rest[0], toPortId });
+            rest.RemoveAt(0);
+        }
+
+        if (addable)
+        {
+            auto customs = to->GetCustomInputs();
+            for (auto& id : rest)
+            {
+                PipelinePort port(PipelineNode::GenerateId(), "", type, true);
+                customs.Add(port);
+                pairs.Add({ id, port.id });
+            }
+            to->SetCustomInputs(customs);
+            PipelineNodeRegistry::SyncNodeWithSchema(to);
+            for (int i = toPortId.IsEmpty() ? 0 : 1; i < pairs.Count(); i++)
+                PipelineComposerLayout::PlaceNewLayer(*to, pairs[i].second, type, place);
+        }
+        else
+        {
+            Vector<String> free;
+            bool after = toPortId.IsEmpty();
+            for (auto& input : to->inputs)
+            {
+                if (input.id == toPortId) { after = true; continue; }
+                if (after && input.portType == type && !graph->FindEdgeToPort(toNodeId, input.id))
+                    free.Add(input.id);
+            }
+            for (int i = 0; i < rest.Count() && i < free.Count(); i++)
+                pairs.Add({ rest[i], free[i] });
+        }
+
+        if (pairs.IsEmpty())
+            return 0;
+
+        for (auto& pair : pairs)
+        {
+            if (auto existing = graph->FindEdgeToPort(toNodeId, pair.second))
+                graph->RemoveEdge(existing->id);
+
+            auto edge = mmake<PipelineEdge>();
+            edge->id = PipelineNode::GenerateId();
+            edge->fromNodeId = fromNodeId;
+            edge->fromPortId = pair.first;
+            edge->toNodeId = toNodeId;
+            edge->toPortId = pair.second;
+            graph->edges.Add(edge);
+        }
+
+        if (auto widget = GetNodeWidget(toNodeId))
+            RefreshNodeWidget(widget);
+        RecordAction("Connect", before, SerializeGraph());
+        if (schema && schema->instant)
+            ScheduleAutoApply(toNodeId);
+
+        return pairs.Count();
+    }
+
     void PipelineEditor::FinishEdgeDrag(const Vec2F& p)
     {
         mPendingEdge.active = false;
@@ -389,6 +487,8 @@ namespace Editor
 
                 if (mPendingEdge.fromInput)
                     ConnectPorts(widget->GetNode()->id, port->port.id, mPendingEdge.nodeId, mPendingEdge.portId);
+                else if (!mPendingEdge.ports.IsEmpty())
+                    ConnectOutputs(mPendingEdge.nodeId, mPendingEdge.ports, widget->GetNode()->id, port->port.id);
                 else
                     ConnectPorts(mPendingEdge.nodeId, mPendingEdge.portId, widget->GetNode()->id, port->port.id);
                 return;
@@ -399,6 +499,13 @@ namespace Editor
                 auto schema = widget->GetSchema();
                 if (!schema || !schema->addableInputs.Contains(mPendingEdge.type))
                     return;
+
+                if (!mPendingEdge.ports.IsEmpty())
+                {
+                    auto place = widget->GetBody() ? widget->GetBody()->GetAddInputPlace(p) : PipelineLayerPlace::Front;
+                    ConnectOutputs(mPendingEdge.nodeId, mPendingEdge.ports, widget->GetNode()->id, "", place);
+                    return;
+                }
 
                 String before = SerializeGraph();
                 auto customs = widget->GetNode()->GetCustomInputs();
@@ -526,7 +633,15 @@ namespace Editor
             RefreshNodeWidget(widget);
         RecalculateViewArea();
         RecordAction("Add node", before, SerializeGraph());
-        if (!toNodeId.IsEmpty())
+        if (!toNodeId.IsEmpty() && !mPendingEdge.fromInput && mPendingEdge.ports.Count() > 1)
+        {
+            // Shift-dragged outputs: the new node gets them all
+            Vector<String> ports = mPendingEdge.ports;
+            ports.Remove(fromPortId);
+            ports.Insert(fromPortId, 0);
+            ConnectOutputs(fromNodeId, ports, toNodeId, toPortId);
+        }
+        else if (!toNodeId.IsEmpty())
             ConnectPorts(fromNodeId, fromPortId, toNodeId, toPortId);
 
         SelectNodes({ node->id });

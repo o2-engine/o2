@@ -278,6 +278,15 @@ namespace Editor
             if (!body)
                 body = CreateComposerNodeBody(type);
 
+            if (!body)
+                body = CreateUiLayoutNodeBody(type);
+
+            if (!body)
+                body = CreateTextStyleNodeBody(type);
+
+            if (!body)
+                body = CreateUiKitNodeBody(type);
+
             if (body)
                 body->Init(owner);
 

@@ -119,9 +119,13 @@ namespace
             Step(2);
         }
 
+        // The switch under the pictures; the extract keeps it in its parameters (with the model, as AssetsLine)
         Ref<Toggle> TransparentSwitch(const Ref<PipelineNode>& node)
         {
-            return Card(node)->FindChildByTypeAndName<Toggle>("transparent switch");
+            if (auto head = Card(node)->FindChildByTypeAndName<Toggle>("transparent switch"))
+                return head;
+
+            return Card(node)->FindChildByTypeAndName<Toggle>("transparent background");
         }
 
         // Opens a card of the type with a result, sized by hand taller than its content
@@ -182,7 +186,8 @@ TEST_F(PipelinePolishUiFixture, HandSizedPicturesStayWhenTheContentChanges)
 }
 
 // Image gen and image edit put the switch beside Crop under the pictures; the captions there are gone; remove background
-// keeps Crop alone; the extract card puts it at the end of its actions, or under them when the card is narrow
+// keeps Crop alone; the extract card keeps it in its parameters, with the model it depends on (AssetsLine 2026-11-11), and
+// its actions are "+ Add part" and the auto-split with its model as one control
 TEST_F(PipelinePolishUiFixture, TheTransparentSwitchSitsBesideCrop)
 {
     const Vector<String> goneCaptions = { "Draw over", "Result", "Result (transparent)", "Frame: only it changes",
@@ -227,7 +232,8 @@ TEST_F(PipelinePolishUiFixture, TheTransparentSwitchSitsBesideCrop)
         Step(3);
         auto list = Card(node)->FindChildByTypeAndName<Widget>("params list");
         ASSERT_TRUE(list) << type.Data();
-        EXPECT_FALSE(FindToggle(list, "Transparent bg") || FindToggle(list, "Transparent background")) << type.Data();
+        EXPECT_EQ(type == "imageExtract", (bool)(FindToggle(list, "Transparent bg") || FindToggle(list, "Transparent background")))
+            << type.Data();
         EXPECT_FALSE(Card(node)->FindChildByTypeAndName<Widget>("transparentMode options")) << type.Data();
         Press(TransparentSwitch(node));
         EXPECT_TRUE(node->GetConfigBool("transparentBg", false)) << type.Data();
@@ -240,25 +246,20 @@ TEST_F(PipelinePolishUiFixture, TheTransparentSwitchSitsBesideCrop)
         auto node = OpenFed("imageExtract", width, true, nullptr, 3);
         auto card = Card(node);
         auto add = card->FindChildByTypeAndName<Button>("add part");
-        auto toggle = TransparentSwitch(node);
-        ASSERT_TRUE(add && toggle) << width;
         auto autoSplit = card->FindChildByTypeAndName<Button>("auto split");
-        ASSERT_TRUE(autoSplit) << width;
-        RectF addRect = add->layout->GetWorldRect(), toggleRect = toggle->layout->GetWorldRect();
-        RectF autoRect = autoSplit->layout->GetWorldRect();
-        RectF row = card->FindChildByTypeAndName<Widget>("actions")->layout->GetWorldRect();
-        // As AssetsLine lays the parts row out: the switch right after the buttons, or on a line of its own at the right
-        if (width >= 400.0f)
-        {
-            EXPECT_NEAR(toggleRect.left, autoRect.right + 8.0f, 1.0f) << "right after the buttons";
-            EXPECT_NEAR(toggleRect.Center().y, addRect.Center().y, 1.0f) << "in the actions row";
-        }
-        else
-        {
-            EXPECT_NEAR(toggleRect.right, row.right, 1.0f) << width << ": at the right";
-            EXPECT_LE(toggleRect.top, addRect.bottom + 0.5f) << "on its own line under the actions";
-        }
+        auto splitModel = card->FindChildByTypeAndName<Button>("split model");
+        ASSERT_TRUE(add && autoSplit && splitModel) << width;
+        EXPECT_FALSE(card->FindChildByTypeAndName<Toggle>("transparent switch")) << width;
+        RectF addRect = add->layout->GetWorldRect(), autoRect = autoSplit->layout->GetWorldRect();
+        RectF modelRect = splitModel->layout->GetWorldRect();
+        EXPECT_NEAR(autoRect.Center().y, addRect.Center().y, 1.0f) << width;
+        EXPECT_NEAR(modelRect.left, autoRect.right + 2.0f, 1.0f) << width << ": the model sits on the button";
+        EXPECT_LE(modelRect.right, card->layout->GetWorldRect().right) << width;
 
+        card->SetParamsOpen(true);
+        Step(3);
+        auto toggle = TransparentSwitch(node);
+        ASSERT_TRUE(toggle) << width;
         float before = PictureArea(node)->layout->GetHeight();
         Press(toggle);
         EXPECT_TRUE(node->GetConfigBool("transparentBg", false)) << width;
@@ -276,8 +277,8 @@ TEST_F(PipelinePolishUiFixture, ParametersStartWithTheModel)
         { "imageEdit", true, 1, { "Model", "Inherit seed", "Transparent bg mode", "White / black x2" }, "Parameters · Model · Seed · Transparency" },
         { "aiRemoveBg", true, 1, { "Model", "Inherit seed", "Transparent bg mode", "White / black x2" },
           "Parameters · Model · Seed · Transparent bg mode" },
-        { "imageExtract", true, 3, { "Model", "Inherit seed", "Settings for", "Transparent bg mode", "White / black x2" },
-          "Parameters · Model · Seed · Transparency" },
+        { "imageExtract", true, 3, { "Model & bg", "Changes every part", "Model", "Transparent background", "Transparent bg mode",
+          "White / black x2" }, "Parameters \xC2\xB7 Gemini 3.1 Flash Image \xC2\xB7 Nano Banana 2 \xC2\xB7 White / black" },
         { "videoGen", false, 1, { "Model", "Aspect", "Duration" }, "Parameters · Model · Aspect · Duration · Solid background colour" },
         { "sfxGen", false, 1, { "Model", "Seamless loop", "Length", "Influence" }, "Parameters · Model · Seamless loop · Length · Influence" },
         { "ttsSpeech", false, 1, { "Gemini TTS", "Model", "Voice" }, "Parameters · Provider · Model · Voice" },
@@ -297,7 +298,7 @@ TEST_F(PipelinePolishUiFixture, ParametersStartWithTheModel)
         ASSERT_GE(rows.Count(), c.rows.Count()) << c.type.Data();
         for (int i = 0; i < c.rows.Count(); i++)
             EXPECT_EQ(rows[i], c.rows[i]) << c.type.Data() << " row " << i;
-        EXPECT_EQ(ParamsHeader(node), c.header) << c.type.Data();
+        EXPECT_EQ(ParamsHeader(node), c.header) << c.type.Data() << ": " << ParamsHeader(node).Data();
 
         // The system prompt field spans the list and wraps its text inside the field
         if (c.type == "promptGen" || c.type == "aiText")

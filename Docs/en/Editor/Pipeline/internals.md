@@ -12,7 +12,7 @@ AI content pipelines: node graphs that turn text, images and sounds into assets 
 
 - **Editor::PipelineGraph** — `nodes`, `edges`, saved camera. `Validate()` reports type mismatches and cycles, `WouldMakeCycle(from, to)`, `FindEdgeToPort`, `GetOutgoingEdges`, `RemoveDanglingEdges`, `ResolveSeeds()` (image nodes inherit the seed of the upstream image node when `inheritSeed` is set), `ComputeSignatures()` — a content hash per node built from its config (UI-only keys excluded, see `GetUiOnlyConfigKeys()`), the signatures of upstream nodes and the seed.
 - **Editor::PipelineNode** — `id`, `nodeType`, `position`/`size` (y down, as in the web editor), `inputs`/`outputs` (`Editor::PipelinePort`: `id`, `name`, `portType`, `custom`), `config` — a `DataDocument` with `GetConfigString/Number/Bool/Value`, `SetConfig*`, `RemoveConfig`, `HasConfig`. Extra inputs added by the user are kept in `customInputs` (`GetCustomInputs/SetCustomInputs`); `PipelineNodeRegistry::SyncNodeWithSchema` rebuilds the port list from the schema and the custom inputs.
-- **Editor::PipelinePortType** — `Text`, `Image`, `Video`, `Audio`; a link connects ports of one type only.
+- **Editor::PipelinePortType** — `Text`, `Image`, `Video`, `Audio`, `UiKit`, `TextStyle`; a link connects ports of one type only. `UiKit` and `TextStyle` (names `uiKit` / `textStyle` in the file) are JSON documents stored and synced as text (`IsTextLikePortType`, `PipelineValue::TextOf`, `.txt` cache and preview files); an unknown type still reads as `text`.
 - **o2::PipelineAsset** (framework) — the `.pipeline` asset holding the graph document; the editor reads it into a `PipelineGraph` and writes it back on every change.
 
 ## Format
@@ -85,6 +85,28 @@ The window keeps the main thread to the UI; what costs time runs on the job work
 - **Status.** `PipelineEditor::GetBackgroundStatus()` (`Loading previews 12/150`, `Applying Outline`, `Rebuilding assets`) is shown in the window toolbar; a card busy in the background (`PipelineNodeWidget::IsBusyInBackground`: its effect applying, its pictures decoding) draws a thin running bar under its header.
 
 `PipelinePerfUiFixture.*` in `o2EditorUITests` times the main actions on the big pipelines of the project (`O2_PIPELINE_PERF=1` or the project folder, results as JSON to `O2_PIPELINE_PERF_OUT`); `PipelineResponsivenessUiFixture.*` keeps the behaviour above.
+
+## Node groups, retired nodes, inputs
+
+The add-node menus (right click, a link dropped on the canvas) list AssetsLine's six groups (`PipelineNodeGroups`: Input & output, AI images, Image tools, Text, Game UI, Audio & video), each a sub menu with its count (`ContextMenu::Item::hint`); a dropped link offers the compatible nodes, still grouped. A schema with `retired` (Remove background (two-pass), Text compose) is never offered but loads and runs. Values of inputs added with "+ input" are read by port id (`PipelineNodeBase::InputOf`, prompts name them with `InputLabel`: `input 1`, `notes 2`): unnamed or same-named inputs no longer collide.
+
+A schema with `partialInputs` (UI kit, AI UI layout) runs with the inputs that have a result; `PipelineNodeRegistry::IsReferenceInput` (every input of a Text style, every input of an AI UI layout but its kit) marks inputs only the node's AI reads: `PipelineGraph::GetRunInputEdges` leaves them out of runs, signatures and auto-apply.
+
+## Pixel density
+
+`PipelinePngMeta` (port of `shared/pngMeta.ts`) reads and writes AssetsLine's tags of a PNG: `AssetsLine:dpi` / `AssetsLine:scale` tEXt chunks plus a pHYs chunk, bytes identical to the web's. An AI extract part is tagged with how much larger the model drew it than its crop (`PipelineRegions::PartScale`, stored with the generation) and, after every run, `DPI = source DPI x scale` (`TagExtractPart`; source DPI = the node's `sourceDpi`, else the input's tag, else 480): `sourceDpi` is out of the stored generation's key but in what consumers hash. Image crop keeps the tag (scaled by a rescale); a source image keeps its PNG bytes. The UI kit takes an element's DPI from its item, else the input's tag.
+
+## AI extract part (2026-11-11)
+
+A region may carry its own `model` besides its own `transparency` (`PipelineExtractRegion::model`, `OwnModel` / `PartModel`; `IsOwn()` = either): such a part is keyed by `|model:<id>` and drops the node's `model` from its key, a part without one keeps its key. The card shows one set of model / background rows under the scope switch "Model & bg: All parts | This part" (`SetOwnPart` copies both, "All parts" drops both), then the seed and the source DPI. Auto-split (`AutoSplitPrompt`, `ParseAutoSplit` with a `SplitFrame`) asks the node's `splitModel` (default `gpt-6.1-sol`, chosen on the button) for the pieces of a UI kit: Gemini answers `box_2d`, other models pixels of the frame (`UiLayout::AnalysisFrameOf`); the background plate comes first, whole and opaque (`IsBackgroundPart`, the plate prompt); the found parts replace the selected frame. ↻ on a part runs only that part (`<node>#<port>` in the bypass list): the others are not looked up, the main preview is written only from the first part, the node is not marked as run. New nodes start on `openai/gpt-5-image-mini`.
+
+## UI kit, Text style and AI UI layout
+
+Port of AssetsLine's UI kit / text style / layout nodes (`AssetsLine/docs/ui-kit-layout.md` is the design). The logic is `Pipeline/UiDoc/` (namespace `Editor::UiDoc`): `UiDocModel` (the document and its blocks), `UiDocUiml` (the text format, edits), `UiDocOps` (steps, `DocAt`, hand-edit history with `PushUserAction` / `UndoAction` / `RedoAction`), `UiDocSolve` (anchors, rows, columns, grids), `UiDocEdit` (the rect tool's maths), `UiDocDevice` (DPI, preview screens), `UiKitModel`, `UiTextStyle`, `UiKitPrep` (backdrop cut, trim, nine-slice detection, collapse), `UiDocRender` (the native renderer: line art and kit skin, FreeType text with the fonts of `o2/Tools/UiFonts`, the kit sheet), `UiDocStructure` (`ui_structure.json`), `UiDocAgent` / `UiDocAi` (the prompts, `AskUiAgent` with the check pass, `GenerateUiTextStyle`, `AnalyzeUiKit`, the config writers). Their outputs equal the web's for the same input (golden tests `UiDoc*`).
+
+The nodes (`Pipeline/Nodes/UiNodes.cpp`): `textStyle` (source, its config is the style), `uiKit` (instant, partial inputs, elements prepared locally), `uiLayout` (instant, partial inputs, per port: `image` drawn natively with the kit and tagged with the layout's DPI, `layout` as JSON; the config keeps the edit `steps`, never the layout). The cards (`PipelineTextStyleBody.cpp`, `PipelineUiKitBody.cpp` with the inputs on its rows and draggable nine-slice guides, `PipelineUiLayoutBody.cpp`) call the models through `PipelineUiAi` (main-thread coroutines, one undo step per answer). The layout's Workspace is `Windows/PipelineWindow/UiLayout/` (`UiWorkspace::Open`: hierarchy, stage with Unity-style handles, Agent / Inspector / Text / History tabs, `UiDevicePicker`).
+
+Tests: `UiDoc*`, `UiKitPrep*`, `PipelineUiNodes`, `PipelineUiPorts`, `PipelinePngMeta`, `PipelineExtractParts`, `PipelineInputsById` (headless); `PipelineUiCardsFixture`, `UiWorkspaceUiFixture` (rendered).
 
 ## AI image to UI
 

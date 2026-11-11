@@ -134,6 +134,8 @@ namespace
             PipelineGraph graph;
             graph.id = "part-settings-ui";
             auto node = PipelineNodeRegistry::CreateNode("imageExtract", Vec2F());
+            // A new node starts on a model that draws the alpha itself: these parts are cut by the local methods
+            node->SetConfigString("model", "gemini-3.1-flash-image");
             graph.nodes.Add(node);
 
             const char* names[] = { "coin", "gem", "chest" };

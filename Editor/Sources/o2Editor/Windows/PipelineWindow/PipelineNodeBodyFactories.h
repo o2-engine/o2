@@ -13,6 +13,15 @@ namespace Editor
     // Creates the body of the AI extract node; null for other types
     Ref<PipelineNodeBody> CreateExtractNodeBody(const String& type);
 
+    // Creates the body of the AI UI layout node; null for other types
+    Ref<PipelineNodeBody> CreateUiLayoutNodeBody(const String& type);
+
+    // Creates the body of the Text style node; null for other types
+    Ref<PipelineNodeBody> CreateTextStyleNodeBody(const String& type);
+
+    // Creates the body of the UI kit node; null for other types
+    Ref<PipelineNodeBody> CreateUiKitNodeBody(const String& type);
+
     // Creates the body of the Image crop node; null for other types
     Ref<PipelineNodeBody> CreateCropNodeBody(const String& type);
 

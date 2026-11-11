@@ -189,7 +189,14 @@ TEST(PipelineUiNodes, MenusInSixGroupsWithoutRetiredNodes)
     EXPECT_TRUE(PipelineNodeRegistry::GetSchema("removeBackground")->retired);
     EXPECT_TRUE(PipelineNodeRegistry::GetSchema("textCompose")->retired);
 
-    auto groups = PipelineNodeGroups::Group(PipelineNodeRegistry::AllSchemas());
+    // Node types other suites register for their tests ("testDynamic"...) are left out: suites share the registry
+    Vector<const PipelineNodeSchema*> builtins;
+    for (auto schema : PipelineNodeRegistry::AllSchemas())
+    {
+        if (!schema->type.StartsWith("test"))
+            builtins.Add(schema);
+    }
+    auto groups = PipelineNodeGroups::Group(builtins);
     Vector<String> ids;
     Map<String, Vector<String>> members;
     for (auto& entry : groups)

@@ -168,6 +168,13 @@ namespace
             graph.id = "uitest-pairs";
             auto node = PipelineNodeRegistry::CreateNode(type, Vec2F(0, 0));
             node->size = Vec2F(width, 0.0f);
+            // A new extract node starts on AssetsLine's defaults (transparent, a model that draws the alpha itself): these
+            // cards check the local methods on a node set up the old way
+            if (type == "imageExtract")
+            {
+                for (auto key : { "model", "prompt", "transparentBg", "transparentMode" })
+                    node->RemoveConfig(key);
+            }
             if (parts > 1)
             {
                 Vector<PipelineExtractRegion> regions;
