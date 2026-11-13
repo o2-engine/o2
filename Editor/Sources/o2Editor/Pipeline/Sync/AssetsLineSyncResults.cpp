@@ -1,11 +1,13 @@
 #include "o2Editor/stdafx.h"
 #include "AssetsLineSyncInternal.h"
 
+#include "o2/Utils/FileSystem/File.h"
 #include "o2/Utils/FileSystem/FileSystem.h"
 #include "o2Editor/Pipeline/Nodes/PipelineNodesCommon.h"
 #include "o2Editor/Pipeline/PipelineExecutor.h"
 #include "o2Editor/Pipeline/PipelineNodeType.h"
 #include "o2Editor/Pipeline/PipelineUtils.h"
+#include "o2Editor/Pipeline/PipelineValue.h"
 #include "o2Editor/Pipeline/PipelineZip.h"
 
 #include <filesystem>
@@ -63,6 +65,39 @@ namespace Editor
                 case PipelinePortType::TextStyle: return "txt";
                 default: return mainPreview.IsEmpty() ? String() : Extension(mainPreview);
             }
+        }
+
+        bool IsPngPath(const String& path)
+        {
+            return Extension(path) == "png";
+        }
+
+        String ReadHead(const String& path, int count)
+        {
+            InFile file(path);
+            if (!file.IsOpened())
+                return String();
+
+            String head;
+            head.resize(Math::Min<int>(count, (int)file.GetDataSize()));
+            if (!head.IsEmpty())
+                file.ReadData(&head[0], (UInt)head.Length());
+            return head;
+        }
+
+        // A picture kept under a .png name in another format (AssetsLine used to store WebP answers so) becomes a PNG;
+        // true when the file was rewritten
+        bool RepairPng(const String& path)
+        {
+            if (path.IsEmpty() || !IsPngPath(path) || !o2FileSystem.IsFileExist(path) || IsPngBytes(ReadHead(path, 8)))
+                return false;
+
+            String png = ToPngBytes(PipelineUtils::ReadFileBytes(path));
+            if (png.IsEmpty())
+                return false;
+
+            PipelineUtils::WriteFileBytes(path, png);
+            return true;
         }
 
         // Result keys of the graph and their local files; chroma nodes add their raw renders in the content cache
@@ -335,6 +370,27 @@ namespace Editor
         auto seeds = graph.ResolveSeeds();
         auto locals = CollectLocalResults(id, graph, sigs, seeds);
 
+        // A repaired file stays in sync when it was in sync before: only its format changed, not the result
+        bool repaired = false;
+        {
+            auto& state = mPipelines[id];
+            for (auto& kv : locals)
+            {
+                String before = kv.second.path.IsEmpty() ? String() : Stamp(kv.second.path);
+                if (!RepairPng(kv.second.path))
+                    continue;
+
+                repaired = true;
+                Log(graph.name + ": converted the result " + kv.first + " to PNG");
+                AssetsLineResultState known;
+                if (state.results.TryGetValue(kv.first, known) && SameStamp(known.stamp, before))
+                    state.results[kv.first].stamp = Stamp(kv.second.path);
+            }
+
+            if (repaired && onResultsChanged)
+                onResultsChanged(id);
+        }
+
         // Nothing moved on either side since the last pass: no need to ask
         {
             auto& state = mPipelines[id];
@@ -464,15 +520,28 @@ namespace Editor
                         o2FileSystem.FileDelete(PipelineExecutor::GetPreviewPath(id, local.nodeId, other));
 
                     path = PipelineExecutor::GetPreviewPath(id, local.nodeId, ext.IsEmpty() ? String("png") : ext);
+                }
 
-                    // A single-part extract shows its part in the grid too
+                String body = answer.body;
+                if (IsPngPath(path) && !IsPngBytes(body))
+                {
+                    String png = ToPngBytes(body);
+                    if (png.IsEmpty())
+                        Log(graph.name + ": the result " + key + " is not an image the editor can read");
+                    else
+                        body = png;
+                }
+
+                // A single-part extract shows its part in the grid too
+                if (local.kind == "main")
+                {
                     auto node = graph.FindNode(local.nodeId);
                     auto schema = node ? PipelineNodeRegistry::GetSchema(node->nodeType) : nullptr;
                     if (schema && schema->perPortRun && node->outputs.Count() == 1)
-                        PipelineUtils::WriteFileBytes(PipelineExecutor::GetPortPreviewPath(id, local.nodeId, node->outputs[0].id, "png"), answer.body);
+                        PipelineUtils::WriteFileBytes(PipelineExecutor::GetPortPreviewPath(id, local.nodeId, node->outputs[0].id, "png"), body);
                 }
 
-                PipelineUtils::WriteFileBytes(path, answer.body);
+                PipelineUtils::WriteFileBytes(path, body);
                 state.results[key] = { v, Stamp(path) };
                 downloaded.Add(local.nodeId);
             }

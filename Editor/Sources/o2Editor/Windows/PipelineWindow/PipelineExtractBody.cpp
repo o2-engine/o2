@@ -823,11 +823,10 @@ namespace Editor
             ctx->log = [weakEditor](const String& message) { if (auto e = weakEditor.Lock()) { if (e->onLog) e->onLog(message); } };
 
             String model = SplitModel();
-            AiRouteKeys keys = AiRouter::KeysOf(ctx->settings);
-            AiRoute route = AiRouter::ChooseRoute(model, keys);
-            if (route.provider != AiProvider::Local && keys.Of(route.provider).IsEmpty())
+            AiPlan plan = AiRouter::Plan(ctx, model);
+            if (plan.kind == AiRouteKind::None)
             {
-                ctx->Log("Auto split: no " + AiRouter::ProviderName(route.provider) + " key - set it in the pipeline settings");
+                ctx->Log("Auto split: " + plan.error);
                 return;
             }
 

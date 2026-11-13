@@ -93,8 +93,17 @@ namespace Editor
     // Encodes a bitmap into PNG bytes, empty on failure
     String EncodeBitmapPng(const Bitmap& bitmap);
 
-    // Decodes image bytes into an RGBA bitmap, null on failure
+    // Decodes image bytes (PNG, WebP, JPEG, BMP, GIF) into an RGBA bitmap, null on failure
     Ref<Bitmap> DecodeImageBytes(const String& bytes);
+
+    // True when the bytes start with the PNG signature
+    bool IsPngBytes(const String& bytes);
+
+    // True when the bytes are a WebP file
+    bool IsWebPBytes(const String& bytes);
+
+    // Returns the image as PNG bytes: PNG as it is, any other readable format re-encoded, empty when unreadable
+    String ToPngBytes(const String& bytes);
 
     // Returns a copy converted to RGBA8 when needed
     Ref<Bitmap> EnsureRgba(const Ref<Bitmap>& bitmap);

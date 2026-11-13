@@ -93,8 +93,9 @@ namespace Editor
 
         Map<String, PipelineValue> inputsById; // Inputs keyed by input port id
 
-        String pipelineId; // Owner pipeline uid, for caches
-        String assetsPath; // Project assets folder, where finish nodes write
+        String pipelineId;   // Owner pipeline uid, for caches
+        String pipelineName; // Owner pipeline name, for the billing history of AssetsLine
+        String assetsPath;   // Project assets folder, where finish nodes write
 
         String outputPortId; // Output being computed, per-port nodes only
         String outputPort;   // Name of that output
@@ -102,6 +103,7 @@ namespace Editor
         bool assetsChanged = false; // Set by finish nodes when the assets folder got new files
 
         String nodeId;        // Node being run
+        String nodeType;      // Type of that node
         String workDir;       // A folder of the node's own (its debug trace), dynamicOutputs nodes only
         bool   fresh = false; // The node is regenerated (↻): memoised model answers are skipped
 

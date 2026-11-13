@@ -187,6 +187,24 @@ add_subdirectory(boost)
 add_subdirectory(miniaudio)
 add_subdirectory(pl_mpeg)
 
+# libwebp, the decoder only (vendored v1.4.0): the editor reads the WebP images AI providers answer with
+if (O2_EDITOR)
+    file(GLOB LIBWEBP_DECODER_SOURCES CONFIGURE_DEPENDS
+        "${CMAKE_CURRENT_SOURCE_DIR}/libwebp/src/dec/*.c"
+        "${CMAKE_CURRENT_SOURCE_DIR}/libwebp/src/dsp/*.c"
+        "${CMAKE_CURRENT_SOURCE_DIR}/libwebp/src/utils/*.c")
+    add_library(webpdecoder STATIC ${LIBWEBP_DECODER_SOURCES})
+    target_include_directories(webpdecoder
+        PUBLIC  "${CMAKE_CURRENT_SOURCE_DIR}/libwebp/src"
+        PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/libwebp")
+    set_target_properties(webpdecoder PROPERTIES C_STANDARD 11 FOLDER o2/3rdPartyLibs)
+    if (MSVC)
+        target_compile_options(webpdecoder PRIVATE /w ${O2_MSVC_MP_FLAG})
+    else()
+        target_compile_options(webpdecoder PRIVATE -w)
+    endif()
+endif()
+
 # spine
 set(SPINE_SANITIZE OFF)
 add_subdirectory(Spine)

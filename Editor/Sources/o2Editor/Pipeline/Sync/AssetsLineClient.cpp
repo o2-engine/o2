@@ -38,6 +38,7 @@ namespace Editor
 
         result.status = response->status;
         result.body = response->body;
+        result.headers = response->headers;
         result.ok = response->IsSuccess();
         String trimmed = result.body.Trimed(" \n\r\t");
         if (trimmed.StartsWith("{") || trimmed.StartsWith("["))
@@ -62,6 +63,17 @@ namespace Editor
         }
 
         co_return result;
+    }
+
+    String AssetsLineResponse::GetHeader(const String& name) const
+    {
+        String lower = name.ToLowerCase();
+        for (auto& kv : headers)
+        {
+            if (kv.first.ToLowerCase() == lower)
+                return kv.second;
+        }
+        return "";
     }
 
     Coroutine<AssetsLineResponse> AssetsLineClient::SendJson(HttpMethod method, const String& path, const DataDocument& body) const

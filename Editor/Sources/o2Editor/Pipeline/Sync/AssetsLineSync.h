@@ -105,6 +105,9 @@ namespace Editor
         // Returns true when an access token for the linked project is stored
         bool IsConnected() const;
 
+        // Gives the client the AI calls of the linked project go through; false while not connected
+        bool MakeAiClient(AssetsLineClient& client) const;
+
         // Runs a pass as soon as possible
         void SyncNow();
 

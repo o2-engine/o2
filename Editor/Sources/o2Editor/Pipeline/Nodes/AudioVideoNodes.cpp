@@ -2,6 +2,8 @@
 #include "o2Editor/Pipeline/Nodes/PipelineNodesCommon.h"
 
 #include "o2Editor/Pipeline/PipelineAudio.h"
+#include "o2Editor/Pipeline/Providers/AiRouter.h"
+#include "o2Editor/Pipeline/Providers/AssetsLineAi.h"
 #include "o2Editor/Pipeline/Providers/ElevenLabsProvider.h"
 #include "o2Editor/Pipeline/Providers/VideoProviders.h"
 
@@ -72,9 +74,18 @@ namespace Editor
             String influenceRaw = node->GetConfigString("promptInfluence", "0.3").Trimed();
             float influence = influenceRaw.IsEmpty() ? -1.0f : PipelineUtils::ValueToNumber(*node->GetConfigValue("promptInfluence"), -1.0f);
 
+            String model = node->GetConfigString("model", ElevenLabsProvider::sfxModel);
+            bool loop = node->GetConfigBool("loop", false);
+            AiPlan plan = AiRouter::PlanDirect(model, !ctx->settings.GetElevenLabsKey().IsEmpty());
+            if (plan.kind == AiRouteKind::None)
+                co_return PipelineRunResult::Fail(plan.error);
+
+            if (plan.kind == AiRouteKind::AssetsLine)
+                co_return AudioResult(co_await AssetsLineAi::GenerateSoundEffect(ctx, model, prompt, duration, loop, influence));
+
+            ctx->Log(AiRouter::DirectRouteLine("ElevenLabs"));
             AiBytesResult r = co_await ElevenLabsProvider::GenerateSoundEffect(ctx, ctx->settings.GetElevenLabsKey(), prompt,
-                node->GetConfigString("model", ElevenLabsProvider::sfxModel), duration, node->GetConfigBool("loop", false), influence,
-                node->GetConfigString("outputFormat", "mp3_44100_128"));
+                model, duration, loop, influence, node->GetConfigString("outputFormat", "mp3_44100_128"));
             co_return AudioResult(r);
         }
     };
@@ -102,16 +113,26 @@ namespace Editor
             String voice = node->GetConfigString("voice", "").Trimed();
             ctx->Log("ttsSpeech: provider=" + provider + " chars=" + (String)text.Length() + " voice=" + (voice.IsEmpty() ? String("(default)") : voice));
 
-            if (provider == "elevenlabs")
+            bool eleven = provider == "elevenlabs";
+            String model = node->GetConfigString("model", eleven ? ElevenLabsProvider::defaultTtsModel : GeminiProvider::defaultTtsModel);
+            String speaker = eleven ? voice : voice.IsEmpty() ? String("Kore") : voice;
+            String style = node->GetConfigString("styleInstructions", "");
+            AiPlan plan = AiRouter::PlanDirect(model, !(eleven ? ctx->settings.GetElevenLabsKey() : ctx->settings.GetGeminiKey()).IsEmpty());
+            if (plan.kind == AiRouteKind::None)
+                co_return PipelineRunResult::Fail(plan.error);
+
+            if (plan.kind == AiRouteKind::AssetsLine)
+                co_return AudioResult(co_await AssetsLineAi::GenerateSpeech(ctx, provider, model, text, speaker, eleven ? String() : style));
+
+            ctx->Log(AiRouter::DirectRouteLine(eleven ? "ElevenLabs" : "Gemini"));
+            if (eleven)
             {
                 AiBytesResult r = co_await ElevenLabsProvider::GenerateSpeech(ctx, ctx->settings.GetElevenLabsKey(), text, voice,
-                    node->GetConfigString("model", ElevenLabsProvider::defaultTtsModel), node->GetConfigString("outputFormat", "mp3_44100_128"));
+                    model, node->GetConfigString("outputFormat", "mp3_44100_128"));
                 co_return AudioResult(r);
             }
 
-            AiBytesResult r = co_await GeminiProvider::GenerateSpeech(ctx, ctx->settings.GetGeminiKey(),
-                node->GetConfigString("model", GeminiProvider::defaultTtsModel), text, voice.IsEmpty() ? String("Kore") : voice,
-                node->GetConfigString("styleInstructions", ""));
+            AiBytesResult r = co_await GeminiProvider::GenerateSpeech(ctx, ctx->settings.GetGeminiKey(), model, text, speaker, style);
             co_return AudioResult(r);
         }
     };
@@ -141,6 +162,14 @@ namespace Editor
             String prompt = JoinNonEmpty(parts, "\n");
             String model = node->GetConfigString("model", GeminiProvider::defaultMusicModel);
             ctx->Log("musicGen: model=" + model + " promptChars=" + (String)prompt.Length());
+            AiPlan plan = AiRouter::PlanDirect(model, !ctx->settings.GetGeminiKey().IsEmpty());
+            if (plan.kind == AiRouteKind::None)
+                co_return PipelineRunResult::Fail(plan.error);
+
+            if (plan.kind == AiRouteKind::AssetsLine)
+                co_return AudioResult(co_await AssetsLineAi::GenerateMusic(ctx, model, prompt));
+
+            ctx->Log(AiRouter::DirectRouteLine("Gemini"));
             AiBytesResult r = co_await GeminiProvider::GenerateMusic(ctx, ctx->settings.GetGeminiKey(), model, prompt);
             co_return AudioResult(r);
         }
@@ -255,11 +284,22 @@ namespace Editor
             ctx->Log("videoGen: model=" + in.model + " promptChars=" + (String)in.prompt.Length() + " refs=" + (String)in.references.Count() +
                      " aspect=" + in.aspectRatio + " duration=" + (String)in.durationSeconds + "s");
 
+            bool kling = in.model.ToLowerCase().StartsWith("kling");
+            AiPlan plan = AiRouter::PlanDirect(in.model, !(kling ? ctx->settings.GetKlingAccessKey() : ctx->settings.GetGeminiKey()).IsEmpty());
+            if (plan.kind == AiRouteKind::None)
+                co_return PipelineRunResult::Fail(plan.error);
+
             AiBytesResult r;
-            if (in.model.ToLowerCase().StartsWith("kling"))
-                r = co_await KlingProvider::GenerateVideo(ctx, ctx->settings.GetKlingAccessKey(), ctx->settings.GetKlingSecretKey(), in);
+            if (plan.kind == AiRouteKind::AssetsLine)
+                r = co_await AssetsLineAi::GenerateVideo(ctx, kling ? "kling" : "veo", in);
             else
-                r = co_await VeoProvider::GenerateVideo(ctx, ctx->settings.GetGeminiKey(), in);
+            {
+                ctx->Log(AiRouter::DirectRouteLine(kling ? "Kling" : "Gemini"));
+                if (kling)
+                    r = co_await KlingProvider::GenerateVideo(ctx, ctx->settings.GetKlingAccessKey(), ctx->settings.GetKlingSecretKey(), in);
+                else
+                    r = co_await VeoProvider::GenerateVideo(ctx, ctx->settings.GetGeminiKey(), in);
+            }
 
             if (!r.ok) co_return PipelineRunResult::Fail(r.error);
             co_return PipelineRunResult::Single(PipelineValue::Bytes(PipelinePortType::Video, r.data, "video/mp4"));

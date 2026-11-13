@@ -4,6 +4,9 @@
 #include "o2/Utils/Bitmap/PngFormat.h"
 #include "o2Editor/Pipeline/PipelineUtils.h"
 
+#include <cstring>
+#include "webp/decode.h"
+
 namespace Editor
 {
     PipelineValue PipelineValue::Text(const String& text)
@@ -83,7 +86,7 @@ namespace Editor
 
     String PipelineValue::GetPngBytes() const
     {
-        if (mimeType == "image/png")
+        if (IsPngBytes(data))
             return data;
 
         auto bmp = GetBitmap();
@@ -119,10 +122,51 @@ namespace Editor
         return out;
     }
 
+    // Bitmaps keep their rows bottom-up, the decoder writes them top-down
+    static Ref<Bitmap> DecodeWebP(const String& bytes)
+    {
+        int width = 0, height = 0;
+        UInt8* pixels = WebPDecodeRGBA((const uint8_t*)bytes.Data(), (size_t)bytes.Length(), &width, &height);
+        if (!pixels)
+            return nullptr;
+
+        auto bitmap = mmake<Bitmap>(PixelFormat::R8G8B8A8, Vec2I(width, height));
+        UInt8* target = bitmap->GetData();
+        size_t rowBytes = (size_t)width * 4;
+        for (int y = 0; y < height; y++)
+            std::memcpy(target + (size_t)(height - 1 - y) * rowBytes, pixels + (size_t)y * rowBytes, rowBytes);
+
+        WebPFree(pixels);
+        return bitmap;
+    }
+
+    bool IsPngBytes(const String& bytes)
+    {
+        static const char signature[] = "\x89PNG\r\n\x1a\n";
+        return bytes.Length() >= 8 && std::memcmp(bytes.Data(), signature, 8) == 0;
+    }
+
+    bool IsWebPBytes(const String& bytes)
+    {
+        return bytes.Length() >= 12 && std::memcmp(bytes.Data(), "RIFF", 4) == 0 && std::memcmp(bytes.Data() + 8, "WEBP", 4) == 0;
+    }
+
+    String ToPngBytes(const String& bytes)
+    {
+        if (IsPngBytes(bytes))
+            return bytes;
+
+        auto bitmap = DecodeImageBytes(bytes);
+        return bitmap ? EncodeBitmapPng(*bitmap) : String();
+    }
+
     Ref<Bitmap> DecodeImageBytes(const String& bytes)
     {
         if (bytes.IsEmpty())
             return nullptr;
+
+        if (IsWebPBytes(bytes))
+            return DecodeWebP(bytes);
 
         auto bitmap = mmake<Bitmap>();
         if (!bitmap->LoadFromMemory((const UInt8*)bytes.Data(), (UInt)bytes.Length(), Bitmap::ImageType::Auto))

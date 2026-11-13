@@ -144,6 +144,15 @@ namespace Editor
         return !mToken.IsEmpty() && mTokenServer == config.serverUrl && mTokenProject == config.projectId;
     }
 
+    bool AssetsLineSync::MakeAiClient(AssetsLineClient& client) const
+    {
+        if (!IsConnected())
+            return false;
+
+        client = MakeClient();
+        return true;
+    }
+
     void AssetsLineSync::ReloadState()
     {
         mStateLoaded = false;

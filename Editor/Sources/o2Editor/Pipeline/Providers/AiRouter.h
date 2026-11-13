@@ -19,6 +19,17 @@ namespace Editor
         bool operator==(const AiRoute& other) const { return provider == other.provider && model == other.model; }
     };
 
+    // Where a call runs: on a provider directly, through AssetsLine, or nowhere
+    enum class AiRouteKind { Direct, AssetsLine, None };
+
+    // How one call runs
+    struct AiPlan
+    {
+        AiRouteKind kind = AiRouteKind::None; // Where the call goes
+        AiRoute     route;                    // Provider and model id of a direct call
+        String      error;                    // Why the call cannot run, kind None only
+    };
+
     // Keys of the providers the router chooses between
     struct AiRouteKeys
     {
@@ -59,6 +70,27 @@ namespace Editor
         // Returns the first route that has a key, the native route when none has; note gets the log line of a non-native choice
         AiRoute ChooseRoute(const String& model, const AiRouteKeys& keys, String* note = nullptr, bool transparentBackground = false);
 
+        // What a node shows for a call with neither a key here nor a connection to AssetsLine
+        String NoKeyMessage(const String& model);
+
+        // How a text or image call runs: a local agent here; a route with a key of this editor directly; with no key and a
+        // connection, through AssetsLine, billed on the connected account and project. A key that fails never falls back to
+        // AssetsLine, which would spend its tokens unasked
+        AiPlan Plan(const String& model, const AiRouteKeys& keys, bool connected, bool transparentBackground = false);
+
+        // How a call runs that a node makes to its provider itself (video, speech, sound effects, music): on the key of that
+        // provider, else through AssetsLine when connected
+        AiPlan PlanDirect(const String& model, bool hasKey, bool connected);
+
+        // The plan with the keys of the context settings and the AssetsLine connection
+        AiPlan Plan(const Ref<PipelineExecContext>& ctx, const String& model, bool transparentBackground = false);
+
+        // The plan of a node's own provider call with the AssetsLine connection
+        AiPlan PlanDirect(const String& model, bool hasKey);
+
+        // The log line of a direct call on a key of this editor
+        String DirectRouteLine(const String& providerName);
+
         // Generates text on the route chosen for the model, with the keys from the context settings
         Coroutine<AiTextResult> GenerateText(const Ref<PipelineExecContext>& ctx, const String& model, const String& prompt,
                                              const Vector<AiImageRef>& images);
@@ -81,4 +113,6 @@ namespace Editor
 // --- META ---
 
 PRE_ENUM_META(Editor::AiProvider);
+
+PRE_ENUM_META(Editor::AiRouteKind);
 // --- END META ---

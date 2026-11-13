@@ -8,6 +8,7 @@ extern void __RegisterEnum__Editor__PipelineModelProvider();
 extern void __RegisterEnum__Editor__PipelineNodeCategory();
 extern void __RegisterEnum__Editor__PipelineIoView();
 extern void __RegisterEnum__Editor__AiProvider();
+extern void __RegisterEnum__Editor__AiRouteKind();
 extern void __RegisterEnum__Editor__LocalAgentSetup__Agent();
 extern void __RegisterEnum__Editor__LocalAgentSetup__State();
 extern void __RegisterEnum__Editor__AssetsLineStatus();
@@ -291,6 +292,7 @@ extern void InitializeTypeso2Editor()
     __RegisterEnum__Editor__PipelineNodeCategory();
     __RegisterEnum__Editor__PipelineIoView();
     __RegisterEnum__Editor__AiProvider();
+    __RegisterEnum__Editor__AiRouteKind();
     __RegisterEnum__Editor__LocalAgentSetup__Agent();
     __RegisterEnum__Editor__LocalAgentSetup__State();
     __RegisterEnum__Editor__AssetsLineStatus();
