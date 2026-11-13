@@ -3,6 +3,7 @@
 
 #include "o2Editor/Pipeline/Nodes/PipelineNodesCommon.h"
 #include "o2Editor/Pipeline/PipelineUtils.h"
+#include "o2Editor/Pipeline/Providers/AssetsLineAi.h"
 #include "o2Editor/Pipeline/Providers/LocalAgentProvider.h"
 #include "o2Editor/Pipeline/Providers/OpenAiProvider.h"
 #include "o2Editor/Pipeline/Providers/OpenRouterProvider.h"
@@ -141,16 +142,101 @@ namespace Editor::AiRouter
         return native;
     }
 
+    String NoKeyMessage(const String& model)
+    {
+        return "No API key for " + model + ": add one in the pipeline settings, or connect AssetsLine to run it on your AssetsLine account";
+    }
+
+    AiPlan Plan(const String& model, const AiRouteKeys& keys, bool connected, bool transparentBackground /*= false*/)
+    {
+        AiPlan plan;
+        AiRoute native = RoutesFor(model)[0];
+        if (native.provider == AiProvider::Local)
+        {
+            plan.kind = AiRouteKind::Direct;
+            plan.route = native;
+            return plan;
+        }
+
+        AiRoute route = ChooseRoute(model, keys, nullptr, transparentBackground);
+        if (!keys.Of(route.provider).IsEmpty())
+        {
+            plan.kind = AiRouteKind::Direct;
+            plan.route = route;
+            return plan;
+        }
+
+        if (connected)
+        {
+            plan.kind = AiRouteKind::AssetsLine;
+            return plan;
+        }
+
+        plan.error = NoKeyMessage(BareModelId(model));
+        return plan;
+    }
+
+    AiPlan PlanDirect(const String& model, bool hasKey, bool connected)
+    {
+        AiPlan plan;
+        if (hasKey)
+            plan.kind = AiRouteKind::Direct;
+        else if (connected)
+            plan.kind = AiRouteKind::AssetsLine;
+        else
+            plan.error = NoKeyMessage(model);
+
+        return plan;
+    }
+
+    AiPlan Plan(const Ref<PipelineExecContext>& ctx, const String& model, bool transparentBackground /*= false*/)
+    {
+        return Plan(model, KeysOf(ctx->settings), AssetsLineAi::IsConnected(), transparentBackground);
+    }
+
+    AiPlan PlanDirect(const String& model, bool hasKey)
+    {
+        return PlanDirect(model, hasKey, !hasKey && AssetsLineAi::IsConnected());
+    }
+
+    String DirectRouteLine(const String& providerName)
+    {
+        return "route: own key (" + providerName + ")";
+    }
+
+    // Logs the direct route: the key it runs on and, for another API than the model's own, why
+    static void LogDirect(const Ref<PipelineExecContext>& ctx, const String& model, const AiRoute& route, bool transparentBackground)
+    {
+        if (route.provider == AiProvider::Local)
+            return;
+
+        String note;
+        ChooseRoute(model, KeysOf(ctx->settings), &note, transparentBackground);
+        ctx->Log(DirectRouteLine(ProviderName(route.provider)));
+        if (!note.IsEmpty())
+            ctx->Log(note);
+    }
+
     Coroutine<AiTextResult> GenerateText(const Ref<PipelineExecContext>& ctx, const String& model, const String& prompt,
                                          const Vector<AiImageRef>& images)
     {
-        AiRouteKeys keys = KeysOf(ctx->settings);
-        String note;
-        AiRoute route = ChooseRoute(model, keys, &note);
-        if (!note.IsEmpty())
-            ctx->Log(note);
-
         AiTextResult result;
+        AiPlan plan = Plan(ctx, model);
+        if (plan.kind == AiRouteKind::None)
+        {
+            result.error = plan.error;
+            co_return result;
+        }
+
+        if (plan.kind == AiRouteKind::AssetsLine)
+        {
+            result = co_await AssetsLineAi::GenerateText(ctx, BareModelId(model), prompt, images);
+            co_return result;
+        }
+
+        AiRouteKeys keys = KeysOf(ctx->settings);
+        AiRoute route = plan.route;
+        LogDirect(ctx, model, route, false);
         if (route.provider == AiProvider::Local)
             result = co_await LocalAgentProvider::GenerateText(ctx, route.model, prompt, images);
         else if (route.provider == AiProvider::OpenRouter)
@@ -176,13 +262,23 @@ namespace Editor::AiRouter
         if (imageStub)
             co_return imageStub(model, prompt, references, seed, transparentBackground, options);
 
-        AiRouteKeys keys = KeysOf(ctx->settings);
-        String note;
-        AiRoute route = ChooseRoute(model, keys, &note, transparentBackground);
-        if (!note.IsEmpty())
-            ctx->Log(note);
-
         AiBytesResult result;
+        AiPlan plan = Plan(ctx, model, transparentBackground);
+        if (plan.kind == AiRouteKind::None)
+        {
+            result.error = plan.error;
+            co_return result;
+        }
+
+        if (plan.kind == AiRouteKind::AssetsLine)
+        {
+            result = co_await AssetsLineAi::GenerateImage(ctx, BareModelId(model), prompt, references, seed, transparentBackground, options);
+            co_return result;
+        }
+
+        AiRouteKeys keys = KeysOf(ctx->settings);
+        AiRoute route = plan.route;
+        LogDirect(ctx, model, route, transparentBackground);
         if (route.provider == AiProvider::Local)
             result = co_await LocalAgentProvider::GenerateImage(ctx, route.model, prompt, references, transparentBackground, options);
         else if (route.provider == AiProvider::OpenRouter)
@@ -202,6 +298,14 @@ ENUM_META(Editor::AiProvider, Editor__AiProvider)
     ENUM_ENTRY(Local);
     ENUM_ENTRY(OpenAi);
     ENUM_ENTRY(OpenRouter);
+}
+END_ENUM_META;
+
+ENUM_META(Editor::AiRouteKind, Editor__AiRouteKind)
+{
+    ENUM_ENTRY(AssetsLine);
+    ENUM_ENTRY(Direct);
+    ENUM_ENTRY(None);
 }
 END_ENUM_META;
 // --- END META ---

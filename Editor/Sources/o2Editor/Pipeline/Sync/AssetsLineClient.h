@@ -21,6 +21,11 @@ namespace Editor
         String       error;           // Readable error
         String       body;            // Raw body
         DataDocument json;            // Body parsed as JSON, when it is JSON
+
+        Map<String, String> headers; // Response headers
+
+        // Returns the header value by case-insensitive name, empty when absent
+        String GetHeader(const String& name) const;
     };
 
     // ------------------------------------------------------------------------

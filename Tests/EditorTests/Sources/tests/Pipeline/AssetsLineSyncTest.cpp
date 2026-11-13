@@ -11,6 +11,7 @@
 #include "o2Editor/Pipeline/PipelineZip.h"
 #include "o2Editor/Pipeline/Sync/AssetsLineClient.h"
 #include "o2Editor/Pipeline/Sync/AssetsLineSync.h"
+#include "o2Editor/Pipeline/Sync/AssetsLineSyncInternal.h"
 #include "o2Editor/Windows/PipelineWindow/AssetsLineDeleteDlg.h"
 
 using namespace o2;
@@ -278,6 +279,23 @@ namespace
 
         const UInt8* p = PipelineImageOps::Pixel(*bitmap, bitmap->GetSize().x/2, bitmap->GetSize().y/2);
         return Color4(p[0], p[1], p[2], p[3]);
+    }
+
+    // 4x2 lossless WebP and the PNG of the same picture
+    String GridWebP()
+    {
+        return PipelineUtils::Base64Decode("UklGRkAAAABXRUJQVlA4TDMAAAAvA0AAED9AkG3To598GgKCouuWEwgQnDtHIGlj8/HkDwBn0UaGewWBABmbUqLAgoj+BzYA");
+    }
+
+    String GridPng()
+    {
+        return PipelineUtils::Base64Decode("iVBORw0KGgoAAAANSUhEUgAAAAQAAAACCAYAAAB/qH1jAAAAHUlEQVR4nGP4z8DwHwwZ/oMBAwgAqQYQ1dDQ8B8AFSQP8+yVEZEAAAAASUVORK5CYII=");
+    }
+
+    bool SamePicture(const String& a, const String& b)
+    {
+        auto x = DecodeImageBytes(a), y = DecodeImageBytes(b);
+        return x && y && x->GetSize() == y->GetSize() && memcmp(x->GetData(), y->GetData(), x->GetSize().x*x->GetSize().y*4) == 0;
     }
 
     // A text prompt, an image generation and a finish node saving the picture as Generated/<name>.png
@@ -734,6 +752,73 @@ TEST_F(AssetsLineSync_, APartGeneratedAgainOnTheWebReplacesThatPartHere)
     auto graph = project.Read("Pipelines/parts.pipeline");
     EXPECT_EQ(PipelineUtils::ReadFileBytes(ContentFile(graph, ex, "pb")), again);
     EXPECT_EQ(PipelineUtils::ReadFileBytes(ContentFile(graph, ex, "pa")), first);
+}
+
+// A model that answers WebP (Riverflow at OpenRouter) left a WebP under the node's .png on the web
+TEST_F(AssetsLineSync_, AWebPResultOfTheWebArrivesAsAPng)
+{
+    Web web(url);
+    Project project(url, web);
+    String id = Uid();
+    String gen = id + "-gen";
+    project.Write("Pipelines/webp.pipeline", GenPipeline(id, "webp"));
+    ASSERT_TRUE(project.Pass()) << project.sync->GetStatusText();
+
+    web.Generated(id, 1, gen, gen, GridWebP());
+    ASSERT_TRUE(project.Pass()) << project.sync->GetStatusText();
+
+    project.Use();
+    String preview = PipelineUtils::ReadFileBytes(PipelineExecutor::GetPreviewPath(id, gen, "png"));
+    EXPECT_TRUE(IsPngBytes(preview));
+    EXPECT_TRUE(SamePicture(preview, GridPng()));
+
+    String asset = PipelineUtils::ReadFileBytes(project.assets + "Generated/webp.png");
+    EXPECT_TRUE(IsPngBytes(asset));
+    EXPECT_TRUE(SamePicture(asset, GridPng()));
+}
+
+// What an earlier editor downloaded as it was: the file is made a PNG in place and stays in sync, nothing is uploaded
+TEST_F(AssetsLineSync_, AWebPKeptHereUnderAPngNameIsRepairedWithoutAnUpload)
+{
+    Web web(url);
+    Project project(url, web);
+    String id = Uid();
+    String gen = id + "-gen";
+    project.Write("Pipelines/repair.pipeline", GenPipeline(id, "repair"));
+    ASSERT_TRUE(project.Pass()) << project.sync->GetStatusText();
+    web.Generated(id, 1, gen, gen, PngBytes(Color4(0, 200, 0, 255)));
+    ASSERT_TRUE(project.Pass()) << project.sync->GetStatusText();
+
+    auto version = [&]()
+    {
+        auto manifest = web.Call(HttpMethod::Get, "/api/sync/pipelines/" + id + "/results");
+        auto entry = manifest["results"].FindMember(gen.Data());
+        return entry ? PipelineUtils::ValueToString((*entry)["v"]) : String();
+    };
+    String before = version();
+    ASSERT_FALSE(before.IsEmpty());
+
+    project.Use();
+    String path = PipelineExecutor::GetPreviewPath(id, gen, "png");
+    PipelineUtils::WriteFileBytes(path, GridWebP());
+    String statePath = project.work + "sync/state.json";
+    DataDocument state;
+    ASSERT_TRUE(state.LoadFromData(PipelineUtils::ReadFileBytes(statePath)));
+    state["pipelines"][id.Data()]["results"][gen.Data()]["stamp"] = AssetsLineSyncUtils::Stamp(path);
+    PipelineUtils::WriteFileBytes(statePath, state.SaveAsString());
+    project.Restart();
+
+    ASSERT_TRUE(project.Pass()) << project.sync->GetStatusText();
+    project.Use();
+    String repaired = PipelineUtils::ReadFileBytes(path);
+    EXPECT_TRUE(IsPngBytes(repaired));
+    EXPECT_TRUE(SamePicture(repaired, GridPng()));
+    AssetsLineResultState known;
+    ASSERT_TRUE(project.sync->GetPipelineState(id)->results.TryGetValue(gen, known));
+    EXPECT_TRUE(AssetsLineSyncUtils::SameStamp(known.stamp, AssetsLineSyncUtils::Stamp(path)));
+
+    ASSERT_TRUE(project.Pass()) << project.sync->GetStatusText();
+    EXPECT_EQ(version(), before) << "the repaired file went up as a new result";
 }
 
 TEST_F(AssetsLineSync_, WhatReachesAFinishNodeBecomesAProjectAsset)

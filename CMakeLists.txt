@@ -489,6 +489,7 @@ if (O2_EDITOR)
     target_precompile_headers(o2Editor PRIVATE "Editor/Sources/o2Editor/stdafx.h")
     target_compile_definitions(o2Editor PUBLIC ${O2_COMPILE_DEFINITIONS})
     target_link_libraries(o2Editor PUBLIC o2Framework)
+    target_link_libraries(o2Editor PRIVATE webpdecoder)
 
     if(MSVC)
         target_compile_options(o2Editor PRIVATE ${O2_MSVC_MP_FLAG} "/Zc:__cplusplus" "/bigobj")

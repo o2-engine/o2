@@ -668,6 +668,11 @@ namespace Editor::PipelineUtils
             workPathOverride += "/";
     }
 
+    bool HasWorkPathOverride()
+    {
+        return !workPathOverride.IsEmpty();
+    }
+
     String GetUploadsPath()
     {
         return GetWorkPath() + "uploads/";

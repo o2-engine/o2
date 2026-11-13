@@ -257,7 +257,10 @@ namespace Editor
         auto ctx = mmake<PipelineExecContext>();
         ctx->settings = PipelineSettings::Load();
         ctx->pipelineId = run->pipelineId;
+        ctx->pipelineName = run->graph.name;
         ctx->nodeId = nodeId;
+        if (auto node = run->graph.FindNode(nodeId))
+            ctx->nodeType = node->nodeType;
         ctx->cachedOnly = run->cachedOnly;
         ctx->assetsPath = assetsPathOverride.IsEmpty() ? o2Assets.GetAssetsPath() : assetsPathOverride;
 

@@ -74,6 +74,9 @@ namespace Editor
         // Overrides the working directory, empty restores the default under the project root
         void SetWorkPathOverride(const String& path);
 
+        // True while the working directory is overridden (a test sandbox)
+        bool HasWorkPathOverride();
+
         // Returns the uploads folder inside the working directory
         String GetUploadsPath();
 
