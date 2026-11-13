@@ -84,7 +84,7 @@ namespace Editor::UiLayout
     // What the agent is told about the sliced assets (PORTING.md --sprites-note)
     String SpritesNote(const Vector<AssetFile>& files, const UiBackdrop& background);
 
-    // The .png.meta of nine-slice borders in Unity's order: x left, y bottom, z right, w top
+    // The skill's .png.meta sidecar of nine-slice borders: spriteBorder x left, y bottom, z right, w top
     String NineSliceMeta(const NineSlice& nine);
 
     // Writes the sprites of the looks (and the plate as bg_backdrop.png) into the folder, nine-sliced ones with a .png.meta

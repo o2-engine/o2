@@ -1,7 +1,6 @@
 // Golden references, round 5 (AssetsLine 2026-11-12): turned layout blocks (shared/uiDoc/rotate.ts) - the turn as a property
 // (cleanTurn, UIML rot= / angle= / rotate=, edits, the root never turned), the maths (turnedBounds, unturnedSize, worldMatrix,
-// worldTurn, corners, inBlock), the hit test through turns, ui_structure.json's `rotation`, the Unity prefab of a turned
-// block (pivot to the centre, the quaternion and the angle hint; Expand of the Canvas Scaler), keepTurns after the skill
+// worldTurn, corners, inBlock), the hit test through turns, ui_structure.json's `rotation`, keepTurns after the skill
 // pass and the markup's rule for tilted elements.
 // The backend modules load its billing database: no-sqlite.mjs stands in for better-sqlite3 (a Linux build on the host).
 //   AL=<AssetsLine checkout>; ASSETSLINE=$AL $AL/backend/node_modules/.bin/tsx --import ./no-sqlite.mjs cases5.mts /tmp/golden5.json
@@ -15,7 +14,6 @@ const ops = await import(`${A}/shared/uiDoc/ops.ts`);
 const solve = await import(`${A}/shared/uiDoc/solve.ts`);
 const structure = await import(`${A}/shared/uiDoc/structure.ts`);
 const fromStructure = await import(`${A}/shared/uiDoc/fromStructure.ts`);
-const unity = await import(`${A}/shared/uiExport/unity.ts`);
 const agentRun = await import(`${A}/backend/src/uiLayout/agentRun.ts`);
 
 const out: Record<string, unknown> = {};
@@ -97,21 +95,13 @@ out.edits = [
   return { text, ops: JSON.stringify(e.ops), errors: e.errors, doc: JSON.stringify(after.doc), uiml: uiml.docToUiml(after.doc) };
 });
 
-// --- the structure, back, the Unity prefab -------------------------------------------------------------------------------
+// --- the structure and back -----------------------------------------------------------------------------------------------
 out.structure = DOCS.map((src) => {
   const doc = uiml.parseUiml(src).doc;
   const st = structure.toUiStructure(doc, null);
   const back = fromStructure.fromUiStructure({ structure: JSON.parse(st.json), kit: null, assetNames: new Map(), dpi: 480 } as never);
   return { src, json: st.json, back: JSON.stringify(back.doc) };
 });
-out.unity = [];
-for (const [i, src] of DOCS.entries()) {
-  for (const canvasFit of [undefined, 'expand'] as const) {
-    const doc = uiml.parseUiml(src).doc;
-    const res = await unity.exportUnity({ name: doc.name, folder: 'Generated/UI', layout: structure.toUiStructure(doc, null).json, sprites: [], fonts: [], seed: `t${i}`, ...(canvasFit ? { canvasFit } : {}) });
-    (out.unity as unknown[]).push({ src, canvasFit: canvasFit ?? '', prefab: new TextDecoder().decode(res.files.find((f: { path: string }) => f.path.endsWith('.prefab'))!.data), warnings: res.warnings });
-  }
-}
 
 // --- the agent: keepTurns, the markup's rule ------------------------------------------------------------------------------
 const draftDoc = uiml.parseUiml(['screen S 400x400', '  image tile_a anchor=top-left pos=40,40 size=40x40 kit=tile rotation=-30',

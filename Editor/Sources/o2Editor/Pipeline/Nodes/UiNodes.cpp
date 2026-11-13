@@ -501,7 +501,7 @@ namespace Editor
             mSchema.instant = true;
             mSchema.partialInputs = true;
             mSchema.perPortRun = true;
-            mSchema.description = "Lay out a game or app screen with an AI agent, or rebuild one from a mockup: an adaptive hierarchy of blocks (anchors, rows, columns, grids) kept as text. Connect UI kits and the screen is drawn with their graphics and text styles; what no kit has - graphics, text styles - the node makes itself, and every graphic it made is an output of its own. Every action is a step you can undo. Exports a Unity prefab, an o2 prototype or JSON.";
+            mSchema.description = "Lay out a game or app screen with an AI agent, or rebuild one from a mockup: an adaptive hierarchy of blocks (anchors, rows, columns, grids) kept as text. Connect UI kits and the screen is drawn with their graphics and text styles; what no kit has - graphics, text styles - the node makes itself, and every graphic it made is an output of its own. Every action is a step you can undo. Saves the screen into the project as an o2 prototype with its sprites, fonts and text styles.";
             mSchema.inputs = { In("kit", PipelinePortType::UiKit) };
             mSchema.outputs = { Out("image", PipelinePortType::Image), Out("layout", PipelinePortType::Text) };
             mSchema.addableInputs = { PipelinePortType::Image, PipelinePortType::Text, PipelinePortType::UiKit };
@@ -511,6 +511,12 @@ namespace Editor
         void InitNode(const Ref<PipelineNode>& node) const override
         {
             node->SetConfigString("agentModel", "gpt-6.1-sol");
+        }
+
+        // Where Save to project writes changes nothing the node draws
+        Vector<String> SignatureExcludedKeys() const override
+        {
+            return { "assetPath" };
         }
 
         // The graphic behind one of the node's outputs; none for its schema outputs and a graphic that is gone

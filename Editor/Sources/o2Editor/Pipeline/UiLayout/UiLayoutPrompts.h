@@ -6,7 +6,7 @@
 using namespace o2;
 
 // The prompts of the image-to-UI node's own part (the sliced sprites the skill takes as its input), word for word the
-// strings of AssetsLine's backend/src/uiLayout/prompts.ts and the Unity plugin; change them together. The layout's prompts
+// strings of AssetsLine's backend/src/uiLayout/prompts.ts; change them together. The layout's prompts
 // are the agent's (o2/Tools/ImageToUi/agent/agent.py)
 namespace Editor::UiLayout::Prompts
 {

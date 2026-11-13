@@ -31,7 +31,7 @@ namespace Editor::UiLayout
         Vector<String>      ownFiles;
     };
 
-    // Writes a kit graphic into the sprite folder at the design's density, its borders as Unity's sprite border (.png.meta);
+    // Writes a kit graphic into the sprite folder at the design's density, its borders in the skill's .png.meta sidecar;
     // returns its file name, empty when it has no picture
     String WriteKitSprite(const String& dir, const ::Editor::UiDoc::UiKitElement& el, double designDpi);
 

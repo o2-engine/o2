@@ -17,7 +17,7 @@ namespace Editor
             Ref<UiWsWindow>                                                       window;
             Function<void()>                                                      onClosed;
             AgentSendHandler                                                      send;
-            Function<void(const Ref<PipelineEditor>&, const String&)>             download;
+            Function<void(const Ref<PipelineEditor>&, const String&)>             save;
         };
 
         static State& St()
@@ -51,24 +51,24 @@ namespace Editor
             st.window->SetEnabledForcible(false);
         }
 
-        // The download button follows the handler
-        static void WireDownload()
+        // The save button follows the handler
+        static void WireSave()
         {
             auto& st = St();
             if (!st.window)
                 return;
 
-            if (!st.download)
+            if (!st.save)
             {
-                st.window->onDownload = Function<void()>();
+                st.window->onSave = Function<void()>();
                 return;
             }
-            st.window->onDownload = []()
+            st.window->onSave = []()
             {
                 auto& s = St();
                 auto editor = s.window ? s.window->GetContext()->editor.Lock() : nullptr;
-                if (editor && s.download)
-                    s.download(editor, s.window->GetNodeId());
+                if (editor && s.save)
+                    s.save(editor, s.window->GetNodeId());
             };
         }
 
@@ -81,7 +81,7 @@ namespace Editor
             PushEditorScopeOnStack scope;
             if (!st.window->GetParent())
                 EditorUIRoot.AddWidget(st.window);
-            WireDownload();
+            WireSave();
             st.window->Bind(editor, nodeId);
         }
 
@@ -158,10 +158,10 @@ namespace Editor
             return written;
         }
 
-        void SetDownloadHandler(const Function<void(const Ref<PipelineEditor>& editor, const String& nodeId)>& handler)
+        void SetSaveHandler(const Function<void(const Ref<PipelineEditor>& editor, const String& nodeId)>& handler)
         {
-            St().download = handler;
-            WireDownload();
+            St().save = handler;
+            WireSave();
         }
 
         Ref<UiWsWindow> GetWindow()

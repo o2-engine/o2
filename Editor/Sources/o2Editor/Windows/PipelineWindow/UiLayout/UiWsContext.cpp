@@ -227,8 +227,6 @@ namespace Editor
         review = !(reviewValue && reviewValue->IsBool() && !reviewValue->Bool());
         draft = JsStringOr(JsGet(config, "uiDraft"));
         points = UiDoc::CleanPoints(JsGet(config, "uiPoints"));
-        const Json* exportValue = JsGet(config, "exportFor");
-        exportFor = exportValue && exportValue->IsString() && (exportValue->Str() == "o2" || exportValue->Str() == "json") ? exportValue->Str() : String("unity");
 
         version++;
         if (onRefreshed)

@@ -20,7 +20,7 @@ namespace Editor::UiDoc
     // One line per element type: what the model and the menus say about it ("" for an unknown type)
     String UiElementHint(const String& type);
 
-    // How the picture is drawn into a box (Unity's Image type, o2's sprite mode): simple, sliced, tiled
+    // How the picture is drawn into a box (o2's sprite mode): simple, sliced, tiled
     const Vector<String>& UiAssetTypes();
 
     // ---------------------------------------------

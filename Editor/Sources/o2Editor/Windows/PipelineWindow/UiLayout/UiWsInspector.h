@@ -7,7 +7,7 @@ namespace Editor
 {
     // -----------------------------------------------------------------------------------------------
     // The workspace's inspector (port of the Inspector of AssetsLine UiWorkspace.tsx): every property of
-    // the selected block by its type - the name and the type, the placement (Unity's anchor presets: 4 x 4
+    // the selected block by its type - the name and the type, the placement (anchor presets: 4 x 4
     // pictures with ↔ / ↕ for stretched axes, the block keeps its place, Alt+click moves it to the anchor
     // too), offsets / nudge, size, margins, grow, the look (kit graphic picker with thumbnails, variant,
     // tint, fit), opacity, visibility, the children's layout (gap, padding, align, justify, the grid's

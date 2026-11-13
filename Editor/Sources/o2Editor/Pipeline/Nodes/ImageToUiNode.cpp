@@ -23,8 +23,8 @@ namespace Editor
             mSchema.label = "AI image to UI";
             mSchema.category = PipelineNodeCategory::AI;
             mSchema.description = "Turn a UI mockup into a layout: cut its sprites, then let the model run the Image-To-UI skill - "
-                "measure on its grid, write ui_structure.json, check, fix, review every element and finalize. In Unity the layout "
-                "becomes a prefab, in o2 a prototype.";
+                "measure on its grid, write ui_structure.json, check, fix, review every element and finalize. The layout becomes "
+                "an o2 prototype in the project's Assets.";
             mSchema.inputs = { In("image", PipelinePortType::Image) };
             mSchema.outputs = { Out("preview", PipelinePortType::Image), Out("layout", PipelinePortType::Text) };
             mSchema.hasPlay = true;
@@ -36,7 +36,7 @@ namespace Editor
 
         void InitNode(const Ref<PipelineNode>& node) const override
         {
-            // A new node keeps its models in its config, as the web and Unity editors do: a later change of the defaults
+            // A new node keeps its models in its config, as AssetsLine's editors do: a later change of the defaults
             // never switches it to other models
             node->SetConfigString("model", PipelineImageToUi::defaultModel);
             node->SetConfigString("imageModel", PipelineImageToUi::defaultImageModel);

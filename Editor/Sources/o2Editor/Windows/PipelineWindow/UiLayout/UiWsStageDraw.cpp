@@ -164,7 +164,7 @@ namespace Editor
                 TurnedFrame(*sel, m, t.accent, 2.0f);
             }
 
-            // The anchor: Unity's four triangles, split along a stretched axis
+            // The anchor: four triangles, split along a stretched axis
             bool editable = ctx->Editable() && !ctx->Busy();
             std::array<std::array<Vec2F, 3>, 4> tris;
             if (AnchorTriangles(tris))

@@ -68,6 +68,45 @@ namespace Editor::UiLayout
     // Weight of a fontFamily ("fonts/Roboto-Bold.ttf", "Roboto-Medium.ttf"): bold, medium or regular
     String WeightOfFont(const String& file);
 
+    // The bundled UI font a fontFamily names ("fonts/Lobster-Regular.ttf" -> Lobster-Regular.ttf, any case), empty when it
+    // names none
+    String BundledFontOf(const String& fontFamily);
+
+    // ---------------------------------------------------------------------------------------------------------
+    // An outline or a shadow of a label's glyphs in the label's pixels: what o2's font style effects draw. A glow is a
+    // shadow without an offset, solid depth one without a blur
+    // ---------------------------------------------------------------------------------------------------------
+    struct UiTextEffect
+    {
+        String type;          // stroke or shadow
+        String color;         // #RRGGBB
+        double opacity = 1.0;
+        double width = 0;     // stroke: its width
+        double x = 0, y = 0;  // shadow: its offset, y down
+        double blur = 0;      // shadow: its blur radius, 0 = a hard copy
+
+        bool operator==(const UiTextEffect& other) const;
+    };
+
+    // ---------------------------------------------------------------------------------------------------------
+    // How a label's glyphs are drawn beyond a flat colour, as one o2 font style: the fill (flat, or a gradient from its
+    // first colour to its last), then the outlines from the letters out, then the shadows
+    // ---------------------------------------------------------------------------------------------------------
+    struct UiTextLook
+    {
+        String               fill;        // #RRGGBB: the flat colour, the gradient's first colour with one
+        String               fillTo;      // The gradient's last colour, empty for a flat fill
+        double               angle = 90;  // The gradient's direction, degrees clockwise on the screen: 90 = top to bottom
+        Vector<UiTextEffect> effects;     // Outlines first, then shadows
+
+        bool operator==(const UiTextLook& other) const;
+    };
+
+    // The look of a text node: its `textStyle` (an extension of the schema: the text style's `fill` gradient and its layer
+    // effects at the label's size) or else its strokeColor / strokeWidth; none when the label is its colour alone. What o2's
+    // font styles cannot draw (inner shadows, a bevel, a gradient's middle colours) goes into warnings
+    std::optional<UiTextLook> TextLookOf(const Json& node, const String& color, const String& path, Vector<String>* warnings);
+
     // o2 text height in points of a pixel font size: round(fontSize * 72 / 92), at least 1
     int HeightPoints(double fontSize);
 
@@ -93,12 +132,13 @@ namespace Editor::UiLayout
         double                   rotation = 0;  // Turned about the centre of its box, degrees clockwise on the screen
 
         String text;
-        String fontFile;          // Roboto-*.ttf
+        String fontFile;          // A bundled UI font (Roboto-Bold.ttf, Lobster-Regular.ttf...)
         double fontSize = 16;
         String alignment;         // left, center, right
         String textVAlign;        // top, middle, bottom
         String strokeColor;       // Outline colour, empty for none
         double strokeWidth = 0;
+        std::optional<UiTextLook> look; // Drawn by a font style; none: the colour alone
 
         String progressOrientation; // Right, Left, Down, Up for a progress fill
         double progressValue = 1.0; // Its ratio, 0..1
@@ -142,8 +182,8 @@ namespace Editor::UiLayout
         // Sets the label's font from a font file (Roboto-Bold.ttf)
         virtual void SetFont(const Ref<Label>& label, const String& fontFile) = 0;
 
-        // Gives the label a style drawing the glyphs in fill with an outline of the radius in stroke
-        virtual void SetStroke(const Ref<Label>& label, const Color4& fill, const Color4& stroke, int radius) = 0;
+        // Gives the label the font style that draws its look
+        virtual void SetLook(const Ref<Label>& label, const UiTextLook& look) = 0;
     };
 
     // The widget tree of a plan

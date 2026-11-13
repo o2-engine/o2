@@ -145,7 +145,7 @@ TEST(UiWorkspaceModel, PreviewScreens)
     EXPECT_STR_EQ(p.kind, "kit");
     EXPECT_STR_EQ(p.name, "iPhone 16");
     EXPECT_STR_EQ(Ws::PreviewName(p), "iPhone 16");
-    // The design fitted into the device's screen, the room left over added to the canvas (Unity's Expand)
+    // The design fitted into the device's screen, the room left over added to the canvas (the Expand fit)
     EXPECT_EQ(p.frame, PreviewFrame(1080, 1920, std::nullopt, target.Screen(), "fit"));
     EXPECT_EQ(p.frame.w, 1080.0);
     EXPECT_GT(p.frame.h, 1920.0);

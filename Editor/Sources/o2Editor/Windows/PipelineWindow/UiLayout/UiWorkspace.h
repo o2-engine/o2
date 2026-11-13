@@ -14,7 +14,7 @@ namespace Editor
 
     // -----------------------------------------------------------------------------------------------------------------
     // The AI UI layout node's workspace (port of AssetsLine frontend/src/nodeEditor/uiLayout/UiWorkspace.tsx and Stage.tsx):
-    // a window over the editor with the hierarchy on the left, the screen on a zoomable board with Unity-style handles in
+    // a window over the editor with the hierarchy on the left, the screen on a zoomable board with rect-tool handles in
     // the middle, and the Agent / Inspector / Text / History tabs on the right. Every edit is a UiDoc op written into the
     // node's config as the web writes it (steps + uiRedo; hand edits folded into one step of actions), one undo step of the
     // editor each, and the node auto-applies; the view keys (uiTab, uiSelected, uiView, uiShowIds, uiDraft, uiDevice...)
@@ -68,8 +68,8 @@ namespace Editor
 
         // --- export ------------------------------------------------------------------------------------------------------
 
-        // The handler of the header's Download (the export target is the node's exportFor); none disables the button
-        void SetDownloadHandler(const Function<void(const Ref<PipelineEditor>& editor, const String& nodeId)>& handler);
+        // The handler of the header's Save to project; none disables the button
+        void SetSaveHandler(const Function<void(const Ref<PipelineEditor>& editor, const String& nodeId)>& handler);
 
         // --- tests -------------------------------------------------------------------------------------------------------
 

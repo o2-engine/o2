@@ -80,7 +80,7 @@ namespace Editor
     };
 
     // --------------------------------------------------------------------------------------------------
-    // Rules of the model menu, the same as AssetsLine's shared/modelMenu.ts and the Unity plugin's: the
+    // Rules of the model menu, the same as AssetsLine's shared/modelMenu.ts: the
     // group of an id, the group order, which groups start folded, the search, Recent and the custom id row
     // --------------------------------------------------------------------------------------------------
     namespace PipelineModelMenu

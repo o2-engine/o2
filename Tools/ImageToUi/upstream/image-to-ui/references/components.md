@@ -4,8 +4,8 @@ Read this when a design contains progress/health/experience bars, selected or
 disabled controls, tabs/toggles, scrolling content, or geometry that must follow
 screen size. The JSON describes those behaviors and the verifier renders
 snapshots of them. Application code owns event handlers, animation, and data
-bindings. The optional [Unity exporter](unity.md) assembles native UGUI objects
-and visibility branches without adding custom runtime controllers.
+bindings. The [o2 prototype export](o2.md) turns the structure into native o2
+widgets with the current state baked, without adding custom runtime controllers.
 
 ## Identify behavior from evidence
 
@@ -107,7 +107,7 @@ set `canvas.safeArea` to pixel values such as
 then measured in the inset rectangle. Use a safe-area container for deeper
 descendants. Preview insets are supplied values, not inferred device geometry.
 
-These fields are not a direct copy of Unity RectTransform: adapters must
+These fields are not a direct copy of an engine's anchors: adapters must
 convert the y-axis convention and choose the engine pivot. The verifier uses
 edge constraints and does not expose an implicit pivot.
 

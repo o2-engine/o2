@@ -9,8 +9,9 @@ Use this reference when selecting sliced sprites for `ui_structure.json`.
 - `assets_inventory.json`: exact relative paths, texture dimensions,
   `alpha_bbox` (nonzero alpha), `alpha_size`, `alpha_padding`,
   `alpha_core_bbox` (alpha >= 128), `fully_transparent`, duplicate basename
-  data, usage hints, and Unity `spriteBorder` metadata. Bounds are
-  left/top/right/bottom with exclusive right/bottom edges; a missing core
+  data, usage hints, and the `spriteBorder` metadata of `.png.meta`
+  sidecars. Bounds are left/top/right/bottom with exclusive right/bottom
+  edges; a missing core
   does not mean a translucent asset is empty.
 - `assets_contact_sheet.png`: all assets.
 - `assets_contact_sheet_usage_*.png`: grouped sheets. Prefer these first to

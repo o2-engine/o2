@@ -272,9 +272,11 @@ to right, then top to bottom; the last row may be incomplete. No child `align`
 or `vAlign` is allowed because grid cells have one owner. Use `offset` only for
 intentional visual nudges, or align artwork inside a cell.
 
-Unity creates `GridLayoutGroup` with FixedColumnCount. Changing the column
-count, cell size, or spacing there triggers native reflow. Resolution changes
-do not automatically select a different column count. `responsive` belongs on
+The o2 prototype makes a native `GridLayout` with that column count when the
+grid has one spacing for both axes and no per-cell offsets; changing the
+column count, cell size, or spacing there triggers native reflow. Any other grid
+is baked as positions. Resolution changes do not automatically select a
+different column count. `responsive` belongs on
 the grid container, not its layout-driven direct children. List/listItem roles
 are available when the grid is a data collection, independent of scrolling.
 
@@ -344,7 +346,7 @@ position and size.
 "nineSlice": { "left": 30, "top": 24, "right": 30, "bottom": 40 }
 ```
 
-When sliced assets come from Unity and include sidecar `.png.meta` files,
+When sliced assets include sidecar `.png.meta` files with sprite borders,
 `render_comparison.py` reads `spriteBorder` automatically for
 `"nineSlice": true`, `"nineSlice": "auto"`, and `"nineSlice": "meta"`. Prefer
 that over hand-guessing margins; use an explicit object only when overriding

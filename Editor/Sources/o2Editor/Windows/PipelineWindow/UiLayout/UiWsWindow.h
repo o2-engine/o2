@@ -54,8 +54,8 @@ namespace Editor
     // corner (at least 860 x 520), maximized by its button or a double-click on the header; its size, the
     // maximized state and the side panels' widths (the dividers drag, a double-click gives the default
     // back; the stage keeps 280 px) are kept in the pipeline work folder's ViewPrefs.json. The header: the
-    // title, the screen's name and size, the kit coverage chip with its popover, undo / redo, the export
-    // target, Download, maximize and close. The keys while the window has the focus: Escape (the peek, then
+    // title, the screen's name and size, the kit coverage chip with its popover, undo / redo, Save to project,
+    // maximize and close. The keys while the window has the focus: Escape (the peek, then
     // the window), Cmd/Ctrl+Z / Shift+Z / Y, Delete, F2, F, the arrows (Shift: 10), Space + drag
     // -----------------------------------------------------------------------------------------------
     class UiWsWindow : public UiWsPanel, public KeyboardEventsListener
@@ -63,7 +63,7 @@ namespace Editor
     public:
         Function<void()>                                   onClosed;   // Called when the window closes
         Function<void(const String& prompt, const String&)> onSend;     // The agent request (prompt, selected block)
-        Function<void()>                                   onDownload; // Download pressed (none: the button is disabled)
+        Function<void()>                                   onSave;     // Save to project pressed (none: the button is disabled)
 
     public:
         // Default constructor

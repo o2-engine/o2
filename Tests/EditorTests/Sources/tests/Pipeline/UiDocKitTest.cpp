@@ -101,7 +101,7 @@ TEST(UiDocKit, AGraphicsScaleAndDesignSizeScreensMetByDpiOrBySize)
     EXPECT_EQ(KitScale(std::nullopt, std::nullopt), 1);
     EXPECT_EQ(KitScale(480.0, 960.0), 0.5);
     EXPECT_EQ(DesignSize(480.0, 400, 120, 960.0), (UiSize{ 200, 60 }));
-    // Every screen is met by Unity's Expand: the design fitted in whole, the room left over added to the canvas (the mode of
+    // Every screen is met by the Expand fit: the design fitted in whole, the room left over added to the canvas (the mode of
     // an older view state means nothing now)
     EXPECT_EQ(PreviewFrame(1080, 1920, 480.0, UiScreen{ 1179, 2556, 460 }, "dpi"), (UiFrame{ 1080, 2341, 1179.0/1080 }));
     EXPECT_EQ(PreviewFrame(1080, 1920, 480.0, UiScreen{ 1179, 2556, 460 }, "fit"), (UiFrame{ 1080, 2341, 1179.0/1080 }));

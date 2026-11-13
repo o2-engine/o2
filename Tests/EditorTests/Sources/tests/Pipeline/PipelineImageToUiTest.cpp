@@ -414,7 +414,7 @@ TEST(ImageToUiAssets, TheSpritesNoteAndTheNineSliceMeta)
     UiBackdrop color;
     color.kind = "color";
     color.color = "#F0E6D2";
-    EXPECT_EQ(SpritesNote(files, color), intro + " 1 stretchable sprite(s) carry Unity nine-slice borders in their .png.meta "
+    EXPECT_EQ(SpritesNote(files, color), intro + " 1 stretchable sprite(s) carry nine-slice borders in their .png.meta "
               "(has_meta_border in the inventory). The backdrop is a flat colour #F0E6D2; there is no sprite for it.");
     UiBackdrop plate;
     plate.kind = "image";

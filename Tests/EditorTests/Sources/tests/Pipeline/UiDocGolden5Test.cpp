@@ -7,15 +7,14 @@
 #include "o2Editor/Pipeline/UiDoc/UiDocFromStructure.h"
 #include "o2Editor/Pipeline/UiDoc/UiDocRotate.h"
 #include "o2Editor/Pipeline/UiDoc/UiDocSolve.h"
-#include "o2Editor/Pipeline/UiDoc/UiUnityExport.h"
 #include "o2Editor/Pipeline/UiLayout/UiLayoutAgentRun.h"
 #include "o2Editor/Pipeline/UiLayout/UiLayoutMarkup.h"
 
 #include "UiDocGolden5.inc"
 
 // Round 5 of the golden checks: turned layout blocks (AssetsLine shared/uiDoc/rotate.ts) - the turn as a property, the
-// maths, the hit test through turns, ui_structure.json's `rotation` and back, the Unity prefab of a turned block, keepTurns
-// after the skill pass and the markup's rule for tilted elements; the web's outputs for the same inputs, made by
+// maths, the hit test through turns, ui_structure.json's `rotation` and back, keepTurns after the skill
+// pass and the markup's rule for tilted elements; the web's outputs for the same inputs, made by
 // UiDocGolden/cases5.mts. Numbers that go through sin / cos are compared to 1e-9 (V8's libm and this one may differ in the
 // last bit); everything written out is compared exactly
 namespace
@@ -189,33 +188,6 @@ TEST(UiDocGolden5, TheStructureCarriesTheTurnAndReadsItBack)
         in.structure = ParseText(st.json);
         in.dpi = 480;
         EXPECT_STR_EQ(DocToJson(FromUiStructure(in).doc).Dump(), S(c, "back"));
-    }
-}
-
-TEST(UiDocGolden5, TheUnityPrefabTurnsAboutACentredPivotLikeTheWebs)
-{
-    ASSERT_EQ(G5("unity").Count(), 4);
-    int i = 0;
-    for (auto& c : G5("unity").Items())
-    {
-        UiDoc doc = ParseUiml(S(c, "src")).doc;
-        UiExportInput input;
-        input.name = doc.name;
-        input.folder = "Generated/UI";
-        input.layout = ToUiStructure(doc, nullptr).json;
-        input.seed = "t" + String(i/2);
-        input.canvasFit = S(c, "canvasFit");
-        auto res = ExportUnity(input);
-        ASSERT_TRUE(res.ok) << res.error.Data();
-        String prefab;
-        for (auto& f : res.files)
-        {
-            if (f.path.EndsWith(".prefab"))
-                prefab = f.data;
-        }
-        EXPECT_STR_EQ(prefab, S(c, "prefab")) << S(c, "src").Data() << " " << S(c, "canvasFit").Data();
-        EXPECT_EQ(res.warnings, Strings(M(c, "warnings")));
-        i++;
     }
 }
 

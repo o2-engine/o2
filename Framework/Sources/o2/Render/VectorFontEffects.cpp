@@ -86,8 +86,23 @@ namespace o2
 
     void FontShadowEffect::Process(Bitmap& bitmap)
     {
+        // The shadow takes the glyph's coverage, not its colours: a fill or an outline before it never tints it
         Bitmap shadow(bitmap);
-        shadow.Colorise(color);
+        if (shadow.GetFormat() == PixelFormat::R8G8B8A8)
+        {
+            UInt8* data = shadow.GetData();
+            Vec2I size = shadow.GetSize();
+            for (int i = 0; i < size.x*size.y; i++)
+            {
+                Color4 c;
+                c.SetABGR(*(Color32Bit*)(data + i*4));
+                Color4 s = color;
+                s.a = c.a*color.a/255;
+                *(Color32Bit*)(data + i*4) = s.ABGR();
+            }
+        }
+        else
+            shadow.Colorise(color);
         shadow.Blur(blurRadius);
         bitmap.BlendImage(shadow, offset);
     }

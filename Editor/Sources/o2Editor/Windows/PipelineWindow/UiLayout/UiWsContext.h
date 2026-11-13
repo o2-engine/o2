@@ -55,7 +55,6 @@ namespace Editor
         bool   showIds = false;
         bool   review = true;
         String draft;     // The agent request being typed (uiDraft)
-        String exportFor; // unity | o2 | json
 
         Vector<UiDoc::UiStepPoint> points;  // The points the request names as [1], [2]... (uiPoints, design pixels)
         bool                       pinning = false; // The point tool is on: a click on the stage places a point
@@ -119,7 +118,7 @@ namespace Editor
         // Shows the screen after k steps (-1: now)
         void SetPeek(int k);
 
-        // Writes a UI-only key (no undo step, no run): uiTab, uiView, uiShowIds, uiDraft, agentReview, agentModel, exportFor,
+        // Writes a UI-only key (no undo step, no run): uiTab, uiView, uiShowIds, uiDraft, agentReview, agentModel,
         // uiDevice... A null value writes null (as the web's update({key: null}))
         void SetUi(const String& key, const UiDoc::Json& value);
 

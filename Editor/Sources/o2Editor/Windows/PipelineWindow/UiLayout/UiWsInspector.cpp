@@ -333,7 +333,7 @@ namespace Editor
             section(inLayout ? "Placed by the parent's " + Ws::TypeLabel(*parent->layout) : String("Placement"));
             if (!inLayout)
             {
-                // Unity's presets: columns left / centre / right / ↔, rows top / middle / bottom / ↕
+                // The anchor presets: columns left / centre / right / ↔, rows top / middle / bottom / ↕
                 RectF r = row("Anchor", narrow ? 166.0f : 200.0f);
                 float cell = narrow ? 32.0f : 40.0f, gap = narrow ? 2.0f : 3.0f, head = narrow ? 26.0f : 30.0f;
                 float gw = 4 + head + 4*(cell + gap) + 8 - gap + 3, gh = 6 + 14 + 4*(cell + gap) + 8 - gap + 3;

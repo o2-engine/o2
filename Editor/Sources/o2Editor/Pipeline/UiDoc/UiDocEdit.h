@@ -4,7 +4,7 @@
 #include "o2Editor/Pipeline/UiDoc/UiDocSolve.h"
 
 // ------------------------------------------------------------------------------------------------
-// Hand edits on the layout's stage (port of AssetsLine shared/uiDoc/edit.ts - Unity's rect tool in spirit):
+// Hand edits on the layout's stage (port of AssetsLine shared/uiDoc/edit.ts - the scene editor's frame tool in spirit):
 // a block dragged, resized or re-anchored ends up as the props that put it there - the same anchor,
 // offsets, size and margins the agent writes - so the edit holds on other screens the way the block is
 // anchored. Inside a row / column / grid the parent places its children: a drag reorders them and a
@@ -47,7 +47,7 @@ namespace Editor::UiDoc
         double x0 = 0, y0 = 0, x1 = 0, y1 = 0;
     };
 
-    // Where the block's anchor sits in its parent's box (min / max, like Unity's anchors)
+    // Where the block's anchor sits in its parent's box (min / max, like o2's widget anchors)
     UiAnchorBox AnchorBox(const UiNode& n, const UiRect& p);
 
     // ------------------------------------------------------------
@@ -118,7 +118,7 @@ namespace Editor::UiDoc
     // (x / y) inside a row / column / grid; false when there is nothing to do
     bool NudgeOp(const UiDoc& doc, const UiRects& rects, const String& id, double dx, double dy, UiOp& out);
 
-    // A block moved to another parent keeps its place on the screen (Unity's worldPositionStays): the move ({op: "move",
+    // A block moved to another parent keeps its place on the screen: the move ({op: "move",
     // id, parent, before?, after?}), then the props that put it where it was when the new parent anchors its children
     // (into a row / column / grid its x / y are dropped instead)
     Vector<UiOp> ReparentOps(const UiDoc& doc, const UiRects& rects, const String& id, const String& parent,

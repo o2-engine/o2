@@ -1,6 +1,6 @@
 ---
 name: image-to-ui
-description: "Extract structured UI data from design images. Use when a UI screenshot or mockup plus sliced assets must become layout hierarchy, positions, text, asset references, and ui_structure.json for Unity/Cocos-style game UI. Trigger for UI analysis, screenshot/design to UI JSON, parse design, extract UI structure, Unity/Cocos UI configuration, or reconstruct UI from a design image and Sprite directory."
+description: "Extract structured UI data from design images. Use when a UI screenshot or mockup plus sliced assets must become layout hierarchy, positions, text, asset references, and ui_structure.json for game UI that becomes an o2 UI prototype. Trigger for UI analysis, screenshot/design to UI JSON, parse design, extract UI structure, o2 UI configuration, or reconstruct UI from a design image and Sprite directory."
 ---
 
 # Image to UI
@@ -16,8 +16,8 @@ debugging the skill itself.
 Require:
 
 - a PNG/JPG design at native resolution;
-- a directory of sliced PNG assets, optionally nested and accompanied by Unity
-  `.png.meta` files;
+- a directory of sliced PNG assets, optionally nested and accompanied by
+  `.png.meta` sidecar files with sprite borders;
 - a fresh output directory for this design.
 
 Keep each design in its own task folder. The workflow records input snapshots
@@ -88,10 +88,11 @@ Apply these rules:
    `position` only for free placement. Every `layout` object must declare
    `"type": "row"`, `"type": "column"`, or `"type": "grid"`. Use grid for
    repeated equal-size cells with explicit `cellSize`, `columns`, and x/y
-   spacing; see `references/schema.md`. Unity exports these as native
-   HorizontalLayoutGroup, VerticalLayoutGroup, and GridLayoutGroup without
-   LayoutElement. Distributed gaps are baked to reference-size spacing on
-   export; read `references/unity.md` before claiming runtime redistribution.
+   spacing; see `references/schema.md`. In the o2 prototype a grid with one
+   spacing for both axes and no per-cell offsets becomes a native GridLayout;
+   rows, columns, other grids and distributed gaps are baked as positions at
+   the reference size; read `references/o2.md` before claiming runtime
+   redistribution.
 5. Model composite controls as layered children and flat generated shapes as
    `rect` or `overlay`. Give the frame/base the control's outer bbox; keep an
    icon glyph at its own visible aspect ratio and center it inside the frame.
@@ -100,8 +101,9 @@ Apply these rules:
    bounds before assigning node geometry.
 6. Include the active UI surface and its scrim; omit unrelated scene content
    behind it.
-7. Use exact relative asset paths when basenames are duplicated. Prefer Unity
-   sprite-border metadata for stretchable panels and buttons.
+7. Use exact relative asset paths when basenames are duplicated. Prefer the
+   sprite-border metadata of the `.png.meta` sidecars for stretchable panels
+   and buttons.
 8. Treat a text element's bbox as its text box. Use `alignment` and
    `textVAlign` for visible-glyph alignment inside that box; use `align` and
    `vAlign` only to position the box inside its parent.
@@ -301,8 +303,8 @@ sets workflow status to `completed`.
 
 ## Deliver
 
-When a Unity Prefab is requested, read [references/unity.md](references/unity.md)
-for the optional UnityAgentBridge exporter and target-engine verification.
+Read [references/o2.md](references/o2.md) for how the editor turns
+`ui_structure.json` into an o2 prototype and what that export bakes or leaves out.
 
 Keep `ui_structure.json`, `comparison.png`, `reconstruction.png`, render/audit
 reports, review-risk report/evidence, `alignment_review.md`,

@@ -1,7 +1,9 @@
-# Hosting the image-to-UI agent (web, o2, Unity)
+# Hosting the image-to-UI agent (AssetsLine and the o2 editor)
 
 Every editor that has the **AI image to UI** node runs the same Python: the
-upstream skill (`upstream/image-to-ui`, never edited) and its agent
+upstream skill (`upstream/image-to-ui`; o2's copy has its texts edited to
+speak about o2, its scripts behave as upstream's - see
+`upstream/UPSTREAM.md`) and its agent
 (`agent/agent.py`). The editor (the *host*) does three things: it makes the
 skill's inputs, it answers the agent's model calls, and it turns the task
 folder into the node's outputs. The reference host is the AssetsLine server,
@@ -61,11 +63,13 @@ means install them — show that text to the user.
 "About the sliced assets: they were cut from this very design, one PNG per
 distinct piece of artwork, each at the size it appears, with the labels,
 numbers and other text drawn on it removed — the text belongs in text
-elements." + "N stretchable sprite(s) carry Unity nine-slice borders in their
+elements." + "N stretchable sprite(s) carry nine-slice borders in their
 .png.meta (has_meta_border in the inventory)." (when N > 0) + one of
 "`bg_backdrop.png` is the screen's backdrop with every UI element removed." /
 "The backdrop is a flat colour #RRGGBB; there is no sprite for it." /
 "There is no backdrop sprite: leave the area behind the UI empty."
+The o2 editor's middle sentence differs from the AssetsLine server's: the
+server names its target engine before "nine-slice", o2 names none.
 
 **Bridge** — read the agent's stdout line by line; only lines starting with
 `@@bridge ` matter:

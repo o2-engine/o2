@@ -2,7 +2,6 @@
 
 #include <cmath>
 #include <functional>
-#include <regex>
 
 #include "UiDocTestKit.h"
 
@@ -10,7 +9,7 @@
 #include "o2Editor/Pipeline/UiDoc/UiDocFromStructure.h"
 #include "o2Editor/Pipeline/UiDoc/UiDocRender.h"
 #include "o2Editor/Pipeline/UiDoc/UiDocRotate.h"
-#include "o2Editor/Pipeline/UiDoc/UiUnityExport.h"
+#include "o2Editor/Pipeline/UiDoc/UiDocStructure.h"
 #include "o2Editor/Pipeline/UiLayout/UiLayoutAgentRun.h"
 #include "o2Editor/Pipeline/UiLayout/UiLayoutDraft.h"
 #include "o2Editor/Pipeline/UiLayout/UiLayoutParse.h"
@@ -61,7 +60,7 @@ namespace
         Ref<Sprite> SpriteOf(const String& asset) override { return nullptr; }
         Ref<Sprite> WhiteSprite() override { return mmake<Sprite>(); }
         void SetFont(const Ref<Label>& label, const String& fontFile) override {}
-        void SetStroke(const Ref<Label>& label, const Color4& fill, const Color4& stroke, int radius) override {}
+        void SetLook(const Ref<Label>& label, const L::UiTextLook& look) override {}
     };
 }
 
@@ -213,7 +212,7 @@ TEST(UiDocRotation, ATiltedElementOfTheReferenceItsUprightSizeTheDraftTurnsItThe
     EXPECT_EQ(FindNode(rebuilt, "tile_a")->rotation, std::nullopt) << "the input is not changed";
 }
 
-TEST(UiDocRotation, TheExportTheStructureCarriesItAndReadsItBackUnityTurnsTheRectTransformAboutACentredPivot)
+TEST(UiDocRotation, TheStructureCarriesItAndReadsItBack)
 {
     UiDoc d = TurnedDoc();
     UiStructureResult st = ToUiStructure(d, nullptr);
@@ -240,33 +239,6 @@ TEST(UiDocRotation, TheExportTheStructureCarriesItAndReadsItBackUnityTurnsTheRec
     in.structure = json;
     in.dpi = 480;
     EXPECT_EQ(FindNode(FromUiStructure(in).doc, "tile")->rotation, std::optional<double>(-15));
-
-    auto prefabOf = [](const UiDoc& doc, const String& fit) {
-        UiExportInput input;
-        input.name = "S";
-        input.folder = "Generated/UI";
-        input.layout = ToUiStructure(doc, nullptr).json;
-        input.seed = "t";
-        input.canvasFit = fit;
-        auto res = ExportUnity(input);
-        EXPECT_TRUE(res.ok) << res.error.Data();
-        for (auto& f : res.files)
-        {
-            if (f.path.EndsWith(".prefab"))
-                return std::string(f.data);
-        }
-        return std::string();
-    };
-    std::string prefab = prefabOf(d, "expand");
-    // The card: -90 degrees about z (Unity turns counter-clockwise), pivot in the middle
-    EXPECT_TRUE(std::regex_search(prefab, std::regex(R"(m_LocalRotation: \{x: 0, y: 0, z: -0\.70710[0-9]*, w: 0\.70710[0-9]*\})")));
-    EXPECT_NE(prefab.find("m_LocalEulerAnglesHint: {x: 0, y: 0, z: -90}"), std::string::npos);
-    EXPECT_NE(prefab.find("m_LocalEulerAnglesHint: {x: 0, y: 0, z: 15}"), std::string::npos);
-    EXPECT_NE(prefab.find("m_ScreenMatchMode: 1"), std::string::npos) << "Expand";
-    // A layout without turns writes exactly what it did
-    std::string plain = prefabOf(ParseUiml("screen S 400x400\n  panel card anchor=center size=200x100").doc, "");
-    EXPECT_EQ(plain.find("z: -0.7"), std::string::npos);
-    EXPECT_NE(plain.find("m_ScreenMatchMode: 0"), std::string::npos);
 }
 
 TEST(UiDocRotation, TheO2PrototypeTurnsTheWidgetAboutACentredPivot)

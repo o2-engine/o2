@@ -7,7 +7,7 @@
 
 // ------------------------------------------------------------------------------------------------
 // Rotation of layout blocks (port of AssetsLine shared/uiDoc/rotate.ts). A block's `rotation` (degrees,
-// clockwise on the screen) turns it about the centre of its box - Unity's RectTransform with its pivot in
+// clockwise on the screen) turns it about the centre of its box - an o2 widget with its pivot in
 // the middle. The layout itself never sees it: boxes are solved as if nothing were turned (a row lays its
 // children out the same), and the turn is drawn on top; the blocks inside a turned block turn with it. So a
 // point on the screen is in a block when it is in the block's box after the turns of the block and of its

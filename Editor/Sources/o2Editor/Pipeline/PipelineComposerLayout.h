@@ -24,7 +24,7 @@ namespace Editor
     };
 
     // --------------------------------------------------------------------------------------------------------------
-    // Rules of the composer card shared with AssetsLine and the Unity plugin: the rows of the layers list the input
+    // Rules of the composer card shared with AssetsLine: the rows of the layers list the input
     // ports sit on, the size a layer's file is exported at, where a new layer lands and the screen-sized frame
     // --------------------------------------------------------------------------------------------------------------
     namespace PipelineComposerLayout

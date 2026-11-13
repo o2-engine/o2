@@ -26,7 +26,7 @@ namespace Editor
     };
 
     // --------------------------------------------------------------------------------------------------
-    // Input | result layout of the image-to-image nodes, the same as AssetsLine's and the Unity plugin's:
+    // Input | result layout of the image-to-image nodes, the same as AssetsLine's:
     // which nodes have it, the extract grid geometry, the height rules and the local view setting
     // --------------------------------------------------------------------------------------------------
     namespace PipelinePairLayout

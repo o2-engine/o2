@@ -16,6 +16,8 @@
 #include "o2/Utils/FileSystem/FileSystem.h"
 #include "o2/Utils/Types/UID.h"
 #include "o2Editor/Pipeline/PipelineUtils.h"
+#include "o2Editor/Pipeline/UiDoc/UiDocFonts.h"
+#include "o2Editor/Pipeline/UiDoc/UiTextStyle.h"
 #include "o2Editor/Pipeline/UiLayout/UiLayoutAgent.h"
 #include "o2Editor/Pipeline/UiLayout/UiLayoutWidgets.h"
 
@@ -115,21 +117,12 @@ namespace Editor::UiLayout
             WriteIfChanged(metaPath, meta.Dump(4));
         }
 
-        String HexOfColor(const Color4& c)
-        {
-            return HexOf(Rgb(c.r, c.g, c.b)).SubStr(1).ToLowerCase();
-        }
-
-        String StyleFile(const Color4& fill, const Color4& stroke, int radius)
-        {
-            return "stroke_" + HexOfColor(fill) + "_" + HexOfColor(stroke) + "_" + (String)radius + ".fntstyle";
-        }
-
         class ExportResources: public UiWidgetResources
         {
         public:
             String              resources; // <folder>/<name>_Resources
             Map<String, String> files;     // Sprite file by lower-case asset name
+            Map<String, String> fonts;     // The font file written for a font the plan names
 
             Ref<Sprite> SpriteOf(const String& asset) override
             {
@@ -152,12 +145,14 @@ namespace Editor::UiLayout
 
             void SetFont(const Ref<Label>& label, const String& fontFile) override
             {
-                label->SetFontAsset(AssetRef<VectorFontAsset>(resources + "/Fonts/" + fontFile));
+                String file = fontFile;
+                fonts.TryGetValue(fontFile, file);
+                label->SetFontAsset(AssetRef<VectorFontAsset>(resources + "/Fonts/" + file));
             }
 
-            void SetStroke(const Ref<Label>& label, const Color4& fill, const Color4& stroke, int radius) override
+            void SetLook(const Ref<Label>& label, const UiTextLook& look) override
             {
-                label->SetFontStyleAsset(AssetRef<FontStyleAsset>(resources + "/FontStyles/" + StyleFile(fill, stroke, radius)));
+                label->SetFontStyleAsset(AssetRef<FontStyleAsset>(resources + "/FontStyles/" + FontStyleFileOf(look)));
             }
 
         private:
@@ -176,6 +171,111 @@ namespace Editor::UiLayout
             while (HasSuffix(y, "/")) y = y.SubStr(0, y.Length() - 1);
             return x == y;
         }
+
+        // A file of the bundled UI fonts (a font or a licence): the layout renderer's fonts, else the editor's own copy
+        String BundledFontBytes(const String& file)
+        {
+            String home = ::Editor::UiDoc::UiFontsHome();
+            String bytes = home.IsEmpty() ? String() : PipelineUtils::ReadFileBytes(home + "/" + file);
+            if (!bytes.IsEmpty())
+                return bytes;
+
+            String editorFonts = FindRepoPath("o2/Editor/Assets/ui/pipeline/fonts");
+            editorFonts = editorFonts.IsEmpty() ? String(GetEditorAssetsPath()) + "ui/pipeline/fonts/" : editorFonts + "/";
+            return PipelineUtils::ReadFileBytes(editorFonts + file);
+        }
+
+        // The licence file of a bundled font's family, empty for a font outside the catalogue
+        String FontLicenceOf(const String& fontFile)
+        {
+            for (auto& font : ::Editor::UiDoc::UiFonts())
+            {
+                if (font.faces.Any([&](const ::Editor::UiDoc::UiFontFace& face) { return face.file == fontFile; }))
+                    return font.license;
+            }
+            return String();
+        }
+
+        Color4 LookColor(const String& hex, double opacity)
+        {
+            Color4 color = Color4::Black();
+            PipelineUtils::ParseHexColor(hex, color);
+            color.a = (int)JsRound(255*Math::Clamp(opacity, 0.0, 1.0));
+            return color;
+        }
+
+        int StrokeRadius(double width)
+        {
+            return Math::Max(1, (int)JsRound(width));
+        }
+
+        String HexOfColor(const String& hex)
+        {
+            Color4 c = LookColor(hex, 1);
+            return HexOf(Rgb(c.r, c.g, c.b)).SubStr(1).ToLowerCase();
+        }
+    }
+
+    Ref<FontStyle> FontStyleOf(const UiTextLook& look)
+    {
+        auto style = mmake<FontStyle>();
+        Color4 from = LookColor(look.fill, 1);
+        if (look.fillTo.IsEmpty())
+            style->AddEffect<FontColorEffect>(from);
+        else
+        {
+            // o2 runs a gradient over each glyph from its first colour, rows bottom-up; the direction goes to the nearest axis
+            Color4 to = LookColor(look.fillTo, 1);
+            double a = std::fmod(std::fmod(look.angle, 360.0) + 360.0, 360.0);
+            if (a >= 45 && a < 135)
+                style->AddEffect<FontGradientEffect>(to, from, 0.0f, 0.0f, Vec2F());
+            else if (a >= 225 && a < 315)
+                style->AddEffect<FontGradientEffect>(from, to, 0.0f, 0.0f, Vec2F());
+            else if (a >= 135 && a < 225)
+                style->AddEffect<FontGradientEffect>(to, from, -90.0f, 0.0f, Vec2F());
+            else
+                style->AddEffect<FontGradientEffect>(from, to, -90.0f, 0.0f, Vec2F());
+        }
+
+        for (auto& e : look.effects)
+        {
+            if (e.type == "stroke")
+                style->AddEffect<FontStrokeEffect>((float)StrokeRadius(e.width), LookColor(e.color, e.opacity), 100);
+            else
+            {
+                // A blur under one pixel copies the glyph as it is (a zero radius divides by zero)
+                style->AddEffect<FontShadowEffect>((float)Math::Max(0.5, e.blur), Vec2I((int)JsRound(e.x), (int)JsRound(e.y)),
+                                                   LookColor(e.color, e.opacity));
+            }
+        }
+        return style;
+    }
+
+    String FontStyleDataOf(const UiTextLook& look)
+    {
+        DataDocument data;
+        FontStyleOf(look)->Serialize(data);
+        return data.SaveAsString();
+    }
+
+    String FontStyleFileOf(const UiTextLook& look)
+    {
+        if (look.fillTo.IsEmpty() && look.effects.Count() == 1 && look.effects[0].type == "stroke" && look.effects[0].opacity >= 1)
+        {
+            return "stroke_" + HexOfColor(look.fill) + "_" + HexOfColor(look.effects[0].color) + "_" +
+                (String)StrokeRadius(look.effects[0].width) + ".fntstyle";
+        }
+
+        UInt64 h = 0xcbf29ce484222325ull;
+        String data = FontStyleDataOf(look);
+        for (int i = 0; i < data.Length(); i++)
+        {
+            h ^= (UInt64)(unsigned char)data[i];
+            h *= 0x100000001b3ull;
+        }
+        char buffer[17];
+        snprintf(buffer, sizeof(buffer), "%016llx", (unsigned long long)h);
+        return "text_" + String(buffer) + ".fntstyle";
     }
 
     Map<String, UiSpriteInfo> SpriteInfos(const Vector<ImageToUiSprite>& sprites)
@@ -273,66 +373,70 @@ namespace Editor::UiLayout
             }
         }
 
-        // Fonts: the Roboto files the layout names, with their licence
-        std::set<std::string> fonts;
-        Vector<Pair<String, int>> strokes;
+        // Fonts: every bundled font the labels use, with its family's licence (a font that cannot be read: Roboto instead)
+        Vector<String> fonts, licences;
+        Vector<UiTextLook> looks;
         for (auto& p : plan.nodes)
         {
             if (p.widget != "Label")
                 continue;
 
-            fonts.insert(p.fontFile.Data());
-            if (!p.strokeColor.IsEmpty())
-            {
-                Pair<String, int> stroke(p.color + "|" + p.strokeColor, Math::Max(1, (int)JsRound(p.strokeWidth)));
-                if (!strokes.Contains(stroke))
-                    strokes.Add(stroke);
-            }
+            if (!fonts.Contains(p.fontFile))
+                fonts.Add(p.fontFile);
+            if (p.look && !looks.Contains(*p.look))
+                looks.Add(*p.look);
         }
 
-        String fontSource = FindRepoPath("o2/Editor/Assets/ui/pipeline/fonts");
-        fontSource = fontSource.IsEmpty() ? String(GetEditorAssetsPath()) + "ui/pipeline/fonts/" : fontSource + "/";
         for (auto& font : fonts)
         {
-            String rel = resources + "/Fonts/" + String(font);
-            WriteIfChanged(root + rel, PipelineUtils::ReadFileBytes(fontSource + String(font)));
+            String file = font, bytes = BundledFontBytes(font);
+            if (bytes.IsEmpty())
+            {
+                file = FontFileOf(WeightOfFont(font));
+                bytes = BundledFontBytes(file);
+                res.warnings.Add(font + ": the bundled font is missing, its labels use " + file);
+            }
+            exportResources.fonts[font] = file;
+            if (bytes.IsEmpty())
+                continue;
+
+            String rel = resources + "/Fonts/" + file;
+            WriteIfChanged(root + rel, bytes);
             EnsureMeta(root + rel, "o2::VectorFontAsset::Meta", SeedUid(request.seed, rel));
+            if (!res.files.Contains(rel))
+                res.files.Add(rel);
+            String licence = FontLicenceOf(file);
+            if (!licence.IsEmpty() && !licences.Contains(licence))
+                licences.Add(licence);
+        }
+        for (auto& licence : licences)
+        {
+            String rel = resources + "/Fonts/" + licence;
+            WriteIfChanged(root + rel, BundledFontBytes(licence));
+            EnsureMeta(root + rel, "o2::DefaultAssetMeta<o2::BinaryAsset>", SeedUid(request.seed, rel));
             res.files.Add(rel);
         }
-        if (!fonts.empty())
+
+        // Text looks: one font style each, named by what it draws
+        if (!looks.IsEmpty())
         {
-            String rel = resources + "/Fonts/LICENSE-Roboto.txt";
-            WriteIfChanged(root + rel, PipelineUtils::ReadFileBytes(fontSource + "LICENSE-Roboto.txt"));
-            EnsureMeta(root + rel, "o2::DefaultAssetMeta<o2::BinaryAsset>", SeedUid(request.seed, rel));
+            o2FileSystem.FolderCreate(root + resources + "/FontStyles", true);
+            EnsureMeta(root + resources + "/FontStyles", "o2::DefaultAssetMeta<o2::FolderAsset>",
+                       SeedUid(request.seed, resources + "/FontStyles"));
+        }
+        for (auto& look : looks)
+        {
+            String rel = resources + "/FontStyles/" + FontStyleFileOf(look);
+            WriteIfChanged(root + rel, FontStyleDataOf(look));
+            EnsureMeta(root + rel, "o2::DefaultAssetMeta<o2::FontStyleAsset>", SeedUid(request.seed, rel));
+            res.files.Add(rel);
         }
 
         if (!SamePath(root, o2Assets.GetAssetsPath()))
         {
-            res.warnings.Add("the prototype is written by the editor whose assets these are: sprites and fonts written, the .proto not");
+            res.warnings.Add("the prototype is written by the editor whose assets these are: sprites, fonts and text styles written, the .proto not");
             res.ok = true;
             co_return res;
-        }
-
-        // Outline styles, made natively; one file per fill, stroke and radius
-        for (auto& stroke : strokes)
-        {
-            int bar = stroke.first.Find("|");
-            Color4 fill = Color4::Black(), color = Color4::Black();
-            PipelineUtils::ParseHexColor(stroke.first.SubStr(0, bar), fill);
-            PipelineUtils::ParseHexColor(stroke.first.SubStr(bar + 1), color);
-            fill.a = color.a = 255;
-
-            String rel = resources + "/FontStyles/" + StyleFile(fill, color, stroke.second);
-            res.files.Add(rel);
-            if (o2Assets.IsAssetExist(rel) || o2FileSystem.IsFileExist(root + rel))
-                continue;
-
-            o2FileSystem.FolderCreate(root + resources + "/FontStyles", true);
-            EnsureMeta(root + resources + "/FontStyles", "o2::DefaultAssetMeta<o2::FolderAsset>", SeedUid(request.seed, resources + "/FontStyles"));
-            auto style = mmake<FontStyleAsset>();
-            style->AddEffect<FontColorEffect>(fill);
-            style->AddEffect<FontStrokeEffect>((float)stroke.second, color, 100);
-            style->Save(rel);
         }
 
         o2Assets.RebuildAssets();
@@ -365,7 +469,11 @@ namespace Editor::UiLayout
 
             UiWidgetTree tree = BuildWidgets(plan, exportResources, options);
             UpdateWidgetTree(tree.root);
-            res.warnings = tree.warnings;
+            for (auto& warning : tree.warnings)
+            {
+                if (!res.warnings.Contains(warning))
+                    res.warnings.Add(warning);
+            }
             res.widgets = tree.widgets.Count();
 
             PushEditorScopeOnStack scope;

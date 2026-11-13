@@ -60,7 +60,7 @@ class AssetCache:
                     duplicates.add(name_key)
                 else:
                     self._index[name_key] = p
-                border = self._read_unity_sprite_border(p)
+                border = self._read_sprite_border(p)
                 if border:
                     self._border_file_count += 1
                     self._borders[rel_key] = border
@@ -77,10 +77,10 @@ class AssetCache:
         return self._index.get(filename.replace("\\", "/").lower())
 
     @staticmethod
-    def _read_unity_sprite_border(path: Path):
-        """Read Unity spriteBorder from the sidecar .meta file, if present.
+    def _read_sprite_border(path: Path):
+        """Read spriteBorder from the sidecar .meta file, if present.
 
-        Unity stores Sprite.border as x=left, y=bottom, z=right, w=top.
+        The sidecar stores the border as x=left, y=bottom, z=right, w=top.
         The renderer wants left/top/right/bottom.
         """
         meta_path = Path(str(path) + ".meta")
@@ -204,7 +204,7 @@ def effective_nine_slice_margins(
 
     def clamp_pair(first: int, second: int, source_extent: int,
                    target_extent: int) -> tuple[int, int]:
-        # Some Unity sprites intentionally use borders whose pair sums to the
+        # Some sprites intentionally use borders whose pair sums to the
         # full source dimension. PIL crop/resize needs a non-empty stretch
         # strip, so keep at least one source and target pixel for the center.
         source_limit = max(0, source_extent - 1)
@@ -292,7 +292,7 @@ def resolve_nine_slice_margins(nine_slice, src_w: int, src_h: int,
     """Convert `nineSlice` JSON value into explicit margins dict.
 
     Accepts:
-      - True / "auto" / "meta": use Unity .meta spriteBorder if present;
+      - True / "auto" / "meta": use the .meta spriteBorder if present;
                      otherwise use min(sw, sh) // 4, capped at 60 px
       - int N:       N pixels on all 4 sides
       - dict:        {"left": ..., "top": ..., "right": ..., "bottom": ...}
@@ -1046,7 +1046,7 @@ def main():
     print(f"Indexing assets: {assets_dir}")
     assets = AssetCache(assets_dir)
     print(f"  {assets._file_count} image files indexed")
-    print(f"  {assets._border_file_count} Unity sprite borders indexed")
+    print(f"  {assets._border_file_count} sprite borders indexed")
 
     global FONT_SEARCH_DIRS
     FONT_SEARCH_DIRS = [

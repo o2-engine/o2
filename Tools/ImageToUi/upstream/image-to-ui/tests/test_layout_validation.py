@@ -654,7 +654,7 @@ class StructureValidationTests(unittest.TestCase):
                     reporter.warnings,
                 )
 
-    def test_nine_slice_validates_unity_metadata_margins(self) -> None:
+    def test_nine_slice_validates_sidecar_metadata_margins(self) -> None:
         for left in ("-1", "nan", "inf"):
             with self.subTest(left=left):
                 (self.assets / "panel.png.meta").write_text(

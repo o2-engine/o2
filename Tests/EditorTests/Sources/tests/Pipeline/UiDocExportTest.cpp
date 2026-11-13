@@ -1,20 +1,15 @@
 #include "o2Editor/stdafx.h"
 
-#include <algorithm>
-#include <cstring>
 #include <functional>
-#include <map>
 
 #include "Network/NetworkTestHelpers.h"
+#include "o2/Render/VectorFontEffects.h"
+#include "o2/Utils/Bitmap/Bitmap.h"
 #include "o2/Utils/FileSystem/FileSystem.h"
 #include "o2Editor/Pipeline/PipelineUtils.h"
 #include "o2Editor/Pipeline/UiDoc/UiDocExport.h"
 #include "o2Editor/Pipeline/UiLayout/UiLayoutPixels.h"
-
-// zlib's global Byte clashes with o2::Byte once the o2 namespace is open
-#define Byte ZlibByte
-#include "3rdPartyLibs/zlib/zlib.h"
-#undef Byte
+#include "o2Editor/Pipeline/UiLayout/UiLayoutWidgets.h"
 
 #include "UiDocTestKit.h"
 
@@ -22,11 +17,11 @@
 
 using namespace UiDocTest;
 namespace PipelineUtils = Editor::PipelineUtils;
-namespace PipelineZip = Editor::PipelineZip;
 namespace UiLayout = Editor::UiLayout;
 
-// The AI UI layout's Download: the Unity package, the JSON zip and the o2 prototype's files against what the web makes
-// of the same layouts (UiDocExportRefs.inc, from UiDocGolden/export_refs.mts), and the entry point writing each target
+// The AI UI layout's Save to project: the o2 prototype's files with the uids the web derives (UiDocExportRefs.inc, from
+// UiDocGolden/export_refs.mts), the sprites at the layout's density, every font the styles use and the text looks as font
+// styles
 
 namespace
 {
@@ -43,11 +38,6 @@ namespace
             return out;
         }();
         return refs;
-    }
-
-    const Json& E(const char* key)
-    {
-        return M(Refs(), key);
     }
 
     // The kit of a structure case, as the golden script made it
@@ -77,96 +67,6 @@ namespace
         return nullptr;
     }
 
-    // The fonts as the golden script stands them in
-    Vector<UiExportFont> FakeFonts(const Json& files)
-    {
-        Vector<UiExportFont> out;
-        for (auto& f : files.Items())
-            out.Add({ f.Str(), "FONT " + f.Str() });
-        return out;
-    }
-
-    std::string Bytes(const String& s)
-    {
-        return std::string(s.Data(), s.Length());
-    }
-
-    std::string Gunzip(const String& bytes)
-    {
-        z_stream zs;
-        std::memset(&zs, 0, sizeof(zs));
-        if (inflateInit2(&zs, 15 + 32) != Z_OK)
-            return std::string();
-        std::string out;
-        char buffer[65536];
-        zs.next_in = (Bytef*)bytes.Data();
-        zs.avail_in = (uInt)bytes.Length();
-        int status = Z_OK;
-        while (status == Z_OK)
-        {
-            zs.next_out = (Bytef*)buffer;
-            zs.avail_out = sizeof(buffer);
-            status = inflate(&zs, Z_NO_FLUSH);
-            out.append(buffer, sizeof(buffer) - zs.avail_out);
-        }
-        inflateEnd(&zs);
-        return status == Z_STREAM_END ? out : std::string();
-    }
-
-    struct TarItem
-    {
-        std::string name, header, data;
-    };
-
-    std::vector<TarItem> ReadTar(const std::string& tar)
-    {
-        std::vector<TarItem> out;
-        for (size_t o = 0; o + 512 <= tar.size();)
-        {
-            std::string header = tar.substr(o, 512);
-            if (header.find_first_not_of('\0') == std::string::npos)
-                break;
-            std::string name = header.substr(0, 100).c_str();
-            size_t size = std::stoul(header.substr(124, 11), nullptr, 8);
-            out.push_back({ name, header, tar.substr(o + 512, size) });
-            o += 512 + (size + 511) / 512 * 512;
-        }
-        return out;
-    }
-
-    // The files of an export against the web's: paths in order, texts as they are, PNGs byte for byte (a baked hue by
-    // its pixels: the encoders differ)
-    void ExpectFiles(const UiExportFiles& got, const Json& expected)
-    {
-        ASSERT_TRUE(got.ok) << got.error.Data();
-        auto& files = M(expected, "files").Items();
-        ASSERT_EQ(got.files.Count(), files.Count());
-        for (int i = 0; i < files.Count(); i++)
-        {
-            String path = files[i].At(0)->Str();
-            const String& want = files[i].At(1)->Str();
-            EXPECT_STR_EQ(got.files[i].path, path);
-            bool binary = UiLayout::HasSuffix(path, ".png") || UiLayout::HasSuffix(path, ".ttf") || UiLayout::HasSuffix(path, ".otf");
-            if (!binary)
-            {
-                EXPECT_STR_EQ(got.files[i].data, want) << path.Data();
-                continue;
-            }
-            const Json* pixels = M(expected, "pixels").Get(path);
-            if (!pixels)
-            {
-                EXPECT_TRUE(Bytes(got.files[i].data) == Bytes(PipelineUtils::Base64Decode(want))) << path.Data();
-                continue;
-            }
-            UiLayout::UiImage img;
-            ASSERT_TRUE(UiLayout::UiImage::Decode(got.files[i].data, img)) << path.Data();
-            String raw = PipelineUtils::Base64Decode(pixels->Str());
-            ASSERT_EQ((size_t)raw.Length(), img.data.size()) << path.Data();
-            EXPECT_EQ(0, std::memcmp(raw.Data(), img.data.data(), img.data.size())) << path.Data();
-        }
-        EXPECT_EQ(got.warnings, Strings(M(expected, "warnings")));
-    }
-
     struct WorkDir
     {
         String path;
@@ -192,233 +92,98 @@ namespace
         return co.GetResult();
     }
 
-    UiLayoutExportRequest RequestFor(const char* caseName, const String& target)
+    UiLayoutExportRequest RequestFor(const char* caseName)
     {
         const Json* c = StructureCase(caseName);
         UiLayoutExportRequest request;
         request.doc = Parse(S(*c, "src"));
         if (!M(*c, "kit").IsNull())
             request.kit = StructureKit(M(*c, "kit"));
-        request.target = target;
         request.nodeId = "node_o2";
         return request;
     }
-}
 
-TEST(UiDocExport, TargetsFileNamesAndFontNotes)
-{
-    Json config;
-    ASSERT_TRUE(Json::Parse("{\"exportFor\":\"o2\"}", config));
-    EXPECT_STR_EQ(ExportTargetOf(config), "o2");
-    ASSERT_TRUE(Json::Parse("{\"exportFor\":\"json\"}", config));
-    EXPECT_STR_EQ(ExportTargetOf(config), "json");
-    ASSERT_TRUE(Json::Parse("{\"exportFor\":\"godot\"}", config));
-    EXPECT_STR_EQ(ExportTargetOf(config), "unity");
-    EXPECT_STR_EQ(ExportTargetOf(Json::Object()), "unity");
-
-    UiDoc doc = Parse("screen Main Menu 100x100");
-    EXPECT_STR_EQ(ExportFileName(doc, "unity"), doc.name + ".unitypackage");
-    EXPECT_STR_EQ(ExportFileName(doc, "o2"), doc.name + "_o2.zip");
-    EXPECT_STR_EQ(ExportFileName(doc, "json"), doc.name + ".zip");
-    EXPECT_STR_EQ(ExportFileName(doc, "x"), doc.name + ".unitypackage");
-
-    UiStructureResult st;
-    st.fonts = { "Roboto-Bold.ttf", "Lobster-Regular.ttf" };
-    EXPECT_EQ(O2FontNotes(st), Vector<String>({ "Lobster-Regular.ttf: the o2 export draws it with Roboto for now" }));
-}
-
-TEST(UiDocExport, UnityFloatsAndGuidsAreTheWebs)
-{
-    // JSON writes -0 as 0: the web's "-0" is for -0
-    for (auto& f : E("floats").Items())
+    // A kit whose title style is Lobster with a gradient, an outline, a drop shadow, a glow and an inner shadow
+    UiKit StyledKit()
     {
-        double x = f.At(1)->Str() == "-0" ? -0.0 : f.At(0)->Num();
-        EXPECT_STR_EQ(UnityFloat(x), f.At(1)->Str()) << x;
+        return ParseKit(R"({"name":"k","elements":[],"textStyles":[{"name":"title","role":"title","font":"Lobster","weight":400,
+            "size":64,"color":"#FFF0A0","fill":{"angle":90,"stops":[{"color":"#FFF0A0","at":0},{"color":"#FF8000","at":1}]},
+            "effects":[{"type":"stroke","color":"#402000","width":4,"opacity":1},
+                       {"type":"shadow","color":"#000000","x":0,"y":6,"blur":4,"spread":0,"opacity":0.5},
+                       {"type":"glow","color":"#FFFFFF","size":8,"opacity":0.8},
+                       {"type":"innerShadow","color":"#000000","x":0,"y":2,"blur":2,"opacity":0.5}]}]})");
     }
-    for (auto& g : E("guids").Items())
-        EXPECT_STR_EQ(UnityGuid(g.At(0)->Str()), g.At(1)->Str());
-}
 
-TEST(UiDocExport, GoldenUnityExportOfTheLayoutsStructures)
-{
-    for (auto& c : E("unity").Items())
+    UiDoc StyledDoc()
     {
-        SCOPED_TRACE(S(c, "name").Data());
-        const Json* sc = StructureCase(S(c, "name"));
-        ASSERT_TRUE(sc);
-        UiDoc doc = Parse(S(*sc, "src"));
-        UiKit kit;
-        if (!M(*sc, "kit").IsNull())
-            kit = StructureKit(M(*sc, "kit"));
-        auto st = ToUiStructure(doc, M(*sc, "kit").IsNull() ? nullptr : &kit);
+        return Parse("screen M 1000x600\n  text title anchor=top-left pos=100,100 size=800x160 style=title \"Forest\"");
+    }
 
-        // The fonts the package takes: the bundled files, every one found
-        Vector<String> missing;
-        Vector<String> names;
-        for (auto& f : UnityExportFonts(st, &missing))
-            names.Add(f.file);
-        EXPECT_EQ(names, Strings(M(c, "fonts")));
-        EXPECT_TRUE(missing.IsEmpty());
+    Json ParsedJson(const String& text)
+    {
+        Json out;
+        EXPECT_TRUE(Json::Parse(text, out)) << text.Data();
+        return out;
+    }
 
-        auto res = ExportUnity(UnityExportInput(doc, st, S(c, "assetPath"), "node_" + S(c, "name"), FakeFonts(M(c, "fonts"))));
-        if (M(c, "error").IsString())
+    const UiLayout::UiPlanNode* PlanNode(const UiLayout::UiWidgetPlan& plan, const String& name)
+    {
+        for (auto& p : plan.nodes)
         {
-            EXPECT_FALSE(res.ok);
-            EXPECT_STR_EQ(res.error, S(c, "error"));
-            continue;
+            if (p.name == name)
+                return &p;
         }
-        ExpectFiles(res, c);
+        return nullptr;
+    }
 
-        if (!M(c, "package").IsArray())
-            continue;
+    // Records the fonts and looks the builder gives the labels
+    class RecordingResources: public UiLayout::UiWidgetResources
+    {
+    public:
+        Vector<String>              fonts;
+        Vector<UiLayout::UiTextLook> looks;
 
-        // The package: the same tar entries (the order of the asset folders aside: the web sorts by locale)
-        String error;
-        String package = UnityPackage(res.files, &error);
-        ASSERT_FALSE(package.IsEmpty()) << error.Data();
-        auto entries = ReadTar(Gunzip(package));
-        ASSERT_EQ(entries.size(), (size_t)M(c, "package").Count());
-        std::map<std::string, const TarItem*> byName;
-        for (auto& e : entries)
-            byName[e.name] = &e;
-        for (auto& want : M(c, "package").Items())
-        {
-            std::string name = want.At(0)->Str().Data();
-            auto it = byName.find(name);
-            ASSERT_TRUE(it != byName.end()) << name;
-            EXPECT_TRUE(it->second->header == Bytes(PipelineUtils::Base64Decode(want.At(1)->Str()))) << name;
-            EXPECT_EQ(it->second->data.size(), (size_t)want.At(2)->Num()) << name;
-            if (want.At(3)->IsString())
-                EXPECT_EQ(it->second->data, std::string(want.At(3)->Str().Data())) << name;
-        }
-        EXPECT_STR_EQ(entries.back().name, "packagemanagermanifest/asset");
+        Ref<Sprite> SpriteOf(const String& asset) override { return nullptr; }
+        Ref<Sprite> WhiteSprite() override { return mmake<Sprite>(); }
+        void SetFont(const Ref<Label>& label, const String& fontFile) override { fonts.Add(fontFile); }
+        void SetLook(const Ref<Label>& label, const UiLayout::UiTextLook& look) override { looks.Add(look); }
+    };
+
+    String ColorHex(const Json& color)
+    {
+        char buffer[16];
+        snprintf(buffer, sizeof(buffer), "%02X%02X%02X%02X", (int)M(color, "r").Num(), (int)M(color, "g").Num(), (int)M(color, "b").Num(),
+                 (int)M(color, "a").Num());
+        return buffer;
     }
 }
 
-TEST(UiDocExport, GoldenUnityExportOfHandWrittenStructures)
+TEST(UiDocExport, TheFolderAndThePrototypePath)
 {
-    for (auto& c : E("unityHand").Items())
-    {
-        SCOPED_TRACE(S(c, "name").Data());
-        UiExportInput input;
-        input.name = S(c, "inputName");
-        input.folder = S(c, "folder");
-        input.layout = S(c, "layout");
-        input.seed = S(c, "seed");
-        input.fonts = FakeFonts(M(c, "fonts"));
-        for (auto& s : M(c, "sprites").Items())
-        {
-            UiExportSprite sprite;
-            sprite.file = S(s, "file");
-            sprite.png = PipelineUtils::Base64Decode(S(s, "b64"));
-            sprite.width = M(s, "width").Num();
-            sprite.height = M(s, "height").Num();
-            if (M(s, "nineSlice").IsObject())
-            {
-                const Json& n = M(s, "nineSlice");
-                sprite.nineSlice = UiNine{ M(n, "left").Num(), M(n, "top").Num(), M(n, "right").Num(), M(n, "bottom").Num() };
-            }
-            if (M(s, "density").IsNumber())
-                sprite.density = M(s, "density").Num();
-            if (M(s, "dpi").IsNumber())
-                sprite.dpi = M(s, "dpi").Num();
-            input.sprites.Add(sprite);
-        }
-
-        auto res = ExportUnity(input);
-        if (M(c, "error").IsString())
-        {
-            EXPECT_FALSE(res.ok);
-            EXPECT_STR_EQ(res.error, S(c, "error"));
-            continue;
-        }
-        ExpectFiles(res, c);
-    }
+    EXPECT_STR_EQ(ExportFolderOf(""), "Generated/UI");
+    EXPECT_STR_EQ(ExportFolderOf("  "), "Generated/UI");
+    EXPECT_STR_EQ(ExportFolderOf(" /My/Folder/ "), "My/Folder");
+    EXPECT_STR_EQ(ExportFolderOf("UI\\Screens\\"), "UI/Screens");
+    EXPECT_STR_EQ(ExportPrototypePathOf(Parse("screen Main 100x100"), ""), "Generated/UI/Main.proto");
+    EXPECT_STR_EQ(ExportPrototypePathOf(Parse("screen Main 100x100"), "UI/Menus"), "UI/Menus/Main.proto");
 }
 
-TEST(UiDocExport, GoldenJsonZipEntries)
-{
-    for (auto& c : E("json").Items())
-    {
-        SCOPED_TRACE(S(c, "name").Data());
-        const Json* sc = StructureCase(S(c, "name"));
-        ASSERT_TRUE(sc);
-        UiDoc doc = Parse(S(*sc, "src"));
-        UiKit kit;
-        if (!M(*sc, "kit").IsNull())
-            kit = StructureKit(M(*sc, "kit"));
-        auto st = ToUiStructure(doc, M(*sc, "kit").IsNull() ? nullptr : &kit);
-
-        Vector<String> missing;
-        auto entries = JsonExportEntries(doc, st, "preview-bytes", &missing);
-        EXPECT_TRUE(missing.IsEmpty());
-        auto& want = M(c, "entries").Items();
-        ASSERT_EQ(entries.Count(), want.Count());
-        for (int i = 0; i < want.Count(); i++)
-        {
-            String name = want[i].At(0)->Str();
-            const Json& value = *want[i].At(1);
-            EXPECT_STR_EQ(entries[i].name, name);
-            if (value.IsNumber())
-                EXPECT_EQ(entries[i].data.Length(), (int)value.Num()) << name.Data();
-            else if (UiLayout::HasSuffix(name, ".png") && name.Contains("/sprites/"))
-                EXPECT_TRUE(Bytes(entries[i].data) == Bytes(PipelineUtils::Base64Decode(value.Str()))) << name.Data();
-            else
-                EXPECT_STR_EQ(entries[i].data, value.Str()) << name.Data();
-        }
-    }
-}
-
-// The entry point the card and the workspace call: each target written where the request says
-TEST(UiDocExport, TheEntryPointWritesEachTarget)
-{
-    WorkDir work;
-
-    auto unity = RequestFor("screen_kitA", "unity");
-    unity.outputPath = work.path + "out/" + ExportFileName(unity.doc, "unity");
-    auto u = RunExport(unity);
-    ASSERT_TRUE(u.ok) << u.error.Data();
-    EXPECT_EQ(u.written, Vector<String>({ unity.outputPath }));
-    auto entries = ReadTar(Gunzip(PipelineUtils::ReadFileBytes(unity.outputPath)));
-    EXPECT_TRUE(std::any_of(entries.begin(), entries.end(), [](const TarItem& e) { return e.data == "Assets/Generated/UI/Menu.prefab"; }));
-    // The real fonts went in: the package is far larger than the stand-ins
-    EXPECT_GT(PipelineUtils::ReadFileBytes(unity.outputPath).Length(), 100000);
-
-    auto json = RequestFor("dpi_kit", "json");
-    json.outputPath = work.path + ExportFileName(json.doc, "json");
-    json.picture = "preview-bytes";
-    auto j = RunExport(json);
-    ASSERT_TRUE(j.ok) << j.error.Data();
-    Vector<PipelineZip::Entry> zip;
-    String error;
-    ASSERT_TRUE(PipelineZip::Read(PipelineUtils::ReadFileBytes(json.outputPath), zip, error)) << error.Data();
-    Vector<String> names;
-    for (auto& e : zip)
-        names.Add(e.name);
-    EXPECT_EQ(names, Vector<String>({ "M/ui_structure.json", "M/layout.uiml", "M/layout.json", "M/sprites/btn.png", "M/kit.json",
-                                      "M/fonts/Roboto-Bold.ttf", "M/fonts/LICENSE-Roboto.txt", "M/preview.png" }));
-
-    auto missingFile = RequestFor("screen_kitA", "unity");
-    auto none = RunExport(missingFile);
-    EXPECT_FALSE(none.ok);
-    EXPECT_STR_EQ(none.error, "no file to write the export to");
-}
-
-// The o2 target into a project's assets that are not the editor's: sprites, fonts and metas written with the uids the
-// web's o2 export derives from the node id, the .proto left to the editor that owns the assets
+// Into a project's assets that are not the editor's: sprites, fonts and metas written with the uids the web's o2 export
+// derives from the node id, the .proto left to the editor that owns the assets
 TEST(UiDocExport, TheO2ExportWritesTheResourcesWithTheWebsUids)
 {
     WorkDir work;
-    auto o2 = RequestFor("screen_kitA", "o2");
-    o2.assetsPath = work.path;
-    auto res = RunExport(o2);
+    auto request = RequestFor("screen_kitA");
+    request.assetsPath = work.path;
+    auto res = RunExport(request);
     ASSERT_TRUE(res.ok) << res.error.Data();
     EXPECT_TRUE(res.prototype.IsEmpty());
     EXPECT_TRUE(res.warnings.Any([](const String& w) { return w.Contains("the .proto not"); }));
     EXPECT_TRUE(res.written.Contains("Generated/UI/Menu_Resources/Sprites/btn_red.png"));
+    EXPECT_TRUE(res.written.Contains("Generated/UI/Menu_Resources/Fonts/LICENSE-Roboto.txt"));
 
     int compared = 0;
-    for (auto& f : M(E("o2"), "files").Items())
+    for (auto& f : M(M(Refs(), "o2"), "files").Items())
     {
         String path = f.At(0)->Str().SubStr(7); // Without "Assets/"
         String meta = PipelineUtils::ReadFileBytes(work.path + path);
@@ -444,7 +209,7 @@ TEST(UiDocExport, TheO2ExportResamplesDenserSprites)
     ASSERT_TRUE(st.sprites[0].density);
     EXPECT_EQ(*st.sprites[0].density, 2);
 
-    auto request = O2ExportRequest(doc, st, "", "/x/", "seed");
+    auto request = PrototypeRequest(doc, st, "", "/x/", "seed");
     EXPECT_STR_EQ(request.folder, "Generated/UI");
     EXPECT_STR_EQ(request.seed, "seed");
     ASSERT_EQ(request.sprites.Count(), 1);
@@ -472,4 +237,169 @@ TEST(UiDocExport, TheO2ExportResamplesDenserSprites)
     ASSERT_TRUE(node);
     EXPECT_EQ(M(M(*node, "nineSlice"), "left").Num(), 20);
     EXPECT_EQ(M(M(*node, "nineSlice"), "bottom").Num(), 20);
+}
+
+// A style in another bundled font: the font file and its family's licence go into the prototype's Fonts with metas, and
+// the label is set to it; a font outside the bundled set is still drawn with Roboto, said in a warning
+TEST(UiDocExport, FontsBeyondRobotoAreShippedWithTheirLicencesAndUsed)
+{
+    EXPECT_STR_EQ(UiLayout::BundledFontOf("fonts/lobster-regular.TTF"), "Lobster-Regular.ttf");
+    EXPECT_STR_EQ(UiLayout::BundledFontOf("FiraSans-Black.ttf"), "FiraSans-Black.ttf");
+    EXPECT_STR_EQ(UiLayout::BundledFontOf("Cairo-Black 1.ttf"), "");
+
+    WorkDir work;
+    UiLayoutExportRequest request;
+    request.doc = StyledDoc();
+    request.kit = StyledKit();
+    request.nodeId = "node_fonts";
+    request.assetsPath = work.path;
+    auto res = RunExport(request);
+    ASSERT_TRUE(res.ok) << res.error.Data();
+
+    String fonts = work.path + "Generated/UI/M_Resources/Fonts/";
+    EXPECT_GT(PipelineUtils::ReadFileBytes(fonts + "Lobster-Regular.ttf").Length(), 10000);
+    EXPECT_GT(PipelineUtils::ReadFileBytes(fonts + "LICENSE-Lobster.txt").Length(), 100);
+    EXPECT_STR_EQ(S(ParsedJson(PipelineUtils::ReadFileBytes(fonts + "Lobster-Regular.ttf.meta")), "Type"), "o2::VectorFontAsset::Meta");
+    EXPECT_FALSE(o2FileSystem.IsFileExist(fonts + "Roboto-Regular.ttf")) << "only the fonts the labels use";
+    for (auto& w : res.warnings)
+        EXPECT_FALSE(w.Contains("drawn with") || w.Contains("missing")) << w.Data();
+
+    // The label is set to the font the prototype ships
+    auto st = ToUiStructure(request.doc, &*request.kit);
+    auto proto = PrototypeRequest(request.doc, st, "", work.path, "node_fonts");
+    UiLayout::UiWidgetPlan plan;
+    String error;
+    ASSERT_TRUE(UiLayout::PlanWidgets(ParsedJson(proto.layout), UiLayout::SpriteInfos(proto.sprites), plan, &error)) << error.Data();
+    auto title = PlanNode(plan, "title");
+    ASSERT_TRUE(title);
+    EXPECT_STR_EQ(title->fontFile, "Lobster-Regular.ttf");
+    RecordingResources resources;
+    UiLayout::BuildWidgets(plan, resources, UiLayout::UiWidgetOptions());
+    EXPECT_EQ(resources.fonts, Vector<String>({ "Lobster-Regular.ttf" }));
+
+    // A font the bundled set does not have
+    Json unknown = ParsedJson(R"({"canvas":{"name":"S","width":200,"height":100},"root":{"name":"S","type":"container",
+        "position":{"x":0,"y":0},"size":{"width":200,"height":100},"children":[{"name":"t","type":"text","text":"Hi",
+        "fontFamily":"Cairo-Black 1.ttf","fontSize":20,"position":{"x":0,"y":0},"size":{"width":200,"height":100}}]}})");
+    ASSERT_TRUE(UiLayout::PlanWidgets(unknown, {}, plan, &error)) << error.Data();
+    EXPECT_STR_EQ(PlanNode(plan, "t")->fontFile, "Roboto-Bold.ttf");
+    EXPECT_TRUE(plan.warnings.Contains("root/t: font Cairo-Black 1.ttf drawn with Roboto-Bold.ttf")) << plan.warnings.Count();
+}
+
+// The style's gradient fill, outline, drop shadow and glow become the effects of one font style the label uses; an inner
+// shadow, which o2's font styles cannot draw, is a warning. The structure the web compares stays without them
+TEST(UiDocExport, GradientOutlineShadowAndGlowLandInTheFontStyle)
+{
+    UiDoc doc = StyledDoc();
+    UiKit kit = StyledKit();
+    auto st = ToUiStructure(doc, &kit);
+    EXPECT_FALSE(st.json.Contains("textStyle")) << "ui_structure.json stays the web's";
+    Json look;
+    ASSERT_TRUE(st.textStyles.TryGetValue("title", look));
+    EXPECT_EQ(M(look, "effects").Count(), 4);
+
+    auto proto = PrototypeRequest(doc, st, "", "/x/", "seed");
+    UiLayout::UiWidgetPlan plan;
+    String error;
+    ASSERT_TRUE(UiLayout::PlanWidgets(ParsedJson(proto.layout), {}, plan, &error)) << error.Data();
+    auto title = PlanNode(plan, "title");
+    ASSERT_TRUE(title && title->look);
+    EXPECT_STR_EQ(title->look->fill, "#FFF0A0");
+    EXPECT_STR_EQ(title->look->fillTo, "#FF8000");
+    EXPECT_EQ(title->look->angle, 90);
+    ASSERT_EQ(title->look->effects.Count(), 3);
+    EXPECT_STR_EQ(title->look->effects[0].type, "stroke");
+    EXPECT_STR_EQ(title->look->effects[1].type, "shadow");
+    EXPECT_GT(title->look->effects[1].y, 0);
+    EXPECT_GT(title->look->effects[1].blur, 0);
+    EXPECT_STR_EQ(title->look->effects[2].type, "shadow");
+    EXPECT_EQ(title->look->effects[2].x, 0);
+    EXPECT_EQ(title->look->effects[2].y, 0);
+    EXPECT_GT(title->look->effects[2].blur, 0) << "a glow is a blurred shadow without an offset";
+    EXPECT_TRUE(plan.warnings.Contains("root/title: an inner shadow is not drawn: o2's font styles draw outlines and shadows outside "
+                                       "the letters"));
+
+    RecordingResources resources;
+    UiLayout::BuildWidgets(plan, resources, UiLayout::UiWidgetOptions());
+    ASSERT_EQ(resources.looks.Count(), 1);
+    EXPECT_TRUE(resources.looks[0] == *title->look);
+
+    // Written into the assets: the font style file with its meta
+    WorkDir work;
+    UiLayoutExportRequest request;
+    request.doc = doc;
+    request.kit = kit;
+    request.nodeId = "node_looks";
+    request.assetsPath = work.path;
+    auto res = RunExport(request);
+    ASSERT_TRUE(res.ok) << res.error.Data();
+    String file = UiLayout::FontStyleFileOf(*title->look);
+    EXPECT_TRUE(file.StartsWith("text_") && file.EndsWith(".fntstyle")) << file.Data();
+    String rel = "Generated/UI/M_Resources/FontStyles/" + file;
+    EXPECT_TRUE(res.written.Contains(rel));
+    EXPECT_STR_EQ(S(ParsedJson(PipelineUtils::ReadFileBytes(work.path + rel + ".meta")), "Type"), "o2::DefaultAssetMeta<o2::FontStyleAsset>");
+
+    Json style = ParsedJson(PipelineUtils::ReadFileBytes(work.path + rel));
+    auto& effects = M(style, "mEffects").Items();
+    ASSERT_EQ(effects.Count(), 4);
+    EXPECT_STR_EQ(S(effects[0], "Type"), "o2::FontGradientEffect");
+    const Json& gradient = M(effects[0], "Value");
+    EXPECT_STR_EQ(ColorHex(M(gradient, "color1")), "FF8000FF") << "rows run bottom-up: the bottom colour first";
+    EXPECT_STR_EQ(ColorHex(M(gradient, "color2")), "FFF0A0FF");
+    EXPECT_EQ(M(gradient, "angle").Num(), 0);
+    EXPECT_STR_EQ(S(effects[1], "Type"), "o2::FontStrokeEffect");
+    EXPECT_STR_EQ(ColorHex(M(M(effects[1], "Value"), "color")), "402000FF");
+    EXPECT_GE(M(M(effects[1], "Value"), "radius").Num(), 1);
+    EXPECT_STR_EQ(S(effects[2], "Type"), "o2::FontShadowEffect");
+    EXPECT_STR_EQ(ColorHex(M(M(effects[2], "Value"), "color")), "00000080");
+    EXPECT_EQ(M(M(M(effects[2], "Value"), "offset"), "x").Num(), 0);
+    EXPECT_GT(M(M(M(effects[2], "Value"), "offset"), "y").Num(), 0) << "down the screen";
+    EXPECT_STR_EQ(S(effects[3], "Type"), "o2::FontShadowEffect");
+    EXPECT_STR_EQ(ColorHex(M(M(effects[3], "Value"), "color")), "FFFFFFCC");
+    EXPECT_EQ(M(M(M(effects[3], "Value"), "offset"), "y").Num(), 0);
+
+    // An outline alone keeps its readable name; other gradient directions go to the nearest axis
+    UiLayout::UiTextLook outline;
+    outline.fill = "#FFFFFF";
+    UiLayout::UiTextEffect stroke;
+    stroke.type = "stroke";
+    stroke.color = "#000000";
+    stroke.width = 2.4;
+    outline.effects.Add(stroke);
+    EXPECT_STR_EQ(UiLayout::FontStyleFileOf(outline), "stroke_ffffff_000000_2.fntstyle");
+    UiLayout::UiTextLook across;
+    across.fill = "#FF0000";
+    across.fillTo = "#0000FF";
+    across.angle = 10;
+    auto acrossStyle = UiLayout::FontStyleOf(across);
+    auto acrossGradient = DynamicCast<FontGradientEffect>(acrossStyle->GetEffects()[0]);
+    ASSERT_TRUE(acrossGradient);
+    EXPECT_EQ(acrossGradient->angle, -90.0f) << "left to right";
+    EXPECT_EQ(acrossGradient->color1, Color4(255, 0, 0, 255));
+}
+
+// A shadow is drawn in its own colour from the glyph's coverage: a fill before it does not tint it
+TEST(UiDocExport, AShadowKeepsItsColourAfterAFill)
+{
+    Bitmap glyph(PixelFormat::R8G8B8A8, Vec2I(16, 16));
+    glyph.Fill(Color4(255, 255, 255, 0));
+    UInt8* data = glyph.GetData();
+    for (int y = 6; y < 10; y++)
+    {
+        for (int x = 2; x < 6; x++)
+        {
+            UInt8* p = data + (y*16 + x)*4;
+            p[0] = p[1] = p[2] = p[3] = 255;
+        }
+    }
+
+    FontColorEffect(Color4(255, 0, 0, 255)).Process(glyph);
+    FontShadowEffect(0.5f, Vec2I(6, 0), Color4(0, 0, 255, 255)).Process(glyph);
+    const UInt8* inside = data + (8*16 + 3)*4;
+    const UInt8* shadow = data + (8*16 + 10)*4;
+    EXPECT_EQ(inside[0], 255) << "the glyph stays red";
+    EXPECT_EQ(inside[2], 0);
+    EXPECT_EQ(shadow[0], 0) << "the shadow is blue, not red times blue";
+    EXPECT_EQ(shadow[2], 255);
+    EXPECT_EQ(shadow[3], 255);
 }

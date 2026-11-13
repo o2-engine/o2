@@ -5,6 +5,8 @@
 #include <cstdio>
 #include <cstdlib>
 
+#include "o2Editor/Pipeline/UiDoc/UiTextStyle.h"
+
 namespace Editor::UiLayout
 {
     namespace PyValue
@@ -621,6 +623,25 @@ namespace Editor::UiLayout
         if (f.Contains("medium"))
             return "medium";
         return "regular";
+    }
+
+    String BundledFontOf(const String& fontFamily)
+    {
+        String file = fontFamily.Trimed(" \t\r\n");
+        file.ReplaceAll("\\", "/");
+        int slash = file.FindLast("/");
+        if (slash >= 0)
+            file = file.SubStr(slash + 1);
+        String lower = file.ToLowerCase();
+        for (auto& font : ::Editor::UiDoc::UiFonts())
+        {
+            for (auto& face : font.faces)
+            {
+                if (face.file.ToLowerCase() == lower)
+                    return face.file;
+            }
+        }
+        return String();
     }
 
     int HeightPoints(double fontSize)

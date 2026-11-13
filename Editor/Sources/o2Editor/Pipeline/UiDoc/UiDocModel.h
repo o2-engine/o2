@@ -9,7 +9,7 @@
 
 // ------------------------------------------------------------------------------------------------
 // The AI UI layout's document (port of AssetsLine shared/uiDoc/model.ts): a screen as a tree of typed
-// blocks, adaptive the way Unity's RectTransform and HTML flex boxes are - every block is either placed
+// blocks, adaptive the way o2's widget layouts and HTML flex boxes are - every block is either placed
 // by its parent's layout (row / column / grid) or anchored inside its parent (a corner, an edge, the
 // centre, or stretched along an axis with margins). Nothing in it says how a block looks: a UI kit skins
 // it by kit=<name> or by the block's type.
@@ -117,7 +117,7 @@ namespace Editor::UiDoc
     // --------------------------------------------------------------------------------------------
     struct UiDoc
     {
-        String                name = "Screen";   // The prefab / prototype name on export
+        String                name = "Screen";   // The prototype's name when saved to the project
         double                width = 1080;      // Design resolution
         double                height = 1920;
         std::optional<double> dpi;               // Density of the design pixels; none = the base

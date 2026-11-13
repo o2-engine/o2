@@ -3,7 +3,7 @@ Inventory sliced UI assets before authoring ui_structure.json.
 
 Outputs:
   - assets_inventory.json: relative paths, sizes, alpha bounds, duplicate
-    basenames, Unity sprite borders, and simple usage hints.
+    basenames, sprite borders from .png.meta sidecars, and simple usage hints.
   - assets_contact_sheet.png: all thumbnails with labels for visual picking.
   - assets_contact_sheet_usage_*.png: smaller sheets grouped by likely usage.
 
@@ -43,7 +43,7 @@ def find_font(size: int) -> ImageFont.FreeTypeFont:
     return ImageFont.load_default()
 
 
-def read_unity_sprite_border(path: Path) -> dict[str, int] | None:
+def read_sprite_border(path: Path) -> dict[str, int] | None:
     meta_path = Path(str(path) + ".meta")
     if not meta_path.exists():
         return None
@@ -126,7 +126,7 @@ def collect_assets(assets_dir: Path) -> dict[str, Any]:
         except Exception as exc:
             print(f"  [warn] failed to read {rel}: {exc}", file=sys.stderr)
             continue
-        border = read_unity_sprite_border(path)
+        border = read_sprite_border(path)
         items.append({
             "path": rel,
             "basename": path.name,
@@ -307,7 +307,7 @@ def main() -> None:
     print(f"Wrote {json_path}")
     print(f"  contact sheets: {len(sheet_paths)} in {out_dir}")
     print(f"  image assets: {inventory['total_images']}")
-    print(f"  Unity sprite borders: {inventory['meta_border_count']}")
+    print(f"  sprite borders: {inventory['meta_border_count']}")
     print(f"  duplicate basenames: {duplicate_count}")
     if args.verbose:
         for sheet_name in sheet_paths:

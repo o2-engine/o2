@@ -7,8 +7,8 @@
 
 // ------------------------------------------------------------------------------------------------
 // The layout solver (port of AssetsLine shared/uiDoc/solve.ts): document + screen size -> a rectangle for
-// every block. The same function draws the cards, renders the node's picture and positions the exported
-// prefab, so a layout looks the same everywhere.
+// every block. The same function draws the cards, renders the node's picture and positions the saved
+// prototype, so a layout looks the same everywhere.
 // - a block whose parent has no layout is placed by its anchor: on a corner, edge or the centre it keeps
 //   its size and sits x / y away from that point (inwards); along a stretched axis it fills the parent
 //   minus its margins;

@@ -490,12 +490,10 @@ namespace Editor
         tool("uiws_close", "close", true, 14.0f);
         tool(mMax ? "uiws_restore" : "uiws_maximize", "max", true);
         sep();
-        float dlW = 10 + 13 + 6 + TextWidth("Download", 12.0f) + 10;
-        bool canDownload = onDownload && !mCtx->current.root.children.empty();
-        Button(RectF(rx - dlW, cy + 14, rx, cy - 14), "Download", "download", false, canDownload, "uiws_download");
-        rx -= dlW + 4;
-        Segments(RectF(rx - 170, cy + 14, rx, cy - 14), { { "unity", "Unity3D" }, { "o2", "o2" }, { "json", "JSON" } }, mCtx->exportFor, "export:");
-        rx -= 170 + 4;
+        float saveW = 10 + 13 + 6 + TextWidth("Save to project", 12.0f) + 10;
+        bool canSave = onSave && !mCtx->current.root.children.empty();
+        Button(RectF(rx - saveW, cy + 14, rx, cy - 14), "Save to project", "save", false, canSave, "uiws_download");
+        rx -= saveW + 4;
         sep();
         tool("uiws_redo", "redo", editable && !mCtx->redo.IsEmpty());
         tool("uiws_undo", "undo", editable && !mCtx->timeline.GetSteps().IsEmpty());
@@ -671,10 +669,8 @@ namespace Editor
             mCtx->Redo();
         else if (id == "cov")
             ToggleCoverage();
-        else if (id == "download" && onDownload)
-            onDownload();
-        else if (id.StartsWith("export:"))
-            mCtx->SetUi("exportFor", Json(id.SubStr(7)));
+        else if (id == "save" && onSave)
+            onSave();
         else if (id == "bring")
             mCtx->Bring();
     }

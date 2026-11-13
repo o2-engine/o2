@@ -21,7 +21,7 @@ namespace Editor
     // -----------------------------------------------------------------------------------------------
     // The workspace's stage (port of AssetsLine uiLayout/Stage.tsx): the screen on a board with a camera
     // (wheel zooms at the pointer, the middle / right button or Space + drag pans, the island has - / % /
-    // + / fit; F frames the selected block) and Unity's rect tool: a click selects the deepest block, a
+    // + / fit; F frames the selected block) and a rect tool: a click selects the deepest block, a
     // press inside the selection grabs it (a click there reaches the block under the pointer), a drag moves
     // it, the edges and corners resize it (Shift keeps the proportions, Alt resizes about the centre), edges
     // and centres snap to the parent and the siblings (Cmd / Ctrl: no snapping), the anchor's triangles go

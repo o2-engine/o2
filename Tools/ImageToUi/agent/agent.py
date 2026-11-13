@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """The agent side of the Image-To-UI skill, for AssetsLine's editors.
 
-The upstream skill (../upstream/image-to-ui, XuToWei/Image-To-UI, unmodified)
-is written for a coding agent with a shell: the agent reads SKILL.md, runs
-`workflow.py prepare / measure / check / target / preview / finalize`, opens
-the images and reports those commands write, writes ui_structure.json and
-alignment_review.md, and is done when finalize writes completion_report.json
-with "complete": true.
+The upstream skill (../upstream/image-to-ui, XuToWei/Image-To-UI; its texts
+speak about o2, its scripts behave as upstream's) is written for a coding
+agent with a shell: the agent reads SKILL.md, runs `workflow.py prepare /
+measure / check / target / preview / finalize`, opens the images and reports
+those commands write, writes ui_structure.json and alignment_review.md, and
+is done when finalize writes completion_report.json with "complete": true.
 
 This program is that agent's environment for a vision model. Every turn the
 model gets the skill's instructions (SKILL.md, plus every reference file it
@@ -16,8 +16,8 @@ newest pictures, and answers with ONE action. The action runs with the skill's
 own scripts, unchanged; their result is the next turn's observation.
 
 The model is called by the host editor (the AssetsLine server, the o2 editor,
-the Unity plugin) over a line protocol, so keys, routing, billing and the
-memo of paid answers stay the host's:
+AssetsLine's other editors) over a line protocol, so keys, routing, billing
+and the memo of paid answers stay the host's:
 
   agent → host (stdout):  @@bridge {"type": "model", "id": 3, "tag": "turn-3",
                                      "prompt": "...", "images": ["/abs/a.jpg", ...]}

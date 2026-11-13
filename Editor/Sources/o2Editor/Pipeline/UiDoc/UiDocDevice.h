@@ -145,8 +145,8 @@ namespace Editor::UiDoc
     };
 
     // The canvas a layout (design size docW x docH) is solved on for a screen: the design fitted into the screen (scaled
-    // until it shows whole), the room left over on one side added to the canvas - Unity's Canvas Scaler in Expand mode with
-    // the design size as its reference resolution. The mode of older view states is ignored: every screen is met by fit
+    // until it shows whole), the room left over on one side added to the canvas - the Expand fit, with the design size as its
+    // reference resolution. The mode of older view states is ignored: every screen is met by fit
     UiFrame PreviewFrame(double docW, double docH, const std::optional<double>& docDpi, const UiScreen& screen, const String& mode);
 
     // How many screen pixels a pixel of a kit graphic covers on that screen: above 1 the graphic is enlarged (soft)

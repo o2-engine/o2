@@ -8,9 +8,12 @@
 #include "o2/Scene/UI/Widgets/HorizontalLayout.h"
 #include "o2/Scene/UI/Widgets/Label.h"
 #include "o2/Scene/UI/Widgets/Toggle.h"
+#include "o2/Assets/Assets.h"
 #include "o2/Utils/Editor/EditorScope.h"
+#include "o2/Utils/FileSystem/FileSystem.h"
 #include "o2Editor/Pipeline/PipelineUtils.h"
 #include "o2Editor/Pipeline/UiDoc/UiDocAgent.h"
+#include "o2Editor/Pipeline/UiDoc/UiDocExport.h"
 #include "o2Editor/Pipeline/UiDoc/UiDocRender.h"
 #include "o2Editor/Windows/PipelineWindow/PipelineEditor.h"
 #include "o2Editor/Windows/PipelineWindow/PipelineNodeWidget.h"
@@ -34,9 +37,10 @@ namespace Editor
     // The AI UI layout card (AssetsLine UiLayoutBody.tsx): the view, the preview screen, the comparison with the reference
     // (a menu under its button) and the workspace in the head row, the screen itself (the reference laid over it while
     // compared), the node's own graphics as a strip of cells with their output ports, a status line (blocks, kit coverage,
-    // undo, download), the agent's last answer (or the notice of a layout in older units with the step that brings it to the
-    // kit's device), the request with its send button, and the folded parameters (the agent's model, the export target, the
-    // check pass). Layers, inspector, text and history are in the workspace window
+    // undo), Save to project with the prototype's path and its place in the Assets window, the agent's last answer (or the
+    // notice of a layout in older units with the step that brings it to the kit's device), the request with its send
+    // button, and the folded parameters (the agent's models, the folder the prototype goes to, the check pass). Layers,
+    // inspector, text and history are in the workspace window
     // ---------------------------------------------------------------------------------------------------------------
     class UiLayoutBody : public PipelineNodeBody
     {
@@ -131,7 +135,7 @@ namespace Editor
             mOwnRow = mRows.Count() - 1;
             mRows[mOwnRow].gap = mOwnCells.IsEmpty() ? 0.0f : -1.0f;
 
-            // The status line: blocks and steps, the kit coverage, undo / redo, download
+            // The status line: blocks and steps, the kit coverage, undo / redo
             auto stat = mmake<HorizontalLayout>();
             stat->name = "status";
             stat->spacing = 4;
@@ -157,12 +161,39 @@ namespace Editor
             };
             mUndo = tool("ui/pipeline/uiws_undo.svg", "undo", [weakThis]() { if (auto self = weakThis.Lock()) self->mContext->Undo(); });
             mRedo = tool("ui/pipeline/uiws_redo.svg", "redo", [weakThis]() { if (auto self = weakThis.Lock()) self->mContext->Redo(); });
-            mDownload = tool("ui/pipeline/uiws_download.svg", "download", [weakThis]()
+            AddRow(stat, 24);
+
+            // Save to project: the button, the .proto it writes (or wrote) and its place in the Assets window
+            auto saveRow = mmake<HorizontalLayout>();
+            saveRow->name = "save row";
+            saveRow->spacing = 4;
+            saveRow->expandWidth = true;
+            saveRow->expandHeight = true;
+            saveRow->baseCorner = BaseCorner::Left;
+            mSave = MakeGhostButton("Save to project");
+            mSave->name = "save to project";
+            mSave->layout->minWidth = mSave->layout->maxWidth = UiWsDraw::TextWidth("Save to project", 11.0f) + 18.0f;
+            mSave->onClick = [weakThis]()
             {
                 if (auto self = weakThis.Lock())
-                    PipelineUiAi::Download(self->mEditor.Lock(), self->mNode->id);
-            });
-            AddRow(stat, 24);
+                    PipelineUiAi::SaveToProject(self->mEditor.Lock(), self->mNode->id);
+            };
+            saveRow->AddChild(mSave);
+            mSaved = MakeLabel("", true);
+            mSaved->name = "saved path";
+            StyleLabel(mSaved, 10.5f, 400, theme.fgDim);
+            mSaved->horOverflow = Label::HorOverflow::Dots;
+            saveRow->AddChild(mSaved);
+            mLocate = MakeIconButton("ui/pipeline/btn_locate.svg", theme.fgDim, Color4(0, 0, 0, 0));
+            mLocate->name = "show in assets";
+            mLocate->layout->minWidth = mLocate->layout->maxWidth = 24;
+            mLocate->onClick = [weakThis]()
+            {
+                if (auto self = weakThis.Lock())
+                    PipelineUiAi::ShowInAssets(PipelineUiAi::PrototypePath(*self->mNode));
+            };
+            saveRow->AddChild(mLocate);
+            AddRow(saveRow, 24);
 
             // The answer line: an error, a layout in older units (with the button that brings it over), the kit not ready for the
             // agent, or its last words. A notice there costs the card no height: the ports below stay put
@@ -211,12 +242,13 @@ namespace Editor
             field->AddChild(mSend);
             AddRow(field, 62);
 
-            if (BeginParams({ PipelineUtils::PrettyModelName(UiDoc::Ws::AgentModelOf(mContext->config)), ExportLabel(mContext->exportFor) }))
+            if (BeginParams({ PipelineUtils::PrettyModelName(UiDoc::Ws::AgentModelOf(mContext->config)),
+                              UiDoc::ExportFolderOf(mNode->GetConfigString("assetPath", "")) }))
             {
                 AddModelRow(PipelineTextModelPresets(), "gpt-6.1-sol", PipelineModelKind::Text, "agentModel", "Agent model", 100);
                 AddModelRow(PipelineImageModelPresets(), UiDoc::UI_KIT_AI_DEFAULT_IMAGE_MODEL, PipelineModelKind::Image, "agentImageModel",
                             "Image model", 100);
-                AddExportRow();
+                AddFolderRow();
                 auto review = AddCheckbox("Check pass after each answer", "agentReview", true);
                 review->name = "check pass";
                 auto draw = AddCheckbox("Draw what the kit lacks", "agentDraw", true);
@@ -305,7 +337,9 @@ namespace Editor
         Ref<Button>           mCoverage; // How much of the layout draws with the kit
         Ref<Button>           mUndo;
         Ref<Button>           mRedo;
-        Ref<Button>           mDownload;
+        Ref<Button>           mSave;     // Save to project
+        Ref<Label>            mSaved;    // Where the prototype goes, whether it is there
+        Ref<Button>           mLocate;   // Shows the saved prototype in the Assets window
         Ref<Label>            mReply;    // The agent's last answer
         Ref<EditBox>          mDraft;    // The request
         Ref<Button>           mSend;
@@ -340,39 +374,38 @@ namespace Editor
                 change();
         }
 
-        static String ExportLabel(const String& target)
+        // The folder inside Assets Save to project writes into, typed or picked from the project's folders
+        void AddFolderRow()
         {
-            return target == "o2" ? String("o2") : target == "json" ? String("JSON") : String("Unity3D");
+            WeakRef<UiLayoutBody> weakThis(this);
+            auto row = MakeRow("Folder", nullptr, 100);
+            auto edit = MakeEditBox(mNode->GetConfigString("assetPath", ""), false, "Generated/UI");
+            edit->name = "asset folder";
+            edit->onChangeCompleted = [weakThis](const WString& text) { if (auto self = weakThis.Lock()) self->SetFolder((String)text); };
+            row->AddChild(edit);
+            auto browse = MakeIconButton("ui/pipeline/btn_import.svg", PipelineTheme::Get().fgDim, Color4(0, 0, 0, 0));
+            browse->name = "browse folder";
+            browse->layout->minWidth = browse->layout->maxWidth = 24;
+            browse->onClick = [weakThis]()
+            {
+                if (auto self = weakThis.Lock())
+                    self->ShowAssetFolderMenu([weakThis](const String& folder) { if (auto self = weakThis.Lock()) self->SetFolder(folder); });
+            };
+            row->AddChild(browse);
+            AddRow(row, 26.85f);
         }
 
-        void AddExportRow()
+        void SetFolder(const String& text)
         {
-            auto row = mmake<HorizontalLayout>();
-            row->spacing = 2;
-            row->expandWidth = true;
-            row->expandHeight = true;
-            row->baseCorner = BaseCorner::Left;
-            SkinSegmentedRow(*row);
-            WeakRef<UiLayoutBody> weakThis(this);
-            for (auto target : { "unity", "o2", "json" })
-            {
-                String value = target;
-                auto segment = MakeSegment(ExportLabel(value), mContext->exportFor == value);
-                segment->name = "export " + value;
-                segment->onToggleByUser = [weakThis, value](bool)
-                {
-                    if (auto self = weakThis.Lock())
-                    {
-                        self->mContext->SetUi("exportFor", UiDoc::Json(value));
-                        self->RebuildBodyKeepingArea();
-                    }
-                };
-                row->AddChild(segment);
-            }
-            auto block = mmake<Widget>();
-            *row->layout = WidgetLayout::BothStretch(3, 3, 3, 3);
-            block->AddChild(row);
-            AddRow(MakeRow("Export for", block, 100), 26.85f);
+            String folder = text.Trimed(" \t\r\n");
+            folder.ReplaceAll("\\", "/");
+            while (folder.StartsWith("/"))
+                folder = folder.SubStr(1);
+            while (folder.EndsWith("/"))
+                folder = folder.SubStr(0, folder.Length() - 1);
+            if (folder != mNode->GetConfigString("assetPath", ""))
+                SetString("assetPath", folder, true);
+            RebuildBodyKeepingArea();
         }
 
         // The turns the layout pass may take when a screen is rebuilt from its reference
@@ -479,8 +512,7 @@ namespace Editor
             mUndo->transparency = mUndo->interactable ? 1.0f : 0.35f;
             mRedo->interactable = !busy && !mContext->redo.IsEmpty();
             mRedo->transparency = mRedo->interactable ? 1.0f : 0.35f;
-            mDownload->interactable = blocks > 0 && !PipelineUiAi::IsBusy("export", mNode->id);
-            mDownload->transparency = mDownload->interactable ? 1.0f : 0.35f;
+            RefreshSaveRow(blocks);
             mSend->interactable = !busy;
             mSend->transparency = busy ? 0.4f : 1.0f;
 
@@ -525,6 +557,24 @@ namespace Editor
 
             if (redraw)
                 Redraw();
+        }
+
+        // The save line: saving, the last save's error, the saved .proto, or where a save will write it
+        void RefreshSaveRow(int blocks)
+        {
+            auto& theme = PipelineTheme::Get();
+            bool saving = PipelineUiAi::IsBusy("export", mNode->id);
+            String error = PipelineUiAi::LastError("export", mNode->id);
+            String proto = PipelineUiAi::PrototypePath(*mNode);
+            bool saved = o2FileSystem.IsFileExist(o2Assets.GetAssetsPath() + proto);
+
+            mSave->interactable = blocks > 0 && !saving;
+            mSave->transparency = mSave->interactable ? 1.0f : 0.35f;
+            mLocate->interactable = saved && !saving;
+            mLocate->transparency = mLocate->interactable ? 1.0f : 0.35f;
+            mSaved->text = saving ? String("Saving...") : !error.IsEmpty() ? "Not saved: " + error :
+                saved ? "Assets/" + proto : "Not saved yet \xC2\xB7 Assets/" + proto;
+            mSaved->color = !error.IsEmpty() && !saving ? theme.red : saved ? theme.fg : theme.fg3;
         }
 
         // Shows the button that brings an older layout to the kit's device beside the answer line, or hides it

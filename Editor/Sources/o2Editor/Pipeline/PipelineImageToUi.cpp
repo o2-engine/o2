@@ -15,7 +15,7 @@ namespace Editor::PipelineImageToUi
 
     const String type = "imageToUi";
     // Codex on the user's ChatGPT login: GPT-6.1 Sol runs the analysis and the agent, Codex's image tool draws with a
-    // transparent background (the AssetsLine server and Unity Free use the same models through the API)
+    // transparent background (the AssetsLine server uses the same models through the API)
     const String defaultModel = "local:codex:gpt-6.1-sol";
     const String defaultImageModel = "local:codex-image";
     const String defaultScreenName = "Screen";

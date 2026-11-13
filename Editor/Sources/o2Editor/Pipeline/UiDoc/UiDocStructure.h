@@ -6,11 +6,11 @@
 
 // ------------------------------------------------------------------------------------------------
 // Layout + kit -> ui_structure.json (XuToWei/Image-To-UI's schema; port of AssetsLine shared/uiDoc/
-// structure.ts), the input the existing exporters turn into a Unity prefab or an o2 prototype. Geometry is
-// taken at the design size: every block gets its box relative to its parent, its anchor, and - unless a
-// layout group places it - a `responsive` block that is exactly its anchor preset (Unity's anchorMin /
-// anchorMax + offsets). A row / column / grid becomes a layout group when the schema can say it (no
-// growing children, symmetric padding, no cross-axis stretch); otherwise its children get their solved boxes
+// structure.ts), the input the o2 prototype export reads. Geometry is taken at the design size: every block
+// gets its box relative to its parent, its anchor, and - unless a layout group places it - a `responsive`
+// block that is exactly its anchor preset (anchor min / max + offsets, as o2's widget layout has them). A
+// row / column / grid becomes a layout group when the schema can say it (no growing children, symmetric
+// padding, no cross-axis stretch); otherwise its children get their solved boxes
 // ------------------------------------------------------------------------------------------------
 namespace Editor::UiDoc
 {
@@ -38,6 +38,8 @@ namespace Editor::UiDoc
         Vector<UiStructureSprite> sprites;  // In first-use order
         Vector<String>            fonts;    // Font files the texts name, first-use order
         Vector<String>            warnings;
+        Map<String, Json>         textStyles; // By text element name: {fill, effects} of its style at the label's size, when
+                                              // it draws more than a colour (the prototype's `textStyle`; not in json)
     };
 
     // The layout (with the kit, or without: placeholders) as ui_structure.json

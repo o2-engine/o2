@@ -19,7 +19,7 @@ namespace Editor
     // ---------------------------------------------------------------------------------------------------------------
     namespace PipelineUiAi
     {
-        // Connects the workspace's Send and Download to these calls (done once, by the first layout card)
+        // Connects the workspace's Send and Save to project to these calls (done once, by the first layout card)
         void InstallWorkspaceHandlers();
 
         // Asks the layout agent (UiLayout::RunLayoutAgent): the request with the points it names ([1], [2]... of the node's
@@ -41,13 +41,16 @@ namespace Editor
         // Analyses the UI kit node's pictures (portId "" = all of them) and merges the answer into its items
         void AnalyzeKit(const Ref<PipelineEditor>& editor, const String& nodeId, const String& portId);
 
-        // Exports the layout node for its exportFor target (the card's and the workspace's Download): unity and json ask
-        // where to save the file, o2 writes the prototype into the project's Assets
-        void Download(const Ref<PipelineEditor>& editor, const String& nodeId);
+        // Saves the layout node as an o2 prototype into the project's Assets (the card's and the workspace's Save to
+        // project; folder: the node's assetPath, Generated/UI when empty), then selects the .proto in the Assets window;
+        // the result and what the prototype does not reproduce go to the editor's log
+        void SaveToProject(const Ref<PipelineEditor>& editor, const String& nodeId);
 
-        // Exports the layout node for its exportFor target without asking: unity / json into the file (the o2 target
-        // ignores it); the result and what the target does not reproduce go to the editor's log
-        void DownloadTo(const Ref<PipelineEditor>& editor, const String& nodeId, const String& outputPath);
+        // Returns the Assets path of the .proto the layout node saves: <assetPath or Generated/UI>/<screen name>.proto
+        String PrototypePath(const PipelineNode& node);
+
+        // Selects the asset in the Assets window and shows its icon (nothing when the window or the asset is missing)
+        void ShowInAssets(const String& path);
 
         // Returns true while a call of the kind ("agent", "style", "kit", "export") runs for the node
         bool IsBusy(const String& kind, const String& nodeId);

@@ -16,6 +16,7 @@
 #include "o2/Scene/UI/Widgets/VerticalProgress.h"
 #include "o2/Utils/Editor/EditorScope.h"
 #include "o2Editor/Pipeline/PipelineUtils.h"
+#include "o2Editor/Pipeline/UiDoc/UiTextStyle.h"
 
 namespace Editor::UiLayout
 {
@@ -153,7 +154,14 @@ namespace Editor::UiLayout
                 {
                     p.widget = "Label";
                     p.text = node.Get("text") ? node.Get("text")->ToJsString() : String();
-                    p.fontFile = FontFileOf(WeightOfFont(Str(&node, "fontFamily")));
+                    String family = Str(&node, "fontFamily");
+                    p.fontFile = BundledFontOf(family);
+                    if (p.fontFile.IsEmpty())
+                    {
+                        p.fontFile = FontFileOf(WeightOfFont(family));
+                        if (!family.IsEmpty() && !family.ToLowerCase().Contains("roboto"))
+                            Warn(p.path + ": font " + family + " drawn with " + p.fontFile);
+                    }
                     p.fontSize = Num(&node, "fontSize", 20);
                     p.alignment = node.Has("alignment") ? Str(&node, "alignment") : String("left");
                     p.textVAlign = node.Has("textVAlign") ? Str(&node, "textVAlign") : String("middle");
@@ -161,10 +169,10 @@ namespace Editor::UiLayout
                         p.color = "#000000";
                     p.strokeWidth = Num(&node, "strokeWidth", 0);
                     p.strokeColor = p.strokeWidth > 0 ? (node.Has("strokeColor") ? Str(&node, "strokeColor") : String("#000000")) : String();
-
-                    String family = Str(&node, "fontFamily");
-                    if (!family.IsEmpty() && !family.ToLowerCase().Contains("roboto"))
-                        Warn(p.path + ": font " + family + " drawn with " + p.fontFile);
+                    Vector<String> lookNotes;
+                    p.look = TextLookOf(node, p.color, p.path, &lookNotes);
+                    for (auto& note : lookNotes)
+                        Warn(note);
                     if (node.Has("lineHeight"))
                         Warn(p.path + ": lineHeight is not applied");
                     if (Num(&node, "textScaleX", 1.0) != 1.0)
@@ -262,6 +270,101 @@ namespace Editor::UiLayout
         return true;
     }
 
+    // --- the text looks ---------------------------------------------------------------------------------------
+
+    bool UiTextEffect::operator==(const UiTextEffect& other) const
+    {
+        return type == other.type && color == other.color && opacity == other.opacity && width == other.width &&
+            x == other.x && y == other.y && blur == other.blur;
+    }
+
+    bool UiTextLook::operator==(const UiTextLook& other) const
+    {
+        return fill == other.fill && fillTo == other.fillTo && angle == other.angle && effects == other.effects;
+    }
+
+    std::optional<UiTextLook> TextLookOf(const Json& node, const String& color, const String& path, Vector<String>* warnings)
+    {
+        auto warn = [&](const String& text) { if (warnings && !warnings->Contains(text)) warnings->Add(text); };
+
+        UiTextLook look;
+        look.fill = color.IsEmpty() ? String("#000000") : color;
+        const Json* style = node.Get("textStyle");
+        if (!style || !style->IsObject())
+        {
+            double width = Num(&node, "strokeWidth", 0);
+            if (width <= 0)
+                return std::nullopt;
+
+            UiTextEffect stroke;
+            stroke.type = "stroke";
+            stroke.color = node.Has("strokeColor") ? Str(&node, "strokeColor") : String("#000000");
+            stroke.width = width;
+            look.effects.Add(stroke);
+            return look;
+        }
+
+        if (auto gradient = ::Editor::UiDoc::NormalizeGradient(style->Get("fill")))
+        {
+            look.fill = gradient->stops[0].color;
+            look.fillTo = gradient->stops.Last().color;
+            look.angle = gradient->angle;
+            for (int i = 1; i + 1 < gradient->stops.Count(); i++)
+            {
+                if (gradient->stops[i].color != look.fill && gradient->stops[i].color != look.fillTo)
+                {
+                    warn(path + ": a gradient of " + (String)gradient->stops.Count() + " colours drawn with its first and last");
+                    break;
+                }
+            }
+        }
+
+        Vector<UiTextEffect> shadows;
+        for (auto& e : ::Editor::UiDoc::NormalizeEffects(style->Get("effects")))
+        {
+            if (e.off)
+                continue;
+
+            UiTextEffect out;
+            out.color = e.color;
+            out.opacity = e.opacity;
+            if (e.type == "stroke")
+            {
+                out.type = "stroke";
+                out.width = e.width;
+                look.effects.Add(out);
+                continue;
+            }
+
+            out.type = "shadow";
+            if (e.type == "shadow")
+            {
+                out.x = e.x;
+                out.y = e.y;
+                out.blur = e.blur;
+            }
+            else if (e.type == "glow")
+                out.blur = e.size;
+            else if (e.type == "extrude")
+            {
+                out.x = e.x;
+                out.y = e.y;
+            }
+            else
+            {
+                warn(path + ": " + (e.type == "innerShadow" ? String("an inner shadow") : String("a ") + e.type) +
+                     " is not drawn: o2's font styles draw outlines and shadows outside the letters");
+                continue;
+            }
+            shadows.Add(out);
+        }
+        look.effects.Add(shadows);
+
+        if (look.fillTo.IsEmpty() && look.effects.IsEmpty())
+            return std::nullopt;
+        return look;
+    }
+
     // --- the widgets -------------------------------------------------------------------------------------------
 
     static Color4 ColorOfHex(const String& hex, const Color4& def, double opacity = 1.0)
@@ -354,7 +457,7 @@ namespace Editor::UiLayout
             widget->layout->offsetMax = p.offsetMax;
             if (p.rotation != 0)
             {
-                // o2 turns a widget about its pivot (Unity's RectTransform does the same): the pivot goes to the centre - the
+                // o2 turns a widget about its pivot: the pivot goes to the centre - the
                 // anchors and offsets keep the box - and the angle runs counter-clockwise, y being up
                 widget->layout->SetPivot2D(Vec2F(0.5f, 0.5f));
                 widget->layout->SetAngleDegrees((float)-p.rotation);
@@ -381,15 +484,13 @@ namespace Editor::UiLayout
                 label->SetHorOverflow(Label::HorOverflow::None);
                 label->SetVerOverflow(Label::VerOverflow::None);
                 label->SetText(WString(p.text));
-                Color4 color = ColorOfHex(p.color, Color4::Black());
-                if (!p.strokeColor.IsEmpty())
+                if (p.look)
                 {
-                    Color4 stroke = ColorOfHex(p.strokeColor, Color4::Black());
-                    resources.SetStroke(label, color, stroke, Math::Max(1, (int)JsRound(p.strokeWidth)));
+                    resources.SetLook(label, *p.look);
                     label->SetColor(Color4::White());
                 }
                 else
-                    label->SetColor(color);
+                    label->SetColor(ColorOfHex(p.color, Color4::Black()));
             }
             else
             {

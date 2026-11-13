@@ -134,7 +134,7 @@ def build_asset_index(
             relative_paths[collision_key] = rel
             index[rel_key] = path
         by_basename[name_key].append(path)
-        border = read_unity_sprite_border(path)
+        border = read_sprite_border(path)
         if border and rel_key not in borders:
             borders[rel_key] = border
 
@@ -142,13 +142,13 @@ def build_asset_index(
     for name, paths in by_basename.items():
         if len(paths) == 1:
             index[name] = paths[0]
-            border = read_unity_sprite_border(paths[0])
+            border = read_sprite_border(paths[0])
             if border:
                 borders[name] = border
     return index, duplicate_basenames, borders
 
 
-def read_unity_sprite_border(path: Path) -> dict[str, int | float] | None:
+def read_sprite_border(path: Path) -> dict[str, int | float] | None:
     meta_path = Path(str(path) + ".meta")
     if not meta_path.exists():
         return None
@@ -481,7 +481,7 @@ def validate_tree(
                 isinstance(nine_slice, str) and nine_slice in ("meta", "auto")
             )
             if uses_metadata and sprite_border is None:
-                reporter.warn(path, f"nineSlice {nine_slice!r} has no Unity spriteBorder metadata; renderer will infer margins")
+                reporter.warn(path, f"nineSlice {nine_slice!r} has no spriteBorder metadata; renderer will infer margins")
     elif etype == "image":
         reporter.warn(path, "image element has no asset")
 

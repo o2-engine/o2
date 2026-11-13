@@ -574,7 +574,7 @@ namespace Editor::UiLayout
             "belongs in text elements.";
         if (nine > 0)
         {
-            note += " " + (String)nine + " stretchable sprite(s) carry Unity nine-slice borders in their .png.meta "
+            note += " " + (String)nine + " stretchable sprite(s) carry nine-slice borders in their .png.meta "
                 "(has_meta_border in the inventory).";
         }
         return note + " " + bg;
@@ -821,7 +821,7 @@ namespace Editor::UiLayout
         if (Cancelled(*st))
             co_return BaseFail("Cancelled");
 
-        // 3. The skill's inputs, laid out as it expects them: the design, a flat folder of sliced PNGs (Unity nine-slice borders
+        // 3. The skill's inputs, laid out as it expects them: the design, a flat folder of sliced PNGs (nine-slice borders
         // in .png.meta), the fonts, a fresh task folder; what earlier rounds of edits kept goes with the run they continued
         for (auto& d : { dirs.input, dirs.assets, dirs.fonts, dirs.task, dirs.scratch, dirs.work + "/rounds", dirs.work + "/edits" })
         {

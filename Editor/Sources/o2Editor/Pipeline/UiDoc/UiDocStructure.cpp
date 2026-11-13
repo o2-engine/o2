@@ -157,6 +157,7 @@ namespace Editor::UiDoc
             Vector<String>                   usedNames;
             Vector<String>                   fonts;
             Vector<String>                   warnings;
+            Map<String, Json>                textStyles;
 
             // A label's text block (owner: the block it is the label of)
             Json TextOf(const UiNode& n, const UiNode* owner, const UiRect& rect, const String& name, const String& text, double padX = 0)
@@ -182,6 +183,20 @@ namespace Editor::UiDoc
                 {
                     out["strokeColor"] = style.stroke->color;
                     out["strokeWidth"] = std::max(1.0, JsRound((style.stroke->width*fit.size)/style.size));
+                }
+
+                TextStyle scaled = style.size > 0 ? ScaleTextStyle(style, fit.size/style.size) : style;
+                Vector<TextEffect> live = LiveEffects(scaled);
+                bool gradient = !n.textColor && scaled.fill;
+                if (gradient || !live.IsEmpty())
+                {
+                    Json look = Json::Object();
+                    look["fill"] = gradient ? TextGradientToJson(*scaled.fill) : Json();
+                    Json effects = Json::Array();
+                    for (auto& e : live)
+                        effects.Add(TextEffectToJson(e));
+                    look["effects"] = effects;
+                    textStyles[name] = look;
                 }
                 return out;
             }
@@ -244,8 +259,8 @@ namespace Editor::UiDoc
                     out["visible"] = false;
                 if (n.opacity && *n.opacity < 1)
                     out["opacity"] = *n.opacity;
-                // Turned about the centre of its box, degrees clockwise (an extension of the schema; the Unity export turns the
-                // RectTransform about a centred pivot)
+                // Turned about the centre of its box, degrees clockwise (an extension of the schema; the prototype turns the
+                // widget about a centred pivot)
                 if (n.rotation && *n.rotation)
                     out["rotation"] = *n.rotation;
 
@@ -466,6 +481,7 @@ namespace Editor::UiDoc
         result.json = structure.Dump(2);
         result.fonts = c.fonts;
         result.warnings = c.warnings;
+        result.textStyles = c.textStyles;
         return result;
     }
 }

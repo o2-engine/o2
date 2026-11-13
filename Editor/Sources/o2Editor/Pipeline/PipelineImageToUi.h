@@ -81,7 +81,7 @@ namespace Editor
     };
 
     // --------------------------------------------------------------------------------------------------
-    // AI image to UI: what the o2 editor, the AssetsLine server and web editor and the Unity plugin agree on
+    // AI image to UI: what the o2 editor and the AssetsLine server and web editor agree on
     // (AssetsLine's shared/imageToUi.ts). The outputs are preview (the skill's reconstruction.png), layout
     // (its ui_structure.json) and one image output per sprite the layout names, named by the file stem, id sp-<name>
     // --------------------------------------------------------------------------------------------------

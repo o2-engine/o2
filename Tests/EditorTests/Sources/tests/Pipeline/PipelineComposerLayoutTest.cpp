@@ -8,7 +8,7 @@
 using namespace o2;
 using namespace Editor;
 
-// Rules of the composer card shared with AssetsLine (shared/composer.ts, composerLayout.ts) and the Unity plugin: the
+// Rules of the composer card shared with AssetsLine (shared/composer.ts, composerLayout.ts): the
 // rows the input ports sit on, a layer's export size, where a new layer lands and the screen-sized frame
 
 namespace

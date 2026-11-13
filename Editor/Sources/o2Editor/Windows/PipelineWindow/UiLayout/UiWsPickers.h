@@ -82,7 +82,7 @@ namespace Editor
 
     namespace UiWsParts
     {
-        // One anchor preset as Unity draws it: the parent's box, the block placed in it, the anchor points (both ends of a
+        // One anchor preset as a picture: the parent's box, the block placed in it, the anchor points (both ends of a
         // stretched axis) and the arrows of stretched axes; on / hover change its colours
         void AnchorCell(const RectF& rect, const String& h, const String& v, bool on, bool hover);
 

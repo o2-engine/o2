@@ -12,8 +12,8 @@ namespace Editor
     enum class PipelineThemeKind { Dark, Light };
 
     // ---------------------------------------------------------------------------------
-    // Colours of one theme. Names follow the AssetsLine CSS tokens, so the three editors
-    // (web, o2, Unity) read the same table; geometry never depends on the theme
+    // Colours of one theme. Names follow the AssetsLine CSS tokens, so AssetsLine's editors
+    // and this one read the same table; geometry never depends on the theme
     // ---------------------------------------------------------------------------------
     struct PipelinePalette
     {

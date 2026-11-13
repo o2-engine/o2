@@ -51,7 +51,7 @@ TEST(UiDocAgent, TheAnswerMessagePlusEditsOrAWholeScreenFencedOrNot)
 
 TEST(UiDocAgent, TheLayoutWithItsKitAsUiStructure)
 {
-    // The export test's structure checks (the Unity / o2 exporters themselves are not part of this port)
+    // The export test's structure checks
     UiKit kit = ParseKit("{\"elements\": [{\"name\": \"btn_red\", \"type\": \"button\", \"assetType\": \"sliced\", \"width\": 60, \"height\": 40, "
                          "\"nineSlice\": {\"left\": 10, \"top\": 10, \"right\": 10, \"bottom\": 10}, \"png\": \"AAAA\"}]}");
     auto st = ToUiStructure(Parse(Screen()), &kit);
