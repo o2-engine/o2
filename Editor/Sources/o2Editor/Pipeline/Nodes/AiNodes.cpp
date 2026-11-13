@@ -1,9 +1,9 @@
 #include "o2Editor/stdafx.h"
+#include "o2Editor/Pipeline/UiDoc/UiDocJs.h"
+#include "o2Editor/Pipeline/Nodes/ImageExtractNode.h"
 #include "o2Editor/Pipeline/Nodes/ImageToUiNode.h"
 #include "o2Editor/Pipeline/Nodes/PipelineNodesCommon.h"
 #include "o2Editor/Pipeline/PipelineEditRegion.h"
-#include "o2Editor/Pipeline/PipelinePngMeta.h"
-#include "o2Editor/Pipeline/PipelineRegions.h"
 #include "o2Editor/Pipeline/PipelineUpscale.h"
 
 #include "o2Editor/Pipeline/Providers/AiRouter.h"
@@ -350,10 +350,69 @@ namespace Editor
             mSchema.type = "imageEdit";
             mSchema.label = "AI image edit";
             mSchema.category = PipelineNodeCategory::AI;
-            mSchema.description = "Edit the input image via Gemini using a text prompt and an optional hand-drawn overlay marking the change. The prompt can come from the prompt input; the node's own field adds to it.";
+            mSchema.description = "Edit the input image via Gemini using a text prompt and an optional hand-drawn overlay marking the change. The prompt can come from the prompt input; the node's own field adds to it. Add picture inputs for references the edit may use (an object, a character, a style to bring in); name them to point at them in the prompt.";
             // The edit prompt from another node (AssetsLine's input since 2026-11-11); the node's own field is added after it
             mSchema.inputs = { In("image", PipelinePortType::Image), In("prompt", PipelinePortType::Text) };
             mSchema.outputs = { Out("out", PipelinePortType::Image) };
+            // Reference pictures for the edit (see ReferencePorts)
+            mSchema.addableInputs = { PipelinePortType::Image };
+        }
+
+        // The picture being edited: the node's own image input (not one added by hand, whatever its name)
+        static const PipelinePort* MainImagePort(const PipelineNode& node)
+        {
+            if (auto p = node.inputs.Find([](const PipelinePort& p) { return p.portType == PipelinePortType::Image && !p.custom && p.name == "image"; }))
+                return p;
+            return node.inputs.Find([](const PipelinePort& p) { return p.portType == PipelinePortType::Image && !p.custom; });
+        }
+
+        // Picture inputs added to the node: references the edit may use, each named for the model by its port name, else
+        // "reference N"
+        static Vector<Pair<const PipelinePort*, String>> ReferencePorts(const PipelineNode& node)
+        {
+            Vector<Pair<const PipelinePort*, String>> out;
+            const PipelinePort* main = MainImagePort(node);
+            Vector<Pair<String, int>> seen;
+            for (auto& p : node.inputs)
+            {
+                if (p.portType != PipelinePortType::Image || &p == main || out.Count() >= MAX_REFERENCES)
+                    continue;
+                // The label is quoted in the instructions: no double quotes in it, and two inputs of one name told apart
+                String base = UiDoc::JsTrim(UiDoc::ReplaceSpaceRuns(p.name.ReplacedAll("\"", "'"), " "));
+                if (base.IsEmpty())
+                    base = "reference " + (String)(out.Count() + 1);
+                String key = UiDoc::JsToLower(base);
+                int at = seen.IndexOf([&](const Pair<String, int>& x) { return x.first == key; });
+                int n = at >= 0 ? ++seen[at].second : 1;
+                if (at < 0)
+                    seen.Add(Pair<String, int>(key, 1));
+                out.Add(Pair<const PipelinePort*, String>(&p, n > 1 ? base + " (" + (String)n + ")" : base));
+            }
+            return out;
+        }
+
+        // At most this many reference pictures go with an edit
+        static constexpr int MAX_REFERENCES = 12;
+
+    public:
+        // The instructions with the pictures listed in the order they are sent: the original, the drawing over it, then the
+        // references. Without references they are the instructions as they always were
+        static String EditInstructions(const String& system, bool overlay, const Vector<String>& refs)
+        {
+            if (refs.IsEmpty())
+                return system;
+            int first = overlay ? 3 : 2;
+            Vector<String> list;
+            for (int i = 0; i < refs.Count(); i++)
+                list.Add("image " + (String)(first + i) + " is \"" + refs[i] + "\"");
+            String joined;
+            for (int i = 0; i < list.Count(); i++)
+                joined += (i ? ", " : "") + list[i];
+            return system + " After " + (overlay ? "those two images" : "the original") + " come " + (String)refs.Count() +
+                " REFERENCE image(s) the user supplied: " + joined + ". They are not to be edited and are not the output: use them "
+                "only as the instruction asks \xE2\x80\x94 an object, a character, a pattern, a style or a texture to bring into the "
+                "original, matched closely; when the instruction names one, it means that image. The result is still the ORIGINAL "
+                "image with the requested change, at its own framing, resolution and aspect ratio.";
         }
 
         // The edit prompt: the text on the prompt input, then the node's own field (either may be empty)
@@ -383,7 +442,14 @@ namespace Editor
                 "that fills the whole frame, removing the original background entirely. Keep the subject fully opaque with crisp edges. "
                 "Do not add shadows, gradients, reflections, or vignettes.";
 
-            auto imageVal = Input(inputs, "image");
+            auto valueOf = [&](const PipelinePort& port) -> const PipelineValue* {
+                auto byId = ctx->inputsById.find(port.id);
+                if (byId != ctx->inputsById.end())
+                    return &byId->second;
+                return ctx->inputsById.empty() ? Input(inputs, port.name) : nullptr;
+            };
+            const PipelinePort* mainPort = MainImagePort(*node);
+            auto imageVal = mainPort ? valueOf(*mainPort) : Input(inputs, "image");
             if (!imageVal || !imageVal->IsImage()) co_return PipelineRunResult::Fail("imageEdit: input \"image\" is not connected");
             String prompt = EditPrompt(Input(inputs, "prompt"), node->GetConfigString("prompt", ""));
             if (prompt.IsEmpty()) co_return PipelineRunResult::Fail("imageEdit: no edit prompt - connect a text to the \"prompt\" input or type it on the node");
@@ -396,6 +462,21 @@ namespace Editor
                 if (base && PipelineImageOps::HasContent(*drawing))
                     overlaid = PipelineImageOps::CompositeOverlay(*base, *drawing);
             }
+
+            // The pictures added as inputs: references for the edit, after the original (and its drawing). Never cropped to a
+            // frame - they are other pictures. An input with nothing connected is skipped
+            Vector<AiImageRef> extra;
+            Vector<String> labels;
+            for (auto& ref : ReferencePorts(*node))
+            {
+                auto v = valueOf(*ref.first);
+                if (!v || !v->IsImage())
+                    continue;
+                extra.Add({ "image/png", v->GetPngBytes() });
+                labels.Add(ref.second);
+            }
+            String instructions = EditInstructions(systemPrompt, overlaid != nullptr, labels);
+            String more = extra.IsEmpty() ? String() : " +" + (String)extra.Count() + " reference(s)";
 
             // A frame: the model edits a crop around it, pasted back; the rest of the image, background included, is kept
             PipelineImageOps::CropRect region;
@@ -413,9 +494,10 @@ namespace Editor
                 auto& r = boxes.region;
                 ctx->Log("imageEdit: model=" + model + " frame=" + (String)r.left + "," + (String)r.top + "-" + (String)r.right + "," +
                          (String)r.bottom + " box=" + (String)box.left + "," + (String)box.top + "-" + (String)box.right + "," +
-                         (String)box.bottom + " refs=" + (String)cropped.Count());
+                         (String)box.bottom + " refs=" + (String)cropped.Count() + more);
+                cropped.Add(extra);
                 AiBytesResult edited = co_await AiRouter::GenerateImage(ctx, model,
-                    systemPrompt + "\n\n" + prompt + "\n\n" + PipelineEditRegion::promptSuffix, cropped, ctx->seed);
+                    instructions + "\n\n" + prompt + "\n\n" + PipelineEditRegion::promptSuffix, cropped, ctx->seed);
                 if (!edited.ok)
                     co_return PipelineRunResult::Fail(edited.error);
 
@@ -431,181 +513,14 @@ namespace Editor
                 references.Add({ "image/png", EncodeBitmapPng(*overlaid) });
 
             auto tr = PipelineTransparency::Read(*node);
-            ctx->Log("imageEdit: model=" + model + " refs=" + (String)references.Count() + " promptChars=" + (String)prompt.Length());
+            ctx->Log("imageEdit: model=" + model + " refs=" + (String)references.Count() + more + " promptChars=" + (String)prompt.Length());
+            references.Add(extra);
 
-            PipelineRunResult r = co_await GenerateWithTransparency(ctx, *node, model, systemPrompt + "\n\n" + prompt, references,
-                systemPrompt + "\n\n" + prompt + "\n\nThen isolate the main subject of the edited result and remove the original background entirely. " + PipelineTransparency::ChromaBgInstruction(tr),
-                systemPrompt + "\n\n" + prompt + "\n\n" + whiteBgSystem,
-                systemPrompt + "\n\n" + prompt + "\n\n" + PipelineTransparency::nativeEditSuffix);
+            PipelineRunResult r = co_await GenerateWithTransparency(ctx, *node, model, instructions + "\n\n" + prompt, references,
+                instructions + "\n\n" + prompt + "\n\nThen isolate the main subject of the edited result and remove the original background entirely. " + PipelineTransparency::ChromaBgInstruction(tr),
+                instructions + "\n\n" + prompt + "\n\n" + whiteBgSystem,
+                instructions + "\n\n" + prompt + "\n\n" + PipelineTransparency::nativeEditSuffix);
             co_return r;
-        }
-    };
-
-    // Cuts a described element out of an image as a transparent sprite through Gemini
-    class ImageExtractNode : public PipelineNodeBase
-    {
-    public:
-        ImageExtractNode()
-        {
-            mSchema.type = "imageExtract";
-            mSchema.label = "AI extract part";
-            mSchema.category = PipelineNodeCategory::AI;
-            mSchema.description = "Cut a described element out of an image as a clean, transparent game sprite; a box on the source marks where each part is.";
-            mSchema.inputs = { In("image", PipelinePortType::Image) };
-            mSchema.outputs = { Out("out", PipelinePortType::Image) };
-            mSchema.perPortRun = true;
-        }
-
-        // Editing one part must not invalidate the others: the shared config is hashed without the
-        // part list, and this part's own name and box are folded back in
-        Vector<String> PortCacheExcludedKeys() const override { return { "regions", "roi", "prompt" }; }
-
-        // A part with a model of its own is keyed by it instead of the node's; a part without one keeps the key it always had
-        Vector<String> PortCacheExcludedKeysOf(const PipelineNode& node, const String& portId) const override
-        {
-            Vector<String> keys = PortCacheExcludedKeys();
-            if (!PipelineRegions::OwnModel(node, portId).IsEmpty())
-                keys.Add("model");
-
-            return keys;
-        }
-
-        void InitNode(const Ref<PipelineNode>& node) const override
-        {
-            // New nodes cut transparent sprites with a model that draws the alpha itself, as AssetsLine's schema defaults
-            node->SetConfigString("model", PipelineRegions::extractDefaultImageModel);
-            node->SetConfigString("prompt", "");
-            node->SetConfigBool("transparentBg", true);
-            node->SetConfigString("transparentMode", "chroma");
-        }
-
-        bool SyncPorts(const Ref<PipelineNode>& node) const override
-        {
-            PipelineRegions::SyncPorts(*node);
-            return true;
-        }
-
-        String PortCacheVariant(const PipelineNode& node, const String& portId) const override
-        {
-            auto region = PipelineRegions::RegionOfPort(node, portId);
-            String variant = "region:" + region.name + ":" + (String)region.x + "," + (String)region.y + "," + (String)region.w + "," + (String)region.h;
-            String model = PipelineRegions::OwnModel(node, portId);
-            return model.IsEmpty() ? variant : variant + "|model:" + model;
-        }
-
-        static String BuildExtractPrompt(const String& part, const String& backdrop, bool native = false)
-        {
-            String result = native ? "The result must be almost entirely transparent with only the requested element visible." :
-                "The result must be almost entirely that flat backdrop colour with only the requested element visible.";
-
-            return "This image is a cropped region of a 2D game that contains the element to extract: " + part + ". "
-                "Keep ONLY that element, exactly as it appears - same shape, position, size, colors, shading, texture and art style. Do NOT move, resize, recolor, restyle, or redraw it. "
-                "If the description leaves something out - a label, text, numbers, an icon or another piece drawn on top of the element - remove that as well and restore the element's own surface underneath, continuing its color, texture and shading exactly, so it is left blank there. "
-                "Erase EVERYTHING else in the crop to " + backdrop + ": the background AND any other objects, pieces, icons, text or fragments that are not the requested element. "
-                "This is NOT background removal - remove the other objects as well. " + result + " If the element is partly hidden, plausibly complete it. "
-                "Output only the resulting image.";
-        }
-
-        // The background plate of a screen: the scene alone, the UI on it removed and the scene continued
-        static String BuildPlatePrompt(const String& part)
-        {
-            return "This image is a 2D game screen or a crop of one. Show only its background - " + part + ". "
-                "Remove EVERY element drawn on top of it - panels, frames, plates, tiles, buttons, icons, bars, badges, characters, logos and all text - and continue the background naturally where they were. "
-                "Keep the image size, framing, colors, lighting and texture of the background exactly; add nothing. Output only the image.";
-        }
-
-        // The result tagged with how much larger the model drew the part than the crop it was given (raw: what it drew)
-        static PipelineRunResult Scaled(const Ref<Bitmap>& out, const Vec2I& crop, const Vec2I& raw)
-        {
-            String png = EncodeBitmapPng(*out);
-            double scale = PipelineRegions::PartScale(crop.x, crop.y, raw.x, raw.y);
-            if (scale > 0.0)
-                png = PipelinePngMeta::WithDpi(png, std::nullopt, scale);
-
-            return PipelineRunResult::Single(PipelineValue::ImageBytes(png));
-        }
-
-        Coroutine<PipelineRunResult> Run(const Ref<PipelineExecContext>& ctx, const Map<String, PipelineValue>& inputs,
-                                         const Ref<PipelineNode>& node) override
-        {
-            auto imageVal = Input(inputs, "image");
-            if (!imageVal || !imageVal->IsImage()) co_return PipelineRunResult::Fail("imageExtract: input \"image\" is not connected");
-
-            // Each output port carries one part: its box is the region of interest, its name the prompt
-            auto region = PipelineRegions::RegionOfPort(*node, ctx->outputPortId);
-            String partName = ctx->outputPort.IsEmpty() ? String("out") : ctx->outputPort;
-            String prompt = region.name.Trimed(" \n\r\t");
-            if (prompt.IsEmpty()) co_return PipelineRunResult::Fail("imageExtract: no extraction prompt for \"" + partName + "\" - name the part to cut out");
-
-            auto source = imageVal->GetBitmap();
-            if (!source) co_return PipelineRunResult::Fail("imageExtract: input is not a decodable image");
-
-            // The part's own model, else the node's
-            String model = PipelineRegions::PartModel(*node, region.id);
-
-            PipelineImageOps::CropRect roi{ region.x, region.y, region.w, region.h };
-            bool hasRoi = region.x > 0.0f || region.y > 0.0f || region.w < 1.0f || region.h < 1.0f;
-            Ref<Bitmap> roiInput = hasRoi ? PipelineImageOps::Crop(*source, roi) : source;
-            Vec2I cropSize = roiInput->GetSize();
-            // A drawing left in an older pipeline is ignored: the extract has no drawing any more
-            Vector<AiImageRef> references = { { "image/png", EncodeBitmapPng(*roiInput) } };
-
-            // The part's own background settings, when it has them, replace the node's
-            auto tr = PipelineTransparency::Read(*node, region.id);
-            bool transparent = tr.transparent;
-            ctx->Log("imageExtract . " + partName + ": model=" + model + " refs=" + (String)references.Count() + " transparent=" + (transparent ? "true" : "false"));
-
-            if (transparent && tr.mode == "native")
-            {
-                AiBytesResult png = co_await AiRouter::GenerateImage(ctx, model, BuildExtractPrompt(prompt, PipelineTransparency::nativeBackdrop, true), references, ctx->seed, true);
-                if (!png.ok) co_return PipelineRunResult::Fail(png.error);
-                auto rendered = DecodeImageBytes(png.data);
-                if (!rendered) co_return PipelineRunResult::Fail("provider returned an undecodable image");
-
-                if (!PipelineImageOps::HasContent(*rendered))
-                    co_return Scaled(rendered, cropSize, rendered->GetSize());
-
-                co_return Scaled(PipelineImageOps::CropToContent(*rendered, PipelineImageOps::ContentMode::Alpha), cropSize, rendered->GetSize());
-            }
-
-            if (transparent && tr.mode == "chroma")
-            {
-                AiBytesResult raw = co_await AiRouter::GenerateImage(ctx, model, BuildExtractPrompt(prompt, PipelineTransparency::ChromaEraseInstruction(tr)), references, ctx->seed);
-                if (!raw.ok) co_return PipelineRunResult::Fail(raw.error);
-                auto rawBmp = DecodeImageBytes(raw.data);
-                if (!rawBmp) co_return PipelineRunResult::Fail("provider returned an undecodable image");
-                co_return Scaled(rawBmp, cropSize, rawBmp->GetSize());
-            }
-
-            if (PipelineRegions::IsBackgroundPart(prompt, transparent))
-            {
-                // The plate behind a screen: opaque and the size of its box, so nothing is trimmed
-                AiBytesResult plate = co_await AiRouter::GenerateImage(ctx, model, BuildPlatePrompt(prompt), references, ctx->seed);
-                if (!plate.ok) co_return PipelineRunResult::Fail(plate.error);
-                auto plateBmp = DecodeImageBytes(plate.data);
-                if (!plateBmp) co_return PipelineRunResult::Fail("provider returned an undecodable image");
-                co_return Scaled(plateBmp, cropSize, plateBmp->GetSize());
-            }
-
-            AiBytesResult white = co_await AiRouter::GenerateImage(ctx, model, BuildExtractPrompt(prompt, "flat, solid, pure white (#FFFFFF)"), references, ctx->seed);
-            if (!white.ok) co_return PipelineRunResult::Fail(white.error);
-            auto whiteBmp = DecodeImageBytes(white.data);
-            if (!whiteBmp) co_return PipelineRunResult::Fail("provider returned an undecodable image");
-
-            if (!transparent)
-                co_return Scaled(PipelineImageOps::CropToContent(*whiteBmp, PipelineImageOps::ContentMode::White), cropSize, whiteBmp->GetSize());
-
-            AiBytesResult black = co_await AiRouter::GenerateImage(ctx, model, PipelineTransparency::blackBgInstruction, { { "image/png", white.data } }, ctx->seed);
-            if (!black.ok) co_return PipelineRunResult::Fail(black.error);
-            auto blackBmp = DecodeImageBytes(black.data);
-            if (!blackBmp) co_return PipelineRunResult::Fail("provider returned an undecodable image");
-
-            auto recovered = PipelineTransparency::MatteFromPair(*whiteBmp, *blackBmp);
-            if (PipelineImageOps::HasContent(*recovered))
-                co_return Scaled(PipelineImageOps::CropToContent(*recovered, PipelineImageOps::ContentMode::Alpha), cropSize, whiteBmp->GetSize());
-
-            ctx->Log("imageExtract . " + partName + ": matte was empty - falling back to the white result");
-            co_return Scaled(PipelineImageOps::CropToContent(*whiteBmp, PipelineImageOps::ContentMode::White), cropSize, whiteBmp->GetSize());
         }
     };
 
@@ -779,7 +694,7 @@ namespace Editor
         PipelineNodeRegistry::Register(mmake<PromptGenNode>());
         PipelineNodeRegistry::Register(mmake<NanoBananaGenNode>());
         PipelineNodeRegistry::Register(mmake<ImageEditNode>());
-        PipelineNodeRegistry::Register(mmake<ImageExtractNode>());
+        RegisterImageExtractNode();
         PipelineNodeRegistry::Register(mmake<AiRemoveBgNode>());
         PipelineNodeRegistry::Register(mmake<AiUpscaleNode>());
         RegisterImageToUiNode();

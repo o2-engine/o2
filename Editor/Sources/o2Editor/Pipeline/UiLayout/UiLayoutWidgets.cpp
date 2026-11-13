@@ -144,6 +144,9 @@ namespace Editor::UiLayout
                 p.color = Str(&node, "color");
                 p.opacity = Math::Clamp(Num(&node, "opacity", 1.0), 0.0, 1.0);
                 p.visible = !(node.Get("visible") && node.Get("visible")->IsBool() && !node.Get("visible")->Bool());
+                // A turned block (the layout's `rotation`, an extension of the schema); the screen itself never turns
+                if (parent >= 0)
+                    p.rotation = Num(&node, "rotation", 0);
 
                 bool isFill = parentProgress && Str(parentProgress, "fill") == p.name;
                 if (p.type == "text")
@@ -349,6 +352,13 @@ namespace Editor::UiLayout
             widget->layout->anchorMax = p.anchorMax;
             widget->layout->offsetMin = p.offsetMin;
             widget->layout->offsetMax = p.offsetMax;
+            if (p.rotation != 0)
+            {
+                // o2 turns a widget about its pivot (Unity's RectTransform does the same): the pivot goes to the centre - the
+                // anchors and offsets keep the box - and the angle runs counter-clockwise, y being up
+                widget->layout->SetPivot2D(Vec2F(0.5f, 0.5f));
+                widget->layout->SetAngleDegrees((float)-p.rotation);
+            }
 
             if (layer)
                 widget->SetLayer(layer);

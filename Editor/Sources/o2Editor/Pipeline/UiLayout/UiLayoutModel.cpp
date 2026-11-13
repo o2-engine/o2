@@ -13,6 +13,7 @@ namespace Editor::UiLayout
         copy->kind = kind;
         copy->box = box;
         copy->look = look;
+        copy->kit = kit;
         copy->text = text;
         copy->color = color;
         copy->weight = weight;
@@ -21,6 +22,8 @@ namespace Editor::UiLayout
         copy->strokeWidth = strokeWidth;
         copy->fontSize = fontSize;
         copy->ink = ink;
+        copy->opacity = opacity;
+        copy->rotation = rotation;
         copy->value = value;
         copy->rows = rows;
         copy->cols = cols;

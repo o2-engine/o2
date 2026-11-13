@@ -19,6 +19,9 @@ namespace Editor
     // Creates the body of the Text style node; null for other types
     Ref<PipelineNodeBody> CreateTextStyleNodeBody(const String& type);
 
+    // Creates the body of the AI text style node; null for other types
+    Ref<PipelineNodeBody> CreateTextStyleExtractNodeBody(const String& type);
+
     // Creates the body of the UI kit node; null for other types
     Ref<PipelineNodeBody> CreateUiKitNodeBody(const String& type);
 

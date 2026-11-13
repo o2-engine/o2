@@ -222,20 +222,7 @@ namespace Editor
         }
         else
         {
-            ctx->workDir = GetWorkPath(pipelineId, nodeId);
-            ctx->fresh = fresh;
-            ctx->memoGet = [pipelineId](const String& key, const String& ext, String& data)
-            {
-                String path = GetContentPath(pipelineId, key, ext.StartsWith(".") ? ext.SubStr(1) : ext);
-                if (!o2FileSystem.IsFileExist(path))
-                    return false;
-                data = PipelineUtils::ReadFileBytes(path);
-                return !data.IsEmpty();
-            };
-            ctx->memoPut = [pipelineId](const String& key, const String& ext, const String& data)
-            {
-                PipelineUtils::WriteFileBytes(GetContentPath(pipelineId, key, ext.StartsWith(".") ? ext.SubStr(1) : ext), data);
-            };
+            AttachWork(*ctx, pipelineId, nodeId, fresh);
 
             PipelineRunResult result = co_await impl->Run(ctx, inputs, node);
             if (run->cancelled)

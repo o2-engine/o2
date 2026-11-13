@@ -1,6 +1,7 @@
 #include "o2Editor/stdafx.h"
 #include "PipelineNodeBodyFactories.h"
 
+#include "o2Editor/Windows/PipelineWindow/PipelineCheckDlg.h"
 #include "o2Editor/Windows/PipelineWindow/PipelineDraw.h"
 #include "o2Editor/Windows/PipelineWindow/PipelineImageTheme.h"
 #include "o2Editor/Windows/PipelineWindow/PipelineTheme.h"
@@ -61,6 +62,16 @@ namespace Editor
             mGrid->onSelect = [weakThis](const String& id) { if (auto self = weakThis.Lock()) self->SelectRegion(id); };
             mGrid->onRename = [weakThis](const String& id, const String& name) { if (auto self = weakThis.Lock()) self->RenameRegion(id, name); };
             mGrid->onRemove = [weakThis](const String& id) { if (auto self = weakThis.Lock()) self->RemoveRegion(id); };
+            mGrid->onCheck = [weakThis](const String& id)
+            {
+                auto self = weakThis.Lock();
+                if (!self)
+                    return;
+
+                int index = self->Regions().IndexOf([&](const PipelineExtractRegion& r) { return r.id == id; });
+                String name = self->NameOf(id).Trimed(" \n\r\t");
+                PipelineCheckDlg::Show(self->mEditor.Lock(), self->mNode, id, name.IsEmpty() ? "part " + (String)(index + 1) : name);
+            };
             mGrid->onRegen = [weakThis](const String& id)
             {
                 auto self = weakThis.Lock();
@@ -459,6 +470,8 @@ namespace Editor
             int own = regions.Count() > 1 ? regions.Sum<int>([](const PipelineExtractRegion& r) { return r.IsOwn() ? 1 : 0; }) : 0;
             if (own > 0)
                 names.Add((String)own + " own");
+            if (PipelineGraph::IsRefCheckOn(*mNode))
+                names.Add("check");
 
             return names;
         }
@@ -509,6 +522,15 @@ namespace Editor
             AddRow(MakeListDivider(), 9);
             AddSeedRow();
             AddSourceDpiRow();
+            // The check against the reference: off unless asked for (a vision call per part and the regenerations it decides on)
+            PipelineCheckRows::Add(*this, "Check against the reference", "Regenerations", [weakThis]()
+            {
+                if (auto self = weakThis.Lock())
+                {
+                    self->RefreshParamRows();
+                    self->RebuildParts();
+                }
+            });
         }
 
         // The density of the source the parts are measured against: typed, else the picture's own tag, else the base
@@ -521,13 +543,18 @@ namespace Editor
             field->name = "source dpi";
             field->layout->minWidth = field->layout->maxWidth = 64;
             WeakRef<ImageExtractBody> weakThis(this);
-            field->onChangeCompleted = [weakThis](const WString& text)
+            // Applies on Enter or when the field is left, and only a change: Escape gives the field its text back, which
+            // then changes nothing (no run, no undo step)
+            field->onChangeCompleted = [weakThis, typed](const WString& text)
             {
                 auto self = weakThis.Lock();
                 if (!self)
                     return;
 
                 String s = ((String)text).Trimed();
+                if (s == typed.Trimed() || o2Input.IsKeyDown(VK_ESCAPE))
+                    return;
+
                 UiLayout::Json value(s);
                 auto dpi = s.IsEmpty() ? std::nullopt : UiDoc::CleanDpi(&value);
                 if (s.IsEmpty())
@@ -734,7 +761,7 @@ namespace Editor
             if (!mGrid)
                 return;
 
-            mGrid->SetParts(Regions(), SelectedId());
+            mGrid->SetParts(Regions(), SelectedId(), PipelineGraph::IsRefCheckOn(*mNode));
             RefreshPartResults();
             ShowPartStates();
             SyncPaintRegions();
@@ -750,7 +777,7 @@ namespace Editor
             auto& runtime = owner->GetRuntime();
             if (mGrid->GetCellCount() != 1)
             {
-                mGrid->SetPartStates(runtime.portStates);
+                mGrid->SetPartStates(runtime.portStates, runtime.phases);
                 return;
             }
 
@@ -758,7 +785,7 @@ namespace Editor
             if (runtime.state == "running")
                 states[Regions()[0].id] = "running";
 
-            mGrid->SetPartStates(states);
+            mGrid->SetPartStates(states, runtime.phases);
         }
 
         void RefreshPartResults()

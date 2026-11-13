@@ -44,6 +44,9 @@ namespace Editor::UiDoc
     // else the default for the role
     TextStyle StyleOf(const UiNode& n, const UiKit* kit, const UiNode* labelOf = nullptr);
 
+    // A block that draws no kit graphic on purpose (kit=none): a flat colour (a dimming layer, a strip) or nothing
+    bool IsPlain(const UiNode& n);
+
     // The style for a label in a given role: the block's own style= wins
     TextStyle StyleForRole(const UiNode& n, const UiKit* kit, const String& role);
 

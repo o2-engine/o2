@@ -101,13 +101,14 @@ TEST(UiDocKit, AGraphicsScaleAndDesignSizeScreensMetByDpiOrBySize)
     EXPECT_EQ(KitScale(std::nullopt, std::nullopt), 1);
     EXPECT_EQ(KitScale(480.0, 960.0), 0.5);
     EXPECT_EQ(DesignSize(480.0, 400, 120, 960.0), (UiSize{ 200, 60 }));
-    // By DPI: a 460-dpi phone of 1179x2556 shows 1230x2667 design pixels
-    EXPECT_EQ(PreviewFrame(1080, 1920, 480.0, UiScreen{ 1179, 2556, 460 }, "dpi"), (UiFrame{ 1230, 2667, 460.0/480 }));
-    // By size: Unity's match 0.5 - the scale is the geometric mean of the two ratios
-    UiFrame fit = PreviewFrame(1080, 1920, 480.0, UiScreen{ 1080, 2340, 416 }, "fit");
-    EXPECT_LT(std::fabs(fit.scale - std::sqrt(2340.0/1920)), 1e-9);
-    EXPECT_EQ(fit.w, JsRound(1080/fit.scale));
-    EXPECT_EQ(fit.h, JsRound(2340/fit.scale));
+    // Every screen is met by Unity's Expand: the design fitted in whole, the room left over added to the canvas (the mode of
+    // an older view state means nothing now)
+    EXPECT_EQ(PreviewFrame(1080, 1920, 480.0, UiScreen{ 1179, 2556, 460 }, "dpi"), (UiFrame{ 1080, 2341, 1179.0/1080 }));
+    EXPECT_EQ(PreviewFrame(1080, 1920, 480.0, UiScreen{ 1179, 2556, 460 }, "fit"), (UiFrame{ 1080, 2341, 1179.0/1080 }));
+    UiFrame wide = PreviewFrame(1080, 1920, 480.0, UiScreen{ 1080, 2340, 416 }, "fit");
+    EXPECT_EQ(wide, (UiFrame{ 1080, 2340, 1 }));
+    // A screen of the design's own aspect ratio gives the design itself
+    EXPECT_EQ(PreviewFrame(1080, 1920, std::nullopt, UiScreen{ 540, 960, 240 }, ""), (UiFrame{ 1080, 1920, 0.5 }));
 }
 
 TEST(UiDocKit, UimlKeepsTheScreenDpiScreenSetsItADocWithoutOneIsTheBase)

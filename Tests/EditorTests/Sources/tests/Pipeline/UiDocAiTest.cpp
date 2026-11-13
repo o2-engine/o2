@@ -423,12 +423,13 @@ TEST(UiDocAi, TheKitAnalysisPromptIsTheWebs)
     "- type: one of background (full-screen backdrop behind everything); panel (stretchable surface that holds content (window, card, popup body)); frame (border / outline drawn around content); button (pressable button surface (the label is drawn on top)); icon (small symbol kept at its aspect (coin, gear, heart, close X)); image (illustration or picture kept at its aspect); progressBar (track (background) of a progress / health / xp bar); progressFill (fill of a progress bar, cut to the value); toggle (on/off switch or checkbox); slider (slider track); sliderHandle (slider knob); input (text field box); tab (tab header); badge (small counter / notification bubble); divider (separator line); header (title ribbon or banner); slot (item cell of an inventory or a grid); other (anything else)\n"
     "- assetType: one of simple, sliced, tiled \xE2\x80\x94 sliced (nine-slice: corners keep their size, the middle stretches) for surfaces that change size: buttons, panels, frames, bars, fields, tabs; simple for icons, pictures, characters and full backgrounds; tiled for repeating patterns\n"
     "- variant: optional, e.g. primary, secondary, disabled, selected, small (empty when not obvious)\n"
-    "- description: one short sentence \xE2\x80\x94 what it is and where in an interface it is used\n"
+    "- purpose: where in an interface to use it, a short phrase (up to 12 words) \xE2\x80\x94 e.g. \"background of popups and dialogs\", \"backing of the main action button\", \"currency counter icon in the top bar\", \"frame around a player avatar\". Say the role, not the look\n"
+    "- description: one short sentence \xE2\x80\x94 what it is and what it looks like (shape, colour, material)\n"
     "- background: transparent (already cut out: transparent or checker-free around the element) | flat (one plain colour fills everything around the element) | complex (scenery, gradient or texture behind the element)\n"
     "- nineSlice (sliced only): how many pixels from each edge of the picture (at the size given above) belong to the corners and borders that must keep their size \xE2\x80\x94 everything between them is stretched. Put each line just inside the flat middle, past the rounding, bevel, rim or ornament; null for simple / tiled\n"
     "\n"
     "Answer with JSON only, an array in the same order:\n"
-    "[{\"index\":1,\"name\":\"...\",\"type\":\"...\",\"assetType\":\"...\",\"variant\":\"\",\"description\":\"...\",\"background\":\"...\",\"nineSlice\":{\"left\":0,\"top\":0,\"right\":0,\"bottom\":0}}]");
+    "[{\"index\":1,\"name\":\"...\",\"type\":\"...\",\"assetType\":\"...\",\"variant\":\"\",\"purpose\":\"...\",\"description\":\"...\",\"background\":\"...\",\"nineSlice\":{\"left\":0,\"top\":0,\"right\":0,\"bottom\":0}}]");
     EXPECT_EQ(ParseJsonArrayAnswer("x ```json\n[1, {\"a\": 2}]\n``` y").Count(), 2);
     EXPECT_EQ(ParseJsonArrayAnswer("nothing").Count(), 0);
 }

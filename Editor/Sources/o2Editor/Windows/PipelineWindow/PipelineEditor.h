@@ -206,6 +206,11 @@ namespace Editor
         // Adds a node of the type in the middle of the view, steps aside from an occupied spot and selects it
         Ref<PipelineNode> AddNodeAtViewCenter(const String& type);
 
+        // Adds a node of the type beside another one - to its right, moved down past the cards in the way - as one undo step;
+        // setup fills its config before its card is built. Returns the node, null when there is no such node to add it beside
+        Ref<PipelineNode> AddNodeBeside(const String& besideNodeId, const String& type, const Function<void(PipelineNode&)>& setup,
+                                        const String& undoName);
+
         // Rebuilds all cards from the graph, keeping their runtimes
         void RebuildAll();
 
@@ -321,7 +326,10 @@ namespace Editor
             Color4            color;             // Line colour
             float             width = 1.5f;      // Line width in canvas units
             bool              selected = false;  // Drawn with the selection halo
-            bool              overCards = false; // Leaves a port inside a card, drawn after the cards
+            bool              overCards = false; // Leaves or enters a port inside a card, drawn after the cards
+
+            std::optional<Vec2F> entry; // Where the link meets the card of a port inside its body: the curve ends there, a
+                                        // straight run reaches the port
 
             bool operator==(const EdgeDraw& other) const { return edge == other.edge; }
         };
@@ -440,7 +448,8 @@ namespace Editor
         void DrawEdges(bool overCards);
 
         // Draws one link as a smooth curve through bend points; the width is in canvas units and never thinner than a pixel on screen
-        void DrawEdge(const Vec2F& from, const Vec2F& to, const Vector<Vec2F>& points, const Color4& color, float width);
+        void DrawEdge(const Vec2F& from, const Vec2F& to, const Vector<Vec2F>& points, const Color4& color, float width,
+                      const Vec2F* entry = nullptr);
 
         // Returns polyline of a link curve through bend points
         Vector<Vec2F> BuildEdgePolyline(const Vec2F& from, const Vec2F& to, const Vector<Vec2F>& points) const;
@@ -461,7 +470,7 @@ namespace Editor
         Ref<PipelineEdge> FindEdgeAt(const Vec2F& canvasPoint, int* segmentOut = nullptr) const;
 
         // Returns port positions of link ends, false when a node card is missing
-        bool GetEdgeEnds(const PipelineEdge& edge, Vec2F& from, Vec2F& to) const;
+        bool GetEdgeEnds(const PipelineEdge& edge, Vec2F& from, Vec2F& to, std::optional<Vec2F>* entry = nullptr) const;
 
         // Starts dragging a link from port, from a connected input it detaches the existing link
         void BeginEdgeDrag(const Ref<PipelineNodeWidget>& node, const PipelineNodeWidget::PortView& port);
@@ -692,6 +701,7 @@ CLASS_METHODS_META(Editor::PipelineEditor)
     FUNCTION().PUBLIC().SIGNATURE(void, FinishBackgroundWork);
     FUNCTION().PUBLIC().SIGNATURE(PipelineValue, GetInputValueById, const Ref<PipelineNode>&, const String&);
     FUNCTION().PUBLIC().SIGNATURE(Ref<PipelineNode>, AddNodeAtViewCenter, const String&);
+    FUNCTION().PUBLIC().SIGNATURE(Ref<PipelineNode>, AddNodeBeside, const String&, const String&, const Function<void(PipelineNode&)>&, const String&);
     FUNCTION().PUBLIC().SIGNATURE(void, RebuildAll);
     FUNCTION().PUBLIC().SIGNATURE(void, ReloadGraph);
     FUNCTION().PUBLIC().SIGNATURE(void, ReloadResults);
@@ -738,14 +748,14 @@ CLASS_METHODS_META(Editor::PipelineEditor)
     FUNCTION().PROTECTED().SIGNATURE(void, UpdateCardsVisibility);
     FUNCTION().PROTECTED().SIGNATURE(void, CollectEdgeDraws);
     FUNCTION().PROTECTED().SIGNATURE(void, DrawEdges, bool);
-    FUNCTION().PROTECTED().SIGNATURE(void, DrawEdge, const Vec2F&, const Vec2F&, const Vector<Vec2F>&, const Color4&, float);
+    FUNCTION().PROTECTED().SIGNATURE(void, DrawEdge, const Vec2F&, const Vec2F&, const Vector<Vec2F>&, const Color4&, float, const Vec2F*);
     FUNCTION().PROTECTED().SIGNATURE(Vector<Vec2F>, BuildEdgePolyline, const Vec2F&, const Vec2F&, const Vector<Vec2F>&);
     FUNCTION().PROTECTED().SIGNATURE(void, DrawSelection);
     FUNCTION().PROTECTED().SIGNATURE(void, DrawBendHandles);
     FUNCTION().PROTECTED().SIGNATURE(void, RebuildBendHandles);
     FUNCTION().PROTECTED().SIGNATURE(Ref<PipelineNodeWidget>, FindNodeAt, const Vec2F&);
     FUNCTION().PROTECTED().SIGNATURE(Ref<PipelineEdge>, FindEdgeAt, const Vec2F&, int*);
-    FUNCTION().PROTECTED().SIGNATURE(bool, GetEdgeEnds, const PipelineEdge&, Vec2F&, Vec2F&);
+    FUNCTION().PROTECTED().SIGNATURE(bool, GetEdgeEnds, const PipelineEdge&, Vec2F&, Vec2F&, std::optional<Vec2F>*);
     FUNCTION().PROTECTED().SIGNATURE(void, BeginEdgeDrag, const Ref<PipelineNodeWidget>&, const PipelineNodeWidget::PortView&);
     FUNCTION().PROTECTED().SIGNATURE(void, FinishEdgeDrag, const Vec2F&);
     FUNCTION().PROTECTED().SIGNATURE(bool, ConnectPorts, const String&, const String&, const String&, const String&, const String&, const String&);

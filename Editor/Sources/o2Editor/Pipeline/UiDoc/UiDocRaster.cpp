@@ -668,6 +668,55 @@ namespace Editor::UiDoc
         Touch(layer.x0, layer.y0, layer.x1, layer.y1);
     }
 
+    void UiCanvas::CompositeTurned(const UiCanvas& layer, double deg, const UiPt& centre, const UiPt& layerCentre, float opacity /*= 1*/)
+    {
+        if (layer.x1 <= layer.x0 || layer.y1 <= layer.y0)
+            return;
+
+        const double a = (deg*3.141592653589793)/180, c = std::cos(a), s = std::sin(a);
+        // Where the layer's drawn box lands: its corners turned about the centre
+        double minX = INFINITY, minY = INFINITY, maxX = -INFINITY, maxY = -INFINITY;
+        for (int i = 0; i < 4; i++)
+        {
+            double dx = (i == 1 || i == 2 ? layer.x1 : layer.x0) - layerCentre.x, dy = (i >= 2 ? layer.y1 : layer.y0) - layerCentre.y;
+            double px = centre.x + c*dx - s*dy, py = centre.y + s*dx + c*dy;
+            minX = std::min(minX, px); maxX = std::max(maxX, px);
+            minY = std::min(minY, py); maxY = std::max(maxY, py);
+        }
+        int bx0 = std::max(0, (int)std::floor(minX) - 1), by0 = std::max(0, (int)std::floor(minY) - 1);
+        int bx1 = std::min(w, (int)std::ceil(maxX) + 1), by1 = std::min(h, (int)std::ceil(maxY) + 1);
+
+        // Every pixel takes the layer's colour where its centre was before the turn: bilinear between the four nearest
+        auto tap = [&](int x, int y, float k, float* acc) {
+            if (k <= 0 || x < layer.x0 || y < layer.y0 || x >= layer.x1 || y >= layer.y1)
+                return;
+            const float* p = layer.px.data() + ((size_t)y*layer.w + x)*4;
+            acc[0] += p[0]*k; acc[1] += p[1]*k; acc[2] += p[2]*k; acc[3] += p[3]*k;
+        };
+        for (int y = by0; y < by1; y++)
+        {
+            float* d = px.data() + (size_t)y*w*4;
+            for (int x = bx0; x < bx1; x++)
+            {
+                double ux = x + 0.5 - centre.x, uy = y + 0.5 - centre.y;
+                double qx = c*ux + s*uy + layerCentre.x - 0.5, qy = -s*ux + c*uy + layerCentre.y - 0.5;
+                int ix = (int)std::floor(qx), iy = (int)std::floor(qy);
+                if (ix < layer.x0 - 1 || iy < layer.y0 - 1 || ix >= layer.x1 || iy >= layer.y1)
+                    continue;
+
+                float fx = (float)(qx - ix), fy = (float)(qy - iy);
+                float acc[4] = { 0, 0, 0, 0 };
+                tap(ix, iy, (1 - fx)*(1 - fy), acc);
+                tap(ix + 1, iy, fx*(1 - fy), acc);
+                tap(ix, iy + 1, (1 - fx)*fy, acc);
+                tap(ix + 1, iy + 1, fx*fy, acc);
+                if (acc[3] > 0)
+                    Over(d + x*4, acc[0]*opacity, acc[1]*opacity, acc[2]*opacity, acc[3]*opacity);
+            }
+        }
+        Touch(bx0, by0, bx1, by1);
+    }
+
     void UiCanvas::CompositeBlock(const std::vector<float>& block, int bw, int bh, int x, int y, float opacity /*= 1*/)
     {
         int bx0 = std::max(0, x), by0 = std::max(0, y), bx1 = std::min(w, x + bw), by1 = std::min(h, y + bh);

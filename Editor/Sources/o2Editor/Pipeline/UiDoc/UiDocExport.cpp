@@ -107,6 +107,8 @@ namespace Editor::UiDoc
         input.sprites = structure.sprites;
         input.fonts = fonts;
         input.seed = seed;
+        // Laid out for its kit's device: the design always shows whole, another aspect ratio adds room (the preview's fit)
+        input.canvasFit = "expand";
         return input;
     }
 

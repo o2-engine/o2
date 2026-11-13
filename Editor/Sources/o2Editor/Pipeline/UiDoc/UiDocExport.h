@@ -13,10 +13,12 @@ namespace Editor::UiDoc
     // The AI UI layout's Download (the card's and the workspace's; port of AssetsLine's downloadLayout in
     // frontend/src/nodeEditor/uiLayout/uiLayoutState.ts) for the node's exportFor target, from the layout as
     // ToUiStructure writes it:
-    //   unity - a .unitypackage: the prefab, its sprites (nine-slice borders in their metas, pixels-per-unit multiplier =
-    //           the sprite's density) and every font the text styles use with its licence;
+    //   unity - a .unitypackage: the prefab (the Canvas Scaler in Expand mode; a turned block's RectTransform turns about
+    //           a centred pivot), its sprites (nine-slice borders in their metas, pixels-per-unit multiplier = the sprite's
+    //           density) and every font the text styles use with its licence;
     //   o2    - the prototype written into the project's Assets the way the AI image to UI node writes its own
-    //           (UiLayout::ExportPrototype), sprites resampled to the layout's density; o2 draws non-Roboto styles with
+    //           (UiLayout::ExportPrototype), sprites resampled to the layout's density, a turned block's widget turned about
+    //           a centred pivot (the web's o2 export leaves it unturned with a warning); o2 draws non-Roboto styles with
     //           Roboto (a warning says so);
     //   json  - a zip of ui_structure.json, layout.uiml, layout.json, the sprites tagged with their DPI, kit.json, the
     //           fonts used with their licences and the rendered picture
@@ -66,7 +68,8 @@ namespace Editor::UiDoc
     // and their licences, read from the bundled fonts; a file that cannot be read goes into missing
     Vector<UiExportFont> UnityExportFonts(const UiStructureResult& structure, Vector<String>* missing = nullptr);
 
-    // The Unity export's input: name, folder (assetPath cleaned, Generated/UI when empty), layout, sprites, fonts, seed
+    // The Unity export's input: name, folder (assetPath cleaned, Generated/UI when empty), layout, sprites, fonts, seed; the
+    // Canvas Scaler in Expand mode (canvasFit)
     UiExportInput UnityExportInput(const UiDoc& doc, const UiStructureResult& structure, const String& assetPath,
                                    const String& seed, const Vector<UiExportFont>& fonts);
 

@@ -29,6 +29,8 @@ namespace Editor::UiLayout
         String textModel;  // Vision model of the analysis and the review
         String imageModel; // Image model of the sprite mattes and the background plate
         int    seed = -1;  // Effective seed, -1 when none
+        String salt;       // Text answers of calls without a salt of their own are remembered under it: a run's turns are
+                           // replayed only within that run
 
         Function<void(const String& tag, const String& ext, const String& data)> record; // Gets every answer, for fixtures
 
@@ -71,8 +73,9 @@ namespace Editor::UiLayout
     // Returns the mime type of image bytes: image/jpeg for FF D8, else image/png
     String ImageMimeOf(const String& bytes);
 
-    // Asks the vision model; images are PNG or JPEG bytes
-    Coroutine<AiAnswer> AiText(const Ref<AiCtx>& ai, String prompt, Vector<String> images, String tag);
+    // Asks the vision model; images are PNG or JPEG bytes. salt (else the context's): the answer is remembered under it too,
+    // so it is replayed only for the same salt
+    Coroutine<AiAnswer> AiText(const Ref<AiCtx>& ai, String prompt, Vector<String> images, String tag, String salt = "");
 
     // Asks the image model for one render; refs are PNG bytes, seed -2 takes the context's
     Coroutine<AiAnswer> AiImage(const Ref<AiCtx>& ai, String prompt, Vector<String> refs, String tag, String aspectRatio, int seed = -2);

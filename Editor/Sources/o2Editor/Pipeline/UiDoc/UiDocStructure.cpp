@@ -244,6 +244,10 @@ namespace Editor::UiDoc
                     out["visible"] = false;
                 if (n.opacity && *n.opacity < 1)
                     out["opacity"] = *n.opacity;
+                // Turned about the centre of its box, degrees clockwise (an extension of the schema; the Unity export turns the
+                // RectTransform about a centred pivot)
+                if (n.rotation && *n.rotation)
+                    out["rotation"] = *n.rotation;
 
                 UiSkin skin = SkinOf(n, kit);
                 Json kids = Json::Array();

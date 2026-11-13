@@ -110,7 +110,7 @@ namespace Editor::UiDoc
             { "width", "w" }, { "height", "h" }, { "padding", "pad" }, { "spacing", "gap" }, { "columns", "cols" }, { "label", "text" },
             { "textalign", "textAlign" }, { "fontsize", "fontSize" }, { "textcolor", "textColor" }, { "gapy", "gapY" },
             { "cellw", "cellW" }, { "cellh", "cellH" }, { "text-align", "textAlign" }, { "font-size", "fontSize" },
-            { "text-color", "textColor" },
+            { "text-color", "textColor" }, { "rot", "rotation" }, { "rotate", "rotation" }, { "angle", "rotation" },
         };
         String lower = JsToLower(key);
         for (auto& a : aliases)

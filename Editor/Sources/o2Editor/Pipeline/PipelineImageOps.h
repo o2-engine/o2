@@ -38,6 +38,9 @@ namespace Editor
         // Trims the empty border around the content leaving pad pixels; unchanged when there is no content
         Ref<Bitmap> CropToContent(const Bitmap& src, ContentMode mode, int pad = 0);
 
+        // The box of the content CropToContent keeps (without padding), pixels; false when there is no content
+        bool ContentBox(const Bitmap& src, ContentMode mode, int& left, int& top, int& width, int& height);
+
         // Scales to the size, box-filtering when shrinking two times or more so thin lines survive
         Ref<Bitmap> Resize(const Bitmap& src, const Vec2I& size);
 

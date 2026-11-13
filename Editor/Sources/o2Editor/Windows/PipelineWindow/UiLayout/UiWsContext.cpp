@@ -81,8 +81,20 @@ namespace Editor
         return graph ? graph->FindNode(nodeId) : nullptr;
     }
 
+    // ------------------------------------------------------------------------------
+    // The first reference picture wired into the node: its bytes, size and density
+    // ------------------------------------------------------------------------------
+    struct UiWsPicture
+    {
+        String                png;
+        int                   w = 0, h = 0;
+        std::optional<double> dpi;
+
+        bool operator==(const UiWsPicture& other) const { return w == other.w && h == other.h && dpi == other.dpi && png == other.png; }
+    };
+
     // The kit value wired into the node's kit input and the first reference picture
-    static void ReadInputs(PipelineEditor& e, const Ref<PipelineNode>& node, PipelineValue& kitValue, std::optional<UiScreen>& reference)
+    static void ReadInputs(PipelineEditor& e, const Ref<PipelineNode>& node, PipelineValue& kitValue, UiWsPicture& picture)
     {
         kitValue = PipelineValue();
         for (auto& port : node->inputs)
@@ -94,7 +106,7 @@ namespace Editor
             }
         }
 
-        reference.reset();
+        picture = UiWsPicture();
         auto graph = e.GetGraph();
         for (auto& port : node->inputs)
         {
@@ -119,8 +131,10 @@ namespace Editor
                 }
                 if (w > 0 && h > 0)
                 {
-                    auto dpi = PipelinePngMeta::ReadDpi(value.data);
-                    reference = UiScreen{ (double)w, (double)h, dpi ? *dpi : UI_BASE_DPI };
+                    picture.w = w;
+                    picture.h = h;
+                    picture.dpi = PipelinePngMeta::ReadDpi(value.data);
+                    picture.png = value.data; // PNG or JPEG as it came (decoded by the compare views)
                 }
             }
             break;
@@ -178,7 +192,8 @@ namespace Editor
             peek = -1;
 
         PipelineValue kitValue;
-        ReadInputs(*e, node, kitValue, reference);
+        UiWsPicture picture;
+        ReadInputs(*e, node, kitValue, picture);
         String text = kitValue.IsValid() && kitValue.type == PipelinePortType::UiKit ? kitValue.data : String();
         if (text != kitText)
         {
@@ -190,8 +205,17 @@ namespace Editor
         undescribed = Ws::KitUndescribed(hasKit ? &kit : nullptr);
 
         const UiDoc::UiDoc& doc = Doc();
+        target = Ws::LayoutTarget(hasKit || kit.device ? &kit : nullptr);
+        referencePng = picture.png;
+        referencePicture = UiDoc::UiSize{ (double)picture.w, (double)picture.h };
+        if (picture.w > 0 && picture.h > 0)
+            reference = Ws::ReferenceScreenOf(doc, target, picture.w, picture.h, picture.dpi);
+        else
+            reference.reset();
+        ref = Ws::RefSettingOf(config, reference.has_value());
         setting = Ws::PreviewSettingOf(config);
-        preview = Ws::PreviewOf(doc, setting, reference ? &*reference : nullptr);
+        bool comparing = ref.on && (!compareNeedsBlocks || !doc.root.children.empty());
+        preview = Ws::PreviewOf(doc, setting, reference ? &*reference : nullptr, target, comparing);
         rects = SolveLayout(doc, preview.frame.w, preview.frame.h);
         report = hasKit ? KitReport(doc, &kit) : UiKitReport();
 
@@ -202,6 +226,7 @@ namespace Editor
         const Json* reviewValue = JsGet(config, "agentReview");
         review = !(reviewValue && reviewValue->IsBool() && !reviewValue->Bool());
         draft = JsStringOr(JsGet(config, "uiDraft"));
+        points = UiDoc::CleanPoints(JsGet(config, "uiPoints"));
         const Json* exportValue = JsGet(config, "exportFor");
         exportFor = exportValue && exportValue->IsString() && (exportValue->Str() == "o2" || exportValue->Str() == "json") ? exportValue->Str() : String("unity");
 
@@ -221,11 +246,10 @@ namespace Editor
         if (!changed)
         {
             PipelineValue kitValue;
-            std::optional<UiScreen> ref;
-            ReadInputs(*e, node, kitValue, ref);
+            UiWsPicture picture;
+            ReadInputs(*e, node, kitValue, picture);
             String text = kitValue.IsValid() && kitValue.type == PipelinePortType::UiKit ? kitValue.data : String();
-            bool sameRef = ref.has_value() == reference.has_value() &&
-                (!ref || (ref->w == reference->w && ref->h == reference->h && ref->dpi == reference->dpi));
+            bool sameRef = picture.w == (int)referencePicture.w && picture.h == (int)referencePicture.h && picture.png == referencePng;
             changed = text != kitText || !sameRef;
         }
 
@@ -267,12 +291,24 @@ namespace Editor
         return changed;
     }
 
+    Vector<UiOp> UiWsContext::WithFirstScreen(const Vector<UiOp>& ops) const
+    {
+        auto first = Ws::FirstScreenOp(current, target, reference ? &*reference : nullptr);
+        if (!first)
+            return ops;
+
+        Vector<UiOp> all = { *first };
+        all.Add(ops);
+        return all;
+    }
+
     void UiWsContext::Op(const Vector<UiOp>& ops, const String& label)
     {
         if (!Editable() || ops.IsEmpty())
             return;
 
-        Write("steps", true, [&](DataValue& c) { return Ws::CommitUser(c, ops, label, Ws::NowMs(), true); });
+        Vector<UiOp> all = WithFirstScreen(ops);
+        Write("steps", true, [&](DataValue& c) { return Ws::CommitUser(c, all, label, Ws::NowMs(), true); });
     }
 
     void UiWsContext::Gesture(const Vector<UiOp>& ops, const String& label)
@@ -280,7 +316,33 @@ namespace Editor
         if (!Editable() || ops.IsEmpty())
             return;
 
-        Write("steps", true, [&](DataValue& c) { return Ws::CommitUser(c, ops, label, Ws::NowMs(), false); });
+        Vector<UiOp> all = WithFirstScreen(ops);
+        Write("steps", true, [&](DataValue& c) { return Ws::CommitUser(c, all, label, Ws::NowMs(), false); });
+    }
+
+    bool UiWsContext::Bring()
+    {
+        if (!Editable() || Busy())
+            return false;
+
+        double scale = 1;
+        auto op = Ws::BringOp(current, target, &scale);
+        if (!op)
+            return false;
+
+        // The step, then the points (design pixels) scaled with everything else
+        Write("steps", true, [&](DataValue& c) { return Ws::CommitUser(c, { *op }, Ws::BringLabel(target), Ws::NowMs(), false); });
+        if (!points.IsEmpty())
+        {
+            Vector<UiDoc::UiStepPoint> moved = points;
+            for (auto& p : moved)
+            {
+                p.x = UiDoc::JsRound(p.x*scale);
+                p.y = UiDoc::JsRound(p.y*scale);
+            }
+            SetUi("uiPoints", UiDoc::PointsToJson(moved));
+        }
+        return true;
     }
 
     void UiWsContext::Undo()
@@ -372,6 +434,43 @@ namespace Editor
             String error;
             Errors().TryGetValue(nodeId, error);
             return error;
+        }
+
+        static Map<String, LiveRun>& Runs() { static auto* m = new Map<String, LiveRun>(); return *m; }
+        static Map<String, bool>& Stops() { static auto* m = new Map<String, bool>(); return *m; }
+
+        void SetRun(const String& nodeId, const LiveRun& run)
+        {
+            LiveRun had;
+            bool known = Runs().TryGetValue(nodeId, had);
+            LiveRun next = run;
+            next.version = known ? had.version + 1 : 1;
+            if (!known || had.runId != run.runId)
+                Stops().Remove(nodeId);
+            Runs()[nodeId] = next;
+        }
+
+        bool GetRun(const String& nodeId, LiveRun& run)
+        {
+            return Runs().TryGetValue(nodeId, run);
+        }
+
+        void ClearRun(const String& nodeId)
+        {
+            Runs().Remove(nodeId);
+            Stops().Remove(nodeId);
+        }
+
+        void RequestStop(const String& nodeId)
+        {
+            if (Runs().ContainsKey(nodeId))
+                Stops()[nodeId] = true;
+        }
+
+        bool IsStopRequested(const String& nodeId)
+        {
+            bool stop = false;
+            return Stops().TryGetValue(nodeId, stop) && stop;
         }
     }
 }

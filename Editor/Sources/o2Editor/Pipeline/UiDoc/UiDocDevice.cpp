@@ -52,6 +52,9 @@ namespace Editor::UiDoc
     const Vector<UiDevice>& UiDevices()
     {
         static const Vector<UiDevice> devices = {
+            { "iphone-16", "iPhone 16", "phone", 1179, 2556, 460 },
+            { "iphone-16-pro", "iPhone 16 Pro", "phone", 1206, 2622, 460 },
+            { "iphone-16-pro-max", "iPhone 16 Pro Max", "phone", 1320, 2868, 460 },
             { "iphone-se", "iPhone SE", "phone", 750, 1334, 326 },
             { "iphone-15", "iPhone 15", "phone", 1179, 2556, 460 },
             { "iphone-15-pro-max", "iPhone 15 Pro Max", "phone", 1290, 2796, 460 },
@@ -70,10 +73,115 @@ namespace Editor::UiDoc
         return devices;
     }
 
+    const char* const UI_DEFAULT_DEVICE = "iphone-16";
+
+    const UiDevice* DeviceById(const String& id)
+    {
+        return UiDevices().Find([&](const UiDevice& d) { return d.id == id; });
+    }
+
+    UiTarget DefaultTarget()
+    {
+        const UiDevice* d = DeviceById(UI_DEFAULT_DEVICE);
+        return UiTarget{ d->id, d->name, d->w, d->h, d->dpi };
+    }
+
+    std::optional<UiTarget> CleanTarget(const Json* raw)
+    {
+        if (!raw || !(raw->IsObject() || raw->IsArray()))
+            return std::nullopt;
+
+        const Json* id = JsGet(raw, "id");
+        if (id && id->IsString())
+        {
+            if (const UiDevice* known = DeviceById(id->Str()))
+                return UiTarget{ known->id, known->name, known->w, known->h, known->dpi };
+        }
+
+        double w = JsRound(JsNumber(JsGet(raw, "w"))), h = JsRound(JsNumber(JsGet(raw, "h")));
+        auto dpi = CleanDpi(JsGet(raw, "dpi"));
+        if (!(w >= 64 && h >= 64 && w <= 8192 && h <= 8192) || !dpi)
+            return std::nullopt;
+
+        String name = JsSlice(JsTrim(JsStringOr(JsGet(raw, "name"))), 0, 40);
+        if (name.IsEmpty())
+            name = JsNum(w) + "\xC3\x97" + JsNum(h);
+        return UiTarget{ "", name, w, h, *dpi };
+    }
+
+    Json TargetToJson(const UiTarget& target)
+    {
+        Json out = Json::Object();
+        if (!target.id.IsEmpty())
+            out["id"] = target.id;
+        out["name"] = target.name;
+        out["w"] = target.w;
+        out["h"] = target.h;
+        out["dpi"] = target.dpi;
+        return out;
+    }
+
+    UiTarget TargetOfConfig(const Json& config)
+    {
+        const Json* device = JsGet(config, "kitDevice");
+        if (device && device->IsString() && device->Str() == "custom")
+        {
+            Json custom = Json::Object();
+            const Json* given = JsGet(config, "kitDeviceCustom");
+            if (given && given->IsObject())
+                custom = *given;
+            custom["name"] = "Custom";
+            auto t = CleanTarget(&custom);
+            return t ? *t : DefaultTarget();
+        }
+
+        Json byId = Json::Object();
+        byId["id"] = device ? *device : Json();
+        auto t = CleanTarget(&byId);
+        return t ? *t : DefaultTarget();
+    }
+
+    double SourceFit(const UiScreen& target, double srcW, double srcH)
+    {
+        if (!(srcW > 0 && srcH > 0))
+            return 1;
+        return std::min(target.w/srcW, target.h/srcH);
+    }
+
+    UiOnTarget SourceOnTarget(const UiScreen& target, double srcW, double srcH)
+    {
+        double k = SourceFit(target, srcW, srcH);
+        return UiOnTarget{ std::max(1.0, JsRound(srcW*k)), std::max(1.0, JsRound(srcH*k)), k };
+    }
+
+    bool InTargetUnits(const std::optional<double>& docDpi, const UiScreen& target)
+    {
+        return std::fabs(DocDpi(docDpi) - target.dpi) < 0.5;
+    }
+
+    UiTargetUnits ToTargetUnits(double docW, double docH, const std::optional<double>& docDpi, const UiScreen& target)
+    {
+        auto on = SourceOnTarget(target, docW, docH);
+        return UiTargetUnits{ on.w, on.h, target.dpi, JsRound(on.k*100000)/100000, DocDpi(docDpi) };
+    }
+
+    String AspectName(double w, double h)
+    {
+        double a = std::max(w, h)/std::min(w, h);
+        static const int ratios[][2] = { { 16, 9 }, { 4, 3 }, { 3, 2 }, { 16, 10 }, { 5, 4 }, { 1, 1 }, { 21, 9 }, { 2, 1 } };
+        for (auto& r : ratios)
+        {
+            if (std::fabs(a - (double)r[0]/r[1]) < 0.012)
+                return w >= h ? JsNum(r[0]) + ":" + JsNum(r[1]) : JsNum(r[1]) + ":" + JsNum(r[0]);
+        }
+        double v = JsRound(a*9*2)/2;
+        return w >= h ? JsNum(v) + ":9" : "9:" + JsNum(v);
+    }
+
     UiFrame PreviewFrame(double docW, double docH, const std::optional<double>& docDpi, const UiScreen& screen, const String& mode)
     {
-        double scale = mode == "dpi" ? screen.dpi/DocDpi(docDpi) : std::sqrt((screen.w/docW)*(screen.h/docH));
-        return UiFrame{ std::max(64.0, JsRound(screen.w/scale)), std::max(64.0, JsRound(screen.h/scale)), scale };
+        double scale = std::min(screen.w/docW, screen.h/docH);
+        return UiFrame{ std::max(docW, JsRound(screen.w/scale)), std::max(docH, JsRound(screen.h/scale)), scale };
     }
 
     double GraphicZoom(const std::optional<double>& docDpi, const std::optional<double>& graphicDpi, const UiFrame& frame)

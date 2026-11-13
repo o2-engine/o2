@@ -101,6 +101,10 @@ namespace Editor::UiLayout
         String         note;     // About the sliced assets (SpritesNote)
         Vector<String> fonts;    // fontFamily values the model may use
         String         revise;   // A round of edits: its request file (agent.py --revise), empty for a run
+        String         seed;     // A first draft of ui_structure.json to start from (agent.py --seed): the file's text
+        String         seedFile; // Where the draft is written for the agent (<work>/seed-ui_structure.json when empty)
+
+        Function<void()> onTick; // Called once a frame while the agent runs (a host following its trace)
     };
 
     // How the agent ended

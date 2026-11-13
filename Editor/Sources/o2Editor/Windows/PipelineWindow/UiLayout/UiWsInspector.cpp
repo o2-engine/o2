@@ -11,6 +11,7 @@
 #include "o2/Utils/Editor/EditorScope.h"
 #include "o2Editor/Dialogs/ColorPickerDlg.h"
 #include "o2Editor/Pipeline/PipelineUtils.h"
+#include "o2Editor/Pipeline/UiDoc/UiDocRotate.h"
 
 namespace Editor
 {
@@ -319,25 +320,9 @@ namespace Editor
         if (isRoot)
         {
             section("Screen");
-            RectF r = row("Size");
-            nums(r, {
-                { "screen:w", "W", "", doc.width, 64.0, [weak](std::optional<double> v)
-                  { auto s = weak.Lock(); if (s && v && *v >= 64) s->Screen(UiDoc::MakeScreenOp("", *v, s->ctx->Doc().height, std::nullopt), "screen size"); } },
-                { "screen:h", "H", "", doc.height, 64.0, [weak](std::optional<double> v)
-                  { auto s = weak.Lock(); if (s && v && *v >= 64) s->Screen(UiDoc::MakeScreenOp("", s->ctx->Doc().width, *v, std::nullopt), "screen size"); } } });
-            r = row("DPI");
-            double dpi = UiDoc::DocDpi(doc);
-            RectF extra = nums(r, { { "screen:dpi", "", UiDoc::JsNum(UiDoc::UI_BASE_DPI), dpi, 36.0, [weak](std::optional<double> v)
-                { auto s = weak.Lock(); auto d = v ? UiDoc::CleanDpi(*v) : std::nullopt; if (s && d) s->Screen(UiDoc::MakeScreenOp("", std::nullopt, std::nullopt, *d), "screen dpi"); } } }, 1);
-            Text(UiDoc::DensityName(dpi), RectF(extra.left + 2, extra.top, extra.right, extra.bottom), TextStyle(11.0f, 400, t.fg3, HorAlign::Left, true));
-            auto& ref = ctx->reference;
-            if (ref && (ref->w != doc.width || ref->h != doc.height || ref->dpi != dpi))
-            {
-                r = row("");
-                String caption = "Same as the reference \xC2\xB7 " + UiDoc::JsNum(ref->w) + "\xC3\x97" + UiDoc::JsNum(ref->h) + " \xC2\xB7 " +
-                    UiDoc::JsNum(UiDoc::JsRound(ref->dpi)) + " dpi";
-                Button(r, caption, "asref", false, editable, "uiws_dev_reference");
-            }
+            DrawRootScreen(box, y);
+            firstRow = false;
+            RectF r;
             r = row("Backdrop");
             kitPicker(r, "kit", n->kit, nullptr);
             r = row("Colour");
@@ -436,6 +421,19 @@ namespace Editor
                 r = row("Grow");
                 nums(r, { { "grow", "", "0", Opt(n->grow), std::nullopt, setter("grow") } });
             }
+            // Turned about its centre, degrees clockwise; the blocks inside turn with it, the layout does not change
+            r = row("Rotation");
+            RectF turns = nums(r, { { "rotation", "\xC2\xB0", "0", Opt(n->rotation), std::nullopt, [weak](std::optional<double> v)
+            {
+                auto turn = v ? UiDoc::CleanTurn(*v) : std::nullopt;
+                if (auto self = weak.Lock())
+                    self->Set("rotation", turn ? Json(*turn) : Json());
+            } } }, 1);
+            if (editable)
+            {
+                Tool(RectF(turns.left, r.top, turns.left + 28, r.bottom), "uiws_undo", "turn:left", false, true, 14.0f);
+                Tool(RectF(turns.left + 30, r.top, turns.left + 58, r.bottom), "uiws_redo", "turn:right", false, true, 14.0f);
+            }
             if (n->type != "group" && n->type != "text")
             {
                 section("Look");
@@ -520,14 +518,9 @@ namespace Editor
                 textField(r, "placeholder", n->placeholder ? *n->placeholder : String(), "", false);
             }
             r = row("Text style");
-            String styleLabel = "auto";
-            if (n->style && !n->style->IsEmpty())
-            {
-                styleLabel = *n->style;
-                if (auto s = UiDoc::KitStyle(ctx->hasKit ? &ctx->kit : nullptr, *n->style))
-                    styleLabel = s->name + " \xC2\xB7 " + s->role;
-            }
-            select(r, "style", styleLabel);
+            UiWsStylePicker::DrawButton(r, *n, ctx->hasKit ? &ctx->kit : nullptr, IsHover("stylepick"), editable);
+            if (editable)
+                AddHot(r, "stylepick");
             r = row("Text align");
             segments(r, "textAlign", { { "auto", "auto" }, { "left", "Start" }, { "center", "Center" }, { "right", "End" } },
                      n->textAlign ? *n->textAlign : String("auto"));
@@ -675,6 +668,15 @@ namespace Editor
             return;
         }
 
+        if (id == "stylepick")
+        {
+            OpenStyles(HotRect(id));
+            return;
+        }
+
+        if (OnRootClick(id))
+            return;
+
         if (id.StartsWith("swatch:"))
         {
             String key = id.SubStr(7);
@@ -725,17 +727,20 @@ namespace Editor
             if (Ws::AnchorOp(ctx->Doc(), ctx->rects, n->id, rest(7), alt, op, label))
                 ctx->Op({ op }, label);
         }
+        else if (id == "turn:left" || id == "turn:right")
+        {
+            // A quarter turn counter-clockwise / clockwise
+            auto turn = UiDoc::CleanTurn((n->rotation ? *n->rotation : 0.0) + (id == "turn:left" ? -90.0 : 90.0));
+            Set("rotation", turn ? Json(*turn) : Json());
+        }
         else if (id == "toggle:visible")
             Set("visible", n->IsShown() ? Json(false) : Json());
         else if (id == "toggle:on")
             Set("on", n->on && *n->on ? Json() : Json(true));
         else if (id.StartsWith("clear:"))
             Set(rest(6), Json());
-        else if (id == "asref" && ctx->reference)
-        {
-            auto& ref = *ctx->reference;
-            Screen(UiDoc::MakeScreenOp("", ref.w, ref.h, ref.dpi), "screen = reference");
-        }
+        else if (OnRootClick(id))
+            return;
     }
 
     void UiWsInspector::OpenOptions(const String& key, const RectF& anchor, const Vector<Pair<String, String>>& options, const String& current)
@@ -750,8 +755,11 @@ namespace Editor
             mOptions->name = "options";
             mKitGrid = mmake<UiWsKitGridPanel>();
             mKitGrid->name = "kit grid";
+            mStyles = mmake<UiWsStyleListPanel>();
+            mStyles->name = "style list";
             mPopup->SetContent(mOptions);
             mPopup->SetContent(mKitGrid);
+            mPopup->SetContent(mStyles);
         }
         if (mPopup->IsOpen())
         {
@@ -763,6 +771,7 @@ namespace Editor
         mPopupFor = key;
         mOptions->SetEnabledForcible(true);
         mKitGrid->SetEnabledForcible(false);
+        mStyles->SetEnabledForcible(false);
         mOptions->options = options;
         mOptions->current = current;
         WeakRef<UiWsInspector> weak(this);
@@ -797,5 +806,28 @@ namespace Editor
             self->Choose("kit:kit:" + name);
         };
         mPopup->OpenAt(anchor, 312.0f, Math::Min(340.0f, mKitGrid->ContentHeight()), true);
+    }
+
+    void UiWsInspector::OpenStyles(const RectF& anchor)
+    {
+        const UiNode* n = Shown();
+        OpenOptions("style", anchor, {}, "");
+        if (!n || !mPopup->IsOpen())
+            return;
+
+        mOptions->SetEnabledForcible(false);
+        mStyles->SetEnabledForcible(true);
+        mStyles->ctx = ctx;
+        mStyles->blockId = n->id;
+        WeakRef<UiWsInspector> weak(this);
+        mStyles->onPick = [weak](const String& name)
+        {
+            auto self = weak.Lock();
+            if (!self)
+                return;
+            self->mPopup->Close();
+            self->Set("style", name.IsEmpty() ? Json() : Json(name));
+        };
+        mPopup->OpenAt(anchor, 320.0f, Math::Min(420.0f, mStyles->ContentHeight()), true);
     }
 }

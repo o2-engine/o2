@@ -13,6 +13,7 @@
 #include "o2/Utils/System/Time/Time.h"
 #include "o2Editor/Pipeline/UiDoc/UiDocRender.h"
 #include "o2Editor/Windows/PipelineWindow/PipelineDraw.h"
+#include "o2Editor/Windows/PipelineWindow/UiLayout/UiWsPins.h"
 
 namespace Editor
 {
@@ -42,6 +43,14 @@ namespace Editor
             return !(neg && pos);
         }
 
+        // How far a point is from a segment
+        float SegmentDistance(const Vec2F& p, const Vec2F& a, const Vec2F& b)
+        {
+            Vec2F d = b - a;
+            float len2 = d.x*d.x + d.y*d.y;
+            float f = len2 > 0.0f ? Math::Clamp01(((p.x - a.x)*d.x + (p.y - a.y)*d.y)/len2) : 0.0f;
+            return (p - (a + d*f)).Length();
+        }
     }
 
     UiWsStage::UiWsStage(RefCounter* refCounter):
@@ -175,24 +184,21 @@ namespace Editor
 
     Vec2F UiWsStage::HandlePoint(const String& handle) const
     {
-        RectF s = ctx && !ctx->selected.IsEmpty() ? BlockRect(ctx->selected) : RectF();
-        float x = handle.Contains('w') ? s.left : handle.Contains('e') ? s.right : (s.left + s.right)*0.5f;
-        float y = handle.Contains('n') ? s.top : handle.Contains('s') ? s.bottom : (s.top + s.bottom)*0.5f;
-        return Vec2F(x, y);
+        // On the block's own box, turned with it
+        double fx = handle.Contains('w') ? 0.0 : handle.Contains('e') ? 1.0 : 0.5;
+        double fy = handle.Contains('n') ? 0.0 : handle.Contains('s') ? 1.0 : 0.5;
+        return SelectionAt(fx, fy);
     }
 
     Vec2F UiWsStage::AnchorGrip() const
     {
-        const auto& doc = Shown();
-        const UiDoc::UiNode* n = ctx->selected.IsEmpty() ? nullptr : UiDoc::FindNode(doc, ctx->selected);
-        const UiDoc::UiNode* parent = n ? UiDoc::FindParent(doc, n->id) : nullptr;
-        const UiRect* p = parent ? ShownRects().Find(parent->id) : nullptr;
-        if (!n || !p)
+        // 5 px into the first triangle from its corner, along both of its sides (turned with the parent)
+        std::array<std::array<Vec2F, 3>, 4> tris;
+        if (!AnchorTriangles(tris))
             return Vec2F();
 
-        auto ab = UiDoc::AnchorBox(*n, *p);
-        Vec2F corner = DesignToWorld(ab.x0, ab.y0);
-        return corner + Vec2F(-5.0f, 5.0f);
+        auto& t = tris[0];
+        return t[0] + (t[1] + t[2] - t[0]*2.0f)*(5.0f/18.5f);
     }
 
     String UiWsStage::GripAt(const Vec2F& point) const
@@ -217,33 +223,29 @@ namespace Editor
                 return h;
         }
 
-        // The whole edge pulls
-        float top = s.top, bottom = s.bottom;
-        if (point.x >= s.left - 5 && point.x <= s.right + 5)
+        // The whole edge pulls (the block's own edges, turned with it)
+        static const struct { const char* h; double ax, ay, bx, by; } edges[] = {
+            { "n", 0, 0, 1, 0 }, { "s", 0, 1, 1, 1 }, { "w", 0, 0, 0, 1 }, { "e", 1, 0, 1, 1 } };
+        for (auto& e : edges)
         {
-            if (Math::Abs(point.y - top) <= 5.0f) return "n";
-            if (Math::Abs(point.y - bottom) <= 5.0f) return "s";
-        }
-        if (point.y <= top + 5 && point.y >= bottom - 5)
-        {
-            if (Math::Abs(point.x - s.left) <= 5.0f) return "w";
-            if (Math::Abs(point.x - s.right) <= 5.0f) return "e";
+            if (SegmentDistance(point, SelectionAt(e.ax, e.ay), SelectionAt(e.bx, e.by)) <= 5.0f)
+                return e.h;
         }
 
+        // The turning knob above the top edge
+        Vec2F knob;
+        if (KnobPoint(knob) && (knob - point).Length() <= 10.0f)
+            return "turn";
+
         // The anchor's triangles
-        const UiDoc::UiNode* parent = UiDoc::FindParent(doc, n->id);
-        const UiRect* p = parent ? ShownRects().Find(parent->id) : nullptr;
-        if (parent && !parent->layout && p && n->IsShown())
+        std::array<std::array<Vec2F, 3>, 4> tris;
+        if (AnchorTriangles(tris))
         {
-            auto ab = UiDoc::AnchorBox(*n, *p);
-            Vec2F b = ToBoard(point);
-            auto tri = [&](double x, double y, float sx, float sy)
+            for (auto& t : tris)
             {
-                Vec2F a(mCam.x + (float)x*mCam.k, mCam.y + (float)y*mCam.k);
-                return InTriangle(b, a, a + Vec2F(sx*4.5f, sy*14.0f), a + Vec2F(sx*14.0f, sy*4.5f));
-            };
-            if (tri(ab.x0, ab.y0, -1, -1) || tri(ab.x1, ab.y0, 1, -1) || tri(ab.x0, ab.y1, -1, 1) || tri(ab.x1, ab.y1, 1, 1))
-                return "anchor";
+                if (InTriangle(point, t[0], t[1], t[2]))
+                    return "anchor";
+            }
         }
         return "";
     }
@@ -264,6 +266,10 @@ namespace Editor
         mR0 = *r0;
         mP = *p;
         mTargets = UiDoc::SnapTargets(doc, mBaseRects, id);
+        mParentTurn = UiDoc::WorldTurn(doc, id, false);
+        mParentM = UiDoc::WorldMatrix(doc, mBaseRects, id, false);
+        mSelfM = UiDoc::WorldMatrix(doc, mBaseRects, id, true);
+        mTurned = mParentTurn != 0 || UiDoc::TurnOf(*n) != 0;
         mHasContext = true;
         return true;
     }
@@ -283,7 +289,7 @@ namespace Editor
             return;
 
         UiWsPanel::OnCursorPressed(cursor);
-        if (!mPressedHot.IsEmpty())
+        if (OnRefPress(cursor) || !mPressedHot.IsEmpty())
             return;
 
         if (mSpace)
@@ -291,6 +297,10 @@ namespace Editor
             BeginPan(cursor);
             return;
         }
+
+        // The request's points: a pin grabbed, or one placed with the point tool
+        if (UiWsPins::Press(*this, *ctx, cursor.position))
+            return;
 
         mPressWorld = cursor.position;
         mMoved = false;
@@ -302,7 +312,7 @@ namespace Editor
         if (!grip.IsEmpty() && BeginContext(ctx->selected))
         {
             mDragId = ctx->selected;
-            mDrag = grip == "anchor" ? DragKind::Anchor : DragKind::Resize;
+            mDrag = grip == "anchor" ? DragKind::Anchor : grip == "turn" ? DragKind::Rotate : DragKind::Resize;
             mHandle = grip;
             return;
         }
@@ -311,8 +321,8 @@ namespace Editor
         Vec2F frame = FrameSize();
         UiRect page(0, 0, frame.x, frame.y);
         String hit = InRect(page, pt) ? UiDoc::HitTest(ctx->Doc(), mBaseRects, pt.x, pt.y) : String();
-        const UiRect* selRect = ctx->selected.IsEmpty() ? nullptr : mBaseRects.Find(ctx->selected);
-        String grab = selRect && InRect(*selRect, pt) ? ctx->selected : hit;
+        bool onSelection = !ctx->selected.IsEmpty() && UiDoc::InBlock(ctx->Doc(), mBaseRects, ctx->selected, { pt.x, pt.y });
+        String grab = onSelection ? ctx->selected : hit;
         if (grab.IsEmpty())
         {
             ctx->Select("");
@@ -335,6 +345,9 @@ namespace Editor
 
     void UiWsStage::OnCursorStillDown(const Input::Cursor& cursor)
     {
+        if (OnRefDrag(cursor) || (ctx && UiWsPins::Drag(*this, *ctx, cursor.position)))
+            return;
+
         if (mDrag == DragKind::None)
             return;
 
@@ -377,6 +390,13 @@ namespace Editor
         bool hasOp = false;
         if (mDrag == DragKind::Move)
         {
+            // In a turned parent the offsets run along its axes
+            if (mParentTurn)
+            {
+                UiDoc::UiPoint along = UiDoc::ApplyLinear(UiDoc::Invert(mParentM), { ddx, ddy });
+                ddx = along.x;
+                ddy = along.y;
+            }
             if (shift)
             {
                 if (std::fabs(ddx) > std::fabs(ddy)) ddy = 0;
@@ -398,8 +418,9 @@ namespace Editor
             }
             else
             {
+                // Snapping lines are the screen's axes: a turned block (or one in a turned parent) is not snapped
                 UiDoc::UiSnap s;
-                if (noSnap)
+                if (noSnap || mTurned)
                     s.rect = moved;
                 else
                     s = UiDoc::SnapMove(moved, mTargets, snapPixels/k);
@@ -412,6 +433,13 @@ namespace Editor
         else if (mDrag == DragKind::Resize)
         {
             UiDoc::UiEdges edges{ mHandle.Contains('n'), mHandle.Contains('s'), mHandle.Contains('e'), mHandle.Contains('w') };
+            // Along the block's own axes (its turn and its parents' undone)
+            if (mTurned)
+            {
+                UiDoc::UiPoint along = UiDoc::ApplyLinear(UiDoc::Invert(mSelfM), { ddx, ddy });
+                ddx = along.x;
+                ddy = along.y;
+            }
             double sym = alt ? 2 : 1;
             double x = mR0.x, y = mR0.y, w = mR0.w, h = mR0.h;
             if (edges.e) w = mR0.w + ddx*sym;
@@ -436,8 +464,18 @@ namespace Editor
             y = sideY == "top" ? mR0.y : sideY == "bottom" ? mR0.y + mR0.h - h : mR0.y + (mR0.h - h)/2;
             UiDoc::UiSnap s;
             s.rect = UiRect(x, y, w, h);
-            if (!(noSnap || shift || alt))
+            if (!(noSnap || shift || alt || mTurned))
                 s = UiDoc::SnapResize(s.rect, edges, mTargets, snapPixels/k);
+            double own = UiDoc::TurnOf(*n);
+            if (own && !parent->layout)
+            {
+                // The box turns about its centre, and a resize moves the centre: shifted by (R - I)(c' - c) the side not
+                // pulled stays where it is on the screen
+                UiDoc::UiPoint c0 = UiDoc::Centre(mR0), c1 = UiDoc::Centre(s.rect);
+                UiDoc::UiPoint d{ c1.x - c0.x, c1.y - c0.y };
+                UiDoc::UiPoint rd = UiDoc::ApplyLinear(UiDoc::RotationAbout(own, 0, 0), d);
+                s.rect = UiRect(s.rect.x + rd.x - d.x, s.rect.y + rd.y - d.y, s.rect.w, s.rect.h);
+            }
             auto patch = parent->layout ? UiDoc::SizeInLayout(*n, *parent, mR0, s.rect) : UiDoc::PlaceAt(*n, mP, s.rect, nullptr, true);
             hasOp = UiDoc::PatchOp(mDragId, patch, op);
             live.label = mDragId + ": size";
@@ -446,12 +484,23 @@ namespace Editor
         }
         else if (mDrag == DragKind::Anchor)
         {
+            // The pointer in the parent's own (unturned) frame, where its anchor points are
             Vec2F pt = WorldToDesign(cursor.position);
-            UiDoc::Anchor a = UiDoc::AnchorAt(mP, pt.x, pt.y);
+            UiDoc::UiPoint q{ pt.x, pt.y };
+            if (mParentTurn)
+                q = UiDoc::Apply(UiDoc::Invert(mParentM), q);
+            UiDoc::Anchor a = UiDoc::AnchorAt(mP, q.x, q.y);
             hasOp = UiDoc::PatchOp(mDragId, UiDoc::PlaceAt(*n, mP, mR0, &a), op);
             live.label = mDragId + ": anchor";
             live.anchorDots = mP;
+            if (mParentTurn)
+                live.anchorM = mParentM;
             o2Application.SetCursor(CursorType::SizeAll);
+        }
+        else if (mDrag == DragKind::Rotate)
+        {
+            RotateTo(cursor.position, live, op, hasOp);
+            o2Application.SetCursor(CursorType::Hand);
         }
 
         if (hasOp)
@@ -495,11 +544,17 @@ namespace Editor
 
     void UiWsStage::OnCursorReleased(const Input::Cursor& cursor)
     {
+        if (OnRefRelease(cursor))
+            return;
+
         if (!mPressedHot.IsEmpty())
         {
             UiWsPanel::OnCursorReleased(cursor);
             return;
         }
+
+        if (ctx && UiWsPins::Release(*this, *ctx, cursor.position))
+            return;
 
         EndDrag(true);
         UpdateCursor(cursor.position);
@@ -507,6 +562,8 @@ namespace Editor
 
     void UiWsStage::OnCursorPressBreak(const Input::Cursor& cursor)
     {
+        mRefLive = -1.0;
+        mRefSlide = "";
         EndDrag(false);
     }
 
@@ -520,8 +577,7 @@ namespace Editor
         Vec2F frame = FrameSize();
         bool onPage = pt.x >= 0 && pt.y >= 0 && pt.x <= frame.x && pt.y <= frame.y && mHover.IsEmpty();
         mHoverBlock = onPage ? UiDoc::HitTest(ctx->Doc(), ctx->rects, pt.x, pt.y) : String();
-        const UiRect* sel = ctx->selected.IsEmpty() ? nullptr : ctx->rects.Find(ctx->selected);
-        mOverSelection = sel && InRect(*sel, pt);
+        mOverSelection = !ctx->selected.IsEmpty() && UiDoc::InBlock(ctx->Doc(), ctx->rects, ctx->selected, { pt.x, pt.y });
         UpdateCursor(cursor.position);
     }
 
@@ -547,11 +603,9 @@ namespace Editor
 
         String grip = mHover.IsEmpty() ? GripAt(point) : String();
         CursorType type = CursorType::Arrow;
-        if (grip == "n" || grip == "s") type = CursorType::SizeNS;
-        else if (grip == "e" || grip == "w") type = CursorType::SizeWE;
-        else if (grip == "ne" || grip == "sw") type = CursorType::SizeNeSw;
-        else if (grip == "nw" || grip == "se") type = CursorType::SizeNwSe;
-        else if (grip == "anchor") type = CursorType::SizeAll;
+        if (grip == "anchor") type = CursorType::SizeAll;
+        else if (grip == "turn") type = CursorType::Hand;
+        else if (!grip.IsEmpty()) type = HandleCursor(grip);
         else if (mOverSelection && mHover.IsEmpty() && ctx->Editable() && !ctx->Busy()) type = CursorType::SizeAll;
         o2Application.SetCursor(type);
     }

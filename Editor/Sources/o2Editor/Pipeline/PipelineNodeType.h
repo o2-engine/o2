@@ -67,6 +67,15 @@ namespace Editor
         static PipelineRunResult Single(const PipelineValue& value, const String& portName = "out");
     };
 
+    // ------------------------------------------------------------------------------------
+    // Result of a node's paid second step over a stored generation (IPipelineNodeImpl::Refine)
+    // ------------------------------------------------------------------------------------
+    struct PipelineRefineResult
+    {
+        PipelineValue value;       // What takes the generation's place
+        bool          keep = true; // False leaves it out of the cache: a model call failed, the next run tries again
+    };
+
     // ---------------------------------------------------------
     // What a node sees while it runs: settings, logging, inputs
     // ---------------------------------------------------------
@@ -99,9 +108,20 @@ namespace Editor
         Function<bool(const String& key, const String& ext, String& data)>       memoGet; // Memoised model answers of the pipeline
         Function<void(const String& key, const String& ext, const String& data)> memoPut; // Stores a model answer
 
+        Function<void(const String&)> phase; // Tells the editor what the node (or the part being run) does beyond its generation
+
     public:
         // Passes the message to the log callback when it is set
         void Log(const String& message) const;
+
+        // Passes what the node does now (check, redo) to the phase callback when it is set
+        void Phase(const String& name) const;
+
+        // Reads a memoised model answer; false when there is none or no store
+        bool MemoGet(const String& key, const String& ext, String& data) const;
+
+        // Stores a model answer when there is a store
+        void MemoPut(const String& key, const String& ext, const String& data) const;
 
         // Returns true when the cancellation callback is set and reports cancel
         bool IsCancelled() const;
@@ -145,6 +165,26 @@ namespace Editor
 
         // Config keys that do not change what the node produces, besides the UI-only ones every node has
         virtual Vector<String> SignatureExcludedKeys() const { return {}; }
+
+        // Config keys the stored generation of a single-output node leaves out: a local step reads them (PostStep), or a
+        // second step keyed on its own does
+        virtual Vector<String> ContentExcludedKeys(const PipelineNode& node) const { return {}; }
+
+        // A cheap local step over the stored generation, applied after every run - a cache hit included - like the crop
+        virtual PipelineValue PostStep(const PipelineNode& node, const PipelineValue& value) const { return value; }
+
+        // The key of a paid second step over a port's stored generation (AI extract and AI text style: the check against the
+        // reference), cached under a key of its own beside the generation's; empty while the step is off. portId is empty for a
+        // single-output node
+        virtual String RefineKey(const PipelineNode& node, const String& portId) const { return ""; }
+
+        // Runs the second step over the stored generation (ctx carries the part, the work folder, the memo and the phase
+        // callback); key is the step's cache key. Returns what takes the generation's place
+        virtual Coroutine<PipelineRefineResult> Refine(Ref<PipelineExecContext> ctx, Map<String, PipelineValue> inputs,
+                                                       Ref<PipelineNode> node, PipelineValue stored, String key);
+
+        // The stored result of the second step's key was read back instead of computed (the step's debug data follows it)
+        virtual void RefineReplayed(const PipelineExecContext& ctx, const PipelineNode& node, const String& key) const {}
     };
 
     // -------------------------------------------
@@ -180,6 +220,14 @@ namespace Editor
         // Returns true for an input only the node's AI reads from its card (every input of a Text style, every input of an
         // AI UI layout but its kit): a run neither computes it nor folds it into the node's signature
         static bool IsReferenceInput(const PipelineNode& node, const String& portId);
+
+        // Returns the upstream signature a consumer folds in for one incoming edge: a UI kit below an AI extract part keys on
+        // the part-density rule's version too (how a part's density is worked out is a post-step); one of an AI UI layout's
+        // own graphics is its stored picture (the upload and its density), whatever happens to the layout around it
+        static String UpstreamSigFor(const String& sig, const PipelineNode* from, const String& fromPortId, const PipelineNode& to);
+
+        // Bumped when the way an AI extract part's density is worked out changes
+        static constexpr int PART_DENSITY_VERSION = 3;
 
         // Returns where a finish node writes inside the assets folder, without the extension: its
         // assetPath, or Generated/<the file name the web editor downloads it as>, or Generated/output

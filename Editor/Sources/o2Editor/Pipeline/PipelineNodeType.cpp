@@ -1,6 +1,8 @@
 #include "o2Editor/stdafx.h"
 #include "PipelineNodeType.h"
 
+#include "o2Editor/Pipeline/UiDoc/UiDocOwn.h"
+
 namespace Editor
 {
     String PipelineNodeCategoryToString(PipelineNodeCategory category)
@@ -55,6 +57,31 @@ namespace Editor
     {
         if (signalRetry)
             signalRetry(attempt, max, status, reason);
+    }
+
+    void PipelineExecContext::Phase(const String& name) const
+    {
+        if (phase)
+            phase(name);
+    }
+
+    bool PipelineExecContext::MemoGet(const String& key, const String& ext, String& data) const
+    {
+        return memoGet && memoGet(key, ext, data);
+    }
+
+    void PipelineExecContext::MemoPut(const String& key, const String& ext, const String& data) const
+    {
+        if (memoPut)
+            memoPut(key, ext, data);
+    }
+
+    Coroutine<PipelineRefineResult> IPipelineNodeImpl::Refine(Ref<PipelineExecContext> ctx, Map<String, PipelineValue> inputs,
+                                                              Ref<PipelineNode> node, PipelineValue stored, String key)
+    {
+        PipelineRefineResult res;
+        res.value = stored;
+        co_return res;
     }
 
     Vector<Ref<IPipelineNodeImpl>>& PipelineNodeRegistry::Impls()
@@ -164,6 +191,27 @@ namespace Editor
         }
 
         return false;
+    }
+
+    String PipelineNodeRegistry::UpstreamSigFor(const String& sig, const PipelineNode* from, const String& fromPortId,
+                                                const PipelineNode& to)
+    {
+        if (sig.IsEmpty() || !from)
+            return sig;
+
+        if (to.nodeType == "uiKit" && from->nodeType == "imageExtract")
+            return sig + "|part-density:" + (String)PART_DENSITY_VERSION;
+
+        if (from->nodeType == "uiLayout")
+        {
+            auto port = from->FindOutput(fromPortId);
+            if (port && !UiDoc::IsLayoutFixedOutput(port->name))
+            {
+                if (auto own = UiDoc::LayoutOwnPortByName(UiDoc::FromDataValue(from->config), port->name))
+                    return UiDoc::OwnGraphicSig(*own);
+            }
+        }
+        return sig;
     }
 
     bool PipelineNodeRegistry::IsFinishType(const String& type)

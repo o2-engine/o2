@@ -10,6 +10,10 @@
 #include "o2Editor/Pipeline/UiDoc/UiDocAi.h"
 #include "o2Editor/Pipeline/UiDoc/UiDocExport.h"
 #include "o2Editor/Pipeline/UiLayout/UiLayoutAgent.h"
+#include "o2Editor/Pipeline/UiLayout/UiLayoutAgentRun.h"
+#include "o2Editor/Pipeline/PipelineExecutor.h"
+#include "o2Editor/Pipeline/PipelinePngMeta.h"
+#include "o2Editor/Pipeline/PipelineUtils.h"
 #include "o2Editor/Pipeline/UiDoc/UiDocJs.h"
 #include "o2Editor/Windows/PipelineWindow/PipelineEditor.h"
 #include "o2Editor/Windows/PipelineWindow/PipelineNodeBody.h"
@@ -145,44 +149,197 @@ namespace Editor
             return true;
         }
 
-        void SendAgent(const Ref<PipelineEditor>& editor, const String& nodeId, const String& prompt, const String& selected)
+        std::optional<UiDoc::UiKit> LayoutKitNow(const Ref<PipelineEditor>& editor, const PipelineNode& layoutNode)
         {
-            auto node = FindNode(editor, nodeId);
-            if (!node || prompt.Trimed(" \n\r\t").IsEmpty() || IsBusy("agent", nodeId))
-                return;
+            auto graph = editor ? editor->GetGraph() : nullptr;
+            auto layout = graph ? graph->FindNode(layoutNode.id) : nullptr;
+            if (!layout)
+                return std::nullopt;
 
-            UiDoc::UiAgentRequest request;
-            request.config = UiDoc::FromDataValue(node->config);
-            request.prompt = prompt;
-            request.selected = selected;
-            UiDoc::UiKit kit;
-            if (CurrentKit(editor, *node, kit))
-                request.kit = kit;
+            // Every kit input in port order, a kit node made again from what its inputs show now (an instant node may not
+            // have caught up yet), then the node's own graphics and styles
+            Vector<PipelineValue> kits;
+            for (auto& port : layout->inputs)
+            {
+                if (port.portType != PipelinePortType::UiKit)
+                    continue;
+                auto edge = graph->FindEdgeToPort(layout->id, port.id);
+                auto kitNode = edge ? graph->FindNode(edge->fromNodeId) : nullptr;
+                if (kitNode && kitNode->nodeType == "uiKit")
+                {
+                    Map<String, PipelineValue> byId;
+                    for (auto& input : kitNode->inputs)
+                    {
+                        auto value = editor->GetInputValueById(kitNode, input.id);
+                        if (value.IsValid())
+                            byId[input.id] = value;
+                    }
+                    kits.Add(PipelineValue::Text(UiDoc::KitToJson(PipelineUiNodes::BuildKit(*kitNode, byId, {})).Dump()));
+                    kits.Last().type = PipelinePortType::UiKit;
+                    continue;
+                }
+                auto value = editor->GetInputValueById(layout, port.id);
+                if (value.IsValid() && value.type == PipelinePortType::UiKit)
+                    kits.Add(value);
+            }
+            return PipelineUiNodes::LayoutKit(kits, UiDoc::FromDataValue(layout->config));
+        }
 
-            // The references: every input but the kit, pictures and texts, in input order
+        // The references of a layout node in port order: the first picture is the screen the layout rebuilds - it is taken
+        // to be the device's screen and handed over in the device's pixels, so everything read off it is in the layout's own
+        // units (a layout still in older units keeps the picture as it is)
+        static Vector<UiLayout::LayoutAgentRef> LayoutReferences(const Ref<PipelineEditor>& editor, const Ref<PipelineNode>& node,
+                                                                const UiDoc::UiDoc& doc, const UiDoc::UiTarget& target)
+        {
+            Vector<UiLayout::LayoutAgentRef> refs;
+            bool deviceUnits = doc.root.children.empty() || UiDoc::InTargetUnits(doc.dpi, target.Screen());
+            bool first = true;
             for (auto& port : node->inputs)
             {
-                if (port.portType == PipelinePortType::UiKit)
+                if (port.portType != PipelinePortType::Image && port.portType != PipelinePortType::Text)
                     continue;
-
                 auto value = editor->GetInputValueById(node, port.id);
                 if (!value.IsValid())
                     continue;
 
-                UiDoc::UiAgentInput input;
-                input.name = port.name.IsEmpty() ? String("input") : port.name;
+                UiLayout::LayoutAgentRef ref;
                 if (value.IsImage())
-                    input.png = value.GetPngBytes();
+                {
+                    String png = value.GetPngBytes();
+                    UiLayout::UiImage img;
+                    if (!UiLayout::UiImage::Decode(png, img))
+                        continue;
+                    ref.name = port.name.IsEmpty() ? String("reference") : port.name;
+                    if (first && deviceUnits)
+                    {
+                        UiDoc::UiOnTarget on = UiDoc::SourceOnTarget(target.Screen(), img.w, img.h);
+                        ref.png = on.w == img.w && on.h == img.h ? png : img.Resize((int)on.w, (int)on.h).Png();
+                        ref.w = on.w;
+                        ref.h = on.h;
+                        ref.dpi = target.dpi;
+                    }
+                    else
+                    {
+                        ref.png = png;
+                        ref.w = img.w;
+                        ref.h = img.h;
+                        ref.dpi = PipelinePngMeta::ReadDpi(png).value_or(UiDoc::UI_BASE_DPI);
+                    }
+                    first = false;
+                }
                 else if (value.IsText())
                 {
-                    input.image = false;
-                    input.text = value.data;
+                    ref.image = false;
+                    ref.name = port.name.IsEmpty() ? String("notes") : port.name;
+                    ref.text = value.data;
                 }
                 else
                     continue;
-
-                request.references.Add(input);
+                refs.Add(ref);
             }
+            return refs;
+        }
+
+        void SendAgent(const Ref<PipelineEditor>& editor, const String& nodeId, const String& prompt, const String& selected)
+        {
+            auto node = FindNode(editor, nodeId);
+            if (!node || IsBusy("agent", nodeId))
+                return;
+
+            UiDoc::Json config = UiDoc::FromDataValue(node->config);
+            UiDoc::UiDoc current = UiDoc::DocAt(config).doc;
+            std::optional<UiDoc::UiKit> kit = LayoutKitNow(editor, *node);
+            UiDoc::UiTarget target = kit && kit->device ? *kit->device : UiDoc::DefaultTarget();
+            Vector<UiLayout::LayoutAgentRef> refs = LayoutReferences(editor, node, current, target);
+
+            // The points the request names ([1], [2]... in its text), numbered as it names them; a request that names none
+            // takes only points with an older note of their own
+            UiDoc::UiPinnedRequest req = UiDoc::RequestWithPins(prompt, UiDoc::CleanPoints(config.Get("uiPoints")));
+            Vector<UiDoc::UiStepPoint> points;
+            {
+                UiDoc::Json raw = UiDoc::PointsToJson(req.points);
+                Vector<UiDoc::UiStepPoint> marked = UiDoc::CleanPoints(&raw, current.width, current.height);
+                bool named = !UiDoc::PinsNamed(req.text, marked.Count()).IsEmpty();
+                for (auto& p : marked)
+                {
+                    if (named || !p.text.IsEmpty())
+                        points.Add(p);
+                }
+            }
+            bool hasPicture = false;
+            for (auto& r : refs)
+                hasPicture = hasPicture || r.image;
+            bool empty = current.root.children.empty();
+            String text = UiDoc::JsTrim(req.text);
+            if (text.IsEmpty())
+                text = !points.IsEmpty() ? String("Make the changes the points ask for.") :
+                    empty && hasPicture ? String("Build this screen from the reference picture.") : String();
+            if (text.IsEmpty())
+                return;
+
+            String model = UiDoc::JsTrim(UiDoc::JsStringOr(config.Get("agentModel")));
+            if (model.IsEmpty())
+                model = UiDoc::UI_AGENT_DEFAULT_MODEL;
+            String imageModel = UiDoc::JsTrim(UiDoc::JsStringOr(config.Get("agentImageModel")));
+            if (imageModel.IsEmpty())
+                imageModel = UiDoc::UI_KIT_AI_DEFAULT_IMAGE_MODEL;
+            double turnsAsked = UiDoc::JsRound(UiDoc::JsNumber(config.Get("agentTurns")));
+            int maxTurns = std::max(1, std::min(120, std::isfinite(turnsAsked) && turnsAsked ? (int)turnsAsked : UiDoc::UI_AGENT_TURNS));
+            auto off = [&](const char* key) { const UiDoc::Json* v = config.Get(key); return v && v->IsBool() && !v->Bool(); };
+
+            auto ctx = MakeContext(editor, nodeId);
+            String pipelineId = editor->GetPipelineId();
+            ctx->isCancelled = [nodeId]() { return UiAgentState::IsStopRequested(nodeId); };
+
+            UiLayout::LayoutAgentInput input;
+            input.runId = UiDoc::NewStepId();
+            input.ai = mmake<UiLayout::AiCtx>();
+            input.ai->exec = ctx;
+            input.ai->textModel = model;
+            input.ai->imageModel = imageModel;
+            input.ai->memo.get = [pipelineId](const String& key, const String& ext, String& data)
+            {
+                String path = PipelineExecutor::GetContentPath(pipelineId, key, ext.StartsWith(".") ? ext.SubStr(1) : ext);
+                if (!o2FileSystem.IsFileExist(path))
+                    return false;
+                data = PipelineUtils::ReadFileBytes(path);
+                return !data.IsEmpty();
+            };
+            input.ai->memo.put = [pipelineId](const String& key, const String& ext, const String& data)
+            {
+                PipelineUtils::WriteFileBytes(PipelineExecutor::GetContentPath(pipelineId, key, ext.StartsWith(".") ? ext.SubStr(1) : ext), data);
+            };
+            input.doc = current;
+            input.steps = UiDoc::StepsOf(config);
+            input.kit = kit;
+            input.refs = refs;
+            input.prompt = text;
+            input.points = points;
+            input.selected = selected;
+            input.canDraw = !off("agentDraw");
+            input.review = !off("agentReview");
+            input.skill = !off("agentSkill");
+            input.maxTurns = maxTurns;
+            input.workDir = PipelineExecutor::GetWorkPath(pipelineId, nodeId);
+            input.python = ctx->settings.imageToUiPython;
+            input.log = mmake<UiLayout::RunLog>(UiLayout::RunLog::DirOf(input.workDir, input.runId));
+            input.log->Open();
+
+            UiAgentState::LiveRun live;
+            live.runId = input.runId;
+            live.prompt = text;
+            live.dir = input.log->GetDir();
+            live.startedMs = (double)UiDoc::NowMs();
+            UiAgentState::SetRun(nodeId, live);
+            WeakRef<UiLayout::RunLog> weakLog(input.log);
+            input.log->onChange = [nodeId, live, weakLog]()
+            {
+                auto log = weakLog.Lock();
+                UiAgentState::LiveRun now = live;
+                if (log)
+                    now.acts = log->GetActs();
+                UiAgentState::SetRun(nodeId, now);
+            };
 
             SetBusy("agent", nodeId, "*");
             SetError("agent", nodeId, "");
@@ -190,14 +347,22 @@ namespace Editor
             UiAgentState::SetError(nodeId, "");
             UiWorkspace::SetAgentBusy(nodeId, true);
             UiWorkspace::SetAgentError(nodeId, "");
+            if (auto widget = editor->GetNodeWidget(nodeId))
+            {
+                if (auto body = widget->GetBody())
+                    body->OnConfigChanged();
+            }
 
             WeakRef<PipelineEditor> weakEditor(editor);
             Run("agent", nodeId, [](WeakRef<PipelineEditor> weakEditor, String nodeId, Ref<PipelineExecContext> ctx,
-                                   UiDoc::UiAgentRequest request) -> Coroutine<void>
+                                   UiLayout::LayoutAgentInput input) -> Coroutine<void>
             {
-                auto response = co_await UiDoc::AskUiAgent(ctx, request);
+                auto log = input.log;
+                UiLayout::LayoutAgentResult response = co_await UiLayout::RunLayoutAgent(input);
+                log->onChange = Function<void()>();
                 SetBusy("agent", nodeId, "");
                 UiAgentState::SetBusy(nodeId, false);
+                UiAgentState::ClearRun(nodeId);
                 UiWorkspace::SetAgentBusy(nodeId, false);
 
                 auto editor = weakEditor.Lock();
@@ -206,15 +371,17 @@ namespace Editor
 
                 if (!response.ok)
                 {
-                    SetError("agent", nodeId, response.error);
-                    UiAgentState::SetError(nodeId, response.error);
-                    UiWorkspace::SetAgentError(nodeId, response.error);
-                    ctx->Log("AI UI layout: " + response.error);
+                    String error = response.error == "Cancelled" ? String() : response.error;
+                    SetError("agent", nodeId, error);
+                    UiAgentState::SetError(nodeId, error);
+                    UiWorkspace::SetAgentError(nodeId, error);
+                    if (!error.IsEmpty())
+                        ctx->Log("AI UI layout: " + error);
                 }
                 else
                 {
-                    if (!response.errors.IsEmpty())
-                        ctx->Log("AI UI layout: " + (String)response.errors.Count() + " edit(s) did not apply");
+                    for (auto& e : response.errors)
+                        ctx->Log("AI UI layout: " + e);
                     UiWorkspace::AppendAgentStep(editor, nodeId, response.step.data);
                 }
 
@@ -223,7 +390,12 @@ namespace Editor
                     if (auto body = widget->GetBody())
                         body->OnConfigChanged();
                 }
-            }(weakEditor, nodeId, MakeContext(editor, nodeId), request));
+            }(weakEditor, nodeId, ctx, input));
+        }
+
+        void CancelAgent(const String& nodeId)
+        {
+            UiAgentState::RequestStop(nodeId);
         }
 
         void GenerateStyle(const Ref<PipelineEditor>& editor, const String& nodeId)
@@ -368,9 +540,7 @@ namespace Editor
             UiDoc::UiLayoutExportRequest request;
             request.target = UiDoc::ExportTargetOf(UiDoc::FromDataValue(node->config));
             request.doc = UiDoc::DocAt(node->config).doc;
-            UiDoc::UiKit kit;
-            if (CurrentKit(editor, *node, kit))
-                request.kit = kit;
+            request.kit = LayoutKitNow(editor, *node);
             request.nodeId = nodeId;
             request.assetPath = node->GetConfigString("assetPath", "");
             request.assetsPath = o2Assets.GetAssetsPath();

@@ -71,6 +71,14 @@ namespace Editor::UiDoc
         return out;
     }
 
+    static Json PairJson(const UiPair& p)
+    {
+        Json out = Json::Object();
+        out["w"] = p.w;
+        out["h"] = p.h;
+        return out;
+    }
+
     Json KitElementToJson(const UiKitElement& e)
     {
         Json out = Json::Object();
@@ -79,7 +87,6 @@ namespace Editor::UiDoc
         out["assetType"] = e.assetType;
         out["width"] = e.width;
         out["height"] = e.height;
-        out["png"] = e.png;
         if (!e.source.IsNull())
             out["source"] = e.source;
         if (e.port)
@@ -88,12 +95,27 @@ namespace Editor::UiDoc
             out["dpi"] = *e.dpi;
         if (e.dpiFrom)
             out["dpiFrom"] = *e.dpiFrom;
+        if (e.inches)
+            out["inches"] = PairJson(*e.inches);
+        if (e.sizeFrom)
+            out["sizeFrom"] = *e.sizeFrom;
+        if (e.share)
+            out["share"] = *e.share;
+        if (e.soft)
+            out["soft"] = true;
+        if (e.texture)
+            out["texture"] = PairJson(*e.texture);
+        if (e.own)
+            out["own"] = true;
         if (e.variant)
             out["variant"] = *e.variant;
+        if (e.purpose)
+            out["purpose"] = *e.purpose;
         if (e.description)
             out["description"] = *e.description;
         if (e.nineSlice)
             out["nineSlice"] = NineToJson(*e.nineSlice);
+        out["png"] = e.png;
         return out;
     }
 
@@ -102,6 +124,8 @@ namespace Editor::UiDoc
         Json out = Json::Object();
         out["version"] = 1;
         out["name"] = kit.name;
+        if (kit.device)
+            out["device"] = TargetToJson(*kit.device);
         Json elements = Json::Array();
         for (auto& e : kit.elements)
             elements.Add(KitElementToJson(e));
@@ -185,6 +209,23 @@ namespace Editor::UiDoc
         return std::nullopt;
     }
 
+    String CleanPurpose(const Json* value)
+    {
+        String text = value && value->IsString() ? value->Str() : String();
+        return JsSlice(JsTrim(ReplaceSpaceRuns(text, " ")), 0, 200);
+    }
+
+    // {w, h} with both positive numbers
+    static std::optional<UiPair> PositivePair(const Json* v)
+    {
+        if (!JsTruthy(v))
+            return std::nullopt;
+        double w = JsNumber(JsGet(v, "w")), h = JsNumber(JsGet(v, "h"));
+        if (!(w > 0 && h > 0))
+            return std::nullopt;
+        return UiPair{ w, h };
+    }
+
     UiKit ParseKit(const String& json)
     {
         UiKit kit;
@@ -228,6 +269,9 @@ namespace Editor::UiDoc
 
                 if (JsTruthy(JsGet(e, "variant")))
                     el.variant = JsSlice(JsString(JsGet(e, "variant")), 0, 40);
+                String purpose = CleanPurpose(JsGet(e, "purpose"));
+                if (!purpose.IsEmpty())
+                    el.purpose = purpose;
                 if (JsTruthy(JsGet(e, "description")))
                     el.description = JsSlice(JsString(JsGet(e, "description")), 0, 300);
 
@@ -247,8 +291,21 @@ namespace Editor::UiDoc
                     el.dpi = dpi;
 
                 const Json* dpiFrom = JsGet(e, "dpiFrom");
-                if (dpiFrom && dpiFrom->IsString() && (dpiFrom->Str() == "item" || dpiFrom->Str() == "input" || dpiFrom->Str() == "base"))
+                if (dpiFrom && dpiFrom->IsString() && (dpiFrom->Str() == "item" || dpiFrom->Str() == "kit" || dpiFrom->Str() == "input" ||
+                                                       dpiFrom->Str() == "base"))
                     el.dpiFrom = dpiFrom->Str();
+
+                el.inches = PositivePair(JsGet(e, "inches"));
+                const Json* sizeFrom = JsGet(e, "sizeFrom");
+                if (sizeFrom && sizeFrom->IsString() && (sizeFrom->Str() == "item" || sizeFrom->Str() == "source" ||
+                                                         sizeFrom->Str() == "tag" || sizeFrom->Str() == "pixels"))
+                    el.sizeFrom = sizeFrom->Str();
+                double share = JsNumber(JsGet(e, "share"));
+                if (share > 0)
+                    el.share = share;
+                const Json* soft = JsGet(e, "soft");
+                el.soft = soft && soft->IsBool() && soft->Bool();
+                el.texture = PositivePair(JsGet(e, "texture"));
 
                 kit.elements.Add(el);
             }
@@ -271,6 +328,7 @@ namespace Editor::UiDoc
         const Json* name = JsGet(raw, "name");
         String kitName = JsSlice(JsNullish(name) ? String("kit") : name->ToJsString(), 0, 80);
         kit.name = kitName.IsEmpty() ? String("kit") : kitName;
+        kit.device = CleanTarget(JsGet(raw, "device"));
         return kit;
     }
 
@@ -306,7 +364,10 @@ namespace Editor::UiDoc
             }
             item.ai = JsTruthy(JsGet(v, "ai"));
             item.nineFrom = str("nineFrom");
+            item.purpose = str("purpose");
+            item.purposeFrom = str("purposeFrom");
             item.dpi = CleanDpi(JsGet(v, "dpi"));
+            item.size = PositivePair(JsGet(v, "size"));
             out.Add(Pair<String, UiKitItem>(member.first, item));
         }
         return out;
@@ -325,7 +386,9 @@ namespace Editor::UiDoc
 
         if (!kit.elements.IsEmpty())
         {
-            lines.Add("Graphics (kit=<name>; sizes in screen design pixels):");
+            bool purposes = kit.elements.Any([](const UiKitElement& e) { return e.purpose && !e.purpose->IsEmpty(); });
+            lines.Add(String("Graphics (kit=<name>; sizes in screen design pixels") +
+                      (purposes ? "; \"use:\" = what the graphic is made for" : "") + "):");
             for (auto& e : kit.elements)
             {
                 double k = (layoutDpi ? *layoutDpi : UI_BASE_DPI)/GraphicDpi(e.dpi);
@@ -338,6 +401,7 @@ namespace Editor::UiDoc
                                                       : String();
                 lines.Add("- " + e.name + ": " + e.type + (e.variant && !e.variant->IsEmpty() ? "/" + *e.variant : String()) + ", " +
                           e.assetType + ", " + r(e.width) + "x" + r(e.height) + own + nine +
+                          (e.purpose && !e.purpose->IsEmpty() ? " \xE2\x80\x94 use: " + *e.purpose : String()) +
                           (e.description && !e.description->IsEmpty() ? " \xE2\x80\x94 " + *e.description : String()));
             }
         }
@@ -347,16 +411,7 @@ namespace Editor::UiDoc
             lines.Add("Text styles (style=<name>):");
             for (auto& s : kit.textStyles)
             {
-                Vector<String> fx;
-                if (s.stroke)
-                    fx.Add("outline " + JsNum(s.stroke->width) + "px " + s.stroke->color);
-                if (s.shadow)
-                    fx.Add("shadow");
-                if (s.gradient)
-                    fx.Add("gradient to " + *s.gradient);
-                if (s.uppercase)
-                    fx.Add("UPPERCASE");
-                String fxText = Join(fx, ", ");
+                String fxText = StyleLook(s);
                 lines.Add("- " + s.name + ": " + s.role + ", " + s.font + " " + JsNum(s.weight) + " " + JsNum(s.size) + "px " + s.color +
                           (fxText.IsEmpty() ? String() : ", " + fxText) +
                           (s.description && !s.description->IsEmpty() ? " \xE2\x80\x94 " + *s.description : String()));
@@ -465,7 +520,8 @@ namespace Editor::UiDoc
 
     int NameScore(const String& id, const UiKitElement& element)
     {
-        return NameScore(id, element.name, element.description ? *element.description : String());
+        return NameScore(id, element.name, (element.purpose ? *element.purpose : String()) + " " +
+                                           (element.description ? *element.description : String()));
     }
 
     const UiKitElement* KitElementOfType(const UiKit* kit, const Vector<String>& types, const String& variant /*= ""*/,

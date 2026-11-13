@@ -27,6 +27,12 @@ namespace Editor::UiDoc
     using UiAiTextStub = Function<AiTextResult(const String& model, const String& prompt, const Vector<AiImageRef>& images)>;
     void SetUiAiTextStub(const UiAiTextStub& stub);
 
+    // Returns true while a text stand-in is set
+    bool HasUiAiTextStub();
+
+    // A text model call: the test stand-in when one is set, else AiRouter::GenerateText
+    Coroutine<AiTextResult> UiAiText(Ref<PipelineExecContext> ctx, String model, String prompt, Vector<AiImageRef> images);
+
     // A picture for a vision call: at most max px on its long side (PNG bytes; smaller ones go as they are)
     String PictureForModel(const String& png, int max = 1024);
 

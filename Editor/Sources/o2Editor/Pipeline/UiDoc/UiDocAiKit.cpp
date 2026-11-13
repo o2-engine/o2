@@ -37,7 +37,10 @@ namespace Editor::UiDoc
             "middle stretches) for surfaces that change size: buttons, panels, frames, bars, fields, tabs; simple for icons, "
             "pictures, characters and full backgrounds; tiled for repeating patterns",
             "- variant: optional, e.g. primary, secondary, disabled, selected, small (empty when not obvious)",
-            "- description: one short sentence \xE2\x80\x94 what it is and where in an interface it is used",
+            "- purpose: where in an interface to use it, a short phrase (up to 12 words) \xE2\x80\x94 e.g. \"background of popups and "
+            "dialogs\", \"backing of the main action button\", \"currency counter icon in the top bar\", \"frame around a player "
+            "avatar\". Say the role, not the look",
+            "- description: one short sentence \xE2\x80\x94 what it is and what it looks like (shape, colour, material)",
             "- background: transparent (already cut out: transparent or checker-free around the element) | flat (one plain colour "
             "fills everything around the element) | complex (scenery, gradient or texture behind the element)",
             "- nineSlice (sliced only): how many pixels from each edge of the picture (at the size given above) belong to the "
@@ -45,7 +48,7 @@ namespace Editor::UiDoc
             "inside the flat middle, past the rounding, bevel, rim or ornament; null for simple / tiled",
             "",
             "Answer with JSON only, an array in the same order:",
-            "[{\"index\":1,\"name\":\"...\",\"type\":\"...\",\"assetType\":\"...\",\"variant\":\"\",\"description\":\"...\","
+            "[{\"index\":1,\"name\":\"...\",\"type\":\"...\",\"assetType\":\"...\",\"variant\":\"\",\"purpose\":\"...\",\"description\":\"...\","
             "\"background\":\"...\",\"nineSlice\":{\"left\":0,\"top\":0,\"right\":0,\"bottom\":0}}]",
         };
         lines.Add(rest);
@@ -226,6 +229,9 @@ namespace Editor::UiDoc
             String variant = JsSlice(JsTrim(JsStringOr(JsGet(row, "variant"))), 0, 40);
             if (!variant.IsEmpty())
                 item["variant"] = variant;
+            String purpose = CleanPurpose(JsGet(row, "purpose"));
+            if (!purpose.IsEmpty())
+                item["purpose"] = purpose;
             String description = JsSlice(JsTrim(JsStringOr(JsGet(row, "description"))), 0, 300);
             if (!description.IsEmpty())
                 item["description"] = description;
@@ -329,6 +335,28 @@ namespace Editor::UiDoc
                 merged["nineSlice"] = JsNullish(aiNine) ? Json() : *aiNine;
                 if (!JsTruthy(aiNine) || !clean.Has("nineFrom"))
                     merged.Remove("nineFrom");
+            }
+            // A purpose typed by hand stays; the AI's own is replaced by the next answer
+            bool handPurpose = !CleanPurpose(JsGet(cur, "purpose")).IsEmpty() && JsStringOr(JsGet(cur, "purposeFrom")) != "ai";
+            if (handPurpose)
+            {
+                merged["purpose"] = *JsGet(cur, "purpose");
+                merged.Remove("purposeFrom");
+            }
+            else if (JsTruthy(clean.Get("purpose")))
+            {
+                merged["purpose"] = *clean.Get("purpose");
+                merged["purposeFrom"] = "ai";
+            }
+            else
+            {
+                for (const char* key : { "purpose", "purposeFrom" })
+                {
+                    if (const Json* was = JsGet(cur, key))
+                        merged[key] = *was;
+                    else
+                        merged.Remove(key);
+                }
             }
             if (keepAi)
             {

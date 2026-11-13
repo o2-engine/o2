@@ -86,6 +86,7 @@ namespace Editor::UiDoc
     // Every block's box at the size (the design size when w or h is 0 or less), absolute
     UiRects SolveLayout(const UiDoc& doc, double w = 0, double h = 0);
 
-    // The deepest shown block under a point (the root never), "" when none
+    // The deepest shown block under a point (the root never), "" when none; turned blocks take the point in their own frame
+    // (their turns and their parents' undone, UiDocRotate.h)
     String HitTest(const UiDoc& doc, const UiRects& rects, double x, double y);
 }

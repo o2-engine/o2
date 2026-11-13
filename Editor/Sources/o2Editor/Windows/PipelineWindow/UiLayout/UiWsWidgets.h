@@ -167,6 +167,11 @@ namespace Editor
         Ref<EditBox> NumberField(const String& letter, std::optional<double> value, const String& placeholder,
                                  const Function<void(std::optional<double>)>& onValue, std::optional<double> min = std::nullopt);
 
+        // A number field whose value applies only on Enter or when the field is left (Escape drops what was typed): for
+        // numbers whose every change makes something again ("1000" must not apply 100 on the way)
+        Ref<EditBox> LazyNumberField(const String& letter, std::optional<double> value, const String& placeholder,
+                                     const Function<void(std::optional<double>)>& onValue, std::optional<double> min = std::nullopt);
+
         // Shows the value in a number field that does not have the focus
         void SetNumber(const Ref<EditBox>& field, std::optional<double> value);
 

@@ -81,6 +81,7 @@ namespace Editor
         bool selected = false; // Accent border
         bool failed = false;   // Red border
         bool tools = false;    // The tool strip is shown; its back is drawn here, under the buttons
+        int  toolCount = 2;    // Buttons of the tool strip: its back is as wide as two of them or more
 
     public:
         // Default constructor

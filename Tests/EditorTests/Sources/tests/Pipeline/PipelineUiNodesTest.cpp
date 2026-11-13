@@ -144,7 +144,7 @@ TEST(PipelineUiNodes, SchemasAsAssetsLine)
     EXPECT_EQ(kit->outputs[0].name, "kit");
     EXPECT_EQ(kit->outputs[0].portType, PipelinePortType::UiKit);
     EXPECT_EQ(kit->addableInputs, Vector<PipelinePortType>({ PipelinePortType::Image, PipelinePortType::TextStyle }));
-    EXPECT_EQ(kit->defaultSize, Vec2F(760, 0));
+    EXPECT_EQ(kit->defaultSize, Vec2F(460, 0)) << "the grid card (AssetsLine defaultNodeWidth)";
 
     auto layout = PipelineNodeRegistry::GetSchema("uiLayout");
     ASSERT_TRUE(layout);
@@ -157,7 +157,7 @@ TEST(PipelineUiNodes, SchemasAsAssetsLine)
     EXPECT_EQ(layout->outputs[0].name, "image");
     EXPECT_EQ(layout->outputs[1].name, "layout");
     EXPECT_EQ(layout->outputs[1].portType, PipelinePortType::Text);
-    EXPECT_EQ(layout->addableInputs, Vector<PipelinePortType>({ PipelinePortType::Image, PipelinePortType::Text }));
+    EXPECT_EQ(layout->addableInputs, Vector<PipelinePortType>({ PipelinePortType::Image, PipelinePortType::Text, PipelinePortType::UiKit }));
 
     auto crop = PipelineNodeRegistry::GetSchema("imageCrop");
     ASSERT_TRUE(crop);
@@ -206,7 +206,10 @@ TEST(PipelineUiNodes, MenusInSixGroupsWithoutRetiredNodes)
             members[entry.group->id].Add(schema->type);
     }
     EXPECT_EQ(ids, Vector<String>({ "io", "aiImage", "imageTools", "text", "gameUi", "av" }));
-    EXPECT_EQ(members["gameUi"], Vector<String>({ "imageToUi", "uiKit", "textStyle", "uiLayout" }));
+    // AI image to UI is retired: the AI UI layout does what it did, with a UI kit
+    EXPECT_EQ(members["gameUi"], Vector<String>({ "uiKit", "textStyle", "textStyleExtract", "uiLayout" }));
+    ASSERT_TRUE(PipelineNodeRegistry::GetSchema("imageToUi"));
+    EXPECT_TRUE(PipelineNodeRegistry::GetSchema("imageToUi")->retired);
     EXPECT_EQ(members["aiImage"], Vector<String>({ "nanoBananaGen", "imageEdit", "imageExtract", "aiRemoveBg", "aiUpscale" }));
     EXPECT_EQ(members["imageTools"].IndexOf("imageCrop"), 1);
     for (auto& group : members)
@@ -304,8 +307,12 @@ TEST(PipelineUiNodes, KitCollectsGraphicsAndStylesItsInputsHave)
     // Trimmed to the button; a uniform middle collapses
     EXPECT_GT(kit.elements[0].width, 0.0);
     EXPECT_LE(kit.elements[0].height, 16.0);
-    EXPECT_EQ(kit.elements[0].dpi.value_or(0), 960.0);
-    EXPECT_EQ(kit.elements[0].dpiFrom.value_or(""), "input");
+    // Sized by its density tag on the kit's device (iPhone 16, 460 dpi): resampled to the device's density
+    EXPECT_EQ(kit.elements[0].dpi.value_or(0), 460.0);
+    EXPECT_EQ(kit.elements[0].dpiFrom.value_or(""), "kit");
+    EXPECT_EQ(kit.elements[0].sizeFrom.value_or(""), "tag");
+    ASSERT_TRUE(kit.device.has_value());
+    EXPECT_EQ(kit.device->id, "iphone-16");
     EXPECT_EQ(*kit.elements[0].port, "btn");
     ASSERT_EQ(kit.textStyles.Count(), 1);
     EXPECT_EQ(kit.textStyles[0].name, "title");

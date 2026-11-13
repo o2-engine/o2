@@ -48,7 +48,8 @@ for (const c of golden.structure.cases.filter((x: any) => !['struct_nokit', 'nob
   const st = structure.toUiStructure(doc, kitOf(c.kit));
   const fonts = unityFonts(st);
   const folder = c.name === 'dpi_kit' ? ' /My/Folder/ ' : '';
-  const input = { name: doc.name, folder: folder.trim().replace(/^\/+|\/+$/g, '') || 'Generated/UI', layout: st.json, sprites: st.sprites, fonts: fonts.map(fakeFont), seed: 'node_' + c.name };
+  // downloadLayout's input: the Canvas Scaler in Expand mode (canvasFit)
+  const input = { name: doc.name, folder: folder.trim().replace(/^\/+|\/+$/g, '') || 'Generated/UI', layout: st.json, sprites: st.sprites, fonts: fonts.map(fakeFont), seed: 'node_' + c.name, canvasFit: 'expand' as const };
   let entry: Record<string, unknown>;
   try {
     const res = await unity.exportUnity(input);

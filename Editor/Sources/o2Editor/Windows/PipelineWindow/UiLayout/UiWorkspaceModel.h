@@ -87,18 +87,20 @@ namespace Editor::UiDoc::Ws
     // --- preview screens ------------------------------------------------------------------------
 
     // ------------------------------------------------------------------------------------------
-    // The screen the layout is previewed on, as the node's config asks: the design, the reference,
-    // a device or a custom screen, turned or not, met by DPI or by screen
+    // The screen the layout is shown on, as the node's config asks: the kit's device (the one it is
+    // laid out for - the default), the design, the reference, another device or a custom screen,
+    // turned or not. Every screen is met the way an engine's canvas set for the device meets it: the
+    // design fitted in, the room left over added to the canvas - another screen changes the aspect
+    // ratio only (a stored uiScale of older view states is read by nobody)
     // ------------------------------------------------------------------------------------------
     struct UiPreviewSetting
     {
-        String   device = "design";                      // design | reference | custom | a device id
+        String   device = "kit";                         // kit | design | reference | custom | a device id
         UiScreen custom = UiScreen{ 1080, 1920, UI_BASE_DPI };
         bool     landscape = false;
-        String   scale = "dpi";                           // dpi | fit
     };
 
-    // The preview setting of a node's config (uiDevice, uiDeviceCustom, uiLandscape, uiScale)
+    // The preview setting of a node's config (uiDevice, uiDeviceCustom, uiLandscape)
     UiPreviewSetting PreviewSettingOf(const Json& config);
 
     // -------------------------------------------------------------------------
@@ -106,21 +108,25 @@ namespace Editor::UiDoc::Ws
     // -------------------------------------------------------------------------
     struct UiPreview
     {
-        String   id;       // design | reference | custom | a device id
-        String   kind;     // design | reference | custom | phone | tablet | desktop
-        String   name;     // The device's name ("" for the design, the reference and a custom screen)
+        String   id;       // kit | design | reference | custom | a device id
+        String   kind;     // kit | design | reference | custom | phone | tablet | desktop
+        String   name;     // The device's name (the kit's device's too; "" for the design, the reference and a custom screen)
         UiScreen screen;
         UiFrame  frame;
-        bool     fallback = false; // The reference was asked for but none is connected: the design is shown
+        bool     fallback = false;  // The reference was asked for but none is connected: the kit's device is shown
+        bool     comparing = false; // The reference is laid over the layout: it is shown on the reference's screen whatever
+                                    // screen is chosen (the picture is stretched over the canvas)
     };
 
-    // The preview of a layout for a setting; reference = the picture the layout rebuilds (null when none)
-    UiPreview PreviewOf(const UiDoc& doc, const UiPreviewSetting& setting, const UiScreen* reference);
+    // The preview of a layout for a setting: target = the layout's device (its kit's), reference = the picture the layout
+    // rebuilds as a screen (null when none), comparing = the reference is laid over the layout
+    UiPreview PreviewOf(const UiDoc& doc, const UiPreviewSetting& setting, const UiScreen* reference, const UiTarget& target,
+                        bool comparing = false);
 
     // Kit graphics drawn larger than their own pixels on the frame (they come out soft)
     Vector<String> SoftGraphics(const UiDoc& doc, const UiKit* kit, const UiFrame& frame);
 
-    // The name a preview is shown under: Design, Reference, Custom or the device's name
+    // The name a preview is shown under: Design, Reference, Custom or the device's name (the kit's device's for the kit)
     String PreviewName(const UiPreview& preview);
 
     // "1080×1920 · 480 dpi"

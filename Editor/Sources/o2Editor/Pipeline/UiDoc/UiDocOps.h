@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cmath>
 #include <optional>
 
 #include "o2Editor/Pipeline/UiDoc/UiDocModel.h"
@@ -25,6 +26,10 @@ namespace Editor::UiDoc
 
     // {op: "screen", name?, width?, height?, dpi?}
     UiOp MakeScreenOp(const String& name, std::optional<double> width, std::optional<double> height, std::optional<double> dpi);
+
+    // {op: "screen", width, height, dpi, scale, fromDpi}: the whole layout brought to other units (every pixel value times
+    // scale) - a layout made in a reference picture's pixels brought to its kit's device
+    UiOp MakeRescaleOp(double width, double height, double dpi, double scale, double fromDpi);
 
     // {op: "update", id, set?, unset?}: set is an object of raw values (cleaned when applied); key=- is unset
     UiOp MakeUpdateOp(const String& id, const Json& set, const Vector<String>& unset = {});
@@ -103,6 +108,37 @@ namespace Editor::UiDoc
         // Sets the check pass result
         void SetReview(const String& reply, double edits);
     };
+
+    // ---------------------------------------------------------------------------------
+    // A place the user pointed at (design pixels of the screen as it was), with an older note
+    // ---------------------------------------------------------------------------------
+    struct UiStepPoint
+    {
+        double x = 0, y = 0;
+        String text;
+
+        bool operator==(const UiStepPoint& other) const { return x == other.x && y == other.y && text == other.text; }
+    };
+
+    // Points as stored: inside the screen (w x h), at most 20, each note trimmed to 2000 characters
+    Vector<UiStepPoint> CleanPoints(const Json* raw, double w = INFINITY, double h = INFINITY);
+
+    // Points as the JSON a step stores: [{x, y, text}]
+    Json PointsToJson(const Vector<UiStepPoint>& points);
+
+    // The numbers of the points a text names as [1], [2]... (of count points), in the order it first names them
+    Vector<int> PinsNamed(const String& text, int count);
+
+    // A draft with the notes of points it does not name written into it: "[n] note" on a line of its own
+    String DraftWithNotes(const String& draft, const Vector<UiStepPoint>& points);
+
+    // A request as it is sent: the points its text names, in the order it names them, and the text renumbered to match
+    struct UiPinnedRequest
+    {
+        String              text;
+        Vector<UiStepPoint> points;
+    };
+    UiPinnedRequest RequestWithPins(const String& draft, const Vector<UiStepPoint>& points);
 
     // A new agent step in the web's key order: {id, by: "agent", prompt, reply, ops, at, model}
     UiStep MakeAgentStep(const String& prompt, const String& reply, const Vector<UiOp>& ops, Int64 nowMs, const String& model);

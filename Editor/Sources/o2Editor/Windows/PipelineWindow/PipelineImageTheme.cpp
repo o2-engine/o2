@@ -268,7 +268,8 @@ namespace Editor
             PipelineDraw::Corners corners;
             corners.lt = 6.0f;
             corners.rb = 7.0f;
-            PipelineDraw::Fill(RectF(rect.left + 1.0f, rect.top - 1.0f, rect.left + 41.0f, rect.top - 19.0f), corners, Color4(0, 0, 0, 158));
+            float width = 20.0f*Math::Max(2, toolCount);
+            PipelineDraw::Fill(RectF(rect.left + 1.0f, rect.top - 1.0f, rect.left + 1.0f + width, rect.top - 19.0f), corners, Color4(0, 0, 0, 158));
         }
     }
 

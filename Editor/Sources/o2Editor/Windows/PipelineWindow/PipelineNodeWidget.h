@@ -42,6 +42,7 @@ namespace Editor
 
         Map<String, PipelineValue> portOutputs; // Last result of each output of a per-port node, by port id
         Map<String, String>        portStates;  // Run state of each part being computed: running / done / error, by port id; dropped when the node stops
+        Map<String, String>        phases;      // What a running part (by port id) or the node (empty id) does beyond its generation: check, redo
     };
 
     // ----------------------------------------------------------------------
@@ -124,6 +125,9 @@ namespace Editor
 
         // Rebuilds ports and the body from the node data
         void Rebuild();
+
+        // Rebuilds the port rows from the node's ports (an AI UI layout's graphic outputs follow its steps)
+        void RefreshPorts();
 
         // Re-reads position and size from the node and lays the card out
         void UpdateFromNode();
@@ -222,6 +226,13 @@ namespace Editor
 
         // Draws the port circles in canvas space; the editor calls it after all cards so ports stay above every frame
         void DrawPorts();
+
+        // Draws what the body shows above every card, port and link (DrawOverlay of the body); the editor calls it last
+        void DrawOverlay();
+
+        // Returns true and where a link to the input meets the card when its port sits inside the body (the UI kit's cells):
+        // on the card's left edge level with the port; false for a port on the edge
+        bool GetInputEntry(const String& portId, const RectF& cardRect, Vec2F& entry) const;
 
         // Draws the state and selection outlines around the card art, scaled with the camera but never thinner than a pixel
         void DrawOutline();
@@ -386,6 +397,7 @@ CLASS_METHODS_META(Editor::PipelineNodeWidget)
     FUNCTION().PUBLIC().SIGNATURE(PipelineNodeRuntime&, GetRuntime);
     FUNCTION().PUBLIC().SIGNATURE(const PipelineNodeSchema*, GetSchema);
     FUNCTION().PUBLIC().SIGNATURE(void, Rebuild);
+    FUNCTION().PUBLIC().SIGNATURE(void, RefreshPorts);
     FUNCTION().PUBLIC().SIGNATURE(void, UpdateFromNode);
     FUNCTION().PUBLIC().SIGNATURE(RectF, GetCardRect);
     FUNCTION().PUBLIC().SIGNATURE(Vec2F, GetCardSize);
@@ -418,6 +430,8 @@ CLASS_METHODS_META(Editor::PipelineNodeWidget)
     FUNCTION().PUBLIC().SIGNATURE(void, UpdateChildren, float);
     FUNCTION().PUBLIC().SIGNATURE(void, Draw);
     FUNCTION().PUBLIC().SIGNATURE(void, DrawPorts);
+    FUNCTION().PUBLIC().SIGNATURE(void, DrawOverlay);
+    FUNCTION().PUBLIC().SIGNATURE(bool, GetInputEntry, const String&, const RectF&, Vec2F&);
     FUNCTION().PUBLIC().SIGNATURE(void, DrawOutline);
     FUNCTION().PUBLIC().SIGNATURE(void, DrawCardBack);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsBusyInBackground);

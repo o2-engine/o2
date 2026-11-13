@@ -53,6 +53,47 @@ namespace Editor
         return RectF(r.left, r.top - headHeight, r.right, r.bottom);
     }
 
+    void UiWsHierarchy::RevealSelection()
+    {
+        const String& id = ctx->selected;
+        if (id == mRevealed)
+            return;
+
+        const auto& doc = ctx->Doc();
+        if (id.IsEmpty() || !UiDoc::FindNode(doc, id))
+        {
+            mRevealed = id;
+            return;
+        }
+
+        // The blocks folded around it open
+        bool unfolded = false;
+        for (auto p = UiDoc::FindParent(doc, id); p; p = UiDoc::FindParent(doc, p->id))
+        {
+            if (mFolded.Contains(p->id))
+            {
+                mFolded.Remove(p->id);
+                unfolded = true;
+            }
+        }
+        if (unfolded)
+            BuildRows();
+
+        // Scrolled just far enough to bring its row in
+        int index = mRows.IndexOf([&](const Row& r) { return !r.root && r.id == id; });
+        float visible = ListRect().Height();
+        if (index < 0 || visible <= 0.0f)
+            return;
+
+        mRevealed = id;
+        const float pad = 6.0f;
+        float top = listPad + index*rowHeight, bottom = top + rowHeight;
+        if (top - mScroll < pad)
+            mScroll = Math::Max(0.0f, top - pad);
+        else if (bottom - mScroll > visible - pad)
+            mScroll = bottom - (visible - pad);
+    }
+
     void UiWsHierarchy::ToggleFold(const String& id)
     {
         if (mFolded.Contains(id))
@@ -90,6 +131,7 @@ namespace Editor
         Line(box.P(0, headHeight - 0.5f), box.P(W - 1, headHeight - 0.5f), t.line);
 
         BuildRows();
+        RevealSelection();
         RectF list = ListRect();
         mContentHeight = listPad + mRows.Count()*rowHeight + 12.0f;
         mScroll = Math::Clamp(mScroll, 0.0f, Math::Max(0.0f, mContentHeight - list.Height()));
@@ -129,11 +171,7 @@ namespace Editor
 
             float alpha = lifted ? 0.4f : 1.0f;
             float x = r.left;
-            for (int d = 0; d < row.depth; d++)
-            {
-                Line(Vec2F(x + 7.5f, r.top), Vec2F(x + 7.5f, r.bottom), A(t.line, alpha));
-                x += indent;
-            }
+            x += row.depth*indent;
 
             // The fold caret
             if (!n->children.empty())

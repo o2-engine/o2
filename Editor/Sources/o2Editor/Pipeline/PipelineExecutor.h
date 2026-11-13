@@ -20,6 +20,7 @@ namespace Editor
         Type   type = Type::Log; // Kind of event
         String nodeId;           // Node the event is about, empty for Log, Done and Fatal
         String state;            // NodeState: running / done / error
+        String phase;            // NodeState running: what the node or part does beyond its generation (check, redo), empty otherwise
         String error;            // NodeState error, Fatal reason
         String message;          // Log line, Retry reason
 
@@ -147,6 +148,10 @@ namespace Editor
         // Deletes the per-port previews of a node whose port ids are not kept
         static void RemoveStalePortPreviews(const String& pipelineId, const String& nodeId, const Vector<String>& keepPortIds);
 
+        // Returns the cache key of a node's second step (IPipelineNodeImpl::Refine) over a generation: the first 32 hex digits
+        // of sha256("<cacheSig>|<key>|" + the generation's bytes; a text style's JSON counts as its bytes)
+        static String RefineSignature(const String& cacheSig, const String& key, const PipelineValue& stored);
+
     private:
         // ----------------------------------------------------------------------
         // State of one run: graph snapshot, flags and the values produced so far
@@ -201,11 +206,31 @@ namespace Editor
         // Builds the context handed to a node: settings, paths, seed and the callbacks into this executor
         Ref<PipelineExecContext> MakeContext(const Ref<Run>& run, const String& nodeId);
 
+        // Gives a context the node's work folder and the pipeline's store of memoised model answers
+        static void AttachWork(PipelineExecContext& ctx, const String& pipelineId, const String& nodeId, bool fresh);
+
+        // ------------------------------------------------------------------------
+        // What a node's second step (IPipelineNodeImpl::Refine) made of a generation
+        // ------------------------------------------------------------------------
+        struct Refined
+        {
+            PipelineValue value;            // What takes the generation's place: the generation itself when the step did not run
+            bool          computed = false; // The step ran in this run
+            bool          owed = false;     // A cached-only run left the step to a real run: the node is not up to date
+        };
+
+        // Runs a node's paid second step over one port's stored generation (portId empty for a single-output node) or reads it
+        // back from its own cache key: the generation's key, the step's key and the generation's bytes. A cached-only run never
+        // pays for it; a restart (↻) drops what it stored
+        Coroutine<Refined> RefineStored(Ref<Run> run, Ref<PipelineNode> node, Map<String, PipelineValue> inputs, String cacheSig,
+                                        String portId, String portName, PipelineValue stored, bool restart);
+
         // Passes the event to onEvent when it is set
         void Emit(const PipelineExecEvent& event);
 
         // Emits a NodeState event: running / done / error, of the node or, with a port id, of one of its parts
-        void EmitState(const String& nodeId, const String& state, const String& error = "", const String& portId = "");
+        void EmitState(const String& nodeId, const String& state, const String& error = "", const String& portId = "",
+                       const String& phase = "");
 
         // Emits a Log event
         void EmitLog(const String& message);

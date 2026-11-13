@@ -882,11 +882,34 @@ namespace Editor
             // UI kit, Text style and AI UI layout: what the cards show, the AI models they call, the preview screen
             "kitSelected", "kitTab", "kitRemoveBg", "kitModel", "kitImageModel", "tsSample", "tsDark", "stylePrompt", "styleModel",
             "uiView", "uiPreview", "uiSelected", "uiWorkspace", "uiTab", "uiRedo", "uiDraft", "uiShowIds", "agentModel", "agentReview",
+            // ...and how its agent is asked, none of which changes the layout it already has; the reference compared with it
+            "agentImageModel", "agentDraw", "buildTurns", "agentTurns", "uiMode", "uiPoints", "uiRefOverlay",
+            "uiRefOn", "uiRefMode", "uiRefSplit",
             // AI extract: the model the auto-split asks (its sourceDpi is not here: it re-tags the parts)
             "splitModel",
             "uiDevice", "uiDeviceCustom", "uiLandscape", "uiScale"
         };
         return keys;
+    }
+
+    const Vector<String>& PipelineGraph::GetRefCheckKeys()
+    {
+        static Vector<String> keys = { "refCheck", "refCheckMax", "refCheckModel" };
+        return keys;
+    }
+
+    bool PipelineGraph::IsRefCheckOn(const PipelineNode& node)
+    {
+        auto v = node.GetConfigValue("refCheck");
+        if (!v || v->IsNull())
+            return false;
+        if (v->IsBoolean())
+            return (bool)*v;
+        if (v->IsNumber())
+            return (double)*v != 0.0;
+        if (v->IsString())
+            return !((String)*v).IsEmpty();
+        return true;
     }
 
     bool PipelineGraph::IsSeededType(const String& type)
@@ -1020,6 +1043,11 @@ namespace Editor
         if (auto impl = PipelineNodeRegistry::Get(node.nodeType))
             exclude.Add(impl->SignatureExcludedKeys());
 
+        // An AI extract's (or AI text style's) check against the reference: while it is off its model and limit mean
+        // nothing, and an off switch hashes like a node that never had one
+        if ((node.nodeType == "imageExtract" || node.nodeType == "textStyleExtract") && !PipelineGraph::IsRefCheckOn(node))
+            exclude.Add(PipelineGraph::GetRefCheckKeys());
+
         String payload = "type=" + node.nodeType + "|config=" + PipelineUtils::CanonicalJson(node.config, exclude) + "|inputs=";
         for (auto& kv : upstreamByPortKey)
             payload += kv.first + ":" + kv.second + ";";
@@ -1059,9 +1087,13 @@ namespace Editor
             exclude.Add(impl->PortCacheExcludedKeysOf(node, portId));
 
         // An extract's source DPI only re-tags its parts (a post-step): out of the stored generation's key, but in what
-        // the consumers hash, so a UI kit downstream takes the new tags
+        // the consumers hash, so a UI kit downstream takes the new tags; its check against the reference is a second step
+        // with a key of its own: the generation it starts from is the one stored without it
         if (rawRender && node.nodeType == "imageExtract")
+        {
             exclude.Add("sourceDpi");
+            exclude.Add(GetRefCheckKeys());
+        }
 
         String variant = (impl ? impl->PortCacheVariant(node, portId) : portId) +
             PipelineTransparency::PortCacheSuffix(node, portId, rawRender, exclude);
@@ -1082,6 +1114,7 @@ namespace Editor
             if (!from || !nodeSignatures.TryGetValue(OutputSigKey(*from, edge->fromPortId), sig))
                 nodeSignatures.TryGetValue(edge->fromNodeId, sig);
 
+            sig = PipelineNodeRegistry::UpstreamSigFor(sig, from ? from.Get() : nullptr, edge->fromPortId, node);
             if (!sig.IsEmpty())
                 upstream[UpstreamSigKey(node, *port)] = sig;
         }
@@ -1121,10 +1154,12 @@ namespace Editor
                     continue;
 
                 // A per-port upstream caches every part apart: hash the part this edge reads
-                if (auto from = FindNode(edge->fromNodeId))
+                auto from = FindNode(edge->fromNodeId);
+                if (from)
                     result.TryGetValue(OutputSigKey(*from, edge->fromPortId), us);
 
-                upstream[UpstreamSigKey(*node, *port)] = us;
+                upstream[UpstreamSigKey(*node, *port)] = PipelineNodeRegistry::UpstreamSigFor(us, from ? from.Get() : nullptr,
+                                                                                              edge->fromPortId, *node);
             }
 
             int seed = -1;

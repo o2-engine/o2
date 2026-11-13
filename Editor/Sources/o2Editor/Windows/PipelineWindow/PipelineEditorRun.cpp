@@ -318,6 +318,12 @@ namespace Editor
                 if (auto widget = GetNodeWidget(event.nodeId))
                 {
                     auto& rt = widget->GetRuntime();
+                    // What the node or a part does beyond its generation (the check against the reference), while it runs
+                    if (event.state == "running" && !event.phase.IsEmpty())
+                        rt.phases[event.portId] = event.phase;
+                    else
+                        rt.phases.Remove(event.portId);
+
                     if (!event.portId.IsEmpty())
                     {
                         // One part of a per-port node: its cell shows the progress, the node keeps its own state

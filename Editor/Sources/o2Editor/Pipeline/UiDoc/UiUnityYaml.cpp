@@ -213,7 +213,7 @@ namespace Editor::UiDoc::Unity
         else if (c.kind == "CanvasScaler")
         {
             s += "  m_UiScaleMode: 1\n  m_ReferencePixelsPerUnit: 100\n  m_ScaleFactor: 1\n  m_ReferenceResolution: " + Vec2(c.reference) + "\n" +
-                "  m_ScreenMatchMode: 0\n  m_MatchWidthOrHeight: 0.5\n  m_PhysicalUnit: 3\n  m_FallbackScreenDPI: 96\n  m_DefaultSpriteDPI: 96\n" +
+                "  m_ScreenMatchMode: " + String(c.expand ? 1 : 0) + "\n  m_MatchWidthOrHeight: 0.5\n  m_PhysicalUnit: 3\n  m_FallbackScreenDPI: 96\n  m_DefaultSpriteDPI: 96\n" +
                 "  m_DynamicPixelsPerUnit: 1\n  m_PresetInfoIsWorld: 0\n";
         }
         else if (c.kind == "GraphicRaycaster")
@@ -321,7 +321,11 @@ namespace Editor::UiDoc::Unity
             V2 pv = d.all ? zero : g->Pv();
             double sc[3] = { d.all ? 0 : g->sc[0], d.all ? 0 : g->sc[1], d.all ? 0 : g->sc[2] };
 
-            out += "--- !u!224 &" + g->rtId + "\nRectTransform:\n" + kHead + "  m_GameObject: {fileID: " + g->goId + "}\n  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}\n" +
+            // A turned block: the quaternion of a turn about z and the editor's angle hint
+            double half = (g->rotZ*3.141592653589793)/360;
+            String rot = g->rotZ ? "{x: 0, y: 0, z: " + UnityFloat(F(std::sin(half))) + ", w: " + UnityFloat(F(std::cos(half))) + "}"
+                                 : String("{x: 0, y: 0, z: 0, w: 1}");
+            out += "--- !u!224 &" + g->rtId + "\nRectTransform:\n" + kHead + "  m_GameObject: {fileID: " + g->goId + "}\n  m_LocalRotation: " + rot + "\n" +
                 "  m_LocalPosition: {x: 0, y: 0, z: 0}\n  m_LocalScale: {x: " + UnityFloat(sc[0]) + ", y: " + UnityFloat(sc[1]) + ", z: " + UnityFloat(sc[2]) +
                 "}\n  m_ConstrainProportionsScale: 0\n";
             if (g->children.empty())
@@ -332,7 +336,7 @@ namespace Editor::UiDoc::Unity
                 for (auto c : g->children)
                     out += "  - {fileID: " + c->rtId + "}\n";
             }
-            out += "  m_Father: {fileID: " + (g->parent ? g->parent->rtId : String("0")) + "}\n  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}\n" +
+            out += "  m_Father: {fileID: " + (g->parent ? g->parent->rtId : String("0")) + "}\n  m_LocalEulerAnglesHint: {x: 0, y: 0, z: " + (g->rotZ ? UnityFloat(F(g->rotZ)) : String("0")) + "}\n" +
                 "  m_AnchorMin: " + Vec2(am) + "\n  m_AnchorMax: " + Vec2(ax) + "\n  m_AnchoredPosition: " + Vec2(ap) + "\n  m_SizeDelta: " + Vec2(sd) +
                 "\n  m_Pivot: " + Vec2(pv) + "\n";
             for (auto& c : g->comps)
@@ -620,6 +624,7 @@ namespace Editor::UiDoc
 
             Ids ids(seed + "|" + prefabPath);
             Assembler assembler(doc, assets);
+            assembler.expand = input.canvasFit == "expand";
             GO* root = assembler.Build(name);
             MarkDriven(root);
             files.Add({ prefabPath, PrefabYaml(root, ids) });

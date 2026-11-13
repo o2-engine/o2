@@ -178,14 +178,18 @@ TEST_F(UiWorkspaceUiFixture, StageReordersInsideAColumn)
 TEST_F(UiWorkspaceUiFixture, HierarchyDropsIntoABlockKeepingThePlace)
 {
     OpenWorkspace(false);
+    // The design itself as the screen (the kit's device would add room: blocks at half pixels after the drop)
+    Ctx()->SetUi("uiDevice", UiDocJson("design"));
+    Step(2);
     auto hierarchy = Window()->GetHierarchy();
-    auto before = RectOf("coin");
+    auto shownRect = [&](const String& id) { return UiDoc::SolveLayout(DocNow(), Ctx()->preview.frame.w, Ctx()->preview.frame.h).Get(id); };
+    auto before = shownRect("coin");
     Drag(hierarchy->RowRect("coin").Center(), hierarchy->RowRect("card").Center(), 12);
     auto doc = DocNow();
     auto parent = UiDoc::FindParent(doc, "coin");
     ASSERT_TRUE(parent);
     EXPECT_EQ(parent->id, String("card"));
-    auto after = RectOf("coin");
+    auto after = shownRect("coin");
     EXPECT_NEAR(after.x, before.x, 0.01);
     EXPECT_NEAR(after.y, before.y, 0.01);
     EXPECT_EQ(LastLabel(), String("coin \xE2\x86\x92 card"));
@@ -515,12 +519,27 @@ TEST_F(UiWorkspaceUiFixture, AgentSendAndAppend)
     UiWorkspace::SetAgentSendHandler({});
 }
 
-// The screen picker writes the view keys: a device, turned, a custom screen (w, h, dpi in that order), by screen
+// The screen picker writes the view keys: a device, turned, a custom screen (w, h, dpi in that order); the kit's device is
+// the default, every row names its aspect ratio and the canvas it gives in the layout's pixels
 TEST_F(UiWorkspaceUiFixture, DevicePickerWritesTheViewKeys)
 {
     OpenWorkspace(false);
     auto picker = Window()->GetStage()->GetDevicePicker();
     int steps = StepsNow().Count();
+    EXPECT_EQ(Ctx()->preview.kind, String("kit"));
+    EXPECT_EQ(Ctx()->preview.name, String("iPhone 16"));
+    EXPECT_EQ(Ctx()->preview.frame.w, 1080.0);
+    EXPECT_EQ(Ctx()->preview.frame.h, 2341.0) << "the design fitted into the device, the room left over added";
+    picker->ToggleMenu();
+    Step(2);
+    ASSERT_TRUE(picker->IsMenuOpen());
+    auto menu = picker->GetMenuPanel();
+    EXPECT_EQ(menu->RowText("kit"), String("Kit's device \xC2\xB7 iPhone 16 9:19.5 \xC2\xB7 1080\xC3\x97" "2341"));
+    EXPECT_EQ(menu->RowText("ipad-pro-13"), String("iPad Pro 13\xE2\x80\xB3 3:4 \xC2\xB7 1440\xC3\x97" "1920"));
+    EXPECT_EQ(menu->RowText("design"), String("Design 9:16 \xC2\xB7 1080\xC3\x97" "1920"));
+    EXPECT_EQ(menu->RowText("reference"), String("Reference \xC2\xB7 connect a picture"));
+    picker->ToggleMenu();
+    Step(2);
     picker->Pick("iphone-15");
     Step(2);
     EXPECT_EQ(ConfigNow().Get("uiDevice")->Str(), String("iphone-15"));
@@ -537,24 +556,27 @@ TEST_F(UiWorkspaceUiFixture, DevicePickerWritesTheViewKeys)
     EXPECT_EQ(ConfigNow().Get("uiDevice")->Str(), String("custom"));
     EXPECT_EQ(ConfigNow().Get("uiDeviceCustom")->Dump(), String("{\"w\":800,\"h\":1920,\"dpi\":480}"));
 
-    picker->SetScale("fit");
-    Step(2);
-    EXPECT_EQ(ConfigNow().Get("uiScale")->Str(), String("fit"));
     EXPECT_EQ(StepsNow().Count(), steps);
 
     picker->ToggleMenu();
     Step(2);
     ASSERT_TRUE(picker->IsMenuOpen());
-    picker->GetMenuPanel()->ClickHot("device:design");
+    EXPECT_EQ(menu->RowText("ipad-pro-13"), String("iPad Pro 13\xE2\x80\xB3 4:3 \xC2\xB7 2560\xC3\x97" "1920")) << "turned";
+    menu->ClickHot("device:design");
     Step(2);
     EXPECT_EQ(ConfigNow().Get("uiDevice")->Str(), String("design"));
+    menu->ClickHot("device:kit");
+    Step(2);
+    EXPECT_EQ(ConfigNow().Get("uiDevice")->Str(), String("kit"));
+    EXPECT_EQ(StepsNow().Count(), steps) << "view keys only";
 }
 
 // The window: at least 860 x 520, maximized by its button and remembered (with the panels' widths) after it is made again
 TEST_F(UiWorkspaceUiFixture, WindowGeometryIsKept)
 {
     o2FileSystem.FileDelete(PipelinePairLayout::GetViewPrefsPath());
-    OpenWorkspace(false);
+    // In its device's pixels: an older layout's notice in the title bar would take the header's middle
+    OpenWorkspace(false, String(workspaceScreen).ReplacedAll("screen Menu 1080x1920", "screen Menu 1080x1920 dpi=460"));
     auto window = Window();
     Vec2F screen = (Vec2F)o2Render.GetResolution();
     window->SetFrame(10, 10, 300, 200);
@@ -632,7 +654,7 @@ TEST_F(UiWorkspaceUiFixture, DevicePickerStandsAlone)
     picker->Bind(editor, layoutNode->id);
     Step(2);
     EXPECT_GT(picker->GetPreferredWidth(), 100.0f);
-    EXPECT_EQ(picker->ctx->preview.kind, String("design"));
+    EXPECT_EQ(picker->ctx->preview.kind, String("kit"));
 
     picker->Pick("pixel-8");
     Step(2);
@@ -646,12 +668,18 @@ TEST_F(UiWorkspaceUiFixture, DevicePickerStandsAlone)
     picker->ToggleMenu();
     Step(2);
     EXPECT_TRUE(picker->IsMenuOpen());
-    auto field = picker->GetMenuPanel()->GetCustomField("dpi");
+    // A custom side applies on Enter or when its field is left, not while it is typed
+    auto field = picker->GetMenuPanel()->GetCustomField("w");
     ASSERT_TRUE(field);
-    field->SetText("320");
+    field->Focus();
+    field->SetText("1");
+    Step(2);
+    EXPECT_EQ(ConfigNow().Get("uiDevice")->Str(), String("ipad-mini")) << "not live";
+    field->SetText("1000");
+    field->Unfocus();
     Step(2);
     EXPECT_EQ(ConfigNow().Get("uiDevice")->Str(), String("custom"));
-    EXPECT_EQ(ConfigNow().Get("uiDeviceCustom")->Get("dpi")->Num(), 320.0);
+    EXPECT_EQ(ConfigNow().Get("uiDeviceCustom")->Get("w")->Num(), 1000.0);
     picker->ToggleMenu();
     Step(2);
     EditorUIRoot.RemoveWidget(picker);

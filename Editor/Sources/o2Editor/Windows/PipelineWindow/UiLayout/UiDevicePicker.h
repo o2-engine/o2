@@ -8,17 +8,20 @@ namespace Editor
     class UiDeviceMenuPanel;
 
     // -----------------------------------------------------------------------------------------------
-    // The screen an AI UI layout is previewed on (port of AssetsLine DevicePicker.tsx): the design, the
-    // reference picture it rebuilds, one of 14 devices or a custom W x H x DPI, turned if asked, met by
-    // DPI (physical size) or by screen (Unity's Canvas Scaler) - a field on the card, a chip on the
-    // workspace's toolbar, and its menu. It writes the node's view keys uiDevice, uiDeviceCustom,
-    // uiLandscape and uiScale (no undo step, no run). The menu warns about kit graphics drawn larger than
-    // their pixels on that screen
+    // The screen an AI UI layout is shown on (port of AssetsLine DevicePicker.tsx): the kit's device (the
+    // one it is laid out for - the default), the design itself, the reference picture it rebuilds, another
+    // device or a custom W x H, turned if asked. The layout meets every screen the same way - fitted, the
+    // room left over added to the canvas - so another screen changes the aspect ratio only: the list names
+    // the devices by it, and every row says the canvas it gives in the layout's pixels. A field on the card
+    // ("iPhone 16 · 1179×2556 · +460 px height"), a chip on the workspace's toolbar, and its menu. It writes
+    // the node's view keys uiDevice, uiDeviceCustom and uiLandscape (no undo step, no run). The menu warns
+    // about kit graphics drawn larger than their pixels on that screen
     // -----------------------------------------------------------------------------------------------
     class UiDevicePicker : public UiWsPanel
     {
     public:
-        bool chip = false; // The toolbar's chip (no border, 16 px icon), else the card's field
+        bool chip = false;     // The toolbar's chip (no border, 16 px icon), else the card's field
+        bool onCanvas = false; // It sits on the editor's canvas (a card): its menu opens in screen space at it
 
     public:
         // Default constructor
@@ -27,7 +30,7 @@ namespace Editor
         // Binds it to a node of the editor (the card): it reads the node itself and follows its changes
         void Bind(const Ref<PipelineEditor>& editor, const String& nodeId);
 
-        // Binds it to the workspace's context
+        // Binds it to a context read by another (the workspace's, the card's)
         void Bind(const Ref<UiWsContext>& context);
 
         // Reads the node again (the card calls it when the node changed)
@@ -45,17 +48,18 @@ namespace Editor
         // Returns the menu's panel (tests), null before the first open
         Ref<UiDeviceMenuPanel> GetMenuPanel() const;
 
-        // Picks a screen as the menu does: design, reference, custom or a device id
+        // Picks a screen as the menu does: kit, design, reference, custom or a device id
         void Pick(const String& device);
 
-        // Sets the scale mode as the menu's segments do: dpi | fit
-        void SetScale(const String& scale);
-
-        // Turns the screen as the menu's button does
+        // Turns the screen as the menu's button does (not the design nor the reference)
         void ToggleLandscape();
 
-        // Sets one side of the custom screen (w, h or dpi) as its fields do; the custom screen becomes the one shown
+        // Sets one side of the custom screen (w or h) as its fields do on Enter / leaving them; the custom screen becomes
+        // the one shown. The same value as stored changes nothing
         void SetCustom(const String& key, double value);
+
+        // The screen picked: what the menu marks (the reference without one is the kit's device)
+        String Chosen() const;
 
         // Polls the bound node for changes (card mode)
         void Update(float dt) override;
@@ -72,9 +76,10 @@ namespace Editor
     };
 
     // -----------------------------------------------------------------------------------------------
-    // The screen picker's menu: By DPI | By screen and the turn button, the design and the reference,
-    // phones, tablets, desktops, the custom screen's W H DPI fields, the canvas the layout gets and the
-    // soft graphics
+    // The screen picker's menu: the hint and the turn button, the kit's device, the design and the
+    // reference, phones, tablets, desktops (each named with its aspect ratio and the canvas it gives),
+    // the custom screen's W H fields, the canvas the layout gets, what the screen adds, the comparison
+    // note and the soft graphics
     // -----------------------------------------------------------------------------------------------
     class UiDeviceMenuPanel : public UiWsPanel
     {
@@ -91,15 +96,19 @@ namespace Editor
         // Builds the custom screen's fields with the current values
         void SyncFields();
 
-        // Returns the custom screen's field of a key: w, h or dpi
+        // Returns the custom screen's field of a key: w or h
         Ref<EditBox> GetCustomField(const String& key) const;
+
+        // The text of a list row (tests): its name with the aspect ratio, and what it says on the right
+        String RowText(const String& id) const;
 
         void OnScrolled(float scroll) override;
 
     protected:
-        Ref<EditBox> mFields[3];
+        Ref<EditBox> mFields[2];
         float        mScroll = 0.0f;
         float        mListHeight = 0.0f;
+        Map<String, String> mRowTexts; // id -> the row's words, as drawn last
 
     protected:
         void DrawPanel(const UiWsDraw::Box& box) override;

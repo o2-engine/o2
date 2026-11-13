@@ -137,31 +137,52 @@ TEST(UiWorkspaceModel, TimelineKeepsTheDocumentsOfStepsThatDidNotChange)
 TEST(UiWorkspaceModel, PreviewScreens)
 {
     UiDoc doc = Parse(screen);
+    UiTarget target = DefaultTarget();
     Json config = Json::Object();
     auto setting = Ws::PreviewSettingOf(config);
-    EXPECT_STR_EQ(setting.device, "design");
-    auto p = Ws::PreviewOf(doc, setting, nullptr);
+    EXPECT_STR_EQ(setting.device, "kit");
+    auto p = Ws::PreviewOf(doc, setting, nullptr, target);
+    EXPECT_STR_EQ(p.kind, "kit");
+    EXPECT_STR_EQ(p.name, "iPhone 16");
+    EXPECT_STR_EQ(Ws::PreviewName(p), "iPhone 16");
+    // The design fitted into the device's screen, the room left over added to the canvas (Unity's Expand)
+    EXPECT_EQ(p.frame, PreviewFrame(1080, 1920, std::nullopt, target.Screen(), "fit"));
+    EXPECT_EQ(p.frame.w, 1080.0);
+    EXPECT_GT(p.frame.h, 1920.0);
+
+    // A stored design is the design itself
+    config["uiDevice"] = "design";
+    p = Ws::PreviewOf(doc, Ws::PreviewSettingOf(config), nullptr, target);
     EXPECT_STR_EQ(p.kind, "design");
     EXPECT_EQ(p.frame.w, 1080.0);
     EXPECT_EQ(p.frame.scale, 1.0);
 
-    // The reference asked for without one: the design, marked as a fallback
+    // The reference asked for without one: the kit's device, marked as a fallback
     config["uiDevice"] = "reference";
-    p = Ws::PreviewOf(doc, Ws::PreviewSettingOf(config), nullptr);
-    EXPECT_STR_EQ(p.kind, "design");
+    p = Ws::PreviewOf(doc, Ws::PreviewSettingOf(config), nullptr, target);
+    EXPECT_STR_EQ(p.kind, "kit");
     EXPECT_TRUE(p.fallback);
     UiScreen reference{ 750, 1334, 326 };
-    p = Ws::PreviewOf(doc, Ws::PreviewSettingOf(config), &reference);
+    p = Ws::PreviewOf(doc, Ws::PreviewSettingOf(config), &reference, target);
     EXPECT_STR_EQ(p.kind, "reference");
     EXPECT_EQ(p.screen.w, 750.0);
+    EXPECT_FALSE(p.comparing);
+
+    // While the reference is laid over the layout, the layout is shown on the reference's screen whatever is picked
+    config["uiDevice"] = "ipad";
+    p = Ws::PreviewOf(doc, Ws::PreviewSettingOf(config), &reference, target, true);
+    EXPECT_STR_EQ(p.kind, "reference");
+    EXPECT_TRUE(p.comparing);
+    p = Ws::PreviewOf(doc, Ws::PreviewSettingOf(config), nullptr, target, true);
+    EXPECT_STR_EQ(p.id, "ipad");
 
     // A device turned; a custom screen read clean
     config["uiDevice"] = "iphone-15";
     config["uiLandscape"] = true;
-    p = Ws::PreviewOf(doc, Ws::PreviewSettingOf(config), nullptr);
+    p = Ws::PreviewOf(doc, Ws::PreviewSettingOf(config), nullptr, target);
     EXPECT_STR_EQ(p.name, "iPhone 15");
     EXPECT_GT(p.screen.w, p.screen.h);
-    EXPECT_EQ(p.frame, PreviewFrame(1080, 1920, std::nullopt, p.screen, "dpi"));
+    EXPECT_EQ(p.frame, PreviewFrame(1080, 1920, std::nullopt, p.screen, "fit"));
 
     Json custom = Json::Object();
     custom["w"] = 20;
@@ -170,12 +191,10 @@ TEST(UiWorkspaceModel, PreviewScreens)
     config["uiDevice"] = "custom";
     config["uiDeviceCustom"] = custom;
     config["uiLandscape"] = false;
-    config["uiScale"] = "fit";
     setting = Ws::PreviewSettingOf(config);
     EXPECT_EQ(setting.custom.w, 64.0);
     EXPECT_EQ(setting.custom.h, 900.0);
     EXPECT_EQ(setting.custom.dpi, UI_BASE_DPI);
-    EXPECT_STR_EQ(setting.scale, "fit");
     EXPECT_STR_EQ(Ws::ScreenText(setting.custom), "64\xC3\x97" "900 \xC2\xB7 480 dpi");
 }
 

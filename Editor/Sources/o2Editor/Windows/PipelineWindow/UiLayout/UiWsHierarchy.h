@@ -44,6 +44,9 @@ namespace Editor
         // Returns true when a block's children are folded
         bool IsFolded(const String& id) const { return mFolded.Contains(id); }
 
+        // How far the list is scrolled (pixels)
+        float GetScroll() const { return mScroll; }
+
         // Adds a block of the word, as the add menu does
         void AddBlock(const String& word);
 
@@ -70,6 +73,7 @@ namespace Editor
 
         Vector<Row>    mRows;
         Vector<String> mFolded;
+        String         mRevealed;      // The selection brought into view last
         float          mScroll = 0.0f;
         float          mContentHeight = 0.0f;
 
@@ -105,6 +109,10 @@ namespace Editor
 
         // The list's area (world)
         RectF ListRect() const;
+
+        // A block selected anywhere (the stage, the inspector, the agent, the keys) is shown here: the blocks folded around it
+        // open, and the list scrolls just far enough to bring its row in (a row in view stays where it is). Once per selection
+        void RevealSelection();
 
         // Moves the dragged row to the point: its landing place, the auto-scroll, the unfolding
         void DragRowTo(const Vec2F& point, float dt);

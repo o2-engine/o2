@@ -22,6 +22,12 @@ namespace Editor::UiDoc
         textStub = stub;
     }
 
+    bool HasUiAiTextStub()
+    {
+        std::lock_guard<std::mutex> guard(stubLock);
+        return (bool)textStub;
+    }
+
     Coroutine<AiTextResult> UiAiText(Ref<PipelineExecContext> ctx, String model, String prompt, Vector<AiImageRef> images)
     {
         UiAiTextStub stub;
@@ -233,6 +239,7 @@ namespace Editor::UiDoc
         SetConfigJson(config, "steps", StepsToJson(steps));
         SetConfigJson(config, "uiRedo", Json::Array());
         SetConfigJson(config, "uiDraft", Json(String()));
+        SetConfigJson(config, "uiPoints", Json::Array());
     }
 
     void CommitUserAction(DataValue& config, const Vector<UiOp>& ops, const String& label, Int64 nowMs, bool fold /*= true*/)

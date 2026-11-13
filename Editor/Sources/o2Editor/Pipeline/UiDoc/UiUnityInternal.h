@@ -199,6 +199,7 @@ namespace Editor::UiDoc::Unity
         int                       columns = 0;
         int                       padding[4] = { 0, 0, 0, 0 };
         V2                        reference;
+        bool                      expand = false; // CanvasScaler: Expand (canvasFit) instead of matching width and height by half
         GO*                       viewport = nullptr;
         GO*                       content = nullptr;
         bool                      horizontal = false, vertical = false;
@@ -219,6 +220,8 @@ namespace Editor::UiDoc::Unity
         std::vector<std::unique_ptr<Comp>> comps;
         bool                               active = true;
         double                             sc[3] = { 1, 1, 1 };
+        double                             rotZ = 0; // Turn about the pivot, degrees about Unity's z (counter-clockwise; a
+                                                     // layout's `rotation` is clockwise on the screen)
         Drive                              drive;
         String                             goId, rtId;
 
@@ -329,6 +332,7 @@ namespace Editor::UiDoc::Unity
     public:
         Doc&                        doc;
         UnityAssets&                assets;
+        bool                        expand = false; // canvasFit: expand
         std::map<std::string, UBox> boxes;
         GO*                         root = nullptr;
         int                         images = 0, texts = 0;

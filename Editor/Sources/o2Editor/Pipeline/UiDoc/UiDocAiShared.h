@@ -7,6 +7,4 @@
 // ------------------------------------------------------------------------------------------------
 namespace Editor::UiDoc
 {
-    // A text model call: the test stand-in when one is set, else AiRouter::GenerateText
-    Coroutine<AiTextResult> UiAiText(Ref<PipelineExecContext> ctx, String model, String prompt, Vector<AiImageRef> images);
 }

@@ -52,10 +52,11 @@ namespace Editor
 
     // -----------------------------------------------------------------------------------------------
     // The Agent tab (port of AgentMessages and the compose part of UiWorkspace.tsx): the steps as a chat
-    // - the request, the answer with its diff chips and edits (folded), the check pass's result; hand
-    // edits as a quiet line - the agent working, its error; then the selected block as context, the
-    // request field (config.uiDraft), the model, the check-pass switch (agentReview) and Send. The agent
-    // itself is not called here: Send hands the request to UiWorkspace's onAgentSend
+    // - the request, the answer with its diff chips and edits (folded), what its run did (the acts, folded:
+    // UiWsRunActs); hand edits as a quiet line - the agent working with its acts live and Stop, its error;
+    // then the selected block as context, the request field (config.uiDraft, the points as [1], [2] tokens:
+    // UiWsPins), the point tool, the model, the check-pass switch (agentReview) and Send. The agent itself
+    // is not called here: Send hands the request to UiWorkspace's onAgentSend
     // -----------------------------------------------------------------------------------------------
     class UiWsAgentTab : public UiWsPanel
     {
@@ -81,6 +82,16 @@ namespace Editor
         // Unfolds or folds the edits of an agent step
         void ToggleEdits(int step);
 
+        // Unfolds or folds the acts of an agent step's run (the live run's are always shown)
+        void ToggleActs(int step);
+
+        // A point placed on the stage (index -1) or moved: its token goes into the request at the caret (the Agent tab opens)
+        void PlacePin(double x, double y, int index);
+
+        // Returns true when a request can be sent now: something typed, or an empty layout with a reference picture to build
+        // from (the agent builds it with the kit)
+        bool CanSend() const;
+
         void OnScrolled(float scroll) override;
         void Update(float dt) override;
 
@@ -89,6 +100,11 @@ namespace Editor
         String            mLastPrompt; // The request as it was before this frame's keys
         Ref<o2::Button>   mModel;
         Vector<int>       mOpen;        // Agent steps whose edits are unfolded
+        Vector<int>       mOpenActs;    // Agent steps whose run's acts are unfolded
+        Vector<String>    mOpenRows;    // Acts unfolded into their words and pictures ("act:<run>:<act id>")
+        int               mSeenRun = -1; // The live run's version the list last scrolled for
+        bool              mFieldHadFocus = false; // The request field had the focus once (its caret takes a point's token)
+        int               mFocusCaret = -1;       // After a point is placed: the field takes the focus back with this caret
         float             mScroll = 0.0f;
         float             mContentHeight = 0.0f;
         int               mSeenSteps = -1; // Steps when the list was last scrolled to its end

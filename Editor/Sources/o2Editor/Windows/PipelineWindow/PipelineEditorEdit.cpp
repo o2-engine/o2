@@ -183,6 +183,24 @@ namespace Editor
         if (uiOnly)
             return;
 
+        // An AI UI layout's graphic outputs are derived from its steps: an answer, an undo or a revert brings them in line, and
+        // a link that hung on a graphic now gone goes with it
+        if (completed && key == "steps" && node->GetNode()->nodeType == "uiLayout")
+        {
+            auto before = node->GetNode()->outputs;
+            PipelineNodeRegistry::SyncNodeWithSchema(node->GetNode());
+            auto& after = node->GetNode()->outputs;
+            bool same = before.Count() == after.Count();
+            for (int i = 0; same && i < after.Count(); i++)
+                same = before[i].id == after[i].id && before[i].name == after[i].name;
+            if (!same)
+            {
+                if (auto graph = GetGraph())
+                    graph->RemoveDanglingEdges();
+                node->RefreshPorts();
+            }
+        }
+
         auto schema = node->GetSchema();
         if (schema && schema->category == PipelineNodeCategory::Source)
         {
@@ -586,6 +604,67 @@ namespace Editor
             return nullptr;
 
         RecordAction("Add node", before, SerializeGraph());
+        SelectNodes({ node->id });
+        return node;
+    }
+
+    Ref<PipelineNode> PipelineEditor::AddNodeBeside(const String& besideNodeId, const String& type,
+                                                    const Function<void(PipelineNode&)>& setup, const String& undoName)
+    {
+        auto graph = GetGraph();
+        auto beside = graph ? graph->FindNode(besideNodeId) : nullptr;
+        if (!beside)
+            return nullptr;
+
+        PushEditorScopeOnStack scope;
+        String before = SerializeGraph();
+        auto node = PipelineNodeRegistry::CreateNode(type, beside->position);
+        if (!node)
+            return nullptr;
+
+        node->size = PipelinePairLayout::NewNodeSize(type, node->size);
+        if (setup)
+            setup(*node);
+        graph->nodes.Add(node);
+        auto card = AddCard(node);
+
+        // Boxes in node space (y down); a card not built yet counts as an average one
+        auto boxOf = [&](const Ref<PipelineNode>& n)
+        {
+            auto widget = GetNodeWidget(n->id);
+            Vec2F size = widget ? widget->GetCardSize() : Vec2F(n->size.x > 0.0f ? n->size.x : 280.0f, 320.0f);
+            return RectF(n->position.x, n->position.y, n->position.x + size.x, n->position.y + size.y);
+        };
+        const float gap = 40.0f;
+        RectF me = boxOf(beside), mine = boxOf(node);
+        float x = me.right + 60.0f, y = me.bottom < me.top ? me.bottom : me.top;
+        float w = Math::Abs(mine.right - mine.left), h = Math::Abs(mine.top - mine.bottom);
+        for (int i = 0; i < 40; i++)
+        {
+            float lowest = -1e9f;
+            for (auto& other : graph->nodes)
+            {
+                if (other == node)
+                    continue;
+
+                RectF b = boxOf(other);
+                float bx = Math::Min(b.left, b.right), bw = Math::Abs(b.right - b.left);
+                float by = Math::Min(b.top, b.bottom), bh = Math::Abs(b.top - b.bottom);
+                if (x < bx + bw + gap && x + w + gap > bx && y < by + bh + gap && y + h + gap > by)
+                    lowest = Math::Max(lowest, by + bh);
+            }
+            if (lowest < -1e8f)
+                break;
+
+            y = lowest + gap;
+        }
+
+        node->position = SnapToGrid(Vec2F(x, y));
+        if (card)
+            card->UpdateFromNode();
+        RecalculateViewArea();
+        mNeedRedraw = true;
+        RecordAction(undoName, before, SerializeGraph());
         SelectNodes({ node->id });
         return node;
     }

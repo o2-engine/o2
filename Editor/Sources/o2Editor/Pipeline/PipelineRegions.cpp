@@ -1,6 +1,8 @@
 #include "o2Editor/stdafx.h"
 #include "PipelineRegions.h"
 
+#include "o2Editor/Pipeline/PipelinePartFit.h"
+
 #include "o2Editor/Pipeline/Nodes/PipelineNodesCommon.h"
 #include "o2Editor/Pipeline/PipelineImageOps.h"
 #include "o2Editor/Pipeline/PipelinePngMeta.h"
@@ -454,7 +456,40 @@ namespace Editor
             if (scale <= 0.0)
                 return outPng;
 
-            return PipelinePngMeta::WithDpi(outPng, ExtractSourceDpi(node, sourcePng) * scale, scale);
+            // The frame's ratio is what the generation claims; a cut-out is measured against the picture it was cut from -
+            // models often draw an element clearly smaller or larger inside their frame than the crop shows it
+            int wholeW = 0, wholeH = 0;
+            if (!sourcePng.IsEmpty())
+            {
+                if (auto measured = MeasuredPartScale(sourcePng, RegionOfPort(node, portId), outPng, scale))
+                    scale = *measured;
+                PipelinePngMeta::Size(sourcePng, wholeW, wholeH);
+            }
+
+            // ...and the size of the picture it was cut from: a UI kit takes that picture to be its device's screen, so the
+            // part's share of it is the part's size on the device
+            return PipelinePngMeta::WithDpi(outPng, ExtractSourceDpi(node, sourcePng) * scale, scale, wholeW, wholeH);
+        }
+
+        std::optional<double> MeasuredPartScale(const String& sourcePng, const PipelineExtractRegion& region, const String& partPng,
+                                                double nominal)
+        {
+            UiLayout::UiImage source, part;
+            if (!UiLayout::UiImage::Decode(sourcePng, source) || !UiLayout::UiImage::Decode(partPng, part) || source.IsEmpty())
+                return std::nullopt;
+
+            bool partial = region.x > 0.001f || region.y > 0.001f || region.w < 0.999f || region.h < 0.999f;
+            UiLayout::UiImage crop = source;
+            if (partial && region.w > 0 && region.h > 0)
+            {
+                int left = std::clamp((int)std::lround(region.x*source.w), 0, source.w - 1);
+                int top = std::clamp((int)std::lround(region.y*source.h), 0, source.h - 1);
+                int w = std::max(1, std::min(source.w - left, (int)std::lround(region.w*source.w)));
+                int h = std::max(1, std::min(source.h - top, (int)std::lround(region.h*source.h)));
+                crop = source.Crop(left, top, w, h);
+            }
+            auto fit = PipelinePartFit::FitPartOnCrop(crop, part, nominal);
+            return fit ? std::optional<double>(fit->scale) : std::nullopt;
         }
 
         PipelineExtractRegion RegionOfPort(const PipelineNode& node, const String& portId)

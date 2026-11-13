@@ -116,6 +116,42 @@ namespace Editor::UiDoc
         return id && id->IsString() ? FindNode(doc, id->Str()) : nullptr;
     }
 
+    // A block by id. The screen itself is root; the agent also names it by the screen's name or as "screen". A missing or
+    // non-text id fails as the web's id.toLowerCase() does
+    static UiNode* BlockOf(UiDoc& doc, const Json* id, String& error)
+    {
+        if (UiNode* hit = FindById(doc, id))
+            return hit;
+        if (!id || !id->IsString())
+        {
+            error = "id.toLowerCase is not a function";
+            return nullptr;
+        }
+        String k = JsToLower(id->Str());
+        return k == "screen" || k == JsToLower(doc.name) ? &doc.root : nullptr;
+    }
+
+    // Every pixel value of a block and of the blocks in it, times k
+    static void ScaleNode(UiNode& n, double k)
+    {
+        auto px = [&](double v) { return JsRound(v*k*10)/10; };
+        for (auto* v : { &n.x, &n.y, &n.w, &n.h, &n.gap, &n.gapY, &n.cellW, &n.cellH, &n.fontSize })
+        {
+            if (*v)
+                **v = px(**v);
+        }
+        for (auto* box : { &n.margin, &n.pad })
+        {
+            if (*box)
+            {
+                for (auto& v : **box)
+                    v = px(v);
+            }
+        }
+        for (auto& c : n.children)
+            ScaleNode(c, k);
+    }
+
     static UiNode* FindParentById(UiDoc& doc, const Json* id)
     {
         return id && id->IsString() ? FindParent(doc, id->Str()) : nullptr;
@@ -268,15 +304,20 @@ namespace Editor::UiDoc
                     doc.dpi = d;
                 }
             }
+            const Json* scale = JsGet(op, "scale");
+            double k = JsNumber(scale);
+            if (JsTruthy(scale) && k > 0 && std::fabs(k - 1) > 1e-6)
+                ScaleNode(doc.root, k);
             return true;
         }
 
         if (kind == "update")
         {
-            UiNode* node = FindById(doc, JsGet(op, "id"));
+            String thrown;
+            UiNode* node = BlockOf(doc, JsGet(op, "id"), thrown);
             if (!node)
             {
-                error = "@update: no block \"" + JsString(JsGet(op, "id")) + "\"";
+                error = !thrown.IsEmpty() ? thrown : "@update: no block \"" + JsString(JsGet(op, "id")) + "\"";
                 return false;
             }
 
@@ -306,10 +347,12 @@ namespace Editor::UiDoc
         if (kind == "add")
         {
             const Json* parentId = JsGet(op, "parent");
-            UiNode* parent = JsTruthy(parentId) ? FindById(doc, parentId) : FindNode(doc, "root");
+            String thrown;
+            Json rootId("root");
+            UiNode* parent = BlockOf(doc, JsTruthy(parentId) ? parentId : &rootId, thrown);
             if (!parent)
             {
-                error = "@add: no block \"" + JsString(parentId) + "\" to add into";
+                error = !thrown.IsEmpty() ? thrown : "@add: no block \"" + JsString(parentId) + "\" to add into";
                 return false;
             }
 
@@ -378,10 +421,11 @@ namespace Editor::UiDoc
             }
 
             const Json* parentId = JsGet(op, "parent");
-            UiNode* to = JsTruthy(parentId) ? FindById(doc, parentId) : from;
+            String thrown;
+            UiNode* to = JsTruthy(parentId) ? BlockOf(doc, parentId, thrown) : from;
             if (!to)
             {
-                error = "@move: no block \"" + JsString(parentId) + "\" to move into";
+                error = !thrown.IsEmpty() ? thrown : "@move: no block \"" + JsString(parentId) + "\" to move into";
                 return false;
             }
             if (IsInside(*node, to->id))
@@ -462,5 +506,135 @@ namespace Editor::UiDoc
                 result.errors.Add(error);
         }
         return result;
+    }
+
+    UiOp MakeRescaleOp(double width, double height, double dpi, double scale, double fromDpi)
+    {
+        Json op = Json::Object();
+        op["op"] = "screen";
+        op["width"] = width;
+        op["height"] = height;
+        op["dpi"] = dpi;
+        op["scale"] = scale;
+        op["fromDpi"] = fromDpi;
+        return op;
+    }
+
+    Vector<UiStepPoint> CleanPoints(const Json* raw, double w /*= INFINITY*/, double h /*= INFINITY*/)
+    {
+        Vector<UiStepPoint> out;
+        if (!raw || !raw->IsArray())
+            return out;
+
+        for (auto& p : raw->Items())
+        {
+            if (!p.IsObject() && !p.IsArray())
+                continue;
+            double x = JsNumber(JsGet(p, "x")), y = JsNumber(JsGet(p, "y"));
+            String text = JsSlice(JsTrim(JsStringOr(JsGet(p, "text"))), 0, 2000);
+            if (!std::isfinite(x) || !std::isfinite(y))
+                continue;
+            out.Add(UiStepPoint{ std::max(0.0, std::min(w, JsRound(x))), std::max(0.0, std::min(h, JsRound(y))), text });
+            if (out.Count() >= 20)
+                break;
+        }
+        return out;
+    }
+
+    Json PointsToJson(const Vector<UiStepPoint>& points)
+    {
+        Json out = Json::Array();
+        for (auto& p : points)
+        {
+            Json j = Json::Object();
+            j["x"] = p.x;
+            j["y"] = p.y;
+            j["text"] = p.text;
+            out.Add(j);
+        }
+        return out;
+    }
+
+    // Every [n] token (one or two digits) of a text: where it starts, how long it is, its number
+    struct PinToken
+    {
+        size_t at = 0, length = 0;
+        int    n = 0;
+    };
+    static Vector<PinToken> PinTokens(const String& text)
+    {
+        Vector<PinToken> out;
+        const std::string& s = text;
+        size_t i = 0;
+        while (i < s.size())
+        {
+            if (s[i] == '[')
+            {
+                size_t j = i + 1;
+                while (j < s.size() && j - i - 1 < 2 && s[j] >= '0' && s[j] <= '9')
+                    j++;
+                size_t digits = j - i - 1;
+                if (digits >= 1 && j < s.size() && s[j] == ']')
+                {
+                    out.Add(PinToken{ i, j - i + 1, std::stoi(s.substr(i + 1, digits)) });
+                    i = j + 1;
+                    continue;
+                }
+            }
+            i++;
+        }
+        return out;
+    }
+
+    Vector<int> PinsNamed(const String& text, int count)
+    {
+        Vector<int> order;
+        for (auto& t : PinTokens(text))
+        {
+            if (t.n >= 1 && t.n <= count && !order.Contains(t.n))
+                order.Add(t.n);
+        }
+        return order;
+    }
+
+    String DraftWithNotes(const String& draft, const Vector<UiStepPoint>& points)
+    {
+        Vector<int> named = PinsNamed(draft, points.Count());
+        String text = draft;
+        for (int i = 0; i < points.Count(); i++)
+        {
+            String note = JsTrim(points[i].text);
+            if (named.Contains(i + 1) || note.IsEmpty())
+                continue;
+            text = JsTrimEnd(text) + (JsTrim(text).IsEmpty() ? "" : "\n") + "[" + JsNum(i + 1) + "] " + note;
+        }
+        return text;
+    }
+
+    UiPinnedRequest RequestWithPins(const String& draft, const Vector<UiStepPoint>& points)
+    {
+        String full = DraftWithNotes(draft, points);
+        Vector<int> order = PinsNamed(full, points.Count());
+
+        const std::string& s = full;
+        std::string text;
+        size_t from = 0;
+        for (auto& t : PinTokens(full))
+        {
+            text += s.substr(from, t.at - from);
+            int i = order.IndexOf(t.n);
+            if (i >= 0 && t.n <= points.Count())
+                text += "[" + std::to_string(i + 1) + "]";
+            else
+                text += s.substr(t.at, t.length);
+            from = t.at + t.length;
+        }
+        text += s.substr(from);
+
+        UiPinnedRequest out;
+        out.text = String(text);
+        for (int n : order)
+            out.points.Add(UiStepPoint{ points[n - 1].x, points[n - 1].y, "" });
+        return out;
     }
 }

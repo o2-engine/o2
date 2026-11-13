@@ -1,12 +1,15 @@
 #pragma once
 
+#include <array>
 #include <future>
 #include <memory>
 #include <optional>
 
 #include "o2/Render/TextureRef.h"
+#include "o2Editor/Pipeline/UiDoc/UiDocRotate.h"
 #include "o2Editor/Pipeline/UiLayout/UiLayoutPixels.h"
 #include "o2Editor/Windows/PipelineWindow/UiLayout/UiDevicePicker.h"
+#include "o2Editor/Windows/PipelineWindow/UiLayout/UiWsRefCompare.h"
 
 namespace o2
 {
@@ -23,8 +26,11 @@ namespace Editor
     // it, the edges and corners resize it (Shift keeps the proportions, Alt resizes about the centre), edges
     // and centres snap to the parent and the siblings (Cmd / Ctrl: no snapping), the anchor's triangles go
     // to the parent's nine points keeping the block where it is; inside a row / column / grid a drag picks
-    // the slot (a dashed ghost follows) and a resize sets w / h and drops grow. Every gesture is one hand
-    // action; while it lasts the stage shows the result live. The screen is drawn by the layout renderer at
+    // the slot (a dashed ghost follows) and a resize sets w / h and drops grow. The knob above the selection
+    // turns it about its centre (Shift: 15 degree steps; near 0 / 90 / 180 it snaps); a turned block (or one in a
+    // turned parent) is drawn, selected and handled turned, moved and resized along its own axes without
+    // snapping, the side not pulled staying where it is on the screen (UiDocRotate.h; UiWsStageTurn.cpp). Every
+    // gesture is one hand action; while it lasts the stage shows the result live. The screen is drawn by the layout renderer at
     // the size it takes on screen, again only when something it shows changed
     // -----------------------------------------------------------------------------------------------
     class UiWsStage : public UiWsPanel
@@ -57,8 +63,11 @@ namespace Editor
         // The world rectangle of a block of the shown screen (an empty one for none)
         RectF BlockRect(const String& id) const;
 
-        // The world point of a resize handle of the selected block: n, s, e, w, ne, nw, se, sw
+        // The world point of a resize handle of the selected block: n, s, e, w, ne, nw, se, sw (turned with it)
         Vec2F HandlePoint(const String& handle) const;
+
+        // The world point of the selected block's turning knob (above its top edge); false when it has none
+        bool KnobPoint(Vec2F& point) const;
 
         // The world point inside the anchor triangle nearest the anchor's first corner (the gesture's grip)
         Vec2F AnchorGrip() const;
@@ -84,6 +93,12 @@ namespace Editor
         // Returns true while the full-size drawing runs on the worker
         bool IsRendering() const { return mJob != nullptr; }
 
+        // The comparison with the reference over the screen (tests)
+        UiRefLayers& GetReferenceLayers() { return mRef; }
+
+        // The divider's place while it is dragged, else the setting's
+        double GetRefSplit() const;
+
         void Update(float dt) override;
         void OnScrolled(float scroll) override;
         bool IsScrollable() const override { return true; }
@@ -104,9 +119,10 @@ namespace Editor
             String                       badge;
             std::optional<UiDoc::UiRect> ghost;
             std::optional<UiDoc::UiRect> anchorDots;
+            std::optional<UiDoc::UiMat>  anchorM; // The turned parent's matrix the anchor dots are drawn through
         };
 
-        enum class DragKind { None, Pan, Move, Resize, Anchor };
+        enum class DragKind { None, Pan, Move, Resize, Anchor, Rotate };
 
         Cam   mCam;
         bool  mAuto = true;             // Fitted until the user pans or zooms; a new screen size fits again
@@ -128,6 +144,9 @@ namespace Editor
         UiDoc::UiRect   mR0, mP;            // The block's and its parent's boxes before the gesture
         UiDoc::UiSnapTargets mTargets;
         bool            mHasContext = false;
+        double          mParentTurn = 0;    // The parents' turns of the block (degrees)
+        UiDoc::UiMat    mParentM = UiDoc::UI_IDENTITY, mSelfM = UiDoc::UI_IDENTITY; // Its box to the screen without / with its own turn
+        bool            mTurned = false;    // The block or a parent is turned: moved and resized along its own axes, not snapped
         String          mHoverBlock;
         bool            mOverSelection = false;
 
@@ -155,6 +174,10 @@ namespace Editor
         };
         std::shared_ptr<RenderJob> mJob;
         bool        mForceRender = false;
+
+        UiRefLayers mRef;            // The reference compared with the screen (UiWsStageRef.cpp)
+        double      mRefLive = -1.0; // The split's divider while dragged
+        String      mRefSlide;       // The island's amount slider while held
 
     protected:
         void DrawPanel(const UiWsDraw::Box& box) override;
@@ -218,7 +241,59 @@ namespace Editor
         // The banners: peeking at a step, the agent working
         void DrawBanners(const UiWsDraw::Box& box);
 
+        // --- comparing with the reference (UiWsStageRef.cpp) ---
+
+        // Draws the reference over the screen's world rectangle (under the selection) and takes the split's divider
+        void DrawReference(const RectF& page);
+
+        // The width of the island's compare tools: the switch, and the modes and the amount while it is on
+        float RefToolsWidth() const;
+
+        // Draws the island's compare tools from x (the island's top), moving x past them
+        void DrawRefTools(float& x, float top, const RectF& island);
+
+        // A click on a compare tool; true when it was one
+        bool OnRefClick(const String& id);
+
+        // A press, a drag and a release of the divider or the amount slider; true when they were theirs
+        bool OnRefPress(const Input::Cursor& cursor);
+        bool OnRefDrag(const Input::Cursor& cursor);
+        bool OnRefRelease(const Input::Cursor& cursor);
+
         // Sets the cursor shape for what is under the point
         void UpdateCursor(const Vec2F& point);
+
+        // --- turned blocks (UiWsStageTurn.cpp) ---
+
+        // The map from a block's solved box to the screen (the shown document): its parents' turns and, with self, its own
+        UiDoc::UiMat BlockMatrix(const String& id, bool self = true) const;
+
+        // The world points of a design box's corners through a map: top-left, top-right, bottom-right, bottom-left
+        std::array<Vec2F, 4> WorldCorners(const UiDoc::UiRect& r, const UiDoc::UiMat& m) const;
+
+        // The world point of a point of the selected block's own box (fractions of its width and height), turned
+        Vec2F SelectionAt(double fx, double fy) const;
+
+        // The turning knob above the selection's top edge, along its own "up": the stalk's foot and the knob (world)
+        bool KnobPoints(Vec2F& foot, Vec2F& knob) const;
+
+        // The anchor's four triangles (world points), turned with the parent; false when the selection has no anchor
+        bool AnchorTriangles(std::array<std::array<Vec2F, 3>, 4>& out) const;
+
+        // The cursor of a resize handle: the nearest of the four resize shapes once the selection's turn is applied
+        CursorType HandleCursor(const String& handle) const;
+
+        // A box's frame through a map, centred on its edge (dashed when dash > 0); a box with no turn draws as before
+        void TurnedFrame(const UiDoc::UiRect& r, const UiDoc::UiMat& m, const Color4& color, float width, float dash = 0.0f,
+                         float gap = 0.0f) const;
+
+        // A box filled through a map
+        void TurnedFill(const UiDoc::UiRect& r, const UiDoc::UiMat& m, const Color4& color) const;
+
+        // Draws the selection's turning knob on its stalk
+        void DrawKnob(bool hot) const;
+
+        // The knob's gesture: the block turned to face the pointer about its centre
+        void RotateTo(const Vec2F& world, Live& live, UiDoc::UiOp& op, bool& hasOp) const;
     };
 }

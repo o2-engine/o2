@@ -197,11 +197,10 @@ namespace Editor::UiDoc::Ws
         auto dpi = custom ? CleanDpi(JsGet(custom, "dpi")) : std::nullopt;
         s.custom.dpi = dpi ? *dpi : UI_BASE_DPI;
 
+        // Nothing stored: the kit's device. A stored 'design' is the design itself, as it always was
         const Json* device = JsGet(config, "uiDevice");
-        s.device = device && device->IsString() && !device->Str().IsEmpty() ? device->Str() : String("design");
+        s.device = device && device->IsString() && !device->Str().IsEmpty() ? device->Str() : String("kit");
         s.landscape = JsTruthy(JsGet(config, "uiLandscape"));
-        const Json* scale = JsGet(config, "uiScale");
-        s.scale = scale && scale->IsString() && scale->Str() == "fit" ? "fit" : "dpi";
         return s;
     }
 
@@ -210,43 +209,48 @@ namespace Editor::UiDoc::Ws
         return UiScreen{ s.h, s.w, s.dpi };
     }
 
-    UiPreview PreviewOf(const UiDoc& doc, const UiPreviewSetting& setting, const UiScreen* reference)
+    UiPreview PreviewOf(const UiDoc& doc, const UiPreviewSetting& setting, const UiScreen* reference, const UiTarget& target,
+                        bool comparing /*= false*/)
     {
         UiScreen design{ doc.width, doc.height, DocDpi(doc) };
+        String device = comparing && reference ? String("reference") : setting.device;
         UiPreview p;
-        if (setting.device == "reference" && reference)
+        if (device == "reference" && reference)
         {
             p.id = "reference";
             p.kind = "reference";
             p.screen = *reference;
+            p.comparing = comparing && setting.device != "reference";
         }
-        else if (setting.device == "custom")
+        else if (device == "design")
+        {
+            p.id = "design";
+            p.kind = "design";
+            p.screen = design;
+        }
+        else if (device == "custom")
         {
             p.id = "custom";
             p.kind = "custom";
             p.screen = setting.landscape ? Turned(setting.custom) : setting.custom;
         }
+        else if (const UiDevice* known = DeviceById(device))
+        {
+            p.id = known->id;
+            p.kind = known->kind;
+            p.name = known->name;
+            p.screen = setting.landscape ? Turned(known->Screen()) : known->Screen();
+        }
         else
         {
-            const UiDevice* device = UiDevices().Find([&](const UiDevice& d) { return d.id == setting.device; });
-            if (device)
-            {
-                p.id = device->id;
-                p.kind = device->kind;
-                p.name = device->name;
-                p.screen = setting.landscape ? Turned(device->Screen()) : device->Screen();
-            }
-            else
-            {
-                p.id = "design";
-                p.kind = "design";
-                p.screen = design;
-                p.fallback = setting.device == "reference";
-            }
+            p.id = "kit";
+            p.kind = "kit";
+            p.name = target.name;
+            p.screen = setting.landscape ? Turned(target.Screen()) : target.Screen();
+            p.fallback = device == "reference";
         }
 
-        bool same = p.screen.w == design.w && p.screen.h == design.h && p.screen.dpi == design.dpi;
-        p.frame = same ? UiFrame{ doc.width, doc.height, 1.0 } : PreviewFrame(doc.width, doc.height, doc.dpi, p.screen, setting.scale);
+        p.frame = p.kind == "design" ? UiFrame{ doc.width, doc.height, 1.0 } : PreviewFrame(doc.width, doc.height, doc.dpi, p.screen, "fit");
         return p;
     }
 

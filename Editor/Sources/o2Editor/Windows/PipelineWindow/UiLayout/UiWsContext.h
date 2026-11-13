@@ -5,7 +5,7 @@
 #include "o2/Utils/Function/Function.h"
 #include "o2/Utils/Serialization/DataValue.h"
 #include "o2/Utils/Types/Ref.h"
-#include "o2Editor/Windows/PipelineWindow/UiLayout/UiWorkspaceModel.h"
+#include "o2Editor/Windows/PipelineWindow/UiLayout/UiWsScreen.h"
 
 using namespace o2;
 
@@ -36,7 +36,12 @@ namespace Editor
         bool                           hasKit = false;
         String                         kitText;   // The kit value as read last
         int                            kitVersion = 0;
-        std::optional<UiDoc::UiScreen> reference; // The first reference picture's size and density
+        std::optional<UiDoc::UiScreen> reference; // The first reference picture as the screen the layout rebuilds (ReferenceScreenOf)
+        UiDoc::UiSize                  referencePicture; // Its picture's own size, pixels
+        String                         referencePng;     // Its picture's bytes, PNG or JPEG (the compare views draw it)
+        UiDoc::UiTarget                target;           // The device the layout is laid out for: the kit's
+        UiDoc::Ws::UiRefSetting        ref;              // Comparing with the reference (on only with one)
+        bool                           compareNeedsBlocks = false; // The card: an empty layout is not compared
 
         UiDoc::Ws::UiPreviewSetting setting;
         UiDoc::Ws::UiPreview        preview;
@@ -51,6 +56,12 @@ namespace Editor
         bool   review = true;
         String draft;     // The agent request being typed (uiDraft)
         String exportFor; // unity | o2 | json
+
+        Vector<UiDoc::UiStepPoint> points;  // The points the request names as [1], [2]... (uiPoints, design pixels)
+        bool                       pinning = false; // The point tool is on: a click on the stage places a point
+
+        // A point placed on the stage (index -1) or moved (its index): the request field puts its chip in at the caret
+        Function<void(double x, double y, int index)> onPin;
 
         int version = 0; // Changes whenever anything above changes
 
@@ -88,6 +99,14 @@ namespace Editor
 
         // A gesture on the stage or in the hierarchy: always its own action
         void Gesture(const Vector<UiDoc::UiOp>& ops, const String& label);
+
+        // The ops of a hand edit: the first edit of an empty layout still at another density is preceded by the screen op
+        // that puts it into its device's pixels (FirstScreenOp)
+        Vector<UiDoc::UiOp> WithFirstScreen(const Vector<UiDoc::UiOp>& ops) const;
+
+        // Brings a layout in older units to its device's pixels: one hand action with one screen op (undo takes it back); the
+        // points marked for the next request follow. False when there is nothing to bring
+        bool Bring();
 
         // Undo / redo by action, revert to the screen after k steps
         void Undo();
@@ -138,5 +157,35 @@ namespace Editor
 
         // Returns the error of the node's agent's last request
         String GetError(const String& nodeId);
+
+        // ---------------------------------------------------------------------------------------
+        // A request to the node's agent going on now: its id, what it was asked, its acts so far
+        // ({id, kind, title, status, ms?, note?, data?, images?}), the folder of their pictures and when it
+        // started (UiDoc::NowMs)
+        // ---------------------------------------------------------------------------------------
+        struct LiveRun
+        {
+            String      runId;
+            String      prompt;
+            UiDoc::Json acts = UiDoc::Json::Array();
+            String      dir;
+            double      startedMs = 0;
+            int         version = 0; // Grows with every change of the acts
+        };
+
+        // Sets the run going on for the node (its acts change as it goes)
+        void SetRun(const String& nodeId, const LiveRun& run);
+
+        // The run going on for the node; false when none
+        bool GetRun(const String& nodeId, LiveRun& run);
+
+        // Forgets the node's run (it ended)
+        void ClearRun(const String& nodeId);
+
+        // Asks the node's running request to stop (what it made so far still becomes a step)
+        void RequestStop(const String& nodeId);
+
+        // Returns true once a stop of the node's request was asked for; cleared by a new run
+        bool IsStopRequested(const String& nodeId);
     }
 }

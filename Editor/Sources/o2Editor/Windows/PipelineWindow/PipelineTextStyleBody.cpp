@@ -16,6 +16,7 @@
 #include "o2Editor/Pipeline/UiDoc/UiTextStyle.h"
 #include "o2Editor/Windows/PipelineWindow/PipelineEditor.h"
 #include "o2Editor/Windows/PipelineWindow/PipelineNodeWidget.h"
+#include "o2Editor/Windows/PipelineWindow/PipelineTextStyleFx.h"
 #include "o2Editor/Windows/PipelineWindow/PipelineTheme.h"
 #include "o2Editor/Windows/PipelineWindow/PipelineUiAi.h"
 
@@ -26,7 +27,9 @@ namespace Editor
     // ---------------------------------------------------------------------------------------------------------------
     // The Text style card (AssetsLine TextStyleBody.tsx): the sample drawn by the layout renderer (what the AI UI layout
     // draws), its text and the paper; a request for the AI (pictures added as inputs are its references) and its model;
-    // then the style's fields. The node's config IS the style
+    // then the style's fields - the fill (a colour, or a gradient with its stops on a bar) and the layer effects among them
+    // (PipelineTextStyleFx.h). The node's config IS the style. The sample's height follows the card's width (its own shape,
+    // 680 x 224, across the body); a card sized by hand gives the sample the rest of its height
     // ---------------------------------------------------------------------------------------------------------------
     class TextStyleBody : public PipelineNodeBody
     {
@@ -42,7 +45,7 @@ namespace Editor
             mPreview = mmake<PipelineImageView>();
             mPreview->name = "style sample";
             mPreview->SetFramed(true);
-            AddRow(mPreview, 112);
+            AddFlexible(mPreview, [](float width) { return SampleHeight(width); });
             MarkContent(mPreview);
 
             // The sample's text and the paper it is drawn on
@@ -126,7 +129,18 @@ namespace Editor
             }
         }
 
+        // The sample's height in a body row of the width: the sample's own shape across it, never under 112
+        static float SampleHeight(float rowWidth)
+        {
+            return Math::Max(112.0f, Math::Round(rowWidth*224.0f/680.0f));
+        }
+
+        // Returns the fill or the effects block (tests)
+        Ref<PipelineTextFxPanel> GetFxPanel(bool effects) const { return effects ? mEffects : mFill; }
+
     private:
+        Ref<PipelineTextFxPanel> mFill;    // The fill: a colour or a gradient and its stops
+        Ref<PipelineTextFxPanel> mEffects; // The layer effects
         Ref<PipelineImageView> mPreview;  // The sample drawn with the style
         Ref<EditBox>           mSample;   // The sample's text
         Ref<EditBox>           mPrompt;   // The request to the AI
@@ -170,6 +184,34 @@ namespace Editor
             Redraw();
         }
 
+        // The fill or the effects changed: they go to the config together with their mirrors (gradient, stroke, shadow),
+        // which the engine exports and the older editors read
+        void SetLook(const UiDoc::TextStyle& style, bool completed)
+        {
+            PipelineTextFxPanel::WriteLook(mNode->config, style);
+            Notify("effects", completed);
+            Redraw();
+        }
+
+        // A block of the drawn rows: the fill or the effects
+        Ref<PipelineTextFxPanel> AddFx(bool effects)
+        {
+            WeakRef<TextStyleBody> weakThis(this);
+            auto panel = mmake<PipelineTextFxPanel>();
+            panel->name = effects ? "style effects" : "style fill";
+            panel->effects = effects;
+            panel->editor = mEditor;
+            panel->getStyle = [weakThis]() { auto self = weakThis.Lock(); return self ? self->Style() : UiDoc::TextStyleDefault(); };
+            panel->onLook = [weakThis](const UiDoc::TextStyle& style, bool done) { if (auto self = weakThis.Lock()) self->SetLook(style, done); };
+            panel->onRows = [weakThis]() { if (auto self = weakThis.Lock()) self->RebuildBodyKeepingArea(); };
+            AddRow(panel, [weakThis, effects](float)
+            {
+                auto self = weakThis.Lock();
+                return PipelineTextFxPanel::Height(effects, self ? self->Style() : UiDoc::TextStyleDefault());
+            });
+            return panel;
+        }
+
         // A labelled row of controls
         Ref<HorizontalLayout> Row(const String& label)
         {
@@ -192,30 +234,6 @@ namespace Editor
             slider->onChanged = onChanged;
             AddRow(slider, 15.5f);
             return slider;
-        }
-
-        // A labelled colour row
-        Ref<PipelineColorField> ColorWell(const String& label, const String& hex, const Function<void(const String&, bool)>& onChanged)
-        {
-            Color4 color;
-            if (!PipelineUtils::ParseHexColor(hex, color))
-                color = Color4::White();
-            auto field = mmake<PipelineColorField>();
-            field->name = "style " + label;
-            field->Setup(label, color);
-            field->onChanged = [onChanged](const Color4& c, bool completed) { onChanged(PipelineUtils::ColorToHex(c).ToUpperCase(), completed); };
-            AddRow(field, boxRowHeight);
-            return field;
-        }
-
-        // A switch row
-        Ref<Toggle> Switch(const String& caption, bool value, const Function<void(bool)>& onChanged)
-        {
-            auto toggle = MakeCheckbox(caption, value);
-            toggle->name = "style " + caption;
-            toggle->onToggleByUser = onChanged;
-            AddRow(toggle, switchRowHeight);
-            return toggle;
         }
 
         void Segments(const Ref<HorizontalLayout>& line, const Vector<Pair<String, String>>& options, const String& current,
@@ -302,91 +320,8 @@ namespace Editor
 
             Slider("Size", 8, 240, 1, (float)st.size, "px", [set](float v, bool done) { set("size", UiDoc::Json((double)v), done); });
 
-            // Fill, and a vertical gradient to a second colour
-            ColorWell("Fill", st.color, [set](const String& hex, bool done) { set("color", UiDoc::Json(hex), done); });
-            Switch("Gradient", st.gradient.has_value(), [set, rebuild, st](bool on)
-            {
-                set("gradient", on ? UiDoc::Json(st.gradient.value_or("#FF8C00")) : UiDoc::Json(nullptr));
-                rebuild();
-            });
-            if (st.gradient)
-                ColorWell("To", *st.gradient, [set](const String& hex, bool done) { set("gradient", UiDoc::Json(hex), done); });
-
-            // Outline
-            UiDoc::TextStroke stroke = st.stroke.value_or(UiDoc::TextStroke{ "#000000", Math::Max(2.0, UiDoc::JsRound(st.size * 0.06)) });
-            auto strokeJson = [](const UiDoc::TextStroke& s)
-            {
-                auto json = UiDoc::Json::Object();
-                json["color"] = s.color;
-                json["width"] = s.width;
-                return json;
-            };
-            Switch("Outline", st.stroke.has_value(), [set, rebuild, stroke, strokeJson](bool on)
-            {
-                set("stroke", on ? strokeJson(stroke) : UiDoc::Json(nullptr));
-                rebuild();
-            });
-            if (st.stroke)
-            {
-                ColorWell("Colour", stroke.color, [set, stroke, strokeJson](const String& hex, bool done)
-                {
-                    auto s = stroke;
-                    s.color = hex;
-                    set("stroke", strokeJson(s), done);
-                });
-                Slider("Width", 1, 24, 1, (float)stroke.width, "px", [set, stroke, strokeJson](float v, bool done)
-                {
-                    auto s = stroke;
-                    s.width = v;
-                    set("stroke", strokeJson(s), done);
-                });
-            }
-
-            // Shadow
-            UiDoc::TextShadow shadow = st.shadow.value_or(UiDoc::TextShadow{ "#000000", 0, Math::Max(2.0, UiDoc::JsRound(st.size * 0.06)),
-                                                                              Math::Max(2.0, UiDoc::JsRound(st.size * 0.08)), 0.6 });
-            auto shadowJson = [](const UiDoc::TextShadow& s)
-            {
-                auto json = UiDoc::Json::Object();
-                json["color"] = s.color;
-                json["x"] = s.x;
-                json["y"] = s.y;
-                json["blur"] = s.blur;
-                json["opacity"] = s.opacity;
-                return json;
-            };
-            Switch("Shadow", st.shadow.has_value(), [set, rebuild, shadow, shadowJson](bool on)
-            {
-                set("shadow", on ? shadowJson(shadow) : UiDoc::Json(nullptr));
-                rebuild();
-            });
-            if (st.shadow)
-            {
-                ColorWell("Colour", shadow.color, [set, shadow, shadowJson](const String& hex, bool done)
-                {
-                    auto s = shadow;
-                    s.color = hex;
-                    set("shadow", shadowJson(s), done);
-                });
-                Slider("Opacity", 0.05f, 1.0f, 0.05f, (float)shadow.opacity, "", [set, shadow, shadowJson](float v, bool done)
-                {
-                    auto s = shadow;
-                    s.opacity = v;
-                    set("shadow", shadowJson(s), done);
-                });
-                Slider("Down", -30, 30, 1, (float)shadow.y, "px", [set, shadow, shadowJson](float v, bool done)
-                {
-                    auto s = shadow;
-                    s.y = v;
-                    set("shadow", shadowJson(s), done);
-                });
-                Slider("Blur", 0, 40, 1, (float)shadow.blur, "px", [set, shadow, shadowJson](float v, bool done)
-                {
-                    auto s = shadow;
-                    s.blur = v;
-                    set("shadow", shadowJson(s), done);
-                });
-            }
+            // The fill: a colour, or a gradient with its stops on a bar
+            mFill = AddFx(false);
 
             Slider("Spacing", -10, 40, 0.5f, (float)st.letterSpacing, "px", [set](float v, bool done) { set("letterSpacing", UiDoc::Json((double)v), done); });
             Slider("Line", 0.8f, 2.0f, 0.05f, (float)st.lineHeight, "x", [set](float v, bool done) { set("lineHeight", UiDoc::Json((double)v), done); });
@@ -396,6 +331,9 @@ namespace Editor
                      [set, rebuild](const String& v) { set("uppercase", UiDoc::Json(v == "up")); rebuild(); });
             Segments(caseLine, { { "left", "Left" }, { "center", "Mid" }, { "right", "Right" } }, st.align,
                      [set, rebuild](const String& v) { set("align", UiDoc::Json(v)); rebuild(); });
+
+            // The layer effects: the head with "add an effect", a row or two per effect
+            mEffects = AddFx(true);
         }
     };
 

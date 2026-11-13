@@ -9,6 +9,7 @@
 #include "o2/Scene/UI/WidgetLayout.h"
 #include "o2/Utils/System/Time/Time.h"
 #include "o2Editor/Windows/PipelineWindow/PipelineDraw.h"
+#include "o2Editor/Windows/PipelineWindow/UiLayout/UiWsPins.h"
 
 // The stage's drawing (UiWsStage.h): the board, the screen, what is drawn over it, the banners and the island
 namespace Editor
@@ -105,6 +106,7 @@ namespace Editor
                 mSprite->SetRect(page);
                 mSprite->Draw();
             }
+            DrawReference(page);
 
             // Over the screen: its edge, the selection's parent, the hovered block, the gesture's ghost, guides and anchor dots
             const auto& doc = Shown();
@@ -114,18 +116,19 @@ namespace Editor
             const UiDoc::UiNode* selParent = selNode ? UiDoc::FindParent(doc, selNode->id) : nullptr;
             const UiRect* sel = selNode ? rects.Find(selNode->id) : nullptr;
             const UiRect* parentRect = selParent ? rects.Find(selParent->id) : nullptr;
+            // (Boxes are drawn turned with their blocks and parents: UiWsStageTurn.cpp)
             if (selParent && parentRect && selParent != &doc.root)
-                DashedFrame(ToWorld(*parentRect), A(t.accent, 0.6f), 5.0f, 4.0f);
+                TurnedFrame(*parentRect, BlockMatrix(selParent->id), A(t.accent, 0.6f), 1.0f, 5.0f, 4.0f);
             if (!mLive && !mHoverBlock.IsEmpty() && mHoverBlock != ctx->selected)
             {
                 if (const UiRect* hov = rects.Find(mHoverBlock))
-                    UiWsDraw::Frame(ToWorld(*hov), 0.0f, A(t.accent, 0.55f), 1.0f);
+                    TurnedFrame(*hov, BlockMatrix(mHoverBlock), A(t.accent, 0.55f), 1.0f);
             }
             if (mLive && mLive->ghost)
             {
-                RectF g = ToWorld(*mLive->ghost);
-                Fill(g, 0.0f, A(t.accent, 0.08f));
-                DashedFrame(g, t.accent, 4.0f, 3.0f);
+                UiDoc::UiMat m = BlockMatrix(ctx->selected, false);
+                TurnedFill(*mLive->ghost, m, A(t.accent, 0.08f));
+                TurnedFrame(*mLive->ghost, m, t.accent, 1.0f, 4.0f, 3.0f);
             }
             if (mLive)
             {
@@ -142,7 +145,11 @@ namespace Editor
                     {
                         for (double fy : { 0.0, 0.5, 1.0 })
                         {
-                            Vec2F c = DesignToWorld(p.x + p.w*fx, p.y + p.h*fy);
+                            // The parent's nine anchor points, turned with it when it is
+                            UiDoc::UiPoint q{ p.x + p.w*fx, p.y + p.h*fy };
+                            if (mLive->anchorM)
+                                q = UiDoc::Apply(*mLive->anchorM, q);
+                            Vec2F c = DesignToWorld(q.x, q.y);
                             Circle(c, 4.1f, t.accent);
                             Circle(c, 2.9f, Color4::White());
                         }
@@ -152,32 +159,27 @@ namespace Editor
 
             if (sel)
             {
-                RectF s = ToWorld(*sel);
-                UiWsDraw::Frame(s, 0.0f, Color4(10, 8, 20, 140), 4.5f);
-                UiWsDraw::Frame(s, 0.0f, t.accent, 2.0f);
+                UiDoc::UiMat m = BlockMatrix(selNode->id);
+                TurnedFrame(*sel, m, Color4(10, 8, 20, 140), 4.5f);
+                TurnedFrame(*sel, m, t.accent, 2.0f);
             }
 
             // The anchor: Unity's four triangles, split along a stretched axis
             bool editable = ctx->Editable() && !ctx->Busy();
-            if (selNode && selParent && !selParent->layout && parentRect && selNode->IsShown())
+            std::array<std::array<Vec2F, 3>, 4> tris;
+            if (AnchorTriangles(tris))
             {
-                auto ab = UiDoc::AnchorBox(*selNode, *parentRect);
                 bool hot = editable && !mLive && GripAt(o2Input.GetCursorPos()) == "anchor";
-                auto tri = [&](double x, double y, float sx, float sy)
+                for (auto& tri : tris)
                 {
-                    Vec2F a = DesignToWorld(x, y);
-                    Vec2F b = a + Vec2F(sx*4.5f, -sy*14.0f), c = a + Vec2F(sx*14.0f, -sy*4.5f);
+                    Vec2F a = tri[0], b = tri[1], c = tri[2];
                     Convex({ a + Vec2F(0, -1.5f), b + Vec2F(0, -1.5f), c + Vec2F(0, -1.5f) }, Color4(0, 0, 0, 70));
                     Convex({ a, b, c }, hot ? t.portImage : Color4::White());
                     Color4 ink(26, 16, 48, 255);
                     Line(a, b, ink, 1.3f);
                     Line(b, c, ink, 1.3f);
                     Line(c, a, ink, 1.3f);
-                };
-                tri(ab.x0, ab.y0, -1, -1);
-                tri(ab.x1, ab.y0, 1, -1);
-                tri(ab.x0, ab.y1, -1, 1);
-                tri(ab.x1, ab.y1, 1, 1);
+                }
             }
 
             // The handles: the corners always, the edge middles while the block is not small
@@ -186,6 +188,8 @@ namespace Editor
                 RectF s = ToWorld(*sel);
                 bool small = s.Width() < 28.0f || Math::Abs(s.Height()) < 28.0f;
                 String grip = mLive ? String() : GripAt(o2Input.GetCursorPos());
+                // The turning knob on its stalk above the top edge
+                DrawKnob(grip == "turn" || mDrag == DragKind::Rotate);
                 for (auto h : { "nw", "n", "ne", "e", "se", "s", "sw", "w" })
                 {
                     if (small && String(h).Length() == 1)
@@ -200,7 +204,14 @@ namespace Editor
 
             if (mLive && !mLive->badge.IsEmpty() && sel)
             {
-                RectF s = ToWorld(*sel);
+                // Under the box the selection takes on the screen
+                auto cs = WorldCorners(*sel, BlockMatrix(selNode->id));
+                RectF s(cs[0].x, cs[0].y, cs[0].x, cs[0].y);
+                for (auto& c : cs)
+                {
+                    s.left = Math::Min(s.left, c.x); s.right = Math::Max(s.right, c.x);
+                    s.top = Math::Max(s.top, c.y); s.bottom = Math::Min(s.bottom, c.y);
+                }
                 float w = TextWidth(mLive->badge, 10.5f, 400, true) + 14.0f;
                 float cx = (s.left + s.right)*0.5f;
                 RectF b(cx - w*0.5f, s.bottom - 10.0f, cx + w*0.5f, s.bottom - 10.0f - 18.0f);
@@ -215,7 +226,11 @@ namespace Editor
     }
 
     void UiWsStage::DrawOverlay(const Box& box)
-    {}
+    {
+        // The request's points over the screen
+        if (ctx)
+            UiWsPins::Draw(*this, *ctx);
+    }
 
     void UiWsStage::DrawBanners(const Box& box)
     {
@@ -264,8 +279,8 @@ namespace Editor
         auto& t = T();
         float W = box.W(), H = box.H();
         float chipW = mDevice->GetPreferredWidth();
-        // lines, kit | chip | ids | - % + fit
-        float w = 6 + 28 + 2 + 28 + 2 + 9 + 2 + chipW + 2 + 9 + 2 + 28 + 2 + 9 + 2 + 28 + 2 + 48 + 2 + 28 + 2 + 28 + 6;
+        // lines, kit | chip | ids, the reference's compare tools | - % + fit
+        float w = 6 + 28 + 2 + 28 + 2 + 9 + 2 + chipW + 2 + 9 + 2 + 28 + 2 + RefToolsWidth() + 9 + 2 + 28 + 2 + 48 + 2 + 28 + 2 + 28 + 6;
         RectF r = box.R((W - w)*0.5f, H - 16 - islandHeight, w, islandHeight);
         Island(r, 12.0f, true);
         AddHot(r, "island");
@@ -290,6 +305,7 @@ namespace Editor
         x += chipW + 2;
         sep();
         tool("uiws_tag", "ids", ctx->showIds, 15.0f);
+        DrawRefTools(x, top, r);
         sep();
         tool("uiws_minus", "zoom:out", false, 15.0f);
         RectF pct(x, top, x + 48, top - 28);
@@ -304,7 +320,7 @@ namespace Editor
 
     void UiWsStage::OnHotClick(const String& id, const Input::Cursor& cursor)
     {
-        if (!ctx)
+        if (!ctx || OnRefClick(id))
             return;
 
         if (id == "view:lines" || id == "view:kit")

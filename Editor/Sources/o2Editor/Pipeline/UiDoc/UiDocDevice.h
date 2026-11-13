@@ -69,8 +69,70 @@ namespace Editor::UiDoc
         UiScreen Screen() const { return UiScreen{ w, h, dpi }; }
     };
 
-    // The 14 devices of the preview picker
+    // Real devices, portrait (desktops landscape): the kit's target and the preview picker's list
     const Vector<UiDevice>& UiDevices();
+
+    // The device a kit is made for when it names none
+    extern const char* const UI_DEFAULT_DEVICE;
+
+    // ------------------------------------------------------------------
+    // A kit's target device: a known one (id) or a screen typed in
+    // ------------------------------------------------------------------
+    struct UiTarget
+    {
+        String id;   // "" for a typed screen
+        String name;
+        double w = 0, h = 0, dpi = UI_BASE_DPI;
+
+        // The target as a screen
+        UiScreen Screen() const { return UiScreen{ w, h, dpi }; }
+
+        bool operator==(const UiTarget& other) const
+        {
+            return id == other.id && name == other.name && w == other.w && h == other.h && dpi == other.dpi;
+        }
+    };
+
+    // A known device by id, null when there is none
+    const UiDevice* DeviceById(const String& id);
+
+    // The default device as a target (iPhone 16)
+    UiTarget DefaultTarget();
+
+    // A stored or typed screen ({id} of a known device, or {w, h, dpi, name}) -> a target; none when it is not one
+    std::optional<UiTarget> CleanTarget(const Json* raw);
+
+    // The target as JSON: {id, name, w, h, dpi} (a typed screen without id)
+    Json TargetToJson(const UiTarget& target);
+
+    // The target device a UI kit node's config names (kitDevice: a device id, or "custom" with kitDeviceCustom
+    // {w, h, dpi}); the default device otherwise
+    UiTarget TargetOfConfig(const Json& config);
+
+    // Device pixels per pixel of a picture taken to be the device's screen: the picture is shown whole on it
+    double SourceFit(const UiScreen& target, double srcW, double srcH);
+
+    // The area a picture takes on the device's screen, device pixels, and the fit
+    struct UiOnTarget
+    {
+        double w = 1, h = 1, k = 1;
+    };
+    UiOnTarget SourceOnTarget(const UiScreen& target, double srcW, double srcH);
+
+    // Whether a layout at docDpi is in its device's pixels (its density is the device's)
+    bool InTargetUnits(const std::optional<double>& docDpi, const UiScreen& target);
+
+    // ------------------------------------------------------------------------------------------
+    // What brings a layout to its device's pixels: the values of a `screen` op with `scale`
+    // ------------------------------------------------------------------------------------------
+    struct UiTargetUnits
+    {
+        double width = 0, height = 0, dpi = UI_BASE_DPI, scale = 1, fromDpi = UI_BASE_DPI;
+    };
+    UiTargetUnits ToTargetUnits(double docW, double docH, const std::optional<double>& docDpi, const UiScreen& target);
+
+    // "9:16", "3:4", "19.5:9" - a screen's aspect ratio, the short side first for portrait
+    String AspectName(double w, double h);
 
 
     // The canvas a layout is solved on for a screen
@@ -82,9 +144,9 @@ namespace Editor::UiDoc
         bool operator==(const UiFrame& other) const { return w == other.w && h == other.h && scale == other.scale; }
     };
 
-    // The canvas of a layout (design size docW x docH at docDpi) shown on a screen. mode "dpi": by physical size (a denser
-    // or bigger screen shows more room around same-sized blocks); "fit": by the screen's size like Unity's Canvas Scaler
-    // (scale with screen size, match 0.5), how the Unity export behaves
+    // The canvas a layout (design size docW x docH) is solved on for a screen: the design fitted into the screen (scaled
+    // until it shows whole), the room left over on one side added to the canvas - Unity's Canvas Scaler in Expand mode with
+    // the design size as its reference resolution. The mode of older view states is ignored: every screen is met by fit
     UiFrame PreviewFrame(double docW, double docH, const std::optional<double>& docDpi, const UiScreen& screen, const String& mode);
 
     // How many screen pixels a pixel of a kit graphic covers on that screen: above 1 the graphic is enlarged (soft)

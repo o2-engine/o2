@@ -207,7 +207,8 @@ class Workflow:
         for path, name in ((self.task, "<task-dir>"), (self.assets, "<assets-dir>"),
                            (self.skill, "<skill>"), (self.design, "<design>")):
             text = text.replace(str(path), name)
-        return text
+        # How long a script took differs from run to run; a prompt that carried it would never be replayed.
+        return re.sub(r" \(\d+(?:\.\d+)? ms\)", "", text)
 
 
 # --- observations --------------------------------------------------------------
@@ -1082,6 +1083,8 @@ class Agent:
                 return 2
         if self.request is not None:
             obs = self.begin_round()
+        elif getattr(self.args, "seed", None):
+            obs = self.begin_seeded(obs)
         turn = 0
         for turn in range(1, self.args.max_turns + 1):
             self.turn = turn
@@ -1128,6 +1131,31 @@ class Agent:
         result = self.result(turn, time.time() - t0)
         self.bridge.send(result)
         return 0 if result["ok"] else 2
+
+    def begin_seeded(self, prepared: Observation) -> Observation:
+        """The host hands over a first draft of ui_structure.json (--seed; the AI
+        UI layout node writes it from a markup of the design in terms of its UI
+        kit). It goes into the fresh task folder as if the model had written it,
+        and is checked at once: the model's first turn starts from the skill's
+        own evidence about the draft — validation, the comparison with the
+        design, the risk review — with the prepared sheets still in front of it."""
+        try:
+            text = self.args.seed.read_text("utf-8")
+            json.loads(text)
+        except (OSError, ValueError) as exc:
+            self.trace.step(id="seed", title="The first draft could not be read", kind="write", status="warn", note=str(exc))
+            return prepared
+        (self.task / "ui_structure.json").write_text(text, "utf-8")
+        self.trace.step(id="seed", title=f"First draft of ui_structure.json ({len(text)} characters)", kind="write",
+                        text=text[:TEXT_VIEW_LIMIT])
+        check = self.do_check({})
+        self.trace.step(id="check", title=f"The first draft: {check.title}", kind="check", text=check.text,
+                        status=check.status, images=[self.trace.image(t, p) for t, p, *_ in [*check.images, *check.trace_only]])
+        sheets = [i for i in prepared.images if "contact_sheet" in i[0]][:3]
+        return Observation("the first draft, checked",
+                           "A first draft of ui_structure.json is in the task folder (see \"The task\"); it was checked:\n"
+                           f"{check.text}\n\nPrepared earlier:\n{prepared.text}",
+                           [*check.images, *sheets], kind="check", status=check.status)
 
     def begin_round(self) -> Observation:
         """A round of edits starts from the layout as it is: check it (fresh
@@ -1186,6 +1214,7 @@ def main() -> int:
     p.add_argument("--font", action="append", dest="fonts", default=[], help="fontFamily value available to the model")
     p.add_argument("--sprites-note", default="")
     p.add_argument("--revise", type=Path, help="a round of edits (request JSON): continue the task folder")
+    p.add_argument("--seed", type=Path, help="a first draft of ui_structure.json to start from (checked before turn 1)")
     args = p.parse_args()
     args.request = None
     if args.revise:

@@ -7,6 +7,7 @@
 #include "o2Editor/Pipeline/UiDoc/UiDocAi.h"
 #include "o2Editor/Pipeline/UiDoc/UiDocOps.h"
 #include "o2Editor/Pipeline/Nodes/UiNodes.h"
+#include "o2Editor/Windows/PipelineWindow/PipelineKitCard.h"
 #include "o2Editor/Windows/PipelineWindow/PipelineUiAi.h"
 
 // The Text style, UI kit and AI UI layout cards: drawn with their content in both themes, and their AI buttons going through
@@ -94,7 +95,8 @@ TEST_F(PipelineUiCardsFixture, LayoutCardShowsTheScreenAndTheAgentAddsAStep)
 {
     actions = mmake<ActionsList>();
     editor->actionsListDelegate = actions;
-    OpenWorkspace(true);
+    // In its device's pixels (iPhone 16's density): an older layout would show its units on the answer line
+    OpenWorkspace(true, String(workspaceScreen).ReplacedAll("screen Menu 1080x1920", "screen Menu 1080x1920 dpi=460"));
     UiWorkspace::Close();
     Step(3);
     auto card = editor->GetNodeWidget(layoutNode->id);
@@ -195,8 +197,9 @@ TEST_F(PipelineUiCardsFixture, KitCardListsItsInputsAndTheAiDescribesThem)
     auto card = editor->GetNodeWidget(kitNode->id);
     ASSERT_TRUE(card);
     EXPECT_TRUE(card->GetBody()->InputsInBody());
-    ASSERT_TRUE(card->FindChildByTypeAndName<Button>("kit row"));
-    ASSERT_TRUE(card->FindChildByTypeAndName<Widget>("kit source"));
+    auto body = DynamicCast<PipelineUiKitBody>(card->GetBody());
+    ASSERT_TRUE(body && body->GetGrid());
+    EXPECT_EQ(body->GetGrid()->GetCells().Count(), 1);
     ShotBoth(kitNode, "uicard_kit");
 
     answer = [](const String&) { return String("```json\n[{\"name\":\"Btn_Green\",\"type\":\"button\",\"assetType\":\"sliced\",\"variant\":\"primary\","
@@ -251,55 +254,4 @@ TEST_F(PipelineUiCardsFixture, ShiftDraggedPartsWireIntoTheKitAtOnce)
     Step(2);
     EXPECT_EQ(editor->GetGraph()->FindNode(kit->id)->inputs.Count(), 0);
     EXPECT_TRUE(editor->GetGraph()->edges.IsEmpty());
-}
-
-// The kit's nine-slice guides drag on the source picture: the borders found become borders set by hand (input pixels)
-TEST_F(PipelineUiCardsFixture, KitGuidesDragTheNineSlice)
-{
-    PipelineUtils::WriteFileBytes(PipelineUtils::GetUploadPath("kit-btn.png"), PipelineUtils::Base64Decode(KitPng(160, 80, Color4(76, 175, 80, 255), false)));
-    PipelineGraph graph;
-    auto source = PipelineNodeRegistry::CreateNode("sourceImage", Vec2F(-600, 0));
-    source->SetConfigString("uploadId", "kit-btn.png");
-    auto kit = PipelineNodeRegistry::CreateNode("uiKit", Vec2F());
-    kit->SetCustomInputs({ PipelinePort("kit-btn", "btn", PipelinePortType::Image, true) });
-    PipelineNodeRegistry::SyncNodeWithSchema(kit);
-    graph.nodes = { source, kit };
-    auto edge = mmake<PipelineEdge>();
-    edge->id = "kit-edge";
-    edge->fromNodeId = source->id;
-    edge->fromPortId = source->outputs[0].id;
-    edge->toNodeId = kit->id;
-    edge->toPortId = "kit-btn";
-    graph.edges.Add(edge);
-    OpenGraph(graph);
-    kitNode = editor->GetGraph()->FindNode(kit->id);
-
-    // The kit as a run makes it: the element with the borders it found
-    Map<String, PipelineValue> byId;
-    byId["kit-btn"] = editor->GetInputValueById(kitNode, "kit-btn");
-    ASSERT_TRUE(byId["kit-btn"].IsImage());
-    auto made = PipelineUiNodes::BuildKit(*kitNode, byId, {});
-    ASSERT_EQ(made.elements.Count(), 1);
-    auto card = editor->GetNodeWidget(kitNode->id);
-    card->GetRuntime().output = PipelineValue::TextOf(PipelinePortType::UiKit, UiDoc::KitToJson(made).Dump());
-    card->OnOutputChanged();
-    editor->SetView(card->GetCardRect().Center(), 1.0f);
-    Step(4);
-
-    auto guides = card->FindChildByTypeAndName<PipelineImageView>("kit source");
-    ASSERT_TRUE(guides && guides->HasImage());
-    RectF image = guides->GetImageRect();
-    auto found = made.elements[0].source.Get("detected");
-    ASSERT_TRUE(found);
-    double left = found->Get("left")->Num();
-    float k = image.Width() / 160.0f;
-    Vec2F from(image.left + (float)left*k, image.Center().y);
-    Drag(editor->LocalToScreenPoint(from), editor->LocalToScreenPoint(from + Vec2F(10.0f*k, 0.0f)));
-
-    auto items = UiDoc::KitItems(editor->GetGraph()->FindNode(kitNode->id)->config);
-    ASSERT_EQ(items.Count(), 1);
-    auto nine = UiDoc::NormalizeNine(&items[0].second.nineSlice);
-    ASSERT_TRUE(nine.has_value());
-    EXPECT_NEAR(nine->left, left + 10.0, 1.0);
-    EXPECT_TRUE(items[0].second.nineFrom.IsEmpty());
 }

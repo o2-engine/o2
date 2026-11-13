@@ -97,6 +97,7 @@ namespace Editor
         Function<void(const String&)>                onSelect; // A cell was clicked
         Function<void(const String&)>                onRegen;  // The regenerate button of a cell was pressed
         Function<void(const String&)>                onRemove; // The remove button of a cell was pressed
+        Function<void(const String&)>                onCheck;  // The button of a cell's check against the reference was pressed
         Function<void(const String&, const String&)> onRename; // The name of the selected cell was edited
 
     public:
@@ -118,8 +119,9 @@ namespace Editor
                 cell.image->Draw();
         }
 
-        // Rebuilds the cells for the parts; the selected one gets the name field and the outline
-        void SetParts(const Vector<PipelineExtractRegion>& regions, const String& selectedId)
+        // Rebuilds the cells for the parts; the selected one gets the name field and the outline. check: the parts are checked
+        // against the reference, each cell offers its check's details
+        void SetParts(const Vector<PipelineExtractRegion>& regions, const String& selectedId, bool check = false)
         {
             RemoveAllChildren();
             mCells.Clear();
@@ -150,6 +152,15 @@ namespace Editor
                 cell.root->AddChild(cell.spinner);
                 cell.spinner->SetEnabledForcible(false);
 
+                // What a running part does beyond its generation: compared with the reference, or drawn again
+                cell.phase = MakeLabel("", true);
+                cell.phase->name = "part phase";
+                StyleLabel(cell.phase, 10.0f, 500, Color4::White());
+                cell.phase->horAlign = HorAlign::Middle;
+                cell.phase->verAlign = VerAlign::Middle;
+                cell.root->AddChild(cell.phase);
+                cell.phase->SetEnabledForcible(false);
+
                 cell.pick = mmake<Button>();
                 cell.pick->name = "select part";
                 cell.pick->onClick = [weakThis, id]() { if (auto self = weakThis.Lock()) self->onSelect(id); };
@@ -173,13 +184,23 @@ namespace Editor
                 auto regen = MakeCellTool("ui/pipeline/al_refresh.svg", "regen part", false);
                 regen->onClick = [weakThis, id]() { if (auto self = weakThis.Lock()) self->onRegen(id); };
                 tools->AddChild(regen);
+                cell.toolCount = 1;
+                if (check)
+                {
+                    auto details = MakeCellTool("ui/pipeline/al_bug.svg", "check details", false);
+                    details->onClick = [weakThis, id]() { if (auto self = weakThis.Lock()) { if (self->onCheck) self->onCheck(id); } };
+                    tools->AddChild(details);
+                    cell.toolCount++;
+                }
                 if (regions.Count() > 1)
                 {
                     auto remove = MakeCellTool("ui/pipeline/al_trash.svg", "remove part", true);
                     remove->onClick = [weakThis, id]() { if (auto self = weakThis.Lock()) self->onRemove(id); };
                     tools->AddChild(remove);
+                    cell.toolCount++;
                 }
                 cell.root->AddChild(cell.tools);
+                cell.image->toolCount = cell.toolCount;
 
                 // One part needs no caption: the prompt field under the grid is its name
                 if (!mSingle)
@@ -279,16 +300,32 @@ namespace Editor
             LayoutCells();
         }
 
-        // Shows the run state of every part in place: a spinner over the running ones, a red frame round the failed ones
-        void SetPartStates(const Map<String, String>& states)
+        // Shows the run state of every part in place: a spinner over the running ones, with what a part does beyond its
+        // generation (phases: check, redo), a red frame round the failed ones
+        void SetPartStates(const Map<String, String>& states, const Map<String, String>& phases = {})
         {
             for (auto& cell : mCells)
             {
-                String state;
+                String state, phase;
                 states.TryGetValue(cell.id, state);
+                phases.TryGetValue(cell.id, phase);
                 cell.spinner->SetEnabledForcible(state == "running");
                 cell.errorFrame->enabled = state == "error";
+                bool shown = state == "running" && !phase.IsEmpty();
+                cell.phase->text = phase == "redo" ? "redrawing" : "checking";
+                cell.phase->SetEnabledForcible(shown);
             }
+        }
+
+        // Returns the phase caption shown over a part's cell, empty when none is (tests)
+        String GetPartPhase(const String& id) const
+        {
+            for (auto& cell : mCells)
+            {
+                if (cell.id == id && cell.phase->IsEnabled())
+                    return (String)cell.phase->GetText();
+            }
+            return "";
         }
 
         // Returns the number of cells
@@ -340,6 +377,8 @@ namespace Editor
             Ref<PipelineCellImage> image; // Picture, outlined while selected
             Ref<WidgetLayer>       errorFrame; // Red outline of a part that failed in this run
             Ref<PipelinePartSpinner> spinner; // Progress over a part being computed
+            Ref<Label>             phase; // What a running part does beyond its generation, under the spinner
+            int                    toolCount = 1; // Buttons of the tool strip
             Ref<Button>            pick;
             Ref<Widget>            tools;
             Ref<EditBox>           edit;  // Name field, shown on the selected cell
@@ -387,10 +426,11 @@ namespace Editor
                 *cell.root->layout = WidgetLayout(Vec2F(0, 1), Vec2F(0, 1), Vec2F(x, -(y + g.cellH + g.labelH)), Vec2F(x + g.cellW, -y));
                 *cell.image->layout = WidgetLayout::HorStretch(VerAlign::Top, 0, 0, g.cellH, 0);
                 *cell.spinner->layout = WidgetLayout::HorStretch(VerAlign::Top, 0, 0, g.cellH, 0);
+                *cell.phase->layout = WidgetLayout::HorStretch(VerAlign::Top, 0, 0, 14, g.cellH*0.5f + 12.0f);
                 *cell.pick->layout = WidgetLayout::HorStretch(VerAlign::Top, 0, 0, g.cellH, 0);
                 cell.errorFrame->layout = Layout(Vec2F(0, 1), Vec2F(1, 1), Vec2F(0, -g.cellH), Vec2F(0, 0));
                 // Top left: the part's output port sits on the top-right corner
-                *cell.tools->layout = WidgetLayout(Vec2F(0, 1), Vec2F(0, 1), Vec2F(1, -19), Vec2F(41, -1));
+                *cell.tools->layout = WidgetLayout(Vec2F(0, 1), Vec2F(0, 1), Vec2F(1, -19), Vec2F(1.0f + 20.0f*cell.toolCount, -1));
                 // The name field of the selected part makes room for the dot; a centred caption has it right before its text
                 float fieldLeft = cell.own ? dotSize + 4.0f : 0.0f, nameMiddle = (g.labelH - 2.0f)*0.5f;
                 float captionArea = g.cellW - 16.0f;

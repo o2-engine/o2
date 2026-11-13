@@ -88,9 +88,10 @@ namespace Editor::UiLayout
         String kind; // panel, image, button, text, progress, group, grid, input
         Box    box;
         String look; // Artwork key, empty for none
+        String kit;  // A UI kit graphic the markup chose to draw it (the AI UI layout node), empty for none; such an element is not cut
 
         String text;
-        String color;  // #RRGGBB, empty for none
+        String color;  // #RRGGBB, empty for none; on a non-text element its flat fill (it has no look then)
         String weight; // regular, medium, bold; empty for none
         String align;  // left, center, right; empty for none
         String stroke; // Outline colour, empty for none
@@ -98,6 +99,9 @@ namespace Editor::UiLayout
         std::optional<double> strokeWidth;
         std::optional<double> fontSize;
         std::optional<Box>    ink; // Measured visible glyph box
+
+        std::optional<double> opacity;  // A flat shape with no artwork (a dimming layer): `color` is its fill, this its opacity
+        std::optional<double> rotation; // Tilted on purpose, degrees clockwise; `box` is then the upright box around it as seen
 
         std::optional<double> value; // Progress fill ratio
 

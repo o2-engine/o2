@@ -67,6 +67,13 @@ namespace Editor
         // the add-input row in place of the port rows
         virtual bool InputsInBody() const { return false; }
 
+        // Returns true when those input ports sit inside the body, away from the card's left edge (the UI kit's cells): a
+        // link curves to the card's edge level with its port and runs straight on to it, drawn over the cards
+        virtual bool InputsInCells() const { return false; }
+
+        // Draws what the body shows above every card and link (a popup of the body), in canvas space after them
+        virtual void DrawOverlay() {}
+
         // Returns true when the canvas point is on the body's add-input row
         virtual bool IsAddInputAt(const Vec2F& point) const { return false; }
 
@@ -454,6 +461,8 @@ CLASS_METHODS_META(Editor::PipelineNodeBody)
     FUNCTION().PUBLIC().SIGNATURE(bool, GetBodyPortOffset, const String&, Vec2F&);
     FUNCTION().PUBLIC().SIGNATURE(bool, HasBodyPort, const String&);
     FUNCTION().PUBLIC().SIGNATURE(bool, InputsInBody);
+    FUNCTION().PUBLIC().SIGNATURE(bool, InputsInCells);
+    FUNCTION().PUBLIC().SIGNATURE(void, DrawOverlay);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsAddInputAt, const Vec2F&);
     FUNCTION().PUBLIC().SIGNATURE(PipelineLayerPlace, GetAddInputPlace, const Vec2F&);
     FUNCTION().PUBLIC().SIGNATURE(const Ref<PipelineIoPair>&, GetPair);

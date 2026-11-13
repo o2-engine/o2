@@ -6,6 +6,7 @@
 #include "o2Editor/Pipeline/PipelineUtils.h"
 #include "o2Editor/Pipeline/PipelineValue.h"
 #include "o2Editor/Pipeline/Providers/AiRouter.h"
+#include "o2Editor/Pipeline/UiDoc/UiDocAi.h"
 
 namespace Editor::UiLayout
 {
@@ -130,7 +131,7 @@ namespace Editor::UiLayout
         return bytes.Length() >= 2 && (unsigned char)bytes[0] == 0xFF && (unsigned char)bytes[1] == 0xD8 ? "image/jpeg" : "image/png";
     }
 
-    Coroutine<AiAnswer> AiText(const Ref<AiCtx>& ai, String prompt, Vector<String> images, String tag)
+    Coroutine<AiAnswer> AiText(const Ref<AiCtx>& ai, String prompt, Vector<String> images, String tag, String salt /*= ""*/)
     {
         AiAnswer res;
         bool hooked = false;
@@ -150,8 +151,14 @@ namespace Editor::UiLayout
             co_return res;
         }
 
-        String key = TextMemoKey(ai->textModel, prompt, images);
-        if (ai->memo.get && !ai->fresh)
+        // A stand-in of the UI AI calls (tests) is asked every time: its answers are never remembered
+        bool stubbed = UiDoc::HasUiAiTextStub();
+        String mark = salt.IsEmpty() ? ai->salt : salt;
+        Vector<String> keyed = images;
+        if (!mark.IsEmpty())
+            keyed.Add("salt:" + mark);
+        String key = TextMemoKey(ai->textModel, prompt, keyed);
+        if (ai->memo.get && !ai->fresh && !stubbed)
         {
             String hit;
             if (ai->memo.get(key, ".txt", hit))
@@ -172,14 +179,14 @@ namespace Editor::UiLayout
         for (auto& image : images)
             refs.Add({ ImageMimeOf(image), image });
 
-        AiTextResult answer = co_await AiRouter::GenerateText(ai->exec, ai->textModel, prompt, refs);
+        AiTextResult answer = co_await UiDoc::UiAiText(ai->exec, ai->textModel, prompt, refs);
         if (!answer.ok)
         {
             res.error = answer.error.IsEmpty() ? String("the vision model failed") : answer.error;
             co_return res;
         }
 
-        if (ai->memo.put)
+        if (ai->memo.put && !stubbed)
             ai->memo.put(key, ".txt", answer.text);
         ai->Record(tag, ".txt", answer.text);
 

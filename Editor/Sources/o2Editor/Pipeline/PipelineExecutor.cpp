@@ -1,6 +1,8 @@
 #include "o2Editor/stdafx.h"
 #include "PipelineExecutor.h"
 
+#include "o2Editor/Pipeline/UiDoc/UiDocOwn.h"
+
 #include "o2/Assets/Assets.h"
 #include "o2/Utils/Debug/Debug.h"
 #include "o2/Utils/FileSystem/FileSystem.h"
@@ -71,8 +73,13 @@ namespace Editor
         Vector<String> exclude = { "crop", "cropEnabled" };
         if (chroma)
             exclude.Add(PipelineTransparency::ChromaConfigKeys());
+        if (auto impl = PipelineNodeRegistry::Get(node.nodeType))
+            exclude.Add(impl->ContentExcludedKeys(node));
 
-        return PipelineGraph::ComputeNodeSignature(node, upstreamSigs, exclude, seed, chroma ? "chroma-raw" : "");
+        // How a kit is put together is part of what it is stored under: a kit made before devices is not the answer to a run
+        // of this build
+        String variant = chroma ? "chroma-raw" : node.nodeType == "uiKit" ? "kit:device-1" : "";
+        return PipelineGraph::ComputeNodeSignature(node, upstreamSigs, exclude, seed, variant);
     }
 
     String PipelineExecutor::GetRanMarkerPath(const String& pipelineId, const String& sig)
@@ -123,58 +130,6 @@ namespace Editor
     PipelineValue PipelineExecutor::LoadPreview(const String& pipelineId, const PipelineNode& node, String* pathOut /*= nullptr*/)
     {
         return LoadValueFile(GetCachePath(pipelineId) + "previews/" + node.id, PreviewTypeOf(node), pathOut);
-    }
-
-    bool PipelineExecutor::RanExists(const String& pipelineId, const String& sig)
-    {
-        return o2FileSystem.IsFileExist(GetRanMarkerPath(pipelineId, sig));
-    }
-
-    void PipelineExecutor::MarkRan(const String& pipelineId, const String& sig)
-    {
-        PipelineUtils::WriteFileBytes(GetRanMarkerPath(pipelineId, sig), "1");
-    }
-
-    void PipelineExecutor::ClearNodeCache(const String& pipelineId, const PipelineNode& node, const String& sig)
-    {
-        for (auto& ext : Vector<String>{ "png", "txt", "mp4", "mp3", "wav", "ogg", "m4a", "flac" })
-            o2FileSystem.FileDelete(GetPreviewPath(pipelineId, node.id, ext));
-
-        o2FileSystem.FileDelete(GetSourcePreviewPath(pipelineId, node.id));
-        if (!sig.IsEmpty())
-            o2FileSystem.FileDelete(GetRanMarkerPath(pipelineId, sig));
-
-        auto schema = PipelineNodeRegistry::GetSchema(node.nodeType);
-        if (schema && schema->dynamicOutputs)
-            RemoveStalePortPreviews(pipelineId, node.id, {});
-    }
-
-    Vector<String> PipelineExecutor::ComputeFreshNodes(const String& pipelineId, const PipelineGraph& graph)
-    {
-        Vector<String> res;
-        auto sigs = graph.ComputeSignatures();
-        for (auto& kv : sigs)
-        {
-            if (!kv.first.Contains("#") && RanExists(pipelineId, kv.second))
-                res.Add(kv.first);
-        }
-        return res;
-    }
-
-    PipelineValue PipelineExecutor::LoadContent(const String& pipelineId, const String& sig, PipelinePortType type)
-    {
-        return LoadValueFile(GetCachePath(pipelineId) + "content/" + sig, type);
-    }
-
-    void PipelineExecutor::SaveContent(const String& pipelineId, const String& sig, const PipelineValue& value)
-    {
-        PipelineUtils::WriteFileBytes(GetContentPath(pipelineId, sig, value.GetExtension()), value.data);
-    }
-
-    void PipelineExecutor::DeleteContent(const String& pipelineId, const String& sig)
-    {
-        for (auto& ext : Vector<String>{ "png", "txt", "mp4", "mp3", "wav", "ogg", "m4a", "flac" })
-            o2FileSystem.FileDelete(GetContentPath(pipelineId, sig, ext));
     }
 
     void PipelineExecutor::Execute(const String& pipelineId, const PipelineGraph& graph, const String& targetNodeId,
@@ -234,7 +189,7 @@ namespace Editor
     }
 
     void PipelineExecutor::EmitState(const String& nodeId, const String& state, const String& error /*= ""*/,
-                                     const String& portId /*= ""*/)
+                                     const String& portId /*= ""*/, const String& phase /*= ""*/)
     {
         PipelineExecEvent ev;
         ev.type = PipelineExecEvent::Type::NodeState;
@@ -242,6 +197,7 @@ namespace Editor
         ev.portId = portId;
         ev.state = state;
         ev.error = error;
+        ev.phase = phase;
         Emit(ev);
     }
 
@@ -435,7 +391,21 @@ namespace Editor
 
         run->visiting[nodeId] = true;
 
+        // An AI UI layout asked only for graphics it made hands out stored pictures: nothing above it is run for them (its
+        // kits may be a chain of paid nodes, and a graphic does not depend on them)
         auto incoming = run->graph.GetRunInputEdges(nodeId);
+        if (node->nodeType == "uiLayout" && nodeId != run->targetNodeId)
+        {
+            Vector<String> wanted;
+            run->neededPorts.TryGetValue(nodeId, wanted);
+            bool storedOnly = !wanted.IsEmpty() && wanted.All([&](const String& portId) {
+                auto port = node->FindOutput(portId);
+                return port && !UiDoc::IsLayoutFixedOutput(port->name);
+            });
+            if (storedOnly)
+                incoming.Clear();
+        }
+
         for (auto& edge : incoming)
         {
             bool ok = co_await Evaluate(run, edge->fromNodeId);
@@ -479,7 +449,9 @@ namespace Editor
             if (run->sigByPort.TryGetValue(edge->fromNodeId + "#" + edge->fromPortId, upstreamSig) ||
                 run->sigByNode.TryGetValue(edge->fromNodeId, upstreamSig))
             {
-                upstreamSigs[PipelineGraph::UpstreamSigKey(*node, *port)] = upstreamSig;
+                auto from = run->graph.FindNode(edge->fromNodeId);
+                upstreamSigs[PipelineGraph::UpstreamSigKey(*node, *port)] =
+                    PipelineNodeRegistry::UpstreamSigFor(upstreamSig, from ? from.Get() : nullptr, edge->fromPortId, *node);
             }
         }
 
@@ -527,6 +499,7 @@ namespace Editor
         PipelineValue lastResult;
         PipelineValue dynamicPreview;
         bool produced = true;
+        bool refineOwed = false; // A cached-only run left a paid second step (IPipelineNodeImpl::Refine) to a real run
         String error;
 
         if (dynamic)
@@ -576,7 +549,8 @@ namespace Editor
                 run->sigByPort[nodeId + "#" + portId] =
                     PipelineGraph::ComputePortSignature(*node, upstreamSigs, nodeSeed, portId, false);
                 // "<node id>#<port id>" in the bypass list regenerates that one part
-                if (run->bypass.Contains(nodeId) || run->bypass.Contains(nodeId + "#" + portId))
+                bool restart = run->bypass.Contains(nodeId) || run->bypass.Contains(nodeId + "#" + portId);
+                if (restart)
                     DeleteContent(run->pipelineId, portSig);
 
                 PipelineValue stored = LoadContent(run->pipelineId, portSig, port.portType);
@@ -623,6 +597,17 @@ namespace Editor
                     SaveContent(run->pipelineId, portSig, stored);
                     computed = true;
                 }
+
+                // The part's paid second step over its stored generation (AI extract: the check against the reference)
+                Refined refined = co_await RefineStored(run, node, inputs, portSig, portId, port.name, stored, restart);
+                if (run->cancelled)
+                {
+                    run->visiting.Remove(nodeId);
+                    co_return false;
+                }
+                stored = refined.value;
+                computed = computed || refined.computed;
+                refineOwed = refineOwed || refined.owed;
 
                 // Every part is cut with its own effective settings
                 PipelineValue value = stored;
@@ -714,12 +699,24 @@ namespace Editor
 
             if (error.IsEmpty() && !lastResult.IsValid())
             {
-                PipelineValue value = stored;
+                // The node's paid second step over its stored generation (AI text style: the check against the picture)
+                Refined refined = co_await RefineStored(run, node, inputs, cacheSig, "", "", stored, run->bypass.Contains(nodeId));
+                if (run->cancelled)
+                {
+                    run->visiting.Remove(nodeId);
+                    co_return false;
+                }
+                refineOwed = refined.owed;
+
+                PipelineValue value = refined.value;
                 if (chroma && value.IsImage())
                 {
                     if (auto raw = value.GetBitmap())
                         value = PipelineValue::Image(PipelineTransparency::ApplyChromaPostStep(*node, *raw));
                 }
+
+                // A node's own local step (AI text style: the name and role set over the model's answer)
+                value = impl->PostStep(*node, value);
 
                 PipelineValue downstream = value;
                 PipelineImageOps::CropRect crop;
@@ -818,7 +815,7 @@ namespace Editor
             complete = whole || node->outputs.All([&](const PipelinePort& p) { return covered.Contains(p.id); });
         }
 
-        if (!lastResult.IsValid() && complete)
+        if (!lastResult.IsValid() && complete && !refineOwed)
             MarkRan(run->pipelineId, sig);
 
         EmitState(nodeId, "done");
@@ -916,13 +913,22 @@ namespace Editor
 
         // An instant node with several outputs (the AI UI layout: its picture and its layout) keeps a preview per output,
         // as a full run of it does: that is what a consumer of its second output reads
+        // An output that came out the same keeps its file: a graphic the layout made is the same picture after every edit of
+        // the layout, and a new file would re-apply everything below it each time
         if (!isFinish && impl->GetSchema().instant && node->outputs.Count() > 1)
         {
             for (auto& port : node->outputs)
             {
                 auto it = result.outputs.find(port.name);
-                if (it != result.outputs.end() && it->second.IsValid())
-                    WritePortPreview(run, node->id, port.id, it->second);
+                if (it == result.outputs.end() || !it->second.IsValid())
+                    continue;
+
+                const PipelineValue& v = it->second;
+                String path = GetPortPreviewPath(run->pipelineId, node->id, port.id, v.GetExtension());
+                bool same = !UiDoc::IsLayoutFixedOutput(port.name) && o2FileSystem.IsFileExist(path) &&
+                    PipelineUtils::ReadFileBytes(path) == (v.IsImage() ? v.GetPngBytes() : v.data);
+                if (!same)
+                    WritePortPreview(run, node->id, port.id, v);
             }
         }
 
@@ -940,7 +946,8 @@ namespace Editor
                 if (!sigs.TryGetValue(key, s) || !RanExists(run->pipelineId, s))
                     upstreamFresh = false;
                 if (auto port = node->FindInput(edge->toPortId))
-                    upstream[PipelineGraph::UpstreamSigKey(*node, *port)] = s;
+                    upstream[PipelineGraph::UpstreamSigKey(*node, *port)] =
+                        PipelineNodeRegistry::UpstreamSigFor(s, from ? from.Get() : nullptr, edge->fromPortId, *node);
             }
 
             if (upstreamFresh)

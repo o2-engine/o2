@@ -90,6 +90,7 @@ namespace Editor::UiLayout
         String                   color;   // #RRGGBB: fill of rect / overlay / container, tint of an image, colour of a text
         double                   opacity = 1.0;
         bool                     visible = true;
+        double                   rotation = 0;  // Turned about the centre of its box, degrees clockwise on the screen
 
         String text;
         String fontFile;          // Roboto-*.ttf
@@ -119,8 +120,9 @@ namespace Editor::UiLayout
 
     // Plans the widgets of a ui_structure.json: the snapshot's boxes resolved like the skill does, anchors (a responsive block
     // becomes o2's anchors and offsets, otherwise the box is attached to its anchor point), sprites with their nine-slice
-    // borders (sprites: by lower-case file name), texts, progress fills, native GridLayouts where o2 reproduces the grid. False
-    // with the reason when the structure does not resolve
+    // borders (sprites: by lower-case file name), texts, progress fills, native GridLayouts where o2 reproduces the grid, a
+    // block's `rotation` (a turn about its centre: BuildWidgets puts the pivot there). False with the reason when the
+    // structure does not resolve
     bool PlanWidgets(const Json& structure, const Map<String, UiSpriteInfo>& sprites, UiWidgetPlan& out, String* error = nullptr);
 
     // ------------------------------------------------------------------------------------------------

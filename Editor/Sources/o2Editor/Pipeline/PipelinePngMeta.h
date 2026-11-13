@@ -20,6 +20,7 @@ namespace Editor
     {
         extern const char* dpiKey;   // "AssetsLine:dpi"
         extern const char* scaleKey; // "AssetsLine:scale"
+        extern const char* sourceKey; // "AssetsLine:source": the size of the picture an AI extract part was cut from, "WxH"
 
         // Returns true when the bytes start with the PNG signature and hold more than a header
         bool IsPng(const String& bytes);
@@ -37,9 +38,13 @@ namespace Editor
         // Returns how much larger than its source an AI extract part was drawn
         std::optional<double> ReadScale(const String& png);
 
-        // Returns the PNG tagged with the density (none removes the tag) and, when given, the extract scale;
-        // the density is written at 0.1 and the scale at 0.0001, as AssetsLine does
-        String WithDpi(const String& png, std::optional<double> dpi, std::optional<double> scale = std::nullopt);
+        // Returns the size of the picture an AI extract part was cut from, false when it is not tagged
+        bool ReadSource(const String& png, int& width, int& height);
+
+        // Returns the PNG tagged with the density (none removes the tag) and, when given, the extract scale and the size of
+        // the source picture; the density is written at 0.1 and the scale at 0.0001, as AssetsLine does
+        String WithDpi(const String& png, std::optional<double> dpi, std::optional<double> scale = std::nullopt,
+                       int sourceW = 0, int sourceH = 0);
 
         // Returns the pixel size from the IHDR, false for anything that is not a PNG
         bool Size(const String& png, int& width, int& height);

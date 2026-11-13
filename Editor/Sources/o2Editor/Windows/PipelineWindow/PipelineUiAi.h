@@ -22,8 +22,18 @@ namespace Editor
         // Connects the workspace's Send and Download to these calls (done once, by the first layout card)
         void InstallWorkspaceHandlers();
 
-        // Asks the layout agent: the request, the selected block ("" = the screen); the step is appended to the node
+        // Asks the layout agent (UiLayout::RunLayoutAgent): the request with the points it names ([1], [2]... of the node's
+        // uiPoints), the selected block ("" = the screen); the references in the layout's units, the kit made fresh. The acts
+        // show in UiAgentState while it runs; the step is appended to the node with uiDraft and uiPoints cleared. An empty
+        // request is one too when an empty layout has a reference picture to build from
         void SendAgent(const Ref<PipelineEditor>& editor, const String& nodeId, const String& prompt, const String& selected);
+
+        // Stops the node's request: what it made so far becomes the step
+        void CancelAgent(const String& nodeId);
+
+        // Returns everything the layout node draws with: every kit input in port order (a kit node made again from its own
+        // inputs), then its own graphics and styles; none for nothing
+        std::optional<UiDoc::UiKit> LayoutKitNow(const Ref<PipelineEditor>& editor, const PipelineNode& layoutNode);
 
         // Generates the Text style node's style from its stylePrompt (pictures wired in are references)
         void GenerateStyle(const Ref<PipelineEditor>& editor, const String& nodeId);

@@ -946,6 +946,8 @@ namespace Editor
             widget->DrawPorts();
 
         DrawBendHandles();
+        for (auto& widget : mNodeWidgets)
+            widget->DrawOverlay();
     }
 
     void PipelineEditor::DrawInheritedDepthChildren()
@@ -1023,9 +1025,12 @@ namespace Editor
         return result;
     }
 
-    void PipelineEditor::DrawEdge(const Vec2F& from, const Vec2F& to, const Vector<Vec2F>& points, const Color4& color, float width)
+    void PipelineEditor::DrawEdge(const Vec2F& from, const Vec2F& to, const Vector<Vec2F>& points, const Color4& color, float width,
+                                  const Vec2F* entry /*= nullptr*/)
     {
-        auto line = BuildEdgePolyline(from, to, points);
+        auto line = BuildEdgePolyline(from, entry ? *entry : to, points);
+        if (entry)
+            line.Add(to);
         if (line.Count() < 2)
             return;
 
@@ -1034,7 +1039,7 @@ namespace Editor
         o2Render.DrawAALine(line, color, pixels);
     }
 
-    bool PipelineEditor::GetEdgeEnds(const PipelineEdge& edge, Vec2F& from, Vec2F& to) const
+    bool PipelineEditor::GetEdgeEnds(const PipelineEdge& edge, Vec2F& from, Vec2F& to, std::optional<Vec2F>* entry /*= nullptr*/) const
     {
         Ref<PipelineNodeWidget> fromWidget, toWidget;
         if (!mNodeWidgetsById.TryGetValue(edge.fromNodeId, fromWidget) || !mNodeWidgetsById.TryGetValue(edge.toNodeId, toWidget))
@@ -1042,6 +1047,9 @@ namespace Editor
 
         from = fromWidget->GetPortPosition(edge.fromPortId, false);
         to = toWidget->GetPortPosition(edge.toPortId, true);
+        Vec2F point;
+        if (entry)
+            *entry = toWidget->GetInputEntry(edge.toPortId, toWidget->GetCardRect(), point) ? std::optional<Vec2F>(point) : std::nullopt;
         return true;
     }
 
@@ -1072,6 +1080,9 @@ namespace Editor
             draw.edge = edge;
             draw.from = fromWidget->GetPortPosition(edge->fromPortId, false, rectOf(fromWidget));
             draw.to = toWidget->GetPortPosition(edge->toPortId, true, rectOf(toWidget));
+            Vec2F entry;
+            if (toWidget->GetInputEntry(edge->toPortId, rectOf(toWidget), entry))
+                draw.entry = entry;
 
             if (culling)
             {
@@ -1127,10 +1138,16 @@ namespace Editor
     {
         for (auto& draw : mEdgeDraws)
         {
+            // A link into a port inside a card (a UI kit cell) is repeated over the cards from the card's edge on, so it
+            // visibly ends at its cell
             if (draw.overCards != overCards)
+            {
+                if (overCards && draw.entry)
+                    DrawEdge(*draw.entry, draw.to, {}, draw.color, draw.width);
                 continue;
+            }
 
-            DrawEdge(draw.from, draw.to, draw.edge->points, draw.color, draw.width);
+            DrawEdge(draw.from, draw.to, draw.edge->points, draw.color, draw.width, draw.entry ? &*draw.entry : nullptr);
         }
 
         if (mPendingEdge.active && !overCards)
@@ -1431,10 +1448,13 @@ namespace Editor
         for (auto& edge : graph->edges)
         {
             Vec2F from, to;
-            if (!GetEdgeEnds(*edge, from, to))
+            std::optional<Vec2F> entry;
+            if (!GetEdgeEnds(*edge, from, to, &entry))
                 continue;
 
-            auto line = BuildEdgePolyline(from, to, edge->points);
+            auto line = BuildEdgePolyline(from, entry ? *entry : to, edge->points);
+            if (entry)
+                line.Add(to);
             for (int i = 0; i < line.Count() - 1; i++)
             {
                 Vec2F a = line[i], b = line[i + 1];

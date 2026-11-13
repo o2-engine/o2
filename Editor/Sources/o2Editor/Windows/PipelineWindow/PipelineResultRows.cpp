@@ -285,6 +285,9 @@ namespace Editor
                 body = CreateTextStyleNodeBody(type);
 
             if (!body)
+                body = CreateTextStyleExtractNodeBody(type);
+
+            if (!body)
                 body = CreateUiKitNodeBody(type);
 
             if (body)

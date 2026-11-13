@@ -151,6 +151,7 @@ namespace Editor
                 steps.Add(UiDoc::UiStep(step));
                 UiDoc::WriteSteps(config, steps, {});
                 UiDoc::SetConfigJson(config, "uiDraft", UiDoc::Json(""));
+                UiDoc::SetConfigJson(config, "uiPoints", UiDoc::Json::Array());
                 return true;
             });
             Refresh(nodeId);

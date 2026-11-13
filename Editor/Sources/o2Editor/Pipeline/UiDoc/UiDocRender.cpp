@@ -8,6 +8,7 @@
 #include "o2Editor/Pipeline/PipelineUtils.h"
 #include "o2Editor/Pipeline/UiDoc/UiDocFonts.h"
 #include "o2Editor/Pipeline/UiDoc/UiDocRenderer.h"
+#include "o2Editor/Pipeline/UiDoc/UiStyleAi.h"
 #include "o2Editor/Pipeline/UiDoc/UiDocFp.h"
 
 namespace Editor::UiDoc::Render
@@ -334,9 +335,22 @@ namespace Editor::UiDoc::Render
             return;
         UiRect r = *found;
 
-        bool layer = n.opacity && *n.opacity < 1;
+        // A turned block turns about the centre of its box, the blocks in it with it (UiDocRotate.h): it is drawn unturned on a
+        // layer of its own with that centre in the layer's middle (so the whole block fits whatever its place on the screen)
+        // and the layer is laid on turned
+        double turn = n.rotation ? F(*n.rotation) : 0.0;
+        bool layer = (n.opacity && *n.opacity < 1) || turn;
+        UiPt centre, layerCentre;
+        double ox0 = ox, oy0 = oy;
         if (layer)
             PushLayer();
+        if (turn)
+        {
+            centre = { X(F(r.x + r.w/2)), Y(F(r.y + r.h/2)) };
+            ox += std::round(cw/2.0 - centre.x);
+            oy += std::round(ch/2.0 - centre.y);
+            layerCentre = { centre.x + (ox - ox0), centre.y + (oy - oy0) };
+        }
 
         const UiKit* kit = o.kit;
         if (n.type != "screen" && n.type != "group")
@@ -346,6 +360,8 @@ namespace Editor::UiDoc::Render
                 UiSkin skin = SkinOf(n, kit);
                 if (skin.el || n.type == "text")
                     Skinned(n, r, skin);
+                else if (IsPlain(n))
+                    Plain(n, r, kit);
                 else
                     LineArt(n, r, skin.missing);
             }
@@ -366,8 +382,38 @@ namespace Editor::UiDoc::Render
         if (o.showIds && n.type != "screen")
             PlainText(n.id, "Roboto-Regular.ttf", F(idSize), F(r.x + 3), F(r.y + idSize), UiColorOf("#7C6FF0"), 0.9f);
 
-        if (layer)
-            PopLayer((float)F(*n.opacity));
+        float opacity = n.opacity && *n.opacity < 1 ? (float)F(*n.opacity) : 1.0f;
+        if (turn)
+        {
+            ox = ox0;
+            oy = oy0;
+            UiCanvas& drawn = *layers[depth];
+            depth--;
+            Top().CompositeTurned(drawn, turn, centre, layerCentre, opacity);
+        }
+        else if (layer)
+            PopLayer(opacity);
+    }
+
+    void Renderer::Plain(const UiNode& n, const UiRect& r, const UiKit* kit)
+    {
+        if (n.color)
+        {
+            UiRgba fill = UiColorOf(*n.color);
+            RectEl(r, 0, &fill, nullptr);
+        }
+        if ((n.type == "button" || n.type == "tab" || n.type == "badge") && n.text && !n.text->IsEmpty())
+        {
+            TextBox t;
+            t.text = *n.text;
+            t.rect = r;
+            t.style = StyleOf(n, kit, &n);
+            t.align = n.textAlign ? *n.textAlign : String("center");
+            if (n.textColor)
+                t.color = *n.textColor;
+            t.size = n.fontSize ? *n.fontSize : 0;
+            Text(t);
+        }
     }
 
     void Renderer::LineArt(const UiNode& n, const UiRect& r, bool missing)
@@ -618,7 +664,11 @@ namespace Editor::UiDoc::Render
                 t.style = StyleOf(n, kit, &n);
                 if (!hasText)
                 {
+                    // A placeholder is plain grey: no fill, effects or their mirrors
                     t.style.color = "#9AA2B1";
+                    t.style.fill.reset();
+                    t.style.effects.Clear();
+                    t.style.gradient.reset();
                     t.style.stroke.reset();
                     t.style.shadow.reset();
                 }
@@ -718,20 +768,7 @@ namespace Editor::UiDoc
 
     UiDoc TextStyleSampleDoc(const TextStyle& style, const String& text, bool dark)
     {
-        double stroke = style.stroke ? style.stroke->width*2 : 0;
-        double w = std::max(680.0, std::ceil(EstimateTextWidth(text, style)*1.03 + 36 + stroke*2 + 8));
-        UiDoc d = EmptyDoc("Sample", w, 224);
-        d.root.color = dark ? "#20232B" : "#F3F4F7";
-        UiNode sample;
-        sample.id = "sample";
-        sample.type = "text";
-        sample.anchor = "stretch";
-        sample.margin = Box4{ 12, 18, 12, 18 };
-        sample.style = style.name;
-        sample.text = text;
-        sample.keys = { "anchor", "margin", "style", "text" };
-        d.root.SetChildren({ sample });
-        return d;
+        return SampleDoc(style, text, dark ? "#20232B" : "#F3F4F7");
     }
 
     UiImage RenderTextStyleSample(const TextStyle& style, const String& text, bool dark, double scale /*= 1*/)

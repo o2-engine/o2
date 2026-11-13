@@ -31,6 +31,8 @@ namespace Editor::UiDoc
         Vector<UiExportSprite> sprites; // Every sprite the layout names
         Vector<UiExportFont>   fonts;
         String                 seed;    // Makes guids and ids reproducible (the node id)
+        String                 canvasFit; // "expand": Unity's Canvas Scaler in Expand mode (an AI UI layout, laid out for its kit's
+                                          // device: the design always shows whole); empty = match width and height by half
     };
 
     // A file of the export: its path inside the project (Assets/...) and bytes

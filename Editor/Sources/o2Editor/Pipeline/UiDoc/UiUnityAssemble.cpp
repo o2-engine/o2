@@ -252,7 +252,9 @@ namespace Editor::UiDoc::Unity
     {
         root = NewGO(name);
         AddComp(root, "Canvas");
-        AddComp(root, "CanvasScaler")->reference = doc.ref;
+        Comp* scaler = AddComp(root, "CanvasScaler");
+        scaler->reference = doc.ref;
+        scaler->expand = expand;
         AddComp(root, "GraphicRaycaster");
         root->SetSd(doc.ref);
         Doc snapshot = doc.Snapshot();
@@ -272,6 +274,17 @@ namespace Editor::UiDoc::Unity
         if (!isRoot)
             parentNode = snapshot.Node(pp);
         SetRectangle(rect, node, box, parentSize, isRoot ? nullptr : &parentNode, isRoot && box.w == doc.ref.x && box.h == doc.ref.y);
+        // A turned block (AssetsLine's `rotation`, clockwise): the pivot goes to the centre with the corners kept where they are,
+        // and the RectTransform turns about it
+        double turn = isRoot ? 0 : NumOf(&node, "rotation", 0);
+        if (turn)
+        {
+            V2 oMin = rect->OffsetMin(), oMax = rect->OffsetMax();
+            rect->SetPv(MakeV2(0.5, 0.5));
+            rect->SetOffsetMin(oMin);
+            rect->SetOffsetMax(oMax);
+            rect->rotZ = -turn;
+        }
 
         Json state;
         if (const Json* found = source.Node(path).Get("state"))

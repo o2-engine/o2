@@ -25,9 +25,20 @@ namespace Editor::UiDoc
         return none;
     }
 
+    bool IsPlain(const UiNode& n)
+    {
+        return n.kit && JsToLower(*n.kit) == "none" && n.type != "text";
+    }
+
     UiSkin SkinOf(const UiNode& n, const UiKit* kit)
     {
         UiSkin skin;
+        // kit=none: a plain block - its colour, or nothing - that takes no graphic of its type either
+        if (IsPlain(n))
+        {
+            skin.explicitKit = true;
+            return skin;
+        }
         String variant = n.variant ? *n.variant : String();
         if (n.kit && !n.kit->IsEmpty())
         {
@@ -194,7 +205,7 @@ namespace Editor::UiDoc
             used.insert(JsToLower(*doc.root.kit));
 
         Walk(doc.root, [&](const UiNode& n, const UiNode*, int) {
-            if (n.type != "screen" && n.type != "group" && n.type != "text")
+            if (n.type != "screen" && n.type != "group" && n.type != "text" && !IsPlain(n))
             {
                 report.total++;
                 UiSkin s = SkinOf(n, kit);
@@ -230,7 +241,7 @@ namespace Editor::UiDoc
     {
         UiKitCoverage cov;
         Walk(doc.root, [&](const UiNode& n, const UiNode*, int) {
-            if (n.type != "screen" && n.type != "group" && n.type != "text")
+            if (n.type != "screen" && n.type != "group" && n.type != "text" && !IsPlain(n))
             {
                 cov.total++;
                 if (SkinOf(n, kit).el)

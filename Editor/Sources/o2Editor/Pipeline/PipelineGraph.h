@@ -320,6 +320,13 @@ namespace Editor
         // Returns config keys that never take part in signatures
         static const Vector<String>& GetUiOnlyConfigKeys();
 
+        // Returns the config keys of the AI extract's / AI text style's check against the reference: refCheck, refCheckMax,
+        // refCheckModel
+        static const Vector<String>& GetRefCheckKeys();
+
+        // Returns true when the node's check against the reference is on (refCheck truthy)
+        static bool IsRefCheckOn(const PipelineNode& node);
+
         // Returns true for node types whose generation depends on a seed
         static bool IsSeededType(const String& type);
 
@@ -491,6 +498,8 @@ CLASS_METHODS_META(Editor::PipelineGraph)
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, OutputSigKey, const PipelineNode&, const String&);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, DynamicPortSignature, const String&, const String&);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(const Vector<String>&, GetUiOnlyConfigKeys);
+    FUNCTION().PUBLIC().SIGNATURE_STATIC(const Vector<String>&, GetRefCheckKeys);
+    FUNCTION().PUBLIC().SIGNATURE_STATIC(bool, IsRefCheckOn, const PipelineNode&);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(bool, IsSeededType, const String&);
 }
 END_META;

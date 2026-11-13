@@ -471,6 +471,7 @@ namespace Editor
             Text(text, RectF(bar.right + 7, chip.top, chip.right - 24, chip.bottom), TextStyle(10.5f, 400, t.fg, HorAlign::Left, true));
             UiWsDraw::Icon(open ? "uiws_chevron_down" : "uiws_chevron_down", Vec2F(chip.right - 10 - 5.5f, cy), 11.0f, t.fg3);
             AddHot(chip, "cov");
+            x += w + 8;
         }
 
         // The tools on the right
@@ -498,6 +499,23 @@ namespace Editor
         sep();
         tool("uiws_redo", "redo", editable && !mCtx->redo.IsEmpty());
         tool("uiws_undo", "undo", editable && !mCtx->timeline.GetSteps().IsEmpty());
+
+        // A layout made before devices: what units it is in, and the step that brings it to its device's pixels
+        if (UiDoc::Ws::InOlderUnits(mCtx->current, mCtx->target) && rx - 8 - x > 60)
+        {
+            String text = UiDoc::Ws::OlderShort(mCtx->current);
+            float bringW = mCtx->Editable() ? TextWidth("Bring to the kit's device", 11.5f) + 16 : 0.0f;
+            float w = Math::Min(rx - 8 - x, 10 + 13 + 8 + TextWidth(text, 11.5f) + 2 + (bringW > 0 ? 8 + bringW : 0) + 3);
+            RectF chip(x, cy + 14, x + w, cy - 14);
+            Fill(chip, 8.0f, Color4(241, 190, 91, 20));
+            Border(chip, 8.0f, Color4(241, 190, 91, 56));
+            UiWsDraw::Icon("uiws_warn", Vec2F(chip.left + 10 + 6.5f, cy), 13.0f, t.yellow);
+            float textRight = chip.right - 3 - (bringW > 0 ? bringW + 8 : 0);
+            Text(text, RectF(chip.left + 10 + 13 + 8, chip.top, textRight, chip.bottom), TextStyle(11.5f, 400, t.fgDim));
+            if (bringW > 0)
+                Button(RectF(chip.right - 3 - bringW, cy + 11, chip.right - 3, cy - 11), "Bring to the kit's device", "bring", false,
+                       !mCtx->Busy());
+        }
 
         // The resize edges and corners, the dividers between the panels: zones of the grips over the panels
         mGrips->zones.Clear();
@@ -657,6 +675,8 @@ namespace Editor
             onDownload();
         else if (id.StartsWith("export:"))
             mCtx->SetUi("exportFor", Json(id.SubStr(7)));
+        else if (id == "bring")
+            mCtx->Bring();
     }
 
     void UiWsWindow::OnHotDoubleClick(const String& id, const Input::Cursor& cursor)
@@ -744,6 +764,8 @@ namespace Editor
                 mHierarchy->EndRename(false);
             else if (DynamicCast<EditBox>(o2UI.GetFocusedWidget()))
                 o2UI.FocusWidget(Ref(this));
+            else if (mCtx->pinning)
+                mCtx->pinning = false;
             else if (mCtx->peek >= 0)
                 mCtx->SetPeek(-1);
             else

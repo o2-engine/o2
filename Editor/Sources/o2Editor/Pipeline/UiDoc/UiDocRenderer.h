@@ -123,6 +123,9 @@ namespace Editor::UiDoc::Render
         // A block's line art (missing: the kit has nothing for it - dashed orange)
         void LineArt(const UiNode& n, const UiRect& r, bool missing);
 
+        // A plain block (kit=none): its colour as a flat rectangle, a button's / tab's / badge's label on it
+        void Plain(const UiNode& n, const UiRect& r, const UiKit* kit);
+
         // A block drawn with its kit skin and its label
         void Skinned(const UiNode& n, const UiRect& r, const UiSkin& skin);
 

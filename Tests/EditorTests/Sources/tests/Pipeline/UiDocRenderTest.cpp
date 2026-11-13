@@ -96,7 +96,30 @@ TEST(UiDocRender, MatchesTheWebsRendererWithinTolerance)
 
         UiImage mine;
         if (name == "sample")
-            mine = RenderTextStyleSample(kit.textStyles[0], S(refs, "sampleText"), true, ref.w/TextStyleSampleDoc(kit.textStyles[0], S(refs, "sampleText"), true).width);
+        {
+            // The card's sample as the web drew it when these references were made: 224 high, widened by the outline
+            const TextStyle& st = kit.textStyles[0];
+            String text = S(refs, "sampleText");
+            double stroke = st.stroke ? st.stroke->width*2 : 0;
+            UiDoc d = EmptyDoc("Sample", std::max(680.0, std::ceil(EstimateTextWidth(text, st)*1.03 + 36 + stroke*2 + 8)), 224);
+            d.root.color = "#20232B";
+            UiNode sample;
+            sample.id = "sample";
+            sample.type = "text";
+            sample.anchor = "stretch";
+            sample.margin = Box4{ 12, 18, 12, 18 };
+            sample.style = st.name;
+            sample.text = text;
+            sample.keys = { "anchor", "margin", "style", "text" };
+            d.root.SetChildren({ sample });
+            UiKit styles;
+            styles.textStyles.Add(st);
+            UiRenderOptions o;
+            o.mode = "kit";
+            o.kit = &styles;
+            o.scale = ref.w/d.width;
+            mine = RenderLayout(d, o);
+        }
         else
         {
             UiRenderOptions o;

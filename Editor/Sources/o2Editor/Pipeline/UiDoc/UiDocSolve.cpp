@@ -3,6 +3,7 @@
 
 #include <cmath>
 
+#include "o2Editor/Pipeline/UiDoc/UiDocRotate.h"
 #include "o2Editor/Pipeline/UiDoc/UiDocFp.h"
 
 namespace Editor::UiDoc
@@ -248,15 +249,22 @@ namespace Editor::UiDoc
     String HitTest(const UiDoc& doc, const UiRects& rects, double x, double y)
     {
         String hit;
-        std::function<void(const UiNode&, bool)> visit = [&](const UiNode& n, bool shown) {
+        // back: from the screen to the unturned boxes of this block's frame (UiDocRotate.h) - a turned block takes the point
+        // in its own frame, and so do the blocks in it
+        std::function<void(const UiNode&, bool, const UiMat&, bool)> visit = [&](const UiNode& n, bool shown, const UiMat& back,
+                                                                                  bool turned) {
             bool vis = shown && n.IsShown();
             const UiRect* r = rects.Find(n.id);
-            if (vis && r && &n != &doc.root && x >= r->x && y >= r->y && x <= r->x + r->w && y <= r->y + r->h)
+            double deg = TurnOf(n);
+            UiMat mine = deg && r ? Mul(RotationAbout(-deg, r->x + r->w/2, r->y + r->h/2), back) : back;
+            bool mineTurned = turned || (deg && r);
+            UiPoint p = mineTurned ? Apply(mine, { x, y }) : UiPoint{ x, y };
+            if (vis && r && &n != &doc.root && p.x >= r->x && p.y >= r->y && p.x <= r->x + r->w && p.y <= r->y + r->h)
                 hit = n.id;
             for (auto& c : n.children)
-                visit(c, vis);
+                visit(c, vis, mine, mineTurned);
         };
-        visit(doc.root, true);
+        visit(doc.root, true, UI_IDENTITY, false);
         return hit;
     }
 }

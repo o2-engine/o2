@@ -24,7 +24,7 @@ namespace Editor
                   { "aiText", "promptGen", "textEdit", "textConcat" } },
                 { "gameUi", "Game UI",
                   "Game interface: a mockup to sprites and a layout, a UI kit, text styles, the AI UI layout",
-                  { "imageToUi", "uiKit", "textStyle", "uiLayout" } },
+                  { "imageToUi", "uiKit", "textStyle", "textStyleExtract", "uiLayout" } },
                 { "av", "Audio & video",
                   "Voice, sound effects, music, video, and audio processing",
                   { "ttsSpeech", "sfxGen", "musicGen", "videoGen", "audioProcess" } },

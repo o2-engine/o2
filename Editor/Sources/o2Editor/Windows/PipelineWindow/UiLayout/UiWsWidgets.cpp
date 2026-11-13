@@ -407,6 +407,28 @@ namespace Editor
             return field;
         }
 
+        Ref<EditBox> LazyNumberField(const String& letter, std::optional<double> value, const String& placeholder,
+                                     const Function<void(std::optional<double>)>& onValue, std::optional<double> min /*= std::nullopt*/)
+        {
+            auto field = NumberField(letter, value, placeholder, {}, min);
+            field->onChanged = Function<void(const WString&)>();
+            // Escape puts the text back before the field is left, so what is applied then is what was there
+            field->onChangeCompleted = [onValue, min](const WString& text)
+            {
+                String s = (String)text;
+                if (s.Trimed(" \t").IsEmpty())
+                {
+                    if (onValue)
+                        onValue(std::nullopt);
+                    return;
+                }
+                double v = ParseNumber(s);
+                if (!std::isnan(v) && (!min || v >= *min) && onValue)
+                    onValue(v);
+            };
+            return field;
+        }
+
         void SetNumber(const Ref<EditBox>& field, std::optional<double> value)
         {
             if (!field || field->IsFocused())

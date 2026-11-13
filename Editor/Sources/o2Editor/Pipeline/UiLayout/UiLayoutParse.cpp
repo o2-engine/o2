@@ -222,6 +222,9 @@ namespace Editor::UiLayout
         if (JsTruthy(raw.Get("look")))
             el->look = SafeKey(JsText(raw.Get("look")), "look");
 
+        if (const Json* kit = raw.Get("kit"); kit && kit->IsString() && !JsTrim(kit->Str()).IsEmpty())
+            el->kit = JsTrim(kit->Str());
+
         if (kind == "text")
         {
             String text = JsTrim(JsText(raw.Get("text")));
@@ -237,6 +240,28 @@ namespace Editor::UiLayout
             if (!stroke.IsEmpty())
                 el->stroke = stroke;
         }
+        else
+        {
+            // A flat shape of one colour (the layout node's markup): no look, its fill and opacity instead
+            String fill = ColorOf(raw.Get("color"));
+            if (!fill.IsEmpty() && !JsTruthy(raw.Get("look")))
+                el->color = fill;
+
+            // Read only when it says something: null and '' are no opacity
+            const Json* opacity = raw.Get("opacity");
+            bool given = opacity && !opacity->IsNull() && !(opacity->IsString() && opacity->Str().IsEmpty());
+            double op = given ? opacity->ToJsNumber() : NAN;
+            if (std::isfinite(op))
+                el->opacity = Math::Max(0.0, Math::Min(1.0, op));
+        }
+
+        // Tilted on purpose (a scattered tile, a sticker): a few degrees and more count, less is a measuring wobble
+        const Json* rotation = raw.Get("rotation");
+        if (!rotation || rotation->IsNull())
+            rotation = raw.Get("angle");
+        double rot = rotation ? rotation->ToJsNumber() : NAN;
+        if (std::isfinite(rot) && std::abs(rot) >= 2 && std::abs(rot) <= 180)
+            el->rotation = JsRound(rot*10)/10;
 
         if (kind == "progress")
         {
@@ -417,6 +442,10 @@ namespace Editor::UiLayout
             return x1 > x0 && y1 > y0 && ((x1 - x0)*(y1 - y0))/Math::Max(1.0, area(inner)) >= 0.7;
         };
 
+        // A flat shape (a dimming layer: a colour, no artwork) lies under or over things; it holds nothing - as a parent it
+        // would pass its opacity on to a popup drawn over it
+        auto holds = [](const UiEl& c) { return c.kind != "text" && !(!c.color.IsEmpty() && c.look.IsEmpty() && c.kit.IsEmpty()); };
+
         for (int i = 0; i < doc.els.Count(); i++)
         {
             auto& e = doc.els[i];
@@ -428,14 +457,14 @@ namespace Editor::UiLayout
                 ids.TryGetValue(e->parent, parentIndex);
 
             Ref<UiEl> p = parentIndex >= 0 ? doc.els[parentIndex] : nullptr;
-            if (p && parentIndex < i && containsMost(p->box, e->box) && p->kind != "text")
+            if (p && parentIndex < i && containsMost(p->box, e->box) && holds(*p))
                 continue;
 
             Ref<UiEl> best;
             for (int j = 0; j < i; j++)
             {
                 auto& c = doc.els[j];
-                if (c->kind == "text" || c == e || area(c->box) <= area(e->box))
+                if (!holds(*c) || c == e || area(c->box) <= area(e->box))
                     continue;
                 if (!containsMost(c->box, e->box))
                     continue;

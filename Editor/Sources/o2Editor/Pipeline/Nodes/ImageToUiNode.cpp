@@ -29,6 +29,9 @@ namespace Editor
             mSchema.outputs = { Out("preview", PipelinePortType::Image), Out("layout", PipelinePortType::Text) };
             mSchema.hasPlay = true;
             mSchema.dynamicOutputs = true;
+            // The AI UI layout does what this node did, with a UI kit, and keeps the result as an editable layout (AssetsLine
+            // retired it the same way): offered in no menu; nodes already in pipelines load and run
+            mSchema.retired = true;
         }
 
         void InitNode(const Ref<PipelineNode>& node) const override

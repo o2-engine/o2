@@ -300,28 +300,46 @@ namespace Editor::PipelineImageOps
         return out;
     }
 
-    Ref<Bitmap> CropToContent(const Bitmap& srcIn, ContentMode mode, int pad /*= 0*/)
+    static bool ContentBoxOf(const Bitmap& src, ContentMode mode, int& minX, int& minY, int& maxX, int& maxY)
     {
-        auto src = EnsureRgba(Ref<Bitmap>(mmake<Bitmap>(srcIn)));
-        Vec2I size = src->GetSize();
-        int minX = size.x, minY = size.y, maxX = -1, maxY = -1;
+        Vec2I size = src.GetSize();
+        minX = size.x; minY = size.y; maxX = -1; maxY = -1;
         for (int y = 0; y < size.y; y++)
         {
             for (int x = 0; x < size.x; x++)
             {
-                const UInt8* p = Pixel(*src, x, y);
+                const UInt8* p = Pixel(src, x, y);
                 if (p[3] <= 16) continue;
                 if (mode == ContentMode::White && p[0] > 244 && p[1] > 244 && p[2] > 244) continue;
                 minX = Math::Min(minX, x); maxX = Math::Max(maxX, x);
                 minY = Math::Min(minY, y); maxY = Math::Max(maxY, y);
             }
         }
-        if (maxX < minX || maxY < minY)
+        return maxX >= minX && maxY >= minY;
+    }
+
+    Ref<Bitmap> CropToContent(const Bitmap& srcIn, ContentMode mode, int pad /*= 0*/)
+    {
+        auto src = EnsureRgba(Ref<Bitmap>(mmake<Bitmap>(srcIn)));
+        Vec2I size = src->GetSize();
+        int minX, minY, maxX, maxY;
+        if (!ContentBoxOf(*src, mode, minX, minY, maxX, maxY))
             return src;
 
         minX = Math::Max(0, minX - pad); minY = Math::Max(0, minY - pad);
         maxX = Math::Min(size.x - 1, maxX + pad); maxY = Math::Min(size.y - 1, maxY + pad);
         return CropPixels(*src, minX, minY, maxX - minX + 1, maxY - minY + 1);
+    }
+
+    bool ContentBox(const Bitmap& srcIn, ContentMode mode, int& left, int& top, int& width, int& height)
+    {
+        auto src = EnsureRgba(Ref<Bitmap>(mmake<Bitmap>(srcIn)));
+        int minX, minY, maxX, maxY;
+        if (!ContentBoxOf(*src, mode, minX, minY, maxX, maxY))
+            return false;
+
+        left = minX; top = minY; width = maxX - minX + 1; height = maxY - minY + 1;
+        return true;
     }
 
     Ref<Bitmap> Fit(const Bitmap& srcIn, const Vec2I& sizeIn)

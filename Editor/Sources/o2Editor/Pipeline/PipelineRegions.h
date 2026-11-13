@@ -112,5 +112,10 @@ namespace Editor
         // its crop. Returns the result unchanged when no scale is known
         String TagExtractPart(const PipelineNode& node, const String& portId, const String& sourcePng, const String& storedPng,
                               const String& outPng, bool raw);
+
+        // The scale of a finished part against its region of the source, when the part is clearly not at the scale its
+        // generation claims (nominal); none when it is, or when there is nothing to measure by
+        std::optional<double> MeasuredPartScale(const String& sourcePng, const PipelineExtractRegion& region, const String& partPng,
+                                                double nominal);
     }
 }

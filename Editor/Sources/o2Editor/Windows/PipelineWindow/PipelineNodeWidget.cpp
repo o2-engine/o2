@@ -154,6 +154,7 @@ namespace Editor
         if (t == "nanoBananaGen") return "ui/pipeline/node_imagegen.svg";
         if (t == "imageCrop") return "ui/pipeline/node_crop.svg";
         if (t == "textStyle") return "ui/pipeline/node_textstyle.svg";
+        if (t == "textStyleExtract") return "ui/pipeline/node_textstyleai.svg";
         if (t == "uiKit") return "ui/pipeline/node_uikit.svg";
         if (t == "uiLayout") return "ui/pipeline/node_uilayout.svg";
         if (t == "imageOutline" || t == "imageShadow" || t == "imageGradient" || t == "imageColor") return "ui/pipeline/node_effect.svg";
@@ -379,6 +380,13 @@ namespace Editor
         UpdateHeaderButtons();
         LayoutPorts();
         LayoutBody();
+    }
+
+    void PipelineNodeWidget::RefreshPorts()
+    {
+        PushEditorScopeOnStack scope;
+        BuildPorts();
+        LayoutPorts();
     }
 
     void PipelineNodeWidget::UpdateHeaderButtons()
@@ -678,11 +686,13 @@ namespace Editor
         {
             auto& view = mInputs[i];
 
-            // The body's rows carry the inputs: the marker sits on the left edge, the row names and removes it
+            // The body's rows carry the inputs: the marker sits on the left edge, the row names and removes it (the UI kit's
+            // cells carry theirs on their corners)
             Vec2F offset;
             if (inputsInBody)
             {
-                view.localPos = IsBodyPort(view.port.id, offset) ? Vec2F(0, bodyTop + offset.y) : Vec2F(0, bodyTop);
+                bool inCells = mBody->InputsInCells();
+                view.localPos = IsBodyPort(view.port.id, offset) ? Vec2F(inCells ? offset.x : 0.0f, bodyTop + offset.y) : Vec2F(0, bodyTop);
                 if (view.label)
                     view.label->enabled = false;
                 if (view.nameEdit)
@@ -815,7 +825,10 @@ namespace Editor
     {
         PushEditorScopeOnStack scope;
         if (mRuntime.state != "running" && mRuntime.state != "queued")
+        {
             mRuntime.portStates.Clear();
+            mRuntime.phases.Clear();
+        }
 
         UpdateHeaderButtons();
         if (mBody)
@@ -1100,6 +1113,30 @@ namespace Editor
             PipelineDraw::Circle(center, 5.5f, theme.cardSolid);
             PipelineDraw::Ring(center, 5.0f, 1.0f, hover ? theme.accent : theme.fg3);
         }
+    }
+
+    void PipelineNodeWidget::DrawOverlay()
+    {
+        if (mCulled || !mResEnabledInHierarchy || !mDetailed || !mBody)
+            return;
+
+        mBody->DrawOverlay();
+    }
+
+    bool PipelineNodeWidget::GetInputEntry(const String& portId, const RectF& cardRect, Vec2F& entry) const
+    {
+        if (!mBody || !mBody->InputsInCells())
+            return false;
+
+        for (auto& view : mInputs)
+        {
+            if (view.port.id == portId)
+            {
+                entry = Vec2F(cardRect.left, cardRect.top - view.localPos.y);
+                return true;
+            }
+        }
+        return false;
     }
 
     void PipelineNodeWidget::OnDragged(const Vec2F& position)

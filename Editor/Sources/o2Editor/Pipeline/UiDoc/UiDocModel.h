@@ -50,6 +50,8 @@ namespace Editor::UiDoc
         std::optional<double> w, h;
         std::optional<Box4>   margin;           // Margins to the parent's edges along stretched axes
         std::optional<double> grow;             // Inside a row / column: share of the free space along the main axis
+        std::optional<double> rotation;         // Turned about the centre of its box, degrees clockwise (UiDocRotate.h): drawn
+                                                // turned, its children with it; the layout of the boxes does not change
 
         // --- layout of the children ---
         std::optional<String> layout;           // row | column | grid

@@ -9,12 +9,16 @@
 #include "o2/Scene/UI/Widgets/EditBox.h"
 #include "o2/Utils/Editor/EditorScope.h"
 #include "o2/Utils/System/Time/Time.h"
+#include "o2Editor/Pipeline/PipelineExecutor.h"
 #include "o2Editor/Pipeline/PipelineSettings.h"
+#include "o2Editor/Pipeline/UiLayout/UiLayoutRunLog.h"
 #include "o2Editor/Pipeline/Providers/LocalAgentProvider.h"
 #include "o2Editor/Windows/PipelineWindow/PipelineEditor.h"
 #include "o2Editor/Windows/PipelineWindow/PipelineDraw.h"
 #include "o2Editor/Windows/PipelineWindow/PipelineModelPicker.h"
 #include "o2Editor/Windows/PipelineWindow/PipelineNodeBodyFactories.h"
+#include "o2Editor/Windows/PipelineWindow/UiLayout/UiWsPins.h"
+#include "o2Editor/Windows/PipelineWindow/UiLayout/UiWsRunActs.h"
 #include "o2Editor/Windows/PipelineWindow/UiLayout/UiWsSide.h"
 
 namespace Editor
@@ -194,7 +198,13 @@ namespace Editor
         PushEditorScopeOnStack scope;
         WeakRef<UiWsAgentTab> weak(this);
         mPrompt = UiWsControls::TextField("", "What to build or change, e.g. \"main menu: title, Play / Shop / Settings, coins top-right\" (Ctrl+Enter)",
-                                         true, {}, [weak](const String&) { if (auto self = weak.Lock()) self->SaveDraft(); });
+                                         true, [weak](const String&)
+                                         {
+                                             // A token typed or deleted renumbers the points (a deleted one goes)
+                                             if (auto self = weak.Lock(); self && self->ctx)
+                                                 UiWsPins::OnFieldChanged(*self->ctx, self->mPrompt.Get());
+                                         },
+                                         [weak](const String&) { if (auto self = weak.Lock()) self->SaveDraft(); });
         mPrompt->name = "prompt";
         if (auto text = mPrompt->GetTextDrawable())
             text->height = PipelineTheme::Size(12.5f);
@@ -222,7 +232,7 @@ namespace Editor
             return false;
 
         String prompt = (String)mPrompt->GetText();
-        if (prompt.Trimed(" \t\r\n").IsEmpty() || ctx->Busy() || !onSend)
+        if (!CanSend())
             return false;
 
         SaveDraft();
@@ -238,6 +248,41 @@ namespace Editor
             mOpen.Remove(step);
         else
             mOpen.Add(step);
+    }
+
+    void UiWsAgentTab::ToggleActs(int step)
+    {
+        if (mOpenActs.Contains(step))
+            mOpenActs.Remove(step);
+        else
+            mOpenActs.Add(step);
+    }
+
+    void UiWsAgentTab::PlacePin(double x, double y, int index)
+    {
+        if (!ctx)
+            return;
+        if (index < 0 && ctx->tab != "agent")
+        {
+            // The field is not on the screen: the token goes to the end of the request, the Agent tab opens
+            UiWsPins::Place(*ctx, nullptr, x, y);
+            ctx->SetUi("uiTab", Json("agent"));
+            UiWsControls::SetTextQuiet(mPrompt, ctx->draft);
+            mFocusCaret = WString(ctx->draft).Length();
+            return;
+        }
+        UiWsPins::Place(*ctx, mPrompt.Get(), x, y, index, mFieldHadFocus ? mPrompt->GetCaretPosition() : -1);
+        if (index < 0)
+            mFocusCaret = mPrompt->GetCaretPosition();
+    }
+
+    bool UiWsAgentTab::CanSend() const
+    {
+        if (!ctx || ctx->Busy() || !onSend)
+            return false;
+        bool typed = !String(mPrompt->GetText()).Trimed(" \t\r\n").IsEmpty();
+        bool fromReference = ctx->reference && ctx->current.root.children.empty();
+        return typed || fromReference;
     }
 
     void UiWsAgentTab::OnScrolled(float scroll)
@@ -265,12 +310,30 @@ namespace Editor
         }
 
         mLastPrompt = (String)mPrompt->GetText();
+        mFieldHadFocus = mFieldHadFocus || mPrompt->IsFocused();
+
+        // A point placed on the stage: the field takes the focus back once the click is over, to write about the point
+        if (mFocusCaret >= 0 && !o2Input.IsCursorDown())
+        {
+            int caret = mFocusCaret;
+            mFocusCaret = -1;
+            mPrompt->Focus();
+            mPrompt->SetCaretPosition(caret);
+        }
+        if (!ctx->onPin)
+        {
+            WeakRef<UiWsAgentTab> weak(this);
+            ctx->onPin = [weak](double x, double y, int index) { if (auto self = weak.Lock()) self->PlacePin(x, y, index); };
+        }
         PipelineControls::SetModelFieldValue(mModel, Ws::AgentModelOf(ctx->config), PipelineModelKind::Text);
         int steps = ctx->timeline.GetSteps().Count();
-        if (steps != mSeenSteps || ctx->Busy() != mSeenBusy)
+        UiAgentState::LiveRun live;
+        int runVersion = UiAgentState::GetRun(ctx->nodeId, live) ? live.version : -1;
+        if (steps != mSeenSteps || ctx->Busy() != mSeenBusy || (runVersion != mSeenRun && mOpenRows.IsEmpty()))
         {
             mSeenSteps = steps;
             mSeenBusy = ctx->Busy();
+            mSeenRun = runVersion;
             mStickToEnd = true;
         }
     }
@@ -316,6 +379,15 @@ namespace Editor
         const auto& steps = ctx->timeline.GetSteps();
         TextStyle body = Wrapped(12.5f, t.fg, 18.75f);
         auto visible = [&](float y0, float h) { return draw && y0 + h > top && y0 < bottom; };
+        UiWsRunActs::Frame acts;
+        acts.box = box;
+        acts.top = top;
+        acts.bottom = bottom;
+        acts.draw = draw;
+        acts.addHot = [this](const RectF& r, const String& id) { AddHot(r, id); };
+        acts.isHover = [this](const String& id) { return IsHover(id); };
+        auto editor = ctx->editor.Lock();
+        String workDir = editor ? PipelineExecutor::GetWorkPath(editor->GetPipelineId(), ctx->nodeId) : String();
 
         if (steps.IsEmpty() && !ctx->Busy())
         {
@@ -407,6 +479,38 @@ namespace Editor
                 y += th + 12;
             }
 
+            // What the run did: its numbers in a line, its acts folded under it
+            const Json* run = s.data.Get("run");
+            if (run && run->IsObject())
+            {
+                const Json* list = run->Get("acts");
+                int count = list ? list->Count() : 0;
+                bool unfolded = mOpenActs.Contains(i);
+                String line = String(unfolded ? "Hide the steps" : "How it was done") + " (" + (String)count + ")";
+                String summary = UiWsRunActs::RunSummary(*run);
+                String hot = "acts:" + (String)i;
+                y += 6;
+                if (visible(y, 16))
+                {
+                    float x = box.world.left + bx, cy = box.world.top - y - 8;
+                    UiWsDraw::Icon(unfolded ? "uiws_chevron_down" : "uiws_chevron_right", Vec2F(x + 5, cy), 9.0f, t.fg3);
+                    float lw = TextWidth(line, 10.5f, 600) + 2;
+                    Text(line, RectF(x + 14, cy + 8, x + 14 + lw, cy - 8), TextStyle(10.5f, 600, IsHover(hot) ? t.fg : t.fgDim));
+                    if (!summary.IsEmpty())
+                        Text(summary, RectF(x + 14 + lw + 8, cy + 8, x + bw, cy - 8), TextStyle(10.5f, 400, t.fg3));
+                    AddHot(box.R(bx, y, bw, 16), hot);
+                }
+                y += 16;
+                if (unfolded && count && run->Get("id"))
+                {
+                    String runId = run->Get("id")->ToJsString();
+                    acts.x = bx;
+                    acts.w = bw;
+                    y += 4;
+                    y += UiWsRunActs::Lay(acts, y, *list, UiLayout::RunLog::DirOf(workDir, runId), runId, mOpenRows, false);
+                }
+            }
+
             // The summary of the edits: the chips, their count, the failed ones; folded
             y += 6;
             auto& errs = ctx->timeline.ErrorsOf(i + 1);
@@ -457,14 +561,53 @@ namespace Editor
 
         if (ctx->Busy())
         {
+            // The request being worked on, then what the run is doing: its acts as they come, and Stop
+            UiAgentState::LiveRun live;
+            bool hasRun = UiAgentState::GetRun(ctx->nodeId, live);
+            if (hasRun && !live.prompt.IsEmpty())
+            {
+                float maxW = (W - 24)*0.86f - 22;
+                float promptW = Math::Min(maxW, TextWidth(live.prompt, 12.5f) + 2);
+                float promptH = TextHeight(live.prompt, promptW, body);
+                if (visible(y, promptH + 14))
+                {
+                    RectF bubble = box.R(W - 12 - promptW - 22, y, promptW + 22, promptH + 14);
+                    PipelineDraw::Corners corners(12.0f);
+                    corners.rb = 4.0f;
+                    PipelineDraw::Fill(bubble, corners, t.accentSoft);
+                    Text(live.prompt, RectF(bubble.left + 11, bubble.top - 7, bubble.right - 11, bubble.bottom + 5), body);
+                }
+                y += promptH + 14 + 10;
+            }
+            String now = hasRun ? UiWsRunActs::RunNow(live.acts, live.startedMs, (double)UiDoc::NowMs()) : String("The agent is working\xE2\x80\xA6");
+            bool stopping = UiAgentState::IsStopRequested(ctx->nodeId);
+            String stop = stopping ? String("Stopping\xE2\x80\xA6") : String("Stop");
+            float stopW = TextWidth(stop, 11.5f, 500) + 20;
             if (visible(y, 22))
             {
                 float pulse = 0.55f + 0.45f*std::sin(o2Time.GetApplicationTime()*5.2f);
                 Fill(box.R(12, y + 1, 22, 22), 7.0f, A(t.accentSoft, pulse));
                 UiWsDraw::Icon("uiws_sparkle", box.P(12 + 11, y + 12), 12.0f, A(t.accent, pulse));
-                Text("The agent is working\xE2\x80\xA6", box.R(12 + 31, y + 2, W - 55, 18), TextStyle(12.5f, 400, t.fgDim));
+                Text(now, box.R(12 + 31, y + 2, W - 55 - stopW - 8, 18), TextStyle(12.5f, 400, t.fgDim));
+                if (hasRun)
+                {
+                    RectF r = box.R(W - 12 - stopW, y, stopW, 22);
+                    Fill(r, 6.0f, IsHover("stop") && !stopping ? t.active : t.field);
+                    Border(r, 6.0f, t.line);
+                    Text(stop, r, TextStyle(11.5f, 500, stopping ? t.fg3 : t.fg, HorAlign::Middle));
+                    if (!stopping)
+                        AddHot(r, "stop");
+                }
             }
-            y += 22 + 10;
+            y += 22 + 8;
+            if (hasRun && live.acts.Count())
+            {
+                acts.x = 12 + 31;
+                acts.w = W - 12 - acts.x;
+                y += UiWsRunActs::Lay(acts, y, live.acts, live.dir, live.runId, mOpenRows, true) + 10;
+            }
+            else
+                y += 2;
         }
 
         String error = UiAgentState::GetError(ctx->nodeId);
@@ -511,7 +654,7 @@ namespace Editor
 
         // The compose area at the bottom
         bool context = !ctx->selected.IsEmpty() && UiDoc::FindNode(ctx->Doc(), ctx->selected);
-        float composeH = 12 + (context ? 22 + 6 : 0) + 70 + 6 + 28 + 12;
+        float composeH = 12 + (ctx->pinning ? 16 + 6 : 0) + (context ? 22 + 6 : 0) + 70 + 6 + 28 + 12;
         float composeTop = H - composeH;
         Line(box.P(0, composeTop + 0.5f), box.P(W, composeTop + 0.5f), t.line);
 
@@ -527,6 +670,12 @@ namespace Editor
         o2Render.DisableScissorTest();
 
         float cy = composeTop + 12;
+        if (ctx->pinning)
+        {
+            String hint = "Click a place on the screen: the point goes into the request's text \xC2\xB7 Esc to finish";
+            Text(hint, box.R(12, cy, W - 24, 16), TextStyle(11.0f, 400, t.accent));
+            cy += 16 + 6;
+        }
         if (context)
         {
             const UiDoc::UiNode* n = UiDoc::FindNode(ctx->Doc(), ctx->selected);
@@ -552,10 +701,19 @@ namespace Editor
         *mPrompt->layout = WidgetLayout(Vec2F(0, 1), Vec2F(1, 1), Vec2F(12, -(cy + 70)), Vec2F(-12, -cy));
         cy += 70 + 6;
         float sendW = 12 + 14 + 6 + TextWidth("Send", 12.0f, 600) + 12;
-        *mModel->layout = WidgetLayout(Vec2F(0, 1), Vec2F(1, 1), Vec2F(12, -(cy + 28)), Vec2F(-(12 + sendW + 6 + 28 + 6), -cy));
+        *mModel->layout = WidgetLayout(Vec2F(0, 1), Vec2F(1, 1), Vec2F(12, -(cy + 28)), Vec2F(-(12 + sendW + 6 + 28 + 6 + 28 + 6), -cy));
+
+        // The point tool: a numbered pin, raised while it is on
+        RectF pin = box.R(W - 12 - sendW - 6 - 28 - 6 - 28, cy, 28, 28);
+        Fill(pin, 7.0f, ctx->pinning ? t.accentSoft : IsHover("pin") ? t.active : t.field);
+        Border(pin, 7.0f, ctx->pinning ? A(t.accent, 0.6f) : t.line);
+        UiWsDraw::Circle(pin.Center(), 7.5f, Color4(255, 45, 111, 255));
+        Text(ctx->points.IsEmpty() ? String("1") : (String)ctx->points.Count(), RectF(pin.left, pin.top, pin.right, pin.bottom),
+             TextStyle(9.5f, 700, Color4::White(), HorAlign::Middle));
+        AddHot(pin, "pin");
+
         Tool(box.R(W - 12 - sendW - 6 - 28, cy, 28, 28), "uiws_review", "review", ctx->review, true, 15.0f);
-        bool canSend = !String(mPrompt->GetText()).Trimed(" \t\r\n").IsEmpty() && !ctx->Busy() && onSend;
-        Button(box.R(W - 12 - sendW, cy, sendW, 28), "Send", "send", true, canSend, "uiws_send");
+        Button(box.R(W - 12 - sendW, cy, sendW, 28), "Send", "send", true, CanSend(), "uiws_send");
         (void)me;
     }
 
@@ -566,6 +724,19 @@ namespace Editor
 
         if (id == "send")
             Send();
+        else if (id == "pin")
+            ctx->pinning = !ctx->pinning;
+        else if (id == "stop")
+            UiAgentState::RequestStop(ctx->nodeId);
+        else if (id.StartsWith("acts:"))
+            ToggleActs(atoi(id.SubStr(5).Data()));
+        else if (id.StartsWith("act:"))
+        {
+            if (mOpenRows.Contains(id))
+                mOpenRows.Remove(id);
+            else
+                mOpenRows.Add(id);
+        }
         else if (id == "review")
             ctx->SetUi("agentReview", Json(!ctx->review));
         else if (id == "unselect")

@@ -157,6 +157,10 @@ namespace Editor::UiDoc
         // Composites another canvas of the same size over this one, faded
         void Composite(const UiCanvas& layer, float opacity = 1);
 
+        // Composites another canvas of the same size turned by deg degrees (clockwise, y down) about centre: the layer's point
+        // layerCentre lands on centre, sampled bilinearly, faded
+        void CompositeTurned(const UiCanvas& layer, double deg, const UiPt& centre, const UiPt& layerCentre, float opacity = 1);
+
         // Composites a premultiplied RGBA block (w x h) at (x, y)
         void CompositeBlock(const std::vector<float>& block, int bw, int bh, int x, int y, float opacity = 1);
 

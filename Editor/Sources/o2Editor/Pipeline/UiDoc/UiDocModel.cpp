@@ -3,6 +3,7 @@
 
 #include <cmath>
 
+#include "o2Editor/Pipeline/UiDoc/UiDocRotate.h"
 #include "o2Editor/Pipeline/UiDoc/UiDocFp.h"
 
 namespace Editor::UiDoc
@@ -16,7 +17,7 @@ namespace Editor::UiDoc
 
     const Vector<String>& NodeKeys()
     {
-        static const Vector<String> keys = { "anchor", "x", "y", "w", "h", "margin", "grow",
+        static const Vector<String> keys = { "anchor", "x", "y", "w", "h", "margin", "grow", "rotation",
                                              "layout", "gap", "gapY", "pad", "align", "justify", "cols", "cellW", "cellH",
                                              "kit", "variant", "style", "color", "opacity", "visible", "fit",
                                              "textAlign", "fontSize", "textColor", "value", "on", "placeholder", "note", "text" };
@@ -47,6 +48,7 @@ namespace Editor::UiDoc
             else if (k == "h") r.d = &n.h;
             else if (k == "margin") r.b = &n.margin;
             else if (k == "grow") r.d = &n.grow;
+            else if (k == "rotation") r.d = &n.rotation;
             else if (k == "layout") r.s = &n.layout;
             else if (k == "gap") r.d = &n.gap;
             else if (k == "gapY") r.d = &n.gapY;
@@ -487,6 +489,13 @@ namespace Editor::UiDoc
             out = Box4ToJson(*b);
             return true;
         }
+        if (k == "rotation")
+        {
+            auto turn = CleanTurn(v);
+            if (!turn) return false;
+            out = Json(*turn);
+            return true;
+        }
         if (k == "layout")
         {
             String s = lowerText();
@@ -748,7 +757,20 @@ namespace Editor::UiDoc
             src["text"] = label;
         }
 
-        static const Vector<String> rootSkipped = { "anchor", "x", "y", "w", "h", "margin", "grow" };
+        // rotation = rot ?? angle ?? rotate (only when no rotation key at all, as `src.rotation === undefined` reads)
+        if (!src.Has("rotation"))
+        {
+            for (const char* alias : { "rot", "angle", "rotate" })
+            {
+                if (!JsNullish(JsGet(src, alias)))
+                {
+                    src["rotation"] = copyOf(alias);
+                    break;
+                }
+            }
+        }
+
+        static const Vector<String> rootSkipped = { "anchor", "x", "y", "w", "h", "margin", "grow", "rotation" };
         for (auto& key : NodeKeys())
         {
             if (isRoot && rootSkipped.Contains(key))

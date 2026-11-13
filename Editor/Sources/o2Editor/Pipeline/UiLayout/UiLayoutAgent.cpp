@@ -493,6 +493,11 @@ namespace Editor::UiLayout
             args.Add("--revise");
             args.Add(run.revise);
         }
+        if (!run.seed.IsEmpty())
+        {
+            args.Add("--seed");
+            args.Add(run.seedFile.IsEmpty() ? Joined(run.workDir, "seed-ui_structure.json") : run.seedFile);
+        }
         return args;
     }
 
@@ -591,6 +596,16 @@ namespace Editor::UiLayout
         {
             res.failure = "imageToUi: no Python 3 found - install Python 3 with Pillow and numpy, or set it in the pipeline settings";
             co_return res;
+        }
+
+        if (!run.seed.IsEmpty())
+        {
+            String seedFile = run.seedFile.IsEmpty() ? Joined(run.workDir, "seed-ui_structure.json") : run.seedFile;
+            if (!PipelineUtils::WriteFileBytes(seedFile, run.seed))
+            {
+                res.failure = "imageToUi: cannot write the first draft " + seedFile;
+                co_return res;
+            }
         }
 
         Vector<String> args = AgentArguments(home, run);
@@ -696,6 +711,8 @@ namespace Editor::UiLayout
                     break;
             }
 
+            if (run.onTick)
+                run.onTick();
             co_await WaitNextFrame();
         }
 

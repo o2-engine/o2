@@ -1,6 +1,7 @@
 #pragma once
 
 #include "o2Editor/Windows/PipelineWindow/UiLayout/UiWsPickers.h"
+#include "o2Editor/Windows/PipelineWindow/UiLayout/UiWsStylePicker.h"
 
 namespace Editor
 {
@@ -10,8 +11,11 @@ namespace Editor
     // pictures with ↔ / ↕ for stretched axes, the block keeps its place, Alt+click moves it to the anchor
     // too), offsets / nudge, size, margins, grow, the look (kit graphic picker with thumbnails, variant,
     // tint, fit), opacity, visibility, the children's layout (gap, padding, align, justify, the grid's
-    // cells), the content (text, placeholder, text style, align, font size and colour, value, on) and the
-    // note; for the screen: its name, size, DPI, "same as the reference", backdrop and colour. Number pairs
+    // cells), the content (text, placeholder, the text style picked from previews, align, font size and
+    // colour, value, on) and the note; for the screen: a notice while it is in older units with the step that
+    // brings it to its device, the device (the kit's, read-only), its name, size and where the size comes
+    // from, the DPI (the device's once in its pixels, read-only), "same as the reference", "as the kit's
+    // device", backdrop and colour. Number pairs
     // carry their letter inside the field, colours their hex. Every change is a hand action (typing into
     // one field folds within 4 s)
     // -----------------------------------------------------------------------------------------------
@@ -52,6 +56,7 @@ namespace Editor
         Ref<UiWsPopup>        mPopup;
         Ref<UiWsOptionsPanel> mOptions;
         Ref<UiWsKitGridPanel> mKitGrid;
+        Ref<UiWsStyleListPanel> mStyles; // The text style picker's list
         String                mPopupFor;
 
     protected:
@@ -78,6 +83,17 @@ namespace Editor
 
         // Opens the kit graphic picker for a key (kit)
         void OpenKitGrid(const RectF& anchor, const String& current);
+
+        // Opens the text style picker's list for the shown block, right-aligned under the button
+        void OpenStyles(const RectF& anchor);
+
+        // Draws the screen's own rows of the root inspector (UiWsInspectorRoot.cpp) from y (the first row's top), moving y past
+        // the last row: the older-units notice, the device, the size and where it comes from, the DPI, the two ways to set
+        // the design
+        void DrawRootScreen(const UiWsDraw::Box& box, float& y);
+
+        // A click on one of the screen's rows; true when it was one (bring, asref, askit)
+        bool OnRootClick(const String& id);
 
         // A slider's value at a world x
         void SlideTo(float x);

@@ -11,6 +11,7 @@ namespace Editor
     {
         const char* dpiKey = "AssetsLine:dpi";
         const char* scaleKey = "AssetsLine:scale";
+        const char* sourceKey = "AssetsLine:source";
 
         static const unsigned char signature[8] = { 137, 80, 78, 71, 13, 10, 26, 10 };
 
@@ -211,13 +212,39 @@ namespace Editor
             return PositiveNumber(ReadText(png), scaleKey);
         }
 
-        String WithDpi(const String& png, std::optional<double> dpi, std::optional<double> scale)
+        bool ReadSource(const String& png, int& width, int& height)
+        {
+            auto text = ReadText(png);
+            auto it = text.find(sourceKey);
+            if (it == text.end())
+                return false;
+
+            const std::string& s = it->second;
+            size_t x = s.find('x');
+            if (x == std::string::npos || x == 0 || x + 1 >= s.size())
+                return false;
+            for (size_t i = 0; i < s.size(); i++)
+            {
+                if (i != x && !(s[i] >= '0' && s[i] <= '9'))
+                    return false;
+            }
+            double w = std::stod(s.substr(0, x)), h = std::stod(s.substr(x + 1));
+            if (!(w > 0 && h > 0) || w > 1e9 || h > 1e9)
+                return false;
+            width = (int)w;
+            height = (int)h;
+            return true;
+        }
+
+        String WithDpi(const String& png, std::optional<double> dpi, std::optional<double> scale, int sourceW, int sourceH)
         {
             Vector<Pair<String, String>> entries;
             bool withDpi = dpi && *dpi != 0.0;
             entries.Add(Pair<String, String>(dpiKey, withDpi ? UiDoc::JsNum(UiDoc::JsRound(*dpi * 10.0) / 10.0) : String()));
             if (scale)
                 entries.Add(Pair<String, String>(scaleKey, UiDoc::JsNum(UiDoc::JsRound(*scale * 10000.0) / 10000.0)));
+            if (sourceW > 0 && sourceH > 0)
+                entries.Add(Pair<String, String>(sourceKey, UiDoc::JsNum(sourceW) + "x" + UiDoc::JsNum(sourceH)));
 
             return WriteText(png, entries, withDpi ? dpi : std::nullopt);
         }
