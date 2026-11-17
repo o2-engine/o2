@@ -257,6 +257,12 @@ namespace o2
         // Returns world point in the axis-aligned layout space (inverse of GetLayoutToWorldBasis)
         Vec2F WorldToLayoutPoint(const Vec2F& worldPoint) const;
 
+        // Returns the world axis-aligned rect a rect of the layout space covers: what a scissor of it clips on screen
+        RectF LayoutToWorldRect(const RectF& rect) const;
+
+        // Returns a layout space offset in the world: what a move of the layout rect moves on screen
+        Vec2F LayoutToWorldVector(const Vec2F& vector) const;
+
         // Returns true when the world transform is the plain layout rect: no rotation, scale or shear in the chain
         bool IsWorldTransformPlain() const;
 
@@ -473,6 +479,8 @@ CLASS_METHODS_META(o2::WidgetLayout)
     FUNCTION().PUBLIC().SIGNATURE(Basis, GetLayoutToWorldBasis);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsPointInside, const Vec2F&);
     FUNCTION().PUBLIC().SIGNATURE(Vec2F, WorldToLayoutPoint, const Vec2F&);
+    FUNCTION().PUBLIC().SIGNATURE(RectF, LayoutToWorldRect, const RectF&);
+    FUNCTION().PUBLIC().SIGNATURE(Vec2F, LayoutToWorldVector, const Vec2F&);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsWorldTransformPlain);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(void, SetSceneLayoutsRounding, bool);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(bool, IsSceneLayoutsRounding);

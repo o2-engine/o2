@@ -585,13 +585,18 @@ namespace o2
             auto owner = mOwnerWidget.Lock();
             if (owner && !owner->layout->IsWorldTransformPlain())
             {
-                mDrawable->SetBasis(Basis(mAbsolutePosition)*owner->layout->GetLayoutToWorldBasis());
+                // the widget's scale magnifies what the layer draws (letters, corners of a sliced sprite), the
+                // drawable keeps the layout size
+                Basis layoutToWorld = owner->layout->GetLayoutToWorldBasis();
+                mDrawable->SetScale2D(Vec2F(layoutToWorld.xv.Length(), layoutToWorld.yv.Length()));
+                mDrawable->SetBasis(Basis(mAbsolutePosition)*layoutToWorld);
                 mDrawableTransformed = true;
             }
             else
             {
                 if (mDrawableTransformed)
                 {
+                    mDrawable->SetScale2D(Vec2F(1.0f, 1.0f));
                     mDrawable->SetAngle(0.0f);
                     mDrawable->SetShear(Vec3F());
                     mDrawableTransformed = false;

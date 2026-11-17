@@ -139,7 +139,7 @@ namespace o2
 
         IDrawable::OnDrawn();
 
-        o2Render.EnableScissorTest(mAbsoluteClipArea);
+        o2Render.EnableScissorTest(layout->LayoutToWorldRect(mAbsoluteClipArea));
 
         DrawInheritedDepthChildren();
 
@@ -513,9 +513,11 @@ namespace o2
         mScrollPos += delta;
         SetChildrenWorldRect(GetLayoutData().mWorldBox.ToRect());
 
-        Vec2F widgetsMove(-delta.x, delta.y);
+        // children bounds are world footprints: the move and the clip area go to the world too
+        Vec2F widgetsMove = layout->LayoutToWorldVector(Vec2F(-delta.x, delta.y));
+        RectF clipArea = layout->LayoutToWorldRect(mAbsoluteClipArea);
         for (auto& child : mChildWidgets)
-            child->MoveAndCheckClipping(widgetsMove, mAbsoluteClipArea);
+            child->MoveAndCheckClipping(widgetsMove, clipArea);
 
         UpdateLayersLayouts();
         UpdateScrollParams();
@@ -523,15 +525,16 @@ namespace o2
 
     void ScrollArea::CheckChildrenClipping()
     {
+        RectF clipArea = layout->LayoutToWorldRect(mAbsoluteClipArea);
         for (auto& child : mChildWidgets)
-            child->CheckClipping(mAbsoluteClipArea);
+            child->CheckClipping(clipArea);
     }
 
     void ScrollArea::CheckClipping(const RectF& clipArea)
     {
         mIsClipped = !mBoundsWithChilds.IsIntersects(clipArea);
 
-        RectF newClipArea = clipArea.GetIntersection(mAbsoluteClipArea);
+        RectF newClipArea = clipArea.GetIntersection(layout->LayoutToWorldRect(mAbsoluteClipArea));
 
         for (auto& child : mChildWidgets)
             child->CheckClipping(newClipArea);

@@ -527,32 +527,37 @@ namespace o2
 
         Vec2F o = transform.origin;
 
-        Vec2F r1 = xv*(float)mSlices.left;
-        Vec2F r2 = xv*(sz.x - (float)mSlices.right);
+        // a scaled sprite magnifies its corners too; its size alone stretches the middle
+        Vec2F sliceScale(Math::Max(Math::Abs(mScale.x), FLT_EPSILON), Math::Max(Math::Abs(mScale.y), FLT_EPSILON));
+        float left = mSlices.left*sliceScale.x, right = mSlices.right*sliceScale.x;
+        float bottom = mSlices.bottom*sliceScale.y, top = mSlices.top*sliceScale.y;
+
+        Vec2F r1 = xv*left;
+        Vec2F r2 = xv*(sz.x - right);
         Vec2F r3 = transform.xv;
 
-        Vec2F t1 = yv*(float)mSlices.bottom;
-        Vec2F t2 = yv*(sz.y - (float)mSlices.top);
+        Vec2F t1 = yv*bottom;
+        Vec2F t2 = yv*(sz.y - top);
         Vec2F t3 = transform.yv;
 
-        if (mSlices.left + mSlices.right > sz.x)
+        if (left + right > sz.x)
         {
-            float d = (mSlices.left + mSlices.right - sz.x)*0.5f;
+            float d = (left + right - sz.x)*0.5f;
             r1 -= xv*d;
             r2 += xv*d;
 
-            u1 = (mSlices.left - d)*invTexSrcSize.x;
-            u2 = (texSrcSize.x - mSlices.right + d)*invTexSrcSize.x;
+            u1 = (mSlices.left - d/sliceScale.x)*invTexSrcSize.x;
+            u2 = (texSrcSize.x - mSlices.right + d/sliceScale.x)*invTexSrcSize.x;
         }
 
-        if (mSlices.top + mSlices.bottom > sz.y)
+        if (top + bottom > sz.y)
         {
-            float d = (mSlices.top + mSlices.bottom - sz.y)*0.5f;
+            float d = (top + bottom - sz.y)*0.5f;
             t1 -= yv*d;
             t2 += yv*d;
 
-            v1 = (mSlices.top - d)*invTexSrcSize.y;
-            v2 = (texSrcSize.y - mSlices.bottom + d)*invTexSrcSize.y;
+            v1 = (mSlices.top - d/sliceScale.y)*invTexSrcSize.y;
+            v2 = (texSrcSize.y - mSlices.bottom + d/sliceScale.y)*invTexSrcSize.y;
         }
 
         Vertex* verts = mMesh.GetVertices<Vertex>();

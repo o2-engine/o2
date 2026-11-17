@@ -155,7 +155,10 @@ namespace o2
         }
         else
         {
-            float pixelDensity = QuantizePixelDensity(Math::Max(Math::Abs(viewPixelScale.x), Math::Abs(viewPixelScale.y)));
+            // a magnified text is rasterized for the pixels its letters cover
+            Basis transform = CalculateTextBasis();
+            float textScale = Math::Sqrt(Math::Abs(transform.xv.x*transform.yv.y - transform.xv.y*transform.yv.x));
+            float pixelDensity = QuantizePixelDensity(Math::Max(Math::Abs(viewPixelScale.x), Math::Abs(viewPixelScale.y))*textScale);
             if (pixelDensity != GetPixelDensity() || mGlyphsMesh)
             {
                 mPixelDensity = pixelDensity;

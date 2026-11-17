@@ -700,6 +700,32 @@ namespace o2
         return basis.Inverted().Transform(worldPoint);
     }
 
+    RectF WidgetLayout::LayoutToWorldRect(const RectF& rect) const
+    {
+        if (IsWorldTransformPlain())
+            return rect;
+
+        Basis basis = GetLayoutToWorldBasis();
+        Vec2F corners[4] = { basis.Transform(rect.LeftBottom()), basis.Transform(rect.LeftTop()),
+                             basis.Transform(rect.RightTop()), basis.Transform(rect.RightBottom()) };
+        Vec2F min = corners[0], max = corners[0];
+        for (auto& corner : corners)
+        {
+            min = Vec2F(Math::Min(min.x, corner.x), Math::Min(min.y, corner.y));
+            max = Vec2F(Math::Max(max.x, corner.x), Math::Max(max.y, corner.y));
+        }
+        return RectF(min.x, max.y, max.x, min.y);
+    }
+
+    Vec2F WidgetLayout::LayoutToWorldVector(const Vec2F& vector) const
+    {
+        if (IsWorldTransformPlain())
+            return vector;
+
+        Basis basis = GetLayoutToWorldBasis();
+        return basis.xv*vector.x + basis.yv*vector.y;
+    }
+
     bool WidgetLayout::IsPointInside(const Vec2F& point) const
     {
         return mWorldBox.ToRect().IsInside(WorldToLayoutPoint(point));

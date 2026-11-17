@@ -1,10 +1,16 @@
 #include "o2/stdafx.h"
 #include <gtest/gtest.h>
 
+#include "o2/Render/Camera.h"
+#include "o2/Render/Render.h"
 #include "o2/Render/Sprite.h"
+#include "o2/Render/Text.h"
+#include "o2/Render/VectorFont.h"
+#include "o2/Assets/Assets.h"
 #include "o2/Scene/UI/Widget.h"
 #include "o2/Scene/UI/WidgetLayer.h"
 #include "o2/Scene/UI/WidgetLayout.h"
+#include "o2/Scene/UI/Widgets/ScrollArea.h"
 #include "Scene/SceneTestHelpers.h"
 #include "Scene/UI/UITestHelpers.h"
 
@@ -37,6 +43,12 @@ namespace
         TickAndUpdateLayout(2);
         return rig;
     }
+
+    // A sprite with its mesh open to the checks
+    struct SpriteProbe: public Sprite
+    {
+        const Mesh& GetMeshForTest() const { return mMesh; }
+    };
 
     void ExpectNear(const Vec2F& a, const Vec2F& b, float eps, const char* what)
     {
@@ -218,4 +230,127 @@ TEST(WidgetTransform, ScaledParentHitTestCoversDrawnArea)
     rig.root->layout->SetScale(Vec3F(0.0f, 2.0f, 1.0f));
     TickAndUpdateLayout(2);
     EXPECT_FALSE(rig.child->layout->IsPointInside(Vec2F(0.0f, 0.0f)));
+}
+
+// A scroll area under a scaled parent clips where it is drawn, not to its unscaled layout rect
+TEST(WidgetTransform, ScaledParentScrollAreaClipsItsDrawnArea)
+{
+    SceneCleanGuard guard;
+    auto root = MakeWidget("root");
+    *root->layout = WidgetLayout::Based(BaseCorner::Center, Vec2F(200, 200));
+    root->layout->SetPivot(Vec2F(0.5f, 0.5f));
+    root->layout->SetScale(Vec3F(2.0f, 2.0f, 1.0f));
+
+    auto area = mmake<ScrollArea>();
+    area->name = "area";
+    root->AddChild(area);
+    *area->layout = WidgetLayout::Based(BaseCorner::Center, Vec2F(100, 50));
+    TickAndUpdateLayout(2);
+
+    RectF world = area->layout->LayoutToWorldRect(area->layout->GetWorldRect());
+    ExpectNear(world.LeftBottom(), Vec2F(-100, -50), 0.1f, "left bottom");
+    ExpectNear(world.RightTop(), Vec2F(100, 50), 0.1f, "right top");
+
+    o2Render.Begin();
+    o2Render.SetCamera(Camera());
+    root->Draw();
+    auto infos = o2Render.GetScissorInfos();
+    o2Render.End();
+
+    ASSERT_FALSE(infos.IsEmpty());
+    RectI clip = infos[0].scissorRect;
+    EXPECT_EQ(clip.Width(), 200);
+    EXPECT_EQ(clip.Height(), 100);
+
+    // a turned widget clips its bounding box
+    root->layout->SetScale(Vec3F(1.0f, 1.0f, 1.0f));
+    area->layout->SetPivot(Vec2F(0.5f, 0.5f));
+    area->layout->SetAngleDegrees(90.0f);
+    TickAndUpdateLayout(2);
+    world = area->layout->LayoutToWorldRect(area->layout->GetWorldRect());
+    EXPECT_NEAR(world.Width(), 50.0f, 0.1f);
+    EXPECT_NEAR(world.Height(), 100.0f, 0.1f);
+}
+
+// Under a scaled parent a child scrolled into a scroll area's view is laid out there and takes clicks
+TEST(WidgetTransform, ScaledParentScrollAreaBringsAChildIntoView)
+{
+    SceneCleanGuard guard;
+    auto root = MakeWidget("root");
+    *root->layout = WidgetLayout::Based(BaseCorner::Center, Vec2F(200, 200));
+    root->layout->SetPivot(Vec2F(0.5f, 0.5f));
+    root->layout->SetScale(Vec3F(2.0f, 2.0f, 1.0f));
+
+    auto area = mmake<ScrollArea>();
+    area->name = "area";
+    root->AddChild(area);
+    *area->layout = WidgetLayout::Based(BaseCorner::Center, Vec2F(100, 50));
+
+    // a strip three views wide: the last item starts outside the view
+    auto item = MakeChildWidget(area, "item");
+    *item->layout = WidgetLayout::Based(BaseCorner::LeftBottom, Vec2F(40, 50), Vec2F(250, 0));
+    item->AddLayer("back", mmake<Sprite>(Color4::White()), Layout::BothStretch());
+    TickAndUpdateLayout(3);
+    EXPECT_FALSE(item->layout->IsPointInside(Vec2F(0, 0)));
+
+    // scrolled to the end: the item takes the right edge of the view, 10..50 of the layout, 20..100 on screen. The scroll
+    // moves the children itself, nothing else lays them out again
+    area->SetScroll(Vec2F(190, 0));
+
+    RectF rect = item->layout->LayoutToWorldRect(item->layout->GetWorldRect());
+    ExpectNear(rect.Center(), Vec2F(60, 0), 0.5f, "item center");
+    EXPECT_NEAR(rect.Width(), 80.0f, 0.5f);
+    EXPECT_TRUE(item->layout->IsPointInside(Vec2F(60, 0)));
+
+    // the hit test also asks the scissor it was drawn with
+    o2Render.Begin();
+    o2Render.SetCamera(Camera());
+    root->Draw();
+    o2Render.End();
+    EXPECT_TRUE(item->IsUnderPoint(Vec2F(60, 0)));
+    EXPECT_FALSE(item->IsUnderPoint(Vec2F(110, 0))) << "past the view's right edge";
+}
+
+// A scaled parent magnifies what the layers draw: the drawable keeps the layout size and gets the scale, so a text lays its
+// words out as before and its letters grow, a sliced sprite's corners grow with it
+TEST(WidgetTransform, ScaledParentMagnifiesTextAndSlicedCorners)
+{
+    SceneCleanGuard guard;
+    auto rig = MakeRig();
+    auto font = mmake<VectorFont>(o2Assets.GetBuiltAssetsPath() + "debugFont.ttf");
+    auto text = mmake<Text>(Ref<Font>(font));
+    text->SetHeight(14);
+    text->SetText("Hamburgefonstiv quick fox");
+    rig.child->AddLayer("text", text, Layout::BothStretch());
+    TickAndUpdateLayout(2);
+    Vec2F plainSize = text->GetRealSize();
+
+    rig.root->layout->SetPivot(Vec2F(0.5f, 0.5f));
+    rig.root->layout->SetScale(Vec3F(2.0f, 2.0f, 1.0f));
+    TickAndUpdateLayout(2);
+
+    for (auto& drawable : { DynamicCast<IRectDrawable>(text), rig.back->GetDrawable() })
+    {
+        ExpectNear(drawable->GetScale2D(), Vec2F(2, 2), 0.001f, "scale");
+        ExpectNear(drawable->GetSize2D(), Vec2F(100, 50), 0.01f, "layout size");
+        EXPECT_NEAR(drawable->GetBasis().xv.Length(), 200.0f, 0.1f);
+    }
+    ExpectNear(text->GetRealSize(), plainSize, 0.5f, "the words keep their layout");
+
+    // back to a plain parent: no scale left on the layers
+    rig.root->layout->SetScale(Vec3F(1.0f, 1.0f, 1.0f));
+    TickAndUpdateLayout(2);
+    ExpectNear(text->GetScale2D(), Vec2F(1, 1), 0.001f, "scale reset");
+    ExpectNear(text->GetSize2D(), Vec2F(100, 50), 0.01f, "size after reset");
+
+    // a 10px corner of a sliced sprite twice as large is 20px wide; the middle takes the rest
+    SpriteProbe sliced;
+    sliced.SetMode(SpriteMode::Sliced);
+    sliced.SetSliceBorder(BorderI(10, 10, 10, 10));
+    sliced.SetScale2D(Vec2F(2.0f, 2.0f));
+    sliced.SetSize2D(Vec2F(100, 50));
+    sliced.SetPosition(Vec2F());
+    auto verts = const_cast<Mesh&>(sliced.GetMeshForTest()).GetVertices<Vertex>();
+    EXPECT_NEAR(verts[1].x - verts[0].x, 20.0f, 0.01f);
+    EXPECT_NEAR(verts[3].x - verts[0].x, 200.0f, 0.01f);
 }
