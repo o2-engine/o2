@@ -85,8 +85,27 @@ namespace o2::RenderedTests
 // assets directory ("RenderTestAssets/" next to the executable) via
 // SetAssetsPathOverride(). Tests can use o2Assets.GetAssetsPath() to read or write
 // files in that sandbox without touching the project's real Assets/.
+
+#if defined(_MSC_VER) && defined(_DEBUG)
+#include <crtdbg.h>
+#endif
+
+// A Debug CRT check (an index out of range, ...) prints to stderr: its message box ended the run silently on a machine
+// with no one to answer it
+static void ReportCrtChecksToStderr()
+{
+#if defined(_MSC_VER) && defined(_DEBUG)
+    for (int type : { _CRT_ERROR, _CRT_ASSERT })
+    {
+        _CrtSetReportMode(type, _CRTDBG_MODE_FILE);
+        _CrtSetReportFile(type, _CRTDBG_FILE_STDERR);
+    }
+#endif
+}
+
 int main(int argc, char** argv)
 {
+    ReportCrtChecksToStderr();
     // Builtin-asset paths (GetBuiltinAssetsPath() = "../../BuiltAssets/Windows/FrameworkData/")
     // are resolved relative to the cwd. ctest sets WORKING_DIRECTORY to the exe folder, but a
     // direct invocation from any other cwd breaks shader/font/Math.js loading. Pin cwd here so
