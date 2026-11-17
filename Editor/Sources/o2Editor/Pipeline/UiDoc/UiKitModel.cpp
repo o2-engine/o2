@@ -9,7 +9,7 @@
 namespace Editor::UiDoc
 {
     const char* const UI_KIT_AI_DEFAULT_MODEL = "gpt-6.1-sol";
-    const char* const UI_KIT_AI_DEFAULT_IMAGE_MODEL = "openai/gpt-5-image-mini";
+    const char* const UI_KIT_AI_DEFAULT_IMAGE_MODEL = "gemini-3.1-flash-image";
 
     const Vector<String>& UiElementTypes()
     {

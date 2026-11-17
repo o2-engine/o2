@@ -89,7 +89,7 @@ namespace Editor
     {
         extern const String type;              // imageToUi
         extern const String defaultModel;      // local:codex:gpt-6.1-sol (the server: gpt-6.1-sol)
-        extern const String defaultImageModel; // local:codex-image (the server: gpt-image-2.5-sunburst)
+        extern const String defaultImageModel; // local:codex-image (the server: gemini-3.1-flash-image)
         extern const String defaultScreenName; // Screen
         extern const String defaultAssetPath;  // Generated/UI
         constexpr int       defaultMaxTurns = 60;

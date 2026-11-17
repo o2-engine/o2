@@ -151,7 +151,7 @@ namespace Editor::UiDoc
         Vector<UiKitPictureIn> pictures;                // The image inputs asked about that have values, in input order
         bool                   removeBg = false;        // Remove complex backgrounds with the image model
         String                 model;                   // "" = kitModel, else gpt-6.1-sol
-        String                 imageModel;              // "" = kitImageModel, else openai/gpt-5-image-mini
+        String                 imageModel;              // "" = kitImageModel, else gemini-3.1-flash-image
     };
 
     // ----------------------------------------------------------------------------------------

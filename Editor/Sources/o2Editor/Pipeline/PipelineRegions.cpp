@@ -199,7 +199,7 @@ namespace Editor
         }
 
         const char* autoSplitDefaultModel = "gpt-6.1-sol";
-        const char* extractDefaultImageModel = "openai/gpt-5-image-mini";
+        const char* extractDefaultImageModel = "gemini-3.1-flash-image";
 
         bool IsBackgroundPart(const String& name, bool transparent)
         {

@@ -122,6 +122,17 @@ namespace Editor::LocalAgentProvider
             return (alias ? "Claude Code " + name : "Claude Code (" + name + ")") + dot + "local";
         }
 
+        // Not run here (AssetsLine Desktop serves it), only named as AssetsLine names it
+        if (id == prefix + "gemini")
+            return String("Gemini") + dot + "local";
+
+        if (id.StartsWith(prefix + "gemini:"))
+        {
+            String name = id.SubStr(prefix.Length() + 7);
+            String alias = name == "pro" ? "Pro" : name == "flash" ? "Flash" : name == "flash-lite" ? "Flash Lite" : "";
+            return (alias.IsEmpty() ? "Gemini (" + name + ")" : "Gemini " + alias) + dot + "local";
+        }
+
         return id.SubStr(prefix.Length()) + dot + "local";
     }
 

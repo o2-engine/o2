@@ -146,6 +146,10 @@ TEST(LocalAgent, MenusOfferTheLocalAgentsOnlyWhenTurnedOn)
     EXPECT_EQ(PipelineModelMenu::RowName("local:codex"), "Codex");
     EXPECT_EQ(PipelineModelMenu::RowName("local:codex-image"), "Codex image");
     EXPECT_EQ(PipelineUtils::PrettyModelName("local:codex:gpt-6-sol"), "Codex (gpt-6-sol) \xC2\xB7 local");
+    EXPECT_EQ(PipelineUtils::PrettyModelName("local:gemini"), "Gemini \xC2\xB7 local");
+    EXPECT_EQ(PipelineUtils::PrettyModelName("local:gemini:flash-lite"), "Gemini Flash Lite \xC2\xB7 local");
+    EXPECT_EQ(PipelineUtils::PrettyModelName("local:gemini:gemini-3.5-pro"), "Gemini (gemini-3.5-pro) \xC2\xB7 local");
+    EXPECT_EQ(PipelineModelMenu::RowName("local:gemini:pro"), "Gemini Pro");
 }
 
 TEST(LocalAgent, CodexRunsOnItsLoginWithItsToolsOff)

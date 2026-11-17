@@ -173,7 +173,7 @@ TEST(PipelineUiNodes, SchemasAsAssetsLine)
     EXPECT_EQ(styleNode->GetConfigNumber("size"), 64.0f);
     EXPECT_EQ(PipelineNodeRegistry::CreateNode("uiLayout", Vec2F())->GetConfigString("agentModel"), "gpt-6.1-sol");
     auto extract = PipelineNodeRegistry::CreateNode("imageExtract", Vec2F());
-    EXPECT_EQ(extract->GetConfigString("model"), "openai/gpt-5-image-mini");
+    EXPECT_EQ(extract->GetConfigString("model"), "gemini-3.1-flash-image");
     EXPECT_TRUE(extract->GetConfigBool("transparentBg"));
     EXPECT_EQ(extract->GetConfigString("transparentMode"), "chroma");
 
