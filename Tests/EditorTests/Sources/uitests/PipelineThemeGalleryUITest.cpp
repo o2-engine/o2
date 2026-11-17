@@ -147,7 +147,7 @@ TEST(PipelineThemeGallery, ShootsEveryCard)
     // The whole graph with its links, for an overview of the theme
     editor->drawEdges = true;
     editor->FitView();
-    Step(2);
+    Step(28);
     editor->FinishBackgroundWork();
     Step(12);
     if (auto overview = Capture())

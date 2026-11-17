@@ -11,4 +11,5 @@
 <path d="M4.125,12.15 V15.7 Q4.125,16.125 4.55,16.125 H7.86" fill="none" stroke="#ffffff" stroke-width="1.75"/>
 <circle cx="4.01" cy="12.15" r="0.9" fill="#ffffff"/>
 <circle cx="7.86" cy="16.01" r="0.9" fill="#ffffff"/>
+<rect x="7.1" y="7.1" width="5.8" height="5.8" rx="1.1" fill="none" stroke="#ffffff" stroke-width="1.6"/>
 </svg>

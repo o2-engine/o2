@@ -222,8 +222,9 @@ namespace Editor
         // Reads the results and freshness of the nodes again; they were changed outside
         void ReloadResults();
 
-        // Animates the camera to show all cards
-        void FitView();
+        // Shows the whole pipeline: the camera flies (about 0.42 s, zooming in log space and following the point being
+        // centred) so every card fits the view, centred, never zooming in past the natural size; fly false moves it at once
+        void FitView(bool fly = true);
 
         // Moves the camera to a canvas point at a scale without animation
         void SetView(const Vec2F& center, float scale);
@@ -364,6 +365,13 @@ namespace Editor
         bool  mNeedAdjustView = false; // True when the view must be fitted at next update
         bool  mCameraDirty = false;    // True when the camera must be saved to the graph
         float mCameraSaveDelay = 0.0f; // Time left until a moved camera is written into the asset document
+        float mFlightTime = -1.0f;      // Time into the camera's flight of FitView; -1: none
+        Vec2F mFlightFrom;              // The canvas point at the view's centre at the flight's start
+        Vec2F mFlightTo;                // The canvas point at the view's centre at the flight's end
+        float mFlightFromScale = 1.0f;  // The camera's scale at the flight's start
+        float mFlightToScale = 1.0f;    // The camera's scale at the flight's end
+        Vec2F mFlightShownPos;          // The camera target the flight set last; another one ends it
+        float mFlightShownScale = 1.0f; // The camera scale the flight set last
         int   mIoViewVersion = 0;      // Version of the input | result view setting the cards were built with
         int   mThemeVersion = -1;      // Version of the theme the canvas and the cards were built with, -1 before the first
         TextureRef mDotsTile;             // Ten by ten grid cells of dots, repeated over the canvas while the dots are dense
@@ -464,6 +472,9 @@ namespace Editor
 
         // Recreates bend handles for the selected link
         void RebuildBendHandles();
+
+        // Moves the camera along the flight of FitView; anything else moving it ends the flight
+        void UpdateFlight(float dt);
 
         // Returns topmost node card under canvas point
         Ref<PipelineNodeWidget> FindNodeAt(const Vec2F& canvasPoint) const;
@@ -643,6 +654,13 @@ CLASS_FIELDS_META(Editor::PipelineEditor)
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mNeedAdjustView);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mCameraDirty);
     FIELD().PROTECTED().DEFAULT_VALUE(0.0f).NAME(mCameraSaveDelay);
+    FIELD().PROTECTED().DEFAULT_VALUE(-1.0f).NAME(mFlightTime);
+    FIELD().PROTECTED().NAME(mFlightFrom);
+    FIELD().PROTECTED().NAME(mFlightTo);
+    FIELD().PROTECTED().DEFAULT_VALUE(1.0f).NAME(mFlightFromScale);
+    FIELD().PROTECTED().DEFAULT_VALUE(1.0f).NAME(mFlightToScale);
+    FIELD().PROTECTED().NAME(mFlightShownPos);
+    FIELD().PROTECTED().DEFAULT_VALUE(1.0f).NAME(mFlightShownScale);
     FIELD().PROTECTED().DEFAULT_VALUE(0).NAME(mIoViewVersion);
     FIELD().PROTECTED().DEFAULT_VALUE(-1).NAME(mThemeVersion);
     FIELD().PROTECTED().NAME(mDotsTile);
@@ -707,7 +725,7 @@ CLASS_METHODS_META(Editor::PipelineEditor)
     FUNCTION().PUBLIC().SIGNATURE(void, RebuildAll);
     FUNCTION().PUBLIC().SIGNATURE(void, ReloadGraph);
     FUNCTION().PUBLIC().SIGNATURE(void, ReloadResults);
-    FUNCTION().PUBLIC().SIGNATURE(void, FitView);
+    FUNCTION().PUBLIC().SIGNATURE(void, FitView, bool);
     FUNCTION().PUBLIC().SIGNATURE(void, SetView, const Vec2F&, float);
     FUNCTION().PUBLIC().SIGNATURE(void, RestoreGraph, const String&);
     FUNCTION().PUBLIC().SIGNATURE(String, SerializeGraph);
@@ -755,6 +773,7 @@ CLASS_METHODS_META(Editor::PipelineEditor)
     FUNCTION().PROTECTED().SIGNATURE(void, DrawSelection);
     FUNCTION().PROTECTED().SIGNATURE(void, DrawBendHandles);
     FUNCTION().PROTECTED().SIGNATURE(void, RebuildBendHandles);
+    FUNCTION().PROTECTED().SIGNATURE(void, UpdateFlight, float);
     FUNCTION().PROTECTED().SIGNATURE(Ref<PipelineNodeWidget>, FindNodeAt, const Vec2F&);
     FUNCTION().PROTECTED().SIGNATURE(Ref<PipelineEdge>, FindEdgeAt, const Vec2F&, int*);
     FUNCTION().PROTECTED().SIGNATURE(bool, GetEdgeEnds, const PipelineEdge&, Vec2F&, Vec2F&, std::optional<Vec2F>*);

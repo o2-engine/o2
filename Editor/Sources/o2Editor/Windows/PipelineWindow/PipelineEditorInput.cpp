@@ -189,7 +189,7 @@ namespace Editor
                     mContextMenu->AddItem("Delete selection", [this]() { DeleteSelection(); }, AssetRef<ImageAsset>(), ShortcutKeys({ VK_DELETE }));
                 }
                 mContextMenu->AddItem("---");
-                mContextMenu->AddItem("Fit view", [this]() { FitView(); });
+                mContextMenu->AddItem("Show the whole pipeline", [this]() { FitView(); });
                 mContextMenu->Show();
             }
         }

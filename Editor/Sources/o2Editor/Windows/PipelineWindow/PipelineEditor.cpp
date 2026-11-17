@@ -703,28 +703,6 @@ namespace Editor
         mVerScrollbar->SetValueRange(mAvailableArea.bottom, mAvailableArea.top);
     }
 
-    void PipelineEditor::FitView()
-    {
-        if (mNodeWidgets.IsEmpty())
-        {
-            mViewCameraTargetPos = Vec2F();
-            mViewCameraTargetScale = Vec2F(1, 1);
-            return;
-        }
-
-        RectF bounds = mNodeWidgets[0]->GetCardRect();
-        for (auto& widget : mNodeWidgets)
-            bounds = bounds.Expand(widget->GetCardRect());
-
-        Vec2F viewSize = layout->GetSize2D();
-        Vec2F boundsSize = bounds.Size() + Vec2F(80, 80);
-        float scale = Math::Max(boundsSize.x / Math::Max(1.0f, viewSize.x), boundsSize.y / Math::Max(1.0f, viewSize.y));
-        scale = Math::Clamp(scale, mViewCameraMinScale, mViewCameraMaxScale);
-        mViewCameraTargetPos = bounds.Center();
-        mViewCameraTargetScale = Vec2F(scale, scale);
-        mCameraDirty = true;
-    }
-
     void PipelineEditor::SetView(const Vec2F& center, float scale)
     {
         float clamped = Math::Clamp(scale, mViewCameraMinScale, mViewCameraMaxScale);
@@ -1250,6 +1228,7 @@ namespace Editor
     {
         PushEditorScopeOnStack scope;
 
+        UpdateFlight(dt);
         FrameScrollView::Update(dt);
 
         UpdateCardsVisibility();
@@ -1261,7 +1240,7 @@ namespace Editor
         if (mReady && mResEnabledInHierarchy && !mIsClipped && mNeedAdjustView)
         {
             mNeedAdjustView = false;
-            FitView();
+            FitView(false);
         }
 
         if (mPendingEdge.active)
