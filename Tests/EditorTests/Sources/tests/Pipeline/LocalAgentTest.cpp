@@ -271,6 +271,7 @@ TEST(LocalAgent, ClaudeCodeRunsOnceWithoutToolsAndWithItsImagesInline)
     EXPECT_EQ(after("--model"), "haiku") << "the id's model wins over the settings";
     EXPECT_FALSE(a.Contains("--bare")) << "no key: Claude Code's own login";
     EXPECT_TRUE(call.env.Contains("MAX_THINKING_TOKENS=0"));
+    EXPECT_TRUE(call.env.Contains("CLAUDE_CODE_DISABLE_THINKING=1")) << "Claude Code 2.1.3xx thinks despite MAX_THINKING_TOKENS=0";
     EXPECT_FALSE(call.env.Any([](const String& e) { return e.StartsWith("ANTHROPIC_API_KEY="); }));
     EXPECT_TRUE(call.env.Contains("ANTHROPIC_API_KEY")) << "the environment's key is dropped: it runs on its login";
 
@@ -297,6 +298,8 @@ TEST(LocalAgent, ClaudeCodeRunsOnceWithoutToolsAndWithItsImagesInline)
     EXPECT_TRUE(call.args.Contains("--bare"));
     EXPECT_TRUE(call.env.Contains("ANTHROPIC_API_KEY=sk-ant-test"));
     EXPECT_FALSE(call.env.Contains("MAX_THINKING_TOKENS=0"));
+    EXPECT_FALSE(call.env.Contains("CLAUDE_CODE_DISABLE_THINKING=1"));
+    EXPECT_TRUE(call.env.Contains("CLAUDE_CODE_DISABLE_THINKING")) << "an inherited switch is dropped when thinking is asked for";
 
     settings.localAgentModel = "";
     call = LocalAgentProvider::ClaudeInvocation(settings, "/bin/claude", "local:claude-code", "x", {});

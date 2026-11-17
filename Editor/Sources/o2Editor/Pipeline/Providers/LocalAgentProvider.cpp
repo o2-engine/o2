@@ -289,8 +289,14 @@ namespace Editor::LocalAgentProvider
             res.args.Add(claudeModel);
         }
 
+        // Claude Code 2.1.3xx thinks adaptively and no longer stops at MAX_THINKING_TOKENS=0 alone
         if (!settings.localAgentThinking)
+        {
             res.env.Add("MAX_THINKING_TOKENS=0");
+            res.env.Add("CLAUDE_CODE_DISABLE_THINKING=1");
+        }
+        else
+            res.env.Add("CLAUDE_CODE_DISABLE_THINKING");
         res.env.Add("CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1");
 
         String content;

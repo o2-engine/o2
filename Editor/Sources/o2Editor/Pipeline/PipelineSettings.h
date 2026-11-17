@@ -26,7 +26,7 @@ namespace Editor
         String localAgentPath;             // Claude Code executable, empty: found on PATH and in the usual install folders
         String localAgentModel;            // Model local:claude-code runs on (haiku, sonnet, opus or an id), empty: Claude Code's
         String localAgentApiKey;           // Anthropic API key Claude Code runs on in --bare mode, empty: its own login
-        bool   localAgentThinking = false; // Let Claude Code think (more tokens); off sets MAX_THINKING_TOKENS=0
+        bool   localAgentThinking = false; // Let Claude Code think (more tokens); off sets MAX_THINKING_TOKENS=0 + CLAUDE_CODE_DISABLE_THINKING=1
         String localCommand;               // Shell command of local:command: the prompt on stdin, the answer on stdout
         String localCodexPath;             // Codex executable, empty: found on PATH and in the usual install folders
         String localCodexModel;            // Model local:codex runs on, empty: Codex's own
