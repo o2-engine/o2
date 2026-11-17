@@ -32,7 +32,7 @@ namespace Editor::UiDoc
         // The colours as they are, the alpha dropped
         for (size_t i = 3; i < img.data.size(); i += 4)
             img.data[i] = 255;
-        UiLayout::UiImage small = img.Resize(S, S);
+        UiLayout::UiImage shrunk = img.Resize(S, S);
         double r = 0, g = 0, b = 0;
         int n = 0;
         for (int y = 0; y < S; y++)
@@ -41,7 +41,7 @@ namespace Editor::UiDoc
             {
                 if (x > 0 && y > 0 && x < S - 1 && y < S - 1)
                     continue;
-                const UInt8* p = small.At(x, y);
+                const UInt8* p = shrunk.At(x, y);
                 r += p[0];
                 g += p[1];
                 b += p[2];

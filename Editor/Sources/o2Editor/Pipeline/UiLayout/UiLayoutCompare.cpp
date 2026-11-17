@@ -221,10 +221,10 @@ namespace Editor::UiLayout
         for (double th : { 0.14, 0.2, 0.27, 0.35, 0.45 })
         {
             boxes = placesAt(th);
-            bool small = true;
+            bool allSmall = true;
             for (auto& c : boxes)
-                small = small && areaOf(c) <= big;
-            if (small)
+                allSmall = allSmall && areaOf(c) <= big;
+            if (allSmall)
                 break;
         }
 

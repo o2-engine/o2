@@ -894,10 +894,10 @@ namespace Editor
                 // The run's own pictures large (two side by side), the evidence at full width, the sprite steps as thumbnails
                 const String& kind = step->kind;
                 bool hero = kind == "input" || kind == "analysis" || kind == "background" || kind == "output";
-                bool wide = IsWide(kind), small = kind == "sprite";
+                bool wide = IsWide(kind), smallBox = kind == "sprite";
                 float column = hero && shown.Count() > 1 ? Math::Floor((width - 8.0f)*0.5f) : width;
-                float boxW = wide || hero ? column : small ? 150.0f : 300.0f;
-                float boxH = wide ? 2400.0f : hero ? 560.0f : small ? 130.0f : 260.0f;
+                float boxW = wide || hero ? column : smallBox ? 150.0f : 300.0f;
+                float boxH = wide ? 2400.0f : hero ? 560.0f : smallBox ? 130.0f : 260.0f;
 
                 auto figures = mmake<Widget>();
                 figures->name = "debug images";
@@ -908,7 +908,7 @@ namespace Editor
                     auto bitmap = BitmapOf(image.file);
                     int iw = image.w > 0 ? image.w : bitmap ? (int)bitmap->GetSize().x : 0;
                     int ih = image.h > 0 ? image.h : bitmap ? (int)bitmap->GetSize().y : 0;
-                    float upscale = small ? 4.0f : iw > 0 && iw*2.0f <= boxW ? 2.0f : 1.0f;
+                    float upscale = smallBox ? 4.0f : iw > 0 && iw*2.0f <= boxW ? 2.0f : 1.0f;
                     float scale = iw > 0 && ih > 0 ? Math::Min(upscale, Math::Min(boxW/iw, boxH/ih)) : 1.0f;
 
                     // Evidence much taller than the box keeps the width and shows its top; the zoom shows all of it

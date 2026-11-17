@@ -1,7 +1,6 @@
 #include "o2Editor/stdafx.h"
 #include <gtest/gtest.h>
 #include <set>
-#include <unistd.h>
 
 #include "PipelinePairUiFixture.h"
 #include "o2/Assets/Assets.h"

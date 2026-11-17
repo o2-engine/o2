@@ -398,10 +398,10 @@ TEST(PipelineUiKitDevice, APartIsSizedOnTheKitsDeviceAndItsTextureResampled)
     EXPECT_EQ(kit.textStyles[0].size, 70);
 
     // A small device: the square is 30 px there, and the texture is resampled to exactly that
-    UiDoc::Json small;
-    UiDoc::Json::Parse(R"({"w":100,"h":64,"dpi":200})", small);
+    UiDoc::Json smallKit;
+    UiDoc::Json::Parse(R"({"w":100,"h":64,"dpi":200})", smallKit);
     kitNode->SetConfigString("kitDevice", "custom");
-    UiDoc::SetConfigJson(kitNode->config, "kitDeviceCustom", small);
+    UiDoc::SetConfigJson(kitNode->config, "kitDeviceCustom", smallKit);
     kit = PipelineUiNodes::BuildKit(*kitNode, byId, {});
     el = kit.elements[0];
     EXPECT_EQ(kit.device->w, 100);

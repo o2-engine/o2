@@ -151,14 +151,14 @@ namespace Editor
     void PipelineKitGrid::DrawCell(const Box& box, const PipelineKitLayout::Grid& g, int index, const PipelineKitCell& cell)
     {
         auto& t = T();
-        bool far = PipelineControls::IsFarView();
+        bool farView = PipelineControls::IsFarView();
         auto b = Kit::CellInGrid(g, index);
         RectF rect = box.R(b.x, b.y, b.w, b.h);
         String hot = "cell:" + cell.id, removeHot = "remove:" + cell.id;
         bool open = cell.id == mOpen;
         bool hover = IsHover(hot) || IsHover(removeHot);
 
-        PipelineImageTheme::DrawCellPlate(rect, open, !far);
+        PipelineImageTheme::DrawCellPlate(rect, open, !farView);
         RectF inner(rect.left + 1.0f, rect.top - 1.0f, rect.right - 1.0f, rect.bottom + 1.0f);
         RectF pad(rect.left + 4.0f, rect.top - 4.0f, rect.right - 4.0f, rect.bottom + 4.0f);
         auto fit = [&](const Vec2I& size)
@@ -181,10 +181,10 @@ namespace Editor
             KitThumb(*cell.element, pad, 3.0f, false);
         else if (hasPic)
             Picture(pic.texture, pic.size, fit(pic.size));
-        else if (!far)
+        else if (!farView)
             Text((String)(index + 1), rect, TextStyle(12.0f, 500, t.fg3, HorAlign::Middle));
 
-        if (far)
+        if (farView)
         {
             AddHot(box.R(b.x, b.y, b.w, g.cellH), hot);
             return;

@@ -288,8 +288,8 @@ namespace Editor
     void UiWsWindow::ClampPanels()
     {
         float winW = ShownFrame().w;
-        bool small = winW < 1180.0f;
-        float defLeft = small ? 228.0f : 264.0f, defRight = small ? 340.0f : 400.0f;
+        bool narrow = winW < 1180.0f;
+        float defLeft = narrow ? 228.0f : 264.0f, defRight = narrow ? 340.0f : 400.0f;
         mRight = Clamp(mSavedRight > 0 ? mSavedRight : defRight, rightMin, Math::Min(rightMax, winW - leftMin - stageMin));
         mLeft = Clamp(mSavedLeft > 0 ? mSavedLeft : defLeft, leftMin, Math::Min(leftMax, winW - mRight - stageMin));
     }

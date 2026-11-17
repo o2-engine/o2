@@ -156,8 +156,8 @@ namespace Editor
             }
 
             double K = std::min(1.0, SIDE/std::max(crop.w, crop.h));
-            UiImage small = K < 1 ? Resized(crop, std::max(8, (int)JsRound(crop.w*K)), std::max(8, (int)JsRound(crop.h*K))) : crop;
-            int W = small.w, H = small.h;
+            UiImage shrunk = K < 1 ? Resized(crop, std::max(8, (int)JsRound(crop.w*K)), std::max(8, (int)JsRound(crop.h*K))) : crop;
+            int W = shrunk.w, H = shrunk.h;
             // A working copy of the sprite no larger than it will ever be laid
             double top = std::min(1.0, std::max(W, H)*1.25/std::max(sprite.w, sprite.h));
             UiImage base = top < 1 ? Resized(sprite, std::max(4, (int)JsRound(sprite.w*top)), std::max(4, (int)JsRound(sprite.h*top))) : sprite;
@@ -177,7 +177,7 @@ namespace Editor
                 const std::vector<int>& solid = laid.solid;
                 const std::vector<int>& contour = laid.contour;
                 const UInt8* data = laid.img.data.data();
-                const UInt8* sd = small.data.data();
+                const UInt8* sd = shrunk.data.data();
                 int mx = (int)JsRound(tw*0.08), my = (int)JsRound(th*0.08);
                 int step = around ? 1 : std::max(1, (int)JsRound(std::min(tw, th)/44.0));
                 int x0 = around ? around->x - around->r : -mx, x1 = around ? around->x + around->r : W - tw + mx;

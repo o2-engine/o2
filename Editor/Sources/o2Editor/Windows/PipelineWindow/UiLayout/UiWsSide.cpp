@@ -464,15 +464,15 @@ namespace Editor
                 String text = reviewReply.IsEmpty() ? String("Checked against the kit \xE2\x80\x94 nothing to fix") : reviewReply;
                 String fixes = reviewEdits > 0 ? "fixes: " + UiDoc::JsNum(reviewEdits) : String();
                 float fixesW = fixes.IsEmpty() ? 0.0f : TextWidth(fixes, 10.5f, 400, true) + 8;
-                TextStyle small = Wrapped(11.5f, t.fgDim, 16.7f);
-                float th = Math::Max(16.7f, TextHeight(text, bw - 16 - 19 - fixesW, small));
+                TextStyle smallText = Wrapped(11.5f, t.fgDim, 16.7f);
+                float th = Math::Max(16.7f, TextHeight(text, bw - 16 - 19 - fixesW, smallText));
                 y += 6;
                 if (visible(y, th + 12))
                 {
                     RectF r = box.R(bx, y, bw, th + 12);
                     Fill(r, 7.0f, t.field);
                     UiWsDraw::Icon("uiws_review", Vec2F(r.left + 8 + 6.5f, r.top - 6 - 8), 13.0f, t.green);
-                    Text(text, RectF(r.left + 27, r.top - 6, r.right - 8 - fixesW, r.bottom + 4), small);
+                    Text(text, RectF(r.left + 27, r.top - 6, r.right - 8 - fixesW, r.bottom + 4), smallText);
                     if (!fixes.IsEmpty())
                         Text(fixes, RectF(r.right - 8 - fixesW, r.top - 6, r.right - 8, r.top - 22), TextStyle(10.5f, 400, t.fg3, HorAlign::Right, true));
                 }

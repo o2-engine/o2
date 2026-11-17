@@ -406,12 +406,12 @@ namespace Editor::UiLayout
     Vector<Box> PlateLeftovers(const UiImage& plate, const UiImage& design, const UiDoc& doc, const OrderedMap<Ref<SpriteCut>>& sprites)
     {
         std::vector<float> lp = Luma(plate), ld = Luma(design);
-        double small = 0.06*design.w*design.h;
+        double smallArea = 0.06*design.w*design.h;
         Vector<Box> out;
         for (auto& e : doc.els)
         {
             bool text = e->kind == "text";
-            if (!text && !(HasLook(*e) && !e->look.IsEmpty() && e->box.w*e->box.h < small))
+            if (!text && !(HasLook(*e) && !e->look.IsEmpty() && e->box.w*e->box.h < smallArea))
                 continue;
 
             Box b = IntBox(ClampBox(text && e->ink ? *e->ink : e->box, design.w, design.h));

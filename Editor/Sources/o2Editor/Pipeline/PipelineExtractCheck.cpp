@@ -187,9 +187,9 @@ namespace Editor::PipelineExtractCheck
 
         double stay = score(0, 0);
         int rx = (int)JsRound(0.3*crop.w), ry = (int)JsRound(0.3*crop.h);
-        double far = std::hypot(rx, ry);
-        if (far <= 0)
-            far = 1;
+        double farthest = std::hypot(rx, ry);
+        if (farthest <= 0)
+            farthest = 1;
 
         int bestX = 0, bestY = 0;
         double bs = stay;
@@ -198,7 +198,7 @@ namespace Editor::PipelineExtractCheck
             for (int dx = -rx; dx <= rx; dx++)
             {
                 // A little for the distance: among equal fits (a flat surface) the nearest one
-                double v = score(dx, dy) + 2*(std::hypot(dx, dy)/far);
+                double v = score(dx, dy) + 2*(std::hypot(dx, dy)/farthest);
                 if (v < bs)
                 {
                     bs = v;
@@ -223,18 +223,18 @@ namespace Editor::PipelineExtractCheck
         Placement res;
         res.box = nominal;
         double k = std::min(1.0, (double)registerSide/std::max(crop.w, crop.h));
-        UiImage small = k < 1 ? crop.Resize((int)JsRound(crop.w*k), (int)JsRound(crop.h*k)) : crop;
-        double kx = (double)small.w/crop.w, ky = (double)small.h/crop.h;
+        UiImage shrunk = k < 1 ? crop.Resize((int)JsRound(crop.w*k), (int)JsRound(crop.h*k)) : crop;
+        double kx = (double)shrunk.w/crop.w, ky = (double)shrunk.h/crop.h;
         UiImage drawn = sprite.Resize(std::max(1, (int)JsRound(nominal.w*kx)), std::max(1, (int)JsRound(nominal.h*ky)));
         int atX = (int)JsRound(nominal.x*kx), atY = (int)JsRound(nominal.y*ky);
         int dx, dy;
-        CoarseShift(drawn, atX, atY, small, dx, dy);
+        CoarseShift(drawn, atX, atY, shrunk, dx, dy);
         atX += dx;
         atY += dy;
 
-        UiImage render = UiImage::Blank(small.w, small.h);
+        UiImage render = UiImage::Blank(shrunk.w, shrunk.h);
         render.Blit(drawn, atX, atY);
-        auto reg = UiLayout::Register(render, small, Box(atX, atY, drawn.w, drawn.h), {});
+        auto reg = UiLayout::Register(render, shrunk, Box(atX, atY, drawn.w, drawn.h), {});
         bool still = reg.sx == 1 && reg.sy == 1 && reg.tx == 0 && reg.ty == 0;
         if (still && !dx && !dy)
             return res;

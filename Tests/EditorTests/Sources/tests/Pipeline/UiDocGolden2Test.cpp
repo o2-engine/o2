@@ -136,9 +136,9 @@ TEST(UiDocGolden2, MergedStylesAndNewEffects)
             EXPECT_STR_EQ(TextStyleToJson(MergeTextStyle(cur, m)).Dump(), G2("merges").At(k++)->Str()) << cur.name.Data() << " " << m.Dump().Data();
     }
 
-    TextStyle small;
-    small.size = 10;
-    Vector<TextStyle> bases = { TextStyleDefault(), styles[0], small };
+    TextStyle smallStyle;
+    smallStyle.size = 10;
+    Vector<TextStyle> bases = { TextStyleDefault(), styles[0], smallStyle };
     k = 0;
     for (auto& s : bases)
     {

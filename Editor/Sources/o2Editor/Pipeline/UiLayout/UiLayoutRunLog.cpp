@@ -93,12 +93,12 @@ namespace Editor::UiLayout
         if (act < 0 || act >= mActs.Count() || img.w <= 0 || img.h <= 0)
             return;
         double k = std::min(1.0, std::min((double)max/img.w, (double)max/img.h));
-        UiImage small = k < 1 ? img.Resize(std::max(1, (int)JsRound(img.w*k)), std::max(1, (int)JsRound(img.h*k))) : img;
+        UiImage shrunk = k < 1 ? img.Resize(std::max(1, (int)JsRound(img.w*k)), std::max(1, (int)JsRound(img.h*k))) : img;
         String n = (String)(++mPictures);
         while (n.Length() < 3)
             n = "0" + n;
         String file = n + ".png";
-        if (!PipelineUtils::WriteFileBytes(mDir + "/" + file, small.Flatten(0x2B, 0x2F, 0x3A).Png()))
+        if (!PipelineUtils::WriteFileBytes(mDir + "/" + file, shrunk.Flatten(0x2B, 0x2F, 0x3A).Png()))
             return;
         Json& a = mActs.Items()[act];
         if (!a.Has("images"))

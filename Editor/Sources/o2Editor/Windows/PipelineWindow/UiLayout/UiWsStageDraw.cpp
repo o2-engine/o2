@@ -186,13 +186,13 @@ namespace Editor
             if (sel && editable && selNode)
             {
                 RectF s = ToWorld(*sel);
-                bool small = s.Width() < 28.0f || Math::Abs(s.Height()) < 28.0f;
+                bool smallBox = s.Width() < 28.0f || Math::Abs(s.Height()) < 28.0f;
                 String grip = mLive ? String() : GripAt(o2Input.GetCursorPos());
                 // The turning knob on its stalk above the top edge
                 DrawKnob(grip == "turn" || mDrag == DragKind::Rotate);
                 for (auto h : { "nw", "n", "ne", "e", "se", "s", "sw", "w" })
                 {
-                    if (small && String(h).Length() == 1)
+                    if (smallBox && String(h).Length() == 1)
                         continue;
                     Vec2F c = HandlePoint(h);
                     bool hot = grip == h;

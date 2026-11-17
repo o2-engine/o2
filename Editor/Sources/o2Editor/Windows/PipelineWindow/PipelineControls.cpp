@@ -467,7 +467,7 @@ namespace Editor
         auto& theme = PipelineTheme::Get();
         RectF rect = layout->GetWorldRect();
         PipelineDraw::Corners corners(PipelineControls::fieldRadius);
-        bool far = PipelineControls::IsFarView();
+        bool farView = PipelineControls::IsFarView();
 
         // .result-empty: no plate under the hint, only the frame, so the hint reads on the light theme too
         if (!mHasImage)
@@ -477,11 +477,11 @@ namespace Editor
             return;
         }
 
-        if (mFramed && !far)
+        if (mFramed && !farView)
             PipelineDraw::Shadow(RectF(rect.left, rect.top - theme.pictureShadowOffset, rect.right, rect.bottom - theme.pictureShadowOffset), corners,
                                  theme.pictureShadow, theme.pictureShadowBlur);
 
-        if (far)
+        if (farView)
             PipelineDraw::Fill(rect, corners, theme.checkerA);
         else
             PipelineDraw::Checker(rect, corners, 8.0f, theme.checkerA, theme.checkerB, false);

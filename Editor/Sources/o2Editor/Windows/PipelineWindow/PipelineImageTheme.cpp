@@ -256,14 +256,14 @@ namespace Editor
         if (!mResEnabledInHierarchy || mIsClipped)
             return;
 
-        bool far = PipelineControls::IsFarView();
+        bool farView = PipelineControls::IsFarView();
         RectF rect = layout->GetWorldRect();
-        PipelineImageTheme::DrawCellPlate(rect, selected, !far);
+        PipelineImageTheme::DrawCellPlate(rect, selected, !farView);
         if (failed)
             PipelineDraw::Stroke(rect, PipelineDraw::Corners(7.0f), 0.0f, 1.0f, PipelineDraw::Gradient(PipelineTheme::Get().red));
         Widget::Draw();
 
-        if (tools && !far)
+        if (tools && !farView)
         {
             PipelineDraw::Corners corners;
             corners.lt = 6.0f;

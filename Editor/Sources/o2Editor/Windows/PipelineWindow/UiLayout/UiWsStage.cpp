@@ -213,11 +213,11 @@ namespace Editor
             return "";
 
         RectF s = ToWorld(*sel);
-        bool small = s.Width() < 28.0f || Math::Abs(s.Height()) < 28.0f;
+        bool smallBox = s.Width() < 28.0f || Math::Abs(s.Height()) < 28.0f;
         const char* handles[] = { "nw", "ne", "se", "sw", "n", "e", "s", "w" };
         for (auto h : handles)
         {
-            if (small && String(h).Length() == 1)
+            if (smallBox && String(h).Length() == 1)
                 continue;
             if ((HandlePoint(h) - point).Length() <= 9.0f)
                 return h;

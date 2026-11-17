@@ -406,18 +406,18 @@ namespace Editor
         RectF stage = GetStageRect();
         float vs = GetViewScale();
         auto& theme = PipelineTheme::Get();
-        bool far = PipelineControls::IsFarView();
+        bool farView = PipelineControls::IsFarView();
 
         // .cmp-viewport: field fill, --border, 9 px corners and the picture shadow
         PipelineDraw::Corners corners(PipelineControls::fieldRadius);
-        if (!far)
+        if (!farView)
             PipelineDraw::Shadow(RectF(area.left, area.top - 6.0f, area.right, area.bottom - 6.0f), corners,
                                  theme.dark ? Color4(0, 0, 0, 89) : Color4(38, 50, 56, 36), 16.0f);
         PipelineDraw::Fill(area, corners, theme.field);
         PipelineDraw::Stroke(area, corners, 0.0f, 1.0f, PipelineDraw::Gradient(theme.border));
 
         // .cmp-stage: a --border ring and a deep shadow under the canvas
-        if (!far)
+        if (!farView)
             PipelineDraw::Shadow(RectF(stage.left, stage.top - 4.0f, stage.right, stage.bottom - 4.0f), PipelineDraw::Corners(0.0f),
                                  theme.dark ? Color4(0, 0, 0, 115) : Color4(38, 50, 56, 46), 22.0f);
 
@@ -434,7 +434,7 @@ namespace Editor
             // The work area's own checker, 16 px squares pairs: #2A2C30 / #353841 in the dark theme, the o2 checker in the light one
             Color4 first = theme.dark ? Color4(42, 44, 48, 255) : theme.checkerA;
             Color4 second = theme.dark ? Color4(53, 56, 65, 255) : theme.checkerB;
-            if (checker && !far)
+            if (checker && !farView)
                 PipelineComposerTheme::Checker(stage, 8.0f, first, second);
             else
                 o2Render.DrawFilledPolygon(quad, first);
@@ -471,7 +471,7 @@ namespace Editor
 
         o2Render.DisableScissorTest();
         PipelineDraw::Stroke(stage, PipelineDraw::Corners(0.0f), -1.0f, 0.0f, PipelineDraw::Gradient(theme.border));
-        if (!far)
+        if (!farView)
             PipelineComposerTheme::DashedFrame(stage, theme.dark ? Color4(255, 255, 255, 46) : PipelineTheme::Alpha(theme.fgDim, 0.5f), 3.0f, 3.0f);
 
         CursorAreaEventsListener::OnDrawn();

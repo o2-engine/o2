@@ -798,11 +798,11 @@ namespace o2
             mRaster = raster;
         else
         {
-            bool near = mRaster && mRaster->IsReady() && mRaster->GetImageVersion() == mImageAsset->GetVersion() &&
+            bool nearRaster = mRaster && mRaster->IsReady() && mRaster->GetImageVersion() == mImageAsset->GetVersion() &&
                 mRaster->GetScale().x > scale.x*0.5f && mRaster->GetScale().x < scale.x*2.0f &&
                 mRaster->GetScale().y > scale.y*0.5f && mRaster->GetScale().y < scale.y*2.0f;
 
-            if (!near)
+            if (!nearRaster)
                 return false;
 
             shift = Vec2F();

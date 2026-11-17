@@ -376,8 +376,8 @@ TEST_F(EditorPreviews, TexturesWindowSortsTheListAndResizesIt)
     BuildStyle(false);
     EditorShell shell(MakeLayout("scene window", "assets window", "properties window"));
 
-    TextureRef small(Vec2I(4, 4)), big(Vec2I(32, 16)), middle(Vec2I(8, 8));
-    small->SetName("sort test b");
+    TextureRef smallTex(Vec2I(4, 4)), big(Vec2I(32, 16)), middle(Vec2I(8, 8));
+    smallTex->SetName("sort test b");
     big->SetName("sort test c");
     middle->SetName("sort test a");
 
@@ -388,12 +388,12 @@ TEST_F(EditorPreviews, TexturesWindowSortsTheListAndResizesIt)
 
     window.SetSort(TexturesWindow::SortBy::Name);
     EXPECT_EQ(window.GetListed(0), middle);
-    EXPECT_EQ(window.GetListed(1), small);
+    EXPECT_EQ(window.GetListed(1), smallTex);
     EXPECT_EQ(window.GetListed(2), big);
 
     window.SetSort(TexturesWindow::SortBy::Memory, true);
     EXPECT_EQ(window.GetListed(0), big);
-    EXPECT_EQ(window.GetListed(2), small);
+    EXPECT_EQ(window.GetListed(2), smallTex);
 
     auto& toggles = window.GetSortToggles();
     ASSERT_EQ(toggles.Count(), 5);
@@ -404,7 +404,7 @@ TEST_F(EditorPreviews, TexturesWindowSortsTheListAndResizesIt)
     memoryToggle->onToggleByUser(false);
     EXPECT_TRUE(memoryToggle->GetValue());
     EXPECT_FALSE(window.IsSortDescending());
-    EXPECT_EQ(window.GetListed(0), small);
+    EXPECT_EQ(window.GetListed(0), smallTex);
 
     toggles[(int)TexturesWindow::SortBy::Name]->onToggleByUser(true);
     EXPECT_EQ(window.GetSortBy(), TexturesWindow::SortBy::Name);

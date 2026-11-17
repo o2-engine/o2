@@ -211,10 +211,10 @@ TEST(UiDocRender, NineSliceCornersKeepTheirSizeAtTheGraphicsDensity)
     EXPECT_TRUE(IsBlue(At(same, 150 + 30, 150 + 10)));
     EXPECT_TRUE(IsRed(At(same, 150 + 50, 150 + 10)));
     o.scale = 0.5;
-    UiImage small = RenderLayout(Parse("screen M 600x400 dpi=480\n  button b anchor=center size=300x100 kit=btn"), o);
-    EXPECT_EQ(small.w, 300);
-    EXPECT_TRUE(IsBlue(At(small, 75 + 4, 75 + 4)));
-    EXPECT_TRUE(IsRed(At(small, 75 + 15, 75 + 5)));
+    UiImage smallImg = RenderLayout(Parse("screen M 600x400 dpi=480\n  button b anchor=center size=300x100 kit=btn"), o);
+    EXPECT_EQ(smallImg.w, 300);
+    EXPECT_TRUE(IsBlue(At(smallImg, 75 + 4, 75 + 4)));
+    EXPECT_TRUE(IsRed(At(smallImg, 75 + 15, 75 + 5)));
 }
 
 TEST(UiDocRender, AProgressFillIsCutToTheValue)
@@ -319,9 +319,9 @@ TEST(UiDocRender, TheKitSheetShowsEveryGraphic)
 
     UiKit three = kit;
     three.elements.Resize(3);
-    UiImage small = RenderKitSheet(three, 40, 480.0);
-    EXPECT_EQ(small.w, 3*204 + 20);
-    EXPECT_EQ(small.h, 196 + 20);
+    UiImage smallImg = RenderKitSheet(three, 40, 480.0);
+    EXPECT_EQ(smallImg.w, 3*204 + 20);
+    EXPECT_EQ(smallImg.h, 196 + 20);
     EXPECT_TRUE(RenderKitSheet(UiKit()).IsEmpty());
     EXPECT_EQ(RenderKitSheet(kit, 2).w, 2*204 + 20);
 }

@@ -169,18 +169,18 @@ TEST(PipelineFarView, ShootsEveryCardCloseAndFar)
 
         for (int pass = 0; pass < 2; pass++)
         {
-            bool far = pass == 0;
-            editor->SetView(rect.Center(), far ? farScale : 1.0f);
+            bool farPass = pass == 0;
+            editor->SetView(rect.Center(), farPass ? farScale : 1.0f);
             Step(2);
             editor->FinishBackgroundWork();
             Step(12);
-            EXPECT_EQ(card->IsDetailed(), far == 0) << type.Data();
+            EXPECT_EQ(card->IsDetailed(), farPass == 0) << type.Data();
 
             auto frame = Capture();
             ASSERT_TRUE(frame) << type;
-            String name = type + (far ? ".far" : ".close") + suffix + ".png";
+            String name = type + (farPass ? ".far" : ".close") + suffix + ".png";
             frame->Save(outDir + "/" + name, Bitmap::ImageType::Png);
-            SaveCardPlacement(entry[far ? "far" : "close"], editor, rect, frame);
+            SaveCardPlacement(entry[farPass ? "far" : "close"], editor, rect, frame);
         }
         shot++;
     }

@@ -176,10 +176,10 @@ namespace Editor::UiDoc
         Vector<String> names, sizes;
         for (auto& p : pics)
         {
-            String small = PictureForModel(p.png, 768);
+            String smaller = PictureForModel(p.png, 768);
             UiImage img;
-            UiImage::Decode(small, img);
-            images.Add(AiImageRef{ "image/png", small });
+            UiImage::Decode(smaller, img);
+            images.Add(AiImageRef{ "image/png", smaller });
             seen.Add(UiSize{ (double)std::max(1, img.w), (double)std::max(1, img.h) });
             names.Add(p.name);
             sizes.Add(JsNum(seen.Last().w) + "x" + JsNum(seen.Last().h));

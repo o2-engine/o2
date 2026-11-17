@@ -107,10 +107,10 @@ TEST(ImageToUiAnalysis, GeminiAnswersBox2dOtherModelsPixels)
     EXPECT_EQ(gemini.boxes, "box_2d");
     EXPECT_EQ(gemini.w, 1080);
     EXPECT_EQ(gemini.scale, 1.0);
-    auto small = AnalysisFrameOf("local:claude-code:opus", 674, 1408);
-    EXPECT_EQ(small.boxes, "pixels");
-    EXPECT_EQ(small.w, 674);
-    EXPECT_EQ(small.h, 1408);
+    auto smallFrame = AnalysisFrameOf("local:claude-code:opus", 674, 1408);
+    EXPECT_EQ(smallFrame.boxes, "pixels");
+    EXPECT_EQ(smallFrame.w, 674);
+    EXPECT_EQ(smallFrame.h, 1408);
     auto big = AnalysisFrameOf("anthropic/claude-sonnet-5.5", 1080, 2340);
     EXPECT_EQ(big.boxes, "pixels");
     EXPECT_EQ(big.w, 724);
