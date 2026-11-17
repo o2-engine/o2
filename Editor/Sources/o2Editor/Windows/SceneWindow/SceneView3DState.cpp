@@ -162,6 +162,20 @@ namespace Editor
         pitch = Math::Clamp(pitch + deltaAnglesRad.y, -maxPitch, maxPitch);
     }
 
+    void SceneView3DState::OrbitAround(const Vec3F& pivot, const Vec2F& deltaAnglesRad)
+    {
+        Vec3F cameraPosition = GetCameraPosition();
+        Quat rotationBefore = GetRotation();
+
+        Orbit(deltaAnglesRad);
+
+        // The whole rig turns by the same rotation around the pivot, so the pivot stays put in the camera space
+        Quat rotationAfter = GetRotation();
+        Quat turn = rotationAfter*rotationBefore.Inverted();
+        Vec3F newCameraPosition = pivot + turn*(cameraPosition - pivot);
+        target = newCameraPosition - rotationAfter*Vec3F(0.0f, 0.0f, distance);
+    }
+
     void SceneView3DState::Look(const Vec2F& deltaAnglesRad)
     {
         Vec3F cameraPosition = GetCameraPosition();

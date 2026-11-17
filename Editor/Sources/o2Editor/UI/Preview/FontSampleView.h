@@ -7,6 +7,7 @@ using namespace o2;
 
 namespace o2
 {
+    class FontStyle;
     class Text;
 }
 
@@ -33,6 +34,15 @@ namespace Editor
         // Returns the font of the lines
         const Ref<Font>& GetFont() const;
 
+        // Sets the style of the lines: the effects of a vector font
+        void SetFontStyle(const Ref<FontStyle>& style);
+
+        // Returns the style of the lines
+        const Ref<FontStyle>& GetFontStyle() const;
+
+        // Returns does the style paint the glyphs itself: a text with it keeps its colours under the white text colour
+        static bool IsStylePaintingGlyphs(const Ref<FontStyle>& style);
+
         // Sets the sizes of the lines, from the top
         void SetSizes(const Vector<int>& sizes);
 
@@ -56,6 +66,7 @@ namespace Editor
 
     protected:
         Ref<Font>         mFont;   // Font of the lines
+        Ref<FontStyle>    mStyle;  // Style of the lines
         Vector<int>       mSizes;  // Sizes of the lines
         WString           mSample; // Sample text
         Vector<Ref<Text>> mLines;  // Texts of the lines
@@ -75,6 +86,7 @@ END_META;
 CLASS_FIELDS_META(Editor::FontSampleView)
 {
     FIELD().PROTECTED().NAME(mFont);
+    FIELD().PROTECTED().NAME(mStyle);
     FIELD().PROTECTED().NAME(mSizes);
     FIELD().PROTECTED().NAME(mSample);
     FIELD().PROTECTED().NAME(mLines);
@@ -87,6 +99,9 @@ CLASS_METHODS_META(Editor::FontSampleView)
     FUNCTION().PUBLIC().CONSTRUCTOR(RefCounter*, const FontSampleView&);
     FUNCTION().PUBLIC().SIGNATURE(void, SetFont, const Ref<Font>&);
     FUNCTION().PUBLIC().SIGNATURE(const Ref<Font>&, GetFont);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetFontStyle, const Ref<FontStyle>&);
+    FUNCTION().PUBLIC().SIGNATURE(const Ref<FontStyle>&, GetFontStyle);
+    FUNCTION().PUBLIC().SIGNATURE_STATIC(bool, IsStylePaintingGlyphs, const Ref<FontStyle>&);
     FUNCTION().PUBLIC().SIGNATURE(void, SetSizes, const Vector<int>&);
     FUNCTION().PUBLIC().SIGNATURE(const Vector<int>&, GetSizes);
     FUNCTION().PUBLIC().SIGNATURE(void, SetSampleText, const WString&);

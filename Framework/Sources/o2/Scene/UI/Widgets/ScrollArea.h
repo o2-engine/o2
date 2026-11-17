@@ -120,6 +120,9 @@ namespace o2
         // Returns create menu group in editor
         static String GetCreateMenuGroup();
 
+        // Returns the icon of the type in the editor
+        static String GetEditorIcon();
+
         SERIALIZABLE(ScrollArea);
         CLONEABLE_REF(ScrollArea);
 
@@ -292,6 +295,7 @@ CLASS_METHODS_META(o2::ScrollArea)
     FUNCTION().PUBLIC().SIGNATURE(bool, IsScrollable);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsInputTransparent);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetCreateMenuGroup);
+    FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetEditorIcon);
     FUNCTION().PROTECTED().SIGNATURE(void, OnDrawn);
     FUNCTION().PROTECTED().SIGNATURE(void, OnDeserialized, const DataValue&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnChildAdded, const Ref<Widget>&);

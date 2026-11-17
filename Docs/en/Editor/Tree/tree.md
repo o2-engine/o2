@@ -24,7 +24,7 @@ Actors can be moved via drag'n'drop. Press the mouse on the desired actor (or se
 
 Right-clicking opens the context menu. It lists hotkeys for the available actions. For them to work, the Tree or Scene window must be focused. When focused, the selected actors are highlighted in green, otherwise in gray.
 
-The context menu creates new actors. Choose Create empty actor for an empty actor, or pick the desired type through the Create menu.
+The context menu creates new actors. Choose Create empty actor for an empty actor, or pick the desired type through the Create menu. Create/UI lists the base widgets; the widgets of the editor itself are in the Create/UI/Editor sub menu. Every item has the icon of its type: the static `GetEditorIcon()` of the actor class, or of its nearest base class that has one, so a game's own widget derived from `Button` shows the button icon.
 
 ### Draw order mode
 <img src="tree_order.png" width="30%">

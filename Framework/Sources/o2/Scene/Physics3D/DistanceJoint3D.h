@@ -31,6 +31,9 @@ namespace o2
 
         static String GetName();
         static String GetCategory();
+
+        // Returns name of component icon
+        static String GetIcon();
         static bool IsAvailableFromCreateMenu();
 
         SERIALIZABLE(DistanceJoint3D);
@@ -95,6 +98,7 @@ CLASS_METHODS_META(o2::DistanceJoint3D)
     FUNCTION().PUBLIC().SIGNATURE(float, GetMaxLength);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetName);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetCategory);
+    FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetIcon);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(bool, IsAvailableFromCreateMenu);
     FUNCTION().PRIVATE().SIGNATURE(b3JointId, CreateJoint, RigidBody3D*, RigidBody3D*);
 }

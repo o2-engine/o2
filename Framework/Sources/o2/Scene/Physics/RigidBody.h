@@ -111,6 +111,9 @@ namespace o2
         // Returns the Box2D body (null until created on scene)
         b2Body* GetBody() const;
 
+        // Returns the icon of the type in the editor
+        static String GetEditorIcon();
+
         SERIALIZABLE(RigidBody);
         CLONEABLE_REF(RigidBody);
 
@@ -226,6 +229,7 @@ CLASS_METHODS_META(o2::RigidBody)
     FUNCTION().PUBLIC().SIGNATURE(void, SetIsFixedRotation, bool);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsFixedRotation);
     FUNCTION().PUBLIC().SIGNATURE(b2Body*, GetBody);
+    FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetEditorIcon);
     FUNCTION().PROTECTED().SIGNATURE(void, OnEnabled);
     FUNCTION().PROTECTED().SIGNATURE(void, OnDisabled);
     FUNCTION().PROTECTED().SIGNATURE(void, OnAddToScene);

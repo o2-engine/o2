@@ -19,7 +19,7 @@ namespace Editor
     void DefaultActorPropertiesViewer::SetTargetActors(const Vector<Actor*>& actors)
     {
         if (!actors.IsEmpty())
-            mSpoiler->SetCaption(GetSmartName(mActorType->GetName()));
+            mSpoiler->SetCaption(GetSmartName(mActorType->GetName().ReplacedAll("o2::", "")));
 
         mTargetActors = actors;
         Refresh();
@@ -33,6 +33,7 @@ namespace Editor
     void DefaultActorPropertiesViewer::SpecializeActorType(const Type* type)
     {
         mSpoiler->name = "actor " + type->GetName();
+        mSpoiler->SetHeadIcon(type->InvokeStatic<String>("GetEditorIcon"));
         mActorType = type;
     }
 

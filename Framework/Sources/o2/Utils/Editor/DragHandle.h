@@ -351,6 +351,9 @@ namespace o2
         // Dynamic cast to RefCounterable via Widget
         static Ref<RefCounterable> CastToRefCounterable(const Ref<WidgetDragHandle>& ref);
 
+        // Returns the icon of the type in the editor
+        static String GetEditorIcon();
+
         SERIALIZABLE(WidgetDragHandle);
 
         Ref<RefCounterable> CloneRef() const override { return DynamicCast<Widget>(mmake<WidgetDragHandle>(*this)); }
@@ -679,6 +682,7 @@ CLASS_METHODS_META(o2::WidgetDragHandle)
     FUNCTION().PUBLIC().SIGNATURE(Vec2F, LocalToScreen, const Vec2F&);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetCreateMenuCategory);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(Ref<RefCounterable>, CastToRefCounterable, const Ref<WidgetDragHandle>&);
+    FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetEditorIcon);
     FUNCTION().PUBLIC().SIGNATURE(Ref<RefCounterable>, CloneRef);
     FUNCTION().PROTECTED().SIGNATURE(void, UpdateLayersLayouts);
     FUNCTION().PROTECTED().SIGNATURE(void, OnSerialize, DataValue&);

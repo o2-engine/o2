@@ -63,6 +63,9 @@ namespace Editor
         // Returns view camera
         const Camera& GetCamera() const;
 
+        // Returns the texture the view is drawn into
+        const TextureRef& GetRenderTarget() const;
+
         // Sets back color
         void SetBackColor(const Color4& color);
 
@@ -118,6 +121,9 @@ namespace Editor
     protected:
         // Called when transformation was changed and updated, updates render texture and sprite
         void OnTransformUpdated() override;
+
+        // Makes the texture of the view for its size and the pixels per point of the screen, when they changed
+        void UpdateRenderTargetSize();
 
         // Updates transparency for this and children widgets
 		void UpdateTransparency() override;
@@ -217,6 +223,7 @@ CLASS_METHODS_META(Editor::ScrollView)
     FUNCTION().PUBLIC().SIGNATURE(Vec2F, GetCameraScale);
     FUNCTION().PUBLIC().SIGNATURE(void, SetCamera, const Camera&);
     FUNCTION().PUBLIC().SIGNATURE(const Camera&, GetCamera);
+    FUNCTION().PUBLIC().SIGNATURE(const TextureRef&, GetRenderTarget);
     FUNCTION().PUBLIC().SIGNATURE(void, SetBackColor, const Color4&);
     FUNCTION().PUBLIC().SIGNATURE(void, SetGridColor, const Color4&);
     FUNCTION().PUBLIC().SIGNATURE(void, UpdateSelfTransform);
@@ -225,6 +232,7 @@ CLASS_METHODS_META(Editor::ScrollView)
     FUNCTION().PUBLIC().SIGNATURE(bool, IsFocusable);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetCreateMenuCategory);
     FUNCTION().PROTECTED().SIGNATURE(void, OnTransformUpdated);
+    FUNCTION().PROTECTED().SIGNATURE(void, UpdateRenderTargetSize);
     FUNCTION().PROTECTED().SIGNATURE(void, UpdateTransparency);
     FUNCTION().PROTECTED().SIGNATURE(void, UpdateCamera, float);
     FUNCTION().PROTECTED().SIGNATURE(Basis, GetCameraScreenToLocalTransform, const Camera&);

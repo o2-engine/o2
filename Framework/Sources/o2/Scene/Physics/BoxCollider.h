@@ -42,6 +42,9 @@ namespace o2
         // Returns category of component
         static String GetCategory();
 
+        // Returns name of component icon
+        static String GetIcon();
+
         // Is component visible in create menu
         static bool IsAvailableFromCreateMenu();
 
@@ -105,6 +108,7 @@ CLASS_METHODS_META(o2::BoxCollider)
     FUNCTION().PUBLIC().SIGNATURE(bool, IsFitByActor);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetName);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetCategory);
+    FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetIcon);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(bool, IsAvailableFromCreateMenu);
 #if  IS_EDITOR
     FUNCTION().PUBLIC().SIGNATURE(void, OnAddedFromEditor);

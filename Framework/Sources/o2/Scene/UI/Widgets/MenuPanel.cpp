@@ -512,6 +512,11 @@ namespace o2
     {
         return "Dropping";
     }
+
+    String MenuPanel::GetEditorIcon()
+    {
+        return "ui/UI4_actor_menupanel_icon.svg";
+    }
 }
 
 DECLARE_TEMPLATE_CLASS(o2::LinkRef<o2::MenuPanel>);

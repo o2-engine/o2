@@ -207,6 +207,11 @@ namespace o2
         RemoveFromRigidBody();
         Component::OnRemoveFromScene();
     }
+
+    String ICollider3D::GetIcon()
+    {
+        return "ui/UI4_collider_component.svg";
+    }
 }
 
 DECLARE_TEMPLATE_CLASS(o2::LinkRef<o2::ICollider3D>);

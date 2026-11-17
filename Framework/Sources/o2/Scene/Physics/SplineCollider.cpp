@@ -64,6 +64,11 @@ namespace o2
         return "Physics";
     }
 
+    String SplineCollider::GetIcon()
+    {
+        return "ui/UI4_spline_collider_component.svg";
+    }
+
     bool SplineCollider::IsAvailableFromCreateMenu()
     {
         return true;

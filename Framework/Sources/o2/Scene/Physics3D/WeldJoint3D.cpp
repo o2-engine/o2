@@ -34,6 +34,11 @@ namespace o2
 
     String WeldJoint3D::GetName() { return "Weld joint 3D"; }
     String WeldJoint3D::GetCategory() { return "Physics 3D/Joints"; }
+
+    String WeldJoint3D::GetIcon()
+    {
+        return "ui/UI4_weld_joint_component.svg";
+    }
     bool WeldJoint3D::IsAvailableFromCreateMenu() { return true; }
 
     b3JointId WeldJoint3D::CreateJoint(RigidBody3D* bodyA, RigidBody3D* bodyB)

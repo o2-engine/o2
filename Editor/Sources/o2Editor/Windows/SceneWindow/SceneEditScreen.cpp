@@ -40,6 +40,8 @@
 #include "o2Editor/Windows/SceneWindow/SceneWindow.h"
 #include "o2/Scene/SceneDrawableCategory.h"
 #include "o2Editor/UI/Style/EditorTheme.h"
+#include "o2Editor/Tools/ITransformTool.h"
+#include "o2Editor/Windows/SceneWindow/ScenePickMenu.h"
 
 DECLARE_SINGLETON(Editor::SceneEditScreen);
 
@@ -576,6 +578,21 @@ namespace Editor
         return mRenderMode;
     }
 
+    String SceneEditScreen::GetRenderModeIcon(SceneRenderMode mode)
+    {
+        switch (mode)
+        {
+            case SceneRenderMode::Camera:          return "ui/UI4_render_camera_icon.svg";
+            case SceneRenderMode::Stable:          return "ui/UI4_render_stable_icon.svg";
+            case SceneRenderMode::Unlit:           return "ui/UI4_render_unlit_icon.svg";
+            case SceneRenderMode::Wireframe:       return "ui/UI4_render_wireframe_icon.svg";
+            case SceneRenderMode::ShadedWireframe: return "ui/UI4_render_shaded_wireframe_icon.svg";
+            case SceneRenderMode::Overdraw:        return "ui/UI4_render_overdraw_icon.svg";
+        }
+
+        return "";
+    }
+
     String SceneEditScreen::GetRenderModeName(SceneRenderMode mode)
     {
         switch (mode)
@@ -683,26 +700,157 @@ namespace Editor
 
     void SceneEditScreen::DrawSelection()
     {
-        if (!mSelectionVisible)
+        if (mSelectionVisible)
+        {
+            if (m3DMode)
+                DrawSelectionOutline(SceneDrawableCategory::Scene3D);
+            else
+            {
+                DrawSelectionOutline(SceneDrawableCategory::Scene2D);
+
+                if (mSelectedObjects.Count() == 1)
+                {
+                    DrawObjectSelection(mSelectedObjects[0], mSelectedObjectColor);
+                }
+                else
+                {
+                    for (auto& object : mSelectedObjects)
+                        DrawObjectSelection(object, mMultiSelectedObjectColor);
+                }
+            }
+        }
+
+        DrawHoverOutline();
+    }
+
+    void SceneEditScreen::DrawHoverOutline()
+    {
+        auto object = mHoverObject.Lock();
+        if (!object)
             return;
 
+        Color4 color = EditorTheme::Get().hoverOutline;
+        Vector<Ref<SceneEditableObject>> objects = { object };
+
+        // In 3D the flat content lies on the plane and is drawn by the same camera, so both kinds are outlined
+        Vector<SceneDrawableCategory> categories = { SceneDrawableCategory::Scene2D };
         if (m3DMode)
-        {
-            DrawSelectionOutline(SceneDrawableCategory::Scene3D);
+            categories.Add(SceneDrawableCategory::Scene3D);
+
+        DrawObjectsOutline(objects, categories, color, mHoverMaskTarget, mHoverOutlineQuad);
+
+        if (!m3DMode)
+            DrawObjectSelection(object, color);
+    }
+
+    void SceneEditScreen::SetHoverObject(const Ref<SceneEditableObject>& object)
+    {
+        if (mHoverObject.Lock() == object)
             return;
+
+        mHoverObject = object;
+        mNeedRedraw = true;
+    }
+
+    Ref<SceneEditableObject> SceneEditScreen::GetHoverObject() const
+    {
+        return mHoverObject.Lock();
+    }
+
+    // Adds the shown layers with drawables under the scene point, sublayers included
+    static void CollectLayersUnderPoint(const Vector<Ref<WidgetLayer>>& layers, const Vec2F& point,
+                                        Vector<Ref<SceneEditableObject>>& result);
+
+    Vector<Ref<SceneEditableObject>> SceneEditScreen::GetObjectsUnderPoint(const Vec2F& screenPoint)
+    {
+        Vector<Ref<SceneEditableObject>> result;
+
+        Vec2F scenePoint = ScreenToScenePoint(screenPoint);
+        Vec3F rayOrigin, rayDirection;
+        bool hasRay = m3DMode && ScreenToWorldRay(screenPoint, rayOrigin, rayDirection);
+
+        for (auto& objectWeak : o2Scene.GetDrawnEditableObjects())
+        {
+            auto object = objectWeak.Lock();
+            if (!object || object->IsLockedInHierarchy() || result.Contains(object))
+                continue;
+
+            float distance;
+            bool hit = hasRay && ITransformTool::RayIntersectsObject3D(object, rayOrigin, rayDirection, distance);
+            if (!hit)
+                hit = object->GetTransform().IsPointInside(scenePoint);
+
+            if (hit)
+                result.Add(object);
+
+            if (Widget::isEditorLayersVisible)
+            {
+                if (auto widget = DynamicCast<Widget>(object))
+                    CollectLayersUnderPoint(widget->GetLayers(), scenePoint, result);
+            }
         }
 
-        DrawSelectionOutline(SceneDrawableCategory::Scene2D);
+        return result;
+    }
 
-        if (mSelectedObjects.Count() == 1)
+    bool SceneEditScreen::ShowPickMenu(const Vec2F& screenPoint)
+    {
+        auto objects = GetObjectsUnderPoint(screenPoint);
+        if (objects.IsEmpty())
+            return false;
+
+        if (!mPickMenu)
         {
-            DrawObjectSelection(mSelectedObjects[0], mSelectedObjectColor);
+            PushEditorScopeOnStack scope;
+
+            auto style = o2UI.GetWidgetStyle<ContextMenu>("standard");
+            mPickMenu = style ? mmake<ScenePickMenu>(*style) : mmake<ScenePickMenu>();
+            mPickMenu->name = "scene pick menu";
+            AddInternalWidget(mPickMenu);
+
+            mPickMenu->onHoverChanged = [&](const Ref<SceneEditableObject>& object) { SetHoverObject(object); };
+            mPickMenu->onPicked = [&](const Ref<SceneEditableObject>& object) { PickObject(object); };
         }
-        else
-        {
-            for (auto& object : mSelectedObjects)
-                DrawObjectSelection(object, mMultiSelectedObjectColor);
-        }
+
+        mPickMenu->Show(objects, screenPoint);
+        return true;
+    }
+
+    const Ref<ScenePickMenu>& SceneEditScreen::GetPickMenu() const
+    {
+        return mPickMenu;
+    }
+
+    void SceneEditScreen::PickObject(const Ref<SceneEditableObject>& object)
+    {
+        if (!object)
+            return;
+
+        auto before = mSelectedObjects;
+
+        ClearSelectionWithoutAction(false);
+        SelectObjectWithoutAction(object);
+
+        if (TreeWindow::IsSingletonInitialzed())
+            o2EditorTree.HighlightObjectTreeNode(object);
+
+        if (SceneWindow::IsSingletonInitialzed())
+            o2EditorSceneWindow.DoneAction(mmake<SelectAction>(mSelectedObjects, before));
+    }
+
+    void SceneEditScreen::BeginOrbit3D()
+    {
+        mOrbitPivot3D = mSelectedObjects.IsEmpty() ? mView3D.target : ITransformTool::GetSelectionCenter3D(mSelectedObjects);
+    }
+
+    void SceneEditScreen::Orbit3D(const Vec2F& cursorDelta)
+    {
+        if (cursorDelta.Length() < Math::Epsilon)
+            return;
+
+        mView3D.OrbitAround(mOrbitPivot3D, Vec2F(-cursorDelta.x, cursorDelta.y)*0.005f);
+        mViewCameraMoved = true;
+        mNeedRedraw = true;
     }
 
     void SceneEditScreen::CollectDrawableComponents(const Ref<Actor>& actor, SceneDrawableCategory category,
@@ -766,23 +914,48 @@ namespace Editor
         return true;
     }
 
+    static void CollectLayersUnderPoint(const Vector<Ref<WidgetLayer>>& layers, const Vec2F& point,
+                                        Vector<Ref<SceneEditableObject>>& result)
+    {
+        for (auto& layer : layers)
+        {
+            if (layer->GetDrawable() && IsLayerShown(layer) && layer->GetTransform().IsPointInside(point) &&
+                !result.Contains(layer))
+            {
+                result.Add(layer);
+            }
+
+            CollectLayersUnderPoint(layer->GetChildren(), point, result);
+        }
+    }
+
     void SceneEditScreen::DrawSelectionOutline(SceneDrawableCategory category)
     {
+        DrawObjectsOutline(mSelectedObjects, { category }, mSelectionOutlineColor, mSelectionMaskTarget, mSelectionOutlineQuad);
+    }
+
+    void SceneEditScreen::DrawObjectsOutline(const Vector<Ref<SceneEditableObject>>& objects,
+                                             const Vector<SceneDrawableCategory>& categories, const Color4& color,
+                                             TextureRef& maskTarget, Ref<Mesh>& quad)
+    {
+        bool flat = categories.Contains(SceneDrawableCategory::Scene2D);
+
         Vector<Ref<Component>> components;
         Vector<Ref<Widget>> widgets;
         Vector<Ref<WidgetLayer>> layers;
-        for (auto& object : mSelectedObjects)
+        for (auto& object : objects)
         {
             if (auto actor = DynamicCast<Actor>(object))
             {
-                CollectDrawableComponents(actor, category, components);
+                for (auto category : categories)
+                    CollectDrawableComponents(actor, category, components);
 
-                if (category == SceneDrawableCategory::Scene2D)
+                if (flat)
                     CollectDrawableWidgets(actor, widgets);
             }
             else if (auto layer = DynamicCast<WidgetLayer>(object))
             {
-                if (category == SceneDrawableCategory::Scene2D && IsLayerShown(layer) && !layers.Contains(layer))
+                if (flat && IsLayerShown(layer) && !layers.Contains(layer))
                     layers.Add(layer);
             }
         }
@@ -794,8 +967,8 @@ namespace Editor
         if (targetSize.x < 1 || targetSize.y < 1)
             return;
 
-        if (!mSelectionMaskTarget || (Vec2I)mSelectionMaskTarget->GetSize() != targetSize)
-            mSelectionMaskTarget = TextureRef(targetSize, TextureFormat::R8G8B8A8, Texture::Usage::RenderTarget);
+        if (!maskTarget || (Vec2I)maskTarget->GetSize() != targetSize)
+            maskTarget = TextureRef(targetSize, TextureFormat::R8G8B8A8, Texture::Usage::RenderTarget);
 
         if (!mSelectionOutlineMaterial)
         {
@@ -810,11 +983,11 @@ namespace Editor
         if (!mSelectionOutlineMaterial || !mSelectionOutlineMaterial->IsReady())
             return;
 
-        if (!mSelectionOutlineQuad)
-            mSelectionOutlineQuad = mmake<Mesh>(TextureRef(), 4, 2);
+        if (!quad)
+            quad = mmake<Mesh>(TextureRef(), 4, 2);
 
         // Silhouette mask: selected content rendered into an offscreen target, alpha marks coverage
-        o2Render.PushRenderTargets({ mSelectionMaskTarget });
+        o2Render.PushRenderTargets({ maskTarget });
         o2Render.Clear(Color4(0.0f, 0.0f, 0.0f, 0.0f));
 
         // Avoid redrawing every child mesh for large selections.
@@ -851,26 +1024,26 @@ namespace Editor
         o2Render.SetCamera(Camera());
 
         Vec2F halfSize = (Vec2F)o2Render.GetCurrentResolution()*0.5f;
-        ULong colorValue = mSelectionOutlineColor.ABGR();
+        ULong colorValue = color.ABGR();
 
-        mSelectionOutlineQuad->SetMaterial(mSelectionOutlineMaterial);
-        mSelectionOutlineQuad->SetTexture(mSelectionMaskTarget);
+        quad->SetMaterial(mSelectionOutlineMaterial);
+        quad->SetTexture(maskTarget);
 
         // The mask target is rendered y-flipped like any render target, the quad samples it back upright
-        Vertex* vertices = mSelectionOutlineQuad->GetVertices<Vertex>();
+        Vertex* vertices = quad->GetVertices<Vertex>();
         vertices[0] = Vertex(-halfSize.x, halfSize.y, 0.0f, colorValue, 0.0f, 1.0f);
         vertices[1] = Vertex(halfSize.x, halfSize.y, 0.0f, colorValue, 1.0f, 1.0f);
         vertices[2] = Vertex(halfSize.x, -halfSize.y, 0.0f, colorValue, 1.0f, 0.0f);
         vertices[3] = Vertex(-halfSize.x, -halfSize.y, 0.0f, colorValue, 0.0f, 0.0f);
 
-        VertexIndex* indexes = mSelectionOutlineQuad->GetIndexes();
+        VertexIndex* indexes = quad->GetIndexes();
         indexes[0] = 0; indexes[1] = 1; indexes[2] = 2;
         indexes[3] = 0; indexes[4] = 2; indexes[5] = 3;
 
-        mSelectionOutlineQuad->vertexCount = 4;
-        mSelectionOutlineQuad->polyCount = 2;
+        quad->vertexCount = 4;
+        quad->polyCount = 2;
 
-        mSelectionOutlineQuad->Draw();
+        quad->Draw();
 
         o2Render.SetCamera(sceneCamera);
     }
@@ -1395,6 +1568,7 @@ namespace Editor
         if (m3DMode && o2Input.IsKeyDown(VK_MENU))
         {
             mAltOrbit3D = true;
+            BeginOrbit3D();
             return;
         }
 
@@ -1430,12 +1604,7 @@ namespace Editor
     {
         if (mAltOrbit3D)
         {
-            if (cursor.delta.Length() > Math::Epsilon)
-            {
-                mView3D.Orbit(Vec2F(-cursor.delta.x, cursor.delta.y)*0.005f);
-                mViewCameraMoved = true;
-                mNeedRedraw = true;
-            }
+            Orbit3D(cursor.delta);
             return;
         }
 
@@ -1471,6 +1640,8 @@ namespace Editor
         if (m3DMode)
             SetFlyNavigation3D(true);
 
+        mRightMouseTravel = 0.0f;
+
         if (mEnabledTool && !IsHandleWorking(cursor))
             mEnabledTool->OnCursorRightMousePressed(ToSceneCursor(cursor));
 
@@ -1479,6 +1650,8 @@ namespace Editor
 
     void SceneEditScreen::OnCursorRightMouseStayDown(const Input::Cursor& cursor)
     {
+        mRightMouseTravel += cursor.delta.Length();
+
         if (m3DMode)
         {
             if (cursor.delta.Length() > Math::Epsilon)
@@ -1503,20 +1676,34 @@ namespace Editor
             mEnabledTool->OnCursorRightMouseReleased(ToSceneCursor(cursor));
 
         ScrollView::OnCursorRightMouseReleased(cursor);
+
+        // A right click that didn't move the view picks from the objects under the cursor
+        const float clickTravel = 3.0f;
+        if (mRightMouseTravel < clickTravel && !IsHandleWorking(cursor))
+            ShowPickMenu(cursor.position);
     }
 
     void SceneEditScreen::OnCursorMiddleMousePressed(const Input::Cursor& cursor)
     {
+        if (m3DMode)
+            BeginOrbit3D();
+
         if (mEnabledTool)
             mEnabledTool->OnCursorMiddleMousePressed(ToSceneCursor(cursor));
     }
 
     void SceneEditScreen::OnCursorMiddleMouseStayDown(const Input::Cursor& cursor)
     {
+        // As in Unity's orbit: the middle button turns the view around the selection, with shift it pans
         if (m3DMode && cursor.delta.Length() > Math::Epsilon)
         {
-            mView3D.Pan(cursor.delta, GetViewportSize());
-            mNeedRedraw = true;
+            if (o2Input.IsKeyDown(VK_SHIFT))
+            {
+                mView3D.Pan(cursor.delta, GetViewportSize());
+                mNeedRedraw = true;
+            }
+            else
+                Orbit3D(cursor.delta);
         }
 
         if (mEnabledTool)

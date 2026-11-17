@@ -3,6 +3,7 @@
 #include "o2/Assets/Asset.h"
 #include "o2/Assets/AssetRef.h"
 #include "o2/Events/CursorAreaEventsListener.h"
+#include "o2/Render/TextureRef.h"
 #include "o2/Scene/UI/Widget.h"
 
 using namespace o2;
@@ -26,7 +27,7 @@ namespace Editor
     class AssetPreviewIcon: public Widget, public CursorAreaEventsListener
     {
     public:
-        enum class Kind { None, Image, VectorImage, Atlas, Font, Model, Sound, Video, Icon };
+        enum class Kind { None, Image, VectorImage, Atlas, Font, FontStyle, Prototype, Model, Sound, Video, Icon };
 
     public:
         // Default constructor
@@ -100,6 +101,9 @@ namespace Editor
         // Removes the preview of the previous asset
         void Clear();
 
+        // Shows the thumbnail of the prototype; nothing when it is empty
+        void SetPrototypeThumbnail(const TextureRef& thumbnail);
+
         // Returns the rect of the preview in the rect of the widget
         RectF GetPreviewRect() const;
 
@@ -148,6 +152,7 @@ CLASS_METHODS_META(Editor::AssetPreviewIcon)
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetCreateMenuCategory);
     FUNCTION().PROTECTED().SIGNATURE(void, OnCursorReleased, const Input::Cursor&);
     FUNCTION().PROTECTED().SIGNATURE(void, Clear);
+    FUNCTION().PROTECTED().SIGNATURE(void, SetPrototypeThumbnail, const TextureRef&);
     FUNCTION().PROTECTED().SIGNATURE(RectF, GetPreviewRect);
 }
 END_META;

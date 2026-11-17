@@ -237,6 +237,9 @@ namespace o2
         // Returns create menu group in editor
         static String GetCreateMenuGroup();
 
+        // Returns the icon of the type in the editor
+        static String GetEditorIcon();
+
         SERIALIZABLE(ContextMenu);
         CLONEABLE_REF(ContextMenu);
 
@@ -386,6 +389,9 @@ namespace o2
         // Returns create menu group in editor
         static String GetCreateMenuGroup();
 
+        // Returns the icon of the type in the editor
+        static String GetEditorIcon();
+
         SERIALIZABLE(ContextMenuItem);
         CLONEABLE_REF(ContextMenuItem);
 
@@ -474,6 +480,7 @@ CLASS_METHODS_META(o2::ContextMenu)
     FUNCTION().PUBLIC().SIGNATURE(void, SetItemsMaxPriority);
     FUNCTION().PUBLIC().SIGNATURE(void, SetItemsMinPriority);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetCreateMenuGroup);
+    FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetEditorIcon);
     FUNCTION().PROTECTED().SIGNATURE(void, FitSizeAndPosition, const Vec2F&);
     FUNCTION().PROTECTED().SIGNATURE(void, HideWithParent);
     FUNCTION().PROTECTED().SIGNATURE(void, HideWithChild);
@@ -526,6 +533,7 @@ CLASS_METHODS_META(o2::ContextMenuItem)
     FUNCTION().PUBLIC().SIGNATURE(void, Enable);
     FUNCTION().PUBLIC().SIGNATURE(void, Disable);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetCreateMenuGroup);
+    FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetEditorIcon);
     FUNCTION().PROTECTED().SIGNATURE(void, OnChildAdded, const Ref<Widget>&);
 }
 END_META;

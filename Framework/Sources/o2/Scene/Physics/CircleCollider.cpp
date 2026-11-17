@@ -51,6 +51,11 @@ namespace o2
         return "Physics";
     }
 
+    String CircleCollider::GetIcon()
+    {
+        return "ui/UI4_circle_collider_component.svg";
+    }
+
     bool CircleCollider::IsAvailableFromCreateMenu()
     {
         return true;

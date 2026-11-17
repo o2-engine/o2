@@ -16,6 +16,7 @@
 #include "o2/Scene/UI/Widgets/EditBox.h"
 #include "o2/Scene/UI/Widgets/Toggle.h"
 #include "o2/Scene/UI/Widgets/Tree.h"
+#include "o2/Assets/Types/VectorImageAsset.h"
 #include "o2/Utils/Editor/EditorScope.h"
 #include "o2/Utils/Editor/SceneEditableObject.h"
 #include "o2/Utils/StringUtils.h"
@@ -175,10 +176,11 @@ namespace Editor
 
         mTreeContextMenu->AddItem("---");
 
-        mTreeContextMenu->AddItem("Create empty actor", [&]() { OnContextCreateNewPressed(); }, AssetRef<ImageAsset>(),
+        mTreeContextMenu->AddItem("Create empty actor", [&]() { OnContextCreateNewPressed(); }, GetCreateMenuIcon(TypeOf(Actor)),
                                   ShortcutKeys({VK_N, VK_CTRL_CMD}));
 
-        mTreeContextMenu->AddItem("Create/UI/Empty layer.alayers", [&]() { CreateObject<WidgetLayer>("Layer"); });
+        AssetRef<Asset> layerIcon = GetCreateMenuIcon("ui/UI4_node_layer_icon.svg");
+        mTreeContextMenu->AddItem("Create/UI/Empty layer.alayers", [&]() { CreateObject<WidgetLayer>("Layer"); }, layerIcon);
         mTreeContextMenu->AddItem("Create/UI/Sprite layer.alayers", [&]()
                                   {
                                       ForcePopEditorScopeOnStack scope;
@@ -187,7 +189,7 @@ namespace Editor
                                       newLayer->SetDrawable(mmake<Sprite>());
                                       newLayer->name = "Sprite";
                                       OnCreateObject(newLayer);
-                                  });
+                                  }, layerIcon);
 
         mTreeContextMenu->AddItem("Create/UI/Text layer.alayers", [&]()
                                   {
@@ -197,7 +199,7 @@ namespace Editor
                                       newLayer->SetDrawable(mmake<Text>());
                                       newLayer->name = "Text";
                                       OnCreateObject(newLayer);
-                                  });
+                                  }, layerIcon);
 
         InitializeCreateMenu();
         InitUIStyleCreateMenu();
@@ -237,26 +239,51 @@ namespace Editor
         mSceneTree->onFocused = THIS_FUNC(OnSceneFocused);
     }
 
+    const Ref<ContextMenu>& TreeWindow::GetContextMenu() const
+    {
+        return mTreeContextMenu;
+    }
+
+    AssetRef<Asset> TreeWindow::GetCreateMenuIcon(const Type& type)
+    {
+        return GetCreateMenuIcon(type.InvokeStatic<String>("GetEditorIcon"));
+    }
+
+    AssetRef<Asset> TreeWindow::GetCreateMenuIcon(const String& iconPath)
+    {
+        if (iconPath.IsEmpty())
+            return AssetRef<Asset>();
+
+        PushEditorScopeOnStack scope;
+        return AssetRef<Asset>(AssetRef<VectorImageAsset>(iconPath));
+    }
+
+    String TreeWindow::GetCreateMenuPath(const Type& type)
+    {
+        String category = type.InvokeStatic<String>("GetCreateMenuCategory");
+
+        // Editor widgets inherit the "UI" category of the base widgets and would mix with them
+        if (type.GetName().StartsWith("Editor::") && !category.StartsWith("UI/Editor"))
+            category = "UI/Editor";
+
+        if (category.IsEmpty())
+            return GetSmartName(type.GetName().ReplacedAll("o2::", "").ReplacedAll("::", "/"));
+
+        String name = type.GetName().ReplacedAll("o2::", "");
+        int fnd = name.FindLast("::");
+        if (fnd >= 0)
+            name = name.SubStr(fnd + 2);
+
+        return category + "/" + GetSmartName(name);
+    }
+
     void TreeWindow::InitializeCreateMenu()
     {
         auto subTypes = TypeOf(Actor).GetDerivedTypes();
 
         for (auto& subType : subTypes)
         {
-            String category = subType->InvokeStatic<String>("GetCreateMenuCategory");
-            String path;
-            if (category.IsEmpty())
-                path = GetSmartName(subType->GetName().ReplacedAll("o2::", "").ReplacedAll("::", "/"));
-            else
-            {
-                String name = subType->GetName().ReplacedAll("o2::", "");
-                int fnd = name.FindLast("::");
-                if (fnd >= 0)
-                    name = name.SubStr(fnd + 2);
-
-                path = category + "/" + GetSmartName(name);
-            }
-
+            String path = GetCreateMenuPath(*subType);
             String group = subType->InvokeStatic<String>("GetCreateMenuGroup");
 
             mTreeContextMenu->AddItem("Create/" + path + "." + group, [=]()
@@ -265,7 +292,7 @@ namespace Editor
                                           auto newActor = DynamicCast<Actor>(subType->CreateSampleRef());
                                           newActor->name = path.ReplacedAll("/", " ");
                                           OnCreateObject(newActor);
-                                      });
+                                      }, GetCreateMenuIcon(*subType));
         }
     }
 
@@ -285,7 +312,7 @@ namespace Editor
                                           auto newWidget = styleWidgetAsset->GetActor()->CloneAsRef<Widget>();
                                           newWidget->SetEnabledForcible(true);
                                           OnCreateObject(newWidget);
-                                      });
+                                      }, GetCreateMenuIcon(styleWidgetAsset->GetActor()->GetType()));
         }
     }
 

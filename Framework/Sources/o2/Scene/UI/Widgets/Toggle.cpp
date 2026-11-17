@@ -292,6 +292,11 @@ namespace o2
         return "Basic";
     }
 
+    String Toggle::GetEditorIcon()
+    {
+        return "ui/UI4_actor_toggle_icon.svg";
+    }
+
     void Toggle::OnEnabled()
     {
         Widget::OnEnabled();

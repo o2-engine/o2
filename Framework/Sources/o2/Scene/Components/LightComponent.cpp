@@ -115,7 +115,7 @@ namespace o2
 
     String LightComponent::GetIcon()
     {
-        return "ui/UI4_image_component.svg";
+        return "ui/UI4_light_component.svg";
     }
 
     void LightComponent::OnAddToScene()

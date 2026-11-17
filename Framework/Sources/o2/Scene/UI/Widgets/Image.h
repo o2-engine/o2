@@ -61,6 +61,9 @@ namespace o2
         // Returns create menu group in editor
         static String GetCreateMenuGroup();
 
+        // Returns the icon of the type in the editor
+        static String GetEditorIcon();
+
         SERIALIZABLE(Image);
         CLONEABLE_REF(Image);
 
@@ -101,6 +104,7 @@ CLASS_METHODS_META(o2::Image)
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetImageName, const String&);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(String, GetImageName);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetCreateMenuGroup);
+    FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetEditorIcon);
 }
 END_META;
 // --- END META ---

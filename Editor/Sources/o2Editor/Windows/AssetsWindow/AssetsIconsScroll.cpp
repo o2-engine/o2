@@ -9,6 +9,8 @@
 #include "o2/Assets/Types/VectorImageAsset.h"
 #include "o2/Assets/Types/VideoAsset.h"
 #include "o2Editor/UI/Preview/MediaPreview.h"
+#include "o2Editor/UI/Preview/PrototypePreview.h"
+#include "o2/Assets/Types/ActorAsset.h"
 #include "o2Editor/Windows/PipelineWindow/PipelineControls.h"
 #include "o2Editor/Windows/PipelineWindow/PipelineTheme.h"
 #include "o2/Render/Render.h"
@@ -141,6 +143,8 @@ namespace Editor
     {
         if (!mResEnabledInHierarchy)
             return;
+
+        RenderPendingThumbnails();
 
         for (auto& layer : mDrawingLayers)
             layer->Draw();
@@ -786,6 +790,19 @@ namespace Editor
 
         iconLayer->SetEnabled(!isVectorImage);
 
+        // A prototype shows its thumbnail on the checked background; one not rendered yet is rendered while drawing
+        TextureRef prototypeThumbnail;
+        if (asset->meta->GetAssetType() == &TypeOf(ActorAsset))
+        {
+            AssetRef<ActorAsset> prototype(asset->meta->ID());
+            prototypeThumbnail = PrototypePreview::FindThumbnail(prototype);
+            if (!prototypeThumbnail && PrototypePreview::IsThumbnailPending(prototype) &&
+                !mPendingThumbnails.Contains(asset))
+            {
+                mPendingThumbnails.Add(asset);
+            }
+        }
+
         if (asset->meta->GetAssetType() == &TypeOf(ImageAsset))
         {
             AssetRef<ImageAsset> previewSpriteAsset(asset->path);
@@ -803,6 +820,16 @@ namespace Editor
             auto vectorSprite = DynamicCast<VectorSprite>(vectorPreviewLayer->GetDrawable());
             vectorSprite->SetImageAsset(previewVectorAsset);
             vectorSprite->SetMode(SpriteMode::Default);
+        }
+        else if (prototypeThumbnail)
+        {
+            Vec2I size = prototypeThumbnail->GetSize();
+            setPreviewLayout((float)size.x, (float)size.y);
+
+            auto iconSprite = rasterIcon();
+            iconSprite->SetTexture(prototypeThumbnail);
+            iconSprite->SetTextureSrcRect(RectI(Vec2I(), size));
+            iconSprite->mode = SpriteMode::Default;
         }
         else if (!isAtlasWithPages)
         {
@@ -829,6 +856,28 @@ namespace Editor
         assetIcon->SetSelected(mSelectedAssets.Contains(Ref(asset)));
         assetIcon->SetDragOnlySelected(true);
         assetIcon->mOwner = Ref(this);
+    }
+
+    void AssetsIconsScrollArea::RenderPendingThumbnails()
+    {
+        // A few per frame: a folder of prototypes doesn't stall the editor
+        const int thumbnailsPerFrame = 4;
+
+        int rendered = 0;
+        while (!mPendingThumbnails.IsEmpty() && rendered < thumbnailsPerFrame)
+        {
+            auto info = mPendingThumbnails[0];
+            mPendingThumbnails.RemoveAt(0);
+            auto icon = mVisibleAssetIcons.FindOrDefault([&](const Ref<AssetIcon>& x) { return x->GetAssetInfo() == info; });
+            if (!icon)
+                continue;
+
+            PrototypePreview::GetThumbnail(AssetRef<ActorAsset>(info->meta->ID()));
+            rendered++;
+
+            Ref<AssetInfo> item = info;
+            SetupItemWidget(icon, (void*)&item);
+        }
     }
 
     void AssetsIconsScrollArea::SetupMediaIcon(const Ref<AssetIcon>& icon, const Ref<AssetInfo>& info)

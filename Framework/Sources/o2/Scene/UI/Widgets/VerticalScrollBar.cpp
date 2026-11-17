@@ -357,6 +357,11 @@ namespace o2
     {
         return "Progress";
     }
+
+    String VerticalScrollBar::GetEditorIcon()
+    {
+        return "ui/UI4_actor_verscrollbar_icon.svg";
+    }
 }
 
 DECLARE_TEMPLATE_CLASS(o2::LinkRef<o2::VerticalScrollBar>);

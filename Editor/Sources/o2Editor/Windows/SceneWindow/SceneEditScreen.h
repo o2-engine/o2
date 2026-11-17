@@ -35,6 +35,7 @@ namespace Editor
     FORWARD_CLASS_REF(SceneDragHandle);
     FORWARD_CLASS_REF(SceneEditorLayer);
     FORWARD_CLASS_REF(SceneHierarchyTree);
+    FORWARD_CLASS_REF(ScenePickMenu);
 
     // How the scene window draws the scene: through the scene camera pipeline or the default one, without the
     // lighting, by the edges of the triangles, the edges over the filled triangles, or the overdraw heat
@@ -110,6 +111,9 @@ namespace Editor
         // Returns name of the render mode for the menus
         static String GetRenderModeName(SceneRenderMode mode);
 
+        // Returns icon of the render mode: on the render mode button and in its menu
+        static String GetRenderModeIcon(SceneRenderMode mode);
+
         // Returns the pipeline the edit view renders with: the first scene camera one, or the
         // default forward pipeline in stable camera mode or when the scene has no cameras
         Ref<RenderPipeline> ResolveScenePipeline() const;
@@ -161,6 +165,25 @@ namespace Editor
 
         // Draws object selection
         void DrawObjectSelection(const Ref<SceneEditableObject>& object, const Color4& color);
+
+        // Outlines the object with the hover color: the object of the hovered item of the pick menu; null clears it
+        void SetHoverObject(const Ref<SceneEditableObject>& object);
+
+        // Returns the object outlined with the hover color
+        Ref<SceneEditableObject> GetHoverObject() const;
+
+        // Returns the drawn objects under the screen point, as the click selection finds them, with the shown layers of
+        // the widgets
+        Vector<Ref<SceneEditableObject>> GetObjectsUnderPoint(const Vec2F& screenPoint);
+
+        // Shows the menu of the objects under the screen point; false when there are none
+        bool ShowPickMenu(const Vec2F& screenPoint);
+
+        // Returns the menu of the objects under the cursor, null until it is shown first
+        const Ref<ScenePickMenu>& GetPickMenu() const;
+
+        // Selects the object alone, as a click on it does, with an action
+        void PickObject(const Ref<SceneEditableObject>& object);
 
         // Selects objects
         void SelectObjects(const Vector<Ref<SceneEditableObject>>& objects, bool additive = true);
@@ -258,6 +281,13 @@ namespace Editor
         Ref<Material> mSelectionOutlineMaterial; // Outline composite material (Shaders/SelectionOutline)
         Ref<Mesh>     mSelectionOutlineQuad;     // Fullscreen quad for the outline composite
         Ref<Mesh>     mSelectionBoundsMesh;      // Bounds silhouette for large selections
+
+        WeakRef<SceneEditableObject> mHoverObject;      // Object outlined with the hover color
+        TextureRef                   mHoverMaskTarget;  // Offscreen silhouette mask of the hovered object
+        Ref<Mesh>                    mHoverOutlineQuad; // Fullscreen quad for its outline composite
+
+        Ref<ScenePickMenu> mPickMenu;                // Menu of the objects under the cursor, opened by a right click
+        float              mRightMouseTravel = 0.0f; // Distance the cursor went with the right button down; a short one is a click
         float  mObjectMinimalSelectionSize = 10.0f;                    // Minimal object size on pixels
 
         Vector<Ref<SceneEditableObject>> mSelectedObjects;          // Current selected objects
@@ -298,6 +328,8 @@ namespace Editor
 
         bool mFlyNavigation3D = false; // Is fly navigation active: right mouse held in 3D mode, WASD/QE moves camera
         bool mAltOrbit3D = false;      // Is alt+left mouse orbit navigation active in 3D mode
+
+        Vec3F mOrbitPivot3D;           // Point the 3D view orbits around: the selection center when the orbit began
 
     protected:
         // Initializes tools
@@ -401,6 +433,20 @@ namespace Editor
 
         // Draws silhouette outline of selected objects drawable content through an offscreen mask
         void DrawSelectionOutline(SceneDrawableCategory category);
+
+        // Draws silhouette outline of the objects drawable content of the categories with the color, through the mask target
+        void DrawObjectsOutline(const Vector<Ref<SceneEditableObject>>& objects,
+                                const Vector<SceneDrawableCategory>& categories, const Color4& color,
+                                TextureRef& maskTarget, Ref<Mesh>& quad);
+
+        // Draws the hover outline of the object of the hovered pick menu item
+        void DrawHoverOutline();
+
+        // Begins orbiting the 3D view around the selection center, or around the view target without a selection
+        void BeginOrbit3D();
+
+        // Orbits the 3D view by the cursor delta around the pivot of the orbit
+        void Orbit3D(const Vec2F& cursorDelta);
 
         // Draws combined bounds into the selection mask
         bool DrawSelectionBoundsMask(const Vector<Ref<Component>>& components);
@@ -508,6 +554,11 @@ CLASS_FIELDS_META(Editor::SceneEditScreen)
     FIELD().PROTECTED().NAME(mSelectionOutlineMaterial);
     FIELD().PROTECTED().NAME(mSelectionOutlineQuad);
     FIELD().PROTECTED().NAME(mSelectionBoundsMesh);
+    FIELD().PROTECTED().NAME(mHoverObject);
+    FIELD().PROTECTED().NAME(mHoverMaskTarget);
+    FIELD().PROTECTED().NAME(mHoverOutlineQuad);
+    FIELD().PROTECTED().NAME(mPickMenu);
+    FIELD().PROTECTED().DEFAULT_VALUE(0.0f).NAME(mRightMouseTravel);
     FIELD().PROTECTED().DEFAULT_VALUE(10.0f).NAME(mObjectMinimalSelectionSize);
     FIELD().PROTECTED().NAME(mSelectedObjects);
     FIELD().PROTECTED().NAME(mTopSelectedObjects);
@@ -531,6 +582,7 @@ CLASS_FIELDS_META(Editor::SceneEditScreen)
     FIELD().PROTECTED().DEFAULT_VALUE(SceneRenderMode::Camera).NAME(mRenderMode);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mFlyNavigation3D);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mAltOrbit3D);
+    FIELD().PROTECTED().NAME(mOrbitPivot3D);
 }
 END_META;
 CLASS_METHODS_META(Editor::SceneEditScreen)
@@ -553,6 +605,7 @@ CLASS_METHODS_META(Editor::SceneEditScreen)
     FUNCTION().PUBLIC().SIGNATURE(void, SetRenderMode, SceneRenderMode);
     FUNCTION().PUBLIC().SIGNATURE(SceneRenderMode, GetRenderMode);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetRenderModeName, SceneRenderMode);
+    FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetRenderModeIcon, SceneRenderMode);
     FUNCTION().PUBLIC().SIGNATURE(Ref<RenderPipeline>, ResolveScenePipeline);
     FUNCTION().PUBLIC().SIGNATURE(const Ref<RenderPipeline>&, GetEditRenderPipeline);
     FUNCTION().PUBLIC().SIGNATURE(SceneView3DState&, GetView3DState);
@@ -569,6 +622,12 @@ CLASS_METHODS_META(Editor::SceneEditScreen)
     FUNCTION().PUBLIC().SIGNATURE(bool, IsFlyNavigation3D);
     FUNCTION().PUBLIC().SIGNATURE(void, SetFlyNavigation3D, bool);
     FUNCTION().PUBLIC().SIGNATURE(void, DrawObjectSelection, const Ref<SceneEditableObject>&, const Color4&);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetHoverObject, const Ref<SceneEditableObject>&);
+    FUNCTION().PUBLIC().SIGNATURE(Ref<SceneEditableObject>, GetHoverObject);
+    FUNCTION().PUBLIC().SIGNATURE(Vector<Ref<SceneEditableObject>>, GetObjectsUnderPoint, const Vec2F&);
+    FUNCTION().PUBLIC().SIGNATURE(bool, ShowPickMenu, const Vec2F&);
+    FUNCTION().PUBLIC().SIGNATURE(const Ref<ScenePickMenu>&, GetPickMenu);
+    FUNCTION().PUBLIC().SIGNATURE(void, PickObject, const Ref<SceneEditableObject>&);
     FUNCTION().PUBLIC().SIGNATURE(void, SelectObjects, const Vector<Ref<SceneEditableObject>>&, bool);
     FUNCTION().PUBLIC().SIGNATURE(void, SelectObject, const Ref<SceneEditableObject>&, bool);
     FUNCTION().PUBLIC().SIGNATURE(void, SelectAllObjects);
@@ -628,6 +687,10 @@ CLASS_METHODS_META(Editor::SceneEditScreen)
     FUNCTION().PROTECTED().SIGNATURE(void, DrawScenePipeline);
     FUNCTION().PROTECTED().SIGNATURE(void, DrawSelection);
     FUNCTION().PROTECTED().SIGNATURE(void, DrawSelectionOutline, SceneDrawableCategory);
+    FUNCTION().PROTECTED().SIGNATURE(void, DrawObjectsOutline, const Vector<Ref<SceneEditableObject>>&, const Vector<SceneDrawableCategory>&, const Color4&, TextureRef&, Ref<Mesh>&);
+    FUNCTION().PROTECTED().SIGNATURE(void, DrawHoverOutline);
+    FUNCTION().PROTECTED().SIGNATURE(void, BeginOrbit3D);
+    FUNCTION().PROTECTED().SIGNATURE(void, Orbit3D, const Vec2F&);
     FUNCTION().PROTECTED().SIGNATURE(bool, DrawSelectionBoundsMask, const Vector<Ref<Component>>&);
     FUNCTION().PROTECTED().SIGNATURE(void, DrawGizmos2D);
     FUNCTION().PROTECTED().SIGNATURE(void, DrawGizmos3D);

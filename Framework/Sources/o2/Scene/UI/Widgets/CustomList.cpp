@@ -449,6 +449,11 @@ namespace o2
 		return "List";
 	}
 
+    String CustomList::GetEditorIcon()
+    {
+        return "ui/UI4_actor_customlist_icon.svg";
+    }
+
 	void CustomList::UpdateSelectionSprites()
 	{
 		for (auto& sel : mSelectedItems)

@@ -41,6 +41,9 @@ namespace o2
         // Sets minimal fitting size
         void SetMinFitSize(float size);
 
+        // Returns minimal fitting size
+        float GetMinFitSize() const;
+
         // Returns is listener scrollable
         bool IsScrollable() const override;
 
@@ -55,6 +58,9 @@ namespace o2
 
         // Returns create menu group in editor
         static String GetCreateMenuGroup();
+
+        // Returns the icon of the type in the editor
+        static String GetEditorIcon();
 
         SERIALIZABLE(PopupWidget);
         CLONEABLE_REF(PopupWidget);
@@ -140,11 +146,13 @@ CLASS_METHODS_META(o2::PopupWidget)
     FUNCTION().PUBLIC().SIGNATURE(void, Show, const Ref<PopupWidget>&, const Vec2F&);
     FUNCTION().PUBLIC().SIGNATURE(void, Show, const Vec2F&);
     FUNCTION().PUBLIC().SIGNATURE(void, SetMinFitSize, float);
+    FUNCTION().PUBLIC().SIGNATURE(float, GetMinFitSize);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsScrollable);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsInputTransparent);
     FUNCTION().PUBLIC().SIGNATURE(void, FitSizeAndPosition, const Vec2F&);
     FUNCTION().PUBLIC().SIGNATURE(const WeakRef<CursorAreaEventListenersLayer>&, GetCurrentDrawingLayer);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetCreateMenuGroup);
+    FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetEditorIcon);
     FUNCTION().PROTECTED().SIGNATURE(void, CheckClipping, const RectF&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnEnabled);
     FUNCTION().PROTECTED().SIGNATURE(void, OnDisabled);

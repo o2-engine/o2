@@ -315,6 +315,11 @@ namespace o2
     }
 #endif
 
+
+    String CameraActor::GetEditorIcon()
+    {
+        return "ui/UI4_actor_camera_icon.svg";
+    }
 }
 
 DECLARE_TEMPLATE_CLASS(o2::LinkRef<o2::CameraActor>);

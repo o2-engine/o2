@@ -6,6 +6,7 @@ using namespace o2;
 namespace o2
 {
     class Toggle;
+    class Type;
 }
 
 namespace Editor
@@ -52,6 +53,12 @@ namespace Editor
 
         // Rebuilds switches of types which draw gizmos
         void UpdateTypesList();
+
+        // Returns the icon of the type that draws gizmos: the component's or the actor type's own icon
+        static String GetTypeIcon(const Type* type);
+
+        // Adds the icon of the type to its switch, before the caption
+        void AddTypeIcon(const Ref<Toggle>& toggle, const Type* type);
     };
 }
 // --- META ---
@@ -79,6 +86,8 @@ CLASS_METHODS_META(Editor::GizmosPopup)
     FUNCTION().PRIVATE().SIGNATURE(Vec2F, GetContentSize);
     FUNCTION().PRIVATE().SIGNATURE(void, InitializeControls);
     FUNCTION().PRIVATE().SIGNATURE(void, UpdateTypesList);
+    FUNCTION().PRIVATE().SIGNATURE_STATIC(String, GetTypeIcon, const Type*);
+    FUNCTION().PRIVATE().SIGNATURE(void, AddTypeIcon, const Ref<Toggle>&, const Type*);
 }
 END_META;
 // --- END META ---

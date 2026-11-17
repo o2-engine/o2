@@ -66,6 +66,9 @@ namespace o2
         // Is component visible in create menu
         static bool IsAvailableFromCreateMenu();
 
+        // Returns name of component icon
+        static String GetIcon();
+
         SERIALIZABLE(ICollider);
 
     protected:
@@ -148,6 +151,7 @@ CLASS_METHODS_META(o2::ICollider)
     FUNCTION().PUBLIC().SIGNATURE(void, SetIsSensor, bool);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsSensor);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(bool, IsAvailableFromCreateMenu);
+    FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetIcon);
     FUNCTION().PROTECTED().SIGNATURE(void, AddToRigidBody, RigidBody*);
     FUNCTION().PROTECTED().SIGNATURE(void, RemoveFromRigidBody);
     FUNCTION().PROTECTED().SIGNATURE(Ref<RigidBody>, FindRigidBody);

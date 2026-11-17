@@ -638,6 +638,11 @@ namespace o2
         return "UI";
     }
 
+    String Widget::GetEditorIcon()
+    {
+        return "ui/UI4_node_widget_icon.svg";
+    }
+
     Ref<WidgetLayer> Widget::AddLayer(const Ref<WidgetLayer>& layer)
     {
         if (layer->mParent)

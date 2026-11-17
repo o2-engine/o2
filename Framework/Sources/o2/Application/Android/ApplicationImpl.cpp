@@ -135,6 +135,9 @@ namespace o2
         return "";
     }
 
+    void Application::SetApplicationIcon(const String& pngPath)
+    {}
+
     void Application::SetContentSize(const Vec2I& size)
     {
         mResolution = size;

@@ -96,6 +96,9 @@ namespace o2
         // Returns the Box3D body handle
         b3BodyId GetBodyId() const;
 
+        // Returns the icon of the type in the editor
+        static String GetEditorIcon();
+
         SERIALIZABLE(RigidBody3D);
         CLONEABLE_REF(RigidBody3D);
 
@@ -211,6 +214,7 @@ CLASS_METHODS_META(o2::RigidBody3D)
     FUNCTION().PUBLIC().SIGNATURE(void, SetIsFixedRotation, bool);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsFixedRotation);
     FUNCTION().PUBLIC().SIGNATURE(b3BodyId, GetBodyId);
+    FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetEditorIcon);
     FUNCTION().PROTECTED().SIGNATURE(void, OnEnabled);
     FUNCTION().PROTECTED().SIGNATURE(void, OnDisabled);
     FUNCTION().PROTECTED().SIGNATURE(void, OnAddToScene);

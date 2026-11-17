@@ -74,6 +74,9 @@ namespace o2
         // Returns is layer enabled @SCRIPTABLE
         bool IsEnabled() const OPTIONAL_OVERRIDE;
 
+        // Returns is the layer enabled with all its parent layers: a layer under a disabled one is not drawn
+        bool IsEnabledWithParentLayers() const;
+
         // Returns is layer enabled and all parent are enabled too @SCRIPTABLE
         bool IsEnabledInHierarchy() const OPTIONAL_OVERRIDE;
 
@@ -442,6 +445,7 @@ CLASS_METHODS_META(o2::WidgetLayer)
     FUNCTION().PUBLIC().SIGNATURE(const Ref<IRectDrawable>&, GetDrawable);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, Draw);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(bool, IsEnabled);
+    FUNCTION().PUBLIC().SIGNATURE(bool, IsEnabledWithParentLayers);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(bool, IsEnabledInHierarchy);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetEnabled, bool);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetParent, const Ref<WidgetLayer>&);

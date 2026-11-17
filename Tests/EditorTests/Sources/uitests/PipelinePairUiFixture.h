@@ -101,11 +101,15 @@ namespace
         return Math::Abs(a.r - b.r) <= tolerance && Math::Abs(a.g - b.g) <= tolerance && Math::Abs(a.b - b.b) <= tolerance;
     }
 
+    // Window the pipeline card checks are made for
+    inline const Vec2I pipelineFixtureWindowSize(1920, 1280);
+
     struct PipelinePairUiFixture : ::testing::Test
     {
         Ref<PipelineEditor> editor;
         Ref<PipelineAsset>  asset;
         String              uploadId;
+        Vec2I               previousWindowSize;
 
         // Work folder of the suite; suites that ctest runs side by side need their own
         virtual String WorkDir() const { return "../../Work/Pipelines/uitest-pairs/"; }
@@ -119,6 +123,11 @@ namespace
             }
             PipelineUtils::SetWorkPathOverride(WorkDir());
             PipelinePairLayout::SetIoView(PipelineIoView::SideBySide);
+
+            // The checks of these cards are made for a window of this size, whatever the screen
+            previousWindowSize = o2Application.GetContentSize();
+            o2Application.SetContentSize(pipelineFixtureWindowSize);
+            AppTestDriver::PumpFrames(3);
 
             PushEditorScopeOnStack scope;
             editor = mmake<PipelineEditor>();
@@ -157,6 +166,9 @@ namespace
             PipelineUtils::SetWorkPathOverride("");
             if (UIRoot::IsSingletonInitialzed())
                 EditorUIRoot.RemoveAllWidgets();
+
+            o2Application.SetContentSize(previousWindowSize);
+            AppTestDriver::PumpFrames(3);
         }
 
         // Opens a graph of the node fed by an image source; returns the editor's copy of the node. A cached result is found in

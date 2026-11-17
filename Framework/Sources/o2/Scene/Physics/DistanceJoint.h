@@ -31,6 +31,9 @@ namespace o2
 
         static String GetName();
         static String GetCategory();
+
+        // Returns name of component icon
+        static String GetIcon();
         static bool IsAvailableFromCreateMenu();
 
         SERIALIZABLE(DistanceJoint);
@@ -75,6 +78,7 @@ CLASS_METHODS_META(o2::DistanceJoint)
     FUNCTION().PUBLIC().SIGNATURE(float, GetDampingRatio);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetName);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetCategory);
+    FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetIcon);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(bool, IsAvailableFromCreateMenu);
     FUNCTION().PRIVATE().SIGNATURE(b2Joint*, CreateJoint, b2Body*, b2Body*);
 }

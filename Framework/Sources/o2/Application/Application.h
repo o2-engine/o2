@@ -91,6 +91,10 @@ namespace o2
         // Returns application window caption. On mobiles/tablets returns empty string
         virtual String GetWindowCaption() const;
 
+        // Sets the icon of the application from a PNG file: the Dock icon on Mac, the window icon on Windows and Linux.
+        // On mobiles/tablets and in the browser has no effect
+        virtual void SetApplicationIcon(const String& pngPath);
+
         // Sets inside content size
         void SetContentSize(const Vec2I& size) override;
 
@@ -199,6 +203,10 @@ namespace o2
 		// It is called when application frame resized
 		void OnResized(const Vec2I& size) override;
 
+        // Called when the window is resized or moved to a screen of another density: the size in points and the pixels
+        // per point. A new scale alone lays the frame out again too, the render and the views size their pixels by it
+        void OnResized(const Vec2I& size, float graphicsScale);
+
 		// Calling when application activated
         virtual void OnActivated() {}
 
@@ -267,6 +275,7 @@ CLASS_METHODS_META(o2::Application)
     FUNCTION().PUBLIC().SIGNATURE(Vec2I, GetWindowPosition);
     FUNCTION().PUBLIC().SIGNATURE(void, SetWindowCaption, const String&);
     FUNCTION().PUBLIC().SIGNATURE(String, GetWindowCaption);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetApplicationIcon, const String&);
     FUNCTION().PUBLIC().SIGNATURE(void, SetContentSize, const Vec2I&);
     FUNCTION().PUBLIC().SIGNATURE(Vec2I, GetContentSize);
     FUNCTION().PUBLIC().SIGNATURE(Vec2I, GetScreenResolution);
@@ -309,6 +318,7 @@ CLASS_METHODS_META(o2::Application)
     FUNCTION().PROTECTED().SIGNATURE(void, SetWindowSizePlatform, const Vec2I&);
     FUNCTION().PROTECTED().SIGNATURE(void, ProcessFrame);
     FUNCTION().PROTECTED().SIGNATURE(void, OnResized, const Vec2I&);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnResized, const Vec2I&, float);
     FUNCTION().PROTECTED().SIGNATURE(void, OnActivated);
     FUNCTION().PROTECTED().SIGNATURE(void, OnDeactivated);
     FUNCTION().PROTECTED().SIGNATURE(void, OnStarted);

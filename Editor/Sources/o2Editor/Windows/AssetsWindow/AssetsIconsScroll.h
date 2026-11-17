@@ -212,6 +212,8 @@ namespace Editor
         Vector<Ref<AssetInfo>> mAssetInfos;        // Asset infos in path @IGNORE
         Vector<Ref<AssetIcon>> mVisibleAssetIcons; // Visible asset icons
 
+        Vector<Ref<AssetInfo>> mPendingThumbnails; // Prototypes whose thumbnails are rendered at the next draws
+
         Ref<ContextMenu> mContextMenu; // Assets Context menu
                                 
         Vector<Ref<AssetInfo>>  mSelectedAssets;          // Selected assets icons @IGNORE
@@ -321,6 +323,9 @@ namespace Editor
 
         // Shows the frame of a video in its icon
         void SetupMediaIcon(const Ref<AssetIcon>& icon, const Ref<AssetInfo>& info);
+
+        // Renders the thumbnails of the visible prototypes that have none yet, a few per frame, and shows them
+        void RenderPendingThumbnails();
 
         // Returns the file of the asset, read once per shown folder
         const FileInfo& GetFileInfo(const Ref<AssetInfo>& info);
@@ -503,6 +508,7 @@ CLASS_FIELDS_META(Editor::AssetsIconsScrollArea)
     FIELD().PROTECTED().NAME(mGridItemsSpacing);
     FIELD().PROTECTED().NAME(mFileInfos);
     FIELD().PROTECTED().NAME(mVisibleAssetIcons);
+    FIELD().PROTECTED().NAME(mPendingThumbnails);
     FIELD().PROTECTED().NAME(mContextMenu);
     FIELD().PROTECTED().NAME(mSelectedPreloadedAssets);
     FIELD().PROTECTED().NAME(mNewAsset);
@@ -602,6 +608,7 @@ CLASS_METHODS_META(Editor::AssetsIconsScrollArea)
     FUNCTION().PROTECTED().SIGNATURE(void, CompleteSelecting);
     FUNCTION().PROTECTED().SIGNATURE(void, SortAssetInfos);
     FUNCTION().PROTECTED().SIGNATURE(void, SetupMediaIcon, const Ref<AssetIcon>&, const Ref<AssetInfo>&);
+    FUNCTION().PROTECTED().SIGNATURE(void, RenderPendingThumbnails);
     FUNCTION().PROTECTED().SIGNATURE(const FileInfo&, GetFileInfo, const Ref<AssetInfo>&);
     FUNCTION().PROTECTED().SIGNATURE(void, InitializeTableHeader);
     FUNCTION().PROTECTED().SIGNATURE(void, UpdateTableHeader);

@@ -179,6 +179,11 @@ namespace o2
         return "Layout";
     }
 
+    String GridLayout::GetEditorIcon()
+    {
+        return "ui/UI4_actor_gridlayout_icon.svg";
+    }
+
     void GridLayout::OnChildAdded(const Ref<Widget>& child)
     {
         child->GetLayoutData().mDrivenByParent = true;

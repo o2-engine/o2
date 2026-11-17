@@ -44,6 +44,12 @@ namespace Editor
             p.frame = Color4(44, 62, 80);
             p.guide = Color4(190, 190, 190);
             p.selectionOutline = Color4(10, 165, 150);
+            p.hoverOutline = Color4(255, 140, 0);
+            p.switchTrack = Color4(209, 220, 222);
+            p.switchTrackHover = Color4(196, 210, 212);
+            p.switchThumb = Color4(0, 156, 141);
+            p.switchText = Color4(96, 125, 139);
+            p.switchTextOn = Color4(255, 255, 255);
             p.frameObject = Color4(44, 62, 80, 150);
             p.frameParent = Color4(44, 62, 80, 100);
             p.warning = Color4(226, 198, 83);
@@ -74,6 +80,12 @@ namespace Editor
             p.frame = Dark::text;
             p.guide = Hex(0x5A5F6E);
             p.selectionOutline = Dark::accent;
+            p.hoverOutline = Hex(0xFFA040);
+            p.switchTrack = Dark::field;
+            p.switchTrackHover = Dark::fieldHover;
+            p.switchThumb = Dark::accentDeep;
+            p.switchText = Dark::ink;
+            p.switchTextOn = Dark::textStrong;
             p.iconOff = 0.55f;
             p.frameObject = Color4(Dark::text.r, Dark::text.g, Dark::text.b, 150);
             p.frameParent = Color4(Dark::text.r, Dark::text.g, Dark::text.b, 100);

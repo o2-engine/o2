@@ -105,6 +105,11 @@ namespace o2
         return "Basic";
     }
 
+    String Button::GetEditorIcon()
+    {
+        return "ui/UI4_actor_button_icon.svg";
+    }
+
     void Button::OnCursorPressed(const Input::Cursor& cursor)
     {
         auto pressedState = state["pressed"];

@@ -379,6 +379,11 @@ namespace o2
     {
         return "Basic";
     }
+
+    String Label::GetEditorIcon()
+    {
+        return "ui/UI4_actor_label_icon.svg";
+    }
 }
 
 DECLARE_TEMPLATE_CLASS(o2::LinkRef<o2::Label>);

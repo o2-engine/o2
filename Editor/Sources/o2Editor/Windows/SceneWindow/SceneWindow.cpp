@@ -6,6 +6,9 @@
 #include "o2/Scene/UI/Widgets/Button.h"
 #include "o2/Scene/UI/Widgets/ContextMenu.h"
 #include "o2/Scene/UI/Widgets/CustomDropDown.h"
+#include "o2/Assets/Types/VectorImageAsset.h"
+#include "o2Editor/Windows/SceneWindow/ViewModeSwitch.h"
+#include "o2/Scene/UI/WidgetLayer.h"
 #include "o2Editor/Windows/SceneWindow/GizmosPopup.h"
 #include "o2Editor/Windows/SceneWindow/LayersPopup.h"
 #include "o2Editor/Windows/SceneWindow/SceneEditScreen.h"
@@ -52,64 +55,109 @@ namespace Editor
         *mEditWidget->layout = WidgetLayout::BothStretch(0, 0, 0, 21);
         mWindow->AddChild(mEditWidget);
 
-        mLayersButton = o2UI.CreateWidget<Button>("panel down");
-        mLayersButton->caption = "Layers";
-        *mLayersButton->layout = WidgetLayout::VerStretch(HorAlign::Right, 0, 0, 100, 0);
-        mUpPanel->AddChild(mLayersButton);
+        // The buttons of the window go left, the scene controls right, the 2D/3D switch at the very end
+        auto spacer = mmake<Widget>();
+        spacer->name = "spacer";
+        mUpPanel->AddChild(spacer);
 
+        auto fixWidth = [](const Ref<Widget>& widget, float width)
+        {
+            widget->layout->minWidth = width;
+            widget->layout->maxWidth = width;
+        };
+
+        // A clicked button keeps the focus while its menu is open, and the focus frame is a pixel larger than the
+        // button: it looked as if the button grew. The dropdown buttons go without the frame
+        auto makeDropdownButton = [&](const String& name, const WString& caption, float width)
+        {
+            auto button = o2UI.CreateWidget<Button>("panel down");
+            button->name = name;
+            button->caption = caption;
+            if (auto focusFrame = button->FindLayer("focused"))
+                focusFrame->SetEnabled(false);
+
+            fixWidth(button, width);
+            mUpPanel->AddChild(button);
+            return button;
+        };
+
+        mLayersButton = makeDropdownButton("layers", "Layers", 72);
         mLayersPopup = mmake<LayersPopup>();
         mLayersButton->AddChild(mLayersPopup);
 
         mLayersButton->onClick = [&]() { mLayersPopup->Show(mLayersButton->layout->worldLeftBottom); };
 
-        mGizmosButton = o2UI.CreateWidget<Button>("panel down");
-        mGizmosButton->caption = "Gizmos";
-        *mGizmosButton->layout = WidgetLayout::VerStretch(HorAlign::Right, 0, 0, 70, 240);
-        mUpPanel->AddChild(mGizmosButton);
+        mGizmosButton = makeDropdownButton("gizmos", "Gizmos", 80);
 
         mGizmosPopup = mmake<GizmosPopup>();
         mGizmosButton->AddChild(mGizmosPopup);
 
         mGizmosButton->onClick = [&]() { mGizmosPopup->Show(mGizmosButton->layout->worldLeftBottom); };
 
-        mView3DButton = o2UI.CreateWidget<Button>("panel down");
-        mView3DButton->caption = "3D";
-        *mView3DButton->layout = WidgetLayout::VerStretch(HorAlign::Right, 0, 0, 50, 100);
-        mUpPanel->AddChild(mView3DButton);
-
-        mView3DButton->onClick = [&]() { mEditWidget->SetView3DMode(!mEditWidget->IsView3DMode()); };
-        mEditWidget->onView3DModeChanged = [&](bool enabled) {
-            mView3DButton->caption = enabled ? WString("2D") : WString("3D");
-        };
-
         // A custom scene camera pipeline (offscreen passes, screen shaders) can distort the edit view: every mode
-        // but the scene camera one draws through the default forward 3D/2D pipeline
-        mRenderModeButton = o2UI.CreateWidget<Button>("panel down");
-        mRenderModeButton->name = "render mode";
-        mRenderModeButton->caption = SceneEditScreen::GetRenderModeName(mEditWidget->GetRenderMode());
-        mRenderModeButton->layout->minWidth = 130;
-        mUpPanel->AddChild(mRenderModeButton);
+        // but the scene camera one draws through the default forward 3D/2D pipeline. The button shows the mode by its icon
+        mRenderModeButton = makeDropdownButton("render mode", "", 44);
+        mRenderModeButton->AddLayer("icon", mmake<VectorSprite>(SceneEditScreen::GetRenderModeIcon(mEditWidget->GetRenderMode())),
+                                    Layout::Based(BaseCorner::Left, Vec2F(20, 20), Vec2F(4, 0)));
 
         mRenderModeMenu = o2UI.CreateWidget<ContextMenu>();
         mRenderModeMenu->name = "render modes";
+        mRenderModeMenu->SetMinFitSize(mRenderModeMenu->GetMinFitSize() + renderModeIconWidth + renderModeCaptionIndent - 20.0f);
         for (auto mode : { SceneRenderMode::Camera, SceneRenderMode::Stable, SceneRenderMode::Unlit,
                            SceneRenderMode::Wireframe, SceneRenderMode::ShadedWireframe, SceneRenderMode::Overdraw })
         {
             auto item = mRenderModeMenu->AddToggleItem(SceneEditScreen::GetRenderModeName(mode),
-                                                       mEditWidget->GetRenderMode() == mode, [](bool) {});
+                                                       mEditWidget->GetRenderMode() == mode, [](bool) {},
+                                                       AssetRef<VectorImageAsset>(SceneEditScreen::GetRenderModeIcon(mode)));
             item->onChecked = [this, mode](bool) { mEditWidget->SetRenderMode(mode); };
         }
 
         mWindow->AddChild(mRenderModeMenu);
 
-        mRenderModeButton->onClick = [&]() { mRenderModeMenu->Show(mRenderModeButton->layout->GetWorldLeftBottom()); };
+        mRenderModeButton->onClick = [&]() { ShowRenderModeMenu(); };
         mEditWidget->onRenderModeChanged = [&](SceneRenderMode mode) { OnRenderModeChanged(mode); };
+
+        mViewModeSwitch = mmake<ViewModeSwitch>();
+        mViewModeSwitch->name = "view mode";
+        fixWidth(mViewModeSwitch, 62);
+        mViewModeSwitch->SetValue(mEditWidget->IsView3DMode(), false);
+        mUpPanel->AddChild(mViewModeSwitch);
+
+        mViewModeSwitch->onSwitchByUser = [&](bool enabled) { mEditWidget->SetView3DMode(enabled); };
+        mEditWidget->onView3DModeChanged = [&](bool enabled) { OnView3DModeChanged(enabled); };
+    }
+
+    void SceneWindow::OnView3DModeChanged(bool enabled)
+    {
+        if (mViewModeSwitch->GetValue() != enabled)
+            mViewModeSwitch->SetValue(enabled);
+    }
+
+    void SceneWindow::ShowRenderModeMenu()
+    {
+        mRenderModeMenu->Show(mRenderModeButton->layout->GetWorldLeftBottom());
+
+        // The check mark and the icon both lie at the left of an item: the icon with the caption step aside
+        for (auto& item : mRenderModeMenu->GetItems())
+        {
+            if (auto widget = item->widget.Lock())
+            {
+                if (auto basic = widget->FindLayer("basic"))
+                {
+                    basic->layout = Layout::BothStretch(renderModeIconWidth, 0, 0, 0);
+
+                    if (auto caption = basic->FindChild("caption"))
+                        caption->layout.offsetMin = Vec2F(renderModeCaptionIndent, caption->layout.offsetMin.Get().y);
+                }
+            }
+        }
     }
 
     void SceneWindow::OnRenderModeChanged(SceneRenderMode mode)
     {
         WString name = SceneEditScreen::GetRenderModeName(mode);
-        mRenderModeButton->caption = name;
+        if (auto icon = DynamicCast<VectorSprite>(mRenderModeButton->layer["icon"]->GetDrawable()))
+            icon->LoadFromImage(SceneEditScreen::GetRenderModeIcon(mode));
 
         // The item widgets are built when the menu shows: the items keep the checks till then
         for (auto& item : mRenderModeMenu->GetItems())

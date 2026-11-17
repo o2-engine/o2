@@ -182,8 +182,23 @@ namespace o2
 
     void WidgetLayer::Draw()
     {
-        if (mEnabled && mResTransparency > FLT_EPSILON)
+        // Layers are drawn as one flat list, so a disabled parent layer must hide its children here
+        if (mResTransparency > FLT_EPSILON && IsEnabledWithParentLayers())
             mDrawable->Draw();
+    }
+
+    bool WidgetLayer::IsEnabledWithParentLayers() const
+    {
+        if (!mEnabled)
+            return false;
+
+        for (auto parent = mParent.Lock(); parent; parent = parent->mParent.Lock())
+        {
+            if (!parent->mEnabled)
+                return false;
+        }
+
+        return true;
     }
 
     bool WidgetLayer::IsEnabled() const

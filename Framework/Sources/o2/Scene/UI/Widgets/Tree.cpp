@@ -118,6 +118,11 @@ namespace o2
         return "Tree";
     }
 
+    String TreeNode::GetEditorIcon()
+    {
+        return "ui/UI4_actor_treenode_icon.svg";
+    }
+
     void TreeNode::OnStateAdded(const Ref<WidgetState>& state)
     {
         Widget::OnStateAdded(state);
@@ -1976,6 +1981,11 @@ namespace o2
     String Tree::GetCreateMenuGroup()
     {
         return "Tree";
+    }
+
+    String Tree::GetEditorIcon()
+    {
+        return "ui/UI4_actor_tree_icon.svg";
     }
 }
 

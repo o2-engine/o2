@@ -287,6 +287,11 @@ namespace o2
         mColliders.RemoveFirst([&](auto& x) { return x == collider; });
     }
 
+
+    String RigidBody::GetEditorIcon()
+    {
+        return "ui/UI4_actor_rigidbody_icon.svg";
+    }
 }
 
 DECLARE_TEMPLATE_CLASS(o2::LinkRef<o2::RigidBody>);

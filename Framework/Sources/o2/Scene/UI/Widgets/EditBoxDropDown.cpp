@@ -314,6 +314,11 @@ namespace o2
         return "Dropping";
     }
 
+    String EditBoxDropDown::GetEditorIcon()
+    {
+        return "ui/UI4_actor_editboxdropdown_icon.svg";
+    }
+
     void EditBoxDropDown::FilterItems()
     {
         if (mIsFiltering || mIsKeyboardNavigating)

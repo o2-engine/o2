@@ -147,6 +147,11 @@ namespace o2
         mFitSizeMin = size;
     }
 
+    float PopupWidget::GetMinFitSize() const
+    {
+        return mFitSizeMin;
+    }
+
     bool PopupWidget::IsScrollable() const
     {
         return true;
@@ -265,6 +270,11 @@ namespace o2
     String PopupWidget::GetCreateMenuGroup()
     {
         return "Window";
+    }
+
+    String PopupWidget::GetEditorIcon()
+    {
+        return "ui/UI4_actor_popup_icon.svg";
     }
 }
 

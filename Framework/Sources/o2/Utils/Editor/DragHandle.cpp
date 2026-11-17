@@ -805,6 +805,11 @@ namespace o2
         return "UI/Editor";
     }
 
+    String WidgetDragHandle::GetEditorIcon()
+    {
+        return "ui/UI4_actor_draghandle_icon.svg";
+    }
+
     Ref<o2::RefCounterable> WidgetDragHandle::CastToRefCounterable(const Ref<WidgetDragHandle>& ref)
     {
         return DynamicCast<Widget>(ref);

@@ -47,6 +47,11 @@ namespace o2
 
     String RevoluteJoint::GetName() { return "Revolute joint"; }
     String RevoluteJoint::GetCategory() { return "Physics/Joints"; }
+
+    String RevoluteJoint::GetIcon()
+    {
+        return "ui/UI4_revolute_joint_component.svg";
+    }
     bool RevoluteJoint::IsAvailableFromCreateMenu() { return true; }
 
     b2Joint* RevoluteJoint::CreateJoint(b2Body* bodyA, b2Body* bodyB)

@@ -93,6 +93,9 @@ namespace o2
         // Returns create menu group in editor
         static String GetCreateMenuGroup();
 
+        // Returns the icon of the type in the editor
+        static String GetEditorIcon();
+
         SERIALIZABLE(LongList);
         CLONEABLE_REF(LongList);
 
@@ -229,6 +232,7 @@ CLASS_METHODS_META(o2::LongList)
     FUNCTION().PUBLIC().SIGNATURE(void, OnItemsUpdated, bool);
     FUNCTION().PUBLIC().SIGNATURE(void, UpdateSelfTransform);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetCreateMenuGroup);
+    FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetEditorIcon);
     FUNCTION().PROTECTED().SIGNATURE(void, OnDeserialized, const DataValue&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnEnabled);
     FUNCTION().PROTECTED().SIGNATURE(void, OnDisabled);

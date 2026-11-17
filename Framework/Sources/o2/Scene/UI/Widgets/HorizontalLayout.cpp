@@ -171,6 +171,11 @@ namespace o2
         return "Layout";
     }
 
+    String HorizontalLayout::GetEditorIcon()
+    {
+        return "ui/UI4_actor_horlayout_icon.svg";
+    }
+
     float HorizontalLayout::GetMinWidthWithChildren() const
     {
         if (!mFitByChildren)

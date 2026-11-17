@@ -25,6 +25,14 @@ namespace o2
         }
     }
 
+    void Application::OnResized(const Vec2I& size, float graphicsScale)
+    {
+        if (graphicsScale > 0.0f)
+            mGraphicsScale = graphicsScale;
+
+        OnResized(size);
+    }
+
     void Application::ProcessFrame()
     {
         if (!mReady)

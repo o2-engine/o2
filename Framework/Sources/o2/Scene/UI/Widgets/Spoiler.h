@@ -63,6 +63,9 @@ namespace o2
         // Returns create menu group in editor
         static String GetCreateMenuGroup();
 
+        // Returns the icon of the type in the editor
+        static String GetEditorIcon();
+
         SERIALIZABLE(Spoiler);
         CLONEABLE_REF(Spoiler);
 
@@ -134,6 +137,7 @@ CLASS_METHODS_META(o2::Spoiler)
     FUNCTION().PUBLIC().SIGNATURE(float, GetHeadHeight);
     FUNCTION().PUBLIC().SIGNATURE(Ref<Button>, GetExpandButton);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetCreateMenuGroup);
+    FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetEditorIcon);
     FUNCTION().PROTECTED().SIGNATURE(void, RearrangeChilds);
     FUNCTION().PROTECTED().SIGNATURE(float, GetMinHeightWithChildren);
     FUNCTION().PROTECTED().SIGNATURE(void, UpdateExpanding, float);

@@ -19,12 +19,12 @@ namespace o2
     RendererView* ApplicationPlatformWrapper::renderer;
     Vec2I ApplicationPlatformWrapper::resolution;
 
-    void ApplicationPlatformWrapper::OnWindowResized(const Vec2I& resolution)
+    void ApplicationPlatformWrapper::OnWindowResized(const Vec2I& resolution, float graphicsScale)
     {
         ApplicationPlatformWrapper::resolution = resolution;
         
         if (Application::IsSingletonInitialzed())
-            o2Application.OnResized(resolution);
+            o2Application.OnResized(resolution, graphicsScale);
     }
     
     void ApplicationPlatformWrapper::Deinitialize()
@@ -215,6 +215,22 @@ namespace o2
     String Application::GetWindowCaption() const
     {
         return [[ApplicationPlatformWrapper::window title] UTF8String];
+    }
+
+    void Application::SetApplicationIcon(const String& pngPath)
+    {
+        NSString* path = [NSString stringWithUTF8String:pngPath.Data()];
+        if (![path isAbsolutePath])
+            path = [[[NSFileManager defaultManager] currentDirectoryPath] stringByAppendingPathComponent:path];
+
+        NSImage* image = [[NSImage alloc] initWithContentsOfFile:path];
+        if (!image)
+        {
+            mLog->WarningStr("Can't load the application icon " + pngPath);
+            return;
+        }
+
+        [NSApp setApplicationIconImage:image];
     }
 
     void Application::SetContentSize(const Vec2I& size)

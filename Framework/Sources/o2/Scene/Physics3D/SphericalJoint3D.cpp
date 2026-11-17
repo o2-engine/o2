@@ -39,6 +39,11 @@ namespace o2
 
     String SphericalJoint3D::GetName() { return "Spherical joint 3D"; }
     String SphericalJoint3D::GetCategory() { return "Physics 3D/Joints"; }
+
+    String SphericalJoint3D::GetIcon()
+    {
+        return "ui/UI4_spherical_joint_component.svg";
+    }
     bool SphericalJoint3D::IsAvailableFromCreateMenu() { return true; }
 
     b3JointId SphericalJoint3D::CreateJoint(RigidBody3D* bodyA, RigidBody3D* bodyB)

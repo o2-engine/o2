@@ -83,6 +83,9 @@ namespace Editor
         // Rotates view: x adds to yaw, y adds to pitch (clamped)
         void Orbit(const Vec2F& deltaAnglesRad);
 
+        // Rotates view like Orbit does, around the pivot instead of the target: the pivot keeps its place on the screen
+        void OrbitAround(const Vec3F& pivot, const Vec2F& deltaAnglesRad);
+
         // Rotates view around the camera position (FPS-style look): camera stays, target moves
         void Look(const Vec2F& deltaAnglesRad);
 

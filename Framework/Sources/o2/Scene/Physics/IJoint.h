@@ -55,6 +55,9 @@ namespace o2
         // Is component visible in create menu
         static bool IsAvailableFromCreateMenu();
 
+        // Returns name of component icon
+        static String GetIcon();
+
         SERIALIZABLE(IJoint);
 
     protected:
@@ -130,6 +133,7 @@ CLASS_METHODS_META(o2::IJoint)
     FUNCTION().PUBLIC().SIGNATURE(void, SetCollideConnected, bool);
     FUNCTION().PUBLIC().SIGNATURE(bool, GetCollideConnected);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(bool, IsAvailableFromCreateMenu);
+    FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetIcon);
     FUNCTION().PROTECTED().SIGNATURE(b2Joint*, CreateJoint, b2Body*, b2Body*);
     FUNCTION().PROTECTED().SIGNATURE(void, SetupBaseDef, b2JointDef&, b2Body*, b2Body*);
     FUNCTION().PROTECTED().SIGNATURE(void, RebuildJoint);

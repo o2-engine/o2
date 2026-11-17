@@ -176,7 +176,7 @@ TEST(SceneRenderMode, VectorSpritesKeepTheDetailOfTheGameWindow)
 class SceneRenderModeToolbar: public EditorVectorUIFixture
 {};
 
-// The toolbar button shows the mode and opens the menu of all the modes, the chosen one checked
+// The toolbar button shows the mode by its icon and opens the menu of all the modes, the chosen one checked
 TEST_F(SceneRenderModeToolbar, ButtonShowsTheMode)
 {
     BuildStyle(false);
@@ -188,7 +188,12 @@ TEST_F(SceneRenderModeToolbar, ButtonShowsTheMode)
 
     auto button = window->FindChildByTypeAndName<Button>("render mode");
     ASSERT_TRUE(button);
-    EXPECT_EQ(button->GetCaption(), WString("Scene camera"));
+    auto buttonIcon = [&]()
+    {
+        auto icon = DynamicCast<VectorSprite>(button->layer["icon"]->GetDrawable());
+        return icon ? icon->GetImageName() : String();
+    };
+    EXPECT_EQ(buttonIcon(), SceneEditScreen::GetRenderModeIcon(SceneRenderMode::Camera));
 
     auto menu = window->FindChildByTypeAndName<ContextMenu>("render modes");
     ASSERT_TRUE(menu);
@@ -209,7 +214,7 @@ TEST_F(SceneRenderModeToolbar, ButtonShowsTheMode)
     EXPECT_EQ(checkedItems(), Vector<WString>({ "Scene camera" }));
 
     o2EditorSceneScreen.SetRenderMode(SceneRenderMode::Overdraw);
-    EXPECT_EQ(button->GetCaption(), WString("Overdraw"));
+    EXPECT_EQ(buttonIcon(), SceneEditScreen::GetRenderModeIcon(SceneRenderMode::Overdraw));
     EXPECT_EQ(checkedItems(), Vector<WString>({ "Overdraw" }));
 
     // Choosing an item of the menu sets its mode
@@ -220,5 +225,5 @@ TEST_F(SceneRenderModeToolbar, ButtonShowsTheMode)
     }
 
     EXPECT_EQ(o2EditorSceneScreen.GetRenderMode(), SceneRenderMode::Wireframe);
-    EXPECT_EQ(button->GetCaption(), WString("Wireframe"));
+    EXPECT_EQ(buttonIcon(), SceneEditScreen::GetRenderModeIcon(SceneRenderMode::Wireframe));
 }

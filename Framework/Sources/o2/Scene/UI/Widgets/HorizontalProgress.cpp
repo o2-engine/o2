@@ -285,6 +285,11 @@ namespace o2
     {
         return "Progress";
     }
+
+    String HorizontalProgress::GetEditorIcon()
+    {
+        return "ui/UI4_actor_horprogress_icon.svg";
+    }
 }
 
 DECLARE_TEMPLATE_CLASS(o2::LinkRef<o2::HorizontalProgress>);

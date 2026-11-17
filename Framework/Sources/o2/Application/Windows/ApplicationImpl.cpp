@@ -6,6 +6,7 @@
 #include "o2/Events/EventSystem.h"
 #include "o2/Utils/Debug/Log/LogStream.h"
 #include "o2/Utils/Debug/StackTrace.h"
+#include "o2/Utils/Bitmap/Bitmap.h"
 #include "o2/Utils/FileSystem/FileSystem.h"
 #include <Windows.h>
 
@@ -43,12 +44,15 @@ namespace o2
             wndClass.cbClsExtra = 0;
             wndClass.cbWndExtra = 0;
             wndClass.hInstance = NULL;
-            wndClass.hIcon = LoadIcon(NULL, IDI_APPLICATION);
+            wndClass.hIcon = LoadIcon(GetModuleHandle(NULL), MAKEINTRESOURCE(1));
+            if (!wndClass.hIcon)
+                wndClass.hIcon = LoadIcon(NULL, IDI_APPLICATION);
+
             wndClass.hCursor = LoadCursor(NULL, IDC_ARROW);
             wndClass.hbrBackground = (HBRUSH)GetStockObject(GRAY_BRUSH);
             wndClass.lpszMenuName = NULL;
             wndClass.lpszClassName = "o2App";
-            wndClass.hIconSm = LoadIcon(NULL, IDI_APPLICATION);
+            wndClass.hIconSm = wndClass.hIcon;
 
             if (!RegisterClassEx(&wndClass))
             {
@@ -228,6 +232,73 @@ namespace o2
     String Application::GetWindowCaption() const
     {
         return mWndCaption;
+    }
+
+    void Application::SetApplicationIcon(const String& pngPath)
+    {
+        if (!mHWnd)
+            return;
+
+        Bitmap icon;
+        if (!icon.Load(pngPath) || icon.GetFormat() != PixelFormat::R8G8B8A8)
+        {
+            mLog->WarningStr("Can't load the application icon " + pngPath);
+            return;
+        }
+
+        // A top-down 32-bit BGRA DIB; the loaded rows go from the bottom
+        Vec2I size = icon.GetSize();
+        BITMAPV5HEADER header = {};
+        header.bV5Size = sizeof(BITMAPV5HEADER);
+        header.bV5Width = size.x;
+        header.bV5Height = -size.y;
+        header.bV5Planes = 1;
+        header.bV5BitCount = 32;
+        header.bV5Compression = BI_BITFIELDS;
+        header.bV5RedMask = 0x00FF0000;
+        header.bV5GreenMask = 0x0000FF00;
+        header.bV5BlueMask = 0x000000FF;
+        header.bV5AlphaMask = 0xFF000000;
+
+        HDC dc = GetDC(NULL);
+        void* bits = nullptr;
+        HBITMAP color = CreateDIBSection(dc, (BITMAPINFO*)&header, DIB_RGB_COLORS, &bits, NULL, 0);
+        ReleaseDC(NULL, dc);
+
+        if (!color || !bits)
+            return;
+
+        const UInt8* pixels = icon.GetData();
+        UInt8* target = (UInt8*)bits;
+        for (int y = 0; y < size.y; y++)
+        {
+            const UInt8* row = pixels + (size_t)(size.y - 1 - y)*size.x*4;
+            for (int x = 0; x < size.x; x++)
+            {
+                UInt8* out = target + ((size_t)y*size.x + x)*4;
+                out[0] = row[x*4 + 2];
+                out[1] = row[x*4 + 1];
+                out[2] = row[x*4 + 0];
+                out[3] = row[x*4 + 3];
+            }
+        }
+
+        HBITMAP mask = CreateBitmap(size.x, size.y, 1, 1, NULL);
+
+        ICONINFO info = {};
+        info.fIcon = TRUE;
+        info.hbmMask = mask;
+        info.hbmColor = color;
+        HICON hIcon = CreateIconIndirect(&info);
+
+        DeleteObject(color);
+        DeleteObject(mask);
+
+        if (!hIcon)
+            return;
+
+        SendMessage(mHWnd, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
+        SendMessage(mHWnd, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
     }
 
     void Application::SetContentSize(const Vec2I& size)

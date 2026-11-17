@@ -18,8 +18,8 @@ namespace Editor
         mSpoiler->expandWidth = true;
         mSpoiler->fitByChildren = true;
         mSpoiler->borderBottom = 5;
-        mSpoiler->SetCaption("Transform");
-        mSpoiler->GetIcon()->SetImageName("ui/UI4_transform_icon_white.svg");
+        mSpoiler->SetCaption("Layer");
+        mSpoiler->SetHeadIcon("ui/UI4_node_layer_icon.svg");
 
         mSpoiler->SetExpanded(true);
     }

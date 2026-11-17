@@ -1,7 +1,9 @@
 #include "o2Editor/stdafx.h"
 #include "FontSampleView.h"
 
+#include "o2/Render/FontStyle.h"
 #include "o2/Render/Text.h"
+#include "o2/Render/VectorFontEffects.h"
 #include "o2/Scene/UI/WidgetLayer.h"
 #include "o2Editor/UI/Style/EditorTheme.h"
 
@@ -18,7 +20,7 @@ namespace Editor
     {}
 
     FontSampleView::FontSampleView(RefCounter* refCounter, const FontSampleView& other):
-        Widget(refCounter), mSizes(other.mSizes), mSample(other.mSample)
+        Widget(refCounter), mSizes(other.mSizes), mSample(other.mSample), mStyle(other.mStyle)
     {
         SetFont(other.mFont);
     }
@@ -27,6 +29,7 @@ namespace Editor
     {
         mSizes = other.mSizes;
         mSample = other.mSample;
+        mStyle = other.mStyle;
         SetFont(other.mFont);
         return *this;
     }
@@ -40,6 +43,24 @@ namespace Editor
     const Ref<Font>& FontSampleView::GetFont() const
     {
         return mFont;
+    }
+
+    void FontSampleView::SetFontStyle(const Ref<FontStyle>& style)
+    {
+        mStyle = style;
+        Rebuild();
+    }
+
+    const Ref<FontStyle>& FontSampleView::GetFontStyle() const
+    {
+        return mStyle;
+    }
+
+    bool FontSampleView::IsStylePaintingGlyphs(const Ref<FontStyle>& style)
+    {
+        return style && style->GetEffects().Contains([](const Ref<VectorFont::Effect>& effect) {
+            return DynamicCast<FontColorEffect>(effect) || DynamicCast<FontGradientEffect>(effect);
+        });
     }
 
     void FontSampleView::SetSizes(const Vector<int>& sizes)
@@ -88,7 +109,7 @@ namespace Editor
         if (!mFont)
             return;
 
-        Color4 color = EditorTheme::Get().text;
+        Color4 color = IsStylePaintingGlyphs(mStyle) ? Color4::White() : EditorTheme::Get().text;
         float top = 0.0f;
         for (int i = 0; i < mSizes.Count(); i++)
         {
@@ -103,6 +124,9 @@ namespace Editor
             text->SetWordWrap(false);
             text->SetDotsEngings(true);
             text->SetColor(color);
+
+            if (mStyle)
+                text->SetFontStyle(mStyle);
 
             AddLayer("line " + (String)i, text, Layout::HorStretch(VerAlign::Top, 4, 4, height, top));
             mLines.Add(text);

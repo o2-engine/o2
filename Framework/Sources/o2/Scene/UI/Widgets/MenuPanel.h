@@ -128,6 +128,9 @@ namespace o2
         // Returns create menu group in editor
         static String GetCreateMenuGroup();
 
+        // Returns the icon of the type in the editor
+        static String GetEditorIcon();
+
         SERIALIZABLE(MenuPanel);
         CLONEABLE_REF(MenuPanel);
 
@@ -243,6 +246,7 @@ CLASS_METHODS_META(o2::MenuPanel)
     FUNCTION().PUBLIC().SIGNATURE(void, SetSelectionDrawableLayout, const Layout&);
     FUNCTION().PUBLIC().SIGNATURE(Layout, GetSelectionDrawableLayout);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetCreateMenuGroup);
+    FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetEditorIcon);
     FUNCTION().PROTECTED().SIGNATURE(void, OnEnabled);
     FUNCTION().PROTECTED().SIGNATURE(void, OnDisabled);
     FUNCTION().PROTECTED().SIGNATURE(Ref<ContextMenu>, CreateSubContext, WString&);

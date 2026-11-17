@@ -261,6 +261,11 @@ namespace o2
 	    return "Render";
     }
 
+    String TextSplitterComponent::GetIcon()
+    {
+        return "ui/UI4_text_splitter_component.svg";
+    }
+
 	void TextSplitterComponent::RebuildCharacters()
     {
         ClearSymbols();

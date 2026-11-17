@@ -110,6 +110,7 @@ namespace
         "UI4_keys_select border", "UI4_keys_select border_hover", "UI4_keys_select border_pressed", "UI4_map_key",
         "UI4_map_key_hover", "UI4_save_gray", "UI4_scene_icon", "UI4_shadow_separator", "pipeline/btn_region",
         "pipeline/menu_node_effect", "pipeline/menu_node_video", "pipeline/al_cmp_grip",
+        "UI4_actor_gridscrollarea_icon", "UI4_actor_gridscrollarea_icon_white", "UI4_circle_collider_component",
     };
 
     const Limits scalableDeviationLimits = { 0.8f, 9.0f };

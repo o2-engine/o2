@@ -55,6 +55,9 @@ namespace o2
         // Is component visible in create menu
         static bool IsAvailableFromCreateMenu();
 
+        // Returns name of component icon
+        static String GetIcon();
+
         SERIALIZABLE(IJoint3D);
 
     protected:
@@ -128,6 +131,7 @@ CLASS_METHODS_META(o2::IJoint3D)
     FUNCTION().PUBLIC().SIGNATURE(void, SetCollideConnected, bool);
     FUNCTION().PUBLIC().SIGNATURE(bool, GetCollideConnected);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(bool, IsAvailableFromCreateMenu);
+    FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetIcon);
     FUNCTION().PROTECTED().SIGNATURE(b3JointId, CreateJoint, RigidBody3D*, RigidBody3D*);
     FUNCTION().PROTECTED().SIGNATURE(void, SetupBaseDef, b3JointDef&, RigidBody3D*, RigidBody3D*);
     FUNCTION().PROTECTED().SIGNATURE(b3Transform, ComputeLocalFrame, RigidBody3D*);

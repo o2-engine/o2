@@ -175,6 +175,11 @@ namespace o2
         return "Layout";
     }
 
+    String VerticalLayout::GetEditorIcon()
+    {
+        return "ui/UI4_actor_verlayout_icon.svg";
+    }
+
     float VerticalLayout::GetMinWidthWithChildren() const
     {
         if (!mFitByChildren)

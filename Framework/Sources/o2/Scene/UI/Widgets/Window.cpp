@@ -398,6 +398,11 @@ namespace o2
     {
         return "Window";
     }
+
+    String Window::GetEditorIcon()
+    {
+        return "ui/UI4_actor_window_icon.svg";
+    }
 }
 
 DECLARE_TEMPLATE_CLASS(o2::LinkRef<o2::Window>);

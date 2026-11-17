@@ -497,3 +497,43 @@ TEST(SceneView3DState, WorldToScreenWithCachedMatrixMatchesPlainOne)
         EXPECT_TRUE(Near2(state.WorldToScreen(point, kViewport, viewProjection),
                           state.WorldToScreen(point, kViewport)));
 }
+
+// Orbiting around the target is the plain orbit
+TEST(SceneView3DState, OrbitAroundTheTargetIsTheOrbit)
+{
+    SceneView3DState orbit;
+    orbit.target = Vec3F(10.0f, -20.0f, 0.0f);
+    orbit.pitch = Math::Deg2rad(40.0f);
+    orbit.yaw = 0.3f;
+    orbit.distance = 300.0f;
+
+    SceneView3DState around = orbit;
+
+    orbit.Orbit(Vec2F(0.4f, 0.2f));
+    around.OrbitAround(around.target, Vec2F(0.4f, 0.2f));
+
+    EXPECT_TRUE(Near3(around.target, orbit.target));
+    EXPECT_TRUE(Near3(around.GetCameraPosition(), orbit.GetCameraPosition()));
+}
+
+// Orbiting around a selected object keeps the object at its place on the screen and at its distance from the camera,
+// as the Unity orbit does
+TEST(SceneView3DState, OrbitAroundAPivotKeepsItOnTheScreen)
+{
+    SceneView3DState state;
+    state.target = Vec3F();
+    state.pitch = Math::Deg2rad(50.0f);
+    state.yaw = 0.1f;
+    state.distance = 400.0f;
+
+    Vec3F pivot(60.0f, 40.0f, 25.0f);
+    Vec2F pivotOnScreen = state.WorldToScreen(pivot, kViewport);
+    float pivotDistance = (state.GetCameraPosition() - pivot).Length();
+
+    state.OrbitAround(pivot, Vec2F(0.5f, -0.3f));
+
+    EXPECT_TRUE(Near2(state.WorldToScreen(pivot, kViewport), pivotOnScreen, 0.05f));
+    EXPECT_NEAR((state.GetCameraPosition() - pivot).Length(), pivotDistance, 0.01f);
+    EXPECT_NEAR(state.distance, 400.0f, 0.001f);
+    EXPECT_NEAR(state.pitch, Math::Deg2rad(50.0f) - 0.3f, 0.0001f);
+}

@@ -135,6 +135,11 @@ namespace o2
         o2Gizmos.DrawSphere(anchor, 0.1f, 12);
     }
 #endif
+
+    String IJoint3D::GetIcon()
+    {
+        return "ui/UI4_joint_component.svg";
+    }
 }
 
 DECLARE_TEMPLATE_CLASS(o2::LinkRef<o2::IJoint3D>);

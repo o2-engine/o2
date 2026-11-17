@@ -39,6 +39,11 @@ namespace o2
         return "Physics 3D";
     }
 
+    String BoxCollider3D::GetIcon()
+    {
+        return "ui/UI4_box_collider3d_component.svg";
+    }
+
     bool BoxCollider3D::IsAvailableFromCreateMenu()
     {
         return true;

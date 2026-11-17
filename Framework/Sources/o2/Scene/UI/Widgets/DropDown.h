@@ -64,6 +64,9 @@ namespace o2
         // Returns create menu group in editor
         static String GetCreateMenuGroup();
 
+        // Returns the icon of the type in the editor
+        static String GetEditorIcon();
+
         SERIALIZABLE(DropDown);
         CLONEABLE_REF(DropDown);
 
@@ -108,6 +111,7 @@ CLASS_METHODS_META(o2::DropDown)
     FUNCTION().PUBLIC().SIGNATURE(WString, GetSelectedItemText);
     FUNCTION().PUBLIC().SIGNATURE(void, SelectItemText, const WString&);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetCreateMenuGroup);
+    FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetEditorIcon);
     FUNCTION().PROTECTED().SIGNATURE(void, OnSelectionChanged);
     FUNCTION().PROTECTED().SIGNATURE(void, OnLayerAdded, const Ref<WidgetLayer>&);
 }

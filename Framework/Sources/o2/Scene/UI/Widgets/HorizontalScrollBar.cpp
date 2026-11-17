@@ -353,6 +353,11 @@ namespace o2
     {
         return "Progress";
     }
+
+    String HorizontalScrollBar::GetEditorIcon()
+    {
+        return "ui/UI4_actor_horscrollbar_icon.svg";
+    }
 }
 
 DECLARE_TEMPLATE_CLASS(o2::LinkRef<o2::HorizontalScrollBar>);

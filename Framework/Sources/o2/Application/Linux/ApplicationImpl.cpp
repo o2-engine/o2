@@ -5,7 +5,10 @@
 #include "o2/Application/Application.h"
 #include "o2/Events/EventSystem.h"
 #include "o2/Utils/Debug/Log/LogStream.h"
+#include "o2/Utils/Bitmap/Bitmap.h"
 #include "o2/Utils/FileSystem/FileSystem.h"
+
+#include <vector>
 
 #if !defined(O2_RENDER_GLES2)
 #include <GL/glx.h>
@@ -285,6 +288,45 @@ namespace o2
     String Application::GetWindowCaption() const
     {
         return mWndCaption;
+    }
+
+    void Application::SetApplicationIcon(const String& pngPath)
+    {
+#if !defined(O2_DISABLE_PLATFORM)
+        if (!mDisplay || !mWindow)
+            return;
+
+        Bitmap icon;
+        if (!icon.Load(pngPath) || icon.GetFormat() != PixelFormat::R8G8B8A8)
+        {
+            mLog->WarningStr("Can't load the application icon " + pngPath);
+            return;
+        }
+
+        // _NET_WM_ICON: width, height, then ARGB pixels from the top row; the loaded rows go from the bottom
+        Vec2I size = icon.GetSize();
+        std::vector<unsigned long> data;
+        data.reserve(2 + (size_t)size.x*size.y);
+        data.push_back((unsigned long)size.x);
+        data.push_back((unsigned long)size.y);
+
+        const UInt8* pixels = icon.GetData();
+        for (int y = size.y - 1; y >= 0; y--)
+        {
+            for (int x = 0; x < size.x; x++)
+            {
+                const UInt8* pixel = pixels + ((size_t)y*size.x + x)*4;
+                data.push_back(((unsigned long)pixel[3] << 24) | ((unsigned long)pixel[0] << 16) |
+                               ((unsigned long)pixel[1] << 8) | (unsigned long)pixel[2]);
+            }
+        }
+
+        Atom netWmIcon = XInternAtom(mDisplay, "_NET_WM_ICON", False);
+        Atom cardinal = XInternAtom(mDisplay, "CARDINAL", False);
+        XChangeProperty(mDisplay, mWindow, netWmIcon, cardinal, 32, PropModeReplace,
+                        (const unsigned char*)data.data(), (int)data.size());
+        XFlush(mDisplay);
+#endif
     }
 
     void Application::SetContentSize(const Vec2I& size)

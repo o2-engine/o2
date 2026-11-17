@@ -34,6 +34,12 @@ namespace Editor
         Color4 frame;         // Selection frames: the scene frame tool, the curve and the spline editors
         Color4 guide;         // Guide lines from curve and spline points to their handles
         Color4 selectionOutline; // Outline of the objects selected in the scene
+        Color4 hoverOutline;     // Outline of the object under the hovered item of the scene pick menu
+        Color4 switchTrack;      // Track of the rounded switches: the 2D/3D one of the scene window
+        Color4 switchTrackHover; // Their track under the cursor
+        Color4 switchThumb;      // Their thumb, sliding under the chosen side
+        Color4 switchText;       // Caption of the side that is not chosen
+        Color4 switchTextOn;     // Caption over the thumb
         Color4 frameObject;   // Its object marks
         Color4 frameParent;   // Its parent marks
         Color4 warning;       // Log warning mark

@@ -16,6 +16,21 @@ Components with a spline (spline colliders and others) activate the spline tool 
 
 A selected point also shows a corner rounding handle on the corner bisector (as in Illustrator/Figma). Dragging it into the corner rounds it: the point slides along the bisector and the supports lay on the arc tangent. Dragging back to the base offset restores a sharp corner. The rounding is limited by halves of the adjacent edges.
 
+### Picking from the objects under the cursor
+A right click (without moving the view) opens a menu of the objects under the cursor (`ScenePickMenu`): actors,
+widgets and, when the tree shows them, widget layers. The menu is a tree of these objects only: an object hangs on
+its nearest ancestor that is under the cursor too, the other ancestors are left out. The hovered item outlines its
+object in the scene in orange, and a panel on the left lists the ancestors of the item the menu left out. A click on
+an item selects its object, as a click in the scene does, with an undoable action.
+
+### View mode and navigation
+The rounded 2D | 3D switch at the right end of the top panel switches the view modes: its thumb slides under the chosen one. In 3D:
+- the right button held looks around, WASD/QE fly;
+- the middle button held orbits around the selected objects (their center when the orbit began; the view target
+  without a selection), the pivot keeps its place on the screen, as in Unity; Alt + the left button does the same;
+- Shift + the middle button pans;
+- the wheel zooms.
+
 ### Layers
 The scene window allows configuring layers and their order. Click Layers at the top (1).
 
@@ -24,7 +39,7 @@ In the dropdown menu they can be reordered via drag'n'drop, created, deleted, re
 ### Gizmos and selection
 The Gizmos button on the top opens the view display panel. The Gizmos switch turns off gizmos
 entirely, below it is the list of actor and component types which draw gizmos: each one is switched
-separately. The list contains the types which override `OnDrawGizmos` and are present on the current
+separately, with the icon of the component (or of the actor) before its name. The list contains the types which override `OnDrawGizmos` and are present on the current
 scene (colliders, joints, cameras) — it is collected from the whole scene, so a type can be switched
 off before anything of it is selected. Gizmos are drawn for the selected objects only, down their
 children — the same hierarchy the selection outline covers — and work in both 2D and 3D view mode.
@@ -39,7 +54,7 @@ itself is outlined alone, with its sublayers. Disabled objects, components and l
 are the sublayers of a disabled layer.
 
 ### Render mode
-The render mode button at the top shows the mode and opens the menu of the modes (`SceneEditScreen::SetRenderMode`, `SceneRenderMode`):
+The narrow render mode button at the top shows the icon of the mode and opens the menu of the modes, each with its icon (`SceneEditScreen::SetRenderMode`, `SceneRenderMode`):
 - **Scene camera** (default) — through the render pipeline of the first scene camera, so the picture matches the game.
 - **Stable camera** — through the default forward 3D/2D pipeline: a custom pipeline (offscreen passes, screen shaders) can distort the editing view.
 - **Unlit** — the default pipeline without the baked shading of the 3D meshes (`ScenePassFilters::SetRawAlbedoMode`); 2D has no lighting.

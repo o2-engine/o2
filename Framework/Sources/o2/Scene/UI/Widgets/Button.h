@@ -73,6 +73,9 @@ namespace o2
         // Returns create menu group in editor
         static String GetCreateMenuGroup();
 
+        // Returns the icon of the type in the editor
+        static String GetEditorIcon();
+
         SERIALIZABLE(Button);
         CLONEABLE_REF(Button);
 
@@ -168,6 +171,7 @@ CLASS_METHODS_META(o2::Button)
     FUNCTION().PUBLIC().SIGNATURE(bool, IsUnderPoint, const Vec2F&);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsScrollable);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetCreateMenuGroup);
+    FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetEditorIcon);
     FUNCTION().PROTECTED().SIGNATURE(void, OnCursorPressed, const Input::Cursor&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnCursorReleased, const Input::Cursor&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnCursorPressBreak, const Input::Cursor&);

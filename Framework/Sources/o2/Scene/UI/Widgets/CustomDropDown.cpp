@@ -306,6 +306,11 @@ namespace o2
         return "Dropping";
     }
 
+    String CustomDropDown::GetEditorIcon()
+    {
+        return "ui/UI4_actor_customdropdown_icon.svg";
+    }
+
     void CustomDropDown::OnItemSelected()
     {
         auto pressedState = state["pressed"];

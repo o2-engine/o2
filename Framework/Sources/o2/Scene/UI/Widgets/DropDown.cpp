@@ -144,6 +144,11 @@ namespace o2
         return "Dropping";
     }
 
+    String DropDown::GetEditorIcon()
+    {
+        return "ui/UI4_actor_dropdown_icon.svg";
+    }
+
     void DropDown::OnSelectionChanged()
     {
         onSelectedText(GetSelectedItemText());

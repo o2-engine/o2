@@ -29,6 +29,11 @@ namespace o2
 
     String WeldJoint::GetName() { return "Weld joint"; }
     String WeldJoint::GetCategory() { return "Physics/Joints"; }
+
+    String WeldJoint::GetIcon()
+    {
+        return "ui/UI4_weld_joint_component.svg";
+    }
     bool WeldJoint::IsAvailableFromCreateMenu() { return true; }
 
     b2Joint* WeldJoint::CreateJoint(b2Body* bodyA, b2Body* bodyB)

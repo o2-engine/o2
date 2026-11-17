@@ -309,6 +309,9 @@ namespace o2
         // Returns create menu group in editor
         static String GetCreateMenuGroup();
 
+        // Returns the icon of the type in the editor
+        static String GetEditorIcon();
+
         SERIALIZABLE(Actor);
         CLONEABLE_REF(Actor);
 
@@ -950,6 +953,7 @@ CLASS_METHODS_META(o2::Actor)
     FUNCTION().PUBLIC().SIGNATURE_STATIC(bool, IsModeOnScene, ActorCreateMode);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetCreateMenuCategory);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetCreateMenuGroup);
+    FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetEditorIcon);
     FUNCTION().PROTECTED().CONSTRUCTOR(RefCounter*, ActorTransform*, bool, const String&, bool, SceneUID, UID);
     FUNCTION().PROTECTED().CONSTRUCTOR(RefCounter*, ActorTransform*, ActorCreateMode);
     FUNCTION().PROTECTED().CONSTRUCTOR(RefCounter*, ActorTransform*, const AssetRef<ActorAsset>&, ActorCreateMode);

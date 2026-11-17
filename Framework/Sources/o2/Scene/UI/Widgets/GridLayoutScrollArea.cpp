@@ -144,6 +144,11 @@ namespace o2
         return "Layout";
     }
 
+    String GridLayoutScrollArea::GetEditorIcon()
+    {
+        return "ui/UI4_actor_gridscrollarea_icon.svg";
+    }
+
     void GridLayoutScrollArea::MoveScrollPosition(const Vec2F& delta)
     {
         ScrollArea::MoveScrollPosition(delta);

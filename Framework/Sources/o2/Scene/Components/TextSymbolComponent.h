@@ -19,6 +19,9 @@ namespace o2
         // Returns name of component
         static String GetName();
 
+        // Returns name of component icon
+        static String GetIcon();
+
         SERIALIZABLE(TextSymbolComponent);
         CLONEABLE_REF(TextSymbolComponent);
     };
@@ -41,6 +44,7 @@ CLASS_METHODS_META(o2::TextSymbolComponent)
     FUNCTION().PUBLIC().CONSTRUCTOR(const TextSymbolComponent&);
     FUNCTION().PUBLIC().SIGNATURE(void, SetTextureAndRect, const TextureRef&, const RectF&);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetName);
+    FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetIcon);
 }
 END_META;
 // --- END META ---

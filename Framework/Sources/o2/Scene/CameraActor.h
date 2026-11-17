@@ -86,6 +86,9 @@ namespace o2
         // Returns the shared default forward pipeline, used when camera pipeline is null
         static const Ref<RenderPipeline>& GetDefaultRenderPipeline();
 
+        // Returns the icon of the type in the editor
+        static String GetEditorIcon();
+
         SERIALIZABLE(CameraActor);
         CLONEABLE_REF(CameraActor);
 
@@ -159,6 +162,7 @@ CLASS_METHODS_META(o2::CameraActor)
     FUNCTION().PUBLIC().SIGNATURE(void, SetRenderPipeline, const Ref<RenderPipeline>&);
     FUNCTION().PUBLIC().SIGNATURE(const Ref<RenderPipeline>&, GetRenderPipeline);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(const Ref<RenderPipeline>&, GetDefaultRenderPipeline);
+    FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetEditorIcon);
     FUNCTION().PROTECTED().SIGNATURE(void, OnAddToScene);
     FUNCTION().PROTECTED().SIGNATURE(void, OnRemoveFromScene);
 #if  IS_EDITOR

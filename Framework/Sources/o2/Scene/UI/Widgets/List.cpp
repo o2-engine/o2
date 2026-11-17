@@ -123,6 +123,11 @@ namespace o2
     {
         return "List";
     }
+
+    String List::GetEditorIcon()
+    {
+        return "ui/UI4_actor_list_icon.svg";
+    }
 }
 
 DECLARE_TEMPLATE_CLASS(o2::LinkRef<o2::List>);

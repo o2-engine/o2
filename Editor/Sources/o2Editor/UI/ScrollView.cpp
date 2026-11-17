@@ -60,6 +60,10 @@ namespace Editor
         if (!mReady)
             return;
 
+        // The window moved to a screen of another density: the texture takes the pixels of the new one
+        if (!Math::Equals(mRenderTarget->GetPixelDensity(), o2Application.GetGraphicsScale()))
+            UpdateRenderTargetSize();
+
         RedrawRenderTarget();
 
         mRenderTargetSprite->transparency = mResTransparency;
@@ -119,6 +123,11 @@ namespace Editor
         if (!mReady)
             return;
 
+        UpdateRenderTargetSize();
+    }
+
+    void ScrollView::UpdateRenderTargetSize()
+    {
         Vec2I size = layout->size2D.Get();
         size.x = Math::Max(size.x, 32);
         size.y = Math::Max(size.y, 32);
@@ -128,7 +137,8 @@ namespace Editor
         Vec2I targetSize(Math::RoundToInt((float)size.x*graphicsScale), Math::RoundToInt((float)size.y*graphicsScale));
 
         // The transform updates every frame while a dock splitter is dragged; only a new size needs a new texture
-        if (!mRenderTarget.Get() || mRenderTarget.Get()->GetSize() != targetSize)
+        if (!mRenderTarget.Get() || mRenderTarget.Get()->GetSize() != targetSize ||
+            !Math::Equals(mRenderTarget.Get()->GetPixelDensity(), graphicsScale))
         {
             mRenderTarget = TextureRef(targetSize, TextureFormat::R8G8B8A8, Texture::Usage::RenderTarget);
             mRenderTarget->SetPixelDensity(graphicsScale);
@@ -257,6 +267,11 @@ namespace Editor
     const Camera& ScrollView::GetCamera() const
     {
         return mViewCamera;
+    }
+
+    const TextureRef& ScrollView::GetRenderTarget() const
+    {
+        return mRenderTarget;
     }
 
     void ScrollView::RedrawRenderTarget()

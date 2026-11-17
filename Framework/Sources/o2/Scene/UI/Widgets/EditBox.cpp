@@ -763,6 +763,11 @@ namespace o2
         return "Basic";
     }
 
+    String EditBox::GetEditorIcon()
+    {
+        return "ui/UI4_actor_editbox_icon.svg";
+    }
+
     void EditBox::UpdateTransparency()
     {
         ScrollArea::UpdateTransparency();

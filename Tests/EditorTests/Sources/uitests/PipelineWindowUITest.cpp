@@ -190,10 +190,14 @@ namespace
         }
     };
 
+    // Window the pipeline card checks are made for
+    const Vec2I pipelineFixtureWindowSize(1920, 1280);
+
     struct PipelineUiFixture : ::testing::Test
     {
         Ref<PipelineEditor> editor;
         Ref<PipelineAsset> asset;
+        Vec2I previousWindowSize;
 
         void SetUp() override
         {
@@ -205,6 +209,11 @@ namespace
             PipelineUtils::SetWorkPathOverride("../../Work/Pipelines/uitest/");
             // The pixel checks of these cards read the o2 light colours: canvas 225,232,232, the teal accent
             PipelineTheme::SetKind(PipelineThemeKind::Light);
+
+            // The checks of these cards are made for a window of this size, whatever the screen
+            previousWindowSize = o2Application.GetContentSize();
+            o2Application.SetContentSize(pipelineFixtureWindowSize);
+            AppTestDriver::PumpFrames(3);
 
             PushEditorScopeOnStack scope;
             editor = mmake<PipelineEditor>();
@@ -280,6 +289,9 @@ namespace
             PipelineUtils::SetWorkPathOverride("");
             if (UIRoot::IsSingletonInitialzed())
                 EditorUIRoot.RemoveAllWidgets();
+
+            o2Application.SetContentSize(previousWindowSize);
+            AppTestDriver::PumpFrames(3);
         }
     };
 }

@@ -53,6 +53,11 @@ namespace o2
         return "Physics 3D";
     }
 
+    String CapsuleCollider3D::GetIcon()
+    {
+        return "ui/UI4_capsule_collider3d_component.svg";
+    }
+
     bool CapsuleCollider3D::IsAvailableFromCreateMenu()
     {
         return true;

@@ -1,8 +1,10 @@
 #include "o2Editor/stdafx.h"
 #include "AssetPreviewIcon.h"
 
+#include "o2/Assets/Types/ActorAsset.h"
 #include "o2/Assets/Types/AtlasAsset.h"
 #include "o2/Assets/Types/FontAsset.h"
+#include "o2/Assets/Types/FontStyleAsset.h"
 #include "o2/Assets/Types/ImageAsset.h"
 #include "o2/Assets/Types/Mesh3DAsset.h"
 #include "o2/Assets/Types/SkinnedModelAsset.h"
@@ -19,6 +21,9 @@
 #include "o2Editor/UI/Style/EditorTheme.h"
 #include "o2Editor/Utils/CommonTextures.h"
 #include "o2Editor/UI/Preview/MediaPreview.h"
+#include "o2Editor/UI/Preview/FontSampleView.h"
+#include "o2Editor/UI/Preview/PrototypePreview.h"
+#include "o2Editor/Properties/Objects/Assets/FontStyleAssetViewer.h"
 #include "o2Editor/Windows/AssetPreviewWindow/AssetPreviewWindow.h"
 #include "o2Editor/Windows/PipelineWindow/PipelineControls.h"
 #include "o2Editor/Windows/PipelineWindow/PipelineTheme.h"
@@ -73,6 +78,7 @@ namespace Editor
             mKind = Kind::Image;
             auto sprite = mmake<Sprite>();
             sprite->SetImageAsset(AssetRef<ImageAsset>(image));
+            sprite->SetMode(SpriteMode::Default);
             mPreview = sprite;
             mPreviewSize = Vec2F(image->width, image->height);
             useChecker();
@@ -113,6 +119,29 @@ namespace Editor
             text->SetVerAlign(VerAlign::Middle);
             text->SetColor(EditorTheme::Get().text);
             mPreview = text;
+        }
+        else if (auto prototype = DynamicCast<ActorAsset>(ref))
+        {
+            // The thumbnail is rendered at the first draw, with a render target bound
+            mKind = Kind::Prototype;
+            useChecker();
+            SetPrototypeThumbnail(PrototypePreview::FindThumbnail(AssetRef<ActorAsset>(prototype)));
+        }
+        else if (auto fontStyle = DynamicCast<FontStyleAsset>(ref))
+        {
+            if (auto font = FontStyleAssetViewer::GetSampleFont())
+            {
+                mKind = Kind::FontStyle;
+                auto text = mmake<Text>(font);
+                text->SetHeight(14);
+                text->SetText("Aa");
+                text->SetHorAlign(HorAlign::Middle);
+                text->SetVerAlign(VerAlign::Middle);
+                text->SetWordWrap(false);
+                text->SetColor(FontSampleView::IsStylePaintingGlyphs(fontStyle) ? Color4::White() : EditorTheme::Get().text);
+                text->SetFontStyle(fontStyle);
+                mPreview = text;
+            }
         }
         else if (DynamicCast<Mesh3DAsset>(ref) || DynamicCast<SkinnedModelAsset>(ref))
         {
@@ -256,10 +285,35 @@ namespace Editor
         return RectF(center - fitted*0.5f, center + fitted*0.5f);
     }
 
+    void AssetPreviewIcon::SetPrototypeThumbnail(const TextureRef& thumbnail)
+    {
+        if (!thumbnail)
+            return;
+
+        auto sprite = mmake<Sprite>();
+        sprite->SetTexture(thumbnail);
+        sprite->SetTextureSrcRect(RectI(Vec2I(), thumbnail->GetSize()));
+        mPreview = sprite;
+        mPreviewSize = (Vec2F)thumbnail->GetSize();
+    }
+
     void AssetPreviewIcon::Draw()
     {
         if (!mResEnabledInHierarchy || mIsClipped)
             return;
+
+        if (mKind == Kind::Prototype && !mPreview)
+        {
+            SetPrototypeThumbnail(PrototypePreview::GetThumbnail(AssetRef<ActorAsset>(DynamicCast<ActorAsset>(mAsset.GetRef()))));
+
+            // A prototype with nothing to draw shows the icon of its type
+            if (!mPreview)
+            {
+                mKind = Kind::Icon;
+                mChecker = nullptr;
+                mPreview = mmake<VectorSprite>(ActorAsset::GetEditorIcon());
+            }
+        }
 
         RectF rect = GetPreviewRect();
         if (mChecker)
@@ -335,10 +389,12 @@ ENUM_META(Editor::AssetPreviewIcon::Kind, Editor__AssetPreviewIcon__Kind)
 {
     ENUM_ENTRY(Atlas);
     ENUM_ENTRY(Font);
+    ENUM_ENTRY(FontStyle);
     ENUM_ENTRY(Icon);
     ENUM_ENTRY(Image);
     ENUM_ENTRY(Model);
     ENUM_ENTRY(None);
+    ENUM_ENTRY(Prototype);
     ENUM_ENTRY(Sound);
     ENUM_ENTRY(VectorImage);
     ENUM_ENTRY(Video);

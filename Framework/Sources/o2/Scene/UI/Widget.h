@@ -273,6 +273,9 @@ namespace o2
         // Returns create menu category in editor
         static String GetCreateMenuCategory();
 
+        // Returns the icon of the type in the editor
+        static String GetEditorIcon();
+
         SERIALIZABLE(Widget);
         CLONEABLE_REF(Widget);
 
@@ -904,6 +907,7 @@ CLASS_METHODS_META(o2::Widget)
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(Ref<Widget>, FindInternalWidget, const String&);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(Ref<Actor>, FindActorById, SceneUID);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetCreateMenuCategory);
+    FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetEditorIcon);
     FUNCTION().PROTECTED().SIGNATURE(void, SerializeRaw, DataValue&);
     FUNCTION().PROTECTED().SIGNATURE(void, DeserializeRaw, const DataValue&);
     FUNCTION().PROTECTED().SIGNATURE(void, SerializeWithProto, DataValue&);

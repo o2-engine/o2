@@ -36,7 +36,7 @@ namespace o2
 
     String SpineComponent::GetIcon()
     {
-        return "ui/UI4_animation_component.svg";
+        return "ui/UI4_spine_component.svg";
     }
 
     SpineComponent& SpineComponent::operator=(const SpineComponent& other)

@@ -105,6 +105,9 @@ namespace o2
         // Returns create menu group in editor
         static String GetCreateMenuGroup();
 
+        // Returns the icon of the type in the editor
+        static String GetEditorIcon();
+
         SERIALIZABLE(VerticalLayout);
         CLONEABLE_REF(VerticalLayout);
 
@@ -208,6 +211,7 @@ CLASS_METHODS_META(o2::VerticalLayout)
     FUNCTION().PUBLIC().SIGNATURE(bool, IsFittingByChildren);
     FUNCTION().PUBLIC().SIGNATURE(void, UpdateSelfTransform);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetCreateMenuGroup);
+    FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetEditorIcon);
     FUNCTION().PROTECTED().SIGNATURE(float, GetMinWidthWithChildren);
     FUNCTION().PROTECTED().SIGNATURE(float, GetMinHeightWithChildren);
     FUNCTION().PROTECTED().SIGNATURE(float, GetHeightWeightWithChildren);

@@ -75,6 +75,19 @@ namespace Editor
         // Dynamic cast to RefCounterable via Singleton<TreeWindow>
         static Ref<RefCounterable> CastToRefCounterable(const Ref<TreeWindow>& ref);
 
+        // Returns the path of the actor type in the create menu: its category and its name; the editor's own widgets
+        // go to the "UI/Editor" sub menu, apart from the base widgets
+        static String GetCreateMenuPath(const Type& type);
+
+        // Returns the context menu of the tree, with the create menu
+        const Ref<ContextMenu>& GetContextMenu() const;
+
+        // Returns the icon of the actor type in the create menu: its GetEditorIcon, the one of its nearest base that has one
+        static AssetRef<Asset> GetCreateMenuIcon(const Type& type);
+
+        // Returns the icon of the create menu at the path of the editor art
+        static AssetRef<Asset> GetCreateMenuIcon(const String& iconPath);
+
         IOBJECT(TreeWindow);
         REF_COUNTERABLE_IMPL(IEditorWindow, Singleton<TreeWindow>);
 
@@ -228,6 +241,10 @@ CLASS_METHODS_META(Editor::TreeWindow)
     FUNCTION().PUBLIC().SIGNATURE(void, SetWidgetsInternalChildrenVisible, bool);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsWidgetsInternalChildrenVisible);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(Ref<RefCounterable>, CastToRefCounterable, const Ref<TreeWindow>&);
+    FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetCreateMenuPath, const Type&);
+    FUNCTION().PUBLIC().SIGNATURE(const Ref<ContextMenu>&, GetContextMenu);
+    FUNCTION().PUBLIC().SIGNATURE_STATIC(AssetRef<Asset>, GetCreateMenuIcon, const Type&);
+    FUNCTION().PUBLIC().SIGNATURE_STATIC(AssetRef<Asset>, GetCreateMenuIcon, const String&);
     FUNCTION().PROTECTED().SIGNATURE(void, InitializeWindow);
     FUNCTION().PROTECTED().SIGNATURE(void, InitializeSceneTree);
     FUNCTION().PROTECTED().SIGNATURE(void, InitializeDrawOrderTree);

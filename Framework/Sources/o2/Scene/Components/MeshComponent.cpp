@@ -122,7 +122,7 @@ namespace o2
 
     String MeshComponent::GetIcon()
     {
-        return "ui/UI4_image_component.svg";
+        return "ui/UI4_mesh_component.svg";
     }
 
     void MeshComponent::OnTransformUpdated()

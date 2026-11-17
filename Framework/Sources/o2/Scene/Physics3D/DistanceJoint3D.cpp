@@ -46,6 +46,11 @@ namespace o2
 
     String DistanceJoint3D::GetName() { return "Distance joint 3D"; }
     String DistanceJoint3D::GetCategory() { return "Physics 3D/Joints"; }
+
+    String DistanceJoint3D::GetIcon()
+    {
+        return "ui/UI4_distance_joint_component.svg";
+    }
     bool DistanceJoint3D::IsAvailableFromCreateMenu() { return true; }
 
     b3JointId DistanceJoint3D::CreateJoint(RigidBody3D* bodyA, RigidBody3D* bodyB)

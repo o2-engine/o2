@@ -8,11 +8,15 @@
 #include "o2/Utils/Reflection/Type.h"
 #include "o2Editor/Windows/SceneWindow/SceneEditScreen.h"
 #include "o2/Render/VectorSprite.h"
+#include "o2/Scene/Component.h"
+#include "o2/Scene/UI/WidgetLayer.h"
+#include "o2Editor/UI/Style/EditorTheme.h"
 
 namespace Editor
 {
     static constexpr float gizmosPopupItemHeight = 20.0f;
-    static constexpr float gizmosPopupWidth = 220.0f;
+    static constexpr float gizmosPopupWidth = 240.0f;
+    static constexpr float gizmosPopupIconWidth = 20.0f;
 
     GizmosPopup::GizmosPopup(RefCounter* refCounter):
         PopupWidget(refCounter)
@@ -78,6 +82,31 @@ namespace Editor
         mSelectionToggle->onToggleByUser = [](bool visible) { o2EditorSceneScreen.SetSelectionVisible(visible); };
     }
 
+    String GizmosPopup::GetTypeIcon(const Type* type)
+    {
+        if (type->IsBasedOn(TypeOf(Component)))
+            return type->InvokeStatic<String>("GetIcon");
+
+        return type->InvokeStatic<String>("GetEditorIcon");
+    }
+
+    void GizmosPopup::AddTypeIcon(const Ref<Toggle>& toggle, const Type* type)
+    {
+        String iconPath = GetTypeIcon(type);
+        if (iconPath.IsEmpty())
+            return;
+
+        // The component icons are white glyphs: they are tinted like the code-drawn icons
+        auto icon = mmake<VectorSprite>(iconPath);
+        if (type->IsBasedOn(TypeOf(Component)))
+            icon->SetColor(EditorTheme::Get().ink);
+
+        toggle->AddLayer("type icon", icon, Layout::Based(BaseCorner::Left, Vec2F(16, 16), Vec2F(21, 0)));
+
+        if (auto caption = toggle->FindLayer("caption"))
+            caption->layout.offsetMin = caption->layout.offsetMin.Get() + Vec2F(gizmosPopupIconWidth, 0.0f);
+    }
+
     void GizmosPopup::UpdateTypesList()
     {
         PushEditorScopeOnStack scope;
@@ -104,6 +133,8 @@ namespace Editor
             toggle->onToggleByUser = [=](bool enabled) {
                 o2EditorSceneScreen.GetGizmos().SetTypeEnabled(type, enabled);
             };
+
+            AddTypeIcon(toggle, type);
 
             AddChild(toggle);
             toggle->layout->CopyFrom(WidgetLayout::HorStretch(VerAlign::Top, 20, 5, gizmosPopupItemHeight,

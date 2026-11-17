@@ -1,7 +1,11 @@
 #include "o2Editor/stdafx.h"
 #include "SpoilerWithHead.h"
 
+#include "o2/Assets/Assets.h"
 #include "o2/Scene/UI/Widgets/Button.h"
+#include "o2/Scene/UI/Widgets/Image.h"
+#include "o2/Utils/Editor/EditorScope.h"
+#include "o2Editor/UI/Style/EditorTheme.h"
 
 namespace Editor
 {
@@ -27,6 +31,20 @@ namespace Editor
     const Ref<Image>& SpoilerWithHead::GetIcon() const
     {
         return mIcon;
+    }
+
+    void SpoilerWithHead::SetHeadIcon(const String& iconPath)
+    {
+        if (!mIcon || iconPath.IsEmpty())
+            return;
+
+        PushEditorScopeOnStack scope;
+
+        String whiteTwin = iconPath.EndsWith(".svg") ? iconPath.SubStr(0, iconPath.Length() - 4) + "_white.svg" : String();
+        mIcon->SetImageName(!whiteTwin.IsEmpty() && o2Assets.IsAssetExist(whiteTwin) ? whiteTwin : iconPath);
+
+        if (auto drawable = mIcon->GetImageDrawable())
+            drawable->SetColor(EditorTheme::Get().textOnHeader);
     }
 
     String SpoilerWithHead::GetCreateMenuCategory()

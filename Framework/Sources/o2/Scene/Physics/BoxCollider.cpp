@@ -51,6 +51,11 @@ namespace o2
         return "Physics";
     }
 
+    String BoxCollider::GetIcon()
+    {
+        return "ui/UI4_box_collider_component.svg";
+    }
+
     bool BoxCollider::IsAvailableFromCreateMenu()
     {
         return true;

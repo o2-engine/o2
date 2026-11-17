@@ -17,6 +17,11 @@ namespace o2
             o2Application.ProcessFrame();
     }
 
+    void AppTestDriver::SetGraphicsScale(float scale)
+    {
+        o2Application.OnResized(o2Application.GetContentSize(), scale);
+    }
+
     void AppTestDriver::Wait(float seconds)
     {
         float time = 0.0f;

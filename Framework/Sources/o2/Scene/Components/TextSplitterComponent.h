@@ -147,6 +147,9 @@ namespace o2
     	// Returns category of component
     	static String GetCategory();
 
+    	// Returns name of component icon
+    	static String GetIcon();
+
         SERIALIZABLE(TextSplitterComponent);
         CLONEABLE_REF(TextSplitterComponent);
 
@@ -299,6 +302,7 @@ CLASS_METHODS_META(o2::TextSplitterComponent)
     FUNCTION().PUBLIC().SIGNATURE(float, GetTransparency);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetName);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetCategory);
+    FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetIcon);
     FUNCTION().PROTECTED().SIGNATURE(void, OnStart);
     FUNCTION().PROTECTED().SIGNATURE(void, OnDestroy);
     FUNCTION().PROTECTED().SIGNATURE(void, OnEnabled);

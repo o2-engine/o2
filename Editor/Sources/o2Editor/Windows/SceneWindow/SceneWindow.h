@@ -9,6 +9,7 @@
 namespace o2
 {
     class PopupWidget;
+    class Toggle;
 }
 
 namespace Editor
@@ -16,6 +17,7 @@ namespace Editor
     FORWARD_CLASS_REF(GizmosPopup);
     FORWARD_CLASS_REF(LayersPopup);
     FORWARD_CLASS_REF(SceneEditScreen);
+    FORWARD_CLASS_REF(ViewModeSwitch);
 
     // Scene window accessor macro
     #define o2EditorSceneWindow SceneWindow::Instance()
@@ -32,13 +34,17 @@ namespace Editor
         // Dynamic cast to RefCounterable via Singleton<SceneWindow>
         static Ref<RefCounterable> CastToRefCounterable(const Ref<SceneWindow>& ref);
 
+    public:
+        static constexpr float renderModeIconWidth = 22.0f;    // Room of the mode icons in the render modes menu
+        static constexpr float renderModeCaptionIndent = 25.0f; // Caption of an item after its icon
+
     protected:
         Ref<SceneEditScreen> mEditWidget; // Scene editing widget
 
         Ref<Button>      mLayersButton; // Layers button
         Ref<LayersPopup> mLayersPopup;  // Layers popup
 
-        Ref<Button> mView3DButton; // 3D view mode toggle button
+        Ref<ViewModeSwitch> mViewModeSwitch; // Rounded 2D/3D switch at the right end of the panel
 
         Ref<Button>      mRenderModeButton; // Render mode button, its caption is the mode
         Ref<ContextMenu> mRenderModeMenu;   // Render modes menu
@@ -63,7 +69,13 @@ namespace Editor
         // Initializes window and controls
         void InitializeWindow() override;
 
-        // Puts the mode to the caption of the render mode button and checks its menu item alone
+        // Slides the 2D/3D switch to the view mode
+        void OnView3DModeChanged(bool enabled);
+
+        // Opens the menu of the render modes under the button, the icons beside the check marks
+        void ShowRenderModeMenu();
+
+        // Puts the icon of the mode on the render mode button and checks its menu item alone
         void OnRenderModeChanged(SceneRenderMode mode);
 
         // Returns window title
@@ -107,7 +119,7 @@ CLASS_FIELDS_META(Editor::SceneWindow)
     FIELD().PROTECTED().NAME(mEditWidget);
     FIELD().PROTECTED().NAME(mLayersButton);
     FIELD().PROTECTED().NAME(mLayersPopup);
-    FIELD().PROTECTED().NAME(mView3DButton);
+    FIELD().PROTECTED().NAME(mViewModeSwitch);
     FIELD().PROTECTED().NAME(mRenderModeButton);
     FIELD().PROTECTED().NAME(mRenderModeMenu);
     FIELD().PROTECTED().NAME(mGizmosButton);
@@ -122,6 +134,8 @@ CLASS_METHODS_META(Editor::SceneWindow)
     FUNCTION().PUBLIC().CONSTRUCTOR(RefCounter*, const SceneWindow&);
     FUNCTION().PUBLIC().SIGNATURE(const Type&, GetAssetType);
     FUNCTION().PROTECTED().SIGNATURE(void, InitializeWindow);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnView3DModeChanged, bool);
+    FUNCTION().PROTECTED().SIGNATURE(void, ShowRenderModeMenu);
     FUNCTION().PROTECTED().SIGNATURE(void, OnRenderModeChanged, SceneRenderMode);
     FUNCTION().PROTECTED().SIGNATURE(String, GetWindowTitle);
     FUNCTION().PROTECTED().SIGNATURE(void, PostInitializeWindow);

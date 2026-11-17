@@ -246,6 +246,11 @@ namespace o2
     {
         return "Dropping";
     }
+
+    String Spoiler::GetEditorIcon()
+    {
+        return "ui/UI4_actor_spoiler_icon.svg";
+    }
 }
 
 DECLARE_TEMPLATE_CLASS(o2::LinkRef<o2::Spoiler>);

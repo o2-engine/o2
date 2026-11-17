@@ -549,6 +549,11 @@ namespace o2
     {
         return "List";
     }
+
+    String LongList::GetEditorIcon()
+    {
+        return "ui/UI4_actor_longlist_icon.svg";
+    }
 }
 
 DECLARE_TEMPLATE_CLASS(o2::LinkRef<o2::LongList>);

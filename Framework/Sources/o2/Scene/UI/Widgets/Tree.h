@@ -207,6 +207,9 @@ namespace o2
         // Returns create menu group in editor
         static String GetCreateMenuGroup();
 
+        // Returns the icon of the type in the editor
+        static String GetEditorIcon();
+
         SERIALIZABLE(Tree);
         CLONEABLE_REF(Tree);
 
@@ -574,6 +577,9 @@ namespace o2
         // Returns create menu group in editor
         static String GetCreateMenuGroup();
 
+        // Returns the icon of the type in the editor
+        static String GetEditorIcon();
+
         SERIALIZABLE(TreeNode);
         CLONEABLE_REF(TreeNode);
 
@@ -756,6 +762,7 @@ CLASS_METHODS_META(o2::Tree)
     FUNCTION().PUBLIC().SIGNATURE(void, UpdateSelfTransform);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsInputTransparent);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetCreateMenuGroup);
+    FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetEditorIcon);
     FUNCTION().PROTECTED().SIGNATURE(void, OnFocused);
     FUNCTION().PROTECTED().SIGNATURE(void, OnUnfocused);
     FUNCTION().PROTECTED().SIGNATURE(void, DrawZebraBack);
@@ -850,6 +857,7 @@ CLASS_METHODS_META(o2::TreeNode)
     FUNCTION().PUBLIC().SIGNATURE(void, SetSelectedState, bool);
     FUNCTION().PUBLIC().SIGNATURE(void, SetFocusedState, bool);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetCreateMenuGroup);
+    FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetEditorIcon);
     FUNCTION().PROTECTED().SIGNATURE(void, OnStateAdded, const Ref<WidgetState>&);
     FUNCTION().PROTECTED().SIGNATURE(void, UpdateTreeLayout, float);
     FUNCTION().PROTECTED().SIGNATURE(void, OnCursorDblClicked, const Input::Cursor&);

@@ -206,6 +206,10 @@ namespace o2
         Component::OnRemoveFromScene();
     }
 
+    String ICollider::GetIcon()
+    {
+        return "ui/UI4_collider_component.svg";
+    }
 }
 
 DECLARE_TEMPLATE_CLASS(o2::LinkRef<o2::ICollider>);

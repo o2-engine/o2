@@ -25,8 +25,14 @@
 
 - (void)mtkView:(nonnull MTKView *)view drawableSizeWillChange:(CGSize)size
 {
-    float scale = o2Application.GetGraphicsScale();
-            o2::ApplicationPlatformWrapper::OnWindowResized(o2::Vec2I(size.width/scale, size.height/scale));
+    // The drawable is in pixels: a window moved to a screen of another density keeps its size in points while the
+    // pixels per point change, so the scale is the one of the window's screen now, not the one of the start. A view not
+    // in the window yet will open on the main screen
+    float scale = view.window ? (float)view.window.backingScaleFactor : (float)[NSScreen mainScreen].backingScaleFactor;
+    if (scale <= 0.0f)
+        scale = o2Application.GetGraphicsScale();
+
+    o2::ApplicationPlatformWrapper::OnWindowResized(o2::Vec2I(size.width/scale, size.height/scale), scale);
 }
 
 @end
@@ -53,6 +59,20 @@ static o2::MacKeyboardHandler::Modifiers GetModifiers(NSEventModifierFlags flags
 
 - (BOOL)acceptsFirstMouse:(NSEvent *)theEvent {
     return YES;
+}
+
+- (void)viewDidChangeBackingProperties {
+    [super viewDidChangeBackingProperties];
+
+    // Another screen density: the drawable takes the pixels of the new screen, the delegate puts the new scale
+    CGFloat scale = self.window ? self.window.backingScaleFactor : self.layer.contentsScale;
+    self.layer.contentsScale = scale;
+
+    CGSize pixels = CGSizeMake(self.bounds.size.width*scale, self.bounds.size.height*scale);
+    if (!CGSizeEqualToSize(pixels, self.drawableSize))
+        self.drawableSize = pixels;
+
+    [self.delegate mtkView:self drawableSizeWillChange:self.drawableSize];
 }
 
 - (void)viewDidMoveToWindow {

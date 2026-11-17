@@ -121,7 +121,7 @@ namespace o2
 
     String Mesh3DComponent::GetIcon()
     {
-        return "ui/UI4_image_component.svg";
+        return "ui/UI4_mesh3d_component.svg";
     }
 
     SceneDrawableCategory Mesh3DComponent::GetSceneDrawableCategory() const

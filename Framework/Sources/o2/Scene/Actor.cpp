@@ -1508,6 +1508,11 @@ namespace o2
         return "";
     }
 
+    String Actor::GetEditorIcon()
+    {
+        return "ui/UI4_node_actor_icon.svg";
+    }
+
     void Actor::SourceToTargetMapCloneVisitor::OnCopyActor(const Actor* source, Actor* target)
     {
         sourceToTargetActors[source] = target;

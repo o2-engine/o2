@@ -191,6 +191,7 @@ namespace Editor
         PushEditorScopeOnStack enterScope;
 
         o2Application.SetWindowCaption("o2 Editor");
+        o2Application.SetApplicationIcon(String(GetEditorAssetsPath()) + "../Platforms/AppIcon/o2Editor_256.png");
 
         mUIRoot = mmake<UIRoot>();
 

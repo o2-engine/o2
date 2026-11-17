@@ -34,6 +34,10 @@ namespace Editor
         // Returns icon
         const Ref<Image>& GetIcon() const;
 
+        // Puts the icon of a type on the head: the white twin of the glyph when the editor art has one ("_white" before
+        // ".svg"), tinted as the glyphs of the heads are
+        void SetHeadIcon(const String& iconPath);
+
         // Returns create menu category in editor
         static String GetCreateMenuCategory();
 
@@ -72,6 +76,7 @@ CLASS_METHODS_META(Editor::SpoilerWithHead)
     FUNCTION().PUBLIC().CONSTRUCTOR(RefCounter*);
     FUNCTION().PUBLIC().CONSTRUCTOR(RefCounter*, const SpoilerWithHead&);
     FUNCTION().PUBLIC().SIGNATURE(const Ref<Image>&, GetIcon);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetHeadIcon, const String&);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetCreateMenuCategory);
     FUNCTION().PRIVATE().SIGNATURE(void, InitializeControls);
 }

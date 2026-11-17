@@ -25,6 +25,9 @@ namespace o2
 		// Returns category of component
 		static String GetCategory();
 
+		// Returns name of component icon
+		static String GetIcon();
+
         SERIALIZABLE(ScissorClippingComponent);
         CLONEABLE_REF(ScissorClippingComponent);
 
@@ -54,6 +57,7 @@ CLASS_METHODS_META(o2::ScissorClippingComponent)
     FUNCTION().PUBLIC().CONSTRUCTOR();
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetName);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetCategory);
+    FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetIcon);
     FUNCTION().PRIVATE().SIGNATURE(void, OnDraw);
     FUNCTION().PRIVATE().SIGNATURE(void, OnPostDraw);
 }

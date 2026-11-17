@@ -45,7 +45,7 @@ namespace o2
 
     String SkinningMeshBoneComponent::GetIcon()
     {
-        return "ui/UI4_emitter_component.svg";
+        return "ui/UI4_bone_component.svg";
     }
 
     void SkinningMeshBoneComponent::OnTransformUpdated()

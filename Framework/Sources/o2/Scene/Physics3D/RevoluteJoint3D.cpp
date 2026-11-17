@@ -41,6 +41,11 @@ namespace o2
 
     String RevoluteJoint3D::GetName() { return "Revolute joint 3D"; }
     String RevoluteJoint3D::GetCategory() { return "Physics 3D/Joints"; }
+
+    String RevoluteJoint3D::GetIcon()
+    {
+        return "ui/UI4_revolute_joint_component.svg";
+    }
     bool RevoluteJoint3D::IsAvailableFromCreateMenu() { return true; }
 
     b3JointId RevoluteJoint3D::CreateJoint(RigidBody3D* bodyA, RigidBody3D* bodyB)

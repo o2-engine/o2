@@ -52,6 +52,11 @@ namespace o2
 
     String PrismaticJoint::GetName() { return "Prismatic joint"; }
     String PrismaticJoint::GetCategory() { return "Physics/Joints"; }
+
+    String PrismaticJoint::GetIcon()
+    {
+        return "ui/UI4_prismatic_joint_component.svg";
+    }
     bool PrismaticJoint::IsAvailableFromCreateMenu() { return true; }
 
     b2Joint* PrismaticJoint::CreateJoint(b2Body* bodyA, b2Body* bodyB)

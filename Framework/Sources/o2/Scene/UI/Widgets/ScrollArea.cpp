@@ -761,6 +761,11 @@ namespace o2
     {
         return "Basic";
     }
+
+    String ScrollArea::GetEditorIcon()
+    {
+        return "ui/UI4_actor_scrollarea_icon.svg";
+    }
 }
 
 DECLARE_TEMPLATE_CLASS(o2::LinkRef<o2::ScrollArea>);

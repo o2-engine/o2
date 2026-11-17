@@ -21,6 +21,10 @@ namespace o2
         // Runs the given number of full application frames (update + draw)
         static void PumpFrames(int count = 1);
 
+        // Reports the pixels per point of the screen as the platform does when the window moves to a screen of another
+        // density, the size in points staying
+        static void SetGraphicsScale(float scale);
+
         // Pumps frames until the given amount of game time passes
         static void Wait(float seconds);
 

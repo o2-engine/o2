@@ -159,6 +159,9 @@ namespace o2
         // Returns create menu group in editor
         static String GetCreateMenuGroup();
 
+        // Returns the icon of the type in the editor
+        static String GetEditorIcon();
+
         SERIALIZABLE(EditBox);
         CLONEABLE_REF(EditBox);
 
@@ -381,6 +384,7 @@ CLASS_METHODS_META(o2::EditBox)
     FUNCTION().PUBLIC().SIGNATURE(bool, IsUnderPoint, const Vec2F&);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsInputTransparent);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetCreateMenuGroup);
+    FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetEditorIcon);
     FUNCTION().PROTECTED().SIGNATURE(void, UpdateTransparency);
     FUNCTION().PROTECTED().SIGNATURE(void, UpdateLayersLayouts);
     FUNCTION().PROTECTED().SIGNATURE(void, OnEnabled);

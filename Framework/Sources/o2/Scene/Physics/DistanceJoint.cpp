@@ -34,6 +34,11 @@ namespace o2
 
     String DistanceJoint::GetName() { return "Distance joint"; }
     String DistanceJoint::GetCategory() { return "Physics/Joints"; }
+
+    String DistanceJoint::GetIcon()
+    {
+        return "ui/UI4_distance_joint_component.svg";
+    }
     bool DistanceJoint::IsAvailableFromCreateMenu() { return true; }
 
     b2Joint* DistanceJoint::CreateJoint(b2Body* bodyA, b2Body* bodyB)

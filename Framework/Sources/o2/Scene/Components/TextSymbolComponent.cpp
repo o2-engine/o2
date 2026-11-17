@@ -24,6 +24,11 @@ namespace o2
     {
 	    return "Text symbol";
     }
+
+    String TextSymbolComponent::GetIcon()
+    {
+        return "ui/UI4_text_symbol_component.svg";
+    }
 }
 
 DECLARE_TEMPLATE_CLASS(o2::LinkRef<o2::TextSymbolComponent>);

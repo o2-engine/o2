@@ -42,6 +42,11 @@ namespace o2
 
     String PrismaticJoint3D::GetName() { return "Prismatic joint 3D"; }
     String PrismaticJoint3D::GetCategory() { return "Physics 3D/Joints"; }
+
+    String PrismaticJoint3D::GetIcon()
+    {
+        return "ui/UI4_prismatic_joint_component.svg";
+    }
     bool PrismaticJoint3D::IsAvailableFromCreateMenu() { return true; }
 
     b3JointId PrismaticJoint3D::CreateJoint(RigidBody3D* bodyA, RigidBody3D* bodyB)

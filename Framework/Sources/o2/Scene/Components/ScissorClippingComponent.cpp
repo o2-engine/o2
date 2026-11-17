@@ -20,6 +20,11 @@ namespace o2
         return "Render";
 	}
 
+    String ScissorClippingComponent::GetIcon()
+    {
+        return "ui/UI4_scissor_clipping_component.svg";
+    }
+
 	void ScissorClippingComponent::OnDraw()
     {
         if (enableClipping)

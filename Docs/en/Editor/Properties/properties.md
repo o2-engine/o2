@@ -11,7 +11,7 @@ The editor can show many field types, including custom ones:
 - nested objects by value
 - nested objects by pointer. Deletion and creation with type selection are available
 - references to other actors. Assigned via drag'n'drop from the hierarchy
-- references to assets. Assigned via drag'n'drop from the assets window, or created in place. In that case the asset is saved together with the actor. The field shows a small preview before the name: the picture of an image, a vector image or an atlas, a sample of a font, the model, the icon of the type for the other assets. A click on it opens the asset in the Preview window; a sound plays and stops instead.
+- references to assets. Assigned via drag'n'drop from the assets window, or created in place. In that case the asset is saved together with the actor. The field shows a small preview before the name: the picture of an image (a 9-slice one whole, without stretching its slices), a vector image or an atlas, a sample of a font or of a text style, the thumbnail of a prototype, the model, the icon of the type for the other assets. A click on it opens the asset in the Preview window; a sound plays and stops instead.
 
 ### (1) Header
 Shows the main actor info — enabled state (circle at the top left), name, tags, layer, lock. All these controls are editable.
@@ -29,6 +29,8 @@ Shows the local transform parameters of the selected actor:
 If the edited object is not a plain o2::Actor but a derived type, its parameters are shown. The screenshot example shows the transparency coefficient and the widget state list.
 
 The settings are taken from the actor via reflection. All public fields are shown by default, plus fields marked with a special tag in code.
+
+The head of the section has the name of the type and its icon, the same as in the create menu of the Tree window (`GetEditorIcon()`, drawn white on the head). A selected widget layer shows its layout under Transform and its own settings under Layer.
 
 ### (4) Components
 Next, component parameters are shown block by block. Public fields declared in the component are shown the same way.

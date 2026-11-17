@@ -673,6 +673,11 @@ namespace o2
         return "Context";
     }
 
+    String ContextMenu::GetEditorIcon()
+    {
+        return "ui/UI4_actor_contextmenu_icon.svg";
+    }
+
     void ContextMenu::FitSizeAndPosition(const Vec2F& position)
     {
         Vec2F size;
@@ -1049,6 +1054,11 @@ namespace o2
     String ContextMenuItem::GetCreateMenuGroup()
     {
         return "Context";
+    }
+
+    String ContextMenuItem::GetEditorIcon()
+    {
+        return "ui/UI4_actor_contextmenuitem_icon.svg";
     }
 
     void ContextMenuItem::OnChildAdded(const Ref<Widget>& child)

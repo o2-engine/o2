@@ -375,6 +375,8 @@ namespace o2
 
     String Application::GetWindowCaption() const { return ""; }
 
+    void Application::SetApplicationIcon(const String& pngPath) {}
+
     void Application::SetContentSize(const Vec2I& size)
     {
         gCanvasResolution = size;

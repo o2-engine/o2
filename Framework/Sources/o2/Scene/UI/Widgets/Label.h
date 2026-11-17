@@ -141,6 +141,9 @@ namespace o2
         // Returns create menu group in editor
         static String GetCreateMenuGroup();
 
+        // Returns the icon of the type in the editor
+        static String GetEditorIcon();
+
         SERIALIZABLE(Label);
         CLONEABLE_REF(Label);
 
@@ -230,6 +233,7 @@ CLASS_METHODS_META(o2::Label)
     FUNCTION().PUBLIC().SIGNATURE(int, GetHeight);
     FUNCTION().PUBLIC().SIGNATURE(void, UpdateSelfTransform);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetCreateMenuGroup);
+    FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetEditorIcon);
     FUNCTION().PROTECTED().SIGNATURE(void, OnLayerAdded, const Ref<WidgetLayer>&);
     FUNCTION().PROTECTED().SIGNATURE(void, CreateDefaultText);
     FUNCTION().PROTECTED().SIGNATURE(void, OnDeserialized, const DataValue&);

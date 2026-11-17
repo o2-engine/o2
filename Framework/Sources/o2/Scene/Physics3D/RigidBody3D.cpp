@@ -335,6 +335,11 @@ namespace o2
         mLastSyncPos = transform->GetWorldPosition();
         mLastSyncRot = transform->GetWorldRotation();
     }
+
+    String RigidBody3D::GetEditorIcon()
+    {
+        return "ui/UI4_actor_rigidbody3d_icon.svg";
+    }
 }
 
 DECLARE_TEMPLATE_CLASS(o2::LinkRef<o2::RigidBody3D>);
