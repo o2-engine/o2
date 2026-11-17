@@ -506,6 +506,7 @@ namespace Editor
 
         mHasImage = bitmap != nullptr;
         mShownBitmap = bitmap ? WeakRef<Bitmap>(bitmap) : WeakRef<Bitmap>();
+        mImageVersion++;
         if (bitmap)
         {
             mImageSize = bitmap->GetSize();

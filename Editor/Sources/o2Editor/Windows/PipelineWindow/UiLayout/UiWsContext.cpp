@@ -1,6 +1,7 @@
 #include "o2Editor/stdafx.h"
 #include "UiWsContext.h"
 
+#include "o2Editor/Pipeline/Nodes/UiNodes.h"
 #include "o2Editor/Pipeline/PipelinePngMeta.h"
 #include "o2Editor/Windows/PipelineWindow/PipelineEditor.h"
 #include "o2Editor/Windows/PipelineWindow/PipelineNodeBody.h"
@@ -93,15 +94,83 @@ namespace Editor
         bool operator==(const UiWsPicture& other) const { return w == other.w && h == other.h && dpi == other.dpi && png == other.png; }
     };
 
-    // The kit value wired into the node's kit input and the first reference picture
-    static void ReadInputs(PipelineEditor& e, const Ref<PipelineNode>& node, PipelineValue& kitValue, UiWsPicture& picture)
+    // -----------------------------------------------------------------------------------------------------------
+    // The style inputs of the UI kit node feeding the layout, as they are now: a Text style node's output follows its
+    // card at once, the kit's own output only after its run (an auto-apply a moment later). The kit's last run is drawn
+    // with these laid over its styles (the way its run makes them), so a style edit shows on the layout in the same frame
+    // -----------------------------------------------------------------------------------------------------------
+    struct UiWsLiveStyles
+    {
+        struct Slot
+        {
+            PipelineValue value;
+            String        item;      // The kit's own name for it
+            String        port;
+            int           index = 0; // Its place among all the kit's inputs, from 1
+        };
+
+        Vector<Slot> slots;
+        String       key; // "" when no UI kit node feeds the layout or it has no style with a value
+    };
+
+    static void ReadLiveStyles(PipelineEditor& e, const Ref<PipelineNode>& kitNode, UiWsLiveStyles& out)
+    {
+        out = UiWsLiveStyles();
+        if (!kitNode || kitNode->nodeType != "uiKit")
+            return;
+
+        const DataValue* items = kitNode->config.FindMember("items");
+        int index = 0;
+        for (auto& port : kitNode->inputs)
+        {
+            index++;
+            if (port.portType != PipelinePortType::TextStyle)
+                continue;
+
+            PipelineValue value = e.GetInputValueById(kitNode, port.id);
+            if (!value.IsValid() || value.type != PipelinePortType::TextStyle)
+                continue;
+
+            String item;
+            const DataValue* entry = items ? items->FindMember(port.id.Data()) : nullptr;
+            const DataValue* name = entry ? entry->FindMember("name") : nullptr;
+            if (name && name->IsString())
+                item = name->GetString();
+            out.slots.Add(UiWsLiveStyles::Slot{ value, item, port.name, index });
+            out.key += port.id + "\t" + item + "\t" + value.data + "\n";
+        }
+    }
+
+    // The kit of the last run with the live styles laid over its own, by position; as it is while their number differs
+    // (a style linked or unlinked since the run: the run is waited for) or the kit names no device
+    static void LayLiveStyles(UiKit& kit, const UiWsLiveStyles& live)
+    {
+        if (live.key.IsEmpty() || !kit.device || live.slots.Count() != kit.textStyles.Count())
+            return;
+
+        double scale = std::min(kit.device->w, kit.device->h)/UiDoc::TEXT_STYLE_SCREEN_W;
+        for (int i = 0; i < live.slots.Count(); i++)
+        {
+            auto& slot = live.slots[i];
+            kit.textStyles[i] = PipelineUiNodes::KitStyle(slot.value, slot.item, slot.port, slot.index, scale);
+        }
+    }
+
+    // The kit value wired into the node's kit input, the live styles of the kit node behind it and the first reference picture
+    static void ReadInputs(PipelineEditor& e, const Ref<PipelineNode>& node, PipelineValue& kitValue, UiWsLiveStyles& live,
+                           UiWsPicture& picture)
     {
         kitValue = PipelineValue();
+        live = UiWsLiveStyles();
         for (auto& port : node->inputs)
         {
             if (port.portType == PipelinePortType::UiKit)
             {
                 kitValue = e.GetInputValueById(node, port.id);
+                auto graph = e.GetGraph();
+                auto edge = graph ? graph->FindEdgeToPort(node->id, port.id) : nullptr;
+                if (edge && kitValue.IsValid())
+                    ReadLiveStyles(e, graph->FindNode(edge->fromNodeId), live);
                 break;
             }
         }
@@ -192,13 +261,16 @@ namespace Editor
             peek = -1;
 
         PipelineValue kitValue;
+        UiWsLiveStyles live;
         UiWsPicture picture;
-        ReadInputs(*e, node, kitValue, picture);
+        ReadInputs(*e, node, kitValue, live, picture);
         String text = kitValue.IsValid() && kitValue.type == PipelinePortType::UiKit ? kitValue.data : String();
-        if (text != kitText)
+        if (text != kitText || live.key != mLiveStylesKey)
         {
             kitText = text;
+            mLiveStylesKey = live.key;
             kit = text.IsEmpty() ? UiKit() : ParseKit(text);
+            LayLiveStyles(kit, live);
             kitVersion++;
         }
         hasKit = !text.IsEmpty() && (!kit.elements.IsEmpty() || !kit.textStyles.IsEmpty());
@@ -244,11 +316,12 @@ namespace Editor
         if (!changed)
         {
             PipelineValue kitValue;
+            UiWsLiveStyles live;
             UiWsPicture picture;
-            ReadInputs(*e, node, kitValue, picture);
+            ReadInputs(*e, node, kitValue, live, picture);
             String text = kitValue.IsValid() && kitValue.type == PipelinePortType::UiKit ? kitValue.data : String();
             bool sameRef = picture.w == (int)referencePicture.w && picture.h == (int)referencePicture.h && picture.png == referencePng;
-            changed = text != kitText || !sameRef;
+            changed = text != kitText || live.key != mLiveStylesKey || !sameRef;
         }
 
         if (changed)

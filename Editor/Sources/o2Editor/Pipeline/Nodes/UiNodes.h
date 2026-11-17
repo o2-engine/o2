@@ -40,6 +40,11 @@ namespace Editor
         // Returns the Text style node's output: its config cleaned into a style, as JSON
         String TextStyleOutput(const PipelineNode& node);
 
+        // Returns a text style as a UI kit node takes it from a style input: brought to the kit's device (scale: its shorter
+        // side over 1080) and named by the kit's item, else by the style, else by the input (style_<index>, index from 1 among
+        // all the kit's inputs)
+        UiDoc::TextStyle KitStyle(const PipelineValue& value, const String& itemName, const String& portName, int index, double scale);
+
         // Builds the UI kit a UI kit node makes from its inputs (keyed by input port id) and its per-element settings
         UiDoc::UiKit BuildKit(const PipelineNode& node, const Map<String, PipelineValue>& inputsById,
                               const Function<void(const String&)>& log);

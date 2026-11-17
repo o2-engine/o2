@@ -393,6 +393,9 @@ namespace Editor
         // Returns true when an image is shown
         bool HasImage() const { return mHasImage; }
 
+        // Returns a number that changes whenever another picture is shown (tests)
+        int GetImageVersion() const { return mImageVersion; }
+
         // Returns the rectangle where the image is drawn (world space)
         RectF GetImageRect() const;
 
@@ -414,6 +417,7 @@ namespace Editor
         bool             mHasImage = false; // True when an image is shown
         bool             mFramed = true;    // Draws the card frame: border and shadow
         WeakRef<Bitmap>  mShownBitmap;      // Bitmap on screen, setting it again changes nothing
+        int              mImageVersion = 0; // Counts the pictures shown
         String           mHint;             // Text shown when there is no image
         bool             mLoading = false;  // The picture is on its way
 
@@ -685,6 +689,7 @@ CLASS_FIELDS_META(Editor::PipelineImageView)
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mHasImage);
     FIELD().PROTECTED().DEFAULT_VALUE(true).NAME(mFramed);
     FIELD().PROTECTED().NAME(mShownBitmap);
+    FIELD().PROTECTED().DEFAULT_VALUE(0).NAME(mImageVersion);
     FIELD().PROTECTED().NAME(mHint);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mLoading);
 }
@@ -697,6 +702,7 @@ CLASS_METHODS_META(Editor::PipelineImageView)
     FUNCTION().PUBLIC().SIGNATURE(void, SetHint, const String&);
     FUNCTION().PUBLIC().SIGNATURE(void, SetLoading, bool);
     FUNCTION().PUBLIC().SIGNATURE(bool, HasImage);
+    FUNCTION().PUBLIC().SIGNATURE(int, GetImageVersion);
     FUNCTION().PUBLIC().SIGNATURE(RectF, GetImageRect);
     FUNCTION().PUBLIC().SIGNATURE(Vec2I, GetImageSize);
     FUNCTION().PUBLIC().SIGNATURE(void, Draw);

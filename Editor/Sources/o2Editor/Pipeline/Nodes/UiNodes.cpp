@@ -122,6 +122,19 @@ namespace Editor
             return true;
         }
 
+        UiDoc::TextStyle KitStyle(const PipelineValue& value, const String& itemName, const String& portName, int index, double scale)
+        {
+            UiLayout::Json raw;
+            if (!UiLayout::Json::Parse(value.data.IsEmpty() ? String("{}") : value.data, raw))
+                raw = UiLayout::Json::Object();
+
+            auto style = UiDoc::ScaleTextStyle(UiDoc::NormalizeTextStyle(raw), scale);
+            // The style keeps its own name unless the kit renames it
+            UiLayout::Json name(!itemName.IsEmpty() ? itemName : !style.name.IsEmpty() ? style.name : portName);
+            style.name = UiDoc::CleanKitName(&name, "style_" + (String)index);
+            return style;
+        }
+
         UiDoc::UiKit BuildKit(const PipelineNode& node, const Map<String, PipelineValue>& inputsById,
                               const Function<void(const String&)>& log)
         {
@@ -154,15 +167,7 @@ namespace Editor
                 UiDoc::UiKitItem item = itemOf(port.id);
                 if (value.type == PipelinePortType::TextStyle)
                 {
-                    UiLayout::Json raw;
-                    if (!UiLayout::Json::Parse(value.data.IsEmpty() ? String("{}") : value.data, raw))
-                        raw = UiLayout::Json::Object();
-
-                    auto style = UiDoc::ScaleTextStyle(UiDoc::NormalizeTextStyle(raw), styleScale);
-                    // The style keeps its own name unless the kit renames it
-                    UiLayout::Json name(!item.name.IsEmpty() ? item.name : !style.name.IsEmpty() ? style.name : port.name);
-                    style.name = UiDoc::CleanKitName(&name, "style_" + (String)i);
-                    kit.textStyles.Add(style);
+                    kit.textStyles.Add(KitStyle(value, item.name, port.name, i, styleScale));
                     continue;
                 }
 
@@ -391,6 +396,11 @@ namespace Editor
                 return value;
             String styled = UiDoc::WithStyleOverrides(value.data, node.GetConfigString("name", ""), node.GetConfigString("role", ""));
             return PipelineValue::TextOf(PipelinePortType::TextStyle, styled);
+        }
+
+        Vector<String> PostStepKeys() const override
+        {
+            return { "name", "role" };
         }
 
         // The check against the picture: a paid second step over the stored style

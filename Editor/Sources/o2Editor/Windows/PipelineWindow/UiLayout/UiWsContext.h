@@ -138,6 +138,7 @@ namespace Editor
         bool         mStepsSeenValid = false;
         bool         mStepsPresent = false;
         String       mScreenNameSeen;
+        String       mLiveStylesKey; // The live styles of the kit node behind the kit input laid over kit (see Refresh)
         bool         mSeenValid = false;
     };
 
