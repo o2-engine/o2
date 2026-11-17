@@ -443,15 +443,60 @@ TEST_F(PipelineKitCardFixture, TextStyleFillAndEffects)
     panel("style effects")->AddEffect("stroke");
     Step(3);
     ASSERT_EQ(config().Get("effects")->Count(), 3);
-    panel("style effects")->Click("fx2:up");
+    EXPECT_EQ(config().Get("effects")->At(1)->Get("type")->Str(), "stroke") << "a new outline goes after the outlines, over the shadow";
+    panel("style effects")->DragEffect(1, 0);
+    Step(2);
     EXPECT_EQ(config().Get("effects")->At(0)->Get("width")->Num(), UiDoc::DefaultEffect("stroke", UiDoc::TextStyleFromConfig(style->config)).width);
-    panel("style effects")->Click("fx0:toggle");
+    EXPECT_TRUE(config().Get("fxStack")->IsNull()) << "outlines among themselves: still the canonical order";
+    panel("style effects")->Click("fx0:eye");
     Step(2);
     EXPECT_EQ(config().Get("stroke")->Get("width")->Num(), 30.0) << "the first live outline";
+    panel("style effects")->Click("fx0:eye");
+    Step(2);
+
+    // The shadow dragged over the outlines: the list is the stack, the config says so
+    panel("style effects")->DragEffect(2, 0);
+    Step(2);
+    EXPECT_EQ(config().Get("effects")->At(0)->Get("type")->Str(), "shadow");
+    EXPECT_TRUE(config().Get("fxStack")->Bool());
+    panel("style effects")->Click("fx0:dup");
+    Step(3);
+    EXPECT_EQ(config().Get("effects")->Count(), 4);
     panel("style effects")->Click("fx1:remove");
+    panel("style effects")->Click("fx0:remove");
     Step(3);
     EXPECT_EQ(config().Get("effects")->Count(), 2);
     EXPECT_TRUE(config().Get("shadow")->IsNull());
+    EXPECT_TRUE(config().Get("fxStack")->IsNull());
+
+    // A gradient outline: its angle in its row, its stops on the row under it
+    panel("style effects")->Click("fx0:grad");
+    Step(3);
+    ASSERT_TRUE(config().Get("effects")->At(0)->Get("fill") && config().Get("effects")->At(0)->Get("fill")->IsObject());
+    panel("style effects")->Slide("fx0:angle", 0.0f);
+    EXPECT_EQ(config().Get("effects")->At(0)->Get("fill")->Get("angle")->Num(), 0.0);
+    panel("style effects")->PressBar(0.5f, "fx0");
+    panel("style effects")->DragStopTo(0.4f);
+    Step(2);
+    EXPECT_EQ(config().Get("effects")->At(0)->Get("fill")->Get("stops")->Count(), 3);
+    EXPECT_EQ(panel("style effects")->GetSelectedStop("fx0"), 1);
+    panel("style effects")->Click("fx0:stopRemove");
+    Step(2);
+    EXPECT_EQ(config().Get("effects")->At(0)->Get("fill")->Get("stops")->Count(), 2);
+    panel("style effects")->AddEffect("glow");
+    panel("style effects")->AddEffect("bevel");
+    Step(3);
+    ASSERT_EQ(config().Get("effects")->Count(), 4);
+    EXPECT_EQ(config().Get("effects")->At(0)->Get("type")->Str(), "bevel") << "an inner effect goes over the inner ones, on top";
+
+    // The glow dragged by its grip over everything: a line shows where it lands, the drop is one edit
+    auto fx = panel("style effects");
+    RectF grip = fx->HotRect("fx3:grip"), top = fx->HotRect("fx0:grip");
+    ASSERT_GT(grip.Width(), 0.0f);
+    Drag(editor->LocalToScreenPoint(grip.Center()), editor->LocalToScreenPoint(Vec2F(top.Center().x, top.top + 2.0f)));
+    Step(2);
+    EXPECT_EQ(config().Get("effects")->At(0)->Get("type")->Str(), "glow");
+    EXPECT_TRUE(config().Get("fxStack")->Bool());
 
     for (auto kind : { PipelineThemeKind::Light, PipelineThemeKind::Dark })
     {

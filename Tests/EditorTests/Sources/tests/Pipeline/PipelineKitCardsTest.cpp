@@ -123,6 +123,37 @@ TEST(PipelineKitCards, TextStyleLookWritesTheMirrors)
     EXPECT_FALSE(back.fill.has_value());
 }
 
+// The card writes its list as the stack: fxStack stays in the config only for an order of its own
+TEST(PipelineKitCards, TextStyleLookWritesTheStack)
+{
+    auto st = UiDoc::TextStyleDefault();
+    st.effects = { UiDoc::DefaultEffect("shadow", st), UiDoc::DefaultEffect("stroke", st) };
+    DataDocument config;
+    config.SetObject();
+    PipelineTextFxPanel::WriteLook(config, st);
+    auto json = UiDoc::FromDataValue(config);
+    ASSERT_TRUE(json.Get("fxStack"));
+    EXPECT_TRUE(json.Get("fxStack")->Bool());
+    auto back = UiDoc::TextStyleFromConfig(config);
+    EXPECT_TRUE(back.fxStack);
+    EXPECT_EQ(back.effects[0].type, "shadow") << "the shadow stays over the outline";
+
+    st.effects = { st.effects[1], st.effects[0] };
+    PipelineTextFxPanel::WriteLook(config, st);
+    json = UiDoc::FromDataValue(config);
+    ASSERT_TRUE(json.Get("fxStack"));
+    EXPECT_TRUE(json.Get("fxStack")->IsNull()) << "the canonical order: no fxStack";
+    EXPECT_FALSE(UiDoc::TextStyleFromConfig(config).fxStack);
+
+    // An outline with a gradient: its colour is the first stop, the mirror takes it
+    st.effects[0].fill = UiDoc::TextGradient{ 0, { UiDoc::GradientStop{ "#FF0000", 0 }, UiDoc::GradientStop{ "#0000FF", 1 } } };
+    PipelineTextFxPanel::WriteLook(config, st);
+    back = UiDoc::TextStyleFromConfig(config);
+    ASSERT_TRUE(back.effects[0].fill.has_value());
+    EXPECT_EQ(back.effects[0].color, "#FF0000");
+    EXPECT_EQ(back.stroke->color, "#FF0000");
+}
+
 TEST(PipelineKitCards, GradientStopsAndEffectOrder)
 {
     UiDoc::TextGradient g{ 90, { UiDoc::GradientStop{ "#000000", 0 }, UiDoc::GradientStop{ "#FFFFFF", 1 } } };
@@ -137,23 +168,32 @@ TEST(PipelineKitCards, GradientStopsAndEffectOrder)
     EXPECT_EQ(end.stops[3].at, 1.0);
     EXPECT_EQ(end.stops[3].color, "#FFFFFF");
 
-    // Before the previous one of its kind: an outline goes closer to the letters, another kind in between stays
+    // A drag to another place in the stack: the effect lands at its place among the others
     auto st = UiDoc::TextStyleDefault();
     Vector<UiDoc::TextEffect> fx = { UiDoc::DefaultEffect("stroke", st), UiDoc::DefaultEffect("shadow", st) };
     st.effects = fx;
     fx.Add(UiDoc::DefaultEffect("stroke", st));
     fx[2].color = "#123456";
-    auto moved = PipelineTextFxPanel::MovedUp(fx, 2);
+    auto moved = PipelineTextFxPanel::Moved(fx, 2, 0);
     EXPECT_EQ(moved[0].color, "#123456");
-    EXPECT_EQ(moved[1].type, "shadow");
-    EXPECT_EQ(moved[2].color, fx[0].color);
-    EXPECT_EQ(PipelineTextFxPanel::MovedUp(fx, 1)[1].type, "shadow") << "no earlier shadow: unchanged";
+    EXPECT_EQ(moved[1].color, fx[0].color);
+    EXPECT_EQ(moved[2].type, "shadow");
+    auto down = PipelineTextFxPanel::Moved(fx, 0, 2);
+    EXPECT_EQ(down[0].type, "shadow");
+    EXPECT_EQ(down[2].color, fx[0].color);
+    EXPECT_EQ(PipelineTextFxPanel::Moved(fx, 1, 1)[1].type, "shadow") << "dropped in place: unchanged";
 
     // Rows: the fill takes one (two with a gradient), the effects a head and a row or two each
     st.effects = moved;
-    EXPECT_EQ(PipelineTextFxPanel::Rows(true, st), 1 + 1 + 2 + 1);
+    EXPECT_EQ(PipelineTextFxPanel::Rows(true, st), 1 + 1 + 1 + 2);
+    EXPECT_EQ(PipelineTextFxPanel::Height(true, st), 5*26.0f + 4*5.0f + 10.0f) << "the effects block's frame adds its padding and border";
     EXPECT_EQ(PipelineTextFxPanel::Rows(false, st), 1);
     st.fill = g;
     EXPECT_EQ(PipelineTextFxPanel::Rows(false, st), 2);
     EXPECT_EQ(PipelineTextFxPanel::Height(false, st), 2*26.0f + 5.0f);
+
+    // A gradient outline takes a second row: its stops
+    st.effects[0].fill = g;
+    EXPECT_EQ(PipelineTextFxPanel::EffectRows(st.effects[0]), 2);
+    EXPECT_EQ(PipelineTextFxPanel::Rows(true, st), 1 + 2 + 1 + 2);
 }
