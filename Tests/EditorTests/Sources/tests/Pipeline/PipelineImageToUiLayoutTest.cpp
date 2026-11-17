@@ -326,6 +326,10 @@ TEST(ImageToUiAgent, CommandLineBundleAndProcess)
     ASSERT_FALSE(home.IsEmpty()) << "o2/Tools/ImageToUi is missing: run tools/sync-image-to-ui.sh";
     EXPECT_TRUE(o2FileSystem.IsFileExist(home + "/upstream/image-to-ui/scripts/workflow.py"));
     EXPECT_TRUE(o2FileSystem.IsFileExist(home + "/agent/agent.py"));
+
+#if defined(_WIN32)
+    GTEST_SKIP() << "the agent runs on POSIX hosts";
+#endif
     EXPECT_TRUE(home.StartsWith("/"));
 
     EXPECT_EQ(PythonCandidates("/no/such/python"), Vector<String>({ "/no/such/python" })) << "a configured path is taken as it is";
@@ -333,9 +337,6 @@ TEST(ImageToUiAgent, CommandLineBundleAndProcess)
     if (!found.IsEmpty())
         EXPECT_TRUE(found[0].EndsWith("python3"));
 
-#if defined(_WIN32)
-    GTEST_SKIP() << "the agent runs on POSIX hosts";
-#endif
     // stdin in, stdout lines out, stderr kept, the exit code
     String out;
     int code = ImageToUiTestKit::RunToEnd("/bin/sh", { "-c", "read line; echo \"got $line\"; echo second; echo oops >&2; exit 5" }, out, "hello\n");

@@ -625,17 +625,17 @@ namespace Editor::UiDoc::Ws
 
     String AlignLabel(const String& v)
     {
-        return v == "start" ? "Start" : v == "center" ? "Center" : v == "end" ? "End" : v == "stretch" ? "Stretch" : v;
+        return v == "start" ? "Start" : v == "center" ? "Center" : v == "end" ? "End" : v == "stretch" ? "Stretch" : v.Data();
     }
 
     String JustifyLabel(const String& v)
     {
         return v == "start" ? "From the start" : v == "center" ? "Centered" : v == "end" ? "To the end" :
-            v == "between" ? "Space between" : v == "around" ? "Space around" : v == "evenly" ? "Even spacing" : v;
+            v == "between" ? "Space between" : v == "around" ? "Space around" : v == "evenly" ? "Even spacing" : v.Data();
     }
 
     String FitLabel(const String& v)
     {
-        return v == "contain" ? "Contain" : v == "cover" ? "Cover" : v == "stretch" ? "Stretch" : v;
+        return v == "contain" ? "Contain" : v == "cover" ? "Cover" : v == "stretch" ? "Stretch" : v.Data();
     }
 }

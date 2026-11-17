@@ -68,7 +68,7 @@ namespace Editor
         String FxName(const String& type)
         {
             return type == "stroke" ? "Outline" : type == "extrude" ? "Depth" : type == "shadow" ? "Shadow" : type == "glow" ? "Glow" :
-                type == "innerShadow" ? "Inner" : type == "bevel" ? "Bevel" : type;
+                type == "innerShadow" ? "Inner" : type == "bevel" ? "Bevel" : type.Data();
         }
 
         String FxHint(const String& type)
