@@ -199,7 +199,7 @@ namespace Editor
 
         void InitNode(const Ref<PipelineNode>& node) const override
         {
-            // New nodes cut transparent sprites with a model that draws the alpha itself, as AssetsLine's schema defaults
+            // New nodes cut transparent sprites with Nano Banana 2 keyed by chroma (one generation), as AssetsLine's schema defaults
             node->SetConfigString("model", PipelineRegions::extractDefaultImageModel);
             node->SetConfigString("prompt", "");
             node->SetConfigBool("transparentBg", true);

@@ -233,6 +233,8 @@ TEST(PipelineRegions, NodeWithoutRegionsHandsItsResultThroughOut)
     source->SetConfigString("uploadId", "sheet.png");
     auto extract = MakeExtractNode();
     extract->SetConfigString("prompt", "gold coin");
+    // A model that draws its own alpha: the cached part goes through without a chroma cut
+    extract->SetConfigString("model", "openai/gpt-5-image-mini");
     extract->outputs = { PipelinePort("keep", "gold coin", PipelinePortType::Image, false), PipelinePort("phantom", "out", PipelinePortType::Image, false) };
     auto invert = PipelineNodeRegistry::CreateNode("imageColor", Vec2F());
     invert->SetConfigBool("invert", true);
