@@ -105,7 +105,7 @@ namespace Editor
 
             AddModelRow(PipelineTextModelPresets(), "gpt-6.1-sol", PipelineModelKind::Text, "styleModel", "AI model", 70);
             int refs = mNode->inputs.Sum<int>([](const PipelinePort& p) { return p.portType == PipelinePortType::Image ? 1 : 0; });
-            mNote = MakeLabel(refs ? (String)refs + " reference picture(s) go along" : "Add picture inputs to match their lettering", true);
+            mNote = MakeLabel(refs ? (String)refs + " reference picture(s) go along" : String("Add picture inputs to match their lettering"), true);
             StyleLabel(mNote, 10.5f, 400, theme.fg3);
             AddRow(mNote, 16);
 

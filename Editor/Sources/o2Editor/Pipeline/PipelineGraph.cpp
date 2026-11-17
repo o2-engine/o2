@@ -908,7 +908,7 @@ namespace Editor
         if (v->IsNumber())
             return (double)*v != 0.0;
         if (v->IsString())
-            return !((String)*v).IsEmpty();
+            return !String(v->GetString()).IsEmpty();
         return true;
     }
 
