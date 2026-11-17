@@ -108,6 +108,9 @@ TEST(LocalAgent, LocalIdsRouteToTheLocalAgentWithoutAKey)
 
 TEST(LocalAgent, MenusOfferTheLocalAgentsOnlyWhenTurnedOn)
 {
+#if defined(_WIN32)
+    GTEST_SKIP() << "the local agents run on macOS and Linux";
+#endif
     PipelineSettings settings;
     EXPECT_TRUE(settings.localAgentEnabled) << "on by default: only the agents found are offered";
     EXPECT_EQ(settings.localCodexEffort, "low");
@@ -154,6 +157,9 @@ TEST(LocalAgent, MenusOfferTheLocalAgentsOnlyWhenTurnedOn)
 
 TEST(LocalAgent, CodexRunsOnItsLoginWithItsToolsOff)
 {
+#if defined(_WIN32)
+    GTEST_SKIP() << "the local agents run on macOS and Linux";
+#endif
     PipelineSettings settings;
     settings.localCodexModel = "gpt-6-sol";
     auto call = LocalAgentProvider::CodexInvocation(settings, "/opt/tools/codex", "local:codex", "Say \"hi\"", { "/tmp/a.png", "/tmp/b.png" },
@@ -230,6 +236,9 @@ TEST(LocalAgent, ReadsCodexEventsOrSaysWhyThereIsNone)
 
 TEST(LocalAgent, CodexDrawsWhatIsAskedAndItsPictureIsFound)
 {
+#if defined(_WIN32)
+    GTEST_SKIP() << "the local agents run on macOS and Linux";
+#endif
     AiImageOptions options;
     options.aspectRatio = "3:2";
     String prompt = LocalAgentProvider::CodexImagePrompt(" A red gem ", 1, true, options);
