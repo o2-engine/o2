@@ -208,10 +208,13 @@ namespace Editor
             return;
         }
 
-        // The cut settings re-cut the cached raw render, the node's or a part's own
+        // The cut settings re-cut the cached raw render, the node's or a part's own; a key of a node's local step (the AI text
+        // style's name and role) sets it over the stored answer again, so the kits and layouts below get it without a run
         bool chromaKey = key == "chromaColor" || key == "chromaTolerance" || key == "chromaSoftness" || key == "chromaSpill";
         bool instant = schema && schema->instant;
-        if (instant || (chromaKey && PipelineTransparency::AnyChromaPostStep(*node->GetNode())))
+        auto impl = PipelineNodeRegistry::Get(node->GetNode()->nodeType);
+        bool postStep = completed && impl && impl->PostStepKeys().Contains(key);
+        if (instant || postStep || (chromaKey && PipelineTransparency::AnyChromaPostStep(*node->GetNode())))
             ScheduleAutoApply(node->GetNode()->id);
     }
 
@@ -609,7 +612,8 @@ namespace Editor
     }
 
     Ref<PipelineNode> PipelineEditor::AddNodeBeside(const String& besideNodeId, const String& type,
-                                                    const Function<void(PipelineNode&)>& setup, const String& undoName)
+                                                    const Function<void(PipelineNode&)>& setup, const String& undoName,
+                                                    bool takeOverLinks /*= false*/)
     {
         auto graph = GetGraph();
         auto beside = graph ? graph->FindNode(besideNodeId) : nullptr;
@@ -660,8 +664,37 @@ namespace Editor
         }
 
         node->position = SnapToGrid(Vec2F(x, y));
+
+        Vector<String> fed;
+        if (takeOverLinks)
+        {
+            for (auto& edge : graph->edges)
+            {
+                auto from = edge->fromNodeId == beside->id ? beside->FindOutput(edge->fromPortId) : nullptr;
+                auto to = from ? node->outputs.Find([&](const PipelinePort& p) { return p.portType == from->portType; }) : nullptr;
+                if (!to)
+                    continue;
+
+                // The route was drawn from the old node: it would start in the wrong place
+                edge->fromNodeId = node->id;
+                edge->fromPortId = to->id;
+                edge->points.Clear();
+                fed.Add(edge->toNodeId);
+            }
+        }
+
         if (card)
+        {
             card->UpdateFromNode();
+            RefreshSourceOutput(card);
+        }
+        for (auto& id : fed)
+        {
+            auto toSchema = graph->FindNode(id) ? PipelineNodeRegistry::GetSchema(graph->FindNode(id)->nodeType) : nullptr;
+            if (toSchema && toSchema->instant)
+                ScheduleAutoApply(id);
+        }
+        RebuildBendHandles();
         RecalculateViewArea();
         mNeedRedraw = true;
         RecordAction(undoName, before, SerializeGraph());

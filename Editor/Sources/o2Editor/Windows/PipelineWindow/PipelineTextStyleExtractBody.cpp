@@ -417,7 +417,8 @@ namespace Editor
             });
         }
 
-        // The style as a Text style node of its own beside this card, to keep editing it by hand: one undo step
+        // The style as a Text style node of its own beside this card, to keep editing it by hand, in this node's place in its
+        // links: the UI kit then reads the style being edited, and the layouts drawn with it follow every change. One undo step
         void MakeTextStyleNode()
         {
             auto editor = mEditor.Lock();
@@ -436,7 +437,7 @@ namespace Editor
                     UiDoc::SetConfigJson(node.config, member.first.Data(), member.second);
                 node.SetConfigString("tsSample", sample);
                 node.SetConfigBool("tsDark", dark);
-            }, "Text style from the AI text style");
+            }, "Text style from the AI text style", true);
         }
     };
 

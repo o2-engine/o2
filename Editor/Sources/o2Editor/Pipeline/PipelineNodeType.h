@@ -175,6 +175,10 @@ namespace Editor
         // A cheap local step over the stored generation, applied after every run - a cache hit included - like the crop
         virtual PipelineValue PostStep(const PipelineNode& node, const PipelineValue& value) const { return value; }
 
+        // Config keys PostStep reads: an edit of one applies it again over the stored generation at once, with no model call
+        // (nothing when the node has none stored)
+        virtual Vector<String> PostStepKeys() const { return {}; }
+
         // The key of a paid second step over a port's stored generation (AI extract and AI text style: the check against the
         // reference), cached under a key of its own beside the generation's; empty while the step is off. portId is empty for a
         // single-output node

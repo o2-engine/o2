@@ -207,9 +207,11 @@ namespace Editor
         Ref<PipelineNode> AddNodeAtViewCenter(const String& type);
 
         // Adds a node of the type beside another one - to its right, moved down past the cards in the way - as one undo step;
-        // setup fills its config before its card is built. Returns the node, null when there is no such node to add it beside
+        // setup fills its config before its card is built. With takeOverLinks the new node takes that node's place in its
+        // links: whatever one of its outputs fed is fed from the new node's first output of the same type (the old node
+        // stays, unlinked there). Returns the node, null when there is no such node to add it beside
         Ref<PipelineNode> AddNodeBeside(const String& besideNodeId, const String& type, const Function<void(PipelineNode&)>& setup,
-                                        const String& undoName);
+                                        const String& undoName, bool takeOverLinks = false);
 
         // Rebuilds all cards from the graph, keeping their runtimes
         void RebuildAll();
@@ -701,7 +703,7 @@ CLASS_METHODS_META(Editor::PipelineEditor)
     FUNCTION().PUBLIC().SIGNATURE(void, FinishBackgroundWork);
     FUNCTION().PUBLIC().SIGNATURE(PipelineValue, GetInputValueById, const Ref<PipelineNode>&, const String&);
     FUNCTION().PUBLIC().SIGNATURE(Ref<PipelineNode>, AddNodeAtViewCenter, const String&);
-    FUNCTION().PUBLIC().SIGNATURE(Ref<PipelineNode>, AddNodeBeside, const String&, const String&, const Function<void(PipelineNode&)>&, const String&);
+    FUNCTION().PUBLIC().SIGNATURE(Ref<PipelineNode>, AddNodeBeside, const String&, const String&, const Function<void(PipelineNode&)>&, const String&, bool);
     FUNCTION().PUBLIC().SIGNATURE(void, RebuildAll);
     FUNCTION().PUBLIC().SIGNATURE(void, ReloadGraph);
     FUNCTION().PUBLIC().SIGNATURE(void, ReloadResults);
