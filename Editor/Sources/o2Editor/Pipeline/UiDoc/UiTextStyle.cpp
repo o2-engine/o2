@@ -180,7 +180,8 @@ namespace Editor::UiDoc
         if (type == "stroke")
         {
             e.width = Half(Num(Either(JsGet(r, "width"), JsGet(r, "size")), 2, 0, 60));
-            e.color = Hex(JsGet(r, "color"), "#000000");
+            e.fill = NormalizeGradient(JsGet(r, "fill"));
+            e.color = e.fill ? e.fill->stops[0].color : Hex(JsGet(r, "color"), "#000000");
             return e.width > 0 ? std::optional<TextEffect>(e) : std::nullopt;
         }
         if (type == "extrude")
@@ -268,6 +269,8 @@ namespace Editor::UiDoc
             }
             if (e.type != "extrude")
                 out["opacity"] = e.opacity;
+            if (e.type == "stroke" && e.fill)
+                out["fill"] = TextGradientToJson(*e.fill);
         }
         if (e.off)
             out["off"] = true;
@@ -335,6 +338,80 @@ namespace Editor::UiDoc
         return style.effects.FindAll([](const TextEffect& e) { return !e.off; });
     }
 
+    bool IsInnerEffect(const TextEffect& effect)
+    {
+        return effect.type == "innerShadow" || effect.type == "bevel";
+    }
+
+    // Where an effect under the fill stands in the canonical stack: outlines on top, then depth, then shadows and glows
+    static int UnderRank(const String& type)
+    {
+        return type == "stroke" ? 0 : type == "extrude" ? 1 : type == "shadow" || type == "glow" ? 2 : -1;
+    }
+
+    Vector<TextEffect> StackEffects(const Vector<TextEffect>& effects)
+    {
+        Vector<TextEffect> under;
+        for (int rank = 0; rank <= 2; rank++)
+        {
+            for (auto& e : effects)
+            {
+                if (!IsInnerEffect(e) && UnderRank(e.type) == rank)
+                    under.Add(e);
+            }
+        }
+
+        Vector<TextEffect> out;
+        int n = 0;
+        for (auto& e : effects)
+            out.Add(IsInnerEffect(e) ? e : under[n++]);
+        return out;
+    }
+
+    // The list is in the canonical order: the stack of it changes nothing (the kinds of its places are what decide)
+    static bool InStackOrder(const Vector<TextEffect>& effects)
+    {
+        int last = 0;
+        for (auto& e : effects)
+        {
+            if (IsInnerEffect(e))
+                continue;
+            if (UnderRank(e.type) < last)
+                return false;
+            last = UnderRank(e.type);
+        }
+        return true;
+    }
+
+    Vector<TextEffect> InsertEffect(const Vector<TextEffect>& effects, const TextEffect& effect)
+    {
+        int at = effects.Count();
+        if (IsInnerEffect(effect))
+        {
+            at = 0;
+            for (int i = 0; i < effects.Count(); i++)
+            {
+                if (IsInnerEffect(effects[i]))
+                    at = i + 1;
+            }
+        }
+        else
+        {
+            for (int i = 0; i < effects.Count(); i++)
+            {
+                if (!IsInnerEffect(effects[i]) && UnderRank(effects[i].type) > UnderRank(effect.type))
+                {
+                    at = i;
+                    break;
+                }
+            }
+        }
+
+        Vector<TextEffect> out = effects;
+        out.Insert(effect, at);
+        return out;
+    }
+
     TextStyle NormalizeTextStyle(const Json& raw, const String& fallbackName /*= "body"*/)
     {
         const Json empty = Json::Object();
@@ -349,8 +426,9 @@ namespace Editor::UiDoc
         out.role = TextRoles().Contains(JsString(roleValue)) ? JsString(roleValue) : d.role;
 
         const Json* effects = JsGet(r, "effects");
+        const Json* fxStack = JsGet(r, "fxStack");
         if (effects && effects->IsArray())
-            out.effects = NormalizeEffects(effects);
+            out.effects = fxStack && fxStack->IsBool() && fxStack->Bool() ? NormalizeEffects(effects) : StackEffects(NormalizeEffects(effects));
         else
         {
             Json list = Json::Array();
@@ -380,6 +458,7 @@ namespace Editor::UiDoc
             out.effects = NormalizeEffects(&list);
         }
 
+        out.fxStack = !InStackOrder(out.effects);
         out.color = Hex(JsGet(r, "color"), d.color);
         if (r.IsObject() && r.Has("fill"))
             out.fill = NormalizeGradient(JsGet(r, "fill"));
@@ -443,7 +522,14 @@ namespace Editor::UiDoc
             merged[member.first] = member.second;
         merged["name"] = current.name;
 
-        if (!(raw.Get("effects") && raw.Get("effects")->IsArray()))
+        // A list written over a style in an order of its own is taken in that order (the model was shown the stack);
+        // otherwise it is a list of layers as in a Photoshop style, in the canonical order
+        if (raw.Get("effects") && raw.Get("effects")->IsArray())
+        {
+            const Json* fxStack = raw.Get("fxStack");
+            merged["fxStack"] = (fxStack && fxStack->IsBool() && fxStack->Bool()) || current.fxStack;
+        }
+        else
         {
             Vector<Json> fx;
             for (auto& e : current.effects)
@@ -609,7 +695,15 @@ namespace Editor::UiDoc
         for (auto& e : LiveEffects(s))
         {
             if (e.type == "stroke")
-                parts.Add("outline " + JsNum(e.width) + "px " + e.color);
+            {
+                Vector<String> colors;
+                if (e.fill)
+                {
+                    for (auto& stop : e.fill->stops)
+                        colors.Add(stop.color);
+                }
+                parts.Add("outline " + JsNum(e.width) + "px " + (e.fill ? "gradient " + Join(colors, "\xE2\x86\x92") : e.color));
+            }
             else if (e.type == "extrude")
                 parts.Add("depth " + JsNum(JsRound(std::hypot(e.x, e.y))) + "px " + e.color);
             else if (e.type == "shadow")
@@ -703,6 +797,8 @@ namespace Editor::UiDoc
         for (auto& e : style.effects)
             effects.Add(TextEffectToJson(e));
         out["effects"] = effects;
+        if (style.fxStack)
+            out["fxStack"] = true;
         out["gradient"] = style.gradient ? Json(*style.gradient) : Json();
         if (style.stroke)
         {
@@ -741,7 +837,9 @@ namespace Editor::UiDoc
     void WriteStyleLook(DataValue& config, const TextStyle& style)
     {
         Json json = TextStyleToJson(style);
-        for (const char* key : { "color", "fill", "effects", "gradient", "stroke", "shadow" })
+        if (!json.Has("fxStack"))
+            json["fxStack"] = Json();
+        for (const char* key : { "color", "fill", "effects", "fxStack", "gradient", "stroke", "shadow" })
             SetConfigJson(config, key, *json.Get(key));
     }
 

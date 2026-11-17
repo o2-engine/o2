@@ -7,6 +7,7 @@
 #include "UiDocTestKit.h"
 
 #include "UiDocRenderRefs2.inc"
+#include "UiDocRenderRefs3.inc"
 
 // Labels with a gradient fill and layer effects, and kit=none plain blocks, against the web's renderer drawn by Chrome
 // (UiDocGolden/render_refs2.mts)
@@ -14,16 +15,27 @@ namespace
 {
     using namespace UiDocTest;
 
+    template<size_t N>
+    Json ParseParts(const char* const (&parts)[N])
+    {
+        std::string text;
+        for (const char* part : parts)
+            text += part;
+        Json out;
+        Json::Parse(String(text), out);
+        return out;
+    }
+
     const Json& Refs2()
     {
-        static const Json refs = []() {
-            std::string text;
-            for (const char* part : kUiDocRenderRefs2Parts)
-                text += part;
-            Json out;
-            Json::Parse(String(text), out);
-            return out;
-        }();
+        static const Json refs = ParseParts(kUiDocRenderRefs2Parts);
+        return refs;
+    }
+
+    // Round 3 (UiDocGolden/render_refs3.mts): the effects as a stack, gradient outlines
+    const Json& Refs3()
+    {
+        static const Json refs = ParseParts(kUiDocRenderRefs3Parts);
         return refs;
     }
 
@@ -116,4 +128,64 @@ TEST(UiDocRenderEffects, PlainBlocksDrawTheirColourAndNoGraphic)
     auto report = KitReport(doc, &kit);
     EXPECT_EQ(report.total, 0);
     EXPECT_TRUE(report.missing.IsEmpty());
+}
+
+// A shadow or a depth above an outline is drawn over it; a gradient outline runs per line over its own reach
+TEST(UiDocRenderEffects, TheStackOrderAndGradientOutlinesMatchTheWebsRenderer)
+{
+    const Json& refs = Refs3();
+    String text = S(refs, "text");
+    for (auto& c : M(refs, "cases").Items())
+    {
+        String name = S(c, "name");
+        SCOPED_TRACE(name.Data());
+        Json styleJson;
+        ASSERT_TRUE(Json::Parse(S(c, "style"), styleJson));
+        TextStyle style = NormalizeTextStyle(styleJson, name);
+        EXPECT_STR_EQ(TextStyleToJson(style).Dump(), styleJson.Dump());
+
+        UiDoc doc = SampleDoc(style, text, "#20232B");
+        EXPECT_STR_EQ(DocToJson(doc).Dump(), S(c, "doc"));
+        UiKit kit;
+        kit.textStyles.Add(style);
+        UiRenderOptions o;
+        o.mode = "kit";
+        o.kit = &kit;
+        o.pixelLong = (int)std::max(doc.width, doc.height);
+        UiImage mine = RenderLayout(doc, o);
+
+        UiImage ref;
+        ASSERT_TRUE(UiImage::Decode(Editor::PipelineUtils::Base64Decode(S(c, "png")), ref));
+        Dump(ref, "stack_" + name + "_ref");
+        Dump(mine, "stack_" + name + "_o2");
+        ASSERT_EQ(mine.w, ref.w);
+        ASSERT_EQ(mine.h, ref.h);
+        auto d = Compare(mine, ref);
+        printf("%s: mean %.2f, off %.2f%%\n", name.Data(), d.first, d.second*100);
+        EXPECT_LT(d.first, 4.0);
+        EXPECT_LT(d.second, 0.05);
+    }
+
+    for (auto& c : M(refs, "wrapped").Items())
+    {
+        String name = S(c, "name");
+        SCOPED_TRACE(name.Data());
+        UiKit kit = ParseKit(S(c, "kit"));
+        UiDoc doc = Parse(S(c, "src"));
+        UiRenderOptions o;
+        o.mode = "kit";
+        o.kit = &kit;
+        o.pixelLong = 640;
+        UiImage mine = RenderLayout(doc, o);
+        UiImage ref;
+        ASSERT_TRUE(UiImage::Decode(Editor::PipelineUtils::Base64Decode(S(c, "png")), ref));
+        Dump(ref, "wrapped_" + name + "_ref");
+        Dump(mine, "wrapped_" + name + "_o2");
+        ASSERT_EQ(mine.w, ref.w);
+        ASSERT_EQ(mine.h, ref.h);
+        auto d = Compare(mine, ref);
+        printf("wrapped %s: mean %.2f, off %.2f%%\n", name.Data(), d.first, d.second*100);
+        EXPECT_LT(d.first, 4.0);
+        EXPECT_LT(d.second, 0.05);
+    }
 }

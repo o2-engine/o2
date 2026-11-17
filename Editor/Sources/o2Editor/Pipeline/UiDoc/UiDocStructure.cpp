@@ -13,6 +13,35 @@ namespace Editor::UiDoc
         return JsRound(n*100.0)/100.0;
     }
 
+    // A style's live effects with their pixel sizes at k times its size, unrounded (to 0.01): every label of a style keeps the
+    // same proportions
+    static Json EffectsAt(const TextStyle& style, double k)
+    {
+        auto px = [k](double v) { return R2(v*k); };
+        Json out = Json::Array();
+        for (auto e : LiveEffects(style))
+        {
+            if (e.type == "stroke")
+                e.width = px(e.width);
+            else if (e.type == "extrude" || e.type == "shadow" || e.type == "innerShadow")
+            {
+                e.x = px(e.x);
+                e.y = px(e.y);
+                e.blur = px(e.blur);
+                e.spread = px(e.spread);
+            }
+            else if (e.type == "glow")
+                e.size = px(e.size);
+            else
+            {
+                e.depth = px(e.depth);
+                e.soft = px(e.soft);
+            }
+            out.Add(TextEffectToJson(e));
+        }
+        return out;
+    }
+
     // {x, y} / {width, height} / {horizontal, vertical}
     static Json Pair2(const char* a, const Json& va, const char* b, const Json& vb)
     {
@@ -184,6 +213,16 @@ namespace Editor::UiDoc
                     out["strokeColor"] = style.stroke->color;
                     out["strokeWidth"] = std::max(1.0, JsRound((style.stroke->width*fit.size)/style.size));
                 }
+                // Beyond the schema (Unity and o2 draw the colour and the first outline): the style's gradient, all its
+                // effects and its letter spacing, at the label's size
+                double k = fit.size/style.size;
+                if (style.fill && !n.textColor)
+                    out["gradient"] = TextGradientToJson(*style.fill);
+                Json effectsAt = EffectsAt(style, k);
+                if (effectsAt.Count() > 0)
+                    out["effects"] = effectsAt;
+                if (style.letterSpacing)
+                    out["letterSpacing"] = R2(style.letterSpacing*k);
 
                 TextStyle scaled = style.size > 0 ? ScaleTextStyle(style, fit.size/style.size) : style;
                 Vector<TextEffect> live = LiveEffects(scaled);
@@ -201,8 +240,8 @@ namespace Editor::UiDoc
                 return out;
             }
 
-            // The graphic a block draws: asset, nine-slice, tint
-            Json Visual(const UiKitElement& el, const std::optional<String>& color)
+            // The graphic a block draws: asset, nine-slice, how it fills a box it is not stretched over, tint
+            Json Visual(const UiKitElement& el, const UiNode& n, const std::optional<String>& color)
             {
                 String key = JsToLower(el.name);
                 int at = usedNames.IndexOf(key);
@@ -218,6 +257,12 @@ namespace Editor::UiDoc
                 out["asset"] = KitFileName(el);
                 if (el.assetType == "sliced" && el.nineSlice)
                     out["nineSlice"] = NineToJson(*el.nineSlice);
+                String fit = n.fit ? *n.fit : n.type == "icon" || n.type == "image" ? String("contain") : n.type == "background" ?
+                    String("cover") : String("stretch");
+                bool stretched = el.assetType == "sliced" || el.assetType == "tiled" || n.type == "progress" || n.type == "slider" ||
+                    n.type == "toggle";
+                if (fit != "stretch" && !stretched)
+                    out["fit"] = fit;
                 if (color && !color->IsEmpty())
                     out["color"] = *color;
                 return out;
@@ -311,7 +356,7 @@ namespace Editor::UiDoc
                     track["name"] = n.id + "_track";
                     full(track);
                     if (skin.el)
-                        Assign(track, Visual(*skin.el, n.color));
+                        Assign(track, Visual(*skin.el, n, n.color));
                     else
                         track["color"] = Placeholder("progress");
                     kids.Add(track);
@@ -321,7 +366,7 @@ namespace Editor::UiDoc
                     fill["name"] = n.id + "_fill";
                     full(fill);
                     if (skin.fill)
-                        Assign(fill, Visual(*skin.fill, std::nullopt));
+                        Assign(fill, Visual(*skin.fill, n, std::nullopt));
                     else
                         fill["color"] = "#6FBF5A";
                     kids.Add(fill);
@@ -338,7 +383,7 @@ namespace Editor::UiDoc
                     if (skin.el)
                     {
                         out["type"] = n.type == "button" ? "button" : "image";
-                        Assign(out, Visual(*skin.el, n.color));
+                        Assign(out, Visual(*skin.el, n, n.color));
                     }
                     else
                     {

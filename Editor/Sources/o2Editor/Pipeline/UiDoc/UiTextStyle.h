@@ -98,15 +98,22 @@ namespace Editor::UiDoc
 
     // ------------------------------------------------------------------------------------------------
     // One layer effect; which fields mean something depends on the type (JSON keys in the web's order):
-    // stroke {color, width, opacity} - an outline outside the letters, several nest from the letters out;
-    // extrude {color, x, y} - solid depth; shadow {color, x, y, blur, spread, opacity}; glow {color, size,
-    // opacity}; innerShadow {color, x, y, blur, opacity}; bevel {highlight, shade, depth, soft, opacity}.
-    // `off` keeps it in the list without drawing it
+    // stroke {color, width, opacity, fill?} - an outline outside the letters, several nest from the letters
+    // out, fill a gradient along it (color then its first colour); extrude {color, x, y} - solid depth;
+    // shadow {color, x, y, blur, spread, opacity}; glow {color, size, opacity}; innerShadow {color, x, y,
+    // blur, opacity}; bevel {highlight, shade, depth, soft, opacity}. `off` keeps it in the list without
+    // drawing it.
+    // A style's list is the stack of layers, its first effect on top. Inner shadows and the bevel lie over
+    // the fill (inside the letters), the rest under it, so the order matters among the effects under the
+    // fill and among those over it. A style without fxStack keeps the canonical order under the fill
+    // (outlines, then depth, then shadows and glows - how every style was drawn before the order could be
+    // set); fxStack says the list is in an order of its own
     // ------------------------------------------------------------------------------------------------
     struct TextEffect
     {
         String type = "stroke";
         String color = "#000000";
+        std::optional<TextGradient> fill; // Stroke only: a gradient along the outline, over its own reach
         double width = 0;
         double x = 0, y = 0;
         double blur = 0;
@@ -134,7 +141,8 @@ namespace Editor::UiDoc
         double                      size = 32;
         String                      color = "#FFFFFF";   // Fill colour, #RRGGBB (a gradient's first colour)
         std::optional<TextGradient> fill;                // Gradient fill; none = flat color
-        Vector<TextEffect>          effects;             // Layer effects
+        Vector<TextEffect>          effects;             // Layer effects: the stack, its first effect on top
+        bool                        fxStack = false;     // The effects are in an order of their own, not the canonical one
         std::optional<String>       gradient;            // Mirror: the last colour of fill
         std::optional<TextStroke>   stroke;              // Mirror: the first live outline
         std::optional<TextShadow>   shadow;              // Mirror: the first live shadow or glow
@@ -168,13 +176,26 @@ namespace Editor::UiDoc
     // The effects that are drawn (not switched off)
     Vector<TextEffect> LiveEffects(const TextStyle& style);
 
+    // Drawn over the fill, inside the letters: inner shadows and the bevel (the rest lies under it)
+    bool IsInnerEffect(const TextEffect& effect);
+
+    // The effects in the canonical order: those under the fill sorted by kind - outlines, depth, shadows and glows - the
+    // order within a kind kept; the inner ones stay where they are (their place among the others changes nothing)
+    Vector<TextEffect> StackEffects(const Vector<TextEffect>& effects);
+
+    // The effects with a new one put where the canonical stack has it: after the last one of its kind (or of a kind
+    // above it); an inner one after the last inner one
+    Vector<TextEffect> InsertEffect(const Vector<TextEffect>& effects, const TextEffect& effect);
+
     // Any stored or model-written object -> a complete style. fill / effects, when the object has them, are what it
-    // says; without them its gradient / stroke / shadow (an older style, a model answering the short way) are read
+    // says; without them its gradient / stroke / shadow (an older style, a model answering the short way) are read. The
+    // effects keep their order with fxStack: true in the object, else they come in the canonical order; the style has
+    // fxStack only when its list is not in the canonical order
     TextStyle NormalizeTextStyle(const Json& raw, const String& fallbackName = "body");
 
     // Fields written over a style by a model or an older editor: fill / effects taken as they are; the short color /
     // gradient / stroke / shadow replace the fill, the outlines and the shadows, the rest of the effects stays. The
-    // name is kept
+    // name is kept. A list written over a style in an order of its own (or with fxStack) keeps its order
     TextStyle MergeTextStyle(const TextStyle& current, const Json& raw);
 
     // How far the drawn style reaches outside the letters, px at the style's size
@@ -202,8 +223,8 @@ namespace Editor::UiDoc
     // The style as JSON, keys in the web's order (JSON.stringify(style)); extracted last when the style has it
     Json TextStyleToJson(const TextStyle& style);
 
-    // The style's JSON members written into a node config (the Text style node's config IS the style): fill, effects
-    // and their mirrors together
+    // The style's JSON members written into a node config (the Text style node's config IS the style): fill, effects,
+    // fxStack (null when the list is in the canonical order) and their mirrors together
     void WriteStyleLook(DataValue& config, const TextStyle& style);
 
     // Font files a set of styles needs (for exports), in first-use order

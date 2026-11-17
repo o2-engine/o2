@@ -35,10 +35,11 @@ namespace Editor::UiDoc
                 " stops from the start of the gradient to its end; two stops at the same \"at\" make a hard edge (a glossy band "
                 "across the letters);",
             String("\"effects\": [...] ") + DASH + " layer effects as in a Photoshop layer style, any number of each kind, at most " +
-                JsNum(TEXT_EFFECTS_MAX) + " in all, [] for plain letters; sizes are " + px + ":",
+                JsNum(TEXT_EFFECTS_MAX) + " in all, [] for plain letters, the top layer first; sizes are " + px + ":",
             String("  {\"type\": \"stroke\", \"color\": \"#RRGGBB\", \"width\": <px>, \"opacity\": <0..1>} ") + DASH +
                 " an outline outside the letters. Several strokes nest: the first is next to the letters, each next one goes "
-                "around the previous (a thin light line, then a thick dark contour);",
+                "around the previous (a thin light line, then a thick dark contour); an outline whose colour changes across it "
+                "takes \"fill\": a gradient as above (then \"color\" is its first colour);",
             String("  {\"type\": \"extrude\", \"color\": \"#RRGGBB\", \"x\": <px>, \"y\": <px>} ") + DASH +
                 " solid 3D depth: the outlined letters repeated towards the offset " + DASH +
                 " the thick dark \"lip\" under cartoon titles and button labels;",
@@ -59,7 +60,7 @@ namespace Editor::UiDoc
     {
         // The style as a model is shown it: without its name and the mirrors of its fill and effects
         Json rest = TextStyleToJson(current);
-        for (const char* key : { "name", "gradient", "stroke", "shadow", "extracted" })
+        for (const char* key : { "name", "gradient", "stroke", "shadow", "fxStack", "extracted" })
             rest.Remove(key);
 
         Vector<String> lines = {

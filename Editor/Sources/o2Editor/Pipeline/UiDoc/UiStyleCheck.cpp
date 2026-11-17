@@ -158,7 +158,17 @@ namespace Editor::UiDoc
     {
         String off = e.off ? " (off)" : "";
         if (e.type == "stroke")
-            return "stroke " + JsNum(e.width) + "px " + e.color + (e.opacity < 1 ? " " + Pct(e.opacity) : String()) + off;
+        {
+            String paint = e.color;
+            if (e.fill)
+            {
+                Vector<String> stops;
+                for (auto& stop : e.fill->stops)
+                    stops.Add(stop.color + "@" + JsNum(stop.at));
+                paint = "gradient " + Join(stops, " ") + " " + JsNum(e.fill->angle) + "\xC2\xB0";
+            }
+            return "stroke " + JsNum(e.width) + "px " + paint + (e.opacity < 1 ? " " + Pct(e.opacity) : String()) + off;
+        }
         if (e.type == "extrude")
             return "extrude " + JsNum(e.x) + "," + JsNum(e.y) + " " + e.color + off;
         if (e.type == "shadow")

@@ -7,8 +7,9 @@
 #include "o2Editor/Pipeline/UiDoc/UiDocFp.h"
 
 // Labels of the layout renderer (render.ts's textSvg): lines fitted by LayoutText, placed by text-anchor and the cap
-// height, drawn with FreeType in the style's face: shadows and glows, the depth, the outlines from the outermost in, the
-// fill (flat or a gradient per line) and the inner shadows and bevel over it
+// height, drawn with FreeType in the style's face: the effects under the fill from the bottom of the style's stack up -
+// outlines (nested in the order they come, a gradient one per line over its own reach), depth, shadows and glows of the
+// whole outlined shape - then the fill (flat or a gradient per line) and the inner shadows and bevel over it
 namespace Editor::UiDoc::Render
 {
     namespace
@@ -73,8 +74,9 @@ namespace Editor::UiDoc::Render
             return UiColorOf(stops.Last().color);
         }
 
-        // Paints the mask's coverage with a linear gradient from (ax, ay) to (bx, by), block pixels
-        void PaintLinear(UiCanvas& canvas, const UiMask& mask, const TextGradient& g, double ax, double ay, double bx, double by)
+        // Paints the mask's coverage with a linear gradient from (ax, ay) to (bx, by), block pixels, faded
+        void PaintLinear(UiCanvas& canvas, const UiMask& mask, const TextGradient& g, double ax, double ay, double bx, double by,
+                         float opacity = 1)
         {
             double dx = bx - ax, dy = by - ay, len2 = dx*dx + dy*dy;
             for (int y = mask.y0; y < mask.y1; y++)
@@ -87,7 +89,7 @@ namespace Editor::UiDoc::Render
                         continue;
                     double t = len2 > 0 ? ((x + 0.5 - ax)*dx + (y + 0.5 - ay)*dy)/len2 : 0;
                     UiRgba c = GradientAt(g, std::clamp(t, 0.0, 1.0));
-                    float ca = m[x]*c.a;
+                    float ca = m[x]*c.a*opacity;
                     float* p = d + x*4;
                     p[0] = c.r*ca + p[0]*(1 - ca);
                     p[1] = c.g*ca + p[1]*(1 - ca);
@@ -127,23 +129,24 @@ namespace Editor::UiDoc::Render
         double k = size/st.size;
         double ls = st.letterSpacing ? F(st.letterSpacing*k) : 0;
 
-        // The effects drawn: none for a plain label
+        // The effects drawn (none for a plain label): under the fill in the stack's order, the first on top; over it the inner ones
         Vector<TextEffect> fx = t.plain ? Vector<TextEffect>() : LiveEffects(st);
-        Vector<TextEffect> strokes, extrudes, outer, inner;
+        Vector<TextEffect> under, extrudes, inner;
+        Vector<double> reaches; // Per effect under the fill: how far an outline reaches, its width and those nested inside it
         double outline = 0;
         for (auto& e : fx)
         {
-            if (e.type == "stroke")
+            if (IsInnerEffect(e))
             {
-                strokes.Add(e);
-                outline += e.width;
+                inner.Add(e);
+                continue;
             }
+            if (e.type == "stroke")
+                outline += e.width;
             else if (e.type == "extrude")
                 extrudes.Add(e);
-            else if (e.type == "shadow" || e.type == "glow")
-                outer.Add(e);
-            else
-                inner.Add(e);
+            under.Add(e);
+            reaches.Add(outline);
         }
 
         // The lines in pixels: shaped, anchored and on their baselines
@@ -199,13 +202,31 @@ namespace Editor::UiDoc::Render
             }
         };
 
-        // Shadows and glows of the whole outlined shape, at the letters and at the far end of each depth
-        if (!outer.IsEmpty())
+        // Line i's gradient over its capitals grown by grow px on every side (an outline's reach), block pixels: every line
+        // of a label, and every label of a style, fades alike
+        TextStyle at = st;
+        at.size = size;
+        auto paintLine = [&](UiCanvas& target, const TextGradient& g, size_t i, double grow, float opacity)
         {
-            UiCanvas layer;
-            for (int n = outer.Count() - 1; n >= 0; n--)
+            double rad = g.angle*3.14159265358979323846/180;
+            double gx = std::cos(rad), gy = std::sin(rad);
+            double w = std::max(1.0, EstimateTextWidth(shown[i], at))*s;
+            double ax = X(F(x)) - x0;
+            double cx = t.align == "left" ? ax + w/2 : t.align == "right" ? ax - w/2 : ax;
+            double h = sizePx*TEXT_METRICS.cap*1.06;
+            double cy = bases[i] - y0 - sizePx*TEXT_METRICS.cap/2;
+            double half = std::fabs(gx)*(w/2 + grow) + std::fabs(gy)*(h/2 + grow);
+            PaintLinear(target, mask, g, cx - gx*half, cy - gy*half, cx + gx*half, cy + gy*half, opacity);
+        };
+
+        // The layers under the fill, from the bottom of the stack up
+        UiCanvas layer;
+        for (int n = under.Count() - 1; n >= 0; n--)
+        {
+            const TextEffect& e = under[n];
+            if (e.type == "shadow" || e.type == "glow")
             {
-                const TextEffect& e = outer[n];
+                // A shadow or glow of the whole outlined shape, at the letters and at the far end of each depth
                 bool glow = e.type == "glow";
                 double px = glow ? 0 : e.x, py = glow ? 0 : e.y, blur = glow ? e.size : e.blur, spread = glow ? e.size*0.25 : e.spread;
                 layer.Reset(bw, bh);
@@ -225,33 +246,37 @@ namespace Editor::UiDoc::Render
                 }
                 canvas.Composite(layer, (float)e.opacity);
             }
-        }
-
-        // The depth: copies half a pixel apart read as one solid side
-        for (int n = extrudes.Count() - 1; n >= 0; n--)
-        {
-            const TextEffect& e = extrudes[n];
-            int copies = std::max(1, std::min(32, (int)std::ceil(std::max(std::fabs(e.x), std::fabs(e.y))*k*2)));
-            for (int i = copies; i >= 1; i--)
+            else if (e.type == "extrude")
             {
-                shape(0, e.x*kp*i/copies, e.y*kp*i/copies);
-                canvas.Paint(mask, UiColorOf(e.color));
+                // The depth: copies half a pixel apart read as one solid side
+                int copies = std::max(1, std::min(32, (int)std::ceil(std::max(std::fabs(e.x), std::fabs(e.y))*k*2)));
+                for (int i = copies; i >= 1; i--)
+                {
+                    shape(0, e.x*kp*i/copies, e.y*kp*i/copies);
+                    canvas.Paint(mask, UiColorOf(e.color));
+                }
             }
-        }
-
-        // The outlines from the outermost in
-        double reachSum = outline;
-        for (int n = strokes.Count() - 1; n >= 0; n--)
-        {
-            const TextEffect& e = strokes[n];
-            mask.Clear();
-            for (size_t i = 0; i < lines.size(); i++)
+            else if (!e.fill)
             {
-                DrawUiText(lines[i], starts[i] - x0, bases[i] - y0, sizePx, 0, mask);
-                DrawUiText(lines[i], starts[i] - x0, bases[i] - y0, sizePx, reachSum*2*kp, mask);
+                mask.Clear();
+                for (size_t i = 0; i < lines.size(); i++)
+                {
+                    DrawUiText(lines[i], starts[i] - x0, bases[i] - y0, sizePx, 0, mask);
+                    DrawUiText(lines[i], starts[i] - x0, bases[i] - y0, sizePx, reaches[n]*2*kp, mask);
+                }
+                canvas.Paint(mask, UiColorOf(e.color), (float)e.opacity);
             }
-            canvas.Paint(mask, UiColorOf(e.color), (float)e.opacity);
-            reachSum -= e.width;
+            else
+            {
+                // A gradient outline: per line, as the fill, over the outline's own reach
+                for (size_t i = 0; i < lines.size(); i++)
+                {
+                    mask.Clear();
+                    DrawUiText(lines[i], starts[i] - x0, bases[i] - y0, sizePx, 0, mask);
+                    DrawUiText(lines[i], starts[i] - x0, bases[i] - y0, sizePx, reaches[n]*2*kp, mask);
+                    paintLine(canvas, *e.fill, i, reaches[n]*kp, (float)e.opacity);
+                }
+            }
         }
 
         // The fill: flat, or a gradient running over each line's capitals on its own
@@ -268,21 +293,11 @@ namespace Editor::UiDoc::Render
         }
         else
         {
-            double rad = grad->angle*3.14159265358979323846/180;
-            double gx = std::cos(rad), gy = std::sin(rad);
-            TextStyle at = st;
-            at.size = size;
             for (size_t i = 0; i < lines.size(); i++)
             {
                 mask.Clear();
                 DrawUiText(lines[i], starts[i] - x0, bases[i] - y0, sizePx, 0, mask);
-                double w = std::max(1.0, EstimateTextWidth(shown[i], at))*s;
-                double ax = X(F(x)) - x0;
-                double cx = t.align == "left" ? ax + w/2 : t.align == "right" ? ax - w/2 : ax;
-                double h = sizePx*TEXT_METRICS.cap*1.06;
-                double cy = bases[i] - y0 - sizePx*TEXT_METRICS.cap/2;
-                double half = std::fabs(gx)*w/2 + std::fabs(gy)*h/2;
-                PaintLinear(fill, mask, *grad, cx - gx*half, cy - gy*half, cx + gx*half, cy + gy*half);
+                paintLine(fill, *grad, i, 0, 1);
             }
         }
 

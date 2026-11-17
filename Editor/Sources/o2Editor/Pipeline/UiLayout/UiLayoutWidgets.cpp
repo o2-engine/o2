@@ -330,6 +330,8 @@ namespace Editor::UiLayout
             out.opacity = e.opacity;
             if (e.type == "stroke")
             {
+                if (e.fill)
+                    warn(path + ": a gradient outline drawn in its first colour");
                 out.type = "stroke";
                 out.width = e.width;
                 look.effects.Add(out);
