@@ -11,6 +11,11 @@ if (MSVC)
 elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     include(CheckGCCVersion.cmake)
 
+    # GCC 15 compiles C as C23 by default, where the K&R function definitions of zlib (and the like) are errors: the C
+    # of the vendored libraries stays gnu17, the default of the GCC before it.
+    set(CMAKE_C_STANDARD 17)
+    set(CMAKE_C_EXTENSIONS ON)
+
     add_compile_options(-Wall -Wno-error=format -Wno-error=format-extra-args -Wno-error=conversion
                         -Wno-error=incompatible-pointer-types -Wno-error=sign-conversion -Wno-error=pointer-sign
                         -Wno-error=class-memaccess -Wno-error=misleading-indentation)
