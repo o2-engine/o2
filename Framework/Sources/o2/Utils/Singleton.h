@@ -113,13 +113,15 @@ namespace o2
     template <typename _class_type>
     void Singleton<_class_type>::DestroySingleton(Ref<_class_type>& lastReference)
     {
-        if (lastReference->GetStrongReferencesCount() != 2)
+        // Through the singleton's own base: a singleton that is also another RefCounterable has two of them
+        RefCounterable* counted = static_cast<Singleton<_class_type>*>(lastReference.Get());
+        if (counted->GetStrongReferencesCount() != 2)
         {
             Assert(false, "DestroySingleton: lastReference must have only one strong reference");
             return;
         }
 
-        GetSingletonsList().Remove(lastReference);
+        GetSingletonsList().RemoveFirst([&](const Ref<RefCounterable>& item) { return item.Get() == counted; });
         lastReference = nullptr;
         mInstance = nullptr;
     }
