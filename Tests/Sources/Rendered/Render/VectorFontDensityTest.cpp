@@ -130,3 +130,47 @@ TEST(VectorFontDensity, ZoomedCameraTakesGlyphsOfTheViewScale)
 
     EXPECT_FLOAT_EQ(font->GetCharacter('Z', 17, nullptr, zoomed).mAdvance, font->GetCharacter('Z', 17, nullptr).mAdvance);
 }
+
+namespace
+{
+    // The alpha of the texture pixels a glyph takes, row by row from the texture top (v = 1 - row/height)
+    Vector<UInt8> GlyphAlpha(const Ref<VectorFont>& font, const RectF& texSrc)
+    {
+        auto bitmap = font->GetTexture()->GetData();
+        Vec2I size = bitmap->GetSize();
+        int left = Math::RoundToInt(texSrc.left*size.x), right = Math::RoundToInt(texSrc.right*size.x);
+        int top = Math::RoundToInt((1.0f - texSrc.top)*size.y), bottom = Math::RoundToInt((1.0f - texSrc.bottom)*size.y);
+
+        Vector<UInt8> alpha;
+        for (int row = Math::Min(top, bottom); row < Math::Max(top, bottom); row++)
+            for (int x = left; x < right; x++)
+                alpha.Add(bitmap->GetData()[(row*size.x + x)*4 + 3]);
+
+        return alpha;
+    }
+}
+
+TEST(VectorFontAtlas, GrowingAtlasKeepsTheGlyphsItHad)
+{
+    auto font = LoadTestFont();
+    ASSERT_FALSE(font->GetFileName().IsEmpty());
+
+    font->CheckCharacters("A", 40, nullptr);
+    Vector<UInt8> before = GlyphAlpha(font, font->GetCharacter('A', 40, nullptr).mTexSrc);
+    int coverage = 0;
+    for (auto a : before)
+        coverage += a;
+    ASSERT_GT(coverage, 0);
+
+    Vec2I startSize = font->GetTexture()->GetSize();
+    WString letters;
+    for (wchar_t ch = 'B'; ch <= 'Z'; ch++)
+        letters += ch;
+
+    for (int height = 60; height <= 400 && font->GetTexture()->GetSize() == startSize; height += 20)
+        font->CheckCharacters(letters, height, nullptr);
+
+    ASSERT_NE(font->GetTexture()->GetSize(), startSize) << "the atlas has grown";
+    EXPECT_EQ(GlyphAlpha(font, font->GetCharacter('A', 40, nullptr).mTexSrc), before)
+        << "the glyph is where its texture coordinates point in the grown atlas";
+}

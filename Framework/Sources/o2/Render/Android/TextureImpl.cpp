@@ -150,12 +150,30 @@ namespace o2
 
     void Texture::Copy(const Texture& from, const RectI& rect)
     {
-        auto prevTextureHandle = o2Render.mCurrentDrawTexture ? o2Render.mCurrentDrawTexture->mHandle : 0;
-        glBindTexture(GL_TEXTURE_2D, from.mHandle);
+        // glCopyTexSubImage2D reads the bound framebuffer, so the source is attached to a temporary one.
+        // The rect is y-up while rows go from the top, like in Mac/TextureImpl.mm
+        GLint prevFrameBuffer = 0;
+        glGetIntegerv(GL_FRAMEBUFFER_BINDING, &prevFrameBuffer);
 
-        GLTextureFormat texFormat = MapTextureFormat(mFormat);
-        glCopyTexImage2D(GL_TEXTURE_2D, 0, texFormat.internalFormat, rect.left, rect.top, rect.Width(), rect.Height(), 0);
-        glBindTexture(GL_TEXTURE_2D, prevTextureHandle);
+        GLuint readFrameBuffer = 0;
+        glGenFramebuffers(1, &readFrameBuffer);
+        glBindFramebuffer(GL_FRAMEBUFFER, readFrameBuffer);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, from.mHandle, 0);
+
+        if (glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE)
+        {
+            auto prevTextureHandle = o2Render.mCurrentDrawTexture ? o2Render.mCurrentDrawTexture->mHandle : 0;
+            glBindTexture(GL_TEXTURE_2D, mHandle);
+            glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, rect.left, Math::Max(0, from.GetSize().y - rect.top),
+                                rect.Width(), rect.Height());
+            glBindTexture(GL_TEXTURE_2D, prevTextureHandle);
+        }
+        else
+            o2Render.mLog->Error("Failed to copy a texture: its frame buffer is incomplete");
+
+        glBindFramebuffer(GL_FRAMEBUFFER, prevFrameBuffer);
+        glDeleteFramebuffers(1, &readFrameBuffer);
+        GL_CHECK_ERROR();
     }
 
     void Texture::PlatformGetData(Byte* data)
