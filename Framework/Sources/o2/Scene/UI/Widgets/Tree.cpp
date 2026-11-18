@@ -772,9 +772,14 @@ namespace o2
         ExpandParentObjects(object);
 
         int idx = mAllNodes.IndexOf([=](auto& x) { return x->object == object; });
+        if (idx < 0)
+            return;
 
-        if (idx >= 0)
-            SetScroll(Vec2F(mScrollPos.x, (float)idx*mNodeWidgetSample->layout->minHeight - layout->height*0.5f));
+        // The expanded parents added rows: the scroll range must include them before scrolling there
+        UpdateScrollParams();
+
+        float nodeHeight = mNodeWidgetSample->layout->minHeight;
+        SetScroll(Vec2F(mScrollPos.x, (float)idx*nodeHeight + nodeHeight*0.5f - mAbsoluteViewArea.Height()*0.5f));
     }
 
     void Tree::ScrollToAndHighlight(void* object)
@@ -785,16 +790,12 @@ namespace o2
             return;
         }
 
-        ExpandParentObjects(object);
+        ScrollTo(object);
 
         int idx = mAllNodes.IndexOf([=](auto& x) { return x->object == object; });
 
         if (idx >= 0)
         {
-            float position = (float)idx*mNodeWidgetSample->layout->minHeight;
-            float scroll = position - layout->height*0.5f;
-            SetScroll(Vec2F(mScrollPos.x, scroll));
-
             mHighlighNode = mAllNodes[idx];
             mHighlightObject = object;
             mHighlightAnim->RewindAndPlay();

@@ -50,6 +50,9 @@ namespace o2
         // Returns true when input events can be handled by down listeners
         bool IsInputTransparent() const override;
 
+        // Returns true if point is in this object; a popup fading out after Hide() takes no clicks
+        bool IsUnderPoint(const Vec2F& point) override;
+
         // Fits size by items
         virtual void FitSizeAndPosition(const Vec2F& position);
 
@@ -149,6 +152,7 @@ CLASS_METHODS_META(o2::PopupWidget)
     FUNCTION().PUBLIC().SIGNATURE(float, GetMinFitSize);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsScrollable);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsInputTransparent);
+    FUNCTION().PUBLIC().SIGNATURE(bool, IsUnderPoint, const Vec2F&);
     FUNCTION().PUBLIC().SIGNATURE(void, FitSizeAndPosition, const Vec2F&);
     FUNCTION().PUBLIC().SIGNATURE(const WeakRef<CursorAreaEventListenersLayer>&, GetCurrentDrawingLayer);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetCreateMenuGroup);

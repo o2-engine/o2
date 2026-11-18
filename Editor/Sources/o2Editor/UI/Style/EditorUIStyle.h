@@ -29,6 +29,9 @@ namespace Editor
         void RebuildTrashDownPanelButton();
         void RebuildMessagesDownPanelToggle();
         void RebuildPreviewToolbarToggle();
+
+        // Enum property as a rounded group of icons
+        void RebuildEnumIconsProperty();
         void RebuildWarningsDownPanelToggle();
         void RebuildErrorsDownPanelToggle();
         void RebuildFilterMenuButton();
@@ -220,6 +223,7 @@ CLASS_METHODS_META(Editor::EditorUIStyleBuilder)
     FUNCTION().PUBLIC().SIGNATURE(void, RebuildTrashDownPanelButton);
     FUNCTION().PUBLIC().SIGNATURE(void, RebuildMessagesDownPanelToggle);
     FUNCTION().PUBLIC().SIGNATURE(void, RebuildPreviewToolbarToggle);
+    FUNCTION().PUBLIC().SIGNATURE(void, RebuildEnumIconsProperty);
     FUNCTION().PUBLIC().SIGNATURE(void, RebuildWarningsDownPanelToggle);
     FUNCTION().PUBLIC().SIGNATURE(void, RebuildErrorsDownPanelToggle);
     FUNCTION().PUBLIC().SIGNATURE(void, RebuildFilterMenuButton);

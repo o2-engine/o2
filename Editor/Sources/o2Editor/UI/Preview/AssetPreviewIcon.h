@@ -10,8 +10,10 @@ using namespace o2;
 
 namespace o2
 {
+    class FontStyle;
     class SoundPlayer;
     class Sprite;
+    class Text;
     class VectorSprite;
 }
 
@@ -21,13 +23,17 @@ namespace Editor
 
     // -------------------------------------------------------------------------------------------------------
     // Small preview of an asset: an image, a vector image or an atlas page on the checker, a font sample, a
-    // model; a sound plays and stops by a click, the others open the Preview window; other assets show the
-    // icon of their type
+    // font style's sample drawn big and fitted whole with its effects, a model; a sound plays and stops by a
+    // click, the others open the Preview window; other assets show the icon of their type
     // -------------------------------------------------------------------------------------------------------
     class AssetPreviewIcon: public Widget, public CursorAreaEventsListener
     {
     public:
         enum class Kind { None, Image, VectorImage, Atlas, Font, FontStyle, Prototype, Model, Sound, Video, Icon };
+
+        // Height of the letters a font style's sample is drawn with: the effects of a style are sized for big letters,
+        // the whole sample is then fitted into the preview
+        static constexpr float styleSampleHeight = 40.0f;
 
     public:
         // Default constructor
@@ -56,6 +62,9 @@ namespace Editor
 
         // Returns the view of the model, null for the other assets
         const Ref<ModelView>& GetModelView() const;
+
+        // Returns the sample text of a font style, drawn into the preview's texture; null for the other assets
+        const Ref<Text>& GetStyleSample() const;
 
         // Returns is the sound playing
         bool IsSoundPlaying() const;
@@ -90,6 +99,10 @@ namespace Editor
         Vec2F              mPreviewSize; // Size the preview keeps the aspect of, zero to fill the rect
         Ref<ModelView>     mModelView;   // View of the model
 
+        Ref<Text>      mStyleSample;             // "Aa" of the font style, drawn big into the texture of the preview
+        Ref<FontStyle> mStyleListened;           // The font style whose changes draw the sample again
+        bool           mStyleSampleDirty = false; // The sample is to be drawn again at the next draw
+
         Ref<SoundPlayer>   mSoundPlayer; // Player of the sound
         Ref<IRectDrawable> mPlayCircle;  // Accent circle of the play button of a sound
         Ref<VectorSprite>  mPlayGlyph;   // Play or pause glyph of a sound
@@ -106,6 +119,13 @@ namespace Editor
 
         // Returns the rect of the preview in the rect of the widget
         RectF GetPreviewRect() const;
+
+        // Draws the font style's sample into a texture of the size of its letters with their effects; the preview
+        // shows the texture fitted into the widget
+        void RenderStyleSample();
+
+        // Called when the font style changes: the sample is drawn again
+        void OnStyleChanged();
 
         REF_COUNTERABLE_IMPL(Widget);
     };
@@ -128,6 +148,9 @@ CLASS_FIELDS_META(Editor::AssetPreviewIcon)
     FIELD().PROTECTED().NAME(mPreview);
     FIELD().PROTECTED().NAME(mPreviewSize);
     FIELD().PROTECTED().NAME(mModelView);
+    FIELD().PROTECTED().NAME(mStyleSample);
+    FIELD().PROTECTED().NAME(mStyleListened);
+    FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mStyleSampleDirty);
     FIELD().PROTECTED().NAME(mSoundPlayer);
     FIELD().PROTECTED().NAME(mPlayCircle);
     FIELD().PROTECTED().NAME(mPlayGlyph);
@@ -143,6 +166,7 @@ CLASS_METHODS_META(Editor::AssetPreviewIcon)
     FUNCTION().PUBLIC().SIGNATURE(Kind, GetKind);
     FUNCTION().PUBLIC().SIGNATURE(const Ref<IRectDrawable>&, GetPreviewDrawable);
     FUNCTION().PUBLIC().SIGNATURE(const Ref<ModelView>&, GetModelView);
+    FUNCTION().PUBLIC().SIGNATURE(const Ref<Text>&, GetStyleSample);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsSoundPlaying);
     FUNCTION().PUBLIC().SIGNATURE(bool, OpensPreview);
     FUNCTION().PUBLIC().SIGNATURE(void, Activate);
@@ -154,6 +178,8 @@ CLASS_METHODS_META(Editor::AssetPreviewIcon)
     FUNCTION().PROTECTED().SIGNATURE(void, Clear);
     FUNCTION().PROTECTED().SIGNATURE(void, SetPrototypeThumbnail, const TextureRef&);
     FUNCTION().PROTECTED().SIGNATURE(RectF, GetPreviewRect);
+    FUNCTION().PROTECTED().SIGNATURE(void, RenderStyleSample);
+    FUNCTION().PROTECTED().SIGNATURE(void, OnStyleChanged);
 }
 END_META;
 // --- END META ---

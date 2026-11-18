@@ -1,10 +1,9 @@
 #include "o2Editor/stdafx.h"
 #include "ScenePickMenu.h"
 
+#include "o2/Application/Input.h"
 #include "o2/Assets/Types/VectorImageAsset.h"
 #include "o2/Render/Render.h"
-#include "o2/Render/Text.h"
-#include "o2/Render/VectorSprite.h"
 #include "o2/Scene/Actor.h"
 #include "o2/Scene/Scene.h"
 #include "o2/Scene/UI/Widget.h"
@@ -32,7 +31,6 @@ namespace Editor
     void ScenePickMenu::Show(const Vector<Ref<SceneEditableObject>>& objects, const Vec2F& position)
     {
         mHoveredEntry = -1;
-        mParentsPanelRect = RectF();
         mEntries = BuildEntries(objects);
 
         RebuildEntryItems();
@@ -58,8 +56,8 @@ namespace Editor
             return;
 
         mHoveredEntry = index;
-        UpdateParentsPanel();
-        onHoverChanged(index >= 0 ? mEntries[index].object : Ref<SceneEditableObject>());
+        UpdateParentsMenu();
+        UpdateHoverObject();
     }
 
     void ScenePickMenu::PickEntry(int index)
@@ -68,38 +66,86 @@ namespace Editor
             return;
 
         auto object = mEntries[index].object;
+        HideWithChild();
         HideWithParent();
         onPicked(object);
     }
 
-    const RectF& ScenePickMenu::GetParentsPanelRect() const
+    void ScenePickMenu::SetParentsMenu(const Ref<ScenePickMenu>& menu)
     {
-        return mParentsPanelRect;
+        mParentsMenu = menu;
+        if (!menu)
+            return;
+
+        menu->mIsParentsMenu = true;
+        menu->onPicked = [this](const Ref<SceneEditableObject>& object) { onPicked(object); };
+    }
+
+    const Ref<ScenePickMenu>& ScenePickMenu::GetParentsMenu() const
+    {
+        return mParentsMenu;
+    }
+
+    Ref<SceneEditableObject> ScenePickMenu::GetHoverObject() const
+    {
+        return mHoverObject.Lock();
     }
 
     void ScenePickMenu::Update(float dt)
     {
         ContextMenu::Update(dt);
 
-        if (!mResEnabledInHierarchy)
+        if (!mResEnabledInHierarchy || mIsParentsMenu)
             return;
 
-        int hovered = -1;
-        if (mSelectedItem)
+        // Fading out after a pick or a click outside: nothing is hovered any more
+        if (!mEnabled)
         {
-            for (int i = 0; i < mItems.Count() && i < mEntries.Count(); i++)
-            {
-                if (mItems[i]->widget.Lock() == mSelectedItem)
-                {
-                    hovered = i;
-                    break;
-                }
-            }
+            mHoveredEntry = -1;
+            UpdateHoverObject();
+            return;
         }
 
-        // The item stays hovered while the cursor is out of the menu, so the panel can be read
+        // The item stays hovered while the cursor is out of the menu, so the cursor can go to the parents menu
+        int hovered = GetEntryUnderCursor();
         if (hovered >= 0)
             SetHoveredEntry(hovered);
+
+        UpdateHoverObject();
+    }
+
+    int ScenePickMenu::GetEntryUnderCursor() const
+    {
+        if (!mSelectedItem || !layout->IsPointInside(o2Input.GetCursorPos()))
+            return -1;
+
+        for (int i = 0; i < mItems.Count() && i < mEntries.Count(); i++)
+        {
+            if (mItems[i]->widget.Lock() == mSelectedItem)
+                return i;
+        }
+
+        return -1;
+    }
+
+    void ScenePickMenu::UpdateHoverObject()
+    {
+        Ref<SceneEditableObject> object;
+        if (mParentsMenu && mParentsMenu->IsEnabled())
+        {
+            int parentIndex = mParentsMenu->GetEntryUnderCursor();
+            if (parentIndex >= 0)
+                object = mParentsMenu->mEntries[parentIndex].object;
+        }
+
+        if (!object && mHoveredEntry >= 0 && mHoveredEntry < mEntries.Count())
+            object = mEntries[mHoveredEntry].object;
+
+        if (object == mHoverObject.Lock())
+            return;
+
+        mHoverObject = object;
+        onHoverChanged(object);
     }
 
     Vector<ScenePickEntry> ScenePickMenu::BuildEntries(const Vector<Ref<SceneEditableObject>>& objects)
@@ -198,6 +244,24 @@ namespace Editor
         return result;
     }
 
+    Vector<ScenePickEntry> ScenePickMenu::BuildParentEntries(const ScenePickEntry& entry)
+    {
+        int minDepth = entry.hiddenDepths.IsEmpty() ? 0 : entry.hiddenDepths[0];
+        for (int depth : entry.hiddenDepths)
+            minDepth = Math::Min(minDepth, depth);
+
+        Vector<ScenePickEntry> result;
+        for (int i = 0; i < entry.hiddenParents.Count(); i++)
+        {
+            ScenePickEntry parentEntry;
+            parentEntry.object = entry.hiddenParents[i];
+            parentEntry.depth = i < entry.hiddenDepths.Count() ? entry.hiddenDepths[i] - minDepth : 0;
+            result.Add(parentEntry);
+        }
+
+        return result;
+    }
+
     String ScenePickMenu::GetObjectIcon(const Ref<SceneEditableObject>& object)
     {
         if (DynamicCast<WidgetLayer>(object))
@@ -226,30 +290,61 @@ namespace Editor
             maxDepth = Math::Max(maxDepth, entry.depth);
 
         size.x += indentStep*(float)maxDepth;
-        ContextMenu::FitPosition(position, size);
-    }
 
-    void ScenePickMenu::SpecialDraw()
-    {
-        ContextMenu::SpecialDraw();
+        Vec2F place = position;
+        auto parent = mParentPopup.Lock();
+        if (mIsParentsMenu && parent)
+        {
+            // On the left of the parent menu, or on its right where the left has no room. position.y is where its last
+            // item ends: the ancestors go up from the hovered item, the root on top
+            RectF parentRect = parent->layout->GetWorldRect();
+            place.x = parentRect.left - parentsMenuGap - size.x;
+            if (place.x < -(float)o2Render.GetResolution().x*0.5f)
+                place.x = parentRect.right + parentsMenuGap;
 
-        if (!mResEnabledInHierarchy || mParentsPanelRect.Width() < 1.0f || mParentsTexts.IsEmpty())
-            return;
+            place.y = position.y + size.y - mViewAreaLayout.offsetMin.y;
+        }
 
-        if (mParentsBack)
-            mParentsBack->Draw();
-
-        for (auto& icon : mParentsIcons)
-            icon->Draw();
-
-        for (auto& text : mParentsTexts)
-            text->Draw();
+        ContextMenu::FitPosition(place, size);
     }
 
     void ScenePickMenu::OnDisabled()
     {
         ContextMenu::OnDisabled();
-        SetHoveredEntry(-1);
+
+        if (mParentsMenu && mParentsMenu->IsEnabled())
+            mParentsMenu->Hide(true);
+
+        mHoveredEntry = -1;
+        if (!mIsParentsMenu && mHoverObject.Lock())
+        {
+            mHoverObject = nullptr;
+            onHoverChanged(nullptr);
+        }
+    }
+
+    void ScenePickMenu::HideWithParent()
+    {
+        if (mIsParentsMenu)
+        {
+            // A press on the parent menu is its own: a click on its item closes both menus
+            auto parent = mParentPopup.Lock();
+            bool pressed = o2Input.IsCursorPressed() || o2Input.IsRightMousePressed();
+            if (pressed && parent && parent->layout->IsPointInside(o2Input.GetCursorPos()))
+                return;
+        }
+
+        ContextMenu::HideWithParent();
+    }
+
+    void ScenePickMenu::ShowAsParentsMenu(const Vector<ScenePickEntry>& entries, const Ref<ScenePickMenu>& parent,
+                                          const Vec2F& position)
+    {
+        mHoveredEntry = -1;
+        mEntries = entries;
+
+        RebuildEntryItems();
+        ContextMenu::Show(parent, position);
     }
 
     void ScenePickMenu::RebuildEntryItems()
@@ -286,108 +381,36 @@ namespace Editor
         }
     }
 
-    void ScenePickMenu::UpdateParentsPanel()
+    void ScenePickMenu::UpdateParentsMenu()
     {
-        mParentsTexts.Clear();
-        mParentsIcons.Clear();
-        mParentsPanelRect = RectF();
-
-        if (mHoveredEntry < 0 || mHoveredEntry >= mEntries.Count())
+        if (!mParentsMenu || mIsParentsMenu)
             return;
 
-        auto& entry = mEntries[mHoveredEntry];
-        if (entry.hiddenParents.IsEmpty())
+        auto hideParents = [&]() {
+            if (mParentsMenu->IsEnabled())
+                mParentsMenu->Hide(true);
+
+            if (mChildPopup.Lock() == mParentsMenu)
+                mChildPopup = nullptr;
+        };
+
+        if (mHoveredEntry < 0 || mHoveredEntry >= mEntries.Count() || mEntries[mHoveredEntry].hiddenParents.IsEmpty() ||
+            !mResEnabledInHierarchy)
+        {
+            hideParents();
             return;
-
-        PushEditorScopeOnStack scope;
-
-        const float rowHeight = 20.0f;
-        const float padding = 6.0f;
-        const float iconSize = 16.0f;
-        const float iconGap = 4.0f;
-        const float gap = 4.0f;
-
-        Ref<Text> sampleText;
-        if (mItemSample)
-            sampleText = mItemSample->GetLayerDrawable<Text>("basic/caption");
-
-        int minDepth = entry.hiddenDepths.IsEmpty() ? 0 : entry.hiddenDepths[0];
-        for (int depth : entry.hiddenDepths)
-            minDepth = Math::Min(minDepth, depth);
-
-        float width = 0.0f;
-        Vector<float> indents;
-        for (int i = 0; i < entry.hiddenParents.Count(); i++)
-        {
-            auto text = sampleText ? sampleText->CloneAsRef<Text>() : mmake<Text>("stdFont.ttf");
-            text->SetWordWrap(false);
-            text->SetHorAlign(HorAlign::Left);
-            text->SetVerAlign(VerAlign::Middle);
-            text->SetText(entry.hiddenParents[i]->GetName());
-            mParentsTexts.Add(text);
-
-            auto icon = mmake<VectorSprite>(GetObjectIcon(entry.hiddenParents[i]));
-            icon->SetMode(SpriteMode::FixedAspect);
-            icon->SetColor(mIconsColor);
-            mParentsIcons.Add(icon);
-
-            float indent = indentStep*(float)(entry.hiddenDepths[i] - minDepth);
-            indents.Add(indent);
-
-            Vec2F textSize = Text::GetTextSize(text->GetText(), text->GetFont(), text->GetFontHeight(), Vec2F(),
-                                               HorAlign::Left, VerAlign::Top, false);
-            width = Math::Max(width, indent + iconSize + iconGap + textSize.x);
         }
 
-        width += padding*2.0f;
-        float height = rowHeight*(float)entry.hiddenParents.Count() + padding*2.0f;
-
-        // Next to the hovered item, on the left of the menu, or on its right where the left has no room
-        RectF menuRect = layout->GetWorldRect();
-        float top = menuRect.top;
-        if (mHoveredEntry < mItems.Count())
+        auto item = mHoveredEntry < mItems.Count() ? mItems[mHoveredEntry]->widget.Lock() : Ref<ContextMenuItem>();
+        if (!item)
         {
-            if (auto widget = mItems[mHoveredEntry]->widget.Lock())
-                top = widget->layout->GetWorldRect().top + padding;
+            hideParents();
+            return;
         }
 
-        Vec2F resolution = (Vec2F)o2Render.GetResolution();
-        float left = menuRect.left - gap - width;
-        if (left < -resolution.x*0.5f)
-            left = menuRect.right + gap;
-
-        top = Math::Min(top, resolution.y*0.5f);
-        if (top - height < -resolution.y*0.5f)
-            top = -resolution.y*0.5f + height;
-
-        mParentsPanelRect = RectF(left, top - height, left + width, top);
-
-        if (!mParentsBack)
-        {
-            if (auto back = FindLayer("back"))
-            {
-                if (back->GetDrawable())
-                    mParentsBack = back->GetDrawable()->CloneAsRef<IRectDrawable>();
-            }
-        }
-
-        // The menu's background is drawn with its shadow around
-        if (mParentsBack)
-        {
-            mParentsBack->SetRect(RectF(mParentsPanelRect.left - 20.0f, mParentsPanelRect.bottom - 19.0f,
-                                        mParentsPanelRect.right + 20.0f, mParentsPanelRect.top + 19.0f));
-        }
-
-        for (int i = 0; i < mParentsTexts.Count(); i++)
-        {
-            float rowTop = mParentsPanelRect.top - padding - rowHeight*(float)i;
-            float rowLeft = mParentsPanelRect.left + padding + indents[i];
-            float iconBottom = rowTop - (rowHeight + iconSize)*0.5f;
-
-            mParentsIcons[i]->SetRect(RectF(rowLeft, iconBottom, rowLeft + iconSize, iconBottom + iconSize));
-            mParentsTexts[i]->SetRect(RectF(rowLeft + iconSize + iconGap, rowTop - rowHeight,
-                                            mParentsPanelRect.right - padding, rowTop));
-        }
+        // The last item of the parents menu ends where the hovered one begins
+        Vec2F position(layout->GetWorldRect().left, item->layout->GetWorldRect().top);
+        mParentsMenu->ShowAsParentsMenu(BuildParentEntries(mEntries[mHoveredEntry]), Ref(this), position);
     }
 }
 

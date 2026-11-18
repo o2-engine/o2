@@ -831,12 +831,27 @@ namespace o2
 
     Basis WidgetLayer::GetTransform() const
     {
-        return Basis(mAbsolutePosition.LeftBottom(), Vec2F::Right() * mAbsolutePosition.Width(), Vec2F::Up() * mAbsolutePosition.Height());
+        Basis layoutTransform(mAbsolutePosition.LeftBottom(), Vec2F::Right() * mAbsolutePosition.Width(),
+                              Vec2F::Up() * mAbsolutePosition.Height());
+
+        // The layer lies in the widget's axis-aligned layout space, the widget's and its parents' scale and rotation
+        // carry it to where it is drawn
+        auto owner = mOwnerWidget.Lock();
+        if (owner && !owner->layout->IsWorldTransformPlain())
+            return layoutTransform*owner->layout->GetLayoutToWorldBasis();
+
+        return layoutTransform;
     }
 
-    void WidgetLayer::SetTransform(const Basis& transform)
+    void WidgetLayer::SetTransform(const Basis& worldTransform)
     {
-        Basis thisTransform = GetTransform();
+        Basis transform = worldTransform;
+        auto owner = mOwnerWidget.Lock();
+        if (owner && !owner->layout->IsWorldTransformPlain())
+            transform = worldTransform*owner->layout->GetLayoutToWorldBasis().Inverted();
+
+        Basis thisTransform(mAbsolutePosition.LeftBottom(), Vec2F::Right() * mAbsolutePosition.Width(),
+                            Vec2F::Up() * mAbsolutePosition.Height());
         layout.offsetMin += transform.origin - thisTransform.origin;
         layout.offsetMax += transform.origin - thisTransform.origin +
             Vec2F(transform.xv.Length() - thisTransform.xv.Length(),

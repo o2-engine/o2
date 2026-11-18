@@ -193,6 +193,7 @@ namespace o2
             RefreshCanvasOffset();   // the page may have moved the canvas since the last one
             Vec2F p = GetCanvasCursorPos(e->targetX, e->targetY);
             if (e->button == 0) o2Input.OnCursorPressed(p);
+            else if (e->button == 1) o2Input.OnAlt2CursorPressed(p);
             return EM_TRUE;
         }
 
@@ -200,6 +201,7 @@ namespace o2
         {
             if (!Application::IsSingletonInitialzed()) return EM_TRUE;
             if (e->button == 0) o2Input.OnCursorReleased();
+            else if (e->button == 1) o2Input.OnAlt2CursorReleased();
             return EM_TRUE;
         }
 

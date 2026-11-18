@@ -246,8 +246,12 @@ namespace Editor
 
         if (mCurrentPath != "")
         {
+            // The folder may be gone: removed or renamed by the rebuild that called this
             AssetRef<FolderAsset> ref(mCurrentPath);
-            mAssetInfos = ref->GetInfo().GetChildren();
+            if (ref)
+                mAssetInfos = ref->GetInfo().GetChildren();
+            else
+                mAssetInfos.Clear();
         }
         else
             mAssetInfos = o2Assets.GetAssetsTree().rootAssets;

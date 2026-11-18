@@ -262,6 +262,9 @@ namespace Editor
         // Returns value
         _type GetCommonValue() const;
 
+        // Sets value as the user does: through the undoable change, calls onChangeCompleted
+        void SetValueByUserAndComplete(const _type& value);
+
         IOBJECT(TPropertyField<_type>);
 
     protected:
@@ -287,9 +290,6 @@ namespace Editor
 
         // Sets value to proxy
         virtual void SetProxy(const Ref<IAbstractValueProxy>& proxy, const _type& value);
-
-        // Sets value, checks value changed, calls onChangeCompleted
-        void SetValueByUserAndComplete(const _type& value);
 
         // Updates value view
         virtual void UpdateValueView() {}
@@ -734,13 +734,13 @@ CLASS_METHODS_META(Editor::TPropertyField<_type>)
     FUNCTION().PUBLIC().SIGNATURE(void, SetUnknownValue, const _type&);
     FUNCTION().PUBLIC().SIGNATURE(void, SetValue, const _type&, bool);
     FUNCTION().PUBLIC().SIGNATURE(_type, GetCommonValue);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetValueByUserAndComplete, const _type&);
     FUNCTION().PROTECTED().SIGNATURE(void, OnTypeSpecialized, const Type&);
     FUNCTION().PROTECTED().SIGNATURE(bool, IsValueRevertable);
     FUNCTION().PROTECTED().SIGNATURE(void, StoreValues, Vector<DataDocument>&);
     FUNCTION().PROTECTED().SIGNATURE(void, StoreValuesOfValue, Vector<DataDocument>&, const _type&);
     FUNCTION().PROTECTED().SIGNATURE(_type, GetProxy, const Ref<IAbstractValueProxy>&);
     FUNCTION().PROTECTED().SIGNATURE(void, SetProxy, const Ref<IAbstractValueProxy>&, const _type&);
-    FUNCTION().PROTECTED().SIGNATURE(void, SetValueByUserAndComplete, const _type&);
     FUNCTION().PROTECTED().SIGNATURE(void, UpdateValueView);
     FUNCTION().PROTECTED().SIGNATURE(bool, IsAlwaysRefresh);
 }

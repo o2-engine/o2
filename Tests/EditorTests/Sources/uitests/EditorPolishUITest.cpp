@@ -16,6 +16,7 @@
 #include "o2/Scene/UI/WidgetLayer.h"
 #include "o2/Scene/UI/WidgetLayout.h"
 #include "o2/Scene/UI/Widgets/Button.h"
+#include "o2/Scene/UI/Widgets/Label.h"
 #include "o2/Scene/UI/Widgets/ContextMenu.h"
 #include "o2/Scene/UI/Widgets/Toggle.h"
 #include "o2/Scene/UI/Widgets/VerticalLayout.h"
@@ -224,14 +225,145 @@ TEST_F(EditorPolish, FontStyleIsPreviewedWithItsLines)
     auto icon = mmake<AssetPreviewIcon>();
     icon->SetAsset(AssetRef<Asset>(AssetRef<FontStyleAsset>(style)));
     EXPECT_EQ(icon->GetKind(), AssetPreviewIcon::Kind::FontStyle);
-    auto text = DynamicCast<Text>(icon->GetPreviewDrawable());
+    auto text = icon->GetStyleSample();
     ASSERT_TRUE(text);
     EXPECT_EQ(text->GetFontStyle(), Ref<FontStyle>(style));
+}
+
+// The sample of a font style is drawn big, with the effects made for big letters, and fitted whole into a small field:
+// a thick outline and a far shadow stay inside it
+TEST_F(EditorPolish, FontStylePreviewStaysInsideTheField)
+{
+    BuildStyle(false);
+    PushEditorScopeOnStack scope;
+
+    auto style = mmake<FontStyleAsset>();
+    style->AddEffect<FontColorEffect>(Color4(250, 200, 40, 255));
+    style->AddEffect<FontStrokeEffect>(12.0f, Color4(255, 0, 255, 255));
+    style->AddEffect<FontShadowEffect>(4.0f, Vec2I(14, -14), Color4(0, 255, 255, 255));
+
+    auto icon = mmake<AssetPreviewIcon>();
+    icon->SetAsset(AssetRef<Asset>(AssetRef<FontStyleAsset>(style)));
+    ASSERT_EQ(icon->GetKind(), AssetPreviewIcon::Kind::FontStyle);
+
+    // A field of 20 x 20 in the middle of the frame: the check holds whichever way the rows of the capture go
+    const float side = 20.0f;
+    *icon->layout = WidgetLayout::Based(BaseCorner::Center, Vec2F(side, side));
+    icon->SetEnabledForcible(true);
+    icon->UpdateSelfTransform();
+
+    auto frame = Capture([&]() {
+        o2Render.Clear(Color4(20, 20, 20, 255));
+        icon->Draw();
+    });
+    ASSERT_TRUE(frame.bitmap);
+
+    Vec2I size = frame.bitmap->GetSize();
+    float density = (float)size.x/(float)o2Render.GetResolution().x;
+    float half = side*0.5f*density + 1.0f;
+    Vec2F center = Vec2F((float)size.x, (float)size.y)*0.5f;
+
+    int inside = 0, outside = 0;
+    const UInt8* data = frame.bitmap->GetData();
+    for (int y = 0; y < size.y; y++)
+    {
+        for (int x = 0; x < size.x; x++)
+        {
+            const UInt8* p = data + (y*size.x + x)*4;
+            bool painted = Math::Abs((int)p[0] - 20) + Math::Abs((int)p[1] - 20) + Math::Abs((int)p[2] - 20) > 30;
+            if (!painted)
+                continue;
+
+            bool inField = Math::Abs((float)x + 0.5f - center.x) <= half && Math::Abs((float)y + 0.5f - center.y) <= half;
+            (inField ? inside : outside)++;
+        }
+    }
+
+    EXPECT_GT(inside, 20) << "the sample is drawn";
+    EXPECT_EQ(outside, 0) << "nothing of the sample is drawn out of the field";
+    EXPECT_TRUE(DynamicCast<Sprite>(icon->GetPreviewDrawable())) << "the sample is drawn into a texture";
+
+    RectF preview = icon->GetPreviewDrawable()->GetRect();
+    EXPECT_LE(preview.Width(), side + 0.01f);
+    EXPECT_LE(preview.Height(), side + 0.01f);
+}
+
+// Shoots the font styles of the project in fields of the size of an asset property and bigger. O2_POLISH_SHOTS=<folder>
+TEST_F(EditorPolish, ShootFontStyleFields)
+{
+    const char* outDir = getenv("O2_POLISH_SHOTS");
+    if (!outDir)
+        GTEST_SKIP() << "set O2_POLISH_SHOTS to a folder to shoot";
+
+    BuildStyle(false);
+    PushEditorScopeOnStack scope;
+
+    Vector<String> paths;
+    Function<void(const Vector<Ref<AssetInfo>>&)> collect = [&](const Vector<Ref<AssetInfo>>& infos) {
+        for (auto& info : infos)
+        {
+            if ((info->meta && info->meta->GetAssetType() == &TypeOf(FontStyleAsset)))
+                paths.Add(info->path);
+
+            collect(info->GetChildren());
+        }
+    };
+    collect(o2Assets.GetAssetsTree().rootAssets);
+    printf("%d font styles\n", paths.Count());
+    if (paths.IsEmpty())
+        GTEST_SKIP() << "the project has no font styles";
+
+    Vector<Ref<AssetPreviewIcon>> icons;
+    for (int i = 0; i < paths.Count() && i < 12; i++)
+    {
+        for (float side : { 18.0f, 64.0f })
+        {
+            auto icon = mmake<AssetPreviewIcon>();
+            icon->SetAsset(AssetRef<Asset>(AssetRef<FontStyleAsset>(paths[i])));
+            Vec2F position(-560.0f + (float)i*92.0f, side < 20.0f ? 120.0f : 0.0f);
+            *icon->layout = WidgetLayout::Based(BaseCorner::Center, Vec2F(side, side), position);
+            icon->SetEnabledForcible(true);
+            icon->UpdateSelfTransform();
+            icons.Add(icon);
+        }
+    }
+
+    auto frame = Capture([&]() {
+        o2Render.Clear(Color4(245, 247, 248, 255));
+        for (auto& icon : icons)
+        {
+            RectF rect = icon->layout->GetWorldRect();
+            o2Render.DrawRectFrame(rect.LeftBottom() - Vec2F(1, 1), rect.RightTop() + Vec2F(1, 1), Color4(255, 0, 0, 255));
+            icon->Draw();
+        }
+    });
+    ASSERT_TRUE(frame.bitmap);
+    frame.bitmap->Save(String(outDir) + "/font_style_fields.png", Bitmap::ImageType::Png);
+}
+
+// A folder that is not there (removed or renamed while it was open) shows empty instead of crashing the editor
+TEST_F(EditorPolish, AssetsWindowShowsAMissingFolderEmpty)
+{
+    BuildStyle(false);
+    EditorShell shell(MakeLayout("scene window", "assets window", "properties window"));
+
+    auto& assets = o2EditorAssets;
+    assets.SetViewMode(0);
+    assets.OpenFolder("No/Such/Folder");
+    shell.Settle();
+    EXPECT_TRUE(assets.GetAssetsScroll()->GetVisibleIcons().IsEmpty());
+
+    assets.OpenFolder("");
+    shell.Settle();
+    EXPECT_FALSE(assets.GetAssetsScroll()->GetVisibleIcons().IsEmpty());
 }
 
 // The play badge of a video icon does not stay on the icons the grid reuses for other assets
 TEST_F(EditorPolish, PlayBadgeStaysOnTheVideosOnly)
 {
+    if (!o2Assets.IsAssetExist("Generated/GeminiShowcase/coin_spin.mp4"))
+        GTEST_SKIP() << "the project has no showcase videos";
+
     BuildStyle(false);
     EditorShell shell(MakeLayout("scene window", "assets window", "properties window"));
 
@@ -310,8 +442,11 @@ TEST_F(EditorPolish, ScenePickMenuHoversAndSelects)
     menu->SetHoveredEntry(1);
     shell.Settle();
     EXPECT_EQ(screen.GetHoverObject(), DynamicCast<SceneEditableObject>(child));
-    EXPECT_GT(menu->GetParentsPanelRect().Width(), 0.0f) << "the group between the panel and the icon is listed aside";
-    EXPECT_LT(menu->GetParentsPanelRect().right, menu->layout->GetWorldRect().left + 1.0f);
+    auto parents = menu->GetParentsMenu();
+    ASSERT_TRUE(parents && parents->IsEnabled()) << "the group between the panel and the icon is listed aside";
+    ASSERT_EQ(parents->GetEntries().Count(), 1);
+    EXPECT_EQ(parents->GetEntries()[0].object, DynamicCast<SceneEditableObject>(between));
+    EXPECT_LT(parents->layout->GetWorldRect().right, menu->layout->GetWorldRect().left + 1.0f);
 
     menu->PickEntry(1);
     shell.Settle();
@@ -750,4 +885,61 @@ TEST_F(EditorPolish, ShootGizmosPopup)
     ForcePopEditorScopeOnStack popScope;
     o2Scene.Clear(true);
     o2Scene.UpdateDestroyingEntities();
+}
+
+// Shoots the Properties of a label and of a text layer, light and dark. Gated: O2_POLISH_SHOTS=<folder>
+TEST_F(EditorPolish, ShootTextProperties)
+{
+    const char* outDir = getenv("O2_POLISH_SHOTS");
+    if (!outDir)
+        GTEST_SKIP() << "set O2_POLISH_SHOTS to a folder to shoot";
+
+    auto shootTheme = [&](const String& suffix)
+    {
+        BuildStyle(false);
+        EditorShell shell(MakeLayout("scene window", "assets window", "properties window"));
+
+        Ref<Label> label;
+        Ref<Button> button;
+        {
+            ForcePopEditorScopeOnStack popScope;
+            label = o2UI.CreateWidget<Label>();
+            label->name = "label";
+            label->text = "Hello world";
+            button = o2UI.CreateWidget<Button>();
+            button->name = "button";
+            button->caption = "Play";
+            o2Scene.UpdateAddedEntities();
+        }
+
+        auto shoot = [&](const String& name)
+        {
+            auto frame = shell.Settle();
+            if (frame.bitmap)
+                frame.bitmap->Save(String(outDir) + "/" + name + suffix + ".png", Bitmap::ImageType::Png);
+        };
+
+        o2EditorPropertiesWindow.SetTarget(label.Get());
+        shoot("text_label");
+
+        auto caption = button->GetLayer("caption");
+        ASSERT_TRUE(caption);
+        o2EditorPropertiesWindow.SetTarget(caption.Get());
+        shoot("text_layer");
+
+        o2EditorPropertiesWindow.SetTargets({});
+        ForcePopEditorScopeOnStack popScope;
+        label = nullptr;
+        button = nullptr;
+        o2Scene.Clear(true);
+        o2Scene.UpdateDestroyingEntities();
+    };
+
+    shootTheme("");
+
+    EditorTheme::SetKind(EditorThemeKind::Dark);
+    PipelineTheme::FollowEditor();
+    shootTheme("_dark");
+    EditorTheme::SetKind(EditorThemeKind::Light);
+    PipelineTheme::FollowEditor();
 }

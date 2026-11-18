@@ -17,17 +17,21 @@ Components with a spline (spline colliders and others) activate the spline tool 
 A selected point also shows a corner rounding handle on the corner bisector (as in Illustrator/Figma). Dragging it into the corner rounds it: the point slides along the bisector and the supports lay on the arc tangent. Dragging back to the base offset restores a sharp corner. The rounding is limited by halves of the adjacent edges.
 
 ### Picking from the objects under the cursor
-A right click (without moving the view) opens a menu of the objects under the cursor (`ScenePickMenu`): actors,
-widgets and, when the tree shows them, widget layers. The menu is a tree of these objects only: an object hangs on
-its nearest ancestor that is under the cursor too, the other ancestors are left out. The hovered item outlines its
-object in the scene in orange, and a panel on the left lists the ancestors of the item the menu left out. A click on
-an item selects its object, as a click in the scene does, with an undoable action.
+A right click (without moving the view) opens a menu of the objects seen under the cursor (`ScenePickMenu`): actors
+that draw there, widgets whose layers draw there and, when the tree shows them, those layers. A widget without layers
+only holds others, the layer of another state (transparent now, as a button's pressed one) is not seen, a camera only
+frames what it shows, a particles emitter draws only where its live particles are (an idle one of a pool draws
+nothing), so none of them is listed. A scaled or turned widget is hit where its layers are drawn. The menu is a tree of these objects only: an object hangs on its nearest ancestor that is in the menu too,
+the other ancestors are left out. The hovered item outlines its object in the scene in orange, and the menu of its
+left-out ancestors opens on the left of it, going up from the item: the root on top, the nearest ancestor right above
+the item's row; its items outline and pick the ancestors the same way. A click on an item selects its object, as a click in the scene does, with an undoable action.
 
 ### View mode and navigation
 The rounded 2D | 3D switch at the right end of the top panel switches the view modes: its thumb slides under the chosen one. In 3D:
 - the right button held looks around, WASD/QE fly;
-- the middle button held orbits around the selected objects (their center when the orbit began; the view target
-  without a selection), the pivot keeps its place on the screen, as in Unity; Alt + the left button does the same;
+- the middle button held orbits around the selected objects (the center of their bounds when the orbit began; the
+  view target without a selection), the pivot keeps its place on the screen, as in Unity; Alt + the left button does
+  the same, for a trackpad;
 - Shift + the middle button pans;
 - the wheel zooms.
 

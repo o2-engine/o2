@@ -32,6 +32,16 @@ The settings are taken from the actor via reflection. All public fields are show
 
 The head of the section has the name of the type and its icon, the same as in the create menu of the Tree window (`GetEditorIcon()`, drawn white on the head). A selected widget layer shows its layout under Transform and its own settings under Layer.
 
+#### Text settings
+A label and a text layer show their text settings in the column of the other fields:
+- Text, and under it Case: a dropdown with the case the selected texts are in (UPPER CASE, Title Case, Sentence case, lower case; empty when they aren't in one). Choosing one puts every selected text in it, Cyrillic too, with one undo.
+- Font, Style, Size, and Color for a label: the usual fields.
+- Align: horizontal (left, center, right, justify) and vertical (top, middle, bottom, spread) groups of icons. A dark block slides under the chosen icon; none when the selected texts differ. A text layer has word wrap and dots endings in the same row, each on or off.
+- Overflow of a label: none, cut, dots, expand, wrap, then the vertical one. Expand border shows only while an overflow expands.
+- Spacing: letters and lines.
+
+Every change is an undoable action.
+
 ### (4) Components
 Next, component parameters are shown block by block. Public fields declared in the component are shown the same way.
 

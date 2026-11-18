@@ -27,6 +27,12 @@ namespace Editor
         // Copy operator
         WStringProperty& operator=(const WStringProperty& other);
 
+        // Changes the text of every target by the function, as one undoable change of the user
+        void TransformByUser(const Function<WString(const WString&)>& transform);
+
+        // Returns the text of every target
+        Vector<WString> GetValues() const;
+
         SERIALIZABLE(WStringProperty);
         CLONEABLE_REF(WStringProperty);
 
@@ -61,6 +67,8 @@ CLASS_METHODS_META(Editor::WStringProperty)
 
     FUNCTION().PUBLIC().CONSTRUCTOR(RefCounter*);
     FUNCTION().PUBLIC().CONSTRUCTOR(RefCounter*, const WStringProperty&);
+    FUNCTION().PUBLIC().SIGNATURE(void, TransformByUser, const Function<WString(const WString&)>&);
+    FUNCTION().PUBLIC().SIGNATURE(Vector<WString>, GetValues);
     FUNCTION().PROTECTED().SIGNATURE(void, UpdateValueView);
     FUNCTION().PROTECTED().SIGNATURE(void, InitializeControls);
     FUNCTION().PROTECTED().SIGNATURE(void, OnEdited, const WString&);

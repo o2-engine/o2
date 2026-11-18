@@ -50,6 +50,9 @@ namespace Editor
             p.switchThumb = Color4(0, 156, 141);
             p.switchText = Color4(96, 125, 139);
             p.switchTextOn = Color4(255, 255, 255);
+            p.segmentTrack = Color4(225, 232, 233);
+            p.segmentThumb = Color4(176, 194, 198);
+            p.segmentHover = Color4(205, 215, 217);
             p.frameObject = Color4(44, 62, 80, 150);
             p.frameParent = Color4(44, 62, 80, 100);
             p.warning = Color4(226, 198, 83);
@@ -86,6 +89,9 @@ namespace Editor
             p.switchThumb = Dark::accentDeep;
             p.switchText = Dark::ink;
             p.switchTextOn = Dark::textStrong;
+            p.segmentTrack = Dark::raisedTop;
+            p.segmentThumb = Dark::pressed;
+            p.segmentHover = Dark::track;
             p.iconOff = 0.55f;
             p.frameObject = Color4(Dark::text.r, Dark::text.g, Dark::text.b, 150);
             p.frameParent = Color4(Dark::text.r, Dark::text.g, Dark::text.b, 100);

@@ -40,3 +40,5 @@ These entities may contain other entities if they inherit the draw priority from
 Separate batches are marked with color; each ends with an End of batch #N row, where N is the batch number.
 
 To change the draw order, move objects via drag'n'drop.
+
+An object picked in the right-click menu of the Scene window is shown in the tree: its collapsed ancestors expand, the tree scrolls to it however deep it is, and its node is selected and highlighted.

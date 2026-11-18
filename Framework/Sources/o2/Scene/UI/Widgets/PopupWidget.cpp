@@ -164,6 +164,11 @@ namespace o2
         return false;
     }
 
+    bool PopupWidget::IsUnderPoint(const Vec2F& point)
+    {
+        return mEnabled && ScrollArea::IsUnderPoint(point);
+    }
+
     const WeakRef<CursorAreaEventListenersLayer>& PopupWidget::GetCurrentDrawingLayer() const
     {
         return mCurrentDrawingLayer;

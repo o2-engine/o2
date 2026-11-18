@@ -354,3 +354,37 @@ TEST(WidgetTransform, ScaledParentMagnifiesTextAndSlicedCorners)
     EXPECT_NEAR(verts[1].x - verts[0].x, 20.0f, 0.01f);
     EXPECT_NEAR(verts[3].x - verts[0].x, 200.0f, 0.01f);
 }
+
+// The editor's transform of a layer is where it is drawn: the scale and rotation of the widget and its parents carry
+// its layout rectangle there; setting it moves the layout so the layer is drawn at the new place
+TEST(WidgetTransform, LayerTransformIsWhereItIsDrawn)
+{
+    SceneCleanGuard guard;
+    auto rig = MakeRig();
+
+    rig.root->layout->SetScale(Vec3F(1.5f, 1.5f, 1.0f));
+    rig.child->layout->SetAngle(Math::Deg2rad(30.0f));
+    TickAndUpdateLayout(2);
+    ASSERT_FALSE(rig.child->layout->IsWorldTransformPlain());
+
+    for (auto& layer : { rig.back, rig.top })
+    {
+        Basis transform = layer->GetTransform();
+        Basis drawn = layer->GetDrawable()->GetBasis();
+        ExpectNear(transform.origin, drawn.origin, 0.05f, "origin");
+        ExpectNear(transform.xv, drawn.xv, 0.05f, "xv");
+        ExpectNear(transform.yv, drawn.yv, 0.05f, "yv");
+    }
+
+    // Moved by 30 in the world: 20 in the layout of a widget scaled 1.5 times
+    Basis before = rig.top->GetTransform();
+    Vec2F offsetBefore = rig.top->layout.offsetMin;
+    Basis moved = before;
+    moved.origin += before.xv.Normalized()*30.0f;
+    rig.top->SetTransform(moved);
+    TickAndUpdateLayout(2);
+
+    ExpectNear(rig.top->GetTransform().origin, moved.origin, 0.05f, "moved origin");
+    ExpectNear(rig.top->GetDrawable()->GetBasis().origin, moved.origin, 0.05f, "drawn there");
+    EXPECT_NEAR((rig.top->layout.offsetMin - offsetBefore).Length(), 20.0f, 0.05f);
+}

@@ -516,7 +516,7 @@ namespace o2
 
         for (auto& listener : mMiddleButtonPressedListeners)
         {
-            listener->OnCursorRightMouseReleased(localCursor);
+            listener->OnCursorMiddleMouseReleased(localCursor);
             listener->mIsMiddleMousePressed = false;
         }
     }

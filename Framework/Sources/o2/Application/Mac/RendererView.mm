@@ -218,6 +218,27 @@ static o2::MacKeyboardHandler::Modifiers GetModifiers(NSEventModifierFlags flags
     o2Input.OnCursorMoved([self getMousePos:event], 0);
 }
 
+// The middle button comes as the "other" mouse button, number 2
+- (void)otherMouseDown:(NSEvent *)event
+{
+    if (event.buttonNumber != 2)
+        return;
+
+    [self applyKeyEvents:keyboardHandler.OnModifiersChanged(GetModifiers(event.modifierFlags))];
+    o2Input.OnAlt2CursorPressed([self getMousePos:event]);
+}
+
+- (void)otherMouseUp:(NSEvent *)event
+{
+    if (event.buttonNumber == 2)
+        o2Input.OnAlt2CursorReleased();
+}
+
+- (void)otherMouseDragged:(NSEvent *)event
+{
+    o2Input.OnCursorMoved([self getMousePos:event], 0);
+}
+
 - (void)scrollWheel:(NSEvent *)event
 {
     // touchpad and Magic Mouse report precise pixel deltas, a classic wheel reports

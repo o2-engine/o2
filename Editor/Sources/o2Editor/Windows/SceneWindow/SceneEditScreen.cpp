@@ -12,6 +12,7 @@
 #include "o2/Scene/Actor.h"
 #include "o2/Scene/CameraActor.h"
 #include "o2/Scene/Component.h"
+#include "o2/Scene/Components/ParticlesEmitterComponent.h"
 #include "o2/Scene/Scene.h"
 #include "o2/Scene/SceneLayerRef.h"
 #include "o2/Scene/UI/UIManager.h"
@@ -757,9 +758,17 @@ namespace Editor
         return mHoverObject.Lock();
     }
 
-    // Adds the shown layers with drawables under the scene point, sublayers included
+    // Adds the visible layers with drawables under the scene point, sublayers included
     static void CollectLayersUnderPoint(const Vector<Ref<WidgetLayer>>& layers, const Vec2F& point,
                                         Vector<Ref<SceneEditableObject>>& result);
+
+    // Returns true when one of the layers or their sublayers draws something seen at the scene point
+    static bool AnyLayerUnderPoint(const Vector<Ref<WidgetLayer>>& layers, const Vec2F& point);
+
+    // An actor that draws only particles is seen where its live particles are: an idle emitter of a pool draws nothing.
+    // 1 - seen at the point, 0 - not, -1 - it draws something else, its transform decides
+    static int ParticlesUnderPoint(const Ref<Actor>& actor, const Vec2F& point, bool hasRay, const Vec3F& rayOrigin,
+                                   const Vec3F& rayDirection);
 
     Vector<Ref<SceneEditableObject>> SceneEditScreen::GetObjectsUnderPoint(const Vec2F& screenPoint)
     {
@@ -772,8 +781,37 @@ namespace Editor
         for (auto& objectWeak : o2Scene.GetDrawnEditableObjects())
         {
             auto object = objectWeak.Lock();
-            if (!object || object->IsLockedInHierarchy() || result.Contains(object))
+            if (!object || object->IsLockedInHierarchy() || result.Contains(object) || DynamicCast<WidgetLayer>(object))
                 continue;
+
+            // A widget is under the cursor where its layers draw something; one without them only holds others,
+            // and is listed among the skipped ancestors
+            if (auto widget = DynamicCast<Widget>(object))
+            {
+                if (AnyLayerUnderPoint(widget->GetLayers(), scenePoint))
+                    result.Add(object);
+
+                if (Widget::isEditorLayersVisible)
+                    CollectLayersUnderPoint(widget->GetLayers(), scenePoint, result);
+
+                continue;
+            }
+
+            // A camera's frame covers what it shows, the camera itself draws nothing there
+            if (DynamicCast<CameraActor>(object))
+                continue;
+
+            if (auto actor = DynamicCast<Actor>(object))
+            {
+                int particles = ParticlesUnderPoint(actor, scenePoint, hasRay, rayOrigin, rayDirection);
+                if (particles >= 0)
+                {
+                    if (particles > 0)
+                        result.Add(object);
+
+                    continue;
+                }
+            }
 
             float distance;
             bool hit = hasRay && ITransformTool::RayIntersectsObject3D(object, rayOrigin, rayDirection, distance);
@@ -782,12 +820,6 @@ namespace Editor
 
             if (hit)
                 result.Add(object);
-
-            if (Widget::isEditorLayersVisible)
-            {
-                if (auto widget = DynamicCast<Widget>(object))
-                    CollectLayersUnderPoint(widget->GetLayers(), scenePoint, result);
-            }
         }
 
         return result;
@@ -804,9 +836,15 @@ namespace Editor
             PushEditorScopeOnStack scope;
 
             auto style = o2UI.GetWidgetStyle<ContextMenu>("standard");
-            mPickMenu = style ? mmake<ScenePickMenu>(*style) : mmake<ScenePickMenu>();
-            mPickMenu->name = "scene pick menu";
-            AddInternalWidget(mPickMenu);
+            auto makeMenu = [&](const String& name) {
+                auto menu = style ? mmake<ScenePickMenu>(*style) : mmake<ScenePickMenu>();
+                menu->name = name;
+                AddInternalWidget(menu);
+                return menu;
+            };
+
+            mPickMenu = makeMenu("scene pick menu");
+            mPickMenu->SetParentsMenu(makeMenu("scene pick parents menu"));
 
             mPickMenu->onHoverChanged = [&](const Ref<SceneEditableObject>& object) { SetHoverObject(object); };
             mPickMenu->onPicked = [&](const Ref<SceneEditableObject>& object) { PickObject(object); };
@@ -828,6 +866,7 @@ namespace Editor
 
         auto before = mSelectedObjects;
 
+        SetHoverObject(nullptr);
         ClearSelectionWithoutAction(false);
         SelectObjectWithoutAction(object);
 
@@ -840,7 +879,18 @@ namespace Editor
 
     void SceneEditScreen::BeginOrbit3D()
     {
-        mOrbitPivot3D = mSelectedObjects.IsEmpty() ? mView3D.target : ITransformTool::GetSelectionCenter3D(mSelectedObjects);
+        if (mSelectedObjects.IsEmpty())
+        {
+            mOrbitPivot3D = mView3D.target;
+            return;
+        }
+
+        // The middle of what the selection draws: a model's origin is often at its feet
+        o2::AABB bounds;
+        if (ITransformTool::GetSelectionBounds3D(mSelectedObjects, bounds))
+            mOrbitPivot3D = bounds.GetCenter();
+        else
+            mOrbitPivot3D = ITransformTool::GetSelectionCenter3D(mSelectedObjects);
     }
 
     void SceneEditScreen::Orbit3D(const Vec2F& cursorDelta)
@@ -914,19 +964,64 @@ namespace Editor
         return true;
     }
 
+    // A layer that draws something seen at the point: shown, not transparent (as the layers of the other states are)
+    static bool IsLayerSeenAt(const Ref<WidgetLayer>& layer, const Vec2F& point)
+    {
+        return layer->GetDrawable() && layer->GetResTransparency() > 0.01f && IsLayerShown(layer) &&
+            layer->GetTransform().IsPointInside(point);
+    }
+
     static void CollectLayersUnderPoint(const Vector<Ref<WidgetLayer>>& layers, const Vec2F& point,
                                         Vector<Ref<SceneEditableObject>>& result)
     {
         for (auto& layer : layers)
         {
-            if (layer->GetDrawable() && IsLayerShown(layer) && layer->GetTransform().IsPointInside(point) &&
-                !result.Contains(layer))
-            {
+            if (IsLayerSeenAt(layer, point) && !result.Contains(layer))
                 result.Add(layer);
-            }
 
             CollectLayersUnderPoint(layer->GetChildren(), point, result);
         }
+    }
+
+    static int ParticlesUnderPoint(const Ref<Actor>& actor, const Vec2F& point, bool hasRay, const Vec3F& rayOrigin,
+                                   const Vec3F& rayDirection)
+    {
+        bool anyEmitter = false;
+        for (auto& component : actor->GetComponents())
+        {
+            if (!component->IsEnabledInHierarchy() || !dynamic_cast<IDrawable*>(component.Get()))
+                continue;
+
+            auto emitter = DynamicCast<ParticlesEmitterComponent>(component);
+            if (!emitter)
+                return -1;
+
+            anyEmitter = true;
+
+            o2::AABB bounds;
+            if (!emitter->GetParticlesBounds(bounds))
+                continue;
+
+            float distance;
+            if ((hasRay && emitter->Is3D()) ? bounds.IntersectsRay(rayOrigin, rayDirection, distance) :
+                RectF(bounds.min.XY(), bounds.max.XY()).IsInside(point))
+            {
+                return 1;
+            }
+        }
+
+        return anyEmitter ? 0 : -1;
+    }
+
+    static bool AnyLayerUnderPoint(const Vector<Ref<WidgetLayer>>& layers, const Vec2F& point)
+    {
+        for (auto& layer : layers)
+        {
+            if (IsLayerSeenAt(layer, point) || AnyLayerUnderPoint(layer->GetChildren(), point))
+                return true;
+        }
+
+        return false;
     }
 
     void SceneEditScreen::DrawSelectionOutline(SceneDrawableCategory category)
@@ -1640,6 +1735,8 @@ namespace Editor
         if (m3DMode)
             SetFlyNavigation3D(true);
 
+        // The cursor in the screen space: in 2D the events come in the scene space of the view
+        mRightMousePressPoint = o2Input.GetCursorPos();
         mRightMouseTravel = 0.0f;
 
         if (mEnabledTool && !IsHandleWorking(cursor))
@@ -1650,7 +1747,7 @@ namespace Editor
 
     void SceneEditScreen::OnCursorRightMouseStayDown(const Input::Cursor& cursor)
     {
-        mRightMouseTravel += cursor.delta.Length();
+        mRightMouseTravel = Math::Max(mRightMouseTravel, (o2Input.GetCursorPos() - mRightMousePressPoint).Length());
 
         if (m3DMode)
         {
@@ -1680,7 +1777,7 @@ namespace Editor
         // A right click that didn't move the view picks from the objects under the cursor
         const float clickTravel = 3.0f;
         if (mRightMouseTravel < clickTravel && !IsHandleWorking(cursor))
-            ShowPickMenu(cursor.position);
+            ShowPickMenu(o2Input.GetCursorPos());
     }
 
     void SceneEditScreen::OnCursorMiddleMousePressed(const Input::Cursor& cursor)
@@ -1700,6 +1797,7 @@ namespace Editor
             if (o2Input.IsKeyDown(VK_SHIFT))
             {
                 mView3D.Pan(cursor.delta, GetViewportSize());
+                mViewCameraMoved = true;
                 mNeedRedraw = true;
             }
             else

@@ -53,6 +53,8 @@
 #include "o2Editor/Properties/Basic/ColorProperty.h"
 #include "o2Editor/Properties/Basic/ComponentProperty.h"
 #include "o2Editor/Properties/Basic/CurveProperty.h"
+#include "o2Editor/Properties/Basic/EnumIconsProperty.h"
+#include "o2Editor/UI/SegmentedIcons.h"
 #include "o2Editor/Properties/Basic/EnumProperty.h"
 #include "o2Editor/Properties/Basic/FloatProperty.h"
 #include "o2Editor/Properties/Basic/IntegerProperty.h"
@@ -1110,6 +1112,21 @@ namespace Editor
             ->offStateAnimationSpeed = 0.5f;
 
         o2UI.AddWidgetStyle(sample, "preview toolbar toggle");
+    }
+
+    void EditorUIStyleBuilder::RebuildEnumIconsProperty()
+    {
+        auto sample = mmake<EnumIconsProperty>();
+        sample->layout->minHeight = 20;
+        sample->expandHeight = true;
+        sample->expandWidth = true;
+        sample->fitByChildren = false;
+
+        auto segments = mmake<SegmentedIcons>();
+        segments->name = "segments";
+        sample->AddChild(segments);
+
+        o2UI.AddWidgetStyle(sample, "standard");
     }
 
     void EditorUIStyleBuilder::RebuildWarningsDownPanelToggle()

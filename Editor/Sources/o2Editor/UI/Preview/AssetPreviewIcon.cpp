@@ -44,6 +44,9 @@ namespace Editor
     {
         if (mSoundPlayer)
             mSoundPlayer->Stop();
+
+        if (mStyleListened)
+            mStyleListened->onChanged -= ObjFunctionPtr<AssetPreviewIcon, void>(this, &AssetPreviewIcon::OnStyleChanged);
     }
 
     AssetPreviewIcon& AssetPreviewIcon::operator=(const AssetPreviewIcon& other)
@@ -132,15 +135,18 @@ namespace Editor
             if (auto font = FontStyleAssetViewer::GetSampleFont())
             {
                 mKind = Kind::FontStyle;
-                auto text = mmake<Text>(font);
-                text->SetHeight(14);
-                text->SetText("Aa");
-                text->SetHorAlign(HorAlign::Middle);
-                text->SetVerAlign(VerAlign::Middle);
-                text->SetWordWrap(false);
-                text->SetColor(FontSampleView::IsStylePaintingGlyphs(fontStyle) ? Color4::White() : EditorTheme::Get().text);
-                text->SetFontStyle(fontStyle);
-                mPreview = text;
+                mStyleSample = mmake<Text>(font);
+                mStyleSample->SetHeight((int)styleSampleHeight);
+                mStyleSample->SetText("Aa");
+                mStyleSample->SetHorAlign(HorAlign::Left);
+                mStyleSample->SetVerAlign(VerAlign::Bottom);
+                mStyleSample->SetWordWrap(false);
+                mStyleSample->SetColor(FontSampleView::IsStylePaintingGlyphs(fontStyle) ? Color4::White() : EditorTheme::Get().text);
+                mStyleSample->SetFontStyle(fontStyle);
+                mStyleSampleDirty = true;
+
+                mStyleListened = fontStyle;
+                mStyleListened->onChanged += ObjFunctionPtr<AssetPreviewIcon, void>(this, &AssetPreviewIcon::OnStyleChanged);
             }
         }
         else if (DynamicCast<Mesh3DAsset>(ref) || DynamicCast<SkinnedModelAsset>(ref))
@@ -210,6 +216,13 @@ namespace Editor
         if (mModelView)
             RemoveChild(mModelView);
 
+        if (mStyleListened)
+            mStyleListened->onChanged -= ObjFunctionPtr<AssetPreviewIcon, void>(this, &AssetPreviewIcon::OnStyleChanged);
+
+        mStyleListened = nullptr;
+        mStyleSample = nullptr;
+        mStyleSampleDirty = false;
+
         mKind = Kind::None;
         mChecker = nullptr;
         mPreview = nullptr;
@@ -233,6 +246,63 @@ namespace Editor
     const Ref<IRectDrawable>& AssetPreviewIcon::GetPreviewDrawable() const
     {
         return mPreview;
+    }
+
+    const Ref<Text>& AssetPreviewIcon::GetStyleSample() const
+    {
+        return mStyleSample;
+    }
+
+    void AssetPreviewIcon::OnStyleChanged()
+    {
+        mStyleSampleDirty = true;
+    }
+
+    void AssetPreviewIcon::RenderStyleSample()
+    {
+        mStyleSampleDirty = false;
+        if (!mStyleSample)
+            return;
+
+        // Laid out from the origin at the density of the texture: the frames of the letters hold their effects
+        mStyleSample->SetRect(RectF(0.0f, 0.0f, styleSampleHeight*4.0f, styleSampleHeight*2.0f));
+
+        RectF bounds;
+        bool any = false;
+        for (auto& line : mStyleSample->GetSymbolsSet().mLines)
+        {
+            for (auto& symbol : line.mSymbols)
+            {
+                bounds = any ? bounds.Expand(symbol.mFrame) : symbol.mFrame;
+                any = true;
+            }
+        }
+
+        if (!any || bounds.Width() < 1.0f || bounds.Height() < 1.0f)
+            return;
+
+        Vec2I size(Math::CeilToInt(bounds.Width()), Math::CeilToInt(bounds.Height()));
+        TextureRef target(size, TextureFormat::R8G8B8A8, Texture::Usage::RenderTarget);
+        if (!target || !target->IsReady())
+            return;
+
+        target->SetName("Font style preview " + (mAsset ? mAsset->GetPath() : String()));
+
+        Camera previousCamera = o2Render.GetCamera();
+        o2Render.PushRenderTargets({ target });
+        o2Render.Clear(Color4(0, 0, 0, 0));
+        o2Render.SetCamera(Camera(bounds.Center(), (Vec2F)size));
+
+        mStyleSample->Draw();
+
+        o2Render.PopRenderTargets();
+        o2Render.SetCamera(previousCamera);
+
+        auto sprite = mmake<Sprite>();
+        sprite->SetTexture(target);
+        sprite->SetTextureSrcRect(RectI(Vec2I(), size));
+        mPreview = sprite;
+        mPreviewSize = (Vec2F)size;
     }
 
     const Ref<ModelView>& AssetPreviewIcon::GetModelView() const
@@ -314,6 +384,9 @@ namespace Editor
                 mPreview = mmake<VectorSprite>(ActorAsset::GetEditorIcon());
             }
         }
+
+        if (mKind == Kind::FontStyle && mStyleSampleDirty)
+            RenderStyleSample();
 
         RectF rect = GetPreviewRect();
         if (mChecker)

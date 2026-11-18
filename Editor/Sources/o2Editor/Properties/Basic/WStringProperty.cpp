@@ -42,6 +42,58 @@ namespace Editor
             mEditBox->text = mCommonValue;
     }
 
+    void WStringProperty::TransformByUser(const Function<WString(const WString&)>& transform)
+    {
+        if (mValuesProxies.IsEmpty())
+            return;
+
+        Vector<WString> values;
+        for (auto& ptr : mValuesProxies)
+            values.Add(transform(GetProxy(ptr.first)));
+
+        Vector<DataDocument> before, after;
+        StoreValues(before);
+        for (auto& value : values)
+        {
+            after.Add(DataDocument());
+            after.Last() = value;
+        }
+
+        if (before == after)
+            return;
+
+        if (mApplyChangeWithAction && !onChangeCompleted.IsEmpty())
+        {
+            onBeforeChange(Ref(this), true);
+
+            mCommonValue = values[0];
+            mValuesDifferent = values.Any([&](const WString& x) { return x != values[0]; });
+
+            UpdateValueView();
+            OnValueChanged(true);
+
+            onChangeCompleted(mValuesPath, before, after);
+        }
+        else
+        {
+            mBeforeChangeValues = before;
+            for (int i = 0; i < mValuesProxies.Count(); i++)
+                SetProxy(mValuesProxies[i].first, values[i]);
+
+            Refresh(true);
+            CheckValueChangeCompleted();
+        }
+    }
+
+    Vector<WString> WStringProperty::GetValues() const
+    {
+        Vector<WString> res;
+        for (auto& ptr : mValuesProxies)
+            res.Add(GetProxy(ptr.first));
+
+        return res;
+    }
+
     void WStringProperty::OnEdited(const WString& data)
     {
         if (mValuesDifferent && data == "--")

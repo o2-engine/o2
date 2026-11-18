@@ -40,6 +40,9 @@ namespace Editor
         Color4 switchThumb;      // Their thumb, sliding under the chosen side
         Color4 switchText;       // Caption of the side that is not chosen
         Color4 switchTextOn;     // Caption over the thumb
+        Color4 segmentTrack; // Track of the groups of icons: the text settings of the Properties
+        Color4 segmentThumb; // Flat dark block under their chosen icon
+        Color4 segmentHover; // Block under the hovered icon, between the two
         Color4 frameObject;   // Its object marks
         Color4 frameParent;   // Its parent marks
         Color4 warning;       // Log warning mark

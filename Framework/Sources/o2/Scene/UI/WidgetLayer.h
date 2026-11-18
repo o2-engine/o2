@@ -312,10 +312,10 @@ namespace o2
         // Returns is that type of object can be transformed
         bool IsSupportsTransforming() const override;
 
-        // Returns transform, override when it's supports
+        // Returns the world transform: where the layer is drawn, with the scale and rotation of its widget
         Basis GetTransform() const override;
 
-        // Sets transform of object, override when it's supports
+        // Sets the world transform: moves and resizes the layer's layout so that it is drawn there
         void SetTransform(const Basis& transform) override;
 
         // Updates transform immediately

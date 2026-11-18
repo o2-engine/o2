@@ -287,7 +287,8 @@ namespace Editor
         Ref<Mesh>                    mHoverOutlineQuad; // Fullscreen quad for its outline composite
 
         Ref<ScenePickMenu> mPickMenu;                // Menu of the objects under the cursor, opened by a right click
-        float              mRightMouseTravel = 0.0f; // Distance the cursor went with the right button down; a short one is a click
+        Vec2F              mRightMousePressPoint;    // Screen point where the right button went down
+        float              mRightMouseTravel = 0.0f; // Farthest the cursor went from there with the button down; a short one is a click
         float  mObjectMinimalSelectionSize = 10.0f;                    // Minimal object size on pixels
 
         Vector<Ref<SceneEditableObject>> mSelectedObjects;          // Current selected objects
@@ -329,7 +330,7 @@ namespace Editor
         bool mFlyNavigation3D = false; // Is fly navigation active: right mouse held in 3D mode, WASD/QE moves camera
         bool mAltOrbit3D = false;      // Is alt+left mouse orbit navigation active in 3D mode
 
-        Vec3F mOrbitPivot3D;           // Point the 3D view orbits around: the selection center when the orbit began
+        Vec3F mOrbitPivot3D;           // Point the 3D view orbits around: the selection's bounds center when the orbit began
 
     protected:
         // Initializes tools
@@ -558,6 +559,7 @@ CLASS_FIELDS_META(Editor::SceneEditScreen)
     FIELD().PROTECTED().NAME(mHoverMaskTarget);
     FIELD().PROTECTED().NAME(mHoverOutlineQuad);
     FIELD().PROTECTED().NAME(mPickMenu);
+    FIELD().PROTECTED().NAME(mRightMousePressPoint);
     FIELD().PROTECTED().DEFAULT_VALUE(0.0f).NAME(mRightMouseTravel);
     FIELD().PROTECTED().DEFAULT_VALUE(10.0f).NAME(mObjectMinimalSelectionSize);
     FIELD().PROTECTED().NAME(mSelectedObjects);
