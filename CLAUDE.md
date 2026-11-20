@@ -14,3 +14,9 @@ When asked how the engine works or how to use a subsystem, consult these docs be
 ## Pipeline editor - three implementations
 
 The AI pipeline editor here (`Editor/Sources/o2Editor/Pipeline/`, `Editor/Sources/o2Editor/Windows/PipelineWindow/`, docs `Docs/{en,ru}/Editor/Pipeline/`) has two twins: the AssetsLine web editor + server (`AssetsLine/`: `shared/`, `backend/src/`, `frontend/src/nodeEditor/`) and the Unity plugin (`AssetsLineUnity/Packages/com.assetsline.pipelines/`). They share one `.pipeline` format and sync pipelines with each other, so a change to pipeline behaviour, a node type, a config key, the format, the executor/caching rules or the node UI must be made in all three together, with their tests and docs - otherwise synced pipelines diverge.
+
+<!-- o2 agent memory: imports -->
+## Agent memory
+
+The lessons the agents keep about the o2 engine and any project on it (synced with the o2 portal):
+@AgentMemory.md
