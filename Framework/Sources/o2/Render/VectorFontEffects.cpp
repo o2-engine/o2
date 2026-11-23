@@ -2,6 +2,7 @@
 #include "VectorFontEffects.h"
 
 #include "o2/Utils/Bitmap/Bitmap.h"
+#include "o2/Utils/Debug/Profiling/NanoProfiler.h"
 
 namespace o2
 {
@@ -12,6 +13,7 @@ namespace o2
 
     void FontStrokeEffect::Process(Bitmap& bitmap)
     {
+        PROFILE_SAMPLE("Font effect: stroke");
         bitmap.Outline(radius, color, alphaThreshold);
     }
 
@@ -38,6 +40,7 @@ namespace o2
 
     void FontGradientEffect::Process(Bitmap& bitmap)
     {
+        PROFILE_SAMPLE("Font effect: gradient");
         bitmap.GradientByAlpha(color1, color2, angle, length, origin);
     }
 
@@ -86,6 +89,7 @@ namespace o2
 
     void FontShadowEffect::Process(Bitmap& bitmap)
     {
+        PROFILE_SAMPLE("Font effect: shadow");
         // The shadow takes the glyph's coverage, not its colours: a fill or an outline before it never tints it
         Bitmap shadow(bitmap);
         if (shadow.GetFormat() == PixelFormat::R8G8B8A8)

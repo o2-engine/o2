@@ -4,7 +4,13 @@
 #include "o2/Utils/Bitmap/PngFormat.h"
 #include "o2/Utils/Bitmap/StbImageFormat.h"
 #include "o2/Utils/Debug/Debug.h"
+#include "o2/Utils/Debug/Profiling/NanoProfiler.h"
 #include "o2/Utils/Reflection/Reflection.h"
+
+#include <algorithm>
+#include <cstring>
+#include <unordered_map>
+#include <vector>
 
 namespace o2
 {
@@ -312,7 +318,8 @@ namespace o2
         }
     }
 
-    void Bitmap::Blur(float radius)
+    // The straightforward blur: every channel of every pixel gathered from the whole square around it
+    static void BlurGeneric(UInt8* mData, const Vec2I& mSize, PixelFormat mFormat, float radius)
     {
         int mapSize = Math::CeilToInt(radius);
         int fullmapSize = mapSize * 2 + 1;
@@ -372,7 +379,8 @@ namespace o2
         delete[] srcData;
     }
 
-    void Bitmap::Outline(float radius, const Color4& color, int threshold /*= 100*/)
+    // The straightforward outline: the solid pixels counted in the whole square around every pixel
+    static void OutlineGeneric(UInt8* mData, const Vec2I& mSize, PixelFormat mFormat, float radius, const Color4& color, int threshold)
     {
         int mapSize = Math::CeilToInt(radius);
         int fullmapSize = mapSize * 2 + 1;
@@ -435,6 +443,201 @@ namespace o2
         }
 
         delete[] srcData;
+    }
+
+    // Weight of the blur at an offset: a cone from 1 in the middle to 0 at the radius (as BlurGeneric computes it)
+    static float BlurWeight(int dx, int dy, float radius)
+    {
+        float x = (float)dx, y = (float)dy;
+        float dst = Math::Sqrt(x*x + y*y);
+        return Math::Clamp01(1.0f - dst / radius);
+    }
+
+    void Bitmap::Blur(float radius)
+    {
+        PROFILE_SAMPLE("Bitmap::Blur");
+
+        int mapSize = Math::CeilToInt(radius);
+        const int w = mSize.x, h = mSize.y, m = mapSize;
+        if (mFormat != PixelFormat::R8G8B8A8 || w <= 0 || h <= 0)
+        {
+            BlurGeneric(mData, mSize, mFormat, radius);
+            return;
+        }
+
+        // The fast path takes the bitmaps a font shadow blurs: one colour, the coverage in the alpha. Then the
+        // colour sums depend only on which part of the square fits the bitmap, and the alpha is spread from the
+        // covered pixels alone. Every sum is the one BlurGeneric makes, term for term: the same result to a bit
+        UInt32* pixels = (UInt32*)mData;
+        const UInt32 rgbMask = 0x00FFFFFF;
+        const UInt32 rgb = pixels[0] & rgbMask;
+        for (int i = 1; i < w*h; i++)
+        {
+            if ((pixels[i] & rgbMask) != rgb)
+            {
+                BlurGeneric(mData, mSize, mFormat, radius);
+                return;
+            }
+        }
+
+        // the square's taps with a weight, in the order BlurGeneric adds them (dx outer, dy inner)
+        struct Tap { int dx, dy, weightIndex; };
+        std::vector<Tap> taps;
+        std::vector<float> weights;
+        for (int dx = -m; dx <= m; dx++)
+        {
+            for (int dy = -m; dy <= m; dy++)
+            {
+                float weight = BlurWeight(dx, dy, radius);
+                if (weight <= 0.0f)
+                    continue;
+                int index = (int)(std::find(weights.begin(), weights.end(), weight) - weights.begin());
+                if (index == (int)weights.size())
+                    weights.push_back(weight);
+                taps.push_back({ dx, dy, index });
+            }
+        }
+
+        // a weighted channel, truncated per tap as Color4*float does
+        std::vector<int> table(weights.size()*256);
+        for (int i = 0; i < (int)weights.size(); i++)
+            for (int v = 0; v < 256; v++)
+                table[i*256 + v] = (int)((float)v*weights[i]);
+
+        // the colour: sums and the weight of the taps that fit, by the part of the square that fits
+        const int colour[3] = { (int)(rgb & 0xFF), (int)((rgb >> 8) & 0xFF), (int)((rgb >> 16) & 0xFF) };
+        struct Part { float weightSum = 0; int sums[3] = { 0, 0, 0 }; };
+        std::unordered_map<UInt64, Part> parts;
+        auto partOf = [&](int x, int y) -> const Part& {
+            int dxMin = Math::Max(-m, -x), dxMax = Math::Min(m, w - 1 - x);
+            int dyMin = Math::Max(-m, -y), dyMax = Math::Min(m, h - 1 - y);
+            UInt64 key = ((UInt64)(dxMin + m) << 48) | ((UInt64)(dxMax + m) << 32) | ((UInt64)(dyMin + m) << 16) | (UInt64)(dyMax + m);
+            auto found = parts.find(key);
+            if (found != parts.end())
+                return found->second;
+
+            Part part;
+            for (auto& tap : taps)
+            {
+                if (tap.dx < dxMin || tap.dx > dxMax || tap.dy < dyMin || tap.dy > dyMax)
+                    continue;
+                part.weightSum += weights[tap.weightIndex];
+                for (int c = 0; c < 3; c++)
+                    part.sums[c] += table[tap.weightIndex*256 + colour[c]];
+            }
+            return parts[key] = part;
+        };
+
+        // the alpha: every covered pixel adds its weighted coverage to the pixels whose square holds it
+        std::vector<int> alphaSums(w*h, 0);
+        for (int sy = 0; sy < h; sy++)
+        {
+            for (int sx = 0; sx < w; sx++)
+            {
+                int alpha = (int)(pixels[sy*w + sx] >> 24);
+                if (alpha == 0)
+                    continue;
+
+                const int* row = table.data() + alpha;
+                bool inside = sx - m >= 0 && sx + m < w && sy - m >= 0 && sy + m < h;
+                for (auto& tap : taps)
+                {
+                    int tx = sx - tap.dx, ty = sy - tap.dy;
+                    if (!inside && (tx < 0 || tx >= w || ty < 0 || ty >= h))
+                        continue;
+                    alphaSums[ty*w + tx] += row[tap.weightIndex*256];
+                }
+            }
+        }
+
+        for (int y = 0; y < h; y++)
+        {
+            for (int x = 0; x < w; x++)
+            {
+                const Part& part = partOf(x, y);
+                float inverse = 1.0f/part.weightSum;
+                UInt32 r = (UInt32)(int)((float)part.sums[0]*inverse);
+                UInt32 g = (UInt32)(int)((float)part.sums[1]*inverse);
+                UInt32 b = (UInt32)(int)((float)part.sums[2]*inverse);
+                UInt32 a = (UInt32)(int)((float)alphaSums[y*w + x]*inverse);
+                pixels[y*w + x] = r | (g << 8) | (b << 16) | (a << 24);
+            }
+        }
+    }
+
+    void Bitmap::Outline(float radius, const Color4& color, int threshold /*= 100*/)
+    {
+        PROFILE_SAMPLE("Bitmap::Outline");
+
+        const int w = mSize.x, h = mSize.y, m = Math::CeilToInt(radius);
+        if (mFormat != PixelFormat::R8G8B8A8 || w <= 0 || h <= 0)
+        {
+            OutlineGeneric(mData, mSize, mFormat, radius, color, threshold);
+            return;
+        }
+
+        // Per pixel the outline needs how many solid pixels (alpha over the threshold) the square around it holds
+        // and the sum of their squared distances: both come from summed-area tables of the solid pixels, of their
+        // coordinates and of the squares of those - the same integers OutlineGeneric counts, in O(1) a pixel
+        std::vector<UInt8> source(mData, mData + w*h*4);
+
+        const int stride = w + 1;
+        const size_t cells = (size_t)(w + 1)*(h + 1);
+        std::vector<Int64> count(cells, 0), sumX(cells, 0), sumY(cells, 0), sumXX(cells, 0), sumYY(cells, 0);
+        for (int y = 0; y < h; y++)
+        {
+            int row = (y + 1)*stride;
+            Int64 lineCount = 0, lineX = 0, lineY = 0, lineXX = 0, lineYY = 0;
+            for (int x = 0; x < w; x++)
+            {
+                if (source[(y*w + x)*4 + 3] > threshold)
+                {
+                    lineCount++; lineX += x; lineY += y; lineXX += (Int64)x*x; lineYY += (Int64)y*y;
+                }
+                int at = row + x + 1, above = at - stride;
+                count[at] = count[above] + lineCount;
+                sumX[at] = sumX[above] + lineX;
+                sumY[at] = sumY[above] + lineY;
+                sumXX[at] = sumXX[above] + lineXX;
+                sumYY[at] = sumYY[above] + lineYY;
+            }
+        }
+        auto area = [&](const std::vector<Int64>& table, int x0, int y0, int x1, int y1) {
+            return table[(y1 + 1)*stride + x1 + 1] - table[y0*stride + x1 + 1] - table[(y1 + 1)*stride + x0] + table[y0*stride + x0];
+        };
+
+        for (int x = 0; x < w; x++)
+        {
+            for (int y = 0; y < h; y++)
+            {
+                int x0 = Math::Max(0, x - m), x1 = Math::Min(w - 1, x + m);
+                int y0 = Math::Max(0, y - m), y1 = Math::Min(h - 1, y + m);
+                Int64 n = area(count, x0, y0, x1, y1);
+                if (n == 0)
+                    continue;
+
+                Int64 distances = area(sumXX, x0, y0, x1, y1) - 2*(Int64)x*area(sumX, x0, y0, x1, y1) + n*x*x +
+                                  area(sumYY, x0, y0, x1, y1) - 2*(Int64)y*area(sumY, x0, y0, x1, y1) + n*y*y;
+
+                // as OutlineGeneric: a float sum of whole numbers (exact below 2^24), then the mean
+                float sqrDist = (float)distances;
+                sqrDist /= (float)n;
+                float distance = Math::Sqrt((float)sqrDist);
+                if (distance < radius + 1.0f)
+                {
+                    UInt offs = (y*w + x)*4;
+                    Color4 pc;
+                    pc.SetABGR(*(Color32Bit*)&source[offs]);
+
+                    Color4 stroke = color;
+                    stroke.a = (int)((float)stroke.a*Math::Clamp01(1.0f - (distance - radius)));
+
+                    Color4 newColor = pc.BlendByAlpha(stroke);
+                    Color32Bit unewColor = newColor.ABGR();
+                    memcpy(&mData[offs], &unewColor, 4);
+                }
+            }
+        }
     }
 
     Ref<Bitmap> Bitmap::Resized(const Vec2I& newSize) const

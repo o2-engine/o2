@@ -13,6 +13,7 @@
 #include "o2/Render/VectorGraphics/VectorTessellator.h"
 #include "o2/Utils/Bitmap/Bitmap.h"
 #include "o2/Utils/Debug/Log/LogStream.h"
+#include "o2/Utils/Debug/Profiling/NanoProfiler.h"
 #include "o2/Utils/FileSystem/File.h"
 #include "o2/Utils/System/Time/Timer.h"
 
@@ -338,6 +339,8 @@ namespace o2
         if (!mFreeTypeFace)
             return;
 
+        PROFILE_SAMPLE("Font: render new glyphs");
+
         // Advances stay the ones of the single density: text layout does not depend on the screen
         Vector<float> advances;
         FT_Set_Char_Size(mFreeTypeFace, 0, height*64, mResolution, mResolution);
@@ -370,7 +373,10 @@ namespace o2
             wchar_t ch = newCharacters[i];
             CharDef newCharDef;
 
-            FT_Load_Char(mFreeTypeFace, ch, LoadFlags());
+            {
+                PROFILE_SAMPLE("Font: FreeType glyph");
+                FT_Load_Char(mFreeTypeFace, ch, LoadFlags());
+            }
             auto glyph = mFreeTypeFace->glyph;
 
             Vec2I glyphSize(glyph->bitmap.width, glyph->bitmap.rows);
@@ -412,6 +418,7 @@ namespace o2
 
     void VectorFont::PackCharacter(CharDef& character, int height)
     {
+        PROFILE_SAMPLE("Font: pack glyph into the atlas");
         Ref<PackLine> packLine;
 
         while (!packLine)
@@ -433,6 +440,7 @@ namespace o2
                 }
                 else
                 {
+                    PROFILE_SAMPLE("Font: grow the atlas");
                     TextureRef lastTexture = mTexture;
                     mTexture = TextureRef(lastTexture->GetSize()*2, TextureFormat::R8G8B8A8, Texture::Usage::Default);
                     mTexture->SetName(lastTexture->GetName());
