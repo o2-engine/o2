@@ -45,7 +45,13 @@ namespace o2
     void ApplicationPlatformWrapper::CallUpdate()
     {
         if (Application::IsSingletonInitialzed())
+        {
+            // the island, the rounded corners and the home indicator, in points as the content size
+            UIEdgeInsets insets = view.safeAreaInsets;
+            o2Application.SetPlatformSafeAreaInsets(BorderF((float)insets.left, (float)insets.bottom,
+                                                            (float)insets.right, (float)insets.top));
             o2Application.Update();
+        }
     }
 
     void Application::Run(int argc, char** argv)

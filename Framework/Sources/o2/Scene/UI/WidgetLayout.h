@@ -354,6 +354,7 @@ namespace o2
         friend class GridLayout;
         friend class HorizontalLayout;
         friend class Label;
+        friend class SafeArea;
         friend class ScrollArea;
         friend class Spoiler;
         friend class Tree;

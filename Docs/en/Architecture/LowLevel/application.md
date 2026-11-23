@@ -27,6 +27,14 @@ Physics and the fixed scene update are processed with a fixed step (`fixedFPS`):
 
 To inject code into the update or drawing loop, the `OnUpdate()`, `OnFixedUpdate()` and `OnDraw()` functions can be overridden
 
+## Safe area
+`GetSafeAreaInsets()` returns how far the rounded corners, the notch or the island, the status bar and the home
+indicator reach into the content from each side, in the units of the content size; the platform reports them every
+frame (`SetPlatformSafeAreaInsets`). The `SafeArea` widget lays the interface out by them, see
+[UI](/Docs/en/Architecture/HighLevel/ui.md). The iOS view controller hides the status bar and the home indicator: the
+game takes the whole screen. A camera actor whose frame changes (a new window size, a turned device) lays its children
+out again.
+
 ## Background window
 `Integration::SetBackgroundWindow(true)`, called before `Initialize()`, brings the window up without
 making it key and keeps the application out of the Dock / task switcher (accessory activation policy

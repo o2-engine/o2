@@ -54,6 +54,56 @@ EM_JS(int, o2_IsHtmlInputFocused, (), {
     return (tag === 'INPUT' || tag === 'TEXTAREA' || el.isContentEditable) ? 1 : 0;
 });
 
+// The safe area: where the page's env(safe-area-inset-*) reaches into the canvas (the page needs viewport-fit=cover for
+// it), measured now and then, or what a hosting page sets as window.o2SafeArea = {top, right, bottom, left} in CSS
+// pixels of the canvas - an emulated device, or a frame that cannot see the screen's notch itself. Writes left, bottom,
+// right, top
+EM_JS(void, o2_ReadSafeArea, (float* out), {
+    if (!Module.__o2SafeAreaRead)
+    {
+        Module.__o2SafeAreaRead = function() {
+            var o = window.o2SafeArea;
+            if (o)
+                return [+o.left || 0, +o.bottom || 0, +o.right || 0, +o.top || 0];
+
+            var s = Module.__o2SafeArea;
+            if (s && s.frames-- > 0)
+                return s.value;
+
+            var probe = Module.__o2SafeAreaProbe;
+            if (!probe && document.body)
+            {
+                probe = Module.__o2SafeAreaProbe = document.createElement('div');
+                probe.style.cssText = 'position:fixed;left:0;top:0;width:0;height:0;visibility:hidden;' +
+                    'pointer-events:none;padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) ' +
+                    'env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px)';
+                document.body.appendChild(probe);
+            }
+
+            var value = [0, 0, 0, 0];
+            if (probe)
+            {
+                var cs = getComputedStyle(probe);
+                var canvas = document.getElementById('canvas');
+                var r = canvas ? canvas.getBoundingClientRect() : null;
+                var w = window.innerWidth, h = window.innerHeight;
+                var left = parseFloat(cs.paddingLeft) || 0, right = parseFloat(cs.paddingRight) || 0;
+                var top = parseFloat(cs.paddingTop) || 0, bottom = parseFloat(cs.paddingBottom) || 0;
+                value = r ? [Math.max(0, left - r.left), Math.max(0, bottom - (h - r.bottom)),
+                             Math.max(0, right - (w - r.right)), Math.max(0, top - r.top)]
+                          : [left, bottom, right, top];
+            }
+
+            Module.__o2SafeArea = { value: value, frames: 30 };
+            return value;
+        };
+    }
+
+    var v = Module.__o2SafeAreaRead();
+    for (var i = 0; i < 4; i++)
+        HEAPF32[(out >> 2) + i] = v[i];
+});
+
 namespace o2
 {
     // Last character produced by each virtual key, captured from DOM keydown
@@ -250,8 +300,12 @@ namespace o2
             return EM_TRUE;
         }
 
+        float gSafeArea[4] = { 0, 0, 0, 0 }; // left, bottom, right, top; see o2_ReadSafeArea
+
         EM_BOOL OnResize(int, const EmscriptenUiEvent*, void*)
         {
+            EM_ASM({ if (Module.__o2SafeArea) Module.__o2SafeArea.frames = 0; });
+
             double w = 0, h = 0;
             emscripten_get_element_css_size("#canvas", &w, &h);
             Vec2I newSize((int)w, (int)h);
@@ -345,6 +399,9 @@ namespace o2
 
     void Application::Update()
     {
+        o2_ReadSafeArea(gSafeArea);
+        SetPlatformSafeAreaInsets(BorderF(gSafeArea[0], gSafeArea[1], gSafeArea[2], gSafeArea[3]));
+
         ProcessFrame();
     }
 

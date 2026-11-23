@@ -25,6 +25,17 @@
 
 @implementation RenderViewController
 
+// the game takes the whole screen: the safe area tells it where the island and the home indicator are
+- (BOOL)prefersStatusBarHidden
+{
+    return YES;
+}
+
+- (BOOL)prefersHomeIndicatorAutoHidden
+{
+    return YES;
+}
+
 @end
 
 @implementation RenderView

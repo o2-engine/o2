@@ -76,3 +76,39 @@ Widgets allow making such elements internal: they behave like children, but enum
 - `Window` - window with a caption and a close button
 - `Spoiler` - collapsible container
 - `PopupWidget` - popup widget drawn on top of the rest of the UI
+- `SafeArea` - the part of the camera's frame the device keeps clear, see below
+
+### Safe area
+`SafeArea` lives inside a camera actor (a child at any depth) and takes the part of the camera's frame the device keeps
+clear: no rounded corners, notch or island, status bar or home indicator. Put the interface people touch inside it and
+the graphics that fill the screen (backgrounds, dimmers) outside, next to it. It lays itself out every frame the scene
+updates, through scaled parents too (a screen designed in its own units), so its own anchors and offsets do not count
+there; `left`/`right`/`top`/`bottom` let a side through. `GetSafeWorldRect()` returns the rectangle in world units -
+a screen of a fixed design can scale itself to fit it.
+
+Without a camera actor above (a prototype opened alone in the editor) the area keeps the layout it was given: lay it out
+as on the target device, and the editor shows the screen as that device does. In the editor the scene does not update,
+so nothing moves there either.
+
+The insets come from `o2Integration.GetSafeAreaInsets()` (`BorderF`, in the units of the content size: points, CSS
+pixels): iOS - the view's `safeAreaInsets`, Android - the cutout, the bars on screen and the rounded corners
+(`NativeBridge.safeArea` from `MainActivity` of the project's Android platform), the web - `env(safe-area-inset-*)` where
+it reaches into the canvas (the page needs `viewport-fit=cover`) or `window.o2SafeArea = {top, right, bottom, left}` set
+by a page that shows the game in an emulated device, macOS - the screen's safe area in full screen, elsewhere zero.
+`SetSafeAreaOverride()` emulates a device (tests, tools); `ResetSafeAreaOverride()` drops it.
+
+<details>
+<summary>Screen with a safe area</summary>
+
+```
+ui camera (CameraActor, FittedSize 1179x2556)
+  MainScreen (Widget, the camera's frame)
+    backdrop (Image, the whole screen)
+    safe_area (SafeArea)
+      top_hud, play_button, bottom_navigation
+```
+
+```cpp
+o2Integration.SetSafeAreaOverride(BorderF(0, 34, 0, 59)); // iPhone 16 in portrait: left, bottom, right, top
+```
+</details>

@@ -77,6 +77,9 @@ namespace o2
         // Returns current camera units
         Units GetUnits() const;
 
+        // Returns the resolution of the frame the camera was last set up for: its size in world units maps onto it
+        Vec2F GetRenderResolution() const;
+
         // Sets rendering pipeline. Null means the default forward pipeline
         void SetRenderPipeline(const Ref<RenderPipeline>& pipeline);
 
@@ -102,6 +105,8 @@ namespace o2
         float mFov = Math::Deg2rad(60.0f); // Perspective field of view in radians @SERIALIZABLE
         float mNearClip = 0.1f;            // Perspective near clipping plane @SERIALIZABLE
         float mFarClip = 1000.0f;          // Perspective far clipping plane @SERIALIZABLE
+
+        mutable Vec2F mRenderResolution; // The resolution of the frame the camera was last set up for
 
     protected:
         // Called when actor has added to scene
@@ -138,6 +143,7 @@ CLASS_FIELDS_META(o2::CameraActor)
     FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(Math::Deg2rad(60.0f)).NAME(mFov);
     FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(0.1f).NAME(mNearClip);
     FIELD().PROTECTED().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(1000.0f).NAME(mFarClip);
+    FIELD().PROTECTED().NAME(mRenderResolution);
 }
 END_META;
 CLASS_METHODS_META(o2::CameraActor)
@@ -159,6 +165,7 @@ CLASS_METHODS_META(o2::CameraActor)
     FUNCTION().PUBLIC().SIGNATURE(Type, GetCameraType);
     FUNCTION().PUBLIC().SIGNATURE(const Vec2F&, GetFittedOrFixedSize);
     FUNCTION().PUBLIC().SIGNATURE(Units, GetUnits);
+    FUNCTION().PUBLIC().SIGNATURE(Vec2F, GetRenderResolution);
     FUNCTION().PUBLIC().SIGNATURE(void, SetRenderPipeline, const Ref<RenderPipeline>&);
     FUNCTION().PUBLIC().SIGNATURE(const Ref<RenderPipeline>&, GetRenderPipeline);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(const Ref<RenderPipeline>&, GetDefaultRenderPipeline);

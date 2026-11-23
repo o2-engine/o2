@@ -147,6 +147,19 @@ namespace o2
             gRunLoopZoneOpened = false;
         }
 
+        // full screen on a display with a camera housing: the strip beside it is not the game's
+        BorderF safeArea;
+        NSWindow* window = ApplicationPlatformWrapper::window;
+        if (window && ([window styleMask] & NSWindowStyleMaskFullScreen))
+        {
+            if (@available(macOS 12.0, *))
+            {
+                NSEdgeInsets insets = window.screen.safeAreaInsets;
+                safeArea = BorderF((float)insets.left, (float)insets.bottom, (float)insets.right, (float)insets.top);
+            }
+        }
+        SetPlatformSafeAreaInsets(safeArea);
+
         ProcessFrame();
     }
 

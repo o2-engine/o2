@@ -161,9 +161,19 @@ namespace o2
             default: camera = Camera::Default(); break;
         }
 
+        mRenderResolution = o2Render.GetCurrentResolution();
+
+        // children laid out by the camera's frame (screens, a safe area) follow a new window size or orientation
+        bool resized = transform->GetSize2D() != camera.GetSize2D();
         transform->size2D = camera.GetSize2D();
         transform->Update();
         camera.basis = transform->worldBasis;
+
+        if (resized)
+        {
+            for (auto& child : mChildren)
+                child->transform->SetDirty(true);
+        }
 
         return camera;
     }
@@ -229,6 +239,11 @@ namespace o2
     Units CameraActor::GetUnits() const
     {
         return mUnits;
+    }
+
+    Vec2F CameraActor::GetRenderResolution() const
+    {
+        return mRenderResolution;
     }
 
     void CameraActor::SetRenderPipeline(const Ref<RenderPipeline>& pipeline)

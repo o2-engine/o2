@@ -635,6 +635,32 @@ namespace o2
         return mReady;
     }
 
+    BorderF Integration::GetSafeAreaInsets() const
+    {
+        return mSafeAreaOverridden ? mSafeAreaOverride : mPlatformSafeAreaInsets;
+    }
+
+    void Integration::SetSafeAreaOverride(const BorderF& insets)
+    {
+        mSafeAreaOverride = insets;
+        mSafeAreaOverridden = true;
+    }
+
+    void Integration::ResetSafeAreaOverride()
+    {
+        mSafeAreaOverridden = false;
+    }
+
+    bool Integration::IsSafeAreaOverridden() const
+    {
+        return mSafeAreaOverridden;
+    }
+
+    void Integration::SetPlatformSafeAreaInsets(const BorderF& insets)
+    {
+        mPlatformSafeAreaInsets = insets;
+    }
+
     bool Integration::IsEditor() const
     {
         return IS_EDITOR;

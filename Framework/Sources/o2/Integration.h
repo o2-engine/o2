@@ -2,6 +2,7 @@
 
 #include "o2/Events/CursorAreaEventsListenersLayer.h"
 #include "o2/Utils/Function/Function.h"
+#include "o2/Utils/Math/Border.h"
 #include "o2/Utils/Math/Vector2.h"
 #include "o2/Utils/Property.h"
 #include "o2/Utils/Singleton.h"
@@ -132,6 +133,23 @@ namespace o2
 		// Returns application's path
 		virtual String GetBinPath() const { return String(); }
 
+		// Returns the safe area insets: how far the rounded corners, the notch or the island, the status bar and the
+		// home indicator reach into the content from each side, in the units of the content size (points, CSS
+		// pixels). An override wins over what the platform reports. Zero on desktops in a window
+		BorderF GetSafeAreaInsets() const;
+
+		// Emulates the safe area of a device: the editor's game view, tests, a page showing the game in a device
+		void SetSafeAreaOverride(const BorderF& insets);
+
+		// Drops the emulated safe area: the platform's one is used again
+		void ResetSafeAreaOverride();
+
+		// Returns true when the safe area is emulated
+		bool IsSafeAreaOverridden() const;
+
+		// Sets the safe area the platform reports, in the units of the content size. Called by the platform layer
+		void SetPlatformSafeAreaInsets(const BorderF& insets);
+
         IOBJECT(Integration);
 
     protected:
@@ -141,6 +159,10 @@ namespace o2
                                // and route asserts to the log
 
         static bool sBackgroundWindow; // Show the window without taking the focus
+
+        BorderF mPlatformSafeAreaInsets;      // The safe area the platform reports
+        BorderF mSafeAreaOverride;            // The emulated safe area
+        bool    mSafeAreaOverridden = false;  // Is the safe area emulated
 
         Ref<Assets>        mAssets;        // Assets
         Ref<EventSystem>   mEventSystem;   // Events processing system
@@ -324,6 +346,9 @@ CLASS_FIELDS_META(o2::Integration)
     FIELD().PUBLIC().DEFAULT_VALUE(600).NAME(maxFPS);
     FIELD().PUBLIC().DEFAULT_VALUE(60).NAME(fixedFPS);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mReady);
+    FIELD().PROTECTED().NAME(mPlatformSafeAreaInsets);
+    FIELD().PROTECTED().NAME(mSafeAreaOverride);
+    FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mSafeAreaOverridden);
     FIELD().PROTECTED().NAME(mAssets);
     FIELD().PROTECTED().NAME(mEventSystem);
     FIELD().PROTECTED().NAME(mFileSystem);
@@ -380,6 +405,11 @@ CLASS_METHODS_META(o2::Integration)
     FUNCTION().PUBLIC().SIGNATURE(bool, IsCursorInfiniteModeOn);
     FUNCTION().PUBLIC().SIGNATURE(float, GetGraphicsScale);
     FUNCTION().PUBLIC().SIGNATURE(String, GetBinPath);
+    FUNCTION().PUBLIC().SIGNATURE(BorderF, GetSafeAreaInsets);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetSafeAreaOverride, const BorderF&);
+    FUNCTION().PUBLIC().SIGNATURE(void, ResetSafeAreaOverride);
+    FUNCTION().PUBLIC().SIGNATURE(bool, IsSafeAreaOverridden);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetPlatformSafeAreaInsets, const BorderF&);
     FUNCTION().PROTECTED().SIGNATURE(void, BasicInitialize);
     FUNCTION().PROTECTED().SIGNATURE(void, InitializePlatform);
     FUNCTION().PROTECTED().SIGNATURE(void, InitalizeSystems);

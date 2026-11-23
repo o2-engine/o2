@@ -280,6 +280,7 @@ extern void __RegisterClass__o2__LongList();
 extern void __RegisterClass__o2__MenuPanel();
 extern void __RegisterClass__o2__MenuPanel__Item();
 extern void __RegisterClass__o2__PopupWidget();
+extern void __RegisterClass__o2__SafeArea();
 extern void __RegisterClass__o2__ScrollArea();
 extern void __RegisterClass__o2__Spoiler();
 extern void __RegisterClass__o2__Toggle();
@@ -591,6 +592,7 @@ extern void InitializeTypeso2Framework()
     __RegisterClass__o2__MenuPanel();
     __RegisterClass__o2__MenuPanel__Item();
     __RegisterClass__o2__PopupWidget();
+    __RegisterClass__o2__SafeArea();
     __RegisterClass__o2__ScrollArea();
     __RegisterClass__o2__Spoiler();
     __RegisterClass__o2__Toggle();
