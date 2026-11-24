@@ -20,6 +20,10 @@ namespace o2
         bool top = true;    // Keeps clear of the top inset @SERIALIZABLE @SCRIPTABLE
         bool bottom = true; // Keeps clear of the bottom inset @SERIALIZABLE @SCRIPTABLE
 
+        // The larger inset of each axis on both sides: the area stays centred in the camera's frame, for a design placed
+        // from the frame's centre (effects that count from it keep hitting their targets) @SERIALIZABLE @SCRIPTABLE
+        bool symmetric = false;
+
     public:
         // Default constructor @SCRIPTABLE
         explicit SafeArea(RefCounter* refCounter);
@@ -69,6 +73,7 @@ CLASS_FIELDS_META(o2::SafeArea)
     FIELD().PUBLIC().SCRIPTABLE_ATTRIBUTE().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(true).NAME(right);
     FIELD().PUBLIC().SCRIPTABLE_ATTRIBUTE().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(true).NAME(top);
     FIELD().PUBLIC().SCRIPTABLE_ATTRIBUTE().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(true).NAME(bottom);
+    FIELD().PUBLIC().SCRIPTABLE_ATTRIBUTE().SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(false).NAME(symmetric);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mWarnedNoCamera);
 }
 END_META;

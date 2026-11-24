@@ -204,6 +204,21 @@ TEST(SafeArea, WithoutACameraKeepsItsLayout)
     EXPECT_NEAR(drawn.left, DrawnRect(panel).left, 0.01f);
 }
 
+// Symmetric: the larger inset of each axis on both sides, the area stays centred in the camera's frame
+TEST(SafeArea, SymmetricStaysCentred)
+{
+	SceneCleanGuard guard;
+	SafeAreaOverrideGuard overrideGuard;
+	o2Integration.SetSafeAreaOverride(BorderF(10, 34, 0, 59));
+	auto rig = MakeRig();
+	rig.area->symmetric = true;
+	TickAndUpdateLayout(1);
+
+	ExpectRect(DrawnRect(rig.area), Expected(rig.camera, BorderF(10, 59, 10, 59)), "mirrored insets");
+	RectF frame = rig.camera->transform->GetWorldRect();
+	EXPECT_NEAR(DrawnRect(rig.area).Center().y, frame.Center().y, 1.5f);
+}
+
 // A copy keeps the sides
 TEST(SafeArea, CopyKeepsTheSides)
 {
@@ -211,10 +226,12 @@ TEST(SafeArea, CopyKeepsTheSides)
     auto area = mmake<SafeArea>();
     area->top = false;
     area->right = false;
+    area->symmetric = true;
 
     auto copy = area->CloneAsRef<SafeArea>();
     EXPECT_FALSE(copy->top);
     EXPECT_FALSE(copy->right);
     EXPECT_TRUE(copy->left);
     EXPECT_TRUE(copy->bottom);
+    EXPECT_TRUE(copy->symmetric);
 }

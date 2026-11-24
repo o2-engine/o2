@@ -14,7 +14,8 @@ namespace o2
     {}
 
     SafeArea::SafeArea(RefCounter* refCounter, const SafeArea& other):
-        Widget(refCounter, other), left(other.left), right(other.right), top(other.top), bottom(other.bottom)
+        Widget(refCounter, other), left(other.left), right(other.right), top(other.top), bottom(other.bottom),
+        symmetric(other.symmetric)
     {}
 
     SafeArea& SafeArea::operator=(const SafeArea& other)
@@ -25,6 +26,7 @@ namespace o2
         right = other.right;
         top = other.top;
         bottom = other.bottom;
+        symmetric = other.symmetric;
 
         return *this;
     }
@@ -62,10 +64,15 @@ namespace o2
         Vec2F unit(frame.Width()/resolution.x, frame.Height()/resolution.y);
         BorderF insets = Integration::IsSingletonInitialzed() ? o2Integration.GetSafeAreaInsets() : BorderF();
 
-        return RectF(frame.left + (left ? insets.left*unit.x : 0.0f),
-                     frame.bottom + (bottom ? insets.bottom*unit.y : 0.0f),
-                     frame.right - (right ? insets.right*unit.x : 0.0f),
-                     frame.top - (top ? insets.top*unit.y : 0.0f));
+        float l = left ? insets.left : 0.0f, r = right ? insets.right : 0.0f;
+        float b = bottom ? insets.bottom : 0.0f, t = top ? insets.top : 0.0f;
+        if (symmetric)
+        {
+            l = r = Math::Max(l, r);
+            b = t = Math::Max(b, t);
+        }
+
+        return RectF(frame.left + l*unit.x, frame.bottom + b*unit.y, frame.right - r*unit.x, frame.top - t*unit.y);
     }
 
     void SafeArea::Fit()

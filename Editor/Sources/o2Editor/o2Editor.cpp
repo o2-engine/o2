@@ -213,7 +213,6 @@ extern void __RegisterClass__Editor__DockWindowPlace();
 extern void __RegisterClass__Editor__DockableWindow();
 extern void __RegisterClass__Editor__GameWindow();
 extern void __RegisterClass__Editor__GameWindow__GameView();
-extern void __RegisterClass__Editor__GameWindow__SimulationDevice();
 extern void __RegisterClass__Editor__IAssetEditorWindow();
 extern void __RegisterClass__Editor__IEditorWindow();
 extern void __RegisterClass__Editor__LogWindow();
@@ -505,7 +504,6 @@ extern void InitializeTypeso2Editor()
     __RegisterClass__Editor__DockableWindow();
     __RegisterClass__Editor__GameWindow();
     __RegisterClass__Editor__GameWindow__GameView();
-    __RegisterClass__Editor__GameWindow__SimulationDevice();
     __RegisterClass__Editor__IAssetEditorWindow();
     __RegisterClass__Editor__IEditorWindow();
     __RegisterClass__Editor__LogWindow();

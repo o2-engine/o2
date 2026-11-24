@@ -218,6 +218,26 @@ namespace Editor
         mAssetsView = value;
     }
 
+    String EditorConfig::ProjectConfig::GetGameDevice() const
+    {
+        return mGameDevice;
+    }
+
+    void EditorConfig::ProjectConfig::SetGameDevice(const String& value)
+    {
+        mGameDevice = value;
+    }
+
+    bool EditorConfig::ProjectConfig::GetGameDeviceLandscape() const
+    {
+        return mGameDeviceLandscape;
+    }
+
+    void EditorConfig::ProjectConfig::SetGameDeviceLandscape(bool value)
+    {
+        mGameDeviceLandscape = value;
+    }
+
     void EditorConfig::ProjectConfig::SetLastLoadedScene(const String& value)
     {
         if (mLastLoadedScene == value)

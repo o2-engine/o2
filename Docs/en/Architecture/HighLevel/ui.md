@@ -83,7 +83,8 @@ Widgets allow making such elements internal: they behave like children, but enum
 clear: no rounded corners, notch or island, status bar or home indicator. Put the interface people touch inside it and
 the graphics that fill the screen (backgrounds, dimmers) outside, next to it. It lays itself out every frame the scene
 updates, through scaled parents too (a screen designed in its own units), so its own anchors and offsets do not count
-there; `left`/`right`/`top`/`bottom` let a side through. `GetSafeWorldRect()` returns the rectangle in world units -
+there; `left`/`right`/`top`/`bottom` let a side through, `symmetric` puts the larger inset of each axis on both sides,
+so the area stays centred in the camera's frame (for a fixed design whose effects count from the frame's centre). `GetSafeWorldRect()` returns the rectangle in world units -
 a screen of a fixed design can scale itself to fit it.
 
 Without a camera actor above (a prototype opened alone in the editor) the area keeps the layout it was given: lay it out
