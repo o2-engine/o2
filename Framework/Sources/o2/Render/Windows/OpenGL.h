@@ -5,8 +5,8 @@
 #include <windows.h>    
 #include <GL/gl.h>
 #include <GL/glu.h>
-#include "3rdPartyLibs/OpenGL/glext.h"
-#include "3rdPartyLibs/OpenGL/wglext.h"
+#include <GL/glext.h>
+#include <GL/wglext.h>
 
 
 namespace o2

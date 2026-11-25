@@ -1,6 +1,6 @@
 #pragma once
 
-#include "3rdPartyLibs/FreeType/include/ft2build.h"
+#include "ft2build.h"
 #include FT_FREETYPE_H
 
 #include "o2/Render/TextureRef.h"

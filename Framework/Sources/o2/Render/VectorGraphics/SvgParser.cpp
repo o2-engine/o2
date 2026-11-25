@@ -1,7 +1,7 @@
 #include "o2/stdafx.h"
 #include "SvgParser.h"
 
-#include "3rdPartyLibs/pugixml/pugixml.hpp"
+#include "pugixml.hpp"
 #include "o2/Utils/Math/Math.h"
 
 #include <cctype>

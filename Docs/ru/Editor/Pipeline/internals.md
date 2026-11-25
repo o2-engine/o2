@@ -42,7 +42,7 @@ AI-пайплайны контента: графы нод, которые пре
 
 Финишные ноды пишут результат в `<assets>/<assetPath>.<ext>` (при необходимости обрезанный и масштабированный; `keepAspect` вписывает картинку в `resizeW`x`resizeH`, а не растягивает её) и ставят `assetsChanged`; в редакторе исполнитель затем вызывает `o2Assets.RebuildAssets()`, а с `deferAssetsRebuild` (окно Pipeline) сообщает об этом в `Done` и оставляет пересборку окну (см. Фоновая работа и статус).
 
-`Editor::PipelineValue` — `type`, `data` (текст или закодированные байты), `mimeType`; конструкторы `Text`, `Image(bitmap)`, `ImageBytes`, `Bytes`, `GetBitmap()`; `DecodeImageBytes` декодирует PNG, WebP (декодер libwebp 1.4.0, вложен в `Framework/3rdPartyLibs/libwebp` и подключён только к редактору - некоторые модели OpenRouter отвечают WebP), JPEG, BMP и GIF; `ToPngBytes` перекодирует любой из них в PNG, `GetPngBytes` решает по байтам, а не по метке. `Editor::PipelineUtils` — рабочие пути (`SetWorkPathOverride`), загрузки, data URL, base64, FNV-хеши, hex-цвета, чтение и запись файлов.
+`Editor::PipelineValue` — `type`, `data` (текст или закодированные байты), `mimeType`; конструкторы `Text`, `Image(bitmap)`, `ImageBytes`, `Bytes`, `GetBitmap()`; `DecodeImageBytes` декодирует PNG, WebP (декодер libwebp 1.4.0, сабмодуль `Framework/3rdPartyLibs/libwebp` и подключён только к редактору - некоторые модели OpenRouter отвечают WebP), JPEG, BMP и GIF; `ToPngBytes` перекодирует любой из них в PNG, `GetPngBytes` решает по байтам, а не по метке. `Editor::PipelineUtils` — рабочие пути (`SetWorkPathOverride`), загрузки, data URL, base64, FNV-хеши, hex-цвета, чтение и запись файлов.
 
 <details>
 <summary>Пример</summary>

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "3rdPartyLibs/pugixml/pugixml.hpp"
+#include "pugixml.hpp"
 #include "o2/Utils/Serialization/DataValue.h"
 #include "o2/Utils/Types/String.h"
 

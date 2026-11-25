@@ -1,7 +1,7 @@
 #include "o2/stdafx.h"
 #include "SkinningMeshComponent.h"
 
-#include "3rdPartyLibs/CDT/include/CDT.h"
+#include "3rdPartyLibs/CDT/CDT/include/CDT.h"
 #include "o2/Application/Input.h"
 #include "o2/Scene/Actor.h"
 #include "o2/Scene/Components/SkinningMeshBoneComponent.h"

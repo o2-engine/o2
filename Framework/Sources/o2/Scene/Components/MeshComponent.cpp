@@ -3,7 +3,7 @@
 
 #include "o2/Scene/Actor.h"
 #include "o2/Utils/Editor/Attributes/EditorPropertyAttribute.h"
-#include "3rdPartyLibs/CDT/include/CDT.h"
+#include "3rdPartyLibs/CDT/CDT/include/CDT.h"
 #include "o2/Application/Input.h"
 
 namespace o2

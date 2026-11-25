@@ -14,6 +14,29 @@ The game loop has two phases: update and rendering. Everything takes place insid
 
 A developer can override the logic of `o2::Application` by inheriting a custom class and implementing the necessary functionality such as initialization, startup, rendering, updates, minimizing, and restoring the application.
 
+## Third-party libraries
+
+Every library is a git submodule of its upstream repository in `Framework/3rdPartyLibs` (astc-encoder in
+`AssetsBuildTool/3rdPartyLibs`): clone with `--recursive` or run `git submodule update --init --recursive`; the
+submodules are shallow. They stay as upstream has them: `Framework/3rdPartyLibs/CMakeLists.txt` builds them (o2's own
+targets over their sources, FreeType and jerryscript by their CMake), the few pieces of o2 around them - the single
+translation units of miniaudio and pl_mpeg, the fix of the jerryscript debugger - are in `Framework/3rdPartyLibs/Glue`.
+
+| Library | Version | For |
+|---|---|---|
+| box2d / box3d | 2.3.0 / pinned commit | 2D / 3D physics |
+| freetype, msdfgen | 2.14.3, 1.13 | fonts, distance fields of glyphs |
+| libpng, zlib | 1.6.59, 1.3.2 | PNG, compression |
+| stb, bc7enc, libwebp | pinned, pinned, 1.4.0 | image decoding, DXT/BC7 encoding, WebP decoding (editor) |
+| rapidjson, pugixml, utfcpp | master of 2020-05, 1.6 (wide char mode), 3.x of 2020-02 | JSON, XML, UTF conversions |
+| CDT | master of 2021-11 | constrained Delaunay triangulation of meshes |
+| spine-runtimes | the 4.2 line, 2024-12 | Spine (spine-cpp) |
+| quickjs (quickjs-ng), jerryscript | 0.15.1, 2.4.0 | scripting backends |
+| miniaudio, pl_mpeg | 0.11.22, master | sound (with stb_vorbis of its extras), MPEG-1 video |
+| tracy, boost | 0.14.1, 1.8x | profiler, stack traces of the memory analyzer |
+| OpenGL-Registry, EGL-Registry | main | GL extension headers (Windows) |
+| astc-encoder | 5.3.0 | ASTC compression in the assets build |
+
 ## Memory Management [(detailed documentation)](/Docs/en/Architecture/Utils/memory.md)
 
 The engine uses its own smart pointers with an external reference counter, but each object internally holds a reference to that counter. This allows converting a “raw” pointer into a smart pointer if the object inherits from `RefCounterable`, which stores a pointer to the counter. A strong reference `Ref<>` is used to manage object lifetime, while `WeakRef<>` does not affect it. Objects for these smart pointers are created only through the `mmake<T>(...)` function, which allocates a single memory block for both the counter and the object, ensuring the counter is always placed before the object (cache-friendly). In debug mode, the engine has a GC that points out potential memory leaks and cyclic references but does not destroy objects itself. It is only used for analysis. The editor includes a tool that displays the memory tree and highlights issues. In addition, there are specialized reference types for serializing unique identifiers: `AssetRef` (for assets) and `LinkRef` (for actors and components).

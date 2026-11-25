@@ -261,6 +261,7 @@ file(GLOB_RECURSE o2Framework_SOURCES ${o2Framework_SOURCES_DIRS})
 # has the generator. Its sources don't take the framework's precompiled header
 file(GLOB o2Framework_MSDFGEN_SOURCES "Framework/3rdPartyLibs/msdfgen/core/*.cpp")
 set_source_files_properties(${o2Framework_MSDFGEN_SOURCES} PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
+target_compile_definitions(o2Framework PRIVATE "MSDFGEN_PUBLIC=")
 list(APPEND o2Framework_SOURCES ${o2Framework_MSDFGEN_SOURCES})
 
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${o2Framework_SOURCES})
@@ -268,7 +269,7 @@ source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${o2Framework_SOURCES})
 set(o2Framework_INCLUDES 
         "Framework/Sources"
         "Framework/3rdPartyLibs/rapidjson/include"
-        "Framework/3rdPartyLibs/FreeType/include"
+        "Framework/3rdPartyLibs/freetype/include"
         "Framework/3rdPartyLibs/msdfgen"
         "Framework/3rdPartyLibs/jerryscript/jerry-core/include"
         "Framework/3rdPartyLibs/jerryscript"
@@ -280,6 +281,9 @@ set(o2Framework_INCLUDES
         "Framework/3rdPartyLibs/boost/winapi/include"
         "Framework/"
 )
+if (WIN32)
+    list(APPEND o2Framework_INCLUDES "Framework/3rdPartyLibs/OpenGL-Registry/api" "Framework/3rdPartyLibs/EGL-Registry/api")
+endif()
 
 target_sources(o2Framework PRIVATE ${o2Framework_SOURCES})
 target_include_directories(o2Framework PUBLIC ${o2Framework_INCLUDES})
@@ -292,7 +296,7 @@ target_link_libraries(o2Framework
     PUBLIC
         Box2D
         box3d
-        FreeType
+        freetype
         pugixml
         spine-cpp
         miniaudio
@@ -454,7 +458,7 @@ if(NOT CMAKE_SYSTEM_NAME STREQUAL "iOS" AND NOT EMSCRIPTEN AND NOT ANDROID)
 endif()
 
 # dependencies
-add_dependencies(o2Framework Box2D box3d FreeType)
+add_dependencies(o2Framework Box2D box3d freetype)
 if (O2_SCRIPTING AND O2_SCRIPTING_BACKEND STREQUAL "jerryscript")
     add_dependencies(o2Framework jerry-core jerry-ext jerry-port-default)
 endif()

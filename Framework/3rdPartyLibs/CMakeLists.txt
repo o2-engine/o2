@@ -12,7 +12,7 @@ elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     include(CheckGCCVersion.cmake)
 
     # GCC 15 compiles C as C23 by default, where the K&R function definitions of zlib (and the like) are errors: the C
-    # of the vendored libraries stays gnu17, the default of the GCC before it.
+    # of the third-party libraries stays gnu17, the default of the GCC before it.
     set(CMAKE_C_STANDARD 17)
     set(CMAKE_C_EXTENSIONS ON)
 
@@ -75,10 +75,19 @@ set(JERRY_STACK_LIMIT               "(0)"    CACHE BOOL "" FORCE)
 set(JERRY_GC_MARK_LIMIT             "(8)"    CACHE BOOL "" FORCE)
 
 if (O2_SCRIPTING AND O2_SCRIPTING_BACKEND STREQUAL "jerryscript")
+    # jerryscript 2.4.0 asks for CMake 2.8.12, which CMake 4 no longer accepts without a policy minimum
+    set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
     add_subdirectory(jerryscript)
+    unset(CMAKE_POLICY_VERSION_MINIMUM)
+
+    # The debugger of 2.4.0 asserts on a scope variable that isn't an object; Glue/jerryscript/debugger.c is its copy
+    # that skips such values
+    get_target_property(_jerry_core_sources jerry-core SOURCES)
+    list(TRANSFORM _jerry_core_sources REPLACE ".*debugger/debugger\\.c$" "${CMAKE_CURRENT_SOURCE_DIR}/Glue/jerryscript/debugger.c")
+    set_target_properties(jerry-core PROPERTIES SOURCES "${_jerry_core_sources}")
 endif()
 
-# quickjs (quickjs-ng), vendored: core interpreter only, no libc/cli
+# quickjs (quickjs-ng, git submodule): core interpreter only, no libc/cli
 if (O2_SCRIPTING AND O2_SCRIPTING_BACKEND STREQUAL "quickjs")
     add_library(quickjs STATIC
         quickjs/quickjs.c
@@ -94,7 +103,7 @@ if (O2_SCRIPTING AND O2_SCRIPTING_BACKEND STREQUAL "quickjs")
         target_compile_definitions(quickjs PRIVATE WIN32_LEAN_AND_MEAN _WIN32_WINNT=0x0601)
     endif()
 
-    # Vendored third-party code: never fail the build on toolchain warnings
+    # Third-party code: never fail the build on toolchain warnings
     if (MSVC)
         target_compile_options(quickjs PRIVATE /w)
     else()
@@ -104,20 +113,17 @@ if (O2_SCRIPTING AND O2_SCRIPTING_BACKEND STREQUAL "quickjs")
     target_link_libraries(quickjs PUBLIC ${CMAKE_DL_LIBS})
 endif()
 
-# Android NDK clang is newer than o2's local clang and promotes some warnings
-# to errors by default inside jerryscript's own -Werror=all flag group.
-# Override per-target, after jerryscript's add_subdirectory() so these come LAST on the command line.
-if (ANDROID)
+# Clang newer than the one of jerryscript 2.4.0 promotes some warnings to errors inside jerryscript's own -Werror flag
+# group. Override per-target, after jerryscript's add_subdirectory() so these come LAST on the command line.
+if (NOT MSVC)
     foreach(_jerry_target jerry-core jerry-ext jerry-port-default)
         if (TARGET ${_jerry_target})
             target_compile_options(${_jerry_target} PRIVATE
-                -Wno-error=enum-enum-conversion
-                -Wno-error=misleading-indentation
-                -Wno-error=sign-conversion
-                -Wno-error=conversion
-                -Wno-error=shorten-64-to-32
-                -Wno-error=format-nonliteral
-                -Wno-unknown-warning-option)
+                -Wno-error -Wno-error=all -Wno-error=extra -Wno-error=format-nonliteral -Wno-error=init-self
+                -Wno-error=conversion -Wno-error=sign-conversion -Wno-error=format-security
+                -Wno-error=missing-declarations -Wno-error=shadow -Wno-error=strict-prototypes -Wno-error=undef
+                -Wno-error=old-style-definition -Wno-error=logical-op -Wno-error=enum-enum-conversion
+                -Wno-error=misleading-indentation -Wno-error=shorten-64-to-32 -Wno-unknown-warning-option)
         endif()
     endforeach()
 endif()
@@ -144,10 +150,10 @@ if (O2_TRACY)
     set_target_properties(TracyClient PROPERTIES FOLDER o2/3rdPartyLibs)
 endif()
 
-# box2d
-set(BOX2D_BUILD_STATIC TRUE)
-set(BOX2D_VERSION 1)
-add_subdirectory(Box2D)
+# Box2D 2.3.0 (git submodule): its library sources, headers included as "Box2D/..."
+file(GLOB_RECURSE BOX2D_SOURCES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/box2d/Box2D/Box2D/*.cpp")
+add_library(Box2D STATIC ${BOX2D_SOURCES})
+target_include_directories(Box2D PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/box2d/Box2D")
 
 # box3d (git submodule) — build the core lib inline (like quickjs), NOT via upstream's own CMake,
 # which pulls in samples/tests and forces a static MSVC runtime that clashes with o2's.
@@ -176,23 +182,90 @@ if (NOT WIN32 AND NOT EMSCRIPTEN)
     target_link_libraries(box3d PUBLIC Threads::Threads)
 endif()
 
-# Vendored third-party code: never fail the build on toolchain warnings.
+# Third-party code: never fail the build on toolchain warnings.
 if (MSVC)
     target_compile_options(box3d PRIVATE /w)
 else()
     target_compile_options(box3d PRIVATE -w)
 endif()
 
-# other libraries
-add_subdirectory(libpng)
-add_subdirectory(zlib)
-add_subdirectory(FreeType)
-add_subdirectory(pugixml)
-add_subdirectory(boost)
-add_subdirectory(miniaudio)
-add_subdirectory(pl_mpeg)
+# zlib (git submodule): the library without its build scripts
+set(ZLIB_SOURCES adler32.c compress.c crc32.c deflate.c gzclose.c gzlib.c gzread.c gzwrite.c infback.c inffast.c inflate.c
+                 inftrees.c trees.c uncompr.c zutil.c)
+list(TRANSFORM ZLIB_SOURCES PREPEND "${CMAKE_CURRENT_SOURCE_DIR}/zlib/")
+add_library(zlib STATIC ${ZLIB_SOURCES})
+target_include_directories(zlib PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/zlib")
+if (NOT WIN32)
+    target_compile_definitions(zlib PUBLIC Z_HAVE_UNISTD_H)
+endif()
 
-# libwebp, the decoder only (vendored v1.4.0): the editor reads the WebP images AI providers answer with
+# libpng 1.6 (git submodule): the library with the prebuilt configuration; the ARM NEON and Intel SSE filters switch
+# themselves on by the target's architecture
+set(LIBPNG_SOURCES png.c pngerror.c pngget.c pngmem.c pngpread.c pngread.c pngrio.c pngrtran.c pngrutil.c pngset.c
+                   pngtrans.c pngwio.c pngwrite.c pngwtran.c pngwutil.c
+                   arm/arm_init.c arm/filter_neon_intrinsics.c arm/palette_neon_intrinsics.c
+                   intel/intel_init.c intel/filter_sse2_intrinsics.c)
+list(TRANSFORM LIBPNG_SOURCES PREPEND "${CMAKE_CURRENT_SOURCE_DIR}/libpng/")
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/libpng/scripts/pnglibconf.h.prebuilt"
+               "${CMAKE_CURRENT_BINARY_DIR}/libpng/pnglibconf.h" COPYONLY)
+add_library(libpng STATIC ${LIBPNG_SOURCES})
+target_include_directories(libpng PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/libpng" "${CMAKE_CURRENT_BINARY_DIR}/libpng")
+target_link_libraries(libpng PUBLIC zlib)
+
+# FreeType (git submodule) by its own CMake: static, its bundled zlib for gzip fonts, no optional dependencies
+set(FT_DISABLE_ZLIB ON CACHE BOOL "" FORCE)
+set(FT_DISABLE_BZIP2 ON CACHE BOOL "" FORCE)
+set(FT_DISABLE_PNG ON CACHE BOOL "" FORCE)
+set(FT_DISABLE_HARFBUZZ ON CACHE BOOL "" FORCE)
+set(FT_DISABLE_BROTLI ON CACHE BOOL "" FORCE)
+set(SKIP_INSTALL_ALL ON CACHE BOOL "" FORCE)
+set(BUILD_SHARED_LIBS OFF)
+add_subdirectory(freetype)
+unset(BUILD_SHARED_LIBS)
+
+# pugixml (git submodule), wide character mode
+add_library(pugixml STATIC "${CMAKE_CURRENT_SOURCE_DIR}/pugixml/src/pugixml.cpp")
+target_include_directories(pugixml PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/pugixml/src")
+target_compile_definitions(pugixml PUBLIC PUGIXML_WCHAR_MODE)
+
+add_subdirectory(boost)
+
+# miniaudio (git submodule) with the Vorbis decoder of its extras, no encoders; Apple frameworks are linked, not loaded
+add_library(miniaudio STATIC "${CMAKE_CURRENT_SOURCE_DIR}/Glue/miniaudio_impl.c")
+target_include_directories(miniaudio PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/miniaudio")
+target_compile_definitions(miniaudio PUBLIC MA_NO_ENCODING $<$<BOOL:${APPLE}>:MA_NO_RUNTIME_LINKING>)
+if (APPLE)
+    find_library(MINIAUDIO_CORE_FOUNDATION CoreFoundation)
+    find_library(MINIAUDIO_CORE_AUDIO CoreAudio)
+    find_library(MINIAUDIO_AUDIO_TOOLBOX AudioToolbox)
+    target_link_libraries(miniaudio PUBLIC ${MINIAUDIO_CORE_FOUNDATION} ${MINIAUDIO_CORE_AUDIO} ${MINIAUDIO_AUDIO_TOOLBOX})
+
+    # On mobile Apple miniaudio manages AVAudioSession, so it must be compiled as Objective-C
+    if (CMAKE_SYSTEM_NAME STREQUAL "iOS")
+        enable_language(OBJC)
+        set_source_files_properties("${CMAKE_CURRENT_SOURCE_DIR}/Glue/miniaudio_impl.c" PROPERTIES LANGUAGE OBJC)
+
+        find_library(MINIAUDIO_AVFOUNDATION AVFoundation)
+        target_link_libraries(miniaudio PUBLIC ${MINIAUDIO_AVFOUNDATION})
+    endif()
+elseif (UNIX AND NOT ANDROID AND NOT EMSCRIPTEN)
+    target_link_libraries(miniaudio PUBLIC dl pthread m)
+endif()
+
+# pl_mpeg (git submodule), a single header library
+add_library(pl_mpeg STATIC "${CMAKE_CURRENT_SOURCE_DIR}/Glue/pl_mpeg_impl.c")
+target_include_directories(pl_mpeg PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/pl_mpeg")
+
+# Third-party code: never fail the build on toolchain warnings
+foreach(_o2_quiet_target Box2D zlib libpng freetype pugixml miniaudio pl_mpeg)
+    if (MSVC)
+        target_compile_options(${_o2_quiet_target} PRIVATE /w)
+    else()
+        target_compile_options(${_o2_quiet_target} PRIVATE -w)
+    endif()
+endforeach()
+
+# libwebp, the decoder only (git submodule, v1.4.0): the editor reads the WebP images AI providers answer with
 if (O2_EDITOR)
     file(GLOB LIBWEBP_DECODER_SOURCES CONFIGURE_DEPENDS
         "${CMAKE_CURRENT_SOURCE_DIR}/libwebp/src/dec/*.c"
@@ -210,9 +283,16 @@ if (O2_EDITOR)
     endif()
 endif()
 
-# spine
-set(SPINE_SANITIZE OFF)
-add_subdirectory(Spine)
+# spine-cpp of the Spine runtimes (git submodule, the 4.2 line: the format of Spine 4.2 exports)
+file(GLOB SPINE_CPP_SOURCES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/spine-runtimes/spine-cpp/spine-cpp/src/spine/*.cpp")
+add_library(spine-cpp STATIC ${SPINE_CPP_SOURCES})
+target_include_directories(spine-cpp PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/spine-runtimes/spine-cpp/spine-cpp/include")
+if (MSVC)
+    target_compile_definitions(spine-cpp PRIVATE _CRT_SECURE_NO_WARNINGS)
+    target_compile_options(spine-cpp PRIVATE /w)
+else()
+    target_compile_options(spine-cpp PRIVATE -w)
+endif()
 
 if(MSVC)
     target_compile_options(Box2D PRIVATE ${O2_MSVC_MP_FLAG})
@@ -224,7 +304,7 @@ if(MSVC)
     endif()
     target_compile_options(libpng PRIVATE ${O2_MSVC_MP_FLAG})
     target_compile_options(zlib PRIVATE ${O2_MSVC_MP_FLAG})
-    target_compile_options(FreeType PRIVATE ${O2_MSVC_MP_FLAG})
+    target_compile_options(freetype PRIVATE ${O2_MSVC_MP_FLAG})
     target_compile_options(pugixml PRIVATE ${O2_MSVC_MP_FLAG})
     target_compile_options(spine-cpp PRIVATE ${O2_MSVC_MP_FLAG})
     target_compile_options(miniaudio PRIVATE ${O2_MSVC_MP_FLAG})
@@ -241,7 +321,7 @@ if (TARGET jerry-core)
 endif()
 set_target_properties(libpng PROPERTIES FOLDER o2/3rdPartyLibs)
 set_target_properties(zlib PROPERTIES FOLDER o2/3rdPartyLibs)
-set_target_properties(FreeType PROPERTIES FOLDER o2/3rdPartyLibs)
+set_target_properties(freetype PROPERTIES FOLDER o2/3rdPartyLibs)
 set_target_properties(pugixml PROPERTIES FOLDER o2/3rdPartyLibs)
 set_target_properties(spine-cpp PROPERTIES FOLDER o2/3rdPartyLibs)
 set_target_properties(miniaudio PROPERTIES FOLDER o2/3rdPartyLibs)
