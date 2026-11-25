@@ -27,7 +27,7 @@
 #include "o2Editor/Actions/Reparent.h"
 #include "o2Editor/EditorApplication.h"
 #include "o2Editor/UIRoot.h"
-#include "o2/Render/VectorSprite.h"
+#include "o2/Render/VectorGraphics/VectorSprite.h"
 
 namespace Editor
 {

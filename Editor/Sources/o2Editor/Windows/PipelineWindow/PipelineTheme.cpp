@@ -2,7 +2,7 @@
 #include "PipelineTheme.h"
 
 #include "o2/Assets/Types/FontAsset.h"
-#include "o2/Render/VectorFont.h"
+#include "o2/Render/Text/VectorFont.h"
 #include "o2Editor/UI/Style/EditorTheme.h"
 
 namespace Editor

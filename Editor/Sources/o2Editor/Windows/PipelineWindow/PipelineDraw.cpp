@@ -1,9 +1,9 @@
 #include "o2Editor/stdafx.h"
 #include "PipelineDraw.h"
 
-#include "o2/Render/Mesh.h"
+#include "o2/Render/Meshes/Mesh.h"
 #include "o2/Render/Render.h"
-#include "o2/Render/Texture.h"
+#include "o2/Render/Resources/Texture.h"
 #include "o2/Utils/Bitmap/Bitmap.h"
 
 #include <map>

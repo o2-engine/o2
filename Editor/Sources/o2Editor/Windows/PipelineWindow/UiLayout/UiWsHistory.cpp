@@ -4,7 +4,7 @@
 #include "o2/Application/Input.h"
 #include "o2/Assets/Types/FontAsset.h"
 #include "o2/Render/Render.h"
-#include "o2/Render/Text.h"
+#include "o2/Render/Text/Text.h"
 #include "o2/Scene/UI/WidgetLayer.h"
 #include "o2/Scene/UI/WidgetLayout.h"
 #include "o2/Scene/UI/Widgets/EditBox.h"

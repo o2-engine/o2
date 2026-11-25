@@ -2,7 +2,7 @@
 
 #include <gtest/gtest.h>
 
-#include "o2/Render/Text.h"
+#include "o2/Render/Text/Text.h"
 #include "o2/Scene/Actor.h"
 #include "o2/Scene/Components/TextSplitterComponent.h"
 #include "Scene/SceneTestHelpers.h"

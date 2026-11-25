@@ -1,10 +1,10 @@
-#include "o2/Render/VectorSprite.h"
+#include "o2/Render/VectorGraphics/VectorSprite.h"
 #include "o2Editor/stdafx.h"
 #include <gtest/gtest.h>
 
 #include "PipelinePairUiFixture.h"
 #include "o2/Render/Sprite.h"
-#include "o2/Render/Text.h"
+#include "o2/Render/Text/Text.h"
 #include "o2/Scene/UI/Widgets/EditBox.h"
 #include "o2Editor/Pipeline/PipelineValue.h"
 

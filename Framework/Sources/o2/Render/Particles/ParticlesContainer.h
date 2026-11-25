@@ -2,8 +2,8 @@
 
 #include "o2/Assets/AssetRef.h"
 #include "o2/Assets/Types/ImageAsset.h"
-#include "o2/Render/Material.h"
-#include "o2/Render/Mesh.h"
+#include "o2/Render/Resources/Material.h"
+#include "o2/Render/Meshes/Mesh.h"
 #include "o2/Render/Particles/Particle.h"
 #include "o2/Utils/Basic/ICloneable.h"
 #include "o2/Utils/Serialization/Serializable.h"

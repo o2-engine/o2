@@ -1,8 +1,8 @@
 #include "o2/stdafx.h"
 #include <gtest/gtest.h>
 
-#include "o2/Render/Material.h"
-#include "o2/Render/Mesh.h"
+#include "o2/Render/Resources/Material.h"
+#include "o2/Render/Meshes/Mesh.h"
 #include "o2/Render/Render.h"
 #include "o2/Utils/Bitmap/Bitmap.h"
 #include "o2/Utils/Math/Math.h"

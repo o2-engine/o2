@@ -2,7 +2,7 @@
 #include "Mesh3DAsset.h"
 
 #include "o2/Assets/Assets.h"
-#include "o2/Render/ObjMeshFormat.h"
+#include "o2/Render/Meshes/ObjMeshFormat.h"
 #include "o2/Utils/FileSystem/FileSystem.h"
 
 namespace o2

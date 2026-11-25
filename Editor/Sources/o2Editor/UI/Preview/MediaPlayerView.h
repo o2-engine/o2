@@ -4,7 +4,7 @@
 #include "o2/Assets/Types/SoundAsset.h"
 #include "o2/Assets/Types/VideoAsset.h"
 #include "o2/Events/CursorAreaEventsListener.h"
-#include "o2/Render/Video.h"
+#include "o2/Render/Video/Video.h"
 #include "o2/Scene/UI/Widget.h"
 #include "o2/Sound/SoundPlayer.h"
 

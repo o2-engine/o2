@@ -7,7 +7,7 @@
 #include "o2/Scene/ActorTransform.h"
 #include "o2/Scene/UI/WidgetLayout.h"
 #include "o2Editor/Windows/AnimationWindow/KeyHandlesSheet.h"
-#include "o2/Render/VectorSprite.h"
+#include "o2/Render/VectorGraphics/VectorSprite.h"
 
 namespace Editor
 {

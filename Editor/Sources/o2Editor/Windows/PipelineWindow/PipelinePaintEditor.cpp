@@ -5,7 +5,7 @@
 #include "o2/Application/Input.h"
 #include "o2/Render/Render.h"
 #include "o2/Render/Sprite.h"
-#include "o2/Render/Text.h"
+#include "o2/Render/Text/Text.h"
 #include "o2/Scene/UI/UIManager.h"
 #include "o2/Scene/UI/WidgetLayer.h"
 #include "o2/Scene/UI/WidgetLayout.h"
@@ -23,7 +23,7 @@
 #include "o2Editor/Windows/PipelineWindow/PipelineTheme.h"
 
 #include <cstring>
-#include "o2/Render/VectorSprite.h"
+#include "o2/Render/VectorGraphics/VectorSprite.h"
 
 namespace Editor
 {

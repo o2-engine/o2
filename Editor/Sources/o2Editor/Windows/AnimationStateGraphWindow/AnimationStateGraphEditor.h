@@ -1,7 +1,7 @@
 #pragma once
 
 #include "o2/Assets/Types/AnimationStateGraphAsset.h"
-#include "o2/Render/VectorSprite.h"
+#include "o2/Render/VectorGraphics/VectorSprite.h"
 #include "o2/Scene/Components/AnimationStateGraphComponent.h"
 #include "o2/Scene/UI/Widgets/EditBoxDropDown.h"
 #include "o2/Utils/Editor/DragHandle.h"

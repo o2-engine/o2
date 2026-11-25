@@ -2,7 +2,7 @@
 #include "MenuPanel.h"
 
 #include "o2/Render/Sprite.h"
-#include "o2/Render/Text.h"
+#include "o2/Render/Text/Text.h"
 #include "o2/Scene/UI/Widgets/HorizontalLayout.h"
 #include "o2/Scene/UI/UIManager.h"
 #include "o2/Scene/UI/WidgetLayer.h"

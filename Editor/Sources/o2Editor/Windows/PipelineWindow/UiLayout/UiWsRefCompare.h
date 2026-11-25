@@ -3,7 +3,7 @@
 #include <future>
 #include <memory>
 
-#include "o2/Render/TextureRef.h"
+#include "o2/Render/Resources/TextureRef.h"
 #include "o2Editor/Pipeline/UiLayout/UiLayoutPixels.h"
 #include "o2Editor/Windows/PipelineWindow/UiLayout/UiWsWidgets.h"
 

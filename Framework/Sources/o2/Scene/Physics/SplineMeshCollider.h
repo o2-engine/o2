@@ -1,7 +1,7 @@
 #pragma once
 
 #include "o2/Assets/Types/ImageAsset.h"
-#include "o2/Render/Mesh.h"
+#include "o2/Render/Meshes/Mesh.h"
 #include "o2/Scene/Physics/SplineCollider.h"
 #include "o2/Utils/Math/Color.h"
 

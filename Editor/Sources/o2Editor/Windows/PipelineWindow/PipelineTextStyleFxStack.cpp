@@ -3,7 +3,7 @@
 
 #include <map>
 
-#include "o2/Render/Texture.h"
+#include "o2/Render/Resources/Texture.h"
 #include "o2Editor/Pipeline/UiDoc/UiDocJs.h"
 #include "o2Editor/Pipeline/UiDoc/UiDocRender.h"
 #include "o2Editor/Windows/PipelineWindow/PipelineTextStyleFxParts.h"

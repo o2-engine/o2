@@ -2,8 +2,8 @@
 #include "SkinnedMeshComponent.h"
 
 #include "o2/Animation/SkinnedModelAnimation.h"
-#include "o2/Render/Material.h"
-#include "o2/Render/Mesh3DFill.h"
+#include "o2/Render/Resources/Material.h"
+#include "o2/Render/Meshes/Mesh3DFill.h"
 #include "o2/Render/Render.h"
 #include "o2/Scene/Actor.h"
 #include "o2/Utils/Debug/Debug.h"

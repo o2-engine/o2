@@ -6,7 +6,7 @@
 #include "o2/Animation/IAnimation.h"
 #include "o2/Assets/Assets.h"
 #include "o2/Assets/Types/VideoAsset.h"
-#include "o2/Render/Video.h"
+#include "o2/Render/Video/Video.h"
 #include "o2/Scene/Components/VideoComponent.h"
 #include "Video/VideoTestData.h"
 

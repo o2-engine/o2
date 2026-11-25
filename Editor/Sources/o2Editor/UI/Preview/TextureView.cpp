@@ -3,7 +3,7 @@
 
 #include "o2/Application/Input.h"
 #include "o2/Assets/Assets.h"
-#include "o2/Render/Mesh.h"
+#include "o2/Render/Meshes/Mesh.h"
 #include "o2/Render/Render.h"
 #include "o2/Render/Sprite.h"
 

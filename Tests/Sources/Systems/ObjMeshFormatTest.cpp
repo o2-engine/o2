@@ -6,7 +6,7 @@
 
 #include "o2/Assets/AssetRef.h"
 #include "o2/Assets/Types/Mesh3DAsset.h"
-#include "o2/Render/ObjMeshFormat.h"
+#include "o2/Render/Meshes/ObjMeshFormat.h"
 #include "o2/Scene/Actor.h"
 #include "o2/Scene/Components/Mesh3DComponent.h"
 #include "Scene/SceneTestHelpers.h"

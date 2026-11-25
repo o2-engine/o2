@@ -5,7 +5,7 @@
 #include "o2/Utils/Serialization/DataValue.h"
 #include "o2Editor/UI/Style/EditorTheme.h"
 #include "o2Editor/Windows/SceneWindow/SceneEditScreen.h"
-#include "o2/Render/VectorSprite.h"
+#include "o2/Render/VectorGraphics/VectorSprite.h"
 
 namespace Editor
 {

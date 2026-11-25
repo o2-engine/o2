@@ -1,7 +1,7 @@
 #pragma once
 
 #include "o2/Assets/Types/SkinnedModelAsset.h"
-#include "o2/Render/Mesh.h"
+#include "o2/Render/Meshes/Mesh.h"
 #include "o2/Utils/Math/Mesh3DPrimitives.h"
 #include "o2Editor/UI/ScrollView.h"
 #include "o2Editor/Windows/SceneWindow/SceneView3DState.h"

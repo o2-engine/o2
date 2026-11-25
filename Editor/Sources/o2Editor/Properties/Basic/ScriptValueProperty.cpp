@@ -9,7 +9,7 @@
 #include "o2Editor/Properties/Basic/IntegerProperty.h"
 #include "o2Editor/Properties/IObjectPropertiesViewer.h"
 #include "o2Editor/Properties/Properties.h"
-#include "o2/Render/VectorSprite.h"
+#include "o2/Render/VectorGraphics/VectorSprite.h"
 
 using namespace o2;
 

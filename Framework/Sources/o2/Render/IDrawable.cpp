@@ -1,7 +1,7 @@
 #include "o2/stdafx.h"
 #include "IDrawable.h"
 
-#include "o2/Render/Material.h"
+#include "o2/Render/Resources/Material.h"
 #include "Render.h"
 
 namespace o2

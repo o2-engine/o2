@@ -9,7 +9,7 @@
 #include "o2/Assets/Types/FontStyleAsset.h"
 #include "o2/Assets/Types/ImageAsset.h"
 #include "o2/Assets/Types/VectorFontAsset.h"
-#include "o2/Render/VectorFontEffects.h"
+#include "o2/Render/Text/VectorFontEffects.h"
 #include "o2/Scene/ActorCreationMode.h"
 #include "o2/Utils/Coroutines/Awaiters.h"
 #include "o2/Utils/Editor/EditorScope.h"

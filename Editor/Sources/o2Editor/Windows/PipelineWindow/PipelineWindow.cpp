@@ -21,7 +21,7 @@
 #include "o2Editor/Dialogs/System/OpenSaveDialog.h"
 #include "o2Editor/EditorConfig.h"
 #include "o2Editor/Pipeline/PipelineImport.h"
-#include "o2/Render/VectorSprite.h"
+#include "o2/Render/VectorGraphics/VectorSprite.h"
 
 DECLARE_SINGLETON(Editor::PipelineWindow);
 

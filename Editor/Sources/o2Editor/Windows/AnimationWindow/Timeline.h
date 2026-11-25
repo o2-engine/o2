@@ -1,7 +1,7 @@
 #pragma once
 
 #include "o2/Events/CursorEventsArea.h"
-#include "o2/Render/Font.h"
+#include "o2/Render/Text/Font.h"
 #include "o2/Scene/UI/Widget.h"
 #include "o2/Utils/Editor/DragHandle.h"
 #include "o2Editor/UI/Style/EditorTheme.h"

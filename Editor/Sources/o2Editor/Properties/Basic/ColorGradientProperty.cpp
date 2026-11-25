@@ -6,7 +6,7 @@
 #include "o2Editor/Dialogs/CurveEditorDlg.h"
 #include "o2Editor/UI/CurvePreview.h"
 #include "o2Editor/Dialogs/ColorPickerDlg.h"
-#include "o2/Render/VectorSprite.h"
+#include "o2/Render/VectorGraphics/VectorSprite.h"
 
 namespace Editor
 {

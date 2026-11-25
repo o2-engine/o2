@@ -1,0 +1,503 @@
+#include "o2/stdafx.h"
+#include "VectorFont.h"
+
+#if defined PLATFORM_WINDOWS
+#include "o2/Render/Platforms/Windows/OpenGL.h"
+#elif defined PLATFORM_ANDROID
+#include "o2/Render/Platforms/Android/OpenGL.h"
+#endif
+
+#include "o2/Application/Application.h"
+#include "o2/Render/Text/FontStyle.h"
+#include "o2/Render/Render.h"
+#include "o2/Render/VectorGraphics/VectorTessellator.h"
+#include "o2/Utils/Bitmap/Bitmap.h"
+#include "o2/Utils/Debug/Log/LogStream.h"
+#include "o2/Utils/Debug/Profiling/NanoProfiler.h"
+#include "o2/Utils/FileSystem/File.h"
+#include "o2/Utils/System/Time/Timer.h"
+
+#include FT_OUTLINE_H
+
+namespace o2
+{
+    namespace
+    {
+        Vec2F GetOutlinePoint(const FT_Vector* point)
+        {
+            return Vec2F((float)point->x/64.0f, (float)point->y/64.0f);
+        }
+
+        int MoveOutlineTo(const FT_Vector* to, void* user)
+        {
+            VectorShape& shape = *(VectorShape*)user;
+            shape.subPaths.Add(VectorSubPath());
+            shape.subPaths.Last().start = GetOutlinePoint(to);
+            shape.subPaths.Last().closed = true;
+            return 0;
+        }
+
+        int LineOutlineTo(const FT_Vector* to, void* user)
+        {
+            VectorShape& shape = *(VectorShape*)user;
+            if (shape.subPaths.IsEmpty())
+                return 1;
+
+            VectorSegment segment;
+            segment.end = GetOutlinePoint(to);
+            shape.subPaths.Last().segments.Add(segment);
+            return 0;
+        }
+
+        int CubicOutlineTo(const FT_Vector* control1, const FT_Vector* control2, const FT_Vector* to, void* user)
+        {
+            VectorShape& shape = *(VectorShape*)user;
+            if (shape.subPaths.IsEmpty())
+                return 1;
+
+            VectorSegment segment;
+            segment.cubic = true;
+            segment.control1 = GetOutlinePoint(control1);
+            segment.control2 = GetOutlinePoint(control2);
+            segment.end = GetOutlinePoint(to);
+            shape.subPaths.Last().segments.Add(segment);
+            return 0;
+        }
+
+        int ConicOutlineTo(const FT_Vector* control, const FT_Vector* to, void* user)
+        {
+            VectorShape& shape = *(VectorShape*)user;
+            if (shape.subPaths.IsEmpty())
+                return 1;
+
+            const VectorSubPath& path = shape.subPaths.Last();
+            Vec2F from = path.segments.IsEmpty() ? path.start : path.segments.Last().end;
+            Vec2F middle = GetOutlinePoint(control), end = GetOutlinePoint(to);
+
+            VectorSegment segment;
+            segment.cubic = true;
+            segment.control1 = from + (middle - from)*(2.0f/3.0f);
+            segment.control2 = end + (middle - end)*(2.0f/3.0f);
+            segment.end = end;
+            shape.subPaths.Last().segments.Add(segment);
+            return 0;
+        }
+    }
+
+    // NO_AUTOHINT: FreeType 2.5.5's autofitter calls through mismatched function pointers,
+    // which traps on WebAssembly (strict call_indirect signature check)
+    static const FT_Int32 kGlyphLoadFlags = FT_LOAD_RENDER | FT_LOAD_NO_AUTOHINT;
+
+    VectorFont::VectorFont() :
+        Font(), mFreeTypeFace(nullptr)
+    {
+        InitializeTexture();
+    }
+
+    VectorFont::VectorFont(const String& fileName) :
+        Font(), mFreeTypeFace(nullptr)
+    {
+        InitializeTexture();
+
+        Load(fileName);
+    }
+
+    VectorFont::VectorFont(bool createAtlas) :
+        Font(), mFreeTypeFace(nullptr)
+    {
+        if (createAtlas)
+            InitializeTexture();
+    }
+
+    VectorFont::VectorFont(const VectorFont& other) :
+        Font(), mFreeTypeFace(other.mFreeTypeFace)
+    {
+        InitializeTexture();
+    }
+
+    void VectorFont::InitializeTexture()
+    {
+        mTexture = TextureRef(Vec2I(mInitialTextureSize, mInitialTextureSize));
+        mTextureSrcRect.Set(0, 0, mInitialTextureSize, mInitialTextureSize);
+    }
+
+    VectorFont::~VectorFont()
+    {
+        if (mFreeTypeFace && mFreeTypeFace->internal)
+            FT_Done_Face(mFreeTypeFace);
+    }
+
+    const char* GetFreeTypeErrorMessage(FT_Error err)
+    {
+#undef __FTERRORS_H__
+#define FT_ERRORDEF( e, v, s )  case e: return s;
+#define FT_ERROR_START_LIST     switch (err) {
+#define FT_ERROR_END_LIST       }
+#include FT_ERRORS_H
+        return "(Unknown error)";
+    }
+
+    bool VectorFont::Load(const String& fileName)
+    {
+        PROFILE_SAMPLE_FUNC();
+        PROFILE_INFO(fileName);
+
+        InFile file(fileName);
+
+        if (!file.IsOpened())
+        {
+            o2Render.mLog->Error("Failed to load vector font: " + fileName);
+            return false;
+        }
+
+        UInt8* data = mnew UInt8[file.GetDataSize()];
+        file.ReadFullData(data);
+
+        FT_Error error = FT_New_Memory_Face(o2Render.mFreeTypeLib, data, file.GetDataSize(), 0, &mFreeTypeFace);
+
+        //delete[] data;
+
+        if (error)
+        {
+            o2Render.mLog->Error("Failed to load vector font: " + fileName + ", error: " + (String)GetFreeTypeErrorMessage(error));
+            return false;
+        }
+
+        mFileName = fileName;
+        if (mTexture)
+            mTexture->SetName("Font atlas " + fileName);
+
+        return true;
+    }
+
+    //     void VectorFont::SetSize(UInt size)
+    //     {
+    //         if (size == mSize)
+    //             return;
+    // 
+    //         mSize = size;
+    //         Vec2I dpi = o2Render.GetDPI();
+    //         FT_Error error = FT_Set_Char_Size(mFreeTypeFace, 0, mSize*64, dpi.x, dpi.y);
+    // 
+    //         FT_Load_Char(mFreeTypeFace, 'A', FT_LOAD_RENDER);
+    //         mBaseHeight = mFreeTypeFace->glyph->metrics.horiBearingY/64.0f;
+    //         mLineHeight = mBaseHeight*2.0f;
+    // 
+    // //         mBaseHeight = mFreeTypeFace->ascender/64.0f;
+    // //         mLineHeight = (mFreeTypeFace->ascender - mFreeTypeFace->descender)/64.0f + 5.0f;
+    // 
+    //         Reset();
+    //     }
+
+    String VectorFont::GetFileName() const
+    {
+        return mFileName;
+    }
+
+    float VectorFont::GetHeightPx(int height) const
+    {
+        float result = 0;
+        if (mHeights.TryGetValue(height, result))
+            return result;
+
+        FT_Set_Char_Size(mFreeTypeFace, 0, height*64, mResolution, mResolution);
+
+        FT_Load_Char(mFreeTypeFace, 'A', LoadFlags());
+
+        result = mFreeTypeFace->glyph->metrics.horiBearingY/64.0f;
+        mHeights.Add(height, result);
+
+        return result;
+    }
+
+    float VectorFont::GetLineHeightPx(int height) const
+    {
+        return GetHeightPx(height)*2.0f;
+    }
+
+    void VectorFont::CheckCharacters(const WString& needChararacters, int height, const Ref<FontStyle>& style,
+                                     float pixelDensity /*= 1.0f*/)
+    {
+        int styleId = GetStyleId(style);
+
+        // Effects work in pixels of the glyph bitmap
+        if (styleId != 0)
+            pixelDensity = 1.0f;
+
+        UInt64 charactersKey = GetStyleHeightKey(styleId, height, pixelDensity);
+
+        int len = needChararacters.Length();
+        Vector<wchar_t> needToRenderChars;
+        needToRenderChars.Reserve(len);
+
+        auto fndStyleHeight = mCharacters.find(charactersKey);
+        for (int i = 0; i < len; i++)
+        {
+            bool isNew = true;
+            wchar_t c = needChararacters[i];
+            if (fndStyleHeight != mCharacters.End())
+                isNew = fndStyleHeight->second.find(c) == fndStyleHeight->second.End();
+
+            if (isNew)
+                isNew = !needToRenderChars.Contains(c);
+
+            if (!isNew)
+                continue;
+
+            needToRenderChars.Add(c);
+        }
+
+        if (needToRenderChars.Count() > 0)
+        {
+            static const Vector<Ref<Effect>> emptyEffects;
+            RenderNewCharacters(needToRenderChars, height, styleId, styleId != 0 ? style->GetEffects() : emptyEffects,
+                                pixelDensity);
+        }
+    }
+
+    int VectorFont::GetStyleId(const Ref<FontStyle>& style)
+    {
+        if (!style || style->GetEffects().IsEmpty())
+            return 0;
+
+        UInt64 cacheKey = style->GetCacheKey();
+
+        int id = 0;
+        if (mStyleIds.TryGetValue(cacheKey, id))
+            return id;
+
+        id = mNextStyleId++;
+        mStyleIds.Add(cacheKey, id);
+
+        return id;
+    }
+
+    const VectorMesh* VectorFont::GetGlyphMesh(UInt16 id)
+    {
+        auto found = mGlyphMeshes.find(id);
+        if (found != mGlyphMeshes.end())
+            return &found->second;
+
+        VectorMesh& mesh = mGlyphMeshes[id];
+        if (!mFreeTypeFace)
+            return &mesh;
+
+        // Not hinted outline is the same at any size
+        FT_Set_Char_Size(mFreeTypeFace, 0, glyphMeshHeight*64, mResolution, mResolution);
+        if (FT_Load_Char(mFreeTypeFace, id, FT_LOAD_NO_BITMAP | FT_LOAD_NO_HINTING) != 0 ||
+            mFreeTypeFace->glyph->format != FT_GLYPH_FORMAT_OUTLINE)
+        {
+            return &mesh;
+        }
+
+        VectorShape shape;
+        shape.fill = VectorPaint::Solid(Color4::White());
+
+        FT_Outline_Funcs functions = { MoveOutlineTo, LineOutlineTo, ConicOutlineTo, CubicOutlineTo, 0, 0 };
+        if (FT_Outline_Decompose(&mFreeTypeFace->glyph->outline, &functions, &shape) != 0)
+            return &mesh;
+
+        VectorTessellationParams params;
+        params.scalable = true;
+        VectorTessellator::TessellateShape(shape, mesh, params);
+
+        return &mesh;
+    }
+
+    void VectorFont::Reset()
+    {
+        mCharacters.Clear();
+        onCharactersRebuilt();
+    }
+
+    void VectorFont::SetResolution(int dpi)
+    {
+        if (dpi == mResolution || dpi <= 0)
+            return;
+
+        mResolution = dpi;
+        mHeights.Clear();
+        mGlyphMeshes.clear();
+        Reset();
+    }
+
+    int VectorFont::LoadFlags() const
+    {
+        return mHinting ? kGlyphLoadFlags : (kGlyphLoadFlags | FT_LOAD_NO_HINTING);
+    }
+
+    int VectorFont::GetResolution() const
+    {
+        return mResolution;
+    }
+
+    void VectorFont::SetHinting(bool enabled)
+    {
+        if (enabled == mHinting)
+            return;
+
+        mHinting = enabled;
+        mHeights.Clear();
+        Reset();
+    }
+
+    void VectorFont::RenderNewCharacters(Vector<wchar_t>& newCharacters, int height, int styleId,
+                                         const Vector<Ref<Effect>>& effects, float pixelDensity)
+    {
+        if (!mFreeTypeFace)
+            return;
+
+        PROFILE_SAMPLE("Font: render new glyphs");
+
+        // Advances stay the ones of the single density: text layout does not depend on the screen
+        Vector<float> advances;
+        FT_Set_Char_Size(mFreeTypeFace, 0, height*64, mResolution, mResolution);
+        if (pixelDensity != 1.0f)
+        {
+            for (auto& ch : newCharacters)
+            {
+                FT_Load_Char(mFreeTypeFace, ch, LoadFlags() & ~FT_LOAD_RENDER);
+                advances.Add(mFreeTypeFace->glyph->advance.x/64.0f);
+            }
+
+            FT_Set_Char_Size(mFreeTypeFace, 0, Math::RoundToInt(height*64*pixelDensity), mResolution, mResolution);
+        }
+
+        Vec2I border;
+        for (auto& effect : effects)
+        {
+            Vec2I effectExt = effect->GetSizeExtend();
+            border.x = Math::Max(border.x, effectExt.x);
+            border.y = Math::Max(border.y, effectExt.y);
+        }
+
+        border += Vec2I(2, 2);
+
+        FT_Load_Char(mFreeTypeFace, 'A', LoadFlags());
+        int symbolsHeight = Math::CeilToInt((mFreeTypeFace->glyph->bitmap.rows + border.y*2)*1.25f);
+
+        for (int i = 0; i < newCharacters.Count(); i++)
+        {
+            wchar_t ch = newCharacters[i];
+            CharDef newCharDef;
+
+            {
+                PROFILE_SAMPLE("Font: FreeType glyph");
+                FT_Load_Char(mFreeTypeFace, ch, LoadFlags());
+            }
+            auto glyph = mFreeTypeFace->glyph;
+
+            Vec2I glyphSize(glyph->bitmap.width, glyph->bitmap.rows);
+
+            Ref<Bitmap> newBitmap = mmake<Bitmap>(PixelFormat::R8G8B8A8, glyphSize + border*2);
+            newBitmap->Fill(Color4(255, 255, 255, 0));
+            UInt8* newBitmapData = newBitmap->GetData();
+            Vec2I newBitmapSize = newBitmap->GetSize();
+
+            for (int x = 0; x < (int)glyph->bitmap.width; x++)
+            {
+                for (int y = 0; y < (int)glyph->bitmap.rows; y++)
+                {
+                    Color4 c(255, 255, 255, glyph->bitmap.buffer[y*glyph->bitmap.width + x]);
+                    ULong cl = c.ABGR();
+                    memcpy(&newBitmapData[((newBitmapSize.y - y - 1 - border.y)*newBitmapSize.x + x + border.x)*4], &cl, 4);
+                }
+            }
+
+            for (auto& effect : effects)
+                effect->Process(*newBitmap);
+
+            newCharDef.bitmap = newBitmap;
+            newCharDef.character.mId = ch;
+            newCharDef.character.mHeight = height;
+            newCharDef.character.mStyleId = styleId;
+            newCharDef.character.mPixelDensity = pixelDensity;
+            newCharDef.character.mSize = (Vec2F)newBitmapSize/pixelDensity;
+            newCharDef.character.mAdvance = advances.IsEmpty() ? glyph->advance.x/64.0f : advances[i];
+            newCharDef.character.mOrigin.x = (-glyph->metrics.horiBearingX/64.0f + border.x)/pixelDensity;
+            newCharDef.character.mOrigin.y =
+                ((glyph->metrics.height - glyph->metrics.horiBearingY)/64.0f + border.y)/pixelDensity;
+
+            PackCharacter(newCharDef, symbolsHeight);
+
+            newCharDef.bitmap = nullptr;
+        }
+    }
+
+    void VectorFont::PackCharacter(CharDef& character, int height)
+    {
+        PROFILE_SAMPLE("Font: pack glyph into the atlas");
+        Ref<PackLine> packLine;
+
+        if (!mTexture)
+        {
+            InitializeTexture();
+            mTexture->SetName("Font atlas " + mFileName);
+        }
+
+        while (!packLine)
+        {
+            packLine = mPackLines.FindOrDefault([&](const Ref<PackLine>& x) {
+                return x->height >= height && x->length + character.bitmap->GetSize().x < mTexture->GetSize().x; });
+
+            if (!packLine)
+            {
+                if (mLastPackLinePos + height <= mTexture->GetSize().y)
+                {
+                    packLine = mmake<PackLine>();
+                    packLine->position = mLastPackLinePos;
+                    packLine->height = height;
+
+                    mPackLines.Add(packLine);
+
+                    mLastPackLinePos += height;
+                }
+                else
+                {
+                    PROFILE_SAMPLE("Font: grow the atlas");
+                    TextureRef lastTexture = mTexture;
+                    mTexture = TextureRef(lastTexture->GetSize()*2, TextureFormat::R8G8B8A8, Texture::Usage::Default);
+                    mTexture->SetName(lastTexture->GetName());
+                    mTexture->Copy(*lastTexture.Get(), RectI(Vec2I(0, 0), lastTexture->GetSize()));
+
+                    for (auto& heightKV : mCharacters)
+                    {
+                        for (auto& charKV : heightKV.second)
+                        {
+                            // Pixel rows keep their positions from the texture top, and the
+                            // v axis is inverted (v = 1 - row/height): v' = 0.5 + v*0.5
+                            charKV.second.mTexSrc.left *= 0.5f;
+                            charKV.second.mTexSrc.right *= 0.5f;
+                            charKV.second.mTexSrc.top = charKV.second.mTexSrc.top*0.5f + 0.5f;
+                            charKV.second.mTexSrc.bottom = charKV.second.mTexSrc.bottom*0.5f + 0.5f;
+                        }
+                    }
+                }
+            }
+        }
+
+        character.packLine = packLine;
+        packLine->characters.Add(character);
+
+        character.rect.left = packLine->length;
+        character.rect.top = packLine->position + character.bitmap->GetSize().y;
+        character.rect.right = packLine->length + character.bitmap->GetSize().x;
+        character.rect.bottom = packLine->position;;
+
+        packLine->length += character.bitmap->GetSize().x;
+
+        Vec2F invTexSize(1.0f/mTexture->GetSize().x, 1.0f/mTexture->GetSize().y);
+        character.character.mTexSrc.left = character.rect.left*invTexSize.x;
+        character.character.mTexSrc.right = character.rect.right*invTexSize.x;
+        character.character.mTexSrc.top = 1.0f - character.rect.top*invTexSize.y;
+        character.character.mTexSrc.bottom = 1.0f - character.rect.bottom*invTexSize.y;
+
+        mTexture->SetSubData(character.rect.LeftBottom(), *character.bitmap);
+
+        AddCharacter(character.character);
+    }
+}
+// --- META ---
+
+DECLARE_CLASS(o2::VectorFont::Effect, o2__VectorFont__Effect);
+// --- END META ---

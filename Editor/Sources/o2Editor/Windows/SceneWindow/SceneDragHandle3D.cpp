@@ -1,8 +1,8 @@
 #include "o2Editor/stdafx.h"
 #include "SceneDragHandle3D.h"
 
-#include "o2/Render/Mesh3DFill.h"
-#include "o2/Render/Mesh.h"
+#include "o2/Render/Meshes/Mesh3DFill.h"
+#include "o2/Render/Meshes/Mesh.h"
 #include "o2/Utils/Math/Basis3D.h"
 #include "o2/Utils/Math/Geometry.h"
 #include "o2Editor/Windows/SceneWindow/SceneEditScreen.h"

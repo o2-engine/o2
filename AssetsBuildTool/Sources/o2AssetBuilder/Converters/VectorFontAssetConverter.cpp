@@ -2,7 +2,7 @@
 #include "VectorFontAssetConverter.h"
 
 #include "o2/Assets/Types/VectorFontAsset.h"
-#include "o2/Render/SdfFont.h"
+#include "o2/Render/Text/SdfFont.h"
 #include "o2/Utils/Debug/Debug.h"
 #include "o2/Utils/FileSystem/FileSystem.h"
 #include "o2/Utils/System/Time/Timer.h"

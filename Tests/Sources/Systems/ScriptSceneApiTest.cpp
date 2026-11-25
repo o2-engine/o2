@@ -1,7 +1,7 @@
 #include "o2/stdafx.h"
 #include <gtest/gtest.h>
 
-#include "o2/Render/Material.h"
+#include "o2/Render/Resources/Material.h"
 #include "o2/Scene/Actor.h"
 #include "o2/Scene/Components/ParticlesEmitterComponent.h"
 #include "o2/Scene/Scene.h"

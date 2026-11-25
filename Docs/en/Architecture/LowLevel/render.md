@@ -5,6 +5,12 @@ It initializes the renderer and the needed APIs if required. Meshes are drawn th
 
 The render subsystem also includes the basic primitives: sprite, text and particle effects.
 
+Sources, `Framework/Sources/o2/Render`: the renderer itself, the camera, the drawable interfaces, sprites and gizmos at
+the root; `Resources` - textures, shaders, materials and GPU geometry; `Text` - texts, fonts, font styles and their
+distance fields; `Meshes` - meshes and model formats; `Video`; `VectorGraphics` - vector images, their meshes, rasters and
+vector sprites; `Particles`; `Spine`; `Pipeline` - render passes; `Platforms` - the backends (Mac, iOS and Apple on Metal,
+Windows, Linux, Android and WebAssembly on GL).
+
 ### Textures
 The `o2::Texture` class and references to them, `o2::TextureRef`, are used for working with textures. Textures are usually atlases loaded from disk, or render targets.
 

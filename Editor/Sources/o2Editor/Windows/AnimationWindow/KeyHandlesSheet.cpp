@@ -14,7 +14,7 @@
 #include "o2Editor/Windows/AnimationWindow/Timeline.h"
 #include "o2Editor/Windows/AnimationWindow/TrackControls/ITrackControl.h"
 #include "o2Editor/Windows/AnimationWindow/Tree.h"
-#include "o2/Render/VectorSprite.h"
+#include "o2/Render/VectorGraphics/VectorSprite.h"
 
 namespace Editor
 {

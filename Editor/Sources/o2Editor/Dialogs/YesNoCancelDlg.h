@@ -1,7 +1,7 @@
 #pragma once
 
 #include "o2/Events/CursorEventsArea.h"
-#include "o2/Render/TextureRef.h"
+#include "o2/Render/Resources/TextureRef.h"
 #include "o2/Utils/Function/Function.h"
 #include "o2/Utils/Singleton.h"
 

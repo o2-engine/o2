@@ -1,8 +1,8 @@
 #pragma once
 
 #include "o2/Events/CursorAreaEventsListener.h"
-#include "o2/Render/TextureRef.h"
-#include "o2/Render/VectorSprite.h"
+#include "o2/Render/Resources/TextureRef.h"
+#include "o2/Render/VectorGraphics/VectorSprite.h"
 #include "o2/Scene/UI/Widget.h"
 #include "o2/Utils/Editor/FrameHandles.h"
 #include "o2/Utils/Function/Function.h"

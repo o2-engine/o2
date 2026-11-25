@@ -1,7 +1,7 @@
 #include "o2Editor/stdafx.h"
 #include "MeshWeightsTool.h"
 
-#include "o2/Render/SkinningMesh.h"
+#include "o2/Render/Meshes/SkinningMesh.h"
 #include "o2/Scene/Components/SkinningMeshComponent.h"
 #include "o2Editor/Actions/VertexWeights.h"
 #include "o2Editor/Windows/SceneWindow/SceneEditScreen.h"

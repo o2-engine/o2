@@ -8,7 +8,7 @@
 #include "o2/Utils/FileSystem/FileSystem.h"
 #include "o2Editor/Dialogs/System/OpenSaveDialog.h"
 #include "o2Editor/Dialogs/YesNoCancelDlg.h"
-#include "o2/Render/VectorSprite.h"
+#include "o2/Render/VectorGraphics/VectorSprite.h"
 
 namespace Editor
 {

@@ -11,7 +11,7 @@
 #include "o2/Render/Camera.h"
 #include "o2/Render/Render.h"
 #include "o2/Render/Sprite.h"
-#include "o2/Render/Text.h"
+#include "o2/Render/Text/Text.h"
 #include "o2/Scene/Components/AnimationComponent.h"
 #include "o2/Scene/Components/AnimationStateGraphComponent.h"
 #include "o2/Scene/Components/ImageComponent.h"

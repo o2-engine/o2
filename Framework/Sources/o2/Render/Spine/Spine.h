@@ -3,7 +3,7 @@
 #include "o2/Assets/Types/Spine/SpineAsset.h"
 #include "o2/Assets/Types/Spine/SpineAtlasAsset.h"
 #include "o2/Render/IDrawable.h"
-#include "o2/Render/TextureRef.h"
+#include "o2/Render/Resources/TextureRef.h"
 #include "o2/Utils/Basic/ICloneable.h"
 #include "o2/Utils/Math/Vertex.h"
 #include "o2/Utils/Property.h"

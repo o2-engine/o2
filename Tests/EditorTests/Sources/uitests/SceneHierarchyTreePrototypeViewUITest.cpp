@@ -2,7 +2,7 @@
 #include <gtest/gtest.h>
 
 #include "o2/Assets/Types/ActorAsset.h"
-#include "o2/Render/Text.h"
+#include "o2/Render/Text/Text.h"
 #include "o2/Scene/Actor.h"
 #include "o2/Scene/Scene.h"
 #include "o2/Scene/UI/UIManager.h"

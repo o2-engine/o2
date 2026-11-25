@@ -2,11 +2,11 @@
 #include "RotateTool.h"
 
 #include "o2/Assets/Types/VectorFontAsset.h"
-#include "o2/Render/Mesh3DFill.h"
-#include "o2/Render/Mesh.h"
+#include "o2/Render/Meshes/Mesh3DFill.h"
+#include "o2/Render/Meshes/Mesh.h"
 #include "o2/Render/Render.h"
 #include "o2/Render/Sprite.h"
-#include "o2/Render/Text.h"
+#include "o2/Render/Text/Text.h"
 #include "o2/Scene/Actor.h"
 #include "o2/Scene/Scene.h"
 #include "o2/Utils/Math/Basis3D.h"
@@ -20,7 +20,7 @@
 #include "o2Editor/Windows/SceneWindow/SceneEditScreen.h"
 #include "o2Editor/Windows/TreeWindow/SceneHierarchyTree.h"
 #include "o2Editor/Windows/TreeWindow/TreeWindow.h"
-#include "o2/Render/VectorSprite.h"
+#include "o2/Render/VectorGraphics/VectorSprite.h"
 
 namespace Editor
 {

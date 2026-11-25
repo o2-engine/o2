@@ -11,7 +11,7 @@
 #include "o2Editor/Actions/AddComponent.h"
 #include "o2Editor/Windows/PropertiesWindow/ActorsViewer/ActorViewer.h"
 #include "o2Editor/Windows/SceneWindow/SceneWindow.h"
-#include "o2/Render/VectorSprite.h"
+#include "o2/Render/VectorGraphics/VectorSprite.h"
 #include "o2Editor/UI/Style/EditorTheme.h"
 
 namespace Editor

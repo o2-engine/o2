@@ -2,7 +2,7 @@
 #include "VideoAsset.h"
 
 #include "o2/Assets/Assets.h"
-#include "o2/Render/VideoDecoder.h"
+#include "o2/Render/Video/VideoDecoder.h"
 #include "o2/Utils/Debug/Log/LogStream.h"
 #include "o2/Utils/FileSystem/FileSystem.h"
 

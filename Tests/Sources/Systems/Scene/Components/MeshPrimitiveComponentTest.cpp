@@ -1,7 +1,7 @@
 #include "o2/stdafx.h"
 #include <gtest/gtest.h>
 
-#include "o2/Render/Mesh.h"
+#include "o2/Render/Meshes/Mesh.h"
 #include "o2/Scene/Actor.h"
 #include "o2/Scene/Components/MeshPrimitiveComponent.h"
 #include "o2/Utils/Math/Matrix4.h"

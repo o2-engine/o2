@@ -1,7 +1,7 @@
 #pragma once
 #include "IEditorTool.h"
 
-#include "o2/Render/Mesh.h"
+#include "o2/Render/Meshes/Mesh.h"
 #include "o2/Scene/Components/SkinningMeshBoneComponent.h"
 #include "o2Editor/Windows/SceneWindow/SceneEditorLayer.h"
 

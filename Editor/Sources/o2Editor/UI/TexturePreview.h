@@ -1,7 +1,7 @@
 #pragma once
 
 #include "o2/Scene/UI/Widget.h"
-#include "o2/Render/TextureRef.h"
+#include "o2/Render/Resources/TextureRef.h"
 
 using namespace o2;
 

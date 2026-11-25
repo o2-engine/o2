@@ -2,7 +2,7 @@
 #include <gtest/gtest.h>
 
 #include "o2/Render/IRectDrawable.h"
-#include "o2/Render/Material.h"
+#include "o2/Render/Resources/Material.h"
 #include "o2/Utils/Math/Color.h"
 #include "o2/Utils/Math/Math.h"
 #include "o2/Utils/Math/Vector2.h"

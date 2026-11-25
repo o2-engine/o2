@@ -1,6 +1,6 @@
 #pragma once
 
-#include "o2/Render/FontStyle.h"
+#include "o2/Render/Text/FontStyle.h"
 #include "o2Editor/Pipeline/UiLayout/UiLayoutRun.h"
 #include "o2Editor/Pipeline/UiLayout/UiLayoutWidgets.h"
 

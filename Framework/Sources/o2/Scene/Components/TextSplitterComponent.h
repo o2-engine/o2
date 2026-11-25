@@ -2,7 +2,7 @@
 
 #include "o2/Scene/Component.h"
 #include "o2/Utils/Serialization/Serializable.h"
-#include "o2/Render/Text.h"
+#include "o2/Render/Text/Text.h"
 
 namespace o2
 {

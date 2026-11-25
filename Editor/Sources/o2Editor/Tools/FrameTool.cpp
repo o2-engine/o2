@@ -6,14 +6,14 @@
 #include "o2/Scene/Actor.h"
 #include "o2/Scene/Scene.h"
 #include "o2Editor/Actions/Transform.h"
-#include "o2/Render/Mesh3DFill.h"
+#include "o2/Render/Meshes/Mesh3DFill.h"
 #include "o2Editor/EditorApplication.h"
 #include "o2Editor/Windows/WindowsManager.h"
 #include "o2Editor/Windows/SceneWindow/SceneWindow.h"
 #include "o2Editor/Windows/SceneWindow/SceneEditScreen.h"
 #include "o2Editor/Windows/TreeWindow/SceneHierarchyTree.h"
 #include "o2Editor/Windows/TreeWindow/TreeWindow.h"
-#include "o2/Render/VectorSprite.h"
+#include "o2/Render/VectorGraphics/VectorSprite.h"
 
 namespace Editor
 {

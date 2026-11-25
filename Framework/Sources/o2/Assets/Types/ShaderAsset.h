@@ -2,7 +2,7 @@
 
 #include "o2/Assets/Asset.h"
 #include "o2/Assets/AssetRef.h"
-#include "o2/Render/Shader.h"
+#include "o2/Render/Resources/Shader.h"
 
 namespace o2
 {

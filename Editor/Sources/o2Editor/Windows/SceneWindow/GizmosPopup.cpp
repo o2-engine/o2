@@ -7,7 +7,7 @@
 #include "o2/Utils/Editor/EditorScope.h"
 #include "o2/Utils/Reflection/Type.h"
 #include "o2Editor/Windows/SceneWindow/SceneEditScreen.h"
-#include "o2/Render/VectorSprite.h"
+#include "o2/Render/VectorGraphics/VectorSprite.h"
 #include "o2/Scene/Component.h"
 #include "o2/Scene/UI/WidgetLayer.h"
 #include "o2Editor/UI/Style/EditorTheme.h"

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "o2/Render/SkinnedModelFormat.h"
+#include "o2/Render/Meshes/SkinnedModelFormat.h"
 #include "o2/Utils/Types/Ref.h"
 #include "o2/Utils/Types/String.h"
 

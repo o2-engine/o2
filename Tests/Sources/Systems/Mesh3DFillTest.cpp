@@ -1,8 +1,8 @@
 #include "o2/stdafx.h"
 #include <gtest/gtest.h>
 
-#include "o2/Render/Mesh.h"
-#include "o2/Render/Mesh3DFill.h"
+#include "o2/Render/Meshes/Mesh.h"
+#include "o2/Render/Meshes/Mesh3DFill.h"
 #include "o2/Utils/Math/Vertex.h"
 
 using namespace o2;

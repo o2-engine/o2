@@ -3,7 +3,7 @@
 #include <functional>
 
 #include "Network/NetworkTestHelpers.h"
-#include "o2/Render/VectorFontEffects.h"
+#include "o2/Render/Text/VectorFontEffects.h"
 #include "o2/Utils/Bitmap/Bitmap.h"
 #include "o2/Utils/FileSystem/FileSystem.h"
 #include "o2Editor/Pipeline/PipelineUtils.h"

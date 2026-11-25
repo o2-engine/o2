@@ -3,7 +3,7 @@
 #include "o2/Assets/Types/ImageAsset.h"
 #include "o2/Assets/Types/MaterialAsset.h"
 #include "o2/Assets/Types/Mesh3DAsset.h"
-#include "o2/Render/Mesh.h"
+#include "o2/Render/Meshes/Mesh.h"
 #include "o2/Utils/Math/Mesh3DPrimitives.h"
 #include "o2/Scene/Component.h"
 

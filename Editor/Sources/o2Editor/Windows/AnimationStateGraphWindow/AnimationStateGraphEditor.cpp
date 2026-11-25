@@ -27,7 +27,7 @@
 #include "o2Editor/UIRoot.h"
 #include "o2Editor/Windows/PropertiesWindow/PropertiesWindow.h"
 #include "o2Editor/Windows/SceneWindow/SceneEditScreen.h"
-#include "o2/Render/VectorSprite.h"
+#include "o2/Render/VectorGraphics/VectorSprite.h"
 #include "o2Editor/UI/Style/EditorTheme.h"
 
 namespace Editor

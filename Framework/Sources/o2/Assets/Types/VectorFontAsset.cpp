@@ -3,7 +3,7 @@
 
 #include "o2/Assets/Assets.h"
 #include "o2/Render/Render.h"
-#include "o2/Render/SdfFont.h"
+#include "o2/Render/Text/SdfFont.h"
 
 #include <cstdlib>
 

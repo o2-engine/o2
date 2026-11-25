@@ -1,6 +1,6 @@
 #pragma once
 
-#include "o2/Render/TextureRef.h"
+#include "o2/Render/Resources/TextureRef.h"
 #include "o2/Utils/Types/Containers/Map.h"
 #include "o2/Utils/Types/Containers/Vector.h"
 #include "o2Editor/Pipeline/PipelineValue.h"

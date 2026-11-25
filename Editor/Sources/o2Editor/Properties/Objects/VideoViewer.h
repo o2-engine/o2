@@ -1,6 +1,6 @@
 #pragma once
 
-#include "o2/Render/Video.h"
+#include "o2/Render/Video/Video.h"
 #include "o2Editor/Properties/IObjectPropertiesViewer.h"
 
 using namespace o2;

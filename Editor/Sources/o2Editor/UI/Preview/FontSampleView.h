@@ -1,6 +1,6 @@
 #pragma once
 
-#include "o2/Render/Font.h"
+#include "o2/Render/Text/Font.h"
 #include "o2/Scene/UI/Widget.h"
 
 using namespace o2;

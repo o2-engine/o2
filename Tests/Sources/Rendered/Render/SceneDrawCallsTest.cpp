@@ -1,7 +1,7 @@
 #include "o2/stdafx.h"
 #include <gtest/gtest.h>
 
-#include "o2/Render/Mesh.h"
+#include "o2/Render/Meshes/Mesh.h"
 #include "o2/Render/Render.h"
 #include "o2/Utils/Editor/EditorScope.h"
 

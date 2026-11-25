@@ -2,7 +2,7 @@
 #include "PropertiesListDlg.h"
 
 #include "o2/Render/Sprite.h"
-#include "o2/Render/Text.h"
+#include "o2/Render/Text/Text.h"
 #include "o2/Scene/UI/UIManager.h"
 #include "o2/Scene/UI/WidgetLayout.h"
 #include "o2/Scene/UI/Widgets/Button.h"
@@ -11,7 +11,7 @@
 #include "o2/Utils/Editor/Attributes/AnimatableAttribute.h"
 #include "o2/Utils/Editor/EditorScope.h"
 #include "o2Editor/UIRoot.h"
-#include "o2/Render/VectorSprite.h"
+#include "o2/Render/VectorGraphics/VectorSprite.h"
 
 DECLARE_SINGLETON(Editor::PropertiesListDlg);
 

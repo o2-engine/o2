@@ -16,7 +16,7 @@
 #include "o2/Utils/Editor/SceneEditableObject.h"
 #include "o2/Utils/Editor/EditorScope.h"
 #include "o2Editor/EditorConfig.h"
-#include "o2/Render/VectorSprite.h"
+#include "o2/Render/VectorGraphics/VectorSprite.h"
 
 DECLARE_SINGLETON(Editor::SceneWindow);
 

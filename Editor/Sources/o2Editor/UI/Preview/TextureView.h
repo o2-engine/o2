@@ -1,6 +1,6 @@
 #pragma once
 
-#include "o2/Render/TextureRef.h"
+#include "o2/Render/Resources/TextureRef.h"
 #include "o2/Utils/Bitmap/Bitmap.h"
 #include "o2Editor/UI/ScrollView.h"
 

@@ -3,7 +3,7 @@
 
 #include "o2/Animation/Tracks/AnimationFloatTrack.h"
 #include "o2/Render/Render.h"
-#include "o2/Render/Text.h"
+#include "o2/Render/Text/Text.h"
 #include "o2/Scene/UI/WidgetLayer.h"
 #include "o2/Scene/UI/WidgetLayout.h"
 #include "o2/Scene/UI/WidgetState.h"

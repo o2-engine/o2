@@ -31,7 +31,7 @@
 #include "o2Editor/Windows/AssetsWindow/FoldersTree.h"
 #include "o2Editor/Windows/SceneWindow/SceneWindow.h"
 #include "o2Editor/EditorConfig.h"
-#include "o2/Render/VectorSprite.h"
+#include "o2/Render/VectorGraphics/VectorSprite.h"
 
 #if defined PLATFORM_WASM
 #include <emscripten.h>

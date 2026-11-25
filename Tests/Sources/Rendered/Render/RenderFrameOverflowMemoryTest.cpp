@@ -2,7 +2,7 @@
 #include <gtest/gtest.h>
 
 #include "o2/Render/Camera.h"
-#include "o2/Render/Mesh.h"
+#include "o2/Render/Meshes/Mesh.h"
 #include "o2/Render/Render.h"
 #include "o2/Utils/Math/Math.h"
 #include "o2/Utils/Math/Vertex.h"

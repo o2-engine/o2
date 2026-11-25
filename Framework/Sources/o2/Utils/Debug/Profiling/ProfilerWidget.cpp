@@ -6,10 +6,10 @@
 #if defined(O2_PROFILER_ENABLED)
 
 #include "o2/Application/Input.h"
-#include "o2/Render/Mesh.h"
+#include "o2/Render/Meshes/Mesh.h"
 #include "o2/Render/Render.h"
-#include "o2/Render/Text.h"
-#include "o2/Render/VectorFont.h"
+#include "o2/Render/Text/Text.h"
+#include "o2/Render/Text/VectorFont.h"
 #include "o2/Scene/UI/WidgetLayout.h"
 #include "o2/Utils/Debug/Debug.h"
 

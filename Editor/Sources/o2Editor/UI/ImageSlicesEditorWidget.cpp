@@ -4,7 +4,7 @@
 #include "o2/Assets/Types/VectorImageAsset.h"
 #include "o2/Utils/Editor/DragHandle.h"
 #include "o2Editor/Properties/Basic/BorderIntProperty.h"
-#include "o2/Render/VectorSprite.h"
+#include "o2/Render/VectorGraphics/VectorSprite.h"
 
 namespace Editor
 {
