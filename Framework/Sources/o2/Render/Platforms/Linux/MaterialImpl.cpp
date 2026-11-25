@@ -102,9 +102,8 @@ namespace o2
         mTexCoordsAttribute = glGetAttribLocation(program, "a_texCoords");
         mNormalAttribute = glGetAttribLocation(program, "a_normal");
 
-        mParamUniformLocations.Resize(mParams.Count());
-        for (int i = 0; i < mParams.Count(); i++)
-            mParamUniformLocations[i] = glGetUniformLocation(program, mParams[i]->GetName().Data());
+        // the declared types and array sizes too: a float vector uploads as many elements as its uniform declares
+        ResolveParamUniforms(program, mParams, mParamUniformLocations, mParamUniformTypes, mParamUniformSizes);
 
         mSamplerLocations.Resize(mSamplers.Count());
         for (int i = 0; i < mSamplers.Count(); i++)

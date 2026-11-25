@@ -274,6 +274,29 @@ namespace o2
         }
     }
 
+    // The vertex type the attribute pointers are bound for now: a batch of another type binds them again before it draws
+    static VertexType gAttributesVertexType;
+
+    // The extra texture coordinates of a material's samplers (a distance field text's gradient and glyph cell), bound like
+    // the other attributes to the buffer bound now: a pool buffer switched under the same program needs them again too
+    static void BindSamplerTexCoords(const Vector<SamplerLocation>& locations, const VertexType& vertexType)
+    {
+        size_t stride = vertexType.GetStride();
+        if (stride == 0) stride = sizeof(Vertex);
+
+        const UInt texCoordParams[] = { VertexParam::TexCoord1, VertexParam::TexCoord2 };
+        for (int i = 0; i < locations.Count() && i < 2; i++)
+        {
+            GLint attrLoc = locations[i].texCoordsAttribute;
+            if (attrLoc >= 0 && vertexType.HasParam(texCoordParams[i]))
+            {
+                glVertexAttribPointer((GLuint)attrLoc, 2, GL_FLOAT, GL_FALSE, (GLsizei)stride,
+                                      (void*)vertexType.GetParamOffset(texCoordParams[i]));
+                glEnableVertexAttribArray((GLuint)attrLoc);
+            }
+        }
+    }
+
     void Render::PlatformBindNextPoolBuffers()
     {
         mCurrentBufferIdx++;
@@ -286,6 +309,9 @@ namespace o2
 
         BindBufferAttributes(mCurrentBatchVertexType, mActivePosAttribute, mActiveColorAttribute, mActiveUVAttribute,
                              mActiveNormalAttribute);
+        if (mCurrentMaterial)
+            BindSamplerTexCoords(mCurrentMaterial->mSamplerLocations, mCurrentBatchVertexType);
+        gAttributesVertexType = mCurrentBatchVertexType;
 
         mVertexBufferIdx = 0;
         mIndexBufferIdx = 0;
@@ -321,6 +347,8 @@ namespace o2
         {
             BindBufferAttributes(mCurrentBatchVertexType, mActivePosAttribute, mActiveColorAttribute, mActiveUVAttribute,
                                  mActiveNormalAttribute);
+            if (mCurrentMaterial)
+                BindSamplerTexCoords(mCurrentMaterial->mSamplerLocations, mCurrentBatchVertexType);
 
             glActiveTexture(GL_TEXTURE0);
             glBindTexture(GL_TEXTURE_2D, mCurrentDrawTexture ? mCurrentDrawTexture->mHandle : mWhiteTexture->mHandle);
@@ -333,7 +361,31 @@ namespace o2
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mIndexBuffersPool[mCurrentBufferIdx]);
             BindBufferAttributes(mCurrentBatchVertexType, mActivePosAttribute, mActiveColorAttribute, mActiveUVAttribute,
                                  mActiveNormalAttribute);
+            if (mCurrentMaterial)
+                BindSamplerTexCoords(mCurrentMaterial->mSamplerLocations, mCurrentBatchVertexType);
+            gAttributesVertexType = mCurrentBatchVertexType;
             return;
+        }
+
+        // A batch that would run past the end of the pool buffer goes into the next one, its indexes rebased (the buffer
+        // counts vertices of the frame so far, and a batch of a bigger vertex type takes more bytes per vertex)
+        if ((mVertexBufferIdx + mLastDrawVertex)*mCurrentBatchVertexType.GetStride() > mVertexBufferByteSize ||
+            mIndexBufferIdx + mLastDrawIdx > mIndexBufferSize)
+        {
+            for (UInt i = 0; i < mLastDrawIdx; i++)
+                mVertexIndexData[i] -= (VertexIndex)mVertexBufferIdx;
+
+            PlatformBindNextPoolBuffers();
+        }
+
+        // the batch's vertices are of another type than the attributes were bound for (the same material drawing them)
+        if (mCurrentBatchVertexType != gAttributesVertexType)
+        {
+            BindBufferAttributes(mCurrentBatchVertexType, mActivePosAttribute, mActiveColorAttribute, mActiveUVAttribute,
+                                 mActiveNormalAttribute);
+            if (mCurrentMaterial)
+                BindSamplerTexCoords(mCurrentMaterial->mSamplerLocations, mCurrentBatchVertexType);
+            gAttributesVertexType = mCurrentBatchVertexType;
         }
 
         size_t stride = mCurrentBatchVertexType.GetStride();
@@ -554,6 +606,8 @@ namespace o2
                                       (void*)mCurrentBatchVertexType.GetParamOffset(VertexParam::Normal));
                 glEnableVertexAttribArray((GLuint)mActiveNormalAttribute);
             }
+
+            gAttributesVertexType = mCurrentBatchVertexType;
 
             // Bind additional texcoord attributes for extra samplers
             const UInt texCoordParams[] = { VertexParam::TexCoord1, VertexParam::TexCoord2 };
