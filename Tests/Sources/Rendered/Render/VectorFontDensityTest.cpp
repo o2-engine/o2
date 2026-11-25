@@ -3,11 +3,11 @@
 
 #include "o2/Assets/Assets.h"
 #include "o2/Render/Camera.h"
-#include "o2/Render/FontStyle.h"
+#include "o2/Render/Text/FontStyle.h"
 #include "o2/Render/Render.h"
-#include "o2/Render/Text.h"
-#include "o2/Render/VectorFont.h"
-#include "o2/Render/VectorFontEffects.h"
+#include "o2/Render/Text/Text.h"
+#include "o2/Render/Text/VectorFont.h"
+#include "o2/Render/Text/VectorFontEffects.h"
 
 using namespace o2;
 

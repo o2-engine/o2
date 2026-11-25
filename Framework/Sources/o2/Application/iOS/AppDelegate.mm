@@ -4,7 +4,7 @@
 #import "ApplicationPlatformWrapper.h"
 #import "RendererView.h"
 #include "o2/Render/Render.h"
-#include "o2/Render/iOS/MetalWrappers.h"
+#include "o2/Render/Platforms/iOS/MetalWrappers.h"
 #include "o2/Application/Application.h"
 #include "o2/Utils/Debug/Debug.h"
 

@@ -4,8 +4,8 @@
 #include "o2/Assets/Types/SoundAsset.h"
 #include "o2/Assets/Types/VideoAsset.h"
 #include "o2/Render/Render.h"
-#include "o2/Render/Texture.h"
-#include "o2/Render/Video.h"
+#include "o2/Render/Resources/Texture.h"
+#include "o2/Render/Video/Video.h"
 #include "o2Editor/Pipeline/PipelineAudio.h"
 
 #include <chrono>

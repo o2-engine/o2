@@ -4,7 +4,7 @@
 #include "o2/Assets/Types/BinaryAsset.h"
 #include "o2/Assets/Types/VectorImageAsset.h"
 #include "o2/Render/Sprite.h"
-#include "o2/Render/VectorSprite.h"
+#include "o2/Render/VectorGraphics/VectorSprite.h"
 #include "o2/Scene/UI/UIManager.h"
 #include "o2/Scene/UI/WidgetLayer.h"
 #include "o2/Scene/UI/Widgets/VerticalLayout.h"

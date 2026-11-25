@@ -3,8 +3,8 @@
 
 #include "o2/Assets/AssetRef.h"
 #include "o2/Assets/Types/FontStyleAsset.h"
-#include "o2/Render/FontStyle.h"
-#include "o2/Render/VectorFontEffects.h"
+#include "o2/Render/Text/FontStyle.h"
+#include "o2/Render/Text/VectorFontEffects.h"
 #include "o2/Utils/Serialization/DataValue.h"
 
 using namespace o2;

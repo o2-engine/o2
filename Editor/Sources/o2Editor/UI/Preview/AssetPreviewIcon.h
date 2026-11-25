@@ -3,7 +3,7 @@
 #include "o2/Assets/Asset.h"
 #include "o2/Assets/AssetRef.h"
 #include "o2/Events/CursorAreaEventsListener.h"
-#include "o2/Render/TextureRef.h"
+#include "o2/Render/Resources/TextureRef.h"
 #include "o2/Scene/UI/Widget.h"
 
 using namespace o2;

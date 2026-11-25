@@ -1,9 +1,9 @@
 #pragma once
 
 #include "o2/Assets/Types/ImageAsset.h"
-#include "o2/Render/Mesh.h"
+#include "o2/Render/Meshes/Mesh.h"
 #include "o2/Render/IRectDrawable.h"
-#include "o2/Render/TextureRef.h"
+#include "o2/Render/Resources/TextureRef.h"
 #include "o2/Utils/Editor/Attributes/ScriptableAttribute.h"
 #include "o2/Utils/Math/Border.h"
 

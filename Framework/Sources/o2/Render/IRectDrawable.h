@@ -2,7 +2,7 @@
 
 #include "o2/Assets/Types/MaterialAsset.h"
 #include "o2/Render/IDrawable.h"
-#include "o2/Render/Material.h"
+#include "o2/Render/Resources/Material.h"
 #include "o2/Utils/Editor/Attributes/RangeAttribute.h"
 #include "o2/Utils/Math/Color.h"
 #include "o2/Utils/Math/Transform.h"

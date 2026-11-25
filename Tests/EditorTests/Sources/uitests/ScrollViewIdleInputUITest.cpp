@@ -5,7 +5,7 @@
 #include "o2/Application/Input.h"
 #include "o2/Events/EventSystem.h"
 #include "o2/Render/Render.h"
-#include "o2/Render/TextureRef.h"
+#include "o2/Render/Resources/TextureRef.h"
 #include "o2/Scene/UI/UIManager.h"
 #include "o2/Scene/UI/WidgetLayout.h"
 #include "o2/Utils/Editor/EditorScope.h"

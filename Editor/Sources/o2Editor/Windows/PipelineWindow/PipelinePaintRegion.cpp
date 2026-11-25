@@ -2,7 +2,7 @@
 #include "PipelinePaintEditor.h"
 
 #include "o2/Render/Render.h"
-#include "o2/Render/Text.h"
+#include "o2/Render/Text/Text.h"
 #include "o2Editor/Pipeline/PipelineEditRegion.h"
 #include "o2Editor/Pipeline/PipelineImageOps.h"
 

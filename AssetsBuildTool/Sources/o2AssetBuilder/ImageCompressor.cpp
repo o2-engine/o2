@@ -2,7 +2,7 @@
 #include "ImageCompressor.h"
 
 #include "AstcCompressor.h"
-#include "o2/Render/Texture.h"
+#include "o2/Render/Resources/Texture.h"
 #include "o2/Utils/Bitmap/Bitmap.h"
 #include "o2/Utils/Bitmap/DdsFormat.h"
 #include "o2/Utils/FileSystem/FileSystem.h"

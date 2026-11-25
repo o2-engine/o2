@@ -1,9 +1,9 @@
 #include "o2Editor/stdafx.h"
 #include "FontSampleView.h"
 
-#include "o2/Render/FontStyle.h"
-#include "o2/Render/Text.h"
-#include "o2/Render/VectorFontEffects.h"
+#include "o2/Render/Text/FontStyle.h"
+#include "o2/Render/Text/Text.h"
+#include "o2/Render/Text/VectorFontEffects.h"
 #include "o2/Scene/UI/WidgetLayer.h"
 #include "o2Editor/UI/Style/EditorTheme.h"
 

@@ -7,7 +7,7 @@
 #include "o2/Assets/Types/VectorImageAsset.h"
 #include "o2/Render/Render.h"
 #include "o2/Render/Sprite.h"
-#include "o2/Render/VectorSprite.h"
+#include "o2/Render/VectorGraphics/VectorSprite.h"
 #include "o2/Utils/Bitmap/Bitmap.h"
 #include "Assets/VectorImageTestAssets.h"
 

@@ -2,7 +2,7 @@
 #include <gtest/gtest.h>
 
 #include "o2/Assets/Types/Mesh3DAsset.h"
-#include "o2/Render/Mesh.h"
+#include "o2/Render/Meshes/Mesh.h"
 #include "o2/Scene/Actor.h"
 #include "o2/Scene/Components/Mesh3DComponent.h"
 #include "o2/Utils/Math/Matrix4.h"

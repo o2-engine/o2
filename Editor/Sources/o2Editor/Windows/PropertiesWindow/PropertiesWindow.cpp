@@ -10,7 +10,7 @@
 #include "o2Editor/Windows/PropertiesWindow/IPropertiesViewer.h"
 #include "o2Editor/Windows/SceneWindow/SceneWindow.h"
 #include "o2Editor/Windows/TreeWindow/TreeWindow.h"
-#include "o2/Render/VectorSprite.h"
+#include "o2/Render/VectorGraphics/VectorSprite.h"
 
 DECLARE_SINGLETON(Editor::PropertiesWindow);
 

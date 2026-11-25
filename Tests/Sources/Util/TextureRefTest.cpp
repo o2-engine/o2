@@ -1,6 +1,6 @@
 #include "o2/stdafx.h"
 
-#include "o2/Render/TextureRef.h"
+#include "o2/Render/Resources/TextureRef.h"
 
 #include <gtest/gtest.h>
 

@@ -8,7 +8,7 @@
 #include "o2/Animation/Tracks/AnimationVec3FTrack.h"
 #include "o2/Assets/Types/VectorImageAsset.h"
 #include "o2/Render/Render.h"
-#include "o2/Render/VectorSprite.h"
+#include "o2/Render/VectorGraphics/VectorSprite.h"
 #include "o2/Scene/Actor.h"
 #include "o2/Scene/UI/WidgetLayout.h"
 #include "o2Editor/UIRoot.h"

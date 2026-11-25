@@ -7,7 +7,7 @@
 
 #include "o2/Scene/UI/Widgets/ScrollArea.h"
 #include "o2/Scene/UI/Widgets/Window.h"
-#include "o2/Render/Text.h"
+#include "o2/Render/Text/Text.h"
 #include "o2Editor/Pipeline/PipelineImageOps.h"
 #include "o2Editor/Pipeline/PipelineValue.h"
 #include "o2Editor/Pipeline/PipelineExecutor.h"

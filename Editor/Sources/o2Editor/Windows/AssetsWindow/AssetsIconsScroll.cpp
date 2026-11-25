@@ -15,7 +15,7 @@
 #include "o2Editor/Windows/PipelineWindow/PipelineTheme.h"
 #include "o2/Render/Render.h"
 #include "o2/Render/Sprite.h"
-#include "o2/Render/VectorSprite.h"
+#include "o2/Render/VectorGraphics/VectorSprite.h"
 #include "o2/Scene/Actor.h"
 #include "o2/Scene/Components/ImageComponent.h"
 #include "o2/Scene/UI/UIManager.h"

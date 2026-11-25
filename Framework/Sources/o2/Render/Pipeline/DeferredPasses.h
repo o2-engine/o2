@@ -1,10 +1,10 @@
 #pragma once
 
-#include "o2/Render/Material.h"
+#include "o2/Render/Resources/Material.h"
 #include "o2/Utils/Math/AABB.h"
-#include "o2/Render/Mesh.h"
+#include "o2/Render/Meshes/Mesh.h"
 #include "o2/Render/Pipeline/RenderPass.h"
-#include "o2/Render/TextureRef.h"
+#include "o2/Render/Resources/TextureRef.h"
 
 namespace o2
 {

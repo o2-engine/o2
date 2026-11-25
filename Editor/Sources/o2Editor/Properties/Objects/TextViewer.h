@@ -1,7 +1,7 @@
 #pragma once
 
 #include "o2/Assets/Types/ImageAsset.h"
-#include "o2/Render/Text.h"
+#include "o2/Render/Text/Text.h"
 #include "o2Editor/Properties/IObjectPropertiesViewer.h"
 #include "o2Editor/Properties/Objects/TextPropertiesBlock.h"
 

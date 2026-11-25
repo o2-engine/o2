@@ -11,7 +11,7 @@
 #include "o2/Scene/UI/Widgets/LongList.h"
 #include "o2/Scene/UI/Widgets/Toggle.h"
 #include "o2/Utils/System/Time/Time.h"
-#include "o2/Render/VectorSprite.h"
+#include "o2/Render/VectorGraphics/VectorSprite.h"
 #include "o2Editor/UI/Style/EditorTheme.h"
 
 namespace Editor

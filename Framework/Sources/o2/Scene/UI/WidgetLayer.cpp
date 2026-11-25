@@ -5,7 +5,7 @@
 #include "o2/Assets/Types/ImageAsset.h"
 #include "o2/Assets/Types/VectorImageAsset.h"
 #include "o2/Render/Sprite.h"
-#include "o2/Render/VectorSprite.h"
+#include "o2/Render/VectorGraphics/VectorSprite.h"
 #include "o2/Scene/UI/Widget.h"
 #include "o2/Scene/UI/WidgetLayout.h"
 #include "o2/Scene/Scene.h"

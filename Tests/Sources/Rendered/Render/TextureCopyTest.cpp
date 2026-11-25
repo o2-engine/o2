@@ -1,8 +1,8 @@
 #include "o2/stdafx.h"
 #include <gtest/gtest.h>
 
-#include "o2/Render/Texture.h"
-#include "o2/Render/TextureRef.h"
+#include "o2/Render/Resources/Texture.h"
+#include "o2/Render/Resources/TextureRef.h"
 #include "o2/Utils/Types/WeakRef.h"
 #include "o2/Utils/Bitmap/Bitmap.h"
 

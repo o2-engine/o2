@@ -5,7 +5,7 @@
 #include "o2/Animation/Tracks/AnimationVec2FTrack.h"
 #include "o2/Animation/Tracks/AnimationColor4Track.h"
 #include "o2/Render/Sprite.h"
-#include "o2/Render/Text.h"
+#include "o2/Render/Text/Text.h"
 #include "o2/Scene/UI/UIManager.h"
 #include "o2/Scene/UI/WidgetLayer.h"
 #include "o2/Scene/UI/WidgetLayout.h"
@@ -31,7 +31,7 @@
 #include "o2/Scene/UI/Widgets/VerticalProgress.h"
 #include "o2/Scene/UI/Widgets/VerticalScrollBar.h"
 #include "o2/Scene/UI/Widgets/Window.h"
-#include "o2/Render/VectorSprite.h"
+#include "o2/Render/VectorGraphics/VectorSprite.h"
 
 namespace o2
 {

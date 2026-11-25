@@ -2,7 +2,7 @@
 
 #include <gtest/gtest.h>
 
-#include "o2/Render/Mesh.h"
+#include "o2/Render/Meshes/Mesh.h"
 #include "o2/Scene/Actor.h"
 #include "o2/Scene/Components/MeshComponent.h"
 #include "o2/Utils/Math/Spline.h"

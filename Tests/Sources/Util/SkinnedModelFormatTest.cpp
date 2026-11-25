@@ -2,7 +2,7 @@
 
 #include <gtest/gtest.h>
 
-#include "o2/Render/SkinnedModelFormat.h"
+#include "o2/Render/Meshes/SkinnedModelFormat.h"
 
 using namespace o2;
 

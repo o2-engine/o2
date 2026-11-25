@@ -35,7 +35,7 @@
 #include "o2Editor/Windows/TreeWindow/SceneSearchFilter.h"
 #include "o2Editor/Windows/WindowsManager.h"
 #include "o2Editor/Windows/SceneWindow/SceneWindow.h"
-#include "o2/Render/VectorSprite.h"
+#include "o2/Render/VectorGraphics/VectorSprite.h"
 
 DECLARE_SINGLETON(Editor::TreeWindow);
 

@@ -3,7 +3,7 @@
 
 #include "o2/Render/Render.h"
 #include "o2/Render/Sprite.h"
-#include "o2/Render/VectorSprite.h"
+#include "o2/Render/VectorGraphics/VectorSprite.h"
 #include "o2Editor/UI/Preview/TextureView.h"
 
 namespace Editor

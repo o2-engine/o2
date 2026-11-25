@@ -3,8 +3,8 @@
 #include "o2/Assets/Asset.h"
 #include "o2/Assets/Types/FolderAsset.h"
 #include "o2/Assets/Types/ImageAsset.h"
-#include "o2/Render/TextureSource.h"
-#include "o2/Render/TextureRef.h"
+#include "o2/Render/Resources/TextureSource.h"
+#include "o2/Render/Resources/TextureRef.h"
 #include "o2/Utils/Types/Ref.h"
 
 namespace o2

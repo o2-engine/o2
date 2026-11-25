@@ -9,7 +9,7 @@
 #include "o2/Physics/PhysicsWorld.h"
 #include "o2/Physics/PhysicsWorld3D.h"
 #include "o2/Render/Render.h"
-#include "o2/Render/VectorRasterCache.h"
+#include "o2/Render/VectorGraphics/VectorRasterCache.h"
 #include "o2/Scene/Scene.h"
 #include "o2/Scene/UI/UIManager.h"
 #include "o2/Sound/SoundSystem.h"

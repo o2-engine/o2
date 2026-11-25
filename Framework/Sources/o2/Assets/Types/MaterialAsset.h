@@ -4,7 +4,7 @@
 #include "o2/Assets/AssetRef.h"
 #include "o2/Assets/Types/VertexShaderAsset.h"
 #include "o2/Assets/Types/FragmentShaderAsset.h"
-#include "o2/Render/Material.h"
+#include "o2/Render/Resources/Material.h"
 #include "o2/Utils/Types/CommonTypes.h"
 
 namespace o2

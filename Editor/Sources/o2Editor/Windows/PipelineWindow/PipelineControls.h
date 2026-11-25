@@ -2,7 +2,7 @@
 
 #include "o2/Events/CursorAreaEventsListener.h"
 #include "o2/Render/IRectDrawable.h"
-#include "o2/Render/TextureRef.h"
+#include "o2/Render/Resources/TextureRef.h"
 #include "o2/Scene/UI/Widget.h"
 #include "o2/Scene/UI/Widgets/EditBox.h"
 #include "o2Editor/Windows/PipelineWindow/PipelineRichText.h"

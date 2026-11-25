@@ -1,6 +1,6 @@
 #include "o2/stdafx.h"
 #include "Mesh3DComponent.h"
-#include "o2/Render/Mesh3DFill.h"
+#include "o2/Render/Meshes/Mesh3DFill.h"
 
 #include "o2/Scene/Actor.h"
 

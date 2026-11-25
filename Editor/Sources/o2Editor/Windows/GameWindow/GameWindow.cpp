@@ -5,7 +5,7 @@
 #include "o2/Render/VectorGraphics/SvgParser.h"
 #include "o2/Render/VectorGraphics/VectorImage.h"
 #include "o2/Render/VectorGraphics/VectorRasterizer.h"
-#include "o2/Render/VectorSprite.h"
+#include "o2/Render/VectorGraphics/VectorSprite.h"
 #include "o2/Scene/CameraActor.h"
 #include "o2/Scene/UI/Widgets/Button.h"
 #include "o2/Utils/Bitmap/Bitmap.h"

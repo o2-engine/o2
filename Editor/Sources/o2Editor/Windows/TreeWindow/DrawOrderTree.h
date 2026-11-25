@@ -1,6 +1,6 @@
 #pragma once
 
-#include "o2/Render/VectorSprite.h"
+#include "o2/Render/VectorGraphics/VectorSprite.h"
 #include "o2/Scene/UI/Widgets/Tree.h"
 
 namespace o2

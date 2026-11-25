@@ -1,8 +1,8 @@
 #pragma once
 
 #include "o2/Assets/Types/ImageAsset.h"
-#include "o2/Render/SkinningMesh.h"
-#include "o2/Render/TextureRef.h"
+#include "o2/Render/Meshes/SkinningMesh.h"
+#include "o2/Render/Resources/TextureRef.h"
 #include "o2/Scene/Component.h"
 #include "o2/Utils/Math/Spline.h"
 #include "o2/Utils/Types/UID.h"

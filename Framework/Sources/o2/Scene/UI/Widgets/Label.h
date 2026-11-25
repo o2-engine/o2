@@ -1,7 +1,7 @@
 #pragma once
 
 #include "o2/Scene/UI/Widget.h"
-#include "o2/Render/Text.h"
+#include "o2/Render/Text/Text.h"
 
 namespace o2
 {

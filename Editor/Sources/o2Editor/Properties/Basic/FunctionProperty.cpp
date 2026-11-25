@@ -11,7 +11,7 @@
 #include "o2Editor/Properties/IObjectPropertiesViewer.h"
 #include "o2Editor/Properties/Properties.h"
 #include <o2/Scene/Components/ScriptableComponent.h>
-#include "o2/Render/VectorSprite.h"
+#include "o2/Render/VectorGraphics/VectorSprite.h"
 #include "o2Editor/UI/Style/EditorTheme.h"
 
 using namespace o2;

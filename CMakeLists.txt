@@ -385,7 +385,7 @@ elseif (UNIX)
                     ${ACCELERATE}
         )
 
-        set(METAL_SHADERS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Framework/Sources/o2/Render/iOS")
+        set(METAL_SHADERS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Framework/Sources/o2/Render/Platforms/iOS")
         add_subdirectory(${METAL_SHADERS_DIR})
 
         target_include_directories(o2Framework
@@ -422,7 +422,7 @@ elseif (UNIX)
                     ${ACCELERATE}
         )
 
-        set(METAL_SHADERS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Framework/Sources/o2/Render/Mac")
+        set(METAL_SHADERS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Framework/Sources/o2/Render/Platforms/Mac")
         add_subdirectory(${METAL_SHADERS_DIR})
 
         target_include_directories(o2Framework

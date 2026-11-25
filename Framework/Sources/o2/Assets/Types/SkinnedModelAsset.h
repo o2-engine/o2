@@ -2,7 +2,7 @@
 
 #include "o2/Assets/Asset.h"
 #include "o2/Assets/AssetRef.h"
-#include "o2/Render/SkinnedModelFormat.h"
+#include "o2/Render/Meshes/SkinnedModelFormat.h"
 
 namespace o2
 {

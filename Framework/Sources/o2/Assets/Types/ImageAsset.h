@@ -2,8 +2,8 @@
 
 #include "o2/Assets/Asset.h"
 #include "o2/Assets/AssetRef.h"
-#include "o2/Render/TextureSource.h"
-#include "o2/Render/TextureRef.h"
+#include "o2/Render/Resources/TextureSource.h"
+#include "o2/Render/Resources/TextureRef.h"
 #include "o2/Utils/Bitmap/Bitmap.h"
 
 namespace o2

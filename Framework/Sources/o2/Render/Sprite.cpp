@@ -5,7 +5,7 @@
 #include "o2/Assets/Assets.h"
 #include "o2/Assets/Types/AtlasAsset.h"
 #include "o2/Assets/Types/ImageAsset.h"
-#include "o2/Render/Mesh.h"
+#include "o2/Render/Meshes/Mesh.h"
 #include "o2/Render/Render.h"
 #include "o2/Utils/Debug/Debug.h"
 #include "o2/Utils/Debug/Log/LogStream.h"

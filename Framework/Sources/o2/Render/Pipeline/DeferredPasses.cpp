@@ -6,7 +6,7 @@
 #include "o2/Render/Pipeline/RenderPipeline.h"
 #include "o2/Render/Pipeline/ScenePasses.h"
 #include "o2/Render/Render.h"
-#include "o2/Render/Shader.h"
+#include "o2/Render/Resources/Shader.h"
 #include "o2/Scene/Actor.h"
 #include "o2/Scene/CameraActor.h"
 #include "o2/Scene/Components/LightComponent.h"

@@ -5,7 +5,7 @@
 
 #include "EditorVectorUIFixture.h"
 #include "o2/Assets/Assets.h"
-#include "o2/Render/Text.h"
+#include "o2/Render/Text/Text.h"
 #include "o2/Scene/Scene.h"
 #include "o2/Scene/UI/WidgetLayer.h"
 #include "o2/Scene/UI/Widgets/Button.h"

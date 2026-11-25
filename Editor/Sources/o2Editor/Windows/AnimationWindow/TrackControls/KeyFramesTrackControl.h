@@ -12,7 +12,7 @@
 #include "o2Editor/Windows/AnimationWindow/TrackControls/ITrackControl.h"
 #include "o2Editor/Actions/ActionsList.h"
 #include "o2Editor/Properties/Properties.h"
-#include "o2/Render/VectorSprite.h"
+#include "o2/Render/VectorGraphics/VectorSprite.h"
 
 using namespace o2;
 

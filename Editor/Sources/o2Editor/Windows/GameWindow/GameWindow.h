@@ -1,7 +1,7 @@
 #pragma once
 
 #include "o2/Events/CursorAreaEventsListenersLayer.h"
-#include "o2/Render/Mesh.h"
+#include "o2/Render/Meshes/Mesh.h"
 #include "o2Editor/Windows/IEditorWindow.h"
 
 namespace o2

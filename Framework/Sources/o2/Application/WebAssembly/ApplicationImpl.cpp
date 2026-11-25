@@ -6,7 +6,7 @@
 #include "o2/Application/Input.h"
 #include "o2/Application/WebAssembly/WasmKeyboard.h"
 #include "o2/Events/EventSystem.h"
-#include "o2/Render/WebAssembly/OpenGL.h"
+#include "o2/Render/Platforms/WebAssembly/OpenGL.h"
 #include "o2/Utils/Debug/Log/LogStream.h"
 #include "o2/Utils/FileSystem/FileSystem.h"
 

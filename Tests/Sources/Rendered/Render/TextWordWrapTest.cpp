@@ -2,8 +2,8 @@
 #include <gtest/gtest.h>
 
 #include "o2/Assets/Assets.h"
-#include "o2/Render/Text.h"
-#include "o2/Render/VectorFont.h"
+#include "o2/Render/Text/Text.h"
+#include "o2/Render/Text/VectorFont.h"
 
 using namespace o2;
 

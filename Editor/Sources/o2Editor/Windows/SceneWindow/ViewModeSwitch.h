@@ -1,7 +1,7 @@
 #pragma once
 
 #include "o2/Events/CursorAreaEventsListener.h"
-#include "o2/Render/Text.h"
+#include "o2/Render/Text/Text.h"
 #include "o2/Scene/UI/Widget.h"
 #include "o2Editor/Windows/PipelineWindow/PipelineControls.h"
 

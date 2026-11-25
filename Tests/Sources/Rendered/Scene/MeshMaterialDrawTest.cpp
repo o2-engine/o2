@@ -1,11 +1,11 @@
 #include "o2/stdafx.h"
 #include <gtest/gtest.h>
 
-#include "o2/Render/Material.h"
+#include "o2/Render/Resources/Material.h"
 #include "o2/Render/Pipeline/DeferredPasses.h"
 #include "o2/Render/Pipeline/Pipelines.h"
 #include "o2/Render/Render.h"
-#include "o2/Render/Shader.h"
+#include "o2/Render/Resources/Shader.h"
 #include "o2/Scene/Actor.h"
 #include "o2/Scene/CameraActor.h"
 #include "o2/Scene/Components/LightComponent.h"

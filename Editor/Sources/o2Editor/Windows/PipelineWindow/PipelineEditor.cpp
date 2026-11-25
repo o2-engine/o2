@@ -22,8 +22,8 @@
 #include "o2Editor/Pipeline/PipelineNodeType.h"
 #include "o2Editor/Pipeline/PipelineUtils.h"
 #include "o2Editor/Windows/PipelineWindow/PipelineNodeBody.h"
-#include "o2/Render/Texture.h"
-#include "o2/Render/VectorSprite.h"
+#include "o2/Render/Resources/Texture.h"
+#include "o2/Render/VectorGraphics/VectorSprite.h"
 #include "o2/Utils/Bitmap/Bitmap.h"
 #include "o2/Utils/Jobs/JobSystem.h"
 

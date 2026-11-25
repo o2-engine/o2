@@ -18,7 +18,7 @@
 #include "o2Editor/Windows/AnimationWindow/Tree.h"
 #include "o2Editor/Windows/PropertiesWindow/PropertiesWindow.h"
 #include "o2Editor/Windows/SceneWindow/SceneEditScreen.h"
-#include "o2/Render/VectorSprite.h"
+#include "o2/Render/VectorGraphics/VectorSprite.h"
 
 DECLARE_SINGLETON(Editor::AnimationWindow);
 

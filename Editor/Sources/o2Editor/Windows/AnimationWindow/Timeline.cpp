@@ -6,7 +6,7 @@
 #include "o2/Scene/UI/Widgets/HorizontalScrollBar.h"
 #include "o2Editor/Windows/AnimationWindow/AnimationWindow.h"
 #include "o2Editor/Windows/SceneWindow/SceneEditScreen.h"
-#include "o2/Render/VectorSprite.h"
+#include "o2/Render/VectorGraphics/VectorSprite.h"
 #include "o2Editor/UI/Style/EditorTheme.h"
 
 namespace Editor

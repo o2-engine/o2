@@ -1,7 +1,7 @@
 #pragma once
 
 #include "o2/Utils/Singleton.h"
-#include "o2/Render/TextureRef.h"
+#include "o2/Render/Resources/TextureRef.h"
 
 #include "spine/TextureLoader.h"
 #include "spine/Atlas.h"

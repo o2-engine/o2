@@ -1,7 +1,7 @@
 #pragma once
 
 #include "o2/Events/KeyboardEventsListener.h"
-#include "o2/Render/TextureRef.h"
+#include "o2/Render/Resources/TextureRef.h"
 #include "o2/Utils/Editor/DragHandle.h"
 #include "o2Editor/Actions/ActionsList.h"
 #include "o2Editor/Actions/IAction.h"

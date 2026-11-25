@@ -2,9 +2,9 @@
 
 #include "o2/Assets/Types/VectorImageAsset.h"
 #include "o2/Render/Camera.h"
-#include "o2/Render/Font.h"
-#include "o2/Render/Mesh.h"
-#include "o2/Render/VectorSprite.h"
+#include "o2/Render/Text/Font.h"
+#include "o2/Render/Meshes/Mesh.h"
+#include "o2/Render/VectorGraphics/VectorSprite.h"
 #include "o2/Utils/Editor/DragHandle.h"
 #include "o2/Utils/Editor/FrameHandles.h"
 #include "o2/Utils/Math/Curve.h"

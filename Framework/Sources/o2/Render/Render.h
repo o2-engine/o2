@@ -4,29 +4,29 @@
 #include FT_FREETYPE_H
 
 #if defined PLATFORM_WINDOWS
-#include "o2/Render/Windows/RenderBase.h"
+#include "o2/Render/Platforms/Windows/RenderBase.h"
 #elif defined PLATFORM_ANDROID
-#include "o2/Render/Android/RenderBase.h"
+#include "o2/Render/Platforms/Android/RenderBase.h"
 #elif defined PLATFORM_MAC
-#include "o2/Render/Mac/RenderBase.h"
+#include "o2/Render/Platforms/Mac/RenderBase.h"
 #elif defined PLATFORM_IOS
-#include "o2/Render/iOS/RenderBase.h"
+#include "o2/Render/Platforms/iOS/RenderBase.h"
 #elif defined PLATFORM_WASM
-#include "o2/Render/WebAssembly/RenderBase.h"
+#include "o2/Render/Platforms/WebAssembly/RenderBase.h"
 #elif defined(PLATFORM_LINUX)
 #if defined(O2_RENDER_GLES2)
-#include "o2/Render/Linux GLES2/RenderBase.h"
+#include "o2/Render/Platforms/Linux GLES2/RenderBase.h"
 #else
-#include "o2/Render/Linux/RenderBase.h"
+#include "o2/Render/Platforms/Linux/RenderBase.h"
 #endif
 #endif
 
 #include "o2/Render/Camera.h"
-#include "o2/Render/Material.h"
+#include "o2/Render/Resources/Material.h"
 #include "o2/Render/RenderCommandBuffer.h"
-#include "o2/Render/RenderGeometry.h"
+#include "o2/Render/Resources/RenderGeometry.h"
 #include "o2/Render/RenderThread.h"
-#include "o2/Render/TextureRef.h"
+#include "o2/Render/Resources/TextureRef.h"
 #include "o2/Utils/Math/Vertex.h"
 #include "o2/Utils/Singleton.h"
 #include "o2/Utils/Types/Ref.h"

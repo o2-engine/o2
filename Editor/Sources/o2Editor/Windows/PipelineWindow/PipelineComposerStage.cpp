@@ -9,7 +9,7 @@
 #include "o2/Application/Input.h"
 #include "o2/Render/Render.h"
 #include "o2/Render/Sprite.h"
-#include "o2/Render/Text.h"
+#include "o2/Render/Text/Text.h"
 #include "o2/Scene/UI/WidgetLayout.h"
 #include "o2/Utils/Bitmap/Bitmap.h"
 #include "o2Editor/Pipeline/PipelineComposerLayout.h"
@@ -17,7 +17,7 @@
 #include "o2Editor/Pipeline/PipelineUtils.h"
 #include "o2Editor/Windows/PipelineWindow/PipelineControls.h"
 #include "o2Editor/Windows/PipelineWindow/PipelinePairViews.h"
-#include "o2/Render/VectorSprite.h"
+#include "o2/Render/VectorGraphics/VectorSprite.h"
 
 namespace Editor
 {

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "o2/Render/TextureRef.h"
+#include "o2/Render/Resources/TextureRef.h"
 #include "o2/Utils/Singleton.h"
 
 using namespace o2;

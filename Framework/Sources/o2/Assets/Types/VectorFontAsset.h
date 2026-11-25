@@ -1,8 +1,8 @@
 #pragma once
 
 #include "o2/Assets/Types/FontAsset.h"
-#include "o2/Render/SdfGlyphGenerator.h"
-#include "o2/Render/VectorFont.h"
+#include "o2/Render/Text/SdfGlyphGenerator.h"
+#include "o2/Render/Text/VectorFont.h"
 #include "o2/Utils/Editor/Attributes/EditorPropertyAttribute.h"
 
 namespace o2

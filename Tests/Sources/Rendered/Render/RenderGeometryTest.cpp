@@ -3,7 +3,7 @@
 
 #include "o2/Render/Camera.h"
 #include "o2/Render/Render.h"
-#include "o2/Render/RenderGeometry.h"
+#include "o2/Render/Resources/RenderGeometry.h"
 #include "o2/Render/VectorGraphics/VectorRasterizer.h"
 #include "o2/Utils/Bitmap/Bitmap.h"
 

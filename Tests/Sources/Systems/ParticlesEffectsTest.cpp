@@ -4,7 +4,7 @@
 #include "o2/Render/Particles/ParticlesEffects.h"
 #include "o2/Render/Particles/ParticlesEmitter.h"
 #include "o2/Render/Particles/ParticlesEmitterShapes.h"
-#include "o2/Render/Material.h"
+#include "o2/Render/Resources/Material.h"
 
 using namespace o2;
 

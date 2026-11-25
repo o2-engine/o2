@@ -15,7 +15,7 @@
 #include "o2/Scene/UI/Widgets/Window.h"
 #include "o2Editor/UIRoot.h"
 #include "o2Editor/Utils/CommonTextures.h"
-#include "o2/Render/VectorSprite.h"
+#include "o2/Render/VectorGraphics/VectorSprite.h"
 
 DECLARE_SINGLETON(Editor::ColorPickerDlg);
 

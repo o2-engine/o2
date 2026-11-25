@@ -1,5 +1,5 @@
 #include "o2Editor/stdafx.h"
-#include "o2/Render/VectorSprite.h"
+#include "o2/Render/VectorGraphics/VectorSprite.h"
 #include <gtest/gtest.h>
 
 #include "o2/Application/Application.h"
@@ -10,7 +10,7 @@
 #include "o2/Render/Camera.h"
 #include "o2/Render/Render.h"
 #include "o2/Render/Sprite.h"
-#include "o2/Render/Text.h"
+#include "o2/Render/Text/Text.h"
 #include "o2/Scene/Scene.h"
 #include "o2/Scene/UI/UIManager.h"
 #include "o2/Scene/UI/WidgetLayout.h"

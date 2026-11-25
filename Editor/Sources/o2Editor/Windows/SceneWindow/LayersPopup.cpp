@@ -16,7 +16,7 @@
 #include "o2Editor/Actions/LayerReorder.h"
 #include "o2Editor/Actions/LayerVisibility.h"
 #include "o2Editor/Windows/SceneWindow/SceneWindow.h"
-#include "o2/Render/VectorSprite.h"
+#include "o2/Render/VectorGraphics/VectorSprite.h"
 
 namespace Editor
 {

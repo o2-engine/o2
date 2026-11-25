@@ -2,7 +2,7 @@
 
 #include "o2/Assets/Types/ImageAsset.h"
 #include "o2/Render/Sprite.h"
-#include "o2/Render/TextureRef.h"
+#include "o2/Render/Resources/TextureRef.h"
 #include "o2/Scene/Component.h"
 #include "o2/Utils/Types/UID.h"
 

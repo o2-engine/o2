@@ -2,7 +2,7 @@
 #include <gtest/gtest.h>
 
 #include "o2/Render/Sprite.h"
-#include "o2/Render/Text.h"
+#include "o2/Render/Text/Text.h"
 #include "o2/Utils/Bitmap/Bitmap.h"
 #include "o2/Utils/FileSystem/FileSystem.h"
 #include "o2Editor/Pipeline/PipelinePairLayout.h"

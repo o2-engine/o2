@@ -8,7 +8,7 @@
 #include "o2/Scene/UI/Widgets/Spoiler.h"
 #include "o2/Utils/Editor/DragHandle.h"
 #include "o2/Utils/Editor/EditorScope.h"
-#include "o2/Render/VectorSprite.h"
+#include "o2/Render/VectorGraphics/VectorSprite.h"
 #include "o2Editor/UI/Style/EditorTheme.h"
 
 namespace Editor

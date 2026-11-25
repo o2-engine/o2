@@ -1,6 +1,6 @@
 #include "o2Editor/stdafx.h"
 
-#include "o2/Render/TextureRef.h"
+#include "o2/Render/Resources/TextureRef.h"
 
 using namespace o2;
 

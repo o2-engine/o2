@@ -1,8 +1,8 @@
 #include "o2/stdafx.h"
 #include <gtest/gtest.h>
 
-#include "o2/Render/FontStyle.h"
-#include "o2/Render/VectorFontEffects.h"
+#include "o2/Render/Text/FontStyle.h"
+#include "o2/Render/Text/VectorFontEffects.h"
 #include "o2Editor/UI/Preview/FontSampleView.h"
 
 using namespace o2;

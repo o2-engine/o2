@@ -25,7 +25,7 @@
 #include "o2Editor/UI/Style/EditorThemeDark.h"
 #include "o2Editor/UIRoot.h"
 #include "o2Editor/Windows/PipelineWindow/PipelineControls.h"
-#include "o2/Render/VectorSprite.h"
+#include "o2/Render/VectorGraphics/VectorSprite.h"
 
 DECLARE_SINGLETON(Editor::AssetsLineDlg);
 

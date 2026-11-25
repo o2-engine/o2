@@ -1,7 +1,7 @@
 #include "o2/stdafx.h"
 #include "ParticlesEmitter.h"
 
-#include "o2/Render/Mesh.h"
+#include "o2/Render/Meshes/Mesh.h"
 #include "o2/Render/Particles/ParticlesEffects.h"
 #include "o2/Render/Particles/ParticlesEmitterShapes.h"
 

@@ -6,8 +6,8 @@
 #include <fstream>
 
 #include "o2/Render/Render.h"
-#include "o2/Render/Video.h"
-#include "o2/Render/VideoDecoder.h"
+#include "o2/Render/Video/Video.h"
+#include "o2/Render/Video/VideoDecoder.h"
 #include "o2/Utils/Bitmap/Bitmap.h"
 #include "Video/VideoTestData.h"
 

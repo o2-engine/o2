@@ -2,7 +2,7 @@
 
 #include "o2/Assets/Asset.h"
 #include "o2/Assets/AssetRef.h"
-#include "o2/Render/FontStyle.h"
+#include "o2/Render/Text/FontStyle.h"
 
 namespace o2
 {
