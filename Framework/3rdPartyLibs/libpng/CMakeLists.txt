@@ -1,5 +1,0 @@
-add_library(libpng STATIC)
-file(GLOB_RECURSE libpng_SOURCES "*.c" "*.h")
-list(FILTER libpng_SOURCES EXCLUDE REGEX "pngtest\\.c$")
-target_include_directories(libpng PUBLIC ../../)
-target_sources(libpng PRIVATE ${libpng_SOURCES})

@@ -42,7 +42,7 @@ Image helpers: `Editor::PipelineImageOps` (resize, `Fit` - scale into a size kee
 
 Finish nodes write the result to `<assets>/<assetPath>.<ext>` (optionally cropped and resized; `keepAspect` fits the image into `resizeW`x`resizeH` instead of squashing it) and set `assetsChanged`; in the editor the executor then calls `o2Assets.RebuildAssets()`, or, with `deferAssetsRebuild` (the Pipeline window), reports it in `Done` and leaves the rebuild to the window (see Background work and status).
 
-`Editor::PipelineValue` — `type`, `data` (text or encoded bytes), `mimeType`; `Text`, `Image(bitmap)`, `ImageBytes`, `Bytes` constructors, `GetBitmap()`; `DecodeImageBytes` decodes PNG, WebP (the decoder of libwebp 1.4.0, vendored in `Framework/3rdPartyLibs/libwebp` and linked to the editor only - some OpenRouter models answer WebP), JPEG, BMP and GIF bytes; `ToPngBytes` re-encodes any of them as PNG, `GetPngBytes` decides by the bytes, not by the label. `Editor::PipelineUtils` — work paths (`SetWorkPathOverride`), uploads, data URLs, base64, FNV hashing, hex colours, file bytes.
+`Editor::PipelineValue` — `type`, `data` (text or encoded bytes), `mimeType`; `Text`, `Image(bitmap)`, `ImageBytes`, `Bytes` constructors, `GetBitmap()`; `DecodeImageBytes` decodes PNG, WebP (the decoder of libwebp 1.4.0, a git submodule in `Framework/3rdPartyLibs/libwebp` and linked to the editor only - some OpenRouter models answer WebP), JPEG, BMP and GIF bytes; `ToPngBytes` re-encodes any of them as PNG, `GetPngBytes` decides by the bytes, not by the label. `Editor::PipelineUtils` — work paths (`SetWorkPathOverride`), uploads, data URLs, base64, FNV hashing, hex colours, file bytes.
 
 <details>
 <summary>Example</summary>

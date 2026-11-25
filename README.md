@@ -13,7 +13,7 @@ o2 - it's an open-source technology for easy making 2D games and applications fo
 - [Web editor demo](https://o2editor.zenkovich.space/) — the o2 editor running in the browser
 - [Demo projects](https://games.zenkovich.space/) — games made with o2, playable in the browser
 
-Start a new project from [o2-Template](https://github.com/o2-engine/o2-Template) — a minimal game project with the engine as a submodule; CMake builds the game, the editor and the tests
+Start a new project from [o2-Template](https://github.com/o2-engine/o2-Template) — a minimal game project with the engine as a submodule (clone it with `--recursive`: the engine's libraries are submodules too); CMake builds the game, the editor and the tests
 
 
 [Discord channel](https://discord.gg/FqBBYpYGfS) / [Telegram channel](https://t.me/o2engine) 

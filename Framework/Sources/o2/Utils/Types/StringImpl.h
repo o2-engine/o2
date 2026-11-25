@@ -1,6 +1,6 @@
 #pragma once
 
-#include "3rdPartyLibs/utf8cpp/utf8.h"
+#include "3rdPartyLibs/utfcpp/source/utf8.h"
 #include "o2/Utils/Math/Border.h"
 #include "o2/Utils/Math/Color.h"
 #include "o2/Utils/Math/Rect.h"

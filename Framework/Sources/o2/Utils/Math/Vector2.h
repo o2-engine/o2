@@ -1,7 +1,7 @@
 #pragma once
 
 #include "o2/Utils/Math/Math.h"
-#include "3rdPartyLibs/Box2D/Common/b2Math.h"
+#include "Box2D/Common/b2Math.h"
 
 namespace o2
 {

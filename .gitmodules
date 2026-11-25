@@ -49,3 +49,68 @@
 [submodule "Framework/3rdPartyLibs/box3d"]
 	path = Framework/3rdPartyLibs/box3d
 	url = https://github.com/erincatto/box3d.git
+[submodule "Framework/3rdPartyLibs/utfcpp"]
+	path = Framework/3rdPartyLibs/utfcpp
+	url = https://github.com/nemtrif/utfcpp.git
+	shallow = true
+[submodule "Framework/3rdPartyLibs/pugixml"]
+	path = Framework/3rdPartyLibs/pugixml
+	url = https://github.com/zeux/pugixml.git
+	shallow = true
+[submodule "Framework/3rdPartyLibs/rapidjson"]
+	path = Framework/3rdPartyLibs/rapidjson
+	url = https://github.com/Tencent/rapidjson.git
+	shallow = true
+[submodule "Framework/3rdPartyLibs/zlib"]
+	path = Framework/3rdPartyLibs/zlib
+	url = https://github.com/madler/zlib.git
+	shallow = true
+[submodule "Framework/3rdPartyLibs/libpng"]
+	path = Framework/3rdPartyLibs/libpng
+	url = https://github.com/pnggroup/libpng.git
+	shallow = true
+[submodule "Framework/3rdPartyLibs/box2d"]
+	path = Framework/3rdPartyLibs/box2d
+	url = https://github.com/erincatto/box2d.git
+	shallow = true
+[submodule "Framework/3rdPartyLibs/libwebp"]
+	path = Framework/3rdPartyLibs/libwebp
+	url = https://github.com/webmproject/libwebp.git
+	shallow = true
+[submodule "Framework/3rdPartyLibs/EGL-Registry"]
+	path = Framework/3rdPartyLibs/EGL-Registry
+	url = https://github.com/KhronosGroup/EGL-Registry.git
+	shallow = true
+[submodule "Framework/3rdPartyLibs/miniaudio"]
+	path = Framework/3rdPartyLibs/miniaudio
+	url = https://github.com/mackron/miniaudio.git
+	shallow = true
+[submodule "Framework/3rdPartyLibs/CDT"]
+	path = Framework/3rdPartyLibs/CDT
+	url = https://github.com/artem-ogre/CDT.git
+	shallow = true
+[submodule "Framework/3rdPartyLibs/jerryscript"]
+	path = Framework/3rdPartyLibs/jerryscript
+	url = https://github.com/jerryscript-project/jerryscript.git
+	shallow = true
+[submodule "Framework/3rdPartyLibs/OpenGL-Registry"]
+	path = Framework/3rdPartyLibs/OpenGL-Registry
+	url = https://github.com/KhronosGroup/OpenGL-Registry.git
+	shallow = true
+[submodule "Framework/3rdPartyLibs/freetype"]
+	path = Framework/3rdPartyLibs/freetype
+	url = https://github.com/freetype/freetype.git
+	shallow = true
+[submodule "Framework/3rdPartyLibs/msdfgen"]
+	path = Framework/3rdPartyLibs/msdfgen
+	url = https://github.com/Chlumsky/msdfgen.git
+	shallow = true
+[submodule "Framework/3rdPartyLibs/pl_mpeg"]
+	path = Framework/3rdPartyLibs/pl_mpeg
+	url = https://github.com/phoboslab/pl_mpeg.git
+	shallow = true
+[submodule "Framework/3rdPartyLibs/spine-runtimes"]
+	path = Framework/3rdPartyLibs/spine-runtimes
+	url = https://github.com/EsotericSoftware/spine-runtimes.git
+	shallow = true
+	branch = 4.2

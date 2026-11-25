@@ -1,9 +1,9 @@
 #include "o2/stdafx.h"
 
 #if defined(SCRIPTING_BACKEND_JERRYSCRIPT)
-#include "jerryscript/jerry-ext/include/jerryscript-ext/debugger.h"
-#include "jerryscript/jerry-ext/include/jerryscript-ext/handler.h"
-#include "jerryscript/jerry-port/default/include/jerryscript-port-default.h"
+#include "3rdPartyLibs/jerryscript/jerry-ext/include/jerryscript-ext/debugger.h"
+#include "3rdPartyLibs/jerryscript/jerry-ext/include/jerryscript-ext/handler.h"
+#include "3rdPartyLibs/jerryscript/jerry-port/default/include/jerryscript-port-default.h"
 #include "o2/Scripts/ScriptEngine.h"
 #include "o2/Utils/Debug/Log/LogStream.h"
 
