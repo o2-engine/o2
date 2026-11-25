@@ -2,6 +2,7 @@
 #include <gtest/gtest.h>
 
 #include <chrono>
+#include <cstdlib>
 #include <cstring>
 #include <random>
 
@@ -224,7 +225,9 @@ TEST(BitmapEffects, BigGlyphEffectsFitAFrame)
 
     printf("BitmapEffects: blur r10 %.1f ms, outline r7 %.1f ms (300x360)\n", blurMs, outlineMs);
 #ifdef NDEBUG
-    EXPECT_LT(blurMs, 15.0);
-    EXPECT_LT(outlineMs, 5.0);
+    // Shared CI runners are slower and noisy: twice the budget there
+    double budget = std::getenv("CI") ? 2.0 : 1.0;
+    EXPECT_LT(blurMs, 15.0*budget);
+    EXPECT_LT(outlineMs, 5.0*budget);
 #endif
 }
