@@ -27,6 +27,9 @@ namespace o2
         // Check effects equals
         bool IsEqual(VectorFont::Effect* other) const override;
 
+        // Adds the stroke under the distance field text
+        bool AddToDistanceFieldStyle(SdfTextStyle& style) const override;
+
         SERIALIZABLE(FontStrokeEffect);
         CLONEABLE_REF(FontStrokeEffect);
     };
@@ -58,6 +61,9 @@ namespace o2
         // Check effects equals
         bool IsEqual(VectorFont::Effect* other) const override;
 
+        // Multiplies the distance field text by the gradient
+        bool AddToDistanceFieldStyle(SdfTextStyle& style) const override;
+
 		SERIALIZABLE(FontGradientEffect);
 		CLONEABLE_REF(FontGradientEffect);
     };
@@ -79,6 +85,9 @@ namespace o2
 
         // Check effects equals
         bool IsEqual(VectorFont::Effect* other) const override;
+
+        // Multiplies the distance field text by the colour
+        bool AddToDistanceFieldStyle(SdfTextStyle& style) const override;
 
 		SERIALIZABLE(FontColorEffect);
 		CLONEABLE_REF(FontColorEffect);
@@ -105,6 +114,9 @@ namespace o2
         // Check effects equals
         bool IsEqual(VectorFont::Effect* other) const override;
 
+        // Adds the shadow under the distance field text
+        bool AddToDistanceFieldStyle(SdfTextStyle& style) const override;
+
 		SERIALIZABLE(FontShadowEffect);
 		CLONEABLE_REF(FontShadowEffect);
     };
@@ -129,6 +141,9 @@ namespace o2
 
         // Returns true when the effect is the same as other
         bool IsEqual(VectorFont::Effect* other) const override;
+
+        // Hardens the edges of the distance field text
+        bool AddToDistanceFieldStyle(SdfTextStyle& style) const override;
 
         SERIALIZABLE(FontSharpenEffect);
         CLONEABLE_REF(FontSharpenEffect);
@@ -155,6 +170,7 @@ CLASS_METHODS_META(o2::FontStrokeEffect)
     FUNCTION().PUBLIC().SIGNATURE(void, Process, Bitmap&);
     FUNCTION().PUBLIC().SIGNATURE(Vec2I, GetSizeExtend);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsEqual, VectorFont::Effect*);
+    FUNCTION().PUBLIC().SIGNATURE(bool, AddToDistanceFieldStyle, SdfTextStyle&);
 }
 END_META;
 
@@ -179,6 +195,7 @@ CLASS_METHODS_META(o2::FontGradientEffect)
     FUNCTION().PUBLIC().SIGNATURE(void, Process, Bitmap&);
     FUNCTION().PUBLIC().SIGNATURE(Vec2I, GetSizeExtend);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsEqual, VectorFont::Effect*);
+    FUNCTION().PUBLIC().SIGNATURE(bool, AddToDistanceFieldStyle, SdfTextStyle&);
 }
 END_META;
 
@@ -199,6 +216,7 @@ CLASS_METHODS_META(o2::FontColorEffect)
     FUNCTION().PUBLIC().SIGNATURE(void, Process, Bitmap&);
     FUNCTION().PUBLIC().SIGNATURE(Vec2I, GetSizeExtend);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsEqual, VectorFont::Effect*);
+    FUNCTION().PUBLIC().SIGNATURE(bool, AddToDistanceFieldStyle, SdfTextStyle&);
 }
 END_META;
 
@@ -221,6 +239,7 @@ CLASS_METHODS_META(o2::FontShadowEffect)
     FUNCTION().PUBLIC().SIGNATURE(void, Process, Bitmap&);
     FUNCTION().PUBLIC().SIGNATURE(Vec2I, GetSizeExtend);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsEqual, VectorFont::Effect*);
+    FUNCTION().PUBLIC().SIGNATURE(bool, AddToDistanceFieldStyle, SdfTextStyle&);
 }
 END_META;
 
@@ -242,6 +261,7 @@ CLASS_METHODS_META(o2::FontSharpenEffect)
     FUNCTION().PUBLIC().SIGNATURE(void, Process, Bitmap&);
     FUNCTION().PUBLIC().SIGNATURE(Vec2I, GetSizeExtend);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsEqual, VectorFont::Effect*);
+    FUNCTION().PUBLIC().SIGNATURE(bool, AddToDistanceFieldStyle, SdfTextStyle&);
 }
 END_META;
 // --- END META ---

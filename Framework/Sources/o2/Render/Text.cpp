@@ -9,6 +9,8 @@
 #include "o2/Render/FontStyle.h"
 #include "o2/Render/Mesh.h"
 #include "o2/Render/Render.h"
+#include "o2/Render/SdfFont.h"
+#include "o2/Utils/Debug/Debug.h"
 #include "o2/Render/VectorGraphics/VectorMesh.h"
 
 namespace o2
@@ -27,6 +29,20 @@ namespace o2
         {
             Vector<VertexIndex> indexes;
         };
+
+        // Calls the function with the position and colour part of every vertex of the meshes: both vertex layouts of
+        // the text start with them
+        template<typename _func>
+        void ForEachMeshVertex(const Vector<Ref<Mesh>>& meshes, const _func& func)
+        {
+            for (auto& mesh : meshes)
+            {
+                size_t stride = mesh->GetVertexType().GetStride();
+                UInt8* data = mesh->GetVertexData();
+                for (UInt i = 0; i < mesh->vertexCount; i++)
+                    func(*reinterpret_cast<Vertex*>(data + i*stride));
+            }
+        }
     }
 
     bool Text::mGlyphMeshesEnabled = false;
@@ -143,7 +159,13 @@ namespace o2
 
         // The view scale has the camera zoom and the screen density: glyphs are rendered for the pixels they cover
         Vec2F viewPixelScale = o2Render.GetViewPixelScale();
-        if (IsDrawnByGlyphMeshes())
+        if (IsDrawnByDistanceField())
+        {
+            // The fields are drawn at any scale: nothing depends on the view
+            if (!mDistanceField || mGlyphsMesh)
+                CheckCharactersAndRebuildMesh();
+        }
+        else if (IsDrawnByGlyphMeshes())
         {
             // The glyph meshes stay, only their fringe is put for the new scale
             float fringeScale = GetGlyphsFringeScale(viewPixelScale);
@@ -159,7 +181,7 @@ namespace o2
             Basis transform = CalculateTextBasis();
             float textScale = Math::Sqrt(Math::Abs(transform.xv.x*transform.yv.y - transform.xv.y*transform.yv.x));
             float pixelDensity = QuantizePixelDensity(Math::Max(Math::Abs(viewPixelScale.x), Math::Abs(viewPixelScale.y))*textScale);
-            if (pixelDensity != GetPixelDensity() || mGlyphsMesh)
+            if (pixelDensity != GetPixelDensity() || mGlyphsMesh || mDistanceField)
             {
                 mPixelDensity = pixelDensity;
                 CheckCharactersAndRebuildMesh();
@@ -169,11 +191,28 @@ namespace o2
         if (mGlyphsMesh && mGlyphsGeometry && mResultColor.a != 0)
             o2Render.DrawGeometry(mGlyphsGeometry, GetMaterial());
 
+        // The effects over the whole text: every layer is drawn for all the letters, from the back one
+        for (int layer = mDistanceFieldLayers.Count() - 1; layer >= 0; layer--)
+        {
+            for (auto& mesh : mMeshes)
+            {
+                if (mesh->polyCount > 0)
+                {
+                    o2Render.DrawBuffer(PrimitiveType::Polygon, mesh->GetVertexData(), mesh->vertexCount,
+                                        mesh->GetVertexType(), mesh->GetIndexes(), mesh->polyCount,
+                                        mDistanceFieldLayers[layer], mesh->GetTexture(), RectI(), true);
+                }
+            }
+        }
+
         for (auto& mesh : mMeshes)
         {
+            if (!mDistanceFieldLayers.IsEmpty())
+                break;
+
             mesh->Draw();
 
-            if (o2Input.IsKeyDown(VK_F3))
+            if (o2Input.IsKeyDown(VK_F3) && mesh->GetVertexType() == Vertex::Type())
                 o2Render.DrawMeshWire(mesh.Get(), Color4(0, 255, 0, 150));
         }
 
@@ -363,6 +402,12 @@ namespace o2
         return mSymbolsSet;
     }
 
+    void Text::WarmUp(const WString& characters)
+    {
+        if (mFont)
+            mFont->WarmUp(characters, mHeight, mFontStyle, GetPixelDensity());
+    }
+
     Vec2F Text::GetRealSize()
     {
         return mSymbolsSet.mRealSize;
@@ -412,6 +457,7 @@ namespace o2
             }
 
             mGlyphsGeometry = nullptr;
+            mDistanceFieldLayers.Clear();
             mUpdatingMesh = false;
 
             return;
@@ -423,6 +469,25 @@ namespace o2
             mUpdatingMesh = false;
             return;
         }
+
+        if (IsDrawnByDistanceField())
+        {
+            if (mGlyphsMesh)
+            {
+                mGlyphsGeometry = nullptr;
+                mGlyphsCoverage.Clear();
+                mGlyphsMesh = false;
+            }
+
+            if (UpdateDistanceFieldMesh())
+            {
+                mUpdatingMesh = false;
+                return;
+            }
+        }
+
+        mDistanceField = false;
+        mDistanceFieldLayers.Clear();
 
         if (IsDrawnByGlyphMeshes())
         {
@@ -529,6 +594,175 @@ namespace o2
     {
         return mGlyphMeshesEnabled && mFont && (!mFontStyle || mFontStyle->GetEffects().IsEmpty()) &&
             mFont->GetGlyphMesh(L' ') != nullptr;
+    }
+
+    bool Text::IsDrawnByDistanceField() const
+    {
+        auto font = dynamic_cast<SdfFont*>(mFont.Get());
+        return font && font->IsDistanceFieldStyle(mFontStyle);
+    }
+
+    bool Text::UpdateDistanceFieldMesh()
+    {
+        auto font = static_cast<SdfFont*>(mFont.Get());
+        const SdfFont::DrawStyle& drawStyle = font->GetDrawStyle(mFontStyle);
+        const SdfTextStyle& style = drawStyle.style;
+
+        // The material didn't build: the font draws by the bitmap atlas
+        if (!font->IsDistanceFieldStyle(mFontStyle))
+            return false;
+
+        mDistanceField = true;
+
+        // Over the whole text the layers are drawn one by one for all the letters, and the gradients span the text
+        bool wholeText = mFontStyle && mFontStyle->GetEffectsMode() == FontEffectsMode::WholeText &&
+            style.GetLayers().Count() > 1;
+
+        mDistanceFieldLayers.Clear();
+        if (wholeText)
+            mDistanceFieldLayers = font->GetLayerMaterials(mFontStyle);
+
+        int textLen = mText.Length();
+        PrepareMesh(textLen);
+
+        for (auto& mesh : mMeshes)
+        {
+            mesh->vertexCount = 0;
+            mesh->polyCount = 0;
+        }
+
+        mSymbolsSet.Initialize(mFont, mFontStyle, mText, mHeight, mTransform.origin.XY(), mSize.XY(), mHorAlign, mVerAlign,
+                               mWordWrap, mDotsEndings, mSymbolsDistCoef, mLinesDistanceCoef, 1.0f);
+
+        Basis transform = CalculateTextBasis();
+        mLastTransform = transform;
+
+        Vec2I atlasSize = font->GetFieldTextureSize();
+        Vec2F invAtlasSize = atlasSize.x > 0 && atlasSize.y > 0 ?
+            Vec2F(1.0f/(float)atlasSize.x, 1.0f/(float)atlasSize.y) : Vec2F();
+
+        float pxPerTexel = font->GetEmPixels(mHeight)/(float)font->GetSettings().glyphSize;
+        Vec2F rasterGrowth = (Vec2F)style.GetRasterBorder() - drawStyle.extent;
+
+        // The field keeps distances within the half of its range: a farther effect is cut there
+        float fieldReach = 0.5f*font->GetSettings().distanceRange*pxPerTexel;
+        float styleReach = style.GetReach();
+        if (styleReach > fieldReach)
+        {
+            static Vector<String> warned;
+            String key = font->GetFileName() + "/" + (String)mHeight + "/" + (String)style.GetLayers().Count();
+            if (!warned.Contains(key))
+            {
+                warned.Add(key);
+                o2Debug.LogWarning(String::Format("The effects of a text style reach %.1f px out of the glyphs, the distance "
+                                                  "field of font %s keeps %.1f px at height %d: raise fieldDistanceRange "
+                                                  "of the font to %.0f", styleReach, font->GetFileName().Data(), fieldReach,
+                                                  mHeight, Math::Ceil(2.0f*styleReach/pxPerTexel + 2.0f)));
+            }
+        }
+        int gradientsCount = style.GetGradients().Count();
+
+        Color32Bit color = mResultColor.ABGR();
+        float z = mTransform.origin.z;
+
+        // The bitmap the vector font would render for a glyph: the gradients span it, or all of them over the whole text
+        auto glyphBitmap = [&](const RectF& frame) {
+            return RectF(frame.left - rasterGrowth.x, frame.top + rasterGrowth.y, frame.right + rasterGrowth.x,
+                         frame.bottom - rasterGrowth.y);
+        };
+
+        RectF textBitmap;
+        bool hasTextBitmap = false;
+        if (wholeText && gradientsCount > 0)
+        {
+            for (auto& line : mSymbolsSet.mLines)
+            {
+                for (auto& symbol : line.mSymbols)
+                {
+                    const SdfFont::Glyph* glyph = font->GetGlyph(symbol.mCharId);
+                    if (!glyph || glyph->empty)
+                        continue;
+
+                    RectF bitmap = glyphBitmap(symbol.mFrame - mSymbolsSet.mPosition);
+                    textBitmap = hasTextBitmap ? textBitmap.Expand(bitmap) : bitmap;
+                    hasTextBitmap = true;
+                }
+            }
+        }
+
+        int currentMeshIdx = 0;
+        Ref<Mesh> currentMesh = mMeshes[0];
+
+        for (auto& line : mSymbolsSet.mLines)
+        {
+            for (auto& symbol : line.mSymbols)
+            {
+                const SdfFont::Glyph* glyph = font->GetGlyph(symbol.mCharId);
+                if (!glyph || glyph->empty)
+                    continue;
+
+                if (currentMesh->polyCount + 2 >= currentMesh->GetMaxPolyCount())
+                    currentMesh = mMeshes[++currentMeshIdx];
+
+                RectF frame = symbol.mFrame - mSymbolsSet.mPosition;
+                RectF bitmap = hasTextBitmap ? textBitmap : glyphBitmap(frame);
+
+                Vec2F corners[4] = { frame.LeftTop(), frame.RightTop(), frame.RightBottom(), frame.LeftBottom() };
+                Vec2F uvs[4] = {
+                    Vec2F(symbol.mTexSrc.left, 1.0f - symbol.mTexSrc.top),
+                    Vec2F(symbol.mTexSrc.right, 1.0f - symbol.mTexSrc.top),
+                    Vec2F(symbol.mTexSrc.right, 1.0f - symbol.mTexSrc.bottom),
+                    Vec2F(symbol.mTexSrc.left, 1.0f - symbol.mTexSrc.bottom)
+                };
+
+                // The field is sampled inside the cell of the glyph: the offset taps never read the neighbours
+                float cellLeft = ((float)glyph->atlasRect.left + 0.5f)*invAtlasSize.x;
+                float cellBottom = ((float)glyph->atlasRect.bottom + 0.5f)*invAtlasSize.y;
+                float cellRight = ((float)glyph->atlasRect.right - 0.5f)*invAtlasSize.x;
+                float cellTop = ((float)glyph->atlasRect.top - 0.5f)*invAtlasSize.y;
+
+                Vertex3Tex* vertices = currentMesh->GetVertices<Vertex3Tex>();
+                for (int i = 0; i < 4; i++)
+                {
+                    Vertex3Tex& vertex = vertices[currentMesh->vertexCount++];
+                    Vec2F position = transform.Transform(corners[i]);
+                    Vec2F inBitmap = corners[i] - bitmap.LeftBottom();
+
+                    vertex.x = position.x;
+                    vertex.y = position.y;
+                    vertex.z = z;
+                    vertex.color = color;
+                    vertex.tu = uvs[i].x;
+                    vertex.tv = uvs[i].y;
+                    vertex.tu2 = gradientsCount > 0 ? style.GetGradientCoordinate(0, inBitmap, bitmap.Size()) : 0.0f;
+                    vertex.tv2 = gradientsCount > 1 ? style.GetGradientCoordinate(1, inBitmap, bitmap.Size()) : 0.0f;
+                    vertex.tu3 = cellLeft;
+                    vertex.tv3 = cellBottom;
+                    vertex.nx = cellRight;
+                    vertex.ny = cellTop;
+                    vertex.nz = pxPerTexel;
+                }
+
+                VertexIndex* indexes = currentMesh->GetIndexes();
+                int index = currentMesh->polyCount*3;
+                UInt base = currentMesh->vertexCount - 4;
+                indexes[index] = base;
+                indexes[index + 1] = base + 1;
+                indexes[index + 2] = base + 2;
+                indexes[index + 3] = base;
+                indexes[index + 4] = base + 2;
+                indexes[index + 5] = base + 3;
+                currentMesh->polyCount += 2;
+            }
+        }
+
+        for (auto& mesh : mMeshes)
+        {
+            mesh->SetTexture(font->GetFieldTexture());
+            mesh->SetMaterial(drawStyle.material);
+        }
+
+        return true;
     }
 
     float Text::GetGlyphsFringeScale(const Vec2F& viewPixelScale) const
@@ -675,6 +909,10 @@ namespace o2
 
     void Text::PrepareMesh(int charactersCount)
     {
+        VertexType vertexType = mDistanceField ? Vertex3Tex::Type() : Vertex::Type();
+        if (!mMeshes.IsEmpty() && mMeshes[0]->GetVertexType() != vertexType)
+            mMeshes.Clear();
+
         int needPolygons = charactersCount*2 + 15; // 15 for dots endings
         for (auto& mesh : mMeshes)
             needPolygons -= mesh->GetMaxPolyCount();
@@ -694,7 +932,12 @@ namespace o2
         {
             int polyCount = Math::Min<int>(needPolygons, mMeshMaxPolyCount);
             needPolygons -= polyCount;
-            mMeshes.Add(mmake<Mesh>(mFont->mTexture, polyCount * 2, polyCount));
+
+            auto mesh = mmake<Mesh>(mFont->mTexture, polyCount * 2, polyCount);
+            if (mDistanceField)
+                mesh->Resize<Vertex3Tex>(polyCount*2, polyCount);
+
+            mMeshes.Add(mesh);
         }
     }
 
@@ -736,20 +979,19 @@ namespace o2
             return;
         }
 
-        ULong dcolor = mResultColor.ABGR();
-        for (auto& mesh : mMeshes)
-        {
-            Vertex* verts = mesh->GetVertices<Vertex>();
-            for (int i = 0; i < (int)mesh->vertexCount; i++)
-                verts[i].color = dcolor;
-        }
+        Color32Bit dcolor = mResultColor.ABGR();
+        ForEachMeshVertex(mMeshes, [&](Vertex& vertex) { vertex.color = dcolor; });
     }
 
 
 	void Text::OnMaterialChanged()
 	{
-        for (auto& mesh : mMeshes)
-			mesh->SetMaterial(GetMaterial());
+        // The fields are drawn only by the material of their font's style
+        if (!mDistanceField)
+        {
+            for (auto& mesh : mMeshes)
+                mesh->SetMaterial(GetMaterial());
+        }
 
 		IRectDrawable::OnMaterialChanged();
 	}
@@ -770,12 +1012,7 @@ namespace o2
             mLastTransform = transform;
 
             float z = mTransform.origin.z;
-            for (auto& mesh : mMeshes)
-            {
-                Vertex* verts = mesh->GetVertices<Vertex>();
-                for (UInt i = 0; i < mesh->vertexCount; i++)
-                    verts[i].z = z;
-            }
+            ForEachMeshVertex(mMeshes, [&](Vertex& vertex) { vertex.z = z; });
 
             if (mGlyphsMesh && mGlyphsGeometry && !mGlyphsGeometry->vertices.IsEmpty() &&
                 mGlyphsGeometry->vertices[0].z != z)
@@ -798,15 +1035,7 @@ namespace o2
         if (bas == Basis::Identity())
             return;
 
-        for (auto& mesh : mMeshes)
-        {
-            Vertex* verts = mesh->GetVertices<Vertex>();
-            for (unsigned int i = 0; i < mesh->vertexCount; i++)
-            {
-                Vertex* vx = &verts[i];
-                bas.Transform(vx->x, vx->y);
-            }
-        }
+        ForEachMeshVertex(mMeshes, [&](Vertex& vertex) { bas.Transform(vertex.x, vertex.y); });
 
         if (mGlyphsMesh && mGlyphsGeometry)
         {

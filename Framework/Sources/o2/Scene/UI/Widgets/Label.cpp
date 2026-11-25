@@ -288,6 +288,12 @@ namespace o2
             mTextDrawable->SetHeight(height);
     }
 
+    void Label::WarmUp(const WString& characters)
+    {
+        if (mTextDrawable)
+            mTextDrawable->WarmUp(characters);
+    }
+
     int Label::GetHeight() const
     {
         if (mTextDrawable)

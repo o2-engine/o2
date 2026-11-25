@@ -355,6 +355,10 @@ namespace o2
         // returns null when files are missing or compilation fails. The material isn't built yet
         static Ref<Material> CreateFromBuiltinShaders(const String& shadersName);
 
+        // Creates material from builtin shader source files with the header put before both sources (a "#version" line
+        // and defines); returns null when files are missing or compilation fails. The material isn't built yet
+        static Ref<Material> CreateFromBuiltinShaders(const String& shadersName, const String& sourcesHeader);
+
         // Links the vertex and fragment shaders into a GPU program. Returns true on success @SCRIPTABLE
         bool Build();
 
@@ -647,6 +651,7 @@ CLASS_METHODS_META(o2::Material)
     FUNCTION().PUBLIC().SIGNATURE(void, SetVertexLayoutSkinned, bool);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsVertexLayoutSkinned);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(Ref<Material>, CreateFromBuiltinShaders, const String&);
+    FUNCTION().PUBLIC().SIGNATURE_STATIC(Ref<Material>, CreateFromBuiltinShaders, const String&, const String&);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(bool, Build);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsReady);
     FUNCTION().PUBLIC().SIGNATURE(size_t, GetHash);

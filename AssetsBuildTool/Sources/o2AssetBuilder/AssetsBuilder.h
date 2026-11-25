@@ -83,5 +83,6 @@ namespace o2
 
         friend class AtlasAssetConverter;
         friend class VectorImageAssetConverter;
+        friend class VectorFontAssetConverter;
     };
 }

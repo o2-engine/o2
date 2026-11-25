@@ -27,7 +27,7 @@
 - VectorImageAsset: векторная картинка, файл `.svg`, рисуется треугольниками через `o2::VectorSprite`
 - BinaryAsset: бинарный файл
 - DataAsset: сериализованные данные, конфиги
-- VectorFontAsset/BitmapFontAsset: векторный/растровый шрифт (базовый FontAsset), FontStyleAsset: стиль шрифта
+- VectorFontAsset/BitmapFontAsset: векторный/растровый шрифт (базовый FontAsset), FontStyleAsset: стиль шрифта. Векторный шрифт с `distanceField` в мете рисует полями расстояний, их поля запекает сборка ассетов ([рендер](/Docs/ru/Architecture/LowLevel/render.md))
 - MaterialAsset, ShaderAsset (VertexShaderAsset/FragmentShaderAsset): материалы и шейдеры
 - Mesh3DAsset, SkinnedModelAsset: 3D-меши и скиннед-модели
 - SoundAsset: звук (wav, ogg, mp3, flac)

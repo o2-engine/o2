@@ -11,6 +11,10 @@
 
 namespace o2
 {
+    // How the effects of a font style apply: to each letter on its own (a letter's stroke and shadow cover the letters
+    // before it), or to the whole text at once (the shadows of all letters under their strokes, under their fills)
+    enum class FontEffectsMode { PerLetter, WholeText };
+
     // ----------------------------------------------------------------------------
     // Font style. Holds a set of vector font effects, applied to rendering glyphs.
     // One font can be drawn with many styles, all styles share the font atlas
@@ -52,11 +56,20 @@ namespace o2
         // Returns key based on effects content. Styles with equal effects share the key
         UInt64 GetCacheKey() const;
 
+        // Sets how the effects apply: to each letter or to the whole text. The whole text takes a pass per layer of
+        // the style; the fonts without distance fields apply the effects per letter
+        void SetEffectsMode(FontEffectsMode mode);
+
+        // Returns how the effects apply
+        FontEffectsMode GetEffectsMode() const;
+
         SERIALIZABLE(FontStyle);
         CLONEABLE_REF(FontStyle);
 
     protected:
         Vector<Ref<VectorFont::Effect>> mEffects; // Font effects list @SERIALIZABLE @EDITOR_PROPERTY @EXPANDED_BY_DEFAULT @INVOKE_ON_CHANGE(OnChanged)
+
+        FontEffectsMode mEffectsMode = FontEffectsMode::PerLetter; // Effects apply to each letter or to the whole text at once @SERIALIZABLE @EDITOR_PROPERTY @INVOKE_ON_CHANGE(OnChanged)
 
         int mVersion = 0; // Effects list change counter
 
@@ -79,6 +92,8 @@ namespace o2
 }
 // --- META ---
 
+PRE_ENUM_META(o2::FontEffectsMode);
+
 CLASS_BASES_META(o2::FontStyle)
 {
     BASE_CLASS(o2::ISerializable);
@@ -90,6 +105,7 @@ CLASS_FIELDS_META(o2::FontStyle)
 {
     FIELD().PUBLIC().NAME(onChanged);
     FIELD().PROTECTED().EDITOR_PROPERTY_ATTRIBUTE().EXPANDED_BY_DEFAULT_ATTRIBUTE().INVOKE_ON_CHANGE_ATTRIBUTE(OnChanged).SERIALIZABLE_ATTRIBUTE().NAME(mEffects);
+    FIELD().PROTECTED().EDITOR_PROPERTY_ATTRIBUTE().INVOKE_ON_CHANGE_ATTRIBUTE(OnChanged).SERIALIZABLE_ATTRIBUTE().DEFAULT_VALUE(FontEffectsMode::PerLetter).NAME(mEffectsMode);
     FIELD().PROTECTED().DEFAULT_VALUE(0).NAME(mVersion);
     FIELD().PROTECTED().DEFAULT_VALUE(0).NAME(mCacheKey);
     FIELD().PROTECTED().DEFAULT_VALUE(-1).NAME(mCacheKeyVersion);
@@ -106,6 +122,8 @@ CLASS_METHODS_META(o2::FontStyle)
     FUNCTION().PUBLIC().SIGNATURE(void, SetEffects, const Vector<Ref<VectorFont::Effect>>&);
     FUNCTION().PUBLIC().SIGNATURE(const Vector<Ref<VectorFont::Effect>>&, GetEffects);
     FUNCTION().PUBLIC().SIGNATURE(UInt64, GetCacheKey);
+    FUNCTION().PUBLIC().SIGNATURE(void, SetEffectsMode, FontEffectsMode);
+    FUNCTION().PUBLIC().SIGNATURE(FontEffectsMode, GetEffectsMode);
     FUNCTION().PROTECTED().SIGNATURE(void, OnChanged);
     FUNCTION().PROTECTED().SIGNATURE(void, OnDeserialized, const DataValue&);
 }

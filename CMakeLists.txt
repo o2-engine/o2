@@ -257,12 +257,19 @@ endif()
 
 file(GLOB_RECURSE o2Framework_SOURCES ${o2Framework_SOURCES_DIRS})
 
+# msdfgen core (distance field fonts) is a part of the framework itself: every build of it, the prebuilt kits included,
+# has the generator. Its sources don't take the framework's precompiled header
+file(GLOB o2Framework_MSDFGEN_SOURCES "Framework/3rdPartyLibs/msdfgen/core/*.cpp")
+set_source_files_properties(${o2Framework_MSDFGEN_SOURCES} PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
+list(APPEND o2Framework_SOURCES ${o2Framework_MSDFGEN_SOURCES})
+
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${o2Framework_SOURCES})
 
 set(o2Framework_INCLUDES 
         "Framework/Sources"
         "Framework/3rdPartyLibs/rapidjson/include"
         "Framework/3rdPartyLibs/FreeType/include"
+        "Framework/3rdPartyLibs/msdfgen"
         "Framework/3rdPartyLibs/jerryscript/jerry-core/include"
         "Framework/3rdPartyLibs/jerryscript"
         "Framework/3rdPartyLibs/boost/stacktrace/include"

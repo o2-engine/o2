@@ -102,6 +102,13 @@ namespace o2
         Load(fileName);
     }
 
+    VectorFont::VectorFont(bool createAtlas) :
+        Font(), mFreeTypeFace(nullptr)
+    {
+        if (createAtlas)
+            InitializeTexture();
+    }
+
     VectorFont::VectorFont(const VectorFont& other) :
         Font(), mFreeTypeFace(other.mFreeTypeFace)
     {
@@ -157,7 +164,8 @@ namespace o2
         }
 
         mFileName = fileName;
-        mTexture->SetName("Font atlas " + fileName);
+        if (mTexture)
+            mTexture->SetName("Font atlas " + fileName);
 
         return true;
     }
@@ -420,6 +428,12 @@ namespace o2
     {
         PROFILE_SAMPLE("Font: pack glyph into the atlas");
         Ref<PackLine> packLine;
+
+        if (!mTexture)
+        {
+            InitializeTexture();
+            mTexture->SetName("Font atlas " + mFileName);
+        }
 
         while (!packLine)
         {

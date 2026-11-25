@@ -66,6 +66,15 @@ namespace o2
                                float pixelDensity /*= 1.0f*/)
     {}
 
+    void Font::WarmUp(const WString& characters, int height, const Ref<FontStyle>& style /*= nullptr*/,
+                      float pixelDensity /*= 1.0f*/)
+    {
+        CheckCharacters(characters, height, style, pixelDensity);
+    }
+
+    void Font::ReleaseRenderResources()
+    {}
+
     int Font::GetStyleId(const Ref<FontStyle>& style)
     {
         return 0;

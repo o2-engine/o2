@@ -132,6 +132,10 @@ namespace o2
         // Sets text height @SCRIPTABLE
         void SetHeight(int height);
 
+        // Prepares the characters for drawing with the font, height and style of the label, so their first show
+        // costs nothing @SCRIPTABLE
+        void WarmUp(const WString& characters);
+
         // Returns text height
         int GetHeight() const;
 
@@ -230,6 +234,7 @@ CLASS_METHODS_META(o2::Label)
     FUNCTION().PUBLIC().SIGNATURE(void, SetExpandBorder, const Vec2F&);
     FUNCTION().PUBLIC().SIGNATURE(Vec2F, GetExpandBorder);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, SetHeight, int);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, WarmUp, const WString&);
     FUNCTION().PUBLIC().SIGNATURE(int, GetHeight);
     FUNCTION().PUBLIC().SIGNATURE(void, UpdateSelfTransform);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(String, GetCreateMenuGroup);

@@ -419,12 +419,23 @@ namespace o2
 
 	Ref<Material> Material::CreateFromBuiltinShaders(const String& shadersName)
 	{
+		return CreateFromBuiltinShaders(shadersName, String());
+	}
+
+	Ref<Material> Material::CreateFromBuiltinShaders(const String& shadersName, const String& sourcesHeader)
+	{
 		String basePath = String(GetBuiltinAssetsPath()) + "Shaders/" + shadersName;
 		String vertexPath = Shader::ResolvePlatformSourcePath(basePath + ".vsh");
 		String fragmentPath = Shader::ResolvePlatformSourcePath(basePath + ".fsh");
 
 		String vertexSource = o2FileSystem.ReadFile(vertexPath);
 		String fragmentSource = o2FileSystem.ReadFile(fragmentPath);
+
+		if (!sourcesHeader.IsEmpty() && !vertexSource.IsEmpty() && !fragmentSource.IsEmpty())
+		{
+			vertexSource = sourcesHeader + vertexSource;
+			fragmentSource = sourcesHeader + fragmentSource;
+		}
 
 		if (vertexSource.IsEmpty() || fragmentSource.IsEmpty())
 		{

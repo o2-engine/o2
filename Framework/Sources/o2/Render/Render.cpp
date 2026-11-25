@@ -71,6 +71,9 @@ namespace o2
 		mCurrentMaterial = nullptr;
 		mDefaultMaterial = nullptr;
 
+		for (auto& font : mFonts)
+			font->ReleaseRenderResources();
+
 		DeinitializePlatform();
 
 		auto fontsToDelete = mFonts;
@@ -1694,6 +1697,11 @@ namespace o2
 	void Render::OnAtlasDestroyed(AtlasAsset* atlas)
 	{
 		mAtlases.RemoveFirst([=](const AssetRef<AtlasAsset>& x) { return x == atlas; });
+	}
+
+	const Vector<Ref<Font>>& Render::GetFonts() const
+	{
+		return mFonts;
 	}
 
 	void Render::OnFontCreated(Font* font)

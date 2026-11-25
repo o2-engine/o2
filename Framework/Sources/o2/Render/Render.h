@@ -394,6 +394,9 @@ namespace o2
 		// Returns every alive texture: of files and atlas pages, then the ones made from data
 		Vector<TextureRef> GetTextures() const;
 
+		// Returns the loaded fonts
+		const Vector<Ref<Font>>& GetFonts() const;
+
 		// Returns maximum texture size
 		Vec2I GetMaxTextureSize() const;
 

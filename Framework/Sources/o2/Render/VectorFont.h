@@ -15,6 +15,7 @@ namespace o2
 {
     class RectsPacker;
     class Bitmap;
+    class SdfTextStyle;
 
     // -----------
     // Vector font
@@ -36,6 +37,10 @@ namespace o2
 
             // Check effect equals
             virtual bool IsEqual(Effect* other) const { return GetType() == other->GetType(); }
+
+            // Adds the effect to the style of the distance field text; false when it has no such version - the text of
+            // a style with it is rendered into the bitmap atlas as before
+            virtual bool AddToDistanceFieldStyle(SdfTextStyle& style) const { return false; }
 
             SERIALIZABLE(Effect);
             CLONEABLE_REF(Effect);
@@ -141,6 +146,9 @@ namespace o2
         Map<UInt16, VectorMesh> mGlyphMeshes; // Meshes of the glyph outlines by character id
 
     protected:
+        // Constructor of a font that renders into its bitmap atlas only when it is needed (a distance field font)
+        explicit VectorFont(bool createAtlas);
+
         // Returns the FreeType load flags: rendered, the font's own hinting unless it is off
         int LoadFlags() const;
 
@@ -178,6 +186,7 @@ CLASS_METHODS_META(o2::VectorFont::Effect)
     FUNCTION().PUBLIC().SIGNATURE(void, Process, Bitmap&);
     FUNCTION().PUBLIC().SIGNATURE(Vec2I, GetSizeExtend);
     FUNCTION().PUBLIC().SIGNATURE(bool, IsEqual, Effect*);
+    FUNCTION().PUBLIC().SIGNATURE(bool, AddToDistanceFieldStyle, SdfTextStyle&);
 }
 END_META;
 // --- END META ---

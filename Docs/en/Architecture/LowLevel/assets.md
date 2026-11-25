@@ -27,7 +27,7 @@ Asset subtypes inherit from the base `o2::Asset`:
 - VectorImageAsset: vector image, an `.svg` file drawn as triangles by `o2::VectorSprite`
 - BinaryAsset: binary file
 - DataAsset: serialized data, configs
-- VectorFontAsset/BitmapFontAsset: vector/bitmap font (base FontAsset), FontStyleAsset: font style
+- VectorFontAsset/BitmapFontAsset: vector/bitmap font (base FontAsset), FontStyleAsset: font style. A vector font with `distanceField` in its meta draws by distance fields; the assets build bakes their fields ([render](/Docs/en/Architecture/LowLevel/render.md))
 - MaterialAsset, ShaderAsset (VertexShaderAsset/FragmentShaderAsset): materials and shaders
 - Mesh3DAsset, SkinnedModelAsset: 3D meshes and skinned models
 - SoundAsset: sound (wav, ogg, mp3, flac)

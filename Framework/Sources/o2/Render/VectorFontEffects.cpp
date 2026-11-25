@@ -1,6 +1,7 @@
 #include "o2/stdafx.h"
 #include "VectorFontEffects.h"
 
+#include "o2/Render/SdfTextStyle.h"
 #include "o2/Utils/Bitmap/Bitmap.h"
 #include "o2/Utils/Debug/Profiling/NanoProfiler.h"
 
@@ -32,6 +33,12 @@ namespace o2
             color == otherEff->color;
     }
 
+    bool FontStrokeEffect::AddToDistanceFieldStyle(SdfTextStyle& style) const
+    {
+        style.AddStroke(radius, color, alphaThreshold);
+        return true;
+    }
+
     FontGradientEffect::FontGradientEffect(const Color4& color1 /*= Color4(200, 200, 200, 255)*/, 
                                            const Color4& color2 /*= Color4(255, 255, 255, 255)*/, 
                                            float angle /*= 0*/, float length /*= 0*/, Vec2F origin /*= Vec2F()*/):
@@ -59,6 +66,16 @@ namespace o2
             color1 == otherEff->color1 && color2 == otherEff->color2 && origin == otherEff->origin;
     }
 
+    bool FontGradientEffect::AddToDistanceFieldStyle(SdfTextStyle& style) const
+    {
+        SdfTextStyle::Gradient gradient;
+        gradient.angle = angle;
+        gradient.length = length;
+        gradient.origin = origin;
+        style.MultiplyGradient(color1, color2, gradient);
+        return true;
+    }
+
     FontColorEffect::FontColorEffect(const Color4& color /*= Color4::White()*/):
         color(color)
     {}
@@ -80,6 +97,12 @@ namespace o2
 
         FontColorEffect* otherEff = (FontColorEffect*)other;
         return color == otherEff->color;
+    }
+
+    bool FontColorEffect::AddToDistanceFieldStyle(SdfTextStyle& style) const
+    {
+        style.MultiplyColor(color);
+        return true;
     }
 
     FontShadowEffect::FontShadowEffect(float blurRadius /*= 2.0f*/, const Vec2I offset /*= Vec2I(2, 2)*/, 
@@ -126,6 +149,12 @@ namespace o2
             color == otherEff->color;
     }
 
+    bool FontShadowEffect::AddToDistanceFieldStyle(SdfTextStyle& style) const
+    {
+        style.AddShadow(blurRadius, (Vec2F)offset, color);
+        return true;
+    }
+
     FontSharpenEffect::FontSharpenEffect(float contrast /*= 3.0f*/, int threshold /*= 128*/):
         contrast(contrast), threshold(threshold)
     {}
@@ -157,6 +186,12 @@ namespace o2
 
         FontSharpenEffect* otherEff = (FontSharpenEffect*)other;
         return Math::Equals(contrast, otherEff->contrast) && threshold == otherEff->threshold;
+    }
+
+    bool FontSharpenEffect::AddToDistanceFieldStyle(SdfTextStyle& style) const
+    {
+        style.Sharpen(contrast, threshold);
+        return true;
     }
 }
 // --- META ---

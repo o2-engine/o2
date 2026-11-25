@@ -11,6 +11,7 @@
 #include "o2/Assets/Types/VectorImageAsset.h"
 #include "o2/Assets/Types/VideoAsset.h"
 #include "o2Editor/UI/Preview/MediaPreview.h"
+#include "o2/Render/SdfFont.h"
 #include "o2/Render/Sprite.h"
 #include "o2/Render/VectorRasterCache.h"
 #include "o2/Render/VectorSprite.h"
@@ -486,10 +487,21 @@ namespace Editor
 
         if (mMode == "Atlas")
         {
-            mTextureInspector->SetTexture(font->GetTexture(), font->GetTextureSrcRect());
+            // A distance field font shows the atlas of its fields: RGB - the multi-channel field, alpha - the true one
+            TextureRef texture = font->GetTexture();
+            RectI sourceRect = font->GetTextureSrcRect();
+            String info = "The glyphs drawn so far, the atlas grows with them";
+            if (auto sdf = DynamicCast<SdfFont>(font))
+            {
+                texture = sdf->GetFieldTexture();
+                sourceRect = RectI(Vec2I(), sdf->GetFieldTextureSize());
+                info = "Distance fields of the glyphs shown so far, for any size and style";
+            }
+
+            mTextureInspector->SetTexture(texture, sourceRect);
             mTextureInspector->SetBackground(TextureView::Background::Black);
-            mTextureInspector->SetNote(TextureView::GetTextureName(font->GetTexture()));
-            mInfo->SetText("The glyphs drawn so far, the atlas grows with them");
+            mTextureInspector->SetNote(TextureView::GetTextureName(texture));
+            mInfo->SetText(info);
             ShowContent(mTextureInspector);
             return;
         }

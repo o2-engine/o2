@@ -150,6 +150,11 @@ namespace o2
         // Returns symbol set structure pointer
         SymbolsSet& GetSymbolsSet();
 
+        // Prepares the characters for drawing with the font, height and style of the text, so their first show costs
+        // nothing: a vector font renders their glyphs (styled ones with their effects), a distance field font generates
+        // their fields and builds the material of the style @SCRIPTABLE
+        void WarmUp(const WString& characters);
+
         // Returns real text size @SCRIPTABLE
         Vec2F GetRealSize();
 
@@ -276,6 +281,9 @@ namespace o2
         float mPixelDensity = 0.0f; // Pixels per unit the glyphs of the mesh are rendered for, 0 until the first draw
 
         bool  mGlyphsMesh = false;        // Is the text drawn by the glyph outlines, not from the font texture
+        bool  mDistanceField = false;     // Is the text drawn by the distance fields of its font
+
+        Vector<Ref<Material>> mDistanceFieldLayers; // Materials of the layers of a style over the whole text, the front one first; empty - the effects per letter
 
         Ref<RenderGeometry> mGlyphsGeometry; // Triangles of the glyph outlines, kept by render between the frames
         Vector<UInt8>       mGlyphsCoverage; // Coverage of the glyphs at the vertices of the geometry
@@ -308,6 +316,13 @@ namespace o2
         // Returns is the text drawn by the meshes of the glyph outlines: they are enabled, the font has them and
         // the style has no effects
         bool IsDrawnByGlyphMeshes() const;
+
+        // Returns is the text drawn by the distance fields: the font has them and draws the style by them
+        bool IsDrawnByDistanceField() const;
+
+        // Fills the meshes with the quads of the distance fields of the laid out symbols; false when the font can't
+        // draw the style by them (its material didn't build)
+        bool UpdateDistanceFieldMesh();
 
         // Returns screen pixels per unit of the glyph meshes for the view scale
         float GetGlyphsFringeScale(const Vec2F& viewPixelScale) const;
@@ -373,6 +388,8 @@ CLASS_FIELDS_META(o2::Text)
     FIELD().PROTECTED().NAME(mSymbolsSet);
     FIELD().PROTECTED().DEFAULT_VALUE(0.0f).NAME(mPixelDensity);
     FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mGlyphsMesh);
+    FIELD().PROTECTED().DEFAULT_VALUE(false).NAME(mDistanceField);
+    FIELD().PROTECTED().NAME(mDistanceFieldLayers);
     FIELD().PROTECTED().NAME(mGlyphsGeometry);
     FIELD().PROTECTED().NAME(mGlyphsCoverage);
     FIELD().PROTECTED().NAME(mGlyphsColor);
@@ -416,6 +433,7 @@ CLASS_METHODS_META(o2::Text)
     FUNCTION().PUBLIC().SIGNATURE(void, SetLinesDistanceCoef, float);
     FUNCTION().PUBLIC().SIGNATURE(float, GetLinesDistanceCoef);
     FUNCTION().PUBLIC().SIGNATURE(SymbolsSet&, GetSymbolsSet);
+    FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(void, WarmUp, const WString&);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(Vec2F, GetRealSize);
     FUNCTION().PUBLIC().SCRIPTABLE_ATTRIBUTE().SIGNATURE(RectF, GetRealRect);
     FUNCTION().PUBLIC().SIGNATURE_STATIC(void, SetGlyphMeshesEnabled, bool);
@@ -428,6 +446,8 @@ CLASS_METHODS_META(o2::Text)
     FUNCTION().PROTECTED().SIGNATURE(float, GetPixelDensity);
     FUNCTION().PROTECTED().SIGNATURE(void, PrepareMesh, int);
     FUNCTION().PROTECTED().SIGNATURE(bool, IsDrawnByGlyphMeshes);
+    FUNCTION().PROTECTED().SIGNATURE(bool, IsDrawnByDistanceField);
+    FUNCTION().PROTECTED().SIGNATURE(bool, UpdateDistanceFieldMesh);
     FUNCTION().PROTECTED().SIGNATURE(float, GetGlyphsFringeScale, const Vec2F&);
     FUNCTION().PROTECTED().SIGNATURE(void, UpdateGlyphsMesh, const Basis&);
     FUNCTION().PROTECTED().SIGNATURE(RenderGeometry&, GetChangingGlyphsGeometry);

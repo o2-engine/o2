@@ -8,7 +8,8 @@ namespace o2
     FontStyle::FontStyle()
     {}
 
-    FontStyle::FontStyle(const FontStyle& other)
+    FontStyle::FontStyle(const FontStyle& other):
+        mEffectsMode(other.mEffectsMode)
     {
         for (auto& eff : other.mEffects)
         {
@@ -19,6 +20,7 @@ namespace o2
 
     FontStyle& FontStyle::operator=(const FontStyle& other)
     {
+        mEffectsMode = other.mEffectsMode;
         mEffects.Clear();
         for (auto& eff : other.mEffects)
         {
@@ -84,6 +86,20 @@ namespace o2
         return mCacheKey;
     }
 
+    void FontStyle::SetEffectsMode(FontEffectsMode mode)
+    {
+        if (mEffectsMode == mode)
+            return;
+
+        mEffectsMode = mode;
+        OnChanged();
+    }
+
+    FontEffectsMode FontStyle::GetEffectsMode() const
+    {
+        return mEffectsMode;
+    }
+
     void FontStyle::OnChanged()
     {
         mVersion++;
@@ -96,6 +112,13 @@ namespace o2
     }
 }
 // --- META ---
+
+ENUM_META(o2::FontEffectsMode, o2__FontEffectsMode)
+{
+    ENUM_ENTRY(PerLetter);
+    ENUM_ENTRY(WholeText);
+}
+END_ENUM_META;
 
 DECLARE_CLASS(o2::FontStyle, o2__FontStyle);
 // --- END META ---

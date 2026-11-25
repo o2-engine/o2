@@ -61,6 +61,14 @@ namespace o2
         virtual void CheckCharacters(const WString& needChararacters, int height, const Ref<FontStyle>& style,
                                      float pixelDensity = 1.0f);
 
+        // Prepares the characters for drawing at the height with the style, so their first show costs nothing: a vector
+        // font renders their glyphs, a distance field font generates their fields
+        virtual void WarmUp(const WString& characters, int height, const Ref<FontStyle>& style = nullptr,
+                            float pixelDensity = 1.0f);
+
+        // Releases the GPU resources of the font that need the render alive (materials); called before it goes
+        virtual void ReleaseRenderResources();
+
         // Returns triangles of the glyph outline, built once for any size and scale: in pixels of the font of
         // glyphMeshHeight, origin at the pen point, Y is up. Null when the font has no outlines
         virtual const VectorMesh* GetGlyphMesh(UInt16 id);
