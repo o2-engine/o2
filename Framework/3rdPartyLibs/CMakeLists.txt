@@ -209,7 +209,10 @@ list(TRANSFORM LIBPNG_SOURCES PREPEND "${CMAKE_CURRENT_SOURCE_DIR}/libpng/")
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/libpng/scripts/pnglibconf.h.prebuilt"
                "${CMAKE_CURRENT_BINARY_DIR}/libpng/pnglibconf.h" COPYONLY)
 add_library(libpng STATIC ${LIBPNG_SOURCES})
-target_include_directories(libpng PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/libpng" "${CMAKE_CURRENT_BINARY_DIR}/libpng")
+# (the configuration stays in the build tree: the kits the portal builds games with carry no paths into it - o2Framework,
+# the one place png.h is included, takes it privately)
+target_include_directories(libpng PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/libpng" PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/libpng")
+set(O2_LIBPNG_CONFIG_DIR "${CMAKE_CURRENT_BINARY_DIR}/libpng" PARENT_SCOPE)
 target_link_libraries(libpng PUBLIC zlib)
 
 # FreeType (git submodule) by its own CMake: static, its bundled zlib for gzip fonts, no optional dependencies
@@ -222,6 +225,8 @@ set(SKIP_INSTALL_ALL ON CACHE BOOL "" FORCE)
 set(BUILD_SHARED_LIBS OFF)
 add_subdirectory(freetype)
 unset(BUILD_SHARED_LIBS)
+# Users of FreeType see its headers only, not its build tree (the configuration it generates there is for its own sources)
+set_target_properties(freetype PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_CURRENT_SOURCE_DIR}/freetype/include")
 
 # pugixml (git submodule), wide character mode
 add_library(pugixml STATIC "${CMAKE_CURRENT_SOURCE_DIR}/pugixml/src/pugixml.cpp")

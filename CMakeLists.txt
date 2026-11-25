@@ -311,6 +311,7 @@ endif()
 
 if (O2_ENABLE_LINK_LIBPNG)
     target_link_libraries(o2Framework PUBLIC libpng)
+    target_include_directories(o2Framework PRIVATE "${O2_LIBPNG_CONFIG_DIR}")
 endif()
 
 if (O2_ENABLE_LINK_ZLIB)
