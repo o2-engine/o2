@@ -135,6 +135,12 @@ namespace o2
              destinationSlice:0
              destinationLevel:0
             destinationOrigin:MTLOriginMake(0, 0, 0)];
+
+        // A managed texture (a GPU without unified memory) keeps a CPU copy: without the sync the next region upload
+        // brings its stale pixels back over the copied ones
+        if (mImpl->texture.storageMode == MTLStorageModeManaged)
+            [blit synchronizeResource:mImpl->texture];
+
         [blit endEncoding];
         [commandBuffer commit];
         [commandBuffer waitUntilCompleted];

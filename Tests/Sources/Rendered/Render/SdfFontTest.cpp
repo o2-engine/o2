@@ -268,9 +268,9 @@ TEST(SdfFont, WarmUpGeneratesOnceForAnySizeAndStyle)
     EXPECT_EQ(font->GetStatistics().generatedGlyphs, generated);
 
     // Sizes scale linearly: one field for every height
-    auto& small = font->GetCharacter('H', 10, nullptr);
+    auto& tiny = font->GetCharacter('H', 10, nullptr);
     auto& big = font->GetCharacter('H', 60, nullptr);
-    EXPECT_NEAR(big.mAdvance/small.mAdvance, 6.0f, 0.01f);
+    EXPECT_NEAR(big.mAdvance/tiny.mAdvance, 6.0f, 0.01f);
 
     // A style with effects makes the quads bigger by their reach
     auto stroked = TestStyles()[2].second;
